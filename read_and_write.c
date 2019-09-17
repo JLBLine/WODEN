@@ -2,10 +2,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-//#include "/usr/local/mwa-RTS_dev/include/slamac.h"
-// #include "point_source_lib.h"
+#include <json-c/json.h>
+#include <fitsio.h>
 
-source_catalogue_t * read_source_catalogue(char *filename) {
+/*********************************
+  convert coords in local topocentric East, North, Height units to
+  'local' XYZ units. Local means Z point north, X points through the equator from the geocenter
+  along the local meridian and Y is East.
+  This is like the absolute system except that zero lon is now
+  the local meridian rather than prime meridian.
+  Latitude is geodetic, in radian.
+  This is what you want for constructing the local antenna positions in a UVFITS antenna table.
+**********************************/
+void ENH2XYZ_local(float E, float N, float H, float lat, float *X, float *Y, float *Z) {
+  float sl,cl;
+
+  sl = sin(lat);
+  cl = cos(lat);
+  *X = -N*sl + H*cl;
+  *Y = E;
+  *Z = N*cl + H*sl;
+}
+
+source_catalogue_t * read_source_catalogue(const char *filename) {
   int result, n_src=0, n_comps=0, n_freqs=0;
   int src_found=0, comp_found=0;
   int src_key, src_end, comp_key, comp_end, freq_key, type_key, param_key, coeff_key;
@@ -309,63 +328,332 @@ source_catalogue_t * read_source_catalogue(char *filename) {
   return srccat;
 } //read_sources
 
+woden_settings_t * read_json_settings(const char *filename){
+  FILE *fp;
+	char buffer[1024];
 
-// int main(void)
-// {
+  struct json_object *parsed_json;
+  struct json_object *lst_base;
+  struct json_object *ra0;
+  struct json_object *dec0;
+  struct json_object *num_baselines;
+  struct json_object *num_freqs;
+  struct json_object *frequency_resolution;
+  struct json_object *base_frequency;
+  struct json_object *num_time_steps;
+  struct json_object *time_res;
+  struct json_object *cat_filename;
+  struct json_object *metafits_filename;
+
+	fp = fopen(filename,"r");
+	fread(buffer, 1024, 1, fp);
+	fclose(fp);
+
+	parsed_json = json_tokener_parse(buffer);
+
+  // json_object_object_get_ex(parsed_json, "lst_base", &lst_base);
+  json_object_object_get_ex(parsed_json, "ra0", &ra0);
+  json_object_object_get_ex(parsed_json, "dec0", &dec0);
+  // json_object_object_get_ex(parsed_json, "num_baselines", &num_baselines);
+  json_object_object_get_ex(parsed_json, "num_freqs", &num_freqs);
+  // json_object_object_get_ex(parsed_json, "frequency_resolution", &frequency_resolution);
+  // json_object_object_get_ex(parsed_json, "base_frequency", &base_frequency);
+  json_object_object_get_ex(parsed_json, "num_time_steps", &num_time_steps);
+  // json_object_object_get_ex(parsed_json, "time_res", &time_res);
+  json_object_object_get_ex(parsed_json, "cat_filename", &cat_filename);
+  json_object_object_get_ex(parsed_json, "metafits_filename", &metafits_filename);
+
+  woden_settings_t * woden_settings;
+  // woden_settings = NULL;
+  woden_settings = malloc( sizeof(woden_settings_t) );
+
+  // woden_settings->lst_base = (float)json_object_get_double(lst_base)*D2R;
+  woden_settings->ra0 = (float)json_object_get_double(ra0)*D2R;
+  woden_settings->dec0 = (float)json_object_get_double(dec0)*D2R;
+  // woden_settings->num_baselines = json_object_get_int(num_baselines);
+  woden_settings->num_freqs = json_object_get_int(num_freqs);
+  // woden_settings->frequency_resolution = (float)json_object_get_double(frequency_resolution);
+  // woden_settings->base_frequency = (float)json_object_get_double(base_frequency);
+  woden_settings->num_time_steps = json_object_get_int(num_time_steps);
+  // woden_settings->time_res = (float)json_object_get_double(time_res);
+  woden_settings->cat_filename = json_object_get_string(cat_filename);
+  woden_settings->metafits_filename = json_object_get_string(metafits_filename);
+
+  struct json_object *band_num;
+  struct json_object *band_nums;
+  size_t num_bands;
+	size_t i;
+
+  json_object_object_get_ex(parsed_json, "band_nums", &band_nums);
+  num_bands = json_object_array_length(band_nums);
+
+  woden_settings->num_bands = num_bands;
+  woden_settings->band_nums = malloc( num_bands * sizeof(int));
+
+	for(i=0;i<num_bands;i++) {
+		band_num = json_object_array_get_idx(band_nums, i);
+		woden_settings->band_nums[i] = json_object_get_int(band_num);
+	}
+
+  return woden_settings;
+
+}
+
+int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
+    int status=0;
+    int ncols, anynulls, colnum, nfound, i;
+    long naxes[2], nrows, frow, felem;
+    //char tflg[1];
+    float nullval;
+    // FILE *fplog=NULL;
+    // extra variable for printing
+    char card[FLEN_CARD], keyname[FLEN_KEYWORD], coltype[FLEN_VALUE], colname[FLEN_VALUE];
+    int single = 0, nkeys, hdupos, ii;
+
+    // fplog=LogGetFilehandle();
+    // if (fplog==NULL) fplog=stderr;
+
+    memset(metafits,'\0',sizeof(MetaFfile_t));
+
+    // prints out metafits header contents
+    int look = 0;
+    if (look){
+      fits_get_hdu_num(mfptr, &hdupos);
+      for (; !status; hdupos++)  /* Main loop through each extension */
+      {
+        fits_get_hdrspace(mfptr, &nkeys, NULL, &status); /* get # of keywords */
+        printf("Header listing for HDU #%d:\n", hdupos);
+        for (ii = 1; ii <= nkeys; ii++) { /* Read and print each keywords */
+           if (fits_read_record(mfptr, ii, card, &status))break;
+           printf("%s\n", card);
+        }
+        printf("END\n\n");  /* terminate listing with END */
+        if (single) break;  /* quit if only listing a single header */
+        fits_movrel_hdu(mfptr, 1, NULL, &status);  /* try to move to next HDU */
+      }
+    } // ends look
+    //
+    // populate the header object from the first HDU
+    // fits_read_key(mfptr, TLONGLONG, "GPSTIME", &(metafits->gpstime), NULL, &status);
+    // if (status) {
+    //     printf( "No GPSTIME keyword. Continuing...\n");
+    //     fits_clear_errmsg();
+    //     status=0;
+    // }
+    fits_read_key(mfptr,TSTRING, "VERSION", &(metafits->version), NULL, &status);
+    if (status) {
+        printf("No VERSION keyword in metafits. Continuing...\n");
+        fits_clear_errmsg();
+        status=0;
+    }
+    /*fits_read_key(mfptr, TSTRING, "CALIBRAT", &(metafits->calib), NULL, &status);
+    if (status) {
+        printf("No CALIBRAT keyword. Continuing...\n");
+        fits_clear_errmsg();
+        status=0;
+    }*/
+    fits_read_key(mfptr, TSTRING, "MWAVER", &(metafits->mwaVersion), NULL, &status);
+    if (status) {
+        printf("No MWAVER keyword in metafits. Continuing...\n");
+        fits_clear_errmsg();
+        status=0;
+    }
+    fits_read_key(mfptr, TSTRING, "RECVRS", &(metafits->recvrs), NULL, &status);
+    if (status) {
+        // fits_report_error(fplog,status);
+        printf("No RECVRS keyword in metafits.\n");
+        return status;
+    }
+    fits_read_key(mfptr,TSTRING, "CALIBSRC", &(metafits->calsrc), NULL, &status);
+    if (status) {
+        printf("No CALIBSRC keyword in metafits. Continuing...\n");
+        fits_clear_errmsg();
+        status=0;
+    }
+    fits_read_key(mfptr,TSTRING, "TILEFLAG", &(metafits->tileflg), NULL, &status);
+    if (status) {
+       printf("No TILEFLAG keyword in metafits. Continuing...\n");
+        fits_clear_errmsg();
+        status=0;
+    }
+
+    fits_read_key(mfptr,TINT, "CENTCHAN", &(metafits->centchan), NULL, &status);
+    if (status) {
+       printf("No CENTCHAN keyword in metafits. Continuing...\n");
+        fits_clear_errmsg();
+        status=0;
+    }
+
+    fits_read_key(mfptr,TFLOAT, "LST", &(metafits->lst_base), NULL, &status);
+    if (status) {
+       printf("No LST keyword in metafits. Continuing...\n");
+        fits_clear_errmsg();
+        status=0;
+    }
+
+    fits_read_key(mfptr,TFLOAT, "FINECHAN", &(metafits->frequency_resolution), NULL, &status);
+    if (status) {
+       printf("No FINECHAN keyword in metafits. Continuing...\n");
+        fits_clear_errmsg();
+        status=0;
+    }
+
+    fits_read_key(mfptr,TFLOAT, "FREQCENT", &(metafits->frequency_cent), NULL, &status);
+    if (status) {
+       printf("No FREQCENT keyword in metafits. Continuing...\n");
+        fits_clear_errmsg();
+        status=0;
+    }
+
+    fits_read_key(mfptr,TFLOAT, "BANDWDTH", &(metafits->bandwidth), NULL, &status);
+    if (status) {
+       printf("No BANDWDTH keyword in metafits. Continuing...\n");
+        fits_clear_errmsg();
+        status=0;
+    }
+
+    fits_read_key(mfptr,TFLOAT, "INTTIME", &(metafits->time_res), NULL, &status);
+    if (status) {
+       printf("No INTTIME keyword in metafits. Continuing...\n");
+        fits_clear_errmsg();
+        status=0;
+    }
+
+    metafits->lst_base *= D2R;
+    metafits->frequency_resolution *= 1e+3;
+    metafits->frequency_cent *= 1e+6;
+    metafits->bandwidth *= 1e+6;
+    metafits->base_low_freq = metafits->frequency_cent - (metafits->bandwidth / 2.0) - (metafits->frequency_resolution / 2.0);
+
+    /* now move onto HDU2, which is where the binary table is */
+  int hdutype=0;
+  fits_movrel_hdu(mfptr,1 , &hdutype, &status);
+  if (status) {
+      // fits_report_error(fplog,status);
+      printf("%s: Cannot move to binary table HDU.",__func__);
+      return status;
+  }
+  // printf("%s: moved to next HDU. Type is: %d\n",__func__,hdutype);
+  fits_read_keys_lng(mfptr, "NAXIS", 1, 2, naxes, &nfound, &status);
+  (metafits->naxes[0]) = naxes[0]; (metafits->naxes[1]) = naxes[1];
+  fits_get_num_rows(mfptr, &nrows, &status);
+  fits_get_num_cols(mfptr, &ncols, &status);
+  //print for checking stuff (default disabled)
+  if (look) {
+    for (ii = 1; ii <= ncols; ii++) {
+      fits_make_keyn("TTYPE", ii, keyname, &status); /* make keyword */
+      fits_read_key(mfptr, TSTRING, keyname, colname, NULL, &status);
+      fits_make_keyn("TFORM", ii, keyname, &status); /* make keyword */
+      fits_read_key(mfptr, TSTRING, keyname, coltype, NULL, &status);
+      printf(" %3d %-16s %-16s\n", ii, colname, coltype);
+    }
+  }
+  frow = 1;
+  felem = 1;
+  nullval = -99.;
+  //read Input key
+  fits_get_colnum(mfptr, CASEINSEN, "Input", &colnum, &status);
+  fits_read_col(mfptr, TINT, colnum,frow, felem, metafits->naxes[1], &nullval, &(metafits->inps), &anynulls, &status);
+  //read Antenna key
+  fits_get_colnum(mfptr, CASEINSEN, "Antenna", &colnum, &status);
+  fits_read_col(mfptr, TINT, colnum,frow, felem, metafits->naxes[1], &nullval, &(metafits->ants), &anynulls, &status);
+  // read Tile key
+  fits_get_colnum(mfptr, CASEINSEN, "Tile", &colnum, &status);
+  fits_read_col(mfptr, TINT, colnum,frow, felem, metafits->naxes[1], &nullval, &(metafits->tile), &anynulls, &status);
+  // read Dipole Delays
+  fits_get_colnum(mfptr, CASEINSEN, "Delays", &colnum, &status);
+  for (i=0; i<metafits->naxes[1]; i++){
+     fits_read_col(mfptr, TINT, colnum,i+1, felem, 16, &nullval, &(metafits->ddlys[i]),
+                   &anynulls, &status);
+  }
+// read Digital Gains
+  fits_get_colnum(mfptr, CASEINSEN, "Gains", &colnum, &status);
+  for (i=0; i<metafits->naxes[1]; i++){
+     fits_read_col(mfptr, TINT, colnum,i+1, felem, 24, &nullval, &(metafits->dig_gains[i]),
+                   &anynulls, &status);
+  }
+
+  // read Flags
+  fits_get_colnum(mfptr, CASEINSEN, "Flag", &colnum, &status);
+  fits_read_col(mfptr, TINT, colnum,frow, felem, metafits->naxes[1], &nullval, &(metafits->flags), &anynulls, &status);
+  // read Antenna Pos E
+  fits_get_colnum(mfptr, CASEINSEN, "East", &colnum, &status);
+  fits_read_col(mfptr, TFLOAT, colnum,frow, felem, metafits->naxes[1], &nullval, &(metafits->E), &anynulls, &status);
+  // read Antenna Pos N
+  fits_get_colnum(mfptr, CASEINSEN, "North", &colnum, &status);
+  fits_read_col(mfptr, TFLOAT, colnum,frow, felem, metafits->naxes[1], &nullval, &(metafits->N), &anynulls, &status);
+  // read Antenna Pos H
+  fits_get_colnum(mfptr, CASEINSEN, "Height", &colnum, &status);
+  fits_read_col(mfptr, TFLOAT, colnum,frow, felem, metafits->naxes[1], &nullval, &(metafits->H), &anynulls, &status);
+  // read cable Length
+  fits_get_colnum(mfptr, CASEINSEN, "Length", &colnum, &status);
+        //for (i=0; i<metafits->naxes[1]; i++){
+	char *lengptr[metafits->naxes[1]];
+	//following for loop written as a test solution for seg faults in reading lengths (James)
+	for(i=0; i<metafits->naxes[1];i++){
+            lengptr[i] = metafits->leng[i];
+	}
+	//James changed the next line, original line commented below
+            //fits_read_col(mfptr, TSTRING, colnum,1, felem, 1, &nullval, &(metafits->leng[0]), &anynulls, &status);
+            //fits_read_col(mfptr, TSTRING, colnum,1, felem, 14, &nullval, &testa, &anynulls, &status);
+	fits_read_col(mfptr, TSTRING, colnum, frow, felem, metafits->naxes[1], &nullval, &lengptr, &anynulls, &status);
+        //}
+	for(i=0;i<metafits->naxes[1];i++){
+		metafits->leng[i][0] = 'E';
+	}
+  return status;
+}
+
+array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits){
+
+  array_layout_t * array_layout;
+  array_layout = malloc( sizeof(array_layout_t) );
+
+  array_layout->latitude = MWA_LAT*DD2R;
+  array_layout->num_antennas = 128;
+  array_layout->num_baselines = (array_layout->num_antennas*(array_layout->num_antennas-1)) / 2;
+
+  array_layout->ant_east = malloc( array_layout->num_antennas * sizeof(float) );
+  array_layout->ant_north = malloc( array_layout->num_antennas * sizeof(float) );
+  array_layout->ant_height = malloc( array_layout->num_antennas * sizeof(float) );
+
+  array_layout->ant_X = malloc( array_layout->num_antennas * sizeof(float) );
+  array_layout->ant_Y = malloc( array_layout->num_antennas * sizeof(float) );
+  array_layout->ant_Z = malloc( array_layout->num_antennas * sizeof(float) );
+  //
+  for (int i = 0; i < array_layout->num_antennas; i++) {
+    //Metafits e,n,h goes XX,YY,XX,YY so need to choose every other value
+    array_layout->ant_east[i] = metafits->E[i*2];
+    array_layout->ant_north[i] = metafits->N[i*2];
+    array_layout->ant_height[i] = metafits->H[i*2];
+
+    //Convert to local X,Y,Z
+    ENH2XYZ_local(array_layout->ant_east[i], array_layout->ant_north[i], array_layout->ant_height[i],
+                  array_layout->latitude,
+                  &(array_layout->ant_X[i]), &(array_layout->ant_Y[i]), &(array_layout->ant_Z[i]));
+
+  }
+
+  // for ant1 in arange(len(X) - 1):
+  //   for ant2 in arange(ant1 + 1, len(X)):
+  //       x_lengths.append(X[ant1] - X[ant2])
+  //       y_lengths.append(Y[ant1] - Y[ant2])
+  //       z_lengths.append(Z[ant1] - Z[ant2])
+
+  array_layout->X_diff_metres = malloc( array_layout->num_baselines * sizeof(float) );
+  array_layout->Y_diff_metres = malloc( array_layout->num_baselines * sizeof(float) );
+  array_layout->Z_diff_metres = malloc( array_layout->num_baselines * sizeof(float) );
+
+  int baseline_ind = 0;
+  for (int ant1 = 0; ant1 < array_layout->num_antennas - 1; ant1++) {
+    for (int ant2 = ant1 + 1; ant2 < array_layout->num_antennas; ant2++) {
+      array_layout->X_diff_metres[baseline_ind] = array_layout->ant_X[ant1] - array_layout->ant_X[ant2];
+      array_layout->Y_diff_metres[baseline_ind] = array_layout->ant_Y[ant1] - array_layout->ant_Y[ant2];
+      array_layout->Z_diff_metres[baseline_ind] = array_layout->ant_Z[ant1] - array_layout->ant_Z[ant2];
+      baseline_ind++;
+    }
+  }
+
+  return array_layout;
 //
-//   float ra0 = 53.62297029690264*D2R;
-//   float dec0 = -39.47871177225978*D2R;
-//   float lst = 71.64335359166665*D2R;
-//
-//   // float ra0 = 71.64335359166665*D2R;
-//   // float dec0 = -26.7*D2R;
-//
-//   int num_baselines = 8128;
-//
-//   float sdec0,cdec0;
-//   sdec0 = sin(dec0); cdec0=cos(dec0);
-//
-//   int num_time_steps = 1;
-//   float time_res = 2.0;
-//   float ha0,sha0,cha0;
-//
-//
-//   // char sourceinfo[] = "phase_cent_pointsource.txt";
-//   // char sourceinfo[] = "dummy_data.txt";
-//   // char sourceinfo[] = "simple_ForA.txt";
-//   char cat_filename[] = "srclist_wsclean_ForA_phase1_cropped_percent100.txt";
-//
-//   // int num_components;
-//   // num_components = get_num_components(sourceinfo);
-//   //
-//   // // struct pointsource *pointsources = (pointsource*)malloc(sizeof(struct pointsource) * num_components);
-//   // float *comp_ras = (float*)malloc(sizeof(float)*num_components);
-//   // float *comp_decs = (float*)malloc(sizeof(float)*num_components);
-//   // float *comp_fluxes = (float*)malloc(sizeof(float)*num_components);
-//   //
-//   // float *comp_pa = (float*)malloc(sizeof(float)*num_components);
-//   // float *comp_majors = (float*)malloc(sizeof(float)*num_components);
-//   // float *comp_minors = (float*)malloc(sizeof(float)*num_components);
-//   //
-//   // int *comp_types = (float*)malloc(sizeof(char)*num_components);
-//   //
-//   // read_pointsources(sourceinfo, comp_ras, comp_decs, comp_fluxes, num_components);
-//
-//   source_catalogue_t *srccat;
-//
-//   srccat = read_source_catalogue(cat_filename);
-//
-//   for (int i = 0; i < 2; i++) {
-//     printf("===================================\n");
-//     printf("point_ra %d %f\n",i,srccat->catsource[0].point_ras[i]);
-//     printf("gauss ra %d %f\n",i,srccat->catsource[0].gauss_ras[i]);
-//     printf("point flux %d %f\n",i,srccat->catsource[0].point_fluxes[i]);
-//     printf("gauss flux %d %f\n",i,srccat->catsource[0].gauss_fluxes[i]);
-//     printf("gauss pa %d %f\n",i,srccat->catsource[0].gauss_pas[i]);
-//     printf("point major %d %f\n",i,srccat->catsource[0].gauss_majors[i]);
-//     printf("gauss minor %d %f\n",i,srccat->catsource[0].gauss_minors[i]);
-//
-//     /* code */
-//   }
-//
-// }
+}

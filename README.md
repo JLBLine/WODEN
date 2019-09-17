@@ -1,9 +1,11 @@
 # WODEN
 
-Jack Line, 13/09/2019
+Jack Line, 17/09/2019
 
 CUDA code designed to compare different visibility generating methods.
 
-Parameters currently extremely hard-coded, soon to be changed into optional inputs. Dumps all data to a binary file output_visi.dat. Needs a new-style RTS srclist. Will add documentation once options are added / if this is going to be published.
+Reads params in from .json file, relying heavily on metafits files for observational settings. Dumps all data to a binary file output_visi_band%02d.dat. Needs a new-style RTS srclist. Will add documentation once options are added / if this is going to be published.
 
-I currently use a uvfits template and a python script to convert outputs into uvfits files, and to generate telescope_XYZ.c
+Currently controlled using `run_woden.py`, which also converts binary outputs into uvfits files, via a uvfits template.
+
+Code borrows heavily / sometimes outright steals functions from the RTS.

@@ -2,10 +2,10 @@
 #include <math.h>
 #include "read_and_write.h"
 
-#define VELC 299792458.0
-#define SOLAR2SIDEREAL 1.00274
-#define D2R M_PI/180.0
-#define DEFAULT_SI -0.8
+// #define VELC 299792458.0
+// #define SOLAR2SIDEREAL 1.00274
+// #define D2R M_PI/180.0
+// #define DEFAULT_SI -0.8
 
 extern "C" void copy_XYZ_to_GPU(float *d_X_diff, float *d_Y_diff, float *d_Z_diff,
                                 float *X_diff_metres, float *Y_diff_metres, float *Z_diff_metres,

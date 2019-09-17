@@ -2,188 +2,167 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "/usr/local/mwa-RTS_dev/include/slamac.h"
+#include <fitsio.h>
 #include "read_and_write.h"
-// #include "point_source_lib.h"
 #include "shapelet_basis.h"
 #include "woden.h"
 
-int main(void)
-{
+int main(int argc, char **argv) {
+
+  if (argc < 2) {
+    printf("Must input a .json settings file to run woden. This file must include:\n");
+    printf("\tra0: ra phase centre (float in degrees)\n");
+    printf("\tdec0: dec phase centre (float in degrees)\n");
+    printf("\tnum_freqs: number of fine frequency channels to simulate (int)\n");
+    printf("\tnum_time_steps: number of time steps to simulate (int)\n");
+    printf("\tcat_filename: path to and name of RTS-new-style srclist (string)\n");
+    printf("\tmetafits_filename: path to MWA and name of metafits file to base\n\t\tsimulation on (string)\n");
+    exit(1);
+
+  }
+
+  if (strcmp("--help", argv[1]) == 0) {
+    printf("wodan needs a .json settings file to run. This file must include:\n");
+    printf("\tra0: ra phase centre (float in degrees)\n");
+    printf("\tdec0: dec phase centre (float in degrees)\n");
+    printf("\tnum_freqs: number of fine frequency channels to simulate (int)\n");
+    printf("\tnum_time_steps: number of time steps to simulate (int)\n");
+    printf("\tcat_filename: path to and name of RTS-new-style srclist (string)\n");
+    printf("\tmetafits_filename: path to MWA and name of metafits file to base\n\t\tsimulation on (string)\n");
+    exit(1);
+
+  }
+
   float *sbf2;
   sbf2 = NULL;
   sbf2 = malloc( sbf_N2 * sbf_L2 * sizeof(float) );
   sbf2 = create_sbf2(sbf2);
 
-  // float lst_base = 71.64335359166665*D2R; //phase1
-  float lst_base = 75.3035563889981*D2R; //phase2
+  // char json_settings[] = "test.json";
 
-  // float ra0 = 71.64335359166665*D2R;
-  // float dec0 = -26.7*D2R;
+  // char json_settings[] = argv[1];
 
-  float ra0 = 50.67*D2R;
-  float dec0 = -37.2*D2R;
-
-  int num_baselines = 8128;
-  int num_freqs = 128;
-  // int num_freqs = 1;
-  float frequency_resolution = 10.0e+3;
-  // float base_frequency = 167.645e+6;
-  // float base_frequency = 169.595e+6;
-  //
-  float base_frequency = 1.8496e+08;
-
-  float sdec0,cdec0;
-  sdec0 = sin(dec0); cdec0=cos(dec0);
-
-  // int num_time_steps = 56;
-  int num_time_steps = 20;
-  float time_res = 0.5;
-  float ha0,sha0,cha0;
-
-
-  // char cat_filename[] = "srclist_wsclean_ForA_phase1_cropped_percent100.txt";
-  char cat_filename[] = "srclist_wsclean_ForA_phase1+2_cropped_percent100.txt";
-  // char cat_filename[] = "srclist_singlepoint.txt";
-  // char cat_filename[] = "srclist_shape_ForA_phase1+2_percent100.txt";
-
+  woden_settings_t * woden_settings;
+  woden_settings = read_json_settings(argv[1]);
 
   source_catalogue_t *srccat;
+  srccat = read_source_catalogue(woden_settings->cat_filename);
 
-  srccat = read_source_catalogue(cat_filename);
+  int status;
+  // array_layout_t * array_layout;
+  static fitsfile *metaf_file=NULL;
+  MetaFfile_t metafits;
+  fits_open_file(&metaf_file, woden_settings->metafits_filename, READONLY, &status);
+  status = init_meta_file(metaf_file, &metafits, woden_settings->metafits_filename);
 
-  // for (int i = 0; i < 1; i++) {
-  //   printf("===================================\n");
-  //   printf("shape_ra %d %f\n",i,srccat->catsources[0].S2_ras[i]);
-  //   printf("shape_dec %d %f\n",i,srccat->catsources[0].S2_decs[i]);
-  //   // printf("gauss ra %d %f\n",i,srccat->catsource[0].gauss_ras[i]);
-  //   printf("shape flux %d %f\n",i,srccat->catsources[0].S2_fluxes[i]);
-  //
-  //   for (int j = 0; j < 2; j++) {
-  //     printf("------------------------------\n");
-  //     printf("shape n1s %d %f\n",j,srccat->catsources[0].S2_n1s[j]);
-  //     printf("shape n2s %d %f\n",j,srccat->catsources[0].S2_n2s[j]);
-  //     printf("shape coeffs %d %f\n",j,srccat->catsources[0].S2_coeffs[j]);
-  //     printf("shape params %d %f\n",j,srccat->catsources[0].S2_param_indexes[j]);
-  //   }
-  // }
+  array_layout_t * array_layout;
+  array_layout = calc_XYZ_diffs(&metafits);
+
+  woden_settings->lst_base = metafits.lst_base;
+  woden_settings->frequency_resolution = metafits.frequency_resolution;
+  woden_settings->base_low_freq = metafits.base_low_freq;
+  woden_settings->time_res = metafits.time_res;
+
+  woden_settings->num_baselines = array_layout->num_baselines;
 
   //Gets these arrays from telescope_XYZ.c
-  extern float X_diff_metres[ ];
-  extern float Y_diff_metres[ ];
-  extern float Z_diff_metres[ ];
+  // extern float X_diff_metres[ ];
+  // extern float Y_diff_metres[ ];
+  // extern float Z_diff_metres[ ];
 
+  float ha0, sha0, cha0;
   float wavelength;
   float frequency;
+  int num_visi = woden_settings->num_baselines * woden_settings->num_time_steps;
 
-  // assign_pointsource_on_GPU(srccat->catsource[0]);
+  float sdec0,cdec0;
+  sdec0 = sin(woden_settings->dec0); cdec0=cos(woden_settings->dec0);
 
-  // d_XYZ_t d_XYZ_metres;
-  // d_XYZ_metres.d_X_diff = NULL;
-  // d_XYZ_metres.d_Y_diff = NULL;
-  // d_XYZ_metres.d_Z_diff = NULL;
-  // copy_XYZ_to_GPU(&(d_XYZ_metres.d_X_diff),&(d_XYZ_metres.d_Y_diff),&(d_XYZ_metres.d_Z_diff),
-  //                   X_diff_metres, Y_diff_metres, Z_diff_metres,
-  //                   num_baselines);
+  //
 
-  for (int freq_step = 0; freq_step < num_freqs; freq_step++) {
-    visibility_set_t visibility_set;
-
-    // frequency = 167.035e+6 + (frequency_resolution*freq_step);
-    frequency = base_frequency + (frequency_resolution*freq_step);
-    wavelength = VELC / frequency;
-
-    visibility_set.sum_visi_real = malloc( num_baselines * num_time_steps * sizeof(float) );
-    visibility_set.sum_visi_imag = malloc( num_baselines * num_time_steps * sizeof(float) );
-    visibility_set.us_metres = malloc( num_baselines * num_time_steps * sizeof(float) );
-    visibility_set.vs_metres = malloc( num_baselines * num_time_steps * sizeof(float) );
-    visibility_set.ws_metres = malloc( num_baselines * num_time_steps * sizeof(float) );
-    visibility_set.sha0s = malloc( num_baselines * num_time_steps * sizeof(float) );
-    visibility_set.cha0s = malloc( num_baselines * num_time_steps * sizeof(float) );
-    visibility_set.lsts = malloc( num_baselines * num_time_steps * sizeof(float) );
-
-    float wavelengths[num_baselines * num_time_steps];
+  for (size_t band = 0; band < woden_settings->num_bands; band++) {
 
 
+    int band_num = woden_settings->band_nums[band];
+    printf("Simulating band %02d\n",band_num);
 
-    for ( int time_step = 0; time_step < num_time_steps; time_step++ ) {
-      float lst = lst_base + (time_step*time_res*SOLAR2SIDEREAL*D2R)*(15.0/3600.0);
-      ha0 = lst - ra0;
-      sha0 = sin(ha0); cha0=cos(ha0);
+    float base_band_freq = ((band_num - 1)*(metafits.bandwidth/24.0)) + woden_settings->base_low_freq;
 
-      for (int baseline = 0; baseline < num_baselines; baseline++) {
-        visibility_set.cha0s[time_step*num_baselines + baseline] = cha0;
-        visibility_set.sha0s[time_step*num_baselines + baseline] = sha0;
-        visibility_set.lsts[time_step*num_baselines + baseline] = lst;
+    for (int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++) {
+      visibility_set_t visibility_set;
 
-        wavelengths[time_step*num_baselines + baseline] = wavelength;
+      // frequency = 167.035e+6 + (frequency_resolution*freq_step);
+      frequency = base_band_freq + (woden_settings->frequency_resolution*freq_step);
+      wavelength = VELC / frequency;
+
+      visibility_set.sum_visi_real = malloc( num_visi * sizeof(float) );
+      visibility_set.sum_visi_imag = malloc( num_visi * sizeof(float) );
+      visibility_set.us_metres = malloc( num_visi * sizeof(float) );
+      visibility_set.vs_metres = malloc( num_visi * sizeof(float) );
+      visibility_set.ws_metres = malloc( num_visi * sizeof(float) );
+      visibility_set.sha0s = malloc( num_visi * sizeof(float) );
+      visibility_set.cha0s = malloc( num_visi * sizeof(float) );
+      visibility_set.lsts = malloc( num_visi * sizeof(float) );
+
+      float wavelengths[num_visi];
+
+      for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
+        float lst = woden_settings->lst_base + (time_step*woden_settings->time_res*SOLAR2SIDEREAL*D2R)*(15.0/3600.0);
+        ha0 = lst - woden_settings->ra0;
+        sha0 = sin(ha0); cha0=cos(ha0);
+
+        for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {
+          visibility_set.cha0s[time_step*woden_settings->num_baselines + baseline] = cha0;
+          visibility_set.sha0s[time_step*woden_settings->num_baselines + baseline] = sha0;
+          visibility_set.lsts[time_step*woden_settings->num_baselines + baseline] = lst;
+
+          wavelengths[time_step*woden_settings->num_baselines + baseline] = wavelength;
+        }
+
       }
 
-    }
+      float angles_array[4] = {sdec0, cdec0, woden_settings->ra0, wavelength};
 
-    // for ( int time_step = 0; time_step < num_time_steps; time_step++ ) {
-    //   for (int baseline = 0; baseline < num_baselines; baseline++) {
-    //     printf("%f %f\n",visibility_set.cha0s[time_step*num_baselines + baseline],visibility_set.sha0s[time_step*num_baselines + baseline]);
-    //   }
-    //
-    // }
+      Atomic_time_step(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
+                      srccat->catsources[0], angles_array,
+                      woden_settings->num_baselines, woden_settings->num_time_steps, visibility_set,
+                      sbf2);
+      //
+      FILE *output_visi;
+      char buf[0x100];
+      snprintf(buf, sizeof(buf), "output_visi_band%02d.dat", band_num);
 
-      // printf("%d %f %f %f %f %f %f\n",num_components,lst,ha0,ra0,dec0,comp_ras[0],comp_decs[0] );
+      output_visi = fopen(buf,"ab");
 
-      // visibility_set.sum_visi_real = {0};
-      // visibility_set.sum_visi_imag = {0};
-      // visibility_set.us_metres = {0};
-      // visibility_set.vs_metres = {0};
-      // visibility_set.ws_metres = {0};
+      if(output_visi == NULL)
+      {
+          printf("Could not open output_visi_band%02d.dat - exiting", band_num);
+          exit(1);
+      }
 
+      fwrite(visibility_set.us_metres, num_visi*sizeof(float), 1, output_visi);
+      fwrite(visibility_set.vs_metres, num_visi*sizeof(float), 1, output_visi);
+      fwrite(visibility_set.ws_metres, num_visi*sizeof(float), 1, output_visi);
+      fwrite(visibility_set.sum_visi_real, num_visi*sizeof(float), 1, output_visi);
+      fwrite(visibility_set.sum_visi_imag, num_visi*sizeof(float), 1, output_visi);
 
-      // printf("%f\n", wavelength);
-      // printf("%f %f %f %f %f\n",sdec0, cdec0, sha0, cha0, ra0 );
-      // d_XYZ_metres.d_X_diff, d_XYZ_metres.d_Y_diff, d_XYZ_metres.d_Z_diff,
+      fflush(output_visi);
 
-    float angles_array[4] = {sdec0, cdec0, ra0, wavelength};
+      fclose(output_visi);
 
-    Atomic_time_step(X_diff_metres, Y_diff_metres, Z_diff_metres,
-                    srccat->catsources[0],angles_array,
-                    num_baselines, num_time_steps, visibility_set,
-                    sbf2);
-    //
-    FILE *output_visi;
+      // output_visi = fopen("output_visi.txt","a");
+      //
+      // int ii;
+      // for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
+      //   for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {
+      //     ii = time_step*woden_settings->num_baselines + baseline;
+      //     fprintf(output_visi,"%f %f %f %f %f\n",visibility_set.us_metres[ii],
+      //             visibility_set.vs_metres[ii],visibility_set.ws_metres[ii],visibility_set.sum_visi_real[ii],visibility_set.sum_visi_imag[ii]);
+      //   }
+      //
+      // }
+      // fclose(output_visi);
 
-
-    output_visi = fopen("output_visi.dat","ab");
-
-    if(output_visi == NULL)
-    {
-        printf("Could not open output_visi.txt - exiting");
-        exit(1);
-    }
-
-
-
-    fwrite(visibility_set.us_metres, num_baselines*num_time_steps*sizeof(float), 1, output_visi);
-    fwrite(visibility_set.vs_metres, num_baselines*num_time_steps*sizeof(float), 1, output_visi);
-    fwrite(visibility_set.vs_metres, num_baselines*num_time_steps*sizeof(float), 1, output_visi);
-    fwrite(visibility_set.sum_visi_real, num_baselines*num_time_steps*sizeof(float), 1, output_visi);
-    fwrite(visibility_set.sum_visi_imag, num_baselines*num_time_steps*sizeof(float), 1, output_visi);
-
-    fflush(output_visi);
-
-    fclose(output_visi);
-
-    // output_visi = fopen("output_visi.txt","a");
-    //
-    // int ii;
-    // for ( int time_step = 0; time_step < num_time_steps; time_step++ ) {
-    //   for (int baseline = 0; baseline < num_baselines; baseline++) {
-    //     ii = time_step*num_baselines + baseline;
-    //     fprintf(output_visi,"%f %f %f %f %f\n",visibility_set.us_metres[ii],
-    //             visibility_set.vs_metres[ii],visibility_set.ws_metres[ii],visibility_set.sum_visi_real[ii],visibility_set.sum_visi_imag[ii]);
-    //   }
-    //
-    // }
-    // fclose(output_visi);
-
-  }//freq loop
-
-}
+    }//freq loop
+  }//band loop
+}//main
