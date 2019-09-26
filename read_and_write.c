@@ -368,8 +368,8 @@ woden_settings_t * read_json_settings(const char *filename){
   woden_settings = malloc( sizeof(woden_settings_t) );
 
   // woden_settings->lst_base = (float)json_object_get_double(lst_base)*D2R;
-  woden_settings->ra0 = (float)json_object_get_double(ra0)*D2R;
-  woden_settings->dec0 = (float)json_object_get_double(dec0)*D2R;
+  woden_settings->ra0 = (float)json_object_get_double(ra0)*DD2R;
+  woden_settings->dec0 = (float)json_object_get_double(dec0)*DD2R;
   // woden_settings->num_baselines = json_object_get_int(num_baselines);
   woden_settings->num_freqs = json_object_get_int(num_freqs);
   // woden_settings->frequency_resolution = (float)json_object_get_double(frequency_resolution);
@@ -519,7 +519,7 @@ int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
         status=0;
     }
 
-    metafits->lst_base *= D2R;
+    metafits->lst_base *= DD2R;
     metafits->frequency_resolution *= 1e+3;
     metafits->frequency_cent *= 1e+6;
     metafits->bandwidth *= 1e+6;

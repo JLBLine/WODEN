@@ -52,6 +52,8 @@ def create_uvfits(v_container=None,freq_cent=None, ra_point=None, dec_point=None
     uvparnames = ['UU','VV','WW','BASELINE','DATE']
     parvals = [uu,vv,ww,baselines_array,date_array]
 
+    # print(uu.shape,vv.shape,ww.shape,baselines_array.shape,date_array.shape)
+
     uvhdu = fits.GroupData(v_container,parnames=uvparnames,pardata=parvals,bitpix=-32)
     uvhdu = fits.GroupsHDU(uvhdu)
 
@@ -141,47 +143,51 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
 
     data = frombuffer(read_data,dtype=float32)
 
-    all_us = zeros(num_baselines*num_freq_channels*num_time_steps)
-    all_vs = zeros(num_baselines*num_freq_channels*num_time_steps)
-    all_ws = zeros(num_baselines*num_freq_channels*num_time_steps)
-    reals = zeros(num_baselines*num_freq_channels*num_time_steps)
-    imags = zeros(num_baselines*num_freq_channels*num_time_steps)
-
-    size_of_chunk = num_baselines*num_time_steps
-
-    for freq_ind in arange(num_freq_channels):
-        start = freq_ind * size_of_chunk * 5
-        all_us[freq_ind*size_of_chunk:(freq_ind + 1)*size_of_chunk] = data[start:start+size_of_chunk]
-        all_vs[freq_ind*size_of_chunk:(freq_ind + 1)*size_of_chunk] = data[start+size_of_chunk:start+2*size_of_chunk]
-        all_ws[freq_ind*size_of_chunk:(freq_ind + 1)*size_of_chunk] = data[start+2*size_of_chunk:start+3*size_of_chunk]
-        reals[freq_ind*size_of_chunk:(freq_ind + 1)*size_of_chunk] = data[start+3*size_of_chunk:start+4*size_of_chunk]
-        imags[freq_ind*size_of_chunk:(freq_ind + 1)*size_of_chunk] = data[start+4*size_of_chunk:start+5*size_of_chunk]
-
     n_data = num_time_steps * num_baselines
     v_container = zeros((n_data,1,1,1,num_freq_channels,4,3))
     uus = zeros(n_data)
     vvs = zeros(n_data)
     wws = zeros(n_data)
 
+    num_visi = num_time_steps * num_freq_channels * num_baselines
+
+    u_base = 0
+    v_base = num_visi
+    w_base = 2*num_visi
+    re_base = 3*num_visi
+    im_base = 4*num_visi
+
+    num_cols = 5
     for time_ind in arange(num_time_steps):
-        # base_ind = time_ind*num_baselines*num_freq_channels
-        uus[time_ind*num_baselines:(time_ind + 1)*num_baselines] = all_us[time_ind*num_baselines:(time_ind + 1)*num_baselines] / VELC
-        vvs[time_ind*num_baselines:(time_ind + 1)*num_baselines] = all_vs[time_ind*num_baselines:(time_ind + 1)*num_baselines] / VELC
-        wws[time_ind*num_baselines:(time_ind + 1)*num_baselines] = all_ws[time_ind*num_baselines:(time_ind + 1)*num_baselines] / VELC
 
-    for freq_ind in arange(num_freq_channels):
-        base_freq = num_time_steps*num_baselines*freq_ind
-        for time_ind in arange(num_time_steps):
-            base_ind = base_freq + (time_ind*num_baselines)
+        time_step = num_baselines * time_ind * num_freq_channels
+        u_ind = u_base + time_step
+        v_ind = v_base + time_step
+        w_ind = w_base + time_step
 
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,0,0] = reals[base_ind:base_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,0,1] = imags[base_ind:base_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,1,0] = reals[base_ind:base_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,1,1] = imags[base_ind:base_ind+num_baselines]
-            ##Set the weights to 1.0
+        uus[time_ind*num_baselines:(time_ind + 1)*num_baselines] = data[u_ind:u_ind+num_baselines] / VELC
+        vvs[time_ind*num_baselines:(time_ind + 1)*num_baselines] = data[v_ind:v_ind+num_baselines] / VELC
+        wws[time_ind*num_baselines:(time_ind + 1)*num_baselines] = data[w_ind:w_ind+num_baselines] / VELC
+
+        # print(u_ind,v_ind,w_ind)
+        # print(data[u_ind],data[v_ind],data[w_ind])
+
+        for freq_ind in arange(num_freq_channels):
+
+            freq_step = num_baselines * (time_ind * num_freq_channels + freq_ind)
+
+            real_ind = re_base + freq_step
+            imag_ind = im_base + freq_step
+
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,0,0] = data[real_ind:real_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,0,1] = data[imag_ind:imag_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,1,0] = data[real_ind:real_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,1,1] = data[imag_ind:imag_ind+num_baselines]
+
             v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,0,2] = ones(num_baselines)
             v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,1,2] = ones(num_baselines)
 
+    # print(uus.shape,vvs.shape,wws.shape,v_container.shape)
     return uus, vvs, wws, v_container
 
 def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
@@ -233,7 +239,8 @@ parser.add_argument('--band_nums', default='all',
     help='Defaults to running all 24 course bands. Alternatively, enter required numbers delineated by commas, e.g. --band_nums=1,7,9')
 parser.add_argument('--no_tidy', default=False, action='store_true',
     help='Defaults to deleting output binary files from woden and json files. Add this flag to not delete those files')
-
+parser.add_argument('--nvprof', default=False, action='store_true',
+    help='Add to switch on the nvidia profiler when running woden')
 
 args = parser.parse_args()
 
@@ -268,9 +275,6 @@ else:
 num_time_steps = args.num_time_steps
 num_freq_channels = args.num_freq_channels
 
-print(args.band_nums)
-print(args.cat_filename)
-
 f=fits.open(args.metafits_filename)
 
 initial_date = f[0].header['DATE-OBS']
@@ -294,24 +298,15 @@ base_low_freq = freqcent - (b_width/2) - (ch_width/2)
 
 f.close()
 
-
-
-
-
 write_json(ra0=args.ra0,dec0=args.dec0,num_freqs=num_freq_channels,num_time_steps=num_time_steps,
                cat_filename=args.cat_filename,metafits_filename=args.metafits_filename,band_nums=band_nums)
 
+if args.nvprof:
+    command('nvprof /home/jline/software/WODEN/woden run_woden.json')
+else:
+    command('/home/jline/software/WODEN/woden run_woden.json')
 
-command('/home/jline/software/WODEN/woden run_woden.json')
-
-
-#
-#
-#
-#
-#
 ##Prepare the uvfits information
-
 ##Create and fill a layout array
 array_layout = zeros((len(east)/2,3))
 ##Tiles are listed as YY,XX,YY,XX so only use half positions

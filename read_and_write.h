@@ -101,6 +101,7 @@ typedef struct _visibility_set_t {
   float *sha0s;
   float *cha0s;
   float *lsts;
+  float *wavelengths;
 
 
   // float *d_sum_visi_real;
