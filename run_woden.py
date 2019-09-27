@@ -305,13 +305,13 @@ ch_width = float(f[0].header['FINECHAN'])*1e+3
 freqcent = float(f[0].header['FREQCENT'])*1e+6
 b_width = float(f[0].header['BANDWDTH'])*1e+6
 
+base_low_freq = freqcent - (b_width/2) - (ch_width/2)
+
 if args.time_res:
     time_res = args.time_res
 
 if args.freq_res:
     ch_width = args.freq_res
-
-base_low_freq = freqcent - (b_width/2) - (ch_width/2)
 
 f.close()
 
@@ -353,7 +353,9 @@ for band in band_nums:
     output_uvfits_name = output_uvfits_prepend + '_band%02d.uvfits' %band
 
     band_low_freq = base_low_freq + (band - 1)*1.28e+6
-    central_freq_chan_value = central_freq_chan*ch_width + band_low_freq
+    central_freq_chan_value = band_low_freq + (1.28e+6 / 2.0)
+
+    print(central_freq_chan_value,band_low_freq,base_low_freq)
 
     template_uvfits = fits.open(args.template_uvfits)
     template_data = template_uvfits[0].data
