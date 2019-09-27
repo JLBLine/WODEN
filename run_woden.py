@@ -191,8 +191,9 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
     return uus, vvs, wws, v_container
 
 def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
-               cat_filename=None,metafits_filename=None,band_nums=None):
-    outfile = open('run_woden.json','w+')
+               cat_filename=None,metafits_filename=None,band_nums=None,
+               json_name=None):
+    outfile = open(json_name,'w+')
 
     outfile.write('{\n')
     outfile.write('  "ra0": %.10f,\n' %ra0)
@@ -298,13 +299,16 @@ base_low_freq = freqcent - (b_width/2) - (ch_width/2)
 
 f.close()
 
+json_name = 'run_woden_%s.json' %args.band_nums
+
 write_json(ra0=args.ra0,dec0=args.dec0,num_freqs=num_freq_channels,num_time_steps=num_time_steps,
-               cat_filename=args.cat_filename,metafits_filename=args.metafits_filename,band_nums=band_nums)
+               cat_filename=args.cat_filename,metafits_filename=args.metafits_filename,band_nums=band_nums,
+               json_name=json_name)
 
 if args.nvprof:
-    command('nvprof /home/jline/software/WODEN/woden run_woden.json')
+    command('nvprof /fred/oz048/jline/software/WODEN/woden %s' %json_name)
 else:
-    command('/home/jline/software/WODEN/woden run_woden.json')
+    command('/fred/oz048/jline/software/WODEN/woden %s' %json_name)
 
 ##Prepare the uvfits information
 ##Create and fill a layout array
@@ -376,8 +380,13 @@ for band in band_nums:
 
     template_uvfits.close()
 
-##Tidy up or not
+    ##Tidy up or not
+    if args.no_tidy:
+        pass
+    else:
+        command("rm %s" %filename)
+
 if args.no_tidy:
     pass
 else:
-    command("rm output_visi_band*.dat run_woden.json")
+    command("rm %s" %json_name)
