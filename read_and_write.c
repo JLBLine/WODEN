@@ -356,10 +356,10 @@ woden_settings_t * read_json_settings(const char *filename){
   json_object_object_get_ex(parsed_json, "dec0", &dec0);
   // json_object_object_get_ex(parsed_json, "num_baselines", &num_baselines);
   json_object_object_get_ex(parsed_json, "num_freqs", &num_freqs);
-  // json_object_object_get_ex(parsed_json, "frequency_resolution", &frequency_resolution);
+  json_object_object_get_ex(parsed_json, "frequency_resolution", &frequency_resolution);
   // json_object_object_get_ex(parsed_json, "base_frequency", &base_frequency);
   json_object_object_get_ex(parsed_json, "num_time_steps", &num_time_steps);
-  // json_object_object_get_ex(parsed_json, "time_res", &time_res);
+  json_object_object_get_ex(parsed_json, "time_res", &time_res);
   json_object_object_get_ex(parsed_json, "cat_filename", &cat_filename);
   json_object_object_get_ex(parsed_json, "metafits_filename", &metafits_filename);
 
@@ -372,10 +372,10 @@ woden_settings_t * read_json_settings(const char *filename){
   woden_settings->dec0 = (float)json_object_get_double(dec0)*DD2R;
   // woden_settings->num_baselines = json_object_get_int(num_baselines);
   woden_settings->num_freqs = json_object_get_int(num_freqs);
-  // woden_settings->frequency_resolution = (float)json_object_get_double(frequency_resolution);
+  woden_settings->frequency_resolution = (float)json_object_get_double(frequency_resolution);
   // woden_settings->base_frequency = (float)json_object_get_double(base_frequency);
   woden_settings->num_time_steps = json_object_get_int(num_time_steps);
-  // woden_settings->time_res = (float)json_object_get_double(time_res);
+  woden_settings->time_res = (float)json_object_get_double(time_res);
   woden_settings->cat_filename = json_object_get_string(cat_filename);
   woden_settings->metafits_filename = json_object_get_string(metafits_filename);
 

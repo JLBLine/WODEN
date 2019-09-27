@@ -59,9 +59,12 @@ int main(int argc, char **argv) {
   array_layout = calc_XYZ_diffs(&metafits);
 
   woden_settings->lst_base = metafits.lst_base;
-  woden_settings->frequency_resolution = metafits.frequency_resolution;
   woden_settings->base_low_freq = metafits.base_low_freq;
-  woden_settings->time_res = metafits.time_res;
+
+  // Get these from run_woden.py now, so we can have different settings to the
+  // metafits file for CHIPS runs etc
+  // woden_settings->frequency_resolution = metafits.frequency_resolution;
+  // woden_settings->time_res = metafits.time_res;
 
   woden_settings->num_baselines = array_layout->num_baselines;
 

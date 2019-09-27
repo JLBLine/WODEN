@@ -6,12 +6,15 @@ from numpy import *
 from struct import unpack
 from subprocess import call
 from jdcal import gcal2jd
+from os import environ
 
 R2D = 180.0 / pi
 D2R = pi / 180.0
 MWA_LAT = -26.7033194444
 VELC = 299792458.0
 SOLAR2SIDEREAL = 1.00274
+
+WODEN_DIR = environ['WODEN_DIR']
 
 def command(cmd):
     call(cmd,shell=True)
@@ -192,7 +195,7 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
 
 def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
                cat_filename=None,metafits_filename=None,band_nums=None,
-               json_name=None):
+               json_name=None,freq_res=None,time_res=None):
     outfile = open(json_name,'w+')
 
     outfile.write('{\n')
@@ -202,6 +205,8 @@ def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
     outfile.write('  "num_time_steps": %d,\n' %num_time_steps)
     outfile.write('  "cat_filename": "%s",\n' %cat_filename)
     outfile.write('  "metafits_filename": "%s",\n' %metafits_filename)
+    outfile.write('  "time_res": %.5f,\n' %time_res)
+    outfile.write('  "frequency_resolution": %.3f,\n' %freq_res)
 
     if len(band_nums) == 1:
         band_str = '[%d]' %band_nums[0]
@@ -242,6 +247,10 @@ parser.add_argument('--no_tidy', default=False, action='store_true',
     help='Defaults to deleting output binary files from woden and json files. Add this flag to not delete those files')
 parser.add_argument('--nvprof', default=False, action='store_true',
     help='Add to switch on the nvidia profiler when running woden')
+parser.add_argument('--freq_res', type=float,default=False,
+    help='Fine channel frequnecy resolution (Hz) - will default to what is in the metafits')
+parser.add_argument('--time_res', type=float,default=False,
+    help='Time resolution (s) - will default to what is in the metafits')
 
 args = parser.parse_args()
 
@@ -295,6 +304,13 @@ time_res = float(f[0].header['INTTIME'])
 ch_width = float(f[0].header['FINECHAN'])*1e+3
 freqcent = float(f[0].header['FREQCENT'])*1e+6
 b_width = float(f[0].header['BANDWDTH'])*1e+6
+
+if args.time_res:
+    time_res = args.time_res
+
+if args.freq_res:
+    ch_width = args.freq_res
+
 base_low_freq = freqcent - (b_width/2) - (ch_width/2)
 
 f.close()
@@ -303,12 +319,12 @@ json_name = 'run_woden_%s.json' %args.band_nums
 
 write_json(ra0=args.ra0,dec0=args.dec0,num_freqs=num_freq_channels,num_time_steps=num_time_steps,
                cat_filename=args.cat_filename,metafits_filename=args.metafits_filename,band_nums=band_nums,
-               json_name=json_name)
+               json_name=json_name,freq_res=ch_width,time_res=time_res)
 
 if args.nvprof:
-    command('nvprof /fred/oz048/jline/software/WODEN/woden %s' %json_name)
+    command('nvprof %s/woden %s' %(WODEN_DIR,json_name))
 else:
-    command('/fred/oz048/jline/software/WODEN/woden %s' %json_name)
+    command('%s/woden %s' %(WODEN_DIR,json_name))
 
 ##Prepare the uvfits information
 ##Create and fill a layout array
