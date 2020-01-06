@@ -150,8 +150,8 @@ int main(int argc, char **argv) {
 
     fclose(output_visi);
 
-    // output_visi = fopen("output_visi.txt","a");
-    //
+    output_visi = fopen("output_visi.txt","a");
+
     // for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
     //   for ( int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++ ) {
     //     for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {

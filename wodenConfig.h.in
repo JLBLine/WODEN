@@ -1,0 +1,3 @@
+// the configured options and settings for Tutorial
+#define WODEN_VERSION_MAJOR @WODEN_VERSION_MAJOR@
+#define WODEN_VERSION_MINOR @WODEN_VERSION_MINOR@

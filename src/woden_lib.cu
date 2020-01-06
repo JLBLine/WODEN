@@ -67,6 +67,7 @@ __global__ void calc_uvw_shapelet(float *d_X_diff, float *d_Y_diff, float *d_Z_d
   w_s = (d_cdec0*d_cha0*d_X_diff[mod_baseline]) - (d_cdec0*d_sha0*d_Y_diff[mod_baseline]) + (d_sdec0*d_Z_diff[mod_baseline]);
 
   // printf("%d\n", iBaseline);
+  // printf("iComponent,d_ras[iComponent], d_decs[iComponent], u_s, v_s, w_s %d %f %f %f %f %f\n",iComponent,d_ras[iComponent], d_decs[iComponent], u_s, v_s, w_s );
 
   d_u_s_metres[num_visis*iComponent + iBaseline] = u_s;
   d_v_s_metres[num_visis*iComponent + iBaseline] = v_s;
@@ -350,8 +351,8 @@ __global__ void calc_visi_shapelets2(float *d_S2_ras, float *d_S2_decs, float *d
   register float i = atomicAdd(&d_sum_visi_real[iBaseline],visi.x * extrap_flux);
   register float j = atomicAdd(&d_sum_visi_imag[iBaseline],visi.y * extrap_flux);
   //
-  // register float i = atomicAdd(&d_sum_visi_real[iBaseline],extrap_flux);
-  // register float j = atomicAdd(&d_sum_visi_imag[iBaseline],param_index);
+  // register float i = atomicAdd(&d_sum_visi_real[iBaseline],m);
+  // register float j = atomicAdd(&d_sum_visi_imag[iBaseline],n);
 
 }
 

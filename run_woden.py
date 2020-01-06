@@ -321,8 +321,11 @@ write_json(ra0=args.ra0,dec0=args.dec0,num_freqs=num_freq_channels,num_time_step
                cat_filename=args.cat_filename,metafits_filename=args.metafits_filename,band_nums=band_nums,
                json_name=json_name,freq_res=ch_width,time_res=time_res)
 
+output_uvfits_prepend = args.output_uvfits_prepend
+if output_uvfits_prepend[-7:] == '.uvfits': output_uvfits_prepend = output_uvfits_prepend[-7:]
+
 if args.nvprof:
-    command('nvprof %s/woden %s' %(WODEN_DIR,json_name))
+    command('nvprof --log-file %s_%02d_nvprof.txt  %s/woden %s' %(output_uvfits_prepend,band_nums[0],WODEN_DIR,json_name))
 else:
     command('%s/woden %s' %(WODEN_DIR,json_name))
 
@@ -344,8 +347,7 @@ X,Y,Z = enh2xyz(east[selection], north[selection],height[selection],MWA_LAT*D2R)
 
 central_freq_chan = int(floor(num_freq_channels / 2.0))
 
-output_uvfits_prepend = args.output_uvfits_prepend
-if output_uvfits_prepend[-7:] == '.uvfits': output_uvfits_prepend = output_uvfits_prepend[-7:]
+
 
 
 for band in band_nums:
