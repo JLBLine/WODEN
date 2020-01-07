@@ -44,6 +44,8 @@ elseif (CUDA_ARCH EQUAL "6.2")
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_62")
 elseif (CUDA_ARCH EQUAL "7.0")
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_70")
+elseif (CUDA_ARCH EQUAL "7.5")
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_75")
 endif()
 
 ##Helps with version numbering
@@ -71,7 +73,7 @@ endif()
 
 
 set(HINTS_JSONC_LIB "${JSONC_ROOT}/lib;${JSONC_ROOT}/lib64;${JSONC_ROOT}")
-set(HINTS_JSONC_INC "${JSONC_ROOT}/include;${JSONC_ROOT}/include/json-c;${JSONC_ROOT}")
+set(HINTS_JSONC_INC "${JSONC_ROOT}/include;${JSONC_ROOT}/include/json-c;${JSONC_ROOT};/usr/include/json-c/")
 
 find_path(JSONC_INC json.h HINTS ${HINTS_JSONC_INC})
 find_library(JSONC_LIB json-c HINTS ${HINTS_JSONC_LIB} REQUIRED)
