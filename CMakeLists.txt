@@ -50,7 +50,7 @@ endif()
 configure_file(wodenConfig.h.in wodenConfig.h)
 
 ##All the includes dirs are in include
-include_directories(include)
+#include_directories(include)
 
 ##Find the source codes
 file(GLOB CSOURCES "src/*.c")
@@ -59,21 +59,32 @@ file(GLOB CUDASOURCES "src/*.cu")
 
 ##Find the following libraries
 ##Use can specify CFITSIO_ROOT and JSONC_LIB when running Cmake
+set(HINTS_CFITSIO_LIB "${CFITSIO_ROOT}/lib;${CFITSIO_ROOT}")
+set(HINTS_CFITSIO_INC "${CFITSIO_ROOT}/include;${CFITSIO_ROOT}")
 
-find_path(CFITSIO_INC fitsio.h HINTS ${CFITSIO_ROOT}/include)
-find_library(CFITSIO_LIB cfitsio HINTS ${CFITSIO_ROOT}/lib REQUIRED)
+find_path(CFITSIO_INC fitsio.h HINTS ${HINTS_CFITSIO_INC})
+find_library(CFITSIO_LIB cfitsio HINTS ${HINTS_CFITSIO_LIB} REQUIRED)
 if(CFITSIO_LIB)
   message(STATUS "CFITSIO include path: ${CFITSIO_INC}")
   message(STATUS "CFITSIO library path: ${CFITSIO_LIB}")
 endif()
 
-find_library(JSONC_LIB json-c HINTS ${JSONC_LIB} REQUIRED)
+
+set(HINTS_JSONC_LIB "${JSONC_ROOT}/lib;${JSONC_ROOT}/lib64;${JSONC_ROOT}")
+set(HINTS_JSONC_INC "${JSONC_ROOT}/include;${JSONC_ROOT}/include/json-c;${JSONC_ROOT}")
+
+find_path(JSONC_INC json.h HINTS ${HINTS_JSONC_INC})
+find_library(JSONC_LIB json-c HINTS ${HINTS_JSONC_LIB} REQUIRED)
 if(JSONC_LIB)
+  message(STATUS "JSONC includes path: ${JSONC_INC}")
   message(STATUS "JSONC library path: ${JSONC_LIB}")
 endif()
 
 ##Set the linkers for the C code
-set(CC_LINKLIBS "-lm  ${CFITSIO_LIB} ${JSONC_LIB}")
+set(CC_LINKLIBS "-lm -pthread ${CFITSIO_LIB} ${JSONC_LIB}")
+
+##All the WODEN header dirs are in include dir
+include_directories(include ${JSONC_INC} ${CFITSIO_INC})
 
 ##Generate libraries from the C and CUDA source code
 add_library(wodenC SHARED ${CSOURCES})
