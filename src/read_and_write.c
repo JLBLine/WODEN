@@ -34,7 +34,7 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
   float freq, flux;
   float coeff1, coeff2, coeff3;
 
-  int point_ind, gauss_ind, S1_ind, S2_ind;
+  int point_ind, gauss_ind, shape_ind;
   int coeff_ind;
 
   //So we know how many s_coeffs we have put into S1_coeffs for each source
@@ -78,11 +78,8 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
     if(strncmp(line, COMP_END, strlen(COMP_END))==0) comp_end=1;
     if(strncmp(line, FREQ_KEY, strlen(FREQ_KEY))==0) freq_key=1;
     if(strncmp(line, GPARAMS_KEY, strlen(GPARAMS_KEY))==0) param_key=1;
-    if(strncmp(line, S1PARAMS_KEY, strlen(S1PARAMS_KEY))==0) param_key=1;
-    if(strncmp(line, S2PARAMS_KEY, strlen(S2PARAMS_KEY))==0) param_key=1;
-    if(strncmp(line, S1COEFF_KEY, strlen(S1COEFF_KEY))==0) coeff_key=1;
-    if(strncmp(line, S2COEFF_KEY, strlen(S2COEFF_KEY))==0) coeff_key=1;
-
+    if(strncmp(line, SPARAMS_KEY, strlen(SPARAMS_KEY))==0) param_key=1;
+    if(strncmp(line, SCOEFF_KEY, strlen(SCOEFF_KEY))==0) coeff_key=1;
 
     /* if a source key hasn't been found, skip lines until one is found */
     if ( (src_key==0 && src_end==0 && comp_key==0 && comp_end==0 && freq_key==0 && param_key==0 && coeff_key==0) ||
@@ -122,34 +119,31 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
       comp_found=0;
       point_ind=0;
       gauss_ind=0;
-      S1_ind=0;
-      S2_ind=0;
+      shape_ind=0;
       coeff_ind=0;
 
       // srcs[n_src-1].name = NULL;
       srcs[n_src-1].n_comps = 0;
       srcs[n_src-1].n_points = 0;
       srcs[n_src-1].n_gauss = 0;
-      srcs[n_src-1].n_S1s = 0;
-      srcs[n_src-1].n_S1_coeffs = 0;
-      srcs[n_src-1].n_S2s = 0;
+      srcs[n_src-1].n_shapes = 0;
+      srcs[n_src-1].n_shape_coeffs = 0;
 
-      //Line should look like <SOURCE name P %d G %d S1 %d %d S2 %d %d>
+      //Line should look like <SOURCE name P %d G %d S %d %d>
       //%*s ignores input so we don't have to read in useless input
-      result = sscanf( line, "%*s %s %*s %d %*s %d %*s %d %d %*s %d %d", srcs[n_src-1].name,
+      result = sscanf( line, "%*s %s %*s %d %*s %d %*s %d %d", srcs[n_src-1].name,
                         &(srcs[n_src-1].n_points), &(srcs[n_src-1].n_gauss),
-                        &(srcs[n_src-1].n_S1s), &(srcs[n_src-1].n_S1_coeffs),
-                        &(srcs[n_src-1].n_S2s), &(srcs[n_src-1].n_S2_coeffs) );
-      if (result != 7) {
+                        &(srcs[n_src-1].n_shapes), &(srcs[n_src-1].n_shape_coeffs) );
+      if (result != 5) {
           printf("read_source_catalogue error %d: problem reading cal source input line <%s>\n", result,line );
           return NULL;
       }
 
-      srcs[n_src-1].n_comps = srcs[n_src-1].n_points + srcs[n_src-1].n_gauss + srcs[n_src-1].n_S1s + srcs[n_src-1].n_S2s;
+      srcs[n_src-1].n_comps = srcs[n_src-1].n_points + srcs[n_src-1].n_gauss + srcs[n_src-1].n_shapes;
 
-      printf("New source: name: <%s>, Comps:%d  P:%d  G:%d  S1:%d-%d  S2:%d-%d \n",
+      printf("New source: name: <%s>, Comps:%d  P:%d  G:%d  S:%d-%d \n",
             srcs[n_src-1].name, srcs[n_src-1].n_comps, srcs[n_src-1].n_points, srcs[n_src-1].n_gauss,
-            srcs[n_src-1].n_S1s, srcs[n_src-1].n_S1_coeffs, srcs[n_src-1].n_S2s, srcs[n_src-1].n_S2_coeffs );
+            srcs[n_src-1].n_shapes, srcs[n_src-1].n_shape_coeffs );
 
       //Now we know the number of sources, do some mallocing
       //Pointsource params
@@ -166,21 +160,21 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
       srcs[n_src-1].gauss_minors = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
       srcs[n_src-1].gauss_pas = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
 
-      srcs[n_src-1].S2_ras = malloc( srcs[n_src-1].n_S2s * sizeof(float) );
-      srcs[n_src-1].S2_decs = malloc( srcs[n_src-1].n_S2s * sizeof(float) );
-      srcs[n_src-1].S2_fluxes = malloc( srcs[n_src-1].n_S2s * sizeof(float) );
-      srcs[n_src-1].S2_freqs = malloc( srcs[n_src-1].n_S2s * sizeof(float) );
-      srcs[n_src-1].S2_majors = malloc( srcs[n_src-1].n_S2s * sizeof(float) );
-      srcs[n_src-1].S2_minors = malloc( srcs[n_src-1].n_S2s * sizeof(float) );
-      srcs[n_src-1].S2_pas = malloc( srcs[n_src-1].n_S2s * sizeof(float) );
+      srcs[n_src-1].shape_ras = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_decs = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_fluxes = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_freqs = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_majors = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_minors = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_pas = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
 
-      //Need bigger arrays to hold the coeffs - make a S2_param_indexes
+      //Need bigger arrays to hold the coeffs - make a shape_param_indexes
       //array so we can map each n1.n2,coeff to the corresponding pa,major,minor
       //when we have multiple shapelet models within a source
-      srcs[n_src-1].S2_n1s = malloc( srcs[n_src-1].n_S2_coeffs * sizeof(float) );
-      srcs[n_src-1].S2_n2s = malloc( srcs[n_src-1].n_S2_coeffs * sizeof(float) );
-      srcs[n_src-1].S2_coeffs = malloc( srcs[n_src-1].n_S2_coeffs * sizeof(float) );
-      srcs[n_src-1].S2_param_indexes = malloc( srcs[n_src-1].n_S2_coeffs * sizeof(float) );
+      srcs[n_src-1].shape_n1s = malloc( srcs[n_src-1].n_shape_coeffs * sizeof(float) );
+      srcs[n_src-1].shape_n2s = malloc( srcs[n_src-1].n_shape_coeffs * sizeof(float) );
+      srcs[n_src-1].shape_coeffs = malloc( srcs[n_src-1].n_shape_coeffs * sizeof(float) );
+      srcs[n_src-1].shape_param_indexes = malloc( srcs[n_src-1].n_shape_coeffs * sizeof(float) );
 
     }
 
@@ -199,7 +193,6 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
       if(strncmp(comp_type, POINT_KEY, strlen(POINT_KEY))==0) type_key=POINT;
       if(strncmp(comp_type, GAUSSIAN_KEY, strlen(GAUSSIAN_KEY))==0) type_key=GAUSSIAN;
       if(strncmp(comp_type, SHAPELET_KEY, strlen(SHAPELET_KEY))==0) type_key=SHAPELET;
-      if(strncmp(comp_type, SHAPELET2_KEY, strlen(SHAPELET2_KEY))==0) type_key=SHAPELET2;
 
       switch (type_key) {
         case POINT:
@@ -217,10 +210,10 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
           srcs[n_src-1].gauss_decs[gauss_ind-1] = dec * DD2R;
         break;
 
-        case SHAPELET2:
-          S2_ind++;
-          srcs[n_src-1].S2_ras[S2_ind-1] = ra * DH2R;
-          srcs[n_src-1].S2_decs[S2_ind-1] = dec * DD2R;
+        case SHAPELET:
+          shape_ind++;
+          srcs[n_src-1].shape_ras[shape_ind-1] = ra * DH2R;
+          srcs[n_src-1].shape_decs[shape_ind-1] = dec * DD2R;
         break;
 
         default:
@@ -254,9 +247,9 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
           srcs[n_src-1].gauss_fluxes[gauss_ind-1] = flux;
         break;
 
-        case SHAPELET2:
-          srcs[n_src-1].S2_freqs[S2_ind-1] = freq;
-          srcs[n_src-1].S2_fluxes[S2_ind-1] = flux;
+        case SHAPELET:
+          srcs[n_src-1].shape_freqs[shape_ind-1] = freq;
+          srcs[n_src-1].shape_fluxes[shape_ind-1] = flux;
         break;
 
       default:
@@ -281,10 +274,10 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
           srcs[n_src-1].gauss_minors[gauss_ind-1] = coeff3 * (DD2R / 60.0);
         break;
 
-        case SHAPELET2:
-          srcs[n_src-1].S2_pas[S2_ind-1] =  coeff1 * DD2R;
-          srcs[n_src-1].S2_majors[S2_ind-1] = coeff2 * (DD2R / 60.0);
-          srcs[n_src-1].S2_minors[S2_ind-1] = coeff3 * (DD2R / 60.0);
+        case SHAPELET:
+          srcs[n_src-1].shape_pas[shape_ind-1] =  coeff1 * DD2R;
+          srcs[n_src-1].shape_majors[shape_ind-1] = coeff2 * (DD2R / 60.0);
+          srcs[n_src-1].shape_minors[shape_ind-1] = coeff3 * (DD2R / 60.0);
         break;
 
       default:
@@ -301,11 +294,11 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
       }
 
       switch (type_key) {
-        case SHAPELET2:
-          srcs[n_src-1].S2_n1s[coeff_ind] = coeff1;
-          srcs[n_src-1].S2_n2s[coeff_ind] = coeff2;
-          srcs[n_src-1].S2_coeffs[coeff_ind] = coeff3;
-          srcs[n_src-1].S2_param_indexes[coeff_ind] = S2_ind - 1;
+        case SHAPELET:
+          srcs[n_src-1].shape_n1s[coeff_ind] = coeff1;
+          srcs[n_src-1].shape_n2s[coeff_ind] = coeff2;
+          srcs[n_src-1].shape_coeffs[coeff_ind] = coeff3;
+          srcs[n_src-1].shape_param_indexes[coeff_ind] = shape_ind - 1;
         break;
 
       default:
@@ -593,10 +586,8 @@ int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
 	for(i=0; i<metafits->naxes[1];i++){
             lengptr[i] = metafits->leng[i];
 	}
-	//James changed the next line, original line commented below
-            //fits_read_col(mfptr, TSTRING, colnum,1, felem, 1, &nullval, &(metafits->leng[0]), &anynulls, &status);
-            //fits_read_col(mfptr, TSTRING, colnum,1, felem, 14, &nullval, &testa, &anynulls, &status);
-	fits_read_col(mfptr, TSTRING, colnum, frow, felem, metafits->naxes[1], &nullval, &lengptr, &anynulls, &status);
+
+  fits_read_col(mfptr, TSTRING, colnum, frow, felem, metafits->naxes[1], &nullval, &lengptr, &anynulls, &status);
         //}
 	for(i=0;i<metafits->naxes[1];i++){
 		metafits->leng[i][0] = 'E';
@@ -633,12 +624,6 @@ array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits){
                   &(array_layout->ant_X[i]), &(array_layout->ant_Y[i]), &(array_layout->ant_Z[i]));
 
   }
-
-  // for ant1 in arange(len(X) - 1):
-  //   for ant2 in arange(ant1 + 1, len(X)):
-  //       x_lengths.append(X[ant1] - X[ant2])
-  //       y_lengths.append(Y[ant1] - Y[ant2])
-  //       z_lengths.append(Z[ant1] - Z[ant2])
 
   array_layout->X_diff_metres = malloc( array_layout->num_baselines * sizeof(float) );
   array_layout->Y_diff_metres = malloc( array_layout->num_baselines * sizeof(float) );

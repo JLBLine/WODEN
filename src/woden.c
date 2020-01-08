@@ -33,14 +33,10 @@ int main(int argc, char **argv) {
 
   }
 
-  float *sbf2;
-  sbf2 = NULL;
-  sbf2 = malloc( sbf_N2 * sbf_L2 * sizeof(float) );
-  sbf2 = create_sbf2(sbf2);
-
-  // char json_settings[] = "test.json";
-
-  // char json_settings[] = argv[1];
+  float *sbf;
+  sbf = NULL;
+  sbf = malloc( sbf_N * sbf_L * sizeof(float) );
+  sbf = create_sbf(sbf);
 
   woden_settings_t * woden_settings;
   woden_settings = read_json_settings(argv[1]);
@@ -81,6 +77,8 @@ int main(int argc, char **argv) {
   float sdec0,cdec0;
   sdec0 = sin(woden_settings->dec0); cdec0=cos(woden_settings->dec0);
 
+  printf("Setting phase centre (rad) to %f %f\n",woden_settings->ra0, woden_settings->dec0);
+
   float angles_array[3] = {sdec0, cdec0, woden_settings->ra0};
 
   for (size_t band = 0; band < woden_settings->num_bands; band++) {
@@ -88,16 +86,16 @@ int main(int argc, char **argv) {
     float base_band_freq = ((band_num - 1)*(metafits.bandwidth/24.0)) + woden_settings->base_low_freq;
     printf("Simulating band %02d with bottom freq %.8e\n",band_num,base_band_freq);
 
-    visibility_set_t visibility_set;
-    visibility_set.sum_visi_real = malloc( num_visis * sizeof(float) );
-    visibility_set.sum_visi_imag = malloc( num_visis * sizeof(float) );
-    visibility_set.us_metres = malloc( num_visis * sizeof(float) );
-    visibility_set.vs_metres = malloc( num_visis * sizeof(float) );
-    visibility_set.ws_metres = malloc( num_visis * sizeof(float) );
-    visibility_set.sha0s = malloc( num_visis * sizeof(float) );
-    visibility_set.cha0s = malloc( num_visis * sizeof(float) );
-    visibility_set.lsts = malloc( num_visis * sizeof(float) );
-    visibility_set.wavelengths = malloc( num_visis * sizeof(float) );
+    visibility_set_t *visibility_set = malloc(sizeof(visibility_set_t));
+    visibility_set->sum_visi_real = malloc( num_visis * sizeof(float) );
+    visibility_set->sum_visi_imag = malloc( num_visis * sizeof(float) );
+    visibility_set->us_metres = malloc( num_visis * sizeof(float) );
+    visibility_set->vs_metres = malloc( num_visis * sizeof(float) );
+    visibility_set->ws_metres = malloc( num_visis * sizeof(float) );
+    visibility_set->sha0s = malloc( num_visis * sizeof(float) );
+    visibility_set->cha0s = malloc( num_visis * sizeof(float) );
+    visibility_set->lsts = malloc( num_visis * sizeof(float) );
+    visibility_set->wavelengths = malloc( num_visis * sizeof(float) );
 
     for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
       // float lst = woden_settings->lst_base + (time_step*woden_settings->time_res*SOLAR2SIDEREAL*D2R)*(15.0/3600.0);
@@ -115,10 +113,10 @@ int main(int argc, char **argv) {
 
         for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {
 
-          visibility_set.cha0s[step + baseline] = cha0;
-          visibility_set.sha0s[step + baseline] = sha0;
-          visibility_set.lsts[step + baseline] = lst;
-          visibility_set.wavelengths[step + baseline] = wavelength;
+          visibility_set->cha0s[step + baseline] = cha0;
+          visibility_set->sha0s[step + baseline] = sha0;
+          visibility_set->lsts[step + baseline] = lst;
+          visibility_set->wavelengths[step + baseline] = wavelength;
         }//baseline loop
       }//freq loop
     }//time loop
@@ -126,8 +124,8 @@ int main(int argc, char **argv) {
     Atomic_time_step(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
                     srccat->catsources[0], angles_array,
                     woden_settings->num_baselines, num_visis, visibility_set,
-                    sbf2);
-    //
+                    sbf);
+
     FILE *output_visi;
     char buf[0x100];
     snprintf(buf, sizeof(buf), "output_visi_band%02d.dat", band_num);
@@ -140,30 +138,42 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    fwrite(visibility_set.us_metres, num_visis*sizeof(float), 1, output_visi);
-    fwrite(visibility_set.vs_metres, num_visis*sizeof(float), 1, output_visi);
-    fwrite(visibility_set.ws_metres, num_visis*sizeof(float), 1, output_visi);
-    fwrite(visibility_set.sum_visi_real, num_visis*sizeof(float), 1, output_visi);
-    fwrite(visibility_set.sum_visi_imag, num_visis*sizeof(float), 1, output_visi);
+    fwrite(visibility_set->us_metres, num_visis*sizeof(float), 1, output_visi);
+    fwrite(visibility_set->vs_metres, num_visis*sizeof(float), 1, output_visi);
+    fwrite(visibility_set->ws_metres, num_visis*sizeof(float), 1, output_visi);
+    fwrite(visibility_set->sum_visi_real, num_visis*sizeof(float), 1, output_visi);
+    fwrite(visibility_set->sum_visi_imag, num_visis*sizeof(float), 1, output_visi);
 
     fflush(output_visi);
-
     fclose(output_visi);
 
-    output_visi = fopen("output_visi.txt","a");
-
+    //Dumps u,v,w (metres), Re(vis), Im(vis) directly to text file - useful for
+    //bug hunting with small outputs
+    // char buff[0x100];
+    // snprintf(buff, sizeof(buff), "output_visi_band%02d.txt", band_num);
+    // output_visi = fopen(buff,"ab");
     // for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
     //   for ( int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++ ) {
     //     for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {
     //       int step = woden_settings->num_baselines*(time_step*woden_settings->num_freqs + freq_step);
-    //       fprintf(output_visi,"%f %f %f %f %f\n",visibility_set.us_metres[step + baseline],
-    //               visibility_set.vs_metres[step + baseline],visibility_set.ws_metres[step + baseline],
-    //               visibility_set.sum_visi_real[step + baseline],visibility_set.sum_visi_imag[step + baseline]);
+    //       fprintf(output_visi,"%f %f %f %f %f\n",visibility_set->us_metres[step + baseline],
+    //               visibility_set->vs_metres[step + baseline],visibility_set->ws_metres[step + baseline],
+    //               visibility_set->sum_visi_real[step + baseline],visibility_set->sum_visi_imag[step + baseline]);
     //     }
     //   }
     // }
     // fclose(output_visi);
 
-    // }//freq loop
+    free( visibility_set->sum_visi_real );
+    free( visibility_set->sum_visi_imag );
+    free( visibility_set->us_metres );
+    free( visibility_set->vs_metres );
+    free( visibility_set->ws_metres );
+    free( visibility_set->sha0s );
+    free( visibility_set->cha0s );
+    free( visibility_set->lsts );
+    free( visibility_set->wavelengths );
+    free( visibility_set );
+
   }//band loop
 }//main

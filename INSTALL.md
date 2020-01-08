@@ -7,6 +7,15 @@ NVIDIA CUDA (https://developer.nvidia.com/cuda-downloads) \
 CFITSIO (https://heasarc.gsfc.nasa.gov/fitsio/) \
 json-c (https://github.com/json-c/json-c)
 
+The wrapper `run_woden.py` relies on the python modules:
+astropy
+numpy
+struct
+subprocess
+jdcal
+
+Note in future work I plan removing the bespoke uvfits behaviour and linking with pyuvdata (https://pyuvdata.readthedocs.io/en/latest/).
+
 ## Installation
 Installation is run via CMake. In the WODEN repo, create a `build` dir:
 ```sh

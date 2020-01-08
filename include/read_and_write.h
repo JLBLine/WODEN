@@ -12,11 +12,8 @@
 #define GAUSSIAN_KEY    "GAUSSIAN"
 #define GPARAMS_KEY     "GPARAMS"
 #define SHAPELET_KEY    "SHAPELET"
-#define S1PARAMS_KEY    "S1PARAMS"
-#define S1COEFF_KEY     "S1COEFF"
-#define SHAPELET2_KEY   "SHAPELET2"
-#define S2PARAMS_KEY    "S2PARAMS"
-#define S2COEFF_KEY     "S2COEFF"
+#define SPARAMS_KEY     "SPARAMS"
+#define SCOEFF_KEY      "SCOEFF"
 #define DH2R 0.26179938779914943653855361527329190701643078328126
 #define DD2R 0.017453292519943295769236907684886127134428718885417
 #define VELC 299792458.0
@@ -36,8 +33,8 @@ typedef struct _catsource_t {
   int n_gauss;
   int n_S1s;
   int n_S1_coeffs;
-  int n_S2s;
-  int n_S2_coeffs;
+  int n_shapes;
+  int n_shape_coeffs;
 
   //Pointsource params
   float *point_ras;
@@ -59,29 +56,18 @@ typedef struct _catsource_t {
   float *gauss_minors;
   float *gauss_pas;
 
-  float *S1_ras;
-  float *S1_decs;
-  float *S1_fluxes;
-  float *S1_freqs;
-  float *S1_coeffs;
-  float *S1_n1s;
-  float *S1_n2s;
-  float *S1_majors;
-  float *S1_minors;
-  float *S1_pas;
-  float *S1_param_indexes;
-
-  float *S2_ras;
-  float *S2_decs;
-  float *S2_fluxes;
-  float *S2_freqs;
-  float *S2_coeffs;
-  float *S2_n1s;
-  float *S2_n2s;
-  float *S2_majors;
-  float *S2_minors;
-  float *S2_pas;
-  float *S2_param_indexes;
+  //Shapelet params
+  float *shape_ras;
+  float *shape_decs;
+  float *shape_fluxes;
+  float *shape_freqs;
+  float *shape_coeffs;
+  float *shape_n1s;
+  float *shape_n2s;
+  float *shape_majors;
+  float *shape_minors;
+  float *shape_pas;
+  float *shape_param_indexes;
 
   // float *n_coeffs
 
@@ -144,7 +130,7 @@ typedef struct _array_layout_t {
     float lst_base;
 } array_layout_t;
 
-//Stolen from the RTS
+//Taken from the RTS
 typedef struct _Meta_Ffile {
     char recvrs[38];
     char calib[1];
