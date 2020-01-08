@@ -10,8 +10,8 @@ from subprocess import call, check_output
 from jdcal import gcal2jd
 from os import environ
 
-gitlabel = check_output(["git", "describe", "--always"]).strip()
-# print(check_output(["git", "describe", "--always"]))
+##Grab the git version from the command line
+gitlabel = check_output(["git", "describe", "--always"],universal_newlines=True).strip()
 
 R2D = 180.0 / pi
 D2R = pi / 180.0
@@ -111,6 +111,9 @@ def create_uvfits(v_container=None,freq_cent=None, ra_point=None, dec_point=None
     uvhdu.header['OBJECT']  = 'Undefined'
     uvhdu.header['OBSRA']   = ra_point
     uvhdu.header['OBSDEC']  = dec_point
+
+    ##Add in the gitlabel so we know what version generated the file
+    uvhdu.header['GITLABEL'] = gitlabel
 
     ##ANTENNA TABLE MODS======================================================================
 

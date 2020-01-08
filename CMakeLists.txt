@@ -48,16 +48,12 @@ elseif (CUDA_ARCH EQUAL "7.5")
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_75")
 endif()
 
-##Helps with version numbering
-configure_file(wodenConfig.h.in wodenConfig.h)
-
 ##All the includes dirs are in include
 #include_directories(include)
 
 ##Find the source codes
 file(GLOB CSOURCES "src/*.c")
 file(GLOB CUDASOURCES "src/*.cu")
-
 
 ##Find the following libraries
 ##Use can specify CFITSIO_ROOT and JSONC_LIB when running Cmake
@@ -96,9 +92,14 @@ add_library(wodenCUDA SHARED ${CUDASOURCES})
 add_executable(woden src/woden.c)
 target_link_libraries(woden wodenC wodenCUDA ${CC_LINKLIBS})
 
+##Copy run_woden.py into the build dir
+find_path(WODENPY run_woden.py HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
+if(WODENPY)
+  message(STATUS "WODENPY path: ${WODENPY}")
+endif()
+configure_file("${WODENPY}/run_woden.py" run_woden.py COPYONLY)
+
 ##Make a symlink to the tempate MWA uvfits so it's easy to find
-
-
 set(link "template_MWA_128T.uvfits")
 find_path(UVFITS_DIR template_MWA_128T.uvfits HINTS "${CMAKE_CURRENT_LIST_DIR}/templates/")
 if(UVFITS_DIR)
@@ -108,5 +109,12 @@ set(target "${UVFITS_DIR}/template_MWA_128T.uvfits")
 
 ADD_CUSTOM_TARGET(link_target ALL
                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${target} ${link})
+                  
+##Copy the variable init script so this file can be put in bashrc
+find_path(INIT_WODEN init_WODEN.sh HINTS "${CMAKE_CURRENT_LIST_DIR}/templates/")
+if(INIT_WODEN)
+  message(STATUS "INIT_WODEN path: ${INIT_WODEN}")
+endif()
+configure_file("${INIT_WODEN}/init_WODEN.sh" init_WODEN.sh COPYONLY)
 
 

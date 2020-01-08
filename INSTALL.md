@@ -55,11 +55,11 @@ make
 ```
 
 ## Post compilation
-The python wrapper `run_woden.py` uses an environment variable to locate the `woden` executable. Once you have compiled WODEN, create the following variable (e.g. for `bash`):
+The python wrapper `run_woden.py` uses an environment variable to locate the `woden` executable. Once you have compiled WODEN, run the following script (e.g. for `bash`):
 ```
-export WODEN_DIR=/path/to/your/WODEN/build
+source /path/to/your/WODEN/build/init_WODEN.sh
 ```
-which you can put in your `~/.bashrc` and then forget about it.
+This will create the variable `$WODEN_DIR`, and add it to your `$PATH`. You can put in your `~/.bashrc` and then forget about it.
 
 The `json-c` library is dynamic, so you need to ensure that WODEN can see it when running. It may already be in your `$LD_LIBRARY_PATH`, but if it isn't, you can add it to your `~/.bashrc` if you are a `bash` user via
 ```
