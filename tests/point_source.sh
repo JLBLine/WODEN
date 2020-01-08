@@ -2,7 +2,7 @@
 
 mkdir -p data
 
-../run_woden.py \
+run_woden.py \
     --ra0=50.67 --dec0=-37.2 \
     --num_freq_channels=16 --num_time_steps=14 \
     --freq_res=80e+3 --time_res=8.0 \
