@@ -238,8 +238,8 @@ if __name__ == "__main__":
         help='RTS-v2-like srclist to simulate')
     parser.add_argument('--metafits_filename',
         help='Metafits file to base the simulation on')
-    parser.add_argument('--template_uvfits',
-        help='Template uvfits to base outputs on')
+    parser.add_argument('--template_uvfits', default="%s/template_MWA_128T.uvfits" %WODEN_DIR,
+        help='Template uvfits to base outputs on - defaults to template_MWA_128T.uvfits')
     parser.add_argument('--output_uvfits_prepend',
         help='Prepend name for uvfits - will append band%%02d.uvfits %%band_num at the end')
     parser.add_argument('--num_freq_channels', type=int,
