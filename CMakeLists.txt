@@ -95,3 +95,18 @@ add_library(wodenCUDA SHARED ${CUDASOURCES})
 ##make the final WODEN executable, linking the libraries
 add_executable(woden src/woden.c)
 target_link_libraries(woden wodenC wodenCUDA ${CC_LINKLIBS})
+
+##Make a symlink to the tempate MWA uvfits so it's easy to find
+
+
+set(link "template_MWA_128T.uvfits")
+find_path(UVFITS_DIR template_MWA_128T.uvfits HINTS "${CMAKE_CURRENT_LIST_DIR}/templates/")
+if(UVFITS_DIR)
+  message(STATUS "UVFITS_DIR path: ${UVFITS_DIR}")
+endif()
+set(target "${UVFITS_DIR}/template_MWA_128T.uvfits")
+
+ADD_CUSTOM_TARGET(link_target ALL
+                  COMMAND ${CMAKE_COMMAND} -E create_symlink ${target} ${link})
+
+
