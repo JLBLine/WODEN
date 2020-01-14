@@ -10,8 +10,14 @@ from subprocess import call, check_output
 from jdcal import gcal2jd
 from os import environ
 
-##Grab the git version from the command line
+##Find out where the git repo is, cd in and grab the git label
+##TODO do this in a better way
+fileloc = os.path.realpath(__file__)
+cwd = os.getcwd()
+os.chdir(('/').join(fileloc.split('/')[:-1]))
 gitlabel = check_output(["git", "describe", "--always"],universal_newlines=True).strip()
+##Get back to where we were before
+os.chdir(cwd)
 
 R2D = 180.0 / pi
 D2R = pi / 180.0
