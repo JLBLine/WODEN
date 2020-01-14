@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
   source_catalogue_t *srccat;
   srccat = read_source_catalogue(woden_settings->cat_filename);
 
-  int status;
+  int status=0;
   // array_layout_t * array_layout;
   static fitsfile *metaf_file=NULL;
   MetaFfile_t metafits;
