@@ -9,6 +9,7 @@ from struct import unpack
 from subprocess import call, check_output
 from jdcal import gcal2jd
 from os import environ
+import os
 
 ##Find out where the git repo is, cd in and grab the git label
 ##TODO do this in a better way
