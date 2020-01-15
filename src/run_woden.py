@@ -248,24 +248,25 @@ if __name__ == "__main__":
         help='RTS-v2-like srclist to simulate')
     parser.add_argument('--metafits_filename',
         help='Metafits file to base the simulation on')
-    parser.add_argument('--template_uvfits', default="%s/template_MWA_128T.uvfits" %WODEN_DIR,
-        help='Template uvfits to base outputs on - defaults to template_MWA_128T.uvfits')
-    parser.add_argument('--output_uvfits_prepend',
-        help='Prepend name for uvfits - will append band%%02d.uvfits %%band_num at the end')
-    parser.add_argument('--num_freq_channels', type=int,
-        help='Number of fine frequency channels to simulate')
-    parser.add_argument('--num_time_steps', type=int,
-        help='The number of time steps to simualte')
     parser.add_argument('--band_nums', default='all',
         help='Defaults to running all 24 course bands. Alternatively, enter required numbers delineated by commas, e.g. --band_nums=1,7,9')
-    parser.add_argument('--no_tidy', default=False, action='store_true',
-        help='Defaults to deleting output binary files from woden and json files. Add this flag to not delete those files')
-    parser.add_argument('--nvprof', default=False, action='store_true',
-        help='Add to switch on the nvidia profiler when running woden')
+    parser.add_argument('--output_uvfits_prepend',default='output',
+        help='Prepend name for uvfits - will append band%%02d.uvfits %%band_num at the end. Defaults to "output".')
+    parser.add_argument('--template_uvfits', default="%s/template_MWA_128T.uvfits" %WODEN_DIR,
+        help='Template uvfits to base outputs on - defaults to template_MWA_128T.uvfits')
+    parser.add_argument('--num_freq_channels', default='obs',
+        help='Number of fine frequency channels to simulate - defaults to 1.28MHz / --freq_res')
+    parser.add_argument('--num_time_steps', default='obs',
+        help='The number of time steps to simualte - defaults to how many are in the metafits')
     parser.add_argument('--freq_res', type=float,default=False,
         help='Fine channel frequnecy resolution (Hz) - will default to what is in the metafits')
     parser.add_argument('--time_res', type=float,default=False,
         help='Time resolution (s) - will default to what is in the metafits')
+    parser.add_argument('--no_tidy', default=False, action='store_true',
+        help='Defaults to deleting output binary files from woden and json files. Add this flag to not delete those files')
+    parser.add_argument('--nvprof', default=False, action='store_true',
+        help='Add to switch on the nvidia profiler when running woden')
+
 
     args = parser.parse_args()
 
@@ -277,14 +278,6 @@ if __name__ == "__main__":
     #         exit()
     #     else:
     #         return option
-    #
-    # ##Get inputs
-    # time = false_test(options.time,'"time"')
-    # metafits = false_test(options.metafits,'"metafits"')
-    # output_dir = false_test(options.output_dir,'"output_dir"')
-    # #srclist = false_test(options.srclist,'"srclist"')
-    # time_int = false_test(options.time_int,'"time_int"')
-    # oskar_uvfits_tag = false_test(options.oskar_uvfits_tag,'"oskar_uvfits_tag"')
 
     if args.band_nums == 'all':
         band_nums = range(1,25)
@@ -326,6 +319,16 @@ if __name__ == "__main__":
 
         if args.freq_res:
             ch_width = args.freq_res
+
+        if args.num_freq_channels == 'obs':
+            num_freq_channels = int(floor(1.28e+6) / ch_width)
+        else:
+            num_freq_channels = int(args.num_freq_channels)
+
+        if args.num_time_steps == 'obs':
+            num_time_steps = int(f[0].header['NSCANS'])
+        else:
+            num_time_steps = int(args.num_time_steps)
 
         f.close()
 
