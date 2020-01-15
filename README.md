@@ -29,20 +29,20 @@ to image the test simulations and check they make sense given the input source c
 Run using the python wrapper script `run_woden.py`, which generates the necessary `.json` input file. The arguments for the script are detailed below (also see `run_woden.py --help`)
 
 Argument  | Type | Description
---|---|--
-- - ra0  | Mandatory  | RA of the desired phase centre (deg)
-- - dec0  | Mandatory  | Dec of the desired phase centre (deg)
-- - cat_filename  | Mandatory  | A WODEN style source catalogue to simulate
-- - metafits_filename  | Mandatory  | Metafits file to base the simulation on. WODEN takes the array layout, LST, observing frequency, and time and frequency resolution from the metafits
-- - band_nums  | Optional | Defaults to running all 24 course bands. Alternatively, enter required numbers delineated by commas, e.g. --band_nums=1,7,9
-- - output_uvfits_prepend  | Optional  | Prepend name for uvfits - will append `band%02d.uvfits %band_num` at the end. Can include the path to another directory.
-- - num_freq_channels  | Optional  | The number of frequency channels within a band to simulate - defaults to 1.28MHz / --freq_res
-- - num_time_steps  | Optional  | The number of time steps to simulate - defaults to how many are in the metafits
-- - freq_res  | Optional | Fine channel frequency resolution (Hz) - will default to what is in the metafits
-- - time_res  | Optional  | Time resolution (s) - will default to what is in the metafits
-- - no_tidy  | Optional  | Defaults to deleting output binary files from WODEN and `.json` files. Add this flag to not delete these files
-- - nvprof  | Optional  | Add to switch on the nvidia profiler when running WODEN and save output profile results to a `.txt` file, in the same location as the output uvfits. This may or may not work depending on how your CUDA installation works
-- - template_uvfits  | Optional | The template uvfits file to base outputs on - defaults to `/build/template_MWA_128T.uvfits`
+--|--|--
+`--ra0`  | Mandatory  | RA of the desired phase centre (deg)
+`--dec0`  | Mandatory  | Dec of the desired phase centre (deg)
+`--cat_filename`  | Mandatory  | A WODEN style source catalogue to simulate
+`--metafits_filename`  | Mandatory  | Metafits file to base the simulation on. WODEN takes the array layout, LST, observing frequency, and time and frequency resolution from the metafits
+`--band_nums`  | Optional | Defaults to running all 24 course bands. Alternatively, enter required numbers delineated by commas, e.g. --band_nums=1,7,9
+`--output_uvfits_prepend`  | Optional  | Prepend name for uvfits - will append `band%02d.uvfits %band_num` at the end. Can include the path to another directory.
+`--num_freq_channels`  | Optional  | The number of frequency channels within a band to simulate - defaults to 1.28MHz / --freq_res
+`--num_time_steps`  | Optional  | The number of time steps to simulate - defaults to how many are in the metafits
+`--freq_res`  | Optional | Fine channel frequency resolution (Hz) - will default to what is in the metafits
+`--time_res`  | Optional  | Time resolution (s) - will default to what is in the metafits
+`--no_tidy`  | Optional  | Defaults to deleting output binary files from WODEN and `.json` files. Add this flag to not delete these files
+`--nvprof`  | Optional  | Add to switch on the nvidia profiler when running WODEN and save output profile results to a `.txt` file, in the same location as the output uvfits. This may or may not work depending on how your CUDA installation works
+`--template_uvfits`  | Optional | The template uvfits file to base outputs on - defaults to `/build/template_MWA_128T.uvfits`
 
 Alternatively, one can run WODEN directly via the command line, using a `.json` file such as
 ```sh
@@ -136,7 +136,7 @@ GPARAMS 45.0000000000 6.0 3.0
 ##Specify the gaussian parameters as `GPARAMS pa(deg) major_axis(arcmin) minor_axis(arcmin)`
 ##The major and minor axes are specified as FWHM
 ##Note this line needs to sit in between the lines starting with
-`COMPONENT GAUSSIAN` and `ENDCOMPONENT`
+##`COMPONENT GAUSSIAN` and `ENDCOMPONENT`
 ```
 
 ### 4.3 Shapelet sources
