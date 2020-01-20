@@ -142,7 +142,7 @@ GPARAMS 45.0000000000 6.0 3.0
 ### 4.3 Shapelet sources
 To generate shapelet models compatible with WODEN, simply use [SHAMFI](https://github.com/JLBLine/SHAMFI) to fit an image with the `--woden_srclist` option. This will ensure all normalisations are correct. An example srclist (made by hand so the normalisations _won't_ be correct) is:
 ```
-SOURCE shapelet_source P 0 G 0 S 3 1
+SOURCE shapelet_source P 0 G 0 S 1 3
 COMPONENT SHAPELET 3.378 -37.2
 FREQ 1.8e+08 10.0 0 0 0
 SPARAMS 45.0000000000 6.0 3.0
@@ -152,7 +152,7 @@ SCOEFF 4 5 0.004567
 ENDCOMPONENT
 ENDSOURCE
 ```
-which generates a single shapelet component, including 3 coffecients, hence `S 3 1` in the first line. The `SPARAMS` line again details `SPARAMS pa(deg) major_axis(arcmin) minor_axis(arcmin)` similarly to the gaussian source. The extra lines detail:
+which generates a single shapelet component, including 3 coffecients, hence `S 1 3` in the first line. The `SPARAMS` line again details `SPARAMS pa(deg) major_axis(arcmin) minor_axis(arcmin)` similarly to the gaussian source. The extra lines detail:
 ```
 SCOEFF 0 0 0.92342
 ##Details the order of the shapelet basis function (see Line et al. 2020
@@ -164,7 +164,7 @@ You can add as many `SCOEFF` lines as necessary, with a maximum order < 100. If 
 ### 4.4 Putting it all together
 An example srclist with all component types would look something like this:
 ```
-SOURCE multi_sources P 3 G 1 S 7 2
+SOURCE multi_sources P 3 G 1 S 2 7
 COMPONENT SHAPELET 3.378 -37.2
 FREQ 1.8e+08 10.0 0 0 0
 SPARAMS 45.0000000000 6.0 3.0

@@ -259,17 +259,19 @@ __global__ void calc_visi_shapelets(float *d_shape_ras, float *d_shape_decs, flo
   float cospa = cos(pa);
 
   float d_wavelength = d_wavelengths[iBaseline];
-  //
+
   float u_s = d_u_s_metres[param_index*num_visis + iBaseline] / d_wavelength;
   float v_s = d_v_s_metres[param_index*num_visis + iBaseline] / d_wavelength;
   //
-  float x = cospa*v_s + sinpa*u_s; // major axis
-  float y = -sinpa*v_s + cospa*u_s; // minor axis
+  float x = (cospa*v_s + sinpa*u_s); // major axis
+  float y = (-sinpa*v_s + cospa*u_s); // minor axis
 
   //Scales the FWHM to std to match basis functions, and account for the
   //basis functions being stored with beta = 1.0
+  //Basis functions have been stored in such a way that x is in the same
+  //direction as on sky, but y is opposite, so include negative here
   float const_x = (d_shape_majors[param_index]*SQRT_M_PI_2_2_LN_2)/sbf_dx;
-  float const_y = (d_shape_minors[param_index]*SQRT_M_PI_2_2_LN_2)/sbf_dx;
+  float const_y = -(d_shape_minors[param_index]*SQRT_M_PI_2_2_LN_2)/sbf_dx;
 
   // I^(n1+n2) = Ipow_lookup[(n1+n2) % 4]
   cuFloatComplex Ipow_lookup[] = { make_cuFloatComplex(  1.0,  0.0 ),
