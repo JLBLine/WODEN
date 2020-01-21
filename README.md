@@ -9,7 +9,7 @@ WODEN reads parameters in from a `.json` file, relying heavily on an MWA metafit
 
 Code borrows the gaussian and shapelet methodology from the RTS [Mitchell et al. 2008](https://ieeexplore.ieee.org/document/4703504?arnumber=4703504 "IEEExplorer"), as well as directly uses the metafits file reader.
 
-WODEN is able to run using shapelet model source catalogues generated with SHApelet Modelling For Interferometers ([SHAMFI](https://github.com/JLBLine/SHAMFI)), specified with the `--woden_srclist` SHAMFI option.
+WODEN is able to run using shapelet model source catalogues generated with SHApelet Modelling For Interferometers ([SHAMFI](https://github.com/JLBLine/SHAMFI)), specified with the `--woden_srclist` SHAMFI option. It also includes a script to convert a multi-scale CLEAN component list out of [WSClean](https://sourceforge.net/projects/wsclean/) into a WODEN-style srclist (when running WSClean use the `-save-source-list` option).
 
 ## 1. Installation
 See INSTALL.md for details. Only supported on linux so far, and with only limited installation testing. Requires an NVIDIA GPU.
@@ -63,6 +63,14 @@ where an `input_file.json` reads as
 }
 ```
 with the input values matching the options listed in the table about. This will only create binary files however and not uvfits files. In the future I plan to use [pyuvdata](https://pyuvdata.readthedocs.io/en/latest/) to read directly from the binary files to then generate output products.
+
+### 3.1 Using multi-scale CLEAN components from WSCLEAN
+To generate a WODEN-style source catalogue from a WSClean multi-scale CLEAN, simply use the script `convert_WSClean_list_to_WODEN.py`, which will be linked to the build directory upon compilation. An exmaple command is
+```sh
+convert_WSClean_list_to_WODEN.py \
+ --file=msclean_output_from_WSClean-sources.txt \
+ --outname=srclist-woden_wsclean-model.txt
+```
 
 ## 4. WODEN source catalogue
 The WODEN source catalogue is a modified version of the RTS srclist. In the `v0.1` release of WODEN, you create one single SOURCE which can include as many COMPONENTS (which can be point, gaussian or shapelet) as you want. In future releases I plan to implement multiple sources and have `--num_sources` as an option in `run_woden.py`.

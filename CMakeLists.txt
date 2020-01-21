@@ -13,7 +13,7 @@ if(CUDA_FOUND)
   message(STATUS "CUDA library found; building GPU-enabled executables.")
   ##Sets the -std=c++11 nvcc compiler flag I think
   set(CMAKE_CUDA_STANDARD 11)
-  #set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++11 ") 
+  #set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++11 ")
   set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 endif()
 
@@ -92,29 +92,39 @@ add_library(wodenCUDA SHARED ${CUDASOURCES})
 add_executable(woden src/woden.c)
 target_link_libraries(woden wodenC wodenCUDA ${CC_LINKLIBS})
 
-##Copy run_woden.py into the build dir
+##Make a symlink to run_woden.py so it's easy to find
+set(link_woden "run_woden.py")
 find_path(WODENPY run_woden.py HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
 if(WODENPY)
   message(STATUS "WODENPY path: ${WODENPY}")
 endif()
-configure_file("${WODENPY}/run_woden.py" run_woden.py COPYONLY)
+set(target_woden "${WODENPY}/run_woden.py")
+ADD_CUSTOM_TARGET(target_woden ALL
+                  COMMAND ${CMAKE_COMMAND} -E create_symlink ${target_woden} ${link_woden})
+                  
+##Make a symlink to convert_WSClean_list_to_WODEN.py so it's easy to find
+set(link_convert "convert_WSClean_list_to_WODEN.py")
+find_path(CONVERTWSCLEAN run_woden.py HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
+if(CONVERTWSCLEAN)
+  message(STATUS "CONVERTWSCLEAN path: ${WODENPY}")
+endif()
+set(target_convert "${CONVERTWSCLEAN}/convert_WSClean_list_to_WODEN.py")
+ADD_CUSTOM_TARGET(target_convert ALL
+                  COMMAND ${CMAKE_COMMAND} -E create_symlink ${target_convert} ${link_convert})
 
 ##Make a symlink to the tempate MWA uvfits so it's easy to find
-set(link "template_MWA_128T.uvfits")
+set(link_uvfits "template_MWA_128T.uvfits")
 find_path(UVFITS_DIR template_MWA_128T.uvfits HINTS "${CMAKE_CURRENT_LIST_DIR}/templates/")
 if(UVFITS_DIR)
   message(STATUS "UVFITS_DIR path: ${UVFITS_DIR}")
 endif()
-set(target "${UVFITS_DIR}/template_MWA_128T.uvfits")
+set(target_uvfits "${UVFITS_DIR}/template_MWA_128T.uvfits")
+ADD_CUSTOM_TARGET(target_uvfits ALL
+                  COMMAND ${CMAKE_COMMAND} -E create_symlink ${target_uvfits} ${link_uvfits})
 
-ADD_CUSTOM_TARGET(link_target ALL
-                  COMMAND ${CMAKE_COMMAND} -E create_symlink ${target} ${link})
-                  
 ##Copy the variable init script so this file can be put in bashrc
 find_path(INIT_WODEN init_WODEN.sh HINTS "${CMAKE_CURRENT_LIST_DIR}/templates/")
 if(INIT_WODEN)
   message(STATUS "INIT_WODEN path: ${INIT_WODEN}")
 endif()
 configure_file("${INIT_WODEN}/init_WODEN.sh" init_WODEN.sh COPYONLY)
-
-
