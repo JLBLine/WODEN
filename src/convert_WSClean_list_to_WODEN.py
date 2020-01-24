@@ -32,7 +32,7 @@ data = genfromtxt(args.file, usecols=(1,2,3,4,7,8,9,10),skip_header=1,delimiter=
 ras = data['ra']
 decs = data['dec']
 ##Reformat decs into something astropy can read
-decs = array(["%02d:%02d:%06.4f" %(int(dec.split('.')[0]),int(dec.split('.')[1]),float('.'.join((dec.split('.')[2],dec.split('.')[3])))) for dec in decs])
+decs = array(["%02d:%02d:%06.4f" %(int(dec.split('.')[0]),int(dec.split('.')[1]),float('.'.join(dec.split('.')[2:]))) for dec in decs])
 
 ##Set up astropy coords to convert coords into degrees
 coords = SkyCoord(ras,decs,unit=(u.hourangle, u.deg))
