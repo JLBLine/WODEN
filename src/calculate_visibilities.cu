@@ -3,33 +3,70 @@
 #include <cuComplex.h>
 #include <complex.h>
 #include <math.h>
-#include "woden_lib.h"
+#include "calculate_visibilities.h"
 #include "shapelet_basis.h"
 #include "cudacomplex.h"
+#include "fundamental_coords.h"
+#include "constants.h"
+#include "source_components.h"
 
-__global__ void calc_uvw(float *d_X_diff, float *d_Y_diff, float *d_Z_diff,
-      float *d_u_metres, float *d_v_metres, float *d_w_metres,
-      float *d_angles_array, float *d_cha0s, float *d_sha0s) {
-  //
 
-  float u, v, w;
+//#include "read_and_write.h"
 
-  // Start by computing which baseline we're going to do
-  const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
+
+// If you put device functions in a separate file, you get an almost order
+// of magnitude slow down. So keep all the __device__ functions where the
+// kernels that use them are called
+
+__device__ void extrap_uvw_flux_calc_lmn(float *d_angles_array,
+                float *d_ras, float *d_decs, float *d_fluxes, float *d_freqs,
+                float *d_u_metres, float *d_v_metres, float *d_w_metres, float *d_wavelengths,
+                int iComponent, int iBaseline,
+                float * l, float * m, float * n, float * u, float * v, float * w, float * extrap_flux){
+  float cdec;
+  float sdec;
+  float cdra;
+  float sdra;
+
   float d_sdec0 = d_angles_array[0];
   float d_cdec0 = d_angles_array[1];
-  float d_sha0 = d_sha0s[iBaseline];
-  float d_cha0 = d_cha0s[iBaseline];
+  float d_ra0 = d_angles_array[2];
+  float d_wavelength = d_wavelengths[iBaseline];
 
-  int mod_baseline = iBaseline - 8128*floorf(iBaseline / 8128.0);
+  cdec = cosf(d_decs[iComponent]);
+  sdec = sinf(d_decs[iComponent]);
+  cdra = cosf((d_ras[iComponent]-d_ra0));
+  sdra = sinf((d_ras[iComponent]-d_ra0));
 
-  u = (d_sha0*d_X_diff[mod_baseline]) + (d_cha0*d_Y_diff[mod_baseline]);
-  v = (d_sdec0*d_sha0*d_Y_diff[mod_baseline]) + (d_cdec0*d_Z_diff[mod_baseline]) - (d_sdec0*d_cha0*d_X_diff[mod_baseline]);
-  w = (d_cdec0*d_cha0*d_X_diff[mod_baseline]) - (d_cdec0*d_sha0*d_Y_diff[mod_baseline]) + (d_sdec0*d_Z_diff[mod_baseline]);
+  * l = cdec*sdra;
+  * m = sdec*d_cdec0 - cdec*d_sdec0*cdra;
+  * n = sdec*d_sdec0 + cdec*d_cdec0*cdra;
 
-  d_u_metres[iBaseline] = u;
-  d_v_metres[iBaseline] = v;
-  d_w_metres[iBaseline] = w;
+
+  * u = d_u_metres[iBaseline] / d_wavelength;
+  * v = d_v_metres[iBaseline] / d_wavelength;
+  * w = d_w_metres[iBaseline] / d_wavelength;
+
+  float cat_wavelength = VELC / d_freqs[iComponent];
+
+  * extrap_flux = d_fluxes[iComponent] * powf(cat_wavelength / d_wavelength,DEFAULT_SI);
+
+}
+
+__device__ void extrap_uvw_flux(float *d_angles_array,
+                float *d_u_metres, float *d_v_metres, float *d_w_metres, float *d_wavelengths,
+                float *d_freqs, float *d_fluxes,
+                int iComponent, int iBaseline,
+                float * u, float * v, float * w, float * extrap_flux){
+
+  float d_wavelength = d_wavelengths[iBaseline];
+
+  * u = d_u_metres[iBaseline] / d_wavelength;
+  * v = d_v_metres[iBaseline] / d_wavelength;
+  * w = d_w_metres[iBaseline] / d_wavelength;
+
+  float cat_wavelength = VELC / d_freqs[iComponent];
+  * extrap_flux = d_fluxes[iComponent] * powf(cat_wavelength / d_wavelength,DEFAULT_SI);
 
 }
 
@@ -62,65 +99,7 @@ __global__ void calc_uvw_shapelet(float *d_X_diff, float *d_Y_diff, float *d_Z_d
 
 }
 
-__global__ void calc_lmn(float *d_angles_array, float *d_ras, float *d_decs,
-                         float *d_l, float *d_m, float *d_n){
-  const int iComponent = threadIdx.x + (blockDim.x*blockIdx.x);
-
-  float d_sdec0 = d_angles_array[0];
-  float d_cdec0 = d_angles_array[1];
-  float d_ra0 = d_angles_array[2];
-
-  float cdec;
-  float sdec;
-  float cdra;
-  float sdra;
-
-  cdec = cosf(d_decs[iComponent]);
-  sdec = sinf(d_decs[iComponent]);
-  cdra = cosf((d_ras[iComponent] - d_ra0));
-  sdra = sinf((d_ras[iComponent] - d_ra0));
-
-  d_l[iComponent] = cdec*sdra;
-  d_m[iComponent] = sdec*d_cdec0 - cdec*d_sdec0*cdra;
-  d_n[iComponent] = sdec*d_sdec0 + cdec*d_cdec0*cdra;
-
-}
-
-__device__ void extrap_uvw_flux_calc_lmn(float *d_angles_array,
-                float *d_ras, float *d_decs, float *d_fluxes, float *d_freqs,
-                float *d_u_metres, float *d_v_metres, float *d_w_metres, float *d_wavelengths,
-                int iComponent, int iBaseline,
-                float * l, float * m, float * n, float * u, float * v, float * w, float * extrap_flux){
-  float cdec;
-  float sdec;
-  float cdra;
-  float sdra;
-
-  float d_sdec0 = d_angles_array[0];
-  float d_cdec0 = d_angles_array[1];
-  float d_ra0 = d_angles_array[2];
-  float d_wavelength = d_wavelengths[iBaseline];
-
-  cdec = cosf(d_decs[iComponent]);
-  sdec = sinf(d_decs[iComponent]);
-  cdra = cosf((d_ras[iComponent]-d_ra0));
-  sdra = sinf((d_ras[iComponent]-d_ra0));
-
-  * l = cdec*sdra;
-  * m = sdec*d_cdec0 - cdec*d_sdec0*cdra;
-  * n = sdec*d_sdec0 + cdec*d_cdec0*cdra;
-
-  * u = d_u_metres[iBaseline] / d_wavelength;
-  * v = d_v_metres[iBaseline] / d_wavelength;
-  * w = d_w_metres[iBaseline] / d_wavelength;
-
-  float cat_wavelength = VELC / d_freqs[iComponent];
-
-  * extrap_flux = d_fluxes[iComponent] * powf(cat_wavelength / d_wavelength,DEFAULT_SI);
-
-}
-
-__device__ void extrap_uvw_flux(float *d_angles_array,
+__device__ void extrap_uvw_flux_shapelets(float *d_angles_array,
                 float *d_u_metres, float *d_v_metres, float *d_w_metres, float *d_wavelengths,
                 float *d_freqs, float *d_fluxes,
                 int iComponent, int iBaseline, int param_index,
@@ -137,42 +116,6 @@ __device__ void extrap_uvw_flux(float *d_angles_array,
 
 }
 
-
-__global__ void calc_visi_point(float *d_point_ras, float *d_point_decs, float *d_point_fluxes, float *d_point_freqs,
-      float *d_u_metres, float *d_v_metres, float *d_w_metres,
-      float *d_sum_visi_real, float *d_sum_visi_imag,
-      float *d_angles_array, float *d_wavelengths) {
-  //
-
-  float u, v, w;
-  float l, m, n;
-  float extrap_flux;
-
-  // Start by computing which baseline we're going to do
-  const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
-  const int iComponent = threadIdx.y + (blockDim.y*blockIdx.y);
-  //
-  extrap_uvw_flux_calc_lmn(d_angles_array,
-                  d_point_ras, d_point_decs, d_point_fluxes, d_point_freqs,
-                  d_u_metres, d_v_metres, d_w_metres, d_wavelengths,
-                  iComponent, iBaseline,
-                  &l, &m, &n, &u, &v, &w, &extrap_flux);
-
-  cuFloatComplex visi;
-
-  //Not sure why, but get exact match with oskar sims and correct location
-  //on sky through wsclean without negative infront on 2pi
-  float temp = 2*M_PI*( u*l + v*m + w*(n-1) );
-  sincosf(temp, &(visi.y), &(visi.x));
-
-  register float i = atomicAdd(&d_sum_visi_real[iBaseline],visi.x*extrap_flux);
-  register float j = atomicAdd(&d_sum_visi_imag[iBaseline],visi.y*extrap_flux);
-
-  //HERE
-  // register float i = atomicAdd(&d_sum_visi_real[iBaseline],0.0);
-  // register float j = atomicAdd(&d_sum_visi_imag[iBaseline],0.0);
-
-}
 
 __global__ void calc_visi_gaussian(float *d_gauss_ras, float *d_gauss_decs, float *d_gauss_fluxes, float *d_gauss_freqs,
       float *d_u_metres, float *d_v_metres, float *d_w_metres, float *d_wavelengths,
@@ -249,7 +192,7 @@ __global__ void calc_visi_shapelets(float *d_shape_ras, float *d_shape_decs, flo
 
   int param_index = d_shape_param_indexes[iComponent];
 
-  extrap_uvw_flux(d_angles_array,
+  extrap_uvw_flux_shapelets(d_angles_array,
                   d_u_metres, d_v_metres, d_w_metres, d_wavelengths,
                   d_shape_freqs, d_shape_fluxes,
                   iComponent, iBaseline, param_index,
@@ -337,7 +280,7 @@ __global__ void calc_visi_shapelets(float *d_shape_ras, float *d_shape_decs, flo
 
 }
 
-extern "C" void Atomic_time_step(float *X_diff_metres, float *Y_diff_metres, float *Z_diff_metres,
+extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metres, float *Z_diff_metres,
                     catsource_t catsource, float *angles_array,
                     const int num_baselines, const int num_visis,
                     visibility_set_t *visibility_set,
@@ -378,31 +321,34 @@ extern "C" void Atomic_time_step(float *X_diff_metres, float *Y_diff_metres, flo
   float *d_u_metres = NULL;
   float *d_v_metres = NULL;
   float *d_w_metres = NULL;
+  float *d_u = NULL;
+  float *d_v = NULL;
+  float *d_w = NULL;
 
   cudaMalloc( (void**)&d_sum_visi_real, num_visis*sizeof(float) );
   cudaMalloc( (void**)&d_sum_visi_imag, num_visis*sizeof(float) );
   cudaMalloc( (void**)&d_u_metres, num_visis*sizeof(float) );
   cudaMalloc( (void**)&d_v_metres, num_visis*sizeof(float) );
   cudaMalloc( (void**)&d_w_metres, num_visis*sizeof(float) );
-
+  cudaMalloc( (void**)&d_u, num_visis*sizeof(float) );
+  cudaMalloc( (void**)&d_v, num_visis*sizeof(float) );
+  cudaMalloc( (void**)&d_w, num_visis*sizeof(float) );
 
   dim3 grid, threads;
 
-  threads.x = 128;
+  threads.x = 1024;
   threads.y = 1;
   threads.z = 1;
   grid.x = (int)ceil( (float)num_visis / (float)threads.x );
-  // grid.x = 127;
   grid.y = 1;
   grid.z = 1;
 
-  calc_uvw<<< grid , threads, 0 >>>( d_X_diff,
+  kern_calc_uvw<<< grid , threads, 0 >>>( d_X_diff,
           d_Y_diff, d_Z_diff,
           d_u_metres, d_v_metres, d_w_metres,
+          d_u, d_v, d_w, d_wavelengths,
           d_angles_array, d_cha0s, d_sha0s);
 
-
-  //
   int num_points = catsource.n_points;
   int num_gauss = catsource.n_gauss;
   int num_shapes = catsource.n_shapes;
@@ -429,28 +375,49 @@ extern "C" void Atomic_time_step(float *X_diff_metres, float *Y_diff_metres, flo
     //TODO need to put some kind of check inside calc_visi_point to skip a grid
     //thread point if it's outside the realms of sanity
 
+    float *d_ls=NULL;
+    float *d_ms=NULL;
+    float *d_ns=NULL;
+
+    cudaMalloc( (void**)&d_ls, num_points*sizeof(float) );
+    cudaMalloc( (void**)&d_ms, num_points*sizeof(float) );
+    cudaMalloc( (void**)&d_ns, num_points*sizeof(float) );
+
+    threads.x = 1024;
+    threads.y = 1;
+    threads.z = 1;
+    grid.x = (int)ceil( (float)num_points / (float)threads.x );
+    grid.y = 1;
+    grid.z = 1;
+
+    kern_calc_lmn<<< grid , threads, 0 >>>(d_angles_array, d_point_ras, d_point_decs,
+                               d_ls, d_ms, d_ns);
+
     if (num_points == 1) {
-      threads.x = 64;
+      threads.x = 128;
       threads.y = 1;
       grid.x = grid.x = (int)ceil( (float)num_visis / (float)threads.x );
       grid.y = 1;
-
     }
-
     else {
       threads.x = 64;
       threads.y = 2;
       grid.x = (int)ceil( (float)num_visis / (float)threads.x );
       grid.y = (int)ceil( ((float)num_points) / ((float)threads.y) );
-
     }
 
-    calc_visi_point<<< grid , threads, 0 >>>(d_point_ras,
-            d_point_decs, d_point_fluxes,d_point_freqs,
+    calc_visi_point<<<grid , threads>>>(d_point_ras,
+            d_point_decs, d_point_fluxes, d_point_freqs,
             d_u_metres, d_v_metres, d_w_metres,
+            d_u, d_v, d_w,
             d_sum_visi_real, d_sum_visi_imag,
-            d_angles_array, d_wavelengths);
+            d_angles_array, d_wavelengths,
+            d_ls, d_ms, d_ns,
+            num_points, num_visis);
 
+    cudaFree( d_ns);
+    cudaFree( d_ms);
+    cudaFree( d_ls);
     cudaFree( d_point_freqs );
     cudaFree( d_point_fluxes );
     cudaFree( d_point_decs);
@@ -618,7 +585,7 @@ extern "C" void Atomic_time_step(float *X_diff_metres, float *Y_diff_metres, flo
     grid.x = (int)ceil( ((float)num_shapes / (float)threads.x) );
     grid.y = 1;
 
-    calc_lmn<<< grid , threads, 0 >>>(d_angles_array, d_shape_ras, d_shape_decs,
+    kern_calc_lmn<<< grid , threads, 0 >>>(d_angles_array, d_shape_ras, d_shape_decs,
                              d_shape_ls, d_shape_ms, d_shape_ns);
 
     //TODO need to put some kind of check inside calc_visi_point to skip a grid
@@ -695,6 +662,9 @@ extern "C" void Atomic_time_step(float *X_diff_metres, float *Y_diff_metres, flo
   cudaMemcpy(visibility_set->ws_metres,d_w_metres,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
 
   //Free up the GPU memory
+  cudaFree( d_w );
+  cudaFree( d_v );
+  cudaFree( d_u );
   cudaFree( d_w_metres );
   cudaFree( d_v_metres );
   cudaFree( d_u_metres );
@@ -710,28 +680,28 @@ extern "C" void Atomic_time_step(float *X_diff_metres, float *Y_diff_metres, flo
 
 }
 
-extern "C" void assign_pointsource_on_GPU(catsource_t src){
-
-  src.d_point_ras=NULL;
-  src.d_point_decs=NULL;
-  src.d_point_fluxes=NULL;
-  src.d_point_freqs=NULL;
-
-  int num_comps = src.n_points;
-
-  cudaMalloc( (void**)&(src.d_point_ras), num_comps*sizeof(float) );
-  cudaMemcpy( src.d_point_ras, src.point_ras, num_comps*sizeof(float), cudaMemcpyHostToDevice );
-
-  cudaMalloc( (void**)&(src.d_point_decs), num_comps*sizeof(float) );
-  cudaMemcpy( src.d_point_decs, src.point_decs, num_comps*sizeof(float), cudaMemcpyHostToDevice );
-
-  cudaMalloc( (void**)&(src.d_point_fluxes), num_comps*sizeof(float) );
-  cudaMemcpy( src.d_point_fluxes, src.point_fluxes, num_comps*sizeof(float), cudaMemcpyHostToDevice );
-
-  cudaMalloc( (void**)&(src.d_point_freqs), num_comps*sizeof(float) );
-  cudaMemcpy( src.d_point_freqs, src.point_freqs, num_comps*sizeof(float), cudaMemcpyHostToDevice );
-
-}
+// extern "C" void assign_pointsource_on_GPU(catsource_t src){
+//
+//   src.d_point_ras=NULL;
+//   src.d_point_decs=NULL;
+//   src.d_point_fluxes=NULL;
+//   src.d_point_freqs=NULL;
+//
+//   int num_comps = src.n_points;
+//
+//   cudaMalloc( (void**)&(src.d_point_ras), num_comps*sizeof(float) );
+//   cudaMemcpy( src.d_point_ras, src.point_ras, num_comps*sizeof(float), cudaMemcpyHostToDevice );
+//
+//   cudaMalloc( (void**)&(src.d_point_decs), num_comps*sizeof(float) );
+//   cudaMemcpy( src.d_point_decs, src.point_decs, num_comps*sizeof(float), cudaMemcpyHostToDevice );
+//
+//   cudaMalloc( (void**)&(src.d_point_fluxes), num_comps*sizeof(float) );
+//   cudaMemcpy( src.d_point_fluxes, src.point_fluxes, num_comps*sizeof(float), cudaMemcpyHostToDevice );
+//
+//   cudaMalloc( (void**)&(src.d_point_freqs), num_comps*sizeof(float) );
+//   cudaMemcpy( src.d_point_freqs, src.point_freqs, num_comps*sizeof(float), cudaMemcpyHostToDevice );
+//
+// }
 
 //
 

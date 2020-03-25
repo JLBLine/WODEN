@@ -48,12 +48,16 @@ elseif (CUDA_ARCH EQUAL "7.5")
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_75")
 endif()
 
-##All the includes dirs are in include
-#include_directories(include)
+##Set the -dc flag lets you pull device functions into separate files
+##However, doing so actually causes a huge slowdown
+##Leaving here in case things change in the future and we need this flag again
+#set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -rdc=true")
+# set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xptxas -O3 -Xcompiler -O3")
 
 ##Find the source codes
 file(GLOB CSOURCES "src/*.c")
 file(GLOB CUDASOURCES "src/*.cu")
+#set(WODEN_INC "include" )
 
 ##Find the following libraries
 ##Use can specify CFITSIO_ROOT and JSONC_LIB when running Cmake
@@ -82,7 +86,7 @@ endif()
 set(CC_LINKLIBS "-lm -pthread ${CFITSIO_LIB} ${JSONC_LIB}")
 
 ##All the WODEN header dirs are in include dir
-include_directories(include ${JSONC_INC} ${CFITSIO_INC})
+include_directories("${CMAKE_SOURCE_DIR}/include" ${JSONC_INC} ${CFITSIO_INC})
 
 ##Generate libraries from the C and CUDA source code
 add_library(wodenC SHARED ${CSOURCES})
@@ -101,7 +105,7 @@ endif()
 set(target_woden "${WODENPY}/run_woden.py")
 ADD_CUSTOM_TARGET(target_woden ALL
                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${target_woden} ${link_woden})
-                  
+
 ##Make a symlink to convert_WSClean_list_to_WODEN.py so it's easy to find
 set(link_convert "convert_WSClean_list_to_WODEN.py")
 find_path(CONVERTWSCLEAN run_woden.py HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")

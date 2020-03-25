@@ -1,4 +1,5 @@
 #include "read_and_write.h"
+#include "constants.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,6 +7,9 @@
 #include <fitsio.h>
 
 /*********************************
+// Taken from the RTS (Mitchell et al 2008)
+// All credit to the original authors
+// https://github.com/ICRAR/mwa-RTS.git
   convert coords in local topocentric East, North, Height units to
   'local' XYZ units. Local means Z point north, X points through the equator from the geocenter
   along the local meridian and Y is East.
@@ -24,6 +28,11 @@ void ENH2XYZ_local(float E, float N, float H, float lat, float *X, float *Y, flo
   *Z = N*cl + H*sl;
 }
 
+/*********************************
+// Taken and edited from the RTS (Mitchell et al 2008)
+// All credit to the original authors
+// https://github.com/ICRAR/mwa-RTS.git
+**********************************/
 source_catalogue_t * read_source_catalogue(const char *filename) {
   int result, n_src=0, n_comps=0, n_freqs=0;
   int src_found=0, comp_found=0;
@@ -392,6 +401,11 @@ woden_settings_t * read_json_settings(const char *filename){
 
 }
 
+/*********************************
+// Taken and edited from the RTS (Mitchell et al 2008)
+// All credit to the original authors
+// https://github.com/ICRAR/mwa-RTS.git
+**********************************/
 int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
     int status=0;
     int ncols, anynulls, colnum, nfound, i;
@@ -425,26 +439,14 @@ int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
         fits_movrel_hdu(mfptr, 1, NULL, &status);  /* try to move to next HDU */
       }
     } // ends look
-    //
-    // populate the header object from the first HDU
-    // fits_read_key(mfptr, TLONGLONG, "GPSTIME", &(metafits->gpstime), NULL, &status);
-    // if (status) {
-    //     printf( "No GPSTIME keyword. Continuing...\n");
-    //     fits_clear_errmsg();
-    //     status=0;
-    // }
+
     fits_read_key(mfptr,TSTRING, "VERSION", &(metafits->version), NULL, &status);
     if (status) {
         printf("No VERSION keyword in metafits. Continuing...\n");
         fits_clear_errmsg();
         status=0;
     }
-    /*fits_read_key(mfptr, TSTRING, "CALIBRAT", &(metafits->calib), NULL, &status);
-    if (status) {
-        printf("No CALIBRAT keyword. Continuing...\n");
-        fits_clear_errmsg();
-        status=0;
-    }*/
+
     fits_read_key(mfptr, TSTRING, "MWAVER", &(metafits->mwaVersion), NULL, &status);
     if (status) {
         printf("No MWAVER keyword in metafits. Continuing...\n");

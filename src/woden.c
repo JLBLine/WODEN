@@ -6,6 +6,7 @@
 #include "read_and_write.h"
 #include "shapelet_basis.h"
 #include "woden.h"
+#include "constants.h"
 
 int main(int argc, char **argv) {
 
@@ -56,18 +57,8 @@ int main(int argc, char **argv) {
 
   woden_settings->lst_base = metafits.lst_base;
   woden_settings->base_low_freq = metafits.base_low_freq;
-
-  // Get these from run_woden.py now, so we can have different settings to the
-  // metafits file for CHIPS runs etc
-  // woden_settings->frequency_resolution = metafits.frequency_resolution;
-  // woden_settings->time_res = metafits.time_res;
-
   woden_settings->num_baselines = array_layout->num_baselines;
 
-  //Gets these arrays from telescope_XYZ.c
-  // extern float X_diff_metres[ ];
-  // extern float Y_diff_metres[ ];
-  // extern float Z_diff_metres[ ];
 
   float ha0, sha0, cha0;
   float wavelength;
@@ -98,9 +89,8 @@ int main(int argc, char **argv) {
     visibility_set->wavelengths = malloc( num_visis * sizeof(float) );
 
     for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
-      // float lst = woden_settings->lst_base + (time_step*woden_settings->time_res*SOLAR2SIDEREAL*D2R)*(15.0/3600.0);
       float lst = woden_settings->lst_base + time_step*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
-      //TODO add half a time step? Add time decorrelation?
+      //TODO add half a time step is good? Add time decorrelation?
       lst += 0.5*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
       ha0 = lst - woden_settings->ra0;
       sha0 = sin(ha0); cha0=cos(ha0);
@@ -121,7 +111,7 @@ int main(int argc, char **argv) {
       }//freq loop
     }//time loop
 
-    Atomic_time_step(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
+    calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
                     srccat->catsources[0], angles_array,
                     woden_settings->num_baselines, num_visis, visibility_set,
                     sbf);
@@ -147,8 +137,8 @@ int main(int argc, char **argv) {
     fflush(output_visi);
     fclose(output_visi);
 
-    //Dumps u,v,w (metres), Re(vis), Im(vis) directly to text file - useful for
-    //bug hunting with small outputs
+    // Dumps u,v,w (metres), Re(vis), Im(vis) directly to text file - useful for
+    // bug hunting with small outputs
     // char buff[0x100];
     // snprintf(buff, sizeof(buff), "output_visi_band%02d.txt", band_num);
     // output_visi = fopen(buff,"ab");
