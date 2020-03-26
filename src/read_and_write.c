@@ -1,4 +1,5 @@
 #include "read_and_write.h"
+#include "constants.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,6 +7,9 @@
 #include <fitsio.h>
 
 /*********************************
+// Taken from the RTS (Mitchell et al 2008)
+// All credit to the original authors
+// https://github.com/ICRAR/mwa-RTS.git
   convert coords in local topocentric East, North, Height units to
   'local' XYZ units. Local means Z point north, X points through the equator from the geocenter
   along the local meridian and Y is East.
@@ -24,6 +28,11 @@ void ENH2XYZ_local(float E, float N, float H, float lat, float *X, float *Y, flo
   *Z = N*cl + H*sl;
 }
 
+/*********************************
+// Taken and edited from the RTS (Mitchell et al 2008)
+// All credit to the original authors
+// https://github.com/ICRAR/mwa-RTS.git
+**********************************/
 source_catalogue_t * read_source_catalogue(const char *filename) {
   int result, n_src=0, n_comps=0, n_freqs=0;
   int src_found=0, comp_found=0;
@@ -392,6 +401,11 @@ woden_settings_t * read_json_settings(const char *filename){
 
 }
 
+/*********************************
+// Taken and edited from the RTS (Mitchell et al 2008)
+// All credit to the original authors
+// https://github.com/ICRAR/mwa-RTS.git
+**********************************/
 int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
     int status=0;
     int ncols, anynulls, colnum, nfound, i;
@@ -425,26 +439,14 @@ int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
         fits_movrel_hdu(mfptr, 1, NULL, &status);  /* try to move to next HDU */
       }
     } // ends look
-    //
-    // populate the header object from the first HDU
-    // fits_read_key(mfptr, TLONGLONG, "GPSTIME", &(metafits->gpstime), NULL, &status);
-    // if (status) {
-    //     printf( "No GPSTIME keyword. Continuing...\n");
-    //     fits_clear_errmsg();
-    //     status=0;
-    // }
+
     fits_read_key(mfptr,TSTRING, "VERSION", &(metafits->version), NULL, &status);
     if (status) {
         printf("No VERSION keyword in metafits. Continuing...\n");
         fits_clear_errmsg();
         status=0;
     }
-    /*fits_read_key(mfptr, TSTRING, "CALIBRAT", &(metafits->calib), NULL, &status);
-    if (status) {
-        printf("No CALIBRAT keyword. Continuing...\n");
-        fits_clear_errmsg();
-        status=0;
-    }*/
+
     fits_read_key(mfptr, TSTRING, "MWAVER", &(metafits->mwaVersion), NULL, &status);
     if (status) {
         printf("No MWAVER keyword in metafits. Continuing...\n");
@@ -512,6 +514,16 @@ int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
         status=0;
     }
 
+    fits_read_key(mfptr,TINT, "NINPUTS", &(metafits->num_tiles), NULL, &status);
+    if (status) {
+       printf("No NINPUTS keyword in metafits. Continuing...\n");
+        fits_clear_errmsg();
+        status=0;
+    }
+
+    //NINPUTS has both XX and YY inputs into correlator so divide by 2 to
+    //get the number of tiles
+    metafits->num_tiles = metafits->num_tiles / 2;
     metafits->lst_base *= DD2R;
     metafits->frequency_resolution *= 1e+3;
     metafits->frequency_cent *= 1e+6;
@@ -595,24 +607,24 @@ int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
   return status;
 }
 
-array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits){
+array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits, int num_tiles){
 
   array_layout_t * array_layout;
   array_layout = malloc( sizeof(array_layout_t) );
 
   array_layout->latitude = MWA_LAT*DD2R;
-  array_layout->num_antennas = 128;
-  array_layout->num_baselines = (array_layout->num_antennas*(array_layout->num_antennas-1)) / 2;
+  array_layout->num_tiles = num_tiles;
+  array_layout->num_baselines = (array_layout->num_tiles*(array_layout->num_tiles-1)) / 2;
 
-  array_layout->ant_east = malloc( array_layout->num_antennas * sizeof(float) );
-  array_layout->ant_north = malloc( array_layout->num_antennas * sizeof(float) );
-  array_layout->ant_height = malloc( array_layout->num_antennas * sizeof(float) );
+  array_layout->ant_east = malloc( array_layout->num_tiles * sizeof(float) );
+  array_layout->ant_north = malloc( array_layout->num_tiles * sizeof(float) );
+  array_layout->ant_height = malloc( array_layout->num_tiles * sizeof(float) );
 
-  array_layout->ant_X = malloc( array_layout->num_antennas * sizeof(float) );
-  array_layout->ant_Y = malloc( array_layout->num_antennas * sizeof(float) );
-  array_layout->ant_Z = malloc( array_layout->num_antennas * sizeof(float) );
+  array_layout->ant_X = malloc( array_layout->num_tiles * sizeof(float) );
+  array_layout->ant_Y = malloc( array_layout->num_tiles * sizeof(float) );
+  array_layout->ant_Z = malloc( array_layout->num_tiles * sizeof(float) );
   //
-  for (int i = 0; i < array_layout->num_antennas; i++) {
+  for (int i = 0; i < array_layout->num_tiles; i++) {
     //Metafits e,n,h goes XX,YY,XX,YY so need to choose every other value
     array_layout->ant_east[i] = metafits->E[i*2];
     array_layout->ant_north[i] = metafits->N[i*2];
@@ -630,8 +642,8 @@ array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits){
   array_layout->Z_diff_metres = malloc( array_layout->num_baselines * sizeof(float) );
 
   int baseline_ind = 0;
-  for (int ant1 = 0; ant1 < array_layout->num_antennas - 1; ant1++) {
-    for (int ant2 = ant1 + 1; ant2 < array_layout->num_antennas; ant2++) {
+  for (int ant1 = 0; ant1 < array_layout->num_tiles - 1; ant1++) {
+    for (int ant2 = ant1 + 1; ant2 < array_layout->num_tiles; ant2++) {
       array_layout->X_diff_metres[baseline_ind] = array_layout->ant_X[ant1] - array_layout->ant_X[ant2];
       array_layout->Y_diff_metres[baseline_ind] = array_layout->ant_Y[ant1] - array_layout->ant_Y[ant2];
       array_layout->Z_diff_metres[baseline_ind] = array_layout->ant_Z[ant1] - array_layout->ant_Z[ant2];

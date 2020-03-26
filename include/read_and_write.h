@@ -14,13 +14,6 @@
 #define SHAPELET_KEY    "SHAPELET"
 #define SPARAMS_KEY     "SPARAMS"
 #define SCOEFF_KEY      "SCOEFF"
-#define DH2R 0.26179938779914943653855361527329190701643078328126
-#define DD2R 0.017453292519943295769236907684886127134428718885417
-#define VELC 299792458.0
-#define SOLAR2SIDEREAL 1.00274
-#define D2R M_PI/180.0
-#define DEFAULT_SI -0.8
-#define MWA_LAT -26.703319
 
 enum component_type {POINT=0, GAUSSIAN, SHAPELET, SHAPELET2};
 
@@ -88,13 +81,9 @@ typedef struct _visibility_set_t {
   float *cha0s;
   float *lsts;
   float *wavelengths;
-
-
-  // float *d_sum_visi_real;
-  // float *d_sum_visi_imag;
-  // float *d_us_metres;
-  // float *d_vs_metres;
-  // float *d_ws_metres;
+  float *ls;
+  float *ms;
+  float *ns;
 } visibility_set_t;
 
 typedef struct _woden_settngs_t {
@@ -126,11 +115,13 @@ typedef struct _array_layout_t {
     float *ant_height;
     float latitude;
     int num_baselines;
-    int num_antennas;
+    int num_tiles;
     float lst_base;
 } array_layout_t;
 
-//Taken from the RTS
+// Taken from the RTS (Mitchell et al 2008)
+// All credit to the original authors
+// https://github.com/ICRAR/mwa-RTS.git
 typedef struct _Meta_Ffile {
     char recvrs[38];
     char calib[1];
@@ -151,6 +142,7 @@ typedef struct _Meta_Ffile {
     float bandwidth;
     float base_low_freq;
     float time_res;
+    int num_tiles;
 
 } MetaFfile_t;
 
@@ -160,4 +152,4 @@ woden_settings_t * read_json_settings(const char *filename);
 
 int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome);
 
-array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits);
+array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits, int num_tiles);
