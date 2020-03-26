@@ -42,7 +42,7 @@ __device__ cuFloatComplex calc_measurement_equation(float *d_us,
   return visi;
 }
 
-__global__ void calc_visi_point(float *d_point_ras,
+__global__ void kern_calc_visi_point(float *d_point_ras,
            float *d_point_decs, float *d_point_fluxes, float *d_point_freqs,
            float *d_us, float *d_vs, float *d_ws,
            float *d_sum_visi_real, float *d_sum_visi_imag,
@@ -70,7 +70,7 @@ __global__ void calc_visi_point(float *d_point_ras,
   }
 }
 
-__global__ void calc_visi_gaussian(float *d_gauss_ras,
+__global__ void kern_calc_visi_gaussian(float *d_gauss_ras,
            float *d_gauss_decs, float *d_gauss_fluxes, float *d_gauss_freqs,
            float *d_us, float *d_vs, float *d_ws,
            float *d_sum_visi_real, float *d_sum_visi_imag,
@@ -118,7 +118,7 @@ __global__ void calc_visi_gaussian(float *d_gauss_ras,
   }
 }
 
-__global__ void calc_visi_shapelets(float *d_shape_ras,
+__global__ void kern_calc_visi_shapelets(float *d_shape_ras,
       float *d_shape_decs, float *d_shape_fluxes, float *d_shape_freqs,
       float *d_us, float *d_vs, float *d_ws,
       float *d_wavelengths,

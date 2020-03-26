@@ -135,7 +135,7 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
       grid.y = (int)ceil( ((float)num_points) / ((float)threads.y) );
     }
 
-    calc_visi_point<<<grid , threads>>>(d_point_ras,
+    kern_calc_visi_point<<<grid , threads>>>(d_point_ras,
             d_point_decs, d_point_fluxes, d_point_freqs,
             d_us, d_vs, d_ws,
             d_sum_visi_real, d_sum_visi_imag,
@@ -215,7 +215,7 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
      grid.y = (int)ceil( ((float)num_gauss) / ((float)threads.y) );
     }
 
-    calc_visi_gaussian<<< grid , threads>>>(d_gauss_ras,
+    kern_calc_visi_gaussian<<< grid , threads>>>(d_gauss_ras,
             d_gauss_decs, d_gauss_fluxes, d_gauss_freqs,
             d_us, d_vs, d_ws,
             d_sum_visi_real, d_sum_visi_imag,
@@ -353,7 +353,7 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
       grid.y = (int)ceil( ((float)catsource.n_shape_coeffs) / ((float)threads.y) );
     }
 
-    calc_visi_shapelets<<< grid , threads, 0 >>>(d_shape_ras,
+    kern_calc_visi_shapelets<<< grid , threads, 0 >>>(d_shape_ras,
             d_shape_decs, d_shape_fluxes, d_shape_freqs,
             d_us, d_vs, d_ws, d_wavelengths,
             d_u_s_metres, d_v_s_metres, d_w_s_metres,
