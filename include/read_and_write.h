@@ -115,7 +115,7 @@ typedef struct _array_layout_t {
     float *ant_height;
     float latitude;
     int num_baselines;
-    int num_antennas;
+    int num_tiles;
     float lst_base;
 } array_layout_t;
 
@@ -142,6 +142,7 @@ typedef struct _Meta_Ffile {
     float bandwidth;
     float base_low_freq;
     float time_res;
+    int num_tiles;
 
 } MetaFfile_t;
 
@@ -151,4 +152,4 @@ woden_settings_t * read_json_settings(const char *filename);
 
 int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome);
 
-array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits);
+array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits, int num_tiles);

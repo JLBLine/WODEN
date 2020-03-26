@@ -53,12 +53,11 @@ int main(int argc, char **argv) {
   status = init_meta_file(metaf_file, &metafits, woden_settings->metafits_filename);
 
   array_layout_t * array_layout;
-  array_layout = calc_XYZ_diffs(&metafits);
+  array_layout = calc_XYZ_diffs(&metafits, metafits.num_tiles);
 
   woden_settings->lst_base = metafits.lst_base;
   woden_settings->base_low_freq = metafits.base_low_freq;
   woden_settings->num_baselines = array_layout->num_baselines;
-
 
   float ha0, sha0, cha0;
   float wavelength;
@@ -137,8 +136,8 @@ int main(int argc, char **argv) {
     fflush(output_visi);
     fclose(output_visi);
 
-    // Dumps u,v,w (metres), Re(vis), Im(vis) directly to text file - useful for
-    // bug hunting with small outputs
+    // // Dumps u,v,w (metres), Re(vis), Im(vis) directly to text file - useful for
+    // // bug hunting with small outputs
     // char buff[0x100];
     // snprintf(buff, sizeof(buff), "output_visi_band%02d.txt", band_num);
     // output_visi = fopen(buff,"ab");

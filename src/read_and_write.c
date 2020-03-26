@@ -514,6 +514,16 @@ int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
         status=0;
     }
 
+    fits_read_key(mfptr,TINT, "NINPUTS", &(metafits->num_tiles), NULL, &status);
+    if (status) {
+       printf("No NINPUTS keyword in metafits. Continuing...\n");
+        fits_clear_errmsg();
+        status=0;
+    }
+
+    //NINPUTS has both XX and YY inputs into correlator so divide by 2 to
+    //get the number of tiles
+    metafits->num_tiles = metafits->num_tiles / 2;
     metafits->lst_base *= DD2R;
     metafits->frequency_resolution *= 1e+3;
     metafits->frequency_cent *= 1e+6;
@@ -597,24 +607,24 @@ int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
   return status;
 }
 
-array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits){
+array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits, int num_tiles){
 
   array_layout_t * array_layout;
   array_layout = malloc( sizeof(array_layout_t) );
 
   array_layout->latitude = MWA_LAT*DD2R;
-  array_layout->num_antennas = 128;
-  array_layout->num_baselines = (array_layout->num_antennas*(array_layout->num_antennas-1)) / 2;
+  array_layout->num_tiles = num_tiles;
+  array_layout->num_baselines = (array_layout->num_tiles*(array_layout->num_tiles-1)) / 2;
 
-  array_layout->ant_east = malloc( array_layout->num_antennas * sizeof(float) );
-  array_layout->ant_north = malloc( array_layout->num_antennas * sizeof(float) );
-  array_layout->ant_height = malloc( array_layout->num_antennas * sizeof(float) );
+  array_layout->ant_east = malloc( array_layout->num_tiles * sizeof(float) );
+  array_layout->ant_north = malloc( array_layout->num_tiles * sizeof(float) );
+  array_layout->ant_height = malloc( array_layout->num_tiles * sizeof(float) );
 
-  array_layout->ant_X = malloc( array_layout->num_antennas * sizeof(float) );
-  array_layout->ant_Y = malloc( array_layout->num_antennas * sizeof(float) );
-  array_layout->ant_Z = malloc( array_layout->num_antennas * sizeof(float) );
+  array_layout->ant_X = malloc( array_layout->num_tiles * sizeof(float) );
+  array_layout->ant_Y = malloc( array_layout->num_tiles * sizeof(float) );
+  array_layout->ant_Z = malloc( array_layout->num_tiles * sizeof(float) );
   //
-  for (int i = 0; i < array_layout->num_antennas; i++) {
+  for (int i = 0; i < array_layout->num_tiles; i++) {
     //Metafits e,n,h goes XX,YY,XX,YY so need to choose every other value
     array_layout->ant_east[i] = metafits->E[i*2];
     array_layout->ant_north[i] = metafits->N[i*2];
@@ -632,8 +642,8 @@ array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits){
   array_layout->Z_diff_metres = malloc( array_layout->num_baselines * sizeof(float) );
 
   int baseline_ind = 0;
-  for (int ant1 = 0; ant1 < array_layout->num_antennas - 1; ant1++) {
-    for (int ant2 = ant1 + 1; ant2 < array_layout->num_antennas; ant2++) {
+  for (int ant1 = 0; ant1 < array_layout->num_tiles - 1; ant1++) {
+    for (int ant2 = ant1 + 1; ant2 < array_layout->num_tiles; ant2++) {
       array_layout->X_diff_metres[baseline_ind] = array_layout->ant_X[ant1] - array_layout->ant_X[ant2];
       array_layout->Y_diff_metres[baseline_ind] = array_layout->ant_Y[ant1] - array_layout->ant_Y[ant2];
       array_layout->Z_diff_metres[baseline_ind] = array_layout->ant_Z[ant1] - array_layout->ant_Z[ant2];
