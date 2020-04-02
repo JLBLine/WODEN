@@ -7,5 +7,6 @@
 #define D2R M_PI/180.0
 #define DEFAULT_SI -0.8
 #define MWA_LAT -26.703319
+#define MWA_LAT_RAD -26.703319*(M_PI / 180.)
 #define M_PI_2_2_LN_2 7.11941466249375271693034 /* pi^2 / (2 log_e(2)) */
 #define SQRT_M_PI_2_2_LN_2 2.668223128318498282851579 /* sqrt(pi^2 / (2 log_e(2)))*/

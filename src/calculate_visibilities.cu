@@ -30,9 +30,11 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   cudaMalloc( (void**)&d_Z_diff, num_baselines*sizeof(float) );
   cudaMemcpy( d_Z_diff, Z_diff_metres, num_baselines*sizeof(float), cudaMemcpyHostToDevice );
 
-  float *d_angles_array;
+  float *d_angles_array = NULL;
   cudaMalloc( (void**)&d_angles_array, 3*sizeof(float) );
   cudaMemcpy( d_angles_array, angles_array, 3*sizeof(float), cudaMemcpyHostToDevice );
+
+
 
   float *d_sha0s = NULL;
   float *d_cha0s = NULL;
@@ -43,7 +45,6 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   cudaMemcpy( d_cha0s, visibility_set->cha0s, num_visis*sizeof(float), cudaMemcpyHostToDevice );
   cudaMalloc( (void**)&d_wavelengths, num_visis*sizeof(float) );
   cudaMemcpy( d_wavelengths, visibility_set->wavelengths, num_visis*sizeof(float), cudaMemcpyHostToDevice );
-
   //
   /* END We should be able to do all this outside of this function and transfer in--------------*/
 

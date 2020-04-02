@@ -82,11 +82,22 @@ if(JSONC_LIB)
   message(STATUS "JSONC library path: ${JSONC_LIB}")
 endif()
 
+set(HINTS_ERFA_INC "/usr/include/;${ERFA_ROOT}/src/;${ERFA_ROOT}")
+set(HINTS_ERFA_LIB "/usr/local/lib/;${ERFA_ROOT}/src/.libs/;${ERFA_ROOT}.libs/;${ERFA_ROOT}")
+
+
+find_path(ERFA_INC erfa.h HINTS ${HINTS_ERFA_INC})
+find_library(ERFA_LIB erfa HINTS ${HINTS_ERFA_LIB} REQUIRED)
+if(ERFA_LIB)
+  message(STATUS "ERFA includes path: ${ERFA_INC}")
+  message(STATUS "ERFA library path: ${ERFA_LIB}")
+endif()
+
 ##Set the linkers for the C code
-set(CC_LINKLIBS "-lm -pthread ${CFITSIO_LIB} ${JSONC_LIB}")
+set(CC_LINKLIBS "-lm -pthread ${CFITSIO_LIB} ${JSONC_LIB} ${ERFA_LIB}")
 
 ##All the WODEN header dirs are in include dir
-include_directories("${CMAKE_SOURCE_DIR}/include" ${JSONC_INC} ${CFITSIO_INC})
+include_directories("${CMAKE_SOURCE_DIR}/include" ${JSONC_INC} ${CFITSIO_INC} ${ERFA_INC})
 
 ##Generate libraries from the C and CUDA source code
 add_library(wodenC SHARED ${CSOURCES})

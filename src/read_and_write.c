@@ -21,8 +21,8 @@
 void ENH2XYZ_local(float E, float N, float H, float lat, float *X, float *Y, float *Z) {
   float sl,cl;
 
-  sl = sin(lat);
-  cl = cos(lat);
+  sl = sinf(lat);
+  cl = cosf(lat);
   *X = -N*sl + H*cl;
   *Y = E;
   *Z = N*cl + H*sl;
@@ -346,6 +346,7 @@ woden_settings_t * read_json_settings(const char *filename){
   struct json_object *time_res;
   struct json_object *cat_filename;
   struct json_object *metafits_filename;
+  struct json_object *sky_crop_type;
 
 	fp = fopen(filename,"r");
 	fread(buffer, 1024, 1, fp);
@@ -364,6 +365,7 @@ woden_settings_t * read_json_settings(const char *filename){
   json_object_object_get_ex(parsed_json, "time_res", &time_res);
   json_object_object_get_ex(parsed_json, "cat_filename", &cat_filename);
   json_object_object_get_ex(parsed_json, "metafits_filename", &metafits_filename);
+  json_object_object_get_ex(parsed_json, "sky_crop_components", &sky_crop_type);
 
   woden_settings_t * woden_settings;
   // woden_settings = NULL;
@@ -380,6 +382,8 @@ woden_settings_t * read_json_settings(const char *filename){
   woden_settings->time_res = (float)json_object_get_double(time_res);
   woden_settings->cat_filename = json_object_get_string(cat_filename);
   woden_settings->metafits_filename = json_object_get_string(metafits_filename);
+
+  woden_settings->sky_crop_type = json_object_get_boolean(sky_crop_type);
 
   struct json_object *band_num;
   struct json_object *band_nums;

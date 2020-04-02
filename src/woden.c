@@ -3,7 +3,8 @@
 #include <string.h>
 #include <math.h>
 #include <fitsio.h>
-#include "read_and_write.h"
+// #include "read_and_write.h"
+#include "create_sky_model.h"
 #include "shapelet_basis.h"
 #include "woden.h"
 #include "constants.h"
@@ -42,9 +43,6 @@ int main(int argc, char **argv) {
   woden_settings_t * woden_settings;
   woden_settings = read_json_settings(argv[1]);
 
-  source_catalogue_t *srccat;
-  srccat = read_source_catalogue(woden_settings->cat_filename);
-
   int status=0;
   // array_layout_t * array_layout;
   static fitsfile *metaf_file=NULL;
@@ -70,6 +68,25 @@ int main(int argc, char **argv) {
   printf("Setting phase centre (rad) to %f %f\n",woden_settings->ra0, woden_settings->dec0);
 
   float angles_array[3] = {sdec0, cdec0, woden_settings->ra0};
+
+  int num_time_steps = woden_settings->num_time_steps;
+
+  //Calculate all lsts for this observation
+  float lsts[num_time_steps];
+
+  for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
+    float lst = woden_settings->lst_base + time_step*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
+    //TODO add half a time step is good? Add time decorrelation?
+    lst += 0.5*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
+    lsts[time_step] = lst;
+  }
+
+  //Read in the source catalogue
+  source_catalogue_t *raw_srccat;
+  raw_srccat = read_source_catalogue(woden_settings->cat_filename);
+
+  catsource_t *cropped_src;
+  cropped_src = crop_sky_model(raw_srccat, lsts, num_time_steps, woden_settings->sky_crop_type);
 
   for (size_t band = 0; band < woden_settings->num_bands; band++) {
     int band_num = woden_settings->band_nums[band];
@@ -111,7 +128,7 @@ int main(int argc, char **argv) {
     }//time loop
 
     calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
-                    srccat->catsources[0], angles_array,
+                    *cropped_src, angles_array,
                     woden_settings->num_baselines, num_visis, visibility_set,
                     sbf);
 

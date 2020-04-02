@@ -24,8 +24,6 @@ typedef struct _catsource_t {
   int n_comps;
   int n_points;
   int n_gauss;
-  int n_S1s;
-  int n_S1_coeffs;
   int n_shapes;
   int n_shape_coeffs;
 
@@ -34,11 +32,8 @@ typedef struct _catsource_t {
   float *point_decs;
   float *point_fluxes;
   float *point_freqs;
-
-  float *d_point_ras;
-  float *d_point_decs;
-  float *d_point_fluxes;
-  float *d_point_freqs;
+  double *point_azs;
+  double *point_zas;
 
   //Gaussian params
   float *gauss_ras;
@@ -100,6 +95,7 @@ typedef struct _woden_settngs_t {
   const char* metafits_filename;
   int num_bands;
   int *band_nums;
+  int sky_crop_type;
 
 } woden_settings_t;
 
