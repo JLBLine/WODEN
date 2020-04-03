@@ -43,6 +43,8 @@ typedef struct _catsource_t {
   float *gauss_majors;
   float *gauss_minors;
   float *gauss_pas;
+  double *gauss_azs;
+  double *gauss_zas;
 
   //Shapelet params
   float *shape_ras;
@@ -56,8 +58,8 @@ typedef struct _catsource_t {
   float *shape_minors;
   float *shape_pas;
   float *shape_param_indexes;
-
-  // float *n_coeffs
+  double *shape_azs;
+  double *shape_zas;
 
 } catsource_t;
 

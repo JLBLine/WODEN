@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
     char buf[0x100];
     snprintf(buf, sizeof(buf), "output_visi_band%02d.dat", band_num);
 
-    output_visi = fopen(buf,"ab");
+    output_visi = fopen(buf,"wb");
 
     if(output_visi == NULL)
     {
@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
     // // bug hunting with small outputs
     // char buff[0x100];
     // snprintf(buff, sizeof(buff), "output_visi_band%02d.txt", band_num);
-    // output_visi = fopen(buff,"ab");
+    // output_visi = fopen(buff,"w");
     // for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
     //   for ( int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++ ) {
     //     for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {

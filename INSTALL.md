@@ -5,7 +5,8 @@ WODEN is built around the `atomicAdd` function so you will need an NVIDIA GPU to
 CMake (https://cmake.org) version >= 3.10 \
 NVIDIA CUDA (https://developer.nvidia.com/cuda-downloads) \
 CFITSIO (https://heasarc.gsfc.nasa.gov/fitsio/) \
-json-c (https://github.com/json-c/json-c)
+json-c (https://github.com/json-c/json-c) \
+ERFA (Essential Routines for Fundamental Astronomy) (https://github.com/liberfa/erfa)
 
 The wrapper `run_woden.py` relies on the python modules:
 astropy

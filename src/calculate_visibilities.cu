@@ -354,7 +354,7 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
       grid.y = (int)ceil( ((float)catsource.n_shape_coeffs) / ((float)threads.y) );
     }
 
-    kern_calc_visi_shapelets<<< grid , threads, 0 >>>(d_shape_ras,
+    kern_calc_visi_shapelets<<< grid, threads >>>(d_shape_ras,
             d_shape_decs, d_shape_fluxes, d_shape_freqs,
             d_us, d_vs, d_ws, d_wavelengths,
             d_u_s_metres, d_v_s_metres, d_w_s_metres,
