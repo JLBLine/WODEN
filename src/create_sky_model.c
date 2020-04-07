@@ -51,6 +51,7 @@ void horizon_test(double za, e_sky_crop sky_crop_type,
       if (num_shape_coeff_component > 0) {
         for (size_t param_index = 0; param_index < num_shape_coeff_component; param_index++) {
           if ( (int)shape_param_indexes[param_index] == shape ){
+            // printf("%d %d %d %d %d\n",(int)param_index, (int)shape_param_indexes[param_index], shape, * num_comp_retained, * num_shape_coeff_retained );
             * num_shape_coeff_retained += 1;
           }
         }
@@ -82,6 +83,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
   // //any number of basis function calculations - try and keep track of that
   // //using this number so we can split compute across the GPU accordingly
   // int total_comp_calculations = 0;
+
 
   for (size_t src = 0; src < raw_srccat->num_sources; src++){
 
@@ -369,6 +371,10 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
           cropped_src->gauss_decs[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_decs[gauss];
           cropped_src->gauss_fluxes[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_fluxes[gauss];
           cropped_src->gauss_freqs[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_freqs[gauss];
+
+          cropped_src->gauss_majors[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_majors[gauss];
+          cropped_src->gauss_minors[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_minors[gauss];
+          cropped_src->gauss_pas[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_pas[gauss];
 
           //Calculate az/za values for each gauss for all time steps
           for (size_t time_step = 0; time_step < num_time_steps; time_step++) {

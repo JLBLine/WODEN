@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <fitsio.h>
+#include <erfa.h>
 // #include "read_and_write.h"
 #include "create_sky_model.h"
 #include "shapelet_basis.h"
@@ -85,8 +86,12 @@ int main(int argc, char **argv) {
   source_catalogue_t *raw_srccat;
   raw_srccat = read_source_catalogue(woden_settings->cat_filename);
 
+  printf("Horizon cropping sky model and calculating az/za for all components for observation\n");
+
   catsource_t *cropped_src;
   cropped_src = crop_sky_model(raw_srccat, lsts, num_time_steps, woden_settings->sky_crop_type);
+
+  printf("Finished cropping and calculating az/za\n");
 
   for (size_t band = 0; band < woden_settings->num_bands; band++) {
     int band_num = woden_settings->band_nums[band];
@@ -131,6 +136,11 @@ int main(int argc, char **argv) {
                     *cropped_src, angles_array,
                     woden_settings->num_baselines, num_visis, visibility_set,
                     sbf);
+
+    // calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
+    //                 raw_srccat->catsources[0], angles_array,
+    //                 woden_settings->num_baselines, num_visis, visibility_set,
+    //                 sbf);
 
     FILE *output_visi;
     char buf[0x100];

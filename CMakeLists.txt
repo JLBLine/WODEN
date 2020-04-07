@@ -82,7 +82,7 @@ if(JSONC_LIB)
   message(STATUS "JSONC library path: ${JSONC_LIB}")
 endif()
 
-set(HINTS_ERFA_INC "/usr/include/;${ERFA_ROOT}/src/;${ERFA_ROOT}")
+set(HINTS_ERFA_INC "/usr/local/include/;${ERFA_ROOT}/src/;${ERFA_ROOT}")
 set(HINTS_ERFA_LIB "/usr/local/lib/;${ERFA_ROOT}/src/.libs/;${ERFA_ROOT}.libs/;${ERFA_ROOT}")
 
 
