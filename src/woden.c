@@ -18,20 +18,26 @@ int main(int argc, char **argv) {
     printf("\tdec0: dec phase centre (float in degrees)\n");
     printf("\tnum_freqs: number of fine frequency channels to simulate (int)\n");
     printf("\tnum_time_steps: number of time steps to simulate (int)\n");
-    printf("\tcat_filename: path to and name of RTS-new-style srclist (string)\n");
+    printf("\tcat_filename: path to and name of WODEN-style srclist (string)\n");
     printf("\tmetafits_filename: path to MWA and name of metafits file to base\n\t\tsimulation on (string)\n");
+    printf("\n");
+    printf("Optionally, the .json can include:\n");
+    printf("\tsky_crop_components=True: WODEN crops sources with any component\n\t\tbelow the horizon. Add this arg to include all components\n\t\tabove horizon, regardless of which source they belong to\n");
     exit(1);
 
   }
 
   if (strcmp("--help", argv[1]) == 0) {
-    printf("wodan needs a .json settings file to run. This file must include:\n");
+    printf("Must input a .json settings file to run woden. This file must include:\n");
     printf("\tra0: ra phase centre (float in degrees)\n");
     printf("\tdec0: dec phase centre (float in degrees)\n");
     printf("\tnum_freqs: number of fine frequency channels to simulate (int)\n");
     printf("\tnum_time_steps: number of time steps to simulate (int)\n");
-    printf("\tcat_filename: path to and name of RTS-new-style srclist (string)\n");
+    printf("\tcat_filename: path to and name of WODEN-style srclist (string)\n");
     printf("\tmetafits_filename: path to MWA and name of metafits file to base\n\t\tsimulation on (string)\n");
+    printf("\n");
+    printf("Optionally, the .json can include:\n");
+    printf("\tsky_crop_components=True: WODEN crops sources with any component\n\t\tbelow the horizon. Add this arg to include all components\n\t\tabove horizon, regardless of which source they belong to\n");
     exit(1);
 
   }
