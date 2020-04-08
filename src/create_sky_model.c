@@ -5,6 +5,11 @@
 // #include "read_and_write.h"
 #include "create_sky_model.h"
 
+/*********************************
+// Takes an ra, dec, lst (all rad) and returns the azimuth and zenith angle
+// assuming the latitude of the MWA. Uses the ERFA library to do the
+// transformation using the ha.
+**********************************/
 void convert_radec2azza(double ra, double dec, double lst,
      double * az, double * za){
 
@@ -22,16 +27,15 @@ void convert_radec2azza(double ra, double dec, double lst,
 // Takes a zenith angle and checks if it's below the horizon. Depending on
 // whether we are cropping all SOURCEs partially below the horizon, or
 // retaining all COMPONENTs, update either all_comps_above_horizon or
-// sky_crop_type
+// sky_crop_type. If the component is a shapelet, we also need to cycle
+// through the catsource.shape_param_indexes, checking which ones match this
+// shape index (int shape), and update num_shape_coeff_retained accordingly
 **********************************/
 void horizon_test(double za, e_sky_crop sky_crop_type,
      e_horizon * all_comps_above_horizon, int * num_comp_retained,
      int * num_shape_coeff_retained, int num_shape_coeff_component,
      float *shape_param_indexes, int shape){
   //Check if component is above horizon, and flag the source if not
-
-
-
   if (sky_crop_type == CROP_SOURCES) {
     if (za >= M_PI / 2.0){
       //When cropping sources, if one component is below the horizon,
@@ -51,14 +55,13 @@ void horizon_test(double za, e_sky_crop sky_crop_type,
       if (num_shape_coeff_component > 0) {
         for (size_t param_index = 0; param_index < num_shape_coeff_component; param_index++) {
           if ( (int)shape_param_indexes[param_index] == shape ){
-            // printf("%d %d %d %d %d\n",(int)param_index, (int)shape_param_indexes[param_index], shape, * num_comp_retained, * num_shape_coeff_retained );
             * num_shape_coeff_retained += 1;
           }
         }
       }
     }
   }
-
+  //Something has gone terribly wrong if we get to the else statement
   else {
     printf("ERROR: create_sky_model.c:crop_sky_model: needs a correct sky_crop_type, allowed is 0 (CROP_SOURCES), 1 (CROP_COMPONENTS), given was %d \n", sky_crop_type );
   }
@@ -70,20 +73,21 @@ void horizon_test(double za, e_sky_crop sky_crop_type,
 // crop out all sources below the horizon (at the beginning of the observation).
 // Return a new single catsource_t (cropped_srccat) that contains the full
 // cropped sky model
+// First part of the function calculates az/za for the initial time step, and
+// counts how many components / sources are to be saved
+// Second part mallocs a big enough catsource_t struct to contain all cropped
+// components, and copies all relevant data across from raw_srccat
 
-// TODO update the sky model for every time step to account for sources that
+// Possible TODO update the sky model for every time step to account for sources that
 // have risen and set during the observation?
+
+// Possible TODO remove the az/za calculation for all time steps, and do in a
+// separate function to make it more modular and clear
 **********************************/
 
 
 catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
               int num_time_steps, e_sky_crop sky_crop_type){
-
-  // //A shapelet model has no set number of basis coeffs, and so can have
-  // //any number of basis function calculations - try and keep track of that
-  // //using this number so we can split compute across the GPU accordingly
-  // int total_comp_calculations = 0;
-
 
   for (size_t src = 0; src < raw_srccat->num_sources; src++){
 
@@ -102,14 +106,14 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
   }
 
   double az, za;
-
+  // Counters for different component types that survive cropping
   int num_point_comp_retained = 0;
   int num_gauss_comp_retained = 0;
   int num_shape_comp_retained = 0;
   int num_shape_coeff_retained = 0;
 
   //used if CROP_SOURCES
-  //Just include all the sources that are totally above the horizon
+  // Just include all the sources that are totally above the horizon
   // num_sources_retained counts how many sources survive cropping
   // all_comps_above_horizon is used to record
   int num_sources_retained=0;
@@ -122,12 +126,15 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
 
     //Begin point source component loop
     for (size_t point = 0; point < raw_srccat->catsources[src].n_points; point++) {
+      //Calculate az/za for all point components
       convert_radec2azza((double)raw_srccat->catsources[src].point_ras[point],
                          (double)raw_srccat->catsources[src].point_decs[point],
                          (double)lsts[0], &az, &za);
       raw_srccat->catsources[src].point_azs[point] = az;
       raw_srccat->catsources[src].point_zas[point] = za;
-
+      //Check if components are above the horizon, and count how many
+      //components survive / flag a source if a component is below the horizon
+      //Last three arguments only used for shapelets so pass 0
       horizon_test(za, sky_crop_type, &all_comps_above_horizon,
                   &num_point_comp_retained, &num_shape_coeff_retained,
                   0, raw_srccat->catsources[src].shape_param_indexes, 0);
@@ -136,12 +143,15 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
 
     //Begin gauss source component loop
     for (size_t gauss = 0; gauss < raw_srccat->catsources[src].n_gauss; gauss++) {
+        //Calculate az/za for all gauss components
       convert_radec2azza((double)raw_srccat->catsources[src].gauss_ras[gauss],
                          (double)raw_srccat->catsources[src].gauss_decs[gauss],
                          (double)lsts[0], &az, &za);
       raw_srccat->catsources[src].gauss_azs[gauss] = az;
       raw_srccat->catsources[src].gauss_zas[gauss] = za;
-
+      //Check if components are above the horizon, and count how many
+      //components survive / flag a source if a component is below the horizon
+      //Last three arguments only used for shapelets so pass 0
       horizon_test(za, sky_crop_type, &all_comps_above_horizon,
                   &num_gauss_comp_retained, &num_shape_coeff_retained,
                   0, raw_srccat->catsources[src].shape_param_indexes, 0);
@@ -150,12 +160,16 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
 
     //Begin shape source component loop
     for (size_t shape = 0; shape < raw_srccat->catsources[src].n_shapes; shape++) {
+      //Calculate az/za for all gauss components
       convert_radec2azza((double)raw_srccat->catsources[src].shape_ras[shape],
                          (double)raw_srccat->catsources[src].shape_decs[shape],
                          (double)lsts[0], &az, &za);
       raw_srccat->catsources[src].shape_azs[shape] = az;
       raw_srccat->catsources[src].shape_zas[shape] = za;
-
+      //Check if components are above the horizon, and count how many
+      //components survive / flag a source if a component is below the horizon
+      //Use last three arguments to correctly identify which shapelet coeffs
+      //belong to which shapelet component so we can malloc the correctly later
       horizon_test(za, sky_crop_type, &all_comps_above_horizon,
                   &num_shape_comp_retained, &num_shape_coeff_retained,
                   raw_srccat->catsources[src].n_shape_coeffs,
@@ -163,6 +177,10 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
 
     }//End shape source component loop
 
+    //After checking all components in a source, if cropping out sources,
+    //check all components were above horizon. If so, update component type
+    //counters, and mark down the index of the sources that survied in
+    //cropped_src_indexes
     if (sky_crop_type == CROP_SOURCES) {
       if (all_comps_above_horizon == ABOVE) {
         num_sources_retained ++;
@@ -172,8 +190,8 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
         num_shape_coeff_retained += raw_srccat->catsources[src].n_shape_coeffs;
         cropped_src_indexes = realloc(cropped_src_indexes,sizeof(int)*num_sources_retained);
         cropped_src_indexes[num_sources_retained - 1] = src;
-      }
-    }
+      }//end if all_comps_above_horizon == ABOVE
+    }//end if sky_crop_type == CROP_SOURCES
 
   }//Finish checking az/za loop here
 
@@ -290,7 +308,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
         cropped_src->shape_minors[shape_crop_component_index] = raw_srccat->catsources[src].shape_minors[shape];
         cropped_src->shape_pas[shape_crop_component_index] = raw_srccat->catsources[src].shape_pas[shape];
 
-        //Calculate az/za values for each shapelet for all time steps
+        //Calculate az/za values for each shapelet component for all time steps
         for (size_t time_step = 0; time_step < num_time_steps; time_step++) {
           convert_radec2azza((double)raw_srccat->catsources[src].shape_ras[shape],
                              (double)raw_srccat->catsources[src].shape_decs[shape],
@@ -300,27 +318,31 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
         }
 
         if ((int)shape == 0) {
-
           // Loop over the coefficients for this shapelet source
-          // Only do it once as all shapelet component coeffs for one source are
-          // in a single arrays
-          // shape_crop_component_index to fill in cropped_src->shape_param_indexes
-          // which is used later on by the GPU
+          // Only do it once as all shapelet component coeffs, n1s, n2s for one
+          // source are in 1D arrays in raw_srccat->catsources[src]. As each
+          // shapelet component can have any number of coeffs, n1s, n2s, we
+          // relate the coeffs, n1s, n2s, to shapelet ra, dec, etc via the
+          // cropped_src->shape_param_indexes array. So need to pull that
+          // information out from raw_srccat->catsources[src].shape_param_indexes
+          // and keep track of how many shapelet coeff components are in
+          // the new cropped_src using shape_coeff_component_index
+          // Do all this work now as the 1D array goes nicely into a GPU kernel
           for (size_t coeff_ind = 0; coeff_ind < raw_srccat->catsources[src].n_shape_coeffs; coeff_ind++) {
             cropped_src->shape_coeffs[shape_coeff_component_index] = raw_srccat->catsources[src].shape_coeffs[coeff_ind];
             cropped_src->shape_n1s[shape_coeff_component_index] = raw_srccat->catsources[src].shape_n1s[coeff_ind];
             cropped_src->shape_n2s[shape_coeff_component_index] = raw_srccat->catsources[src].shape_n2s[coeff_ind];
 
+            //We do the loop of shapelet coeffs, n1s, n2s only once per source, so we may well get ahead of the
+            //shape_crop_component_index. So use to shape_param_index to account for that
             int shape_param_index = raw_srccat->catsources[src].shape_param_indexes[coeff_ind] + shape_crop_component_index;
 
             cropped_src->shape_param_indexes[shape_coeff_component_index] = shape_param_index;
-
-            // printf("Pls %d %d %d\n", shape_crop_component_index, shape_coeff_component_index, shape_param_index);
             shape_coeff_component_index += 1;
+          }//end coeff,n1,n2 loop for all shapelet components in this source
+        }//end if shape == 0
 
-
-          }
-        }
+        //Update shapelet component index for each shapelet component added
         shape_crop_component_index += 1;
       }//End shapelet component loop
     }//End retained sources loop
@@ -411,8 +433,14 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
             cropped_src->shape_zas[shape_crop_component_index*num_time_steps + time_step] = za;
           }//End az/za calculation loop
 
+          //Loop through all shapelet coeffs,n1s,n2s for this source; these 1D arrays
+          //can contain information from multiple shapelet components.
+          //raw_srccat->catsources[src].shape_param_indexes is used to match
+          //the coeff,n1,n2 to each component, so check those indexes and grab
+          //information if correct.
+          // Do all this work now as the 1D array goes nicely into a GPU kernel
           for (size_t coeff_ind = 0; coeff_ind < raw_srccat->catsources[src].n_shape_coeffs; coeff_ind++) {
-
+            //Check if we are on the cofrect component
             if ( (int)raw_srccat->catsources[src].shape_param_indexes[coeff_ind] == shape ){
               cropped_src->shape_coeffs[shape_coeff_component_index] = raw_srccat->catsources[src].shape_coeffs[coeff_ind];
               cropped_src->shape_n1s[shape_coeff_component_index] = raw_srccat->catsources[src].shape_n1s[coeff_ind];
