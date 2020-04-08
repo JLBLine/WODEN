@@ -206,7 +206,8 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
 
 def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
                cat_filename=None,metafits_filename=None,band_nums=None,
-               json_name=None,freq_res=None,time_res=None):
+               json_name=None,freq_res=None,time_res=None,
+               sky_crop_components=False):
     '''Populate a json parameter file used to run WODEN'''
 
     outfile = open(json_name,'w+')
@@ -220,6 +221,11 @@ def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
     outfile.write('  "metafits_filename": "%s",\n' %metafits_filename)
     outfile.write('  "time_res": %.5f,\n' %time_res)
     outfile.write('  "frequency_resolution": %.3f,\n' %freq_res)
+
+    if sky_crop_components:
+        outfile.write('  "sky_crop_components": True,\n')
+    else:
+        pass
 
     if len(band_nums) == 1:
         band_str = '[%d]' %band_nums[0]
@@ -266,6 +272,8 @@ if __name__ == "__main__":
         help='Defaults to deleting output binary files from woden and json files. Add this flag to not delete those files')
     parser.add_argument('--nvprof', default=False, action='store_true',
         help='Add to switch on the nvidia profiler when running woden')
+    parser.add_argument('--sky_crop_components', default=False, action='store_true',
+        help='WODEN will crop out sky model information that is below the horizon for the given LST. By default, for each SOURCE in the sky model, if any COMPONENT is below the horizon, the entire source will be flagged. If --sky_crop_components is included WODEN will include any COMPONENT above the horizon, regardless of which SOURCE it belongs to.')
 
 
     args = parser.parse_args()
@@ -334,9 +342,11 @@ if __name__ == "__main__":
 
     ##Write json file
     json_name = 'run_woden_%s.json' %args.band_nums
-    write_json(ra0=args.ra0,dec0=args.dec0,num_freqs=num_freq_channels,num_time_steps=num_time_steps,
-                   cat_filename=args.cat_filename,metafits_filename=args.metafits_filename,band_nums=band_nums,
-                   json_name=json_name,freq_res=ch_width,time_res=time_res)
+    write_json(ra0=args.ra0,dec0=args.dec0, num_freqs=num_freq_channels,
+               num_time_steps=num_time_steps, cat_filename=args.cat_filename,
+               metafits_filename=args.metafits_filename, band_nums=band_nums,
+               json_name=json_name, freq_res=ch_width, time_res=time_res,
+               sky_crop_components=args.sky_crop_components)
 
     ##Check the uvfits prepend to make sure we end in .uvfits
     output_uvfits_prepend = args.output_uvfits_prepend

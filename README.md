@@ -40,6 +40,7 @@ Argument  | Type | Description
 `--num_time_steps`  | Optional  | The number of time steps to simulate - defaults to how many are in the metafits
 `--freq_res`  | Optional | Fine channel frequency resolution (Hz) - will default to what is in the metafits
 `--time_res`  | Optional  | Time resolution (s) - will default to what is in the metafits
+`--sky_crop_components` | Optional |  WODEN crops sources with any component below the horizon. Add this to include all components above horizon, regardless of which source they belong to
 `--no_tidy`  | Optional  | Defaults to deleting output binary files from WODEN and `.json` files. Add this flag to not delete these files
 `--nvprof`  | Optional  | Add to switch on the nvidia profiler when running WODEN and save output profile results to a `.txt` file, in the same location as the output uvfits. This may or may not work depending on how your CUDA installation works
 `--template_uvfits`  | Optional | The template uvfits file to base outputs on - defaults to `/build/template_MWA_128T.uvfits`

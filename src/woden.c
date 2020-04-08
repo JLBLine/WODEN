@@ -3,7 +3,9 @@
 #include <string.h>
 #include <math.h>
 #include <fitsio.h>
-#include "read_and_write.h"
+#include <erfa.h>
+// #include "read_and_write.h"
+#include "create_sky_model.h"
 #include "shapelet_basis.h"
 #include "woden.h"
 #include "constants.h"
@@ -16,20 +18,26 @@ int main(int argc, char **argv) {
     printf("\tdec0: dec phase centre (float in degrees)\n");
     printf("\tnum_freqs: number of fine frequency channels to simulate (int)\n");
     printf("\tnum_time_steps: number of time steps to simulate (int)\n");
-    printf("\tcat_filename: path to and name of RTS-new-style srclist (string)\n");
+    printf("\tcat_filename: path to and name of WODEN-style srclist (string)\n");
     printf("\tmetafits_filename: path to MWA and name of metafits file to base\n\t\tsimulation on (string)\n");
+    printf("\n");
+    printf("Optionally, the .json can include:\n");
+    printf("\tsky_crop_components=True: WODEN crops sources with any component\n\t\tbelow the horizon. Add this arg to include all components\n\t\tabove horizon, regardless of which source they belong to\n");
     exit(1);
 
   }
 
   if (strcmp("--help", argv[1]) == 0) {
-    printf("wodan needs a .json settings file to run. This file must include:\n");
+    printf("Must input a .json settings file to run woden. This file must include:\n");
     printf("\tra0: ra phase centre (float in degrees)\n");
     printf("\tdec0: dec phase centre (float in degrees)\n");
     printf("\tnum_freqs: number of fine frequency channels to simulate (int)\n");
     printf("\tnum_time_steps: number of time steps to simulate (int)\n");
-    printf("\tcat_filename: path to and name of RTS-new-style srclist (string)\n");
+    printf("\tcat_filename: path to and name of WODEN-style srclist (string)\n");
     printf("\tmetafits_filename: path to MWA and name of metafits file to base\n\t\tsimulation on (string)\n");
+    printf("\n");
+    printf("Optionally, the .json can include:\n");
+    printf("\tsky_crop_components=True: WODEN crops sources with any component\n\t\tbelow the horizon. Add this arg to include all components\n\t\tabove horizon, regardless of which source they belong to\n");
     exit(1);
 
   }
@@ -41,9 +49,6 @@ int main(int argc, char **argv) {
 
   woden_settings_t * woden_settings;
   woden_settings = read_json_settings(argv[1]);
-
-  source_catalogue_t *srccat;
-  srccat = read_source_catalogue(woden_settings->cat_filename);
 
   int status=0;
   // array_layout_t * array_layout;
@@ -70,6 +75,29 @@ int main(int argc, char **argv) {
   printf("Setting phase centre (rad) to %f %f\n",woden_settings->ra0, woden_settings->dec0);
 
   float angles_array[3] = {sdec0, cdec0, woden_settings->ra0};
+
+  int num_time_steps = woden_settings->num_time_steps;
+
+  //Calculate all lsts for this observation
+  float lsts[num_time_steps];
+
+  for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
+    float lst = woden_settings->lst_base + time_step*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
+    //TODO add half a time step is good? Add time decorrelation?
+    lst += 0.5*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
+    lsts[time_step] = lst;
+  }
+
+  //Read in the source catalogue
+  source_catalogue_t *raw_srccat;
+  raw_srccat = read_source_catalogue(woden_settings->cat_filename);
+
+  printf("Horizon cropping sky model and calculating az/za for all components for observation\n");
+
+  catsource_t *cropped_src;
+  cropped_src = crop_sky_model(raw_srccat, lsts, num_time_steps, woden_settings->sky_crop_type);
+
+  printf("Finished cropping and calculating az/za\n");
 
   for (size_t band = 0; band < woden_settings->num_bands; band++) {
     int band_num = woden_settings->band_nums[band];
@@ -111,15 +139,20 @@ int main(int argc, char **argv) {
     }//time loop
 
     calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
-                    srccat->catsources[0], angles_array,
+                    *cropped_src, angles_array,
                     woden_settings->num_baselines, num_visis, visibility_set,
                     sbf);
+
+    // calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
+    //                 raw_srccat->catsources[0], angles_array,
+    //                 woden_settings->num_baselines, num_visis, visibility_set,
+    //                 sbf);
 
     FILE *output_visi;
     char buf[0x100];
     snprintf(buf, sizeof(buf), "output_visi_band%02d.dat", band_num);
 
-    output_visi = fopen(buf,"ab");
+    output_visi = fopen(buf,"wb");
 
     if(output_visi == NULL)
     {
@@ -140,7 +173,7 @@ int main(int argc, char **argv) {
     // // bug hunting with small outputs
     // char buff[0x100];
     // snprintf(buff, sizeof(buff), "output_visi_band%02d.txt", band_num);
-    // output_visi = fopen(buff,"ab");
+    // output_visi = fopen(buff,"w");
     // for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
     //   for ( int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++ ) {
     //     for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {

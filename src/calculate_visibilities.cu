@@ -30,9 +30,11 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   cudaMalloc( (void**)&d_Z_diff, num_baselines*sizeof(float) );
   cudaMemcpy( d_Z_diff, Z_diff_metres, num_baselines*sizeof(float), cudaMemcpyHostToDevice );
 
-  float *d_angles_array;
+  float *d_angles_array = NULL;
   cudaMalloc( (void**)&d_angles_array, 3*sizeof(float) );
   cudaMemcpy( d_angles_array, angles_array, 3*sizeof(float), cudaMemcpyHostToDevice );
+
+
 
   float *d_sha0s = NULL;
   float *d_cha0s = NULL;
@@ -43,7 +45,6 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   cudaMemcpy( d_cha0s, visibility_set->cha0s, num_visis*sizeof(float), cudaMemcpyHostToDevice );
   cudaMalloc( (void**)&d_wavelengths, num_visis*sizeof(float) );
   cudaMemcpy( d_wavelengths, visibility_set->wavelengths, num_visis*sizeof(float), cudaMemcpyHostToDevice );
-
   //
   /* END We should be able to do all this outside of this function and transfer in--------------*/
 
@@ -353,7 +354,7 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
       grid.y = (int)ceil( ((float)catsource.n_shape_coeffs) / ((float)threads.y) );
     }
 
-    kern_calc_visi_shapelets<<< grid , threads, 0 >>>(d_shape_ras,
+    kern_calc_visi_shapelets<<< grid, threads >>>(d_shape_ras,
             d_shape_decs, d_shape_fluxes, d_shape_freqs,
             d_us, d_vs, d_ws, d_wavelengths,
             d_u_s_metres, d_v_s_metres, d_w_s_metres,
