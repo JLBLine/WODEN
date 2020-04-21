@@ -116,15 +116,12 @@ int main(int argc, char **argv) {
     beam_settings.beamtype = GAUSSIAN;
 
     printf("Setting up Gaussian primary beam settings\n");
+    printf("   setting beam FWHM to %.5fdeg and ref freq to %.3fMHz\n",woden_settings->gauss_beam_FWHM,woden_settings->gauss_beam_ref_freq / 1e+6  );
 
-    //TODO - make beam_FWHM_deg an option
-    float beam_FWHM_deg = 5.0;
-    beam_settings.beam_FWHM_rad = beam_FWHM_deg * D2R;
-    //TODO - make beam_ref_freq an option
-    float beam_ref_freq = 150e+6;
+    beam_settings.beam_FWHM_rad = woden_settings->gauss_beam_FWHM * D2R;
     //TODO I cannot for the life of me work out how to cudaMalloc and Memcpy
     //a single float (argh) so put the ref freq in an array (embarrassment)
-    float beam_ref_freq_array[1] = {beam_ref_freq};
+    float beam_ref_freq_array[1] = {woden_settings->gauss_beam_ref_freq};
     beam_settings.beam_ref_freq_array = malloc(sizeof(float));
     beam_settings.beam_ref_freq_array = beam_ref_freq_array;
 

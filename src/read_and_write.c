@@ -348,6 +348,8 @@ woden_settings_t * read_json_settings(const char *filename){
   struct json_object *metafits_filename;
   struct json_object *sky_crop_type;
   struct json_object *gaussian_beam;
+  struct json_object *gauss_beam_FWHM;
+  struct json_object *gauss_beam_ref_freq;
 
 	fp = fopen(filename,"r");
 	fread(buffer, 1024, 1, fp);
@@ -368,6 +370,9 @@ woden_settings_t * read_json_settings(const char *filename){
   json_object_object_get_ex(parsed_json, "metafits_filename", &metafits_filename);
   json_object_object_get_ex(parsed_json, "sky_crop_components", &sky_crop_type);
   json_object_object_get_ex(parsed_json, "use_gaussian_beam", &gaussian_beam);
+
+  json_object_object_get_ex(parsed_json, "gauss_beam_FWHM", &gauss_beam_FWHM);
+  json_object_object_get_ex(parsed_json, "gauss_beam_ref_freq", &gauss_beam_ref_freq);
 
   woden_settings_t * woden_settings;
   // woden_settings = NULL;
@@ -393,7 +398,28 @@ woden_settings_t * read_json_settings(const char *filename){
 
   if (gauss_beam) {
     woden_settings->beamtype = GAUSS_BEAM;
+
+    float beam_FWHM = (float)json_object_get_double(gauss_beam_FWHM);
+    //If the gauss_beam_FWHM has been set in the json file, use it
+    //Otherwise, set the defult FWHM of 20 deg
+    if (beam_FWHM > 0.0) {
+      woden_settings->gauss_beam_FWHM = beam_FWHM;
+    }
+    else {
+      woden_settings->gauss_beam_FWHM = 20.0;
+    }
+
+    float beam_ref_freq = (float)json_object_get_double(gauss_beam_ref_freq);
+    //If gauss_beam_ref_freq has been set in the json file, use it
+    //Otherwise, set the defult FWHM of 20 deg
+    if (beam_ref_freq > 0.0) {
+      woden_settings->gauss_beam_ref_freq = beam_ref_freq;
+    }
+    else {
+      woden_settings->gauss_beam_ref_freq = 150e+6;
+    }
   }
+
   else {
     woden_settings->beamtype = NO_BEAM;
   }
