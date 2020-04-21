@@ -109,6 +109,8 @@ typedef struct _woden_settngs_t {
   int *band_nums;
   int sky_crop_type;
   e_beamtype beamtype;
+  float gauss_beam_FWHM;
+  float gauss_beam_ref_freq;
   int chunking_size;
 
 } woden_settings_t;
