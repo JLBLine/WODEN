@@ -4,7 +4,7 @@
 #include <math.h>
 #include <fitsio.h>
 #include <erfa.h>
-// #include "read_and_write.h"
+
 #include "create_sky_model.h"
 #include "shapelet_basis.h"
 #include "woden.h"
@@ -73,7 +73,9 @@ int main(int argc, char **argv) {
   sdec0 = sin(woden_settings->dec0); cdec0=cos(woden_settings->dec0);
 
   printf("Setting phase centre (rad) to %f %f\n",woden_settings->ra0, woden_settings->dec0);
+  printf("Obs pointing centre (rad) is %f %f\n",metafits.ra_point, metafits.dec_point);
 
+  //Used for calculating l,m,n for components
   float angles_array[3] = {sdec0, cdec0, woden_settings->ra0};
 
   int num_time_steps = woden_settings->num_time_steps;
@@ -99,6 +101,58 @@ int main(int argc, char **argv) {
 
   printf("Finished cropping and calculating az/za\n");
 
+  //Setup beam settings for observation
+  beam_settings_t beam_settings;
+  //Angles used in calculating beam style l,m,ns
+  beam_settings.beam_angles_array = malloc(3*sizeof(float));
+  beam_settings.beam_angles_array[0] = sinf(metafits.dec_point);
+  beam_settings.beam_angles_array[1] = cosf(metafits.dec_point);
+  beam_settings.beam_angles_array[2] = woden_settings->lst_base - metafits.ra_point;
+
+  //Number of beam calculations needed for point components
+  beam_settings.num_point_beam_values = cropped_src->n_points * woden_settings->num_time_steps * woden_settings->num_freqs;
+
+  if (woden_settings->beamtype == GAUSS_BEAM) {
+    beam_settings.beamtype = GAUSSIAN;
+
+    printf("Setting up Gaussian primary beam settings\n");
+
+    //TODO - make beam_FWHM_deg an option
+    float beam_FWHM_deg = 5.0;
+    beam_settings.beam_FWHM_rad = beam_FWHM_deg * D2R;
+    //TODO - make beam_ref_freq an option
+    float beam_ref_freq = 150e+6;
+    //TODO I cannot for the life of me work out how to cudaMalloc and Memcpy
+    //a single float (argh) so put the ref freq in an array (embarrassment)
+    float beam_ref_freq_array[1] = {beam_ref_freq};
+    beam_settings.beam_ref_freq_array = malloc(sizeof(float));
+    beam_settings.beam_ref_freq_array = beam_ref_freq_array;
+
+    //Store all ha (which change with lst) that the beam needs to be calculated at.
+    beam_settings.beam_point_has = malloc(woden_settings->num_time_steps * cropped_src->n_points * sizeof(float));
+    beam_settings.beam_point_decs = malloc(woden_settings->num_time_steps * cropped_src->n_points * sizeof(float));
+
+    for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
+      float lst = woden_settings->lst_base + time_step*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
+      //TODO add half a time step is good? Add time decorrelation?
+      lst += 0.5*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
+
+      for (int component = 0; component < cropped_src->n_points; component++) {
+        int step = cropped_src->n_points*time_step + component;
+
+        beam_settings.beam_point_has[step] = lst - cropped_src->point_ras[component];
+        beam_settings.beam_point_decs[step] = cropped_src->point_decs[component];
+
+      }//point loop
+
+    //TODO add in gaussian components
+    //TODO add in shapelet components
+
+    }//gaussian beam time loop
+  } // End if (woden_settings->gaussian_beam)
+
+
+
   for (size_t band = 0; band < woden_settings->num_bands; band++) {
     int band_num = woden_settings->band_nums[band];
     float base_band_freq = ((band_num - 1)*(metafits.bandwidth/24.0)) + woden_settings->base_low_freq;
@@ -114,6 +168,24 @@ int main(int argc, char **argv) {
     visibility_set->cha0s = malloc( num_visis * sizeof(float) );
     visibility_set->lsts = malloc( num_visis * sizeof(float) );
     visibility_set->wavelengths = malloc( num_visis * sizeof(float) );
+    visibility_set->channel_frequencies = malloc( woden_settings->num_freqs * sizeof(float) );
+
+    // //Useful for testing beam things
+    // visibility_set->beam_has = malloc(woden_settings->num_time_steps * cropped_src->n_points * sizeof(float) );
+    // visibility_set->beam_decs = malloc(woden_settings->num_time_steps * cropped_src->n_points * sizeof(float) );
+    // visibility_set->beam_ls = malloc(woden_settings->num_time_steps * cropped_src->n_points * sizeof(float) );
+    // visibility_set->beam_ms = malloc(woden_settings->num_time_steps * cropped_src->n_points * sizeof(float) );
+    // visibility_set->beam_reals = malloc(woden_settings->num_time_steps * cropped_src->n_points * woden_settings->num_freqs * sizeof(float) );
+    // visibility_set->beam_imags = malloc(woden_settings->num_time_steps * cropped_src->n_points * woden_settings->num_freqs * sizeof(float) );
+
+    //Fill in the channel frequencies
+    for (int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++) {
+      frequency = base_band_freq + (woden_settings->frequency_resolution*freq_step);
+      visibility_set->channel_frequencies[freq_step] = frequency;
+    }
+
+    //Fill in visibility settings in order of baseline,freq,time
+    //Order matches that of a uvfits file (I live in the past)
 
     for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
       float lst = woden_settings->lst_base + time_step*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
@@ -139,8 +211,9 @@ int main(int argc, char **argv) {
     }//time loop
 
     calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
-                    *cropped_src, angles_array,
-                    woden_settings->num_baselines, num_visis, visibility_set,
+                    *cropped_src, angles_array, beam_settings,
+                    woden_settings->num_baselines, woden_settings->num_time_steps,
+                    num_visis, woden_settings->num_freqs, visibility_set,
                     sbf);
 
     // calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
@@ -169,22 +242,66 @@ int main(int argc, char **argv) {
     fflush(output_visi);
     fclose(output_visi);
 
-    // // Dumps u,v,w (metres), Re(vis), Im(vis) directly to text file - useful for
-    // // bug hunting with small outputs
+    // // // Dumps u,v,w (metres), Re(vis), Im(vis) directly to text file - useful for
+    // // // bug hunting with small outputs
+    // FILE *output_visi_text;
     // char buff[0x100];
     // snprintf(buff, sizeof(buff), "output_visi_band%02d.txt", band_num);
-    // output_visi = fopen(buff,"w");
+    // output_visi_text = fopen(buff,"w");
     // for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
     //   for ( int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++ ) {
     //     for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {
     //       int step = woden_settings->num_baselines*(time_step*woden_settings->num_freqs + freq_step);
-    //       fprintf(output_visi,"%f %f %f %f %f\n",visibility_set->us_metres[step + baseline],
+    //       fprintf(output_visi_text,"%f %f %f %f %f\n",visibility_set->us_metres[step + baseline],
     //               visibility_set->vs_metres[step + baseline],visibility_set->ws_metres[step + baseline],
     //               visibility_set->sum_visi_real[step + baseline],visibility_set->sum_visi_imag[step + baseline]);
     //     }
     //   }
     // }
-    // fclose(output_visi);
+    // fflush(output_visi_text);
+    // fclose(output_visi_text);
+    //
+    // //// Beam testing text file
+    // FILE *output_beamcoords;
+    // char bufff[0x100];
+    // snprintf(bufff, sizeof(bufff), "output_beam_coords%02d.txt", band_num);
+    // output_beamcoords = fopen(bufff,"w");
+    // for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
+    //     for (int component = 0; component < cropped_src->n_points; component++) {
+    //       int step = cropped_src->n_points*time_step;
+    //       fprintf(output_beamcoords,"%f %f %f %f %f %f\n",
+    //               beam_settings.beam_point_has[step + component], beam_settings.beam_point_decs[step + component],
+    //               visibility_set->beam_has[step + component], visibility_set->beam_decs[step + component],
+    //               visibility_set->beam_ls[step + component], visibility_set->beam_ms[step + component]);
+    //     }
+    // }
+    // fflush(output_beamcoords);
+    // fclose(output_beamcoords);
+    // //
+    // //
+    // //// Beam testing text file
+    // FILE *output_beamvals;
+    // char buffff[0x100];
+    // snprintf(buffff, sizeof(buffff), "output_beam_values%02d.txt", band_num);
+    // output_beamvals = fopen(buffff,"w");
+    // for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
+    //   for ( int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++ ) {
+    //     for (int component = 0; component < cropped_src->n_points; component++) {
+    //       int step = cropped_src->n_points*(time_step*woden_settings->num_freqs + freq_step);
+    //       fprintf(output_beamvals,"%f %f\n",
+    //               visibility_set->beam_reals[step + component],visibility_set->beam_imags[step + component]);
+    //     }
+    //   }
+    // }
+    // fflush(output_beamvals);
+    // fclose(output_beamvals);
+
+    // free( visibility_set->beam_imags );
+    // free( visibility_set->beam_reals );
+    // free( visibility_set->beam_ls );
+    // free( visibility_set->beam_ms );
+    // free( visibility_set->beam_has );
+    // free( visibility_set->beam_decs );
 
     free( visibility_set->sum_visi_real );
     free( visibility_set->sum_visi_imag );
@@ -195,6 +312,7 @@ int main(int argc, char **argv) {
     free( visibility_set->cha0s );
     free( visibility_set->lsts );
     free( visibility_set->wavelengths );
+
     free( visibility_set );
 
   }//band loop

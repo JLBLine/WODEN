@@ -207,7 +207,7 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
 def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
                cat_filename=None,metafits_filename=None,band_nums=None,
                json_name=None,freq_res=None,time_res=None,
-               sky_crop_components=False):
+               sky_crop_components=False, use_gaussian_beam=False):
     '''Populate a json parameter file used to run WODEN'''
 
     outfile = open(json_name,'w+')
@@ -224,6 +224,11 @@ def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
 
     if sky_crop_components:
         outfile.write('  "sky_crop_components": True,\n')
+    else:
+        pass
+
+    if use_gaussian_beam:
+        outfile.write('  "use_gaussian_beam": True,\n')
     else:
         pass
 
@@ -274,6 +279,8 @@ if __name__ == "__main__":
         help='Add to switch on the nvidia profiler when running woden')
     parser.add_argument('--sky_crop_components', default=False, action='store_true',
         help='WODEN will crop out sky model information that is below the horizon for the given LST. By default, for each SOURCE in the sky model, if any COMPONENT is below the horizon, the entire source will be flagged. If --sky_crop_components is included WODEN will include any COMPONENT above the horizon, regardless of which SOURCE it belongs to.')
+    parser.add_argument('--use_gaussian_beam', default=False, action='store_true',
+        help='Apply a gaussian beam centred on the pointing centre in the metafits file')
 
 
     args = parser.parse_args()
@@ -346,7 +353,8 @@ if __name__ == "__main__":
                num_time_steps=num_time_steps, cat_filename=args.cat_filename,
                metafits_filename=args.metafits_filename, band_nums=band_nums,
                json_name=json_name, freq_res=ch_width, time_res=time_res,
-               sky_crop_components=args.sky_crop_components)
+               sky_crop_components=args.sky_crop_components,
+               use_gaussian_beam=args.use_gaussian_beam)
 
     ##Check the uvfits prepend to make sure we end in .uvfits
     output_uvfits_prepend = args.output_uvfits_prepend

@@ -2,6 +2,9 @@
 #include <stdint.h>
 #include <fitsio.h>
 
+enum component_type {POINT=0, GAUSSIAN, SHAPELET, SHAPELET2};
+typedef enum {NO_BEAM, GAUSS_BEAM, FEE_BEAM}e_beamtype;
+
 #define CS_LEN_SRC_NAME 16
 #define SRC_KEY         "SOURCE"
 #define SRC_END         "ENDSOURCE"
@@ -14,8 +17,6 @@
 #define SHAPELET_KEY    "SHAPELET"
 #define SPARAMS_KEY     "SPARAMS"
 #define SCOEFF_KEY      "SCOEFF"
-
-enum component_type {POINT=0, GAUSSIAN, SHAPELET, SHAPELET2};
 
 typedef struct _catsource_t {
   //General source info
@@ -34,6 +35,8 @@ typedef struct _catsource_t {
   float *point_freqs;
   double *point_azs;
   double *point_zas;
+  float *point_beam_XX_re;
+  float *point_beam_XX_im;
 
   //Gaussian params
   float *gauss_ras;
@@ -78,9 +81,16 @@ typedef struct _visibility_set_t {
   float *cha0s;
   float *lsts;
   float *wavelengths;
-  float *ls;
-  float *ms;
-  float *ns;
+  float *channel_frequencies;
+
+  float *beam_has;
+  float *beam_decs;
+  float *beam_ls;
+  float *beam_ms;
+  float *beam_reals;
+  float *beam_imags;
+
+
 } visibility_set_t;
 
 typedef struct _woden_settngs_t {
@@ -98,6 +108,7 @@ typedef struct _woden_settngs_t {
   int num_bands;
   int *band_nums;
   int sky_crop_type;
+  e_beamtype beamtype;
 
 } woden_settings_t;
 
@@ -135,6 +146,8 @@ typedef struct _Meta_Ffile {
     int dig_gains[256][24];
     int centchan;
     float lst_base;
+    float ra_point;
+    float dec_point;
     float frequency_resolution;
     float frequency_cent;
     float bandwidth;
@@ -151,3 +164,15 @@ woden_settings_t * read_json_settings(const char *filename);
 int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome);
 
 array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits, int num_tiles);
+
+typedef struct _beam_settings_t {
+    float *beam_angles_array;
+    float *beam_point_has;
+    float *beam_point_decs;
+    int num_point_beam_values;
+
+    float beam_FWHM_rad;
+    float *beam_ref_freq_array;
+    e_beamtype beamtype;
+
+} beam_settings_t;
