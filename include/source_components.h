@@ -15,7 +15,8 @@ __global__ void kern_calc_visi_point(float *d_point_ras,
            float *d_sum_visi_real, float *d_sum_visi_imag,
            float *d_angles_array, float *d_wavelengths,
            float *d_ls, float *d_ms, float *d_ns,
-           int num_points, int num_visis);
+           int num_points, int num_baselines, int num_freqs, int num_visis,
+           float *d_beam_reals, float *d_beam_imags, int beamtype);
 
 __global__ void kern_calc_visi_gaussian(float *d_gauss_ras,
            float *d_gauss_decs, float *d_gauss_fluxes, float *d_gauss_freqs,
