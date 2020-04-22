@@ -1,11 +1,6 @@
 #include <math.h>
 #include "read_and_write.h"
 
-extern "C" void copy_XYZ_to_GPU(float *d_X_diff, float *d_Y_diff, float *d_Z_diff,
-                                float *X_diff_metres, float *Y_diff_metres, float *Z_diff_metres,
-                                const int num_baselines);
-
-
 extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metres, float *Z_diff_metres,
                     catsource_t catsource, float *angles_array, beam_settings_t beam_settings,
                     const int num_baselines, const int num_time_steps, const int num_visis,

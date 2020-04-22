@@ -174,6 +174,14 @@ typedef struct _beam_settings_t {
     float *beam_point_decs;
     int num_point_beam_values;
 
+    float *beam_gausscomp_has;
+    float *beam_gausscomp_decs;
+    int num_gausscomp_beam_values;
+
+    float *beam_shape_has;
+    float *beam_shape_decs;
+    int num_shape_beam_values;
+
     float beam_FWHM_rad;
     float *beam_ref_freq_array;
     e_beamtype beamtype;

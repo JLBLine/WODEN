@@ -34,7 +34,6 @@ __global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
 
   // TODO would it be faster to have freq and time on one axis, and num
   // components on other axis?
-
   if (iFreq < num_freqs && iLMcoord < num_components * num_times) {
 
     //The l,m coords for the beam locations are for every component, every time
@@ -54,7 +53,7 @@ __global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
                std, std, cos_theta, sin_theta, sin_2theta,
                &d_beam_real, &d_beam_imag);
 
-    // printf("%d %d %f %f %f %f\n", iFreq, iLMcoord, d_beam_ls[iLMcoord], d_beam_ms[iLMcoord], d_beam_real, d_beam_imag);
+    printf("%d %d %f %f %f %f\n", iFreq, iLMcoord, d_beam_ls[iLMcoord], d_beam_ms[iLMcoord], d_beam_real, d_beam_imag);
 
     d_beam_reals[beam_ind] = d_beam_real;
     d_beam_imags[beam_ind] = d_beam_imag;
@@ -69,7 +68,7 @@ extern "C" void testing_gaussian_beam( float *beam_has, float *beam_decs,
            float *beam_reals, float *beam_imags){
 
 
-  int num_hadec = num_components * num_times;
+  int num_beam_hadec = num_components * num_times;
   int num_beam_calcs = num_components * num_times * num_freqs;
 
   float *d_beam_angles_array = NULL;
@@ -77,21 +76,21 @@ extern "C" void testing_gaussian_beam( float *beam_has, float *beam_decs,
   cudaMemcpy( d_beam_angles_array, beam_angles_array, 3*sizeof(float), cudaMemcpyHostToDevice );
 
   float *d_beam_has = NULL;
-  cudaMalloc( (void**)&d_beam_has, num_hadec*sizeof(float) );
-  cudaMemcpy( d_beam_has, beam_has, num_hadec*sizeof(float), cudaMemcpyHostToDevice );
+  cudaMalloc( (void**)&d_beam_has, num_beam_hadec*sizeof(float) );
+  cudaMemcpy( d_beam_has, beam_has, num_beam_hadec*sizeof(float), cudaMemcpyHostToDevice );
 
   float *d_beam_decs = NULL;
-  cudaMalloc( (void**)&d_beam_decs, num_hadec*sizeof(float) );
-  cudaMemcpy( d_beam_decs, beam_decs, num_hadec*sizeof(float), cudaMemcpyHostToDevice );
+  cudaMalloc( (void**)&d_beam_decs, num_beam_hadec*sizeof(float) );
+  cudaMemcpy( d_beam_decs, beam_decs, num_beam_hadec*sizeof(float), cudaMemcpyHostToDevice );
 
   float *d_beam_ls = NULL;
-  cudaMalloc( (void**)&d_beam_ls, num_hadec*sizeof(float) );
+  cudaMalloc( (void**)&d_beam_ls, num_beam_hadec*sizeof(float) );
 
   float *d_beam_ms = NULL;
-  cudaMalloc( (void**)&d_beam_ms, num_hadec*sizeof(float) );
+  cudaMalloc( (void**)&d_beam_ms, num_beam_hadec*sizeof(float) );
 
   float *d_beam_ns = NULL;
-  cudaMalloc( (void**)&d_beam_ns, num_hadec*sizeof(float) );
+  cudaMalloc( (void**)&d_beam_ns, num_beam_hadec*sizeof(float) );
 
   float *d_freqs = NULL;
   cudaMalloc( (void**)&d_freqs, num_freqs*sizeof(float) );
@@ -114,13 +113,13 @@ extern "C" void testing_gaussian_beam( float *beam_has, float *beam_decs,
   dim3 grid, threads;
 
   threads.x = 128;
-  grid.x = (int)ceil( (float)num_hadec / (float)threads.x );
+  grid.x = (int)ceil( (float)num_beam_hadec / (float)threads.x );
 
   kern_calc_lmn<<< grid, threads >>>(d_beam_angles_array, d_beam_has, d_beam_decs,
-                d_beam_ls, d_beam_ms, d_beam_ns, num_hadec);
+                d_beam_ls, d_beam_ms, d_beam_ns, num_beam_hadec);
 
-  cudaMemcpy(beam_ls, d_beam_ls, num_hadec*sizeof(float), cudaMemcpyDeviceToHost);
-  cudaMemcpy(beam_ms, d_beam_ms, num_hadec*sizeof(float), cudaMemcpyDeviceToHost);
+  cudaMemcpy(beam_ls, d_beam_ls, num_beam_hadec*sizeof(float), cudaMemcpyDeviceToHost);
+  cudaMemcpy(beam_ms, d_beam_ms, num_beam_hadec*sizeof(float), cudaMemcpyDeviceToHost);
 
   float beam_theta = 0;
   float cos_theta = cosf(beam_theta);
