@@ -9,66 +9,55 @@
 #include "shapelet_basis.h"
 #include "woden.h"
 #include "constants.h"
+#include "print_help.h"
 
 int main(int argc, char **argv) {
 
+  //If not enough arguments, print help
   if (argc < 2) {
-    printf("Must input a .json settings file to run woden. This file must include:\n");
-    printf("\tra0: ra phase centre (float in degrees)\n");
-    printf("\tdec0: dec phase centre (float in degrees)\n");
-    printf("\tnum_freqs: number of fine frequency channels to simulate (int)\n");
-    printf("\tnum_time_steps: number of time steps to simulate (int)\n");
-    printf("\tcat_filename: path to and name of WODEN-style srclist (string)\n");
-    printf("\tmetafits_filename: path to MWA and name of metafits file to base\n\t\tsimulation on (string)\n");
-    printf("\n");
-    printf("Optionally, the .json can include:\n");
-    printf("\tsky_crop_components=True: WODEN crops sources with any component\n\t\tbelow the horizon. Add this arg to include all components\n\t\tabove horizon, regardless of which source they belong to\n");
+    print_cmdline_help();
     exit(1);
-
   }
 
+  //If --help is passed, print help
   if (strcmp("--help", argv[1]) == 0) {
-    printf("Must input a .json settings file to run woden. This file must include:\n");
-    printf("\tra0: ra phase centre (float in degrees)\n");
-    printf("\tdec0: dec phase centre (float in degrees)\n");
-    printf("\tnum_freqs: number of fine frequency channels to simulate (int)\n");
-    printf("\tnum_time_steps: number of time steps to simulate (int)\n");
-    printf("\tcat_filename: path to and name of WODEN-style srclist (string)\n");
-    printf("\tmetafits_filename: path to MWA and name of metafits file to base\n\t\tsimulation on (string)\n");
-    printf("\n");
-    printf("Optionally, the .json can include:\n");
-    printf("\tsky_crop_components=True: WODEN crops sources with any component\n\t\tbelow the horizon. Add this arg to include all components\n\t\tabove horizon, regardless of which source they belong to\n");
+    print_cmdline_help();
     exit(1);
 
   }
 
+  //Create the shapelet basis function array
   float *sbf;
   sbf = NULL;
   sbf = malloc( sbf_N * sbf_L * sizeof(float) );
   sbf = create_sbf(sbf);
 
+  //Read in the settings from the controlling json file
   woden_settings_t * woden_settings;
   woden_settings = read_json_settings(argv[1]);
 
+  //Read in information from the metafits file
   int status=0;
-  // array_layout_t * array_layout;
   static fitsfile *metaf_file=NULL;
   MetaFfile_t metafits;
   fits_open_file(&metaf_file, woden_settings->metafits_filename, READONLY, &status);
   status = init_meta_file(metaf_file, &metafits, woden_settings->metafits_filename);
 
+  //Create the array layout in instrument-centric X,Y,Z using positions
+  //from the metafits file
   array_layout_t * array_layout;
   array_layout = calc_XYZ_diffs(&metafits, metafits.num_tiles);
 
+  //Propagate some of the metafits data into woden_settings
   woden_settings->lst_base = metafits.lst_base;
   woden_settings->base_low_freq = metafits.base_low_freq;
   woden_settings->num_baselines = array_layout->num_baselines;
 
+  //Set some constants based on the settings
   float ha0, sha0, cha0;
   float wavelength;
   float frequency;
   const int num_visis = woden_settings->num_baselines * woden_settings->num_time_steps * woden_settings->num_freqs;
-
   float sdec0,cdec0;
   sdec0 = sin(woden_settings->dec0); cdec0=cos(woden_settings->dec0);
 
@@ -77,7 +66,6 @@ int main(int argc, char **argv) {
 
   //Used for calculating l,m,n for components
   float angles_array[3] = {sdec0, cdec0, woden_settings->ra0};
-
   int num_time_steps = woden_settings->num_time_steps;
 
   //Calculate all lsts for this observation
@@ -94,14 +82,15 @@ int main(int argc, char **argv) {
   source_catalogue_t *raw_srccat;
   raw_srccat = read_source_catalogue(woden_settings->cat_filename);
 
+  //Crop emission below the horizon, and collapse all SOURCES from raw_srccat
+  //into one single SOURCE
   printf("Horizon cropping sky model and calculating az/za for all components for observation\n");
-
   catsource_t *cropped_src;
   cropped_src = crop_sky_model(raw_srccat, lsts, num_time_steps, woden_settings->sky_crop_type);
 
   printf("Finished cropping and calculating az/za\n");
 
-  //Setup beam settings for observation
+  //Setup primary beam settings for observation
   beam_settings_t beam_settings;
   //Angles used in calculating beam style l,m,ns
   beam_settings.beam_angles_array = malloc(3*sizeof(float));
@@ -112,12 +101,14 @@ int main(int argc, char **argv) {
   //Number of beam calculations needed for point components
   beam_settings.num_point_beam_values = cropped_src->n_points * woden_settings->num_time_steps * woden_settings->num_freqs;
 
+  //If using a gaussian primary beam, do gaussian beam things
   if (woden_settings->beamtype == GAUSS_BEAM) {
     beam_settings.beamtype = GAUSSIAN;
 
     printf("Setting up Gaussian primary beam settings\n");
     printf("   setting beam FWHM to %.5fdeg and ref freq to %.3fMHz\n",woden_settings->gauss_beam_FWHM,woden_settings->gauss_beam_ref_freq / 1e+6  );
 
+    //Set constants used in beam calculation
     beam_settings.beam_FWHM_rad = woden_settings->gauss_beam_FWHM * D2R;
     //TODO I cannot for the life of me work out how to cudaMalloc and Memcpy
     //a single float (argh) so put the ref freq in an array (embarrassment)
@@ -129,15 +120,12 @@ int main(int argc, char **argv) {
     beam_settings.beam_point_has = malloc(woden_settings->num_time_steps * cropped_src->n_points * sizeof(float));
     beam_settings.beam_point_decs = malloc(woden_settings->num_time_steps * cropped_src->n_points * sizeof(float));
 
+    //Loop over all time and point components and calculate ha
     for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
-      float lst = woden_settings->lst_base + time_step*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
-      //TODO add half a time step is good? Add time decorrelation?
-      lst += 0.5*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
-
       for (int component = 0; component < cropped_src->n_points; component++) {
         int step = cropped_src->n_points*time_step + component;
 
-        beam_settings.beam_point_has[step] = lst - cropped_src->point_ras[component];
+        beam_settings.beam_point_has[step] = lsts[time_step] - cropped_src->point_ras[component];
         beam_settings.beam_point_decs[step] = cropped_src->point_decs[component];
 
       }//point loop
@@ -148,9 +136,15 @@ int main(int argc, char **argv) {
     }//gaussian beam time loop
   } // End if (woden_settings->gaussian_beam)
 
+  //TODO add in the FEE beam model as an option
+  //else if (woden_settings->beamtype == MWA_BEAM) {}
 
-
+  //MWA correlator data is split into 24 'coarse' bands of 1.28MHz bandwidth,
+  //which is typically split into 10, 20, or 40kHz fine channels
+  //Loop through each coarse frequency band, run the simulation and dump to
+  //a binary file
   for (size_t band = 0; band < woden_settings->num_bands; band++) {
+    //Set the lower frequency edge for this coarse band
     int band_num = woden_settings->band_nums[band];
     float base_band_freq = ((band_num - 1)*(metafits.bandwidth/24.0)) + woden_settings->base_low_freq;
     printf("Simulating band %02d with bottom freq %.8e\n",band_num,base_band_freq);
@@ -175,7 +169,7 @@ int main(int argc, char **argv) {
     // visibility_set->beam_reals = malloc(woden_settings->num_time_steps * cropped_src->n_points * woden_settings->num_freqs * sizeof(float) );
     // visibility_set->beam_imags = malloc(woden_settings->num_time_steps * cropped_src->n_points * woden_settings->num_freqs * sizeof(float) );
 
-    //Fill in the channel frequencies
+    //Fill in the fine channel frequencies
     for (int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++) {
       frequency = base_band_freq + (woden_settings->frequency_resolution*freq_step);
       visibility_set->channel_frequencies[freq_step] = frequency;
@@ -185,39 +179,31 @@ int main(int argc, char **argv) {
     //Order matches that of a uvfits file (I live in the past)
 
     for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
-      float lst = woden_settings->lst_base + time_step*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
-      //TODO add half a time step is good? Add time decorrelation?
-      lst += 0.5*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
-      ha0 = lst - woden_settings->ra0;
+      ha0 = lsts[time_step] - woden_settings->ra0;
       sha0 = sin(ha0); cha0=cos(ha0);
 
       for (int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++) {
         frequency = base_band_freq + (woden_settings->frequency_resolution*freq_step);
         wavelength = VELC / frequency;
-
         int step = woden_settings->num_baselines*(time_step*woden_settings->num_freqs + freq_step);
 
         for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {
-
           visibility_set->cha0s[step + baseline] = cha0;
           visibility_set->sha0s[step + baseline] = sha0;
-          visibility_set->lsts[step + baseline] = lst;
+          visibility_set->lsts[step + baseline] = lsts[time_step];
           visibility_set->wavelengths[step + baseline] = wavelength;
         }//baseline loop
       }//freq loop
     }//time loop
 
+    //Throw all of the settings at the GPU and crank the handle on the simulation
     calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
                     *cropped_src, angles_array, beam_settings,
                     woden_settings->num_baselines, woden_settings->num_time_steps,
                     num_visis, woden_settings->num_freqs, visibility_set,
                     sbf);
 
-    // calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
-    //                 raw_srccat->catsources[0], angles_array,
-    //                 woden_settings->num_baselines, num_visis, visibility_set,
-    //                 sbf);
-
+    //Dumps u,v,w (metres), Re(vis), Im(vis) to a binary file
     FILE *output_visi;
     char buf[0x100];
     snprintf(buf, sizeof(buf), "output_visi_band%02d.dat", band_num);
@@ -300,6 +286,7 @@ int main(int argc, char **argv) {
     // free( visibility_set->beam_has );
     // free( visibility_set->beam_decs );
 
+    //Free up that memory
     free( visibility_set->sum_visi_real );
     free( visibility_set->sum_visi_imag );
     free( visibility_set->us_metres );
