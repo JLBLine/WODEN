@@ -114,6 +114,7 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   float fwhm_lm = sinf(beam_settings.beam_FWHM_rad);
 
   if (num_points > 0) {
+    printf("Doing point components\n");
 
     float *d_point_ras=NULL;
     float *d_point_decs=NULL;
@@ -248,6 +249,7 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   }//if point sources
 
   if (num_gauss > 0) {
+    printf("Doing gaussian components\n");
 
     float *d_gauss_ras=NULL;
     float *d_gauss_decs=NULL;
@@ -334,14 +336,12 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
       grid.x = (int)ceil( (float)num_time_steps*float(num_gauss) / (float)threads.x );
       grid.y = (int)ceil( (float)num_freqs / (float)threads.y );
       //
-      printf("Doing a beam gaussian beam kernel\n");
+
       kern_gaussian_beam<<< grid, threads >>>(d_beam_ls, d_beam_ms,
                  d_beam_ref_freq, d_freqs,
                  fwhm_lm, cos_theta, sin_theta, sin_2theta,
                  num_freqs, num_time_steps, num_gauss,
                  d_beam_reals, d_beam_imags);
-
-      printf("Finished a gaussian beam kernel\n");
 
       // cudaMemcpy(visibility_set->beam_has, d_beam_has, num_beam_hadec*sizeof(float), cudaMemcpyDeviceToHost);
       // cudaMemcpy(visibility_set->beam_decs, d_beam_decs, num_beam_hadec*sizeof(float), cudaMemcpyDeviceToHost);
@@ -398,6 +398,8 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   }//if gauss sources
 
   if (num_shapes > 0) {
+    printf("Doing shapelet components\n");
+
     float *d_shape_ras=NULL;
     float *d_shape_decs=NULL;
     float *d_shape_fluxes=NULL;
@@ -535,19 +537,16 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
       grid.x = (int)ceil( (float)num_time_steps*float(num_shapes) / (float)threads.x );
       grid.y = (int)ceil( (float)num_freqs / (float)threads.y );
       //
-      printf("Doing a beam gaussian beam kernel for shapelets\n");
       kern_gaussian_beam<<< grid, threads >>>(d_beam_ls, d_beam_ms,
                  d_beam_ref_freq, d_freqs,
                  fwhm_lm, cos_theta, sin_theta, sin_2theta,
                  num_freqs, num_time_steps, num_shapes,
                  d_beam_reals, d_beam_imags);
 
-      printf("Finished a gaussian beam kernel for shapelets\n");
-
-      cudaMemcpy(visibility_set->beam_has, d_beam_has, num_beam_hadec*sizeof(float), cudaMemcpyDeviceToHost);
-      cudaMemcpy(visibility_set->beam_decs, d_beam_decs, num_beam_hadec*sizeof(float), cudaMemcpyDeviceToHost);
-      cudaMemcpy(visibility_set->beam_ls, d_beam_ls, num_beam_hadec*sizeof(float), cudaMemcpyDeviceToHost);
-      cudaMemcpy(visibility_set->beam_ms, d_beam_ms, num_beam_hadec*sizeof(float), cudaMemcpyDeviceToHost);
+      // cudaMemcpy(visibility_set->beam_has, d_beam_has, num_beam_hadec*sizeof(float), cudaMemcpyDeviceToHost);
+      // cudaMemcpy(visibility_set->beam_decs, d_beam_decs, num_beam_hadec*sizeof(float), cudaMemcpyDeviceToHost);
+      // cudaMemcpy(visibility_set->beam_ls, d_beam_ls, num_beam_hadec*sizeof(float), cudaMemcpyDeviceToHost);
+      // cudaMemcpy(visibility_set->beam_ms, d_beam_ms, num_beam_hadec*sizeof(float), cudaMemcpyDeviceToHost);
 
       cudaFree( d_beam_ns );
       cudaFree( d_beam_ms );
@@ -584,8 +583,8 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
             d_beam_reals, d_beam_imags, beam_settings.beamtype);
 
 
-    cudaMemcpy(visibility_set->beam_reals,d_beam_reals,beam_settings.num_shape_beam_values*sizeof(float),cudaMemcpyDeviceToHost);
-    cudaMemcpy(visibility_set->beam_imags,d_beam_imags,beam_settings.num_shape_beam_values*sizeof(float),cudaMemcpyDeviceToHost);
+    // cudaMemcpy(visibility_set->beam_reals,d_beam_reals,beam_settings.num_shape_beam_values*sizeof(float),cudaMemcpyDeviceToHost);
+    // cudaMemcpy(visibility_set->beam_imags,d_beam_imags,beam_settings.num_shape_beam_values*sizeof(float),cudaMemcpyDeviceToHost);
 
     cudaFree( d_beam_imags);
     cudaFree( d_beam_reals);
