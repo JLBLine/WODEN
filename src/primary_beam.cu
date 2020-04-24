@@ -53,8 +53,6 @@ __global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
                std, std, cos_theta, sin_theta, sin_2theta,
                &d_beam_real, &d_beam_imag);
 
-    printf("%d %d %f %f %f %f\n", iFreq, iLMcoord, d_beam_ls[iLMcoord], d_beam_ms[iLMcoord], d_beam_real, d_beam_imag);
-
     d_beam_reals[beam_ind] = d_beam_real;
     d_beam_imags[beam_ind] = d_beam_imag;
 
