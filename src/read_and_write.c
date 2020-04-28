@@ -347,6 +347,7 @@ woden_settings_t * read_json_settings(const char *filename){
   struct json_object *cat_filename;
   struct json_object *metafits_filename;
   struct json_object *sky_crop_type;
+  struct json_object *chunking_size;
 
 	fp = fopen(filename,"r");
 	fread(buffer, 1024, 1, fp);
@@ -366,6 +367,7 @@ woden_settings_t * read_json_settings(const char *filename){
   json_object_object_get_ex(parsed_json, "cat_filename", &cat_filename);
   json_object_object_get_ex(parsed_json, "metafits_filename", &metafits_filename);
   json_object_object_get_ex(parsed_json, "sky_crop_components", &sky_crop_type);
+  json_object_object_get_ex(parsed_json, "chunking_size", &chunking_size);
 
   woden_settings_t * woden_settings;
   // woden_settings = NULL;
@@ -384,6 +386,9 @@ woden_settings_t * read_json_settings(const char *filename){
   woden_settings->metafits_filename = json_object_get_string(metafits_filename);
 
   woden_settings->sky_crop_type = json_object_get_boolean(sky_crop_type);
+
+  woden_settings->chunking_size = json_object_get_int(chunking_size);
+
 
   struct json_object *band_num;
   struct json_object *band_nums;

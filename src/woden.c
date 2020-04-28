@@ -20,6 +20,7 @@ int main(int argc, char **argv) {
     printf("\tnum_time_steps: number of time steps to simulate (int)\n");
     printf("\tcat_filename: path to and name of WODEN-style srclist (string)\n");
     printf("\tmetafits_filename: path to MWA and name of metafits file to base\n\t\tsimulation on (string)\n");
+    printf("\tchunking_size: size of point source chunks to process (int)\n");
     printf("\n");
     printf("Optionally, the .json can include:\n");
     printf("\tsky_crop_components=True: WODEN crops sources with any component\n\t\tbelow the horizon. Add this arg to include all components\n\t\tabove horizon, regardless of which source they belong to\n");
@@ -35,6 +36,7 @@ int main(int argc, char **argv) {
     printf("\tnum_time_steps: number of time steps to simulate (int)\n");
     printf("\tcat_filename: path to and name of WODEN-style srclist (string)\n");
     printf("\tmetafits_filename: path to MWA and name of metafits file to base\n\t\tsimulation on (string)\n");
+    printf("\tchunking_size: size of point source chunks to process (int)\n");
     printf("\n");
     printf("Optionally, the .json can include:\n");
     printf("\tsky_crop_components=True: WODEN crops sources with any component\n\t\tbelow the horizon. Add this arg to include all components\n\t\tabove horizon, regardless of which source they belong to\n");
@@ -50,6 +52,11 @@ int main(int argc, char **argv) {
   woden_settings_t *woden_settings;
   woden_settings = read_json_settings(argv[1]);
 
+  if (woden_settings->chunking_size > MAX_CHUNKING_SIZE) {
+    printf("Current maximum allowable chunk size is %d.  Defaulting to this value.", MAX_CHUNKING_SIZE);
+    woden_settings->chunking_size = MAX_CHUNKING_SIZE;
+  }
+  
   int status=0;
   // array_layout_t * array_layout;
   static fitsfile *metaf_file=NULL;
@@ -139,11 +146,11 @@ int main(int argc, char **argv) {
     }//time loop
  
     //should we chunk outside the band for-loop so that we can reuse the chunks for each band (should be the same)
-    if (cropped_src->n_points > MAX_CHUNKING_SIZE) {
+    if (cropped_src->n_points > woden_settings->chunking_size) {
       printf("Chunking candidate.\n");
-      int num_chunks = (cropped_src->n_points/(MAX_CHUNKING_SIZE));    
+      int num_chunks = (cropped_src->n_points/(woden_settings->chunking_size));    
       
-      if (cropped_src->n_points%(MAX_CHUNKING_SIZE) != 0) {
+      if (cropped_src->n_points%(woden_settings->chunking_size) != 0) {
         num_chunks = num_chunks + 1;      
       }
       
@@ -204,12 +211,12 @@ int main(int argc, char **argv) {
       for (int chunk = 0; chunk < num_chunks; chunk++) {
         printf("Processing chunk %d.\n", chunk);
 
-        //if that last chunk aint a divisor of our MAX_CHUNKING_SIZE
-        if ((chunk == (num_chunks - 1)) && (cropped_src->n_points%(MAX_CHUNKING_SIZE) != 0)) {
-          temp_cropped_src->n_points = cropped_src->n_points % MAX_CHUNKING_SIZE;
+        //if that last chunk aint a divisor of our woden_settings->chunking_size
+        if ((chunk == (num_chunks - 1)) && (cropped_src->n_points%(woden_settings->chunking_size) != 0)) {
+          temp_cropped_src->n_points = cropped_src->n_points % woden_settings->chunking_size;
         }
         else{
-          temp_cropped_src->n_points = MAX_CHUNKING_SIZE;
+          temp_cropped_src->n_points = woden_settings->chunking_size;
         }
         printf("Number of points for chunk %d is %d.\n", chunk, temp_cropped_src->n_points);
 
@@ -218,12 +225,12 @@ int main(int argc, char **argv) {
         temp_cropped_src->n_shape_coeffs = 0;
 
         //increment the required pointers to point at the beginning of the next chunk 
-        temp_cropped_src->point_ras = cropped_src->point_ras + (chunk * MAX_CHUNKING_SIZE);
-        temp_cropped_src->point_decs = cropped_src->point_decs + (chunk * MAX_CHUNKING_SIZE);
-        temp_cropped_src->point_fluxes = cropped_src->point_fluxes + (chunk * MAX_CHUNKING_SIZE);
-        temp_cropped_src->point_freqs = cropped_src->point_freqs + (chunk * MAX_CHUNKING_SIZE);
-        temp_cropped_src->point_azs = cropped_src->point_azs + (woden_settings->num_time_steps * chunk * MAX_CHUNKING_SIZE);
-        temp_cropped_src->point_zas = cropped_src->point_zas + (woden_settings->num_time_steps * chunk * MAX_CHUNKING_SIZE);
+        temp_cropped_src->point_ras = cropped_src->point_ras + (chunk * woden_settings->chunking_size);
+        temp_cropped_src->point_decs = cropped_src->point_decs + (chunk * woden_settings->chunking_size);
+        temp_cropped_src->point_fluxes = cropped_src->point_fluxes + (chunk * woden_settings->chunking_size);
+        temp_cropped_src->point_freqs = cropped_src->point_freqs + (chunk * woden_settings->chunking_size);
+        temp_cropped_src->point_azs = cropped_src->point_azs + (woden_settings->num_time_steps * chunk * woden_settings->chunking_size);
+        temp_cropped_src->point_zas = cropped_src->point_zas + (woden_settings->num_time_steps * chunk * woden_settings->chunking_size);
 
         calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
                       *temp_cropped_src, angles_array,

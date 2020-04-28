@@ -98,6 +98,7 @@ typedef struct _woden_settngs_t {
   int num_bands;
   int *band_nums;
   int sky_crop_type;
+  int chunking_size;
 
 } woden_settings_t;
 
