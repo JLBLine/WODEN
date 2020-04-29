@@ -3,6 +3,7 @@
 #include <cuComplex.h>
 #include <complex.h>
 #include <math.h>
+#include "cudacomplex.h"
 #include "constants.h"
 #include "fundamental_coords.h"
 
@@ -58,6 +59,70 @@ __global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
 
   }
 }
+
+
+void calculate_gaussian_beam(int num_components, int num_time_steps, int num_freqs,
+     float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
+     float *d_beam_ref_freq, float *d_freqs, float *d_beam_angles_array,
+     float *beam_has, float *beam_decs,
+     float *d_beam_reals, float *d_beam_imags){
+
+  int num_beam_hadec = num_components * num_time_steps;
+
+  float *d_beam_has = NULL;
+  cudaMalloc( (void**)&d_beam_has, num_beam_hadec*sizeof(float) );
+  cudaMemcpy( d_beam_has, beam_has, num_beam_hadec*sizeof(float), cudaMemcpyHostToDevice );
+
+  float *d_beam_decs = NULL;
+  cudaMalloc( (void**)&d_beam_decs, num_beam_hadec*sizeof(float) );
+  cudaMemcpy( d_beam_decs, beam_decs, num_beam_hadec*sizeof(float), cudaMemcpyHostToDevice );
+
+  float *d_beam_ls = NULL;
+  cudaMalloc( (void**)&d_beam_ls, num_beam_hadec*sizeof(float) );
+
+  float *d_beam_ms = NULL;
+  cudaMalloc( (void**)&d_beam_ms, num_beam_hadec*sizeof(float) );
+
+  float *d_beam_ns = NULL;
+  cudaMalloc( (void**)&d_beam_ns, num_beam_hadec*sizeof(float) );
+
+  dim3 grid, threads;
+  threads.x = 128;
+
+  grid.x = (int)ceil( (float)num_beam_hadec / (float)threads.x );
+
+  kern_calc_lmn<<< grid, threads >>>(d_beam_angles_array, d_beam_has, d_beam_decs,
+                d_beam_ls, d_beam_ms, d_beam_ns, num_beam_hadec);
+
+  // cudaMemcpy(visibility_set->beam_has, d_beam_has, num_beam_hadec*sizeof(float), cudaMemcpyDeviceToHost);
+  // cudaMemcpy(visibility_set->beam_decs, d_beam_decs, num_beam_hadec*sizeof(float), cudaMemcpyDeviceToHost);
+  // cudaMemcpy(visibility_set->beam_ls, d_beam_ls, num_beam_hadec*sizeof(float), cudaMemcpyDeviceToHost);
+  // cudaMemcpy(visibility_set->beam_ms, d_beam_ms, num_beam_hadec*sizeof(float), cudaMemcpyDeviceToHost);
+
+
+  threads.y = 2;
+  grid.x = (int)ceil( (float)num_time_steps*float(num_components) / (float)threads.x );
+  grid.y = (int)ceil( (float)num_freqs / (float)threads.y );
+  //
+  // printf("Doing a beam gaussian beam kernel\n");
+  kern_gaussian_beam<<< grid, threads >>>(d_beam_ls, d_beam_ms,
+             d_beam_ref_freq, d_freqs,
+             fwhm_lm, cos_theta, sin_theta, sin_2theta,
+             num_freqs, num_time_steps, num_components,
+             d_beam_reals, d_beam_imags);
+
+  // printf("Finished a gaussian beam kernel\n");
+
+  cudaFree( d_beam_ns );
+  cudaFree( d_beam_ms );
+  cudaFree( d_beam_ls );
+  cudaFree( d_beam_decs );
+  cudaFree( d_beam_has );
+}
+
+
+
+
 
 extern "C" void testing_gaussian_beam( float *beam_has, float *beam_decs,
            float *beam_angles_array, float *beam_freqs, float *ref_freq_array,
