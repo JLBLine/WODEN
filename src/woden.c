@@ -9,6 +9,7 @@
 #include "shapelet_basis.h"
 #include "woden.h"
 #include "constants.h"
+#include "chunk_source.h"
 
 int main(int argc, char **argv) {
 
@@ -56,9 +57,11 @@ int main(int argc, char **argv) {
     printf("Current maximum allowable chunk size is %d.  Defaulting to this value.", MAX_CHUNKING_SIZE);
     woden_settings->chunking_size = MAX_CHUNKING_SIZE;
   }
-  
+  else if (woden_settings->chunking_size < 1 ) {
+    woden_settings->chunking_size = MAX_CHUNKING_SIZE;
+  }
+
   int status=0;
-  // array_layout_t * array_layout;
   static fitsfile *metaf_file=NULL;
   MetaFfile_t metafits;
   fits_open_file(&metaf_file, woden_settings->metafits_filename, READONLY, &status);
@@ -144,37 +147,30 @@ int main(int argc, char **argv) {
         }//baseline loop
       }//freq loop
     }//time loop
- 
+
+    //Calculating a single shapelet coeff is equivalent to a point/gauss so treat as a
+    //component here
+    int num_components = cropped_src->n_points + cropped_src->n_gauss + cropped_src->n_shape_coeffs;
+
     //should we chunk outside the band for-loop so that we can reuse the chunks for each band (should be the same)
-    if (cropped_src->n_points > woden_settings->chunking_size) {
+    if (num_components > woden_settings->chunking_size) {
       printf("Chunking candidate.\n");
-      int num_chunks = (cropped_src->n_points/(woden_settings->chunking_size));    
-      
-      if (cropped_src->n_points%(woden_settings->chunking_size) != 0) {
-        num_chunks = num_chunks + 1;      
+      int num_chunks = num_components / woden_settings->chunking_size;
+
+      if (num_components % woden_settings->chunking_size != 0) {
+        num_chunks = num_chunks + 1;
       }
-      
+
       printf("Number of chunks required is %d.\n",  num_chunks);
 
-      //setup a temporary visibility set that calculate_visibilities will populate 
+      //setup a temporary visibility set that calculate_visibilities will populate
       visibility_set_t *temp_visibility_set = malloc(sizeof(visibility_set_t));
       temp_visibility_set->sum_visi_real = malloc( num_visis * sizeof(float) );
       temp_visibility_set->sum_visi_imag = malloc( num_visis * sizeof(float) );
       temp_visibility_set->us_metres = malloc( num_visis * sizeof(float) );
       temp_visibility_set->vs_metres = malloc( num_visis * sizeof(float) );
       temp_visibility_set->ws_metres = malloc( num_visis * sizeof(float) );
-//      temp_visibility_set->sha0s = malloc( num_visis * sizeof(float) );
-//      temp_visibility_set->cha0s = malloc( num_visis * sizeof(float) );
-//      temp_visibility_set->lsts = malloc( num_visis * sizeof(float) );
-//      temp_visibility_set->wavelengths = malloc( num_visis * sizeof(float) );
 
-      //we need to pass these values into calculate_visibilities
-/*
-      memcpy(temp_visibility_set->sha0s, visibility_set->sha0s, num_visis * sizeof(float));
-      memcpy(temp_visibility_set->cha0s, visibility_set->cha0s, num_visis * sizeof(float));
-      memcpy(temp_visibility_set->lsts, visibility_set->lsts, num_visis * sizeof(float));
-      memcpy(temp_visibility_set->wavelengths, visibility_set->wavelengths, num_visis * sizeof(float));
-*/
       temp_visibility_set->sha0s = visibility_set->sha0s;
       temp_visibility_set->cha0s = visibility_set->cha0s;
       temp_visibility_set->lsts = visibility_set->lsts;
@@ -182,55 +178,34 @@ int main(int argc, char **argv) {
 
       catsource_t *temp_cropped_src = malloc(sizeof(catsource_t));
 
-      //we are only dealing with points for now so just let these point to our cropped_src
-      temp_cropped_src->gauss_ras = cropped_src->gauss_ras;
-      temp_cropped_src->gauss_decs = cropped_src->gauss_decs;
-      temp_cropped_src->gauss_fluxes = cropped_src->gauss_fluxes;
-      temp_cropped_src->gauss_freqs = cropped_src->gauss_freqs;
-      temp_cropped_src->gauss_majors = cropped_src->gauss_majors;
-      temp_cropped_src->gauss_minors = cropped_src->gauss_minors;
-      temp_cropped_src->gauss_pas = cropped_src->gauss_pas;
-      temp_cropped_src->gauss_azs = cropped_src->gauss_azs;
-      temp_cropped_src->gauss_zas = cropped_src->gauss_zas;
-
-      temp_cropped_src->shape_ras = cropped_src->shape_ras;
-      temp_cropped_src->shape_decs = cropped_src->shape_decs;
-      temp_cropped_src->shape_fluxes = cropped_src->shape_fluxes;
-      temp_cropped_src->shape_freqs = cropped_src->shape_freqs;
-      temp_cropped_src->shape_majors = cropped_src->shape_majors;
-      temp_cropped_src->shape_minors = cropped_src->shape_minors;
-      temp_cropped_src->shape_pas = cropped_src->shape_pas;
-      temp_cropped_src->shape_n1s = cropped_src->shape_n1s;
-      temp_cropped_src->shape_n2s = cropped_src->shape_n2s;
-      temp_cropped_src->shape_coeffs = cropped_src->shape_coeffs;
-      temp_cropped_src->shape_param_indexes = cropped_src->shape_param_indexes;
-      temp_cropped_src->shape_azs = cropped_src->shape_azs;
-      temp_cropped_src->shape_zas= cropped_src->shape_zas;
-
-
+      //For each chunk, calculate the visibilities for those components
       for (int chunk = 0; chunk < num_chunks; chunk++) {
         printf("Processing chunk %d.\n", chunk);
+        //
+        // //if that last chunk aint a divisor of our woden_settings->chunking_size
+        // if ((chunk == (num_chunks - 1)) && (cropped_src->n_points%(woden_settings->chunking_size) != 0)) {
+        //   temp_cropped_src->n_points = cropped_src->n_points % woden_settings->chunking_size;
+        // }
+        // else{
+        //   temp_cropped_src->n_points = woden_settings->chunking_size;
+        // }
 
-        //if that last chunk aint a divisor of our woden_settings->chunking_size
-        if ((chunk == (num_chunks - 1)) && (cropped_src->n_points%(woden_settings->chunking_size) != 0)) {
-          temp_cropped_src->n_points = cropped_src->n_points % woden_settings->chunking_size;
-        }
-        else{
-          temp_cropped_src->n_points = woden_settings->chunking_size;
-        }
-        printf("Number of points for chunk %d is %d.\n", chunk, temp_cropped_src->n_points);
+        fill_chunk_src(temp_cropped_src, cropped_src, num_chunks, chunk,
+                       woden_settings->chunking_size, woden_settings->num_time_steps );
 
-        temp_cropped_src->n_gauss = 0;
-        temp_cropped_src->n_shapes = 0;
-        temp_cropped_src->n_shape_coeffs = 0;
-
-        //increment the required pointers to point at the beginning of the next chunk 
-        temp_cropped_src->point_ras = cropped_src->point_ras + (chunk * woden_settings->chunking_size);
-        temp_cropped_src->point_decs = cropped_src->point_decs + (chunk * woden_settings->chunking_size);
-        temp_cropped_src->point_fluxes = cropped_src->point_fluxes + (chunk * woden_settings->chunking_size);
-        temp_cropped_src->point_freqs = cropped_src->point_freqs + (chunk * woden_settings->chunking_size);
-        temp_cropped_src->point_azs = cropped_src->point_azs + (woden_settings->num_time_steps * chunk * woden_settings->chunking_size);
-        temp_cropped_src->point_zas = cropped_src->point_zas + (woden_settings->num_time_steps * chunk * woden_settings->chunking_size);
+        printf("\tNumber of components in chunk are: P %d G %d S_coeffs %d\n",temp_cropped_src->n_points,temp_cropped_src->n_gauss,temp_cropped_src->n_shape_coeffs );
+        //
+        // temp_cropped_src->n_gauss = 0;
+        // temp_cropped_src->n_shapes = 0;
+        // temp_cropped_src->n_shape_coeffs = 0;
+        //
+        // //increment the required pointers to point at the beginning of the next chunk
+        // temp_cropped_src->point_ras = cropped_src->point_ras + (chunk * woden_settings->chunking_size);
+        // temp_cropped_src->point_decs = cropped_src->point_decs + (chunk * woden_settings->chunking_size);
+        // temp_cropped_src->point_fluxes = cropped_src->point_fluxes + (chunk * woden_settings->chunking_size);
+        // temp_cropped_src->point_freqs = cropped_src->point_freqs + (chunk * woden_settings->chunking_size);
+        // temp_cropped_src->point_azs = cropped_src->point_azs + (woden_settings->num_time_steps * chunk * woden_settings->chunking_size);
+        // temp_cropped_src->point_zas = cropped_src->point_zas + (woden_settings->num_time_steps * chunk * woden_settings->chunking_size);
 
         calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
                       *temp_cropped_src, angles_array,
@@ -240,17 +215,18 @@ int main(int argc, char **argv) {
         printf("Adding temporary visibility set.\n");
 	      //add to visiblity_set
         for (int visi = 0; visi < num_visis; visi++) {
-          //if the first chunk then initialise our values
+          //if the first chunk then initialise our values, and copy across
+          //the u,v,w coords
           if (chunk == 0) {
             visibility_set->sum_visi_real[visi] = 0;
             visibility_set->sum_visi_imag[visi] = 0;
 
             visibility_set->us_metres[visi] = temp_visibility_set->us_metres[visi];
             visibility_set->vs_metres[visi] = temp_visibility_set->vs_metres[visi];
-            visibility_set->ws_metres[visi] = temp_visibility_set->ws_metres[visi];          
+            visibility_set->ws_metres[visi] = temp_visibility_set->ws_metres[visi];
           }
-          
-          //add each component to visibility set
+
+          //add each chunk of components to visibility set
           visibility_set->sum_visi_real[visi] += temp_visibility_set->sum_visi_real[visi];
           visibility_set->sum_visi_imag[visi] += temp_visibility_set->sum_visi_imag[visi];
         }//visi loop
@@ -261,22 +237,18 @@ int main(int argc, char **argv) {
       free( temp_visibility_set->us_metres );
       free( temp_visibility_set->vs_metres );
       free( temp_visibility_set->ws_metres );
-/*
-      free( temp_visibility_set->sha0s );
-      free( temp_visibility_set->cha0s );
-      free( temp_visibility_set->lsts );
-      free( temp_visibility_set->wavelengths );
-*/
+
       free( temp_visibility_set );
-     
+
     }
+    //If not chunking the components, just simulate all in one go
     else {
       calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
                     *cropped_src, angles_array,
                     woden_settings->num_baselines, num_visis, visibility_set,
                     sbf);
 
-   }
+    }
 
     // calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
     //                 raw_srccat->catsources[0], angles_array,
@@ -320,9 +292,9 @@ int main(int argc, char **argv) {
         }
       }
     }
-    fclose(output_visi); 
+    fclose(output_visi);
 */
- 
+
     free( visibility_set->sum_visi_real );
     free( visibility_set->sum_visi_imag );
     free( visibility_set->us_metres );

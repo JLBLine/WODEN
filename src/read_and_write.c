@@ -6,6 +6,8 @@
 #include <json.h>
 #include <fitsio.h>
 
+enum component_type {POINT=0, GAUSSIAN, SHAPELET};
+
 /*********************************
 // Taken from the RTS (Mitchell et al 2008)
 // All credit to the original authors

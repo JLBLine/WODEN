@@ -15,8 +15,6 @@
 #define SPARAMS_KEY     "SPARAMS"
 #define SCOEFF_KEY      "SCOEFF"
 
-enum component_type {POINT=0, GAUSSIAN, SHAPELET, SHAPELET2};
-
 typedef struct _catsource_t {
   //General source info
   char name[32];
