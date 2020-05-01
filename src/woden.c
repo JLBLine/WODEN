@@ -226,7 +226,6 @@ int main(int argc, char **argv) {
       }//freq loop
     }//time loop
 
-<<<<<<< 80081d08caeaccbd7a66d932be24439b1305b2da
     //Calculating a single shapelet coeff is equivalent to a point/gauss so treat as a
     //component here
     int num_components = cropped_src->n_points + cropped_src->n_gauss + cropped_src->n_shape_coeffs;
@@ -269,7 +268,7 @@ int main(int argc, char **argv) {
         calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
                       *temp_cropped_src, angles_array, beam_settings,
                       woden_settings->num_baselines, woden_settings->num_time_steps,
-                      num_visis, woden_settings->num_freqs, visibility_set,
+                      num_visis, woden_settings->num_freqs, temp_visibility_set,
                       sbf);
 
         // printf("Adding temporary visibility set.\n");
@@ -303,22 +302,15 @@ int main(int argc, char **argv) {
     }
     //If not chunking the components, just simulate all in one go
     else {
-      calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
-=======
     //Throw all of the settings at the GPU and crank the handle on the simulation
     calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
->>>>>>> Added some comments through the main function, and tidied the --help printf statements into a separate file
                     *cropped_src, angles_array, beam_settings,
                     woden_settings->num_baselines, woden_settings->num_time_steps,
                     num_visis, woden_settings->num_freqs, visibility_set,
                     sbf);
-
-<<<<<<< 80081d08caeaccbd7a66d932be24439b1305b2da
     }
 
-=======
     //Dumps u,v,w (metres), Re(vis), Im(vis) to a binary file
->>>>>>> Added some comments through the main function, and tidied the --help printf statements into a separate file
     FILE *output_visi;
     char buf[0x100];
     snprintf(buf, sizeof(buf), "output_visi_band%02d.dat", band_num);

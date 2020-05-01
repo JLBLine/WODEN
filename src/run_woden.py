@@ -208,7 +208,7 @@ def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
                cat_filename=None,metafits_filename=None,band_nums=None,
                json_name=None,freq_res=None,time_res=None,
                sky_crop_components=False, use_gaussian_beam=False,
-               gauss_beam_FWHM=False, gauss_beam_ref_freq=False):
+               gauss_beam_FWHM=False, gauss_beam_ref_freq=False,
                chunking_size=None):
     '''Populate a json parameter file used to run WODEN'''
 
