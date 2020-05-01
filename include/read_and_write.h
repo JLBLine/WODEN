@@ -15,8 +15,6 @@
 #define SPARAMS_KEY     "SPARAMS"
 #define SCOEFF_KEY      "SCOEFF"
 
-enum component_type {POINT=0, GAUSSIAN, SHAPELET, SHAPELET2};
-
 typedef struct _catsource_t {
   //General source info
   char name[32];
@@ -98,6 +96,7 @@ typedef struct _woden_settngs_t {
   int num_bands;
   int *band_nums;
   int sky_crop_type;
+  int chunking_size;
 
 } woden_settings_t;
 

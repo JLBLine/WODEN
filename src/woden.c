@@ -9,6 +9,7 @@
 #include "shapelet_basis.h"
 #include "woden.h"
 #include "constants.h"
+#include "chunk_source.h"
 
 int main(int argc, char **argv) {
 
@@ -20,6 +21,7 @@ int main(int argc, char **argv) {
     printf("\tnum_time_steps: number of time steps to simulate (int)\n");
     printf("\tcat_filename: path to and name of WODEN-style srclist (string)\n");
     printf("\tmetafits_filename: path to MWA and name of metafits file to base\n\t\tsimulation on (string)\n");
+    printf("\tchunking_size: size of point source chunks to process (int)\n");
     printf("\n");
     printf("Optionally, the .json can include:\n");
     printf("\tsky_crop_components=True: WODEN crops sources with any component\n\t\tbelow the horizon. Add this arg to include all components\n\t\tabove horizon, regardless of which source they belong to\n");
@@ -35,6 +37,7 @@ int main(int argc, char **argv) {
     printf("\tnum_time_steps: number of time steps to simulate (int)\n");
     printf("\tcat_filename: path to and name of WODEN-style srclist (string)\n");
     printf("\tmetafits_filename: path to MWA and name of metafits file to base\n\t\tsimulation on (string)\n");
+    printf("\tchunking_size: size of point source chunks to process (int)\n");
     printf("\n");
     printf("Optionally, the .json can include:\n");
     printf("\tsky_crop_components=True: WODEN crops sources with any component\n\t\tbelow the horizon. Add this arg to include all components\n\t\tabove horizon, regardless of which source they belong to\n");
@@ -47,17 +50,24 @@ int main(int argc, char **argv) {
   sbf = malloc( sbf_N * sbf_L * sizeof(float) );
   sbf = create_sbf(sbf);
 
-  woden_settings_t * woden_settings;
+  woden_settings_t *woden_settings;
   woden_settings = read_json_settings(argv[1]);
 
+  if (woden_settings->chunking_size > MAX_CHUNKING_SIZE) {
+    printf("Current maximum allowable chunk size is %d.  Defaulting to this value.", MAX_CHUNKING_SIZE);
+    woden_settings->chunking_size = MAX_CHUNKING_SIZE;
+  }
+  else if (woden_settings->chunking_size < 1 ) {
+    woden_settings->chunking_size = MAX_CHUNKING_SIZE;
+  }
+
   int status=0;
-  // array_layout_t * array_layout;
   static fitsfile *metaf_file=NULL;
   MetaFfile_t metafits;
   fits_open_file(&metaf_file, woden_settings->metafits_filename, READONLY, &status);
   status = init_meta_file(metaf_file, &metafits, woden_settings->metafits_filename);
 
-  array_layout_t * array_layout;
+  array_layout_t *array_layout;
   array_layout = calc_XYZ_diffs(&metafits, metafits.num_tiles);
 
   woden_settings->lst_base = metafits.lst_base;
@@ -138,15 +148,87 @@ int main(int argc, char **argv) {
       }//freq loop
     }//time loop
 
-    calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
+    //Calculating a single shapelet coeff is equivalent to a point/gauss so treat as a
+    //component here
+    int num_components = cropped_src->n_points + cropped_src->n_gauss + cropped_src->n_shape_coeffs;
+
+    //TODO should we chunk outside the band for-loop so that we can reuse the chunks for each band (should be the same)
+    if (num_components > woden_settings->chunking_size) {
+      printf("Chunking sky model\n");
+      int num_chunks = num_components / woden_settings->chunking_size;
+
+      if (num_components % woden_settings->chunking_size != 0) {
+        num_chunks = num_chunks + 1;
+      }
+
+      printf("Number of chunks required is %d\n",  num_chunks);
+
+      //setup a temporary visibility set that calculate_visibilities will populate
+      visibility_set_t *temp_visibility_set = malloc(sizeof(visibility_set_t));
+      temp_visibility_set->sum_visi_real = malloc( num_visis * sizeof(float) );
+      temp_visibility_set->sum_visi_imag = malloc( num_visis * sizeof(float) );
+      temp_visibility_set->us_metres = malloc( num_visis * sizeof(float) );
+      temp_visibility_set->vs_metres = malloc( num_visis * sizeof(float) );
+      temp_visibility_set->ws_metres = malloc( num_visis * sizeof(float) );
+
+      temp_visibility_set->sha0s = visibility_set->sha0s;
+      temp_visibility_set->cha0s = visibility_set->cha0s;
+      temp_visibility_set->lsts = visibility_set->lsts;
+      temp_visibility_set->wavelengths = visibility_set->wavelengths;
+
+      catsource_t *temp_cropped_src = malloc(sizeof(catsource_t));
+
+      //For each chunk, calculate the visibilities for those components
+      for (int chunk = 0; chunk < num_chunks; chunk++) {
+        printf("Processing chunk %d\n", chunk);
+
+        fill_chunk_src(temp_cropped_src, cropped_src, num_chunks, chunk,
+                       woden_settings->chunking_size, woden_settings->num_time_steps );
+
+        printf("\tNumber of components in chunk are: P %d G %d S_coeffs %d\n",temp_cropped_src->n_points,temp_cropped_src->n_gauss,temp_cropped_src->n_shape_coeffs );
+
+        calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
+                      *temp_cropped_src, angles_array,
+                      woden_settings->num_baselines, num_visis, temp_visibility_set,
+                      sbf);
+
+        // printf("Adding temporary visibility set.\n");
+	      //add to visiblity_set
+        for (int visi = 0; visi < num_visis; visi++) {
+          //if the first chunk then initialise our values, and copy across
+          //the u,v,w coords
+          if (chunk == 0) {
+            visibility_set->sum_visi_real[visi] = 0;
+            visibility_set->sum_visi_imag[visi] = 0;
+
+            visibility_set->us_metres[visi] = temp_visibility_set->us_metres[visi];
+            visibility_set->vs_metres[visi] = temp_visibility_set->vs_metres[visi];
+            visibility_set->ws_metres[visi] = temp_visibility_set->ws_metres[visi];
+          }
+
+          //add each chunk of components to visibility set
+          visibility_set->sum_visi_real[visi] += temp_visibility_set->sum_visi_real[visi];
+          visibility_set->sum_visi_imag[visi] += temp_visibility_set->sum_visi_imag[visi];
+        }//visi loop
+      }//chunk loop
+
+      free( temp_visibility_set->sum_visi_real );
+      free( temp_visibility_set->sum_visi_imag );
+      free( temp_visibility_set->us_metres );
+      free( temp_visibility_set->vs_metres );
+      free( temp_visibility_set->ws_metres );
+
+      free( temp_visibility_set );
+
+    }
+    //If not chunking the components, just simulate all in one go
+    else {
+      calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
                     *cropped_src, angles_array,
                     woden_settings->num_baselines, num_visis, visibility_set,
                     sbf);
 
-    // calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
-    //                 raw_srccat->catsources[0], angles_array,
-    //                 woden_settings->num_baselines, num_visis, visibility_set,
-    //                 sbf);
+    }
 
     FILE *output_visi;
     char buf[0x100];
@@ -169,22 +251,24 @@ int main(int argc, char **argv) {
     fflush(output_visi);
     fclose(output_visi);
 
-    // // Dumps u,v,w (metres), Re(vis), Im(vis) directly to text file - useful for
-    // // bug hunting with small outputs
-    // char buff[0x100];
-    // snprintf(buff, sizeof(buff), "output_visi_band%02d.txt", band_num);
-    // output_visi = fopen(buff,"w");
-    // for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
-    //   for ( int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++ ) {
-    //     for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {
-    //       int step = woden_settings->num_baselines*(time_step*woden_settings->num_freqs + freq_step);
-    //       fprintf(output_visi,"%f %f %f %f %f\n",visibility_set->us_metres[step + baseline],
-    //               visibility_set->vs_metres[step + baseline],visibility_set->ws_metres[step + baseline],
-    //               visibility_set->sum_visi_real[step + baseline],visibility_set->sum_visi_imag[step + baseline]);
-    //     }
-    //   }
-    // }
-    // fclose(output_visi);
+    // Dumps u,v,w (metres), Re(vis), Im(vis) directly to text file - useful for
+    // bug hunting with small outputs
+/*
+    char buff[0x100];
+    snprintf(buff, sizeof(buff), "output_visi_band%02d.txt", band_num);
+    output_visi = fopen(buff,"w");
+    for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
+      for ( int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++ ) {
+        for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {
+          int step = woden_settings->num_baselines*(time_step*woden_settings->num_freqs + freq_step);
+          fprintf(output_visi,"%f %f %f %f %f\n",visibility_set->us_metres[step + baseline],
+                  visibility_set->vs_metres[step + baseline],visibility_set->ws_metres[step + baseline],
+                  visibility_set->sum_visi_real[step + baseline],visibility_set->sum_visi_imag[step + baseline]);
+        }
+      }
+    }
+    fclose(output_visi);
+*/
 
     free( visibility_set->sum_visi_real );
     free( visibility_set->sum_visi_imag );
