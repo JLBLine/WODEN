@@ -57,6 +57,10 @@ __global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
     d_beam_reals[beam_ind] = d_beam_real;
     d_beam_imags[beam_ind] = d_beam_imag;
 
+    // printf("%f %f %f %f %f\n",std, fwhm_lm, FWHM_FACTOR, ref_freq[0] , d_freqs[iFreq] );
+
+    // printf("iFreq,iLMcoord,d_beam_ls[iLMcoord],d_beam_ms[iLMcoord],d_beam_real %d %d %f %f %f\n",iFreq,iLMcoord,d_beam_ls[iLMcoord],d_beam_ms[iLMcoord],d_beam_real );
+
   }
 }
 

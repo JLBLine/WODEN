@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
   printf("Finished cropping and calculating az/za\n");
 
   //Setup primary beam settings for observation
-  beam_settings_t beam_settings;
+  beam_settings_t beam_settings; //= malloc(sizeof(beam_settings_t));
   //Angles used in calculating beam style l,m,ns
   beam_settings.beam_angles_array = malloc(3*sizeof(float));
   beam_settings.beam_angles_array[0] = sinf(metafits.dec_point);
@@ -114,7 +114,7 @@ int main(int argc, char **argv) {
 
   //If using a gaussian primary beam, do gaussian beam things
   if (woden_settings->beamtype == GAUSS_BEAM) {
-    beam_settings.beamtype = GAUSSIAN;
+    beam_settings.beamtype = GAUSS_BEAM;
 
     printf("Setting up Gaussian primary beam settings\n");
     printf("   setting beam FWHM to %.5fdeg and ref freq to %.3fMHz\n",woden_settings->gauss_beam_FWHM,woden_settings->gauss_beam_ref_freq / 1e+6  );
@@ -144,6 +144,8 @@ int main(int argc, char **argv) {
 
         beam_settings.beam_point_has[step] = lsts[time_step] - cropped_src->point_ras[component];
         beam_settings.beam_point_decs[step] = cropped_src->point_decs[component];
+
+        // printf("Original mothers step, ha %d %f \n",step,beam_settings.beam_point_has[step] );
 
       }//point loop
 
@@ -253,23 +255,52 @@ int main(int argc, char **argv) {
       temp_visibility_set->cha0s = visibility_set->cha0s;
       temp_visibility_set->lsts = visibility_set->lsts;
       temp_visibility_set->wavelengths = visibility_set->wavelengths;
+      temp_visibility_set->channel_frequencies = visibility_set->channel_frequencies;
 
       catsource_t *temp_cropped_src = malloc(sizeof(catsource_t));
+      int point_iter = 0;
+      int gauss_iter = 0;
+      int shape_iter = 0;
 
       //For each chunk, calculate the visibilities for those components
       for (int chunk = 0; chunk < num_chunks; chunk++) {
         printf("Processing chunk %d\n", chunk);
 
         fill_chunk_src(temp_cropped_src, cropped_src, num_chunks, chunk,
-                       woden_settings->chunking_size, woden_settings->num_time_steps );
+                       woden_settings->chunking_size, woden_settings->num_time_steps,
+                       &point_iter, &gauss_iter, &shape_iter);
+        // printf("WOT %d %d %d\n", point_iter, gauss_iter, shape_iter);
 
         printf("\tNumber of components in chunk are: P %d G %d S_coeffs %d\n",temp_cropped_src->n_points,temp_cropped_src->n_gauss,temp_cropped_src->n_shape_coeffs );
 
+        beam_settings_t beam_settings_chunk;
+        beam_settings_chunk = make_beam_settings_chunk(beam_settings, temp_cropped_src,
+                              cropped_src, woden_settings, point_iter, gauss_iter, shape_iter);
+
+        // for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
+        //   for (int component = 0; component < temp_cropped_src->n_points; component++) {
+        //     int chunk_step = temp_cropped_src->n_points*time_step + component;
+        //     int crop_step = cropped_src->n_points*time_step + point_iter + component;
+        //
+        //     printf("\tHA val %f %f\n",beam_settings_chunk.beam_point_has[chunk_step],beam_settings.beam_point_has[crop_step] );
+        //     printf("\tDec val %f %f\n",beam_settings_chunk.beam_point_decs[chunk_step],beam_settings.beam_point_decs[crop_step] );
+        //   }
+        // }
+
         calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
-                      *temp_cropped_src, angles_array, beam_settings,
+                      *temp_cropped_src, angles_array, beam_settings_chunk,
                       woden_settings->num_baselines, woden_settings->num_time_steps,
                       num_visis, woden_settings->num_freqs, temp_visibility_set,
                       sbf);
+
+        // free(beam_settings_chunk.beam_angles_array );
+        // free(beam_settings_chunk.beam_ref_freq_array);
+        free(beam_settings_chunk.beam_point_has );
+        free(beam_settings_chunk.beam_point_decs );
+        free(beam_settings_chunk.beam_gausscomp_has );
+        free(beam_settings_chunk.beam_gausscomp_decs );
+        free(beam_settings_chunk.beam_shape_has );
+        free(beam_settings_chunk.beam_shape_decs );
 
         // printf("Adding temporary visibility set.\n");
 	      //add to visiblity_set
@@ -302,12 +333,14 @@ int main(int argc, char **argv) {
     }
     //If not chunking the components, just simulate all in one go
     else {
-    //Throw all of the settings at the GPU and crank the handle on the simulation
-    calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
-                    *cropped_src, angles_array, beam_settings,
-                    woden_settings->num_baselines, woden_settings->num_time_steps,
-                    num_visis, woden_settings->num_freqs, visibility_set,
-                    sbf);
+      printf("At least we made it here\n");
+
+      //Throw all of the settings at the GPU and crank the handle on the simulation
+      calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
+                      *cropped_src, angles_array, beam_settings,
+                      woden_settings->num_baselines, woden_settings->num_time_steps,
+                      num_visis, woden_settings->num_freqs, visibility_set,
+                      sbf);
     }
 
     //Dumps u,v,w (metres), Re(vis), Im(vis) to a binary file
@@ -332,24 +365,24 @@ int main(int argc, char **argv) {
     fflush(output_visi);
     fclose(output_visi);
 
-    // // Dumps u,v,w (metres), Re(vis), Im(vis) directly to text file - useful for
-    // // bug hunting with small outputs
-    // FILE *output_visi_text;
-    // char buff[0x100];
-    // snprintf(buff, sizeof(buff), "output_visi_band%02d.txt", band_num);
-    // output_visi_text = fopen(buff,"w");
-    // for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
-    //   for ( int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++ ) {
-    //     for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {
-    //       int step = woden_settings->num_baselines*(time_step*woden_settings->num_freqs + freq_step);
-    //       fprintf(output_visi_text,"%f %f %f %f %f\n",visibility_set->us_metres[step + baseline],
-    //               visibility_set->vs_metres[step + baseline],visibility_set->ws_metres[step + baseline],
-    //               visibility_set->sum_visi_real[step + baseline],visibility_set->sum_visi_imag[step + baseline]);
-    //     }
-    //   }
-    // }
-    // fflush(output_visi_text);
-    // fclose(output_visi_text);
+    // Dumps u,v,w (metres), Re(vis), Im(vis) directly to text file - useful for
+    // bug hunting with small outputs
+    FILE *output_visi_text;
+    char buff[0x100];
+    snprintf(buff, sizeof(buff), "output_visi_band%02d.txt", band_num);
+    output_visi_text = fopen(buff,"w");
+    for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
+      for ( int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++ ) {
+        for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {
+          int step = woden_settings->num_baselines*(time_step*woden_settings->num_freqs + freq_step);
+          fprintf(output_visi_text,"%f %f %f %f %f\n",visibility_set->us_metres[step + baseline],
+                  visibility_set->vs_metres[step + baseline],visibility_set->ws_metres[step + baseline],
+                  visibility_set->sum_visi_real[step + baseline],visibility_set->sum_visi_imag[step + baseline]);
+        }
+      }
+    }
+    fflush(output_visi_text);
+    fclose(output_visi_text);
     // //
     // // // Beam testing text file
     // FILE *output_beamcoords;

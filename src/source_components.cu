@@ -70,9 +70,9 @@ __global__ void kern_calc_visi_point(float *d_point_ras,
     float beam_real;
     float beam_imag;
 
-    int beam_ind = 0.0;
-    int time_ind = 0.0;
-    int freq_ind = 0.0;
+    int beam_ind = 0;
+    int time_ind = 0;
+    int freq_ind = 0;
 
     if (beamtype == GAUSS_BEAM) {
       //Do some epic indexing to work out which beam value
@@ -83,7 +83,7 @@ __global__ void kern_calc_visi_point(float *d_point_ras,
       beam_real = d_beam_reals[beam_ind];
       beam_imag = d_beam_imags[beam_ind];
 
-      // printf("%d %d %d %d %d %d\n",iBaseline,num_baselines,num_freqs,time_ind,freq_ind,beam_ind);
+      // printf("%d %d %d %d %d %d %f %f\n",iBaseline,num_baselines,num_freqs,time_ind,freq_ind,beam_ind,beam_real,beam_imag);
 
     }
     else {

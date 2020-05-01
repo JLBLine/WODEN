@@ -184,6 +184,6 @@ typedef struct _beam_settings_t {
 
     float beam_FWHM_rad;
     float *beam_ref_freq_array;
-    e_beamtype beamtype;
+    int beamtype;
 
 } beam_settings_t;

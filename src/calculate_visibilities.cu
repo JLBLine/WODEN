@@ -37,8 +37,6 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   cudaMalloc( (void**)&d_angles_array, 3*sizeof(float) );
   cudaMemcpy( d_angles_array, angles_array, 3*sizeof(float), cudaMemcpyHostToDevice );
 
-
-
   float *d_sha0s = NULL;
   float *d_cha0s = NULL;
   float *d_wavelengths = NULL;
@@ -160,6 +158,8 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
     //If using a gaussian primary beam, calculate beam values for all freqs,
     //lsts and point component locations
     if (beam_settings.beamtype == GAUSS_BEAM) {
+
+      printf("Doing gaussian beam tings\n");
 
       calculate_gaussian_beam(num_points, num_time_steps, num_freqs,
            fwhm_lm, cos_theta, sin_theta, sin_2theta,
