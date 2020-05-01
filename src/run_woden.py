@@ -340,8 +340,6 @@ if __name__ == "__main__":
         else:
             num_time_steps = int(args.num_time_steps)
 
-#        chunking_size = int(args.chunking_size)
-
         f.close()
 
     ##Write json file
