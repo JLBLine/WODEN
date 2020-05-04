@@ -364,11 +364,14 @@ beam_settings_t make_beam_settings_chunk(beam_settings_t beam_settings,
     beam_settings_chunk.beam_gausscomp_has = malloc(woden_settings->num_time_steps * temp_cropped_src->n_gauss * sizeof(float));
     beam_settings_chunk.beam_gausscomp_decs = malloc(woden_settings->num_time_steps * temp_cropped_src->n_gauss * sizeof(float));
 
-    beam_settings_chunk.beam_shape_has = malloc(woden_settings->num_time_steps * temp_cropped_src->n_shapes * sizeof(float));
-    beam_settings_chunk.beam_shape_decs = malloc(woden_settings->num_time_steps * temp_cropped_src->n_shapes * sizeof(float));
+    //Currently we chunk over shapelet coefficients, no source, so need to copy over
+    //all the ha,dec information
+    beam_settings_chunk.beam_shape_has = malloc(woden_settings->num_time_steps * cropped_src->n_shapes * sizeof(float));
+    beam_settings_chunk.beam_shape_decs = malloc(woden_settings->num_time_steps * cropped_src->n_shapes * sizeof(float));
 
-    //Loop over all time and point components and calculate ha
+    //Loop over all time and point and gaussian components and assign ha,dec
     for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
+      //point loop
       for (int component = 0; component < temp_cropped_src->n_points; component++) {
         int chunk_step = temp_cropped_src->n_points*time_step + component;
         int crop_step = cropped_src->n_points*time_step + point_iter + component;
@@ -381,24 +384,24 @@ beam_settings_t make_beam_settings_chunk(beam_settings_t beam_settings,
         // printf("\tDec val %f %f\n",beam_settings_chunk.beam_point_decs[chunk_step],beam_settings.beam_point_decs[crop_step] );
 
       }//point loop
-    //
-    // //Loop over all time and gausscomp components and calculate ha
-    //   for (int component = 0; component < cropped_src->n_gauss; component++) {
-    //     int step = cropped_src->n_gauss*time_step + component;
-    //
-    //     beam_settings.beam_gausscomp_has[step] = lsts[time_step] - cropped_src->gauss_ras[component];
-    //     beam_settings.beam_gausscomp_decs[step] = cropped_src->gauss_decs[component];
-    //   }//gausscomp loop
-    //
-    // //Loop over all time and shape components and calculate ha
-    //   for (int component = 0; component < cropped_src->n_shapes; component++) {
-    //     int step = cropped_src->n_shapes*time_step + component;
-    //
-    //     beam_settings.beam_shape_has[step] = lsts[time_step] - cropped_src->shape_ras[component];
-    //     beam_settings.beam_shape_decs[step] = cropped_src->shape_decs[component];
-    //   }//shape loop
-    //
-    }//gaussian beam time loop
+
+    //gausscomp loop
+      for (int component = 0; component < temp_cropped_src->n_gauss; component++) {
+        int chunk_step = temp_cropped_src->n_gauss*time_step + component;
+        int crop_step = cropped_src->n_gauss*time_step + gauss_iter + component;
+
+        beam_settings_chunk.beam_gausscomp_has[chunk_step] = beam_settings.beam_gausscomp_has[crop_step];
+        beam_settings_chunk.beam_gausscomp_decs[chunk_step] = beam_settings.beam_gausscomp_decs[crop_step];
+      }//gausscomp loop
+
+      for (int component = 0; component < cropped_src->n_shapes; component++) {
+        int step = cropped_src->n_shapes*time_step + component;
+
+        beam_settings_chunk.beam_shape_has[step] = beam_settings.beam_shape_has[step];
+        beam_settings_chunk.beam_shape_decs[step] = beam_settings.beam_shape_decs[step];
+      }//gausscomp loop
+
+    }//end assign ha,dec for point+gaussian components time loop
   } // End if GAUSS_BEAM
 
 

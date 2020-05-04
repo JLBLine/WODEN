@@ -293,14 +293,14 @@ int main(int argc, char **argv) {
                       num_visis, woden_settings->num_freqs, temp_visibility_set,
                       sbf);
 
-        // free(beam_settings_chunk.beam_angles_array );
-        // free(beam_settings_chunk.beam_ref_freq_array);
-        free(beam_settings_chunk.beam_point_has );
-        free(beam_settings_chunk.beam_point_decs );
-        free(beam_settings_chunk.beam_gausscomp_has );
-        free(beam_settings_chunk.beam_gausscomp_decs );
-        free(beam_settings_chunk.beam_shape_has );
-        free(beam_settings_chunk.beam_shape_decs );
+        if (beam_settings.beamtype == GAUSS_BEAM) {
+          free(beam_settings_chunk.beam_point_has );
+          free(beam_settings_chunk.beam_point_decs );
+          free(beam_settings_chunk.beam_gausscomp_has );
+          free(beam_settings_chunk.beam_gausscomp_decs );
+          free(beam_settings_chunk.beam_shape_has );
+          free(beam_settings_chunk.beam_shape_decs );
+        }
 
         // printf("Adding temporary visibility set.\n");
 	      //add to visiblity_set
@@ -333,8 +333,6 @@ int main(int argc, char **argv) {
     }
     //If not chunking the components, just simulate all in one go
     else {
-      printf("At least we made it here\n");
-
       //Throw all of the settings at the GPU and crank the handle on the simulation
       calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
                       *cropped_src, angles_array, beam_settings,
@@ -367,22 +365,22 @@ int main(int argc, char **argv) {
 
     // Dumps u,v,w (metres), Re(vis), Im(vis) directly to text file - useful for
     // bug hunting with small outputs
-    FILE *output_visi_text;
-    char buff[0x100];
-    snprintf(buff, sizeof(buff), "output_visi_band%02d.txt", band_num);
-    output_visi_text = fopen(buff,"w");
-    for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
-      for ( int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++ ) {
-        for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {
-          int step = woden_settings->num_baselines*(time_step*woden_settings->num_freqs + freq_step);
-          fprintf(output_visi_text,"%f %f %f %f %f\n",visibility_set->us_metres[step + baseline],
-                  visibility_set->vs_metres[step + baseline],visibility_set->ws_metres[step + baseline],
-                  visibility_set->sum_visi_real[step + baseline],visibility_set->sum_visi_imag[step + baseline]);
-        }
-      }
-    }
-    fflush(output_visi_text);
-    fclose(output_visi_text);
+    // FILE *output_visi_text;
+    // char buff[0x100];
+    // snprintf(buff, sizeof(buff), "output_visi_band%02d.txt", band_num);
+    // output_visi_text = fopen(buff,"w");
+    // for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
+    //   for ( int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++ ) {
+    //     for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {
+    //       int step = woden_settings->num_baselines*(time_step*woden_settings->num_freqs + freq_step);
+    //       fprintf(output_visi_text,"%f %f %f %f %f\n",visibility_set->us_metres[step + baseline],
+    //               visibility_set->vs_metres[step + baseline],visibility_set->ws_metres[step + baseline],
+    //               visibility_set->sum_visi_real[step + baseline],visibility_set->sum_visi_imag[step + baseline]);
+    //     }
+    //   }
+    // }
+    // fflush(output_visi_text);
+    // fclose(output_visi_text);
     // //
     // // // Beam testing text file
     // FILE *output_beamcoords;
