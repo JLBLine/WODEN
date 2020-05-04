@@ -7,6 +7,7 @@
 #include "fundamental_coords.h"
 #include "constants.h"
 #include "shapelet_basis.h"
+#include "read_and_write.h"
 
 __device__ void extrap_flux(float *d_wavelengths, float *d_freqs,
            float *d_fluxes, int iComponent, int iBaseline,
@@ -48,7 +49,8 @@ __global__ void kern_calc_visi_point(float *d_point_ras,
            float *d_sum_visi_real, float *d_sum_visi_imag,
            float *d_angles_array, float *d_wavelengths,
            float *d_ls, float *d_ms, float *d_ns,
-           int num_points, int num_visis) {
+           int num_points, int num_baselines, int num_freqs, int num_visis,
+           float *d_beam_reals, float *d_beam_imags, int beamtype) {
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
@@ -65,8 +67,39 @@ __global__ void kern_calc_visi_point(float *d_point_ras,
                            d_ls, d_ms, d_ns,
                            iBaseline, iComponent);
 
+    float beam_real;
+    float beam_imag;
+
+    int beam_ind = 0;
+    int time_ind = 0;
+    int freq_ind = 0;
+
+    if (beamtype == GAUSS_BEAM) {
+      //Do some epic indexing to work out which beam value
+      time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
+      freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+      beam_ind = num_freqs*time_ind*num_points + (num_points*freq_ind) + iComponent;
+
+      beam_real = d_beam_reals[beam_ind];
+      beam_imag = d_beam_imags[beam_ind];
+
+      // printf("%d %d %d %d %d %d %f %f\n",iBaseline,num_baselines,num_freqs,time_ind,freq_ind,beam_ind,beam_real,beam_imag);
+
+    }
+    else {
+      beam_real = 1.0;
+      beam_imag = 0.0;
+    }
+
+    cuFloatComplex beam_complex = make_cuFloatComplex(beam_real,beam_imag);
+
+    visi = cuCmulf(visi, beam_complex);
+
     atomicAdd(&d_sum_visi_real[iBaseline],visi.x*point_flux);
     atomicAdd(&d_sum_visi_imag[iBaseline],visi.y*point_flux);
+
+    // atomicAdd(&d_sum_visi_real[iBaseline],beam_real);
+    // atomicAdd(&d_sum_visi_imag[iBaseline],beam_imag);
   }
 }
 
@@ -77,7 +110,8 @@ __global__ void kern_calc_visi_gaussian(float *d_gauss_ras,
            float *d_angles_array, float *d_wavelengths,
            float *d_ls, float *d_ms, float *d_ns,
            float *d_gauss_pas, float *d_gauss_majors, float *d_gauss_minors,
-           int num_gauss, int num_visis) {
+           int num_gauss, int num_baselines, int num_freqs, int num_visis,
+           float *d_beam_reals, float *d_beam_imags, int beamtype) {
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
@@ -112,6 +146,32 @@ __global__ void kern_calc_visi_gaussian(float *d_gauss_ras,
 
     visi = cuCmulf(visi, V_envelop);
 
+    float beam_real;
+    float beam_imag;
+
+    int beam_ind = 0.0;
+    int time_ind = 0.0;
+    int freq_ind = 0.0;
+
+    if (beamtype == GAUSS_BEAM) {
+      //Do some epic indexing to work out which beam value
+      time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
+      freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+      beam_ind = num_freqs*time_ind*num_gauss + (num_gauss*freq_ind) + iComponent;
+
+      beam_real = d_beam_reals[beam_ind];
+      beam_imag = d_beam_imags[beam_ind];
+
+    }
+    else {
+      beam_real = 1.0;
+      beam_imag = 0.0;
+    }
+
+    cuFloatComplex beam_complex = make_cuFloatComplex(beam_real,beam_imag);
+
+    visi = cuCmulf(visi, beam_complex);
+
     atomicAdd(&d_sum_visi_real[iBaseline],visi.x*gauss_flux);
     atomicAdd(&d_sum_visi_imag[iBaseline],visi.y*gauss_flux);
 
@@ -130,15 +190,17 @@ __global__ void kern_calc_visi_shapelets(float *d_shape_ras,
       float *d_shape_param_indexes,
       float *d_shape_ls, float *d_shape_ms, float *d_shape_ns,
       float *d_sbf,
-      const int num_baselines, const int num_visis, const int num_coeffs){
-
+      int num_shapes, int num_baselines, int num_freqs, int num_visis,
+      const int num_coeffs,
+      float *d_beam_reals, float *d_beam_imags, int beamtype) {
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
   const int iComponent = threadIdx.y + (blockDim.y*blockIdx.y);
 
-  if(iBaseline < num_visis && iComponent < num_coeffs) {
 
+  if (iBaseline < num_visis && iComponent < num_coeffs) {
+    // printf("Made it here all g %d %d %d %d\n", iBaseline,num_visis,iComponent,num_coeffs);
     int param_index = d_shape_param_indexes[iComponent];
 
     float shape_flux;
@@ -209,6 +271,32 @@ __global__ void kern_calc_visi_shapelets(float *d_shape_ras,
     V_envelop = V_envelop + Ipow_lookup[(n1+n2) % 4] * f_hat * u_value*v_value;
 
     visi = cuCmulf(visi, V_envelop);
+
+    float beam_real;
+    float beam_imag;
+
+    int beam_ind = 0.0;
+    int time_ind = 0.0;
+    int freq_ind = 0.0;
+
+    if (beamtype == GAUSS_BEAM) {
+      //Do some epic indexing to work out which beam value
+      time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
+      freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+      beam_ind = num_freqs*time_ind*num_shapes + (num_shapes*freq_ind) + param_index;
+
+      beam_real = d_beam_reals[beam_ind];
+      beam_imag = d_beam_imags[beam_ind];
+
+    }
+    else {
+      beam_real = 1.0;
+      beam_imag = 0.0;
+    }
+
+    cuFloatComplex beam_complex = make_cuFloatComplex(beam_real,beam_imag);
+
+    visi = cuCmulf(visi, beam_complex);
 
     atomicAdd(&d_sum_visi_real[iBaseline],visi.x * shape_flux);
     atomicAdd(&d_sum_visi_imag[iBaseline],visi.y * shape_flux);

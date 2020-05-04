@@ -6,7 +6,7 @@
 #include <json.h>
 #include <fitsio.h>
 
-enum component_type {POINT=0, GAUSSIAN, SHAPELET};
+// enum component_type {POINT=0, GAUSSIAN, SHAPELET};
 
 /*********************************
 // Taken from the RTS (Mitchell et al 2008)
@@ -349,7 +349,10 @@ woden_settings_t * read_json_settings(const char *filename){
   struct json_object *cat_filename;
   struct json_object *metafits_filename;
   struct json_object *sky_crop_type;
+  struct json_object *gaussian_beam;
   struct json_object *chunking_size;
+  struct json_object *gauss_beam_FWHM;
+  struct json_object *gauss_beam_ref_freq;
 
 	fp = fopen(filename,"r");
 	fread(buffer, 1024, 1, fp);
@@ -369,7 +372,11 @@ woden_settings_t * read_json_settings(const char *filename){
   json_object_object_get_ex(parsed_json, "cat_filename", &cat_filename);
   json_object_object_get_ex(parsed_json, "metafits_filename", &metafits_filename);
   json_object_object_get_ex(parsed_json, "sky_crop_components", &sky_crop_type);
+  json_object_object_get_ex(parsed_json, "use_gaussian_beam", &gaussian_beam);
   json_object_object_get_ex(parsed_json, "chunking_size", &chunking_size);
+
+  json_object_object_get_ex(parsed_json, "gauss_beam_FWHM", &gauss_beam_FWHM);
+  json_object_object_get_ex(parsed_json, "gauss_beam_ref_freq", &gauss_beam_ref_freq);
 
   woden_settings_t * woden_settings;
   // woden_settings = NULL;
@@ -387,8 +394,43 @@ woden_settings_t * read_json_settings(const char *filename){
   woden_settings->cat_filename = json_object_get_string(cat_filename);
   woden_settings->metafits_filename = json_object_get_string(metafits_filename);
 
+  //Boolean setting whether to crop sources by SOURCE or by COMPONENT
   woden_settings->sky_crop_type = json_object_get_boolean(sky_crop_type);
 
+  //Boolean whether to use gaussian primary beam
+  int gauss_beam = json_object_get_boolean(gaussian_beam);
+
+  if (gauss_beam) {
+    woden_settings->beamtype = GAUSS_BEAM;
+
+    float beam_FWHM = (float)json_object_get_double(gauss_beam_FWHM);
+    //If the gauss_beam_FWHM has been set in the json file, use it
+    //Otherwise, set the defult FWHM of 20 deg
+    if (beam_FWHM > 0.0) {
+      woden_settings->gauss_beam_FWHM = beam_FWHM;
+    }
+    else {
+      woden_settings->gauss_beam_FWHM = 20.0;
+    }
+
+    float beam_ref_freq = (float)json_object_get_double(gauss_beam_ref_freq);
+    //If gauss_beam_ref_freq has been set in the json file, use it
+    //Otherwise, set the defult FWHM of 20 deg
+    if (beam_ref_freq > 0.0) {
+      woden_settings->gauss_beam_ref_freq = beam_ref_freq;
+    }
+    else {
+      woden_settings->gauss_beam_ref_freq = 150e+6;
+    }
+  }
+
+  else {
+    woden_settings->beamtype = NO_BEAM;
+  }
+
+  //TODO once we implement MWA primary beam, check whether both gaussian beam and
+  //MWA beam have been selected. If so, tell the user, and exit, get them to sort
+  //themselves out
   woden_settings->chunking_size = json_object_get_int(chunking_size);
 
 
@@ -407,6 +449,8 @@ woden_settings_t * read_json_settings(const char *filename){
 		band_num = json_object_array_get_idx(band_nums, i);
 		woden_settings->band_nums[i] = json_object_get_int(band_num);
 	}
+
+
 
   return woden_settings;
 
@@ -497,6 +541,20 @@ int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
         status=0;
     }
 
+    fits_read_key(mfptr,TFLOAT, "RA", &(metafits->ra_point), NULL, &status);
+    if (status) {
+       printf("No RA keyword in metafits. Continuing...\n");
+        fits_clear_errmsg();
+        status=0;
+    }
+
+    fits_read_key(mfptr,TFLOAT, "DEC", &(metafits->dec_point), NULL, &status);
+    if (status) {
+       printf("No DEC keyword in metafits. Continuing...\n");
+        fits_clear_errmsg();
+        status=0;
+    }
+
     fits_read_key(mfptr,TFLOAT, "FINECHAN", &(metafits->frequency_resolution), NULL, &status);
     if (status) {
        printf("No FINECHAN keyword in metafits. Continuing...\n");
@@ -536,6 +594,8 @@ int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
     //get the number of tiles
     metafits->num_tiles = metafits->num_tiles / 2;
     metafits->lst_base *= DD2R;
+    metafits->ra_point *= DD2R;
+    metafits->dec_point *= DD2R;
     metafits->frequency_resolution *= 1e+3;
     metafits->frequency_cent *= 1e+6;
     metafits->bandwidth *= 1e+6;

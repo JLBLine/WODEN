@@ -1,6 +1,5 @@
+// #include "woden.h"
 #include "read_and_write.h"
-
-#define MAX_NUM_COMPONENTS 10000
 
 typedef enum {CROP_SOURCES, CROP_COMPONENTS}e_sky_crop;
 typedef enum {BELOW, ABOVE}e_horizon;
