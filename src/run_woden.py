@@ -209,7 +209,7 @@ def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
                json_name=None,freq_res=None,time_res=None,
                sky_crop_components=False, use_gaussian_beam=False,
                gauss_beam_FWHM=False, gauss_beam_ref_freq=False,
-               chunking_size=None):
+               chunking_size=None, use_FEE_beam=False):
     '''Populate a json parameter file used to run WODEN'''
 
     outfile = open(json_name,'w+')
@@ -242,6 +242,11 @@ def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
 
     if use_gaussian_beam:
         outfile.write('  "gauss_beam_ref_freq": %.10f,\n' %float(gauss_beam_ref_freq))
+    else:
+        pass
+
+    if use_FEE_beam:
+        outfile.write('  "use_FEE_beam": True,\n')
     else:
         pass
 
@@ -298,7 +303,12 @@ if __name__ == "__main__":
         help='The FWHM of the Gaussian beam in deg - WODEN defaults to using 20 deg if this is not set')
     parser.add_argument('--gauss_beam_ref_freq', default=False,
         help='The frequency at which the gauss beam FWHM is set at. If not set, WODEN will default to 150MHz.')
+    parser.add_argument('--use_FEE_beam', default=False, action='store_true',
+        help='Use the FEE MWA beam model, based on the settings in the metafits file')
+
     parser.add_argument('--chunking_size', type=int, default=0, help='The chunk size to break up the point sources into for processing - defaults to 0 (do not perform chunking)')
+
+
 
 
     args = parser.parse_args()
@@ -375,7 +385,8 @@ if __name__ == "__main__":
                use_gaussian_beam=args.use_gaussian_beam,
                gauss_beam_FWHM=args.gauss_beam_FWHM,
                gauss_beam_ref_freq=args.gauss_beam_ref_freq,
-               chunking_size=args.chunking_size)
+               chunking_size=args.chunking_size,
+               use_FEE_beam=args.use_FEE_beam)
 
     ##Check the uvfits prepend to make sure we end in .uvfits
     output_uvfits_prepend = args.output_uvfits_prepend

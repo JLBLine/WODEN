@@ -11,6 +11,7 @@
 #include "constants.h"
 #include "source_components.h"
 #include "primary_beam.h"
+#include "FEE_primary_beam_cuda.h"
 
 
 extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metres, float *Z_diff_metres,
@@ -67,6 +68,11 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   cudaMalloc( (void**)&d_vs, num_visis*sizeof(float) );
   cudaMalloc( (void**)&d_ws, num_visis*sizeof(float) );
 
+  //ensure d_sum_visi_real, d_sum_visi_imag are zero by copying across CPU versions which
+  //should be zero also
+  cudaMemcpy(d_sum_visi_real,visibility_set->sum_visi_real,num_visis*sizeof(float),cudaMemcpyHostToDevice);
+  cudaMemcpy(d_sum_visi_imag,visibility_set->sum_visi_imag,num_visis*sizeof(float),cudaMemcpyHostToDevice);
+
   dim3 grid, threads;
 
   threads.x = 128;
@@ -94,23 +100,27 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   cudaMalloc( (void**)&d_freqs, num_freqs*sizeof(float) );
   cudaMemcpy( d_freqs, visibility_set->channel_frequencies, num_freqs*sizeof(float), cudaMemcpyHostToDevice );
 
-  float *d_beam_ref_freq = NULL;
-  cudaMalloc( (void**)&d_beam_ref_freq, sizeof(float) );
-  cudaMemcpy( d_beam_ref_freq, beam_settings.beam_ref_freq_array, sizeof(float), cudaMemcpyHostToDevice );
-
-  //TODO currently hardcoded to have theta=0. Should this change with az/za?
-  // float beam_theta = 0;
-  // float cos_theta = cosf(beam_theta);
-  // float sin_theta = sinf(beam_theta);
-  // float sin_2theta = sinf(2*beam_theta);
-
+  //TODO currently hardcoded to have beam position angle = 0. Should this change with az/za?
   float cos_theta = 1.0;
   float sin_theta = 0.0;
   float sin_2theta = 0.0;
-  float fwhm_lm = sinf(beam_settings.beam_FWHM_rad);
+  float fwhm_lm = 20.0 * D2R;
+
+  float *d_beam_ref_freq = NULL;
+  if (beam_settings.beamtype == GAUSS_BEAM) {
+
+    cudaMalloc( (void**)&d_beam_ref_freq, sizeof(float) );
+    cudaMemcpy( d_beam_ref_freq, beam_settings.beam_ref_freq_array, sizeof(float), cudaMemcpyHostToDevice );
+
+    float fwhm_lm = sinf(beam_settings.beam_FWHM_rad);
+
+  }
+
+  float *d_beam_reals = NULL;
+  float *d_beam_imags = NULL;
 
   if (num_points > 0) {
-    printf("Doing point components\n");
+    printf("\tDoing point components\n");
 
     float *d_point_ras=NULL;
     float *d_point_decs=NULL;
@@ -147,19 +157,13 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
     kern_calc_lmn<<< grid, threads >>>(d_angles_array, d_point_ras, d_point_decs,
                                d_ls, d_ms, d_ns, num_points);
 
-    //TODO make these 2 by 2 (or have 4 arrays) to get instrumental pol going when
-    //we implement the FEE beam
-    //Make some empty beam stuff
-    float *d_beam_reals = NULL;
-    cudaMalloc( (void**)&d_beam_reals, beam_settings.num_point_beam_values*sizeof(float) );
-    float *d_beam_imags = NULL;
-    cudaMalloc( (void**)&d_beam_imags, beam_settings.num_point_beam_values*sizeof(float) );
-
     //If using a gaussian primary beam, calculate beam values for all freqs,
     //lsts and point component locations
     if (beam_settings.beamtype == GAUSS_BEAM) {
+      cudaMalloc( (void**)&d_beam_reals, beam_settings.num_point_beam_values*sizeof(float) );
+      cudaMalloc( (void**)&d_beam_imags, beam_settings.num_point_beam_values*sizeof(float) );
 
-      printf("Doing gaussian beam tings\n");
+      printf("\tDoing gaussian beam tings\n");
 
       calculate_gaussian_beam(num_points, num_time_steps, num_freqs,
            fwhm_lm, cos_theta, sin_theta, sin_2theta,
@@ -168,6 +172,17 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
            d_beam_reals, d_beam_imags);
 
     }// end if beam == GAUSS
+
+
+    if (beam_settings.beamtype == FEE_BEAM) {
+
+      cudaMalloc( (void**)&d_beam_reals, num_time_steps*num_points*sizeof(float) );
+      cudaMalloc( (void**)&d_beam_imags, num_time_steps*num_points*sizeof(float) );
+
+      calc_CUDA_FEE_beam(d_beam_reals, d_beam_imags,
+                         catsource.point_azs, catsource.point_zas,
+                         num_points, num_time_steps, beam_settings);
+    }
 
     if (num_points == 1) {
       threads.x = 128;
@@ -189,6 +204,7 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
             d_angles_array, d_wavelengths,
             d_ls, d_ms, d_ns,
             num_points, num_baselines, num_freqs, num_visis,
+            num_time_steps,
             d_beam_reals, d_beam_imags,  beam_settings.beamtype );
 
 
@@ -208,7 +224,7 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   }//if point sources
 
   if (num_gauss > 0) {
-    printf("Doing gaussian components\n");
+    printf("\tDoing gaussian components\n");
 
     float *d_gauss_ras=NULL;
     float *d_gauss_decs=NULL;
@@ -261,11 +277,13 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
     //TODO make these 2 by 2 (or have 4 arrays) to get instrumental pol going when
     //we implement the FEE beam
     //Make some empty beam stuff
-    float *d_beam_reals = NULL;
-    cudaMalloc( (void**)&d_beam_reals, beam_settings.num_gausscomp_beam_values*sizeof(float) );
-    float *d_beam_imags = NULL;
-    cudaMalloc( (void**)&d_beam_imags, beam_settings.num_gausscomp_beam_values*sizeof(float) );
+    // float *d_beam_reals = NULL;
+    // float *d_beam_imags = NULL;
+
     if (beam_settings.beamtype == GAUSS_BEAM) {
+
+      cudaMalloc( (void**)&d_beam_imags, beam_settings.num_gausscomp_beam_values*sizeof(float) );
+      cudaMalloc( (void**)&d_beam_reals, beam_settings.num_gausscomp_beam_values*sizeof(float) );
 
       calculate_gaussian_beam(num_gauss, num_time_steps, num_freqs,
            fwhm_lm, cos_theta, sin_theta, sin_2theta,
@@ -274,6 +292,16 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
            d_beam_reals, d_beam_imags);
 
     }// end if beam == GAUSS
+
+    if (beam_settings.beamtype == FEE_BEAM) {
+
+      cudaMalloc( (void**)&d_beam_reals, num_time_steps*num_gauss*sizeof(float) );
+      cudaMalloc( (void**)&d_beam_imags, num_time_steps*num_gauss*sizeof(float) );
+
+      calc_CUDA_FEE_beam(d_beam_reals, d_beam_imags,
+                         catsource.gauss_azs, catsource.gauss_zas,
+                         num_gauss, num_time_steps, beam_settings);
+    }
 
     if (num_gauss == 1) {
      threads.x = 128;
@@ -295,7 +323,7 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
             d_angles_array, d_wavelengths,
             d_ls, d_ms, d_ns,
             d_gauss_pas, d_gauss_majors, d_gauss_minors,
-            num_gauss, num_baselines, num_freqs, num_visis,
+            num_gauss, num_baselines, num_freqs, num_visis, num_time_steps,
             d_beam_reals, d_beam_imags,  beam_settings.beamtype );
 
     // cudaMemcpy(visibility_set->beam_reals,d_beam_reals,beam_settings.num_gausscomp_beam_values*sizeof(float),cudaMemcpyDeviceToHost);
@@ -317,7 +345,7 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   }//if gauss sources
 
   if (num_shapes > 0) {
-    printf("Doing shapelet components\n");
+    printf("\tDoing shapelet components\n");
 
     float *d_shape_ras=NULL;
     float *d_shape_decs=NULL;
@@ -422,11 +450,12 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
     //TODO make these 2 by 2 (or have 4 arrays) to get instrumental pol going when
     //we implement the FEE beam
     //Make some empty beam stuff
-    float *d_beam_reals = NULL;
-    cudaMalloc( (void**)&d_beam_reals, beam_settings.num_shape_beam_values*sizeof(float) );
-    float *d_beam_imags = NULL;
-    cudaMalloc( (void**)&d_beam_imags, beam_settings.num_shape_beam_values*sizeof(float) );
+    // float *d_beam_reals = NULL;
+    // float *d_beam_imags = NULL;
+
     if (beam_settings.beamtype == GAUSS_BEAM) {
+      cudaMalloc( (void**)&d_beam_reals, beam_settings.num_shape_beam_values*sizeof(float) );
+      cudaMalloc( (void**)&d_beam_imags, beam_settings.num_shape_beam_values*sizeof(float) );
 
       calculate_gaussian_beam(num_shapes, num_time_steps, num_freqs,
            fwhm_lm, cos_theta, sin_theta, sin_2theta,
@@ -435,6 +464,16 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
            d_beam_reals, d_beam_imags);
 
     }// end if beam == GAUSS
+
+    if (beam_settings.beamtype == FEE_BEAM) {
+
+      cudaMalloc( (void**)&d_beam_reals, num_time_steps*num_shapes*sizeof(float) );
+      cudaMalloc( (void**)&d_beam_imags, num_time_steps*num_shapes*sizeof(float) );
+
+      calc_CUDA_FEE_beam(d_beam_reals, d_beam_imags,
+                         catsource.shape_azs, catsource.shape_zas,
+                         num_shapes, num_time_steps, beam_settings);
+    }
 
     if (catsource.n_shape_coeffs == 1) {
       threads.x = 64;
@@ -459,7 +498,7 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
             d_shape_ls, d_shape_ms, d_shape_ns,
             d_sbf,
             num_shapes, num_baselines, num_freqs, num_visis,
-            catsource.n_shape_coeffs,
+            catsource.n_shape_coeffs, num_time_steps,
             d_beam_reals, d_beam_imags, beam_settings.beamtype);
 
 

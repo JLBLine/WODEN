@@ -1,6 +1,10 @@
 #include <math.h>
 #include <stdint.h>
 #include <fitsio.h>
+#include "FEE_primary_beam.h"
+
+#ifndef READWRITE_HEAD
+#define READWRITE_HEAD
 
 enum component_type {POINT=0, GAUSSIAN, SHAPELET, SHAPELET2};
 typedef enum {NO_BEAM, GAUSS_BEAM, FEE_BEAM}e_beamtype;
@@ -33,8 +37,8 @@ typedef struct _catsource_t {
   float *point_decs;
   float *point_fluxes;
   float *point_freqs;
-  double *point_azs;
-  double *point_zas;
+  float *point_azs;
+  float *point_zas;
   float *point_beam_XX_re;
   float *point_beam_XX_im;
 
@@ -46,8 +50,8 @@ typedef struct _catsource_t {
   float *gauss_majors;
   float *gauss_minors;
   float *gauss_pas;
-  double *gauss_azs;
-  double *gauss_zas;
+  float *gauss_azs;
+  float *gauss_zas;
 
   //Shapelet params
   float *shape_ras;
@@ -61,8 +65,8 @@ typedef struct _catsource_t {
   float *shape_minors;
   float *shape_pas;
   float *shape_param_indexes;
-  double *shape_azs;
-  double *shape_zas;
+  float *shape_azs;
+  float *shape_zas;
 
 } catsource_t;
 
@@ -89,6 +93,30 @@ typedef struct _visibility_set_t {
   float *beam_ms;
   float *beam_reals;
   float *beam_imags;
+
+  float *sum_visi_XX_real;
+  float *sum_visi_XX_imag;
+
+  float *sum_visi_XY_real;
+  float *sum_visi_XY_imag;
+
+  float *sum_visi_YX_real;
+  float *sum_visi_YX_imag;
+
+  float *sum_visi_YY_real;
+  float *sum_visi_YY_imag;
+
+  float *beam_XX_real;
+  float *beam_XX_imag;
+
+  float *beam_XY_real;
+  float *beam_XY_imag;
+
+  float *beam_YX_real;
+  float *beam_YX_imag;
+
+  float *beam_YY_real;
+  float *beam_YY_imag;
 
 
 } visibility_set_t;
@@ -145,7 +173,7 @@ typedef struct _Meta_Ffile {
     int inps[256], ants[256], tile[256], flags[256];
     float E[256], N[256], H[256];
     char leng[256][14];
-    int ddlys[256][16];
+    int FEE_delays[256][16];
     int dig_gains[256][24];
     int centchan;
     float lst_base;
@@ -164,7 +192,7 @@ source_catalogue_t * read_source_catalogue(const char *filename);
 
 woden_settings_t * read_json_settings(const char *filename);
 
-int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome);
+int RTS_init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome);
 
 array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits, int num_tiles);
 
@@ -186,4 +214,8 @@ typedef struct _beam_settings_t {
     float *beam_ref_freq_array;
     int beamtype;
 
+    copy_primary_beam_t *FEE_beam;
+
 } beam_settings_t;
+
+#endif

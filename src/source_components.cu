@@ -50,6 +50,7 @@ __global__ void kern_calc_visi_point(float *d_point_ras,
            float *d_angles_array, float *d_wavelengths,
            float *d_ls, float *d_ms, float *d_ns,
            int num_points, int num_baselines, int num_freqs, int num_visis,
+           int num_times,
            float *d_beam_reals, float *d_beam_imags, int beamtype) {
 
   // Start by computing which baseline we're going to do
@@ -84,12 +85,33 @@ __global__ void kern_calc_visi_point(float *d_point_ras,
       beam_imag = d_beam_imags[beam_ind];
 
       // printf("%d %d %d %d %d %d %f %f\n",iBaseline,num_baselines,num_freqs,time_ind,freq_ind,beam_ind,beam_real,beam_imag);
+    }
+
+    else if (beamtype == FEE_BEAM) {
+      time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
+      beam_ind = iComponent*num_times + time_ind;
+
+      beam_real = d_beam_reals[beam_ind];
+      beam_imag = d_beam_imags[beam_ind];
+
+      // if (iBaseline == 0 || iBaseline == 8128) {
+      // if (iBaseline == 0) {
+      //   printf("WHAT IS BEAM %d %d %d %d %.5f %.5f\n",iComponent,iBaseline,time_ind,beam_ind, beam_real,beam_imag );
+      // }
+
 
     }
+
     else {
       beam_real = 1.0;
       beam_imag = 0.0;
     }
+
+    // if (iBaseline == 0) {
+    //   printf("WHAT IS BEAM %d %.5f %.5f\n",iComponent,beam_real,beam_imag );
+    // }
+
+
 
     cuFloatComplex beam_complex = make_cuFloatComplex(beam_real,beam_imag);
 
@@ -111,6 +133,7 @@ __global__ void kern_calc_visi_gaussian(float *d_gauss_ras,
            float *d_ls, float *d_ms, float *d_ns,
            float *d_gauss_pas, float *d_gauss_majors, float *d_gauss_minors,
            int num_gauss, int num_baselines, int num_freqs, int num_visis,
+           int num_times,
            float *d_beam_reals, float *d_beam_imags, int beamtype) {
 
   // Start by computing which baseline we're going to do
@@ -163,12 +186,31 @@ __global__ void kern_calc_visi_gaussian(float *d_gauss_ras,
       beam_imag = d_beam_imags[beam_ind];
 
     }
+
+    else if (beamtype == FEE_BEAM) {
+      time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
+      beam_ind = iComponent*num_times + time_ind;
+
+      beam_real = d_beam_reals[beam_ind];
+      beam_imag = d_beam_imags[beam_ind];
+
+      // if (iBaseline == 0 || iBaseline == 8128) {
+      // if (iBaseline == 0) {
+      //   printf("WHAT IS BEAM %d %d %d %d %d %.5f %.5f\n",iComponent,iBaseline,iComponent,time_ind,beam_ind, beam_real,beam_imag );
+      // }
+
+    }
+
     else {
       beam_real = 1.0;
       beam_imag = 0.0;
     }
 
     cuFloatComplex beam_complex = make_cuFloatComplex(beam_real,beam_imag);
+
+    // if (iBaseline == 0) {
+    //   printf(" %d %d %d %d %d %.5f %.5f %.5f %.5f\n",iComponent,iBaseline,iComponent,time_ind,beam_ind, beam_real,beam_imag,visi.x,visi.y );
+    // }
 
     visi = cuCmulf(visi, beam_complex);
 
@@ -191,7 +233,7 @@ __global__ void kern_calc_visi_shapelets(float *d_shape_ras,
       float *d_shape_ls, float *d_shape_ms, float *d_shape_ns,
       float *d_sbf,
       int num_shapes, int num_baselines, int num_freqs, int num_visis,
-      const int num_coeffs,
+      const int num_coeffs, int num_times,
       float *d_beam_reals, float *d_beam_imags, int beamtype) {
 
   // Start by computing which baseline we're going to do
@@ -289,12 +331,32 @@ __global__ void kern_calc_visi_shapelets(float *d_shape_ras,
       beam_imag = d_beam_imags[beam_ind];
 
     }
+
+    else if (beamtype == FEE_BEAM) {
+      time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
+      beam_ind = param_index*num_times + time_ind;
+
+      beam_real = d_beam_reals[beam_ind];
+      beam_imag = d_beam_imags[beam_ind];
+
+      // if (iBaseline == 0 || iBaseline == 812) {
+      // if (iBaseline == 0) {
+      //   printf("WHAT IS BEAM %d %d %d %d %d %.5f %.5f\n",iComponent,iBaseline,param_index,time_ind,beam_ind, beam_real,beam_imag );
+      // }
+
+    }
+
     else {
       beam_real = 1.0;
       beam_imag = 0.0;
     }
 
     cuFloatComplex beam_complex = make_cuFloatComplex(beam_real,beam_imag);
+
+    // if (iBaseline == 0) {
+    // // if (beam_real > 1.0) {
+    //   printf("%d %d %d %d %d %.5f %.5f %.5f %.5f %.5f\n",iComponent,iBaseline,param_index,time_ind,beam_ind, beam_real,beam_imag,visi.x,visi.y,shape_flux );
+    // }
 
     visi = cuCmulf(visi, beam_complex);
 

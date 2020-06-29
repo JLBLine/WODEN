@@ -173,9 +173,9 @@ int RTS_HDFBeamInit(char *h5filename, float freq_Hz, copy_primary_beam_t *pb, fl
 
   file = H5Fopen(h5filename, H5F_ACC_RDONLY, H5P_DEFAULT);
 
-  if(norm_fac != NULL){
-    memcpy(pb->norm_fac,norm_fac,MAX_POLS*sizeof(float _Complex));
-  }
+  // if(norm_fac != NULL){
+  //   memcpy(pb->norm_fac,norm_fac,MAX_POLS*sizeof(float _Complex));
+  // }
 
   if(freq_Hz != last_freq_in) {
     /***************************************************************/
@@ -453,6 +453,15 @@ int RTS_HDFBeamInit(char *h5filename, float freq_Hz, copy_primary_beam_t *pb, fl
   free(Q2);
 
   H5Fclose(file);
+
+  pb->m_range = malloc((2*pb->nmax + 1)*sizeof(float) );
+
+  // printf("Managed to do m_range the Malloc\n");
+
+  for (int m = 0; m < 2*pb->nmax + 1; m++) {
+    pb->m_range[m] = -(float)pb->nmax + (float)m;
+    // printf("%d %d %.2f\n", m, pb->nmax, pb->m_range[m] );
+  }
 
   return 0;
 
@@ -1004,74 +1013,74 @@ void RTS_freeHDFBeam(copy_primary_beam_t *pb){
 
 }
 //
-int RTS_getHDFBeamNormalization(char *h5filename, float freq, copy_primary_beam_t *pb){
-
-  /* Get zenith response of zenith pointing */
-  /* This factor remains the same for a given frequency, so only need to calculate once for
-     any and all beams in a given rts instance */
-  /* From primary_beam_full_EE.py:
-
-  Calculate normalisation factors for the Jones vector for this
-        ApertureArray object. For MWA, these are at the zenith of a zenith pointed beam,
-        which is the maximum for all beam pointings.
-        The FEKO simulations include all ph angles at za=0. These are not redundant,
-        and the ph value determines the unit vector directions of both axes.
-        For the E-W dipoles, the projection of the theta unit vec will be max when
-        pointing east, i.e. when ph_EtN=0 (ph_NtE=90). For the phi unit vec,
-        this will be when ph_EtN=-90 or 90 (ph_NtE=180 or 0: we use 180)
-        For the N-S dipoles, projection of ZA onto N-S is max az ph_EtN=90 (ph_NtE=0) and
-        proj of ph onto N-S is max when ph_EtN=0 (ph_NtE=90
-
-  BP: Not sure this is okay for sky x y as defined by the RTS though
-  */
-
-  int res=0;
-
-  // We dont want any dipole flagging when calculating the zenith values
-  // Creating a options structure will set the dipole flagging to FALSE
-
-  copy_primary_beam_t *primary_beam;
-  primary_beam = malloc(sizeof(copy_primary_beam_t));
-
-  if(norm_fac == NULL){
-
-    float zenith_delays[NUM_DIPOLES] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-
-    float _Complex j_norm[MAX_POLS];
-    float delays_copy[NUM_DIPOLES];
-
-    norm_fac = malloc(MAX_POLS*sizeof(float _Complex));
-
-    // for(unsigned int k=0; k<NUM_DIPOLES; k++){
-    //   delays_copy[k] = ->delay[k];
-    //   ->delay[k] = 0.0;
-    // }
-
-    int scaling = 0; // We want the 'true' value at zenith
-    res = RTS_HDFBeamInit(h5filename, freq, primary_beam, zenith_delays, 0);
-
-    // BP: Not quite sure about the pol ordering here RTS v FEKO
-    //     although in pratical term the differences are very small
-
-    float rotation=0.0;
-
-    res = RTS_getTileResponse(freq, (M_PI/2.0), 0.0, primary_beam, j_norm ,scaling ,rotation);
-    pb->norm_fac[0]=j_norm[0];
-    res = RTS_getTileResponse(freq, 0.0, 0.0, primary_beam, j_norm ,scaling ,rotation);
-    pb->norm_fac[1]=j_norm[1];
-    res = RTS_getTileResponse(freq, M_PI, 0.0, primary_beam, j_norm ,scaling ,rotation);
-    pb->norm_fac[2]=j_norm[2];
-    res = RTS_getTileResponse(freq, (M_PI/2.0), 0.0, primary_beam, j_norm ,scaling ,rotation);
-    pb->norm_fac[3]=j_norm[3];
-
-    RTS_freeHDFBeam(primary_beam);
-    RTS_HDFBeamCleanUp();
-
-  }
-
-  return res;
+// int RTS_getHDFBeamNormalization(char *h5filename, float freq, copy_primary_beam_t *pb){
 //
-}
+//   /* Get zenith response of zenith pointing */
+//   /* This factor remains the same for a given frequency, so only need to calculate once for
+//      any and all beams in a given rts instance */
+//   /* From primary_beam_full_EE.py:
+//
+//   Calculate normalisation factors for the Jones vector for this
+//         ApertureArray object. For MWA, these are at the zenith of a zenith pointed beam,
+//         which is the maximum for all beam pointings.
+//         The FEKO simulations include all ph angles at za=0. These are not redundant,
+//         and the ph value determines the unit vector directions of both axes.
+//         For the E-W dipoles, the projection of the theta unit vec will be max when
+//         pointing east, i.e. when ph_EtN=0 (ph_NtE=90). For the phi unit vec,
+//         this will be when ph_EtN=-90 or 90 (ph_NtE=180 or 0: we use 180)
+//         For the N-S dipoles, projection of ZA onto N-S is max az ph_EtN=90 (ph_NtE=0) and
+//         proj of ph onto N-S is max when ph_EtN=0 (ph_NtE=90
+//
+//   BP: Not sure this is okay for sky x y as defined by the RTS though
+//   */
+//
+//   int res=0;
+//
+//   // We dont want any dipole flagging when calculating the zenith values
+//   // Creating a options structure will set the dipole flagging to FALSE
+//
+//   copy_primary_beam_t *primary_beam;
+//   primary_beam = malloc(sizeof(copy_primary_beam_t));
+//
+//   if(norm_fac == NULL){
+//
+//     float zenith_delays[NUM_DIPOLES] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+//
+//     float _Complex j_norm[MAX_POLS];
+//     float delays_copy[NUM_DIPOLES];
+//
+//     norm_fac = malloc(MAX_POLS*sizeof(float _Complex));
+//
+//     // for(unsigned int k=0; k<NUM_DIPOLES; k++){
+//     //   delays_copy[k] = ->delay[k];
+//     //   ->delay[k] = 0.0;
+//     // }
+//
+//     int scaling = 0; // We want the 'true' value at zenith
+//     res = RTS_HDFBeamInit(h5filename, freq, primary_beam, zenith_delays, 0);
+//
+//     // BP: Not quite sure about the pol ordering here RTS v FEKO
+//     //     although in pratical term the differences are very small
+//
+//     float rotation=0.0;
+//
+//     res = RTS_getTileResponse(freq, (M_PI/2.0), 0.0, primary_beam, j_norm ,scaling ,rotation);
+//     pb->norm_fac[0]=j_norm[0];
+//     res = RTS_getTileResponse(freq, 0.0, 0.0, primary_beam, j_norm ,scaling ,rotation);
+//     pb->norm_fac[1]=j_norm[1];
+//     res = RTS_getTileResponse(freq, M_PI, 0.0, primary_beam, j_norm ,scaling ,rotation);
+//     pb->norm_fac[2]=j_norm[2];
+//     res = RTS_getTileResponse(freq, (M_PI/2.0), 0.0, primary_beam, j_norm ,scaling ,rotation);
+//     pb->norm_fac[3]=j_norm[3];
+//
+//     RTS_freeHDFBeam(primary_beam);
+//     RTS_HDFBeamCleanUp();
+//
+//   }
+//
+//   return res;
+// //
+// }
 //
 void RTS_HDFBeamCleanUp(){
 

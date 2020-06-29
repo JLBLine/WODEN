@@ -152,9 +152,9 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
 
       srcs[n_src-1].n_comps = srcs[n_src-1].n_points + srcs[n_src-1].n_gauss + srcs[n_src-1].n_shapes;
 
-      printf("New source: name: <%s>, Comps:%d  P:%d  G:%d  S:%d-%d \n",
-            srcs[n_src-1].name, srcs[n_src-1].n_comps, srcs[n_src-1].n_points, srcs[n_src-1].n_gauss,
-            srcs[n_src-1].n_shapes, srcs[n_src-1].n_shape_coeffs );
+      // printf("New source: name: <%s>, Comps:%d  P:%d  G:%d  S:%d-%d \n",
+      //       srcs[n_src-1].name, srcs[n_src-1].n_comps, srcs[n_src-1].n_points, srcs[n_src-1].n_gauss,
+      //       srcs[n_src-1].n_shapes, srcs[n_src-1].n_shape_coeffs );
 
       //Now we know the number of sources, do some mallocing
       //Pointsource params
@@ -353,6 +353,7 @@ woden_settings_t * read_json_settings(const char *filename){
   struct json_object *chunking_size;
   struct json_object *gauss_beam_FWHM;
   struct json_object *gauss_beam_ref_freq;
+  struct json_object *FEE_beam;
 
 	fp = fopen(filename,"r");
 	fread(buffer, 1024, 1, fp);
@@ -378,6 +379,8 @@ woden_settings_t * read_json_settings(const char *filename){
   json_object_object_get_ex(parsed_json, "gauss_beam_FWHM", &gauss_beam_FWHM);
   json_object_object_get_ex(parsed_json, "gauss_beam_ref_freq", &gauss_beam_ref_freq);
 
+  json_object_object_get_ex(parsed_json, "use_FEE_beam", &FEE_beam);
+
   woden_settings_t * woden_settings;
   // woden_settings = NULL;
   woden_settings = malloc( sizeof(woden_settings_t) );
@@ -399,6 +402,9 @@ woden_settings_t * read_json_settings(const char *filename){
 
   //Boolean whether to use gaussian primary beam
   int gauss_beam = json_object_get_boolean(gaussian_beam);
+
+  //Boolean whether to use gaussian primary beam
+  int fee_beam = json_object_get_boolean(FEE_beam);
 
   if (gauss_beam) {
     woden_settings->beamtype = GAUSS_BEAM;
@@ -423,14 +429,20 @@ woden_settings_t * read_json_settings(const char *filename){
       woden_settings->gauss_beam_ref_freq = 150e+6;
     }
   }
+  //TODO once we implement MWA primary beam, check whether both gaussian beam and
+  //MWA beam have been selected. If so, tell the user, and exit, get them to sort
+  //themselves out
+
+  //TODO make sure metafits contains correct beam info if using FEE_beam
+
+  else if (fee_beam){
+    woden_settings->beamtype = FEE_BEAM;
+  }
 
   else {
     woden_settings->beamtype = NO_BEAM;
   }
 
-  //TODO once we implement MWA primary beam, check whether both gaussian beam and
-  //MWA beam have been selected. If so, tell the user, and exit, get them to sort
-  //themselves out
   woden_settings->chunking_size = json_object_get_int(chunking_size);
 
 
@@ -461,7 +473,7 @@ woden_settings_t * read_json_settings(const char *filename){
 // All credit to the original authors
 // https://github.com/ICRAR/mwa-RTS.git
 **********************************/
-int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
+int RTS_init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
     int status=0;
     int ncols, anynulls, colnum, nfound, i;
     long naxes[2], nrows, frow, felem;
@@ -639,7 +651,7 @@ int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
   // read Dipole Delays
   fits_get_colnum(mfptr, CASEINSEN, "Delays", &colnum, &status);
   for (i=0; i<metafits->naxes[1]; i++){
-     fits_read_col(mfptr, TINT, colnum,i+1, felem, 16, &nullval, &(metafits->ddlys[i]),
+     fits_read_col(mfptr, TINT, colnum,i+1, felem, 16, &nullval, &(metafits->FEE_delays[i]),
                    &anynulls, &status);
   }
 // read Digital Gains

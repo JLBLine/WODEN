@@ -1,3 +1,4 @@
+#pragma once
 #define N_LNA_FREQS 451
 #define MAX_ZMATRIX_FREQS 256
 #define NUM_DIPOLES 16
@@ -11,6 +12,8 @@
 #include "hdf5.h"
 #include "hdf5_hl.h"
 
+// #ifndef FEEBEAM_HEAD
+// #define FEEBEAM_HEAD
 typedef struct _copy_primary_beam {
   int type;                     //!< id of the primary beam function type
   int dipole_type;              //!< id of the primary beam function type
@@ -48,6 +51,8 @@ typedef struct _copy_primary_beam {
 
   float _Complex *rts_P1;
   float _Complex *rts_P_sin;
+
+  float *m_range;
 
 } copy_primary_beam_t;
 
@@ -359,6 +364,8 @@ int RTS_getTileResponse(float freq_Hz, float az, float za, copy_primary_beam_t *
 //
 void RTS_freeHDFBeam(copy_primary_beam_t *pb);
 //
-int RTS_getHDFBeamNormalization(char *h5filename, float freq, copy_primary_beam_t *pb);
+// int RTS_getHDFBeamNormalization(char *h5filename, float freq, copy_primary_beam_t *pb);
 //
 void RTS_HDFBeamCleanUp();
+
+// #endif

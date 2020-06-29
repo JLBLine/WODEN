@@ -1,23 +1,29 @@
 #include "FEE_primary_beam.h"
 #define kP1BlockSize 64
 #include "cudacheck.h"
+#include "read_and_write.h"
 
-// extern "C" void RTS_CUDA_AllocatePrimaryBeam_local( copy_cal_context_t *calContext,
-//                                const int nStations );
-//
-// extern "C" void RTS_CUDA_SendPrimaryBeam_local( copy_cal_context_t *calContext,
-                           // const int nStations );
-//
-// extern "C" void RTS_CUDA_allocate_TileGains(float _Complex **TileGainMatrices, int nStations);
+// __global__ void kern_map_FEE_norm(cuFloatComplex *d_full_norm_factors,
+           // cuFloatComplex *d_norm_fac );
 
-//
-// extern "C" void RTS_copy_GPU_TileGains(float _Complex *TileGainMatrices, float _Complex *hostGains, int n_gains);
-//
-// extern "C" void RTS_CUDA_ReleasePrimaryBeam_local( copy_cal_context_t *calContext );
+extern "C" void calc_CUDA_FEE_beam(float *d_beam_reals, float *d_beam_imags,
+                                   float *azs, float *zas,
+                                   int num_components, int num_time_steps,
+                                   beam_settings_t beam_settings);
+
+extern "C" void get_HDFBeam_normalisation(copy_primary_beam_t *primary_beam);
+
+__global__ void kern_convert_FEE_to_stokesI(cuFloatComplex *d_FEE_beam_gain_matrices,
+           float *d_beam_reals, float *d_beam_imags,
+           int num_coords);
+
+           extern "C" void free_FEE_primary_beam_from_GPU(copy_primary_beam_t *primary_beam);
+
+extern "C" void copy_FEE_primary_beam_to_GPU(copy_primary_beam_t *primary_beam);
 
 extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,
            copy_primary_beam_t *primary_beam,
-           float _Complex *h_FEE_beam_gains);
+           float _Complex *h_FEE_beam_gains, int scaling);
 
 
 extern "C" void test_FEE_beam(float *az, float *za, int num_azza,
@@ -72,5 +78,5 @@ __global__ void kern_calc_sigmaTP(cuFloatComplex *TileGainMatrices,
                 int nmax, int num_coords);
 
 
-__global__ void kern_apply_norm(cuFloatComplex *TileGainMatrices,
-           cuFloatComplex *d_norm_fac );
+__global__ void kern_apply_FEE_norm(cuFloatComplex *TileGainMatrices,
+           cuFloatComplex *d_norm_fac, int num_coords );
