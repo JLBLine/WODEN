@@ -21,6 +21,8 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
                     visibility_set_t *visibility_set,
                     float *sbf2) {
 
+  // printf("CUDA error 0: %s\n", cudaGetErrorString( cudaGetLastError() ) );
+
   /*START We should be able to do all this outside of this function and transfer in--------------*/
   //==========================================================================================
   float *d_X_diff = NULL;
@@ -50,8 +52,8 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   //
   /* END We should be able to do all this outside of this function and transfer in--------------*/
 
-  float *d_sum_visi_real = NULL;
-  float *d_sum_visi_imag = NULL;
+  // float *d_sum_visi_real = NULL;
+  // float *d_sum_visi_imag = NULL;
   float *d_u_metres = NULL;
   float *d_v_metres = NULL;
   float *d_w_metres = NULL;
@@ -59,8 +61,6 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   float *d_vs = NULL;
   float *d_ws = NULL;
 
-  cudaMalloc( (void**)&d_sum_visi_real, num_visis*sizeof(float) );
-  cudaMalloc( (void**)&d_sum_visi_imag, num_visis*sizeof(float) );
   cudaMalloc( (void**)&d_u_metres, num_visis*sizeof(float) );
   cudaMalloc( (void**)&d_v_metres, num_visis*sizeof(float) );
   cudaMalloc( (void**)&d_w_metres, num_visis*sizeof(float) );
@@ -68,10 +68,38 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   cudaMalloc( (void**)&d_vs, num_visis*sizeof(float) );
   cudaMalloc( (void**)&d_ws, num_visis*sizeof(float) );
 
-  //ensure d_sum_visi_real, d_sum_visi_imag are zero by copying across CPU versions which
-  //should be zero also
-  cudaMemcpy(d_sum_visi_real,visibility_set->sum_visi_real,num_visis*sizeof(float),cudaMemcpyHostToDevice);
-  cudaMemcpy(d_sum_visi_imag,visibility_set->sum_visi_imag,num_visis*sizeof(float),cudaMemcpyHostToDevice);
+  // printf("CUDA error 1: %s\n", cudaGetErrorString( cudaGetLastError() ) );
+
+
+
+  // printf("CUDA error 3: %s\n", cudaGetErrorString( cudaGetLastError() ) );
+
+  float *d_sum_visi_XX_real;
+  float *d_sum_visi_XX_imag;
+  float *d_sum_visi_XY_real;
+  float *d_sum_visi_XY_imag;
+  float *d_sum_visi_YX_real;
+  float *d_sum_visi_YX_imag;
+  float *d_sum_visi_YY_real;
+  float *d_sum_visi_YY_imag;
+
+  cudaMalloc( (void**)&d_sum_visi_XX_real, num_visis*sizeof(float) );
+  cudaMalloc( (void**)&d_sum_visi_XX_imag, num_visis*sizeof(float) );
+  cudaMalloc( (void**)&d_sum_visi_XY_real, num_visis*sizeof(float) );
+  cudaMalloc( (void**)&d_sum_visi_XY_imag, num_visis*sizeof(float) );
+  cudaMalloc( (void**)&d_sum_visi_YX_real, num_visis*sizeof(float) );
+  cudaMalloc( (void**)&d_sum_visi_YX_imag, num_visis*sizeof(float) );
+  cudaMalloc( (void**)&d_sum_visi_YY_real, num_visis*sizeof(float) );
+  cudaMalloc( (void**)&d_sum_visi_YY_imag, num_visis*sizeof(float) );
+
+  cudaMemcpy(d_sum_visi_XX_real, visibility_set->sum_visi_XX_real, num_visis*sizeof(float), cudaMemcpyHostToDevice );
+  cudaMemcpy(d_sum_visi_XX_imag, visibility_set->sum_visi_XX_imag, num_visis*sizeof(float), cudaMemcpyHostToDevice );
+  cudaMemcpy(d_sum_visi_XY_real, visibility_set->sum_visi_XY_real, num_visis*sizeof(float), cudaMemcpyHostToDevice );
+  cudaMemcpy(d_sum_visi_XY_imag, visibility_set->sum_visi_XY_imag, num_visis*sizeof(float), cudaMemcpyHostToDevice );
+  cudaMemcpy(d_sum_visi_YX_real, visibility_set->sum_visi_YX_real, num_visis*sizeof(float), cudaMemcpyHostToDevice );
+  cudaMemcpy(d_sum_visi_YX_imag, visibility_set->sum_visi_YX_imag, num_visis*sizeof(float), cudaMemcpyHostToDevice );
+  cudaMemcpy(d_sum_visi_YY_real, visibility_set->sum_visi_YY_real, num_visis*sizeof(float), cudaMemcpyHostToDevice );
+  cudaMemcpy(d_sum_visi_YY_imag, visibility_set->sum_visi_YY_imag, num_visis*sizeof(float), cudaMemcpyHostToDevice );
 
   dim3 grid, threads;
 
@@ -116,8 +144,8 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
 
   }
 
-  float *d_beam_reals = NULL;
-  float *d_beam_imags = NULL;
+  float *d_gauss_beam_reals = NULL;
+  float *d_gauss_beam_imags = NULL;
 
   if (num_points > 0) {
     printf("\tDoing point components\n");
@@ -160,8 +188,8 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
     //If using a gaussian primary beam, calculate beam values for all freqs,
     //lsts and point component locations
     if (beam_settings.beamtype == GAUSS_BEAM) {
-      cudaMalloc( (void**)&d_beam_reals, beam_settings.num_point_beam_values*sizeof(float) );
-      cudaMalloc( (void**)&d_beam_imags, beam_settings.num_point_beam_values*sizeof(float) );
+      cudaMalloc( (void**)&d_gauss_beam_reals, beam_settings.num_point_beam_values*sizeof(float) );
+      cudaMalloc( (void**)&d_gauss_beam_imags, beam_settings.num_point_beam_values*sizeof(float) );
 
       printf("\tDoing gaussian beam tings\n");
 
@@ -169,19 +197,21 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
            fwhm_lm, cos_theta, sin_theta, sin_2theta,
            d_beam_ref_freq, d_freqs, d_beam_angles_array,
            beam_settings.beam_point_has, beam_settings.beam_point_decs,
-           d_beam_reals, d_beam_imags);
+           d_gauss_beam_reals, d_gauss_beam_imags);
 
     }// end if beam == GAUSS
 
 
     if (beam_settings.beamtype == FEE_BEAM) {
 
-      cudaMalloc( (void**)&d_beam_reals, num_time_steps*num_points*sizeof(float) );
-      cudaMalloc( (void**)&d_beam_imags, num_time_steps*num_points*sizeof(float) );
+      cudaMalloc( (void**)&d_gauss_beam_reals, num_time_steps*num_points*sizeof(float) );
+      cudaMalloc( (void**)&d_gauss_beam_imags, num_time_steps*num_points*sizeof(float) );
 
-      calc_CUDA_FEE_beam(d_beam_reals, d_beam_imags,
+      calc_CUDA_FEE_beam(d_gauss_beam_reals, d_gauss_beam_imags,
                          catsource.point_azs, catsource.point_zas,
-                         num_points, num_time_steps, beam_settings);
+                         num_points, num_time_steps, beam_settings.FEE_beam);
+
+      // printf("calculate_visibilities error 2: %s\n", cudaGetErrorString( cudaGetLastError() ) );
     }
 
     if (num_points == 1) {
@@ -200,19 +230,22 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
     kern_calc_visi_point<<<grid , threads>>>(d_point_ras,
             d_point_decs, d_point_fluxes, d_point_freqs,
             d_us, d_vs, d_ws,
-            d_sum_visi_real, d_sum_visi_imag,
+            d_sum_visi_XX_real, d_sum_visi_XX_imag,
+            d_sum_visi_XY_real, d_sum_visi_XY_imag,
+            d_sum_visi_YX_real, d_sum_visi_YX_imag,
+            d_sum_visi_YY_real, d_sum_visi_YY_imag,
             d_angles_array, d_wavelengths,
             d_ls, d_ms, d_ns,
             num_points, num_baselines, num_freqs, num_visis,
             num_time_steps,
-            d_beam_reals, d_beam_imags,  beam_settings.beamtype );
+            d_gauss_beam_reals, d_gauss_beam_imags,  beam_settings.beamtype,
+            (cuFloatComplex *)beam_settings.FEE_beam->d_FEE_beam_gain_matrices);
 
+    // printf("CUDA error 3: %s\n", cudaGetErrorString( cudaGetLastError() ) );
 
-    // cudaMemcpy(visibility_set->beam_reals,d_beam_reals,beam_settings.num_point_beam_values*sizeof(float),cudaMemcpyDeviceToHost);
-    // cudaMemcpy(visibility_set->beam_imags,d_beam_imags,beam_settings.num_point_beam_values*sizeof(float),cudaMemcpyDeviceToHost);
-
-    cudaFree( d_beam_imags);
-    cudaFree( d_beam_reals);
+    cudaFree( beam_settings.FEE_beam->d_FEE_beam_gain_matrices);
+    cudaFree( d_gauss_beam_imags);
+    cudaFree( d_gauss_beam_reals);
     cudaFree( d_ns);
     cudaFree( d_ms);
     cudaFree( d_ls);
@@ -277,30 +310,30 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
     //TODO make these 2 by 2 (or have 4 arrays) to get instrumental pol going when
     //we implement the FEE beam
     //Make some empty beam stuff
-    // float *d_beam_reals = NULL;
-    // float *d_beam_imags = NULL;
+    // float *d_gauss_beam_reals = NULL;
+    // float *d_gauss_beam_imags = NULL;
 
     if (beam_settings.beamtype == GAUSS_BEAM) {
 
-      cudaMalloc( (void**)&d_beam_imags, beam_settings.num_gausscomp_beam_values*sizeof(float) );
-      cudaMalloc( (void**)&d_beam_reals, beam_settings.num_gausscomp_beam_values*sizeof(float) );
+      cudaMalloc( (void**)&d_gauss_beam_imags, beam_settings.num_gausscomp_beam_values*sizeof(float) );
+      cudaMalloc( (void**)&d_gauss_beam_reals, beam_settings.num_gausscomp_beam_values*sizeof(float) );
 
       calculate_gaussian_beam(num_gauss, num_time_steps, num_freqs,
            fwhm_lm, cos_theta, sin_theta, sin_2theta,
            d_beam_ref_freq, d_freqs, d_beam_angles_array,
            beam_settings.beam_gausscomp_has, beam_settings.beam_gausscomp_decs,
-           d_beam_reals, d_beam_imags);
+           d_gauss_beam_reals, d_gauss_beam_imags);
 
     }// end if beam == GAUSS
 
     if (beam_settings.beamtype == FEE_BEAM) {
 
-      cudaMalloc( (void**)&d_beam_reals, num_time_steps*num_gauss*sizeof(float) );
-      cudaMalloc( (void**)&d_beam_imags, num_time_steps*num_gauss*sizeof(float) );
+      cudaMalloc( (void**)&d_gauss_beam_reals, num_time_steps*num_gauss*sizeof(float) );
+      cudaMalloc( (void**)&d_gauss_beam_imags, num_time_steps*num_gauss*sizeof(float) );
 
-      calc_CUDA_FEE_beam(d_beam_reals, d_beam_imags,
+      calc_CUDA_FEE_beam(d_gauss_beam_reals, d_gauss_beam_imags,
                          catsource.gauss_azs, catsource.gauss_zas,
-                         num_gauss, num_time_steps, beam_settings);
+                         num_gauss, num_time_steps, beam_settings.FEE_beam);
     }
 
     if (num_gauss == 1) {
@@ -316,21 +349,23 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
      grid.y = (int)ceil( ((float)num_gauss) / ((float)threads.y) );
     }
 
-    kern_calc_visi_gaussian<<< grid , threads>>>(d_gauss_ras,
+    kern_calc_visi_gaussian<<<grid , threads>>>(d_gauss_ras,
             d_gauss_decs, d_gauss_fluxes, d_gauss_freqs,
             d_us, d_vs, d_ws,
-            d_sum_visi_real, d_sum_visi_imag,
+            d_sum_visi_XX_real, d_sum_visi_XX_imag,
+            d_sum_visi_XY_real, d_sum_visi_XY_imag,
+            d_sum_visi_YX_real, d_sum_visi_YX_imag,
+            d_sum_visi_YY_real, d_sum_visi_YY_imag,
             d_angles_array, d_wavelengths,
             d_ls, d_ms, d_ns,
             d_gauss_pas, d_gauss_majors, d_gauss_minors,
             num_gauss, num_baselines, num_freqs, num_visis, num_time_steps,
-            d_beam_reals, d_beam_imags,  beam_settings.beamtype );
+            d_gauss_beam_reals, d_gauss_beam_imags,  beam_settings.beamtype,
+            (cuFloatComplex *)beam_settings.FEE_beam->d_FEE_beam_gain_matrices);
 
-    // cudaMemcpy(visibility_set->beam_reals,d_beam_reals,beam_settings.num_gausscomp_beam_values*sizeof(float),cudaMemcpyDeviceToHost);
-    // cudaMemcpy(visibility_set->beam_imags,d_beam_imags,beam_settings.num_gausscomp_beam_values*sizeof(float),cudaMemcpyDeviceToHost);
-
-    cudaFree( d_beam_imags);
-    cudaFree( d_beam_reals);
+    cudaFree( beam_settings.FEE_beam->d_FEE_beam_gain_matrices);
+    cudaFree( d_gauss_beam_imags);
+    cudaFree( d_gauss_beam_reals);
     cudaFree( d_ns);
     cudaFree( d_ms);
     cudaFree( d_ls);
@@ -450,29 +485,29 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
     //TODO make these 2 by 2 (or have 4 arrays) to get instrumental pol going when
     //we implement the FEE beam
     //Make some empty beam stuff
-    // float *d_beam_reals = NULL;
-    // float *d_beam_imags = NULL;
+    // float *d_gauss_beam_reals = NULL;
+    // float *d_gauss_beam_imags = NULL;
 
     if (beam_settings.beamtype == GAUSS_BEAM) {
-      cudaMalloc( (void**)&d_beam_reals, beam_settings.num_shape_beam_values*sizeof(float) );
-      cudaMalloc( (void**)&d_beam_imags, beam_settings.num_shape_beam_values*sizeof(float) );
+      cudaMalloc( (void**)&d_gauss_beam_reals, beam_settings.num_shape_beam_values*sizeof(float) );
+      cudaMalloc( (void**)&d_gauss_beam_imags, beam_settings.num_shape_beam_values*sizeof(float) );
 
       calculate_gaussian_beam(num_shapes, num_time_steps, num_freqs,
            fwhm_lm, cos_theta, sin_theta, sin_2theta,
            d_beam_ref_freq, d_freqs, d_beam_angles_array,
            beam_settings.beam_shape_has, beam_settings.beam_shape_decs,
-           d_beam_reals, d_beam_imags);
+           d_gauss_beam_reals, d_gauss_beam_imags);
 
     }// end if beam == GAUSS
 
     if (beam_settings.beamtype == FEE_BEAM) {
 
-      cudaMalloc( (void**)&d_beam_reals, num_time_steps*num_shapes*sizeof(float) );
-      cudaMalloc( (void**)&d_beam_imags, num_time_steps*num_shapes*sizeof(float) );
+      cudaMalloc( (void**)&d_gauss_beam_reals, num_time_steps*num_shapes*sizeof(float) );
+      cudaMalloc( (void**)&d_gauss_beam_imags, num_time_steps*num_shapes*sizeof(float) );
 
-      calc_CUDA_FEE_beam(d_beam_reals, d_beam_imags,
+      calc_CUDA_FEE_beam(d_gauss_beam_reals, d_gauss_beam_imags,
                          catsource.shape_azs, catsource.shape_zas,
-                         num_shapes, num_time_steps, beam_settings);
+                         num_shapes, num_time_steps, beam_settings.FEE_beam);
     }
 
     if (catsource.n_shape_coeffs == 1) {
@@ -492,21 +527,23 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
             d_shape_decs, d_shape_fluxes, d_shape_freqs,
             d_us, d_vs, d_ws, d_wavelengths,
             d_u_s_metres, d_v_s_metres, d_w_s_metres,
-            d_sum_visi_real, d_sum_visi_imag,
+            d_sum_visi_XX_real, d_sum_visi_XX_imag,
+            d_sum_visi_XY_real, d_sum_visi_XY_imag,
+            d_sum_visi_YX_real, d_sum_visi_YX_imag,
+            d_sum_visi_YY_real, d_sum_visi_YY_imag,
             d_angles_array, d_shape_pas, d_shape_majors, d_shape_minors,
             d_shape_n1s, d_shape_n2s, d_shape_coeffs, d_shape_param_indexes,
             d_shape_ls, d_shape_ms, d_shape_ns,
             d_sbf,
             num_shapes, num_baselines, num_freqs, num_visis,
             catsource.n_shape_coeffs, num_time_steps,
-            d_beam_reals, d_beam_imags, beam_settings.beamtype);
+            d_gauss_beam_reals, d_gauss_beam_imags, beam_settings.beamtype,
+            (cuFloatComplex *)beam_settings.FEE_beam->d_FEE_beam_gain_matrices);
 
+    cudaFree( beam_settings.FEE_beam->d_FEE_beam_gain_matrices);
 
-    // cudaMemcpy(visibility_set->beam_reals,d_beam_reals,beam_settings.num_shape_beam_values*sizeof(float),cudaMemcpyDeviceToHost);
-    // cudaMemcpy(visibility_set->beam_imags,d_beam_imags,beam_settings.num_shape_beam_values*sizeof(float),cudaMemcpyDeviceToHost);
-
-    cudaFree( d_beam_imags);
-    cudaFree( d_beam_reals);
+    cudaFree( d_gauss_beam_imags);
+    cudaFree( d_gauss_beam_reals);
 
     cudaFree( d_shape_ns );
     cudaFree( d_shape_ms );
@@ -531,8 +568,20 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   }//if shapelet
 
   //Get the results into host memory
-  cudaMemcpy(visibility_set->sum_visi_real,d_sum_visi_real,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
-  cudaMemcpy(visibility_set->sum_visi_imag,d_sum_visi_imag,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+  // cudaMemcpy(visibility_set->sum_visi_real,d_sum_visi_real,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+  // cudaMemcpy(visibility_set->sum_visi_imag,d_sum_visi_imag,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+
+  cudaMemcpy(visibility_set->sum_visi_XX_real,d_sum_visi_XX_real,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+  cudaMemcpy(visibility_set->sum_visi_XX_imag,d_sum_visi_XX_imag,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+
+  cudaMemcpy(visibility_set->sum_visi_XY_real,d_sum_visi_XY_real,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+  cudaMemcpy(visibility_set->sum_visi_XY_imag,d_sum_visi_XY_imag,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+
+  cudaMemcpy(visibility_set->sum_visi_YX_real,d_sum_visi_YX_real,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+  cudaMemcpy(visibility_set->sum_visi_YX_imag,d_sum_visi_YX_imag,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+
+  cudaMemcpy(visibility_set->sum_visi_YY_real,d_sum_visi_YY_real,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+  cudaMemcpy(visibility_set->sum_visi_YY_imag,d_sum_visi_YY_imag,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
 
   cudaMemcpy(visibility_set->us_metres,d_u_metres,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
   cudaMemcpy(visibility_set->vs_metres,d_v_metres,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
@@ -550,8 +599,8 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   cudaFree( d_w_metres );
   cudaFree( d_v_metres );
   cudaFree( d_u_metres );
-  cudaFree( d_sum_visi_imag );
-  cudaFree( d_sum_visi_real );
+  // cudaFree( d_sum_visi_imag );
+  // cudaFree( d_sum_visi_real );
   cudaFree( d_wavelengths );
   cudaFree( d_cha0s );
   cudaFree( d_sha0s );
@@ -559,5 +608,15 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   cudaFree( d_Z_diff );
   cudaFree( d_Y_diff );
   cudaFree( d_X_diff );
+
+
+  cudaFree( d_sum_visi_XX_imag );
+  cudaFree( d_sum_visi_XX_real );
+  cudaFree( d_sum_visi_XY_imag );
+  cudaFree( d_sum_visi_XY_real );
+  cudaFree( d_sum_visi_YX_imag );
+  cudaFree( d_sum_visi_YX_real );
+  cudaFree( d_sum_visi_YY_imag );
+  cudaFree( d_sum_visi_YY_real );
 
 }

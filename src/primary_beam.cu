@@ -28,7 +28,7 @@ __global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
            float *ref_freq, float *d_freqs,
            float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
            int num_freqs, int num_times, int num_components,
-           float *d_beam_reals, float *d_beam_imags) {
+           float *d_gauss_beam_reals, float *d_gauss_beam_imags) {
   // Start by computing which baseline we're going to do
   const int iLMcoord = threadIdx.x + (blockDim.x*blockIdx.x);
   const int iFreq = threadIdx.y + (blockDim.y*blockIdx.y);
@@ -39,7 +39,7 @@ __global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
 
     //The l,m coords for the beam locations are for every component, every time
     //step in a 1D array. We are calculating over frequency as well and then
-    //putting results into d_beam_reals, d_beam_imags, so have to do some
+    //putting results into d_gauss_beam_reals, d_gauss_beam_imags, so have to do some
     //fun index maths to work out what time / component / freq we are on,
     //and where to put the output
     int time_ind = (int)floorf((float)iLMcoord / (float)num_components);
@@ -54,8 +54,8 @@ __global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
                std, std, cos_theta, sin_theta, sin_2theta,
                &d_beam_real, &d_beam_imag);
 
-    d_beam_reals[beam_ind] = d_beam_real;
-    d_beam_imags[beam_ind] = d_beam_imag;
+    d_gauss_beam_reals[beam_ind] = d_beam_real;
+    d_gauss_beam_imags[beam_ind] = d_beam_imag;
 
     // printf("%f %f %f %f %f\n",std, fwhm_lm, FWHM_FACTOR, ref_freq[0] , d_freqs[iFreq] );
 
@@ -69,7 +69,7 @@ void calculate_gaussian_beam(int num_components, int num_time_steps, int num_fre
      float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
      float *d_beam_ref_freq, float *d_freqs, float *d_beam_angles_array,
      float *beam_has, float *beam_decs,
-     float *d_beam_reals, float *d_beam_imags){
+     float *d_gauss_beam_reals, float *d_gauss_beam_imags){
 
   int num_beam_hadec = num_components * num_time_steps;
 
@@ -113,7 +113,7 @@ void calculate_gaussian_beam(int num_components, int num_time_steps, int num_fre
              d_beam_ref_freq, d_freqs,
              fwhm_lm, cos_theta, sin_theta, sin_2theta,
              num_freqs, num_time_steps, num_components,
-             d_beam_reals, d_beam_imags);
+             d_gauss_beam_reals, d_gauss_beam_imags);
 
   // printf("Finished a gaussian beam kernel\n");
 
@@ -170,11 +170,11 @@ extern "C" void testing_gaussian_beam( float *beam_has, float *beam_decs,
   cudaMalloc( (void**)&d_beam_ref_freq, sizeof(float) );
   cudaMemcpy( d_beam_ref_freq, ref_freq_array, sizeof(float), cudaMemcpyHostToDevice );
 
-  float *d_beam_reals = NULL;
-  cudaMalloc( (void**)&d_beam_reals, num_beam_calcs*sizeof(float) );
+  float *d_gauss_beam_reals = NULL;
+  cudaMalloc( (void**)&d_gauss_beam_reals, num_beam_calcs*sizeof(float) );
 
-  float *d_beam_imags = NULL;
-  cudaMalloc( (void**)&d_beam_imags, num_beam_calcs*sizeof(float) );
+  float *d_gauss_beam_imags = NULL;
+  cudaMalloc( (void**)&d_gauss_beam_imags, num_beam_calcs*sizeof(float) );
 
 
   dim3 grid, threads;
@@ -205,13 +205,13 @@ extern "C" void testing_gaussian_beam( float *beam_has, float *beam_decs,
              d_beam_ref_freq, d_freqs,
              fwhm_lm, cos_theta, sin_theta, sin_2theta,
              num_freqs, num_times, num_components,
-             d_beam_reals, d_beam_imags);
+             d_gauss_beam_reals, d_gauss_beam_imags);
 
-  cudaMemcpy(beam_reals, d_beam_reals, num_beam_calcs*sizeof(float), cudaMemcpyDeviceToHost);
-  cudaMemcpy(beam_imags, d_beam_imags, num_beam_calcs*sizeof(float), cudaMemcpyDeviceToHost);
+  cudaMemcpy(beam_reals, d_gauss_beam_reals, num_beam_calcs*sizeof(float), cudaMemcpyDeviceToHost);
+  cudaMemcpy(beam_imags, d_gauss_beam_imags, num_beam_calcs*sizeof(float), cudaMemcpyDeviceToHost);
 
-  cudaFree( d_beam_imags);
-  cudaFree( d_beam_reals);
+  cudaFree( d_gauss_beam_imags);
+  cudaFree( d_gauss_beam_reals);
   cudaFree( d_beam_ref_freq);
   cudaFree( d_freqs);
   cudaFree( d_beam_ns );

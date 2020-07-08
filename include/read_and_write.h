@@ -3,8 +3,7 @@
 #include <fitsio.h>
 #include "FEE_primary_beam.h"
 
-#ifndef READWRITE_HEAD
-#define READWRITE_HEAD
+#pragma once
 
 enum component_type {POINT=0, GAUSSIAN, SHAPELET, SHAPELET2};
 typedef enum {NO_BEAM, GAUSS_BEAM, FEE_BEAM}e_beamtype;
@@ -106,18 +105,17 @@ typedef struct _visibility_set_t {
   float *sum_visi_YY_real;
   float *sum_visi_YY_imag;
 
-  float *beam_XX_real;
-  float *beam_XX_imag;
-
-  float *beam_XY_real;
-  float *beam_XY_imag;
-
-  float *beam_YX_real;
-  float *beam_YX_imag;
-
-  float *beam_YY_real;
-  float *beam_YY_imag;
-
+  // float *d_beam_XX_real;
+  // float *d_beam_XX_imag;
+  //
+  // float *d_beam_XY_real;
+  // float *d_beam_XY_imag;
+  //
+  // float *d_beam_YX_real;
+  // float *d_beam_YX_imag;
+  //
+  // float *d_beam_YY_real;
+  // float *d_beam_YY_imag;
 
 } visibility_set_t;
 
@@ -214,8 +212,9 @@ typedef struct _beam_settings_t {
     float *beam_ref_freq_array;
     int beamtype;
 
+    float *para_cosrot;
+    float *para_sinrot;
+
     copy_primary_beam_t *FEE_beam;
 
 } beam_settings_t;
-
-#endif

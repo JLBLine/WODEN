@@ -54,6 +54,23 @@ typedef struct _copy_primary_beam {
 
   float *m_range;
 
+  float _Complex *d_FEE_beam_gain_matrices;
+
+  float *d_para_cosrot;
+  float *d_para_sinrot;
+
+  // float *d_beam_XX_real;
+  // float *d_beam_XX_imag;
+  //
+  // float *d_beam_XY_real;
+  // float *d_beam_XY_imag;
+  //
+  // float *d_beam_YX_real;
+  // float *d_beam_YX_imag;
+  //
+  // float *d_beam_YY_real;
+  // float *d_beam_YY_imag;
+
 } copy_primary_beam_t;
 
 typedef struct _copy_cal_context_t {

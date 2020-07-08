@@ -122,7 +122,6 @@ __global__ void kern_convert_FEE_to_stokesI(cuFloatComplex *d_FEE_beam_gain_matr
   const int iCoord = threadIdx.x + (blockDim.x*blockIdx.x);
 
   // printf("Doing the stokes kernel\n");
-
   if (iCoord < num_coords) {
     cuFloatComplex g1xx = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 0];
     cuFloatComplex g1xy = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 1];
@@ -148,7 +147,7 @@ __global__ void kern_convert_FEE_to_stokesI(cuFloatComplex *d_FEE_beam_gain_matr
     //   printf("Sum Kernel %d %.4f %.4f\n",iCoord,stokesI.x,stokesI.y );
     // }
 
-    // if (stokesI.x > 0.01) {
+    // if (stokesI.x > 0.99 || stokesI.x < -0.99) {
     //   printf("Sum Kernel %d %.4f %.4f\n",iCoord,stokesI.x,stokesI.y );
     // }
 
@@ -165,18 +164,195 @@ __global__ void kern_convert_FEE_to_stokesI(cuFloatComplex *d_FEE_beam_gain_matr
 }
 
 
+// __global__ void kern_convert_FEE_to_instrumental(cuFloatComplex *d_FEE_beam_gain_matrices1,
+//            cuFloatComplex *d_FEE_beam_gain_matrices2,
+//            float *d_beam_reals, float *d_beam_imags,
+//            int num_coords) {
+//
+//   // Start by computing which baseline we're going to do
+//   const int iCoord = threadIdx.x + (blockDim.x*blockIdx.x);
+//
+//   // printf("Doing the stokes kernel\n");
+//
+//   if (iCoord < num_coords) {
+//     cuFloatComplex g1xx = d_FEE_beam_gain_matrices1[iCoord*MAX_POLS + 0];
+//     cuFloatComplex g1xy = d_FEE_beam_gain_matrices1[iCoord*MAX_POLS + 1];
+//     cuFloatComplex g1yx = d_FEE_beam_gain_matrices1[iCoord*MAX_POLS + 2];
+//     cuFloatComplex g1yy = d_FEE_beam_gain_matrices1[iCoord*MAX_POLS + 3];
+//
+//     cuFloatComplex g2xx = d_FEE_beam_gain_matrices2[iCoord*MAX_POLS + 0];
+//     cuFloatComplex g2xy = d_FEE_beam_gain_matrices2[iCoord*MAX_POLS + 1];
+//     cuFloatComplex g2yx = d_FEE_beam_gain_matrices2[iCoord*MAX_POLS + 2];
+//     cuFloatComplex g2yy = d_FEE_beam_gain_matrices2[iCoord*MAX_POLS + 3];
+//
+//     // printf("WOT DO THAT %d %f %f\n",iCoord,g1xx.x,g1xx.y );
+//
+//     cuFloatComplex g2xx_conj = make_cuFloatComplex(g2xx.x,-g2xx.y);
+//     cuFloatComplex g2xy_conj = make_cuFloatComplex(g2xy.x,-g2xy.y);
+//     cuFloatComplex g2yx_conj = make_cuFloatComplex(g2yx.x,-g2yx.y);
+//     cuFloatComplex g2yy_conj = make_cuFloatComplex(g2yy.x,-g2yy.y);
+//
+//     cuFloatComplex XX = cuCmulf(g1xx,g2xx_conj) + cuCmulf(g1xy,g2xy_conj);
+//     cuFloatComplex YY = cuCmulf(g1yx,g2yx_conj) + cuCmulf(g1yy,g2yy_conj);
+//
+//     cuFloatComplex stokesI = cuCaddf(XX, YY);
+//
+//     d_beam_reals[iCoord] = stokesI.x / 2.0;
+//     d_beam_imags[iCoord] = stokesI.y / 2.0;
+//
+//     // if (iCoord > 5000 ){
+//     //   printf("Sum Kernel %d %.4f %.4f\n",iCoord,stokesI.x,stokesI.y );
+//     // }
+//
+//     // if (stokesI.x > 0.01) {
+//     //   printf("Sum Kernel %d %.4f %.4f\n",iCoord,stokesI.x,stokesI.y );
+//     // }
+//
+//
+//
+//
+//
+//     // d_beam_reals[iCoord] = g1xx.x;
+//     // d_beam_imags[iCoord] = g1xx.y;
+//
+//   }
+//   // printf("%d %f \n", ind, (d_Q1[0].x) );
+//
+// }
+
+
+// extern "C" void calc_CUDA_FEE_beam(float *d_beam_reals, float *d_beam_imags,
+//                                    float *azs, float *zas,
+//                                    int num_components, int num_time_steps,
+//                                    beam_settings_t beam_settings) {
+//
+//   float _Complex *d_FEE_beam_gain_matrices = NULL;
+//
+//   printf("\tDoing FEE beam tings\n");
+//
+//   cudaMalloc( (void **)&d_FEE_beam_gain_matrices, num_time_steps*num_components*MAX_POLS*sizeof(float _Complex));
+//
+//   // printf("LOCATION 1\n");
+//
+//   //Ensure gains are zero before summing results to them
+//   float _Complex *zero_array = NULL;
+//   // cudaMallocHost( (void**)&zero_array, num_time_steps*num_components*MAX_POLS*sizeof(float _Complex) );
+//   zero_array = (float _Complex *)malloc( num_time_steps*num_components*MAX_POLS*sizeof(float _Complex) );
+//
+//   for (int i = 0; i < num_time_steps*num_components*MAX_POLS; i++) {
+//     zero_array[i] = {0.0, 0.0};
+//   }
+//   // printf("LOCATION 2\n");
+//   //
+//   cudaMemcpy(d_FEE_beam_gain_matrices, zero_array, num_time_steps*num_components*MAX_POLS*sizeof(float _Complex), cudaMemcpyHostToDevice );
+//   // cudaFreeHost(zero_array);
+//   free(zero_array);
+//
+//   // float az = 0.0;
+//   // float za = 0.0;
+//   float rotation = 0.0;
+//   float scaling = 1.0;
+//
+//   // printf("Location 3\n");
+//
+//
+//   RTS_CUDA_get_TileGains(azs, zas,
+//     num_time_steps*num_components, rotation, beam_settings.FEE_beam,
+//     d_FEE_beam_gain_matrices, scaling);
+//
+//   // printf("LOCATION 3\n");
+//
+//   cudaFree( beam_settings.FEE_beam->emn_T );
+//   cudaFree( beam_settings.FEE_beam->emn_P );
+//   cudaFree( beam_settings.FEE_beam->d_emn_T_sum );
+//   cudaFree( beam_settings.FEE_beam->d_emn_P_sum );
+//
+//   cudaFree(beam_settings.FEE_beam->rts_P_sin);
+//   cudaFree(beam_settings.FEE_beam->rts_P1);
+//
+//   // printf("Have run RTS_CUDA_get_TileGains\n");
+//
+//   // printf("LOCATION 4\n");
+//
+//   dim3 grid, threads;
+//
+//   threads.x = 128;
+//   threads.y = 1;
+//   threads.z = 1;
+//   grid.x = (int)ceil( (float)num_components*num_time_steps / (float)threads.x );
+//   grid.y = 1;
+//   grid.z = 1;
+//
+//   kern_convert_FEE_to_stokesI<<<grid, threads>>>((cuFloatComplex *)d_FEE_beam_gain_matrices,
+//            d_beam_reals, d_beam_imags, num_components*num_time_steps);
+//
+//   cudaFree(d_FEE_beam_gain_matrices);
+//
+//   // printf("LOCATION 5\n");
+// }
+
+__global__ void kern_rotate_FEE_beam(cuFloatComplex *d_FEE_beam_gain_matrices,
+                                float *d_para_cosrot, float *d_para_sinrot,
+                                int num_components, int num_time_steps) {
+  const int iCoord = threadIdx.x + (blockDim.x*blockIdx.x);
+
+  // There are beam values for every component and every time step
+  //and we want to rotate them all by a single angle that changes with time
+  if (iCoord < num_components*num_time_steps) {
+
+    int time_ind = (int)floorf((float)iCoord / (float)num_components);
+
+    cuFloatComplex prerot0 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 0];
+    cuFloatComplex prerot1 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 1];
+    cuFloatComplex prerot2 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 2];
+    cuFloatComplex prerot3 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 3];
+
+    float sinrot = d_para_sinrot[time_ind];
+    float cosrot = d_para_cosrot[time_ind];
+
+    // if (iCoord == 0) {
+    //   printf("BEFORE %d %d %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
+    //           iCoord,time_ind,
+    //           prerot0.x,prerot0.y, prerot1.x,prerot1.y,
+    //           prerot2.x,prerot2.y,prerot3.x,prerot3.y );
+    // }
+
+    d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 0] = -prerot1*sinrot + prerot0*cosrot;
+    d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 1] = prerot1*cosrot + prerot0*sinrot;
+    d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 2] = -prerot3*sinrot + prerot2*cosrot;
+    d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 3] = prerot3*cosrot + prerot2*sinrot;
+
+    // //Swtich off after testings!!
+    //
+    // prerot0 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 0];
+    // prerot1 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 1];
+    // prerot2 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 2];
+    // prerot3 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 3];
+    //
+    // if (iCoord == 0) {
+    //   printf("AFTER %d %d %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
+    //           iCoord,time_ind,
+    //           prerot0.x,prerot0.y, prerot1.x,prerot1.y,
+    //           prerot2.x,prerot2.y,prerot3.x,prerot3.y );
+    // }
+
+  }
+
+}
+
+
 extern "C" void calc_CUDA_FEE_beam(float *d_beam_reals, float *d_beam_imags,
                                    float *azs, float *zas,
                                    int num_components, int num_time_steps,
-                                   beam_settings_t beam_settings) {
+                                   copy_primary_beam_t *FEE_beam) {
 
-  float _Complex *d_FEE_beam_gain_matrices = NULL;
+  // float _Complex *d_FEE_beam_gain_matrices = NULL;
 
   printf("\tDoing FEE beam tings\n");
 
-  cudaMalloc( (void **)&d_FEE_beam_gain_matrices, num_time_steps*num_components*MAX_POLS*sizeof(float _Complex));
+  cudaMalloc( (void **)&FEE_beam->d_FEE_beam_gain_matrices, num_time_steps*num_components*MAX_POLS*sizeof(float _Complex));
 
-  // printf("LOCATION 1\n");
+  // printf("calc_CUDA_FEE_beam 1: %s\n", cudaGetErrorString( cudaGetLastError() ) );
 
   //Ensure gains are zero before summing results to them
   float _Complex *zero_array = NULL;
@@ -186,9 +362,9 @@ extern "C" void calc_CUDA_FEE_beam(float *d_beam_reals, float *d_beam_imags,
   for (int i = 0; i < num_time_steps*num_components*MAX_POLS; i++) {
     zero_array[i] = {0.0, 0.0};
   }
-  // printf("LOCATION 2\n");
+  // printf("calc_CUDA_FEE_beam 2: %s\n", cudaGetErrorString( cudaGetLastError() ) );
   //
-  cudaMemcpy(d_FEE_beam_gain_matrices, zero_array, num_time_steps*num_components*MAX_POLS*sizeof(float _Complex), cudaMemcpyHostToDevice );
+  cudaMemcpy(FEE_beam->d_FEE_beam_gain_matrices, zero_array, num_time_steps*num_components*MAX_POLS*sizeof(float _Complex), cudaMemcpyHostToDevice );
   // cudaFreeHost(zero_array);
   free(zero_array);
 
@@ -201,62 +377,65 @@ extern "C" void calc_CUDA_FEE_beam(float *d_beam_reals, float *d_beam_imags,
 
 
   RTS_CUDA_get_TileGains(azs, zas,
-    num_time_steps*num_components, rotation, beam_settings.FEE_beam,
-    d_FEE_beam_gain_matrices, scaling);
+    num_time_steps, num_components, rotation, FEE_beam,
+    FEE_beam->d_FEE_beam_gain_matrices, scaling);
 
-  // printf("LOCATION 3\n");
+  // printf("calc_CUDA_FEE_beam 3: %s\n", cudaGetErrorString( cudaGetLastError() ) );
 
-  cudaFree( beam_settings.FEE_beam->emn_T );
-  cudaFree( beam_settings.FEE_beam->emn_P );
-  cudaFree( beam_settings.FEE_beam->d_emn_T_sum );
-  cudaFree( beam_settings.FEE_beam->d_emn_P_sum );
+  cudaFree( FEE_beam->emn_T );
+  cudaFree( FEE_beam->emn_P );
+  cudaFree( FEE_beam->d_emn_T_sum );
+  cudaFree( FEE_beam->d_emn_P_sum );
 
-  cudaFree(beam_settings.FEE_beam->rts_P_sin);
-  cudaFree(beam_settings.FEE_beam->rts_P1);
+  cudaFree(FEE_beam->rts_P_sin);
+  cudaFree(FEE_beam->rts_P1);
 
-  // printf("Have run RTS_CUDA_get_TileGains\n");
+  // dim3 grid, threads;
+  //
+  // threads.x = 128;
+  // threads.y = 1;
+  // threads.z = 1;
+  // grid.x = (int)ceil( (float)num_components*num_time_steps / (float)threads.x );
+  // grid.y = 1;
+  // grid.z = 1;
 
-  // printf("LOCATION 4\n");
+  // kern_convert_FEE_to_stokesI<<<grid, threads>>>((cuFloatComplex *)FEE_beam->d_FEE_beam_gain_matrices,
+  //          d_beam_reals, d_beam_imags, num_components*num_time_steps);
 
-  dim3 grid, threads;
+  // printf("calc_CUDA_FEE_beam 4: %s\n", cudaGetErrorString( cudaGetLastError() ) );
 
-  threads.x = 128;
-  threads.y = 1;
-  threads.z = 1;
-  grid.x = (int)ceil( (float)num_components*num_time_steps / (float)threads.x );
-  grid.y = 1;
-  grid.z = 1;
-
-  kern_convert_FEE_to_stokesI<<<grid, threads>>>((cuFloatComplex *)d_FEE_beam_gain_matrices,
-           d_beam_reals, d_beam_imags, num_components*num_time_steps);
-
-  cudaFree(d_FEE_beam_gain_matrices);
+  // cudaFree(d_FEE_beam_gain_matrices);
 
   // printf("LOCATION 5\n");
 }
-
 
 extern "C" void free_FEE_primary_beam_from_GPU(copy_primary_beam_t *primary_beam){
   cudaFree(primary_beam->d_M);
   cudaFree(primary_beam->d_N);
   cudaFree(primary_beam->d_Q1);
   cudaFree(primary_beam->d_Q2);
+
+  cudaFree(primary_beam->d_para_cosrot);
+  cudaFree(primary_beam->d_para_sinrot);
+
+
 }
 
 
 
-extern "C" void copy_FEE_primary_beam_to_GPU(copy_primary_beam_t *primary_beam){
+extern "C" void copy_FEE_primary_beam_to_GPU(beam_settings_t beam_settings,
+                                             int num_time_steps){
 
   const int n_pols=2; // instrumental pols
-  const int nMN = primary_beam->nMN; // max_length HDFBeamInit
+  const int nMN = beam_settings.FEE_beam->nMN; // max_length HDFBeamInit
   int arrSize = n_pols * nMN;
 
   int nStations = 1;
 
-  cudaMalloc( (void**)&primary_beam->d_M, arrSize*sizeof(float) );
-  cudaMalloc( (void**)&primary_beam->d_N, arrSize*sizeof(float) );
-  cudaMalloc( (void**)&primary_beam->d_Q1, arrSize*sizeof(float _Complex) );
-  cudaMalloc( (void**)&primary_beam->d_Q2, arrSize*sizeof(float _Complex) );
+  cudaMalloc( (void**)&beam_settings.FEE_beam->d_M, arrSize*sizeof(float) );
+  cudaMalloc( (void**)&beam_settings.FEE_beam->d_N, arrSize*sizeof(float) );
+  cudaMalloc( (void**)&beam_settings.FEE_beam->d_Q1, arrSize*sizeof(float _Complex) );
+  cudaMalloc( (void**)&beam_settings.FEE_beam->d_Q2, arrSize*sizeof(float _Complex) );
 
   float *h_params;
 
@@ -265,19 +444,19 @@ extern "C" void copy_FEE_primary_beam_to_GPU(copy_primary_beam_t *primary_beam){
 
   for(unsigned int i=0; i< n_pols; i++){
     for(unsigned int j=0; j<nMN; j++){
-      h_params[j+(i*nMN)] = (float)(primary_beam->M[i][j]);
+      h_params[j+(i*nMN)] = (float)(beam_settings.FEE_beam->M[i][j]);
     }
   }
 
-  cudaMemcpy(primary_beam->d_M, h_params, arrSize*sizeof(float), cudaMemcpyHostToDevice );
+  cudaMemcpy(beam_settings.FEE_beam->d_M, h_params, arrSize*sizeof(float), cudaMemcpyHostToDevice );
 
   for(unsigned int i=0; i<n_pols; i++){
     for(unsigned int j=0; j<nMN; j++){
-      h_params[j+(i*nMN)] = (float)(primary_beam->N[i][j]);
+      h_params[j+(i*nMN)] = (float)(beam_settings.FEE_beam->N[i][j]);
     }
   }
 
-  cudaMemcpy( primary_beam->d_N, h_params, arrSize*nStations*sizeof(float), cudaMemcpyHostToDevice );
+  cudaMemcpy( beam_settings.FEE_beam->d_N, h_params, arrSize*nStations*sizeof(float), cudaMemcpyHostToDevice );
   // cudaFreeHost( h_params );
   free(h_params);
 
@@ -287,28 +466,37 @@ extern "C" void copy_FEE_primary_beam_to_GPU(copy_primary_beam_t *primary_beam){
 
   for(unsigned int i=0; i< n_pols; i++){
     for(unsigned int j=0; j<nMN; j++){
-        h_Qdata[j+(i*nMN)] = primary_beam->Q1[i][j];
+        h_Qdata[j+(i*nMN)] = beam_settings.FEE_beam->Q1[i][j];
     }
   }
 
-  cudaMemcpy(primary_beam->d_Q1, h_Qdata, arrSize*nStations*sizeof(float _Complex), cudaMemcpyHostToDevice );
+  cudaMemcpy(beam_settings.FEE_beam->d_Q1, h_Qdata, arrSize*nStations*sizeof(float _Complex), cudaMemcpyHostToDevice );
 
   for(unsigned int i=0; i< n_pols; i++){
     for(unsigned int j=0; j<nMN; j++){
-        h_Qdata[j+(i*nMN)] = primary_beam->Q2[i][j];
+        h_Qdata[j+(i*nMN)] = beam_settings.FEE_beam->Q2[i][j];
     }
   }
 
-  cudaMemcpy(primary_beam->d_Q2, h_Qdata ,arrSize*nStations*sizeof(float _Complex) , cudaMemcpyHostToDevice );
+  cudaMemcpy(beam_settings.FEE_beam->d_Q2, h_Qdata ,arrSize*nStations*sizeof(float _Complex) , cudaMemcpyHostToDevice );
   // cudaFreeHost( h_Qdata );
   free( h_Qdata );
+
+
+  cudaMalloc( (void**)&beam_settings.FEE_beam->d_para_cosrot, num_time_steps*sizeof(float) );
+  cudaMalloc( (void**)&beam_settings.FEE_beam->d_para_sinrot, num_time_steps*sizeof(float) );
+
+
+  cudaMemcpy( beam_settings.FEE_beam->d_para_cosrot, beam_settings.para_cosrot, num_time_steps*sizeof(float), cudaMemcpyHostToDevice );
+  cudaMemcpy( beam_settings.FEE_beam->d_para_sinrot, beam_settings.para_sinrot, num_time_steps*sizeof(float), cudaMemcpyHostToDevice );
 
 }
 
 extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,
-           copy_primary_beam_t *primary_beam,
+           int num_time_steps, copy_primary_beam_t *primary_beam,
            float _Complex *h_FEE_beam_gains,
            int scaling) {
+  // printf("We are beginning the calc_FEE_beam\n");
 
   const int n_pols=2; // instrumental pols
   const int nMN = primary_beam->nMN; // max_length HDFBeamInit
@@ -324,6 +512,7 @@ extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,
   // printf("INPUT GPU3 %.5f %.5f\n", single_az, single_za );
   // printf("INPUT GPU4 %.5f %.5f\n", az, za );
 
+  // printf("THINGS %d %d %d\n",n_pols,nMN,arrSize );
 
 
   cudaMalloc( (void**)&primary_beam->d_M, arrSize*sizeof(float) );
@@ -389,7 +578,7 @@ extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,
   for (size_t i = 0; i < num_azza*MAX_POLS; i++) {
     h_FEE_beam_gains[i] = {0.0,0.0};
   }
-  cudaMemcpy(TileGainMatrices ,h_FEE_beam_gains, num_azza*MAX_POLS*sizeof(float _Complex), cudaMemcpyHostToDevice );
+  cudaMemcpy(TileGainMatrices, h_FEE_beam_gains, num_azza*MAX_POLS*sizeof(float _Complex), cudaMemcpyHostToDevice );
 
 
   // float az = 0.0;
@@ -403,7 +592,8 @@ extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,
   // printf("Scaling before get_TileGains %d\n",scaling );
 
 
-  RTS_CUDA_get_TileGains(az, za, num_azza, rotation, primary_beam, TileGainMatrices, scaling);
+
+  RTS_CUDA_get_TileGains(az, za, num_time_steps, num_azza, rotation, primary_beam, TileGainMatrices, scaling);
 
   // printf("CUDA error 4: %s\n", cudaGetErrorString( cudaGetLastError() ) );
 
@@ -423,125 +613,125 @@ extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,
 }
 
 
-extern "C" void test_FEE_beam(float *az, float *za, int num_azza,
-           copy_primary_beam_t *primary_beam,
-           float _Complex *h_FEE_beam_gains,
-           float _Complex *h_rts_P_sin, float _Complex *h_rts_P1,
-           float _Complex *h_emn_T, float _Complex *h_emn_P,
-           float _Complex *h_emn_T_sum, float _Complex *h_emn_P_sum) {
-
-  const int n_pols=2; // instrumental pols
-  const int nMN = primary_beam->nMN; // max_length HDFBeamInit
-  int arrSize = n_pols * nMN;
-
-  // az = 0.17453;
-  // za = 0.17453;
-
-  // float single_az = az[0];
-  // float single_za = za[0];
-
-  // printf("INPUT GPU3 %.5f %.5f\n", single_az, single_za );
-  // printf("INPUT GPU4 %.5f %.5f\n", az, za );
-
-  int nStations = 1;
-
-  cudaMalloc( (void**)&primary_beam->d_M, arrSize*sizeof(float) );
-  cudaMalloc( (void**)&primary_beam->d_N, arrSize*sizeof(float) );
-  cudaMalloc( (void**)&primary_beam->d_Q1, arrSize*sizeof(float _Complex) );
-  cudaMalloc( (void**)&primary_beam->d_Q2, arrSize*sizeof(float _Complex) );
-
-  float *h_params;
-
-  cudaMallocHost( (void**)&h_params, arrSize*sizeof(float) );
-
-  for(unsigned int i=0; i< n_pols; i++){
-    for(unsigned int j=0; j<nMN; j++){
-      h_params[j+(i*nMN)] = (float)(primary_beam->M[i][j]);
-    }
-  }
-
-  cudaMemcpy(primary_beam->d_M, h_params, arrSize*sizeof(float), cudaMemcpyHostToDevice );
-
-  for(unsigned int i=0; i<n_pols; i++){
-    for(unsigned int j=0; j<nMN; j++){
-      h_params[j+(i*nMN)] = (float)(primary_beam->N[i][j]);
-    }
-  }
-
-  cudaMemcpy( primary_beam->d_N, h_params, arrSize*nStations*sizeof(float), cudaMemcpyHostToDevice );
-  cudaFreeHost( h_params );
-
-  float _Complex *h_Qdata;
-  cudaMallocHost( (void**)&h_Qdata, arrSize*nStations*sizeof(float _Complex) );
-
-  for(unsigned int i=0; i< n_pols; i++){
-    for(unsigned int j=0; j<nMN; j++){
-        h_Qdata[j+(i*nMN)] = primary_beam->Q1[i][j];
-    }
-  }
-
-  cudaMemcpy(primary_beam->d_Q1, h_Qdata, arrSize*nStations*sizeof(float _Complex), cudaMemcpyHostToDevice );
-
-  for(unsigned int i=0; i< n_pols; i++){
-    for(unsigned int j=0; j<nMN; j++){
-        h_Qdata[j+(i*nMN)] = primary_beam->Q2[i][j];
-    }
-  }
-
-  cudaMemcpy(primary_beam->d_Q2, h_Qdata ,arrSize*nStations*sizeof(float _Complex) , cudaMemcpyHostToDevice );
-  cudaFreeHost( h_Qdata );
-
-  float _Complex *TileGainMatrices = NULL;
-  cudaMalloc( (void **)&TileGainMatrices, num_azza*MAX_POLS*sizeof(float _Complex));
-
-  //Ensure gains are zero before summing results to them
-  for (size_t i = 0; i < num_azza*MAX_POLS; i++) {
-    h_FEE_beam_gains[i] = {0.0,0.0};
-  }
-  cudaMemcpy(TileGainMatrices ,h_FEE_beam_gains, num_azza*MAX_POLS*sizeof(float _Complex) , cudaMemcpyHostToDevice );
-
-
-  // float az = 0.0;
-  // float za = 0.0;
-  float rotation = 0.0;
-  float scaling = 1.0;
-
-  int nmax = primary_beam->nmax;
-
-  // // printf("INPUT GPU2 %.5f %.5f\n",single_az,single_za );
-  RTS_CUDA_get_TileGains(az, za, num_azza, rotation, primary_beam, TileGainMatrices, scaling);
-
-  cudaMemcpy(h_FEE_beam_gains, TileGainMatrices, num_azza*MAX_POLS*sizeof(float _Complex), cudaMemcpyDeviceToHost );
-
-
-
-  cudaMemcpy(h_rts_P1, primary_beam->rts_P1, num_azza*(nmax*nmax + 2*nmax)*sizeof(float _Complex), cudaMemcpyDeviceToHost );
-  cudaMemcpy(h_rts_P_sin, primary_beam->rts_P_sin, num_azza*(nmax*nmax + 2*nmax)*sizeof(float _Complex), cudaMemcpyDeviceToHost );
-
-  cudaMemcpy(h_emn_T, primary_beam->emn_T, num_azza*n_pols*primary_beam->nMN*sizeof(float _Complex), cudaMemcpyDeviceToHost );
-  cudaMemcpy(h_emn_P, primary_beam->emn_P, num_azza*n_pols*primary_beam->nMN*sizeof(float _Complex), cudaMemcpyDeviceToHost );
-
-  cudaMemcpy(h_emn_T_sum, primary_beam->d_emn_T_sum, num_azza*n_pols*(2*nmax + 1)*sizeof(float _Complex), cudaMemcpyDeviceToHost );
-  cudaMemcpy(h_emn_P_sum, primary_beam->d_emn_P_sum, num_azza*n_pols*(2*nmax + 1)*sizeof(float _Complex), cudaMemcpyDeviceToHost );
-
-
-  // cudaFree( primary_beam->d_Q1 );
-  // cudaFree( primary_beam->d_Q2 );
-  // // cudaFree( d_norm_fac );
-  // cudaFree( primary_beam->d_N );
-  // cudaFree( primary_beam->d_M );
-  cudaFree( primary_beam->emn_T );
-  cudaFree( primary_beam->emn_P );
-  cudaFree( primary_beam->d_emn_T_sum );
-  cudaFree( primary_beam->d_emn_P_sum );
-
-  cudaFree(primary_beam->rts_P_sin);
-  cudaFree(primary_beam->rts_P1);
-
-  cudaFree( TileGainMatrices );
-
-
-}
+// extern "C" void test_FEE_beam(float *az, float *za, int num_azza,
+//            copy_primary_beam_t *primary_beam,
+//            float _Complex *h_FEE_beam_gains,
+//            float _Complex *h_rts_P_sin, float _Complex *h_rts_P1,
+//            float _Complex *h_emn_T, float _Complex *h_emn_P,
+//            float _Complex *h_emn_T_sum, float _Complex *h_emn_P_sum) {
+//
+//   const int n_pols=2; // instrumental pols
+//   const int nMN = primary_beam->nMN; // max_length HDFBeamInit
+//   int arrSize = n_pols * nMN;
+//
+//   // az = 0.17453;
+//   // za = 0.17453;
+//
+//   // float single_az = az[0];
+//   // float single_za = za[0];
+//
+//   // printf("INPUT GPU3 %.5f %.5f\n", single_az, single_za );
+//   // printf("INPUT GPU4 %.5f %.5f\n", az, za );
+//
+//   int nStations = 1;
+//
+//   cudaMalloc( (void**)&primary_beam->d_M, arrSize*sizeof(float) );
+//   cudaMalloc( (void**)&primary_beam->d_N, arrSize*sizeof(float) );
+//   cudaMalloc( (void**)&primary_beam->d_Q1, arrSize*sizeof(float _Complex) );
+//   cudaMalloc( (void**)&primary_beam->d_Q2, arrSize*sizeof(float _Complex) );
+//
+//   float *h_params;
+//
+//   cudaMallocHost( (void**)&h_params, arrSize*sizeof(float) );
+//
+//   for(unsigned int i=0; i< n_pols; i++){
+//     for(unsigned int j=0; j<nMN; j++){
+//       h_params[j+(i*nMN)] = (float)(primary_beam->M[i][j]);
+//     }
+//   }
+//
+//   cudaMemcpy(primary_beam->d_M, h_params, arrSize*sizeof(float), cudaMemcpyHostToDevice );
+//
+//   for(unsigned int i=0; i<n_pols; i++){
+//     for(unsigned int j=0; j<nMN; j++){
+//       h_params[j+(i*nMN)] = (float)(primary_beam->N[i][j]);
+//     }
+//   }
+//
+//   cudaMemcpy( primary_beam->d_N, h_params, arrSize*nStations*sizeof(float), cudaMemcpyHostToDevice );
+//   cudaFreeHost( h_params );
+//
+//   float _Complex *h_Qdata;
+//   cudaMallocHost( (void**)&h_Qdata, arrSize*nStations*sizeof(float _Complex) );
+//
+//   for(unsigned int i=0; i< n_pols; i++){
+//     for(unsigned int j=0; j<nMN; j++){
+//         h_Qdata[j+(i*nMN)] = primary_beam->Q1[i][j];
+//     }
+//   }
+//
+//   cudaMemcpy(primary_beam->d_Q1, h_Qdata, arrSize*nStations*sizeof(float _Complex), cudaMemcpyHostToDevice );
+//
+//   for(unsigned int i=0; i< n_pols; i++){
+//     for(unsigned int j=0; j<nMN; j++){
+//         h_Qdata[j+(i*nMN)] = primary_beam->Q2[i][j];
+//     }
+//   }
+//
+//   cudaMemcpy(primary_beam->d_Q2, h_Qdata ,arrSize*nStations*sizeof(float _Complex) , cudaMemcpyHostToDevice );
+//   cudaFreeHost( h_Qdata );
+//
+//   float _Complex *TileGainMatrices = NULL;
+//   cudaMalloc( (void **)&TileGainMatrices, num_azza*MAX_POLS*sizeof(float _Complex));
+//
+//   //Ensure gains are zero before summing results to them
+//   for (size_t i = 0; i < num_azza*MAX_POLS; i++) {
+//     h_FEE_beam_gains[i] = {0.0,0.0};
+//   }
+//   cudaMemcpy(TileGainMatrices ,h_FEE_beam_gains, num_azza*MAX_POLS*sizeof(float _Complex) , cudaMemcpyHostToDevice );
+//
+//
+//   // float az = 0.0;
+//   // float za = 0.0;
+//   float rotation = 0.0;
+//   float scaling = 1.0;
+//
+//   int nmax = primary_beam->nmax;
+//
+//   // // printf("INPUT GPU2 %.5f %.5f\n",single_az,single_za );
+//   RTS_CUDA_get_TileGains(az, za, num_azza, rotation, primary_beam, TileGainMatrices, scaling);
+//
+//   cudaMemcpy(h_FEE_beam_gains, TileGainMatrices, num_azza*MAX_POLS*sizeof(float _Complex), cudaMemcpyDeviceToHost );
+//
+//
+//
+//   cudaMemcpy(h_rts_P1, primary_beam->rts_P1, num_azza*(nmax*nmax + 2*nmax)*sizeof(float _Complex), cudaMemcpyDeviceToHost );
+//   cudaMemcpy(h_rts_P_sin, primary_beam->rts_P_sin, num_azza*(nmax*nmax + 2*nmax)*sizeof(float _Complex), cudaMemcpyDeviceToHost );
+//
+//   cudaMemcpy(h_emn_T, primary_beam->emn_T, num_azza*n_pols*primary_beam->nMN*sizeof(float _Complex), cudaMemcpyDeviceToHost );
+//   cudaMemcpy(h_emn_P, primary_beam->emn_P, num_azza*n_pols*primary_beam->nMN*sizeof(float _Complex), cudaMemcpyDeviceToHost );
+//
+//   cudaMemcpy(h_emn_T_sum, primary_beam->d_emn_T_sum, num_azza*n_pols*(2*nmax + 1)*sizeof(float _Complex), cudaMemcpyDeviceToHost );
+//   cudaMemcpy(h_emn_P_sum, primary_beam->d_emn_P_sum, num_azza*n_pols*(2*nmax + 1)*sizeof(float _Complex), cudaMemcpyDeviceToHost );
+//
+//
+//   // cudaFree( primary_beam->d_Q1 );
+//   // cudaFree( primary_beam->d_Q2 );
+//   // // cudaFree( d_norm_fac );
+//   // cudaFree( primary_beam->d_N );
+//   // cudaFree( primary_beam->d_M );
+//   cudaFree( primary_beam->emn_T );
+//   cudaFree( primary_beam->emn_P );
+//   cudaFree( primary_beam->d_emn_T_sum );
+//   cudaFree( primary_beam->d_emn_P_sum );
+//
+//   cudaFree(primary_beam->rts_P_sin);
+//   cudaFree(primary_beam->rts_P1);
+//
+//   cudaFree( TileGainMatrices );
+//
+//
+// }
 
 // __global__ void kern_map_FEE_norm(cuFloatComplex *d_full_norm_factors,
 //            cuFloatComplex *d_norm_fac ){
@@ -566,7 +756,7 @@ extern "C" void test_FEE_beam(float *az, float *za, int num_azza,
 
 extern "C" void get_HDFBeam_normalisation(copy_primary_beam_t *primary_beam) {
 
-  // printf("CUDA error 4: %s\n", cudaGetErrorString( cudaGetLastError() ) );
+  // printf("CUDA error 1: %s\n", cudaGetErrorString( cudaGetLastError() ) );
 
   float norm_azs[4] = {M_PI/2.0, 0.0, M_PI, M_PI/2.0};
   float norm_zas[4] = {0.0, 0.0, 0.0, 0.0};
@@ -576,9 +766,13 @@ extern "C" void get_HDFBeam_normalisation(copy_primary_beam_t *primary_beam) {
   float _Complex *all_norm_gains=NULL;
   all_norm_gains = (float _Complex *)malloc(MAX_POLS*MAX_POLS*sizeof(float _Complex));
 
-  // printf("CUDA error 3: %s\n", cudaGetErrorString( cudaGetLastError() ) );
+  // printf("Before calc_FEE_beam: %s\n", cudaGetErrorString( cudaGetLastError() ) );
 
-  calc_FEE_beam(norm_azs, norm_zas, MAX_POLS, primary_beam, all_norm_gains, scaling);
+  int num_time_steps = 1;
+
+  calc_FEE_beam(norm_azs, norm_zas,  MAX_POLS, num_time_steps, primary_beam, all_norm_gains, scaling);
+
+  // printf("After calc_FEE_beam: %s\n", cudaGetErrorString( cudaGetLastError() ) );
 
   for (size_t i = 0; i < MAX_POLS; i++) {
     // printf("NORM BEAM STOOF %.6f %.6f\n",creal(all_norm_gains[i*MAX_POLS + i]),cimag(all_norm_gains[i*MAX_POLS + i]) );
@@ -597,11 +791,13 @@ extern "C" void get_HDFBeam_normalisation(copy_primary_beam_t *primary_beam) {
 
 }
 
-extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta, int num_coords,
+extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
+           int num_time_steps, int num_components,
            float rotation, copy_primary_beam_t *primary_beam,
            float _Complex *TileGainMatrices, int scaling){
 
   int n_pols = 2;
+  int num_coords = num_time_steps*num_components;
 
   for (size_t phi_ind = 0; phi_ind < num_coords; phi_ind++) {
     // printf("%.5f %.5f\n",phi[phi_ind]*(180. / M_PI),theta[phi_ind]*(180. / M_PI) );
@@ -792,14 +988,18 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta, int num_coords,
   //
   // printf("Apparently ran kern_calc_sigmaTP\n");
 
-  threads.x = 128;
-  grid.x = (int)ceil( (float)num_coords / threads.x);
 
-  threads.y = threads.z = 1;
-  grid.y = grid.z = 1;
+
+
 
   if (scaling == 1.0) {
     // printf("Trying to do the scaling fool\n");
+
+    threads.x = 128;
+    grid.x = (int)ceil( (float)num_coords / threads.x);
+
+    threads.y = threads.z = 1;
+    grid.y = grid.z = 1;
 
     float _Complex *d_norm_fac=NULL;
     cudaMalloc( (void**)&d_norm_fac, MAX_POLS*sizeof(float _Complex) );
@@ -810,6 +1010,14 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta, int num_coords,
 
     cudaFree(d_norm_fac);
 
+    //Now we have to rotate about the parallactic angle as the beam is in
+    //theta/phi instrumental pols, whereas we want XX/YY pols
+    //The normalisation values come from the unrotated beam, so we never
+    //want to rotate the beam when getting the normalisation values (e.g. scaling == 0 )
+
+    kern_rotate_FEE_beam<<< grid, threads >>>( (cuFloatComplex*)TileGainMatrices,
+                                  primary_beam->d_para_cosrot, primary_beam->d_para_sinrot,
+                                  num_components, num_time_steps);
 
   }
 

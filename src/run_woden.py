@@ -126,6 +126,9 @@ def create_uvfits(v_container=None,freq_cent=None, ra_point=None, dec_point=None
 
     template_uvfits[1].header['FREQ'] = freq_cent
     template_uvfits[1].header['ARRNAM'] = 'MWA'
+    template_uvfits[1].header['TELESCOP'] = 'MWA'
+    template_uvfits[0].header['TELESCOP'] = 'MWA'
+
 
     ##MAJICK uses this date to set the LST
     dmy, hms = date.split()
@@ -172,10 +175,16 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
     u_base = 0
     v_base = num_visi
     w_base = 2*num_visi
-    re_base = 3*num_visi
-    im_base = 4*num_visi
+    re_XX_base = 3*num_visi
+    im_XX_base = 4*num_visi
+    re_XY_base = 5*num_visi
+    im_XY_base = 6*num_visi
+    re_YX_base = 7*num_visi
+    im_YX_base = 8*num_visi
+    re_YY_base = 9*num_visi
+    im_YY_base = 10*num_visi
 
-    num_cols = 5
+    num_cols = 11
     for time_ind in arange(num_time_steps):
 
         time_step = num_baselines * time_ind * num_freq_channels
@@ -191,16 +200,30 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
 
             freq_step = num_baselines * (time_ind * num_freq_channels + freq_ind)
 
-            real_ind = re_base + freq_step
-            imag_ind = im_base + freq_step
+            real_XX_ind = re_XX_base + freq_step
+            imag_XX_ind = im_XX_base + freq_step
+            real_YY_ind = re_YY_base + freq_step
+            imag_YY_ind = im_YY_base + freq_step
+            real_XY_ind = re_XY_base + freq_step
+            imag_XY_ind = im_XY_base + freq_step
+            real_YX_ind = re_YX_base + freq_step
+            imag_YX_ind = im_YX_base + freq_step
 
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,0,0] = data[real_ind:real_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,0,1] = data[imag_ind:imag_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,1,0] = data[real_ind:real_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,1,1] = data[imag_ind:imag_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,0,0] = data[real_XX_ind:real_XX_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,0,1] = data[imag_XX_ind:imag_XX_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,1,0] = data[real_YY_ind:real_YY_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,1,1] = data[imag_YY_ind:imag_YY_ind+num_baselines]
 
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,2,0] = data[real_XY_ind:real_XY_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,2,1] = data[imag_XY_ind:imag_XY_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,3,0] = data[real_YX_ind:real_YX_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,3,1] = data[imag_YX_ind:imag_YX_ind+num_baselines]
+
+            ##Set the weight for everything to one
             v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,0,2] = ones(num_baselines)
             v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,1,2] = ones(num_baselines)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,2,2] = ones(num_baselines)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,3,2] = ones(num_baselines)
 
     return uus, vvs, wws, v_container
 
