@@ -152,8 +152,12 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
 
     float *d_point_ras=NULL;
     float *d_point_decs=NULL;
-    float *d_point_fluxes=NULL;
     float *d_point_freqs=NULL;
+    float *d_point_stokesI=NULL;
+    float *d_point_stokesQ=NULL;
+    float *d_point_stokesU=NULL;
+    float *d_point_stokesV=NULL;
+    float *d_point_SIs=NULL;
 
     cudaMalloc( (void**)&(d_point_ras), num_points*sizeof(float) );
     cudaMemcpy( d_point_ras, catsource.point_ras, num_points*sizeof(float), cudaMemcpyHostToDevice );
@@ -161,11 +165,26 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
     cudaMalloc( (void**)&(d_point_decs), num_points*sizeof(float) );
     cudaMemcpy( d_point_decs, catsource.point_decs, num_points*sizeof(float), cudaMemcpyHostToDevice );
 
-    cudaMalloc( (void**)&(d_point_fluxes), num_points*sizeof(float) );
-    cudaMemcpy( d_point_fluxes, catsource.point_fluxes, num_points*sizeof(float), cudaMemcpyHostToDevice );
+    // cudaMalloc( (void**)&(d_point_fluxes), num_points*sizeof(float) );
+    // cudaMemcpy( d_point_fluxes, catsource.point_fluxes, num_points*sizeof(float), cudaMemcpyHostToDevice );
 
     cudaMalloc( (void**)&(d_point_freqs), num_points*sizeof(float) );
-    cudaMemcpy( d_point_freqs, catsource.point_freqs, num_points*sizeof(float), cudaMemcpyHostToDevice );
+    cudaMemcpy( d_point_freqs, catsource.point_ref_freqs, num_points*sizeof(float), cudaMemcpyHostToDevice );
+
+    cudaMalloc( (void**)&(d_point_stokesI), num_points*sizeof(float) );
+    cudaMemcpy( d_point_stokesI, catsource.point_ref_stokesI, num_points*sizeof(float), cudaMemcpyHostToDevice );
+
+    cudaMalloc( (void**)&(d_point_stokesQ), num_points*sizeof(float) );
+    cudaMemcpy( d_point_stokesQ, catsource.point_ref_stokesQ, num_points*sizeof(float), cudaMemcpyHostToDevice );
+
+    cudaMalloc( (void**)&(d_point_stokesU), num_points*sizeof(float) );
+    cudaMemcpy( d_point_stokesU, catsource.point_ref_stokesU, num_points*sizeof(float), cudaMemcpyHostToDevice );
+
+    cudaMalloc( (void**)&(d_point_stokesV), num_points*sizeof(float) );
+    cudaMemcpy( d_point_stokesV, catsource.point_ref_stokesV, num_points*sizeof(float), cudaMemcpyHostToDevice );
+
+    cudaMalloc( (void**)&(d_point_SIs), num_points*sizeof(float) );
+    cudaMemcpy( d_point_SIs, catsource.point_SIs, num_points*sizeof(float), cudaMemcpyHostToDevice );
 
     float *d_ls=NULL;
     float *d_ms=NULL;
@@ -201,15 +220,15 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
 
     }// end if beam == GAUSS
 
-
     if (beam_settings.beamtype == FEE_BEAM) {
 
       cudaMalloc( (void**)&d_gauss_beam_reals, num_time_steps*num_points*sizeof(float) );
       cudaMalloc( (void**)&d_gauss_beam_imags, num_time_steps*num_points*sizeof(float) );
 
       calc_CUDA_FEE_beam(d_gauss_beam_reals, d_gauss_beam_imags,
-                         catsource.point_azs, catsource.point_zas,
-                         num_points, num_time_steps, beam_settings.FEE_beam);
+             catsource.point_azs, catsource.point_zas,
+             catsource.sin_point_para_angs, catsource.cos_point_para_angs,
+             num_points, num_time_steps, beam_settings.FEE_beam);
 
       // printf("calculate_visibilities error 2: %s\n", cudaGetErrorString( cudaGetLastError() ) );
     }
@@ -227,8 +246,9 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
       grid.y = (int)ceil( ((float)num_points) / ((float)threads.y) );
     }
 
-    kern_calc_visi_point<<<grid , threads>>>(d_point_ras,
-            d_point_decs, d_point_fluxes, d_point_freqs,
+    kern_calc_visi_point<<<grid , threads>>>(d_point_ras, d_point_decs,
+            d_point_freqs, d_point_stokesI, d_point_stokesQ,
+            d_point_stokesU, d_point_stokesV, d_point_SIs,
             d_us, d_vs, d_ws,
             d_sum_visi_XX_real, d_sum_visi_XX_imag,
             d_sum_visi_XY_real, d_sum_visi_XY_imag,
@@ -241,8 +261,6 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
             d_gauss_beam_reals, d_gauss_beam_imags,  beam_settings.beamtype,
             (cuFloatComplex *)beam_settings.FEE_beam->d_FEE_beam_gain_matrices);
 
-    // printf("CUDA error 3: %s\n", cudaGetErrorString( cudaGetLastError() ) );
-
     cudaFree( beam_settings.FEE_beam->d_FEE_beam_gain_matrices);
     cudaFree( d_gauss_beam_imags);
     cudaFree( d_gauss_beam_reals);
@@ -250,7 +268,12 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
     cudaFree( d_ms);
     cudaFree( d_ls);
     cudaFree( d_point_freqs );
-    cudaFree( d_point_fluxes );
+    // cudaFree( d_point_fluxes );
+    cudaFree( d_point_stokesI );
+    cudaFree( d_point_stokesQ );
+    cudaFree( d_point_stokesU );
+    cudaFree( d_point_stokesV );
+    cudaFree( d_point_SIs );
     cudaFree( d_point_decs);
     cudaFree( d_point_ras);
 
@@ -261,20 +284,40 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
 
     float *d_gauss_ras=NULL;
     float *d_gauss_decs=NULL;
-    float *d_gauss_fluxes=NULL;
-    float *d_gauss_freqs=NULL;
     float *d_gauss_pas=NULL;
     float *d_gauss_majors=NULL;
     float *d_gauss_minors=NULL;
+
+    float *d_gauss_freqs=NULL;
+    float *d_gauss_stokesI=NULL;
+    float *d_gauss_stokesQ=NULL;
+    float *d_gauss_stokesU=NULL;
+    float *d_gauss_stokesV=NULL;
+    float *d_gauss_SIs=NULL;
+
+    cudaMalloc( (void**)&(d_gauss_freqs), num_gauss*sizeof(float) );
+    cudaMemcpy( d_gauss_freqs, catsource.gauss_ref_freqs, num_gauss*sizeof(float), cudaMemcpyHostToDevice );
+
+    cudaMalloc( (void**)&(d_gauss_stokesI), num_gauss*sizeof(float) );
+    cudaMemcpy( d_gauss_stokesI, catsource.gauss_ref_stokesI, num_gauss*sizeof(float), cudaMemcpyHostToDevice );
+
+    cudaMalloc( (void**)&(d_gauss_stokesQ), num_gauss*sizeof(float) );
+    cudaMemcpy( d_gauss_stokesQ, catsource.gauss_ref_stokesQ, num_gauss*sizeof(float), cudaMemcpyHostToDevice );
+
+    cudaMalloc( (void**)&(d_gauss_stokesU), num_gauss*sizeof(float) );
+    cudaMemcpy( d_gauss_stokesU, catsource.gauss_ref_stokesU, num_gauss*sizeof(float), cudaMemcpyHostToDevice );
+
+    cudaMalloc( (void**)&(d_gauss_stokesV), num_gauss*sizeof(float) );
+    cudaMemcpy( d_gauss_stokesV, catsource.gauss_ref_stokesV, num_gauss*sizeof(float), cudaMemcpyHostToDevice );
+
+    cudaMalloc( (void**)&(d_gauss_SIs), num_gauss*sizeof(float) );
+    cudaMemcpy( d_gauss_SIs, catsource.gauss_SIs, num_gauss*sizeof(float), cudaMemcpyHostToDevice );
 
     cudaMalloc( (void**)&(d_gauss_ras), num_gauss*sizeof(float) );
     cudaMemcpy( d_gauss_ras, catsource.gauss_ras, num_gauss*sizeof(float), cudaMemcpyHostToDevice );
 
     cudaMalloc( (void**)&(d_gauss_decs), num_gauss*sizeof(float) );
     cudaMemcpy( d_gauss_decs, catsource.gauss_decs, num_gauss*sizeof(float), cudaMemcpyHostToDevice );
-
-    cudaMalloc( (void**)&(d_gauss_fluxes), num_gauss*sizeof(float) );
-    cudaMemcpy( d_gauss_fluxes, catsource.gauss_fluxes, num_gauss*sizeof(float), cudaMemcpyHostToDevice );
 
     cudaMalloc( (void**)&(d_gauss_pas), num_gauss*sizeof(float) );
     cudaMemcpy( d_gauss_pas, catsource.gauss_pas, num_gauss*sizeof(float), cudaMemcpyHostToDevice );
@@ -284,9 +327,6 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
 
     cudaMalloc( (void**)&(d_gauss_minors), num_gauss*sizeof(float) );
     cudaMemcpy( d_gauss_minors, catsource.gauss_minors, num_gauss*sizeof(float), cudaMemcpyHostToDevice );
-
-    cudaMalloc( (void**)&(d_gauss_freqs), num_gauss*sizeof(float) );
-    cudaMemcpy( d_gauss_freqs, catsource.gauss_freqs, num_gauss*sizeof(float), cudaMemcpyHostToDevice );
 
     float *d_ls=NULL;
     float *d_ms=NULL;
@@ -332,8 +372,9 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
       cudaMalloc( (void**)&d_gauss_beam_imags, num_time_steps*num_gauss*sizeof(float) );
 
       calc_CUDA_FEE_beam(d_gauss_beam_reals, d_gauss_beam_imags,
-                         catsource.gauss_azs, catsource.gauss_zas,
-                         num_gauss, num_time_steps, beam_settings.FEE_beam);
+             catsource.gauss_azs, catsource.gauss_zas,
+             catsource.sin_gauss_para_angs, catsource.cos_gauss_para_angs,
+             num_gauss, num_time_steps, beam_settings.FEE_beam);
     }
 
     if (num_gauss == 1) {
@@ -349,8 +390,9 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
      grid.y = (int)ceil( ((float)num_gauss) / ((float)threads.y) );
     }
 
-    kern_calc_visi_gaussian<<<grid , threads>>>(d_gauss_ras,
-            d_gauss_decs, d_gauss_fluxes, d_gauss_freqs,
+    kern_calc_visi_gaussian<<<grid , threads>>>(d_gauss_ras, d_gauss_decs,
+            d_gauss_freqs, d_gauss_stokesI, d_gauss_stokesQ,
+            d_gauss_stokesU, d_gauss_stokesV, d_gauss_SIs,
             d_us, d_vs, d_ws,
             d_sum_visi_XX_real, d_sum_visi_XX_imag,
             d_sum_visi_XY_real, d_sum_visi_XY_imag,
@@ -372,10 +414,14 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
     cudaFree( d_gauss_minors );
     cudaFree( d_gauss_majors);
     cudaFree( d_gauss_pas);
-    cudaFree( d_gauss_freqs );
-    cudaFree( d_gauss_fluxes );
     cudaFree( d_gauss_decs);
     cudaFree( d_gauss_ras);
+    cudaFree( d_gauss_freqs );
+    cudaFree( d_gauss_stokesI );
+    cudaFree( d_gauss_stokesQ );
+    cudaFree( d_gauss_stokesU );
+    cudaFree( d_gauss_stokesV );
+    cudaFree( d_gauss_SIs );
 
   }//if gauss sources
 
@@ -507,6 +553,7 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
 
       calc_CUDA_FEE_beam(d_gauss_beam_reals, d_gauss_beam_imags,
                          catsource.shape_azs, catsource.shape_zas,
+                         catsource.sin_shape_para_angs, catsource.cos_shape_para_angs,
                          num_shapes, num_time_steps, beam_settings.FEE_beam);
     }
 

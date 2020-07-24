@@ -208,10 +208,24 @@ int RTS_HDFBeamInit(char *h5filename, float freq_Hz, copy_primary_beam_t *pb, fl
 
   lam = VEL_LIGHT/(od.freq_out); // Should this be freq_out??
 
+  //RTS code was setup with a different ordering of the delays, so change
+  //the order of the delays
+
+  float RTS_order_delays[NUM_DIPOLES];
+
+  for (int dipole = 0; dipole < NUM_DIPOLES; dipole++) {
+    RTS_order_delays[NUM_DIPOLES - 1 - dipole] = FEE_delays[dipole];
+  	// RTS_order_delays[7-dipole] = FEE_delays[1+dipole*4];
+  	// RTS_order_delays[11-dipole] = FEE_delays[2+dipole*4];
+  	// RTS_order_delays[15-dipole] = FEE_delays[3+dipole*4];
+  }
+
+
   for (int pol=0; pol < N_COPOL; pol++){
     for (int i=0; i<NUM_DIPOLES; i++) {
       float phase;
-      phase = (-2.0*M_PI*DQ/lam)*FEE_delays[i];
+      printf("The delays used are %.5f\n", RTS_order_delays[i]);
+      phase = (-2.0*M_PI*DQ/lam)*RTS_order_delays[i];
       // phase = (-2.0*M_PI/lam)*FEE_delays[i]; // rts delays are already *DQ
       // if (debug) fprintf(fpd,"delay: %g, phase: %g\n",FEE_delays[i],phase);
       // Vcplx=amps[pol]*np.exp(1.0j*phases) #complex excitation col voltage
@@ -231,7 +245,15 @@ int RTS_HDFBeamInit(char *h5filename, float freq_Hz, copy_primary_beam_t *pb, fl
       //TODO implement dipole flagging and/or dipole amplitudes here
       //eg Vcplx[pol][i] = amps[pol][i] * cexp(1.0j * phase);
 
-      Vcplx[pol][i] = cexp(1.0j * phase);
+      if (FEE_delays[i] == 32.0) {
+        Vcplx[pol][i] = cexp(1.0j * phase);
+      }
+
+      else{
+        Vcplx[pol][i] = cexp(1.0j * phase);
+      }
+
+
     } //end for dipole
   } // end for pol
 

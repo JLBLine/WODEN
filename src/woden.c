@@ -55,6 +55,13 @@ int main(int argc, char **argv) {
   fits_open_file(&metaf_file, woden_settings->metafits_filename, READONLY, &status);
   status = RTS_init_meta_file(metaf_file, &metafits, woden_settings->metafits_filename);
 
+  float *float_delays = NULL;
+  float_delays = malloc(16*sizeof(float));
+
+  for (size_t i = 0; i < 16; i++) {
+   float_delays[i] = metafits.FEE_ideal_delays[i];
+  }
+
   //Create the array layout in instrument-centric X,Y,Z using positions
   //from the metafits file
   array_layout_t * array_layout;
@@ -185,14 +192,15 @@ int main(int argc, char **argv) {
     for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
 
       float FEE_HA = lsts[time_step] - metafits.ra_point;
-      para_angle = eraHd2pa((double)FEE_HA, (double)metafits.dec_point, (double)MWA_LAT);
+      para_angle = eraHd2pa((double)FEE_HA, (double)metafits.dec_point, (double)MWA_LAT_RAD);
 
-      beam_settings.para_cosrot[time_step] = cosf((float)para_angle);
-      beam_settings.para_sinrot[time_step] = sinf((float)para_angle);
+      beam_settings.para_cosrot[time_step] = cosf((float)para_angle + M_PI/2.0);
+      beam_settings.para_sinrot[time_step] = sinf((float)para_angle + M_PI/2.0);
 
-      printf("PARA ANGLEEEEE %.10f %.10f %.10f\n",para_angle,cosf((float)para_angle),sinf((float)para_angle) );
+      // printf("PARA ANGLEEEEE %.10f %.10f %.10f\n",para_angle,cosf((float)para_angle + M_PI/2.0),sinf((float)para_angle + M_PI/2.0) );
     }
 
+    calc_para_angle(cropped_src, lsts, num_time_steps);
   }
 
   else {
@@ -212,6 +220,11 @@ int main(int argc, char **argv) {
     float base_band_freq = ((band_num - 1)*(metafits.bandwidth/24.0)) + woden_settings->base_low_freq;
     printf("Simulating band %02d with bottom freq %.8e\n",band_num,base_band_freq);
 
+    //TODO - add half a freq resolution in here? minus? Leave as is?
+    // base_band_freq += woden_settings->frequency_resolution/2.0;
+
+    beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
+
     if (woden_settings->beamtype == FEE_BEAM){
 
       //Just use one single tile beam for all for now - will need a certain
@@ -226,13 +239,13 @@ int main(int argc, char **argv) {
 
       // copy_primary_beam_t *FEE_beam;
       // FEE_beam = malloc(sizeof(copy_primary_beam_t));
-      beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
+      // beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
       printf("Setting up the FEE beam...");
-      RTS_HDFBeamInit(HDFbeampath, base_middle_freq, beam_settings.FEE_beam, (float *)metafits.FEE_delays[st], st);
+      RTS_HDFBeamInit(HDFbeampath, base_middle_freq, beam_settings.FEE_beam, float_delays, st);
       printf(" done.\n");
 
       printf("Getting FEE beam normalisation...");
-      get_HDFBeam_normalisation(beam_settings.FEE_beam);
+      get_HDFBeam_normalisation(beam_settings);
       printf(" done.\n");
       // beam_settings.FEE_beam->norm_fac[0] = 0.25714464415545296 + 0*I;
       // beam_settings.FEE_beam->norm_fac[1] = 0.25714464415545296 + 0*I;
@@ -288,6 +301,7 @@ int main(int argc, char **argv) {
     //Fill in the fine channel frequencies
     for (int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++) {
       frequency = base_band_freq + (woden_settings->frequency_resolution*freq_step);
+
       visibility_set->channel_frequencies[freq_step] = frequency;
     }
 
@@ -358,6 +372,7 @@ int main(int argc, char **argv) {
 
       //For each chunk, calculate the visibilities for those components
       for (int chunk = 0; chunk < num_chunks; chunk++) {
+      // for (int chunk = 0; chunk < 42; chunk++) {
         printf("Processing chunk %d\n", chunk);
 
         //ensure temp visi's are 0.0
@@ -538,8 +553,8 @@ int main(int argc, char **argv) {
     fclose(output_visi);
 
 
-    // Dumps u,v,w (metres), Re(vis), Im(vis) directly to text file - useful for
-    // bug hunting with small outputs
+    // // Dumps u,v,w (metres), Re(vis), Im(vis) directly to text file - useful for
+    // // bug hunting with small outputs
     // FILE *output_visi_text;
     // char buff[0x100];
     // snprintf(buff, sizeof(buff), "output_visi_band%02d.txt", band_num);
@@ -550,7 +565,7 @@ int main(int argc, char **argv) {
     //       int step = woden_settings->num_baselines*(time_step*woden_settings->num_freqs + freq_step);
     //       fprintf(output_visi_text,"%f %f %f %f %f\n",visibility_set->us_metres[step + baseline],
     //               visibility_set->vs_metres[step + baseline],visibility_set->ws_metres[step + baseline],
-    //               visibility_set->sum_visi_XX_real[step + baseline],visibility_set->sum_visi_XX_imag[step + baseline]);
+    //               visibility_set->sum_visi_XY_real[step + baseline],visibility_set->sum_visi_XY_imag[step + baseline]);
     //     }
     //   }
     // }

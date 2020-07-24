@@ -14,18 +14,19 @@
 
 extern "C" void calc_CUDA_FEE_beam(float *d_beam_reals, float *d_beam_imags,
                                    float *azs, float *zas,
+                                   float *sin_para_angs, float *cos_para_angs,
                                    int num_components, int num_time_steps,
                                    copy_primary_beam_t *FEE_beam);
 
-__global__ void kern_convert_FEE_to_stokesI(cuFloatComplex *d_FEE_beam_gain_matrices,
-           float *d_beam_reals, float *d_beam_imags,
-           int num_coords);
+// __global__ void kern_convert_FEE_to_stokesI(cuFloatComplex *d_FEE_beam_gain_matrices,
+//            float *d_beam_reals, float *d_beam_imags,
+//            int num_coords);
 
 __global__ void kern_rotate_FEE_beam(cuFloatComplex *d_FEE_beam_gain_matrices,
-                                float *d_para_cosrot, float *d_para_sinrot,
+                                float *d_sin_para_angs, float *d_cos_para_angs,
                                 int num_components, int num_time_steps);
 
-extern "C" void get_HDFBeam_normalisation(copy_primary_beam_t *primary_beam);
+extern "C" void get_HDFBeam_normalisation(beam_settings_t beam_settings);
 
 // __global__ void kern_convert_FEE_to_stokesI(cuFloatComplex *d_FEE_beam_gain_matrices,
 //            float *d_beam_reals, float *d_beam_imags,
@@ -37,6 +38,7 @@ extern "C" void copy_FEE_primary_beam_to_GPU(beam_settings_t beam_settings,
                                              int num_time_steps);
 
 extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,
+           float *sin_para_angs, float *cos_para_angs,
            int num_time_steps, copy_primary_beam_t *primary_beam,
            float _Complex *h_FEE_beam_gains,
            int scaling);
@@ -51,6 +53,7 @@ extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,
 
 
 extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
+           float *sin_para_angs, float *cos_para_angs,
            int num_time_steps, int num_components,
            float rotation, copy_primary_beam_t *primary_beam,
            float _Complex *TileGainMatrices, int scaling);

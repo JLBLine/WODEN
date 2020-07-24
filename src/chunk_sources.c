@@ -8,10 +8,16 @@ enum component_case {P=0, G, S, PG, PS, GS, PGS};
 void null_point_comps(catsource_t *temp_cropped_src){
   temp_cropped_src->point_ras = NULL;
   temp_cropped_src->point_decs = NULL;
-  temp_cropped_src->point_fluxes = NULL;
-  temp_cropped_src->point_freqs = NULL;
+  temp_cropped_src->point_ref_stokesI = NULL;
+  temp_cropped_src->point_ref_stokesQ = NULL;
+  temp_cropped_src->point_ref_stokesU = NULL;
+  temp_cropped_src->point_ref_stokesV = NULL;
+  temp_cropped_src->point_ref_freqs = NULL;
+  temp_cropped_src->point_SIs = NULL;
   temp_cropped_src->point_azs = NULL;
   temp_cropped_src->point_zas = NULL;
+  temp_cropped_src->cos_point_para_angs = NULL;
+  temp_cropped_src->sin_point_para_angs = NULL;
 
   temp_cropped_src->n_points = 0;
 
@@ -20,13 +26,19 @@ void null_point_comps(catsource_t *temp_cropped_src){
 void null_gauss_comps(catsource_t *temp_cropped_src){
   temp_cropped_src->gauss_ras = NULL;
   temp_cropped_src->gauss_decs = NULL;
-  temp_cropped_src->gauss_fluxes = NULL;
-  temp_cropped_src->gauss_freqs = NULL;
+  temp_cropped_src->gauss_ref_stokesI = NULL;
+  temp_cropped_src->gauss_ref_stokesQ = NULL;
+  temp_cropped_src->gauss_ref_stokesU = NULL;
+  temp_cropped_src->gauss_ref_stokesV = NULL;
+  temp_cropped_src->gauss_ref_freqs = NULL;
+  temp_cropped_src->gauss_SIs = NULL;
   temp_cropped_src->gauss_majors = NULL;
   temp_cropped_src->gauss_minors = NULL;
   temp_cropped_src->gauss_pas = NULL;
   temp_cropped_src->gauss_azs = NULL;
   temp_cropped_src->gauss_zas = NULL;
+  temp_cropped_src->cos_gauss_para_angs = NULL;
+  temp_cropped_src->sin_gauss_para_angs = NULL;
 
   temp_cropped_src->n_gauss = 0;
 
@@ -46,6 +58,8 @@ void null_shapelet_comps(catsource_t *temp_cropped_src){
   temp_cropped_src->shape_param_indexes = NULL;
   temp_cropped_src->shape_azs = NULL;
   temp_cropped_src->shape_zas= NULL;
+  temp_cropped_src->cos_shape_para_angs = NULL;
+  temp_cropped_src->sin_shape_para_angs = NULL;
 
   temp_cropped_src->n_shapes = 0;
   temp_cropped_src->n_shape_coeffs = 0;
@@ -57,12 +71,20 @@ void increment_point(catsource_t *temp_cropped_src, catsource_t *cropped_src,
   //increment the required pointers to point at the beginning of the next chunk
   temp_cropped_src->point_ras = cropped_src->point_ras + * point_iter;
   temp_cropped_src->point_decs = cropped_src->point_decs + * point_iter;
-  temp_cropped_src->point_fluxes = cropped_src->point_fluxes + * point_iter;
-  temp_cropped_src->point_freqs = cropped_src->point_freqs + * point_iter;
-  // temp_cropped_src->point_azs = cropped_src->point_azs + (num_time_steps * chunk * chunking_size);
-  // temp_cropped_src->point_zas = cropped_src->point_zas + (num_time_steps * chunk * chunking_size);
+  temp_cropped_src->point_ref_stokesI = cropped_src->point_ref_stokesI + * point_iter;
+  temp_cropped_src->point_ref_stokesQ = cropped_src->point_ref_stokesQ + * point_iter;
+  temp_cropped_src->point_ref_stokesU = cropped_src->point_ref_stokesU + * point_iter;
+  temp_cropped_src->point_ref_stokesV = cropped_src->point_ref_stokesV + * point_iter;
+  temp_cropped_src->point_ref_freqs = cropped_src->point_ref_freqs + * point_iter;
+  temp_cropped_src->point_SIs = cropped_src->point_SIs + * point_iter;
+
   temp_cropped_src->point_azs = cropped_src->point_azs + (num_time_steps * * point_iter);
   temp_cropped_src->point_zas = cropped_src->point_zas + (num_time_steps * * point_iter);
+
+  temp_cropped_src->sin_point_para_angs = cropped_src->sin_point_para_angs + (num_time_steps * * point_iter);
+  temp_cropped_src->cos_point_para_angs = cropped_src->cos_point_para_angs + (num_time_steps * * point_iter);
+
+
 }
 
 void increment_gauss(catsource_t *temp_cropped_src, catsource_t *cropped_src,
@@ -70,19 +92,24 @@ void increment_gauss(catsource_t *temp_cropped_src, catsource_t *cropped_src,
   //increment the required pointers to point at the beginning of the next chunk
   temp_cropped_src->gauss_ras = cropped_src->gauss_ras + * gauss_iter;
   temp_cropped_src->gauss_decs = cropped_src->gauss_decs + * gauss_iter;
-  temp_cropped_src->gauss_fluxes = cropped_src->gauss_fluxes + * gauss_iter;
-  temp_cropped_src->gauss_freqs = cropped_src->gauss_freqs + * gauss_iter;
+  temp_cropped_src->gauss_ref_stokesI = cropped_src->gauss_ref_stokesI + * gauss_iter;
+  temp_cropped_src->gauss_ref_stokesQ = cropped_src->gauss_ref_stokesQ + * gauss_iter;
+  temp_cropped_src->gauss_ref_stokesU = cropped_src->gauss_ref_stokesU + * gauss_iter;
+  temp_cropped_src->gauss_ref_stokesV = cropped_src->gauss_ref_stokesV + * gauss_iter;
+  temp_cropped_src->gauss_ref_freqs = cropped_src->gauss_ref_freqs + * gauss_iter;
+  temp_cropped_src->gauss_SIs = cropped_src->gauss_SIs + * gauss_iter;
 
   temp_cropped_src->gauss_majors = cropped_src->gauss_majors + * gauss_iter;
   temp_cropped_src->gauss_minors = cropped_src->gauss_minors + * gauss_iter;
   temp_cropped_src->gauss_pas = cropped_src->gauss_pas + * gauss_iter;
 
-  // printf("The GAUSS thing %d \n",num_time_steps * * gauss_iter );
-
   temp_cropped_src->gauss_azs = cropped_src->gauss_azs + (num_time_steps * * gauss_iter);
   temp_cropped_src->gauss_zas = cropped_src->gauss_zas + (num_time_steps * * gauss_iter);
-}
 
+  temp_cropped_src->sin_gauss_para_angs = cropped_src->sin_gauss_para_angs + (num_time_steps * * gauss_iter);
+  temp_cropped_src->cos_gauss_para_angs = cropped_src->cos_gauss_para_angs + (num_time_steps * * gauss_iter);
+
+}
 
 
 void increment_shapelet(catsource_t *temp_cropped_src, catsource_t *cropped_src,
@@ -107,8 +134,13 @@ void increment_shapelet(catsource_t *temp_cropped_src, catsource_t *cropped_src,
   temp_cropped_src->shape_n2s = cropped_src->shape_n2s + * shape_iter;
   temp_cropped_src->shape_param_indexes = cropped_src->shape_param_indexes + * shape_iter;
 
+  //only chunk over coeffs, so we need all the az / za for every chunk,
+  //so we don't iterate the pointer here
+
   temp_cropped_src->shape_azs = cropped_src->shape_azs; // + (num_time_steps * chunk * chunking_size);
   temp_cropped_src->shape_zas = cropped_src->shape_zas; // + (num_time_steps * chunk * chunking_size);
+  temp_cropped_src->sin_shape_para_angs = cropped_src->sin_shape_para_angs;
+  temp_cropped_src->cos_shape_para_angs = cropped_src->cos_shape_para_angs;
 }
 
 void fill_chunk_src(catsource_t *temp_cropped_src, catsource_t *cropped_src,

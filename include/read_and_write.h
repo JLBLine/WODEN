@@ -14,6 +14,7 @@ typedef enum {NO_BEAM, GAUSS_BEAM, FEE_BEAM}e_beamtype;
 #define COMP_KEY        "COMPONENT"
 #define COMP_END        "ENDCOMPONENT"
 #define FREQ_KEY        "FREQ"
+#define LINEAR_KEY      "LINEAR"
 #define POINT_KEY       "POINT"
 #define GAUSSIAN_KEY    "GAUSSIAN"
 #define GPARAMS_KEY     "GPARAMS"
@@ -34,23 +35,36 @@ typedef struct _catsource_t {
   //Pointsource params
   float *point_ras;
   float *point_decs;
-  float *point_fluxes;
+  float *point_ref_freqs;
+  float *point_ref_stokesI;
+  float *point_ref_stokesQ;
+  float *point_ref_stokesU;
+  float *point_ref_stokesV;
+  float *point_SIs;
   float *point_freqs;
   float *point_azs;
   float *point_zas;
-  float *point_beam_XX_re;
-  float *point_beam_XX_im;
+  float *sin_point_para_angs;
+  float *cos_point_para_angs;
+  // float *point_beam_XX_re;
+  // float *point_beam_XX_im;
 
   //Gaussian params
   float *gauss_ras;
   float *gauss_decs;
-  float *gauss_fluxes;
-  float *gauss_freqs;
+  float *gauss_ref_freqs;
+  float *gauss_ref_stokesI;
+  float *gauss_ref_stokesQ;
+  float *gauss_ref_stokesU;
+  float *gauss_ref_stokesV;
+  float *gauss_SIs;
   float *gauss_majors;
   float *gauss_minors;
   float *gauss_pas;
   float *gauss_azs;
   float *gauss_zas;
+  float *sin_gauss_para_angs;
+  float *cos_gauss_para_angs;
 
   //Shapelet params
   float *shape_ras;
@@ -66,6 +80,8 @@ typedef struct _catsource_t {
   float *shape_param_indexes;
   float *shape_azs;
   float *shape_zas;
+  float *sin_shape_para_angs;
+  float *cos_shape_para_angs;
 
 } catsource_t;
 
@@ -183,6 +199,7 @@ typedef struct _Meta_Ffile {
     float base_low_freq;
     float time_res;
     int num_tiles;
+    int FEE_ideal_delays[16];
 
 } MetaFfile_t;
 
