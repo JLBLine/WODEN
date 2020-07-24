@@ -233,7 +233,7 @@ int main(int argc, char **argv) {
       float base_middle_freq = base_band_freq + metafits.bandwidth/48.0;
 
       //TODO make this a path defined by run_woden.py
-      char* HDFbeampath = "/home/jline/software/useful/MWA_embedded_element_pattern_V02.h5";
+      // char* HDFbeampath = "/home/jline/software/useful/MWA_embedded_element_pattern_V02.h5";
 
       printf("Middle freq is %f\n",base_middle_freq );
 
@@ -241,7 +241,7 @@ int main(int argc, char **argv) {
       // FEE_beam = malloc(sizeof(copy_primary_beam_t));
       // beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
       printf("Setting up the FEE beam...");
-      RTS_HDFBeamInit(HDFbeampath, base_middle_freq, beam_settings.FEE_beam, float_delays, st);
+      RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam, float_delays, st);
       printf(" done.\n");
 
       printf("Getting FEE beam normalisation...");

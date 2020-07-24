@@ -154,6 +154,7 @@ typedef struct _woden_settngs_t {
   float gauss_beam_FWHM;
   float gauss_beam_ref_freq;
   int chunking_size;
+  const char* hdf5_beam_path;
 
 } woden_settings_t;
 

@@ -232,7 +232,7 @@ def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
                json_name=None,freq_res=None,time_res=None,
                sky_crop_components=False, use_gaussian_beam=False,
                gauss_beam_FWHM=False, gauss_beam_ref_freq=False,
-               chunking_size=None, use_FEE_beam=False):
+               chunking_size=None, use_FEE_beam=False, hdf5_beam_path=False):
     '''Populate a json parameter file used to run WODEN'''
 
     outfile = open(json_name,'w+')
@@ -247,6 +247,7 @@ def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
     outfile.write('  "time_res": %.5f,\n' %time_res)
     outfile.write('  "frequency_resolution": %.3f,\n' %freq_res)
     outfile.write('  "chunking_size": %d,\n' %chunking_size)
+
 
     if sky_crop_components:
         outfile.write('  "sky_crop_components": True,\n')
@@ -270,6 +271,7 @@ def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
 
     if use_FEE_beam:
         outfile.write('  "use_FEE_beam": True,\n')
+        outfile.write('  "hdf5_beam_path": "%s",\n' %hdf5_beam_path)
     else:
         pass
 
@@ -328,6 +330,8 @@ if __name__ == "__main__":
         help='The frequency at which the gauss beam FWHM is set at. If not set, WODEN will default to 150MHz.')
     parser.add_argument('--use_FEE_beam', default=False, action='store_true',
         help='Use the FEE MWA beam model, based on the settings in the metafits file')
+    parser.add_argument('--hdf5_beam_path', default='/home/jline/software/useful/MWA_embedded_element_pattern_V02.h5',
+        help='Location of the hdf5 file holding the FEE beam coefficients')
 
     parser.add_argument('--chunking_size', type=int, default=0, help='The chunk size to break up the point sources into for processing - defaults to 0 (do not perform chunking)')
 
@@ -409,7 +413,8 @@ if __name__ == "__main__":
                gauss_beam_FWHM=args.gauss_beam_FWHM,
                gauss_beam_ref_freq=args.gauss_beam_ref_freq,
                chunking_size=args.chunking_size,
-               use_FEE_beam=args.use_FEE_beam)
+               use_FEE_beam=args.use_FEE_beam,
+               hdf5_beam_path=args.hdf5_beam_path)
 
     ##Check the uvfits prepend to make sure we end in .uvfits
     output_uvfits_prepend = args.output_uvfits_prepend

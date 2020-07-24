@@ -421,6 +421,7 @@ woden_settings_t * read_json_settings(const char *filename){
   struct json_object *gauss_beam_FWHM;
   struct json_object *gauss_beam_ref_freq;
   struct json_object *FEE_beam;
+  struct json_object *hdf5_beam_path;
 
 	fp = fopen(filename,"r");
 	fread(buffer, 1024, 1, fp);
@@ -447,6 +448,7 @@ woden_settings_t * read_json_settings(const char *filename){
   json_object_object_get_ex(parsed_json, "gauss_beam_ref_freq", &gauss_beam_ref_freq);
 
   json_object_object_get_ex(parsed_json, "use_FEE_beam", &FEE_beam);
+  json_object_object_get_ex(parsed_json, "hdf5_beam_path", &hdf5_beam_path);
 
   woden_settings_t * woden_settings;
   // woden_settings = NULL;
@@ -463,6 +465,8 @@ woden_settings_t * read_json_settings(const char *filename){
   woden_settings->time_res = (float)json_object_get_double(time_res);
   woden_settings->cat_filename = json_object_get_string(cat_filename);
   woden_settings->metafits_filename = json_object_get_string(metafits_filename);
+  woden_settings->hdf5_beam_path = json_object_get_string(hdf5_beam_path);
+
 
   //Boolean setting whether to crop sources by SOURCE or by COMPONENT
   woden_settings->sky_crop_type = json_object_get_boolean(sky_crop_type);
