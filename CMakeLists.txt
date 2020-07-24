@@ -93,11 +93,23 @@ if(ERFA_LIB)
   message(STATUS "ERFA library path: ${ERFA_LIB}")
 endif()
 
+
+##Try and find the hdf5 library
+set(HINTS_HDF5_INC "/usr/include/hdf5/serial/")
+set(HINTS_HDF5_LIB "/usr/lib/x86_64-linux-gnu/hdf5/serial/")
+
+find_path(HDF5_INC hdf5.h HINTS ${HINTS_HDF5_INC})
+find_library(HDF5_LIB hdf5 HINTS ${HINTS_HDF5_LIB} REQUIRED)
+if(HDF5_LIB)
+  message(STATUS "HDF5 include path: ${HDF5_INC}")
+  message(STATUS "HDF5 library path: ${HDF5_LIB}")
+endif()
+
 ##Set the linkers for the C code
-set(CC_LINKLIBS "-lm -pthread ${CFITSIO_LIB} ${JSONC_LIB} ${ERFA_LIB}")
+set(CC_LINKLIBS "-lm -pthread ${CFITSIO_LIB} ${JSONC_LIB} ${ERFA_LIB} ${HDF5_LIB}")
 
 ##All the WODEN header dirs are in include dir
-include_directories("${CMAKE_SOURCE_DIR}/include" ${JSONC_INC} ${CFITSIO_INC} ${ERFA_INC})
+include_directories("${CMAKE_SOURCE_DIR}/include" ${JSONC_INC} ${CFITSIO_INC} ${ERFA_INC} ${HDF5_INC})
 
 ##Generate libraries from the C and CUDA source code
 add_library(wodenC SHARED ${CSOURCES})

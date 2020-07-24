@@ -38,11 +38,13 @@ void ENH2XYZ_local(float E, float N, float H, float lat, float *X, float *Y, flo
 source_catalogue_t * read_source_catalogue(const char *filename) {
   int result, n_src=0, n_comps=0, n_freqs=0;
   int src_found=0, comp_found=0;
-  int src_key, src_end, comp_key, comp_end, freq_key, type_key, param_key, coeff_key;
+  int src_key, src_end, comp_key, comp_end, freq_key;
+  int linear_key, type_key, param_key, coeff_key;
 
   char comp_type[16];
   float ra, dec;
-  float freq, flux;
+  float freq, flux_I, flux_Q, flux_U, flux_V;
+  float SI;
   float coeff1, coeff2, coeff3;
 
   int point_ind, gauss_ind, shape_ind;
@@ -82,18 +84,19 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
     if (line[0]=='\n' || line[0] == '#'|| line[0] == '\0') continue;
 
     /* lines must start with one of the following keywords... which one is it? */
-    src_key = src_end = comp_key = comp_end = freq_key = param_key = coeff_key = 0;
+    linear_key = src_key = src_end = comp_key = comp_end = freq_key = param_key = coeff_key = 0;
     if(strncmp(line, SRC_KEY, strlen(SRC_KEY))==0) src_key=1;
     if(strncmp(line, SRC_END, strlen(SRC_END))==0) src_end=1;
     if(strncmp(line, COMP_KEY, strlen(COMP_KEY))==0) comp_key=1;
     if(strncmp(line, COMP_END, strlen(COMP_END))==0) comp_end=1;
     if(strncmp(line, FREQ_KEY, strlen(FREQ_KEY))==0) freq_key=1;
+    if(strncmp(line, LINEAR_KEY, strlen(LINEAR_KEY))==0) linear_key=1;
     if(strncmp(line, GPARAMS_KEY, strlen(GPARAMS_KEY))==0) param_key=1;
     if(strncmp(line, SPARAMS_KEY, strlen(SPARAMS_KEY))==0) param_key=1;
     if(strncmp(line, SCOEFF_KEY, strlen(SCOEFF_KEY))==0) coeff_key=1;
 
     /* if a source key hasn't been found, skip lines until one is found */
-    if ( (src_key==0 && src_end==0 && comp_key==0 && comp_end==0 && freq_key==0 && param_key==0 && coeff_key==0) ||
+    if ( (src_key==0 && src_end==0 && comp_key==0 && comp_end==0 && freq_key==0 && param_key==0 && coeff_key==0 && linear_key==0) ||
          (src_found==0 && src_key==0) /* i.e., haven't started a new source */ ) {
         // printf("%c%c%c%c %s %d %d\n",line[0],line[1],line[2],line[3],FREQ_KEY,freq_key,strncmp(line, FREQ_KEY, strlen(FREQ_KEY)));
         printf("read_source_catalogue: skipping bad line: %s\n",line);
@@ -152,21 +155,33 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
 
       srcs[n_src-1].n_comps = srcs[n_src-1].n_points + srcs[n_src-1].n_gauss + srcs[n_src-1].n_shapes;
 
-      printf("New source: name: <%s>, Comps:%d  P:%d  G:%d  S:%d-%d \n",
-            srcs[n_src-1].name, srcs[n_src-1].n_comps, srcs[n_src-1].n_points, srcs[n_src-1].n_gauss,
-            srcs[n_src-1].n_shapes, srcs[n_src-1].n_shape_coeffs );
+      // printf("New source: name: <%s>, Comps:%d  P:%d  G:%d  S:%d-%d \n",
+      //       srcs[n_src-1].name, srcs[n_src-1].n_comps, srcs[n_src-1].n_points, srcs[n_src-1].n_gauss,
+      //       srcs[n_src-1].n_shapes, srcs[n_src-1].n_shape_coeffs );
 
       //Now we know the number of sources, do some mallocing
       //Pointsource params
       srcs[n_src-1].point_ras = malloc( srcs[n_src-1].n_points * sizeof(float) );
       srcs[n_src-1].point_decs = malloc( srcs[n_src-1].n_points * sizeof(float) );
-      srcs[n_src-1].point_fluxes = malloc( srcs[n_src-1].n_points * sizeof(float) );
-      srcs[n_src-1].point_freqs = malloc( srcs[n_src-1].n_points * sizeof(float) );
+      // srcs[n_src-1].point_fluxes = malloc( srcs[n_src-1].n_points * sizeof(float) );
+      // srcs[n_src-1].point_freqs = malloc( srcs[n_src-1].n_points * sizeof(float) );
+      srcs[n_src-1].point_SIs = malloc( srcs[n_src-1].n_points * sizeof(float) );
+      srcs[n_src-1].point_ref_stokesI = malloc( srcs[n_src-1].n_points * sizeof(float) );
+      srcs[n_src-1].point_ref_stokesQ = malloc( srcs[n_src-1].n_points * sizeof(float) );
+      srcs[n_src-1].point_ref_stokesU = malloc( srcs[n_src-1].n_points * sizeof(float) );
+      srcs[n_src-1].point_ref_stokesV = malloc( srcs[n_src-1].n_points * sizeof(float) );
+      srcs[n_src-1].point_ref_freqs = malloc( srcs[n_src-1].n_points * sizeof(float) );
       //Gaussian params
       srcs[n_src-1].gauss_ras = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
       srcs[n_src-1].gauss_decs = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
-      srcs[n_src-1].gauss_fluxes = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
-      srcs[n_src-1].gauss_freqs = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
+      // srcs[n_src-1].gauss_fluxes = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
+      // srcs[n_src-1].gauss_freqs = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
+      srcs[n_src-1].gauss_SIs = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
+      srcs[n_src-1].gauss_ref_stokesI = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
+      srcs[n_src-1].gauss_ref_stokesQ = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
+      srcs[n_src-1].gauss_ref_stokesU = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
+      srcs[n_src-1].gauss_ref_stokesV = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
+      srcs[n_src-1].gauss_ref_freqs = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
       srcs[n_src-1].gauss_majors = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
       srcs[n_src-1].gauss_minors = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
       srcs[n_src-1].gauss_pas = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
@@ -237,9 +252,8 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
 
     else if (freq_key && comp_found==1) {
 
-      //I'm ignoring Stokes Q,U,V for now
-      result = sscanf( line, "%*s %f %f %*f %*f %*f", &freq, &flux );
-      if (result != 2) {
+      result = sscanf( line, "%*s %f %f %f %f %f", &freq, &flux_I, &flux_Q, &flux_U, &flux_V );
+      if (result != 5) {
           printf("%d CS_ReadSourceList error: problem reading cal component input line <%s>\n", result, line );
           return NULL;
       }
@@ -247,20 +261,73 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
       switch (type_key) {
         case POINT:
 
-          srcs[n_src-1].point_freqs[point_ind-1] = freq;
-          srcs[n_src-1].point_fluxes[point_ind-1] = flux;
+          srcs[n_src-1].point_ref_freqs[point_ind-1] = freq;
+          srcs[n_src-1].point_ref_stokesI[point_ind-1] = flux_I;
+          srcs[n_src-1].point_ref_stokesQ[point_ind-1] = flux_Q;
+          srcs[n_src-1].point_ref_stokesU[point_ind-1] = flux_U;
+          srcs[n_src-1].point_ref_stokesV[point_ind-1] = flux_V;
+          srcs[n_src-1].point_SIs[point_ind-1] = DEFAULT_SI;
           // LOGV( LOG_LOW, "New source component: <%s> component %d, ra: %8.5f hrs, dec: %+9.5f deg\n",
           //       cat[n_src-1].components[n_comps-1].ra*DR2H, cat[n_src-1].components[n_comps-1].dec*DR2D );
         break;
 
         case GAUSSIAN:
-          srcs[n_src-1].gauss_freqs[gauss_ind-1] = freq;
-          srcs[n_src-1].gauss_fluxes[gauss_ind-1] = flux;
+          srcs[n_src-1].gauss_ref_freqs[gauss_ind-1] = freq;
+          srcs[n_src-1].gauss_ref_stokesI[gauss_ind-1] = flux_I;
+          srcs[n_src-1].gauss_ref_stokesQ[gauss_ind-1] = flux_Q;
+          srcs[n_src-1].gauss_ref_stokesU[gauss_ind-1] = flux_U;
+          srcs[n_src-1].gauss_ref_stokesV[gauss_ind-1] = flux_V;
+          srcs[n_src-1].gauss_SIs[gauss_ind-1] = DEFAULT_SI;
         break;
 
         case SHAPELET:
           srcs[n_src-1].shape_freqs[shape_ind-1] = freq;
-          srcs[n_src-1].shape_fluxes[shape_ind-1] = flux;
+          srcs[n_src-1].shape_fluxes[shape_ind-1] = flux_I;
+        break;
+
+      default:
+        printf("%d CS_ReadSourceList error assigning info from line: <%s>\n", type_key, line );
+        return NULL;
+
+      }//switch (type_key)
+
+    }//if (freq_key && comp_found==1)
+
+
+    else if (linear_key && comp_found==1) {
+
+      //I'm ignoring Stokes Q,U,V for now
+      result = sscanf( line, "%*s %f %f %f %f %f %f", &freq, &flux_I, &flux_Q, &flux_U, &flux_V, &SI );
+      if (result != 6) {
+          printf("%d CS_ReadSourceList error: problem reading cal component input line <%s>\n", result, line );
+          return NULL;
+      }
+
+      switch (type_key) {
+        case POINT:
+
+          srcs[n_src-1].point_ref_freqs[point_ind-1] = freq;
+          srcs[n_src-1].point_ref_stokesI[point_ind-1] = flux_I;
+          srcs[n_src-1].point_ref_stokesQ[point_ind-1] = flux_Q;
+          srcs[n_src-1].point_ref_stokesU[point_ind-1] = flux_U;
+          srcs[n_src-1].point_ref_stokesV[point_ind-1] = flux_V;
+          srcs[n_src-1].point_SIs[point_ind-1] = SI;
+          // LOGV( LOG_LOW, "New source component: <%s> component %d, ra: %8.5f hrs, dec: %+9.5f deg\n",
+          //       cat[n_src-1].components[n_comps-1].ra*DR2H, cat[n_src-1].components[n_comps-1].dec*DR2D );
+        break;
+
+        case GAUSSIAN:
+          srcs[n_src-1].gauss_ref_freqs[gauss_ind-1] = freq;
+          srcs[n_src-1].gauss_ref_stokesI[gauss_ind-1] = flux_I;
+          srcs[n_src-1].gauss_ref_stokesQ[gauss_ind-1] = flux_Q;
+          srcs[n_src-1].gauss_ref_stokesU[gauss_ind-1] = flux_U;
+          srcs[n_src-1].gauss_ref_stokesV[gauss_ind-1] = flux_V;
+          srcs[n_src-1].gauss_SIs[gauss_ind-1] = SI;
+        break;
+
+        case SHAPELET:
+          srcs[n_src-1].shape_freqs[shape_ind-1] = freq;
+          srcs[n_src-1].shape_fluxes[shape_ind-1] = flux_I;
         break;
 
       default:
@@ -353,6 +420,7 @@ woden_settings_t * read_json_settings(const char *filename){
   struct json_object *chunking_size;
   struct json_object *gauss_beam_FWHM;
   struct json_object *gauss_beam_ref_freq;
+  struct json_object *FEE_beam;
 
 	fp = fopen(filename,"r");
 	fread(buffer, 1024, 1, fp);
@@ -378,6 +446,8 @@ woden_settings_t * read_json_settings(const char *filename){
   json_object_object_get_ex(parsed_json, "gauss_beam_FWHM", &gauss_beam_FWHM);
   json_object_object_get_ex(parsed_json, "gauss_beam_ref_freq", &gauss_beam_ref_freq);
 
+  json_object_object_get_ex(parsed_json, "use_FEE_beam", &FEE_beam);
+
   woden_settings_t * woden_settings;
   // woden_settings = NULL;
   woden_settings = malloc( sizeof(woden_settings_t) );
@@ -399,6 +469,9 @@ woden_settings_t * read_json_settings(const char *filename){
 
   //Boolean whether to use gaussian primary beam
   int gauss_beam = json_object_get_boolean(gaussian_beam);
+
+  //Boolean whether to use gaussian primary beam
+  int fee_beam = json_object_get_boolean(FEE_beam);
 
   if (gauss_beam) {
     woden_settings->beamtype = GAUSS_BEAM;
@@ -423,14 +496,20 @@ woden_settings_t * read_json_settings(const char *filename){
       woden_settings->gauss_beam_ref_freq = 150e+6;
     }
   }
+  //TODO once we implement MWA primary beam, check whether both gaussian beam and
+  //MWA beam have been selected. If so, tell the user, and exit, get them to sort
+  //themselves out
+
+  //TODO make sure metafits contains correct beam info if using FEE_beam
+
+  else if (fee_beam){
+    woden_settings->beamtype = FEE_BEAM;
+  }
 
   else {
     woden_settings->beamtype = NO_BEAM;
   }
 
-  //TODO once we implement MWA primary beam, check whether both gaussian beam and
-  //MWA beam have been selected. If so, tell the user, and exit, get them to sort
-  //themselves out
   woden_settings->chunking_size = json_object_get_int(chunking_size);
 
 
@@ -461,7 +540,7 @@ woden_settings_t * read_json_settings(const char *filename){
 // All credit to the original authors
 // https://github.com/ICRAR/mwa-RTS.git
 **********************************/
-int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
+int RTS_init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
     int status=0;
     int ncols, anynulls, colnum, nfound, i;
     long naxes[2], nrows, frow, felem;
@@ -590,6 +669,29 @@ int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
         status=0;
     }
 
+    char ideal_delays[38];
+
+    fits_read_key(mfptr,TSTRING, "DELAYS", &(ideal_delays), NULL, &status);
+    if (status) {
+       printf("No DELAYS keyword in metafits. Continuing...\n");
+        fits_clear_errmsg();
+        status=0;
+    }
+
+    //Split the delay string by ',' and shove in an array
+  	char delim[] = ",";
+  	char *ptr = strtok(ideal_delays, delim);
+
+    int delay_ind = 0;
+  	while(ptr != NULL)
+  	{
+      metafits->FEE_ideal_delays[delay_ind] = atoi(ptr);
+  		ptr = strtok(NULL, delim);
+      delay_ind += 1;
+  	}
+
+
+
     //NINPUTS has both XX and YY inputs into correlator so divide by 2 to
     //get the number of tiles
     metafits->num_tiles = metafits->num_tiles / 2;
@@ -639,7 +741,7 @@ int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
   // read Dipole Delays
   fits_get_colnum(mfptr, CASEINSEN, "Delays", &colnum, &status);
   for (i=0; i<metafits->naxes[1]; i++){
-     fits_read_col(mfptr, TINT, colnum,i+1, felem, 16, &nullval, &(metafits->ddlys[i]),
+     fits_read_col(mfptr, TINT, colnum,i+1, felem, 16, &nullval, &(metafits->FEE_delays[i]),
                    &anynulls, &status);
   }
 // read Digital Gains
@@ -721,6 +823,32 @@ array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits, int num_tiles){
       baseline_ind++;
     }
   }
+
+  // int baseline_ind = 0;
+  // for (int ant2 = 0; ant2 < array_layout->num_tiles; ant2++) {
+  //   for (int ant1 = 0; ant1 <= ant2; ant1++) {
+  //
+  //     if (ant1 != ant2){
+  //
+  //       int cc_ct = ant1 + (ant2 * (ant2-1)) / 2;
+  //
+  //       printf("We on the same page?? %d %d\n",cc_ct,baseline_ind );
+  //
+  //       array_layout->X_diff_metres[baseline_ind] = array_layout->ant_X[ant1] - array_layout->ant_X[ant2];
+  //       array_layout->Y_diff_metres[baseline_ind] = array_layout->ant_Y[ant1] - array_layout->ant_Y[ant2];
+  //       array_layout->Z_diff_metres[baseline_ind] = array_layout->ant_Z[ant1] - array_layout->ant_Z[ant2];
+  //       baseline_ind++;
+  //     }
+  //   }
+  // }
+
+  // for(st2_id=0; st2_id < opts->arr_spec.num_stations; st2_id++) {
+  //       for(st1_id=0; st1_id <= st2_id; st1_id++) {
+  //
+  //           if (st1_id != st2_id) {
+  //               *(visgroup->st1_id+cc_ct) = st1_id;
+  //               *(visgroup->st2_id+cc_ct) = st2_id;
+  //           }
 
   return array_layout;
 //

@@ -24,6 +24,77 @@ void convert_radec2azza(double ra, double dec, double lst,
 
 }
 
+void calc_para_angle(catsource_t *cropped_src, float *lsts,
+                     int num_time_steps){
+
+  cropped_src->sin_point_para_angs = malloc( cropped_src->n_points * num_time_steps * sizeof(float) );
+  cropped_src->cos_point_para_angs = malloc( cropped_src->n_points * num_time_steps * sizeof(float) );
+  cropped_src->sin_gauss_para_angs = malloc( cropped_src->n_gauss * num_time_steps * sizeof(float) );
+  cropped_src->cos_gauss_para_angs = malloc( cropped_src->n_gauss * num_time_steps * sizeof(float) );
+  cropped_src->sin_shape_para_angs = malloc( cropped_src->n_shapes * num_time_steps * sizeof(float) );
+  cropped_src->cos_shape_para_angs = malloc( cropped_src->n_shapes * num_time_steps * sizeof(float) );
+
+  for (int point = 0; point < cropped_src->n_points; point++) {
+
+    double para_angle;
+    for ( int time_step = 0; time_step < num_time_steps; time_step++ ) {
+
+      float ha = lsts[time_step] - cropped_src->point_ras[point];
+      // para_angle = eraHd2pa((double)ha, (double)cropped_src->point_decs[point], (double)MWA_LAT_RAD);
+
+      // printf("PARA FUN %d %.8f %.8f %.8f\n",point*num_time_steps + time_step,ha,cropped_src->point_decs[point],para_angle );
+
+      double this_ha, this_dec;
+
+      float alt = M_PI/2 - cropped_src->point_zas[point*num_time_steps + time_step];
+      eraAe2hd((double)cropped_src->point_azs[point*num_time_steps + time_step], (double)alt, (double)MWA_LAT_RAD,
+               &this_ha, &this_dec);
+
+      para_angle = eraHd2pa(this_ha, this_dec, (double)MWA_LAT_RAD);
+
+      cropped_src->sin_point_para_angs[point*num_time_steps + time_step] = sinf((float)para_angle + M_PI/2.0);
+      cropped_src->cos_point_para_angs[point*num_time_steps + time_step] = cosf((float)para_angle + M_PI/2.0);
+
+      // printf("PARA FUN %d %.8f %.8f %.8f\n",point*num_time_steps + time_step,
+      //       para_angle,sinf((float)para_angle + M_PI/2.0),
+      //       cosf((float)para_angle + M_PI/2.0) );
+
+
+
+    }
+  }//END point component loop
+
+  // for (size_t i = 0; i < cropped_src->n_points; i++) {
+  //   printf("RIGHT HERE 1 %.5f %.5f\n",cropped_src->sin_point_para_angs[i],cropped_src->cos_point_para_angs[i] );
+  // }
+
+  for (int gauss = 0; gauss < cropped_src->n_gauss; gauss++) {
+
+    double para_angle;
+    for ( int time_step = 0; time_step < num_time_steps; time_step++ ) {
+
+      float ha = lsts[time_step] - cropped_src->gauss_ras[gauss];
+      para_angle = eraHd2pa((double)ha, (double)cropped_src->gauss_decs[gauss], (double)MWA_LAT_RAD);
+
+      cropped_src->sin_gauss_para_angs[gauss*num_time_steps + time_step] = sinf((float)para_angle + M_PI/2.0);
+      cropped_src->cos_gauss_para_angs[gauss*num_time_steps + time_step] = cosf((float)para_angle + M_PI/2.0);
+    }
+  }//END gauss component loop
+
+  for (int shape = 0; shape < cropped_src->n_shapes; shape++) {
+    double para_angle;
+    for ( int time_step = 0; time_step < num_time_steps; time_step++ ) {
+
+      float ha = lsts[time_step] - cropped_src->shape_ras[shape];
+      para_angle = eraHd2pa((double)ha, (double)cropped_src->shape_decs[shape], (double)MWA_LAT_RAD);
+
+      cropped_src->sin_shape_para_angs[shape*num_time_steps + time_step] = sinf((float)para_angle + M_PI/2.0);
+      cropped_src->cos_shape_para_angs[shape*num_time_steps + time_step] = cosf((float)para_angle + M_PI/2.0);
+    }
+  }//END shape component loop
+
+}
+
 /*********************************
 // Takes a zenith angle and checks if it's below the horizon. Depending on
 // whether we are cropping all SOURCEs partially below the horizon, or
@@ -207,20 +278,29 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
 
   cropped_src->point_ras = malloc( num_point_comp_retained * sizeof(float) );
   cropped_src->point_decs = malloc( num_point_comp_retained * sizeof(float) );
-  cropped_src->point_fluxes = malloc( num_point_comp_retained * sizeof(float) );
-  cropped_src->point_freqs = malloc( num_point_comp_retained * sizeof(float) );
-  cropped_src->point_azs = malloc( num_point_comp_retained * num_time_steps * sizeof(double) );
-  cropped_src->point_zas = malloc( num_point_comp_retained * num_time_steps * sizeof(double) );
+  cropped_src->point_ref_stokesI = malloc( num_point_comp_retained * sizeof(float) );
+  cropped_src->point_ref_stokesQ = malloc( num_point_comp_retained * sizeof(float) );
+  cropped_src->point_ref_stokesU = malloc( num_point_comp_retained * sizeof(float) );
+  cropped_src->point_ref_stokesV = malloc( num_point_comp_retained * sizeof(float) );
+  cropped_src->point_ref_freqs = malloc( num_point_comp_retained * sizeof(float) );
+  cropped_src->point_SIs = malloc( num_point_comp_retained * sizeof(float) );
+
+  cropped_src->point_azs = malloc( num_point_comp_retained * num_time_steps * sizeof(float) );
+  cropped_src->point_zas = malloc( num_point_comp_retained * num_time_steps * sizeof(float) );
 
   cropped_src->gauss_ras = malloc( num_gauss_comp_retained * sizeof(float) );
   cropped_src->gauss_decs = malloc( num_gauss_comp_retained * sizeof(float) );
-  cropped_src->gauss_fluxes = malloc( num_gauss_comp_retained * sizeof(float) );
-  cropped_src->gauss_freqs = malloc( num_gauss_comp_retained * sizeof(float) );
+  cropped_src->gauss_ref_stokesI = malloc( num_gauss_comp_retained * sizeof(float) );
+  cropped_src->gauss_ref_stokesQ = malloc( num_gauss_comp_retained * sizeof(float) );
+  cropped_src->gauss_ref_stokesU = malloc( num_gauss_comp_retained * sizeof(float) );
+  cropped_src->gauss_ref_stokesV = malloc( num_gauss_comp_retained * sizeof(float) );
+  cropped_src->gauss_ref_freqs = malloc( num_gauss_comp_retained * sizeof(float) );
+  cropped_src->gauss_SIs = malloc( num_gauss_comp_retained * sizeof(float) );
   cropped_src->gauss_majors = malloc( num_gauss_comp_retained * sizeof(float) );
   cropped_src->gauss_minors = malloc( num_gauss_comp_retained * sizeof(float) );
   cropped_src->gauss_pas = malloc( num_gauss_comp_retained * sizeof(float) );
-  cropped_src->gauss_azs = malloc( num_gauss_comp_retained * num_time_steps * sizeof(double) );
-  cropped_src->gauss_zas = malloc( num_gauss_comp_retained * num_time_steps * sizeof(double) );
+  cropped_src->gauss_azs = malloc( num_gauss_comp_retained * num_time_steps * sizeof(float) );
+  cropped_src->gauss_zas = malloc( num_gauss_comp_retained * num_time_steps * sizeof(float) );
 
   cropped_src->shape_ras = malloc( num_shape_comp_retained * sizeof(float) );
   cropped_src->shape_decs = malloc( num_shape_comp_retained * sizeof(float) );
@@ -233,8 +313,8 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
   cropped_src->shape_n2s = malloc( num_shape_coeff_retained * sizeof(float) );
   cropped_src->shape_coeffs = malloc( num_shape_coeff_retained * sizeof(float) );
   cropped_src->shape_param_indexes = malloc( num_shape_coeff_retained * sizeof(float) );
-  cropped_src->shape_azs = malloc( num_shape_comp_retained * num_time_steps * sizeof(double) );
-  cropped_src->shape_zas = malloc( num_shape_comp_retained * num_time_steps * sizeof(double) );
+  cropped_src->shape_azs = malloc( num_shape_comp_retained * num_time_steps * sizeof(float) );
+  cropped_src->shape_zas = malloc( num_shape_comp_retained * num_time_steps * sizeof(float) );
 
   //Now add information into cropped_src
   if (sky_crop_type == CROP_SOURCES) {
@@ -258,16 +338,20 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
       for (size_t point = 0; point < raw_srccat->catsources[src].n_points; point++){
         cropped_src->point_ras[point_crop_component_index] = raw_srccat->catsources[src].point_ras[point];
         cropped_src->point_decs[point_crop_component_index] = raw_srccat->catsources[src].point_decs[point];
-        cropped_src->point_fluxes[point_crop_component_index] = raw_srccat->catsources[src].point_fluxes[point];
-        cropped_src->point_freqs[point_crop_component_index] = raw_srccat->catsources[src].point_freqs[point];
+        cropped_src->point_ref_stokesI[point_crop_component_index] = raw_srccat->catsources[src].point_ref_stokesI[point];
+        cropped_src->point_ref_stokesQ[point_crop_component_index] = raw_srccat->catsources[src].point_ref_stokesQ[point];
+        cropped_src->point_ref_stokesU[point_crop_component_index] = raw_srccat->catsources[src].point_ref_stokesU[point];
+        cropped_src->point_ref_stokesV[point_crop_component_index] = raw_srccat->catsources[src].point_ref_stokesV[point];
+        cropped_src->point_ref_freqs[point_crop_component_index] = raw_srccat->catsources[src].point_ref_freqs[point];
+        cropped_src->point_SIs[point_crop_component_index] = raw_srccat->catsources[src].point_SIs[point];
 
         //Calculate az/za values for each point for all time steps
         for (size_t time_step = 0; time_step < num_time_steps; time_step++) {
           convert_radec2azza((double)raw_srccat->catsources[src].point_ras[point],
                              (double)raw_srccat->catsources[src].point_decs[point],
                              (double)lsts[time_step], &az, &za);
-          cropped_src->point_azs[point_crop_component_index*num_time_steps + time_step] = az;
-          cropped_src->point_zas[point_crop_component_index*num_time_steps + time_step] = za;
+          cropped_src->point_azs[point_crop_component_index*num_time_steps + time_step] = (float)az;
+          cropped_src->point_zas[point_crop_component_index*num_time_steps + time_step] = (float)za;
         }
 
         point_crop_component_index ++;
@@ -278,8 +362,12 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
       for (size_t gauss = 0; gauss < raw_srccat->catsources[src].n_gauss; gauss++){
         cropped_src->gauss_ras[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ras[gauss];
         cropped_src->gauss_decs[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_decs[gauss];
-        cropped_src->gauss_fluxes[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_fluxes[gauss];
-        cropped_src->gauss_freqs[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_freqs[gauss];
+        cropped_src->gauss_ref_stokesI[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_stokesI[gauss];
+        cropped_src->gauss_ref_stokesQ[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_stokesQ[gauss];
+        cropped_src->gauss_ref_stokesU[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_stokesU[gauss];
+        cropped_src->gauss_ref_stokesV[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_stokesV[gauss];
+        cropped_src->gauss_ref_freqs[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_freqs[gauss];
+        cropped_src->gauss_SIs[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_SIs[gauss];
 
         cropped_src->gauss_majors[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_majors[gauss];
         cropped_src->gauss_minors[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_minors[gauss];
@@ -290,8 +378,8 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
           convert_radec2azza((double)raw_srccat->catsources[src].gauss_ras[gauss],
                              (double)raw_srccat->catsources[src].gauss_decs[gauss],
                              (double)lsts[time_step], &az, &za);
-          cropped_src->gauss_azs[gauss_crop_component_index*num_time_steps + time_step] = az;
-          cropped_src->gauss_zas[gauss_crop_component_index*num_time_steps + time_step] = za;
+          cropped_src->gauss_azs[gauss_crop_component_index*num_time_steps + time_step] = (float)az;
+          cropped_src->gauss_zas[gauss_crop_component_index*num_time_steps + time_step] = (float)za;
         }
 
         gauss_crop_component_index ++;
@@ -314,8 +402,8 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
           convert_radec2azza((double)raw_srccat->catsources[src].shape_ras[shape],
                              (double)raw_srccat->catsources[src].shape_decs[shape],
                              (double)lsts[time_step], &az, &za);
-          cropped_src->shape_azs[shape_crop_component_index*num_time_steps + time_step] = az;
-          cropped_src->shape_zas[shape_crop_component_index*num_time_steps + time_step] = za;
+          cropped_src->shape_azs[shape_crop_component_index*num_time_steps + time_step] = (float)az;
+          cropped_src->shape_zas[shape_crop_component_index*num_time_steps + time_step] = (float)za;
         }
 
         if ((int)shape == 0) {
@@ -369,16 +457,21 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
         if (raw_srccat->catsources[src].point_zas[point] < M_PI / 2.0){
           cropped_src->point_ras[point_crop_component_index] = raw_srccat->catsources[src].point_ras[point];
           cropped_src->point_decs[point_crop_component_index] = raw_srccat->catsources[src].point_decs[point];
-          cropped_src->point_fluxes[point_crop_component_index] = raw_srccat->catsources[src].point_fluxes[point];
-          cropped_src->point_freqs[point_crop_component_index] = raw_srccat->catsources[src].point_freqs[point];
+          cropped_src->point_ref_stokesI[point_crop_component_index] = raw_srccat->catsources[src].point_ref_stokesI[point];
+          cropped_src->point_ref_stokesQ[point_crop_component_index] = raw_srccat->catsources[src].point_ref_stokesQ[point];
+          cropped_src->point_ref_stokesU[point_crop_component_index] = raw_srccat->catsources[src].point_ref_stokesU[point];
+          cropped_src->point_ref_stokesV[point_crop_component_index] = raw_srccat->catsources[src].point_ref_stokesV[point];
+          cropped_src->point_ref_freqs[point_crop_component_index] = raw_srccat->catsources[src].point_ref_freqs[point];
+          cropped_src->point_SIs[point_crop_component_index] = raw_srccat->catsources[src].point_SIs[point];
 
           //Calculate az/za values for each point for all time steps
-          for (size_t time_step = 0; time_step < num_time_steps; time_step++) {
+          for (int time_step = 0; time_step < num_time_steps; time_step++) {
             convert_radec2azza((double)raw_srccat->catsources[src].point_ras[point],
                                (double)raw_srccat->catsources[src].point_decs[point],
                                (double)lsts[time_step], &az, &za);
-            cropped_src->point_azs[point_crop_component_index*num_time_steps + time_step] = az;
-            cropped_src->point_zas[point_crop_component_index*num_time_steps + time_step] = za;
+            cropped_src->point_azs[point_crop_component_index*num_time_steps + time_step] = (float)az;
+            cropped_src->point_zas[point_crop_component_index*num_time_steps + time_step] = (float)za;
+            // printf("AZ ZA %d %.7f %.7f\n",point_crop_component_index*num_time_steps + time_step,(float)az,(float)za );
           }//End az/za calculation loop
 
           point_crop_component_index ++;
@@ -392,8 +485,12 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
         if (raw_srccat->catsources[src].gauss_zas[gauss] < M_PI / 2.0){
           cropped_src->gauss_ras[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ras[gauss];
           cropped_src->gauss_decs[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_decs[gauss];
-          cropped_src->gauss_fluxes[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_fluxes[gauss];
-          cropped_src->gauss_freqs[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_freqs[gauss];
+          cropped_src->gauss_ref_stokesI[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_stokesI[gauss];
+          cropped_src->gauss_ref_stokesQ[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_stokesQ[gauss];
+          cropped_src->gauss_ref_stokesU[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_stokesU[gauss];
+          cropped_src->gauss_ref_stokesV[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_stokesV[gauss];
+          cropped_src->gauss_ref_freqs[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_freqs[gauss];
+          cropped_src->gauss_SIs[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_SIs[gauss];
 
           cropped_src->gauss_majors[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_majors[gauss];
           cropped_src->gauss_minors[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_minors[gauss];
@@ -404,8 +501,8 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
             convert_radec2azza((double)raw_srccat->catsources[src].gauss_ras[gauss],
                                (double)raw_srccat->catsources[src].gauss_decs[gauss],
                                (double)lsts[time_step], &az, &za);
-            cropped_src->gauss_azs[gauss_crop_component_index*num_time_steps + time_step] = az;
-            cropped_src->gauss_zas[gauss_crop_component_index*num_time_steps + time_step] = za;
+            cropped_src->gauss_azs[gauss_crop_component_index*num_time_steps + time_step] = (float)az;
+            cropped_src->gauss_zas[gauss_crop_component_index*num_time_steps + time_step] = (float)za;
           }//End az/za calculation loop
 
           gauss_crop_component_index ++;
@@ -430,8 +527,8 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
             convert_radec2azza((double)raw_srccat->catsources[src].shape_ras[shape],
                                (double)raw_srccat->catsources[src].shape_decs[shape],
                                (double)lsts[time_step], &az, &za);
-            cropped_src->shape_azs[shape_crop_component_index*num_time_steps + time_step] = az;
-            cropped_src->shape_zas[shape_crop_component_index*num_time_steps + time_step] = za;
+            cropped_src->shape_azs[shape_crop_component_index*num_time_steps + time_step] = (float)az;
+            cropped_src->shape_zas[shape_crop_component_index*num_time_steps + time_step] = (float)za;
           }//End az/za calculation loop
 
           //Loop through all shapelet coeffs,n1s,n2s for this source; these 1D arrays

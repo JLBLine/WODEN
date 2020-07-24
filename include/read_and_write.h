@@ -1,6 +1,9 @@
 #include <math.h>
 #include <stdint.h>
 #include <fitsio.h>
+#include "FEE_primary_beam.h"
+
+#pragma once
 
 enum component_type {POINT=0, GAUSSIAN, SHAPELET, SHAPELET2};
 typedef enum {NO_BEAM, GAUSS_BEAM, FEE_BEAM}e_beamtype;
@@ -11,6 +14,7 @@ typedef enum {NO_BEAM, GAUSS_BEAM, FEE_BEAM}e_beamtype;
 #define COMP_KEY        "COMPONENT"
 #define COMP_END        "ENDCOMPONENT"
 #define FREQ_KEY        "FREQ"
+#define LINEAR_KEY      "LINEAR"
 #define POINT_KEY       "POINT"
 #define GAUSSIAN_KEY    "GAUSSIAN"
 #define GPARAMS_KEY     "GPARAMS"
@@ -31,23 +35,36 @@ typedef struct _catsource_t {
   //Pointsource params
   float *point_ras;
   float *point_decs;
-  float *point_fluxes;
+  float *point_ref_freqs;
+  float *point_ref_stokesI;
+  float *point_ref_stokesQ;
+  float *point_ref_stokesU;
+  float *point_ref_stokesV;
+  float *point_SIs;
   float *point_freqs;
-  double *point_azs;
-  double *point_zas;
-  float *point_beam_XX_re;
-  float *point_beam_XX_im;
+  float *point_azs;
+  float *point_zas;
+  float *sin_point_para_angs;
+  float *cos_point_para_angs;
+  // float *point_beam_XX_re;
+  // float *point_beam_XX_im;
 
   //Gaussian params
   float *gauss_ras;
   float *gauss_decs;
-  float *gauss_fluxes;
-  float *gauss_freqs;
+  float *gauss_ref_freqs;
+  float *gauss_ref_stokesI;
+  float *gauss_ref_stokesQ;
+  float *gauss_ref_stokesU;
+  float *gauss_ref_stokesV;
+  float *gauss_SIs;
   float *gauss_majors;
   float *gauss_minors;
   float *gauss_pas;
-  double *gauss_azs;
-  double *gauss_zas;
+  float *gauss_azs;
+  float *gauss_zas;
+  float *sin_gauss_para_angs;
+  float *cos_gauss_para_angs;
 
   //Shapelet params
   float *shape_ras;
@@ -61,8 +78,10 @@ typedef struct _catsource_t {
   float *shape_minors;
   float *shape_pas;
   float *shape_param_indexes;
-  double *shape_azs;
-  double *shape_zas;
+  float *shape_azs;
+  float *shape_zas;
+  float *sin_shape_para_angs;
+  float *cos_shape_para_angs;
 
 } catsource_t;
 
@@ -90,6 +109,29 @@ typedef struct _visibility_set_t {
   float *beam_reals;
   float *beam_imags;
 
+  float *sum_visi_XX_real;
+  float *sum_visi_XX_imag;
+
+  float *sum_visi_XY_real;
+  float *sum_visi_XY_imag;
+
+  float *sum_visi_YX_real;
+  float *sum_visi_YX_imag;
+
+  float *sum_visi_YY_real;
+  float *sum_visi_YY_imag;
+
+  // float *d_beam_XX_real;
+  // float *d_beam_XX_imag;
+  //
+  // float *d_beam_XY_real;
+  // float *d_beam_XY_imag;
+  //
+  // float *d_beam_YX_real;
+  // float *d_beam_YX_imag;
+  //
+  // float *d_beam_YY_real;
+  // float *d_beam_YY_imag;
 
 } visibility_set_t;
 
@@ -145,7 +187,7 @@ typedef struct _Meta_Ffile {
     int inps[256], ants[256], tile[256], flags[256];
     float E[256], N[256], H[256];
     char leng[256][14];
-    int ddlys[256][16];
+    int FEE_delays[256][16];
     int dig_gains[256][24];
     int centchan;
     float lst_base;
@@ -157,6 +199,7 @@ typedef struct _Meta_Ffile {
     float base_low_freq;
     float time_res;
     int num_tiles;
+    int FEE_ideal_delays[16];
 
 } MetaFfile_t;
 
@@ -164,7 +207,7 @@ source_catalogue_t * read_source_catalogue(const char *filename);
 
 woden_settings_t * read_json_settings(const char *filename);
 
-int init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome);
+int RTS_init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome);
 
 array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits, int num_tiles);
 
@@ -185,5 +228,10 @@ typedef struct _beam_settings_t {
     float beam_FWHM_rad;
     float *beam_ref_freq_array;
     int beamtype;
+
+    float *para_cosrot;
+    float *para_sinrot;
+
+    copy_primary_beam_t *FEE_beam;
 
 } beam_settings_t;
