@@ -82,8 +82,8 @@ if(JSONC_LIB)
   message(STATUS "JSONC library path: ${JSONC_LIB}")
 endif()
 
-set(HINTS_ERFA_INC "/usr/local/include/;${ERFA_ROOT}/src/;${ERFA_ROOT}")
-set(HINTS_ERFA_LIB "/usr/local/lib/;${ERFA_ROOT}/src/.libs/;${ERFA_ROOT}.libs/;${ERFA_ROOT}")
+set(HINTS_ERFA_INC "/usr/local/include/;${ERFA_ROOT}/include/;${ERFA_ROOT}")
+set(HINTS_ERFA_LIB "/usr/local/lib/;${ERFA_ROOT}/src/.libs/;${ERFA_ROOT}.libs/;${ERFA_ROOT};${ERFA_ROOT}/lib/")
 
 
 find_path(ERFA_INC erfa.h HINTS ${HINTS_ERFA_INC})
@@ -95,8 +95,8 @@ endif()
 
 
 ##Try and find the hdf5 library
-set(HINTS_HDF5_INC "/usr/include/hdf5/serial/")
-set(HINTS_HDF5_LIB "/usr/lib/x86_64-linux-gnu/hdf5/serial/")
+set(HINTS_HDF5_INC "/usr/include/hdf5/serial/;${HDF5_ROOT}/include/")
+set(HINTS_HDF5_LIB "/usr/lib/x86_64-linux-gnu/hdf5/serial/;${HDF5_ROOT}/lib/")
 
 find_path(HDF5_INC hdf5.h HINTS ${HINTS_HDF5_INC})
 find_library(HDF5_LIB hdf5 HINTS ${HINTS_HDF5_LIB} REQUIRED)
@@ -118,6 +118,13 @@ add_library(wodenCUDA SHARED ${CUDASOURCES})
 ##make the final WODEN executable, linking the libraries
 add_executable(woden src/woden.c)
 target_link_libraries(woden wodenC wodenCUDA ${CC_LINKLIBS})
+add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
+
+SET_SOURCE_FILES_PROPERTIES(
+  src/FEE_primary_beam.c
+  PROPERTIES
+  COMPILE_DEFINITIONS "H5Dopen_vers=2;H5Gopen_vers=2"
+)
 
 ##Make a symlink to run_woden.py so it's easy to find
 set(link_woden "run_woden.py")
