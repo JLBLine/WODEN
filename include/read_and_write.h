@@ -46,8 +46,6 @@ typedef struct _catsource_t {
   float *point_zas;
   float *sin_point_para_angs;
   float *cos_point_para_angs;
-  // float *point_beam_XX_re;
-  // float *point_beam_XX_im;
 
   //Gaussian params
   float *gauss_ras;
@@ -121,18 +119,6 @@ typedef struct _visibility_set_t {
   float *sum_visi_YY_real;
   float *sum_visi_YY_imag;
 
-  // float *d_beam_XX_real;
-  // float *d_beam_XX_imag;
-  //
-  // float *d_beam_XY_real;
-  // float *d_beam_XY_imag;
-  //
-  // float *d_beam_YX_real;
-  // float *d_beam_YX_imag;
-  //
-  // float *d_beam_YY_real;
-  // float *d_beam_YY_imag;
-
 } visibility_set_t;
 
 typedef struct _woden_settngs_t {
@@ -154,7 +140,7 @@ typedef struct _woden_settngs_t {
   float gauss_beam_FWHM;
   float gauss_beam_ref_freq;
   int chunking_size;
-  const char* hdf5_beam_path;
+  char* hdf5_beam_path;
 
 } woden_settings_t;
 
@@ -234,5 +220,6 @@ typedef struct _beam_settings_t {
     float *para_sinrot;
 
     copy_primary_beam_t *FEE_beam;
+    copy_primary_beam_t *FEE_beam_zenith;
 
 } beam_settings_t;

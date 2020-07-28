@@ -99,23 +99,6 @@ __constant__ float ffactorials[] = {
   8.94618213078e+116
 };
 
-__global__ void kern_print_summin(cuFloatComplex *d_here_is_an_array,
-           int array_length, cuFloatComplex *d_output_array) {
-
-  // Start by computing which baseline we're going to do
-  const int ind = threadIdx.x + (blockDim.x*blockIdx.x);
-
-  if (ind < array_length) {
-    d_output_array[ind] = cuCmulf(d_here_is_an_array[ind],d_here_is_an_array[ind]);
-    // printf("%d\n",ind );
-
-  }
-  // printf("%d %f \n", ind, (d_Q1[0].x) );
-
-}
-
-
-
 __global__ void kern_rotate_FEE_beam(cuFloatComplex *d_FEE_beam_gain_matrices,
                                 float *d_sin_para_angs, float *d_cos_para_angs,
                                 int num_components, int num_time_steps) {
@@ -125,8 +108,6 @@ __global__ void kern_rotate_FEE_beam(cuFloatComplex *d_FEE_beam_gain_matrices,
 
     int time_ind = (int)floorf((float)iCoord / (float)num_components);
 
-    //There is a negative sign error in the copied mwa_pb code so add a negative
-    //here
     cuFloatComplex prerot0 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 0];
     cuFloatComplex prerot1 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 1];
     cuFloatComplex prerot2 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 2];
@@ -135,52 +116,13 @@ __global__ void kern_rotate_FEE_beam(cuFloatComplex *d_FEE_beam_gain_matrices,
     float sinrot = d_sin_para_angs[iCoord];
     float cosrot = d_cos_para_angs[iCoord];
 
-    // printf("ANGLES %.8f %.8f\n",sinrot,cosrot );
-
-    // if (iCoord == 0) {
-
-    // cuFloatComplex this0 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 0];
-    // cuFloatComplex this1 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 1];
-    // cuFloatComplex this2 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 2];
-    // cuFloatComplex this3 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 3];
-    //
-    // printf("BEFORE %d %d %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
-    //         iCoord,time_ind,
-    //         this0.x, this0.y, this1.x, this1.y,
-    //         this2.x, this2.y, this3.x, this3.y );
-    // // }
-
-    // d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 0] = cosrot*prerot0 - sinrot*prerot2;
-    // d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 1] = cosrot*prerot1 - sinrot*prerot3;
-    // d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 2] = sinrot*prerot0 + cosrot*prerot2;
-    // d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 3] = sinrot*prerot1 + cosrot*prerot3;
-
     d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 3] = prerot3*cosrot + prerot2*sinrot;
     d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 2] = -prerot3*sinrot + prerot2*cosrot;
     d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 1] = prerot1*cosrot + prerot0*sinrot;
     d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 0] = -prerot1*sinrot + prerot0*cosrot;
 
-
-
-
-
-    // if (iCoord == 0) {
-
-    // this0 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 0];
-    // this1 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 1];
-    // this2 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 2];
-    // this3 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 3];
-
-    // printf("AFTER %d %d %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
-    //         iCoord,time_ind,
-    //         this0.x, this0.y, this1.x, this1.y,
-    //         this2.x, this2.y, this3.x, this3.y );
-    // // }
-
   }
-
 }
-
 
 extern "C" void calc_CUDA_FEE_beam(float *d_beam_reals, float *d_beam_imags,
                                    float *azs, float *zas,
@@ -395,18 +337,8 @@ extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,
   }
   cudaMemcpy(TileGainMatrices, h_FEE_beam_gains, num_azza*MAX_POLS*sizeof(float _Complex), cudaMemcpyHostToDevice );
 
-
-  // float az = 0.0;
-  // float za = 0.0;
   float rotation = 0.0;
-  // float scaling = 1.0;
-
   int nmax = primary_beam->nmax;
-
-  // // printf("INPUT GPU2 %.5f %.5f\n",single_az,single_za );
-  // printf("Scaling before get_TileGains %d\n",scaling );
-
-
 
   RTS_CUDA_get_TileGains(az, za, sin_para_angs, cos_para_angs,
     num_time_steps, num_azza, rotation, primary_beam, TileGainMatrices, scaling);
@@ -425,60 +357,51 @@ extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,
 
   cudaFree( TileGainMatrices );
 
-
 }
 
 
 
 extern "C" void get_HDFBeam_normalisation(beam_settings_t beam_settings) {
 
-  // printf("CUDA error 1: %s\n", cudaGetErrorString( cudaGetLastError() ) );
-
+  //The FEE beam is in theta-phi polarisations, which means we need a different
+  //norm factor in north, east, south, west
   float norm_azs[4] = {M_PI/2.0, 0.0, M_PI, M_PI/2.0};
   float norm_zas[4] = {0.0, 0.0, 0.0, 0.0};
 
-  int scaling = 0;
-
-  float _Complex *all_norm_gains=NULL;
-  all_norm_gains = (float _Complex *)malloc(MAX_POLS*MAX_POLS*sizeof(float _Complex));
-
-  // printf("Before calc_FEE_beam: %s\n", cudaGetErrorString( cudaGetLastError() ) );
-
+  //When running the FEE beam, we later rotate by parrallactic angle. We
+  //will normalise before this rotation, so only need to calculate the
+  //beam values at zenith once, and the beam is stationary, so only need
+  //to calculate for one time step here
   int num_time_steps = 1;
 
-  calc_FEE_beam(norm_azs, norm_zas,  MAX_POLS,
+
+
+  float _Complex *all_norm_gains=NULL;
+  all_norm_gains = (float _Complex *)malloc(num_time_steps*MAX_POLS*MAX_POLS*sizeof(float _Complex));
+  // printf("Before calc_FEE_beam: %s\n", cudaGetErrorString( cudaGetLastError() ) );
+
+  //Scaling means don't apply normalistaion, as we are calculating it here
+  int scaling = 0;
+
+  calc_FEE_beam(norm_azs, norm_zas,  MAX_POLS*num_time_steps,
     beam_settings.para_sinrot, beam_settings.para_cosrot,
-    num_time_steps, beam_settings.FEE_beam, all_norm_gains, scaling);
+    num_time_steps, beam_settings.FEE_beam_zenith, all_norm_gains, scaling);
 
   // printf("After calc_FEE_beam: %s\n", cudaGetErrorString( cudaGetLastError() ) );
 
   for (size_t i = 0; i < MAX_POLS; i++) {
 
-    // printf("WHICH TO CHOOSE %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n",
-    //       creal(all_norm_gains[i*MAX_POLS + 0]), cimag(all_norm_gains[i*MAX_POLS + 0]),
-    //       creal(all_norm_gains[i*MAX_POLS + 1]), cimag(all_norm_gains[i*MAX_POLS + 1]),
-    //       creal(all_norm_gains[i*MAX_POLS + 2]), cimag(all_norm_gains[i*MAX_POLS + 2]),
-    //       creal(all_norm_gains[i*MAX_POLS + 3]), cimag(all_norm_gains[i*MAX_POLS + 3]));
+    // float real_norm = creal(all_norm_gains[i*MAX_POLS + MAX_POLS - 1 - i]);
+    // float imag_norm = cimag(all_norm_gains[i*MAX_POLS + MAX_POLS - 1 - i]);
+    // float abs_norm_value = sqrtf(real_norm*real_norm + imag_norm*imag_norm);
+    // printf("NORM BEAM STOOF %.6f %.6f %.6f\n",real_norm, imag_norm, abs_norm_value );
 
-
-    float real_norm = creal(all_norm_gains[i*MAX_POLS + MAX_POLS - 1 - i]);
-    float imag_norm = cimag(all_norm_gains[i*MAX_POLS + MAX_POLS - 1 - i]);
-    float abs_norm_value = sqrtf(real_norm*real_norm + imag_norm*imag_norm);
-
-    // printf("\tthe value %.5f \n",abs_norm_value );
-
-    // beam_settings.FEE_beam->norm_fac[i] = {abs_norm_value, 0};
-
-    printf("NORM BEAM STOOF %.6f %.6f %.6f\n",real_norm, imag_norm, abs_norm_value );
-
+    //Do a polarisation reordering here, to follow the RTS code
     beam_settings.FEE_beam->norm_fac[i] = all_norm_gains[i*MAX_POLS + MAX_POLS - 1 - i];
 
     // beam_settings.FEE_beam->norm_fac[i] = {abs(real_norm),abs(imag_norm)};
-
   }
-
   free(all_norm_gains);
-
 }
 
 extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
@@ -491,7 +414,6 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
   int num_coords = num_time_steps*num_components;
 
   for (size_t phi_ind = 0; phi_ind < num_coords; phi_ind++) {
-    // printf("%.5f %.5f\n",phi[phi_ind]*(180. / M_PI),theta[phi_ind]*(180. / M_PI) );
     phi[phi_ind] = (M_PI/2.0) - phi[phi_ind];
     if(phi[phi_ind] < 0){
       phi[phi_ind] += 2.0*M_PI;
@@ -509,19 +431,10 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
   cudaMalloc( (void**)&d_theta, num_coords*sizeof(float) );
   cudaMemcpy(d_theta, theta, num_coords*sizeof(float), cudaMemcpyHostToDevice );
 
-  // copy_primary_beam_t *pb;
-  //
-  // pb = primary_beam;
-
   int nmax = primary_beam->nmax; // Assumes all beams have same dimensions
   int nMN = primary_beam->nMN;
 
-  // printf("NMAX IS %d\n",nmax );
-
   int P_size = sizeof(float _Complex)*(nmax*nmax + 2*nmax)*num_coords;
-  // printf("WE GOOD WE DID THIS %d\n",nmax*nmax + 2*nmax);
-  // CUDA_SAFE_CALL( cudaMalloc( (void **)&primary_beam->rts_P_sin, P_size));
-  // CUDA_SAFE_CALL( cudaMalloc( (void **)&primary_beam->rts_P1, P_size));
 
   cudaMalloc( (void **)&primary_beam->rts_P_sin, P_size);
   cudaMalloc( (void **)&primary_beam->rts_P1, P_size);
@@ -539,19 +452,6 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
   RTS_P1SINfKernel<<<grid, threads >>>( d_theta, (cuFloatComplex*)primary_beam->rts_P_sin,
                                       (cuFloatComplex*)primary_beam->rts_P1, nmax, num_coords);
 
-
-  // CUDA_CHECK_KERNEL( "P1SINKernel execution failed\n" );
-  // printf("RTS_P1SINfKernel managed to run\n");
-
-  // float _Complex *Sigma_P;
-  // float _Complex *Sigma_T;
-  // //
-  // CUDA_SAFE_CALL( cudaMalloc( (void **)&Sigma_P, nMN * n_pols * sizeof(float _Complex)));
-  // CUDA_SAFE_CALL( cudaMalloc( (void **)&Sigma_T, nMN * n_pols * sizeof(float _Complex)));
-  //
-  // CUDA_SAFE_CALL( cudaMalloc( (void **)&primary_beam->emn_P, num_coords * nMN * n_pols * sizeof(float _Complex)));
-  // CUDA_SAFE_CALL( cudaMalloc( (void **)&primary_beam->emn_T, num_coords * nMN * n_pols * sizeof(float _Complex)));
-
   cudaMalloc( (void **)&primary_beam->emn_P, num_coords * nMN * n_pols * sizeof(float _Complex));
   cudaMalloc( (void **)&primary_beam->emn_T, num_coords * nMN * n_pols * sizeof(float _Complex));
   //
@@ -564,28 +464,12 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
   grid.y = (int)ceil((float)num_coords / (float)threads.y);
   grid.z = n_pols;
 
-  // printf("Loation 8\n");
-
   RTS_getTileGainsKernel<<<grid, threads >>>(d_phi, d_theta, nMN, num_coords,
                                 primary_beam->d_M,primary_beam->d_N,
                                 (cuFloatComplex*)primary_beam->d_Q1, (cuFloatComplex*)primary_beam->d_Q2,
                                 (cuFloatComplex*)primary_beam->rts_P_sin, (cuFloatComplex*)primary_beam->rts_P1,
                                 (cuFloatComplex*)primary_beam->emn_T, (cuFloatComplex*)primary_beam->emn_P);
-  // printf("RTS_getTileGainsKernel managed to run\n");
-  // //
-  // // // CUDA_CHECK_KERNEL( "RTS_getTileGainsKernel execution failed\n" );
-  // //
 
-  //
-  // // printf("NORM FAC AFTER mem copy %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f\n",
-  // //     creal(primary_beam->norm_fac[0]), cimag(primary_beam->norm_fac[0]),
-  // //     creal(primary_beam->norm_fac[1]), cimag(primary_beam->norm_fac[1]),
-  // //     creal(primary_beam->norm_fac[2]), cimag(primary_beam->norm_fac[2]),
-  // //     creal(primary_beam->norm_fac[3]), cimag(primary_beam->norm_fac[3]) );
-  //
-
-  // printf("Loation 7\n");
-  //
   float *d_emn_P_sum_real = NULL;
   float *d_emn_T_sum_real = NULL;
   float *d_emn_P_sum_imag = NULL;
@@ -595,55 +479,38 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
   cudaMalloc( (void**)&d_emn_T_sum_real, num_coords*(2*nmax + 1)*n_pols*sizeof(float) );
   cudaMalloc( (void**)&d_emn_P_sum_imag, num_coords*(2*nmax + 1)*n_pols*sizeof(float) );
   cudaMalloc( (void**)&d_emn_T_sum_imag, num_coords*(2*nmax + 1)*n_pols*sizeof(float) );
-  // // int num_theta = 1;
 
   //Ensure gains are zero before summing results to them
   float *zero_array = NULL;
-  // cudaMallocHost( (void**)&zero_array, num_coords*(2*nmax + 1)*n_pols*sizeof(float) );
-
   zero_array = (float *)malloc(num_coords*(2*nmax + 1)*n_pols*sizeof(float) );
 
   for (int i = 0; i < num_coords*(2*nmax + 1)*n_pols; i++) {
     zero_array[i] = 0.0;
   }
 
-  // printf("Loation 6\n");
-  //
   cudaMemcpy(d_emn_P_sum_real, zero_array, num_coords*(2*nmax + 1)*n_pols*sizeof(float), cudaMemcpyHostToDevice );
   cudaMemcpy(d_emn_P_sum_imag, zero_array, num_coords*(2*nmax + 1)*n_pols*sizeof(float), cudaMemcpyHostToDevice );
   cudaMemcpy(d_emn_T_sum_real, zero_array, num_coords*(2*nmax + 1)*n_pols*sizeof(float), cudaMemcpyHostToDevice );
   cudaMemcpy(d_emn_T_sum_imag, zero_array, num_coords*(2*nmax + 1)*n_pols*sizeof(float), cudaMemcpyHostToDevice );
 
-  // printf("NMAX IN THIS CONTEXT IS %d\n",nmax );
 
   float *d_m_range = NULL;
   cudaMalloc( (void**)&d_m_range, (2*nmax + 1)*sizeof(float) );
-  //
   cudaMemcpy(d_m_range, primary_beam->m_range, (2*nmax + 1)*sizeof(float), cudaMemcpyHostToDevice );
-  // cudaFreeHost( m_range);
-  //
-  // printf("Managed to do the loop\n");
-  //
+
   threads.x = 16;
   threads.y = 8;
   threads.z = 8;
 
-  // printf("pb->nM is %d, nmax is %d\n",primary_beam->nMN,nmax );
-
   grid.x = (int)ceil( (float)num_coords / threads.x);
   grid.y = (int)ceil( (2.0*(float)primary_beam->nMN) / threads.y);
   grid.z = (int)ceil( ((float)nmax*2.0 + 1.0) / threads.z);
-
-  // printf("STUFF %d %d %d %d %d %d\n",threads.x,grid.x,threads.y,grid.y,threads.z,grid.z );
 
   kern_sum_emn_PT_by_M<<< grid, threads >>>((cuFloatComplex*)primary_beam->emn_T,
                       (cuFloatComplex*)primary_beam->emn_P,
                       d_emn_T_sum_real, d_emn_T_sum_imag,
                       d_emn_P_sum_real, d_emn_P_sum_imag,
                       d_m_range, primary_beam->d_M, primary_beam->nMN, nmax, num_coords);
-
-  // printf("Apparently ran kern_sum_emn_PT_by_M\n");
-  //
 
   threads.x = 64;
   threads.y = n_pols;
@@ -658,30 +525,15 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
   cudaMemcpy(primary_beam->d_emn_T_sum, zero_array, num_coords*(2*nmax + 1)*n_pols*sizeof(float), cudaMemcpyHostToDevice );
   cudaMemcpy(primary_beam->d_emn_P_sum, zero_array, num_coords*(2*nmax + 1)*n_pols*sizeof(float), cudaMemcpyHostToDevice );
 
-
   free(zero_array);
-
-  // float *zero_array2 = NULL;
-  // cudaMallocHost( (void**)&zero_array2, num_coords*(2*nmax + 1)*n_pols*sizeof(float _Complex) );
-  // for (size_t i = 0; i < num_azza*MAX_POLS; i++) {
-  //   zero_array2[i] = {0.0,0.0};
-  // }
-  // cudaMemcpy(TileGainMatrices, zero_array2 ,num_azza*MAX_POLS*sizeof(float _Complex) , cudaMemcpyHostToDevice );
 
   kern_calc_sigmaTP<<< grid, threads >>>((cuFloatComplex*)TileGainMatrices,
                   d_emn_T_sum_real, d_emn_T_sum_imag,
                   d_emn_P_sum_real, d_emn_P_sum_imag,
                   (cuFloatComplex*)primary_beam->d_emn_T_sum, (cuFloatComplex*)primary_beam->d_emn_P_sum,
                   nmax, num_coords );
-  //
-  // printf("Apparently ran kern_calc_sigmaTP\n");
-
-
-
-
 
   if (scaling == 1.0) {
-    // printf("Trying to do the scaling fool\n");
 
     threads.x = 128;
     grid.x = (int)ceil( (float)num_coords / threads.x);
@@ -701,10 +553,6 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
     float *d_cos_para_angs=NULL;
     float *d_sin_para_angs=NULL;
 
-    // for (size_t i = 0; i < num_components; i++) {
-    //   printf("RIGHT HERE 2 %.5f %.5f\n",sin_para_angs[i],cos_para_angs[i] );
-    // }
-
     cudaMalloc( (void**)&d_cos_para_angs, num_components*num_time_steps*sizeof(float) );
     cudaMalloc( (void**)&d_sin_para_angs, num_components*num_time_steps*sizeof(float) );
 
@@ -721,31 +569,15 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
 
   }
 
-
-
-
-
-
-  // printf("Location 1\n");
-
   cudaFree(d_emn_T_sum_real);
   cudaFree(d_emn_T_sum_imag);
   cudaFree(d_emn_P_sum_real);
   cudaFree(d_emn_P_sum_imag);
 
-  // printf("Location 2\n");
-
   cudaFree(d_m_range);
-
-  // printf("Location 3\n");
 
   cudaFree( d_phi );
   cudaFree( d_theta);
-
-  // cudaFree(d_norm_fac);
-
-
-  // printf("Location 4\n");
 
   cudaFree( primary_beam->emn_T );
   cudaFree( primary_beam->emn_P );
@@ -755,12 +587,6 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
   cudaFree( primary_beam->rts_P_sin );
   cudaFree( primary_beam->rts_P1 );
 
-  // printf("Location 5\n");
-
-  // // //
-  // cudaFree(Sigma_P);
-  // cudaFree(Sigma_T);
-
 }
 
 __global__ void kern_apply_FEE_norm(cuFloatComplex *TileGainMatrices,
@@ -769,36 +595,17 @@ __global__ void kern_apply_FEE_norm(cuFloatComplex *TileGainMatrices,
   const int iCoord = threadIdx.x + (blockDim.x*blockIdx.x);
 
   if (iCoord < num_coords) {
-    // cuFloatComplex this1 = d_norm_fac[0];
 
     cuFloatComplex before0 = TileGainMatrices[iCoord*MAX_POLS + 0];
     cuFloatComplex before1 = TileGainMatrices[iCoord*MAX_POLS + 1];
     cuFloatComplex before2 = TileGainMatrices[iCoord*MAX_POLS + 2];
     cuFloatComplex before3 = TileGainMatrices[iCoord*MAX_POLS + 3];
 
-    // TileGainMatrices[iCoord*MAX_POLS + 0] = before0;
-    // TileGainMatrices[iCoord*MAX_POLS + 1] = before1;
-    // TileGainMatrices[iCoord*MAX_POLS + 2] = before2;
-    // TileGainMatrices[iCoord*MAX_POLS + 3] = before3;
-
-    // TileGainMatrices[iCoord*MAX_POLS + 0] = before3;
-    // TileGainMatrices[iCoord*MAX_POLS + 1] = before2;
-    // TileGainMatrices[iCoord*MAX_POLS + 2] = before1;
-    // TileGainMatrices[iCoord*MAX_POLS + 3] = before0;
-
-
-
+    //Again, reorder polarisations here to follow the RTS
     TileGainMatrices[iCoord*MAX_POLS + 0] = cuCdivf(before3, d_norm_fac[0]);
     TileGainMatrices[iCoord*MAX_POLS + 1] = cuCdivf(before2, d_norm_fac[1]);
     TileGainMatrices[iCoord*MAX_POLS + 2] = cuCdivf(before1, d_norm_fac[2]);
     TileGainMatrices[iCoord*MAX_POLS + 3] = cuCdivf(before0, d_norm_fac[3]);
-
-    // TileGainMatrices[iCoord*MAX_POLS + 0] /= d_norm_fac[0];
-    // TileGainMatrices[iCoord*MAX_POLS + 1] /= d_norm_fac[1];
-    // TileGainMatrices[iCoord*MAX_POLS + 2] /= d_norm_fac[2];
-    // TileGainMatrices[iCoord*MAX_POLS + 3] /= d_norm_fac[3];
-
-    //TODO CUDA divide???
 
   }
 }
@@ -821,87 +628,18 @@ __global__ void kern_calc_sigmaTP(cuFloatComplex *TileGainMatrices,
 
       int array_loc = n_pols*numM*iCoord + iPol*numM + i;
 
-      // printf("%d %d %d %d\n",iCoord, iPol, i, array_loc);
-
-
       cuFloatComplex d_emn_T = make_cuComplex(d_emn_T_sum_real[array_loc],d_emn_T_sum_imag[array_loc]);
       cuFloatComplex d_emn_P = make_cuComplex(d_emn_P_sum_real[array_loc],d_emn_P_sum_imag[array_loc]);
-      // cuFloatComplex d_emn_P = d_phi_comp[i];
-
-      // printf("%d %.5f %.5f %.5f %.5f\n",i,d_emn_T_sum_real[iPol*numM + i],d_emn_T_sum_imag[iPol*numM + i],d_emn_P.x,d_emn_P.y );
 
       d_emn_T_sum[array_loc] = d_emn_T;
       d_emn_P_sum[array_loc] = d_emn_P;
 
-      // TileGainMatrices[iPol*n_pols] += cuCmulf(d_emn_T , d_phi_comp[i]);
-      // TileGainMatrices[iPol*n_pols + 1] += cuCmulf(d_emn_P , d_phi_comp[i]);
-
-      // cuFloatComplex what_the_fuck = TileGainMatrices[iCoord*MAX_POLS + iPol*n_pols];
-
-      // if (d_emn_T.x != 0) {
-      //   printf("BEFORE %d %d %d %d %d %.5f %.5f %.5f %.5f\n", array_loc, iCoord, iPol, i, iCoord*MAX_POLS + iPol*n_pols, d_emn_T.x,d_emn_T.y,what_the_fuck.x,what_the_fuck.y);
-      // }
-
       TileGainMatrices[iCoord*MAX_POLS + iPol*n_pols] += d_emn_T;
       TileGainMatrices[iCoord*MAX_POLS + iPol*n_pols + 1] += d_emn_P;
-
-
-      // if (d_emn_T.x != 0) {
-      //   printf("AFTER %d %d %d %d %d %.5f %.5f %.5f %.5f\n", array_loc, iCoord, iPol, i, iCoord*MAX_POLS + iPol*n_pols, d_emn_T.x,d_emn_T.y,what_the_fuck.x,what_the_fuck.y);
-      // }
-
-      // printf("%d %d\n",iCoord*MAX_POLS + iPol*n_pols,iCoord*MAX_POLS + iPol*n_pols+1 );
-
-      // if (d_emn_T.x != 0 || d_emn_P.x != 0) {
-      // // // if (abs(d_emn_T.x) > 1e-4 || abs(d_emn_P.x)  > 1e-4) {
-      //   printf("%d %d %d %d %d %d %.5f %.5f %.5f %.5f\n", array_loc, iCoord, iPol, i, iCoord*MAX_POLS + iPol*n_pols, iCoord*MAX_POLS + iPol*n_pols + 1,d_emn_T.x,d_emn_T.y, d_emn_P.x,d_emn_P.y);
-      // }
-
-      // printf("%d %d %d %.5f %.5f %.5f %.5f\n",iCoord, iPol, i, d_emn_T.x,d_emn_T.y, d_emn_P.x,d_emn_P.y);
 
     }
   }
 }
-//
-//
-//
-//   // // order of instrumental pols is reversed between FEKO and RTS
-//   const int rtspol = abs(pol-1);
-//   // const int rtspol = pol;
-//   const int iGainIndex = iStation*MAX_POLS;
-//   TileGainMatrices[iGainIndex+2*rtspol] = sum_P;
-//   TileGainMatrices[iGainIndex+2*rtspol+1] = sum_T;
-//
-//   // printf("CHANGES? %d %d %.5f %.5f %.5f %.5f\n",iGainIndex+2*rtspol, iGainIndex+2*rtspol+1, sum_P.x,sum_P.y,sum_T.x,sum_T.y );
-//
-//   // printf("INDEXES %d %d\n",iGainIndex+2*rtspol, iGainIndex+2*rtspol+1);
-//
-//   cuFloatComplex to_print;
-//   to_print = norm_fac[0];
-//
-//   //
-//
-//   if(scaling==1){
-//     // printf("Norm fac inside GPU %.5f %.5f\n",to_print.x, to_print.y );
-//
-//   }
-//   //
-//   // if(rotation!=0.0){
-//   //   float crot, srot;
-//   //   crot = cosf(rotation);
-//   //   srot = sinf(rotation);
-//   //   cuFloatComplex prerot[2];
-//   //
-//   //   prerot[0] = TileGainMatrices[iGainIndex+2*rtspol];
-//   //   prerot[1] = TileGainMatrices[iGainIndex+2*rtspol+1];
-//   //
-//   //   TileGainMatrices[iGainIndex+2*rtspol+1] = prerot[1]*crot + prerot[0]*srot;
-//   //   TileGainMatrices[iGainIndex+2*rtspol] = -prerot[1]*srot + prerot[0]*crot;
-//
-//   // }
-//
-// }
-
 
 __global__ void kern_sum_emn_PT_by_M(cuFloatComplex *emn_T, cuFloatComplex *emn_P,
            float *d_emn_T_sum_real, float *d_emn_T_sum_imag,
@@ -923,30 +661,14 @@ __global__ void kern_sum_emn_PT_by_M(cuFloatComplex *emn_T, cuFloatComplex *emn_
       cuFloatComplex emn_P_value = emn_P[n_pols*nMN*iCoord + iM_index];
       cuFloatComplex emn_T_value = emn_T[n_pols*nMN*iCoord + iM_index];
 
-      // printf("%d %d %d %d %.8f %.8f %.8f %.8f\n",iCoord,iM_index,iM_value,iPol,  emn_P_value.x,emn_P_value.y,emn_T_value.x,emn_T_value.y );
-
       atomicAdd(&d_emn_P_sum_real[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax], emn_P_value.x);
       atomicAdd(&d_emn_P_sum_imag[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax], emn_P_value.y);
 
       atomicAdd(&d_emn_T_sum_real[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax], emn_T_value.x);
       atomicAdd(&d_emn_T_sum_imag[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax], emn_T_value.y);
 
-
-      // if (abs(emn_P_value.x) > 1e-4) {
-      //   printf("%d %d %d %d %d %.5f %.5f\n",iCoord, iM_index, iM_value, iPol, n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax, emn_P_value.x, emn_P_value.y );
-      // }
-
-
-      //
-      // atomicAdd(&d_emn_P_sum_real[iPol*(2*nmax + 1) + (int)d_m_range[iM_value] + nmax], 1.0);
-      // atomicAdd(&d_emn_T_sum_real[iPol*(2*nmax + 1) + (int)d_m_range[iM_value] + nmax], 1.0);
-      // atomicAdd(&d_emn_P_sum_imag[iPol*(2*nmax + 1) + (int)d_m_range[iM_value] + nmax], 1.0);
-      // atomicAdd(&d_emn_T_sum_imag[iPol*(2*nmax + 1) + (int)d_m_range[iM_value] + nmax], 1.0);
-
     }
-
   }
-
 }
 
 
@@ -1013,13 +735,9 @@ __device__ void RTS_CUDA_pm_polynomial_value_singlef(int n, int m, float x, floa
                   / ( float ) (     j - m     );
     }
   }
-
-  //return v;
-
 }
-//
-//
-//
+
+
 __global__ void RTS_P1SINfKernel(float *d_theta, cuFloatComplex *rts_P_sin,
            cuFloatComplex *rts_p1, int nmax, int num_coords){
 
@@ -1036,11 +754,7 @@ __global__ void RTS_P1SINfKernel(float *d_theta, cuFloatComplex *rts_P_sin,
 
   int nMN = nmax*nmax + 2*nmax;
 
-  // printf("WE'RE IN THE RTS_P1SINfKernel %d\n",iCoord);
-
   if(iCoord < num_coords && i < nMN) {
-
-    // printf("THIS THIS THIS %.5f\n",theta );
 
     if(index < n){
       pm_index = n-index;
@@ -1051,10 +765,6 @@ __global__ void RTS_P1SINfKernel(float *d_theta, cuFloatComplex *rts_P_sin,
     float p;
     float Pm1;
     float Pm_sin;
-
-    //float *pm_vals;
-
-    //pm_vals = ( float * ) malloc ((n+1) * sizeof ( float ) );
 
     float pm_vals[100];
 
@@ -1094,13 +804,9 @@ __global__ void RTS_P1SINfKernel(float *d_theta, cuFloatComplex *rts_P_sin,
     rts_P_sin[iCoord*nMN + i] = make_cuFloatComplex(Pm_sin,0);
     rts_p1[iCoord*nMN + i] = make_cuFloatComplex(Pm1,0);
 
-    // printf("%d %d %.5f %.5f\n",i,iCoord,Pm_sin,Pm1 );
-
   } //end IF thread lies within number of calculations we want to do
-
 }
-//
-//
+
 __global__ void RTS_getTileGainsKernel( float *d_phi, float *d_theta, int nMN, int num_coords,
            float *pb_M, float *pb_N,
            cuFloatComplex *pb_Q1, cuFloatComplex *pb_Q2,
@@ -1113,7 +819,6 @@ __global__ void RTS_getTileGainsKernel( float *d_phi, float *d_theta, int nMN, i
   int pol = blockIdx.z;
   int n_pols = gridDim.z; // 2
 
-
   // int iStation = blockIdx.z;
   int index;
   float factor1,factor2;
@@ -1121,41 +826,22 @@ __global__ void RTS_getTileGainsKernel( float *d_phi, float *d_theta, int nMN, i
 
   int beam_index = i+(pol*nMN);
 
-  // printf("GPPPPUUUUUUU %d %d %d \n",i,iCoord,pol);
-
   if(iCoord < num_coords && i < nMN) {
-    // printf("GPPPPUUUUUUU %d %d %d \n",i,iCoord,pol);
-
     float phi = d_phi[iCoord];
     float theta = d_theta[iCoord];
-
-    // printf("%.4f %.4f\n",phi,theta );
 
     index = (int) (pb_N[beam_index] - fabs(pb_M[beam_index]));
     if(index >=80){
       printf("Maximum factorial exceeded %d\n", __FUNCTION__,index );
-      //LOG( LOG_ERR,"Maximum factorial exceeded\n", __FUNCTION__ );
-      //exit(-1);
     }
     factor1 = ffactorials[index];
     index = (int) (pb_N[beam_index] + fabs(pb_M[beam_index]));
     if(index >=80){
       printf("Maximum factorial exceeded %d\n", __FUNCTION__,index );
-      //LOG( LOG_ERR,"Maximum factorial exceeded\n", __FUNCTION__ );
-      //exit(-1);
     }
     factor2 = ffactorials[index];
 
     C_MN = sqrt(0.5 * (2 * pb_N[beam_index] + 1) * factor1 / factor2);
-
-    // printf("%d %d %d %.5f \n",i,pol,iStation,C_MN);
-
-    // if(pb_M[beam_index] == 0){ //diverging??
-    //   M_absM = 1;
-    // } else {
-    //   M_absM = -(pb_M[beam_index] / fabs(pb_M[beam_index]));
-    // }
-    // M_absM = pow(M_absM,pb_M[beam_index]);
 
     if (pb_M[beam_index] > 0) {
       if ((int)pb_M[beam_index] % 2 == 0) {
@@ -1173,11 +859,6 @@ __global__ void RTS_getTileGainsKernel( float *d_phi, float *d_theta, int nMN, i
 
     phi_comp = CUBE_DEVICE_CALL(U1polar,(pb_M[beam_index] * phi)) * C_MN * M_absM / sqrt(pb_N[beam_index] * (pb_N[beam_index] + 1.0));
 
-    // double real_phi_const;
-    // real_phi_const = C_MN * M_absM / sqrt(pb_N[beam_index] * (pb_N[beam_index] + 1.0));
-    //
-    // cuFloatComplex phi_const = make_cuComplex(real_phi_const, 0.0);
-
     cuFloatComplex this_emn_T, this_emn_P;
     float T_exp, P_exp;
     float u = cos(theta);
@@ -1191,24 +872,8 @@ __global__ void RTS_getTileGainsKernel( float *d_phi, float *d_theta, int nMN, i
     this_emn_T *= (rts_P_sin[iCoord*nMN + i]*(fabs(pb_M[beam_index])*pb_Q2[beam_index]*u - pb_M[beam_index] * pb_Q1[beam_index]) + pb_Q2[beam_index] * rts_P1[iCoord*nMN + i]);
     this_emn_P *= (rts_P_sin[iCoord*nMN + i]*(pb_M[beam_index]*pb_Q2[beam_index] - fabs(pb_M[beam_index])*pb_Q1[beam_index]*u) - pb_Q1[beam_index] * rts_P1[iCoord*nMN + i]);
 
-
-    // emn_T[beam_index] = cuCmulf(this_emn_T,phi_const);
-    // emn_P[beam_index] = cuCmulf(this_emn_P,phi_const);
-
     emn_T[iCoord*n_pols*nMN + beam_index] = cuCmulf(this_emn_T,phi_comp);
     emn_P[iCoord*n_pols*nMN + beam_index] = cuCmulf(this_emn_P,phi_comp);
 
-    // if (isnan(this_emn_P.x) || isnan(phi_comp.x)) {
-    //   printf("%d %d %d %d %d %.5f %.5f %.5f %.5f %.5f %.5f\n",i, iCoord, pol, beam_index, iCoord*n_pols*nMN + beam_index,this_emn_P.x,this_emn_P.y,this_emn_T.x,this_emn_T.y,phi_comp.x, phi_comp.y );
-    // }
-
-    // if (this_emn_P.x > 0) {
-    //   printf("%d %d %d %d %d %.5f %.5f %.5f %.5f %.5f %.5f\n",i, iCoord, pol, beam_index, iCoord*n_pols*nMN + beam_index,this_emn_P.x,this_emn_P.y,this_emn_T.x,this_emn_T.y,phi_comp.x, phi_comp.y );
-    // }
-
-    //
-
-    // Now have one long Sigma_P for all modes, pols and tiles. Want to reduce (sum) per tile
-    // and assign to TileGainMatrices
   }
 }

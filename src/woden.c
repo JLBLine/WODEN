@@ -182,21 +182,23 @@ int main(int argc, char **argv) {
   else if (woden_settings->beamtype == FEE_BEAM) {
     beam_settings.beamtype = FEE_BEAM;
 
-    //Get the parallactic angle of the beam pointing for every time step
+    //Get the parallactic angle of the zenith for every time step
     //Need to rotate the FEE model which is stored in theta/phi pols by the
     //parallactic angle to obtain XX/YY
-    beam_settings.para_cosrot = malloc(woden_settings->num_time_steps*sizeof(float));
-    beam_settings.para_sinrot = malloc(woden_settings->num_time_steps*sizeof(float));
+    //There are 4 normalisations to calculate, so need 4 times num time steps
+    beam_settings.para_cosrot = malloc(woden_settings->num_time_steps*MAX_POLS*sizeof(float));
+    beam_settings.para_sinrot = malloc(woden_settings->num_time_steps*MAX_POLS*sizeof(float));
 
     double para_angle;
     for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
 
-      float FEE_HA = lsts[time_step] - metafits.ra_point;
-      para_angle = eraHd2pa((double)FEE_HA, (double)metafits.dec_point, (double)MWA_LAT_RAD);
+      float zenith_HA = 0.0;
+      para_angle = eraHd2pa((double)zenith_HA, (double)MWA_LAT_RAD, (double)MWA_LAT_RAD);
 
-      beam_settings.para_cosrot[time_step] = cosf((float)para_angle + M_PI/2.0);
-      beam_settings.para_sinrot[time_step] = sinf((float)para_angle + M_PI/2.0);
-
+      for (size_t pol_direction = 0; pol_direction < MAX_POLS; pol_direction++) {
+        beam_settings.para_cosrot[time_step*MAX_POLS + pol_direction] = cosf((float)para_angle + M_PI/2.0);
+        beam_settings.para_sinrot[time_step*MAX_POLS + pol_direction] = sinf((float)para_angle + M_PI/2.0);
+      }
       // printf("PARA ANGLEEEEE %.10f %.10f %.10f\n",para_angle,cosf((float)para_angle + M_PI/2.0),sinf((float)para_angle + M_PI/2.0) );
     }
 
@@ -224,6 +226,8 @@ int main(int argc, char **argv) {
     // base_band_freq += woden_settings->frequency_resolution/2.0;
 
     beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
+    //We need the zenith beam to get the normalisation
+    beam_settings.FEE_beam_zenith = malloc(sizeof(copy_primary_beam_t));
 
     if (woden_settings->beamtype == FEE_BEAM){
 
@@ -237,25 +241,25 @@ int main(int argc, char **argv) {
 
       printf("Middle freq is %f\n",base_middle_freq );
 
-      // copy_primary_beam_t *FEE_beam;
-      // FEE_beam = malloc(sizeof(copy_primary_beam_t));
-      // beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
+      float float_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+      printf("Setting up the zenith FEE beam...");
+      RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam_zenith, float_zenith_delays, st);
+      printf(" done.\n");
+
+      printf("Getting FEE beam normalisation...");
+      get_HDFBeam_normalisation(beam_settings, woden_settings->num_time_steps);
+      printf(" done.\n");
+
+
       printf("Setting up the FEE beam...");
       RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam, float_delays, st);
       printf(" done.\n");
 
-      printf("Getting FEE beam normalisation...");
-      get_HDFBeam_normalisation(beam_settings);
-      printf(" done.\n");
-      // beam_settings.FEE_beam->norm_fac[0] = 0.25714464415545296 + 0*I;
-      // beam_settings.FEE_beam->norm_fac[1] = 0.25714464415545296 + 0*I;
-      // beam_settings.FEE_beam->norm_fac[2] = 0.25729902904652246 + 0*I;
-      // beam_settings.FEE_beam->norm_fac[3] = 0.25729902904652246 + 0*I;
-
-      // beam_settings.FEE_beam->norm_fac[0] = 0.46907393930481284 + 0*I;
-      // beam_settings.FEE_beam->norm_fac[1] = 0.46907393930481284 + 0*I;
-      // beam_settings.FEE_beam->norm_fac[2] = 0.4694292262227538 + 0*I;
-      // beam_settings.FEE_beam->norm_fac[3] = 0.4694292262227538 + 0*I;
+      // free( beam_settings.FEE_beam )
+      // beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t))
+      // RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam, float_delays, st);
 
 
       // printf("NMAX in WODEN.C IS %d\n",beam_settings.FEE_beam->nmax );
