@@ -232,7 +232,8 @@ def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
                json_name=None,freq_res=None,time_res=None,
                sky_crop_components=False, use_gaussian_beam=False,
                gauss_beam_FWHM=False, gauss_beam_ref_freq=False,
-               chunking_size=None, use_FEE_beam=False, hdf5_beam_path=False):
+               chunking_size=None, use_FEE_beam=False, hdf5_beam_path=False,
+               jd_date=False):
     '''Populate a json parameter file used to run WODEN'''
 
     outfile = open(json_name,'w+')
@@ -247,6 +248,8 @@ def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
     outfile.write('  "time_res": %.5f,\n' %time_res)
     outfile.write('  "frequency_resolution": %.3f,\n' %freq_res)
     outfile.write('  "chunking_size": %d,\n' %chunking_size)
+    outfile.write('  "jd_date": %.16f,\n' %jd_date)
+
 
 
     if sky_crop_components:
@@ -370,6 +373,8 @@ if __name__ == "__main__":
         date,time = initial_date.split('T')
         year,month,day = date.split('-')
         oskar_date = "%s-%s-%s %s" %(day,month,year,time)
+        int_jd, float_jd = calc_jdcal(oskar_date)
+        jd_date = int_jd + float_jd
 
         ##Get the east, north, height antenna positions from the metafits
         east = f[1].data['East']
@@ -414,7 +419,8 @@ if __name__ == "__main__":
                gauss_beam_ref_freq=args.gauss_beam_ref_freq,
                chunking_size=args.chunking_size,
                use_FEE_beam=args.use_FEE_beam,
-               hdf5_beam_path=args.hdf5_beam_path)
+               hdf5_beam_path=args.hdf5_beam_path,
+               jd_date=jd_date)
 
     ##Check the uvfits prepend to make sure we end in .uvfits
     output_uvfits_prepend = args.output_uvfits_prepend

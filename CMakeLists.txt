@@ -105,11 +105,22 @@ if(HDF5_LIB)
   message(STATUS "HDF5 library path: ${HDF5_LIB}")
 endif()
 
+##Try and find the pal library
+set(HINTS_PAL_INC "${PAL_ROOT}/include/")
+set(HINTS_PAL_LIB "/usr/local/lib/;${PAL_ROOT}/lib/")
+
+find_path(PAL_INC pal.h HINTS ${HINTS_PAL_INC})
+find_library(PAL_LIB pal HINTS ${HINTS_PAL_LIB} REQUIRED)
+if(PAL_LIB)
+  message(STATUS "PAL include path: ${PAL_INC}")
+  message(STATUS "PAL library path: ${PAL_LIB}")
+endif()
+
 ##Set the linkers for the C code
-set(CC_LINKLIBS "-lm -pthread ${CFITSIO_LIB} ${JSONC_LIB} ${ERFA_LIB} ${HDF5_LIB}")
+set(CC_LINKLIBS "-lm -pthread ${CFITSIO_LIB} ${JSONC_LIB} ${ERFA_LIB} ${HDF5_LIB} ${PAL_LIB}")
 
 ##All the WODEN header dirs are in include dir
-include_directories("${CMAKE_SOURCE_DIR}/include" ${JSONC_INC} ${CFITSIO_INC} ${ERFA_INC} ${HDF5_INC})
+include_directories("${CMAKE_SOURCE_DIR}/include" ${JSONC_INC} ${CFITSIO_INC} ${ERFA_INC} ${HDF5_INC} ${PAL_INC})
 
 ##Generate libraries from the C and CUDA source code
 add_library(wodenC SHARED ${CSOURCES})

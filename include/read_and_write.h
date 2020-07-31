@@ -141,6 +141,7 @@ typedef struct _woden_settngs_t {
   float gauss_beam_ref_freq;
   int chunking_size;
   char* hdf5_beam_path;
+  double jd_date;
 
 } woden_settings_t;
 
@@ -196,7 +197,8 @@ woden_settings_t * read_json_settings(const char *filename);
 
 int RTS_init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome);
 
-array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits, int num_tiles);
+array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits, int num_tiles,
+                                woden_settings_t *woden_settings);
 
 typedef struct _beam_settings_t {
     float *beam_angles_array;
@@ -223,3 +225,9 @@ typedef struct _beam_settings_t {
     copy_primary_beam_t *FEE_beam_zenith;
 
 } beam_settings_t;
+
+void RTS_precXYZ(double rmat[3][3], double x, double y, double z, double lmst,
+         double *xp, double *yp, double *zp, double lmst2000);
+
+void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
+                       woden_settings_t *woden_settings);

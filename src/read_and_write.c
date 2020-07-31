@@ -5,6 +5,8 @@
 #include <string.h>
 #include <json.h>
 #include <fitsio.h>
+// #include <erfa.h>
+#include <pal.h>
 
 // enum component_type {POINT=0, GAUSSIAN, SHAPELET};
 
@@ -28,6 +30,53 @@ void ENH2XYZ_local(float E, float N, float H, float lat, float *X, float *Y, flo
   *X = -N*sl + H*cl;
   *Y = E;
   *Z = N*cl + H*sl;
+}
+
+/**************************
+***************************/
+// Taken from the RTS (Mitchell et al 2008)
+// All credit to the original authors
+// https://github.com/ICRAR/mwa-RTS.git
+/* lmst, lmst2000 are the local mean sidereal times in radians
+ * for the obs. and J2000 epochs.
+ */
+void RTS_precXYZ(double rmat[3][3], double x, double y, double z, double lmst,
+         double *xp, double *yp, double *zp, double lmst2000) {
+
+  double sep, cep, s2000, c2000;
+  double xpr, ypr, zpr, xpr2, ypr2, zpr2;
+
+  sep = sin(lmst);
+  cep = cos(lmst);
+  s2000 = sin(lmst2000);
+  c2000 = cos(lmst2000);
+
+  /* rotate to frame with x axis at zero RA */
+  xpr = cep*x - sep*y;
+  ypr = sep*x + cep*y;
+  zpr = z;
+
+  xpr2 = (rmat[0][0])*xpr + (rmat[0][1])*ypr + (rmat[0][2])*zpr;
+  ypr2 = (rmat[1][0])*xpr + (rmat[1][1])*ypr + (rmat[1][2])*zpr;
+  zpr2 = (rmat[2][0])*xpr + (rmat[2][1])*ypr + (rmat[2][2])*zpr;
+
+  /* rotate back to frame with xp pointing out at lmst2000 */
+  *xp = c2000*xpr2 + s2000*ypr2;
+  *yp = -s2000*xpr2 + c2000*ypr2;
+  *zp = zpr2;
+}
+
+/**************************
+//RTS matrix transpose function
+***************************/
+void RTS_mat_transpose(double rmat1[3][3], double rmat2[3][3]) {
+
+  int i, j;
+  for(i=0;i<3;++i) {
+    for(j=0;j<3;++j) {
+      rmat2[j][i] = rmat1[i][j];
+    }
+  }
 }
 
 /*********************************
@@ -422,6 +471,7 @@ woden_settings_t * read_json_settings(const char *filename){
   struct json_object *gauss_beam_ref_freq;
   struct json_object *FEE_beam;
   struct json_object *hdf5_beam_path;
+  struct json_object *jd_date;
 
 	fp = fopen(filename,"r");
 	fread(buffer, 1024, 1, fp);
@@ -450,6 +500,8 @@ woden_settings_t * read_json_settings(const char *filename){
   json_object_object_get_ex(parsed_json, "use_FEE_beam", &FEE_beam);
   json_object_object_get_ex(parsed_json, "hdf5_beam_path", &hdf5_beam_path);
 
+  json_object_object_get_ex(parsed_json, "jd_date", &jd_date);
+
   woden_settings_t * woden_settings;
   // woden_settings = NULL;
   woden_settings = malloc( sizeof(woden_settings_t) );
@@ -466,7 +518,7 @@ woden_settings_t * read_json_settings(const char *filename){
   woden_settings->cat_filename = json_object_get_string(cat_filename);
   woden_settings->metafits_filename = json_object_get_string(metafits_filename);
   woden_settings->hdf5_beam_path = json_object_get_string(hdf5_beam_path);
-
+  woden_settings->jd_date = (float)json_object_get_double(jd_date);
 
   //Boolean setting whether to crop sources by SOURCE or by COMPONENT
   woden_settings->sky_crop_type = json_object_get_boolean(sky_crop_type);
@@ -784,7 +836,127 @@ int RTS_init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome)
   return status;
 }
 
-array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits, int num_tiles){
+
+void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
+                       woden_settings_t *woden_settings) {
+
+
+  double lst     = (double)woden_settings->lst_base;
+  double ra      = (double)woden_settings->lst_base;
+  double dec     = (double)MWA_LAT_RAD;
+
+  int n_tile    = array_layout->num_tiles;
+
+  double rmatpn[3][3];
+  double mjd = woden_settings->jd_date - 2400000.5;
+  double J2000_transformation[3][3];
+
+  printf("YO DATES AND SHIT %.5f %.5f\n",woden_settings->jd_date,mjd );
+
+  // palPrenut calls:
+  //  - palPrec( 2000.0, palEpj(mjd), rmatp ); // form precession matrix: v_mean(mjd epoch) = rmatp * v_mean(J2000)
+  //  - palNut( mjd, rmatn );                  // form nutation matrix: v_true(mjd epoch) = rmatn * v_mean(mjd epoch)
+  //  - palDmxm( rmatn, rmatp, rmatpn );       // Combine the matrices:  pn = n x p
+
+  palPrenut(2000.0, mjd, rmatpn);
+
+  // Transpose the matrix so that it converts from v_true(mjd epoch) to v_mean(J2000)
+
+  RTS_mat_transpose( rmatpn, J2000_transformation );
+
+  // const double c=VEL_LIGHT;
+  // int st1;
+  double lmst2000, ha2000; // ant_u_ep, ant_v_ep, ant_w_ep;
+  double X_epoch, Y_epoch, Z_epoch, X_prec, Y_prec, Z_prec;
+  double u_prec, v_prec, w_prec;
+
+  double v1[3], v2[3], ra2000, dec2000;
+  //
+  /****************************************************************************************************************
+   * Change the various coordinates to the J2000 mean system
+   ****************************************************************************************************************/
+
+  // palDcs2c   - convert the apparent direction to direction cosines
+  // palDmxv    - perform the 3-d forward unitary transformation: v2 = tmatpn * v1
+  // palDcc2s   - convert cartesian coordinates back to spherical coordinates (i.e. zenith in the J2000 mean system).
+  // palDranrm  - normalize into range 0-2 pi.
+
+  // Change the coordinates of the initial phase centre
+
+  palDcs2c(ra, dec, v1);
+  // eraS2c( ra, dec, v1 );
+  palDmxv(J2000_transformation, v1, v2);
+  palDcc2s(v2, &ra2000, &dec2000);
+  ra2000 = palDranrm(ra2000);
+
+  lmst2000 = ra2000;
+  ha2000 = 0.0;
+
+  woden_settings->lst_base = (float)lmst2000;
+
+  //
+  // // Change the coordinates of the FOV centre (do we need to test that they are set?)
+  //
+  // ra  = (double)arr_spec->obsepoch_lst - rts_options->context.point_cent_ha;
+  // dec = (double)rts_options->context.point_cent_dec;
+  //
+  // palDcs2c(ra, dec, v1);
+  // palDmxv(arr_spec->J2000_transformation, v1, v2);
+  // palDcc2s(v2, &ra, &dec);
+  // ra = palDranrm(ra);
+  //
+  // rts_options->context.point_cent_ha  = (float)(lmst2000 - ra);
+  // rts_options->context.point_cent_dec = (float)dec;
+  //
+  // // Do not change the coordinates of the image centre, assume that it was specified in J2000 coordinates
+  //
+  // // rts_options->image_centre_ra
+  // // rts_options->image_centre_dec
+  //
+  // /****************************************************************************************************************
+  //  * Reset a few array parameters for the J2000 epoch
+  //  ****************************************************************************************************************/
+  //
+  // arr_spec->latitude                  = dec2000;
+  // rts_options->context.lst            = lmst2000;
+  // rts_options->context.phase_cent_ra  = ra2000;
+  // rts_options->context.phase_cent_dec = dec2000;
+  //
+  // /****************************************************************************************************************
+  //  * Update antennas positions
+  //  ****************************************************************************************************************/
+  //
+  for (int st=0; st < n_tile; st++ ) {
+
+    // Calculate antennas positions in the J2000 u,v,w frame (for a zenith phase center)
+    X_epoch = (double)array_layout->ant_X[st];
+    Y_epoch = (double)array_layout->ant_Y[st];
+    Z_epoch = (double)array_layout->ant_Z[st];
+    RTS_precXYZ( J2000_transformation, X_epoch,Y_epoch,Z_epoch, lst, &X_prec,&Y_prec,&Z_prec, lmst2000 );
+    // calcUVW( ha2000,dec2000, X_prec,Y_prec,Z_prec, &u_prec,&v_prec,&w_prec );
+
+    // printf("%.3f %.3f %.3f %.3f %.3f %.3f\n",X_epoch,Y_epoch,Z_epoch,X_prec,Y_prec,Z_prec );
+
+    // Update stored coordinates
+    array_layout->ant_X[st] = X_prec;
+    array_layout->ant_Y[st] = Y_prec;
+    array_layout->ant_Z[st] = Z_prec;
+    // arr_spec->stations[st1].coord_enh.east   = u_prec;
+    // arr_spec->stations[st1].coord_enh.north  = v_prec;
+    // arr_spec->stations[st1].coord_enh.height = w_prec;
+
+  } // st1
+
+  /****************************************************************************************************************
+   * Clean up and return
+   ****************************************************************************************************************/
+
+} // RTS_PrecessXYZtoJ2000
+
+
+
+array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits, int num_tiles,
+                                woden_settings_t *woden_settings){
 
   array_layout_t * array_layout;
   array_layout = malloc( sizeof(array_layout_t) );
@@ -812,6 +984,12 @@ array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits, int num_tiles){
                   array_layout->latitude,
                   &(array_layout->ant_X[i]), &(array_layout->ant_Y[i]), &(array_layout->ant_Z[i]));
 
+  }
+
+  //TODO when we implement non-phase track mode, make this a variable
+  int phase_tracking = 1;
+  if (phase_tracking == 1) {
+    RTS_PrecessXYZtoJ2000(array_layout, woden_settings);
   }
 
   array_layout->X_diff_metres = malloc( array_layout->num_baselines * sizeof(float) );
@@ -846,13 +1024,6 @@ array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits, int num_tiles){
   //   }
   // }
 
-  // for(st2_id=0; st2_id < opts->arr_spec.num_stations; st2_id++) {
-  //       for(st1_id=0; st1_id <= st2_id; st1_id++) {
-  //
-  //           if (st1_id != st2_id) {
-  //               *(visgroup->st1_id+cc_ct) = st1_id;
-  //               *(visgroup->st2_id+cc_ct) = st2_id;
-  //           }
 
   return array_layout;
 //

@@ -224,7 +224,7 @@ int RTS_HDFBeamInit(char *h5filename, float freq_Hz, copy_primary_beam_t *pb, fl
   for (int pol=0; pol < N_COPOL; pol++){
     for (int i=0; i<NUM_DIPOLES; i++) {
       float phase;
-      printf("The delays used are %.5f\n", RTS_order_delays[i]);
+      // printf("The delays used are %.5f\n", RTS_order_delays[i]);
       phase = (-2.0*M_PI*DQ/lam)*RTS_order_delays[i];
       // phase = (-2.0*M_PI/lam)*FEE_delays[i]; // rts delays are already *DQ
       // if (debug) fprintf(fpd,"delay: %g, phase: %g\n",FEE_delays[i],phase);

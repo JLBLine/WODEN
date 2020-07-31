@@ -62,14 +62,16 @@ int main(int argc, char **argv) {
    float_delays[i] = metafits.FEE_ideal_delays[i];
   }
 
-  //Create the array layout in instrument-centric X,Y,Z using positions
-  //from the metafits file
-  array_layout_t * array_layout;
-  array_layout = calc_XYZ_diffs(&metafits, metafits.num_tiles);
-
   //Propagate some of the metafits data into woden_settings
   woden_settings->lst_base = metafits.lst_base;
   woden_settings->base_low_freq = metafits.base_low_freq;
+
+
+  //Create the array layout in instrument-centric X,Y,Z using positions
+  //from the metafits file. Rotate back to J2000 if necessary
+  array_layout_t * array_layout;
+  array_layout = calc_XYZ_diffs(&metafits, metafits.num_tiles,
+                                woden_settings);
   woden_settings->num_baselines = array_layout->num_baselines;
 
   //Set some constants based on the settings
@@ -92,8 +94,10 @@ int main(int argc, char **argv) {
 
   for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
     float lst = woden_settings->lst_base + time_step*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
+
     //TODO add half a time step is good? Add time decorrelation?
     lst += 0.5*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
+    // lst -= 20.0*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
     lsts[time_step] = lst;
   }
 
