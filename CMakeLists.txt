@@ -73,7 +73,7 @@ endif()
 
 
 set(HINTS_JSONC_LIB "${JSONC_ROOT}/lib;${JSONC_ROOT}/lib64;${JSONC_ROOT}")
-set(HINTS_JSONC_INC "${JSONC_ROOT}/include;${JSONC_ROOT}/include/json-c;${JSONC_ROOT};/usr/include/json-c/")
+set(HINTS_JSONC_INC "${JSONC_ROOT}/include;${JSONC_ROOT}/include/json-c;${JSONC_ROOT};/usr/include/json-c/;/usr/local/include/json-c/")
 
 find_path(JSONC_INC json.h HINTS ${HINTS_JSONC_INC})
 find_library(JSONC_LIB json-c HINTS ${HINTS_JSONC_LIB} REQUIRED)
@@ -106,7 +106,7 @@ if(HDF5_LIB)
 endif()
 
 ##Try and find the pal library
-set(HINTS_PAL_INC "${PAL_ROOT}/include/")
+set(HINTS_PAL_INC "${PAL_ROOT}/include/;/usr/local/include/star/")
 set(HINTS_PAL_LIB "/usr/local/lib/;${PAL_ROOT}/lib/")
 
 find_path(PAL_INC pal.h HINTS ${HINTS_PAL_INC})
