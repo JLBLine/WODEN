@@ -55,6 +55,14 @@ def calc_jdcal(date):
     ##then the fraction goes into the data array for PTYPE5
     return jd_day, jd_fraction
 
+def RTS_encode_baseline(b1, b2):
+    '''The ancient aips/miriad extended way of encoding a baseline.
+    Needed for populating the uvfits file'''
+    # if b2 > 255:
+    #     return b1*2048 + b2 + 65536
+    # else:
+    return b1*256 + b2
+
 def create_uvfits(v_container=None,freq_cent=None, ra_point=None, dec_point=None,
                   output_uvfits_name=None,uu=None,vv=None,ww=None,
                   baselines_array=None,date_array=None,date=None,
@@ -86,20 +94,20 @@ def create_uvfits(v_container=None,freq_cent=None, ra_point=None, dec_point=None
     uvhdu.header['CRPIX4'] = int(central_freq_chan) + 1 ##Middle pixel number
     uvhdu.header['CDELT4'] = ch_width
 
+    # uvhdu.header['CTYPE5'] = template_uvfits[0].header['CTYPE5']
+    # uvhdu.header['CRVAL5'] = template_uvfits[0].header['CRVAL5']
+    # uvhdu.header['CRPIX5'] = template_uvfits[0].header['CRPIX5']
+    # uvhdu.header['CDELT5'] = template_uvfits[0].header['CDELT5']
+
     uvhdu.header['CTYPE5'] = template_uvfits[0].header['CTYPE5']
-    uvhdu.header['CRVAL5'] = template_uvfits[0].header['CRVAL5']
+    uvhdu.header['CRVAL5'] = ra_point
     uvhdu.header['CRPIX5'] = template_uvfits[0].header['CRPIX5']
     uvhdu.header['CDELT5'] = template_uvfits[0].header['CDELT5']
 
     uvhdu.header['CTYPE6'] = template_uvfits[0].header['CTYPE6']
-    uvhdu.header['CRVAL6'] = ra_point
+    uvhdu.header['CRVAL6'] = dec_point
     uvhdu.header['CRPIX6'] = template_uvfits[0].header['CRPIX6']
     uvhdu.header['CDELT6'] = template_uvfits[0].header['CDELT6']
-
-    uvhdu.header['CTYPE7'] = template_uvfits[0].header['CTYPE7']
-    uvhdu.header['CRVAL7'] = dec_point
-    uvhdu.header['CRPIX7'] = template_uvfits[0].header['CRPIX7']
-    uvhdu.header['CDELT7'] = template_uvfits[0].header['CDELT7']
 
     ## Write the parameters scaling explictly because they are omitted if default 1/0
     uvhdu.header['PSCAL1'] = 1.0
@@ -165,7 +173,7 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
     data = frombuffer(read_data,dtype=float32)
 
     n_data = num_time_steps * num_baselines
-    v_container = zeros((n_data,1,1,1,num_freq_channels,4,3))
+    v_container = zeros((n_data,1,1,num_freq_channels,4,3))
     uus = zeros(n_data)
     vvs = zeros(n_data)
     wws = zeros(n_data)
@@ -209,21 +217,21 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
             real_YX_ind = re_YX_base + freq_step
             imag_YX_ind = im_YX_base + freq_step
 
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,0,0] = data[real_XX_ind:real_XX_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,0,1] = data[imag_XX_ind:imag_XX_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,1,0] = data[real_YY_ind:real_YY_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,1,1] = data[imag_YY_ind:imag_YY_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,0,0] = data[real_XX_ind:real_XX_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,0,1] = data[imag_XX_ind:imag_XX_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,1,0] = data[real_YY_ind:real_YY_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,1,1] = data[imag_YY_ind:imag_YY_ind+num_baselines]
 
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,2,0] = data[real_XY_ind:real_XY_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,2,1] = data[imag_XY_ind:imag_XY_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,3,0] = data[real_YX_ind:real_YX_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,3,1] = data[imag_YX_ind:imag_YX_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,2,0] = data[real_XY_ind:real_XY_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,2,1] = data[imag_XY_ind:imag_XY_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,3,0] = data[real_YX_ind:real_YX_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,3,1] = data[imag_YX_ind:imag_YX_ind+num_baselines]
 
             ##Set the weight for everything to one
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,0,2] = ones(num_baselines)
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,1,2] = ones(num_baselines)
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,2,2] = ones(num_baselines)
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,3,2] = ones(num_baselines)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,0,2] = ones(num_baselines)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,1,2] = ones(num_baselines)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,2,2] = ones(num_baselines)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,3,2] = ones(num_baselines)
 
     return uus, vvs, wws, v_container
 
@@ -233,7 +241,7 @@ def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
                sky_crop_components=False, use_gaussian_beam=False,
                gauss_beam_FWHM=False, gauss_beam_ref_freq=False,
                chunking_size=None, use_FEE_beam=False, hdf5_beam_path=False,
-               jd_date=False):
+               jd_date=False,EDA2_sim=False):
     '''Populate a json parameter file used to run WODEN'''
 
     outfile = open(json_name,'w+')
@@ -277,6 +285,9 @@ def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
         outfile.write('  "hdf5_beam_path": "%s",\n' %hdf5_beam_path)
     else:
         pass
+
+    if EDA2_sim:
+        outfile.write('  "EDA2_sim": True,\n')
 
     if len(band_nums) == 1:
         band_str = '[%d]' %band_nums[0]
@@ -337,6 +348,9 @@ if __name__ == "__main__":
         help='Location of the hdf5 file holding the FEE beam coefficients')
 
     parser.add_argument('--chunking_size', type=int, default=0, help='The chunk size to break up the point sources into for processing - defaults to 0 (do not perform chunking)')
+
+    parser.add_argument('--EDA2_sim', default=False, action='store_true',
+        help='If doing an EDA2 simulation, need this flag to read all the antenna positions from a modified metafits file')
 
 
 
@@ -420,7 +434,7 @@ if __name__ == "__main__":
                chunking_size=args.chunking_size,
                use_FEE_beam=args.use_FEE_beam,
                hdf5_beam_path=args.hdf5_beam_path,
-               jd_date=jd_date)
+               jd_date=jd_date,EDA2_sim=args.EDA2_sim)
 
     ##Check the uvfits prepend to make sure we end in .uvfits
     output_uvfits_prepend = args.output_uvfits_prepend
@@ -431,11 +445,23 @@ if __name__ == "__main__":
     else:
         command('%s/woden %s' %(WODEN_DIR,json_name))
 
+    if args.EDA2_sim:
+        ##If doing EDA2, we have 256 stations, so select them all
+        selection = arange(len(east) - 1)
+    else:
+        ##This is an MWA simulation, in the metafits it lists XX,YY for each
+        ##antenna so we select every second one
+        selection = arange(0,len(east),2)
+
+    ##TODO if we work out a different way to input east,north,height layout
+    ##this will need to change
+    num_antennas = len(selection)
+
     ##Prepare the uvfits information
     ##Create and fill a layout array
-    array_layout = zeros((int(len(east)/2),3))
+    array_layout = zeros((int(len(selection)),3))
     ##Tiles are listed as YY,XX,YY,XX,etc so only use half positions
-    selection = arange(0,len(east),2)
+
     array_layout[:,0] = east[selection]
     array_layout[:,1] = north[selection]
     array_layout[:,2] = height[selection]
@@ -454,14 +480,27 @@ if __name__ == "__main__":
         band_low_freq = base_low_freq + (band - 1)*1.28e+6
         central_freq_chan_value = band_low_freq + (1.28e+6 / 2.0)
 
+        num_baselines = int(((num_antennas - 1)*num_antennas) / 2)
+
         with fits.open(args.template_uvfits) as template_uvfits:
             template_data = template_uvfits[0].data
-            template_baselines = template_uvfits[0].data['BASELINE'].copy()
-            num_baselines = len(template_data)
+            # template_baselines = template_uvfits[0].data['BASELINE'][256:].copy()
+            template_baselines = empty(num_baselines)
+            #
+            baseline_ind = 0
+            for b1 in arange(num_antennas - 1):
+                for b2 in arange(b1+1,num_antennas):
+                    template_baselines[baseline_ind] = RTS_encode_baseline(b1+1, b2+1)
+                    baseline_ind += 1
 
-            template_uvfits[1].data['STABXYZ'][:,0] = X
-            template_uvfits[1].data['STABXYZ'][:,1] = Y
-            template_uvfits[1].data['STABXYZ'][:,2] = Z
+            # print(template_uvfits[1].data['ANNAME'])
+            # template_uvfits[1].data['ANNAME'] = arange(num_antennas) + 1
+
+            template_uvfits[1].data['STABXYZ'][:num_antennas,0] = X
+            template_uvfits[1].data['STABXYZ'][:num_antennas,1] = Y
+            template_uvfits[1].data['STABXYZ'][:num_antennas,2] = Z
+
+            print('THIS',len(X),len(Y),len(Z))
 
             int_jd, float_jd = calc_jdcal(oskar_date)
 

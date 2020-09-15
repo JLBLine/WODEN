@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
   static fitsfile *metaf_file=NULL;
   MetaFfile_t metafits;
   fits_open_file(&metaf_file, woden_settings->metafits_filename, READONLY, &status);
-  status = RTS_init_meta_file(metaf_file, &metafits, woden_settings->metafits_filename);
+  status = RTS_init_meta_file(metaf_file, &metafits, woden_settings);
 
   float *float_delays = NULL;
   float_delays = malloc(16*sizeof(float));
@@ -207,6 +207,10 @@ int main(int argc, char **argv) {
     }
 
     calc_para_angle(cropped_src, lsts, num_time_steps);
+  }
+
+  else if (woden_settings->beamtype == ANALY_DIPOLE) {
+    beam_settings.beamtype = ANALY_DIPOLE;
   }
 
   else {
@@ -573,7 +577,7 @@ int main(int argc, char **argv) {
     //       int step = woden_settings->num_baselines*(time_step*woden_settings->num_freqs + freq_step);
     //       fprintf(output_visi_text,"%f %f %f %f %f\n",visibility_set->us_metres[step + baseline],
     //               visibility_set->vs_metres[step + baseline],visibility_set->ws_metres[step + baseline],
-    //               visibility_set->sum_visi_XY_real[step + baseline],visibility_set->sum_visi_XY_imag[step + baseline]);
+    //               visibility_set->sum_visi_XX_real[step + baseline],visibility_set->sum_visi_XX_imag[step + baseline]);
     //     }
     //   }
     // }

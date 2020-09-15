@@ -255,6 +255,7 @@ __device__ void apply_beam_gains(cuFloatComplex g1xx, cuFloatComplex g1xy,
 __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
            int num_baselines, int num_components, int num_times, int beamtype,
            float *d_gauss_beam_reals, float *d_gauss_beam_imags,
+           cuFloatComplex *d_analy_beam_X, cuFloatComplex *d_analy_beam_Y,
            cuFloatComplex *d_FEE_beam_gain_matrices,
            cuFloatComplex * g1xx, cuFloatComplex * g1xy,
            cuFloatComplex * g1yx, cuFloatComplex * g1yy,
@@ -302,53 +303,47 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
     * g2yx = d_FEE_beam_gain_matrices[beam_ind*MAX_POLS + 2];
     * g2yy = d_FEE_beam_gain_matrices[beam_ind*MAX_POLS + 3];
 
+    // cuFloatComplex thing1 = * g1xx;
+    // cuFloatComplex thing2 = * g1xy;
+    // cuFloatComplex thing3 = * g1yx;
+    // cuFloatComplex thing4 = * g1yy;
+    //
+    // if (iBaseline == 0) {
+    //   if (thing1.x > 2.0 || thing2.x > 2.0 || thing3.x > 2.0 || thing4.x > 2.0) {
+    //     printf("%d %.5f %.5f %.5f %.5f\n",iComponent,thing1.x,thing2.x,thing3.x,thing4.x );
+    //   }
+    // }
+
+  }
+
+  else if (beamtype == ANALY_DIPOLE) {
+
+    time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
+    freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+    beam_ind = num_freqs*time_ind*num_components + (num_components*freq_ind) + iComponent;
+
+    * g1xx = d_analy_beam_X[beam_ind];
+    * g2xx = d_analy_beam_X[beam_ind];
+    * g1yy = d_analy_beam_Y[beam_ind];
+    * g2yy = d_analy_beam_Y[beam_ind];
+
+    * g1xy = make_cuComplex(0.0, 0.0);
+    * g2xy = make_cuComplex(0.0, 0.0);
+    * g1yx = make_cuComplex(0.0, 0.0);
+    * g2yx = make_cuComplex(0.0, 0.0);
+
     cuFloatComplex thing1 = * g1xx;
     cuFloatComplex thing2 = * g1xy;
     cuFloatComplex thing3 = * g1yx;
     cuFloatComplex thing4 = * g1yy;
 
-    if (iBaseline == 0) {
-      if (thing1.x > 2.0 || thing2.x > 2.0 || thing3.x > 2.0 || thing4.x > 2.0) {
-        printf("%d %.5f %.5f %.5f %.5f\n",iComponent,thing1.x,thing2.x,thing3.x,thing4.x );
-      }
-    }
-
-    // * g1xx = d_FEE_beam_gain_matrices[beam_ind*MAX_POLS + 3];
-    // * g1xy = d_FEE_beam_gain_matrices[beam_ind*MAX_POLS + 2];
-    // * g1yx = d_FEE_beam_gain_matrices[beam_ind*MAX_POLS + 1];
-    // * g1yy = d_FEE_beam_gain_matrices[beam_ind*MAX_POLS + 0];
-    //
-    // * g2xx = d_FEE_beam_gain_matrices[beam_ind*MAX_POLS + 3];
-    // * g2xy = d_FEE_beam_gain_matrices[beam_ind*MAX_POLS + 2];
-    // * g2yx = d_FEE_beam_gain_matrices[beam_ind*MAX_POLS + 1];
-    // * g2yy = d_FEE_beam_gain_matrices[beam_ind*MAX_POLS + 0];
-
     // if (iBaseline == 0) {
-    //   printf("BEAM %d %.4f %4f %.4f %4f %.4f %4f %.4f %4f\n",iComponent,
-    //          * g1xx.x,* g1xx.y, * g1xy.x,* g1xy.y, * g1yx.x,* g1yx.y, * g1yy.x,* g1yy.y );
-    //
+    //   if (thing1.x > 2.0 || thing2.x > 2.0 || thing3.x > 2.0 || thing4.x > 2.0 || thing1.y > 2.0 || thing2.y > 2.0 || thing3.y > 2.0 || thing4.y > 2.0) {
+    //         printf("%d %.5f %.5f %.5f %.5f\n",iComponent,thing1.x,thing2.x,thing3.x,thing4.x );
+    //   }
     // }
-
-    // * g1xx = make_cuComplex(1.0, 0.0);
-    // * g2xx = make_cuComplex(1.0, 0.0);
-    // * g1yy = make_cuComplex(1.0, 0.0);
-    // * g2yy = make_cuComplex(1.0, 0.0);
-    // * g1xy = make_cuComplex(0.0, 0.0);
-    // * g2xy = make_cuComplex(0.0, 0.0);
-    // * g1yx = make_cuComplex(0.0, 0.0);
-    // * g2yx = make_cuComplex(0.0, 0.0);
-
-    // if (iBaseline == 0) {
-    //   cuFloatComplex thing1 = * g1xx;
-    //   cuFloatComplex thing2 = * g1xy;
-    //   cuFloatComplex thing3 = * g1yx;
-    //   cuFloatComplex thing4 = * g1yy;
-    //   printf("Yup %d %.10f %.10f %.10f %.10f %.10f %.10f %.10f %.10f\n",iComponent,thing1.x, thing1.y,thing2.x, thing2.y,thing3.x, thing3.y,thing4.x, thing4.y );
-    // }
-
   }
 
-  //No beam at all you be cray-cray
   else {
     * g1xx = make_cuComplex(1.0, 0.0);
     * g2xx = make_cuComplex(1.0, 0.0);
@@ -360,13 +355,13 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
     * g2yx = make_cuComplex(0.0, 0.0);
   }
 
-
-}
+} //end __device__ get_beam_gains
 
 __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
            int num_baselines, int num_components, int num_times, int beamtype,
            float *d_gauss_beam_reals, float *d_gauss_beam_imags,
            cuFloatComplex *d_FEE_beam_gain_matrices,
+           cuFloatComplex *d_analy_beam_X, cuFloatComplex *d_analy_beam_Y,
            cuFloatComplex visi,
            float flux_I, float flux_Q, float flux_U, float flux_V,
            float *d_sum_visi_XX_real, float *d_sum_visi_XX_imag,
@@ -386,6 +381,7 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
     get_beam_gains(iBaseline, iComponent, num_freqs,
                num_baselines, num_components, num_times, beamtype,
                d_gauss_beam_reals, d_gauss_beam_imags,
+               d_analy_beam_X, d_analy_beam_Y,
                d_FEE_beam_gain_matrices,
                &g1xx, &g1xy, &g1yx, &g1yy, &g2xx, &g2xy, &g2yx, &g2yy);
 
@@ -425,7 +421,8 @@ __global__ void kern_calc_visi_point(float *d_point_ras, float *d_point_decs,
            int num_points, int num_baselines, int num_freqs, int num_visis,
            int num_times,
            float *d_gauss_beam_reals, float *d_gauss_beam_imags, int beamtype,
-           cuFloatComplex *d_FEE_beam_gain_matrices) {
+           cuFloatComplex *d_FEE_beam_gain_matrices,
+           cuFloatComplex *d_analy_beam_X, cuFloatComplex *d_analy_beam_Y) {
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
@@ -465,7 +462,9 @@ __global__ void kern_calc_visi_point(float *d_point_ras, float *d_point_decs,
     update_sum_visis(iBaseline, iComponent, num_freqs,
            num_baselines, num_points, num_times, beamtype,
            d_gauss_beam_reals, d_gauss_beam_imags,
-           d_FEE_beam_gain_matrices, visi,
+           d_FEE_beam_gain_matrices,
+           d_analy_beam_X, d_analy_beam_Y,
+           visi,
            point_flux_I, point_flux_Q, point_flux_U, point_flux_V,
            d_sum_visi_XX_real, d_sum_visi_XX_imag,
            d_sum_visi_XY_real, d_sum_visi_XY_imag,
@@ -530,10 +529,15 @@ __global__ void kern_calc_visi_gaussian(float *d_gauss_ras, float *d_gauss_decs,
 
     visi = cuCmulf(visi, V_envelop);
 
+    cuFloatComplex *d_analy_beam_X;
+    cuFloatComplex *d_analy_beam_Y;
+
     update_sum_visis(iBaseline, iComponent, num_freqs,
            num_baselines, num_gauss, num_times, beamtype,
            d_gauss_beam_reals, d_gauss_beam_imags,
-           d_FEE_beam_gain_matrices, visi,
+           d_FEE_beam_gain_matrices,
+           d_analy_beam_X, d_analy_beam_Y,
+           visi,
            gauss_flux_I, gauss_flux_Q, gauss_flux_U, gauss_flux_V,
            d_sum_visi_XX_real, d_sum_visi_XX_imag,
            d_sum_visi_XY_real, d_sum_visi_XY_imag,
@@ -645,64 +649,20 @@ __global__ void kern_calc_visi_shapelets(float *d_shape_ras,
 
     visi = cuCmulf(visi, V_envelop);
 
+    cuFloatComplex *d_analy_beam_X;
+    cuFloatComplex *d_analy_beam_Y;
+
     update_sum_visis(iBaseline, iComponent, num_freqs,
            num_baselines, num_shapes, num_times, beamtype,
            d_gauss_beam_reals, d_gauss_beam_imags,
-           d_FEE_beam_gain_matrices, visi,
+           d_FEE_beam_gain_matrices,
+           d_analy_beam_X, d_analy_beam_Y,
+           visi,
            shape_flux_I, shape_flux_Q, shape_flux_U, shape_flux_V,
            d_sum_visi_XX_real, d_sum_visi_XX_imag,
            d_sum_visi_XY_real, d_sum_visi_XY_imag,
            d_sum_visi_YX_real, d_sum_visi_YX_imag,
            d_sum_visi_YY_real, d_sum_visi_YY_imag);
-
-    // float beam_real;
-    // float beam_imag;
-    //
-    // int beam_ind = 0.0;
-    // int time_ind = 0.0;
-    // int freq_ind = 0.0;
-    //
-    // if (beamtype == GAUSS_BEAM) {
-    //   //Do some epic indexing to work out which beam value
-    //   time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
-    //   freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
-    //   beam_ind = num_freqs*time_ind*num_shapes + (num_shapes*freq_ind) + param_index;
-    //
-    //   beam_real = d_gauss_beam_reals[beam_ind];
-    //   beam_imag = d_gauss_beam_imags[beam_ind];
-    //
-    // }
-    //
-    // else if (beamtype == FEE_BEAM) {
-    //   time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
-    //   beam_ind = param_index*num_times + time_ind;
-    //
-    //   beam_real = d_gauss_beam_reals[beam_ind];
-    //   beam_imag = d_gauss_beam_imags[beam_ind];
-    //
-    //   // if (iBaseline == 0 || iBaseline == 812) {
-    //   // if (iBaseline == 0) {
-    //   //   printf("WHAT IS BEAM %d %d %d %d %d %.5f %.5f\n",iComponent,iBaseline,param_index,time_ind,beam_ind, beam_real,beam_imag );
-    //   // }
-    //
-    // }
-    //
-    // else {
-    //   beam_real = 1.0;
-    //   beam_imag = 0.0;
-    // }
-    //
-    // cuFloatComplex beam_complex = make_cuFloatComplex(beam_real,beam_imag);
-    //
-    // // if (iBaseline == 0) {
-    // // // if (beam_real > 1.0) {
-    // //   printf("%d %d %d %d %d %.5f %.5f %.5f %.5f %.5f\n",iComponent,iBaseline,param_index,time_ind,beam_ind, beam_real,beam_imag,visi.x,visi.y,shape_flux );
-    // // }
-    //
-    // visi = cuCmulf(visi, beam_complex);
-    //
-    // atomicAdd(&d_sum_visi_real[iBaseline],visi.x * shape_flux);
-    // atomicAdd(&d_sum_visi_imag[iBaseline],visi.y * shape_flux);
 
   }
 

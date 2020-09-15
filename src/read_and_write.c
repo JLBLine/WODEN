@@ -472,6 +472,7 @@ woden_settings_t * read_json_settings(const char *filename){
   struct json_object *FEE_beam;
   struct json_object *hdf5_beam_path;
   struct json_object *jd_date;
+  struct json_object *EDA2_sim;
 
 	fp = fopen(filename,"r");
 	fread(buffer, 1024, 1, fp);
@@ -502,6 +503,8 @@ woden_settings_t * read_json_settings(const char *filename){
 
   json_object_object_get_ex(parsed_json, "jd_date", &jd_date);
 
+  json_object_object_get_ex(parsed_json, "EDA2_sim", &EDA2_sim);
+
   woden_settings_t * woden_settings;
   // woden_settings = NULL;
   woden_settings = malloc( sizeof(woden_settings_t) );
@@ -528,6 +531,10 @@ woden_settings_t * read_json_settings(const char *filename){
 
   //Boolean whether to use gaussian primary beam
   int fee_beam = json_object_get_boolean(FEE_beam);
+
+  //Boolean whether this is an EDA2 simulation or not; changes the way the
+  //array layout is read from the metafits file
+  woden_settings->EDA2_sim = json_object_get_boolean(EDA2_sim);
 
   if (gauss_beam) {
     woden_settings->beamtype = GAUSS_BEAM;
@@ -560,6 +567,10 @@ woden_settings_t * read_json_settings(const char *filename){
 
   else if (fee_beam){
     woden_settings->beamtype = FEE_BEAM;
+  }
+
+  else if (EDA2_sim){
+    woden_settings->beamtype = ANALY_DIPOLE;
   }
 
   else {
@@ -596,7 +607,7 @@ woden_settings_t * read_json_settings(const char *filename){
 // All credit to the original authors
 // https://github.com/ICRAR/mwa-RTS.git
 **********************************/
-int RTS_init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
+int RTS_init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, woden_settings_t *woden_settings){
     int status=0;
     int ncols, anynulls, colnum, nfound, i;
     long naxes[2], nrows, frow, felem;
@@ -746,11 +757,16 @@ int RTS_init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome)
       delay_ind += 1;
   	}
 
+    //Set the number of stations
+    if (woden_settings->EDA2_sim == 1) {
+      // metafits->num_tiles = metafits->num_tiles;
+      metafits->num_tiles = metafits->num_tiles - 1;
+    } else {
+      //NINPUTS has both XX and YY inputs into correlator so divide by 2 to
+      //get the number of tiles when running MWA simulation
+      metafits->num_tiles = metafits->num_tiles / 2;
+    }
 
-
-    //NINPUTS has both XX and YY inputs into correlator so divide by 2 to
-    //get the number of tiles
-    metafits->num_tiles = metafits->num_tiles / 2;
     metafits->lst_base *= DD2R;
     metafits->ra_point *= DD2R;
     metafits->dec_point *= DD2R;
@@ -972,18 +988,35 @@ array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits, int num_tiles,
   array_layout->ant_X = malloc( array_layout->num_tiles * sizeof(float) );
   array_layout->ant_Y = malloc( array_layout->num_tiles * sizeof(float) );
   array_layout->ant_Z = malloc( array_layout->num_tiles * sizeof(float) );
-  //
-  for (int i = 0; i < array_layout->num_tiles; i++) {
-    //Metafits e,n,h goes XX,YY,XX,YY so need to choose every other value
-    array_layout->ant_east[i] = metafits->E[i*2];
-    array_layout->ant_north[i] = metafits->N[i*2];
-    array_layout->ant_height[i] = metafits->H[i*2];
 
-    //Convert to local X,Y,Z
-    ENH2XYZ_local(array_layout->ant_east[i], array_layout->ant_north[i], array_layout->ant_height[i],
-                  array_layout->latitude,
-                  &(array_layout->ant_X[i]), &(array_layout->ant_Y[i]), &(array_layout->ant_Z[i]));
 
+  if (woden_settings->EDA2_sim) {
+    for (int i = 0; i < array_layout->num_tiles; i++) {
+      //We are using a hacked metafits file so use all E,N,H values
+      array_layout->ant_east[i] = metafits->E[i];
+      array_layout->ant_north[i] = metafits->N[i];
+      array_layout->ant_height[i] = metafits->H[i];
+
+      //Convert to local X,Y,Z
+      ENH2XYZ_local(array_layout->ant_east[i], array_layout->ant_north[i], array_layout->ant_height[i],
+                    array_layout->latitude,
+                    &(array_layout->ant_X[i]), &(array_layout->ant_Y[i]), &(array_layout->ant_Z[i]));
+    }
+
+  } else {
+
+    for (int i = 0; i < array_layout->num_tiles; i++) {
+      //Metafits e,n,h goes XX,YY,XX,YY so need to choose every other value
+      array_layout->ant_east[i] = metafits->E[i*2];
+      array_layout->ant_north[i] = metafits->N[i*2];
+      array_layout->ant_height[i] = metafits->H[i*2];
+
+      //Convert to local X,Y,Z
+      ENH2XYZ_local(array_layout->ant_east[i], array_layout->ant_north[i], array_layout->ant_height[i],
+                    array_layout->latitude,
+                    &(array_layout->ant_X[i]), &(array_layout->ant_Y[i]), &(array_layout->ant_Z[i]));
+
+    }
   }
 
   //TODO when we implement non-phase track mode, make this a variable
