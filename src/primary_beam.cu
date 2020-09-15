@@ -268,13 +268,9 @@ __global__ void kern_analytic_dipole_beam(float *d_azs, float *d_zas,
   // components on other axis?
   if (iFreq < num_freqs && iCoord < num_components * num_times) {
 
-    //The l,m coords for the beam locations are for every component, every time
-    //step in a 1D array. We are calculating over frequency as well and then
-    //putting results into d_gauss_beam_reals, d_gauss_beam_imags, so have to do some
-    //fun index maths to work out what time / component / freq we are on,
-    //and where to put the output
-    int time_ind = (int)floorf((float)iCoord / (float)num_components);
-    int component = iCoord - time_ind*num_components;
+    int component = (int)floorf((float)iCoord / (float)num_times);
+    int time_ind = iCoord - component*num_times;
+
     int beam_ind = num_freqs*time_ind*num_components + (num_components*iFreq) + component;
 
     cuFloatComplex d_beam_X, d_beam_Y;
@@ -287,14 +283,20 @@ __global__ void kern_analytic_dipole_beam(float *d_azs, float *d_zas,
     analytic_dipole(0.0, 0.0, wavelength,
                &d_beam_norm_X, &d_beam_norm_Y);
 
-    // if (iCoord % num_components == 0) {
-    //   // printf("%d %d %.5f %.5f %.5f %.5f %.5f %.5f %.1f %.4f\n",iCoord,iFreq,d_azs[iCoord], d_zas[iCoord],d_beam_X.x,d_beam_X.y, d_beam_norm_X.x,d_beam_norm_X.y, d_freqs[iFreq],wavelength );
-    //
-    //   printf("%d %d %.5f %.5f %.1f \n",iCoord, iFreq, d_azs[iCoord], d_zas[iCoord], d_freqs[iFreq]);
-    // }
-
     d_analy_beam_X[beam_ind] = cuCdivf(d_beam_X, d_beam_norm_X);
     d_analy_beam_Y[beam_ind] = cuCdivf(d_beam_Y, d_beam_norm_Y);
+
+    // cuFloatComplex normed_X;
+    //
+    // normed_X = cuCdivf(d_beam_X, d_beam_norm_X);
+    //
+    // if (d_zas[iCoord] > 89 * (M_PI / 180.0)) {
+    //   printf("%d %d %.5f %.5f %.5f %.5f\n",iCoord,iFreq,d_azs[iCoord]*(180.0 / M_PI),
+    //                                      d_zas[iCoord]*(180.0 / M_PI),normed_X.x,normed_X.y );
+    // }
+
+    // d_analy_beam_X[beam_ind] = d_beam_X;
+    // d_analy_beam_Y[beam_ind] = d_beam_Y;
 
     // printf("%f %f %f %f %f\n",std, fwhm_lm, FWHM_FACTOR, ref_freq[0] , d_freqs[iFreq] );
 
@@ -318,8 +320,6 @@ extern "C" void calculate_analytic_dipole_beam(int num_components,
   float *d_zas = NULL;
   cudaMalloc( (void**)&d_zas, num_beam_azza*sizeof(float) );
   cudaMemcpy(d_zas, zas, num_beam_azza*sizeof(float), cudaMemcpyHostToDevice );
-
-  printf("MADE IT HERE %.5f %.5f\n",azs[0],zas[0]);
 
   dim3 grid, threads;
   threads.x = 128;
@@ -371,8 +371,8 @@ extern "C" void test_analytic_dipole_beam(int num_components,
       azs, zas, d_freqs,
       (cuFloatComplex *)d_analy_beam_X, (cuFloatComplex *)d_analy_beam_Y);
 
-  cudaMemcpy(analy_beam_X, d_analy_beam_X, num_time_steps*num_components*sizeof(float _Complex), cudaMemcpyDeviceToHost );
-  cudaMemcpy(analy_beam_Y, d_analy_beam_Y, num_time_steps*num_components*sizeof(float _Complex), cudaMemcpyDeviceToHost );
+  cudaMemcpy(analy_beam_X, d_analy_beam_X, num_freqs*num_time_steps*num_components*sizeof(float _Complex), cudaMemcpyDeviceToHost );
+  cudaMemcpy(analy_beam_Y, d_analy_beam_Y, num_freqs*num_time_steps*num_components*sizeof(float _Complex), cudaMemcpyDeviceToHost );
 
   cudaFree(analy_beam_X);
   cudaFree(analy_beam_Y);

@@ -242,8 +242,8 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
       cudaMalloc( (void**)&d_gauss_beam_reals, sizeof(float) );
       cudaMalloc( (void**)&d_gauss_beam_imags, sizeof(float) );
 
-      cudaMalloc( (void**)&d_analy_beam_X, num_time_steps*num_points*sizeof(cuFloatComplex) );
-      cudaMalloc( (void**)&d_analy_beam_Y, num_time_steps*num_points*sizeof(cuFloatComplex) );
+      cudaMalloc( (void**)&d_analy_beam_X, num_time_steps*num_points*num_freqs*sizeof(cuFloatComplex) );
+      cudaMalloc( (void**)&d_analy_beam_Y, num_time_steps*num_points*num_freqs*sizeof(cuFloatComplex) );
 
       calculate_analytic_dipole_beam(num_points, num_time_steps, num_freqs,
            catsource.point_azs, catsource.point_zas, d_freqs,
@@ -297,8 +297,10 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
     cudaFree( d_point_decs);
     cudaFree( d_point_ras);
 
-    cudaFree( d_analy_beam_X );
-    cudaFree( d_analy_beam_Y );
+    if (beam_settings.beamtype == ANALY_DIPOLE) {
+      cudaFree( d_analy_beam_X );
+      cudaFree( d_analy_beam_Y );
+    }
 
   }//if point sources
 
