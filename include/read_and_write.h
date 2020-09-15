@@ -6,7 +6,7 @@
 #pragma once
 
 enum component_type {POINT=0, GAUSSIAN, SHAPELET, SHAPELET2};
-typedef enum {NO_BEAM, GAUSS_BEAM, FEE_BEAM}e_beamtype;
+typedef enum {NO_BEAM, GAUSS_BEAM, FEE_BEAM, ANALY_DIPOLE}e_beamtype;
 
 #define CS_LEN_SRC_NAME 16
 #define SRC_KEY         "SOURCE"
@@ -142,6 +142,7 @@ typedef struct _woden_settngs_t {
   int chunking_size;
   char* hdf5_beam_path;
   double jd_date;
+  int EDA2_sim;
 
 } woden_settings_t;
 
@@ -195,7 +196,7 @@ source_catalogue_t * read_source_catalogue(const char *filename);
 
 woden_settings_t * read_json_settings(const char *filename);
 
-int RTS_init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome);
+int RTS_init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, woden_settings_t *woden_settings);
 
 array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits, int num_tiles,
                                 woden_settings_t *woden_settings);

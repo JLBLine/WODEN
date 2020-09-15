@@ -132,7 +132,7 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   float cos_theta = 1.0;
   float sin_theta = 0.0;
   float sin_2theta = 0.0;
-  float fwhm_lm = 20.0 * D2R;
+  float fwhm_lm; //= 20.0 * D2R;
 
   float *d_beam_ref_freq = NULL;
   if (beam_settings.beamtype == GAUSS_BEAM) {
@@ -140,12 +140,15 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
     cudaMalloc( (void**)&d_beam_ref_freq, sizeof(float) );
     cudaMemcpy( d_beam_ref_freq, beam_settings.beam_ref_freq_array, sizeof(float), cudaMemcpyHostToDevice );
 
-    float fwhm_lm = sinf(beam_settings.beam_FWHM_rad);
+    fwhm_lm = sinf(beam_settings.beam_FWHM_rad);
 
   }
 
   float *d_gauss_beam_reals = NULL;
   float *d_gauss_beam_imags = NULL;
+
+  cuFloatComplex *d_analy_beam_X = NULL;
+  cuFloatComplex *d_analy_beam_Y = NULL;
 
   if (num_points > 0) {
     printf("\tDoing point components\n");
@@ -233,6 +236,22 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
       // printf("calculate_visibilities error 2: %s\n", cudaGetErrorString( cudaGetLastError() ) );
     }
 
+    if (beam_settings.beamtype == ANALY_DIPOLE) {
+      printf("\tTrying to do analytic_dipole\n");
+
+      cudaMalloc( (void**)&d_gauss_beam_reals, sizeof(float) );
+      cudaMalloc( (void**)&d_gauss_beam_imags, sizeof(float) );
+
+      cudaMalloc( (void**)&d_analy_beam_X, num_time_steps*num_points*sizeof(cuFloatComplex) );
+      cudaMalloc( (void**)&d_analy_beam_Y, num_time_steps*num_points*sizeof(cuFloatComplex) );
+
+      calculate_analytic_dipole_beam(num_points, num_time_steps, num_freqs,
+           catsource.point_azs, catsource.point_zas, d_freqs,
+           d_analy_beam_X, d_analy_beam_Y);
+
+      // printf("calculate_visibilities error 2: %s\n", cudaGetErrorString( cudaGetLastError() ) );
+    }
+
     if (num_points == 1) {
       threads.x = 128;
       threads.y = 1;
@@ -259,7 +278,8 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
             num_points, num_baselines, num_freqs, num_visis,
             num_time_steps,
             d_gauss_beam_reals, d_gauss_beam_imags,  beam_settings.beamtype,
-            (cuFloatComplex *)beam_settings.FEE_beam->d_FEE_beam_gain_matrices);
+            (cuFloatComplex *)beam_settings.FEE_beam->d_FEE_beam_gain_matrices,
+            d_analy_beam_X, d_analy_beam_Y);
 
     cudaFree( beam_settings.FEE_beam->d_FEE_beam_gain_matrices);
     cudaFree( d_gauss_beam_imags);
@@ -276,6 +296,9 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
     cudaFree( d_point_SIs );
     cudaFree( d_point_decs);
     cudaFree( d_point_ras);
+
+    cudaFree( d_analy_beam_X );
+    cudaFree( d_analy_beam_Y );
 
   }//if point sources
 
