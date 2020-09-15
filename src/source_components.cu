@@ -342,6 +342,7 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
     //         printf("%d %.5f %.5f %.5f %.5f\n",iComponent,thing1.x,thing2.x,thing3.x,thing4.x );
     //   }
     // }
+
   }
 
   else {
@@ -529,8 +530,8 @@ __global__ void kern_calc_visi_gaussian(float *d_gauss_ras, float *d_gauss_decs,
 
     visi = cuCmulf(visi, V_envelop);
 
-    cuFloatComplex *d_analy_beam_X;
-    cuFloatComplex *d_analy_beam_Y;
+    cuFloatComplex *d_analy_beam_X = NULL;
+    cuFloatComplex *d_analy_beam_Y = NULL;
 
     update_sum_visis(iBaseline, iComponent, num_freqs,
            num_baselines, num_gauss, num_times, beamtype,
@@ -649,8 +650,8 @@ __global__ void kern_calc_visi_shapelets(float *d_shape_ras,
 
     visi = cuCmulf(visi, V_envelop);
 
-    cuFloatComplex *d_analy_beam_X;
-    cuFloatComplex *d_analy_beam_Y;
+    cuFloatComplex *d_analy_beam_X = NULL;
+    cuFloatComplex *d_analy_beam_Y = NULL;
 
     update_sum_visis(iBaseline, iComponent, num_freqs,
            num_baselines, num_shapes, num_times, beamtype,
