@@ -243,8 +243,12 @@ __device__ void analytic_dipole(float az, float za, float wavelength,
   cuFloatComplex tempX;
   cuFloatComplex tempY;
 
-  tempX.x = voltage_parallel_X*voltage_parallel_X;
-  tempY.x = voltage_parallel_Y*voltage_parallel_Y;
+  // tempX.x = voltage_parallel_X*voltage_parallel_X;
+  // tempY.x = voltage_parallel_Y*voltage_parallel_Y;
+
+  tempX.x = voltage_parallel_X;
+  tempY.x = voltage_parallel_Y;
+
 
   // printf("%.5f %.5f %.5f %.5f %.5f\n",az,za,wavelength,tempX.x,tempY.x );
 
