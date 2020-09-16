@@ -287,13 +287,17 @@ __global__ void kern_analytic_dipole_beam(float *d_azs, float *d_zas,
     analytic_dipole(0.0, 0.0, wavelength,
                &d_beam_norm_X, &d_beam_norm_Y);
 
-    d_analy_beam_X[beam_ind] = cuCdivf(d_beam_X, d_beam_norm_X);
-    d_analy_beam_Y[beam_ind] = cuCdivf(d_beam_Y, d_beam_norm_Y);
+    // d_analy_beam_X[beam_ind] = cuCdivf(d_beam_X, d_beam_norm_X);
+    // d_analy_beam_Y[beam_ind] = cuCdivf(d_beam_Y, d_beam_norm_Y);
 
-    // cuFloatComplex normed_X;
-    //
-    // normed_X = cuCdivf(d_beam_X, d_beam_norm_X);
-    //
+    cuFloatComplex normed_X = d_beam_X;
+    cuFloatComplex normed_Y = d_beam_Y;
+    normed_X.x = normed_X.x / d_beam_norm_X.x;
+    normed_Y.x = normed_Y.x / d_beam_norm_Y.x;
+
+    d_analy_beam_X[beam_ind] = normed_X;
+    d_analy_beam_Y[beam_ind] = normed_Y;
+
     // if (d_zas[iCoord] > 89 * (M_PI / 180.0)) {
     //   printf("%d %d %.5f %.5f %.5f %.5f\n",iCoord,iFreq,d_azs[iCoord]*(180.0 / M_PI),
     //                                      d_zas[iCoord]*(180.0 / M_PI),normed_X.x,normed_X.y );
