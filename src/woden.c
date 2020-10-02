@@ -97,7 +97,6 @@ int main(int argc, char **argv) {
 
     //TODO add half a time step is good? Add time decorrelation?
     lst += 0.5*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
-    // lst -= 20.0*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
     lsts[time_step] = lst;
   }
 
