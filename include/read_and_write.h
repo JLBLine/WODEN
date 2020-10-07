@@ -143,6 +143,8 @@ typedef struct _woden_settngs_t {
   char* hdf5_beam_path;
   double jd_date;
   int EDA2_sim;
+  int array_layout_file;
+  char* array_layout_file_path;
 
 } woden_settings_t;
 
@@ -198,7 +200,7 @@ woden_settings_t * read_json_settings(const char *filename);
 
 int RTS_init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, woden_settings_t *woden_settings);
 
-array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits, int num_tiles,
+array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits,
                                 woden_settings_t *woden_settings);
 
 typedef struct _beam_settings_t {

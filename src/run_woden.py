@@ -42,10 +42,23 @@ def calc_jdcal(date):
 def RTS_encode_baseline(b1, b2):
     '''The ancient aips/miriad extended way of encoding a baseline.
     Needed for populating the uvfits file'''
-    # if b2 > 255:
-    #     return b1*2048 + b2 + 65536
-    # else:
-    return b1*256 + b2
+    if b2 > 255:
+        return b1*2048 + b2 + 65536
+    else:
+        return b1*256 + b2
+
+def RTS_decode_baseline(blcode):
+    blcode = int(blcode)
+
+    if blcode > 65536:
+        blcode -= 65536
+        b2 = int(blcode % 2048)
+        b1 = int((blcode - b2) / 2048)
+    else:
+        b2 = int(blcode % 256)
+        b1 = int((blcode - b2) / 256)
+
+    return b1,b2
 
 
 def make_antenna_table(XYZ_array=None,telescope_name=None,num_antennas=None,
@@ -157,14 +170,14 @@ def create_uvfits(v_container=None,freq_cent=None, ra_point=None, dec_point=None
     uvhdu.header['PZERO4'] = 0.0
     uvhdu.header['PSCAL5'] = 1.0
 
-    int_jd, float_jd = calc_jdcal(initial_date)
+    int_jd, float_jd = calc_jdcal(date)
     uvhdu.header['PZERO5'] = float(int_jd)
 
     ##Old observation parameters that were/are needed in CHIPS
     uvhdu.header['OBJECT']  = 'Undefined'
     uvhdu.header['OBSRA']   = ra_point
     uvhdu.header['OBSDEC']  = dec_point
-    uvhdu.header['TELESCOP'] = 'MWA'
+    # uvhdu.header['TELESCOP'] = 'MWA'
 
     ##Add in the gitlabel so we know what version generated the file
     if gitlabel: uvhdu.header['GITLABEL'] = gitlabel
@@ -257,57 +270,46 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
 
     return uus, vvs, wws, v_container
 
-def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
-               cat_filename=None,metafits_filename=None,band_nums=None,
-               json_name=None,freq_res=None,time_res=None,
-               sky_crop_components=False, use_gaussian_beam=False,
-               gauss_beam_FWHM=False, gauss_beam_ref_freq=False,
-               chunking_size=None, use_FEE_beam=False, hdf5_beam_path=False,
-               jd_date=False,EDA2_sim=False):
+def write_json(num_time_steps=None, num_freqs=None,
+               band_nums=None, json_name=None, freq_res=None,
+               time_res=None, jd_date=None, args=None):
     '''Populate a json parameter file used to run WODEN'''
 
     outfile = open(json_name,'w+')
 
     outfile.write('{\n')
-    outfile.write('  "ra0": %.10f,\n' %ra0)
-    outfile.write('  "dec0": %.10f,\n' %dec0)
+    outfile.write('  "ra0": %.10f,\n' %args.ra0)
+    outfile.write('  "dec0": %.10f,\n' %args.dec0)
     outfile.write('  "num_freqs": %d,\n' %num_freqs)
     outfile.write('  "num_time_steps": %d,\n' %num_time_steps)
-    outfile.write('  "cat_filename": "%s",\n' %cat_filename)
-    outfile.write('  "metafits_filename": "%s",\n' %metafits_filename)
+    outfile.write('  "cat_filename": "%s",\n' %args.cat_filename)
+    outfile.write('  "metafits_filename": "%s",\n' %args.metafits_filename)
     outfile.write('  "time_res": %.5f,\n' %time_res)
     outfile.write('  "frequency_resolution": %.3f,\n' %freq_res)
-    outfile.write('  "chunking_size": %d,\n' %chunking_size)
+    outfile.write('  "chunking_size": %d,\n' %args.chunking_size)
     outfile.write('  "jd_date": %.16f,\n' %jd_date)
 
-    if sky_crop_components:
+    if args.sky_crop_components:
         outfile.write('  "sky_crop_components": True,\n')
-    else:
-        pass
 
-    if use_gaussian_beam:
+    if args.use_gaussian_beam:
         outfile.write('  "use_gaussian_beam": True,\n')
-    else:
-        pass
 
-    if gauss_beam_FWHM:
+    if args.gauss_beam_FWHM:
         outfile.write('  "gauss_beam_FWHM": %.10f,\n' %float(gauss_beam_FWHM))
-    else:
-        pass
 
-    if use_gaussian_beam:
+    if args.use_gaussian_beam:
         outfile.write('  "gauss_beam_ref_freq": %.10f,\n' %float(gauss_beam_ref_freq))
-    else:
-        pass
 
-    if use_FEE_beam:
+    if args.use_FEE_beam:
         outfile.write('  "use_FEE_beam": True,\n')
-        outfile.write('  "hdf5_beam_path": "%s",\n' %hdf5_beam_path)
-    else:
-        pass
+        outfile.write('  "hdf5_beam_path": "%s",\n' %args.hdf5_beam_path)
 
-    if EDA2_sim:
+    if args.EDA2_sim:
         outfile.write('  "EDA2_sim": True,\n')
+
+    if args.array_layout:
+        outfile.write('  "array_layout": "%s",\n' %args.array_layout)
 
     if len(band_nums) == 1:
         band_str = '[%d]' %band_nums[0]
@@ -422,7 +424,6 @@ if __name__ == "__main__":
         help='Use the FEE MWA beam model, based on the settings in the metafits file')
     parser.add_argument('--hdf5_beam_path', default='/home/jline/software/useful/MWA_embedded_element_pattern_V02.h5',
         help='Location of the hdf5 file holding the FEE beam coefficients')
-
     parser.add_argument('--chunking_size', type=int, default=0, help='The chunk size to break up the point sources into for processing - defaults to 0 (do not perform chunking)')
 
     parser.add_argument('--EDA2_sim', default=False, action='store_true',
@@ -430,6 +431,10 @@ if __name__ == "__main__":
 
     parser.add_argument('--telescope_name', default='MWA',
         help='Name of telescope written out to the uvfits file, defaults to MWA')
+
+    parser.add_argument('--array_layout', default=False,
+        help='Instead of reading the array layout from the metafits file, read from a text file. \
+              Store antenna positions as offset from array centre, in east, north, height coords (metres)')
 
     args = parser.parse_args()
 
@@ -496,18 +501,9 @@ if __name__ == "__main__":
 
     ##Write json file
     json_name = 'run_woden_%s.json' %args.band_nums
-    write_json(ra0=args.ra0,dec0=args.dec0, num_freqs=num_freq_channels,
-               num_time_steps=num_time_steps, cat_filename=args.cat_filename,
-               metafits_filename=args.metafits_filename, band_nums=band_nums,
-               json_name=json_name, freq_res=ch_width, time_res=time_res,
-               sky_crop_components=args.sky_crop_components,
-               use_gaussian_beam=args.use_gaussian_beam,
-               gauss_beam_FWHM=args.gauss_beam_FWHM,
-               gauss_beam_ref_freq=args.gauss_beam_ref_freq,
-               chunking_size=args.chunking_size,
-               use_FEE_beam=args.use_FEE_beam,
-               hdf5_beam_path=args.hdf5_beam_path,
-               jd_date=jd_date,EDA2_sim=args.EDA2_sim)
+    write_json(num_time_steps=num_time_steps, num_freqs=num_freq_channels,
+               band_nums=band_nums, json_name=json_name, freq_res=ch_width,
+               time_res=time_res, jd_date=jd_date, args=args)
 
     ##Check the uvfits prepend to make sure we end in .uvfits
     output_uvfits_prepend = args.output_uvfits_prepend
@@ -518,28 +514,56 @@ if __name__ == "__main__":
     else:
         command('%s/woden %s' %(WODEN_DIR,json_name))
 
-    if args.EDA2_sim:
-        ##If doing EDA2, we have 256 stations, so select them all but one
-        selection = arange(len(east) - 1)
+    # if args.EDA2_sim:
+    #     ##If doing EDA2, we have 256 stations, so select them all but one
+    #     selection = arange(len(east) - 1)
+    # else:
+    #
+    #
+    # ##TODO if we work out a different way to input east,north,height layout
+    # ##this will need to change
+    # num_antennas = int(len(selection))
+    #
+    # ##Prepare the uvfits information
+    # ##Create and fill a layout array
+    # array_layout = zeros((num_antennas,3))
+    # ##Tiles are listed as YY,XX,YY,XX,etc so only use half positions
+    #
+    # array_layout[:,0] = east[selection]
+    # array_layout[:,1] = north[selection]
+    # array_layout[:,2] = height[selection]
+
+
+    if args.array_layout:
+        try:
+            array_layout = loadtxt(args.array_layout)
+            num_antennas,_ = array_layout.shape
+
+            east = array_layout[:,0]
+            north = array_layout[:,1]
+            height = array_layout[:,2]
+
+        except:
+            exit("Could not open array layout file:\n%s\nexiting before woe beings")
+
     else:
         ##This is an MWA simulation, in the metafits it lists XX,YY for each
         ##antenna so we select every second one
         selection = arange(0,len(east),2)
+        num_antennas = int(len(selection))
 
-    ##TODO if we work out a different way to input east,north,height layout
-    ##this will need to change
-    num_antennas = int(len(selection))
+        east = east[selection]
+        north = north[selection]
+        height = height[selection]
 
-    ##Prepare the uvfits information
-    ##Create and fill a layout array
-    array_layout = zeros((num_antennas,3))
-    ##Tiles are listed as YY,XX,YY,XX,etc so only use half positions
+        array_layout = zeros((num_antennas,3))
 
-    array_layout[:,0] = east[selection]
-    array_layout[:,1] = north[selection]
-    array_layout[:,2] = height[selection]
+        array_layout[:,0] = east
+        array_layout[:,1] = north
+        array_layout[:,2] = height
 
-    X,Y,Z = enh2xyz(east[selection], north[selection],height[selection],MWA_LAT*D2R)
+
+    X,Y,Z = enh2xyz(east, north, height,MWA_LAT*D2R)
 
     ##Get the central frequency channels, used in the uvfits header
     central_freq_chan = int(floor(num_freq_channels / 2.0))
