@@ -994,9 +994,17 @@ array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits,
       exit(1);
     }
 
+    //gcc 7.5.0 on my desktop will not perform realloc later in the code
+    //unless I do an initial malloc here
+    array_layout->ant_east = malloc(sizeof(float));
+    array_layout->ant_north = malloc(sizeof(float));
+    array_layout->ant_height = malloc(sizeof(float));
+
     while(fgets(line,BUFSIZ,fp) != NULL) {
 
       num_tiles += 1;
+
+      printf("MADE IT HERE %d \n",num_tiles );
 
       array_layout->ant_east = realloc(array_layout->ant_east,sizeof(float)*num_tiles);
       array_layout->ant_north = realloc(array_layout->ant_north,sizeof(float)*num_tiles);

@@ -296,10 +296,10 @@ def write_json(num_time_steps=None, num_freqs=None,
         outfile.write('  "use_gaussian_beam": True,\n')
 
     if args.gauss_beam_FWHM:
-        outfile.write('  "gauss_beam_FWHM": %.10f,\n' %float(gauss_beam_FWHM))
+        outfile.write('  "gauss_beam_FWHM": %.10f,\n' %float(args.gauss_beam_FWHM))
 
     if args.use_gaussian_beam:
-        outfile.write('  "gauss_beam_ref_freq": %.10f,\n' %float(gauss_beam_ref_freq))
+        outfile.write('  "gauss_beam_ref_freq": %.10f,\n' %float(args.gauss_beam_ref_freq))
 
     if args.use_FEE_beam:
         outfile.write('  "use_FEE_beam": True,\n')
