@@ -12,6 +12,8 @@
 #include "constants.h"
 #include "chunk_source.h"
 #include "print_help.h"
+#include "primary_beam.h"
+#include "FEE_primary_beam.h"
 
 // #include "FEE_primary_beam_cuda.h"
 
@@ -54,13 +56,6 @@ int main(int argc, char **argv) {
   MetaFfile_t metafits;
   fits_open_file(&metaf_file, woden_settings->metafits_filename, READONLY, &status);
   status = RTS_init_meta_file(metaf_file, &metafits, woden_settings);
-
-  float *float_delays = NULL;
-  float_delays = malloc(16*sizeof(float));
-
-  for (size_t i = 0; i < 16; i++) {
-   float_delays[i] = metafits.FEE_ideal_delays[i];
-  }
 
   //Propagate some of the metafits data into woden_settings
   woden_settings->lst_base = metafits.lst_base;
@@ -110,112 +105,10 @@ int main(int argc, char **argv) {
 
   printf("Finished cropping and calculating az/za\n");
 
-
-  //TODO this beam setting up can be put in a function elsewhere
-
-  //Setup primary beam settings for observation
-  beam_settings_t beam_settings; //= malloc(sizeof(beam_settings_t));
-  //Angles used in calculating beam style l,m,ns
-  beam_settings.beam_angles_array = malloc(3*sizeof(float));
-  beam_settings.beam_angles_array[0] = sinf(metafits.dec_point);
-  beam_settings.beam_angles_array[1] = cosf(metafits.dec_point);
-  beam_settings.beam_angles_array[2] = woden_settings->lst_base - metafits.ra_point;
-
-  //Number of beam calculations needed for point components
-  beam_settings.num_point_beam_values = cropped_src->n_points * woden_settings->num_time_steps * woden_settings->num_freqs;
-  beam_settings.num_gausscomp_beam_values = cropped_src->n_gauss * woden_settings->num_time_steps * woden_settings->num_freqs;
-  beam_settings.num_shape_beam_values = cropped_src->n_shapes * woden_settings->num_time_steps * woden_settings->num_freqs;
-
-  //TODO pull the functionality of this GAUSS_BEAM loop into another file
-  //If using a gaussian primary beam, do gaussian beam things
-  if (woden_settings->beamtype == GAUSS_BEAM) {
-    beam_settings.beamtype = GAUSS_BEAM;
-
-    printf("Setting up Gaussian primary beam settings\n");
-    printf("   setting beam FWHM to %.5fdeg and ref freq to %.3fMHz\n",woden_settings->gauss_beam_FWHM,woden_settings->gauss_beam_ref_freq / 1e+6  );
-
-    //Set constants used in beam calculation
-    beam_settings.beam_FWHM_rad = woden_settings->gauss_beam_FWHM * D2R;
-    //TODO I cannot for the life of me work out how to cudaMalloc and Memcpy
-    //a single float (argh) so put the ref freq in an array (embarrassment)
-    float beam_ref_freq_array[1] = {woden_settings->gauss_beam_ref_freq};
-    beam_settings.beam_ref_freq_array = malloc(sizeof(float));
-    beam_settings.beam_ref_freq_array = beam_ref_freq_array;
-
-    //Store all ha (which change with lst) that the beam needs to be calculated at.
-    beam_settings.beam_point_has = malloc(woden_settings->num_time_steps * cropped_src->n_points * sizeof(float));
-    beam_settings.beam_point_decs = malloc(woden_settings->num_time_steps * cropped_src->n_points * sizeof(float));
-
-    beam_settings.beam_gausscomp_has = malloc(woden_settings->num_time_steps * cropped_src->n_gauss * sizeof(float));
-    beam_settings.beam_gausscomp_decs = malloc(woden_settings->num_time_steps * cropped_src->n_gauss * sizeof(float));
-
-    beam_settings.beam_shape_has = malloc(woden_settings->num_time_steps * cropped_src->n_shapes * sizeof(float));
-    beam_settings.beam_shape_decs = malloc(woden_settings->num_time_steps * cropped_src->n_shapes * sizeof(float));
-
-    //Loop over all time and point components and calculate ha
-    for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
-      for (int component = 0; component < cropped_src->n_points; component++) {
-        int step = cropped_src->n_points*time_step + component;
-
-        beam_settings.beam_point_has[step] = lsts[time_step] - cropped_src->point_ras[component];
-        beam_settings.beam_point_decs[step] = cropped_src->point_decs[component];
-
-        // printf("Original mothers step, ha %d %f \n",step,beam_settings.beam_point_has[step] );
-
-      }//point loop
-
-    //Loop over all time and gausscomp components and calculate ha
-      for (int component = 0; component < cropped_src->n_gauss; component++) {
-        int step = cropped_src->n_gauss*time_step + component;
-
-        beam_settings.beam_gausscomp_has[step] = lsts[time_step] - cropped_src->gauss_ras[component];
-        beam_settings.beam_gausscomp_decs[step] = cropped_src->gauss_decs[component];
-      }//gausscomp loop
-
-    //Loop over all time and shape components and calculate ha
-      for (int component = 0; component < cropped_src->n_shapes; component++) {
-        int step = cropped_src->n_shapes*time_step + component;
-
-        beam_settings.beam_shape_has[step] = lsts[time_step] - cropped_src->shape_ras[component];
-        beam_settings.beam_shape_decs[step] = cropped_src->shape_decs[component];
-      }//shape loop
-
-    }//gaussian beam time loop
-  } // End if (woden_settings->gaussian_beam)
-
-  else if (woden_settings->beamtype == FEE_BEAM) {
-    beam_settings.beamtype = FEE_BEAM;
-
-    //Get the parallactic angle of the zenith for every time step
-    //Need to rotate the FEE model which is stored in theta/phi pols by the
-    //parallactic angle to obtain XX/YY
-    //There are 4 normalisations to calculate, so need 4 times num time steps
-    beam_settings.para_cosrot = malloc(woden_settings->num_time_steps*MAX_POLS*sizeof(float));
-    beam_settings.para_sinrot = malloc(woden_settings->num_time_steps*MAX_POLS*sizeof(float));
-
-    double para_angle;
-    for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
-
-      float zenith_HA = 0.0;
-      para_angle = eraHd2pa((double)zenith_HA, (double)MWA_LAT_RAD, (double)MWA_LAT_RAD);
-
-      for (size_t pol_direction = 0; pol_direction < MAX_POLS; pol_direction++) {
-        beam_settings.para_cosrot[time_step*MAX_POLS + pol_direction] = cosf((float)para_angle + M_PI/2.0);
-        beam_settings.para_sinrot[time_step*MAX_POLS + pol_direction] = sinf((float)para_angle + M_PI/2.0);
-      }
-      // printf("PARA ANGLEEEEE %.10f %.10f %.10f\n",para_angle,cosf((float)para_angle + M_PI/2.0),sinf((float)para_angle + M_PI/2.0) );
-    }
-
-    calc_para_angle(cropped_src, lsts, num_time_steps);
-  }
-
-  else if (woden_settings->beamtype == ANALY_DIPOLE) {
-    beam_settings.beamtype = ANALY_DIPOLE;
-  }
-
-  else {
-    printf("BEAM TYPE %d\n",(int)woden_settings->beamtype );
-  }
+  //Setup some beam settings given user chose parameters
+  beam_settings_t beam_settings;
+  beam_settings = fill_primary_beam_settings(woden_settings, metafits,
+                                             cropped_src, lsts, num_time_steps);
 
   //TODO allow this frequency resolution to over-written by user commands
   //MWA correlator data is split into 24 'coarse' bands of 1.28MHz bandwidth,
@@ -231,16 +124,16 @@ int main(int argc, char **argv) {
     //TODO - add half a freq resolution in here? minus? Leave as is?
     // base_band_freq += woden_settings->frequency_resolution/2.0;
 
-    beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
-    //We need the zenith beam to get the normalisation
-    beam_settings.FEE_beam_zenith = malloc(sizeof(copy_primary_beam_t));
-
     if (woden_settings->beamtype == FEE_BEAM){
+      float base_middle_freq = base_band_freq + metafits.bandwidth/48.0;
+      // setup_FEE_beam(woden_settings, metafits, beam_settings, base_middle_freq);
 
       //Just use one single tile beam for all for now - will need a certain
       //number in the future to include dipole flagging
       int st = 0;
-      float base_middle_freq = base_band_freq + metafits.bandwidth/48.0;
+      beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
+      //We need the zenith beam to get the normalisation
+      beam_settings.FEE_beam_zenith = malloc(sizeof(copy_primary_beam_t));
 
       printf("Middle freq is %f\n",base_middle_freq );
 
@@ -255,6 +148,12 @@ int main(int argc, char **argv) {
       get_HDFBeam_normalisation(beam_settings, woden_settings->num_time_steps);
       printf(" done.\n");
 
+      float *float_delays = NULL;
+      float_delays = malloc(16*sizeof(float));
+
+      for (size_t i = 0; i < 16; i++) {
+       float_delays[i] = metafits.FEE_ideal_delays[i];
+      }
 
       printf("Setting up the FEE beam...");
       RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam, float_delays, st);
@@ -263,7 +162,6 @@ int main(int argc, char **argv) {
       printf("Copying the FEE beam across to the GPU...");
       copy_FEE_primary_beam_to_GPU(beam_settings, woden_settings->num_time_steps);
       printf(" done.\n");
-
     }
 
     visibility_set_t *visibility_set = malloc(sizeof(visibility_set_t));

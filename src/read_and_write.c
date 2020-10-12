@@ -1004,8 +1004,6 @@ array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits,
 
       num_tiles += 1;
 
-      printf("MADE IT HERE %d \n",num_tiles );
-
       array_layout->ant_east = realloc(array_layout->ant_east,sizeof(float)*num_tiles);
       array_layout->ant_north = realloc(array_layout->ant_north,sizeof(float)*num_tiles);
       array_layout->ant_height = realloc(array_layout->ant_height,sizeof(float)*num_tiles);

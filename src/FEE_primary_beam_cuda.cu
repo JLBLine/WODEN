@@ -378,7 +378,7 @@ extern "C" void get_HDFBeam_normalisation(beam_settings_t beam_settings) {
 
   float _Complex *all_norm_gains=NULL;
   all_norm_gains = (float _Complex *)malloc(num_time_steps*MAX_POLS*MAX_POLS*sizeof(float _Complex));
-  // printf("Before calc_FEE_beam: %s\n", cudaGetErrorString( cudaGetLastError() ) );
+  printf("Before calc_FEE_beam: %s\n", cudaGetErrorString( cudaGetLastError() ) );
 
   //Scaling means don't apply normalistaion, as we are calculating it here
   int scaling = 0;
@@ -387,7 +387,7 @@ extern "C" void get_HDFBeam_normalisation(beam_settings_t beam_settings) {
     beam_settings.para_sinrot, beam_settings.para_cosrot,
     num_time_steps, beam_settings.FEE_beam_zenith, all_norm_gains, scaling);
 
-  // printf("After calc_FEE_beam: %s\n", cudaGetErrorString( cudaGetLastError() ) );
+  printf("After calc_FEE_beam: %s\n", cudaGetErrorString( cudaGetLastError() ) );
 
   for (size_t i = 0; i < MAX_POLS; i++) {
 

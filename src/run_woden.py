@@ -514,26 +514,6 @@ if __name__ == "__main__":
     else:
         command('%s/woden %s' %(WODEN_DIR,json_name))
 
-    # if args.EDA2_sim:
-    #     ##If doing EDA2, we have 256 stations, so select them all but one
-    #     selection = arange(len(east) - 1)
-    # else:
-    #
-    #
-    # ##TODO if we work out a different way to input east,north,height layout
-    # ##this will need to change
-    # num_antennas = int(len(selection))
-    #
-    # ##Prepare the uvfits information
-    # ##Create and fill a layout array
-    # array_layout = zeros((num_antennas,3))
-    # ##Tiles are listed as YY,XX,YY,XX,etc so only use half positions
-    #
-    # array_layout[:,0] = east[selection]
-    # array_layout[:,1] = north[selection]
-    # array_layout[:,2] = height[selection]
-
-
     if args.array_layout:
         try:
             array_layout = loadtxt(args.array_layout)
@@ -561,7 +541,6 @@ if __name__ == "__main__":
         array_layout[:,0] = east
         array_layout[:,1] = north
         array_layout[:,2] = height
-
 
     X,Y,Z = enh2xyz(east, north, height,MWA_LAT*D2R)
 
