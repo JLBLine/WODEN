@@ -1,6 +1,12 @@
 #include "primary_beam.h"
 #include "FEE_primary_beam.h"
 #include <erfa.h>
+#include <complex.h>
+
+// extern void get_HDFBeam_normalisation(beam_settings_t beam_settings);
+//
+// extern void copy_FEE_primary_beam_to_GPU(beam_settings_t beam_settings,
+//                                              int num_time_steps);
 
 void calc_para_angle(catsource_t *cropped_src, float *lsts,
                      int num_time_steps){
@@ -186,42 +192,50 @@ beam_settings_t fill_primary_beam_settings(woden_settings_t *woden_settings,
 
 } // end of fill_primary_beam_settings()
 
-void setup_FEE_beam(woden_settings_t *woden_settings, MetaFfile_t metafits,
-                    beam_settings_t beam_settings, float base_middle_freq){
-
-  //Just use one single tile beam for all for now - will need a certain
-  //number in the future to include dipole flagging
-  int st = 0;
-  beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
-  //We need the zenith beam to get the normalisation
-  beam_settings.FEE_beam_zenith = malloc(sizeof(copy_primary_beam_t));
-
-  printf("Middle freq is %f\n",base_middle_freq );
-
-  float float_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-
-  printf("Setting up the zenith FEE beam...");
-  RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam_zenith, float_zenith_delays, st);
-  printf(" done.\n");
-
-  printf("Getting FEE beam normalisation...");
-  get_HDFBeam_normalisation(beam_settings, woden_settings->num_time_steps);
-  printf(" done.\n");
-
-  float *float_delays = NULL;
-  float_delays = malloc(16*sizeof(float));
-
-  for (size_t i = 0; i < 16; i++) {
-   float_delays[i] = metafits.FEE_ideal_delays[i];
-  }
-
-  printf("Setting up the FEE beam...");
-  RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam, float_delays, st);
-  printf(" done.\n");
-
-  printf("Copying the FEE beam across to the GPU...");
-  copy_FEE_primary_beam_to_GPU(beam_settings, woden_settings->num_time_steps);
-  printf(" done.\n");
-
-}
+//TODO make this work so we can pull it out of woden.c
+// void setup_FEE_beam(woden_settings_t *woden_settings, MetaFfile_t metafits,
+//                     beam_settings_t beam_settings, float base_middle_freq){
+//
+//   //Just use one single tile beam for all for now - will need a certain
+//   //number in the future to include dipole flagging
+//   int st = 0;
+//   beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
+//   //We need the zenith beam to get the normalisation
+//   beam_settings.FEE_beam_zenith = malloc(sizeof(copy_primary_beam_t));
+//
+//   printf("Middle freq is %f\n",base_middle_freq );
+//
+//   float float_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+//                                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+//
+//   printf("Setting up the zenith FEE beam...");
+//   RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam_zenith, float_zenith_delays, st);
+//   printf(" done.\n");
+//
+//   printf("Getting FEE beam normalisation...");
+//   get_HDFBeam_normalisation(beam_settings);
+//   printf(" done.\n");
+//
+//   for (size_t i = 0; i < 4; i++) {
+//
+//     printf("%.3f %.3f\n", creal(beam_settings.FEE_beam_zenith->norm_fac[i]),
+//                           cimag(beam_settings.FEE_beam_zenith->norm_fac[i]) );
+//     /* code */
+//   }
+//
+//   float *float_delays = NULL;
+//   float_delays = malloc(16*sizeof(float));
+//
+//   for (size_t i = 0; i < 16; i++) {
+//    float_delays[i] = metafits.FEE_ideal_delays[i];
+//   }
+//
+//   printf("Setting up the FEE beam...");
+//   RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam, float_delays, st);
+//   printf(" done.\n");
+//
+//   printf("Copying the FEE beam across to the GPU...");
+//   copy_FEE_primary_beam_to_GPU(beam_settings, woden_settings->num_time_steps);
+//   printf(" done.\n");
+//
+// }

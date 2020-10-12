@@ -1,9 +1,8 @@
+#pragma once
 #include <math.h>
 #include <stdint.h>
 #include <fitsio.h>
 #include "FEE_primary_beam.h"
-
-#pragma once
 
 enum component_type {POINT=0, GAUSSIAN, SHAPELET, SHAPELET2};
 typedef enum {NO_BEAM, GAUSS_BEAM, FEE_BEAM, ANALY_DIPOLE}e_beamtype;

@@ -124,16 +124,23 @@ int main(int argc, char **argv) {
     //TODO - add half a freq resolution in here? minus? Leave as is?
     // base_band_freq += woden_settings->frequency_resolution/2.0;
 
+    beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
+    //We need the zenith beam to get the normalisation
+    beam_settings.FEE_beam_zenith = malloc(sizeof(copy_primary_beam_t));
+
     if (woden_settings->beamtype == FEE_BEAM){
       float base_middle_freq = base_band_freq + metafits.bandwidth/48.0;
+
+      //TODO make a function like this that can do the GPU related tasks in
+      //this if statement in another function. For some reason I can't make
+      //it work outside of woden.c main (something to do with compilation and
+      //linkage??)
       // setup_FEE_beam(woden_settings, metafits, beam_settings, base_middle_freq);
 
-      //Just use one single tile beam for all for now - will need a certain
-      //number in the future to include dipole flagging
+      // Just use one single tile beam for all for now - will need a certain
+      // number in the future to include dipole flagging
       int st = 0;
-      beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
-      //We need the zenith beam to get the normalisation
-      beam_settings.FEE_beam_zenith = malloc(sizeof(copy_primary_beam_t));
+
 
       printf("Middle freq is %f\n",base_middle_freq );
 
@@ -191,7 +198,6 @@ int main(int argc, char **argv) {
     //Fill in the fine channel frequencies
     for (int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++) {
       frequency = base_band_freq + (woden_settings->frequency_resolution*freq_step);
-
       visibility_set->channel_frequencies[freq_step] = frequency;
     }
 
@@ -288,18 +294,18 @@ int main(int argc, char **argv) {
 
         printf("\tNumber of components in chunk are: P %d G %d S_coeffs %d\n",temp_cropped_src->n_points,temp_cropped_src->n_gauss,temp_cropped_src->n_shape_coeffs );
 
+        beam_settings_t beam_settings_chunk;
+        beam_settings_chunk = make_beam_settings_chunk(beam_settings, temp_cropped_src,
+                              cropped_src, woden_settings, point_iter, gauss_iter, shape_iter);
+
+        calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
+                    *temp_cropped_src, angles_array, beam_settings_chunk,
+                    woden_settings->num_baselines, woden_settings->num_time_steps,
+                    num_visis, woden_settings->num_freqs, temp_visibility_set,
+                    sbf);
+
+
         if (woden_settings->beamtype == GAUSS_BEAM){
-
-          beam_settings_t beam_settings_chunk;
-          beam_settings_chunk = make_beam_settings_chunk(beam_settings, temp_cropped_src,
-                                cropped_src, woden_settings, point_iter, gauss_iter, shape_iter);
-
-          calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
-                      *temp_cropped_src, angles_array, beam_settings_chunk,
-                      woden_settings->num_baselines, woden_settings->num_time_steps,
-                      num_visis, woden_settings->num_freqs, temp_visibility_set,
-                      sbf);
-
           free(beam_settings_chunk.beam_point_has );
           free(beam_settings_chunk.beam_point_decs );
           free(beam_settings_chunk.beam_gausscomp_has );
@@ -307,17 +313,6 @@ int main(int argc, char **argv) {
           free(beam_settings_chunk.beam_shape_has );
           free(beam_settings_chunk.beam_shape_decs );
         }
-
-        else {
-          // printf("This be where we call num gauss %d\n", temp_cropped_src->n_gauss);
-
-          calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
-                      *temp_cropped_src, angles_array, beam_settings,
-                      woden_settings->num_baselines, woden_settings->num_time_steps,
-                      num_visis, woden_settings->num_freqs, temp_visibility_set,
-                      sbf);
-        }
-
 
         // printf("Adding temporary visibility set.\n");
 	      //add to visiblity_set

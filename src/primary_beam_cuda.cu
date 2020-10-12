@@ -291,6 +291,8 @@ __global__ void kern_analytic_dipole_beam(float *d_azs, float *d_zas,
     d_analy_beam_X[beam_ind] = normed_X;
     d_analy_beam_Y[beam_ind] = normed_Y;
 
+    // printf("%d %.5f\n",beam_ind,normed_X.x );
+
   }
 }
 
@@ -301,6 +303,10 @@ extern "C" void calculate_analytic_dipole_beam(int num_components,
      cuFloatComplex *d_analy_beam_X, cuFloatComplex *d_analy_beam_Y){
 
   int num_beam_azza = num_components * num_time_steps;
+
+  // for (size_t i = 0; i < num_components; i++) {
+  //   printf("Analy beam az,za %.5f %.5f \n",azs[i],zas[i] );
+  // }
 
   float *d_azs = NULL;
   cudaMalloc( (void**)&d_azs, num_beam_azza*sizeof(float) );
@@ -321,7 +327,6 @@ extern "C" void calculate_analytic_dipole_beam(int num_components,
   kern_analytic_dipole_beam<<< grid, threads >>>(d_azs, d_zas,
              d_freqs, num_freqs, num_time_steps, num_components,
              d_analy_beam_X, d_analy_beam_Y);
-
 
   cudaFree(d_azs);
   cudaFree(d_zas);

@@ -263,6 +263,7 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
       threads.y = 4;
       grid.x = (int)ceil( (float)num_visis / (float)threads.x );
       grid.y = (int)ceil( ((float)num_points) / ((float)threads.y) );
+
     }
 
     kern_calc_visi_point<<<grid , threads>>>(d_point_ras, d_point_decs,

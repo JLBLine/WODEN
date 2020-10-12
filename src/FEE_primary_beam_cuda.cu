@@ -331,11 +331,15 @@ extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,
   float _Complex *TileGainMatrices = NULL;
   cudaMalloc( (void **)&TileGainMatrices, num_azza*MAX_POLS*sizeof(float _Complex));
 
+  // printf("CUDA error 1: %s\n", cudaGetErrorString( cudaGetLastError() ) );
+
   //Ensure gains are zero before summing results to them
   for (size_t i = 0; i < num_azza*MAX_POLS; i++) {
     h_FEE_beam_gains[i] = {0.0,0.0};
   }
   cudaMemcpy(TileGainMatrices, h_FEE_beam_gains, num_azza*MAX_POLS*sizeof(float _Complex), cudaMemcpyHostToDevice );
+
+  // printf("CUDA error 2: %s\n", cudaGetErrorString( cudaGetLastError() ) );
 
   float rotation = 0.0;
   int nmax = primary_beam->nmax;
@@ -343,7 +347,7 @@ extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,
   RTS_CUDA_get_TileGains(az, za, sin_para_angs, cos_para_angs,
     num_time_steps, num_azza, rotation, primary_beam, TileGainMatrices, scaling);
 
-  // printf("CUDA error 4: %s\n", cudaGetErrorString( cudaGetLastError() ) );
+  // printf("CUDA error 3: %s\n", cudaGetErrorString( cudaGetLastError() ) );
 
   cudaMemcpy(h_FEE_beam_gains, TileGainMatrices, num_azza*MAX_POLS*sizeof(float _Complex), cudaMemcpyDeviceToHost );
 
@@ -374,11 +378,9 @@ extern "C" void get_HDFBeam_normalisation(beam_settings_t beam_settings) {
   //to calculate for one time step here
   int num_time_steps = 1;
 
-
-
   float _Complex *all_norm_gains=NULL;
   all_norm_gains = (float _Complex *)malloc(num_time_steps*MAX_POLS*MAX_POLS*sizeof(float _Complex));
-  printf("Before calc_FEE_beam: %s\n", cudaGetErrorString( cudaGetLastError() ) );
+  // printf("Before calc_FEE_beam: %s\n", cudaGetErrorString( cudaGetLastError() ) );
 
   //Scaling means don't apply normalistaion, as we are calculating it here
   int scaling = 0;
@@ -387,18 +389,11 @@ extern "C" void get_HDFBeam_normalisation(beam_settings_t beam_settings) {
     beam_settings.para_sinrot, beam_settings.para_cosrot,
     num_time_steps, beam_settings.FEE_beam_zenith, all_norm_gains, scaling);
 
-  printf("After calc_FEE_beam: %s\n", cudaGetErrorString( cudaGetLastError() ) );
+  // printf("After calc_FEE_beam: %s\n", cudaGetErrorString( cudaGetLastError() ) );
 
   for (size_t i = 0; i < MAX_POLS; i++) {
-
-    // float real_norm = creal(all_norm_gains[i*MAX_POLS + MAX_POLS - 1 - i]);
-    // float imag_norm = cimag(all_norm_gains[i*MAX_POLS + MAX_POLS - 1 - i]);
-    // float abs_norm_value = sqrtf(real_norm*real_norm + imag_norm*imag_norm);
-    // printf("NORM BEAM STOOF %.6f %.6f %.6f\n",real_norm, imag_norm, abs_norm_value );
-
     //Do a polarisation reordering here, to follow the RTS code
     beam_settings.FEE_beam->norm_fac[i] = all_norm_gains[i*MAX_POLS + MAX_POLS - 1 - i];
-
     // beam_settings.FEE_beam->norm_fac[i] = {abs(real_norm),abs(imag_norm)};
   }
   free(all_norm_gains);
@@ -638,6 +633,12 @@ __global__ void kern_calc_sigmaTP(cuFloatComplex *TileGainMatrices,
       TileGainMatrices[iCoord*MAX_POLS + iPol*n_pols + 1] += d_emn_P;
 
     }
+
+    // cuFloatComplex thing1 = TileGainMatrices[iCoord*MAX_POLS + iPol*n_pols];
+    // cuFloatComplex thing2 = TileGainMatrices[iCoord*MAX_POLS + iPol*n_pols + 1];
+    //
+    // printf("%.5f %.5f %.5f %.5f\n",thing1.x,thing1.y,thing2.x,thing2.y );
+
   }
 }
 

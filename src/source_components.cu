@@ -338,6 +338,12 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
     cuFloatComplex thing4 = * g1yy;
 
     // if (iBaseline == 0) {
+    //   if (thing1.x > 0.0 || thing4.x > 0.0) {
+    //         printf("%d %.5f %.5f %.5f %.5f\n",iComponent,thing1.x,thing2.x,thing3.x,thing4.x );
+    //   }
+    // }
+
+    // if (iBaseline == 0) {
     //   if (thing1.x > 2.0 || thing2.x > 2.0 || thing3.x > 2.0 || thing4.x > 2.0 || thing1.y > 2.0 || thing2.y > 2.0 || thing3.y > 2.0 || thing4.y > 2.0) {
     //         printf("%d %.5f %.5f %.5f %.5f\n",iComponent,thing1.x,thing2.x,thing3.x,thing4.x );
     //   }
