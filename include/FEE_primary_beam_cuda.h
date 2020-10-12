@@ -3,8 +3,7 @@
 #include "cudacheck.h"
 #include "read_and_write.h"
 
-extern "C" void calc_CUDA_FEE_beam(float *d_beam_reals, float *d_beam_imags,
-                                   float *azs, float *zas,
+extern "C" void calc_CUDA_FEE_beam(float *azs, float *zas,
                                    float *sin_para_angs, float *cos_para_angs,
                                    int num_components, int num_time_steps,
                                    copy_primary_beam_t *FEE_beam);
@@ -55,3 +54,9 @@ __global__ void kern_calc_sigmaTP(cuFloatComplex *TileGainMatrices,
 
 __global__ void kern_apply_FEE_norm(cuFloatComplex *TileGainMatrices,
            cuFloatComplex *d_norm_fac, int num_coords );
+
+__global__ void kern_map_FEE_beam_gains(cuFloatComplex *d_FEE_beam_gain_matrices,
+    cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
+    cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11,
+    int num_freqs, int num_components, int num_visis, int num_baselines,
+    int num_times);

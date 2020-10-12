@@ -124,8 +124,7 @@ __global__ void kern_rotate_FEE_beam(cuFloatComplex *d_FEE_beam_gain_matrices,
   }
 }
 
-extern "C" void calc_CUDA_FEE_beam(float *d_beam_reals, float *d_beam_imags,
-                                   float *azs, float *zas,
+extern "C" void calc_CUDA_FEE_beam(float *azs, float *zas,
                                    float *sin_para_angs, float *cos_para_angs,
                                    int num_components, int num_time_steps,
                                    copy_primary_beam_t *FEE_beam) {
@@ -875,6 +874,34 @@ __global__ void RTS_getTileGainsKernel( float *d_phi, float *d_theta, int nMN, i
 
     emn_T[iCoord*n_pols*nMN + beam_index] = cuCmulf(this_emn_T,phi_comp);
     emn_P[iCoord*n_pols*nMN + beam_index] = cuCmulf(this_emn_P,phi_comp);
+
+  }
+}
+
+__global__ void kern_map_FEE_beam_gains(cuFloatComplex *d_FEE_beam_gain_matrices,
+    cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
+    cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11,
+    int num_freqs, int num_components, int num_visis, int num_baselines,
+    int num_times){
+
+  //All baselines at all freqs and all times
+  int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
+  //Direction on sky
+  int iComponent = threadIdx.y + (blockDim.y*blockIdx.y);
+
+  if(iBaseline < num_visis && iComponent < num_components ) {
+
+    //I hate indexing, good grief
+    int time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
+    int freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+
+    int current_ind = iComponent*num_times + time_ind;
+    int new_ind = num_freqs*time_ind*num_components + (num_components*freq_ind) + iComponent;
+
+    d_primay_beam_J00[new_ind] = d_FEE_beam_gain_matrices[current_ind*MAX_POLS + 0];
+    d_primay_beam_J01[new_ind] = d_FEE_beam_gain_matrices[current_ind*MAX_POLS + 1];
+    d_primay_beam_J10[new_ind] = d_FEE_beam_gain_matrices[current_ind*MAX_POLS + 2];
+    d_primay_beam_J11[new_ind] = d_FEE_beam_gain_matrices[current_ind*MAX_POLS + 3];
 
   }
 }

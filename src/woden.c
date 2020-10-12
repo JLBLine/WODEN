@@ -305,14 +305,14 @@ int main(int argc, char **argv) {
                     sbf);
 
 
-        if (woden_settings->beamtype == GAUSS_BEAM){
-          free(beam_settings_chunk.beam_point_has );
-          free(beam_settings_chunk.beam_point_decs );
-          free(beam_settings_chunk.beam_gausscomp_has );
-          free(beam_settings_chunk.beam_gausscomp_decs );
-          free(beam_settings_chunk.beam_shape_has );
-          free(beam_settings_chunk.beam_shape_decs );
-        }
+        // if (woden_settings->beamtype == GAUSS_BEAM){
+        //   free(beam_settings_chunk.beam_point_has );
+        //   free(beam_settings_chunk.beam_point_decs );
+        //   free(beam_settings_chunk.beam_gausscomp_has );
+        //   free(beam_settings_chunk.beam_gausscomp_decs );
+        //   free(beam_settings_chunk.beam_shape_has );
+        //   free(beam_settings_chunk.beam_shape_decs );
+        // }
 
         // printf("Adding temporary visibility set.\n");
 	      //add to visiblity_set
