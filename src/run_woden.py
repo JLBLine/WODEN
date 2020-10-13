@@ -4,21 +4,14 @@ the GPU WODEN code.
 '''
 from __future__ import print_function
 from astropy.io import fits
+from astropy.time import Time
 from numpy import *
 from struct import unpack
 from subprocess import call, check_output
-from jdcal import gcal2jd
+# from jdcal import gcal2jd
 from os import environ
 import os
-
-##Find out where the git repo is, cd in and grab the git label
-##TODO do this in a better way
-fileloc = os.path.realpath(__file__)
-cwd = os.getcwd()
-os.chdir(('/').join(fileloc.split('/')[:-1]))
-gitlabel = check_output(["git", "describe", "--always"],universal_newlines=True).strip()
-##Get back to where we were before
-os.chdir(cwd)
+import warnings
 
 R2D = 180.0 / pi
 D2R = pi / 180.0
@@ -36,30 +29,100 @@ def calc_jdcal(date):
     '''Takes a string format date and returns julian date in
     the two chunks a uvfits file likes'''
 
-    dmy, hms = date.split()
+    t = Time(date)
+    jd = t.jd
 
-    day,month,year = map(int,dmy.split('-'))
-    hour,mins,secs = map(float,hms.split(':'))
-
-    ##For some reason jdcal gives you the date in two pieces
-    ##Gives you the time up until midnight of the day
-    jd1,jd2 = gcal2jd(year,month,day)
-    jd3 = (hour + (mins / 60.0) + (secs / 3600.0)) / 24.0
-
-    jd = jd1 + jd2 + jd3
-
-    jd_day = jd1 + floor(jd2)
-    jd_fraction = (jd2 - floor(jd2)) + jd3
+    jd_day = floor(jd)
+    jd_fraction = (jd - jd_day)
 
     ##The header of the uvdata file takes the integer, and
     ##then the fraction goes into the data array for PTYPE5
     return jd_day, jd_fraction
 
+def RTS_encode_baseline(b1, b2):
+    '''The ancient aips/miriad extended way of encoding a baseline.
+    Needed for populating the uvfits file'''
+    if b2 > 255:
+        return b1*2048 + b2 + 65536
+    else:
+        return b1*256 + b2
+
+def RTS_decode_baseline(blcode):
+    blcode = int(blcode)
+
+    if blcode > 65536:
+        blcode -= 65536
+        b2 = int(blcode % 2048)
+        b1 = int((blcode - b2) / 2048)
+    else:
+        b2 = int(blcode % 256)
+        b1 = int((blcode - b2) / 256)
+
+    return b1,b2
+
+
+def make_antenna_table(XYZ_array=None,telescope_name=None,num_antennas=None,
+                       freq_cent=None,date=None):
+    """Write an antenna table for a uvfits file"""
+
+    ##Make some values for certain columns
+    annnames = array(["%05d" %ant for ant in range(1,num_antennas+1)])
+    xlabels = array(['X']*num_antennas)
+    ylabels = array(['Y']*num_antennas)
+
+    ##Make a number of FITS columns to create the antenna table from
+    col1 = fits.Column(array=annnames,name='ANNAME',format='5A')
+    col2 = fits.Column(array=XYZ_array,name='STABXYZ',format='3D')
+    ##col3 makes an empty array, and the format states skip reading this column
+    ##Just replicating the example uvfits I've been using
+    col3 = fits.Column(array=array([]),name='ORBPARM',format='0D')
+    col4 = fits.Column(array=arange(1,num_antennas+1),name='NOSTA',format='1J')
+    col5 = fits.Column(array=zeros(num_antennas),name='MNTSTA',format='1J')
+    col6 = fits.Column(array=zeros(num_antennas),name='STAXOF',format='1E')
+    col7 = fits.Column(array=xlabels,name='POLTYA',format='1A')
+    col8 = fits.Column(array=zeros(num_antennas),name='POLAA',format='1E')
+    col9 = fits.Column(array=zeros(num_antennas),name='POLCALA',format='1E')
+    col10 = fits.Column(array=ylabels,name='POLTYB',format='1A')
+    col11 = fits.Column(array=zeros(num_antennas),name='POLAB',format='1E')
+    col12 = fits.Column(array=zeros(num_antennas),name='POLCALB',format='1E')
+
+    ##Stick the columns into a ColDefs
+    coldefs = fits.ColDefs([col1,col2,col3,col4,col5,col6, \
+                            col7,col8,col9,col10,col11,col12])
+
+    ##Use the columns to for a BinTableHDU object. This is shoved into the
+    ##uvfits file later
+    ##Astropy doesn't like the fact we have a zero sized column (col3 see above)
+    ##so supress the warning when making the BinTableHDU
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        hdu_ant = fits.BinTableHDU.from_columns(coldefs, name="AIPS AN")
+
+    ##-----Add some header values that seem to be needed by casa/RTS/WSClean
+
+    ##Absolute reference point of the centre of the array - this is hardcoded to
+    ##the MWA at the moment; X,Y,Z are relative to this
+    ##TODO get the equation to work this out from lat/lon
+    hdu_ant.header['ARRAYX']  = -2559453.2906
+    hdu_ant.header['ARRAYY']  = 5095371.73544
+    hdu_ant.header['ARRAYZ']  = -2849056.77357
+
+    hdu_ant.header['FREQ']    = freq_cent
+    hdu_ant.header['RDATE']   = date
+    hdu_ant.header['TIMSYS']  = 'UTC     '
+    hdu_ant.header['ARRNAM']  = telescope_name
+    hdu_ant.header['NUMORB']  = 0
+    hdu_ant.header['NOPCAL']  = 0
+    hdu_ant.header['POLTYPE'] = '        '
+    hdu_ant.header['CREATOR']   = 'WODEN_uvfits_writer'
+
+    return hdu_ant
+
 def create_uvfits(v_container=None,freq_cent=None, ra_point=None, dec_point=None,
                   output_uvfits_name=None,uu=None,vv=None,ww=None,
-                  baselines_array=None,date_array=None,date=None,
-                  central_freq_chan=None,ch_width=None,template_uvfits=None,
-                  int_jd=None):
+                  baselines_array=None, date_array=None, date=None,
+                  central_freq_chan=None,ch_width=None,
+                  int_jd=None, hdu_ant=None, gitlabel=False):
     '''Takes visibility data and writes out a uvfits format file'''
     ##TODO replace all of this with an interface with pyuvdata
 
@@ -86,20 +149,15 @@ def create_uvfits(v_container=None,freq_cent=None, ra_point=None, dec_point=None
     uvhdu.header['CRPIX4'] = int(central_freq_chan) + 1 ##Middle pixel number
     uvhdu.header['CDELT4'] = ch_width
 
-    uvhdu.header['CTYPE5'] = template_uvfits[0].header['CTYPE5']
-    uvhdu.header['CRVAL5'] = template_uvfits[0].header['CRVAL5']
-    uvhdu.header['CRPIX5'] = template_uvfits[0].header['CRPIX5']
-    uvhdu.header['CDELT5'] = template_uvfits[0].header['CDELT5']
+    uvhdu.header['CTYPE5'] = 'RA'
+    uvhdu.header['CRVAL5'] = ra_point
+    uvhdu.header['CRPIX5'] = 1.0
+    uvhdu.header['CDELT5'] = 1.0
 
-    uvhdu.header['CTYPE6'] = template_uvfits[0].header['CTYPE6']
-    uvhdu.header['CRVAL6'] = ra_point
-    uvhdu.header['CRPIX6'] = template_uvfits[0].header['CRPIX6']
-    uvhdu.header['CDELT6'] = template_uvfits[0].header['CDELT6']
-
-    uvhdu.header['CTYPE7'] = template_uvfits[0].header['CTYPE7']
-    uvhdu.header['CRVAL7'] = dec_point
-    uvhdu.header['CRPIX7'] = template_uvfits[0].header['CRPIX7']
-    uvhdu.header['CDELT7'] = template_uvfits[0].header['CDELT7']
+    uvhdu.header['CTYPE6'] = 'DEC'
+    uvhdu.header['CRVAL6'] = dec_point
+    uvhdu.header['CRPIX6'] = 1.0
+    uvhdu.header['CDELT6'] = 1.0
 
     ## Write the parameters scaling explictly because they are omitted if default 1/0
     uvhdu.header['PSCAL1'] = 1.0
@@ -112,35 +170,20 @@ def create_uvfits(v_container=None,freq_cent=None, ra_point=None, dec_point=None
     uvhdu.header['PZERO4'] = 0.0
     uvhdu.header['PSCAL5'] = 1.0
 
+    int_jd, float_jd = calc_jdcal(date)
     uvhdu.header['PZERO5'] = float(int_jd)
 
     ##Old observation parameters that were/are needed in CHIPS
     uvhdu.header['OBJECT']  = 'Undefined'
     uvhdu.header['OBSRA']   = ra_point
     uvhdu.header['OBSDEC']  = dec_point
+    # uvhdu.header['TELESCOP'] = 'MWA'
 
     ##Add in the gitlabel so we know what version generated the file
-    uvhdu.header['GITLABEL'] = gitlabel
-
-    ##ANTENNA TABLE MODS======================================================================
-
-    template_uvfits[1].header['FREQ'] = freq_cent
-    template_uvfits[1].header['ARRNAM'] = 'MWA'
-    template_uvfits[1].header['TELESCOP'] = 'MWA'
-    template_uvfits[0].header['TELESCOP'] = 'MWA'
-
-
-    ##MAJICK uses this date to set the LST
-    dmy, hms = date.split()
-    day,month,year = map(int,dmy.split('-'))
-    hour,mins,secs = map(float,hms.split(':'))
-
-    rdate = "%d-%02d-%02dT%02d:%02d:%.2f" %(year,month,day,hour,mins,secs)
-
-    template_uvfits[1].header['RDATE'] = rdate
+    if gitlabel: uvhdu.header['GITLABEL'] = gitlabel
 
     ## Create hdulist and write out file
-    hdulist = fits.HDUList(hdus=[uvhdu,template_uvfits[1]])
+    hdulist = fits.HDUList(hdus=[uvhdu,hdu_ant])
     hdulist.writeto(output_uvfits_name,overwrite=True)
     hdulist.close()
 
@@ -165,7 +208,7 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
     data = frombuffer(read_data,dtype=float32)
 
     n_data = num_time_steps * num_baselines
-    v_container = zeros((n_data,1,1,1,num_freq_channels,4,3))
+    v_container = zeros((n_data,1,1,num_freq_channels,4,3))
     uus = zeros(n_data)
     vvs = zeros(n_data)
     wws = zeros(n_data)
@@ -209,74 +252,64 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
             real_YX_ind = re_YX_base + freq_step
             imag_YX_ind = im_YX_base + freq_step
 
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,0,0] = data[real_XX_ind:real_XX_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,0,1] = data[imag_XX_ind:imag_XX_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,1,0] = data[real_YY_ind:real_YY_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,1,1] = data[imag_YY_ind:imag_YY_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,0,0] = data[real_XX_ind:real_XX_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,0,1] = data[imag_XX_ind:imag_XX_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,1,0] = data[real_YY_ind:real_YY_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,1,1] = data[imag_YY_ind:imag_YY_ind+num_baselines]
 
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,2,0] = data[real_XY_ind:real_XY_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,2,1] = data[imag_XY_ind:imag_XY_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,3,0] = data[real_YX_ind:real_YX_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,3,1] = data[imag_YX_ind:imag_YX_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,2,0] = data[real_XY_ind:real_XY_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,2,1] = data[imag_XY_ind:imag_XY_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,3,0] = data[real_YX_ind:real_YX_ind+num_baselines]
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,3,1] = data[imag_YX_ind:imag_YX_ind+num_baselines]
 
             ##Set the weight for everything to one
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,0,2] = ones(num_baselines)
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,1,2] = ones(num_baselines)
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,2,2] = ones(num_baselines)
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,0,freq_ind,3,2] = ones(num_baselines)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,0,2] = ones(num_baselines)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,1,2] = ones(num_baselines)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,2,2] = ones(num_baselines)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,3,2] = ones(num_baselines)
 
     return uus, vvs, wws, v_container
 
-def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
-               cat_filename=None,metafits_filename=None,band_nums=None,
-               json_name=None,freq_res=None,time_res=None,
-               sky_crop_components=False, use_gaussian_beam=False,
-               gauss_beam_FWHM=False, gauss_beam_ref_freq=False,
-               chunking_size=None, use_FEE_beam=False, hdf5_beam_path=False,
-               jd_date=False):
+def write_json(num_time_steps=None, num_freqs=None,
+               band_nums=None, json_name=None, freq_res=None,
+               time_res=None, jd_date=None, args=None):
     '''Populate a json parameter file used to run WODEN'''
 
     outfile = open(json_name,'w+')
 
     outfile.write('{\n')
-    outfile.write('  "ra0": %.10f,\n' %ra0)
-    outfile.write('  "dec0": %.10f,\n' %dec0)
+    outfile.write('  "ra0": %.10f,\n' %args.ra0)
+    outfile.write('  "dec0": %.10f,\n' %args.dec0)
     outfile.write('  "num_freqs": %d,\n' %num_freqs)
     outfile.write('  "num_time_steps": %d,\n' %num_time_steps)
-    outfile.write('  "cat_filename": "%s",\n' %cat_filename)
-    outfile.write('  "metafits_filename": "%s",\n' %metafits_filename)
+    outfile.write('  "cat_filename": "%s",\n' %args.cat_filename)
+    outfile.write('  "metafits_filename": "%s",\n' %args.metafits_filename)
     outfile.write('  "time_res": %.5f,\n' %time_res)
     outfile.write('  "frequency_resolution": %.3f,\n' %freq_res)
-    outfile.write('  "chunking_size": %d,\n' %chunking_size)
+    outfile.write('  "chunking_size": %d,\n' %args.chunking_size)
     outfile.write('  "jd_date": %.16f,\n' %jd_date)
 
-
-
-    if sky_crop_components:
+    if args.sky_crop_components:
         outfile.write('  "sky_crop_components": True,\n')
-    else:
-        pass
 
-    if use_gaussian_beam:
+    if args.use_gaussian_beam:
         outfile.write('  "use_gaussian_beam": True,\n')
-    else:
-        pass
 
-    if gauss_beam_FWHM:
-        outfile.write('  "gauss_beam_FWHM": %.10f,\n' %float(gauss_beam_FWHM))
-    else:
-        pass
+    if args.gauss_beam_FWHM:
+        outfile.write('  "gauss_beam_FWHM": %.10f,\n' %float(args.gauss_beam_FWHM))
 
-    if use_gaussian_beam:
-        outfile.write('  "gauss_beam_ref_freq": %.10f,\n' %float(gauss_beam_ref_freq))
-    else:
-        pass
+    if args.use_gaussian_beam:
+        outfile.write('  "gauss_beam_ref_freq": %.10f,\n' %float(args.gauss_beam_ref_freq))
 
-    if use_FEE_beam:
+    if args.use_FEE_beam:
         outfile.write('  "use_FEE_beam": True,\n')
-        outfile.write('  "hdf5_beam_path": "%s",\n' %hdf5_beam_path)
-    else:
-        pass
+        outfile.write('  "hdf5_beam_path": "%s",\n' %args.hdf5_beam_path)
+
+    if args.EDA2_sim:
+        outfile.write('  "EDA2_sim": True,\n')
+
+    if args.array_layout:
+        outfile.write('  "array_layout": "%s",\n' %args.array_layout)
 
     if len(band_nums) == 1:
         band_str = '[%d]' %band_nums[0]
@@ -291,8 +324,66 @@ def write_json(ra0=None,dec0=None,num_freqs=None,num_time_steps=None,
     outfile.write('}\n')
     outfile.close()
 
+
+def make_baseline_date_arrays(num_antennas, date, num_time_steps, time_res):
+    """Makes the BASELINE and DATE arrays needed in the uvfits file
+    The BASELINE array encode which two antennas formed the baseline
+    The DATE array contains the fractional jd date, that is added to the
+    header value PZERO5, to specify the time each visibility was recorded at
+
+    Arguements:
+        num_antennas - the number of antennas in the antenna table
+        date - initial UTC date in format YYYY-MM-DDThh:mm:ss
+        num_time_steps - number of time steps in the data
+        time_res - integration time of the data (seconds)
+    """
+
+    num_baselines = int(((num_antennas - 1)*num_antennas) / 2)
+    template_baselines = empty(num_baselines)
+
+    ##Loop over all antenna combinations and encode the baseline pair
+    baseline_ind = 0
+    for b1 in arange(num_antennas - 1):
+        for b2 in arange(b1+1,num_antennas):
+            template_baselines[baseline_ind] = RTS_encode_baseline(b1+1, b2+1)
+            baseline_ind += 1
+
+    ##Calculate the Julian date, which get's split up into the header (int_jd)
+    ##and DATE array (float_jd)
+    ##array in the
+    int_jd, float_jd = calc_jdcal(initial_date)
+    jd_date = int_jd + float_jd
+
+    ##Need an array the length of number of baselines worth of the fractional jd date
+    float_jd_array = ones(num_baselines)*float_jd
+
+    ##Create empty data structures for final uvfits file
+    n_data = num_time_steps * num_baselines
+    baselines_array = zeros(n_data)
+    date_array = zeros(n_data)
+
+    for time_ind,time in enumerate(arange(0,num_time_steps*time_res,time_res)):
+        time_ind_lower = time_ind*num_baselines
+        baselines_array[time_ind_lower:time_ind_lower+num_baselines] = template_baselines
+
+        ##Fill in the fractional julian date, after adding on the appropriate amount of
+        ##time - /(24*60*60) because julian number is a fraction of a whole day
+        adjust_float_jd_array = float_jd_array + (float(time) / (24.0*60.0*60.0))
+        date_array[time_ind_lower:time_ind_lower+num_baselines] = adjust_float_jd_array
+
+    return baselines_array, date_array
+
 if __name__ == "__main__":
     import argparse
+
+    ##Find out where the git repo is, cd in and grab the git label
+    ##TODO do this in a better way
+    fileloc = os.path.realpath(__file__)
+    cwd = os.getcwd()
+    os.chdir(('/').join(fileloc.split('/')[:-1]))
+    gitlabel = check_output(["git", "describe", "--always"],universal_newlines=True).strip()
+    ##Get back to where we were before
+    os.chdir(cwd)
 
     print("You are using WODEN commit %s" %gitlabel)
 
@@ -309,8 +400,6 @@ if __name__ == "__main__":
         help='Defaults to running all 24 course bands. Alternatively, enter required numbers delineated by commas, e.g. --band_nums=1,7,9')
     parser.add_argument('--output_uvfits_prepend',default='output',
         help='Prepend name for uvfits - will append band%%02d.uvfits %%band_num at the end. Defaults to "output".')
-    parser.add_argument('--template_uvfits', default="%s/template_MWA_128T.uvfits" %WODEN_DIR,
-        help='Template uvfits to base outputs on - defaults to template_MWA_128T.uvfits')
     parser.add_argument('--num_freq_channels', default='obs',
         help='Number of fine frequency channels to simulate - defaults to 1.28MHz / --freq_res')
     parser.add_argument('--num_time_steps', default='obs',
@@ -335,11 +424,17 @@ if __name__ == "__main__":
         help='Use the FEE MWA beam model, based on the settings in the metafits file')
     parser.add_argument('--hdf5_beam_path', default='/home/jline/software/useful/MWA_embedded_element_pattern_V02.h5',
         help='Location of the hdf5 file holding the FEE beam coefficients')
-
     parser.add_argument('--chunking_size', type=int, default=0, help='The chunk size to break up the point sources into for processing - defaults to 0 (do not perform chunking)')
 
+    parser.add_argument('--EDA2_sim', default=False, action='store_true',
+        help='If doing an EDA2 simulation, need this flag to read all the antenna positions from a modified metafits file')
 
+    parser.add_argument('--telescope_name', default='MWA',
+        help='Name of telescope written out to the uvfits file, defaults to MWA')
 
+    parser.add_argument('--array_layout', default=False,
+        help='Instead of reading the array layout from the metafits file, read from a text file. \
+              Store antenna positions as offset from array centre, in east, north, height coords (metres)')
 
     args = parser.parse_args()
 
@@ -369,12 +464,6 @@ if __name__ == "__main__":
 
     with fits.open(args.metafits_filename) as f:
         initial_date = f[0].header['DATE-OBS']
-        ##Change in to oskar date format
-        date,time = initial_date.split('T')
-        year,month,day = date.split('-')
-        oskar_date = "%s-%s-%s %s" %(day,month,year,time)
-        int_jd, float_jd = calc_jdcal(oskar_date)
-        jd_date = int_jd + float_jd
 
         ##Get the east, north, height antenna positions from the metafits
         east = f[1].data['East']
@@ -407,20 +496,14 @@ if __name__ == "__main__":
 
         f.close()
 
+    int_jd, float_jd = calc_jdcal(initial_date)
+    jd_date = int_jd + float_jd
+
     ##Write json file
     json_name = 'run_woden_%s.json' %args.band_nums
-    write_json(ra0=args.ra0,dec0=args.dec0, num_freqs=num_freq_channels,
-               num_time_steps=num_time_steps, cat_filename=args.cat_filename,
-               metafits_filename=args.metafits_filename, band_nums=band_nums,
-               json_name=json_name, freq_res=ch_width, time_res=time_res,
-               sky_crop_components=args.sky_crop_components,
-               use_gaussian_beam=args.use_gaussian_beam,
-               gauss_beam_FWHM=args.gauss_beam_FWHM,
-               gauss_beam_ref_freq=args.gauss_beam_ref_freq,
-               chunking_size=args.chunking_size,
-               use_FEE_beam=args.use_FEE_beam,
-               hdf5_beam_path=args.hdf5_beam_path,
-               jd_date=jd_date)
+    write_json(num_time_steps=num_time_steps, num_freqs=num_freq_channels,
+               band_nums=band_nums, json_name=json_name, freq_res=ch_width,
+               time_res=time_res, jd_date=jd_date, args=args)
 
     ##Check the uvfits prepend to make sure we end in .uvfits
     output_uvfits_prepend = args.output_uvfits_prepend
@@ -431,16 +514,35 @@ if __name__ == "__main__":
     else:
         command('%s/woden %s' %(WODEN_DIR,json_name))
 
-    ##Prepare the uvfits information
-    ##Create and fill a layout array
-    array_layout = zeros((int(len(east)/2),3))
-    ##Tiles are listed as YY,XX,YY,XX,etc so only use half positions
-    selection = arange(0,len(east),2)
-    array_layout[:,0] = east[selection]
-    array_layout[:,1] = north[selection]
-    array_layout[:,2] = height[selection]
+    if args.array_layout:
+        try:
+            array_layout = loadtxt(args.array_layout)
+            num_antennas,_ = array_layout.shape
 
-    X,Y,Z = enh2xyz(east[selection], north[selection],height[selection],MWA_LAT*D2R)
+            east = array_layout[:,0]
+            north = array_layout[:,1]
+            height = array_layout[:,2]
+
+        except:
+            exit("Could not open array layout file:\n%s\nexiting before woe beings")
+
+    else:
+        ##This is an MWA simulation, in the metafits it lists XX,YY for each
+        ##antenna so we select every second one
+        selection = arange(0,len(east),2)
+        num_antennas = int(len(selection))
+
+        east = east[selection]
+        north = north[selection]
+        height = height[selection]
+
+        array_layout = zeros((num_antennas,3))
+
+        array_layout[:,0] = east
+        array_layout[:,1] = north
+        array_layout[:,2] = height
+
+    X,Y,Z = enh2xyz(east, north, height,MWA_LAT*D2R)
 
     ##Get the central frequency channels, used in the uvfits header
     central_freq_chan = int(floor(num_freq_channels / 2.0))
@@ -453,44 +555,29 @@ if __name__ == "__main__":
 
         band_low_freq = base_low_freq + (band - 1)*1.28e+6
         central_freq_chan_value = band_low_freq + (1.28e+6 / 2.0)
+        num_baselines = int(((num_antennas - 1)*num_antennas) / 2)
 
-        with fits.open(args.template_uvfits) as template_uvfits:
-            template_data = template_uvfits[0].data
-            template_baselines = template_uvfits[0].data['BASELINE'].copy()
-            num_baselines = len(template_data)
+        filename = "output_visi_band%02d.dat" %band
+        uus,vvs,wws,v_container = load_data(filename=filename,num_baselines=num_baselines,
+                                            num_freq_channels=num_freq_channels,num_time_steps=num_time_steps)
 
-            template_uvfits[1].data['STABXYZ'][:,0] = X
-            template_uvfits[1].data['STABXYZ'][:,1] = Y
-            template_uvfits[1].data['STABXYZ'][:,2] = Z
+        ##X,Y,Z are stored in a 2D array in units of seconds in the uvfits file
+        XYZ_array = empty((num_antennas,3))
+        XYZ_array[:,0] = X / VELC
+        XYZ_array[:,1] = Y / VELC
+        XYZ_array[:,2] = Z / VELC
 
-            int_jd, float_jd = calc_jdcal(oskar_date)
+        hdu_ant = make_antenna_table(XYZ_array=XYZ_array,telescope_name=args.telescope_name,
+                      num_antennas=num_antennas, freq_cent=central_freq_chan_value,
+                      date=initial_date)
 
-            ##Need an array the length of number of baselines worth of the fractional jd date
-            float_jd_array = ones(num_baselines)*float_jd
+        baselines_array, date_array = make_baseline_date_arrays(num_antennas,
+                                      initial_date, num_time_steps, time_res)
 
-            n_data = num_time_steps * num_baselines
-
-            ##Create empty data structures for final uvfits file
-            baselines_array = zeros(n_data)
-            date_array = zeros(n_data)
-
-            filename = "output_visi_band%02d.dat" %band
-            uus,vvs,wws,v_container = load_data(filename=filename,num_baselines=num_baselines,
-                                                num_freq_channels=num_freq_channels,num_time_steps=num_time_steps)
-
-            for time_ind,time in enumerate(arange(0,num_time_steps*time_res,time_res)):
-                time_ind_lower = time_ind*num_baselines
-                baselines_array[time_ind_lower:time_ind_lower+num_baselines] = template_baselines
-
-                ##Fill in the fractional julian date, after adding on the appropriate amount of
-                ##time - /(24*60*60) because julian number is a fraction of a whole day
-                adjust_float_jd_array = float_jd_array + (float(time) / (24.0*60.0*60.0))
-                date_array[time_ind_lower:time_ind_lower+num_baselines] = adjust_float_jd_array
-
-            create_uvfits(v_container=v_container,freq_cent=central_freq_chan_value,ra_point=args.ra0,dec_point=args.dec0,
-                        output_uvfits_name=output_uvfits_name,uu=uus,vv=vvs,ww=wws,baselines_array=baselines_array,
-                        date_array=date_array,date=oskar_date,central_freq_chan=central_freq_chan,ch_width=ch_width,
-                        template_uvfits=template_uvfits,int_jd=int_jd)
+        create_uvfits(v_container=v_container,freq_cent=central_freq_chan_value,ra_point=args.ra0,dec_point=args.dec0,
+                    output_uvfits_name=output_uvfits_name,uu=uus,vv=vvs,ww=wws,baselines_array=baselines_array,
+                    date_array=date_array,date=initial_date,central_freq_chan=central_freq_chan,ch_width=ch_width,
+                    int_jd=int_jd, hdu_ant=hdu_ant, gitlabel=gitlabel)
 
 
         ##Tidy up or not

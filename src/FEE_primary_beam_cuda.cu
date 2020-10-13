@@ -124,8 +124,7 @@ __global__ void kern_rotate_FEE_beam(cuFloatComplex *d_FEE_beam_gain_matrices,
   }
 }
 
-extern "C" void calc_CUDA_FEE_beam(float *d_beam_reals, float *d_beam_imags,
-                                   float *azs, float *zas,
+extern "C" void calc_CUDA_FEE_beam(float *azs, float *zas,
                                    float *sin_para_angs, float *cos_para_angs,
                                    int num_components, int num_time_steps,
                                    copy_primary_beam_t *FEE_beam) {
@@ -331,11 +330,15 @@ extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,
   float _Complex *TileGainMatrices = NULL;
   cudaMalloc( (void **)&TileGainMatrices, num_azza*MAX_POLS*sizeof(float _Complex));
 
+  // printf("CUDA error 1: %s\n", cudaGetErrorString( cudaGetLastError() ) );
+
   //Ensure gains are zero before summing results to them
   for (size_t i = 0; i < num_azza*MAX_POLS; i++) {
     h_FEE_beam_gains[i] = {0.0,0.0};
   }
   cudaMemcpy(TileGainMatrices, h_FEE_beam_gains, num_azza*MAX_POLS*sizeof(float _Complex), cudaMemcpyHostToDevice );
+
+  // printf("CUDA error 2: %s\n", cudaGetErrorString( cudaGetLastError() ) );
 
   float rotation = 0.0;
   int nmax = primary_beam->nmax;
@@ -343,7 +346,7 @@ extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,
   RTS_CUDA_get_TileGains(az, za, sin_para_angs, cos_para_angs,
     num_time_steps, num_azza, rotation, primary_beam, TileGainMatrices, scaling);
 
-  // printf("CUDA error 4: %s\n", cudaGetErrorString( cudaGetLastError() ) );
+  // printf("CUDA error 3: %s\n", cudaGetErrorString( cudaGetLastError() ) );
 
   cudaMemcpy(h_FEE_beam_gains, TileGainMatrices, num_azza*MAX_POLS*sizeof(float _Complex), cudaMemcpyDeviceToHost );
 
@@ -374,8 +377,6 @@ extern "C" void get_HDFBeam_normalisation(beam_settings_t beam_settings) {
   //to calculate for one time step here
   int num_time_steps = 1;
 
-
-
   float _Complex *all_norm_gains=NULL;
   all_norm_gains = (float _Complex *)malloc(num_time_steps*MAX_POLS*MAX_POLS*sizeof(float _Complex));
   // printf("Before calc_FEE_beam: %s\n", cudaGetErrorString( cudaGetLastError() ) );
@@ -390,15 +391,8 @@ extern "C" void get_HDFBeam_normalisation(beam_settings_t beam_settings) {
   // printf("After calc_FEE_beam: %s\n", cudaGetErrorString( cudaGetLastError() ) );
 
   for (size_t i = 0; i < MAX_POLS; i++) {
-
-    // float real_norm = creal(all_norm_gains[i*MAX_POLS + MAX_POLS - 1 - i]);
-    // float imag_norm = cimag(all_norm_gains[i*MAX_POLS + MAX_POLS - 1 - i]);
-    // float abs_norm_value = sqrtf(real_norm*real_norm + imag_norm*imag_norm);
-    // printf("NORM BEAM STOOF %.6f %.6f %.6f\n",real_norm, imag_norm, abs_norm_value );
-
     //Do a polarisation reordering here, to follow the RTS code
     beam_settings.FEE_beam->norm_fac[i] = all_norm_gains[i*MAX_POLS + MAX_POLS - 1 - i];
-
     // beam_settings.FEE_beam->norm_fac[i] = {abs(real_norm),abs(imag_norm)};
   }
   free(all_norm_gains);
@@ -638,6 +632,12 @@ __global__ void kern_calc_sigmaTP(cuFloatComplex *TileGainMatrices,
       TileGainMatrices[iCoord*MAX_POLS + iPol*n_pols + 1] += d_emn_P;
 
     }
+
+    // cuFloatComplex thing1 = TileGainMatrices[iCoord*MAX_POLS + iPol*n_pols];
+    // cuFloatComplex thing2 = TileGainMatrices[iCoord*MAX_POLS + iPol*n_pols + 1];
+    //
+    // printf("%.5f %.5f %.5f %.5f\n",thing1.x,thing1.y,thing2.x,thing2.y );
+
   }
 }
 
@@ -874,6 +874,34 @@ __global__ void RTS_getTileGainsKernel( float *d_phi, float *d_theta, int nMN, i
 
     emn_T[iCoord*n_pols*nMN + beam_index] = cuCmulf(this_emn_T,phi_comp);
     emn_P[iCoord*n_pols*nMN + beam_index] = cuCmulf(this_emn_P,phi_comp);
+
+  }
+}
+
+__global__ void kern_map_FEE_beam_gains(cuFloatComplex *d_FEE_beam_gain_matrices,
+    cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
+    cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11,
+    int num_freqs, int num_components, int num_visis, int num_baselines,
+    int num_times){
+
+  //All baselines at all freqs and all times
+  int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
+  //Direction on sky
+  int iComponent = threadIdx.y + (blockDim.y*blockIdx.y);
+
+  if(iBaseline < num_visis && iComponent < num_components ) {
+
+    //I hate indexing, good grief
+    int time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
+    int freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+
+    int current_ind = iComponent*num_times + time_ind;
+    int new_ind = num_freqs*time_ind*num_components + (num_components*freq_ind) + iComponent;
+
+    d_primay_beam_J00[new_ind] = d_FEE_beam_gain_matrices[current_ind*MAX_POLS + 0];
+    d_primay_beam_J01[new_ind] = d_FEE_beam_gain_matrices[current_ind*MAX_POLS + 1];
+    d_primay_beam_J10[new_ind] = d_FEE_beam_gain_matrices[current_ind*MAX_POLS + 2];
+    d_primay_beam_J11[new_ind] = d_FEE_beam_gain_matrices[current_ind*MAX_POLS + 3];
 
   }
 }

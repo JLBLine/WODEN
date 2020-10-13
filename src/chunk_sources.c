@@ -380,25 +380,28 @@ void fill_chunk_src(catsource_t *temp_cropped_src, catsource_t *cropped_src,
 
 }
 
+
+//Only the GAUSS_BEAM needs to be chunked as it uses l,m,n calcs instead
+//of za,az to get calculated
 beam_settings_t make_beam_settings_chunk(beam_settings_t beam_settings,
                 catsource_t *temp_cropped_src, catsource_t *cropped_src,
                 woden_settings_t *woden_settings,
                 int point_iter, int gauss_iter, int shape_iter) {
 
-
-  beam_settings_t beam_settings_chunk; //= malloc(sizeof(beam_settings_t));
-
-  beam_settings_chunk.beam_angles_array = malloc(3*sizeof(float));
-  beam_settings_chunk.beam_angles_array = beam_settings.beam_angles_array;
-
-  //Number of beam calculations needed for point components
-  beam_settings_chunk.num_point_beam_values = temp_cropped_src->n_points * woden_settings->num_time_steps * woden_settings->num_freqs;
-  beam_settings_chunk.num_gausscomp_beam_values = temp_cropped_src->n_gauss * woden_settings->num_time_steps * woden_settings->num_freqs;
-  beam_settings_chunk.num_shape_beam_values = temp_cropped_src->n_shapes * woden_settings->num_time_steps * woden_settings->num_freqs;
-
-  beam_settings_chunk.beamtype = beam_settings.beamtype;
+  beam_settings_t beam_settings_chunk;
 
   if (beam_settings_chunk.beamtype == GAUSS_BEAM) {
+
+    beam_settings_chunk.beam_angles_array = malloc(3*sizeof(float));
+    beam_settings_chunk.beam_angles_array = beam_settings.beam_angles_array;
+
+    //Number of beam calculations needed for point components
+    beam_settings_chunk.num_point_beam_values = temp_cropped_src->n_points * woden_settings->num_time_steps * woden_settings->num_freqs;
+    beam_settings_chunk.num_gausscomp_beam_values = temp_cropped_src->n_gauss * woden_settings->num_time_steps * woden_settings->num_freqs;
+    beam_settings_chunk.num_shape_beam_values = temp_cropped_src->n_shapes * woden_settings->num_time_steps * woden_settings->num_freqs;
+
+    beam_settings_chunk.beamtype = beam_settings.beamtype;
+
     //Set constants used in beam calculation
     beam_settings_chunk.beam_FWHM_rad = beam_settings.beam_FWHM_rad;
 
@@ -452,12 +455,9 @@ beam_settings_t make_beam_settings_chunk(beam_settings_t beam_settings,
     }//end assign ha,dec for point+gaussian components time loop
   } // End if GAUSS_BEAM
 
-  // else if (beam_settings_chunk.beamtype == FEE_BEAM) {
-  //
-  //   beam_settings_chunk.FEE_beam = malloc(sizeof(copy_primary_beam_t));
-  //   beam_settings.FEE_beam = beam_settings.FEE_beam;
-  // }
-
+  else {
+    beam_settings_chunk = beam_settings;
+  }
 
   return beam_settings_chunk;
 

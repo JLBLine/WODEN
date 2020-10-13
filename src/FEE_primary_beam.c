@@ -1104,9 +1104,9 @@ void RTS_freeHDFBeam(copy_primary_beam_t *pb){
 // //
 // }
 //
-void RTS_HDFBeamCleanUp(){
-
-  // Makes special call to get_FF2 which release cached arrays
-  RTS_get_FF2(0,0,NULL,NULL,0,1);
-
-}
+// void RTS_HDFBeamCleanUp(){
+//
+//   // Makes special call to get_FF2 which release cached arrays
+//   RTS_get_FF2(0,0,NULL,NULL,0,1);
+//
+// }

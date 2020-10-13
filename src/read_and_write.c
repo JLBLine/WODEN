@@ -100,7 +100,6 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
   int coeff_ind;
 
   //So we know how many s_coeffs we have put into S1_coeffs for each source
-  // int ind_scoeffs1;
 
   //Array that will end up being as long as the number of sources,
   //containing catsource_t structs
@@ -212,8 +211,6 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
       //Pointsource params
       srcs[n_src-1].point_ras = malloc( srcs[n_src-1].n_points * sizeof(float) );
       srcs[n_src-1].point_decs = malloc( srcs[n_src-1].n_points * sizeof(float) );
-      // srcs[n_src-1].point_fluxes = malloc( srcs[n_src-1].n_points * sizeof(float) );
-      // srcs[n_src-1].point_freqs = malloc( srcs[n_src-1].n_points * sizeof(float) );
       srcs[n_src-1].point_SIs = malloc( srcs[n_src-1].n_points * sizeof(float) );
       srcs[n_src-1].point_ref_stokesI = malloc( srcs[n_src-1].n_points * sizeof(float) );
       srcs[n_src-1].point_ref_stokesQ = malloc( srcs[n_src-1].n_points * sizeof(float) );
@@ -223,8 +220,6 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
       //Gaussian params
       srcs[n_src-1].gauss_ras = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
       srcs[n_src-1].gauss_decs = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
-      // srcs[n_src-1].gauss_fluxes = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
-      // srcs[n_src-1].gauss_freqs = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
       srcs[n_src-1].gauss_SIs = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
       srcs[n_src-1].gauss_ref_stokesI = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
       srcs[n_src-1].gauss_ref_stokesQ = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
@@ -235,6 +230,7 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
       srcs[n_src-1].gauss_minors = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
       srcs[n_src-1].gauss_pas = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
 
+      //TODO need to update shapelets to also used all Stokes params
       srcs[n_src-1].shape_ras = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
       srcs[n_src-1].shape_decs = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
       srcs[n_src-1].shape_fluxes = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
@@ -472,6 +468,8 @@ woden_settings_t * read_json_settings(const char *filename){
   struct json_object *FEE_beam;
   struct json_object *hdf5_beam_path;
   struct json_object *jd_date;
+  struct json_object *EDA2_sim;
+  struct json_object *array_layout_file_path;
 
 	fp = fopen(filename,"r");
 	fread(buffer, 1024, 1, fp);
@@ -502,6 +500,9 @@ woden_settings_t * read_json_settings(const char *filename){
 
   json_object_object_get_ex(parsed_json, "jd_date", &jd_date);
 
+  json_object_object_get_ex(parsed_json, "EDA2_sim", &EDA2_sim);
+  json_object_object_get_ex(parsed_json, "array_layout", &array_layout_file_path);
+
   woden_settings_t * woden_settings;
   // woden_settings = NULL;
   woden_settings = malloc( sizeof(woden_settings_t) );
@@ -528,6 +529,10 @@ woden_settings_t * read_json_settings(const char *filename){
 
   //Boolean whether to use gaussian primary beam
   int fee_beam = json_object_get_boolean(FEE_beam);
+
+  //Boolean whether this is an EDA2 simulation or not; changes the way the
+  //array layout is read from the metafits file
+  woden_settings->EDA2_sim = json_object_get_boolean(EDA2_sim);
 
   if (gauss_beam) {
     woden_settings->beamtype = GAUSS_BEAM;
@@ -562,11 +567,23 @@ woden_settings_t * read_json_settings(const char *filename){
     woden_settings->beamtype = FEE_BEAM;
   }
 
+  else if (EDA2_sim){
+    woden_settings->beamtype = ANALY_DIPOLE;
+  }
+
   else {
     woden_settings->beamtype = NO_BEAM;
   }
 
   woden_settings->chunking_size = json_object_get_int(chunking_size);
+
+  woden_settings->array_layout_file = json_object_get_boolean(array_layout_file_path);
+  if (woden_settings->array_layout_file) {
+    woden_settings->array_layout_file_path = json_object_get_string(array_layout_file_path);
+    printf("Will use east,north,height coords from this file: %s\n", woden_settings->array_layout_file_path);
+  }
+
+  woden_settings->hdf5_beam_path = json_object_get_string(hdf5_beam_path);
 
 
   struct json_object *band_num;
@@ -596,7 +613,7 @@ woden_settings_t * read_json_settings(const char *filename){
 // All credit to the original authors
 // https://github.com/ICRAR/mwa-RTS.git
 **********************************/
-int RTS_init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome){
+int RTS_init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, woden_settings_t *woden_settings){
     int status=0;
     int ncols, anynulls, colnum, nfound, i;
     long naxes[2], nrows, frow, felem;
@@ -746,11 +763,18 @@ int RTS_init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, const char *nome)
       delay_ind += 1;
   	}
 
+    // //Set the number of stations
+    // if (woden_settings->EDA2_sim == 1) {
+    //   // metafits->num_tiles = metafits->num_tiles;
+    //   metafits->num_tiles = metafits->num_tiles - 1;
+    // } else {
+    //   //NINPUTS has both XX and YY inputs into correlator so divide by 2 to
+    //   //get the number of tiles when running MWA simulation
+    //   metafits->num_tiles = metafits->num_tiles / 2;
+    // }
 
-
-    //NINPUTS has both XX and YY inputs into correlator so divide by 2 to
-    //get the number of tiles
     metafits->num_tiles = metafits->num_tiles / 2;
+
     metafits->lst_base *= DD2R;
     metafits->ra_point *= DD2R;
     metafits->dec_point *= DD2R;
@@ -850,8 +874,6 @@ void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
   double rmatpn[3][3];
   double mjd = woden_settings->jd_date - 2400000.5;
   double J2000_transformation[3][3];
-
-  printf("YO DATES AND SHIT %.5f %.5f\n",woden_settings->jd_date,mjd );
 
   // palPrenut calls:
   //  - palPrec( 2000.0, palEpj(mjd), rmatp ); // form precession matrix: v_mean(mjd epoch) = rmatp * v_mean(J2000)
@@ -955,35 +977,73 @@ void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
 
 
 
-array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits, int num_tiles,
+array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits,
                                 woden_settings_t *woden_settings){
 
   array_layout_t * array_layout;
   array_layout = malloc( sizeof(array_layout_t) );
 
-  array_layout->latitude = MWA_LAT*DD2R;
-  array_layout->num_tiles = num_tiles;
-  array_layout->num_baselines = (array_layout->num_tiles*(array_layout->num_tiles-1)) / 2;
+  if (woden_settings->array_layout_file) {
+    int num_tiles = 0;
 
-  array_layout->ant_east = malloc( array_layout->num_tiles * sizeof(float) );
-  array_layout->ant_north = malloc( array_layout->num_tiles * sizeof(float) );
-  array_layout->ant_height = malloc( array_layout->num_tiles * sizeof(float) );
+    FILE *fp=NULL;
+    char line[BUFSIZ];
+
+    if ((fp=fopen(woden_settings->array_layout_file_path,"r"))==NULL) {
+      printf("Reading of array_layout file:\n %s\nhas failed", woden_settings->array_layout_file_path);
+      exit(1);
+    }
+
+    //gcc 7.5.0 on my desktop will not perform realloc later in the code
+    //unless I do an initial malloc here
+    array_layout->ant_east = malloc(sizeof(float));
+    array_layout->ant_north = malloc(sizeof(float));
+    array_layout->ant_height = malloc(sizeof(float));
+
+    while(fgets(line,BUFSIZ,fp) != NULL) {
+
+      num_tiles += 1;
+
+      array_layout->ant_east = realloc(array_layout->ant_east,sizeof(float)*num_tiles);
+      array_layout->ant_north = realloc(array_layout->ant_north,sizeof(float)*num_tiles);
+      array_layout->ant_height = realloc(array_layout->ant_height,sizeof(float)*num_tiles);
+
+      sscanf( line, "%f %f %f", &array_layout->ant_east[num_tiles-1],
+                                &array_layout->ant_north[num_tiles-1],
+                                &array_layout->ant_height[num_tiles-1] );
+
+    }
+
+    array_layout->num_tiles = num_tiles;
+  } else {
+    array_layout->num_tiles = metafits->num_tiles;
+
+    array_layout->ant_east = malloc( array_layout->num_tiles * sizeof(float) );
+    array_layout->ant_north = malloc( array_layout->num_tiles * sizeof(float) );
+    array_layout->ant_height = malloc( array_layout->num_tiles * sizeof(float) );
+
+    for (int i = 0; i < array_layout->num_tiles; i++) {
+      //Metafits e,n,h goes XX,YY,XX,YY so need to choose every other value
+      array_layout->ant_east[i] = metafits->E[i*2];
+      array_layout->ant_north[i] = metafits->N[i*2];
+      array_layout->ant_height[i] = metafits->H[i*2];
+    }
+  }
+
+  //malloc some arrays for holding array coords
+
+  array_layout->latitude = MWA_LAT*DD2R;
+  array_layout->num_baselines = (array_layout->num_tiles*(array_layout->num_tiles-1)) / 2;
 
   array_layout->ant_X = malloc( array_layout->num_tiles * sizeof(float) );
   array_layout->ant_Y = malloc( array_layout->num_tiles * sizeof(float) );
   array_layout->ant_Z = malloc( array_layout->num_tiles * sizeof(float) );
-  //
-  for (int i = 0; i < array_layout->num_tiles; i++) {
-    //Metafits e,n,h goes XX,YY,XX,YY so need to choose every other value
-    array_layout->ant_east[i] = metafits->E[i*2];
-    array_layout->ant_north[i] = metafits->N[i*2];
-    array_layout->ant_height[i] = metafits->H[i*2];
 
+  for (int i = 0; i < array_layout->num_tiles; i++) {
     //Convert to local X,Y,Z
     ENH2XYZ_local(array_layout->ant_east[i], array_layout->ant_north[i], array_layout->ant_height[i],
                   array_layout->latitude,
                   &(array_layout->ant_X[i]), &(array_layout->ant_Y[i]), &(array_layout->ant_Z[i]));
-
   }
 
   //TODO when we implement non-phase track mode, make this a variable
@@ -1005,25 +1065,6 @@ array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits, int num_tiles,
       baseline_ind++;
     }
   }
-
-  // int baseline_ind = 0;
-  // for (int ant2 = 0; ant2 < array_layout->num_tiles; ant2++) {
-  //   for (int ant1 = 0; ant1 <= ant2; ant1++) {
-  //
-  //     if (ant1 != ant2){
-  //
-  //       int cc_ct = ant1 + (ant2 * (ant2-1)) / 2;
-  //
-  //       printf("We on the same page?? %d %d\n",cc_ct,baseline_ind );
-  //
-  //       array_layout->X_diff_metres[baseline_ind] = array_layout->ant_X[ant1] - array_layout->ant_X[ant2];
-  //       array_layout->Y_diff_metres[baseline_ind] = array_layout->ant_Y[ant1] - array_layout->ant_Y[ant2];
-  //       array_layout->Z_diff_metres[baseline_ind] = array_layout->ant_Z[ant1] - array_layout->ant_Z[ant2];
-  //       baseline_ind++;
-  //     }
-  //   }
-  // }
-
 
   return array_layout;
 //
