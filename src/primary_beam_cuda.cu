@@ -25,7 +25,7 @@ __device__ void twoD_Gaussian(float x, float y, float xo, float yo,
 }
 
 __global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
-           float *ref_freq, float *d_freqs,
+           float beam_ref_freq, float *d_freqs,
            float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
            int num_freqs, int num_times, int num_components,
            cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J11) {
@@ -47,7 +47,7 @@ __global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
     int beam_ind = num_freqs*time_ind*num_components + (num_components*iFreq) + component;
 
     float d_beam_real, d_beam_imag;
-    float std = (fwhm_lm / FWHM_FACTOR) * (ref_freq[0] / d_freqs[iFreq]);
+    float std = (fwhm_lm / FWHM_FACTOR) * (beam_ref_freq / d_freqs[iFreq]);
 
     twoD_Gaussian(d_beam_ls[iLMcoord], d_beam_ms[iLMcoord], 0, 0,
                std, std, cos_theta, sin_theta, sin_2theta,
@@ -56,7 +56,7 @@ __global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
     d_primay_beam_J00[beam_ind] = make_cuComplex(d_beam_real, d_beam_imag);
     d_primay_beam_J11[beam_ind] = make_cuComplex(d_beam_real, d_beam_imag);
 
-    // printf("%f %f %f %f %f\n",std, fwhm_lm, FWHM_FACTOR, ref_freq[0] , d_freqs[iFreq] );
+    // printf("%f %f %f %f %f\n",std, fwhm_lm, FWHM_FACTOR, beam_ref_freq , d_freqs[iFreq] );
 
     // printf("iFreq,iLMcoord,d_beam_ls[iLMcoord],d_beam_ms[iLMcoord],d_beam_real %d %d %f %f %f\n",iFreq,iLMcoord,d_beam_ls[iLMcoord],d_beam_ms[iLMcoord],d_beam_real );
 
@@ -66,7 +66,7 @@ __global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
 
 extern "C" void calculate_gaussian_beam(int num_components, int num_time_steps, int num_freqs,
      float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
-     float *d_beam_ref_freq, float *d_freqs, float *d_beam_angles_array,
+     float beam_ref_freq, float *d_freqs, float *d_beam_angles_array,
      float *beam_has, float *beam_decs,
      cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J11){
 
@@ -102,7 +102,7 @@ extern "C" void calculate_gaussian_beam(int num_components, int num_time_steps, 
   //
   // printf("Doing a beam gaussian beam kernel\n");
   kern_gaussian_beam<<< grid, threads >>>(d_beam_ls, d_beam_ms,
-             d_beam_ref_freq, d_freqs,
+             beam_ref_freq, d_freqs,
              fwhm_lm, cos_theta, sin_theta, sin_2theta,
              num_freqs, num_time_steps, num_components,
              d_primay_beam_J00, d_primay_beam_J11);

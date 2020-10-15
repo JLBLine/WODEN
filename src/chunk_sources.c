@@ -405,8 +405,7 @@ beam_settings_t make_beam_settings_chunk(beam_settings_t beam_settings,
     //Set constants used in beam calculation
     beam_settings_chunk.beam_FWHM_rad = beam_settings.beam_FWHM_rad;
 
-    beam_settings_chunk.beam_ref_freq_array = malloc(sizeof(float));
-    beam_settings_chunk.beam_ref_freq_array = beam_settings.beam_ref_freq_array;
+    beam_settings_chunk.beam_ref_freq = beam_settings.beam_ref_freq;
 
     //Store all ha (which change with lst) that the beam needs to be calculated at.
     beam_settings_chunk.beam_point_has = malloc(woden_settings->num_time_steps * temp_cropped_src->n_points * sizeof(float));
