@@ -50,21 +50,10 @@ int main(int argc, char **argv) {
     woden_settings->chunking_size = MAX_CHUNKING_SIZE;
   }
 
-  //Read in information from the metafits file
-  int status=0;
-  static fitsfile *metaf_file=NULL;
-  MetaFfile_t metafits;
-  fits_open_file(&metaf_file, woden_settings->metafits_filename, READONLY, &status);
-  status = RTS_init_meta_file(metaf_file, &metafits, woden_settings);
-
-  //Propagate some of the metafits data into woden_settings
-  woden_settings->lst_base = metafits.lst_base;
-  woden_settings->base_low_freq = metafits.base_low_freq;
-
   //Create the array layout in instrument-centric X,Y,Z using positions
-  //from the metafits file. Rotate back to J2000 if necessary
+  //Rotate back to J2000 if necessary
   array_layout_t * array_layout;
-  array_layout = calc_XYZ_diffs(&metafits, woden_settings);
+  array_layout = calc_XYZ_diffs(woden_settings);
   woden_settings->num_baselines = array_layout->num_baselines;
 
   //Set some constants based on the settings
@@ -75,8 +64,7 @@ int main(int argc, char **argv) {
   float sdec0,cdec0;
   sdec0 = sin(woden_settings->dec0); cdec0=cos(woden_settings->dec0);
 
-  printf("Setting phase centre (rad) to %f %f\n",woden_settings->ra0, woden_settings->dec0);
-  printf("Obs pointing centre (rad) is %f %f\n",metafits.ra_point, metafits.dec_point);
+  printf("Setting phase centre RA,DEC %.5fdeg %.5fdeg\n",woden_settings->ra0/DD2R, woden_settings->dec0/DD2R);
 
   //Used for calculating l,m,n for components
   float angles_array[3] = {sdec0, cdec0, woden_settings->ra0};
@@ -107,8 +95,8 @@ int main(int argc, char **argv) {
 
   //Setup some beam settings given user chose parameters
   beam_settings_t beam_settings;
-  beam_settings = fill_primary_beam_settings(woden_settings, metafits,
-                                             cropped_src, lsts, num_time_steps);
+  beam_settings = fill_primary_beam_settings(woden_settings, cropped_src,
+                                            lsts, num_time_steps);
 
   //TODO allow this frequency resolution to over-written by user commands
   //MWA correlator data is split into 24 'coarse' bands of 1.28MHz bandwidth,
@@ -118,7 +106,7 @@ int main(int argc, char **argv) {
   for (size_t band = 0; band < woden_settings->num_bands; band++) {
     //Set the lower frequency edge for this coarse band
     int band_num = woden_settings->band_nums[band];
-    float base_band_freq = ((band_num - 1)*(metafits.bandwidth/24.0)) + woden_settings->base_low_freq;
+    float base_band_freq = ((band_num - 1)*woden_settings->coarse_band_width) + woden_settings->base_low_freq;
     printf("Simulating band %02d with bottom freq %.8e\n",band_num,base_band_freq);
 
     //TODO - add half a freq resolution in here? minus? Leave as is?
@@ -129,19 +117,17 @@ int main(int argc, char **argv) {
     beam_settings.FEE_beam_zenith = malloc(sizeof(copy_primary_beam_t));
 
     if (woden_settings->beamtype == FEE_BEAM){
-      float base_middle_freq = base_band_freq + metafits.bandwidth/48.0;
+      float base_middle_freq = base_band_freq + woden_settings->coarse_band_width/2.0;
 
       //TODO make a function like this that can do the GPU related tasks in
       //this if statement in another function. For some reason I can't make
       //it work outside of woden.c main (something to do with compilation and
       //linkage??)
-      // setup_FEE_beam(woden_settings, metafits, beam_settings, base_middle_freq);
+      // setup_FEE_beam(woden_settings, beam_settings, base_middle_freq);
 
       // Just use one single tile beam for all for now - will need a certain
       // number in the future to include dipole flagging
       int st = 0;
-
-
       printf("Middle freq is %f\n",base_middle_freq );
 
       float float_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -155,15 +141,9 @@ int main(int argc, char **argv) {
       get_HDFBeam_normalisation(beam_settings, woden_settings->num_time_steps);
       printf(" done.\n");
 
-      float *float_delays = NULL;
-      float_delays = malloc(16*sizeof(float));
-
-      for (size_t i = 0; i < 16; i++) {
-       float_delays[i] = metafits.FEE_ideal_delays[i];
-      }
-
       printf("Setting up the FEE beam...");
-      RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam, float_delays, st);
+      RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq,
+            beam_settings.FEE_beam, woden_settings->FEE_ideal_delays, st);
       printf(" done.\n");
 
       printf("Copying the FEE beam across to the GPU...");

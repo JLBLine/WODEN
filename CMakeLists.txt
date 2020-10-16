@@ -157,16 +157,6 @@ set(target_convert "${CONVERTWSCLEAN}/convert_WSClean_list_to_WODEN.py")
 ADD_CUSTOM_TARGET(target_convert ALL
                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${target_convert} ${link_convert})
 
-##Make a symlink to the tempate MWA uvfits so it's easy to find
-set(link_uvfits "template_MWA_128T.uvfits")
-find_path(UVFITS_DIR template_MWA_128T.uvfits HINTS "${CMAKE_CURRENT_LIST_DIR}/templates/")
-if(UVFITS_DIR)
-  message(STATUS "UVFITS_DIR path: ${UVFITS_DIR}")
-endif()
-set(target_uvfits "${UVFITS_DIR}/template_MWA_128T.uvfits")
-ADD_CUSTOM_TARGET(target_uvfits ALL
-                  COMMAND ${CMAKE_COMMAND} -E create_symlink ${target_uvfits} ${link_uvfits})
-
 ##Copy the variable init script so this file can be put in bashrc
 find_path(INIT_WODEN init_WODEN.sh HINTS "${CMAKE_CURRENT_LIST_DIR}/templates/")
 if(INIT_WODEN)

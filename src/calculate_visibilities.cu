@@ -115,10 +115,7 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   int num_gauss = catsource.n_gauss;
   int num_shapes = catsource.n_shapes;
 
-  //Setup some beam related arrays
-  float *d_beam_angles_array = NULL;
-  cudaMalloc( (void**)&d_beam_angles_array, 3*sizeof(float) );
-  cudaMemcpy( d_beam_angles_array, beam_settings.beam_angles_array, 3*sizeof(float), cudaMemcpyHostToDevice );
+
 
   float *d_freqs = NULL;
   cudaMalloc( (void**)&d_freqs, num_freqs*sizeof(float) );
@@ -131,10 +128,14 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   float fwhm_lm; //= 20.0 * D2R;
 
   float *d_beam_ref_freq = NULL;
+  float *d_beam_angles_array = NULL;
   if (beam_settings.beamtype == GAUSS_BEAM) {
-    cudaMalloc( (void**)&d_beam_ref_freq, sizeof(float) );
-    cudaMemcpy( d_beam_ref_freq, beam_settings.beam_ref_freq_array, sizeof(float), cudaMemcpyHostToDevice );
+    // cudaMalloc( (void**)&d_beam_ref_freq, sizeof(float) );
+    // cudaMemcpy( d_beam_ref_freq, beam_settings.beam_ref_freq_array, sizeof(float), cudaMemcpyHostToDevice );
     fwhm_lm = sinf(beam_settings.beam_FWHM_rad);
+
+    cudaMalloc( (void**)&d_beam_angles_array, 3*sizeof(float) );
+    cudaMemcpy( d_beam_angles_array, beam_settings.beam_angles_array, 3*sizeof(float), cudaMemcpyHostToDevice );
 
   }
 
@@ -214,7 +215,7 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
 
       calculate_gaussian_beam(num_points, num_time_steps, num_freqs,
            fwhm_lm, cos_theta, sin_theta, sin_2theta,
-           d_beam_ref_freq, d_freqs, d_beam_angles_array,
+           beam_settings.beam_ref_freq, d_freqs, d_beam_angles_array,
            beam_settings.beam_point_has, beam_settings.beam_point_decs,
            d_primay_beam_J00, d_primay_beam_J11);
 
@@ -383,7 +384,7 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
     if (beam_settings.beamtype == GAUSS_BEAM) {
       calculate_gaussian_beam(num_gauss, num_time_steps, num_freqs,
            fwhm_lm, cos_theta, sin_theta, sin_2theta,
-           d_beam_ref_freq, d_freqs, d_beam_angles_array,
+           beam_settings.beam_ref_freq, d_freqs, d_beam_angles_array,
            beam_settings.beam_gausscomp_has, beam_settings.beam_gausscomp_decs,
            d_primay_beam_J00, d_primay_beam_J11);
 
@@ -587,7 +588,7 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
     if (beam_settings.beamtype == GAUSS_BEAM) {
       calculate_gaussian_beam(num_shapes, num_time_steps, num_freqs,
            fwhm_lm, cos_theta, sin_theta, sin_2theta,
-           d_beam_ref_freq, d_freqs, d_beam_angles_array,
+           beam_settings.beam_ref_freq, d_freqs, d_beam_angles_array,
            beam_settings.beam_shape_has, beam_settings.beam_shape_decs,
            d_primay_beam_J00, d_primay_beam_J11);
 
@@ -704,8 +705,11 @@ extern "C" void calculate_visibilities(float *X_diff_metres, float *Y_diff_metre
   //Free up the GPU memory
 
   cudaFree( d_freqs );
-  cudaFree( d_beam_angles_array );
-  cudaFree( d_beam_ref_freq );
+
+  if (beam_settings.beamtype == GAUSS_BEAM) {
+    cudaFree( d_beam_angles_array );
+    cudaFree( d_beam_ref_freq );
+  }
 
   cudaFree( d_ws );
   cudaFree( d_vs );

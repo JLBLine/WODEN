@@ -80,17 +80,12 @@ void calc_para_angle(catsource_t *cropped_src, float *lsts,
 }
 
 beam_settings_t fill_primary_beam_settings(woden_settings_t *woden_settings,
-                MetaFfile_t metafits, catsource_t *cropped_src,
-                float *lsts, int num_time_steps) {
+                catsource_t *cropped_src, float *lsts, int num_time_steps) {
 
 
   //Setup primary beam settings for observation
   beam_settings_t beam_settings; //= malloc(sizeof(beam_settings_t));
-  //Angles used in calculating beam style l,m,ns
-  beam_settings.beam_angles_array = malloc(3*sizeof(float));
-  beam_settings.beam_angles_array[0] = sinf(metafits.dec_point);
-  beam_settings.beam_angles_array[1] = cosf(metafits.dec_point);
-  beam_settings.beam_angles_array[2] = woden_settings->lst_base - metafits.ra_point;
+
 
   //Number of beam calculations needed for point components
   beam_settings.num_point_beam_values = cropped_src->n_points * woden_settings->num_time_steps * woden_settings->num_freqs;
@@ -101,7 +96,15 @@ beam_settings_t fill_primary_beam_settings(woden_settings_t *woden_settings,
   if (woden_settings->beamtype == GAUSS_BEAM) {
     beam_settings.beamtype = GAUSS_BEAM;
 
+    //Angles used in calculating beam style l,m,ns
+    beam_settings.beam_angles_array = malloc(3*sizeof(float));
+    beam_settings.beam_angles_array[0] = sinf(woden_settings->gauss_dec_point);
+    beam_settings.beam_angles_array[1] = cosf(woden_settings->gauss_dec_point);
+    beam_settings.beam_angles_array[2] = woden_settings->lst_base - woden_settings->gauss_ra_point;
+
     printf("Setting up Gaussian primary beam settings\n");
+    printf("   pointing at HA, Dec = %.5fdeg, %.5fdeg\n",
+               beam_settings.beam_angles_array[2]/DD2R, woden_settings->gauss_dec_point/DD2R );
     printf("   setting beam FWHM to %.5fdeg and ref freq to %.3fMHz\n",
             woden_settings->gauss_beam_FWHM,woden_settings->gauss_beam_ref_freq / 1e+6  );
 
@@ -109,9 +112,11 @@ beam_settings_t fill_primary_beam_settings(woden_settings_t *woden_settings,
     beam_settings.beam_FWHM_rad = woden_settings->gauss_beam_FWHM * D2R;
     //TODO I cannot for the life of me work out how to cudaMalloc and Memcpy
     //a single float (argh) so put the ref freq in an array (embarrassment)
-    float beam_ref_freq_array[1] = {woden_settings->gauss_beam_ref_freq};
-    beam_settings.beam_ref_freq_array = malloc(sizeof(float));
-    beam_settings.beam_ref_freq_array = beam_ref_freq_array;
+    // float beam_ref_freq_array[1] = {woden_settings->gauss_beam_ref_freq};
+    // beam_settings.beam_ref_freq_array = malloc(sizeof(float));
+    // beam_settings.beam_ref_freq_array = beam_ref_freq_array;
+
+    beam_settings.beam_ref_freq = woden_settings->gauss_beam_ref_freq;
 
     //Store all ha (which change with lst) that the beam needs to be calculated at.
     beam_settings.beam_point_has = malloc(woden_settings->num_time_steps * cropped_src->n_points * sizeof(float));
@@ -174,7 +179,6 @@ beam_settings_t fill_primary_beam_settings(woden_settings_t *woden_settings,
         beam_settings.para_cosrot[time_step*MAX_POLS + pol_direction] = cosf((float)para_angle + M_PI/2.0);
         beam_settings.para_sinrot[time_step*MAX_POLS + pol_direction] = sinf((float)para_angle + M_PI/2.0);
       }
-      // printf("PARA ANGLEEEEE %.10f %.10f %.10f\n",para_angle,cosf((float)para_angle + M_PI/2.0),sinf((float)para_angle + M_PI/2.0) );
     }
 
     calc_para_angle(cropped_src, lsts, num_time_steps);
@@ -191,51 +195,3 @@ beam_settings_t fill_primary_beam_settings(woden_settings_t *woden_settings,
   return beam_settings;
 
 } // end of fill_primary_beam_settings()
-
-//TODO make this work so we can pull it out of woden.c
-// void setup_FEE_beam(woden_settings_t *woden_settings, MetaFfile_t metafits,
-//                     beam_settings_t beam_settings, float base_middle_freq){
-//
-//   //Just use one single tile beam for all for now - will need a certain
-//   //number in the future to include dipole flagging
-//   int st = 0;
-//   beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
-//   //We need the zenith beam to get the normalisation
-//   beam_settings.FEE_beam_zenith = malloc(sizeof(copy_primary_beam_t));
-//
-//   printf("Middle freq is %f\n",base_middle_freq );
-//
-//   float float_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-//                                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-//
-//   printf("Setting up the zenith FEE beam...");
-//   RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam_zenith, float_zenith_delays, st);
-//   printf(" done.\n");
-//
-//   printf("Getting FEE beam normalisation...");
-//   get_HDFBeam_normalisation(beam_settings);
-//   printf(" done.\n");
-//
-//   for (size_t i = 0; i < 4; i++) {
-//
-//     printf("%.3f %.3f\n", creal(beam_settings.FEE_beam_zenith->norm_fac[i]),
-//                           cimag(beam_settings.FEE_beam_zenith->norm_fac[i]) );
-//     /* code */
-//   }
-//
-//   float *float_delays = NULL;
-//   float_delays = malloc(16*sizeof(float));
-//
-//   for (size_t i = 0; i < 16; i++) {
-//    float_delays[i] = metafits.FEE_ideal_delays[i];
-//   }
-//
-//   printf("Setting up the FEE beam...");
-//   RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam, float_delays, st);
-//   printf(" done.\n");
-//
-//   printf("Copying the FEE beam across to the GPU...");
-//   copy_FEE_primary_beam_to_GPU(beam_settings, woden_settings->num_time_steps);
-//   printf(" done.\n");
-//
-// }

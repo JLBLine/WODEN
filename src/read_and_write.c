@@ -455,11 +455,11 @@ woden_settings_t * read_json_settings(const char *filename){
   struct json_object *num_baselines;
   struct json_object *num_freqs;
   struct json_object *frequency_resolution;
-  struct json_object *base_frequency;
+  struct json_object *base_low_freq;
   struct json_object *num_time_steps;
   struct json_object *time_res;
   struct json_object *cat_filename;
-  struct json_object *metafits_filename;
+  struct json_object *coarse_band_width;
   struct json_object *sky_crop_type;
   struct json_object *gaussian_beam;
   struct json_object *chunking_size;
@@ -468,7 +468,7 @@ woden_settings_t * read_json_settings(const char *filename){
   struct json_object *FEE_beam;
   struct json_object *hdf5_beam_path;
   struct json_object *jd_date;
-  struct json_object *EDA2_sim;
+  struct json_object *EDA2_beam;
   struct json_object *array_layout_file_path;
 
 	fp = fopen(filename,"r");
@@ -477,20 +477,22 @@ woden_settings_t * read_json_settings(const char *filename){
 
 	parsed_json = json_tokener_parse(buffer);
 
-  // json_object_object_get_ex(parsed_json, "lst_base", &lst_base);
+  json_object_object_get_ex(parsed_json, "LST", &lst_base);
   json_object_object_get_ex(parsed_json, "ra0", &ra0);
   json_object_object_get_ex(parsed_json, "dec0", &dec0);
-  // json_object_object_get_ex(parsed_json, "num_baselines", &num_baselines);
   json_object_object_get_ex(parsed_json, "num_freqs", &num_freqs);
   json_object_object_get_ex(parsed_json, "frequency_resolution", &frequency_resolution);
-  // json_object_object_get_ex(parsed_json, "base_frequency", &base_frequency);
+  json_object_object_get_ex(parsed_json, "lowest_channel_freq", &base_low_freq);
+  json_object_object_get_ex(parsed_json, "coarse_band_width", &coarse_band_width);
+
   json_object_object_get_ex(parsed_json, "num_time_steps", &num_time_steps);
   json_object_object_get_ex(parsed_json, "time_res", &time_res);
   json_object_object_get_ex(parsed_json, "cat_filename", &cat_filename);
-  json_object_object_get_ex(parsed_json, "metafits_filename", &metafits_filename);
   json_object_object_get_ex(parsed_json, "sky_crop_components", &sky_crop_type);
   json_object_object_get_ex(parsed_json, "use_gaussian_beam", &gaussian_beam);
   json_object_object_get_ex(parsed_json, "chunking_size", &chunking_size);
+  json_object_object_get_ex(parsed_json, "array_layout", &array_layout_file_path);
+  json_object_object_get_ex(parsed_json, "jd_date", &jd_date);
 
   json_object_object_get_ex(parsed_json, "gauss_beam_FWHM", &gauss_beam_FWHM);
   json_object_object_get_ex(parsed_json, "gauss_beam_ref_freq", &gauss_beam_ref_freq);
@@ -498,26 +500,23 @@ woden_settings_t * read_json_settings(const char *filename){
   json_object_object_get_ex(parsed_json, "use_FEE_beam", &FEE_beam);
   json_object_object_get_ex(parsed_json, "hdf5_beam_path", &hdf5_beam_path);
 
-  json_object_object_get_ex(parsed_json, "jd_date", &jd_date);
-
-  json_object_object_get_ex(parsed_json, "EDA2_sim", &EDA2_sim);
-  json_object_object_get_ex(parsed_json, "array_layout", &array_layout_file_path);
+  json_object_object_get_ex(parsed_json, "use_EDA2_beam", &EDA2_beam);
 
   woden_settings_t * woden_settings;
-  // woden_settings = NULL;
   woden_settings = malloc( sizeof(woden_settings_t) );
 
-  // woden_settings->lst_base = (float)json_object_get_double(lst_base)*D2R;
+  woden_settings->lst_base = (float)json_object_get_double(lst_base)*D2R;
   woden_settings->ra0 = (float)json_object_get_double(ra0)*DD2R;
   woden_settings->dec0 = (float)json_object_get_double(dec0)*DD2R;
-  // woden_settings->num_baselines = json_object_get_int(num_baselines);
   woden_settings->num_freqs = json_object_get_int(num_freqs);
   woden_settings->frequency_resolution = (float)json_object_get_double(frequency_resolution);
-  // woden_settings->base_frequency = (float)json_object_get_double(base_frequency);
+
+  woden_settings->base_low_freq = (float)json_object_get_double(base_low_freq);
+  woden_settings->coarse_band_width = (float)json_object_get_double(coarse_band_width);
+
   woden_settings->num_time_steps = json_object_get_int(num_time_steps);
   woden_settings->time_res = (float)json_object_get_double(time_res);
   woden_settings->cat_filename = json_object_get_string(cat_filename);
-  woden_settings->metafits_filename = json_object_get_string(metafits_filename);
   woden_settings->hdf5_beam_path = json_object_get_string(hdf5_beam_path);
   woden_settings->jd_date = (float)json_object_get_double(jd_date);
 
@@ -530,10 +529,6 @@ woden_settings_t * read_json_settings(const char *filename){
   //Boolean whether to use gaussian primary beam
   int fee_beam = json_object_get_boolean(FEE_beam);
 
-  //Boolean whether this is an EDA2 simulation or not; changes the way the
-  //array layout is read from the metafits file
-  woden_settings->EDA2_sim = json_object_get_boolean(EDA2_sim);
-
   if (gauss_beam) {
     woden_settings->beamtype = GAUSS_BEAM;
 
@@ -542,8 +537,7 @@ woden_settings_t * read_json_settings(const char *filename){
     //Otherwise, set the defult FWHM of 20 deg
     if (beam_FWHM > 0.0) {
       woden_settings->gauss_beam_FWHM = beam_FWHM;
-    }
-    else {
+    } else {
       woden_settings->gauss_beam_FWHM = 20.0;
     }
 
@@ -552,22 +546,44 @@ woden_settings_t * read_json_settings(const char *filename){
     //Otherwise, set the defult FWHM of 20 deg
     if (beam_ref_freq > 0.0) {
       woden_settings->gauss_beam_ref_freq = beam_ref_freq;
-    }
-    else {
+    } else {
       woden_settings->gauss_beam_ref_freq = 150e+6;
     }
+
+    struct json_object *gauss_ra_point;
+    struct json_object *gauss_dec_point;
+    json_object_object_get_ex(parsed_json, "gauss_ra_point", &gauss_ra_point);
+    json_object_object_get_ex(parsed_json, "gauss_dec_point", &gauss_dec_point);
+    woden_settings->gauss_ra_point = (float)json_object_get_double(gauss_ra_point)*DD2R;
+    woden_settings->gauss_dec_point = (float)json_object_get_double(gauss_dec_point)*DD2R;
+
+    //TODO once we implement MWA primary beam, check whether both gaussian beam and
+    //MWA beam have been selected. If so, tell the user, and exit, get them to sort
+    //themselves out
   }
-  //TODO once we implement MWA primary beam, check whether both gaussian beam and
-  //MWA beam have been selected. If so, tell the user, and exit, get them to sort
-  //themselves out
-
-  //TODO make sure metafits contains correct beam info if using FEE_beam
-
   else if (fee_beam){
     woden_settings->beamtype = FEE_BEAM;
+
+    struct json_object *delay;
+    struct json_object *FEE_ideal_delays;
+    int delays_length;
+  	// size_t i;
+
+    json_object_object_get_ex(parsed_json, "FEE_delays", &FEE_ideal_delays);
+    delays_length = json_object_array_length(FEE_ideal_delays);
+
+    if (delays_length != 16) {
+      printf("FEE_delays in json file must be an array of length 16\nExiting now");
+      exit(1);
+    }
+
+  	for(int i=0;i<delays_length;i++) {
+  		delay = json_object_array_get_idx(FEE_ideal_delays, i);
+  		woden_settings->FEE_ideal_delays[i] = (float)json_object_get_double(delay);
+  	}
   }
 
-  else if (EDA2_sim){
+  else if (EDA2_beam){
     woden_settings->beamtype = ANALY_DIPOLE;
   }
 
@@ -581,15 +597,18 @@ woden_settings_t * read_json_settings(const char *filename){
   if (woden_settings->array_layout_file) {
     woden_settings->array_layout_file_path = json_object_get_string(array_layout_file_path);
     printf("Will use east,north,height coords from this file: %s\n", woden_settings->array_layout_file_path);
+  } else {
+    printf("WODEN needs an east,north,height coordinate list. Specify using \
+    'array_layout' in setting file\n");
+    exit(1);
   }
 
   woden_settings->hdf5_beam_path = json_object_get_string(hdf5_beam_path);
 
-
   struct json_object *band_num;
   struct json_object *band_nums;
   size_t num_bands;
-	size_t i;
+	// size_t i;
 
   json_object_object_get_ex(parsed_json, "band_nums", &band_nums);
   num_bands = json_object_array_length(band_nums);
@@ -597,269 +616,14 @@ woden_settings_t * read_json_settings(const char *filename){
   woden_settings->num_bands = num_bands;
   woden_settings->band_nums = malloc( num_bands * sizeof(int));
 
-	for(i=0;i<num_bands;i++) {
-		band_num = json_object_array_get_idx(band_nums, i);
-		woden_settings->band_nums[i] = json_object_get_int(band_num);
-	}
-
-
+  for(int i=0;i<num_bands;i++) {
+    band_num = json_object_array_get_idx(band_nums, i);
+    woden_settings->band_nums[i] = json_object_get_int(band_num);
+  }
 
   return woden_settings;
 
 }
-
-/*********************************
-// Taken and edited from the RTS (Mitchell et al 2008)
-// All credit to the original authors
-// https://github.com/ICRAR/mwa-RTS.git
-**********************************/
-int RTS_init_meta_file(fitsfile *mfptr, MetaFfile_t *metafits, woden_settings_t *woden_settings){
-    int status=0;
-    int ncols, anynulls, colnum, nfound, i;
-    long naxes[2], nrows, frow, felem;
-    //char tflg[1];
-    float nullval;
-    // FILE *fplog=NULL;
-    // extra variable for printing
-    char card[FLEN_CARD], keyname[FLEN_KEYWORD], coltype[FLEN_VALUE], colname[FLEN_VALUE];
-    int single = 0, nkeys, hdupos, ii;
-
-    // fplog=LogGetFilehandle();
-    // if (fplog==NULL) fplog=stderr;
-
-    memset(metafits,'\0',sizeof(MetaFfile_t));
-
-    // prints out metafits header contents
-    int look = 0;
-    if (look){
-      fits_get_hdu_num(mfptr, &hdupos);
-      for (; !status; hdupos++)  /* Main loop through each extension */
-      {
-        fits_get_hdrspace(mfptr, &nkeys, NULL, &status); /* get # of keywords */
-        printf("Header listing for HDU #%d:\n", hdupos);
-        for (ii = 1; ii <= nkeys; ii++) { /* Read and print each keywords */
-           if (fits_read_record(mfptr, ii, card, &status))break;
-           printf("%s\n", card);
-        }
-        printf("END\n\n");  /* terminate listing with END */
-        if (single) break;  /* quit if only listing a single header */
-        fits_movrel_hdu(mfptr, 1, NULL, &status);  /* try to move to next HDU */
-      }
-    } // ends look
-
-    fits_read_key(mfptr,TSTRING, "VERSION", &(metafits->version), NULL, &status);
-    if (status) {
-        printf("No VERSION keyword in metafits. Continuing...\n");
-        fits_clear_errmsg();
-        status=0;
-    }
-
-    fits_read_key(mfptr, TSTRING, "MWAVER", &(metafits->mwaVersion), NULL, &status);
-    if (status) {
-        printf("No MWAVER keyword in metafits. Continuing...\n");
-        fits_clear_errmsg();
-        status=0;
-    }
-    fits_read_key(mfptr, TSTRING, "RECVRS", &(metafits->recvrs), NULL, &status);
-    if (status) {
-        // fits_report_error(fplog,status);
-        printf("No RECVRS keyword in metafits.\n");
-        return status;
-    }
-    fits_read_key(mfptr,TSTRING, "CALIBSRC", &(metafits->calsrc), NULL, &status);
-    if (status) {
-        printf("No CALIBSRC keyword in metafits. Continuing...\n");
-        fits_clear_errmsg();
-        status=0;
-    }
-    fits_read_key(mfptr,TSTRING, "TILEFLAG", &(metafits->tileflg), NULL, &status);
-    if (status) {
-       printf("No TILEFLAG keyword in metafits. Continuing...\n");
-        fits_clear_errmsg();
-        status=0;
-    }
-
-    fits_read_key(mfptr,TINT, "CENTCHAN", &(metafits->centchan), NULL, &status);
-    if (status) {
-       printf("No CENTCHAN keyword in metafits. Continuing...\n");
-        fits_clear_errmsg();
-        status=0;
-    }
-
-    fits_read_key(mfptr,TFLOAT, "LST", &(metafits->lst_base), NULL, &status);
-    if (status) {
-       printf("No LST keyword in metafits. Continuing...\n");
-        fits_clear_errmsg();
-        status=0;
-    }
-
-    fits_read_key(mfptr,TFLOAT, "RA", &(metafits->ra_point), NULL, &status);
-    if (status) {
-       printf("No RA keyword in metafits. Continuing...\n");
-        fits_clear_errmsg();
-        status=0;
-    }
-
-    fits_read_key(mfptr,TFLOAT, "DEC", &(metafits->dec_point), NULL, &status);
-    if (status) {
-       printf("No DEC keyword in metafits. Continuing...\n");
-        fits_clear_errmsg();
-        status=0;
-    }
-
-    fits_read_key(mfptr,TFLOAT, "FINECHAN", &(metafits->frequency_resolution), NULL, &status);
-    if (status) {
-       printf("No FINECHAN keyword in metafits. Continuing...\n");
-        fits_clear_errmsg();
-        status=0;
-    }
-
-    fits_read_key(mfptr,TFLOAT, "FREQCENT", &(metafits->frequency_cent), NULL, &status);
-    if (status) {
-       printf("No FREQCENT keyword in metafits. Continuing...\n");
-        fits_clear_errmsg();
-        status=0;
-    }
-
-    fits_read_key(mfptr,TFLOAT, "BANDWDTH", &(metafits->bandwidth), NULL, &status);
-    if (status) {
-       printf("No BANDWDTH keyword in metafits. Continuing...\n");
-        fits_clear_errmsg();
-        status=0;
-    }
-
-    fits_read_key(mfptr,TFLOAT, "INTTIME", &(metafits->time_res), NULL, &status);
-    if (status) {
-       printf("No INTTIME keyword in metafits. Continuing...\n");
-        fits_clear_errmsg();
-        status=0;
-    }
-
-    fits_read_key(mfptr,TINT, "NINPUTS", &(metafits->num_tiles), NULL, &status);
-    if (status) {
-       printf("No NINPUTS keyword in metafits. Continuing...\n");
-        fits_clear_errmsg();
-        status=0;
-    }
-
-    char ideal_delays[38];
-
-    fits_read_key(mfptr,TSTRING, "DELAYS", &(ideal_delays), NULL, &status);
-    if (status) {
-       printf("No DELAYS keyword in metafits. Continuing...\n");
-        fits_clear_errmsg();
-        status=0;
-    }
-
-    //Split the delay string by ',' and shove in an array
-  	char delim[] = ",";
-  	char *ptr = strtok(ideal_delays, delim);
-
-    int delay_ind = 0;
-  	while(ptr != NULL)
-  	{
-      metafits->FEE_ideal_delays[delay_ind] = atoi(ptr);
-  		ptr = strtok(NULL, delim);
-      delay_ind += 1;
-  	}
-
-    // //Set the number of stations
-    // if (woden_settings->EDA2_sim == 1) {
-    //   // metafits->num_tiles = metafits->num_tiles;
-    //   metafits->num_tiles = metafits->num_tiles - 1;
-    // } else {
-    //   //NINPUTS has both XX and YY inputs into correlator so divide by 2 to
-    //   //get the number of tiles when running MWA simulation
-    //   metafits->num_tiles = metafits->num_tiles / 2;
-    // }
-
-    metafits->num_tiles = metafits->num_tiles / 2;
-
-    metafits->lst_base *= DD2R;
-    metafits->ra_point *= DD2R;
-    metafits->dec_point *= DD2R;
-    metafits->frequency_resolution *= 1e+3;
-    metafits->frequency_cent *= 1e+6;
-    metafits->bandwidth *= 1e+6;
-    metafits->base_low_freq = metafits->frequency_cent - (metafits->bandwidth / 2.0) - (metafits->frequency_resolution / 2.0);
-
-    /* now move onto HDU2, which is where the binary table is */
-  int hdutype=0;
-  fits_movrel_hdu(mfptr,1 , &hdutype, &status);
-  if (status) {
-      // fits_report_error(fplog,status);
-      printf("%s: Cannot move to binary table HDU.",__func__);
-      return status;
-  }
-  // printf("%s: moved to next HDU. Type is: %d\n",__func__,hdutype);
-  fits_read_keys_lng(mfptr, "NAXIS", 1, 2, naxes, &nfound, &status);
-  (metafits->naxes[0]) = naxes[0]; (metafits->naxes[1]) = naxes[1];
-  fits_get_num_rows(mfptr, &nrows, &status);
-  fits_get_num_cols(mfptr, &ncols, &status);
-  //print for checking stuff (default disabled)
-  if (look) {
-    for (ii = 1; ii <= ncols; ii++) {
-      fits_make_keyn("TTYPE", ii, keyname, &status); /* make keyword */
-      fits_read_key(mfptr, TSTRING, keyname, colname, NULL, &status);
-      fits_make_keyn("TFORM", ii, keyname, &status); /* make keyword */
-      fits_read_key(mfptr, TSTRING, keyname, coltype, NULL, &status);
-      printf(" %3d %-16s %-16s\n", ii, colname, coltype);
-    }
-  }
-  frow = 1;
-  felem = 1;
-  nullval = -99.;
-  //read Input key
-  fits_get_colnum(mfptr, CASEINSEN, "Input", &colnum, &status);
-  fits_read_col(mfptr, TINT, colnum,frow, felem, metafits->naxes[1], &nullval, &(metafits->inps), &anynulls, &status);
-  //read Antenna key
-  fits_get_colnum(mfptr, CASEINSEN, "Antenna", &colnum, &status);
-  fits_read_col(mfptr, TINT, colnum,frow, felem, metafits->naxes[1], &nullval, &(metafits->ants), &anynulls, &status);
-  // read Tile key
-  fits_get_colnum(mfptr, CASEINSEN, "Tile", &colnum, &status);
-  fits_read_col(mfptr, TINT, colnum,frow, felem, metafits->naxes[1], &nullval, &(metafits->tile), &anynulls, &status);
-  // read Dipole Delays
-  fits_get_colnum(mfptr, CASEINSEN, "Delays", &colnum, &status);
-  for (i=0; i<metafits->naxes[1]; i++){
-     fits_read_col(mfptr, TINT, colnum,i+1, felem, 16, &nullval, &(metafits->FEE_delays[i]),
-                   &anynulls, &status);
-  }
-// read Digital Gains
-  fits_get_colnum(mfptr, CASEINSEN, "Gains", &colnum, &status);
-  for (i=0; i<metafits->naxes[1]; i++){
-     fits_read_col(mfptr, TINT, colnum,i+1, felem, 24, &nullval, &(metafits->dig_gains[i]),
-                   &anynulls, &status);
-  }
-
-  // read Flags
-  fits_get_colnum(mfptr, CASEINSEN, "Flag", &colnum, &status);
-  fits_read_col(mfptr, TINT, colnum,frow, felem, metafits->naxes[1], &nullval, &(metafits->flags), &anynulls, &status);
-  // read Antenna Pos E
-  fits_get_colnum(mfptr, CASEINSEN, "East", &colnum, &status);
-  fits_read_col(mfptr, TFLOAT, colnum,frow, felem, metafits->naxes[1], &nullval, &(metafits->E), &anynulls, &status);
-  // read Antenna Pos N
-  fits_get_colnum(mfptr, CASEINSEN, "North", &colnum, &status);
-  fits_read_col(mfptr, TFLOAT, colnum,frow, felem, metafits->naxes[1], &nullval, &(metafits->N), &anynulls, &status);
-  // read Antenna Pos H
-  fits_get_colnum(mfptr, CASEINSEN, "Height", &colnum, &status);
-  fits_read_col(mfptr, TFLOAT, colnum,frow, felem, metafits->naxes[1], &nullval, &(metafits->H), &anynulls, &status);
-  // read cable Length
-  fits_get_colnum(mfptr, CASEINSEN, "Length", &colnum, &status);
-        //for (i=0; i<metafits->naxes[1]; i++){
-	char *lengptr[metafits->naxes[1]];
-	//following for loop written as a test solution for seg faults in reading lengths (James)
-	for(i=0; i<metafits->naxes[1];i++){
-            lengptr[i] = metafits->leng[i];
-	}
-
-  fits_read_col(mfptr, TSTRING, colnum, frow, felem, metafits->naxes[1], &nullval, &lengptr, &anynulls, &status);
-        //}
-	for(i=0;i<metafits->naxes[1];i++){
-		metafits->leng[i][0] = 'E';
-	}
-  return status;
-}
-
 
 void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
                        woden_settings_t *woden_settings) {
@@ -977,58 +741,41 @@ void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
 
 
 
-array_layout_t * calc_XYZ_diffs(MetaFfile_t *metafits,
-                                woden_settings_t *woden_settings){
+array_layout_t * calc_XYZ_diffs(woden_settings_t *woden_settings){
 
   array_layout_t * array_layout;
   array_layout = malloc( sizeof(array_layout_t) );
 
-  if (woden_settings->array_layout_file) {
-    int num_tiles = 0;
+  int num_tiles = 0;
 
-    FILE *fp=NULL;
-    char line[BUFSIZ];
+  FILE *fp=NULL;
+  char line[BUFSIZ];
 
-    if ((fp=fopen(woden_settings->array_layout_file_path,"r"))==NULL) {
-      printf("Reading of array_layout file:\n %s\nhas failed", woden_settings->array_layout_file_path);
-      exit(1);
-    }
-
-    //gcc 7.5.0 on my desktop will not perform realloc later in the code
-    //unless I do an initial malloc here
-    array_layout->ant_east = malloc(sizeof(float));
-    array_layout->ant_north = malloc(sizeof(float));
-    array_layout->ant_height = malloc(sizeof(float));
-
-    while(fgets(line,BUFSIZ,fp) != NULL) {
-
-      num_tiles += 1;
-
-      array_layout->ant_east = realloc(array_layout->ant_east,sizeof(float)*num_tiles);
-      array_layout->ant_north = realloc(array_layout->ant_north,sizeof(float)*num_tiles);
-      array_layout->ant_height = realloc(array_layout->ant_height,sizeof(float)*num_tiles);
-
-      sscanf( line, "%f %f %f", &array_layout->ant_east[num_tiles-1],
-                                &array_layout->ant_north[num_tiles-1],
-                                &array_layout->ant_height[num_tiles-1] );
-
-    }
-
-    array_layout->num_tiles = num_tiles;
-  } else {
-    array_layout->num_tiles = metafits->num_tiles;
-
-    array_layout->ant_east = malloc( array_layout->num_tiles * sizeof(float) );
-    array_layout->ant_north = malloc( array_layout->num_tiles * sizeof(float) );
-    array_layout->ant_height = malloc( array_layout->num_tiles * sizeof(float) );
-
-    for (int i = 0; i < array_layout->num_tiles; i++) {
-      //Metafits e,n,h goes XX,YY,XX,YY so need to choose every other value
-      array_layout->ant_east[i] = metafits->E[i*2];
-      array_layout->ant_north[i] = metafits->N[i*2];
-      array_layout->ant_height[i] = metafits->H[i*2];
-    }
+  if ((fp=fopen(woden_settings->array_layout_file_path,"r"))==NULL) {
+    printf("Reading of array_layout file:\n %s\nhas failed", woden_settings->array_layout_file_path);
+    exit(1);
   }
+
+  //gcc 7.5.0 on my desktop will not perform realloc later in the code
+  //unless I do an initial malloc here
+  array_layout->ant_east = malloc(sizeof(float));
+  array_layout->ant_north = malloc(sizeof(float));
+  array_layout->ant_height = malloc(sizeof(float));
+
+  while(fgets(line,BUFSIZ,fp) != NULL) {
+
+    num_tiles += 1;
+
+    array_layout->ant_east = realloc(array_layout->ant_east,sizeof(float)*num_tiles);
+    array_layout->ant_north = realloc(array_layout->ant_north,sizeof(float)*num_tiles);
+    array_layout->ant_height = realloc(array_layout->ant_height,sizeof(float)*num_tiles);
+
+    sscanf( line, "%f %f %f", &array_layout->ant_east[num_tiles-1],
+                              &array_layout->ant_north[num_tiles-1],
+                              &array_layout->ant_height[num_tiles-1] );
+  }
+
+  array_layout->num_tiles = num_tiles;
 
   //malloc some arrays for holding array coords
 

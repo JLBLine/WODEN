@@ -5,6 +5,9 @@ the GPU WODEN code.
 from __future__ import print_function
 from astropy.io import fits
 from astropy.time import Time
+from astropy.coordinates import EarthLocation
+from astropy import units as u
+
 from numpy import *
 from struct import unpack
 from subprocess import call, check_output
@@ -16,6 +19,7 @@ import warnings
 R2D = 180.0 / pi
 D2R = pi / 180.0
 MWA_LAT = -26.7033194444
+MWA_LONG = 116.670813889
 VELC = 299792458.0
 SOLAR2SIDEREAL = 1.00274
 
@@ -38,6 +42,12 @@ def calc_jdcal(date):
     ##The header of the uvdata file takes the integer, and
     ##then the fraction goes into the data array for PTYPE5
     return jd_day, jd_fraction
+
+def get_LST(latitude=None,longitude=None,date=None):
+    observing_location = EarthLocation(lat=latitude*u.deg, lon=longitude*u.deg, height=0.0)
+    observing_time = Time(date, scale='utc', location=observing_location)
+    LST = observing_time.sidereal_time('apparent')
+    return LST.value*15.0
 
 def RTS_encode_baseline(b1, b2):
     '''The ancient aips/miriad extended way of encoding a baseline.
@@ -272,7 +282,9 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
 
 def write_json(num_time_steps=None, num_freqs=None,
                band_nums=None, json_name=None, freq_res=None,
-               time_res=None, jd_date=None, args=None):
+               time_res=None, jd_date=None, array_layout=None,
+               lst=None, lowest_channel_freq=None, FEE_delays=None,
+               latitude=None, longitude=None, array_layout_name=None,args=None):
     '''Populate a json parameter file used to run WODEN'''
 
     outfile = open(json_name,'w+')
@@ -283,33 +295,44 @@ def write_json(num_time_steps=None, num_freqs=None,
     outfile.write('  "num_freqs": %d,\n' %num_freqs)
     outfile.write('  "num_time_steps": %d,\n' %num_time_steps)
     outfile.write('  "cat_filename": "%s",\n' %args.cat_filename)
-    outfile.write('  "metafits_filename": "%s",\n' %args.metafits_filename)
     outfile.write('  "time_res": %.5f,\n' %time_res)
     outfile.write('  "frequency_resolution": %.3f,\n' %freq_res)
     outfile.write('  "chunking_size": %d,\n' %args.chunking_size)
     outfile.write('  "jd_date": %.16f,\n' %jd_date)
+    outfile.write('  "LST": %.8f,\n' %lst)
+    outfile.write('  "array_layout": "%s",\n' %array_layout_name)
+    outfile.write('  "lowest_channel_freq": %.10e,\n' %lowest_channel_freq)
+    outfile.write('  "latitude": %.8f,\n' %latitude)
+    outfile.write('  "longitude": %.8f,\n' %longitude)
+    outfile.write('  "coarse_band_width": %.10e,\n' %float(args.coarse_band_width))
 
     if args.sky_crop_components:
         outfile.write('  "sky_crop_components": True,\n')
 
-    if args.use_gaussian_beam:
+    if args.primary_beam == 'Gaussian':
         outfile.write('  "use_gaussian_beam": True,\n')
+        if args.gauss_beam_FWHM:
+            outfile.write('  "gauss_beam_FWHM": %.10f,\n' %float(args.gauss_beam_FWHM))
 
-    if args.gauss_beam_FWHM:
-        outfile.write('  "gauss_beam_FWHM": %.10f,\n' %float(args.gauss_beam_FWHM))
+        if args.gauss_beam_ref_freq:
+            outfile.write('  "gauss_beam_ref_freq": %.10f,\n' %float(args.gauss_beam_ref_freq))
 
-    if args.use_gaussian_beam:
-        outfile.write('  "gauss_beam_ref_freq": %.10f,\n' %float(args.gauss_beam_ref_freq))
+        if args.gauss_ra_point:
+            outfile.write('  "gauss_ra_point": %.8f,\n' %float(args.gauss_ra_point))
+        else:
+            outfile.write('  "gauss_ra_point": %.8f,\n' %float(args.ra0))
+        if args.gauss_dec_point:
+            outfile.write('  "gauss_dec_point": %.8f,\n' %float(args.gauss_dec_point))
+        else:
+            outfile.write('  "gauss_dec_point": %.8f,\n' %float(args.dec0))
 
-    if args.use_FEE_beam:
+    elif args.primary_beam == 'MWA_FEE':
         outfile.write('  "use_FEE_beam": True,\n')
         outfile.write('  "hdf5_beam_path": "%s",\n' %args.hdf5_beam_path)
+        outfile.write('  "FEE_delays": %s,\n ' %FEE_delays)
 
-    if args.EDA2_sim:
-        outfile.write('  "EDA2_sim": True,\n')
-
-    if args.array_layout:
-        outfile.write('  "array_layout": "%s",\n' %args.array_layout)
+    elif args.primary_beam == 'EDA2':
+        outfile.write('  "use_EDA2_beam": True,\n')
 
     if len(band_nums) == 1:
         band_str = '[%d]' %band_nums[0]
@@ -375,6 +398,14 @@ def make_baseline_date_arrays(num_antennas, date, num_time_steps, time_res):
 
 if __name__ == "__main__":
     import argparse
+    from argparse import RawTextHelpFormatter
+
+    class SmartFormatter(argparse.HelpFormatter):
+        def _split_lines(self, text, width):
+            if text.startswith('R|'):
+                return text[2:].splitlines()
+            # this is the RawTextHelpFormatter._split_lines
+            return argparse.HelpFormatter._split_lines(self, text, width)
 
     ##Find out where the git repo is, cd in and grab the git label
     ##TODO do this in a better way
@@ -387,54 +418,107 @@ if __name__ == "__main__":
 
     print("You are using WODEN commit %s" %gitlabel)
 
-    parser = argparse.ArgumentParser(description='Run the woden simulator')
-    parser.add_argument('--ra0', type=float,
-        help='RA of the desired phase centre (deg)')
-    parser.add_argument('--dec0', type=float,
-        help='Dec of the desired phase centre (deg)')
-    parser.add_argument('--cat_filename',
-        help='RTS-v2-like srclist to simulate')
-    parser.add_argument('--metafits_filename',
-        help='Metafits file to base the simulation on')
-    parser.add_argument('--band_nums', default='all',
-        help='Defaults to running all 24 course bands. Alternatively, enter required numbers delineated by commas, e.g. --band_nums=1,7,9')
-    parser.add_argument('--output_uvfits_prepend',default='output',
-        help='Prepend name for uvfits - will append band%%02d.uvfits %%band_num at the end. Defaults to "output".')
-    parser.add_argument('--num_freq_channels', default='obs',
-        help='Number of fine frequency channels to simulate - defaults to 1.28MHz / --freq_res')
-    parser.add_argument('--num_time_steps', default='obs',
-        help='The number of time steps to simualte - defaults to how many are in the metafits')
-    parser.add_argument('--freq_res', type=float,default=False,
+    parser = argparse.ArgumentParser(description="Run the WODEN simulator and profit. \
+                WODEN is setup to simulate MWA-style observations, where the \
+                full frequency bandwidth is split into 24 'coarse' bands, each \
+                of which is split into fine channels. This naturally allows \
+                any simulation to be split across multiple GPUs as separate \
+                processes.",formatter_class=SmartFormatter)
+
+    freq_group = parser.add_argument_group('FREQUENCY OPTIONS')
+    freq_group.add_argument('--band_nums', default='all',
+        help='Defaults to running 24 coarse bands. Alternatively, enter required numbers delineated by commas, e.g. --band_nums=1,7,9')
+    freq_group.add_argument('--lowest_channel_freq', default=False,
+        help='Set the frequency (Hz) of the lowest channel for band 1. \
+              If using a metafits file, this will override the frequency in the metafits')
+    freq_group.add_argument('--coarse_band_width', default=1.28e+6,
+        help='Set the width of each coarse band \
+              If using a metafits file, this will override the frequency in the metafits')
+    freq_group.add_argument('--num_freq_channels', default='obs',
+        help='Number of fine frequency channels to simulate - defaults to --coarse_band_width / --freq_res')
+    freq_group.add_argument('--freq_res', type=float, default=False,
         help='Fine channel frequnecy resolution (Hz) - will default to what is in the metafits')
-    parser.add_argument('--time_res', type=float,default=False,
-        help='Time resolution (s) - will default to what is in the metafits')
-    parser.add_argument('--no_tidy', default=False, action='store_true',
-        help='Defaults to deleting output binary files from woden and json files. Add this flag to not delete those files')
-    parser.add_argument('--nvprof', default=False, action='store_true',
-        help='Add to switch on the nvidia profiler when running woden')
-    parser.add_argument('--sky_crop_components', default=False, action='store_true',
-        help='WODEN will crop out sky model information that is below the horizon for the given LST. By default, for each SOURCE in the sky model, if any COMPONENT is below the horizon, the entire source will be flagged. If --sky_crop_components is included WODEN will include any COMPONENT above the horizon, regardless of which SOURCE it belongs to.')
-    parser.add_argument('--use_gaussian_beam', default=False, action='store_true',
-        help='Apply a gaussian beam centred on the pointing centre in the metafits file')
-    parser.add_argument('--gauss_beam_FWHM', default=False,
-        help='The FWHM of the Gaussian beam in deg - WODEN defaults to using 20 deg if this is not set')
-    parser.add_argument('--gauss_beam_ref_freq', default=False,
-        help='The frequency at which the gauss beam FWHM is set at. If not set, WODEN will default to 150MHz.')
-    parser.add_argument('--use_FEE_beam', default=False, action='store_true',
-        help='Use the FEE MWA beam model, based on the settings in the metafits file')
-    parser.add_argument('--hdf5_beam_path', default='/home/jline/software/useful/MWA_embedded_element_pattern_V02.h5',
-        help='Location of the hdf5 file holding the FEE beam coefficients')
-    parser.add_argument('--chunking_size', type=int, default=0, help='The chunk size to break up the point sources into for processing - defaults to 0 (do not perform chunking)')
 
-    parser.add_argument('--EDA2_sim', default=False, action='store_true',
-        help='If doing an EDA2 simulation, need this flag to read all the antenna positions from a modified metafits file')
+    time_group = parser.add_argument_group('TIME OPTIONS')
+    time_group.add_argument('--num_time_steps', default='False',
+        help='The number of time steps to simualte. Defaults to how many are in \
+              if the metafits if using metafits')
+    time_group.add_argument('--time_res', type=float,default=False,
+        help='Time resolution (s) - will default to what is in the metafits \
+              if the metafits if using metafits')
 
-    parser.add_argument('--telescope_name', default='MWA',
-        help='Name of telescope written out to the uvfits file, defaults to MWA')
 
-    parser.add_argument('--array_layout', default=False,
+    obs_group = parser.add_argument_group('OBSERVATION OPTIONS')
+    obs_group.add_argument('--ra0', type=float,
+        help='RA of the desired phase centre (deg)')
+    obs_group.add_argument('--dec0', type=float,
+        help='Dec of the desired phase centre (deg)')
+    obs_group.add_argument('--date', default=False,
+        help='Initial UTC date of the observatio in format YYYY-MM-DDThh:mm:ss \
+             This is used to set the LST and array precession. This is set \
+             automatically when reading a metafits but including this will \
+             override the date in the metafits')
+
+    tel_group = parser.add_argument_group('TELESCOPE OPTIONS')
+    tel_group.add_argument('--latitude', default=MWA_LAT,
+        help='Latitude (deg) of the array - defaults to MWA at -26.7033194444')
+    tel_group.add_argument('--longitude', default=MWA_LONG,
+        help='Longitude (deg) of the array - defaults to MWA at 116.670813889')
+    tel_group.add_argument('--array_layout', default=False,
         help='Instead of reading the array layout from the metafits file, read from a text file. \
               Store antenna positions as offset from array centre, in east, north, height coords (metres)')
+    tel_group.add_argument('--primary_beam', default="MWA_FEE",
+        help="R|Which primary beam to use in the simulation. Options are:\n\
+            - MWA_FEE (MWA fully embedded element model)\n\
+            - Gaussian (Analytic symmetric Gaussian  \n\
+                 see --gauss_beam_FWHM \n\
+                 and --gauss_beam_ref_freq for fine control) \n\
+            - EDA2 (Analytic dipole with a ground mesh) \n\
+            - none (Don't use a primary beam at all)")
+
+    tel_group.add_argument('--gauss_beam_FWHM', default=False,
+        help='The FWHM of the Gaussian beam in deg - WODEN defaults to using 20 deg if this is not set')
+    tel_group.add_argument('--gauss_beam_ref_freq', default=False,
+        help='The frequency at which the gauss beam FWHM is set at. If not set, WODEN will default to 150MHz.')
+    tel_group.add_argument('--gauss_ra_point', default=False,
+        help='The initial RA (deg) to point the Gaussian beam at. This will be \
+              used to calculate an hour angle at which the beam will remain \
+              pointed at for the duration of the observation. Defaults to the \
+              RA of the metafits if available, or the RA of the phase centre \
+              if not')
+    tel_group.add_argument('--gauss_dec_point', default=False,
+        help='The initial Dec (deg) to point the Gaussian beam at. Defaults \
+        to the Dec of the metafits if available, or the RA of the phase centre \
+        if not')
+
+    tel_group.add_argument('--hdf5_beam_path', default='/home/jline/software/useful/MWA_embedded_element_pattern_V02.h5',
+        help='Location of the hdf5 file holding the FEE beam coefficients')
+    tel_group.add_argument('--MWA_FEE_delays',
+        help='A list of 16 delays to point the MWA FEE primary beam model, \
+              enter as as list like \
+              --MWA_FEE_delays=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] \
+              for a zenith pointing. Read directly from the metafits if using a \
+              metafits file')
+    tel_group.add_argument('--telescope_name', default='MWA',
+        help='Name of telescope written out to the uvfits file, defaults to MWA')
+
+
+    input_group = parser.add_argument_group('INPUT/OUTPUT OPTIONS')
+    input_group.add_argument('--cat_filename',
+        help='Path to WODEN style sky model')
+    input_group.add_argument('--metafits_filename',default=False,
+        help='MWA style metafits file to base the simulation on. Array layout, frequency and time parameters are all set by this option, but can be overridden using other arguments')
+    input_group.add_argument('--output_uvfits_prepend',default='output',
+        help='Prepend name for uvfits - will append band%%02d.uvfits %%band_num at the end. Defaults to "output".')
+    input_group.add_argument('--sky_crop_components', default=False, action='store_true',
+        help='WODEN will crop out sky model information that is below the horizon for the given LST. By default, for each SOURCE in the sky model, if any COMPONENT is below the horizon, the entire source will be flagged. If --sky_crop_components is included WODEN will include any COMPONENT above the horizon, regardless of which SOURCE it belongs to.')
+
+    sim_group = parser.add_argument_group('SIMULATOR OPTIONS')
+    sim_group.add_argument('--no_tidy', default=False, action='store_true',
+        help='Defaults to deleting output binary files from woden and json files. Add this flag to not delete those files')
+    sim_group.add_argument('--nvprof', default=False, action='store_true',
+        help='Add to switch on the nvidia profiler when running woden')
+    sim_group.add_argument('--chunking_size', type=int, default=0, help='The chunk size to break up the point sources into for processing - defaults to 0 (do not perform chunking)')
 
     args = parser.parse_args()
 
@@ -447,6 +531,66 @@ if __name__ == "__main__":
     #     else:
     #         return option
 
+    FEE_delays = False
+
+    if args.metafits_filename:
+
+        with fits.open(args.metafits_filename) as f:
+            initial_date = f[0].header['DATE-OBS']
+
+            ##Get the east, north, height antenna positions from the metafits
+            east = f[1].data['East']
+            north = f[1].data['North']
+            height = f[1].data['Height']
+
+            ##Read observation parameters from the metafits file
+            time_res = float(f[0].header['INTTIME'])
+            ch_width = float(f[0].header['FINECHAN'])*1e+3
+            freqcent = float(f[0].header['FREQCENT'])*1e+6
+            b_width = float(f[0].header['BANDWDTH'])*1e+6
+            lowest_channel_freq = freqcent - (b_width/2) - (ch_width/2)
+
+            num_time_steps = int(f[0].header['NSCANS'])
+
+            delays = array(f[0].header['DELAYS'].split(','),dtype=int)
+            delays[where(delays == 32)] = 0
+            FEE_delays = str(list(delays))
+
+            ##If user hasn't specified a pointing for a Gaussian beam,
+            ##fill in using the metafits file
+            if not args.gauss_ra_point:
+                args.gauss_ra_point = float(f[0].header['RA'])
+            if not args.gauss_dec_point:
+                args.gauss_dec_point = float(f[0].header['DEC'])
+
+            f.close()
+
+    else:
+        ##TODO put in a check that all other agruments needed are included
+        pass
+
+    ##Override metafits/load arguements
+
+    coarse_band_width = float(args.coarse_band_width)
+
+    if args.lowest_channel_freq: lowest_channel_freq = float(args.lowest_channel_freq)
+    if args.num_time_steps: num_time_steps = int(args.num_time_steps)
+
+    if args.num_freq_channels == 'obs':
+        num_freq_channels = int(floor(coarse_band_width / ch_width))
+    else:
+        num_freq_channels = int(args.num_freq_channels)
+
+    if args.time_res: time_res = args.time_res
+    if args.freq_res: ch_width = args.freq_res
+    if args.date: initial_date = args.date
+
+    latitude = float(args.latitude)
+    longitude = float(args.longitude)
+    lst_deg = get_LST(latitude=latitude,longitude=longitude,date=initial_date)
+
+    if args.MWA_FEE_delays: FEE_delays = args.MWA_FEE_delays
+
     if args.band_nums == 'all':
         band_nums = range(1,25)
     else:
@@ -458,61 +602,9 @@ if __name__ == "__main__":
             print('-----------------------------------------------------')
             exit()
 
-    ##Setup simulation parameters
-    num_time_steps = args.num_time_steps
-    num_freq_channels = args.num_freq_channels
-
-    with fits.open(args.metafits_filename) as f:
-        initial_date = f[0].header['DATE-OBS']
-
-        ##Get the east, north, height antenna positions from the metafits
-        east = f[1].data['East']
-        north = f[1].data['North']
-        height = f[1].data['Height']
-
-        ##Read observation parameters from the metafits file
-        time_res = float(f[0].header['INTTIME'])
-        ch_width = float(f[0].header['FINECHAN'])*1e+3
-        freqcent = float(f[0].header['FREQCENT'])*1e+6
-        b_width = float(f[0].header['BANDWDTH'])*1e+6
-        base_low_freq = freqcent - (b_width/2) - (ch_width/2)
-
-        ##Replace default obs settings if specified in arguments
-        if args.time_res:
-            time_res = args.time_res
-
-        if args.freq_res:
-            ch_width = args.freq_res
-
-        if args.num_freq_channels == 'obs':
-            num_freq_channels = int(floor(1.28e+6) / ch_width)
-        else:
-            num_freq_channels = int(args.num_freq_channels)
-
-        if args.num_time_steps == 'obs':
-            num_time_steps = int(f[0].header['NSCANS'])
-        else:
-            num_time_steps = int(args.num_time_steps)
-
-        f.close()
-
     int_jd, float_jd = calc_jdcal(initial_date)
     jd_date = int_jd + float_jd
 
-    ##Write json file
-    json_name = 'run_woden_%s.json' %args.band_nums
-    write_json(num_time_steps=num_time_steps, num_freqs=num_freq_channels,
-               band_nums=band_nums, json_name=json_name, freq_res=ch_width,
-               time_res=time_res, jd_date=jd_date, args=args)
-
-    ##Check the uvfits prepend to make sure we end in .uvfits
-    output_uvfits_prepend = args.output_uvfits_prepend
-    if output_uvfits_prepend[-7:] == '.uvfits': output_uvfits_prepend = output_uvfits_prepend[-7:]
-
-    if args.nvprof:
-        command('nvprof --log-file %s_%02d_nvprof.txt  %s/woden %s' %(output_uvfits_prepend,band_nums[0],WODEN_DIR,json_name))
-    else:
-        command('%s/woden %s' %(WODEN_DIR,json_name))
 
     if args.array_layout:
         try:
@@ -524,10 +616,12 @@ if __name__ == "__main__":
             height = array_layout[:,2]
 
         except:
-            exit("Could not open array layout file:\n%s\nexiting before woe beings")
+            exit("Could not open array layout file:\n%s\nexiting before woe beings" %args.array_layout)
+
+        array_layout_name = args.array_layout
 
     else:
-        ##This is an MWA simulation, in the metafits it lists XX,YY for each
+        ##Using metafits for array layout. In the metafits it lists XX,YY for each
         ##antenna so we select every second one
         selection = arange(0,len(east),2)
         num_antennas = int(len(selection))
@@ -542,6 +636,33 @@ if __name__ == "__main__":
         array_layout[:,1] = north
         array_layout[:,2] = height
 
+        array_layout_name = 'WODEN_array_layout.txt'
+
+        savetxt(array_layout_name,array_layout)
+
+    ##Write json file
+    json_name = 'run_woden_%s.json' %args.band_nums
+
+    write_json(num_time_steps=num_time_steps, num_freqs=num_freq_channels,
+                   band_nums=band_nums, json_name=json_name, freq_res=ch_width,
+                   time_res=time_res, jd_date=jd_date,
+                   array_layout=array_layout_name, lst=lst_deg,
+                   lowest_channel_freq=lowest_channel_freq,
+                   FEE_delays=FEE_delays,
+                   latitude=latitude, longitude=longitude,
+                   array_layout_name=array_layout_name,args=args)
+
+    ##Check the uvfits prepend to make sure we end in .uvfits
+    output_uvfits_prepend = args.output_uvfits_prepend
+    if output_uvfits_prepend[-7:] == '.uvfits': output_uvfits_prepend = output_uvfits_prepend[-7:]
+
+    if args.nvprof:
+        command('nvprof --log-file %s_%02d_nvprof.txt  %s/woden %s' %(output_uvfits_prepend,band_nums[0],WODEN_DIR,json_name))
+    else:
+        command('%s/woden %s' %(WODEN_DIR,json_name))
+
+
+
     X,Y,Z = enh2xyz(east, north, height,MWA_LAT*D2R)
 
     ##Get the central frequency channels, used in the uvfits header
@@ -553,8 +674,8 @@ if __name__ == "__main__":
 
         output_uvfits_name = output_uvfits_prepend + '_band%02d.uvfits' %band
 
-        band_low_freq = base_low_freq + (band - 1)*1.28e+6
-        central_freq_chan_value = band_low_freq + (1.28e+6 / 2.0)
+        band_low_freq = lowest_channel_freq + (band - 1)*coarse_band_width
+        central_freq_chan_value = band_low_freq + central_freq_chan*ch_width
         num_baselines = int(((num_antennas - 1)*num_antennas) / 2)
 
         filename = "output_visi_band%02d.dat" %band
