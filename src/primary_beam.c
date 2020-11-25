@@ -24,17 +24,17 @@ void calc_para_angle(catsource_t *cropped_src, float *lsts,
     for ( int time_step = 0; time_step < num_time_steps; time_step++ ) {
 
       float ha = lsts[time_step] - cropped_src->point_ras[point];
-      // para_angle = eraHd2pa((double)ha, (double)cropped_src->point_decs[point], (double)MWA_LAT_RAD);
+      para_angle = eraHd2pa((double)ha, (double)cropped_src->point_decs[point], (double)MWA_LAT_RAD);
 
       // printf("PARA FUN %d %.8f %.8f %.8f\n",point*num_time_steps + time_step,ha,cropped_src->point_decs[point],para_angle );
 
-      double this_ha, this_dec;
-
-      float alt = M_PI/2 - cropped_src->point_zas[point*num_time_steps + time_step];
-      eraAe2hd((double)cropped_src->point_azs[point*num_time_steps + time_step], (double)alt, (double)MWA_LAT_RAD,
-               &this_ha, &this_dec);
-
-      para_angle = eraHd2pa(this_ha, this_dec, (double)MWA_LAT_RAD);
+      // double this_ha, this_dec;
+      //
+      // float alt = M_PI/2 - cropped_src->point_zas[point*num_time_steps + time_step];
+      // eraAe2hd((double)cropped_src->point_azs[point*num_time_steps + time_step], (double)alt, (double)MWA_LAT_RAD,
+      //          &this_ha, &this_dec);
+      //
+      // para_angle = eraHd2pa(this_ha, this_dec, (double)MWA_LAT_RAD);
 
       cropped_src->sin_point_para_angs[point*num_time_steps + time_step] = sinf((float)para_angle + M_PI/2.0);
       cropped_src->cos_point_para_angs[point*num_time_steps + time_step] = cosf((float)para_angle + M_PI/2.0);

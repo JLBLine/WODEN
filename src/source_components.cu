@@ -272,7 +272,6 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
     * g1yx = make_cuComplex(0.0, 0.0);
     * g2yx = make_cuComplex(0.0, 0.0);
   }
-
 } //end __device__ get_beam_gains
 
 __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
@@ -300,6 +299,11 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
                d_primay_beam_J00, d_primay_beam_J01,
                d_primay_beam_J10, d_primay_beam_J11,
                &g1xx, &g1xy, &g1yx, &g1yy, &g2xx, &g2xy, &g2yx, &g2yy);
+
+    // if (iBaseline == 0) {
+    //    printf("Component %02d %.3f %.3f %.3f %.3f\n", iComponent,
+    //           g1xx.x, g1xx.y, g1yy.x, g1yy.y );
+    // }
 
     // if (iBaseline == 0) {
     //   printf("rXX iXX rYY iYY %.3f %.3f %.3f %.3f\n", g1xx.x, g1xx.y, g2yy.x, g2yy.y );
