@@ -111,6 +111,7 @@ typedef struct _beam_settings_t {
 
 typedef struct _source_catalogue_t {
     int num_sources;
+    int num_shapelets;
     catsource_t *catsources;
     beam_settings_t *beam_settings;
 } source_catalogue_t;
@@ -174,7 +175,8 @@ typedef struct _woden_settngs_t {
   float coarse_band_width;
   float gauss_ra_point;
   float gauss_dec_point;
-
+  int num_visis;
+  float base_band_freq;
 
 } woden_settings_t;
 
@@ -192,6 +194,7 @@ typedef struct _array_layout_t {
     int num_baselines;
     int num_tiles;
     float lst_base;
+
 } array_layout_t;
 
 source_catalogue_t * read_source_catalogue(const char *filename);

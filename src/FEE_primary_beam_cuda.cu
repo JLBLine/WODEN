@@ -190,19 +190,19 @@ extern "C" void free_FEE_primary_beam_from_GPU(copy_primary_beam_t *primary_beam
 
 
 
-extern "C" void copy_FEE_primary_beam_to_GPU(beam_settings_t beam_settings,
+extern "C" void copy_FEE_primary_beam_to_GPU(copy_primary_beam_t *FEE_beam,
                                              int num_time_steps){
 
   const int n_pols=2; // instrumental pols
-  const int nMN = beam_settings.FEE_beam->nMN; // max_length HDFBeamInit
+  const int nMN = FEE_beam->nMN; // max_length HDFBeamInit
   int arrSize = n_pols * nMN;
 
   int nStations = 1;
 
-  cudaMalloc( (void**)&beam_settings.FEE_beam->d_M, arrSize*sizeof(float) );
-  cudaMalloc( (void**)&beam_settings.FEE_beam->d_N, arrSize*sizeof(float) );
-  cudaMalloc( (void**)&beam_settings.FEE_beam->d_Q1, arrSize*sizeof(float _Complex) );
-  cudaMalloc( (void**)&beam_settings.FEE_beam->d_Q2, arrSize*sizeof(float _Complex) );
+  cudaMalloc( (void**)&FEE_beam->d_M, arrSize*sizeof(float) );
+  cudaMalloc( (void**)&FEE_beam->d_N, arrSize*sizeof(float) );
+  cudaMalloc( (void**)&FEE_beam->d_Q1, arrSize*sizeof(float _Complex) );
+  cudaMalloc( (void**)&FEE_beam->d_Q2, arrSize*sizeof(float _Complex) );
 
   float *h_params;
 
@@ -211,19 +211,19 @@ extern "C" void copy_FEE_primary_beam_to_GPU(beam_settings_t beam_settings,
 
   for(unsigned int i=0; i< n_pols; i++){
     for(unsigned int j=0; j<nMN; j++){
-      h_params[j+(i*nMN)] = (float)(beam_settings.FEE_beam->M[i][j]);
+      h_params[j+(i*nMN)] = (float)(FEE_beam->M[i][j]);
     }
   }
 
-  cudaMemcpy(beam_settings.FEE_beam->d_M, h_params, arrSize*sizeof(float), cudaMemcpyHostToDevice );
+  cudaMemcpy(FEE_beam->d_M, h_params, arrSize*sizeof(float), cudaMemcpyHostToDevice );
 
   for(unsigned int i=0; i<n_pols; i++){
     for(unsigned int j=0; j<nMN; j++){
-      h_params[j+(i*nMN)] = (float)(beam_settings.FEE_beam->N[i][j]);
+      h_params[j+(i*nMN)] = (float)(FEE_beam->N[i][j]);
     }
   }
 
-  cudaMemcpy( beam_settings.FEE_beam->d_N, h_params, arrSize*nStations*sizeof(float), cudaMemcpyHostToDevice );
+  cudaMemcpy( FEE_beam->d_N, h_params, arrSize*nStations*sizeof(float), cudaMemcpyHostToDevice );
   // cudaFreeHost( h_params );
   free(h_params);
 
@@ -233,19 +233,19 @@ extern "C" void copy_FEE_primary_beam_to_GPU(beam_settings_t beam_settings,
 
   for(unsigned int i=0; i< n_pols; i++){
     for(unsigned int j=0; j<nMN; j++){
-        h_Qdata[j+(i*nMN)] = beam_settings.FEE_beam->Q1[i][j];
+        h_Qdata[j+(i*nMN)] = FEE_beam->Q1[i][j];
     }
   }
 
-  cudaMemcpy(beam_settings.FEE_beam->d_Q1, h_Qdata, arrSize*nStations*sizeof(float _Complex), cudaMemcpyHostToDevice );
+  cudaMemcpy(FEE_beam->d_Q1, h_Qdata, arrSize*nStations*sizeof(float _Complex), cudaMemcpyHostToDevice );
 
   for(unsigned int i=0; i< n_pols; i++){
     for(unsigned int j=0; j<nMN; j++){
-        h_Qdata[j+(i*nMN)] = beam_settings.FEE_beam->Q2[i][j];
+        h_Qdata[j+(i*nMN)] = FEE_beam->Q2[i][j];
     }
   }
 
-  cudaMemcpy(beam_settings.FEE_beam->d_Q2, h_Qdata ,arrSize*nStations*sizeof(float _Complex) , cudaMemcpyHostToDevice );
+  cudaMemcpy(FEE_beam->d_Q2, h_Qdata ,arrSize*nStations*sizeof(float _Complex) , cudaMemcpyHostToDevice );
   // cudaFreeHost( h_Qdata );
   free( h_Qdata );
 
@@ -364,7 +364,8 @@ extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,
 
 
 
-extern "C" void get_HDFBeam_normalisation(beam_settings_t beam_settings) {
+extern "C" void get_HDFBeam_normalisation(copy_primary_beam_t *FEE_beam_zenith,
+                copy_primary_beam_t *FEE_beam) {
 
   //The FEE beam is in theta-phi polarisations, which means we need a different
   //norm factor in north, east, south, west
@@ -384,15 +385,18 @@ extern "C" void get_HDFBeam_normalisation(beam_settings_t beam_settings) {
   //Scaling means don't apply normalistaion, as we are calculating it here
   int scaling = 0;
 
+  float *para_sinrot = NULL;
+  float *para_cosrot = NULL;
+
   calc_FEE_beam(norm_azs, norm_zas,  MAX_POLS*num_time_steps,
-    beam_settings.para_sinrot, beam_settings.para_cosrot,
-    num_time_steps, beam_settings.FEE_beam_zenith, all_norm_gains, scaling);
+    para_sinrot, para_cosrot,
+    num_time_steps, FEE_beam_zenith, all_norm_gains, scaling);
 
   // printf("After calc_FEE_beam: %s\n", cudaGetErrorString( cudaGetLastError() ) );
 
   for (size_t i = 0; i < MAX_POLS; i++) {
     //Do a polarisation reordering here, to follow the RTS code
-    beam_settings.FEE_beam->norm_fac[i] = all_norm_gains[i*MAX_POLS + MAX_POLS - 1 - i];
+    FEE_beam->norm_fac[i] = all_norm_gains[i*MAX_POLS + MAX_POLS - 1 - i];
     // beam_settings.FEE_beam->norm_fac[i] = {abs(real_norm),abs(imag_norm)};
   }
   free(all_norm_gains);

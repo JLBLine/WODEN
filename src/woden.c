@@ -61,6 +61,9 @@ int main(int argc, char **argv) {
   float wavelength;
   float frequency;
   const int num_visis = woden_settings->num_baselines * woden_settings->num_time_steps * woden_settings->num_freqs;
+
+  woden_settings->num_visis = num_visis;
+
   float sdec0,cdec0;
   sdec0 = sin(woden_settings->dec0); cdec0=cos(woden_settings->dec0);
 
@@ -109,38 +112,37 @@ int main(int argc, char **argv) {
     float base_band_freq = ((band_num - 1)*woden_settings->coarse_band_width) + woden_settings->base_low_freq;
     printf("Simulating band %02d with bottom freq %.8e\n",band_num,base_band_freq);
 
+    woden_settings->base_band_freq = base_band_freq;
+
     //TODO - add half a freq resolution in here? minus? Leave as is?
     // base_band_freq += woden_settings->frequency_resolution/2.0;
 
 
 
       beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
-      //We need the zenith beam to get the normalisation
+      // //We need the zenith beam to get the normalisation
       beam_settings.FEE_beam_zenith = malloc(sizeof(copy_primary_beam_t));
 
+      //The intial setup of the FEE beam is done on the CPU, so call it here
       if (woden_settings->beamtype == FEE_BEAM){
         float base_middle_freq = base_band_freq + woden_settings->coarse_band_width/2.0;
-
-        //TODO make a function like this that can do the GPU related tasks in
-        //this if statement in another function. For some reason I can't make
-        //it work outside of woden.c main (something to do with compilation and
-        //linkage??)
-        // setup_FEE_beam(woden_settings, beam_settings, base_middle_freq);
-
+      //
+      //   //TODO make a function like this that can do the GPU related tasks in
+      //   //this if statement in another function. For some reason I can't make
+      //   //it work outside of woden.c main (something to do with compilation and
+      //   //linkage??)
+      //   // setup_FEE_beam(woden_settings, beam_settings, base_middle_freq);
+      //
         // Just use one single tile beam for all for now - will need a certain
         // number in the future to include dipole flagging
         int st = 0;
         printf("Middle freq is %f\n",base_middle_freq );
-
+      //
         float float_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-
+      //
         printf("Setting up the zenith FEE beam...");
         RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam_zenith, float_zenith_delays, st);
-        printf(" done.\n");
-
-        printf("Getting FEE beam normalisation...");
-        get_HDFBeam_normalisation(beam_settings, woden_settings->num_time_steps);
         printf(" done.\n");
 
         printf("Setting up the FEE beam...");
@@ -148,9 +150,6 @@ int main(int argc, char **argv) {
               beam_settings.FEE_beam, woden_settings->FEE_ideal_delays, st);
         printf(" done.\n");
 
-        printf("Copying the FEE beam across to the GPU...");
-        copy_FEE_primary_beam_to_GPU(beam_settings, woden_settings->num_time_steps);
-        printf(" done.\n");
       }
 
     visibility_set_t *visibility_set = malloc(sizeof(visibility_set_t));
@@ -227,6 +226,7 @@ int main(int argc, char **argv) {
     cropped_sky_models = malloc(sizeof(source_catalogue_t));
 
     cropped_sky_models->num_sources = num_chunks;
+    cropped_sky_models->num_shapelets = 0;
     cropped_sky_models->catsources = malloc(num_chunks*sizeof(catsource_t));
     cropped_sky_models->beam_settings = malloc(num_chunks*sizeof(beam_settings_t));
 
@@ -242,6 +242,12 @@ int main(int argc, char **argv) {
       fill_chunk_src(temp_cropped_src, cropped_src, num_chunks, chunk,
                      woden_settings->chunking_size, woden_settings->num_time_steps,
                      &point_iter, &gauss_iter, &shape_iter);
+
+      //Add the number of shapelets onto the full source catalogue value
+      //so we know if we need to setup shapelet basis functions in GPU memory
+      //or not
+
+      cropped_sky_models->num_shapelets += temp_cropped_src->n_shapes;
 
       beam_settings_t beam_settings_chunk;
       beam_settings_chunk = make_beam_settings_chunk(beam_settings, temp_cropped_src,
@@ -279,9 +285,7 @@ int main(int argc, char **argv) {
     chunk_visibility_set->sum_visi_YY_imag = malloc( num_visis * sizeof(float) );
 
     calculate_visibilities(array_layout, cropped_sky_models,
-                  angles_array, woden_settings->num_baselines,
-                  woden_settings->num_time_steps,
-                  num_visis, woden_settings->num_freqs,
+                  angles_array, woden_settings,
                   visibility_set, chunk_visibility_set, sbf,
                   num_chunks);
 
@@ -302,9 +306,9 @@ int main(int argc, char **argv) {
     //
     free( chunk_visibility_set );
 
-    if (woden_settings->beamtype == FEE_BEAM) {
-      free_FEE_primary_beam_from_GPU(beam_settings.FEE_beam);
-    }
+    // if (woden_settings->beamtype == FEE_BEAM) {
+    //   free_FEE_primary_beam_from_GPU(beam_settings.FEE_beam);
+    // }
 
     //Dumps u,v,w (metres), Re(vis), Im(vis) to a binary file
     FILE *output_visi;

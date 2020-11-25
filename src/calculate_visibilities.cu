@@ -11,20 +11,21 @@
 #include "constants.h"
 #include "source_components.h"
 #include "primary_beam_cuda.h"
+// #include "FEE_primary_beam.h"
 #include "FEE_primary_beam_cuda.h"
 
 
 extern "C" void calculate_visibilities(array_layout_t * array_layout,
   source_catalogue_t *cropped_sky_models,
-  float *angles_array, const int num_baselines,
-  const int num_time_steps, const int num_visis, const int num_freqs,
+  float *angles_array, woden_settings_t *woden_settings,
   visibility_set_t *visibility_set, visibility_set_t *chunk_visibility_set,
   float *sbf, int num_chunks) {
 
-  // printf("CUDA error 0: %s\n", cudaGetErrorString( cudaGetLastError() ) );
+  const int num_baselines = woden_settings->num_baselines;
+  const int num_time_steps = woden_settings->num_time_steps;
+  const int num_visis = woden_settings->num_visis;
+  const int num_freqs = woden_settings->num_freqs;
 
-  /*START We should be able to do all this outside of this function and transfer in--------------*/
-  //==========================================================================================
   float *d_X_diff = NULL;
   float *d_Y_diff = NULL;
   float *d_Z_diff = NULL;
@@ -49,8 +50,6 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
   cudaMemcpy( d_cha0s, visibility_set->cha0s, num_visis*sizeof(float), cudaMemcpyHostToDevice );
   cudaMalloc( (void**)&d_wavelengths, num_visis*sizeof(float) );
   cudaMemcpy( d_wavelengths, visibility_set->wavelengths, num_visis*sizeof(float), cudaMemcpyHostToDevice );
-  //
-  /* END We should be able to do all this outside of this function and transfer in--------------*/
 
   float *d_u_metres = NULL;
   float *d_v_metres = NULL;
@@ -88,6 +87,39 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
   cudaMalloc( (void**)&d_freqs, num_freqs*sizeof(float) );
   cudaMemcpy( d_freqs, visibility_set->channel_frequencies, num_freqs*sizeof(float), cudaMemcpyHostToDevice );
 
+  //if we have shapelets in our sky model, copy the shapelet basis functions
+  //into GPU memory
+
+  float *d_sbf=NULL;
+  if (cropped_sky_models->num_shapelets > 0) {
+    cudaMalloc( (void**)&(d_sbf), sbf_N*sbf_L*sizeof(float) );
+    cudaMemcpy( d_sbf, sbf, sbf_N*sbf_L*sizeof(float), cudaMemcpyHostToDevice );
+  }
+
+  copy_primary_beam_t *FEE_beam;
+  copy_primary_beam_t *FEE_beam_zenith;
+  beam_settings_t base_beam_settings;
+
+  if (woden_settings->beamtype == FEE_BEAM){
+
+    base_beam_settings = cropped_sky_models->beam_settings[0];
+
+    FEE_beam = base_beam_settings.FEE_beam;
+    FEE_beam_zenith = base_beam_settings.FEE_beam_zenith;
+
+    printf("Getting FEE beam normalisation...");
+    get_HDFBeam_normalisation(FEE_beam_zenith, FEE_beam);
+    printf(" done.\n");
+
+    printf("Copying the FEE beam across to the GPU...");
+    copy_FEE_primary_beam_to_GPU(FEE_beam, woden_settings->num_time_steps);
+    printf(" done.\n");
+  }
+
+
+
+
+
   //Iterate through all sky model chunks, calculated visibilities are
   //added to chunk_visibility_set, and then summed onto visibility_set
 
@@ -116,14 +148,6 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
               cropped_sky_models->catsources[chunk].n_points,
               cropped_sky_models->catsources[chunk].n_gauss,
               cropped_sky_models->catsources[chunk].n_shape_coeffs );
-
-    // calculate_visibilities(arrvay_layout, cropped_sky_models->catsources[chunk],
-    //             angles_array, ,
-    //             woden_settings->num_baselines, woden_settings->num_time_steps,
-    //             num_visis, woden_settings->num_freqs, chunk_visibility_set,
-    //             sbf);
-
-
 
     //ensure d_sum_visi_XX_real are set entirely to zero by copying the host
     //array values, which have been set explictly to zero during chunking
@@ -161,8 +185,6 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
     int num_points = catsource.n_points;
     int num_gauss = catsource.n_gauss;
     int num_shapes = catsource.n_shapes;
-
-
 
     //TODO currently hardcoded to have beam position angle = 0. Should this change with az/za?
     float cos_theta = 1.0;
@@ -268,7 +290,7 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
 
         calc_CUDA_FEE_beam(catsource.point_azs, catsource.point_zas,
                catsource.sin_point_para_angs, catsource.cos_point_para_angs,
-               num_points, num_time_steps, beam_settings.FEE_beam);
+               num_points, num_time_steps, FEE_beam);
 
         threads.x = 64;
         threads.y = 4;
@@ -276,7 +298,7 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
         grid.y = (int)ceil( ((float)num_points) / ((float)threads.y) );
 
         kern_map_FEE_beam_gains<<< grid, threads >>>(
-            (cuFloatComplex *)beam_settings.FEE_beam->d_FEE_beam_gain_matrices,
+            (cuFloatComplex *)FEE_beam->d_FEE_beam_gain_matrices,
             d_primay_beam_J00, d_primay_beam_J01,
             d_primay_beam_J10, d_primay_beam_J11,
             num_freqs, num_points, num_visis,
@@ -322,7 +344,7 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
               d_primay_beam_J00, d_primay_beam_J01,
               d_primay_beam_J10, d_primay_beam_J11);
 
-      cudaFree( beam_settings.FEE_beam->d_FEE_beam_gain_matrices);
+      cudaFree( FEE_beam->d_FEE_beam_gain_matrices);
       cudaFree( d_ns);
       cudaFree( d_ms);
       cudaFree( d_ls);
@@ -436,7 +458,7 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
       if (beam_settings.beamtype == FEE_BEAM) {
         calc_CUDA_FEE_beam(catsource.gauss_azs, catsource.gauss_zas,
                catsource.sin_gauss_para_angs, catsource.cos_gauss_para_angs,
-               num_gauss, num_time_steps, beam_settings.FEE_beam);
+               num_gauss, num_time_steps, FEE_beam);
 
         threads.x = 64;
         threads.y = 4;
@@ -444,7 +466,7 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
         grid.y = (int)ceil( ((float)num_gauss) / ((float)threads.y) );
 
         kern_map_FEE_beam_gains<<< grid, threads >>>(
-            (cuFloatComplex *)beam_settings.FEE_beam->d_FEE_beam_gain_matrices,
+            (cuFloatComplex *)FEE_beam->d_FEE_beam_gain_matrices,
             d_primay_beam_J00, d_primay_beam_J01,
             d_primay_beam_J10, d_primay_beam_J11,
             num_freqs, num_gauss, num_visis,
@@ -489,7 +511,7 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
               d_primay_beam_J00, d_primay_beam_J01,
               d_primay_beam_J10, d_primay_beam_J11);
 
-      cudaFree( beam_settings.FEE_beam->d_FEE_beam_gain_matrices);
+      cudaFree( FEE_beam->d_FEE_beam_gain_matrices);
       cudaFree( d_primay_beam_J00 );
       cudaFree( d_primay_beam_J11 );
 
@@ -531,7 +553,7 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
       float *d_shape_n2s=NULL;
       float *d_shape_param_indexes=NULL;
 
-      float *d_sbf=NULL;
+
       float *d_lsts=NULL;
 
       float *d_u_s_metres = NULL;
@@ -575,9 +597,6 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
 
       cudaMalloc( (void**)&(d_shape_param_indexes), catsource.n_shape_coeffs*sizeof(float) );
       cudaMemcpy( d_shape_param_indexes, catsource.shape_param_indexes, catsource.n_shape_coeffs*sizeof(float), cudaMemcpyHostToDevice );
-
-      cudaMalloc( (void**)&(d_sbf), sbf_N*sbf_L*sizeof(float) );
-      cudaMemcpy( d_sbf, sbf, sbf_N*sbf_L*sizeof(float), cudaMemcpyHostToDevice );
 
       cudaMalloc( (void**)&(d_shape_ls), num_shapes*sizeof(float) );
       cudaMalloc( (void**)&(d_shape_ms), num_shapes*sizeof(float) );
@@ -640,7 +659,7 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
       if (beam_settings.beamtype == FEE_BEAM) {
         calc_CUDA_FEE_beam(catsource.shape_azs, catsource.shape_zas,
                            catsource.sin_shape_para_angs, catsource.cos_shape_para_angs,
-                           num_shapes, num_time_steps, beam_settings.FEE_beam);
+                           num_shapes, num_time_steps, FEE_beam);
 
         threads.x = 64;
         threads.y = 4;
@@ -648,7 +667,7 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
         grid.y = (int)ceil( ((float)num_shapes) / ((float)threads.y) );
 
         kern_map_FEE_beam_gains<<< grid, threads >>>(
-            (cuFloatComplex *)beam_settings.FEE_beam->d_FEE_beam_gain_matrices,
+            (cuFloatComplex *)FEE_beam->d_FEE_beam_gain_matrices,
             d_primay_beam_J00, d_primay_beam_J01,
             d_primay_beam_J10, d_primay_beam_J11,
             num_freqs, num_shapes, num_visis,
@@ -694,7 +713,7 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
               d_primay_beam_J00, d_primay_beam_J01,
               d_primay_beam_J10, d_primay_beam_J11);
 
-      cudaFree( beam_settings.FEE_beam->d_FEE_beam_gain_matrices);
+      cudaFree( FEE_beam->d_FEE_beam_gain_matrices);
       cudaFree( d_primay_beam_J00 );
       cudaFree( d_primay_beam_J11 );
 
@@ -710,7 +729,6 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
       cudaFree(d_v_s_metres);
       cudaFree(d_u_s_metres);
       cudaFree(d_lsts);
-      cudaFree(d_sbf);
       cudaFree(d_shape_param_indexes);
       cudaFree(d_shape_n2s);
       cudaFree(d_shape_n1s);
@@ -725,25 +743,32 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
 
     }//if shapelet
 
-    //Get the results into host memory
-    // cudaMemcpy(visibility_set->sum_visi_real,d_sum_visi_real,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
-    // cudaMemcpy(visibility_set->sum_visi_imag,d_sum_visi_imag,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+    cudaMemcpy(chunk_visibility_set->sum_visi_XX_real,
+               d_sum_visi_XX_real,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+    cudaMemcpy(chunk_visibility_set->sum_visi_XX_imag,
+               d_sum_visi_XX_imag,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
 
-    cudaMemcpy(chunk_visibility_set->sum_visi_XX_real,d_sum_visi_XX_real,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
-    cudaMemcpy(chunk_visibility_set->sum_visi_XX_imag,d_sum_visi_XX_imag,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+    cudaMemcpy(chunk_visibility_set->sum_visi_XY_real,
+               d_sum_visi_XY_real,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+    cudaMemcpy(chunk_visibility_set->sum_visi_XY_imag,
+               d_sum_visi_XY_imag,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
 
-    cudaMemcpy(chunk_visibility_set->sum_visi_XY_real,d_sum_visi_XY_real,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
-    cudaMemcpy(chunk_visibility_set->sum_visi_XY_imag,d_sum_visi_XY_imag,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+    cudaMemcpy(chunk_visibility_set->sum_visi_YX_real,
+               d_sum_visi_YX_real,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+    cudaMemcpy(chunk_visibility_set->sum_visi_YX_imag,
+               d_sum_visi_YX_imag,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
 
-    cudaMemcpy(chunk_visibility_set->sum_visi_YX_real,d_sum_visi_YX_real,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
-    cudaMemcpy(chunk_visibility_set->sum_visi_YX_imag,d_sum_visi_YX_imag,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+    cudaMemcpy(chunk_visibility_set->sum_visi_YY_real,
+               d_sum_visi_YY_real,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+    cudaMemcpy(chunk_visibility_set->sum_visi_YY_imag,
+               d_sum_visi_YY_imag,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
 
-    cudaMemcpy(chunk_visibility_set->sum_visi_YY_real,d_sum_visi_YY_real,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
-    cudaMemcpy(chunk_visibility_set->sum_visi_YY_imag,d_sum_visi_YY_imag,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
-
-    cudaMemcpy(chunk_visibility_set->us_metres,d_u_metres,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
-    cudaMemcpy(chunk_visibility_set->vs_metres,d_v_metres,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
-    cudaMemcpy(chunk_visibility_set->ws_metres,d_w_metres,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+    cudaMemcpy(chunk_visibility_set->us_metres,
+              d_u_metres,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+    cudaMemcpy(chunk_visibility_set->vs_metres,
+              d_v_metres,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
+    cudaMemcpy(chunk_visibility_set->ws_metres,
+              d_w_metres,num_visis*sizeof(float),cudaMemcpyDeviceToHost);
 
 
     //add to visiblity_set
@@ -803,6 +828,15 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
   cudaFree( d_Z_diff );
   cudaFree( d_Y_diff );
   cudaFree( d_X_diff );
+
+  if (cropped_sky_models->num_shapelets > 0) {
+    cudaFree( d_sbf );
+  }
+
+  if (woden_settings->beamtype == FEE_BEAM) {
+    free_FEE_primary_beam_from_GPU(base_beam_settings.FEE_beam);
+    free_FEE_primary_beam_from_GPU(base_beam_settings.FEE_beam_zenith);
+  }
 
 
   cudaFree( d_sum_visi_XX_imag );

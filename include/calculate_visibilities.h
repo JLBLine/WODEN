@@ -5,8 +5,7 @@
 
 extern "C" void calculate_visibilities(array_layout_t * array_layout,
   source_catalogue_t *cropped_sky_models,
-  float *angles_array, const int num_baselines,
-  const int num_time_steps, const int num_visis, const int num_freqs,
+  float *angles_array, woden_settings_t *woden_settings,
   visibility_set_t *visibility_set, visibility_set_t *chunk_visibility_set,
   float *sbf, int num_chunks);
 
