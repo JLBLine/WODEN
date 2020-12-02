@@ -127,12 +127,6 @@ int main(int argc, char **argv) {
       if (woden_settings->beamtype == FEE_BEAM){
         float base_middle_freq = base_band_freq + woden_settings->coarse_band_width/2.0;
       //
-      //   //TODO make a function like this that can do the GPU related tasks in
-      //   //this if statement in another function. For some reason I can't make
-      //   //it work outside of woden.c main (something to do with compilation and
-      //   //linkage??)
-      //   // setup_FEE_beam(woden_settings, beam_settings, base_middle_freq);
-      //
         // Just use one single tile beam for all for now - will need a certain
         // number in the future to include dipole flagging
         int st = 0;
@@ -288,6 +282,8 @@ int main(int argc, char **argv) {
                   angles_array, woden_settings,
                   visibility_set, chunk_visibility_set, sbf,
                   num_chunks);
+
+    printf("GPU calls for band %d finished\n",band_num );
 
     free(temp_cropped_src);
 

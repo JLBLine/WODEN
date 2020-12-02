@@ -456,7 +456,14 @@ beam_settings_t make_beam_settings_chunk(beam_settings_t beam_settings,
 
   else {
     beam_settings_chunk = beam_settings;
+    beam_settings_chunk.num_point_beam_values = temp_cropped_src->n_points * woden_settings->num_time_steps * woden_settings->num_freqs;
+    beam_settings_chunk.num_gausscomp_beam_values = temp_cropped_src->n_gauss * woden_settings->num_time_steps * woden_settings->num_freqs;
+    beam_settings_chunk.num_shape_beam_values = temp_cropped_src->n_shapes * woden_settings->num_time_steps * woden_settings->num_freqs;
   }
+
+  // printf("INSIDE make_beam_settings_chunk %d %d\n",
+  //         beam_settings_chunk.num_point_beam_values,
+  //         beam_settings.num_point_beam_values );
 
   return beam_settings_chunk;
 

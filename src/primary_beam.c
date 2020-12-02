@@ -88,6 +88,7 @@ beam_settings_t fill_primary_beam_settings(woden_settings_t *woden_settings,
 
 
   //Number of beam calculations needed for point components
+
   beam_settings.num_point_beam_values = cropped_src->n_points * woden_settings->num_time_steps * woden_settings->num_freqs;
   beam_settings.num_gausscomp_beam_values = cropped_src->n_gauss * woden_settings->num_time_steps * woden_settings->num_freqs;
   beam_settings.num_shape_beam_values = cropped_src->n_shapes * woden_settings->num_time_steps * woden_settings->num_freqs;

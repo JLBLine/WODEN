@@ -6,7 +6,8 @@
 extern "C" void calc_CUDA_FEE_beam(float *azs, float *zas,
                                    float *sin_para_angs, float *cos_para_angs,
                                    int num_components, int num_time_steps,
-                                   copy_primary_beam_t *FEE_beam);
+                                   copy_primary_beam_t *FEE_beam,
+                                   int rotation, int scaling);
 
 __global__ void kern_rotate_FEE_beam(cuFloatComplex *d_FEE_beam_gain_matrices,
                                 float *d_sin_para_angs, float *d_cos_para_angs,
