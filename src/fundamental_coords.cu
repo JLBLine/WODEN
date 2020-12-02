@@ -18,25 +18,6 @@ __device__ void calc_uvw(float *d_X_diff, float *d_Y_diff, float *d_Z_diff,
 
 }
 
-// __device__ void apply_beam_gains(d_FEE_beam_gain_matrices1, d_FEE_beam_gain_matrices2) {
-//   cuFloatComplex g1xx = d_FEE_beam_gain_matrices1[iCoord*MAX_POLS + 0];
-//   cuFloatComplex g1xy = d_FEE_beam_gain_matrices1[iCoord*MAX_POLS + 1];
-//   cuFloatComplex g1yx = d_FEE_beam_gain_matrices1[iCoord*MAX_POLS + 2];
-//   cuFloatComplex g1yy = d_FEE_beam_gain_matrices1[iCoord*MAX_POLS + 3];
-//
-//   cuFloatComplex g2xx = d_FEE_beam_gain_matrices2[iCoord*MAX_POLS + 0];
-//   cuFloatComplex g2xy = d_FEE_beam_gain_matrices2[iCoord*MAX_POLS + 1];
-//   cuFloatComplex g2yx = d_FEE_beam_gain_matrices2[iCoord*MAX_POLS + 2];
-//   cuFloatComplex g2yy = d_FEE_beam_gain_matrices2[iCoord*MAX_POLS + 3];
-//
-//   // printf("WOT DO THAT %d %f %f\n",iCoord,g1xx.x,g1xx.y );
-//
-//   cuFloatComplex g2xx_conj = make_cuFloatComplex(g2xx.x,-g2xx.y);
-//   cuFloatComplex g2xy_conj = make_cuFloatComplex(g2xy.x,-g2xy.y);
-//   cuFloatComplex g2yx_conj = make_cuFloatComplex(g2yx.x,-g2yx.y);
-//   cuFloatComplex g2yy_conj = make_cuFloatComplex(g2yy.x,-g2yy.y);
-// }
-
 __global__ void kern_calc_uvw(float *d_X_diff, float *d_Y_diff, float *d_Z_diff,
            float *d_u_metres, float *d_v_metres, float *d_w_metres,
            float *d_u, float *d_v, float *d_w, float *d_wavelengths,

@@ -6,17 +6,19 @@
 extern "C" void calc_CUDA_FEE_beam(float *azs, float *zas,
                                    float *sin_para_angs, float *cos_para_angs,
                                    int num_components, int num_time_steps,
-                                   copy_primary_beam_t *FEE_beam);
+                                   copy_primary_beam_t *FEE_beam,
+                                   int rotation, int scaling);
 
 __global__ void kern_rotate_FEE_beam(cuFloatComplex *d_FEE_beam_gain_matrices,
                                 float *d_sin_para_angs, float *d_cos_para_angs,
                                 int num_components, int num_time_steps);
 
-extern "C" void get_HDFBeam_normalisation(beam_settings_t beam_settings);
+extern "C" void get_HDFBeam_normalisation(copy_primary_beam_t *FEE_beam_zenith,
+                copy_primary_beam_t *FEE_beam);
 
 extern "C" void free_FEE_primary_beam_from_GPU(copy_primary_beam_t *primary_beam);
 
-extern "C" void copy_FEE_primary_beam_to_GPU(beam_settings_t beam_settings,
+extern "C" void copy_FEE_primary_beam_to_GPU(copy_primary_beam_t *FEE_beam,
                                              int num_time_steps);
 
 extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,

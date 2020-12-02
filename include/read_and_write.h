@@ -82,9 +82,38 @@ typedef struct _catsource_t {
 
 } catsource_t;
 
+typedef struct _beam_settings_t {
+    float *beam_angles_array;
+    float *beam_point_has;
+    float *beam_point_decs;
+    int num_point_beam_values;
+
+    float *beam_gausscomp_has;
+    float *beam_gausscomp_decs;
+    int num_gausscomp_beam_values;
+
+    float *beam_shape_has;
+    float *beam_shape_decs;
+    int num_shape_beam_values;
+
+    float beam_FWHM_rad;
+    // float *beam_ref_freq_array;
+    float beam_ref_freq;
+    int beamtype;
+
+    float *para_cosrot;
+    float *para_sinrot;
+
+    copy_primary_beam_t *FEE_beam;
+    copy_primary_beam_t *FEE_beam_zenith;
+
+} beam_settings_t;
+
 typedef struct _source_catalogue_t {
     int num_sources;
+    int num_shapelets;
     catsource_t *catsources;
+    beam_settings_t *beam_settings;
 } source_catalogue_t;
 
 typedef struct _visibility_set_t {
@@ -108,13 +137,10 @@ typedef struct _visibility_set_t {
 
   float *sum_visi_XX_real;
   float *sum_visi_XX_imag;
-
   float *sum_visi_XY_real;
   float *sum_visi_XY_imag;
-
   float *sum_visi_YX_real;
   float *sum_visi_YX_imag;
-
   float *sum_visi_YY_real;
   float *sum_visi_YY_imag;
 
@@ -149,7 +175,8 @@ typedef struct _woden_settngs_t {
   float coarse_band_width;
   float gauss_ra_point;
   float gauss_dec_point;
-
+  int num_visis;
+  float base_band_freq;
 
 } woden_settings_t;
 
@@ -167,70 +194,14 @@ typedef struct _array_layout_t {
     int num_baselines;
     int num_tiles;
     float lst_base;
-} array_layout_t;
 
-// // Taken from the RTS (Mitchell et al 2008)
-// // All credit to the original authors
-// // https://github.com/ICRAR/mwa-RTS.git
-// typedef struct _Meta_Ffile {
-//     char recvrs[38];
-//     char calib[1];
-//     char calsrc[16];
-//     char tileflg[16];
-//     char version[4];
-//     char mwaVersion;
-//     long naxes[2];
-//     int inps[256], ants[256], tile[256], flags[256];
-//     float E[256], N[256], H[256];
-//     char leng[256][14];
-//     int FEE_delays[256][16];
-//     int dig_gains[256][24];
-//     int centchan;
-//     float lst_base;
-//     float ra_point;
-//     float dec_point;
-//     float frequency_resolution;
-//     float frequency_cent;
-//     float bandwidth;
-//     float base_low_freq;
-//     float time_res;
-//     int num_tiles;
-//     int FEE_ideal_delays[16];
-//
-// } MetaFfile_t;
+} array_layout_t;
 
 source_catalogue_t * read_source_catalogue(const char *filename);
 
 woden_settings_t * read_json_settings(const char *filename);
 
 array_layout_t * calc_XYZ_diffs(woden_settings_t *woden_settings);
-
-typedef struct _beam_settings_t {
-    float *beam_angles_array;
-    float *beam_point_has;
-    float *beam_point_decs;
-    int num_point_beam_values;
-
-    float *beam_gausscomp_has;
-    float *beam_gausscomp_decs;
-    int num_gausscomp_beam_values;
-
-    float *beam_shape_has;
-    float *beam_shape_decs;
-    int num_shape_beam_values;
-
-    float beam_FWHM_rad;
-    // float *beam_ref_freq_array;
-    float beam_ref_freq;
-    int beamtype;
-
-    float *para_cosrot;
-    float *para_sinrot;
-
-    copy_primary_beam_t *FEE_beam;
-    copy_primary_beam_t *FEE_beam_zenith;
-
-} beam_settings_t;
 
 void RTS_precXYZ(double rmat[3][3], double x, double y, double z, double lmst,
          double *xp, double *yp, double *zp, double lmst2000);

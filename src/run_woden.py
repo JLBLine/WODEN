@@ -334,6 +334,7 @@ def write_json(num_time_steps=None, num_freqs=None,
     elif args.primary_beam == 'EDA2':
         outfile.write('  "use_EDA2_beam": True,\n')
 
+
     if len(band_nums) == 1:
         band_str = '[%d]' %band_nums[0]
     else:

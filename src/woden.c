@@ -61,6 +61,9 @@ int main(int argc, char **argv) {
   float wavelength;
   float frequency;
   const int num_visis = woden_settings->num_baselines * woden_settings->num_time_steps * woden_settings->num_freqs;
+
+  woden_settings->num_visis = num_visis;
+
   float sdec0,cdec0;
   sdec0 = sin(woden_settings->dec0); cdec0=cos(woden_settings->dec0);
 
@@ -109,47 +112,39 @@ int main(int argc, char **argv) {
     float base_band_freq = ((band_num - 1)*woden_settings->coarse_band_width) + woden_settings->base_low_freq;
     printf("Simulating band %02d with bottom freq %.8e\n",band_num,base_band_freq);
 
+    woden_settings->base_band_freq = base_band_freq;
+
     //TODO - add half a freq resolution in here? minus? Leave as is?
     // base_band_freq += woden_settings->frequency_resolution/2.0;
 
-    beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
-    //We need the zenith beam to get the normalisation
-    beam_settings.FEE_beam_zenith = malloc(sizeof(copy_primary_beam_t));
 
-    if (woden_settings->beamtype == FEE_BEAM){
-      float base_middle_freq = base_band_freq + woden_settings->coarse_band_width/2.0;
 
-      //TODO make a function like this that can do the GPU related tasks in
-      //this if statement in another function. For some reason I can't make
-      //it work outside of woden.c main (something to do with compilation and
-      //linkage??)
-      // setup_FEE_beam(woden_settings, beam_settings, base_middle_freq);
+      beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
+      // //We need the zenith beam to get the normalisation
+      beam_settings.FEE_beam_zenith = malloc(sizeof(copy_primary_beam_t));
 
-      // Just use one single tile beam for all for now - will need a certain
-      // number in the future to include dipole flagging
-      int st = 0;
-      printf("Middle freq is %f\n",base_middle_freq );
+      //The intial setup of the FEE beam is done on the CPU, so call it here
+      if (woden_settings->beamtype == FEE_BEAM){
+        float base_middle_freq = base_band_freq + woden_settings->coarse_band_width/2.0;
+      //
+        // Just use one single tile beam for all for now - will need a certain
+        // number in the future to include dipole flagging
+        int st = 0;
+        printf("Middle freq is %f\n",base_middle_freq );
+      //
+        float float_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+      //
+        printf("Setting up the zenith FEE beam...");
+        RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam_zenith, float_zenith_delays, st);
+        printf(" done.\n");
 
-      float float_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                                       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+        printf("Setting up the FEE beam...");
+        RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq,
+              beam_settings.FEE_beam, woden_settings->FEE_ideal_delays, st);
+        printf(" done.\n");
 
-      printf("Setting up the zenith FEE beam...");
-      RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam_zenith, float_zenith_delays, st);
-      printf(" done.\n");
-
-      printf("Getting FEE beam normalisation...");
-      get_HDFBeam_normalisation(beam_settings, woden_settings->num_time_steps);
-      printf(" done.\n");
-
-      printf("Setting up the FEE beam...");
-      RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq,
-            beam_settings.FEE_beam, woden_settings->FEE_ideal_delays, st);
-      printf(" done.\n");
-
-      printf("Copying the FEE beam across to the GPU...");
-      copy_FEE_primary_beam_to_GPU(beam_settings, woden_settings->num_time_steps);
-      printf(" done.\n");
-    }
+      }
 
     visibility_set_t *visibility_set = malloc(sizeof(visibility_set_t));
     visibility_set->sum_visi_real = malloc( num_visis * sizeof(float) );
@@ -205,162 +200,111 @@ int main(int argc, char **argv) {
     //Calculating a single shapelet coeff is equivalent to a point/gauss so treat as a
     //component here
     int num_components = cropped_src->n_points + cropped_src->n_gauss + cropped_src->n_shape_coeffs;
-
+    int num_chunks;
     //TODO should we chunk outside the band for-loop so that we can reuse the chunks for each band (should be the same)
     if (num_components > woden_settings->chunking_size) {
       printf("Chunking sky model\n");
-      int num_chunks = num_components / woden_settings->chunking_size;
+      num_chunks = num_components / woden_settings->chunking_size;
 
       if (num_components % woden_settings->chunking_size != 0) {
         num_chunks = num_chunks + 1;
       }
-
       printf("Number of chunks required is %d\n",  num_chunks);
-
-      //setup a temporary visibility set that calculate_visibilities will populate
-      visibility_set_t *temp_visibility_set = malloc(sizeof(visibility_set_t));
-      // temp_visibility_set->sum_visi_real = malloc( num_visis * sizeof(float) );
-      // temp_visibility_set->sum_visi_imag = malloc( num_visis * sizeof(float) );
-
-      temp_visibility_set->us_metres = malloc( num_visis * sizeof(float) );
-      temp_visibility_set->vs_metres = malloc( num_visis * sizeof(float) );
-      temp_visibility_set->ws_metres = malloc( num_visis * sizeof(float) );
-
-      temp_visibility_set->sha0s = visibility_set->sha0s;
-      temp_visibility_set->cha0s = visibility_set->cha0s;
-      temp_visibility_set->lsts = visibility_set->lsts;
-      temp_visibility_set->wavelengths = visibility_set->wavelengths;
-      temp_visibility_set->channel_frequencies = visibility_set->channel_frequencies;
-
-      temp_visibility_set->sum_visi_XX_real = malloc( num_visis * sizeof(float) );
-      temp_visibility_set->sum_visi_XX_imag = malloc( num_visis * sizeof(float) );
-      temp_visibility_set->sum_visi_XY_real = malloc( num_visis * sizeof(float) );
-      temp_visibility_set->sum_visi_XY_imag = malloc( num_visis * sizeof(float) );
-      temp_visibility_set->sum_visi_YX_real = malloc( num_visis * sizeof(float) );
-      temp_visibility_set->sum_visi_YX_imag = malloc( num_visis * sizeof(float) );
-      temp_visibility_set->sum_visi_YY_real = malloc( num_visis * sizeof(float) );
-      temp_visibility_set->sum_visi_YY_imag = malloc( num_visis * sizeof(float) );
-
-      catsource_t *temp_cropped_src = malloc(sizeof(catsource_t));
-      int point_iter = 0;
-      int gauss_iter = 0;
-      int shape_iter = 0;
-
-      //For each chunk, calculate the visibilities for those components
-      for (int chunk = 0; chunk < num_chunks; chunk++) {
-      // for (int chunk = 0; chunk < 42; chunk++) {
-        printf("Processing chunk %d\n", chunk);
-
-        //ensure temp visi's are 0.0
-        for (size_t visi = 0; visi < num_visis; visi++) {
-          // temp_visibility_set->sum_visi_real[visi] = 0.0;
-          // temp_visibility_set->sum_visi_imag[visi] = 0.0;
-
-          temp_visibility_set->sum_visi_XX_real[visi] = 0.0;
-          temp_visibility_set->sum_visi_XX_imag[visi] = 0.0;
-          temp_visibility_set->sum_visi_XY_real[visi] = 0.0;
-          temp_visibility_set->sum_visi_XY_imag[visi] = 0.0;
-          temp_visibility_set->sum_visi_YX_real[visi] = 0.0;
-          temp_visibility_set->sum_visi_YX_imag[visi] = 0.0;
-          temp_visibility_set->sum_visi_YY_real[visi] = 0.0;
-          temp_visibility_set->sum_visi_YY_imag[visi] = 0.0;
-
-        }
-
-        fill_chunk_src(temp_cropped_src, cropped_src, num_chunks, chunk,
-                       woden_settings->chunking_size, woden_settings->num_time_steps,
-                       &point_iter, &gauss_iter, &shape_iter);
-        // printf("WOT %d %d %d\n", point_iter, gauss_iter, shape_iter);
-
-        printf("\tNumber of components in chunk are: P %d G %d S_coeffs %d\n",temp_cropped_src->n_points,temp_cropped_src->n_gauss,temp_cropped_src->n_shape_coeffs );
-
-        beam_settings_t beam_settings_chunk;
-        beam_settings_chunk = make_beam_settings_chunk(beam_settings, temp_cropped_src,
-                              cropped_src, woden_settings, point_iter, gauss_iter, shape_iter);
-
-        calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
-                    *temp_cropped_src, angles_array, beam_settings_chunk,
-                    woden_settings->num_baselines, woden_settings->num_time_steps,
-                    num_visis, woden_settings->num_freqs, temp_visibility_set,
-                    sbf);
-
-
-        // if (woden_settings->beamtype == GAUSS_BEAM){
-        //   free(beam_settings_chunk.beam_point_has );
-        //   free(beam_settings_chunk.beam_point_decs );
-        //   free(beam_settings_chunk.beam_gausscomp_has );
-        //   free(beam_settings_chunk.beam_gausscomp_decs );
-        //   free(beam_settings_chunk.beam_shape_has );
-        //   free(beam_settings_chunk.beam_shape_decs );
-        // }
-
-        // printf("Adding temporary visibility set.\n");
-	      //add to visiblity_set
-        for (int visi = 0; visi < num_visis; visi++) {
-          //if the first chunk then initialise our values, and copy across
-          //the u,v,w coords
-          if (chunk == 0) {
-            // visibility_set->sum_visi_real[visi] = 0;
-            // visibility_set->sum_visi_imag[visi] = 0;
-
-            visibility_set->sum_visi_XX_real[visi] = 0;
-            visibility_set->sum_visi_XX_imag[visi] = 0;
-            visibility_set->sum_visi_XY_real[visi] = 0;
-            visibility_set->sum_visi_XY_imag[visi] = 0;
-            visibility_set->sum_visi_YX_real[visi] = 0;
-            visibility_set->sum_visi_YX_imag[visi] = 0;
-            visibility_set->sum_visi_YY_real[visi] = 0;
-            visibility_set->sum_visi_YY_imag[visi] = 0;
-
-            visibility_set->us_metres[visi] = temp_visibility_set->us_metres[visi];
-            visibility_set->vs_metres[visi] = temp_visibility_set->vs_metres[visi];
-            visibility_set->ws_metres[visi] = temp_visibility_set->ws_metres[visi];
-          }
-
-          //add each chunk of components to visibility set
-          visibility_set->sum_visi_XX_real[visi] += temp_visibility_set->sum_visi_XX_real[visi];
-          visibility_set->sum_visi_XX_imag[visi] += temp_visibility_set->sum_visi_XX_imag[visi];
-          visibility_set->sum_visi_XY_real[visi] += temp_visibility_set->sum_visi_XY_real[visi];
-          visibility_set->sum_visi_XY_imag[visi] += temp_visibility_set->sum_visi_XY_imag[visi];
-          visibility_set->sum_visi_YX_real[visi] += temp_visibility_set->sum_visi_YX_real[visi];
-          visibility_set->sum_visi_YX_imag[visi] += temp_visibility_set->sum_visi_YX_imag[visi];
-          visibility_set->sum_visi_YY_real[visi] += temp_visibility_set->sum_visi_YY_real[visi];
-          visibility_set->sum_visi_YY_imag[visi] += temp_visibility_set->sum_visi_YY_imag[visi];
-
-        }//visi loop
-      }//chunk loop
-
-      free(temp_cropped_src);
-
-      free( temp_visibility_set->us_metres );
-      free( temp_visibility_set->vs_metres );
-      free( temp_visibility_set->ws_metres );
-
-      free(temp_visibility_set->sum_visi_XX_real);
-      free(temp_visibility_set->sum_visi_XX_imag);
-      free(temp_visibility_set->sum_visi_XY_real);
-      free(temp_visibility_set->sum_visi_XY_imag);
-      free(temp_visibility_set->sum_visi_YX_real);
-      free(temp_visibility_set->sum_visi_YX_imag);
-      free(temp_visibility_set->sum_visi_YY_real);
-      free(temp_visibility_set->sum_visi_YY_imag);
-
-      free( temp_visibility_set );
-
-    }
-    //If not chunking the components, just simulate all in one go
-    else {
-      //Throw all of the settings at the GPU and crank the handle on the simulation
-      calculate_visibilities(array_layout->X_diff_metres, array_layout->Y_diff_metres, array_layout->Z_diff_metres,
-                      *cropped_src, angles_array, beam_settings,
-                      woden_settings->num_baselines, woden_settings->num_time_steps,
-                      num_visis, woden_settings->num_freqs, visibility_set,
-                      sbf);
+    } else {
+      num_chunks = 1;
     }
 
-    if (woden_settings->beamtype == FEE_BEAM) {
-      free_FEE_primary_beam_from_GPU(beam_settings.FEE_beam);
+    //Make a struct to contain sky as many sky models and beam settings as
+    //needed
+    source_catalogue_t *cropped_sky_models;
+    cropped_sky_models = malloc(sizeof(source_catalogue_t));
+
+    cropped_sky_models->num_sources = num_chunks;
+    cropped_sky_models->num_shapelets = 0;
+    cropped_sky_models->catsources = malloc(num_chunks*sizeof(catsource_t));
+    cropped_sky_models->beam_settings = malloc(num_chunks*sizeof(beam_settings_t));
+
+    catsource_t *temp_cropped_src = malloc(sizeof(catsource_t));
+    int point_iter = 0;
+    int gauss_iter = 0;
+    int shape_iter = 0;
+
+    printf("Chunking sky model..\n");
+    //For each chunk, calculate the visibilities for those components
+    for (int chunk = 0; chunk < num_chunks; chunk++) {
+
+      fill_chunk_src(temp_cropped_src, cropped_src, num_chunks, chunk,
+                     woden_settings->chunking_size, woden_settings->num_time_steps,
+                     &point_iter, &gauss_iter, &shape_iter);
+
+      //Add the number of shapelets onto the full source catalogue value
+      //so we know if we need to setup shapelet basis functions in GPU memory
+      //or not
+
+      cropped_sky_models->num_shapelets += temp_cropped_src->n_shapes;
+
+      beam_settings_t beam_settings_chunk;
+      beam_settings_chunk = make_beam_settings_chunk(beam_settings, temp_cropped_src,
+                            cropped_src, woden_settings, point_iter, gauss_iter, shape_iter);
+
+      // printf("Managed to chunk the beam %d\n",chunk );
+
+      cropped_sky_models->catsources[chunk] = *temp_cropped_src;
+      cropped_sky_models->beam_settings[chunk] = beam_settings_chunk;
+
     }
+
+    printf("Sky model chunked.\n");
+
+    //setup a temporary visibility set that calculate_visibilities will populate
+    visibility_set_t *chunk_visibility_set = malloc(sizeof(visibility_set_t));
+
+    chunk_visibility_set->us_metres = malloc( num_visis * sizeof(float) );
+    chunk_visibility_set->vs_metres = malloc( num_visis * sizeof(float) );
+    chunk_visibility_set->ws_metres = malloc( num_visis * sizeof(float) );
+
+    chunk_visibility_set->sha0s = visibility_set->sha0s;
+    chunk_visibility_set->cha0s = visibility_set->cha0s;
+    chunk_visibility_set->lsts = visibility_set->lsts;
+    chunk_visibility_set->wavelengths = visibility_set->wavelengths;
+    chunk_visibility_set->channel_frequencies = visibility_set->channel_frequencies;
+
+    chunk_visibility_set->sum_visi_XX_real = malloc( num_visis * sizeof(float) );
+    chunk_visibility_set->sum_visi_XX_imag = malloc( num_visis * sizeof(float) );
+    chunk_visibility_set->sum_visi_XY_real = malloc( num_visis * sizeof(float) );
+    chunk_visibility_set->sum_visi_XY_imag = malloc( num_visis * sizeof(float) );
+    chunk_visibility_set->sum_visi_YX_real = malloc( num_visis * sizeof(float) );
+    chunk_visibility_set->sum_visi_YX_imag = malloc( num_visis * sizeof(float) );
+    chunk_visibility_set->sum_visi_YY_real = malloc( num_visis * sizeof(float) );
+    chunk_visibility_set->sum_visi_YY_imag = malloc( num_visis * sizeof(float) );
+
+    calculate_visibilities(array_layout, cropped_sky_models,
+                  angles_array, woden_settings,
+                  visibility_set, chunk_visibility_set, sbf,
+                  num_chunks);
+
+    printf("GPU calls for band %d finished\n",band_num );
+
+    free(temp_cropped_src);
+
+    free( chunk_visibility_set->us_metres );
+    free( chunk_visibility_set->vs_metres );
+    free( chunk_visibility_set->ws_metres );
+
+    free(chunk_visibility_set->sum_visi_XX_real);
+    free(chunk_visibility_set->sum_visi_XX_imag);
+    free(chunk_visibility_set->sum_visi_XY_real);
+    free(chunk_visibility_set->sum_visi_XY_imag);
+    free(chunk_visibility_set->sum_visi_YX_real);
+    free(chunk_visibility_set->sum_visi_YX_imag);
+    free(chunk_visibility_set->sum_visi_YY_real);
+    free(chunk_visibility_set->sum_visi_YY_imag);
+    //
+    free( chunk_visibility_set );
+
+    // if (woden_settings->beamtype == FEE_BEAM) {
+    //   free_FEE_primary_beam_from_GPU(beam_settings.FEE_beam);
+    // }
 
     //Dumps u,v,w (metres), Re(vis), Im(vis) to a binary file
     FILE *output_visi;
