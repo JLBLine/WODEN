@@ -457,19 +457,13 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
                     num_coords * nMN * n_pols * sizeof(float _Complex)) );
   //
   //
-  threads.x = kP1BlockSize;
+  threads.x = 128;
   threads.y = 2;
   threads.z = 1;
   //
-  grid.x = (int)ceil((float)(nMN) / (float)threads.x);
-  grid.y = (int)ceil((float)num_coords / (float)threads.y);
+  grid.x = (int)ceil((float)num_coords / (float)threads.x);
+  grid.y = (int)ceil((float)(nMN) / (float)threads.y);
   grid.z = n_pols;
-
-  // RTS_getTileGainsKernel<<<grid, threads >>>(d_phi, d_theta, nMN, num_coords,
-  //                               primary_beam->d_M,primary_beam->d_N,
-  //                               (cuFloatComplex*)primary_beam->d_Q1, (cuFloatComplex*)primary_beam->d_Q2,
-  //                               (cuFloatComplex*)primary_beam->rts_P_sin, (cuFloatComplex*)primary_beam->rts_P1,
-  //                               (cuFloatComplex*)primary_beam->emn_T, (cuFloatComplex*)primary_beam->emn_P);
 
   cudaErrorCheckKernel("RTS_getTileGainsKernel",
                         RTS_getTileGainsKernel, grid, threads,
@@ -885,8 +879,9 @@ __global__ void RTS_getTileGainsKernel( float *d_phi, float *d_theta, int nMN, i
            cuFloatComplex *emn_T, cuFloatComplex *emn_P){
 
 
-  int i = threadIdx.x + (blockDim.x*blockIdx.x);
-  int iCoord = threadIdx.y + (blockDim.y*blockIdx.y);
+  int iCoord = threadIdx.x + (blockDim.x*blockIdx.x);
+  int i = threadIdx.y + (blockDim.y*blockIdx.y);
+
   int pol = blockIdx.z;
   int n_pols = gridDim.z; // 2
 
