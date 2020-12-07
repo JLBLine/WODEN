@@ -66,8 +66,12 @@ typedef struct _catsource_t {
   //Shapelet params
   float *shape_ras;
   float *shape_decs;
-  float *shape_fluxes;
-  float *shape_freqs;
+  float *shape_ref_freqs;
+  float *shape_ref_stokesI;
+  float *shape_ref_stokesQ;
+  float *shape_ref_stokesU;
+  float *shape_ref_stokesV;
+  float *shape_SIs;
   float *shape_coeffs;
   float *shape_n1s;
   float *shape_n2s;
@@ -83,7 +87,12 @@ typedef struct _catsource_t {
 } catsource_t;
 
 typedef struct _beam_settings_t {
-    float *beam_angles_array;
+    // float *beam_angles_array;
+
+    float gauss_sdec;
+    float gauss_cdec;
+    float gauss_ha;
+
     float *beam_point_has;
     float *beam_point_decs;
     int num_point_beam_values;

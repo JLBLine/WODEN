@@ -8,9 +8,10 @@ __global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
            int num_freqs, int num_times, int num_components,
            cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J11);
 
-extern "C" void calculate_gaussian_beam(int num_points, int num_time_steps, int num_freqs,
+extern "C" void calculate_gaussian_beam(int num_points, int num_time_steps,
+     int num_freqs, float ha0, float sdec0, float cdec0,
      float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
-     float beam_ref_freq, float *d_freqs, float *d_beam_angles_array,
+     float beam_ref_freq, float *d_freqs,
      float *beam_point_has, float *beam_point_decs,
      cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J11);
 

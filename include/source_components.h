@@ -86,8 +86,9 @@ __global__ void kern_calc_visi_gaussian(float *d_gauss_ras, float *d_gauss_decs,
       cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
       cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11);
 
-__global__ void kern_calc_visi_shapelets(float *d_shape_ras,
-      float *d_shape_decs, float *d_shape_fluxes, float *d_shape_freqs,
+__global__ void kern_calc_visi_shapelets(float *d_shape_ras,float *d_shape_decs,
+      float *d_shape_freqs, float *d_shape_stokesI, float *d_shape_stokesQ,
+      float *d_shape_stokesU, float *d_shape_stokesV, float *d_shape_SIs,
       float *d_us, float *d_vs, float *d_ws,
       float *d_wavelengths,
       float *d_u_s_metres, float *d_v_s_metres, float *d_w_s_metres,

@@ -36,10 +36,6 @@ __device__ void extrap_stokes(float *d_wavelengths, float *d_ref_freqs,
   * flux_U = d_ref_stokesU[iComponent] * flux_ratio;
   * flux_V = d_ref_stokesV[iComponent] * flux_ratio;
 
-  if (iBaseline == 0) {
-    // printf("Extrap fluxes %.5f %.5f %.5f %.5f\n", d_freq, d_ref_freq, d_SIs[iComponent], flux_ratio);
-    // printf("Extrap fluxes %d %.5f %.5f %.5f %.5f\n",iComponent,* flux_I,* flux_Q,* flux_U,* flux_V );
-  }
 }
 
 __global__ void kern_extrap_stokes(int num_visis, int num_components,
@@ -454,8 +450,9 @@ __global__ void kern_calc_visi_gaussian(float *d_gauss_ras, float *d_gauss_decs,
   }
 }
 
-__global__ void kern_calc_visi_shapelets(float *d_shape_ras,
-      float *d_shape_decs, float *d_shape_fluxes, float *d_shape_freqs,
+__global__ void kern_calc_visi_shapelets(float *d_shape_ras,float *d_shape_decs,
+      float *d_shape_freqs, float *d_shape_stokesI, float *d_shape_stokesQ,
+      float *d_shape_stokesU, float *d_shape_stokesV, float *d_shape_SIs,
       float *d_us, float *d_vs, float *d_ws,
       float *d_wavelengths,
       float *d_u_s_metres, float *d_v_s_metres, float *d_w_s_metres,
@@ -478,26 +475,19 @@ __global__ void kern_calc_visi_shapelets(float *d_shape_ras,
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
   const int iCoeff = threadIdx.y + (blockDim.y*blockIdx.y);
 
-
   if (iBaseline < num_visis && iCoeff < num_coeffs) {
-    // printf("Made it here all g %d %d %d %d\n", iBaseline,num_visis,iCoeff,num_coeffs);
     int iComponent = d_shape_param_indexes[iCoeff];
 
-    // if (iComponent > 100) {
-    //   if (iBaseline == 0) {
-    //     printf("Made it here all g %d %d %d %d\n", iBaseline,num_visis,iComponent,num_coeffs);
-    //   }
-    // }
-
     float shape_flux_I;
-    //Use param index below and not iCoeff as there
-    extrap_flux(d_wavelengths, d_shape_freqs,
-               d_shape_fluxes, iComponent, iBaseline,
-               &shape_flux_I);
+    float shape_flux_Q;
+    float shape_flux_U;
+    float shape_flux_V;
 
-    float shape_flux_Q = 0.0;
-    float shape_flux_U = 0.0;
-    float shape_flux_V = 0.0;
+    extrap_stokes(d_wavelengths, d_shape_freqs,
+                 d_shape_stokesI, d_shape_stokesQ,
+                 d_shape_stokesU, d_shape_stokesV,
+                 d_shape_SIs, iComponent, iBaseline,
+                 &shape_flux_I, &shape_flux_Q, &shape_flux_U, &shape_flux_V);
 
     cuFloatComplex visi;
     visi = calc_measurement_equation(d_us, d_vs, d_ws,

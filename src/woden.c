@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
   for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
     float lst = woden_settings->lst_base + time_step*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
 
-    //TODO add half a time step is good? Add time decorrelation?
+    //Add half a time_res so we are sampling centre of each time step
     lst += 0.5*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
     lsts[time_step] = lst;
   }
@@ -104,9 +104,9 @@ int main(int argc, char **argv) {
   beam_settings = fill_primary_beam_settings(woden_settings, cropped_src,
                                             lsts, num_time_steps);
 
-  //TODO allow this frequency resolution to over-written by user commands
   //MWA correlator data is split into 24 'coarse' bands of 1.28MHz bandwidth,
   //which is typically split into 10, 20, or 40kHz fine channels
+  //User can change these settings using run_woden.py / in the json
   //Loop through each coarse frequency band, run the simulation and dump to
   //a binary file
   for (size_t band = 0; band < woden_settings->num_bands; band++) {
@@ -117,37 +117,32 @@ int main(int argc, char **argv) {
 
     woden_settings->base_band_freq = base_band_freq;
 
-    //TODO - add half a freq resolution in here? minus? Leave as is?
-    // base_band_freq += woden_settings->frequency_resolution/2.0;
+    beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
+    // //We need the zenith beam to get the normalisation
+    beam_settings.FEE_beam_zenith = malloc(sizeof(copy_primary_beam_t));
 
+    //The intial setup of the FEE beam is done on the CPU, so call it here
+    if (woden_settings->beamtype == FEE_BEAM){
+      float base_middle_freq = base_band_freq + woden_settings->coarse_band_width/2.0;
+    //
+      // Just use one single tile beam for all for now - will need a certain
+      // number in the future to include dipole flagging
+      int st = 0;
+      printf("Middle freq is %f\n",base_middle_freq );
+    //
+      float float_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    //
+      printf("Setting up the zenith FEE beam...");
+      RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam_zenith, float_zenith_delays, st);
+      printf(" done.\n");
 
+      printf("Setting up the FEE beam...");
+      RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq,
+            beam_settings.FEE_beam, woden_settings->FEE_ideal_delays, st);
+      printf(" done.\n");
 
-      beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
-      // //We need the zenith beam to get the normalisation
-      beam_settings.FEE_beam_zenith = malloc(sizeof(copy_primary_beam_t));
-
-      //The intial setup of the FEE beam is done on the CPU, so call it here
-      if (woden_settings->beamtype == FEE_BEAM){
-        float base_middle_freq = base_band_freq + woden_settings->coarse_band_width/2.0;
-      //
-        // Just use one single tile beam for all for now - will need a certain
-        // number in the future to include dipole flagging
-        int st = 0;
-        printf("Middle freq is %f\n",base_middle_freq );
-      //
-        float float_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                                         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-      //
-        printf("Setting up the zenith FEE beam...");
-        RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam_zenith, float_zenith_delays, st);
-        printf(" done.\n");
-
-        printf("Setting up the FEE beam...");
-        RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq,
-              beam_settings.FEE_beam, woden_settings->FEE_ideal_delays, st);
-        printf(" done.\n");
-
-      }
+    }
 
     visibility_set_t *visibility_set = malloc(sizeof(visibility_set_t));
     visibility_set->sum_visi_real = malloc( num_visis * sizeof(float) );
@@ -241,13 +236,9 @@ int main(int argc, char **argv) {
                      woden_settings->chunking_size, woden_settings->num_time_steps,
                      &point_iter, &gauss_iter, &shape_iter);
 
-      printf("Temp cropped source n_points, n_gauss, n_shape_coeffs %d %d %d\n",
-             temp_cropped_src->n_points, temp_cropped_src->n_gauss, temp_cropped_src->n_shape_coeffs );
-
       //Add the number of shapelets onto the full source catalogue value
       //so we know if we need to setup shapelet basis functions in GPU memory
       //or not
-
       cropped_sky_models->num_shapelets += temp_cropped_src->n_shapes;
 
       beam_settings_t beam_settings_chunk;

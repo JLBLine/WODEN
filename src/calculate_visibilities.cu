@@ -105,31 +105,22 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
   if (woden_settings->beamtype == FEE_BEAM){
 
     base_beam_settings = cropped_sky_models->beam_settings[0];
-
     FEE_beam = base_beam_settings.FEE_beam;
     FEE_beam_zenith = base_beam_settings.FEE_beam_zenith;
 
-    // cudaErrorCheck("Before get_HDFBeam_normalisation", cudaGetLastError());
     printf("Getting FEE beam normalisation...\n");
     get_HDFBeam_normalisation(FEE_beam_zenith, FEE_beam);
     printf(" done.\n");
-    // cudaErrorCheck("After get_HDFBeam_normalisation", cudaGetLastError());
 
     free_FEE_primary_beam_from_GPU(base_beam_settings.FEE_beam_zenith);
 
-    // cudaErrorCheck("Before copy_FEE_primary_beam_to_GPU", cudaGetLastError());
     printf("Copying the FEE beam across to the GPU...");
     copy_FEE_primary_beam_to_GPU(FEE_beam, woden_settings->num_time_steps);
     printf(" done.\n");
-    // cudaErrorCheck("After copy_FEE_primary_beam_to_GPU", cudaGetLastError());
-    // cudaErrorCheck("WHAT", cudaDeviceSynchronize());
   }
 
   //Iterate through all sky model chunks, calculated visibilities are
   //added to chunk_visibility_set, and then summed onto visibility_set
-
-  // cudaErrorCheckCall(cudaGetLastError());
-
   for (int chunk = 0; chunk < num_chunks; chunk++) {
 
     catsource_t catsource;
@@ -201,18 +192,8 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
     float sin_2theta = 0.0;
     float fwhm_lm; //= 20.0 * D2R;
 
-    float *d_beam_ref_freq = NULL;
-    float *d_beam_angles_array = NULL;
     if (beam_settings.beamtype == GAUSS_BEAM) {
-      // cudaMalloc( (void**)&d_beam_ref_freq, sizeof(float) );
-      // cudaMemcpy( d_beam_ref_freq, beam_settings.beam_ref_freq_array, sizeof(float), cudaMemcpyHostToDevice );
       fwhm_lm = sinf(beam_settings.beam_FWHM_rad);
-
-      cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_angles_array, 3*sizeof(float)) );
-      cudaErrorCheckCall( cudaMemcpy( d_beam_angles_array,
-                          beam_settings.beam_angles_array, 3*sizeof(float),
-                          cudaMemcpyHostToDevice) );
-
     }
 
     cuFloatComplex *d_primay_beam_J00 = NULL;
@@ -266,9 +247,6 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
 
       //Only the FEE beam currently yields cross pol values, so only malloc what
       //we need here
-
-      // printf("TRYING to malloc this many things %d\n",beam_settings.num_point_beam_values );
-
       if (beam_settings.beamtype == FEE_BEAM) {
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01,
                   beam_settings.num_point_beam_values*sizeof(cuFloatComplex) ));
@@ -309,8 +287,10 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
         printf("\tDoing gaussian beam tings\n");
 
         calculate_gaussian_beam(num_points, num_time_steps, num_freqs,
+             beam_settings.gauss_ha, beam_settings.gauss_sdec,
+             beam_settings.gauss_cdec,
              fwhm_lm, cos_theta, sin_theta, sin_2theta,
-             beam_settings.beam_ref_freq, d_freqs, d_beam_angles_array,
+             beam_settings.beam_ref_freq, d_freqs,
              beam_settings.beam_point_has, beam_settings.beam_point_decs,
              d_primay_beam_J00, d_primay_beam_J11);
 
@@ -388,7 +368,6 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
       cudaErrorCheckCall( cudaFree( d_ms) );
       cudaErrorCheckCall( cudaFree( d_ls) );
       cudaErrorCheckCall( cudaFree( d_point_freqs ) );
-      // cudaFree( d_point_fluxes );
       cudaErrorCheckCall( cudaFree( d_point_stokesI ) );
       cudaErrorCheckCall( cudaFree( d_point_stokesQ ) );
       cudaErrorCheckCall( cudaFree( d_point_stokesU ) );
@@ -507,8 +486,10 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
 
       if (beam_settings.beamtype == GAUSS_BEAM) {
         calculate_gaussian_beam(num_gauss, num_time_steps, num_freqs,
+             beam_settings.gauss_ha, beam_settings.gauss_sdec,
+             beam_settings.gauss_cdec,
              fwhm_lm, cos_theta, sin_theta, sin_2theta,
-             beam_settings.beam_ref_freq, d_freqs, d_beam_angles_array,
+             beam_settings.beam_ref_freq, d_freqs,
              beam_settings.beam_gausscomp_has, beam_settings.beam_gausscomp_decs,
              d_primay_beam_J00, d_primay_beam_J11);
 
@@ -603,8 +584,12 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
 
       float *d_shape_ras=NULL;
       float *d_shape_decs=NULL;
-      float *d_shape_fluxes=NULL;
       float *d_shape_freqs=NULL;
+      float *d_shape_stokesI=NULL;
+      float *d_shape_stokesQ=NULL;
+      float *d_shape_stokesU=NULL;
+      float *d_shape_stokesV=NULL;
+      float *d_shape_SIs=NULL;
       float *d_shape_pas=NULL;
       float *d_shape_majors=NULL;
       float *d_shape_minors=NULL;
@@ -633,9 +618,29 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
       cudaErrorCheckCall( cudaMemcpy( d_shape_decs, catsource.shape_decs,
               num_shapes*sizeof(float), cudaMemcpyHostToDevice) );
 
-      cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_fluxes), num_shapes*sizeof(float)) );
-      cudaErrorCheckCall( cudaMemcpy( d_shape_fluxes, catsource.shape_fluxes,
-              num_shapes*sizeof(float), cudaMemcpyHostToDevice) );
+      cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_freqs), num_shapes*sizeof(float)) );
+      cudaErrorCheckCall( cudaMemcpy( d_shape_freqs, catsource.shape_ref_freqs,
+                          num_shapes*sizeof(float), cudaMemcpyHostToDevice) );
+
+      cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_stokesI), num_shapes*sizeof(float)) );
+      cudaErrorCheckCall( cudaMemcpy( d_shape_stokesI, catsource.shape_ref_stokesI,
+                          num_shapes*sizeof(float), cudaMemcpyHostToDevice) );
+
+      cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_stokesQ), num_shapes*sizeof(float)) );
+      cudaErrorCheckCall( cudaMemcpy( d_shape_stokesQ, catsource.shape_ref_stokesQ,
+                          num_shapes*sizeof(float), cudaMemcpyHostToDevice) );
+
+      cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_stokesU), num_shapes*sizeof(float)) );
+      cudaErrorCheckCall( cudaMemcpy( d_shape_stokesU, catsource.shape_ref_stokesU,
+                          num_shapes*sizeof(float), cudaMemcpyHostToDevice) );
+
+      cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_stokesV), num_shapes*sizeof(float)) );
+      cudaErrorCheckCall( cudaMemcpy( d_shape_stokesV, catsource.shape_ref_stokesV,
+                          num_shapes*sizeof(float), cudaMemcpyHostToDevice) );
+
+      cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_SIs), num_shapes*sizeof(float)) );
+      cudaErrorCheckCall( cudaMemcpy( d_shape_SIs, catsource.shape_SIs,
+                          num_shapes*sizeof(float), cudaMemcpyHostToDevice) );
 
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_pas), num_shapes*sizeof(float)) );
       cudaErrorCheckCall( cudaMemcpy( d_shape_pas, catsource.shape_pas,
@@ -647,10 +652,6 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
 
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_minors), num_shapes*sizeof(float)) );
       cudaErrorCheckCall( cudaMemcpy( d_shape_minors, catsource.shape_minors,
-              num_shapes*sizeof(float), cudaMemcpyHostToDevice) );
-
-      cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_freqs), num_shapes*sizeof(float)) );
-      cudaErrorCheckCall( cudaMemcpy( d_shape_freqs, catsource.shape_freqs,
               num_shapes*sizeof(float), cudaMemcpyHostToDevice) );
 
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_coeffs),
@@ -737,8 +738,10 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
 
       if (beam_settings.beamtype == GAUSS_BEAM) {
         calculate_gaussian_beam(num_shapes, num_time_steps, num_freqs,
+             beam_settings.gauss_ha, beam_settings.gauss_sdec,
+             beam_settings.gauss_cdec,
              fwhm_lm, cos_theta, sin_theta, sin_2theta,
-             beam_settings.beam_ref_freq, d_freqs, d_beam_angles_array,
+             beam_settings.beam_ref_freq, d_freqs,
              beam_settings.beam_shape_has, beam_settings.beam_shape_decs,
              d_primay_beam_J00, d_primay_beam_J11);
 
@@ -787,7 +790,9 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
 
       cudaErrorCheckKernel("kern_calc_visi_shapelets",
               kern_calc_visi_shapelets, grid, threads,
-              d_shape_ras, d_shape_decs, d_shape_fluxes, d_shape_freqs,
+              d_shape_ras, d_shape_decs,
+              d_shape_freqs, d_shape_stokesI, d_shape_stokesQ,
+              d_shape_stokesU, d_shape_stokesV, d_shape_SIs,
               d_us, d_vs, d_ws, d_wavelengths,
               d_u_s_metres, d_v_s_metres, d_w_s_metres,
               d_sum_visi_XX_real, d_sum_visi_XX_imag,
@@ -826,10 +831,14 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
       cudaErrorCheckCall( cudaFree(d_shape_minors ) );
       cudaErrorCheckCall( cudaFree(d_shape_majors) );
       cudaErrorCheckCall( cudaFree(d_shape_pas) );
-      cudaErrorCheckCall( cudaFree(d_shape_freqs ) );
-      cudaErrorCheckCall( cudaFree(d_shape_fluxes ) );
       cudaErrorCheckCall( cudaFree(d_shape_decs) );
       cudaErrorCheckCall( cudaFree(d_shape_ras) );
+      cudaErrorCheckCall( cudaFree(d_shape_freqs ) );
+      cudaErrorCheckCall( cudaFree(d_shape_stokesI ) );
+      cudaErrorCheckCall( cudaFree(d_shape_stokesQ ) );
+      cudaErrorCheckCall( cudaFree(d_shape_stokesU ) );
+      cudaErrorCheckCall( cudaFree(d_shape_stokesV ) );
+      cudaErrorCheckCall( cudaFree(d_shape_SIs ) );
 
     }//if shapelet
 
@@ -892,10 +901,6 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
 
     }//visi loop
 
-    if (beam_settings.beamtype == GAUSS_BEAM) {
-      cudaErrorCheckCall( cudaFree( d_beam_angles_array) );
-      cudaErrorCheckCall( cudaFree( d_beam_ref_freq) );
-    }
   } //chunk loop
 
   //Free up the GPU memory
@@ -911,7 +916,6 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
   cudaErrorCheckCall( cudaFree(d_wavelengths) );
   cudaErrorCheckCall( cudaFree(d_cha0s) );
   cudaErrorCheckCall( cudaFree(d_sha0s) );
-  // cudaErrorCheckCall( cudaFree(d_angles_array) );
   cudaErrorCheckCall( cudaFree(d_Z_diff) );
   cudaErrorCheckCall( cudaFree(d_Y_diff) );
   cudaErrorCheckCall( cudaFree(d_X_diff) );
@@ -923,7 +927,6 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
   if (woden_settings->beamtype == FEE_BEAM) {
     free_FEE_primary_beam_from_GPU(base_beam_settings.FEE_beam);
   }
-
 
   cudaErrorCheckCall( cudaFree(d_sum_visi_XX_imag) );
   cudaErrorCheckCall( cudaFree(d_sum_visi_XX_real) );
