@@ -187,7 +187,7 @@ beam_settings_t fill_primary_beam_settings(woden_settings_t *woden_settings,
   }
 
   else {
-    printf("BEAM TYPE %d\n",(int)woden_settings->beamtype );
+    printf("NO PRIMARY BEAM HAS BEEN SELECTED\n\tWill run without a primary beam\n");
   }
 
   return beam_settings;

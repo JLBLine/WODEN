@@ -1,8 +1,5 @@
 #include "calculate_visibilities.h"
 
-//TODO pull out all extern C info into a separate header that normal
-//C code can #include - will have to remove the extern C part in that header
-
 __device__ void extrap_flux(float *d_wavelengths, float *d_freqs,
            float *d_fluxes, int iComponent, int iBaseline,
            float * extrap_flux);
@@ -53,6 +50,28 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
            float *d_sum_visi_XY_real, float *d_sum_visi_XY_imag,
            float *d_sum_visi_YX_real, float *d_sum_visi_YX_imag,
            float *d_sum_visi_YY_real, float *d_sum_visi_YY_imag);
+
+void source_component_common(int num_components, int num_beam_values,
+           cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
+           cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11,
+           float *d_freqs, float *d_ls, float *d_ms, float *d_ns,
+           float *d_ras, float *d_decs, float *azs, float *zas,
+           float *sin_para_angs, float *cos_para_angs,
+           float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
+           float *beam_has, float *beam_decs,
+           woden_settings_t *woden_settings,
+           beam_settings_t beam_settings,
+           copy_primary_beam_t *FEE_beam);
+
+// void setup_point_sources(float *d_point_ras, float *d_point_decs,
+//     float *d_point_freqs, float *d_point_stokesI, float *d_point_stokesQ,
+//     float *d_point_stokesU, float *d_point_stokesV, float *d_point_SIs,
+//     float *d_ls, float *d_ms, float *d_ns, float *d_freqs,
+//     catsource_t catsource, beam_settings_t beam_settings,
+//     woden_settings_t *woden_settings, copy_primary_beam_t *FEE_beam,
+//     float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
+//     cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
+//     cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11);
 
 __global__ void kern_calc_visi_point(float *d_point_ras, float *d_point_decs,
       float *d_point_freqs, float *d_point_stokesI, float *d_point_stokesQ,

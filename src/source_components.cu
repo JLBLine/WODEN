@@ -7,10 +7,11 @@
 #include "fundamental_coords.h"
 #include "constants.h"
 #include "shapelet_basis.h"
-// #include "read_and_write.h"
 #include "source_components.h"
 #include "cudacheck.h"
 #include "woden_struct_defs.h"
+#include "primary_beam_cuda.h"
+#include "FEE_primary_beam_cuda.h"
 
 __device__ void extrap_flux(float *d_wavelengths, float *d_freqs,
            float *d_fluxes, int iComponent, int iBaseline,
@@ -139,8 +140,6 @@ extern "C" void test_extrap_flux(catsource_t *catsource,
   cudaFree( d_flux_Q );
   cudaFree( d_flux_U );
   cudaFree( d_flux_V );
-
-
 }
 
 __device__ cuFloatComplex calc_measurement_equation(float *d_us,
@@ -221,8 +220,6 @@ __device__ void apply_beam_gains(cuFloatComplex g1xx, cuFloatComplex g1xy,
   * visi_XY = this_XY;
   * visi_YX = this_YX;
   * visi_YY = this_YY;
-  // }
-
 
 }
 
@@ -298,15 +295,6 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
                d_primay_beam_J10, d_primay_beam_J11,
                &g1xx, &g1xy, &g1yx, &g1yy, &g2xx, &g2xy, &g2yx, &g2yy);
 
-    // if (iBaseline == 0) {
-    //    printf("Component %02d %.3f %.3f %.3f %.3f\n", iComponent,
-    //           g1xx.x, g1xx.y, g1yy.x, g1yy.y );
-    // }
-
-    // if (iBaseline == 0) {
-    //   printf("rXX iXX rYY iYY %.3f %.3f %.3f %.3f\n", g1xx.x, g1xx.y, g2yy.x, g2yy.y );
-    // }
-
     cuFloatComplex visi_XX;
     cuFloatComplex visi_XY;
     cuFloatComplex visi_YX;
@@ -330,6 +318,137 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
 
 }
 
+void source_component_common(int num_components, int num_beam_values,
+           cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
+           cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11,
+           float *d_freqs, float *d_ls, float *d_ms, float *d_ns,
+           float *d_ras, float *d_decs, float *azs, float *zas,
+           float *sin_para_angs, float *cos_para_angs,
+           float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
+           float *beam_has, float *beam_decs,
+           woden_settings_t *woden_settings,
+           beam_settings_t beam_settings,
+           copy_primary_beam_t *FEE_beam){
+
+  dim3 grid, threads;
+
+  threads.x = 128;
+  threads.y = 1;
+  threads.z = 1;
+  grid.x = (int)ceil( (float)num_components / (float)threads.x );
+  grid.y = 1;
+  grid.z = 1;
+
+  cudaErrorCheckKernel("kern_calc_lmn",
+                        kern_calc_lmn, grid, threads,
+                        woden_settings->ra0,
+                        woden_settings->dec0, woden_settings->cdec0,
+                        d_ras, d_decs,
+                        d_ls, d_ms, d_ns, num_components)
+
+  //If using a gaussian primary beam, calculate beam values for all freqs,
+  //lsts and point component locations
+  if (beam_settings.beamtype == GAUSS_BEAM) {
+    printf("\tDoing gaussian beam tings\n");
+
+    calculate_gaussian_beam(num_components,
+         woden_settings->num_time_steps, woden_settings->num_freqs,
+         beam_settings.gauss_ha, beam_settings.gauss_sdec,
+         beam_settings.gauss_cdec,
+         fwhm_lm, cos_theta, sin_theta, sin_2theta,
+         beam_settings.beam_ref_freq, d_freqs,
+         beam_has, beam_decs,
+         d_primay_beam_J00, d_primay_beam_J11);
+
+  }// end if beam == GAUSS
+
+  else if (beam_settings.beamtype == FEE_BEAM) {
+
+    calc_CUDA_FEE_beam(azs, zas, sin_para_angs, cos_para_angs,
+           num_components, woden_settings->num_time_steps, FEE_beam, 1, 1);
+
+    threads.x = 64;
+    threads.y = 4;
+    grid.x = (int)ceil( (float)woden_settings->num_visis / (float)threads.x );
+    grid.y = (int)ceil( ((float)num_components) / ((float)threads.y) );
+
+    cudaErrorCheckKernel("kern_map_FEE_beam_gains",
+              kern_map_FEE_beam_gains, grid, threads,
+              (cuFloatComplex *)FEE_beam->d_FEE_beam_gain_matrices,
+              d_primay_beam_J00, d_primay_beam_J01,
+              d_primay_beam_J10, d_primay_beam_J11,
+              woden_settings->num_freqs, num_components,
+              woden_settings->num_visis, woden_settings->num_baselines,
+              woden_settings->num_time_steps);
+  }
+
+  else if (beam_settings.beamtype == ANALY_DIPOLE) {
+    printf("\tDoing analytic_dipole (EDA2 beam)\n");
+
+    calculate_analytic_dipole_beam(num_components,
+         woden_settings->num_time_steps, woden_settings->num_freqs,
+         azs, zas, d_freqs, d_primay_beam_J00, d_primay_beam_J11);
+  }
+}
+
+// void setup_point_sources(float *d_point_ras, float *d_point_decs,
+//     float *d_point_freqs, float *d_point_stokesI, float *d_point_stokesQ,
+//     float *d_point_stokesU, float *d_point_stokesV, float *d_point_SIs,
+//     float *d_ls, float *d_ms, float *d_ns, float *d_freqs,
+//     catsource_t catsource, beam_settings_t beam_settings,
+//     woden_settings_t *woden_settings, copy_primary_beam_t *FEE_beam,
+//     float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
+//     cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
+//     cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11) {
+//
+//   int n_points = catsource.n_points;
+//
+//   cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_ras), n_points*sizeof(float) ) );
+//   cudaErrorCheckCall( cudaMemcpy( d_point_ras, catsource.point_ras,
+//                       n_points*sizeof(float), cudaMemcpyHostToDevice ) );
+//
+//   cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_decs), n_points*sizeof(float) ) );
+//   cudaErrorCheckCall( cudaMemcpy( d_point_decs, catsource.point_decs,
+//                       n_points*sizeof(float), cudaMemcpyHostToDevice ) );
+//
+//   cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_freqs), n_points*sizeof(float) ) );
+//   cudaErrorCheckCall( cudaMemcpy( d_point_freqs, catsource.point_ref_freqs,
+//                       n_points*sizeof(float), cudaMemcpyHostToDevice ) );
+//
+//   cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_stokesI), n_points*sizeof(float) ) );
+//   cudaErrorCheckCall( cudaMemcpy( d_point_stokesI, catsource.point_ref_stokesI,
+//                       n_points*sizeof(float), cudaMemcpyHostToDevice ) );
+//
+//   cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_stokesQ), n_points*sizeof(float) ) );
+//   cudaErrorCheckCall( cudaMemcpy( d_point_stokesQ, catsource.point_ref_stokesQ,
+//                       n_points*sizeof(float), cudaMemcpyHostToDevice ) );
+//
+//   cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_stokesU), n_points*sizeof(float) ) );
+//   cudaErrorCheckCall( cudaMemcpy( d_point_stokesU, catsource.point_ref_stokesU,
+//                       n_points*sizeof(float), cudaMemcpyHostToDevice ) );
+//
+//   cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_stokesV), n_points*sizeof(float) ) );
+//   cudaErrorCheckCall( cudaMemcpy( d_point_stokesV, catsource.point_ref_stokesV,
+//                       n_points*sizeof(float), cudaMemcpyHostToDevice ) );
+//
+//   cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_SIs), n_points*sizeof(float) ) );
+//   cudaErrorCheckCall( cudaMemcpy( d_point_SIs, catsource.point_SIs,
+//                       n_points*sizeof(float), cudaMemcpyHostToDevice ) );
+//
+//   // source_component_common(n_points,
+//   //            beam_settings.num_point_beam_values,
+//   //            d_primay_beam_J00, d_primay_beam_J01,
+//   //            d_primay_beam_J10, d_primay_beam_J11,
+//   //            d_freqs, d_ls, d_ms, d_ns,
+//   //            d_point_ras, d_point_decs,
+//   //            catsource.point_azs, catsource.point_zas,
+//   //            catsource.sin_point_para_angs, catsource.cos_point_para_angs,
+//   //            fwhm_lm, cos_theta, sin_theta, sin_2theta,
+//   //            beam_settings.beam_point_has, beam_settings.beam_point_decs,
+//   //            woden_settings, beam_settings, FEE_beam);
+//
+// }
+
 __global__ void kern_calc_visi_point(float *d_point_ras, float *d_point_decs,
            float *d_point_freqs, float *d_point_stokesI, float *d_point_stokesQ,
            float *d_point_stokesU, float *d_point_stokesV, float *d_point_SIs,
@@ -350,6 +469,8 @@ __global__ void kern_calc_visi_point(float *d_point_ras, float *d_point_decs,
   const int iComponent = threadIdx.y + (blockDim.y*blockIdx.y);
 
   if(iBaseline < num_visis && iComponent < num_points) {
+
+    // printf("%d %d\n",iBaseline, iComponent );
 
     float point_flux_I;
     float point_flux_Q;
@@ -447,7 +568,6 @@ __global__ void kern_calc_visi_gaussian(float *d_gauss_ras, float *d_gauss_decs,
            d_sum_visi_XY_real, d_sum_visi_XY_imag,
            d_sum_visi_YX_real, d_sum_visi_YX_imag,
            d_sum_visi_YY_real, d_sum_visi_YY_imag);
-  //
   }
 }
 
