@@ -1,7 +1,6 @@
-#include "FEE_primary_beam.h"
 #define kP1BlockSize 64
 #include "cudacheck.h"
-#include "read_and_write.h"
+#include "woden_struct_defs.h"
 
 extern "C" void calc_CUDA_FEE_beam(float *azs, float *zas,
                                    float *sin_para_angs, float *cos_para_angs,

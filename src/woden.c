@@ -6,16 +6,22 @@
 #include <erfa.h>
 #include <complex.h>
 
+#include "constants.h"
+#include "woden_struct_defs.h"
 #include "create_sky_model.h"
 #include "shapelet_basis.h"
-#include "woden.h"
-#include "constants.h"
 #include "chunk_source.h"
 #include "print_help.h"
 #include "primary_beam.h"
 #include "FEE_primary_beam.h"
+#include "read_and_write.h"
 
 // #include "FEE_primary_beam_cuda.h"
+
+extern void calculate_visibilities(array_layout_t * array_layout,
+  source_catalogue_t *cropped_sky_models,
+  woden_settings_t *woden_settings, visibility_set_t *visibility_set,
+  visibility_set_t *chunk_visibility_set, float *sbf, int num_chunks);
 
 int main(int argc, char **argv) {
 

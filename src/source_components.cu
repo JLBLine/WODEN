@@ -7,9 +7,10 @@
 #include "fundamental_coords.h"
 #include "constants.h"
 #include "shapelet_basis.h"
-#include "read_and_write.h"
+// #include "read_and_write.h"
 #include "source_components.h"
 #include "cudacheck.h"
+#include "woden_struct_defs.h"
 
 __device__ void extrap_flux(float *d_wavelengths, float *d_freqs,
            float *d_fluxes, int iComponent, int iBaseline,

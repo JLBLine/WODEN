@@ -1,3 +1,5 @@
+#include "woden_struct_defs.h"
+
 void null_point_comps(catsource_t *temp_cropped_src);
 void null_gauss_comps(catsource_t *temp_cropped_src);
 void null_shapelet_comps(catsource_t *temp_cropped_src);

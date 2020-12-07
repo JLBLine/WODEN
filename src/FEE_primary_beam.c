@@ -161,7 +161,7 @@ Find the nearest freq in the element pattern hdf file
 //#define H5FILE_NAME "/home/bpindor/code/MWAtools_pb/MWA_embedded_element_pattern_V02.h5"
 //#define H5FILE_NAME "/home/bpindor/temp/MWAtools_pb/MWA_embedded_element_pattern_V02.h5"
 
-int RTS_HDFBeamInit(char *h5filename, float freq_Hz, copy_primary_beam_t *pb, float *FEE_delays, int stn){
+int RTS_HDFBeamInit(const char *h5filename, float freq_Hz, copy_primary_beam_t *pb, float *FEE_delays, int stn){
 
   hid_t       file, group;         /* handles */
   herr_t          status;
@@ -206,7 +206,7 @@ int RTS_HDFBeamInit(char *h5filename, float freq_Hz, copy_primary_beam_t *pb, fl
   float lam;
   float _Complex Vcplx[N_COPOL][NUM_DIPOLES];
 
-  lam = VEL_LIGHT/(od.freq_out); // Should this be freq_out??
+  lam = VELC/(od.freq_out); // Should this be freq_out??
 
   //RTS code was setup with a different ordering of the delays, so change
   //the order of the delays

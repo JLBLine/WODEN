@@ -10,7 +10,6 @@
 #include "legendre_polynomial.h"
 #include "cudacheck.h"
 #include "FEE_primary_beam_cuda.h"
-#include "rts_cube.h"
 
 
 // #include <iostream>
@@ -328,7 +327,7 @@ extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,
   // printf("CUDA error 2: %s\n", cudaGetErrorString( cudaGetLastError() ) );
 
   float rotation = 0.0;
-  int nmax = primary_beam->nmax;
+  // int nmax = primary_beam->nmax;
 
   RTS_CUDA_get_TileGains(az, za, sin_para_angs, cos_para_angs,
     num_time_steps, num_azza, rotation, primary_beam, TileGainMatrices, scaling);
@@ -923,7 +922,7 @@ __global__ void RTS_getTileGainsKernel( float *d_phi, float *d_theta, int nMN, i
 
     cuFloatComplex phi_comp;
 
-    phi_comp = CUBE_DEVICE_CALL(U1polar,(pb_M[beam_index] * phi)) * C_MN * M_absM / sqrt(pb_N[beam_index] * (pb_N[beam_index] + 1.0));
+    phi_comp = U1polar(pb_M[beam_index] * phi) * C_MN * M_absM / sqrt(pb_N[beam_index] * (pb_N[beam_index] + 1.0));
 
     cuFloatComplex this_emn_T, this_emn_P;
     float T_exp, P_exp;

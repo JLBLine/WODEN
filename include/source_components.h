@@ -1,6 +1,5 @@
 #include "calculate_visibilities.h"
 
-
 //TODO pull out all extern C info into a separate header that normal
 //C code can #include - will have to remove the extern C part in that header
 

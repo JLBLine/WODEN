@@ -117,7 +117,6 @@ inline __device__ cuFloatComplex cuComplexExp( const cuFloatComplex z ) {
 // ----------------------------------------------------------
 //! Calculate real and imaginary parts of U(1) variable e^(i*theta)
 
-//CUBE_DEVICE(cuFloatComplex, U1polar, const float theta) {
 inline __device__ cuFloatComplex U1polar( const float theta ) {
 
   cuFloatComplex z;
