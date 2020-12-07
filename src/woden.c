@@ -70,7 +70,10 @@ int main(int argc, char **argv) {
   printf("Setting phase centre RA,DEC %.5fdeg %.5fdeg\n",woden_settings->ra0/DD2R, woden_settings->dec0/DD2R);
 
   //Used for calculating l,m,n for components
-  float angles_array[3] = {sdec0, cdec0, woden_settings->ra0};
+  // float angles_array[3] = {sdec0, cdec0, woden_settings->ra0};
+  woden_settings->sdec0 = sdec0;
+  woden_settings->cdec0 = cdec0;
+
   int num_time_steps = woden_settings->num_time_steps;
 
   //Calculate all lsts for this observation
@@ -199,6 +202,7 @@ int main(int argc, char **argv) {
 
     //Calculating a single shapelet coeff is equivalent to a point/gauss so treat as a
     //component here
+
     int num_components = cropped_src->n_points + cropped_src->n_gauss + cropped_src->n_shape_coeffs;
     int num_chunks;
     //TODO should we chunk outside the band for-loop so that we can reuse the chunks for each band (should be the same)
@@ -236,6 +240,9 @@ int main(int argc, char **argv) {
       fill_chunk_src(temp_cropped_src, cropped_src, num_chunks, chunk,
                      woden_settings->chunking_size, woden_settings->num_time_steps,
                      &point_iter, &gauss_iter, &shape_iter);
+
+      printf("Temp cropped source n_points, n_gauss, n_shape_coeffs %d %d %d\n",
+             temp_cropped_src->n_points, temp_cropped_src->n_gauss, temp_cropped_src->n_shape_coeffs );
 
       //Add the number of shapelets onto the full source catalogue value
       //so we know if we need to setup shapelet basis functions in GPU memory
@@ -279,9 +286,8 @@ int main(int argc, char **argv) {
     chunk_visibility_set->sum_visi_YY_imag = malloc( num_visis * sizeof(float) );
 
     calculate_visibilities(array_layout, cropped_sky_models,
-                  angles_array, woden_settings,
-                  visibility_set, chunk_visibility_set, sbf,
-                  num_chunks);
+                  woden_settings, visibility_set, chunk_visibility_set,
+                  sbf, num_chunks);
 
     printf("GPU calls for band %d finished\n",band_num );
 

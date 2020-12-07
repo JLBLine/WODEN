@@ -5,11 +5,8 @@
 
 extern "C" void calculate_visibilities(array_layout_t * array_layout,
   source_catalogue_t *cropped_sky_models,
-  float *angles_array, woden_settings_t *woden_settings,
-  visibility_set_t *visibility_set, visibility_set_t *chunk_visibility_set,
-  float *sbf, int num_chunks);
-
-
+  woden_settings_t *woden_settings, visibility_set_t *visibility_set,
+  visibility_set_t *chunk_visibility_set, float *sbf, int num_chunks);
 
 typedef struct _d_sum_visi_struct_t {
   float *d_sum_visi_XX_real;

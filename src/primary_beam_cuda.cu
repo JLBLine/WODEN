@@ -96,8 +96,13 @@ extern "C" void calculate_gaussian_beam(int num_components, int num_time_steps, 
   threads.x = 128;
   grid.x = (int)ceil( (float)num_beam_hadec / (float)threads.x );
 
+  float sdec0 = d_beam_angles_array[0];
+  float cdec0 = d_beam_angles_array[1];
+  float ha0 = d_beam_angles_array[2];
+
   cudaErrorCheckKernel("kern_calc_lmn", kern_calc_lmn, grid, threads,
-                        d_beam_angles_array, d_beam_has, d_beam_decs,
+                        ha0, sdec0, cdec0,
+                        d_beam_has, d_beam_decs,
                         d_beam_ls, d_beam_ms, d_beam_ns, num_beam_hadec);
 
   threads.y = 2;

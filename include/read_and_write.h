@@ -150,6 +150,8 @@ typedef struct _woden_settngs_t {
   float lst_base;
   float ra0;
   float dec0;
+  float sdec0;
+  float cdec0;
   int num_baselines;
   int num_freqs;
   float frequency_resolution;

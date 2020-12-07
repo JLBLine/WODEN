@@ -9,6 +9,7 @@
 #include "shapelet_basis.h"
 #include "read_and_write.h"
 #include "source_components.h"
+#include "cudacheck.h"
 
 __device__ void extrap_flux(float *d_wavelengths, float *d_freqs,
            float *d_fluxes, int iComponent, int iBaseline,
@@ -340,7 +341,7 @@ __global__ void kern_calc_visi_point(float *d_point_ras, float *d_point_decs,
            float *d_sum_visi_XY_real, float *d_sum_visi_XY_imag,
            float *d_sum_visi_YX_real, float *d_sum_visi_YX_imag,
            float *d_sum_visi_YY_real, float *d_sum_visi_YY_imag,
-           float *d_angles_array, float *d_wavelengths,
+           float *d_wavelengths,
            float *d_ls, float *d_ms, float *d_ns,
            int num_points, int num_baselines, int num_freqs, int num_visis,
            int num_times, int beamtype,
@@ -391,7 +392,7 @@ __global__ void kern_calc_visi_gaussian(float *d_gauss_ras, float *d_gauss_decs,
            float *d_sum_visi_XY_real, float *d_sum_visi_XY_imag,
            float *d_sum_visi_YX_real, float *d_sum_visi_YX_imag,
            float *d_sum_visi_YY_real, float *d_sum_visi_YY_imag,
-           float *d_angles_array, float *d_wavelengths,
+           float *d_wavelengths,
            float *d_ls, float *d_ms, float *d_ns,
            float *d_gauss_pas, float *d_gauss_majors, float *d_gauss_minors,
            int num_gauss, int num_baselines, int num_freqs, int num_visis,
@@ -462,7 +463,7 @@ __global__ void kern_calc_visi_shapelets(float *d_shape_ras,
       float *d_sum_visi_XY_real, float *d_sum_visi_XY_imag,
       float *d_sum_visi_YX_real, float *d_sum_visi_YX_imag,
       float *d_sum_visi_YY_real, float *d_sum_visi_YY_imag,
-      float *d_angles_array, float *d_shape_pas, float *d_shape_majors,
+      float *d_shape_pas, float *d_shape_majors,
       float *d_shape_minors,
       float *d_shape_n1s, float *d_shape_n2s, float *d_shape_coeffs,
       float *d_shape_param_indexes,
@@ -481,6 +482,12 @@ __global__ void kern_calc_visi_shapelets(float *d_shape_ras,
   if (iBaseline < num_visis && iCoeff < num_coeffs) {
     // printf("Made it here all g %d %d %d %d\n", iBaseline,num_visis,iCoeff,num_coeffs);
     int iComponent = d_shape_param_indexes[iCoeff];
+
+    // if (iComponent > 100) {
+    //   if (iBaseline == 0) {
+    //     printf("Made it here all g %d %d %d %d\n", iBaseline,num_visis,iComponent,num_coeffs);
+    //   }
+    // }
 
     float shape_flux_I;
     //Use param index below and not iCoeff as there

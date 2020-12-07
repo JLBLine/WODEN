@@ -238,12 +238,15 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
   cropped_src->shape_majors = malloc( num_shape_comp_retained * sizeof(float) );
   cropped_src->shape_minors = malloc( num_shape_comp_retained * sizeof(float) );
   cropped_src->shape_pas = malloc( num_shape_comp_retained * sizeof(float) );
+
   cropped_src->shape_n1s = malloc( num_shape_coeff_retained * sizeof(float) );
   cropped_src->shape_n2s = malloc( num_shape_coeff_retained * sizeof(float) );
   cropped_src->shape_coeffs = malloc( num_shape_coeff_retained * sizeof(float) );
   cropped_src->shape_param_indexes = malloc( num_shape_coeff_retained * sizeof(float) );
   cropped_src->shape_azs = malloc( num_shape_comp_retained * num_time_steps * sizeof(float) );
   cropped_src->shape_zas = malloc( num_shape_comp_retained * num_time_steps * sizeof(float) );
+
+  printf("Num shapelets, shape coeffs %d, %d\n",num_shape_comp_retained, num_shape_coeff_retained );
 
   //Now add information into cropped_src
   if (sky_crop_type == CROP_SOURCES) {

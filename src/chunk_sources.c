@@ -134,11 +134,14 @@ void increment_shapelet(catsource_t *temp_cropped_src, catsource_t *cropped_src,
   temp_cropped_src->shape_n2s = cropped_src->shape_n2s + * shape_iter;
   temp_cropped_src->shape_param_indexes = cropped_src->shape_param_indexes + * shape_iter;
 
+  int max_shape_param_index = 0;
+  int this_index = 0;
+
   //only chunk over coeffs, so we need all the az / za for every chunk,
   //so we don't iterate the pointer here
 
-  temp_cropped_src->shape_azs = cropped_src->shape_azs; // + (num_time_steps * chunk * chunking_size);
-  temp_cropped_src->shape_zas = cropped_src->shape_zas; // + (num_time_steps * chunk * chunking_size);
+  temp_cropped_src->shape_azs = cropped_src->shape_azs;
+  temp_cropped_src->shape_zas = cropped_src->shape_zas;
   temp_cropped_src->sin_shape_para_angs = cropped_src->sin_shape_para_angs;
   temp_cropped_src->cos_shape_para_angs = cropped_src->cos_shape_para_angs;
 }
@@ -272,7 +275,7 @@ void fill_chunk_src(catsource_t *temp_cropped_src, catsource_t *cropped_src,
   }//END if GAUSS extend beyond chunk, we're only simulating GAUSSIANS
 
   //Here, there are no POINTs in the chunk, and not enough GAUSS to fill the chunk
-  else if ((cropped_src->n_gauss + cropped_src->n_points < upper_comp_ind) && (cropped_src->n_gauss + cropped_src->n_points >= lower_comp_ind) ){
+  else if ((cropped_src->n_gauss + cropped_src->n_points < upper_comp_ind) && (cropped_src->n_gauss + cropped_src->n_points >= lower_comp_ind) && (cropped_src->n_gauss > 1) ){
     int gauss_remainder = cropped_src->n_points + cropped_src->n_gauss - chunk*chunking_size;
     * gauss_iter = cropped_src->n_gauss - gauss_remainder;
     temp_cropped_src->n_gauss = gauss_remainder;
@@ -297,6 +300,7 @@ void fill_chunk_src(catsource_t *temp_cropped_src, catsource_t *cropped_src,
     //These are the number of SHAPELET coefficients yet to be simulated
     int shape_remainder = cropped_src->n_points + cropped_src->n_gauss + cropped_src->n_shape_coeffs - chunk*chunking_size;
 
+    temp_cropped_src->n_shapes = cropped_src->n_shapes;
     if (shape_remainder > chunking_size) {
       temp_cropped_src->n_shape_coeffs = chunking_size;
     }
@@ -305,6 +309,8 @@ void fill_chunk_src(catsource_t *temp_cropped_src, catsource_t *cropped_src,
     }
 
     * shape_iter = cropped_src->n_shape_coeffs - shape_remainder;
+
+    // printf("WHAT IS NUMBER %d %d %d\n",shape_remainder,cropped_src->n_shape_coeffs, * shape_iter  );
   }
 
   //FINISH work out what component type and how many of each component
