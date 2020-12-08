@@ -897,12 +897,12 @@ __global__ void RTS_getTileGainsKernel( float *d_phi, float *d_theta, int nMN, i
 
     index = (int) (pb_N[beam_index] - fabs(pb_M[beam_index]));
     if(index >=80){
-      printf("Maximum factorial exceeded %d\n", __FUNCTION__,index );
+      printf("Maximum factorial exceeded in RTS_getTileGainsKernel (attempted %d)\n", index );
     }
     factor1 = ffactorials[index];
     index = (int) (pb_N[beam_index] + fabs(pb_M[beam_index]));
     if(index >=80){
-      printf("Maximum factorial exceeded %d\n", __FUNCTION__,index );
+      printf("Maximum factorial exceeded  in RTS_getTileGainsKernel (attempted %d)\n", index );
     }
     factor2 = ffactorials[index];
 

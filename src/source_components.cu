@@ -342,7 +342,7 @@ void source_component_common(int num_components, int num_beam_values,
   cudaErrorCheckKernel("kern_calc_lmn",
                         kern_calc_lmn, grid, threads,
                         woden_settings->ra0,
-                        woden_settings->dec0, woden_settings->cdec0,
+                        woden_settings->sdec0, woden_settings->cdec0,
                         d_ras, d_decs,
                         d_ls, d_ms, d_ns, num_components)
 
