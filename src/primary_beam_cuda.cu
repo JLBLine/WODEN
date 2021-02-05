@@ -65,9 +65,10 @@ __global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
 }
 
 
-extern "C" void calculate_gaussian_beam(int num_components, int num_time_steps, int num_freqs,
+extern "C" void calculate_gaussian_beam(int num_components, int num_time_steps,
+     int num_freqs, float ha0, float sdec0, float cdec0,
      float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
-     float beam_ref_freq, float *d_freqs, float *d_beam_angles_array,
+     float beam_ref_freq, float *d_freqs,
      float *beam_has, float *beam_decs,
      cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J11){
 
@@ -97,7 +98,8 @@ extern "C" void calculate_gaussian_beam(int num_components, int num_time_steps, 
   grid.x = (int)ceil( (float)num_beam_hadec / (float)threads.x );
 
   cudaErrorCheckKernel("kern_calc_lmn", kern_calc_lmn, grid, threads,
-                        d_beam_angles_array, d_beam_has, d_beam_decs,
+                        ha0, sdec0, cdec0,
+                        d_beam_has, d_beam_decs,
                         d_beam_ls, d_beam_ms, d_beam_ns, num_beam_hadec);
 
   threads.y = 2;

@@ -82,8 +82,6 @@ void horizon_test(double za, e_sky_crop sky_crop_type,
 // Possible TODO update the sky model for every time step to account for sources that
 // have risen and set during the observation?
 
-// Possible TODO remove the az/za calculation for all time steps, and do in a
-// separate function to make it more modular and clear
 **********************************/
 
 
@@ -233,11 +231,16 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
 
   cropped_src->shape_ras = malloc( num_shape_comp_retained * sizeof(float) );
   cropped_src->shape_decs = malloc( num_shape_comp_retained * sizeof(float) );
-  cropped_src->shape_fluxes = malloc( num_shape_comp_retained * sizeof(float) );
-  cropped_src->shape_freqs = malloc( num_shape_comp_retained * sizeof(float) );
+  cropped_src->shape_ref_stokesI = malloc( num_shape_comp_retained * sizeof(float) );
+  cropped_src->shape_ref_stokesQ = malloc( num_shape_comp_retained * sizeof(float) );
+  cropped_src->shape_ref_stokesU = malloc( num_shape_comp_retained * sizeof(float) );
+  cropped_src->shape_ref_stokesV = malloc( num_shape_comp_retained * sizeof(float) );
+  cropped_src->shape_SIs = malloc( num_shape_comp_retained * sizeof(float) );
+  cropped_src->shape_ref_freqs = malloc( num_shape_comp_retained * sizeof(float) );
   cropped_src->shape_majors = malloc( num_shape_comp_retained * sizeof(float) );
   cropped_src->shape_minors = malloc( num_shape_comp_retained * sizeof(float) );
   cropped_src->shape_pas = malloc( num_shape_comp_retained * sizeof(float) );
+
   cropped_src->shape_n1s = malloc( num_shape_coeff_retained * sizeof(float) );
   cropped_src->shape_n2s = malloc( num_shape_coeff_retained * sizeof(float) );
   cropped_src->shape_coeffs = malloc( num_shape_coeff_retained * sizeof(float) );
@@ -319,8 +322,13 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
       for (size_t shape = 0; shape < raw_srccat->catsources[src].n_shapes; shape++){
         cropped_src->shape_ras[shape_crop_component_index] = raw_srccat->catsources[src].shape_ras[shape];
         cropped_src->shape_decs[shape_crop_component_index] = raw_srccat->catsources[src].shape_decs[shape];
-        cropped_src->shape_fluxes[shape_crop_component_index] = raw_srccat->catsources[src].shape_fluxes[shape];
-        cropped_src->shape_freqs[shape_crop_component_index] = raw_srccat->catsources[src].shape_freqs[shape];
+
+        cropped_src->shape_ref_stokesI[shape_crop_component_index] = raw_srccat->catsources[src].shape_ref_stokesI[shape];
+        cropped_src->shape_ref_stokesQ[shape_crop_component_index] = raw_srccat->catsources[src].shape_ref_stokesQ[shape];
+        cropped_src->shape_ref_stokesU[shape_crop_component_index] = raw_srccat->catsources[src].shape_ref_stokesU[shape];
+        cropped_src->shape_ref_stokesV[shape_crop_component_index] = raw_srccat->catsources[src].shape_ref_stokesV[shape];
+        cropped_src->shape_ref_freqs[shape_crop_component_index] = raw_srccat->catsources[src].shape_ref_freqs[shape];
+        cropped_src->shape_SIs[shape_crop_component_index] = raw_srccat->catsources[src].shape_SIs[shape];
 
         cropped_src->shape_majors[shape_crop_component_index] = raw_srccat->catsources[src].shape_majors[shape];
         cropped_src->shape_minors[shape_crop_component_index] = raw_srccat->catsources[src].shape_minors[shape];
@@ -444,8 +452,12 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
         if (raw_srccat->catsources[src].shape_zas[shape] < M_PI / 2.0){
           cropped_src->shape_ras[shape_crop_component_index] = raw_srccat->catsources[src].shape_ras[shape];
           cropped_src->shape_decs[shape_crop_component_index] = raw_srccat->catsources[src].shape_decs[shape];
-          cropped_src->shape_fluxes[shape_crop_component_index] = raw_srccat->catsources[src].shape_fluxes[shape];
-          cropped_src->shape_freqs[shape_crop_component_index] = raw_srccat->catsources[src].shape_freqs[shape];
+          cropped_src->shape_ref_stokesI[shape_crop_component_index] = raw_srccat->catsources[src].shape_ref_stokesI[shape];
+          cropped_src->shape_ref_stokesQ[shape_crop_component_index] = raw_srccat->catsources[src].shape_ref_stokesQ[shape];
+          cropped_src->shape_ref_stokesU[shape_crop_component_index] = raw_srccat->catsources[src].shape_ref_stokesU[shape];
+          cropped_src->shape_ref_stokesV[shape_crop_component_index] = raw_srccat->catsources[src].shape_ref_stokesV[shape];
+          cropped_src->shape_ref_freqs[shape_crop_component_index] = raw_srccat->catsources[src].shape_ref_freqs[shape];
+          cropped_src->shape_SIs[shape_crop_component_index] = raw_srccat->catsources[src].shape_SIs[shape];
 
           cropped_src->shape_majors[shape_crop_component_index] = raw_srccat->catsources[src].shape_majors[shape];
           cropped_src->shape_minors[shape_crop_component_index] = raw_srccat->catsources[src].shape_minors[shape];
@@ -483,16 +495,6 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
       }//End shapelet component loop
     }//End raw_srccat source loop
   }//End if sky_crop_type == CROP_COMPONENTS
-
-  // for (size_t comp = 0; comp < cropped_src->n_shapes; comp++) {
-  //
-  //   printf("%f %f %f %f %f %f %f %f %f %f %f\n", cropped_src->shape_ras[comp], cropped_src->shape_decs[comp],
-  //         cropped_src->shape_fluxes[comp],cropped_src->shape_freqs[comp],
-  //         cropped_src->shape_majors[comp],cropped_src->shape_minors[comp],
-  //         cropped_src->shape_pas[comp],cropped_src->shape_n1s[comp],
-  //         cropped_src->shape_n2s[comp],cropped_src->shape_coeffs[comp],
-  //         cropped_src->shape_param_indexes[comp]);
-  // }
 
   return cropped_src;
 

@@ -230,11 +230,15 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
       srcs[n_src-1].gauss_minors = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
       srcs[n_src-1].gauss_pas = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
 
-      //TODO need to update shapelets to also used all Stokes params
+      //Shapelet params
       srcs[n_src-1].shape_ras = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
       srcs[n_src-1].shape_decs = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
-      srcs[n_src-1].shape_fluxes = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
-      srcs[n_src-1].shape_freqs = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_ref_stokesI = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_SIs = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_ref_stokesQ = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_ref_stokesU = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_ref_stokesV = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_ref_freqs = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
       srcs[n_src-1].shape_majors = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
       srcs[n_src-1].shape_minors = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
       srcs[n_src-1].shape_pas = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
@@ -326,8 +330,12 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
         break;
 
         case SHAPELET:
-          srcs[n_src-1].shape_freqs[shape_ind-1] = freq;
-          srcs[n_src-1].shape_fluxes[shape_ind-1] = flux_I;
+          srcs[n_src-1].shape_ref_freqs[shape_ind-1] = freq;
+          srcs[n_src-1].shape_ref_stokesI[shape_ind-1] = flux_I;
+          srcs[n_src-1].shape_ref_stokesQ[shape_ind-1] = flux_Q;
+          srcs[n_src-1].shape_ref_stokesU[shape_ind-1] = flux_U;
+          srcs[n_src-1].shape_ref_stokesV[shape_ind-1] = flux_V;
+          srcs[n_src-1].shape_SIs[shape_ind-1] = DEFAULT_SI;
         break;
 
       default:
@@ -371,8 +379,12 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
         break;
 
         case SHAPELET:
-          srcs[n_src-1].shape_freqs[shape_ind-1] = freq;
-          srcs[n_src-1].shape_fluxes[shape_ind-1] = flux_I;
+          srcs[n_src-1].shape_ref_freqs[shape_ind-1] = freq;
+          srcs[n_src-1].shape_ref_stokesI[shape_ind-1] = flux_I;
+          srcs[n_src-1].shape_ref_stokesQ[shape_ind-1] = flux_Q;
+          srcs[n_src-1].shape_ref_stokesU[shape_ind-1] = flux_U;
+          srcs[n_src-1].shape_ref_stokesV[shape_ind-1] = flux_V;
+          srcs[n_src-1].shape_SIs[shape_ind-1] = SI;
         break;
 
       default:
@@ -557,9 +569,6 @@ woden_settings_t * read_json_settings(const char *filename){
     woden_settings->gauss_ra_point = (float)json_object_get_double(gauss_ra_point)*DD2R;
     woden_settings->gauss_dec_point = (float)json_object_get_double(gauss_dec_point)*DD2R;
 
-    //TODO once we implement MWA primary beam, check whether both gaussian beam and
-    //MWA beam have been selected. If so, tell the user, and exit, get them to sort
-    //themselves out
   }
   else if (fee_beam){
     woden_settings->beamtype = FEE_BEAM;

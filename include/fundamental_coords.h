@@ -10,15 +10,18 @@ __device__ void calc_uvw(float *d_X_diff, float *d_Y_diff, float *d_Z_diff,
 __global__ void kern_calc_uvw(float *d_X_diff, float *d_Y_diff, float *d_Z_diff,
            float *d_u_metres, float *d_v_metres, float *d_w_metres,
            float *d_u, float *d_v, float *d_w, float *d_wavelengths,
-           float *d_angles_array, float *d_cha0s, float *d_sha0s,
+           float sdec0, float cdec0,
+           float *d_cha0s, float *d_sha0s,
            int num_visis, int num_baselines);
 
-__device__ void calc_lmn(float *d_angles_array, float d_ra, float d_dec,
+__device__ void calc_lmn(float ra0, float sdec0, float cdec0,
+           float d_ra, float d_dec,
            float * l, float * m, float * n);
 
-__global__ void kern_calc_lmn(float *d_angles_array, float *d_ras, float *d_decs,
-                         float *d_l, float *d_m, float *d_n,
-                         int num_components);
+__global__ void kern_calc_lmn(float ra0, float sdec0, float cdec0,
+           float *d_ras, float *d_decs,
+           float *d_l, float *d_m, float *d_n,
+           int num_components);
 
 __global__ void kern_calc_uvw_shapelet(float *d_X_diff, float *d_Y_diff, float *d_Z_diff,
       float *d_u_s_metres, float *d_v_s_metres, float *d_w_s_metres,

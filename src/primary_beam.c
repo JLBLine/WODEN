@@ -97,15 +97,14 @@ beam_settings_t fill_primary_beam_settings(woden_settings_t *woden_settings,
   if (woden_settings->beamtype == GAUSS_BEAM) {
     beam_settings.beamtype = GAUSS_BEAM;
 
-    //Angles used in calculating beam style l,m,ns
-    beam_settings.beam_angles_array = malloc(3*sizeof(float));
-    beam_settings.beam_angles_array[0] = sinf(woden_settings->gauss_dec_point);
-    beam_settings.beam_angles_array[1] = cosf(woden_settings->gauss_dec_point);
-    beam_settings.beam_angles_array[2] = woden_settings->lst_base - woden_settings->gauss_ra_point;
+    //Angles used in calculating beam centred l,m,ns
+    beam_settings.gauss_sdec = sinf(woden_settings->gauss_dec_point);
+    beam_settings.gauss_cdec = cosf(woden_settings->gauss_dec_point);
+    beam_settings.gauss_ha = woden_settings->lst_base - woden_settings->gauss_ra_point;
 
     printf("Setting up Gaussian primary beam settings\n");
     printf("   pointing at HA, Dec = %.5fdeg, %.5fdeg\n",
-               beam_settings.beam_angles_array[2]/DD2R, woden_settings->gauss_dec_point/DD2R );
+               beam_settings.gauss_ha/DD2R, woden_settings->gauss_dec_point/DD2R );
     printf("   setting beam FWHM to %.5fdeg and ref freq to %.3fMHz\n",
             woden_settings->gauss_beam_FWHM,woden_settings->gauss_beam_ref_freq / 1e+6  );
 
@@ -136,8 +135,6 @@ beam_settings_t fill_primary_beam_settings(woden_settings_t *woden_settings,
 
         beam_settings.beam_point_has[step] = lsts[time_step] - cropped_src->point_ras[component];
         beam_settings.beam_point_decs[step] = cropped_src->point_decs[component];
-
-        // printf("Original mothers step, ha %d %f \n",step,beam_settings.beam_point_has[step] );
 
       }//point loop
 
@@ -190,7 +187,7 @@ beam_settings_t fill_primary_beam_settings(woden_settings_t *woden_settings,
   }
 
   else {
-    printf("BEAM TYPE %d\n",(int)woden_settings->beamtype );
+    printf("NO PRIMARY BEAM HAS BEEN SELECTED\n\tWill run without a primary beam\n");
   }
 
   return beam_settings;

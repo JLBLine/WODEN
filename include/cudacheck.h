@@ -1,11 +1,14 @@
 #pragma once
-
 #include <stdbool.h>
 
+//A Bool to say whether we exit if an error is found. Might be useful as an
+//option somewhere down the line
 #define EXITERROR true
 
-#define cudaErrorCheckCall(code) { ErrorCheck("Call", code, __FILE__, __LINE__); }
-
+//Take a CUDA error (code), and checks whether an error occurred. If an error
+//happens, uses (message) to give more information to the user. Uses (file)
+//and (line) to report where the error happened. Optional bool (abort) means
+//you can switch off exiting if an error is found.
 inline void ErrorCheck(const char *message, cudaError_t code, const char *file,
                        int line, bool abort=EXITERROR){
   if (code != cudaSuccess) {
@@ -18,27 +21,12 @@ inline void ErrorCheck(const char *message, cudaError_t code, const char *file,
   }
 }
 
+//Function to wrap any CUDA call in and error check
+#define cudaErrorCheckCall(code) { ErrorCheck("Call", code, __FILE__, __LINE__); }
+
 //Runs a given kernel with the appropirate number of grids/threads
 //Checks for errors and includes "message" in the error message
-
 #define cudaErrorCheckKernel(message, kernel, grid, threads, ...) \
   kernel <<< grid , threads, 0 >>>(__VA_ARGS__); \
   ErrorCheck(message, cudaGetLastError(), __FILE__, __LINE__); \
   ErrorCheck(message, cudaDeviceSynchronize(), __FILE__, __LINE__);
-
-// #define cudaErrorCheckKernel(kernel, grid, threads, ...){
-//   kernel<<< grid, threads >>>( __VA_ARGS__ );
-//   cudaError_t err = cudaGetLastError();
-//   ErrorCheck(err, __FILE__, __LINE__);
-//   err = cudaDeviceSynchronize();
-//   ErrorCheck(err, __FILE__, __LINE__);
-// }
-
-
-// #define CUDA_SAFE_CALL( call ) do {                                     \
-//     cudaError_t err = call;						\
-//     if( cudaSuccess != err ) {						\
-//       fprintf( stderr, "CUDA Error in file '%s' on line %i : %s.\n",	\
-// 	       __FILE__, __LINE__, cudaGetErrorString( err ) );		\
-//       exit( EXIT_FAILURE );						\
-//     } } while( 0 );

@@ -6,16 +6,22 @@
 #include <erfa.h>
 #include <complex.h>
 
+#include "constants.h"
+#include "woden_struct_defs.h"
 #include "create_sky_model.h"
 #include "shapelet_basis.h"
-#include "woden.h"
-#include "constants.h"
 #include "chunk_source.h"
 #include "print_help.h"
 #include "primary_beam.h"
 #include "FEE_primary_beam.h"
+#include "read_and_write.h"
 
 // #include "FEE_primary_beam_cuda.h"
+
+extern void calculate_visibilities(array_layout_t * array_layout,
+  source_catalogue_t *cropped_sky_models,
+  woden_settings_t *woden_settings, visibility_set_t *visibility_set,
+  visibility_set_t *chunk_visibility_set, float *sbf, int num_chunks);
 
 int main(int argc, char **argv) {
 
@@ -70,7 +76,10 @@ int main(int argc, char **argv) {
   printf("Setting phase centre RA,DEC %.5fdeg %.5fdeg\n",woden_settings->ra0/DD2R, woden_settings->dec0/DD2R);
 
   //Used for calculating l,m,n for components
-  float angles_array[3] = {sdec0, cdec0, woden_settings->ra0};
+  // float angles_array[3] = {sdec0, cdec0, woden_settings->ra0};
+  woden_settings->sdec0 = sdec0;
+  woden_settings->cdec0 = cdec0;
+
   int num_time_steps = woden_settings->num_time_steps;
 
   //Calculate all lsts for this observation
@@ -79,7 +88,7 @@ int main(int argc, char **argv) {
   for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
     float lst = woden_settings->lst_base + time_step*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
 
-    //TODO add half a time step is good? Add time decorrelation?
+    //Add half a time_res so we are sampling centre of each time step
     lst += 0.5*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
     lsts[time_step] = lst;
   }
@@ -101,9 +110,9 @@ int main(int argc, char **argv) {
   beam_settings = fill_primary_beam_settings(woden_settings, cropped_src,
                                             lsts, num_time_steps);
 
-  //TODO allow this frequency resolution to over-written by user commands
   //MWA correlator data is split into 24 'coarse' bands of 1.28MHz bandwidth,
   //which is typically split into 10, 20, or 40kHz fine channels
+  //User can change these settings using run_woden.py / in the json
   //Loop through each coarse frequency band, run the simulation and dump to
   //a binary file
   for (size_t band = 0; band < woden_settings->num_bands; band++) {
@@ -114,37 +123,32 @@ int main(int argc, char **argv) {
 
     woden_settings->base_band_freq = base_band_freq;
 
-    //TODO - add half a freq resolution in here? minus? Leave as is?
-    // base_band_freq += woden_settings->frequency_resolution/2.0;
+    beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
+    // //We need the zenith beam to get the normalisation
+    beam_settings.FEE_beam_zenith = malloc(sizeof(copy_primary_beam_t));
 
+    //The intial setup of the FEE beam is done on the CPU, so call it here
+    if (woden_settings->beamtype == FEE_BEAM){
+      float base_middle_freq = base_band_freq + woden_settings->coarse_band_width/2.0;
+    //
+      // Just use one single tile beam for all for now - will need a certain
+      // number in the future to include dipole flagging
+      int st = 0;
+      printf("Middle freq is %f\n",base_middle_freq );
+    //
+      float float_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    //
+      printf("Setting up the zenith FEE beam...");
+      RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam_zenith, float_zenith_delays, st);
+      printf(" done.\n");
 
+      printf("Setting up the FEE beam...");
+      RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq,
+            beam_settings.FEE_beam, woden_settings->FEE_ideal_delays, st);
+      printf(" done.\n");
 
-      beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
-      // //We need the zenith beam to get the normalisation
-      beam_settings.FEE_beam_zenith = malloc(sizeof(copy_primary_beam_t));
-
-      //The intial setup of the FEE beam is done on the CPU, so call it here
-      if (woden_settings->beamtype == FEE_BEAM){
-        float base_middle_freq = base_band_freq + woden_settings->coarse_band_width/2.0;
-      //
-        // Just use one single tile beam for all for now - will need a certain
-        // number in the future to include dipole flagging
-        int st = 0;
-        printf("Middle freq is %f\n",base_middle_freq );
-      //
-        float float_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                                         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-      //
-        printf("Setting up the zenith FEE beam...");
-        RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam_zenith, float_zenith_delays, st);
-        printf(" done.\n");
-
-        printf("Setting up the FEE beam...");
-        RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq,
-              beam_settings.FEE_beam, woden_settings->FEE_ideal_delays, st);
-        printf(" done.\n");
-
-      }
+    }
 
     visibility_set_t *visibility_set = malloc(sizeof(visibility_set_t));
     visibility_set->sum_visi_real = malloc( num_visis * sizeof(float) );
@@ -199,6 +203,7 @@ int main(int argc, char **argv) {
 
     //Calculating a single shapelet coeff is equivalent to a point/gauss so treat as a
     //component here
+
     int num_components = cropped_src->n_points + cropped_src->n_gauss + cropped_src->n_shape_coeffs;
     int num_chunks;
     //TODO should we chunk outside the band for-loop so that we can reuse the chunks for each band (should be the same)
@@ -240,7 +245,6 @@ int main(int argc, char **argv) {
       //Add the number of shapelets onto the full source catalogue value
       //so we know if we need to setup shapelet basis functions in GPU memory
       //or not
-
       cropped_sky_models->num_shapelets += temp_cropped_src->n_shapes;
 
       beam_settings_t beam_settings_chunk;
@@ -279,9 +283,8 @@ int main(int argc, char **argv) {
     chunk_visibility_set->sum_visi_YY_imag = malloc( num_visis * sizeof(float) );
 
     calculate_visibilities(array_layout, cropped_sky_models,
-                  angles_array, woden_settings,
-                  visibility_set, chunk_visibility_set, sbf,
-                  num_chunks);
+                  woden_settings, visibility_set, chunk_visibility_set,
+                  sbf, num_chunks);
 
     printf("GPU calls for band %d finished\n",band_num );
 

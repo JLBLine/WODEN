@@ -21,21 +21,20 @@ __device__ void calc_uvw(float *d_X_diff, float *d_Y_diff, float *d_Z_diff,
 __global__ void kern_calc_uvw(float *d_X_diff, float *d_Y_diff, float *d_Z_diff,
            float *d_u_metres, float *d_v_metres, float *d_w_metres,
            float *d_u, float *d_v, float *d_w, float *d_wavelengths,
-           float *d_angles_array, float *d_cha0s, float *d_sha0s,
-           int num_visis, int num_baselines) {
+           float sdec0, float cdec0,
+           float *d_cha0s, float *d_sha0s,
+           int num_visis, int num_baselines){
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
 
   if (iBaseline < num_visis){
     float u, v, w;
 
-    float d_sdec0 = d_angles_array[0];
-    float d_cdec0 = d_angles_array[1];
     float d_sha0 = d_sha0s[iBaseline];
     float d_cha0 = d_cha0s[iBaseline];
 
     calc_uvw(d_X_diff, d_Y_diff, d_Z_diff,
-               d_sdec0, d_cdec0, d_sha0, d_cha0,
+               sdec0, cdec0, d_sha0, d_cha0,
                iBaseline, num_baselines,
                &u, &v, &w);
 
@@ -80,11 +79,12 @@ __global__ void kern_calc_uvw_shapelet(float *d_X_diff, float *d_Y_diff, float *
   }
 }
 
-__device__ void calc_lmn(float *d_angles_array, float d_ra, float d_dec,
-           float * l, float * m, float * n){
-  float d_sdec0 = d_angles_array[0];
-  float d_cdec0 = d_angles_array[1];
-  float d_ra0 = d_angles_array[2];
+__device__ void calc_lmn(float ra0, float sdec0, float cdec0,
+                         float d_ra, float d_dec,
+                         float * l, float * m, float * n){
+  // float d_sdec0 = d_angles_array[0];
+  // float d_cdec0 = d_angles_array[1];
+  // float d_ra0 = d_angles_array[2];
 
   float cdec;
   float sdec;
@@ -93,25 +93,28 @@ __device__ void calc_lmn(float *d_angles_array, float d_ra, float d_dec,
 
   cdec = cosf(d_dec);
   sdec = sinf(d_dec);
-  cdra = cosf((d_ra - d_ra0));
-  sdra = sinf((d_ra - d_ra0));
+  cdra = cosf((d_ra - ra0));
+  sdra = sinf((d_ra - ra0));
 
   * l = cdec*sdra;
-  * m = sdec*d_cdec0 - cdec*d_sdec0*cdra;
-  * n = sdec*d_sdec0 + cdec*d_cdec0*cdra;
+  * m = sdec*cdec0 - cdec*sdec0*cdra;
+  * n = sdec*sdec0 + cdec*cdec0*cdra;
 
 }
 
-__global__ void kern_calc_lmn(float *d_angles_array, float *d_ras, float *d_decs,
-           float *d_l, float *d_m, float *d_n, int num_components){
+__global__ void kern_calc_lmn(float ra0, float sdec0, float cdec0,
+                              float *d_ras, float *d_decs,
+                              float *d_l, float *d_m, float *d_n,
+                              int num_components){
 
   const int iComponent = threadIdx.x + (blockDim.x*blockIdx.x);
 
   if (iComponent < num_components){
     float l, m, n;
 
-    calc_lmn(d_angles_array, d_ras[iComponent], d_decs[iComponent],
-              &l, &m, &n);
+    calc_lmn(ra0, sdec0, cdec0,
+             d_ras[iComponent], d_decs[iComponent],
+             &l, &m, &n);
 
     d_l[iComponent] = l;
     d_m[iComponent] = m;
