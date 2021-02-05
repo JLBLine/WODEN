@@ -154,14 +154,6 @@ extern "C" void calc_CUDA_FEE_beam(float *azs, float *zas,
     num_time_steps, num_components, rotation, FEE_beam,
     FEE_beam->d_FEE_beam_gain_matrices, scaling);
 
-  // cudaErrorCheckCall( cudaFree( FEE_beam->emn_T ) );
-  // cudaErrorCheckCall( cudaFree( FEE_beam->emn_P ) );
-  // cudaErrorCheckCall( cudaFree( FEE_beam->d_emn_T_sum ) );
-  // cudaErrorCheckCall( cudaFree( FEE_beam->d_emn_P_sum ) );
-  //
-  // cudaErrorCheckCall( cudaFree(FEE_beam->rts_P_sin) );
-  // cudaErrorCheckCall( cudaFree(FEE_beam->rts_P1) );
-
 }
 
 extern "C" void free_FEE_primary_beam_from_GPU(copy_primary_beam_t *primary_beam){
@@ -393,7 +385,7 @@ extern "C" void get_HDFBeam_normalisation(copy_primary_beam_t *FEE_beam_zenith,
   for (size_t i = 0; i < MAX_POLS; i++) {
     //Do a polarisation reordering here, to follow the RTS code
     FEE_beam->norm_fac[i] = all_norm_gains[i*MAX_POLS + MAX_POLS - 1 - i];
-    // beam_settings.FEE_beam->norm_fac[i] = {abs(real_norm),abs(imag_norm)};
+
   }
   free(all_norm_gains);
 }
@@ -506,7 +498,6 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
   cudaErrorCheckCall( cudaMemcpy(d_emn_T_sum_imag, zero_array,
          num_coords*(2*nmax + 1)*n_pols*sizeof(float), cudaMemcpyHostToDevice) );
 
-
   float *d_m_range = NULL;
   cudaErrorCheckCall( cudaMalloc( (void**)&d_m_range, (2*nmax + 1)*sizeof(float)) );
   cudaErrorCheckCall( cudaMemcpy(d_m_range, primary_beam->m_range,
@@ -520,11 +511,6 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
   grid.y = (int)ceil( (2.0*(float)primary_beam->nMN) / threads.y);
   grid.z = (int)ceil( ((float)nmax*2.0 + 1.0) / threads.z);
 
-  // kern_sum_emn_PT_by_M<<< grid, threads >>>((cuFloatComplex*)primary_beam->emn_T,
-  //                     (cuFloatComplex*)primary_beam->emn_P,
-  //                     d_emn_T_sum_real, d_emn_T_sum_imag,
-  //                     d_emn_P_sum_real, d_emn_P_sum_imag,
-  //                     d_m_range, primary_beam->d_M, primary_beam->nMN, nmax, num_coords);
   cudaErrorCheckKernel("kern_sum_emn_PT_by_M",
                         kern_sum_emn_PT_by_M, grid, threads,
                         (cuFloatComplex*)primary_beam->emn_T,
@@ -553,11 +539,6 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
 
   free(zero_array);
 
-  // kern_calc_sigmaTP<<< grid, threads >>>((cuFloatComplex*)TileGainMatrices,
-  //                 d_emn_T_sum_real, d_emn_T_sum_imag,
-  //                 d_emn_P_sum_real, d_emn_P_sum_imag,
-  //                 (cuFloatComplex*)primary_beam->d_emn_T_sum, (cuFloatComplex*)primary_beam->d_emn_P_sum,
-  //                 nmax, num_coords );
   cudaErrorCheckKernel("kern_calc_sigmaTP",
                         kern_calc_sigmaTP, grid, threads,
                         (cuFloatComplex*)TileGainMatrices,
@@ -582,9 +563,6 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
     cudaErrorCheckCall( cudaMemcpy(d_norm_fac, primary_beam->norm_fac,
                MAX_POLS*sizeof(float _Complex), cudaMemcpyHostToDevice ) );
 
-    // kern_apply_FEE_norm<<< grid, threads >>>((cuFloatComplex*)TileGainMatrices,
-    //            (cuFloatComplex*)d_norm_fac, num_coords );
-
     cudaErrorCheckKernel("kern_apply_FEE_norm",
                          kern_apply_FEE_norm, grid, threads,
                          (cuFloatComplex*)TileGainMatrices,
@@ -592,7 +570,7 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
 
     cudaErrorCheckCall( cudaFree(d_norm_fac) );
 
-    //If rotating by parallactic angle - only even want to do this
+    //If rotating by parallactic angle - only ever want to do this
     //after normalistation
     if (rotation == 1.0) {
 
@@ -610,10 +588,6 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
       cudaErrorCheckCall( cudaMemcpy( d_sin_para_angs, sin_para_angs,
          num_components*num_time_steps*sizeof(float), cudaMemcpyHostToDevice) );
 
-      // kern_rotate_FEE_beam<<< grid, threads >>>( (cuFloatComplex*)TileGainMatrices,
-      //                               d_sin_para_angs, d_cos_para_angs,
-      //                               num_components, num_time_steps);
-
       cudaErrorCheckKernel("kern_rotate_FEE_beam",
                             kern_rotate_FEE_beam, grid, threads,
                             (cuFloatComplex*)TileGainMatrices,
@@ -623,7 +597,6 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
       cudaErrorCheckCall( cudaFree(d_cos_para_angs) );
       cudaErrorCheckCall( cudaFree(d_sin_para_angs) );
     }
-
   }
 
   cudaErrorCheckCall( cudaFree(d_emn_T_sum_real) );
@@ -969,4 +942,39 @@ __global__ void kern_map_FEE_beam_gains(cuFloatComplex *d_FEE_beam_gain_matrices
     d_primay_beam_J11[new_ind] = d_FEE_beam_gain_matrices[current_ind*MAX_POLS + 3];
 
   }
+}
+
+extern "C" void test_RTS_CUDA_FEE_beam(int num_components,
+           float *azs, float *zas,
+           float *sin_para_angs, float *cos_para_angs,
+           copy_primary_beam_t *FEE_beam_zenith,
+           copy_primary_beam_t *FEE_beam,
+           int rotation, int scaling,
+           float _Complex *FEE_beam_gains){
+
+  int num_time_steps = 1;
+
+  printf("Getting FEE beam normalisation...\n");
+  get_HDFBeam_normalisation(FEE_beam_zenith, FEE_beam);
+  printf(" done.\n");
+
+  free_FEE_primary_beam_from_GPU(FEE_beam_zenith);
+
+  printf("Copying the FEE beam across to the GPU...");
+  copy_FEE_primary_beam_to_GPU(FEE_beam, num_time_steps);
+  printf(" done.\n");
+
+  printf("Calculating FEE beam for %d directions...\n", num_components);
+  calc_CUDA_FEE_beam(azs, zas, sin_para_angs, cos_para_angs,
+         num_components, num_time_steps, FEE_beam,
+         rotation, scaling);
+
+  cudaErrorCheckCall( cudaMemcpy(FEE_beam_gains,
+            FEE_beam->d_FEE_beam_gain_matrices,
+            num_components*num_time_steps*MAX_POLS*sizeof(float _Complex),
+            cudaMemcpyDeviceToHost) );
+
+  // free_FEE_primary_beam_from_GPU(FEE_beam_zenith);
+  // printf("GPU beam realeased, calculation complete\n");
+
 }

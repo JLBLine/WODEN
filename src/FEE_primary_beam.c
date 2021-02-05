@@ -215,9 +215,8 @@ int RTS_HDFBeamInit(const char *h5filename, float freq_Hz, copy_primary_beam_t *
 
   for (int dipole = 0; dipole < NUM_DIPOLES; dipole++) {
     RTS_order_delays[NUM_DIPOLES - 1 - dipole] = FEE_delays[dipole];
-  	// RTS_order_delays[7-dipole] = FEE_delays[1+dipole*4];
-  	// RTS_order_delays[11-dipole] = FEE_delays[2+dipole*4];
-  	// RTS_order_delays[15-dipole] = FEE_delays[3+dipole*4];
+
+    // RTS_order_delays[dipole] = FEE_delays[dipole];
   }
 
 
