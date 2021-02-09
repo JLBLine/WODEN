@@ -5,10 +5,7 @@
 #include <string.h>
 #include <json.h>
 #include <fitsio.h>
-// #include <erfa.h>
 #include <pal.h>
-
-// enum component_type {POINT=0, GAUSSIAN, SHAPELET};
 
 /*********************************
 // Taken from the RTS (Mitchell et al 2008)
@@ -571,7 +568,7 @@ woden_settings_t * read_json_settings(const char *filename){
 
   }
   else if (fee_beam){
-    woden_settings->beamtype = FEE_BEAM;
+    woden_settings->beamtype = HFEE_BEAM;
 
     struct json_object *delay;
     struct json_object *FEE_ideal_delays;

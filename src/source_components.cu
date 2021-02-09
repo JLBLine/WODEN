@@ -364,8 +364,12 @@ void source_component_common(int num_components, int num_beam_values,
 
   else if (beam_settings.beamtype == FEE_BEAM) {
 
+    int rotation = 1;
+    int norm_to_zenith = 1;
+
     calc_CUDA_FEE_beam(azs, zas, sin_para_angs, cos_para_angs,
-           num_components, woden_settings->num_time_steps, FEE_beam, 1, 1);
+           num_components, woden_settings->num_time_steps, FEE_beam,
+           rotation, norm_to_zenith);
 
     threads.x = 64;
     threads.y = 4;
@@ -382,6 +386,31 @@ void source_component_common(int num_components, int num_beam_values,
               woden_settings->num_time_steps);
   }
 
+  else if (beam_settings.beamtype == HFEE_BEAM) {
+    printf("HERERERERERER\n");
+    //
+    // int rotation = 1;
+    // int norm_to_zenith = 1;
+    //
+    // calc_CUDA_FEE_beam(azs, zas, sin_para_angs, cos_para_angs,
+    //        num_components, woden_settings->num_time_steps, FEE_beam,
+    //        rotation, norm_to_zenith);
+    //
+    // threads.x = 64;
+    // threads.y = 4;
+    // grid.x = (int)ceil( (float)woden_settings->num_visis / (float)threads.x );
+    // grid.y = (int)ceil( ((float)num_components) / ((float)threads.y) );
+    //
+    // cudaErrorCheckKernel("kern_map_FEE_beam_gains",
+    //           kern_map_FEE_beam_gains, grid, threads,
+    //           (cuFloatComplex *)FEE_beam->d_FEE_beam_gain_matrices,
+    //           d_primay_beam_J00, d_primay_beam_J01,
+    //           d_primay_beam_J10, d_primay_beam_J11,
+    //           woden_settings->num_freqs, num_components,
+    //           woden_settings->num_visis, woden_settings->num_baselines,
+    //           woden_settings->num_time_steps);
+  }
+
   else if (beam_settings.beamtype == ANALY_DIPOLE) {
     printf("\tDoing analytic_dipole (EDA2 beam)\n");
 
@@ -390,64 +419,6 @@ void source_component_common(int num_components, int num_beam_values,
          azs, zas, d_freqs, d_primay_beam_J00, d_primay_beam_J11);
   }
 }
-
-// void setup_point_sources(float *d_point_ras, float *d_point_decs,
-//     float *d_point_freqs, float *d_point_stokesI, float *d_point_stokesQ,
-//     float *d_point_stokesU, float *d_point_stokesV, float *d_point_SIs,
-//     float *d_ls, float *d_ms, float *d_ns, float *d_freqs,
-//     catsource_t catsource, beam_settings_t beam_settings,
-//     woden_settings_t *woden_settings, copy_primary_beam_t *FEE_beam,
-//     float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
-//     cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
-//     cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11) {
-//
-//   int n_points = catsource.n_points;
-//
-//   cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_ras), n_points*sizeof(float) ) );
-//   cudaErrorCheckCall( cudaMemcpy( d_point_ras, catsource.point_ras,
-//                       n_points*sizeof(float), cudaMemcpyHostToDevice ) );
-//
-//   cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_decs), n_points*sizeof(float) ) );
-//   cudaErrorCheckCall( cudaMemcpy( d_point_decs, catsource.point_decs,
-//                       n_points*sizeof(float), cudaMemcpyHostToDevice ) );
-//
-//   cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_freqs), n_points*sizeof(float) ) );
-//   cudaErrorCheckCall( cudaMemcpy( d_point_freqs, catsource.point_ref_freqs,
-//                       n_points*sizeof(float), cudaMemcpyHostToDevice ) );
-//
-//   cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_stokesI), n_points*sizeof(float) ) );
-//   cudaErrorCheckCall( cudaMemcpy( d_point_stokesI, catsource.point_ref_stokesI,
-//                       n_points*sizeof(float), cudaMemcpyHostToDevice ) );
-//
-//   cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_stokesQ), n_points*sizeof(float) ) );
-//   cudaErrorCheckCall( cudaMemcpy( d_point_stokesQ, catsource.point_ref_stokesQ,
-//                       n_points*sizeof(float), cudaMemcpyHostToDevice ) );
-//
-//   cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_stokesU), n_points*sizeof(float) ) );
-//   cudaErrorCheckCall( cudaMemcpy( d_point_stokesU, catsource.point_ref_stokesU,
-//                       n_points*sizeof(float), cudaMemcpyHostToDevice ) );
-//
-//   cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_stokesV), n_points*sizeof(float) ) );
-//   cudaErrorCheckCall( cudaMemcpy( d_point_stokesV, catsource.point_ref_stokesV,
-//                       n_points*sizeof(float), cudaMemcpyHostToDevice ) );
-//
-//   cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_SIs), n_points*sizeof(float) ) );
-//   cudaErrorCheckCall( cudaMemcpy( d_point_SIs, catsource.point_SIs,
-//                       n_points*sizeof(float), cudaMemcpyHostToDevice ) );
-//
-//   // source_component_common(n_points,
-//   //            beam_settings.num_point_beam_values,
-//   //            d_primay_beam_J00, d_primay_beam_J01,
-//   //            d_primay_beam_J10, d_primay_beam_J11,
-//   //            d_freqs, d_ls, d_ms, d_ns,
-//   //            d_point_ras, d_point_decs,
-//   //            catsource.point_azs, catsource.point_zas,
-//   //            catsource.sin_point_para_angs, catsource.cos_point_para_angs,
-//   //            fwhm_lm, cos_theta, sin_theta, sin_2theta,
-//   //            beam_settings.beam_point_has, beam_settings.beam_point_decs,
-//   //            woden_settings, beam_settings, FEE_beam);
-//
-// }
 
 __global__ void kern_calc_visi_point(float *d_point_ras, float *d_point_decs,
            float *d_point_freqs, float *d_point_stokesI, float *d_point_stokesQ,

@@ -85,7 +85,6 @@ endif()
 set(HINTS_ERFA_INC "/usr/local/include/;${ERFA_ROOT}/include/;${ERFA_ROOT}")
 set(HINTS_ERFA_LIB "/usr/local/lib/;${ERFA_ROOT}/src/.libs/;${ERFA_ROOT}.libs/;${ERFA_ROOT};${ERFA_ROOT}/lib/")
 
-
 find_path(ERFA_INC erfa.h HINTS ${HINTS_ERFA_INC})
 find_library(ERFA_LIB erfa HINTS ${HINTS_ERFA_LIB} REQUIRED)
 if(ERFA_LIB)
@@ -116,11 +115,23 @@ if(PAL_LIB)
   message(STATUS "PAL library path: ${PAL_LIB}")
 endif()
 
+
+##Try and find the hyperbeam library
+set(HINTS_HBEAM_INC "/usr/local/include/;${HBEAM_ROOT}/;")
+set(HINTS_HBEAM_LIB "/usr/local/lib/;${HBEAM_ROOT}")
+
+find_path(HBEAM_INC mwa_hyperbeam.h HINTS ${HINTS_HBEAM_INC})
+find_library(HBEAM_LIB mwa_hyperbeam HINTS ${HINTS_HBEAM_LIB} REQUIRED)
+if(HBEAM_LIB)
+  message(STATUS "HBEAM include path: ${HBEAM_INC}")
+  message(STATUS "HBEAM library path: ${HBEAM_LIB}")
+endif()
+
 ##Set the linkers for the C code
-set(CC_LINKLIBS "-lm -pthread ${CFITSIO_LIB} ${JSONC_LIB} ${ERFA_LIB} ${HDF5_LIB} ${PAL_LIB}")
+set(CC_LINKLIBS "-lm -pthread ${CFITSIO_LIB} ${JSONC_LIB} ${ERFA_LIB} ${HDF5_LIB} ${PAL_LIB} ${HBEAM_LIB}")
 
 ##All the WODEN header dirs are in include dir
-include_directories("${CMAKE_SOURCE_DIR}/include" ${JSONC_INC} ${CFITSIO_INC} ${ERFA_INC} ${HDF5_INC} ${PAL_INC})
+include_directories("${CMAKE_SOURCE_DIR}/include" ${JSONC_INC} ${CFITSIO_INC} ${ERFA_INC} ${HDF5_INC} ${PAL_INC} ${HBEAM_INC})
 
 ##Generate libraries from the C and CUDA source code
 add_library(wodenC SHARED ${CSOURCES})

@@ -3,7 +3,7 @@
 #include "constants.h"
 
 enum component_type {POINT=0, GAUSSIAN, SHAPELET, SHAPELET2};
-typedef enum {NO_BEAM, GAUSS_BEAM, FEE_BEAM, ANALY_DIPOLE}e_beamtype;
+typedef enum {NO_BEAM, GAUSS_BEAM, FEE_BEAM, ANALY_DIPOLE, HFEE_BEAM}e_beamtype;
 
 typedef struct _catsource_t {
   //General source info

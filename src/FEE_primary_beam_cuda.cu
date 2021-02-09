@@ -115,10 +115,14 @@ __global__ void kern_rotate_FEE_beam(cuFloatComplex *d_FEE_beam_gain_matrices,
     float sinrot = d_sin_para_angs[iCoord];
     float cosrot = d_cos_para_angs[iCoord];
 
-    d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 3] = prerot3*cosrot + prerot2*sinrot;
-    d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 2] = -prerot3*sinrot + prerot2*cosrot;
-    d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 1] = prerot1*cosrot + prerot0*sinrot;
-    d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 0] = -prerot1*sinrot + prerot0*cosrot;
+    //if R is the 2D rotation matrix [[cosrot, -sinrot],[sinrot, cosrot]],
+    //then perform two rotations on the vectors [J00, J01] and [J10, J11] so
+    //that
+
+    d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 0] = prerot0*cosrot - prerot1*sinrot;
+    d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 1] = prerot0*sinrot + prerot1*cosrot;
+    d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 2] = prerot2*cosrot - prerot3*sinrot;
+    d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 3] = prerot2*sinrot + prerot3*cosrot;
 
   }
 }
@@ -341,6 +345,20 @@ extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,
 }
 
 
+__global__ void kern_make_norm_abs(cuFloatComplex *d_norm_fac) {
+
+  const int pol = threadIdx.x + (blockDim.x*blockIdx.x);
+
+  cuFloatComplex norm = d_norm_fac[pol];
+  cuFloatComplex abs_norm;
+
+  abs_norm.x = sqrt(norm.x*norm.x + norm.y*norm.y);
+  abs_norm.y = 0.0;
+
+  d_norm_fac[pol] = abs_norm;
+
+}
+
 
 extern "C" void get_HDFBeam_normalisation(copy_primary_beam_t *FEE_beam_zenith,
                 copy_primary_beam_t *FEE_beam) {
@@ -379,6 +397,15 @@ extern "C" void get_HDFBeam_normalisation(copy_primary_beam_t *FEE_beam_zenith,
 
   float _Complex *all_norm_gains=NULL;
   all_norm_gains = (float _Complex*)malloc(num_time_steps*num_azza*MAX_POLS*sizeof(float _Complex));
+
+  //Convert the normalisation results to their absolute values
+  dim3 grid, threads;
+  threads.x = num_time_steps*num_azza*MAX_POLS;
+  grid.x = grid.y = grid.z = threads.y = threads.z = 1;
+
+  cudaErrorCheckKernel("kern_make_norm_abs",
+                       kern_make_norm_abs, grid, threads,
+                       (cuFloatComplex*)FEE_beam_zenith->d_FEE_beam_gain_matrices);
 
   cudaErrorCheckCall( cudaMemcpy(all_norm_gains, FEE_beam_zenith->d_FEE_beam_gain_matrices,  num_time_steps*num_azza*MAX_POLS*sizeof(float _Complex), cudaMemcpyDeviceToHost )) ;
 
@@ -550,23 +577,21 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
 
   //If we want to normalise the beam, do it here
   if (scaling == 1.0) {
-
     threads.x = 128;
     grid.x = (int)ceil( (float)num_coords / threads.x);
-
     threads.y = threads.z = 1;
     grid.y = grid.z = 1;
 
-    float _Complex *d_norm_fac=NULL;
+    cuFloatComplex *d_norm_fac=NULL;
     cudaErrorCheckCall( cudaMalloc( (void**)&d_norm_fac,
-                        MAX_POLS*sizeof(float _Complex) ) );
+                        MAX_POLS*sizeof(cuFloatComplex) ) );
     cudaErrorCheckCall( cudaMemcpy(d_norm_fac, primary_beam->norm_fac,
-               MAX_POLS*sizeof(float _Complex), cudaMemcpyHostToDevice ) );
+               MAX_POLS*sizeof(cuFloatComplex), cudaMemcpyHostToDevice ) );
 
     cudaErrorCheckKernel("kern_apply_FEE_norm",
                          kern_apply_FEE_norm, grid, threads,
                          (cuFloatComplex*)TileGainMatrices,
-                         (cuFloatComplex*)d_norm_fac, num_coords );
+                         d_norm_fac, num_coords );
 
     cudaErrorCheckCall( cudaFree(d_norm_fac) );
 

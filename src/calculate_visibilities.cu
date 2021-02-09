@@ -208,6 +208,8 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
     float sin_2theta = 0.0;
     float fwhm_lm;
 
+    printf("BEAM SETTINGS %d\n",beam_settings.beamtype );
+
     if (beam_settings.beamtype == GAUSS_BEAM) {
       fwhm_lm = sinf(beam_settings.beam_FWHM_rad);
     }
