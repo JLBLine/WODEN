@@ -51,7 +51,14 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
            float *d_sum_visi_YX_real, float *d_sum_visi_YX_imag,
            float *d_sum_visi_YY_real, float *d_sum_visi_YY_imag);
 
-void source_component_common(int num_components, int num_beam_values,
+__global__ void kern_extrap_stokes(int num_visis, int num_components,
+          float *d_wavelengths, float *d_ref_freqs, float *d_SIs,
+          float *d_ref_stokesI, float *d_ref_stokesQ,
+          float *d_ref_stokesU, float *d_ref_stokesV,
+          float *d_flux_I, float *d_flux_Q,
+          float *d_flux_U, float *d_flux_V );
+
+extern "C" void source_component_common(int num_components, int num_beam_values,
            cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
            cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11,
            float *d_freqs, float *d_ls, float *d_ms, float *d_ns,
@@ -63,15 +70,6 @@ void source_component_common(int num_components, int num_beam_values,
            beam_settings_t beam_settings,
            copy_primary_beam_t *FEE_beam);
 
-// void setup_point_sources(float *d_point_ras, float *d_point_decs,
-//     float *d_point_freqs, float *d_point_stokesI, float *d_point_stokesQ,
-//     float *d_point_stokesU, float *d_point_stokesV, float *d_point_SIs,
-//     float *d_ls, float *d_ms, float *d_ns, float *d_freqs,
-//     catsource_t catsource, beam_settings_t beam_settings,
-//     woden_settings_t *woden_settings, copy_primary_beam_t *FEE_beam,
-//     float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
-//     cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
-//     cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11);
 
 __global__ void kern_calc_visi_point(float *d_point_ras, float *d_point_decs,
       float *d_point_freqs, float *d_point_stokesI, float *d_point_stokesQ,

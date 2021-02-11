@@ -13,6 +13,7 @@
 #include "primary_beam_cuda.h"
 #include "FEE_primary_beam_cuda.h"
 #include "cudacheck.h"
+// #include "mwa_hyperbeam.h"
 
 extern "C" void calculate_visibilities(array_layout_t * array_layout,
   source_catalogue_t *cropped_sky_models,
@@ -208,8 +209,6 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
     float sin_2theta = 0.0;
     float fwhm_lm;
 
-    printf("BEAM SETTINGS %d\n",beam_settings.beamtype );
-
     if (beam_settings.beamtype == GAUSS_BEAM) {
       fwhm_lm = sinf(beam_settings.beam_FWHM_rad);
     }
@@ -278,7 +277,7 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
       //
       //Only the FEE beam currently yields cross pol values, so only malloc what
       //we need here
-      if (beam_settings.beamtype == FEE_BEAM) {
+      if (beam_settings.beamtype == FEE_BEAM || beam_settings.beamtype == HFEE_BEAM) {
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01,
                   beam_settings.num_point_beam_values*sizeof(cuFloatComplex) ));
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J10,
@@ -360,6 +359,10 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
         cudaErrorCheckCall( cudaFree( d_primay_beam_J01 ) );
         cudaErrorCheckCall( cudaFree( d_primay_beam_J10 ) );
       }
+      else if (beam_settings.beamtype == HFEE_BEAM) {
+        cudaErrorCheckCall( cudaFree( d_primay_beam_J01 ) );
+        cudaErrorCheckCall( cudaFree( d_primay_beam_J10 ) );
+      }
 
     }//if point sources
 
@@ -436,7 +439,7 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
 
       //Only the FEE beam currently yields cross pol values, so only malloc what
       //we need here
-      if (beam_settings.beamtype == FEE_BEAM) {
+      if (beam_settings.beamtype == FEE_BEAM || beam_settings.beamtype == HFEE_BEAM) {
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01,
               beam_settings.num_gausscomp_beam_values*sizeof(cuFloatComplex)) );
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J10,
@@ -502,6 +505,10 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
         cudaErrorCheckCall( cudaFree(FEE_beam->d_FEE_beam_gain_matrices) );
         cudaErrorCheckCall( cudaFree(d_primay_beam_J01) );
         cudaErrorCheckCall( cudaFree(d_primay_beam_J10) );
+      }
+      else if (beam_settings.beamtype == HFEE_BEAM) {
+        cudaErrorCheckCall( cudaFree( d_primay_beam_J01 ) );
+        cudaErrorCheckCall( cudaFree( d_primay_beam_J10 ) );
       }
 
       cudaErrorCheckCall( cudaFree(d_ns) );
@@ -726,6 +733,10 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
         cudaErrorCheckCall( cudaFree( FEE_beam->d_FEE_beam_gain_matrices) );
         cudaErrorCheckCall( cudaFree(d_primay_beam_J01) );
         cudaErrorCheckCall( cudaFree(d_primay_beam_J10) );
+      }
+      else if (beam_settings.beamtype == HFEE_BEAM) {
+        cudaErrorCheckCall( cudaFree( d_primay_beam_J01 ) );
+        cudaErrorCheckCall( cudaFree( d_primay_beam_J10 ) );
       }
 
       cudaErrorCheckCall( cudaFree(d_ns) );

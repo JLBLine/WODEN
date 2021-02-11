@@ -159,52 +159,54 @@ beam_settings_t fill_primary_beam_settings(woden_settings_t *woden_settings,
 
   else if (woden_settings->beamtype == FEE_BEAM) {
     beam_settings.beamtype = FEE_BEAM;
+     calc_para_angle(cropped_src, lsts, num_time_steps);
 
     //Get the parallactic angle of the zenith for every time step
     //Need to rotate the FEE model which is stored in theta/phi pols by the
     //parallactic angle to obtain XX/YY
     //There are 4 normalisations to calculate, so need 4 times num time steps
-    beam_settings.para_cosrot = malloc(woden_settings->num_time_steps*MAX_POLS*sizeof(float));
-    beam_settings.para_sinrot = malloc(woden_settings->num_time_steps*MAX_POLS*sizeof(float));
+    // beam_settings.para_cosrot = malloc(woden_settings->num_time_steps*MAX_POLS*sizeof(float));
+    // beam_settings.para_sinrot = malloc(woden_settings->num_time_steps*MAX_POLS*sizeof(float));
+    //
+    // double para_angle;
+    // for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
+    //
+    //   float zenith_HA = 0.0;
+    //   para_angle = eraHd2pa((double)zenith_HA, (double)MWA_LAT_RAD, (double)MWA_LAT_RAD);
+    //
+    //   for (size_t pol_direction = 0; pol_direction < MAX_POLS; pol_direction++) {
+    //     beam_settings.para_cosrot[time_step*MAX_POLS + pol_direction] = cosf((float)para_angle + M_PI/2.0);
+    //     beam_settings.para_sinrot[time_step*MAX_POLS + pol_direction] = sinf((float)para_angle + M_PI/2.0);
+    //   }
+    // }
+    // calc_para_angle(cropped_src, lsts, num_time_steps);
 
-    double para_angle;
-    for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
-
-      float zenith_HA = 0.0;
-      para_angle = eraHd2pa((double)zenith_HA, (double)MWA_LAT_RAD, (double)MWA_LAT_RAD);
-
-      for (size_t pol_direction = 0; pol_direction < MAX_POLS; pol_direction++) {
-        beam_settings.para_cosrot[time_step*MAX_POLS + pol_direction] = cosf((float)para_angle + M_PI/2.0);
-        beam_settings.para_sinrot[time_step*MAX_POLS + pol_direction] = sinf((float)para_angle + M_PI/2.0);
-      }
-    }
-
-    calc_para_angle(cropped_src, lsts, num_time_steps);
   }
 
   else if (woden_settings->beamtype == HFEE_BEAM) {
     beam_settings.beamtype = HFEE_BEAM;
-
-    //Get the parallactic angle of the zenith for every time step
-    //Need to rotate the FEE model which is stored in theta/phi pols by the
-    //parallactic angle to obtain XX/YY
-    //There are 4 normalisations to calculate, so need 4 times num time steps
-    beam_settings.para_cosrot = malloc(woden_settings->num_time_steps*MAX_POLS*sizeof(float));
-    beam_settings.para_sinrot = malloc(woden_settings->num_time_steps*MAX_POLS*sizeof(float));
-
-    double para_angle;
-    for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
-
-      float zenith_HA = 0.0;
-      para_angle = eraHd2pa((double)zenith_HA, (double)MWA_LAT_RAD, (double)MWA_LAT_RAD);
-
-      for (size_t pol_direction = 0; pol_direction < MAX_POLS; pol_direction++) {
-        beam_settings.para_cosrot[time_step*MAX_POLS + pol_direction] = cosf((float)para_angle + M_PI/2.0);
-        beam_settings.para_sinrot[time_step*MAX_POLS + pol_direction] = sinf((float)para_angle + M_PI/2.0);
-      }
-    }
-
     calc_para_angle(cropped_src, lsts, num_time_steps);
+
+    // //Get the parallactic angle of the zenith for every time step
+    // //Need to rotate the FEE model which is stored in theta/phi pols by the
+    // //parallactic angle to obtain XX/YY
+    // //There are 4 normalisations to calculate, so need 4 times num time steps
+    // beam_settings.para_cosrot = malloc(woden_settings->num_time_steps*MAX_POLS*sizeof(float));
+    // beam_settings.para_sinrot = malloc(woden_settings->num_time_steps*MAX_POLS*sizeof(float));
+    //
+    // double para_angle;
+    // for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
+    //
+    //   float zenith_HA = 0.0;
+    //   para_angle = eraHd2pa((double)zenith_HA, (double)MWA_LAT_RAD, (double)MWA_LAT_RAD);
+    //
+    //   for (size_t pol_direction = 0; pol_direction < MAX_POLS; pol_direction++) {
+    //     beam_settings.para_cosrot[time_step*MAX_POLS + pol_direction] = cosf((float)para_angle + M_PI/2.0);
+    //     beam_settings.para_sinrot[time_step*MAX_POLS + pol_direction] = sinf((float)para_angle + M_PI/2.0);
+    //   }
+    // }
+    //
+    // calc_para_angle(cropped_src, lsts, num_time_steps);
   }
 
   else if (woden_settings->beamtype == ANALY_DIPOLE) {

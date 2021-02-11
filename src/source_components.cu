@@ -13,6 +13,14 @@
 #include "primary_beam_cuda.h"
 #include "FEE_primary_beam_cuda.h"
 
+#if __cplusplus
+extern "C" {
+#endif
+#include <mwa_hyperbeam.h>
+#if __cplusplus
+}
+#endif
+
 __device__ void extrap_flux(float *d_wavelengths, float *d_freqs,
            float *d_fluxes, int iComponent, int iBaseline,
            float * extrap_flux){
@@ -241,7 +249,7 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
   beam_ind = num_freqs*time_ind*num_components + (num_components*freq_ind) + iComponent;
 
   //Get XX,YY if using a beam
-  if (beamtype == FEE_BEAM || beamtype == ANALY_DIPOLE || beamtype == GAUSS_BEAM) {
+  if (beamtype == FEE_BEAM || beamtype == ANALY_DIPOLE || beamtype == GAUSS_BEAM || beamtype == HFEE_BEAM) {
     * g1xx = d_primay_beam_J00[beam_ind];
     * g2xx = d_primay_beam_J00[beam_ind];
     * g1yy = d_primay_beam_J11[beam_ind];
@@ -255,7 +263,7 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
   }
 
   //Only FEE model has XY and YX at the moment
-  if (beamtype == FEE_BEAM) {
+  if (beamtype == FEE_BEAM || beamtype == HFEE_BEAM) {
     * g1xy = d_primay_beam_J01[beam_ind];
     * g2xy = d_primay_beam_J01[beam_ind];
     * g1yx = d_primay_beam_J10[beam_ind];
@@ -267,6 +275,17 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
     * g1yx = make_cuComplex(0.0, 0.0);
     * g2yx = make_cuComplex(0.0, 0.0);
   }
+
+  // if (iBaseline == 0) {
+  //   cuFloatComplex print0 = * g1xx;
+  //   cuFloatComplex print1 = * g1xy;
+  //   cuFloatComplex print2 = * g1yx;
+  //   cuFloatComplex print3 = * g1yy;
+  //
+  //   printf("INSIDE beam gains %d %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n",beam_ind,
+  //            print0.x, print0.y, print1.x, print1.y, print2.x, print2.y, print3.x, print3.y );
+  // }
+
 } //end __device__ get_beam_gains
 
 __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
@@ -318,7 +337,7 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
 
 }
 
-void source_component_common(int num_components, int num_beam_values,
+extern "C" void source_component_common(int num_components, int num_beam_values,
            cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
            cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11,
            float *d_freqs, float *d_ls, float *d_ms, float *d_ns,
@@ -387,28 +406,118 @@ void source_component_common(int num_components, int num_beam_values,
   }
 
   else if (beam_settings.beamtype == HFEE_BEAM) {
-    printf("HERERERERERER\n");
+
     //
     // int rotation = 1;
-    // int norm_to_zenith = 1;
+    int norm_to_zenith = 1;
+    float base_middle_freq = woden_settings->base_band_freq + woden_settings->coarse_band_width/2.0;
     //
-    // calc_CUDA_FEE_beam(azs, zas, sin_para_angs, cos_para_angs,
-    //        num_components, woden_settings->num_time_steps, FEE_beam,
-    //        rotation, norm_to_zenith);
+    FEEBeam *hFEE_beam = new_fee_beam(woden_settings->hdf5_beam_path);
+    double amps[16] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+
+    int num_coords =  woden_settings->num_time_steps*num_components;
+
+    //Need doubles for hbeam
+    double *double_azs = (double *)malloc(num_coords*sizeof(double));
+    double *double_zas = (double *)malloc(num_coords*sizeof(double));
+    for (int i = 0; i < num_coords; i++) {
+      double_azs[i] = azs[i];
+      double_zas[i] = zas[i];
+    }
+
+
     //
-    // threads.x = 64;
-    // threads.y = 4;
-    // grid.x = (int)ceil( (float)woden_settings->num_visis / (float)threads.x );
-    // grid.y = (int)ceil( ((float)num_components) / ((float)threads.y) );
-    //
-    // cudaErrorCheckKernel("kern_map_FEE_beam_gains",
-    //           kern_map_FEE_beam_gains, grid, threads,
-    //           (cuFloatComplex *)FEE_beam->d_FEE_beam_gain_matrices,
-    //           d_primay_beam_J00, d_primay_beam_J01,
-    //           d_primay_beam_J10, d_primay_beam_J11,
-    //           woden_settings->num_freqs, num_components,
-    //           woden_settings->num_visis, woden_settings->num_baselines,
-    //           woden_settings->num_time_steps);
+    // // Calculate the Jones matrix for this pointing.
+    double *hbeam_jones = calc_jones_array(hFEE_beam, num_coords,
+                                double_azs, double_zas, base_middle_freq,
+                                (unsigned*)woden_settings->FEE_ideal_delays,
+                                amps, norm_to_zenith);
+
+    free(double_azs);
+    free(double_zas);
+
+    // for (int i = 0; i < num_coords; i++) {
+    //   printf("az, za %.4f %4f HBEAM %d %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f\n",
+    //           azs[i],zas[i],i,
+    //           hbeam_jones[i*8 + 0], hbeam_jones[i*8 + 1],
+    //           hbeam_jones[i*8 + 2], hbeam_jones[i*8 + 3],
+    //           hbeam_jones[i*8 + 4], hbeam_jones[i*8 + 5],
+    //           hbeam_jones[i*8 + 6], hbeam_jones[i*8 + 7] );
+    // }
+
+    //========================BEGIN COULD BE A FUNCTION ELSEWHERE=========================
+    double *d_hbeam_jones=NULL;
+    cuFloatComplex *d_hbeam_jones_complex=NULL;
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_hbeam_jones,
+                        2*MAX_POLS*num_coords*sizeof(double)) );
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_hbeam_jones_complex,
+                        MAX_POLS*num_coords*sizeof(cuFloatComplex)) );
+
+    cudaErrorCheckCall( cudaMemcpy( d_hbeam_jones, hbeam_jones,
+       2*MAX_POLS*num_coords*sizeof(double), cudaMemcpyHostToDevice) );
+
+    threads.x = 128;
+    //There is a real/imag component, for each pol, for each coord
+    grid.x = (int)ceil( (float)(num_coords / (float)threads.x));
+    threads.y = threads.z = 1;
+    grid.y = grid.z = 1;
+
+    cudaErrorCheckKernel("kern_map_hFEE_to_complex",
+                          kern_map_hFEE_to_complex, grid, threads,
+                          num_coords, d_hbeam_jones, d_hbeam_jones_complex);
+
+    threads.x = 128;
+    grid.x = (int)ceil( (float)(num_coords / (float)threads.x));
+    threads.y = threads.z = 1;
+    grid.y = grid.z = 1;
+
+    float *d_cos_para_angs=NULL;
+    float *d_sin_para_angs=NULL;
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_cos_para_angs,
+                        num_coords*sizeof(float)) );
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_sin_para_angs,
+                        num_coords*sizeof(float)) );
+
+
+    cudaErrorCheckCall( cudaMemcpy( d_cos_para_angs, cos_para_angs,
+       num_coords*sizeof(float), cudaMemcpyHostToDevice) );
+    cudaErrorCheckCall( cudaMemcpy( d_sin_para_angs, sin_para_angs,
+       num_coords*sizeof(float), cudaMemcpyHostToDevice) );
+
+    cudaErrorCheckKernel("kern_rotate_FEE_beam",
+                          kern_rotate_FEE_beam, grid, threads,
+                          d_hbeam_jones_complex,
+                          d_sin_para_angs, d_cos_para_angs,
+                          num_components, woden_settings->num_time_steps);
+
+    cudaErrorCheckCall( cudaFree(d_cos_para_angs) );
+    cudaErrorCheckCall( cudaFree(d_sin_para_angs) );
+
+    //==========================END COULD BE A FUNCTION ELSEWHERE=========================
+
+
+    threads.x = 64;
+    threads.y = 4;
+    grid.x = (int)ceil( (float)woden_settings->num_visis / (float)threads.x );
+    grid.y = (int)ceil( ((float)num_components) / ((float)threads.y) );
+
+    cudaErrorCheckKernel("kern_map_FEE_beam_gains",
+              kern_map_FEE_beam_gains, grid, threads,
+              d_hbeam_jones_complex,
+              d_primay_beam_J00, d_primay_beam_J01,
+              d_primay_beam_J10, d_primay_beam_J11,
+              woden_settings->num_freqs, num_components,
+              woden_settings->num_visis, woden_settings->num_baselines,
+              woden_settings->num_time_steps);
+
+    free(hbeam_jones);
+    // Free the beam - we must use a special function to do this.
+    free_fee_beam(hFEE_beam);
+
+    cudaErrorCheckCall( cudaFree(d_hbeam_jones_complex) );
+
   }
 
   else if (beam_settings.beamtype == ANALY_DIPOLE) {

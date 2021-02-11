@@ -38,3 +38,6 @@ extern "C" void test_analytic_dipole_beam(int num_components,
      int num_time_steps, int num_freqs,
      float *azs, float *zas, float *freqs,
      float _Complex *analy_beam_X, float _Complex *analy_beam_Y);
+
+__global__ void kern_map_hFEE_to_complex(int num_coords, double *d_hbeam_jones,
+                                         cuFloatComplex *d_hbeam_jones_complex);

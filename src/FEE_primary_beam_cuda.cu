@@ -105,12 +105,16 @@ __global__ void kern_rotate_FEE_beam(cuFloatComplex *d_FEE_beam_gain_matrices,
 
   if (iCoord < num_components*num_time_steps) {
 
-    int time_ind = (int)floorf((float)iCoord / (float)num_components);
+    // int time_ind = (int)floorf((float)iCoord / (float)num_components);
 
     cuFloatComplex prerot0 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 0];
     cuFloatComplex prerot1 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 1];
     cuFloatComplex prerot2 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 2];
     cuFloatComplex prerot3 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 3];
+
+    // printf("kern_rotate_FEE_beam1 %d %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n",iCoord,
+    //       prerot0.x, prerot0.y, prerot1.x, prerot1.y,
+    //       prerot2.x, prerot2.y, prerot3.x, prerot3.y );
 
     float sinrot = d_sin_para_angs[iCoord];
     float cosrot = d_cos_para_angs[iCoord];
@@ -123,6 +127,15 @@ __global__ void kern_rotate_FEE_beam(cuFloatComplex *d_FEE_beam_gain_matrices,
     d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 1] = prerot0*sinrot + prerot1*cosrot;
     d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 2] = prerot2*cosrot - prerot3*sinrot;
     d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 3] = prerot2*sinrot + prerot3*cosrot;
+
+    prerot0 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 0];
+    prerot1 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 1];
+    prerot2 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 2];
+    prerot3 = d_FEE_beam_gain_matrices[iCoord*MAX_POLS + 3];
+
+    // printf("kern_rotate_FEE_beam2 %d %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n",iCoord,
+    //       prerot0.x, prerot0.y, prerot1.x, prerot1.y,
+    //       prerot2.x, prerot2.y, prerot3.x, prerot3.y );
 
   }
 }

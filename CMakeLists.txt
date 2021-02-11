@@ -128,18 +128,22 @@ if(HBEAM_LIB)
 endif()
 
 ##Set the linkers for the C code
-set(CC_LINKLIBS "-lm -pthread ${CFITSIO_LIB} ${JSONC_LIB} ${ERFA_LIB} ${HDF5_LIB} ${PAL_LIB} ${HBEAM_LIB}")
+set(CC_LINKLIBS "-lm -pthread" ${CFITSIO_LIB} ${JSONC_LIB} ${ERFA_LIB} ${HDF5_LIB} ${PAL_LIB} ${HBEAM_LIB})
 
 ##All the WODEN header dirs are in include dir
 include_directories("${CMAKE_SOURCE_DIR}/include" ${JSONC_INC} ${CFITSIO_INC} ${ERFA_INC} ${HDF5_INC} ${PAL_INC} ${HBEAM_INC})
 
 ##Generate libraries from the C and CUDA source code
-add_library(wodenC SHARED ${CSOURCES})
-add_library(wodenCUDA SHARED ${CUDASOURCES})
+# add_library(wodenC SHARED ${CSOURCES})
+# add_library(wodenCUDA SHARED ${CUDASOURCES})
+# target_link_libraries(wodenCUDA ${CC_LINKLIBS})
+# target_compile_features(wodenCUDA PUBLIC cxx_std_11)
 
 ##make the final WODEN executable, linking the libraries
-add_executable(woden src/woden.c)
-target_link_libraries(woden wodenC wodenCUDA ${CC_LINKLIBS})
+add_executable(woden src/woden.c ${CSOURCES} ${CUDASOURCES})
+# target_link_libraries(woden wodenC wodenCUDA ${CC_LINKLIBS})
+target_link_libraries(woden ${CC_LINKLIBS})
+# set_property(TARGET woden PROPERTY LINKER_LANGUAGE CXX)
 add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
 
 SET_SOURCE_FILES_PROPERTIES(
