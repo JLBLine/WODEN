@@ -480,6 +480,7 @@ woden_settings_t * read_json_settings(const char *filename){
   struct json_object *jd_date;
   struct json_object *EDA2_beam;
   struct json_object *array_layout_file_path;
+  struct json_object *swap_FEE_pols;
 
 	fp = fopen(filename,"r");
 	fread(buffer, 1024, 1, fp);
@@ -512,6 +513,7 @@ woden_settings_t * read_json_settings(const char *filename){
   json_object_object_get_ex(parsed_json, "hdf5_beam_path", &hdf5_beam_path);
 
   json_object_object_get_ex(parsed_json, "use_EDA2_beam", &EDA2_beam);
+  json_object_object_get_ex(parsed_json, "swap_FEE_pols", &swap_FEE_pols);
 
   woden_settings_t * woden_settings;
   woden_settings = malloc( sizeof(woden_settings_t) );
@@ -579,6 +581,8 @@ woden_settings_t * read_json_settings(const char *filename){
     else if (hfee_beam) {
       woden_settings->beamtype = HFEE_BEAM;
     }
+
+    woden_settings->swap_FEE_pols = json_object_get_boolean(swap_FEE_pols);
 
     struct json_object *delay;
     struct json_object *FEE_ideal_delays;

@@ -425,22 +425,11 @@ extern "C" void source_component_common(int num_components, int num_beam_values,
       double_zas[i] = zas[i];
     }
 
+    //Convert to ints
     unsigned *hbeam_delays = (unsigned *)malloc(num_delays*sizeof(unsigned));
-
     for (size_t delay = 0; delay < num_delays; delay++) {
       hbeam_delays[delay] = woden_settings->FEE_ideal_delays[delay];
     }
-
-    // printf("DELAYS HFEE %.f %.f %.f %.f %.f %.f %.f %.f %.f %.f %.f %.f %.f %.f %.f %.f\n",
-    //  woden_settings->FEE_ideal_delays[0], woden_settings->FEE_ideal_delays[1],
-    //  woden_settings->FEE_ideal_delays[2], woden_settings->FEE_ideal_delays[3],
-    //  woden_settings->FEE_ideal_delays[4], woden_settings->FEE_ideal_delays[5],
-    //  woden_settings->FEE_ideal_delays[6], woden_settings->FEE_ideal_delays[7],
-    //  woden_settings->FEE_ideal_delays[8], woden_settings->FEE_ideal_delays[9],
-    //  woden_settings->FEE_ideal_delays[10], woden_settings->FEE_ideal_delays[11],
-    //  woden_settings->FEE_ideal_delays[12], woden_settings->FEE_ideal_delays[13],
-    //  woden_settings->FEE_ideal_delays[14], woden_settings->FEE_ideal_delays[15]);
-
 
     printf("Middle freq is %f\n",base_middle_freq );
     // // Calculate the Jones matrix for this pointing.
@@ -478,9 +467,18 @@ extern "C" void source_component_common(int num_components, int num_beam_values,
     threads.y = threads.z = 1;
     grid.y = grid.z = 1;
 
-    cudaErrorCheckKernel("kern_map_hFEE_to_complex",
-                          kern_map_hFEE_to_complex, grid, threads,
-                          num_coords, d_hbeam_jones, d_hbeam_jones_complex);
+    if (woden_settings->swap_FEE_pols){
+      printf("Swapping hFEE polarisation order\n");
+      cudaErrorCheckKernel("kern_map_hFEE_to_complex",
+                            kern_map_hFEE_to_complex, grid, threads,
+                            num_coords, d_hbeam_jones, d_hbeam_jones_complex);
+    }
+    else {
+      printf("Not swapping hFEE polarisation order\n");
+      cudaErrorCheckKernel("kern_map_hFEE_to_complex_noswap",
+                            kern_map_hFEE_to_complex_noswap, grid, threads,
+                            num_coords, d_hbeam_jones, d_hbeam_jones_complex);
+    }
 
     threads.x = 128;
     grid.x = (int)ceil( (float)(num_coords / (float)threads.x));

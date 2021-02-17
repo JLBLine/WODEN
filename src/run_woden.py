@@ -339,6 +339,11 @@ def write_json(num_time_steps=None, num_freqs=None,
     elif args.primary_beam == 'EDA2':
         outfile.write('  "use_EDA2_beam": True,\n')
 
+    if args.no_swap_FEE_pols:
+        outfile.write('  "swap_FEE_pols": False,\n')
+    else:
+        outfile.write('  "swap_FEE_pols": True,\n')
+
 
     if len(band_nums) == 1:
         band_str = '[%d]' %band_nums[0]
@@ -506,6 +511,9 @@ if __name__ == "__main__":
               --MWA_FEE_delays=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] \
               for a zenith pointing. Read directly from the metafits if using a \
               metafits file')
+    tel_group.add_argument('--no_swap_FEE_pols', default=False, action='store_true',
+        help='By default, WODEN will swap the polarisation order out of hyperbeam. \
+              Include this flag to switch off the ordering')
     tel_group.add_argument('--telescope_name', default='MWA',
         help='Name of telescope written out to the uvfits file, defaults to MWA')
 

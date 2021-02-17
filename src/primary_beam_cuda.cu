@@ -387,13 +387,6 @@ __global__ void kern_map_hFEE_to_complex(int num_coords, double *d_hbeam_jones,
     float hbeam_real_j11 = (float)d_hbeam_jones[iCoord*2*MAX_POLS + 6];
     float hbeam_imag_j11 = (float)d_hbeam_jones[iCoord*2*MAX_POLS + 7];
 
-    // printf("kern_map_hFEE_to_complex1 %d %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n",
-    //           iCoord,
-    //           hbeam_real_j00, hbeam_imag_j00,
-    //           hbeam_real_j01, hbeam_imag_j01,
-    //           hbeam_real_j10, hbeam_imag_j10,
-    //           hbeam_real_j11, hbeam_imag_j11);
-
     cuFloatComplex hbeam_complex_j00 = {hbeam_real_j00, hbeam_imag_j00};
     cuFloatComplex hbeam_complex_j01 = {hbeam_real_j01, hbeam_imag_j01};
     cuFloatComplex hbeam_complex_j10 = {hbeam_real_j10, hbeam_imag_j10};
@@ -405,11 +398,40 @@ __global__ void kern_map_hFEE_to_complex(int num_coords, double *d_hbeam_jones,
     d_hbeam_jones_complex[iCoord*MAX_POLS + 2] = -hbeam_complex_j01;
     d_hbeam_jones_complex[iCoord*MAX_POLS + 3] =  hbeam_complex_j00;
 
-    // printf("kern_map_hFEE_to_complex2 %d %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n",
-    //           iCoord,
-    //          -hbeam_complex_j11.x, -hbeam_complex_j11.y,
-    //           hbeam_complex_j10.x,  hbeam_complex_j10.y,
-    //          -hbeam_complex_j01.x, -hbeam_complex_j01.y,
-    //           hbeam_complex_j00.x,  hbeam_complex_j00.y);
+  }
+}
+
+__global__ void kern_map_hFEE_to_complex_noswap(int num_coords, double *d_hbeam_jones,
+                                         cuFloatComplex *d_hbeam_jones_complex) {
+  // Start by computing which sky direction we're going to do
+  const int iCoord = threadIdx.x + (blockDim.x*blockIdx.x);
+
+  if (iCoord < num_coords) {
+
+    //hyperbeam has real,imag,real,imag and stores J00, J01, J10, J11 as output
+    //by the FEE coord system. To get into RTS-style coords ready for a
+    //parallactic, need to reorder/sign flip to have -J11, J10, -J10, J00
+    //also make things complex here, why not
+
+    float hbeam_real_j00 = (float)d_hbeam_jones[iCoord*2*MAX_POLS + 0];
+    float hbeam_imag_j00 = (float)d_hbeam_jones[iCoord*2*MAX_POLS + 1];
+    float hbeam_real_j01 = (float)d_hbeam_jones[iCoord*2*MAX_POLS + 2];
+    float hbeam_imag_j01 = (float)d_hbeam_jones[iCoord*2*MAX_POLS + 3];
+    float hbeam_real_j10 = (float)d_hbeam_jones[iCoord*2*MAX_POLS + 4];
+    float hbeam_imag_j10 = (float)d_hbeam_jones[iCoord*2*MAX_POLS + 5];
+    float hbeam_real_j11 = (float)d_hbeam_jones[iCoord*2*MAX_POLS + 6];
+    float hbeam_imag_j11 = (float)d_hbeam_jones[iCoord*2*MAX_POLS + 7];
+
+    cuFloatComplex hbeam_complex_j00 = {hbeam_real_j00, hbeam_imag_j00};
+    cuFloatComplex hbeam_complex_j01 = {hbeam_real_j01, hbeam_imag_j01};
+    cuFloatComplex hbeam_complex_j10 = {hbeam_real_j10, hbeam_imag_j10};
+    cuFloatComplex hbeam_complex_j11 = {hbeam_real_j11, hbeam_imag_j11};
+
+    //Do the reordering/sign flipping in these 4 lines:
+    d_hbeam_jones_complex[iCoord*MAX_POLS + 0] =  hbeam_complex_j00;
+    d_hbeam_jones_complex[iCoord*MAX_POLS + 1] =  hbeam_complex_j01;
+    d_hbeam_jones_complex[iCoord*MAX_POLS + 2] =  hbeam_complex_j10;
+    d_hbeam_jones_complex[iCoord*MAX_POLS + 3] =  hbeam_complex_j11;
+
   }
 }

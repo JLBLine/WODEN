@@ -211,6 +211,7 @@ typedef struct _woden_settngs_t {
   float gauss_dec_point;
   int num_visis;
   float base_band_freq;
+  int swap_FEE_pols;
 
 } woden_settings_t;
 
