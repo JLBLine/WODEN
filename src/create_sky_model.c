@@ -15,7 +15,7 @@ void convert_radec2azza(double ra, double dec, double lst,
      double * az, double * za){
 
   double erfa_az, el;
-  double ha = ra - lst;
+  double ha = lst - ra;
 
   eraHd2ae( ha, dec, (double)MWA_LAT_RAD, &erfa_az, &el );
 

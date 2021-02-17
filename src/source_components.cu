@@ -276,7 +276,7 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
     * g2yx = make_cuComplex(0.0, 0.0);
   }
 
-  // if (iBaseline == 0) {
+  // if (iBaseline % 8128 == 0) {
   //   cuFloatComplex print0 = * g1xx;
   //   cuFloatComplex print1 = * g1xy;
   //   cuFloatComplex print2 = * g1yx;
@@ -407,13 +407,13 @@ extern "C" void source_component_common(int num_components, int num_beam_values,
 
   else if (beam_settings.beamtype == HFEE_BEAM) {
 
-    //
+    int num_delays = 16;
     // int rotation = 1;
     int norm_to_zenith = 1;
     float base_middle_freq = woden_settings->base_band_freq + woden_settings->coarse_band_width/2.0;
     //
     FEEBeam *hFEE_beam = new_fee_beam(woden_settings->hdf5_beam_path);
-    double amps[16] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+    double amps[num_delays] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 
     int num_coords =  woden_settings->num_time_steps*num_components;
 
@@ -425,20 +425,35 @@ extern "C" void source_component_common(int num_components, int num_beam_values,
       double_zas[i] = zas[i];
     }
 
+    unsigned *hbeam_delays = (unsigned *)malloc(num_delays*sizeof(unsigned));
 
-    //
+    for (size_t delay = 0; delay < num_delays; delay++) {
+      hbeam_delays[delay] = woden_settings->FEE_ideal_delays[delay];
+    }
+
+    // printf("DELAYS HFEE %.f %.f %.f %.f %.f %.f %.f %.f %.f %.f %.f %.f %.f %.f %.f %.f\n",
+    //  woden_settings->FEE_ideal_delays[0], woden_settings->FEE_ideal_delays[1],
+    //  woden_settings->FEE_ideal_delays[2], woden_settings->FEE_ideal_delays[3],
+    //  woden_settings->FEE_ideal_delays[4], woden_settings->FEE_ideal_delays[5],
+    //  woden_settings->FEE_ideal_delays[6], woden_settings->FEE_ideal_delays[7],
+    //  woden_settings->FEE_ideal_delays[8], woden_settings->FEE_ideal_delays[9],
+    //  woden_settings->FEE_ideal_delays[10], woden_settings->FEE_ideal_delays[11],
+    //  woden_settings->FEE_ideal_delays[12], woden_settings->FEE_ideal_delays[13],
+    //  woden_settings->FEE_ideal_delays[14], woden_settings->FEE_ideal_delays[15]);
+
+
+    printf("Middle freq is %f\n",base_middle_freq );
     // // Calculate the Jones matrix for this pointing.
     double *hbeam_jones = calc_jones_array(hFEE_beam, num_coords,
                                 double_azs, double_zas, base_middle_freq,
-                                (unsigned*)woden_settings->FEE_ideal_delays,
-                                amps, norm_to_zenith);
+                                hbeam_delays, amps, norm_to_zenith);
 
     free(double_azs);
     free(double_zas);
 
     // for (int i = 0; i < num_coords; i++) {
     //   printf("az, za %.4f %4f HBEAM %d %.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f\n",
-    //           azs[i],zas[i],i,
+    //           azs[i], zas[i], i,
     //           hbeam_jones[i*8 + 0], hbeam_jones[i*8 + 1],
     //           hbeam_jones[i*8 + 2], hbeam_jones[i*8 + 3],
     //           hbeam_jones[i*8 + 4], hbeam_jones[i*8 + 5],

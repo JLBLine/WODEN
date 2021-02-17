@@ -331,6 +331,11 @@ def write_json(num_time_steps=None, num_freqs=None,
         outfile.write('  "hdf5_beam_path": "%s",\n' %args.hdf5_beam_path)
         outfile.write('  "FEE_delays": %s,\n ' %FEE_delays)
 
+    elif args.primary_beam == 'MWA_hFEE':
+        outfile.write('  "use_hFEE_beam": True,\n')
+        outfile.write('  "hdf5_beam_path": "%s",\n' %args.hdf5_beam_path)
+        outfile.write('  "FEE_delays": %s,\n ' %FEE_delays)
+
     elif args.primary_beam == 'EDA2':
         outfile.write('  "use_EDA2_beam": True,\n')
 
@@ -471,6 +476,7 @@ if __name__ == "__main__":
     tel_group.add_argument('--primary_beam', default="MWA_FEE",
         help="R|Which primary beam to use in the simulation. Options are:\n\
             - MWA_FEE (MWA fully embedded element model)\n\
+            - MWA_hFEE (hyperbeam MWA fully embedded element model)\n\
             - Gaussian (Analytic symmetric Gaussian  \n\
                  see --gauss_beam_FWHM \n\
                  and --gauss_beam_ref_freq for fine control) \n\

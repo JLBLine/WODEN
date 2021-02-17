@@ -475,6 +475,7 @@ woden_settings_t * read_json_settings(const char *filename){
   struct json_object *gauss_beam_FWHM;
   struct json_object *gauss_beam_ref_freq;
   struct json_object *FEE_beam;
+  struct json_object *hFEE_beam;
   struct json_object *hdf5_beam_path;
   struct json_object *jd_date;
   struct json_object *EDA2_beam;
@@ -507,6 +508,7 @@ woden_settings_t * read_json_settings(const char *filename){
   json_object_object_get_ex(parsed_json, "gauss_beam_ref_freq", &gauss_beam_ref_freq);
 
   json_object_object_get_ex(parsed_json, "use_FEE_beam", &FEE_beam);
+  json_object_object_get_ex(parsed_json, "use_hFEE_beam", &hFEE_beam);
   json_object_object_get_ex(parsed_json, "hdf5_beam_path", &hdf5_beam_path);
 
   json_object_object_get_ex(parsed_json, "use_EDA2_beam", &EDA2_beam);
@@ -535,8 +537,11 @@ woden_settings_t * read_json_settings(const char *filename){
   //Boolean whether to use gaussian primary beam
   int gauss_beam = json_object_get_boolean(gaussian_beam);
 
-  //Boolean whether to use gaussian primary beam
+  //Boolean whether to use FEE primary beam
   int fee_beam = json_object_get_boolean(FEE_beam);
+
+  //Boolean whether to use FEE primary beam
+  int hfee_beam = json_object_get_boolean(hFEE_beam);
 
   if (gauss_beam) {
     woden_settings->beamtype = GAUSS_BEAM;
@@ -567,8 +572,13 @@ woden_settings_t * read_json_settings(const char *filename){
     woden_settings->gauss_dec_point = (float)json_object_get_double(gauss_dec_point)*DD2R;
 
   }
-  else if (fee_beam){
-    woden_settings->beamtype = HFEE_BEAM;
+  else if (fee_beam || hfee_beam){
+    if (fee_beam) {
+      woden_settings->beamtype = FEE_BEAM;
+    }
+    else if (hfee_beam) {
+      woden_settings->beamtype = HFEE_BEAM;
+    }
 
     struct json_object *delay;
     struct json_object *FEE_ideal_delays;
@@ -586,6 +596,7 @@ woden_settings_t * read_json_settings(const char *filename){
   	for(int i=0;i<delays_length;i++) {
   		delay = json_object_array_get_idx(FEE_ideal_delays, i);
   		woden_settings->FEE_ideal_delays[i] = (float)json_object_get_double(delay);
+      // woden_settings->FEE_ideal_delays[i] = 0.0;
   	}
   }
 
