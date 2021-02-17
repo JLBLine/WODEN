@@ -256,12 +256,26 @@ void fill_chunk_src(catsource_t *temp_cropped_src, catsource_t *cropped_src,
         * point_iter = chunk * chunking_size;
         temp_cropped_src->n_gauss = cropped_src->n_gauss;
 
+        //Crop by SHAPELET coeff, not number of components, so always use
+        //same n_shapes
         temp_cropped_src->n_shapes = cropped_src->n_shapes;
-        temp_cropped_src->n_shape_coeffs = chunking_size - temp_cropped_src->n_points - temp_cropped_src->n_gauss;
         //This is the first time using SHAPELET so no iterating the pointers
         * shape_iter = 0;
-      }
 
+        //Number of components left to fill the chunk
+        int chunk_remainder = chunking_size - temp_cropped_src->n_gauss - temp_cropped_src->n_points;
+
+        //If number of SHAPELET coeffs is less than remainder of chunk,
+        //all them all, otherwise just add enough to fill the chunk
+        if (cropped_src->n_shape_coeffs <= chunk_remainder) {
+          temp_cropped_src->n_shape_coeffs = cropped_src->n_shape_coeffs;
+        }
+        else {
+          // int shape_up_to_chunksize = chunking_size - temp_cropped_src->n_points - temp_cropped_src->n_gauss;
+          temp_cropped_src->n_shape_coeffs = chunk_remainder;
+        }
+
+      }//END  can't fill the chunk size with POINTS and GAUSS, need to add in SHAPELETS
     }//END else there are POINT sources in this chunk, and there are both GAUSSIAN and SHAPELETS to fill the rest of chunk
   }//END if chunk contains POINT components, but extends beyond the number POINT components
 
@@ -290,7 +304,8 @@ void fill_chunk_src(catsource_t *temp_cropped_src, catsource_t *cropped_src,
     else {
       comp_case = GS;
       temp_cropped_src->n_shapes = cropped_src->n_shapes;
-      int shape_remainder = (chunk + 1)*chunking_size - cropped_src->n_points - cropped_src->n_gauss;
+      // int shape_remainder = (chunk + 1)*chunking_size - cropped_src->n_points - cropped_src->n_gauss;
+      int shape_remainder = cropped_src->n_points + cropped_src->n_gauss + cropped_src->n_shape_coeffs - chunk*chunking_size;
       temp_cropped_src->n_shape_coeffs = shape_remainder;
       //This is the first time using SHAPELET so no iterating the pointers
       * shape_iter = 0;

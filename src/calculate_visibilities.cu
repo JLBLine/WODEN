@@ -647,7 +647,7 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
 
       //Only the FEE beam currently yields cross pol values, so only malloc what
       //we need here
-      if (beam_settings.beamtype == FEE_BEAM) {
+      if (beam_settings.beamtype == FEE_BEAM || beam_settings.beamtype == HFEE_BEAM) {
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01,
                   beam_settings.num_shape_beam_values*sizeof(cuFloatComplex)) );
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J10,
