@@ -581,7 +581,11 @@ if __name__ == "__main__":
             f.close()
 
     else:
-        ##TODO put in a check that all other agruments needed are included
+        if args.primary_beam == 'MWA_FEE' or args.primary_beam == 'MWA_hFEE':
+            if args.MWA_FEE_delays:
+                pass
+            else:
+                exit('To run with --primary_beam=MWA_FEE or MWA_hFEE you must\n\teither supply a metafits or the delays with the argument --MWA_FEE_delays\n\tExiting now as WODEN will fail to run with current settings.')
         pass
 
     ##Override metafits/load arguements
