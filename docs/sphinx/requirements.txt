@@ -2,5 +2,3 @@ sphinx_argparse
 breathe
 astropy
 numpy
-struct
-subprocess
