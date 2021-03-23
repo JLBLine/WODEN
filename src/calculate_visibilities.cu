@@ -17,12 +17,35 @@
 extern "C" void calculate_visibilities(array_layout_t * array_layout,
   source_catalogue_t *cropped_sky_models,
   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
-  visibility_set_t *chunk_visibility_set, float *sbf, int num_chunks) {
+  float *sbf) {
 
   const int num_baselines = woden_settings->num_baselines;
   const int num_time_steps = woden_settings->num_time_steps;
   const int num_visis = woden_settings->num_visis;
   const int num_freqs = woden_settings->num_freqs;
+
+  //Setup chunk_visibility_set to hold the visibility outputs of each
+  //sky chunk simulation
+  visibility_set_t *chunk_visibility_set = (visibility_set_t *)malloc(sizeof(visibility_set_t));
+
+  chunk_visibility_set->us_metres = (float *)malloc( num_visis * sizeof(float) );
+  chunk_visibility_set->vs_metres = (float *)malloc( num_visis * sizeof(float) );
+  chunk_visibility_set->ws_metres = (float *)malloc( num_visis * sizeof(float) );
+
+  chunk_visibility_set->sha0s = visibility_set->sha0s;
+  chunk_visibility_set->cha0s = visibility_set->cha0s;
+  chunk_visibility_set->lsts = visibility_set->lsts;
+  chunk_visibility_set->wavelengths = visibility_set->wavelengths;
+  chunk_visibility_set->channel_frequencies = visibility_set->channel_frequencies;
+
+  chunk_visibility_set->sum_visi_XX_real = (float *)malloc( num_visis * sizeof(float) );
+  chunk_visibility_set->sum_visi_XX_imag = (float *)malloc( num_visis * sizeof(float) );
+  chunk_visibility_set->sum_visi_XY_real = (float *)malloc( num_visis * sizeof(float) );
+  chunk_visibility_set->sum_visi_XY_imag = (float *)malloc( num_visis * sizeof(float) );
+  chunk_visibility_set->sum_visi_YX_real = (float *)malloc( num_visis * sizeof(float) );
+  chunk_visibility_set->sum_visi_YX_imag = (float *)malloc( num_visis * sizeof(float) );
+  chunk_visibility_set->sum_visi_YY_real = (float *)malloc( num_visis * sizeof(float) );
+  chunk_visibility_set->sum_visi_YY_imag = (float *)malloc( num_visis * sizeof(float) );
 
   float *d_X_diff = NULL;
   float *d_Y_diff = NULL;
@@ -128,7 +151,7 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
 
   //Iterate through all sky model chunks, calculated visibilities are
   //added to chunk_visibility_set, and then summed onto visibility_set
-  for (int chunk = 0; chunk < num_chunks; chunk++) {
+  for (int chunk = 0; chunk < cropped_sky_models->num_sources; chunk++) {
 
     catsource_t catsource;
     catsource = cropped_sky_models->catsources[chunk];
@@ -811,6 +834,22 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
     }//visi loop
 
   } //chunk loop
+
+  //Free the chunk_visibility_set
+  free( chunk_visibility_set->us_metres );
+  free( chunk_visibility_set->vs_metres );
+  free( chunk_visibility_set->ws_metres );
+
+  free(chunk_visibility_set->sum_visi_XX_real);
+  free(chunk_visibility_set->sum_visi_XX_imag);
+  free(chunk_visibility_set->sum_visi_XY_real);
+  free(chunk_visibility_set->sum_visi_XY_imag);
+  free(chunk_visibility_set->sum_visi_YX_real);
+  free(chunk_visibility_set->sum_visi_YX_imag);
+  free(chunk_visibility_set->sum_visi_YY_real);
+  free(chunk_visibility_set->sum_visi_YY_imag);
+  //
+  free( chunk_visibility_set );
 
   //Free up the GPU memory
 

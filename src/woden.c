@@ -18,10 +18,14 @@
 
 // #include "FEE_primary_beam_cuda.h"
 
+// extern void calculate_visibilities(array_layout_t * array_layout,
+//   source_catalogue_t *cropped_sky_models,
+//   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
+//   visibility_set_t *chunk_visibility_set, float *sbf, int num_chunks);
+
 extern void calculate_visibilities(array_layout_t * array_layout,
-  source_catalogue_t *cropped_sky_models,
-  woden_settings_t *woden_settings, visibility_set_t *visibility_set,
-  visibility_set_t *chunk_visibility_set, float *sbf, int num_chunks);
+  source_catalogue_t *cropped_sky_models, woden_settings_t *woden_settings,
+  visibility_set_t *visibility_set, float *sbf);
 
 int main(int argc, char **argv) {
 
@@ -33,6 +37,13 @@ int main(int argc, char **argv) {
 
   //If --help is passed, print help
   if (strcmp("--help", argv[1]) == 0) {
+    print_cmdline_help();
+    exit(1);
+
+  }
+
+  //If -h is passed, print help
+  if (strcmp("-h", argv[1]) == 0) {
     print_cmdline_help();
     exit(1);
 
@@ -171,9 +182,6 @@ int main(int argc, char **argv) {
     visibility_set->sum_visi_YY_real = malloc( num_visis * sizeof(float) );
     visibility_set->sum_visi_YY_imag = malloc( num_visis * sizeof(float) );
 
-    visibility_set->sum_visi_real = malloc( num_visis * sizeof(float) );
-    visibility_set->sum_visi_imag = malloc( num_visis * sizeof(float) );
-
     //Fill in the fine channel frequencies
     for (int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++) {
       frequency = base_band_freq + (woden_settings->frequency_resolution*freq_step);
@@ -208,7 +216,6 @@ int main(int argc, char **argv) {
     int num_chunks;
     //TODO should we chunk outside the band for-loop so that we can reuse the chunks for each band (should be the same)
     if (num_components > woden_settings->chunking_size) {
-      printf("Chunking sky model\n");
       num_chunks = num_components / woden_settings->chunking_size;
 
       if (num_components % woden_settings->chunking_size != 0) {
@@ -239,7 +246,8 @@ int main(int argc, char **argv) {
     for (int chunk = 0; chunk < num_chunks; chunk++) {
 
       fill_chunk_src(temp_cropped_src, cropped_src, num_chunks, chunk,
-                     woden_settings->chunking_size, woden_settings->num_time_steps,
+                     woden_settings->chunking_size,
+                     woden_settings->num_time_steps,
                      &point_iter, &gauss_iter, &shape_iter);
 
       //Add the number of shapelets onto the full source catalogue value
@@ -260,50 +268,12 @@ int main(int argc, char **argv) {
 
     printf("Sky model chunked.\n");
 
-    //setup a temporary visibility set that calculate_visibilities will populate
-    visibility_set_t *chunk_visibility_set = malloc(sizeof(visibility_set_t));
-
-    chunk_visibility_set->us_metres = malloc( num_visis * sizeof(float) );
-    chunk_visibility_set->vs_metres = malloc( num_visis * sizeof(float) );
-    chunk_visibility_set->ws_metres = malloc( num_visis * sizeof(float) );
-
-    chunk_visibility_set->sha0s = visibility_set->sha0s;
-    chunk_visibility_set->cha0s = visibility_set->cha0s;
-    chunk_visibility_set->lsts = visibility_set->lsts;
-    chunk_visibility_set->wavelengths = visibility_set->wavelengths;
-    chunk_visibility_set->channel_frequencies = visibility_set->channel_frequencies;
-
-    chunk_visibility_set->sum_visi_XX_real = malloc( num_visis * sizeof(float) );
-    chunk_visibility_set->sum_visi_XX_imag = malloc( num_visis * sizeof(float) );
-    chunk_visibility_set->sum_visi_XY_real = malloc( num_visis * sizeof(float) );
-    chunk_visibility_set->sum_visi_XY_imag = malloc( num_visis * sizeof(float) );
-    chunk_visibility_set->sum_visi_YX_real = malloc( num_visis * sizeof(float) );
-    chunk_visibility_set->sum_visi_YX_imag = malloc( num_visis * sizeof(float) );
-    chunk_visibility_set->sum_visi_YY_real = malloc( num_visis * sizeof(float) );
-    chunk_visibility_set->sum_visi_YY_imag = malloc( num_visis * sizeof(float) );
-
     calculate_visibilities(array_layout, cropped_sky_models,
-                  woden_settings, visibility_set, chunk_visibility_set,
-                  sbf, num_chunks);
+                  woden_settings, visibility_set, sbf);
 
     printf("GPU calls for band %d finished\n",band_num );
 
     free(temp_cropped_src);
-
-    free( chunk_visibility_set->us_metres );
-    free( chunk_visibility_set->vs_metres );
-    free( chunk_visibility_set->ws_metres );
-
-    free(chunk_visibility_set->sum_visi_XX_real);
-    free(chunk_visibility_set->sum_visi_XX_imag);
-    free(chunk_visibility_set->sum_visi_XY_real);
-    free(chunk_visibility_set->sum_visi_XY_imag);
-    free(chunk_visibility_set->sum_visi_YX_real);
-    free(chunk_visibility_set->sum_visi_YX_imag);
-    free(chunk_visibility_set->sum_visi_YY_real);
-    free(chunk_visibility_set->sum_visi_YY_imag);
-    //
-    free( chunk_visibility_set );
 
     // if (woden_settings->beamtype == FEE_BEAM) {
     //   free_FEE_primary_beam_from_GPU(beam_settings.FEE_beam);
@@ -325,8 +295,6 @@ int main(int argc, char **argv) {
     fwrite(visibility_set->us_metres, num_visis*sizeof(float), 1, output_visi);
     fwrite(visibility_set->vs_metres, num_visis*sizeof(float), 1, output_visi);
     fwrite(visibility_set->ws_metres, num_visis*sizeof(float), 1, output_visi);
-    // fwrite(visibility_set->sum_visi_real, num_visis*sizeof(float), 1, output_visi);
-    // fwrite(visibility_set->sum_visi_imag, num_visis*sizeof(float), 1, output_visi);
 
     fwrite(visibility_set->sum_visi_XX_real, num_visis*sizeof(float), 1, output_visi);
     fwrite(visibility_set->sum_visi_XX_imag, num_visis*sizeof(float), 1, output_visi);

@@ -8,8 +8,6 @@
 #ifndef CUDACOMPLEX_H
 #define CUDACOMPLEX_H
 
-// #include "rts_common.h"
-
 // --------------------------------
 //! Unary negative
 inline __device__ cuFloatComplex operator-( cuFloatComplex a ) {
@@ -102,8 +100,6 @@ inline __device__ cuFloatComplex operator/( const cuFloatComplex a, const float 
 // ----------------------------------------------------------
 //! Exponentiation
 //! Computes e^z == e^x ( cos y + i sin y )
-
-//CUBE_DEVICE(cuFloatComplex, cuComplexExp, const cuFloatComplex z ) {
 inline __device__ cuFloatComplex cuComplexExp( const cuFloatComplex z ) {
 
   float x = cuCrealf( z );
@@ -116,7 +112,6 @@ inline __device__ cuFloatComplex cuComplexExp( const cuFloatComplex z ) {
 
 // ----------------------------------------------------------
 //! Calculate real and imaginary parts of U(1) variable e^(i*theta)
-
 inline __device__ cuFloatComplex U1polar( const float theta ) {
 
   cuFloatComplex z;

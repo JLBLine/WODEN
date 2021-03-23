@@ -9,4 +9,5 @@ run_woden.py \
     --cat_filename=srclist_gaussian_source.txt \
     --metafits_filename=1102865128_metafits_ppds.fits \
     --band_nums=1,2,3 --output_uvfits_prepend=./data/gaussian_zenith \
+    --primary_beam=none
     # --nvprof

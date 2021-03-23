@@ -9,4 +9,4 @@ run_woden.py \
     --cat_filename=srclist_shapelet_source.txt \
     --metafits_filename=1102865128_metafits_ppds.fits \
     --band_nums=1,2,3 --output_uvfits_prepend=./data/shapelet_zenith \
-    # --nvprof
+    --primary_beam=none
