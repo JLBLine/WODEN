@@ -81,3 +81,6 @@ html_static_path = ['_static']
 
 breathe_projects = { "WODEN": "../doxygen/xml/" }
 breathe_default_project = "WODEN"
+
+##Add these in so the c++ acknowledges CUDA specific attributes
+cpp_id_attributes = ["__global__", "__device__", "_Complex"]

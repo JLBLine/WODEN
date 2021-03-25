@@ -1,3 +1,12 @@
+/*******************************************************************************
+*  Methods to read in simulation parameters from a .json file,
+*  read in data from source catalogues, read/generate array layouts, and move
+*  the array back to J2000.
+*  @author J.L.B. Line
+*
+*  Please see documentation in ../include/read_and_write.h or online at
+*  https://woden.readthedocs.io/en/latest/index.html
+*******************************************************************************/
 #include "read_and_write.h"
 #include "constants.h"
 #include <stdio.h>
@@ -5,7 +14,6 @@
 #include <string.h>
 #include <json.h>
 #include <fitsio.h>
-// #include <erfa.h>
 #include <pal.h>
 
 void RTS_ENH2XYZ_local(float E, float N, float H, float lat,
@@ -441,6 +449,7 @@ woden_settings_t * read_json_settings(const char *filename){
 
   struct json_object *parsed_json;
   struct json_object *lst_base;
+  struct json_object *latitude;
   struct json_object *ra0;
   struct json_object *dec0;
   struct json_object *num_baselines;
@@ -469,6 +478,7 @@ woden_settings_t * read_json_settings(const char *filename){
 	parsed_json = json_tokener_parse(buffer);
 
   json_object_object_get_ex(parsed_json, "LST", &lst_base);
+  json_object_object_get_ex(parsed_json, "latitude", &latitude);
   json_object_object_get_ex(parsed_json, "ra0", &ra0);
   json_object_object_get_ex(parsed_json, "dec0", &dec0);
   json_object_object_get_ex(parsed_json, "num_freqs", &num_freqs);
@@ -495,6 +505,18 @@ woden_settings_t * read_json_settings(const char *filename){
 
   woden_settings_t * woden_settings;
   woden_settings = malloc( sizeof(woden_settings_t) );
+
+  //Boolean whether to use gaussian primary beam
+  int lat_true = json_object_get_boolean(latitude);
+
+  if (lat_true == 1) {
+    woden_settings->latitude = json_object_get_double(latitude)*DD2R;
+  }
+  else {
+    woden_settings->latitude = MWA_LAT_RAD;
+  }
+
+  printf("LATITUDE IS %.1f\n", woden_settings->latitude/DD2R);
 
   woden_settings->lst_base = (float)json_object_get_double(lst_base)*D2R;
   woden_settings->ra0 = (float)json_object_get_double(ra0)*DD2R;
@@ -534,7 +556,7 @@ woden_settings_t * read_json_settings(const char *filename){
 
     float beam_ref_freq = (float)json_object_get_double(gauss_beam_ref_freq);
     //If gauss_beam_ref_freq has been set in the json file, use it
-    //Otherwise, set the defult FWHM of 20 deg
+    //Otherwise, set the reference to 150e+6
     if (beam_ref_freq > 0.0) {
       woden_settings->gauss_beam_ref_freq = beam_ref_freq;
     } else {
@@ -618,7 +640,7 @@ void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
 
   double lst     = (double)woden_settings->lst_base;
   double ra      = (double)woden_settings->lst_base;
-  double dec     = (double)MWA_LAT_RAD;
+  double dec     = woden_settings->latitude;
 
   int n_tile    = array_layout->num_tiles;
 
@@ -760,7 +782,7 @@ array_layout_t * calc_XYZ_diffs(woden_settings_t *woden_settings){
 
   //malloc some arrays for holding array coords
 
-  array_layout->latitude = MWA_LAT*DD2R;
+  array_layout->latitude = woden_settings->latitude;
   array_layout->num_baselines = (array_layout->num_tiles*(array_layout->num_tiles-1)) / 2;
 
   array_layout->ant_X = malloc( array_layout->num_tiles * sizeof(float) );
@@ -770,7 +792,7 @@ array_layout_t * calc_XYZ_diffs(woden_settings_t *woden_settings){
   for (int i = 0; i < array_layout->num_tiles; i++) {
     //Convert to local X,Y,Z
     RTS_ENH2XYZ_local(array_layout->ant_east[i], array_layout->ant_north[i], array_layout->ant_height[i],
-                  array_layout->latitude,
+                  (float)array_layout->latitude,
                   &(array_layout->ant_X[i]), &(array_layout->ant_Y[i]), &(array_layout->ant_Z[i]));
   }
 

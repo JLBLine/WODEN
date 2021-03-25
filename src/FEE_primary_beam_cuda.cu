@@ -669,11 +669,6 @@ __global__ void kern_calc_sigmaTP(cuFloatComplex *TileGainMatrices,
 
     }
 
-    // cuFloatComplex thing1 = TileGainMatrices[iCoord*MAX_POLS + iPol*n_pols];
-    // cuFloatComplex thing2 = TileGainMatrices[iCoord*MAX_POLS + iPol*n_pols + 1];
-    //
-    // printf("%.5f %.5f %.5f %.5f\n",thing1.x,thing1.y,thing2.x,thing2.y );
-
   }
 }
 

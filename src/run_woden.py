@@ -292,6 +292,7 @@ def write_json(num_time_steps=None, num_freqs=None,
     outfile.write('{\n')
     outfile.write('  "ra0": %.10f,\n' %args.ra0)
     outfile.write('  "dec0": %.10f,\n' %args.dec0)
+    outfile.write('  "latitude": %.10f,\n' %args.latitude)
     outfile.write('  "num_freqs": %d,\n' %num_freqs)
     outfile.write('  "num_time_steps": %d,\n' %num_time_steps)
     outfile.write('  "cat_filename": "%s",\n' %args.cat_filename)
@@ -461,9 +462,9 @@ if __name__ == "__main__":
              override the date in the metafits')
 
     tel_group = parser.add_argument_group('TELESCOPE OPTIONS')
-    tel_group.add_argument('--latitude', default=MWA_LAT,
+    tel_group.add_argument('--latitude', default=MWA_LAT, type=float,
         help='Latitude (deg) of the array - defaults to MWA at -26.7033194444')
-    tel_group.add_argument('--longitude', default=MWA_LONG,
+    tel_group.add_argument('--longitude', default=MWA_LONG, type=float,
         help='Longitude (deg) of the array - defaults to MWA at 116.670813889')
     tel_group.add_argument('--array_layout', default=False,
         help='Instead of reading the array layout from the metafits file, read from a text file. \
@@ -489,10 +490,10 @@ if __name__ == "__main__":
               if not')
     tel_group.add_argument('--gauss_dec_point', default=False,
         help='The initial Dec (deg) to point the Gaussian beam at. Defaults \
-        to the Dec of the metafits if available, or the RA of the phase centre \
+        to the Dec of the metafits if available, or the Dec of the phase centre \
         if not')
 
-    tel_group.add_argument('--hdf5_beam_path', default='/home/jline/software/useful/MWA_embedded_element_pattern_V02.h5',
+    tel_group.add_argument('--hdf5_beam_path', default='/home/jline/software/useful/mwa_full_embedded_element_pattern.h5',
         help='Location of the hdf5 file holding the FEE beam coefficients')
     tel_group.add_argument('--MWA_FEE_delays',
         help='A list of 16 delays to point the MWA FEE primary beam model, \

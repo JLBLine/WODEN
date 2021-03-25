@@ -16,12 +16,6 @@
 #include "FEE_primary_beam.h"
 #include "read_and_write.h"
 
-// #include "FEE_primary_beam_cuda.h"
-
-// extern void calculate_visibilities(array_layout_t * array_layout,
-//   source_catalogue_t *cropped_sky_models,
-//   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
-//   visibility_set_t *chunk_visibility_set, float *sbf, int num_chunks);
 
 extern void calculate_visibilities(array_layout_t * array_layout,
   source_catalogue_t *cropped_sky_models, woden_settings_t *woden_settings,
@@ -84,6 +78,7 @@ int main(int argc, char **argv) {
   float sdec0,cdec0;
   sdec0 = sin(woden_settings->dec0); cdec0=cos(woden_settings->dec0);
 
+  printf("Setting initial LST to %.5fdeg\n",woden_settings->lst_base/DD2R );
   printf("Setting phase centre RA,DEC %.5fdeg %.5fdeg\n",woden_settings->ra0/DD2R, woden_settings->dec0/DD2R);
 
   //Used for calculating l,m,n for components
@@ -112,7 +107,8 @@ int main(int argc, char **argv) {
   //into one single SOURCE
   printf("Horizon cropping sky model and calculating az/za for all components for observation\n");
   catsource_t *cropped_src;
-  cropped_src = crop_sky_model(raw_srccat, lsts, num_time_steps, woden_settings->sky_crop_type);
+  cropped_src = crop_sky_model(raw_srccat, lsts, woden_settings->latitude,
+                               num_time_steps, woden_settings->sky_crop_type);
 
   printf("Finished cropping and calculating az/za\n");
 

@@ -23,6 +23,8 @@ Welcome to WODEN's documentation!
   :maxdepth: 1
 
   chunk_source
+  create_sky_model
+  FEE_primary_beam
   read_and_write
 
 `CUDA` documentation

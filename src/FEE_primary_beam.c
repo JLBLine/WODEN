@@ -93,40 +93,10 @@ static const double factorials[] = {
   8.94618213078e+116
 };
 
-// /* function prototypes for LAPACK */
-// void cgetrf_( int *m, int *n, float _Complex *a, int *lda, int *ipiv, int *info );
-// void cgetri_( int *n, float _Complex *a, int *lda, int *ipiv, float _Complex *work, int *lwork, int *info );
-
 static int count=0;
 static int count1=0;
 static int count2=0;
 static int count3=0;
-
-
-// /****************************
-// reorder the delays from RTS order into engineer order
-// (see comments in dipole_files.c)
-// ****************************/
-// void RTS_reorderDelays(float in[NUM_DIPOLES], float out[NUM_DIPOLES]) {
-//     int i;
-//     for (i=0; i< 4; i++) {
-//         out[0+i*4] = in[3-i];
-//         out[1+i*4] = in[7-i];
-//         out[2+i*4] = in[11-i];
-//         out[3+i*4] = in[15-i];
-//     }
-// }
-//
-//
-// void RTS_reorderDelays2RTS(float in[NUM_DIPOLES], float out[NUM_DIPOLES]) {
-//     int i;
-//     for (i=0; i< 4; i++) {
-//       out[3-i] = in[0+i*4];
-//       out[7-i] = in[1+i*4];
-//       out[11-i] = in[2+i*4];
-//       out[15-i] = in[3+i*4];
-//     }
-// }
 
 herr_t RTS_op_func (hid_t loc_id, const char *name, const H5L_info_t *info,
             void *operator_data) {
@@ -153,14 +123,9 @@ herr_t RTS_op_func (hid_t loc_id, const char *name, const H5L_info_t *info,
     return return_val;
 }
 
-
-
 /****************************
 Find the nearest freq in the element pattern hdf file
 ****************************/
-//#define H5FILE_NAME "/home/bpindor/code/MWAtools_pb/MWA_embedded_element_pattern_V02.h5"
-//#define H5FILE_NAME "/home/bpindor/temp/MWAtools_pb/MWA_embedded_element_pattern_V02.h5"
-
 int RTS_HDFBeamInit(const char *h5filename, float freq_Hz, copy_primary_beam_t *pb, float *FEE_delays, int stn){
 
   hid_t       file, group;         /* handles */
@@ -172,10 +137,6 @@ int RTS_HDFBeamInit(const char *h5filename, float freq_Hz, copy_primary_beam_t *
   static float last_freq_out=0.0;
 
   file = H5Fopen(h5filename, H5F_ACC_RDONLY, H5P_DEFAULT);
-
-  // if(norm_fac != NULL){
-  //   memcpy(pb->norm_fac,norm_fac,MAX_POLS*sizeof(float _Complex));
-  // }
 
   if(freq_Hz != last_freq_in) {
     /***************************************************************/
@@ -208,51 +169,14 @@ int RTS_HDFBeamInit(const char *h5filename, float freq_Hz, copy_primary_beam_t *
 
   lam = VELC/(od.freq_out); // Should this be freq_out??
 
-  //RTS code was setup with a different ordering of the delays, so change
-  //the order of the delays
-
-  float RTS_order_delays[NUM_DIPOLES];
-
-  for (int dipole = 0; dipole < NUM_DIPOLES; dipole++) {
-    RTS_order_delays[NUM_DIPOLES - 1 - dipole] = FEE_delays[dipole];
-
-    // RTS_order_delays[dipole] = FEE_delays[dipole];
-  }
-
-
   for (int pol=0; pol < N_COPOL; pol++){
     for (int i=0; i<NUM_DIPOLES; i++) {
       float phase;
-      // printf("The delays used are %.5f\n", RTS_order_delays[i]);
-      phase = (-2.0*M_PI*DQ/lam)*RTS_order_delays[i];
-      // phase = (-2.0*M_PI/lam)*FEE_delays[i]; // rts delays are already *DQ
-      // if (debug) fprintf(fpd,"delay: %g, phase: %g\n",FEE_delays[i],phase);
-      // Vcplx=amps[pol]*np.exp(1.0j*phases) #complex excitation col voltage
-      // No dipole amplitudes implemented in RTS but cant flag dipoles
-
-      // ant_i == -1 used to override dipole_flagging when setting reference_beam
-
-      // if(options->disable_dipole_flags || stn==-1){
-      //    Vcplx[pol][i] = cexp(1.0j * phase);
-      // } else {
-      //   // Dipole flags are written into dead_dip array in read_metafits.c:read_dipoles
-      //   // Flagged dipoles have dead_dip==1, so set their amplitudes to abs(dead_dip-1)
-      //
-      //    Vcplx[pol][i] = fabs(options->dead_dip[(stn+pol)*NUM_DIPOLES + i] - 1.0) * cexp(1.0j * phase);
-      // }
+      phase = (-2.0*M_PI*DQ/lam)*FEE_delays[i];
 
       //TODO implement dipole flagging and/or dipole amplitudes here
       //eg Vcplx[pol][i] = amps[pol][i] * cexp(1.0j * phase);
-
-      if (FEE_delays[i] == 32.0) {
-        Vcplx[pol][i] = cexp(1.0j * phase);
-      }
-
-      else{
-        Vcplx[pol][i] = cexp(1.0j * phase);
-      }
-
-
+      Vcplx[pol][i] = cexp(1.0j * phase);
     } //end for dipole
   } // end for pol
 
@@ -271,7 +195,7 @@ int RTS_HDFBeamInit(const char *h5filename, float freq_Hz, copy_primary_beam_t *
 
   for(int i = 1; i<n_ant+1;i++){
     sprintf(table_name,"X%d_%d",i,(int)od.freq_out);
-    dataset = H5Dopen(file,table_name, H5P_DEFAULT);
+    dataset = H5Dopen(file, table_name, H5P_DEFAULT);
     dataspace = H5Dget_space(dataset);
     status  = H5Sget_simple_extent_dims(dataspace, dims_out, NULL);
     if(dims_out[1]/2 > max_length){
@@ -308,8 +232,6 @@ int RTS_HDFBeamInit(const char *h5filename, float freq_Hz, copy_primary_beam_t *
   Q2 = (double _Complex *)malloc(sizeof(double _Complex) * max_length);
 
   // Read in Q_modes_all
-
-  //    double Q_modes_all[2046][3];
   double Q_modes_all[3][2046];
 
   dataset = H5Dopen(file,"modes", H5P_DEFAULT);
@@ -320,7 +242,6 @@ int RTS_HDFBeamInit(const char *h5filename, float freq_Hz, copy_primary_beam_t *
   H5Dclose(dataset);
 
   // Read in modes for each antenna
-
   double *Q_all, *Q_modes;
 
   int Nmax[n_pols];
@@ -663,12 +584,6 @@ int RTS_get_FF2(float phi, float theta, copy_primary_beam_t *pb, float _Complex 
     prev_phi=-1.0;
     prev_theta=-1.0;
     nMN = 0;
-    /*
-    printf("Count0 %d\n",count);
-    printf("Count1 %d\n",count1);
-    printf("Count2 %d\n",count2);
-    printf("Count3 %d\n",count3);
-    */
 
     return 0;
   }
@@ -705,7 +620,6 @@ int RTS_get_FF2(float phi, float theta, copy_primary_beam_t *pb, float _Complex 
     return 0;
   }
 
-
   if(theta == last_theta && phi == last_phi && nMN == pb->nMN){
     result[3] = (float _Complex) Jones[0][0];
     result[2] = (float _Complex) Jones[0][1];
@@ -723,9 +637,7 @@ int RTS_get_FF2(float phi, float theta, copy_primary_beam_t *pb, float _Complex 
     prev_phi = last_phi;
   }
 
-
   nmax = pb->nmax;
-
   /* C_MN and M_absM need to be recalculated only if beam model changes */
 
   if(nMN==0 || nMN != pb->nMN){
@@ -785,10 +697,7 @@ int RTS_get_FF2(float phi, float theta, copy_primary_beam_t *pb, float _Complex 
 
   } // End Calculation of C_MN and M_absM
 
-
   /* phi_comp needs to be recalculated if phi has changed or if beam model changes */
-
-
   if(phi != last_phi || beam_reset){
     count2++;
     for(int pol=0;pol<n_pols;pol++){
@@ -825,7 +734,6 @@ int RTS_get_FF2(float phi, float theta, copy_primary_beam_t *pb, float _Complex 
   } // END (theta != last_theta)
 
   // If either phi or theta have changed, recalculate Jones elements
-
   double _Complex Sigma_P, Sigma_T;
 
   if(theta != last_theta || phi != last_phi || beam_reset){
@@ -848,20 +756,12 @@ int RTS_get_FF2(float phi, float theta, copy_primary_beam_t *pb, float _Complex 
   last_phi = phi;
   last_theta = theta;
 
-
   // RTS polarizations are (of course) opposite orientation to FEKO
 
   result[3] = (float _Complex) Jones[0][0];
   result[2] = (float _Complex) Jones[0][1];
   result[1] = (float _Complex) Jones[1][0];
   result[0] = (float _Complex) Jones[1][1];
-
-  /*
-  prevJones[0][0] = Jones[0][0];
-  prevJones[0][1] = Jones[0][1];
-  prevJones[1][0] = Jones[1][0];
-  prevJones[1][1] = Jones[1][1];
-  */
 
   if(scaling==1) {
 
@@ -924,24 +824,9 @@ int RTS_getJonesSphHarm(float freq_Hz, float az, float za, copy_primary_beam_t *
 }
 //
 int RTS_getJonesDipole(float freq_Hz, float az, float za, copy_primary_beam_t *pb, float _Complex result[4],int scaling) {
-    // int res=0;
 
-    return RTS_getJonesSphHarm(freq_Hz, az, za, pb, result,scaling);
+    return RTS_getJonesSphHarm(freq_Hz, az, za, pb, result, scaling);
 
-    // switch (pb->type) {
-    //     case ANT_CROSSED_DIPOLES_ON_GROUNDPLANE :
-    //         //if(debug) fprintf(fpd,"%s: Type %d.\n",__func__,pb->type);
-    //         return getJonesShortDipole(freq_Hz, az, za, pb, result) ;
-    //         break;
-    //     case ANT_SIMULATED :
-    //
-	  // break;
-    //
-    //     default:
-	  //        fprintf(stderr,"%s: Unknown dipole type %d\n",__func__,pb->type);
-	  //        res=1;
-    //     }
-    // return res;
 }
 //
 // /*****************************************************************************
@@ -989,7 +874,6 @@ int RTS_getTileResponse(float freq_Hz, float az, float za, copy_primary_beam_t *
       crot = cos(rotation);
       srot = sin(rotation);
 
-      //cgemm2x2??
       // The pols have already been flipped in get_FF, so need to flip them
       // back when calculating rotation (ugh)
       result[3] = prerot[3]*crot + prerot[2]*srot;
@@ -1031,81 +915,4 @@ void RTS_freeHDFBeam(copy_primary_beam_t *pb){
 
   if(pb->parameters!=NULL) free(pb->parameters);
 
-
 }
-//
-// int RTS_getHDFBeamNormalization(char *h5filename, float freq, copy_primary_beam_t *pb){
-//
-//   /* Get zenith response of zenith pointing */
-//   /* This factor remains the same for a given frequency, so only need to calculate once for
-//      any and all beams in a given rts instance */
-//   /* From primary_beam_full_EE.py:
-//
-//   Calculate normalisation factors for the Jones vector for this
-//         ApertureArray object. For MWA, these are at the zenith of a zenith pointed beam,
-//         which is the maximum for all beam pointings.
-//         The FEKO simulations include all ph angles at za=0. These are not redundant,
-//         and the ph value determines the unit vector directions of both axes.
-//         For the E-W dipoles, the projection of the theta unit vec will be max when
-//         pointing east, i.e. when ph_EtN=0 (ph_NtE=90). For the phi unit vec,
-//         this will be when ph_EtN=-90 or 90 (ph_NtE=180 or 0: we use 180)
-//         For the N-S dipoles, projection of ZA onto N-S is max az ph_EtN=90 (ph_NtE=0) and
-//         proj of ph onto N-S is max when ph_EtN=0 (ph_NtE=90
-//
-//   BP: Not sure this is okay for sky x y as defined by the RTS though
-//   */
-//
-//   int res=0;
-//
-//   // We dont want any dipole flagging when calculating the zenith values
-//   // Creating a options structure will set the dipole flagging to FALSE
-//
-//   copy_primary_beam_t *primary_beam;
-//   primary_beam = malloc(sizeof(copy_primary_beam_t));
-//
-//   if(norm_fac == NULL){
-//
-//     float zenith_delays[NUM_DIPOLES] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-//
-//     float _Complex j_norm[MAX_POLS];
-//     float delays_copy[NUM_DIPOLES];
-//
-//     norm_fac = malloc(MAX_POLS*sizeof(float _Complex));
-//
-//     // for(unsigned int k=0; k<NUM_DIPOLES; k++){
-//     //   delays_copy[k] = ->delay[k];
-//     //   ->delay[k] = 0.0;
-//     // }
-//
-//     int scaling = 0; // We want the 'true' value at zenith
-//     res = RTS_HDFBeamInit(h5filename, freq, primary_beam, zenith_delays, 0);
-//
-//     // BP: Not quite sure about the pol ordering here RTS v FEKO
-//     //     although in pratical term the differences are very small
-//
-//     float rotation=0.0;
-//
-//     res = RTS_getTileResponse(freq, (M_PI/2.0), 0.0, primary_beam, j_norm ,scaling ,rotation);
-//     pb->norm_fac[0]=j_norm[0];
-//     res = RTS_getTileResponse(freq, 0.0, 0.0, primary_beam, j_norm ,scaling ,rotation);
-//     pb->norm_fac[1]=j_norm[1];
-//     res = RTS_getTileResponse(freq, M_PI, 0.0, primary_beam, j_norm ,scaling ,rotation);
-//     pb->norm_fac[2]=j_norm[2];
-//     res = RTS_getTileResponse(freq, (M_PI/2.0), 0.0, primary_beam, j_norm ,scaling ,rotation);
-//     pb->norm_fac[3]=j_norm[3];
-//
-//     RTS_freeHDFBeam(primary_beam);
-//     RTS_HDFBeamCleanUp();
-//
-//   }
-//
-//   return res;
-// //
-// }
-//
-// void RTS_HDFBeamCleanUp(){
-//
-//   // Makes special call to get_FF2 which release cached arrays
-//   RTS_get_FF2(0,0,NULL,NULL,0,1);
-//
-// }

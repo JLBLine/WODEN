@@ -10,11 +10,6 @@
 #include <math.h>
 #include "woden_struct_defs.h"
 
-// extern "C" void calculate_visibilities(array_layout_t * array_layout,
-//   source_catalogue_t *cropped_sky_models,
-//   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
-//   visibility_set_t *chunk_visibility_set, float *sbf, int num_chunks);
-
 /**
 @brief Given the telescope, settings, and sky models detailed in `array_layout`,
  `cropped_sky_models`, and `woden_settings`, run the GPU simulation, and store
@@ -36,54 +31,49 @@ struct
 @param[in] *sbf An array of gridded shapelet basis function values as created by
 `create_sbf`
 
+      NOTE
 
+      The following attributes *must* be set for `calculate_visibilities` to work:
 
-\n The following attributes must be set for `calculate_visibilities` to work:
+      array_layout->X_diff_metres
+      array_layout->Y_diff_metres
+      array_layout->Z_diff_metres
+      cropped_sky_models->num_sources
+      cropped_sky_models->catsources
+      cropped_sky_models->beam_settings
+      woden_settings->num_baselines
+      woden_settings->num_time_steps
+      woden_settings->num_visis
+      woden_settings->num_freqs
+      woden_settings->beamtype
+      woden_settings->ra0
+      woden_settings->sdec0
+      woden_settings->cdec0
+      visibility_set->cha0s
+      visibility_set->sha0s
+      visibility_set->lsts
+      visibility_set->wavelengths
+      visibility_set->channel_frequencies
 
-array_layout->X_diff_metres \n
-array_layout->Y_diff_metres \n
-array_layout->Z_diff_metres \n
+      The following must be malloc-ed for `calculate_visibilities` to work:
 
-cropped_sky_models->num_sources \n
-cropped_sky_models->catsources \n
-cropped_sky_models->beam_settings \n
+      visibility_set->sum_visi_real
+      visibility_set->sum_visi_imag
+      visibility_set->us_metres
+      visibility_set->vs_metres
+      visibility_set->ws_metres
+      visibility_set->sum_visi_XX_real
+      visibility_set->sum_visi_XX_imag
+      visibility_set->sum_visi_XY_real
+      visibility_set->sum_visi_XY_imag
+      visibility_set->sum_visi_YX_real
+      visibility_set->sum_visi_YX_imag
+      visibility_set->sum_visi_YY_real
+      visibility_set->sum_visi_YY_imag
 
-woden_settings->num_baselines \n
-woden_settings->num_time_steps \n
-woden_settings->num_visis \n
-woden_settings->num_freqs \n
-woden_settings->beamtype \n
-woden_settings->ra0 \n
-woden_settings->sdec0 \n
-woden_settings->cdec0 \n
-
-visibility_set->cha0s \n
-visibility_set->sha0s \n
-visibility_set->lsts \n
-visibility_set->wavelengths \n
-visibility_set->channel_frequencies
-
-The following must be malloc-ed for `calculate_visibilities` to work:
-
-visibility_set->sum_visi_real \n
-visibility_set->sum_visi_imag \n
-visibility_set->us_metres \n
-visibility_set->vs_metres \n
-visibility_set->ws_metres \n
-visibility_set->sum_visi_XX_real \n
-visibility_set->sum_visi_XX_imag \n
-visibility_set->sum_visi_XY_real \n
-visibility_set->sum_visi_XY_imag \n
-visibility_set->sum_visi_YX_real \n
-visibility_set->sum_visi_YX_imag \n
-visibility_set->sum_visi_YY_real \n
-visibility_set->sum_visi_YY_imag
-
-Beyond that, depending on your primary beam settings, other attributes may
-be required.
-
+      Beyond that, depending on your primary beam settings,
+      other attributes may be required.
 */
-
 extern "C" void calculate_visibilities(array_layout_t * array_layout,
   source_catalogue_t *cropped_sky_models, woden_settings_t *woden_settings,
   visibility_set_t *visibility_set, float *sbf);
