@@ -25,6 +25,7 @@ Welcome to WODEN's documentation!
   chunk_source
   create_sky_model
   FEE_primary_beam
+  primary_beam
   read_and_write
 
 `CUDA` documentation
@@ -33,6 +34,7 @@ Welcome to WODEN's documentation!
   :maxdepth: 1
 
   calculate_visibilities
+  primary_beam_cuda
 
 ..  cudacomplex
 

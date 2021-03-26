@@ -237,8 +237,6 @@ __device__ void analytic_dipole(float az, float za, float wavelength,
   tempX.x = voltage_parallel_X;
   tempY.x = voltage_parallel_Y;
 
-  // printf("%.5f %.5f %.5f %.5f %.5f\n",az,za,wavelength,tempX.x,tempY.x );
-
   //No imaginary components so set to 0
   tempX.y = 0;
   tempY.y = 0;
@@ -250,7 +248,7 @@ __device__ void analytic_dipole(float az, float za, float wavelength,
 
 __global__ void kern_analytic_dipole_beam(float *d_azs, float *d_zas,
            float *d_freqs, int num_freqs, int num_times, int num_components,
-           cuFloatComplex *d_analy_beam_X, cuFloatComplex *d_analy_beam_Y) {
+           cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J11) {
   // Start by computing which baseline we're going to do
   const int iCoord = threadIdx.x + (blockDim.x*blockIdx.x);
   const int iFreq = threadIdx.y + (blockDim.y*blockIdx.y);
@@ -271,6 +269,8 @@ __global__ void kern_analytic_dipole_beam(float *d_azs, float *d_zas,
     analytic_dipole(d_azs[iCoord], d_zas[iCoord], wavelength,
                &d_beam_X, &d_beam_Y);
 
+    //Should really calculate this normalisation outside of this kernel - we are
+    //massively increasing the number calculations for no reason
     analytic_dipole(0.0, 0.0, wavelength,
                &d_beam_norm_X, &d_beam_norm_Y);
 
@@ -279,8 +279,8 @@ __global__ void kern_analytic_dipole_beam(float *d_azs, float *d_zas,
     normed_X.x = normed_X.x / d_beam_norm_X.x;
     normed_Y.x = normed_Y.x / d_beam_norm_Y.x;
 
-    d_analy_beam_X[beam_ind] = normed_X;
-    d_analy_beam_Y[beam_ind] = normed_Y;
+    d_primay_beam_J00[beam_ind] = normed_X;
+    d_primay_beam_J00[beam_ind] = normed_Y;
 
   }
 }
@@ -289,7 +289,7 @@ __global__ void kern_analytic_dipole_beam(float *d_azs, float *d_zas,
 extern "C" void calculate_analytic_dipole_beam(int num_components,
      int num_time_steps, int num_freqs,
      float *azs, float *zas, float *d_freqs,
-     cuFloatComplex *d_analy_beam_X, cuFloatComplex *d_analy_beam_Y){
+     cuFloatComplex * d_primay_beam_J00, cuFloatComplex *d_primay_beam_J11){
 
   int num_beam_azza = num_components * num_time_steps;
 

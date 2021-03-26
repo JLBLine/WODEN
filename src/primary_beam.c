@@ -3,11 +3,6 @@
 #include <erfa.h>
 #include <complex.h>
 
-// extern void get_HDFBeam_normalisation(beam_settings_t beam_settings);
-//
-// extern void copy_FEE_primary_beam_to_GPU(beam_settings_t beam_settings,
-//                                              int num_time_steps);
-
 void calc_para_angle(catsource_t *cropped_src, float *lsts, double latitude,
                      int num_time_steps){
 
@@ -140,25 +135,8 @@ beam_settings_t fill_primary_beam_settings(woden_settings_t *woden_settings,
   else if (woden_settings->beamtype == FEE_BEAM) {
     beam_settings.beamtype = FEE_BEAM;
 
-    // //Get the parallactic angle of the zenith for every time step
-    //
-    // //There are 4 normalisations to calculate, so need 4 times num time steps
-    // beam_settings.para_cosrot = malloc(woden_settings->num_time_steps*MAX_POLS*sizeof(float));
-    // beam_settings.para_sinrot = malloc(woden_settings->num_time_steps*MAX_POLS*sizeof(float));
-    //
-    // double para_angle;
-    // for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
-    //
-    //   float zenith_HA = 0.0;
-    //   para_angle = eraHd2pa((double)zenith_HA, (double)MWA_LAT_RAD, (double)MWA_LAT_RAD);
-    //
-    //   for (size_t pol_direction = 0; pol_direction < MAX_POLS; pol_direction++) {
-    //     beam_settings.para_cosrot[time_step*MAX_POLS + pol_direction] = cosf((float)para_angle + M_PI/2.0);
-    //     beam_settings.para_sinrot[time_step*MAX_POLS + pol_direction] = sinf((float)para_angle + M_PI/2.0);
-    //   }
-    // }
     //Need to rotate the FEE model which is stored in theta/phi pols by the
-    // //parallactic angle to obtain XX/YY
+    //parallactic angle to obtain XX/YY
     calc_para_angle(cropped_src, lsts, woden_settings->latitude, num_time_steps);
   }
 
