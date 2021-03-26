@@ -99,7 +99,7 @@ values, as the COMPONENTs move through the beam with time. The outputs are
 stored in `d_primay_beam_J00, d_primay_beam_J11`, where `00` refers to the
 north-south polarisation, `11` the east-west polarisation, in order of time,
 frequency, COMPONENT. This function uses the beam centre pointing `ha0, dec0`
-to calculate an $l,m$ coord system in which to calculate the Gaussian beam,
+to calculate an \f$l,m\f$ coord system in which to calculate the Gaussian beam,
 using `kern_gaussian_beam`.
 
 @param[in] num_components Number of COMPONENTS the beam is calculated for

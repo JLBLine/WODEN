@@ -85,12 +85,6 @@ beam_settings_t fill_primary_beam_settings(woden_settings_t *woden_settings,
 
     //Set constants used in beam calculation
     beam_settings.beam_FWHM_rad = woden_settings->gauss_beam_FWHM * D2R;
-    //TODO I cannot for the life of me work out how to cudaMalloc and Memcpy
-    //a single float (argh) so put the ref freq in an array (embarrassment)
-    // float beam_ref_freq_array[1] = {woden_settings->gauss_beam_ref_freq};
-    // beam_settings.beam_ref_freq_array = malloc(sizeof(float));
-    // beam_settings.beam_ref_freq_array = beam_ref_freq_array;
-
     beam_settings.beam_ref_freq = woden_settings->gauss_beam_ref_freq;
 
     //Store all ha (which change with lst) that the beam needs to be calculated at.
@@ -104,32 +98,32 @@ beam_settings_t fill_primary_beam_settings(woden_settings_t *woden_settings,
     beam_settings.beam_shape_decs = malloc(woden_settings->num_time_steps * cropped_src->n_shapes * sizeof(float));
 
     //Loop over all time and point components and calculate ha
-    for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
-      for (int component = 0; component < cropped_src->n_points; component++) {
-        int step = cropped_src->n_points*time_step + component;
-
+    for (int component = 0; component < cropped_src->n_points; component++) {
+      for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
+        int step = component*num_time_steps + time_step;
         beam_settings.beam_point_has[step] = lsts[time_step] - cropped_src->point_ras[component];
         beam_settings.beam_point_decs[step] = cropped_src->point_decs[component];
-
-      }//point loop
+      }
+    }//point loop
 
     //Loop over all time and gausscomp components and calculate ha
-      for (int component = 0; component < cropped_src->n_gauss; component++) {
-        int step = cropped_src->n_gauss*time_step + component;
-
+    for (int component = 0; component < cropped_src->n_gauss; component++) {
+      for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
+        int step = component*num_time_steps + time_step;
         beam_settings.beam_gausscomp_has[step] = lsts[time_step] - cropped_src->gauss_ras[component];
         beam_settings.beam_gausscomp_decs[step] = cropped_src->gauss_decs[component];
-      }//gausscomp loop
+      }
+    }//gausscomp loop
 
     //Loop over all time and shape components and calculate ha
-      for (int component = 0; component < cropped_src->n_shapes; component++) {
-        int step = cropped_src->n_shapes*time_step + component;
-
+    for (int component = 0; component < cropped_src->n_shapes; component++) {
+      for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
+        int step = component*num_time_steps + time_step;
         beam_settings.beam_shape_has[step] = lsts[time_step] - cropped_src->shape_ras[component];
         beam_settings.beam_shape_decs[step] = cropped_src->shape_decs[component];
-      }//shape loop
+      }
+    }//shape loop
 
-    }//gaussian beam time loop
   } // End if (woden_settings->gaussian_beam)
 
   else if (woden_settings->beamtype == FEE_BEAM) {
