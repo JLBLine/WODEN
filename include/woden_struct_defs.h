@@ -70,7 +70,7 @@ typedef struct _catsource_t {
 
 } catsource_t;
 
-typedef struct _copy_primary_beam {
+typedef struct _RTS_MWA_FEE_beam {
   float *parameters;
   float ref_freq;               //!< if used to generate reference J matrices, some applications need a frequency.
   double _Complex **Q1, **Q2;      //!< Beam modes used for Spherical Harmonic model
@@ -107,7 +107,7 @@ typedef struct _copy_primary_beam {
   float *d_para_cosrot;
   float *d_para_sinrot;
 
-} copy_primary_beam_t;
+} RTS_MWA_FEE_beam_t;
 
 typedef struct _beam_settings_t {
     // float *beam_angles_array;
@@ -136,8 +136,8 @@ typedef struct _beam_settings_t {
     float *para_cosrot;
     float *para_sinrot;
 
-    copy_primary_beam_t *FEE_beam;
-    copy_primary_beam_t *FEE_beam_zenith;
+    RTS_MWA_FEE_beam_t *FEE_beam;
+    RTS_MWA_FEE_beam_t *FEE_beam_zenith;
 
 } beam_settings_t;
 
@@ -154,10 +154,10 @@ typedef struct _visibility_set_t {
   float *us_metres;
   float *vs_metres;
   float *ws_metres;
-  float *sha0s;
-  float *cha0s;
-  float *lsts;
-  float *wavelengths;
+  float *allsteps_sha0s;
+  float *allsteps_cha0s;
+  float *allsteps_lsts;
+  float *allsteps_wavelengths;
   float *channel_frequencies;
 
   float *beam_has;

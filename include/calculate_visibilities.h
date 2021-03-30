@@ -49,10 +49,10 @@ struct
       woden_settings->ra0
       woden_settings->sdec0
       woden_settings->cdec0
-      visibility_set->cha0s
-      visibility_set->sha0s
-      visibility_set->lsts
-      visibility_set->wavelengths
+      visibility_set->allsteps_cha0s
+      visibility_set->allsteps_sha0s
+      visibility_set->allsteps_lsts
+      visibility_set->allsteps_wavelengths
       visibility_set->channel_frequencies
 
       The following must be malloc-ed for `calculate_visibilities` to work:

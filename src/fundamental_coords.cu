@@ -13,7 +13,7 @@ __device__ void calc_uvw(float *d_X_diff, float *d_Y_diff, float *d_Z_diff,
   int mod_baseline = iBaseline - num_baselines*floorf((float)iBaseline / (float)num_baselines);
 
   * u = (d_sha0*d_X_diff[mod_baseline]) + (d_cha0*d_Y_diff[mod_baseline]);
-  * v = (d_sdec0*d_sha0*d_Y_diff[mod_baseline]) + (d_cdec0*d_Z_diff[mod_baseline]) - (d_sdec0*d_cha0*d_X_diff[mod_baseline]);
+  * v = -(d_sdec0*d_cha0*d_X_diff[mod_baseline]) + (d_sdec0*d_sha0*d_Y_diff[mod_baseline]) + (d_cdec0*d_Z_diff[mod_baseline]);
   * w = (d_cdec0*d_cha0*d_X_diff[mod_baseline]) - (d_cdec0*d_sha0*d_Y_diff[mod_baseline]) + (d_sdec0*d_Z_diff[mod_baseline]);
 
 }
@@ -82,10 +82,6 @@ __global__ void kern_calc_uvw_shapelet(float *d_X_diff, float *d_Y_diff, float *
 __device__ void calc_lmn(float ra0, float sdec0, float cdec0,
                          float d_ra, float d_dec,
                          float * l, float * m, float * n){
-  // float d_sdec0 = d_angles_array[0];
-  // float d_cdec0 = d_angles_array[1];
-  // float d_ra0 = d_angles_array[2];
-
   float cdec;
   float sdec;
   float cdra;

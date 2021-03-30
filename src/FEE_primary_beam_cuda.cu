@@ -126,7 +126,7 @@ __global__ void kern_rotate_FEE_beam(cuFloatComplex *d_FEE_beam_gain_matrices,
 extern "C" void calc_CUDA_FEE_beam(float *azs, float *zas,
                                    float *sin_para_angs, float *cos_para_angs,
                                    int num_components, int num_time_steps,
-                                   copy_primary_beam_t *FEE_beam,
+                                   RTS_MWA_FEE_beam_t *FEE_beam,
                                    int rotation, int scaling) {
 
   // float _Complex *d_FEE_beam_gain_matrices = NULL;
@@ -156,7 +156,7 @@ extern "C" void calc_CUDA_FEE_beam(float *azs, float *zas,
 
 }
 
-extern "C" void free_FEE_primary_beam_from_GPU(copy_primary_beam_t *primary_beam){
+extern "C" void free_FEE_primary_beam_from_GPU(RTS_MWA_FEE_beam_t *primary_beam){
   cudaErrorCheckCall( cudaFree(primary_beam->d_M) );
   cudaErrorCheckCall( cudaFree(primary_beam->d_N) );
   cudaErrorCheckCall( cudaFree(primary_beam->d_Q1) );
@@ -170,7 +170,7 @@ extern "C" void free_FEE_primary_beam_from_GPU(copy_primary_beam_t *primary_beam
 
 
 
-extern "C" void copy_FEE_primary_beam_to_GPU(copy_primary_beam_t *FEE_beam,
+extern "C" void copy_FEE_primary_beam_to_GPU(RTS_MWA_FEE_beam_t *FEE_beam,
                                              int num_time_steps){
 
   const int n_pols=2; // instrumental pols
@@ -237,7 +237,7 @@ extern "C" void copy_FEE_primary_beam_to_GPU(copy_primary_beam_t *FEE_beam,
 
 extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,
            float *sin_para_angs, float *cos_para_angs,
-           int num_time_steps, copy_primary_beam_t *primary_beam,
+           int num_time_steps, RTS_MWA_FEE_beam_t *primary_beam,
            float _Complex *h_FEE_beam_gains,
            int scaling) {
   // printf("We are beginning the calc_FEE_beam\n");
@@ -342,8 +342,8 @@ extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,
 
 
 
-extern "C" void get_HDFBeam_normalisation(copy_primary_beam_t *FEE_beam_zenith,
-                copy_primary_beam_t *FEE_beam) {
+extern "C" void get_HDFBeam_normalisation(RTS_MWA_FEE_beam_t *FEE_beam_zenith,
+                RTS_MWA_FEE_beam_t *FEE_beam) {
 
   //The FEE beam is in theta-phi polarisations, which means we need a different
   //norm factor in north, east, south, west
@@ -393,7 +393,7 @@ extern "C" void get_HDFBeam_normalisation(copy_primary_beam_t *FEE_beam_zenith,
 extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
            float *sin_para_angs, float *cos_para_angs,
            int num_time_steps, int num_components,
-           float rotation, copy_primary_beam_t *primary_beam,
+           float rotation, RTS_MWA_FEE_beam_t *primary_beam,
            float _Complex *TileGainMatrices, int scaling){
 
   int n_pols = 2;
@@ -942,8 +942,8 @@ __global__ void kern_map_FEE_beam_gains(cuFloatComplex *d_FEE_beam_gain_matrices
 extern "C" void test_RTS_CUDA_FEE_beam(int num_components,
            float *azs, float *zas,
            float *sin_para_angs, float *cos_para_angs,
-           copy_primary_beam_t *FEE_beam_zenith,
-           copy_primary_beam_t *FEE_beam,
+           RTS_MWA_FEE_beam_t *FEE_beam_zenith,
+           RTS_MWA_FEE_beam_t *FEE_beam,
            int rotation, int scaling,
            float _Complex *FEE_beam_gains){
 

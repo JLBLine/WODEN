@@ -126,7 +126,7 @@ herr_t RTS_op_func (hid_t loc_id, const char *name, const H5L_info_t *info,
 /****************************
 Find the nearest freq in the element pattern hdf file
 ****************************/
-int RTS_HDFBeamInit(const char *h5filename, float freq_Hz, copy_primary_beam_t *pb, float *FEE_delays, int stn){
+int RTS_HDFBeamInit(const char *h5filename, float freq_Hz, RTS_MWA_FEE_beam_t *pb, float *FEE_delays, int stn){
 
   hid_t       file, group;         /* handles */
   herr_t          status;
@@ -542,7 +542,7 @@ void RTS_P1SIN(int nmax, float theta, double _Complex **P_sin, double _Complex *
 // // Version of get_FF which uses cached values to avoid recalculating values
 // // when repeatedly for same phi, theta values
 //
-int RTS_get_FF2(float phi, float theta, copy_primary_beam_t *pb, float _Complex result[4], int scaling, int clean_up)
+int RTS_get_FF2(float phi, float theta, RTS_MWA_FEE_beam_t *pb, float _Complex result[4], int scaling, int clean_up)
 {
 
   int n_pols = 2;
@@ -806,7 +806,7 @@ int RTS_get_FF2(float phi, float theta, copy_primary_beam_t *pb, float _Complex 
 //  !                  3: AZ onto W
 //  !
 //  *****************************************************************************/
-int RTS_getJonesSphHarm(float freq_Hz, float az, float za, copy_primary_beam_t *pb, float _Complex result[4],int scaling) {
+int RTS_getJonesSphHarm(float freq_Hz, float az, float za, RTS_MWA_FEE_beam_t *pb, float _Complex result[4],int scaling) {
     int res=0;
 
     // Straight port of get_FF from python version
@@ -823,7 +823,7 @@ int RTS_getJonesSphHarm(float freq_Hz, float az, float za, copy_primary_beam_t *
     return res;
 }
 //
-int RTS_getJonesDipole(float freq_Hz, float az, float za, copy_primary_beam_t *pb, float _Complex result[4],int scaling) {
+int RTS_getJonesDipole(float freq_Hz, float az, float za, RTS_MWA_FEE_beam_t *pb, float _Complex result[4],int scaling) {
 
     return RTS_getJonesSphHarm(freq_Hz, az, za, pb, result, scaling);
 
@@ -853,7 +853,7 @@ int RTS_getJonesDipole(float freq_Hz, float az, float za, copy_primary_beam_t *p
 //     BP 2019: This is the actual beam function called inside the RTS. The rotation term
 //              takes the beam from the alt-az coordinates to ra-dec coordinates.
 //  *****************************************************************************/
-int RTS_getTileResponse(float freq_Hz, float az, float za, copy_primary_beam_t *pb, float _Complex result[4], int scaling, float rotation) {
+int RTS_getTileResponse(float freq_Hz, float az, float za, RTS_MWA_FEE_beam_t *pb, float _Complex result[4], int scaling, float rotation) {
 
     int res=0;
     float _Complex prerot[4];
@@ -891,7 +891,7 @@ int RTS_getTileResponse(float freq_Hz, float az, float za, copy_primary_beam_t *
     return res;
 }
 //
-void RTS_freeHDFBeam(copy_primary_beam_t *pb){
+void RTS_freeHDFBeam(RTS_MWA_FEE_beam_t *pb){
 
   if(pb==NULL) return;
 

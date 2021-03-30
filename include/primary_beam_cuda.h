@@ -205,6 +205,11 @@ polarisation, in order of time, frequency, COMPONENT. Beam outputs are
 normalised to zenith. Note eveything starting with `d_` should be in device
 memory.
 
+When called with `dim3 grid, threads`, kernel should be called with both
+`grid.x` and `grid.y` defined, where:
+ - grid.x * threads.x >= `num_components` * `num_time_steps`
+ - grid.y * threads.y >= `num_freqs`
+
 @param[in] num_components Number of COMPONENTS the beam is calculated for
 @param[in] num_time_steps Number of time steps being calculated
 @param[in] num_freqs Number of frequencies being calculated

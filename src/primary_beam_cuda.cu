@@ -39,12 +39,10 @@ __global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
 
     int component = (int)floorf((float)iLMcoord / (float)num_times);
     int time_ind = iLMcoord - component*num_times;
-
     int beam_ind = num_freqs*time_ind*num_components + (num_components*iFreq) + component;
 
-
-
     float d_beam_real, d_beam_imag;
+    //Convert FWHM into standard dev, and scale for frequency
     float std = (fwhm_lm / FWHM_FACTOR) * (beam_ref_freq / d_freqs[iFreq]);
 
     twoD_Gaussian(d_beam_ls[iLMcoord], d_beam_ms[iLMcoord], 0, 0,

@@ -130,18 +130,18 @@ int main(int argc, char **argv) {
 
     woden_settings->base_band_freq = base_band_freq;
 
-    beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
+    beam_settings.FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
     // //We need the zenith beam to get the normalisation
-    beam_settings.FEE_beam_zenith = malloc(sizeof(copy_primary_beam_t));
+    beam_settings.FEE_beam_zenith = malloc(sizeof(RTS_MWA_FEE_beam_t));
 
     //The intial setup of the FEE beam is done on the CPU, so call it here
     if (woden_settings->beamtype == FEE_BEAM){
-      float base_middle_freq = base_band_freq + woden_settings->coarse_band_width/2.0;
+      float base_middle_freq = base_band_freq + (woden_settings->coarse_band_width/2.0);
     //
       // Just use one single tile beam for all for now - will need a certain
       // number in the future to include dipole flagging
       int st = 0;
-      printf("Middle freq is %f\n",base_middle_freq );
+      printf("Middle freq is %.8e \n",base_middle_freq );
     //
       float float_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
@@ -163,10 +163,10 @@ int main(int argc, char **argv) {
     visibility_set->us_metres = malloc( num_visis * sizeof(float) );
     visibility_set->vs_metres = malloc( num_visis * sizeof(float) );
     visibility_set->ws_metres = malloc( num_visis * sizeof(float) );
-    visibility_set->sha0s = malloc( num_visis * sizeof(float) );
-    visibility_set->cha0s = malloc( num_visis * sizeof(float) );
-    visibility_set->lsts = malloc( num_visis * sizeof(float) );
-    visibility_set->wavelengths = malloc( num_visis * sizeof(float) );
+    visibility_set->allsteps_sha0s = malloc( num_visis * sizeof(float) );
+    visibility_set->allsteps_cha0s = malloc( num_visis * sizeof(float) );
+    visibility_set->allsteps_lsts = malloc( num_visis * sizeof(float) );
+    visibility_set->allsteps_wavelengths = malloc( num_visis * sizeof(float) );
     visibility_set->channel_frequencies = malloc( (int)woden_settings->num_freqs * sizeof(float) );
 
     visibility_set->sum_visi_XX_real = malloc( num_visis * sizeof(float) );
@@ -184,6 +184,10 @@ int main(int argc, char **argv) {
       visibility_set->channel_frequencies[freq_step] = frequency;
     }
 
+    //For easy indexing when running on GPUs, make 4 arrays that match
+    //the settings for every baseline, frequency, and time step in the
+    //simulation.
+
     //Fill in visibility settings in order of baseline,freq,time
     //Order matches that of a uvfits file (I live in the past)
 
@@ -197,10 +201,10 @@ int main(int argc, char **argv) {
         int step = woden_settings->num_baselines*(time_step*woden_settings->num_freqs + freq_step);
 
         for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {
-          visibility_set->cha0s[step + baseline] = cha0;
-          visibility_set->sha0s[step + baseline] = sha0;
-          visibility_set->lsts[step + baseline] = lsts[time_step];
-          visibility_set->wavelengths[step + baseline] = wavelength;
+          visibility_set->allsteps_cha0s[step + baseline] = cha0;
+          visibility_set->allsteps_sha0s[step + baseline] = sha0;
+          visibility_set->allsteps_lsts[step + baseline] = lsts[time_step];
+          visibility_set->allsteps_wavelengths[step + baseline] = wavelength;
         }//baseline loop
       }//freq loop
     }//time loop
@@ -261,7 +265,6 @@ int main(int argc, char **argv) {
       cropped_sky_models->beam_settings[chunk] = beam_settings_chunk;
 
     }
-
     printf("Sky model chunked.\n");
 
     calculate_visibilities(array_layout, cropped_sky_models,
@@ -271,11 +274,12 @@ int main(int argc, char **argv) {
 
     free(temp_cropped_src);
 
-    // if (woden_settings->beamtype == FEE_BEAM) {
-    //   free_FEE_primary_beam_from_GPU(beam_settings.FEE_beam);
-    // }
-
     //Dumps u,v,w (metres), Re(vis), Im(vis) to a binary file
+    //Output order is by baseline (fastest changing), frequency, time (slowest
+    //changing)
+    //This means the us_metres, vs_metres, ws_metres are repeated over frequency,
+    //but keeps the dimensions of the output sane
+
     FILE *output_visi;
     char buf[0x100];
     snprintf(buf, sizeof(buf), "output_visi_band%02d.dat", band_num);
@@ -326,13 +330,13 @@ int main(int argc, char **argv) {
     //
 
     //Free up that memory
-    free( visibility_set->us_metres );
-    free( visibility_set->vs_metres );
-    free( visibility_set->ws_metres );
-    free( visibility_set->sha0s );
-    free( visibility_set->cha0s );
-    free( visibility_set->lsts );
-    free( visibility_set->wavelengths );
+    free(visibility_set->us_metres);
+    free(visibility_set->vs_metres);
+    free(visibility_set->ws_metres);
+    free(visibility_set->allsteps_sha0s);
+    free(visibility_set->allsteps_cha0s);
+    free(visibility_set->allsteps_lsts);
+    free(visibility_set->allsteps_wavelengths);
 
     free(visibility_set->sum_visi_XX_real);
     free(visibility_set->sum_visi_XX_imag);

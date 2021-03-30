@@ -3,8 +3,9 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to WODEN's documentation!
+The WODEN visibility simulator
 =================================
+This documentation is under construction. Stand by as I put it together.
 
 .. toctree::
    :maxdepth: 2
@@ -35,6 +36,7 @@ Welcome to WODEN's documentation!
 
   calculate_visibilities
   primary_beam_cuda
+  source_components
 
 ..  cudacomplex
 
