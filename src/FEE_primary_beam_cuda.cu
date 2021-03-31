@@ -179,9 +179,9 @@ __device__ void RTS_CUDA_pm_polynomial_value_singlef(int n, int m, float x, floa
       values[i+j*mm] = 0.0;
     }
   }
-/*
-  J = M is the first nonzero function.
-*/
+  /*
+    J = M is the first nonzero function.
+  */
   if ( m <= n )
   {
     for ( i = 0; i < mm; i++ )
@@ -199,9 +199,9 @@ __device__ void RTS_CUDA_pm_polynomial_value_singlef(int n, int m, float x, floa
       fact = fact + 2.0;
     }
   }
-/*
-  J = M + 1 is the second nonzero function.
-*/
+  /*
+    J = M + 1 is the second nonzero function.
+  */
   if ( m + 1 <= n )
   {
     for ( i = 0; i < mm; i++ )
@@ -209,9 +209,9 @@ __device__ void RTS_CUDA_pm_polynomial_value_singlef(int n, int m, float x, floa
       values[i+(m+1)*mm] = x * ( float ) ( 2 * m + 1 ) * values[i+m*mm];
     }
   }
-/*
-  Now we use a three term recurrence.
-*/
+  /*
+    Now we use a three term recurrence.
+  */
   for ( j = m + 2; j <= n; j++ )
   {
     for ( i = 0; i < mm; i++ )
@@ -398,7 +398,6 @@ __global__ void kern_sum_emn_PT_by_M(cuFloatComplex *emn_T, cuFloatComplex *emn_
 __global__ void kern_calc_sigmaTP(cuFloatComplex *TileGainMatrices,
                 float *d_emn_T_sum_real, float *d_emn_T_sum_imag,
                 float *d_emn_P_sum_real, float *d_emn_P_sum_imag,
-                cuFloatComplex *d_emn_T_sum, cuFloatComplex *d_emn_P_sum,
                 int nmax, int num_coords) {
 
   const int iCoord = threadIdx.x + (blockDim.x*blockIdx.x);
@@ -415,9 +414,6 @@ __global__ void kern_calc_sigmaTP(cuFloatComplex *TileGainMatrices,
 
       cuFloatComplex d_emn_T = make_cuComplex(d_emn_T_sum_real[array_loc],d_emn_T_sum_imag[array_loc]);
       cuFloatComplex d_emn_P = make_cuComplex(d_emn_P_sum_real[array_loc],d_emn_P_sum_imag[array_loc]);
-
-      d_emn_T_sum[array_loc] = d_emn_T;
-      d_emn_P_sum[array_loc] = d_emn_P;
 
       TileGainMatrices[iCoord*MAX_POLS + iPol*n_pols] += d_emn_T;
       TileGainMatrices[iCoord*MAX_POLS + iPol*n_pols + 1] += d_emn_P;
@@ -608,15 +604,15 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
   grid.x = (int)ceil( (float)num_coords / threads.x);
   grid.y = grid.z = 1;
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&primary_beam->d_emn_T_sum,
-                      num_coords*n_pols*(2*nmax + 1)*sizeof(float _Complex) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&primary_beam->d_emn_P_sum,
-                      num_coords*n_pols*(2*nmax + 1)*sizeof(float _Complex) ) );
-
-  cudaErrorCheckCall( cudaMemcpy(primary_beam->d_emn_T_sum, zero_array,
-       num_coords*(2*nmax + 1)*n_pols*sizeof(float), cudaMemcpyHostToDevice ) );
-  cudaErrorCheckCall( cudaMemcpy(primary_beam->d_emn_P_sum, zero_array,
-       num_coords*(2*nmax + 1)*n_pols*sizeof(float), cudaMemcpyHostToDevice ) );
+  // cudaErrorCheckCall( cudaMalloc( (void**)&primary_beam->d_emn_T_sum,
+  //                     num_coords*n_pols*(2*nmax + 1)*sizeof(float _Complex) ) );
+  // cudaErrorCheckCall( cudaMalloc( (void**)&primary_beam->d_emn_P_sum,
+  //                     num_coords*n_pols*(2*nmax + 1)*sizeof(float _Complex) ) );
+  //
+  // cudaErrorCheckCall( cudaMemcpy(primary_beam->d_emn_T_sum, zero_array,
+  //      num_coords*(2*nmax + 1)*n_pols*sizeof(float), cudaMemcpyHostToDevice ) );
+  // cudaErrorCheckCall( cudaMemcpy(primary_beam->d_emn_P_sum, zero_array,
+  //      num_coords*(2*nmax + 1)*n_pols*sizeof(float), cudaMemcpyHostToDevice ) );
 
   free(zero_array);
 
@@ -625,8 +621,6 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
                         (cuFloatComplex*)TileGainMatrices,
                         d_emn_T_sum_real, d_emn_T_sum_imag,
                         d_emn_P_sum_real, d_emn_P_sum_imag,
-                        (cuFloatComplex*)primary_beam->d_emn_T_sum,
-                        (cuFloatComplex*)primary_beam->d_emn_P_sum,
                         nmax, num_coords );
 
   //If we want to normalise the beam, do it here
@@ -692,8 +686,8 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
 
   cudaErrorCheckCall( cudaFree( primary_beam->emn_T ) );
   cudaErrorCheckCall( cudaFree( primary_beam->emn_P ) );
-  cudaErrorCheckCall( cudaFree( primary_beam->d_emn_T_sum ) );
-  cudaErrorCheckCall( cudaFree( primary_beam->d_emn_P_sum ) );
+  // cudaErrorCheckCall( cudaFree( primary_beam->d_emn_T_sum ) );
+  // cudaErrorCheckCall( cudaFree( primary_beam->d_emn_P_sum ) );
 
   cudaErrorCheckCall( cudaFree( primary_beam->rts_P_sin ) );
   cudaErrorCheckCall( cudaFree( primary_beam->rts_P1 ) );
