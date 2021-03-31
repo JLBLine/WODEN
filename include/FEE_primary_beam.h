@@ -11,15 +11,15 @@
 #include "woden_struct_defs.h"
 
 /**
-@brief Operator function to be called by H5Literate.
+@brief Operator function to be called by H5Literate and `RTS_op_func`.
 
 @details Used when finding the closest available frequency in the MWA FEE
 primary beam model
 */
 struct opdata {
-  float freq_in;
-  float freq_out;
-  float least_diff;
+  float freq_in; /**< Desired frequency (Hz) */
+  float freq_out; /**< Closest available frequency (Hz) */
+  float least_diff; /**< Difference between frequencies (Hz) */
 };
 
 /**
@@ -27,7 +27,7 @@ struct opdata {
 in the element pattern hdf5 file
 
 @details The MWA FEE beam is stored at a 1.28MHz frequency resolution. Using
-this function is conjunction with `H5Literate`, find the frequencies stored
+this function in conjunction with `H5Literate`, find the frequencies stored
 in the MWA FEE hdf5, and return the closest frequency to the frequency in
 `operator_data.freq_in` (Hz)
 
@@ -35,19 +35,33 @@ in the MWA FEE hdf5, and return the closest frequency to the frequency in
 herr_t RTS_op_func(hid_t loc_id, const char *name, const H5L_info_t *info,
             void *operator_data);
 
-int RTS_HDFBeamInit(const char *h5filename, float freq_Hz, RTS_MWA_FEE_beam_t *pb,
-                float *FEE_delays, int stn);
+/**
+@brief Read in the spherical harmonic basis functions and stored coefficients
+from `h5filename`, and calculate the tile phases for the given `FEE_delays` on
+the host device to intialise the MWA FEE beam at the requested frequency.
 
-void RTS_P1SIN(int nmax, float theta, double _Complex **P_sin, double _Complex **P1);
+@details The MWA primary beam is steered usings quantised delays on each of the
+16 dipoles in the tile. Specify these delays using `FEE_delays` - they can be
+found in the metafits file associated with an MWA observation
 
-int RTS_get_FF2(float phi, float theta, RTS_MWA_FEE_beam_t *pb, float _Complex result[4], int scaling, int clean_up);
+The MWA FEE beam is stored at a 1.28MHz frequency resolution, so the beam is
+intialised at the closest stored frequency to `freq_Hz`.
 
-int RTS_getJonesSphHarm(float freq_Hz, float az, float za, RTS_MWA_FEE_beam_t *pb, float _Complex result[4],int scaling);
+@todo How to do some kind of interpolation over frequency in the future
 
-int RTS_getJonesDipole(float freq_Hz, float az, float za, RTS_MWA_FEE_beam_t *pb, float _Complex result[4],int scaling);
+@param[in] h5filename Path to `mwa_full_embedded_element_pattern.h5`
+@param[in] freq_Hz Requested frequency (Hz)
+@param[in,out] pb A `RTS_MWA_FEE_beam_t` struct to store outputs in
+@param[in] FEE_delays Dipole delay factors to specify beam pointings
 
-int RTS_getTileResponse(float freq_Hz, float az, float za, RTS_MWA_FEE_beam_t *pb, float _Complex result[4], int scaling, float rotation);
+*/
+int RTS_MWAFEEInit(const char *h5filename, float freq_Hz, RTS_MWA_FEE_beam_t *pb,
+                float *FEE_delays);
 
+/**
+@brief Free the stored spherical harmonic basis functions and coefficients in
+`pb`
+
+@details Frees `pb->Q1, pb->Q2, pb->M, pb->N`.
+*/
 void RTS_freeHDFBeam(RTS_MWA_FEE_beam_t *pb);
-
-void RTS_HDFBeamCleanUp();

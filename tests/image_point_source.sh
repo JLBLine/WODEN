@@ -17,3 +17,5 @@ wsclean -name ./images/grid_pointing -size 1024 1024 -niter 80000 -auto-threshol
   ./data/grid_pointing_band*.ms
 
 rm casa*.log
+
+kvis images/grid_pointing-image.fits

@@ -138,21 +138,18 @@ int main(int argc, char **argv) {
     if (woden_settings->beamtype == FEE_BEAM){
       float base_middle_freq = base_band_freq + (woden_settings->coarse_band_width/2.0);
     //
-      // Just use one single tile beam for all for now - will need a certain
-      // number in the future to include dipole flagging
-      int st = 0;
       printf("Middle freq is %.8e \n",base_middle_freq );
     //
       float float_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     //
       printf("Setting up the zenith FEE beam...");
-      RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam_zenith, float_zenith_delays, st);
+      RTS_MWAFEEInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam_zenith, float_zenith_delays);
       printf(" done.\n");
 
       printf("Setting up the FEE beam...");
-      RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq,
-            beam_settings.FEE_beam, woden_settings->FEE_ideal_delays, st);
+      RTS_MWAFEEInit(woden_settings->hdf5_beam_path, base_middle_freq,
+            beam_settings.FEE_beam, woden_settings->FEE_ideal_delays);
       printf(" done.\n");
 
     }
@@ -348,6 +345,12 @@ int main(int argc, char **argv) {
     free(visibility_set->sum_visi_YY_imag);
 
     free( visibility_set );
+
+    //Release the CPU MWA FEE beam if required
+    if (woden_settings->beamtype == FEE_BEAM){
+      RTS_freeHDFBeam(beam_settings.FEE_beam);
+      RTS_freeHDFBeam(beam_settings.FEE_beam_zenith);
+    }
 
   }//band loop
   printf("WODEN is done\n");

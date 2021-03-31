@@ -538,18 +538,29 @@ k_x &=& \frac{\pi}{\sqrt{2\ln(2)}} \left[\cos(\phi_{PA})v_{\mathrm{comp}} + \sin
 k_y &=& \frac{\pi}{\sqrt{2\ln(2)}} \left[-\sin(\phi_{PA})v_{\mathrm{comp}} + \cos(\phi_{PA})u_{\mathrm{comp}} \right]
 \f}
 
-where \f$ B_{n_k,n_l} \f$ is a stored shapelet basis function from a look up
-table and scaled by the major and minor axis, and \f$ u_{\mathrm{comp}}, v_{\mathrm{comp}} \f$
-are visibility coordinates with the SHAPELET ra,dec as the phase centre. These
-should have been calculated using `fundamental_coords.kern_calc_uvw_shapelet`.
+where \f$ B_{n_k,n_l} \f$ is a stored 2D shapelet basis function from a look up
+table, of order \f$ n_k,n_l \f$ and scaled by the major and minor axis,
+\f$C_{n_k,n_l}\f$ is a scaling coefficient, and \f$ u_{\mathrm{comp}},
+v_{\mathrm{comp}} \f$ are visibility coordinates with the SHAPELET ra,dec as the
+phase centre. These should have been calculated using
+`fundamental_coords.kern_calc_uvw_shapelet`.
+
+This kernel differs from `kern_calc_visi_point` and `kern_calc_visi_gaussian`
+in that each SHAPELET component is built up from multiple shapelet basis
+functions, and so the kernel (and sometimes the sky model) is split over the
+shapelet basis functions, meaning multiple basis function calculations will
+use the same COMPONENT \f$l,m,n\f$. The array `d_shape_param_indexes` is
+used to match the basis function information `d_shape_n1s`, `d_shape_n2s`,
+`d_shape_coeffs` to the COPMONENT information (e.g. `d_shape_ls`).
+
+`d_sbf` is the shapelet basis function lookup table, and should have been
+generated with `shapelet_basis.create_sbf` and copied into device memory.
 
 When called with `dim3 grid, threads`, kernel should be called with both
 `grid.x` and `grid.y` defined, where:
  - grid.x * threads.x >= `num_visi`
  - grid.y * threads.y >= `num_coeffs`
 
-@param[in] *d_shape_ras Right Ascensions of all SHAPELETs (radians)
-@param[in] *d_shape_decs Declinations of all SHAPELETs (radians)
 @param[in] *d_shape_freqs Frequencies in the simulation (Hz)
 @param[in] *d_shape_stokesI Array of reference Stokes I flux densities for all
 SHAPELETs (Jy)
@@ -566,6 +577,16 @@ step in the simulation (wavelengths)
 step in the simulation (wavelengths)
 @param[in] *d_ws Visibility coord \f$w\f$ for every baseline, frequency, and time
 step in the simulation (wavelengths)
+
+@param[in] *d_allsteps_wavelengths Wavelength for every baseline, frequency,
+and time step in the simulation
+@param[in] *d_u_s_metres Array of \f$ u_{\mathrm{comp}} \f$ for every baseline,
+frequency, and time step in the simulation (metres)
+@param[in] *d_v_s_metres Array of \f$ v_{\mathrm{comp}} \f$ for every baseline,
+frequency, and time step in the simulation (metres)
+@param[in] *d_w_s_metres Array of \f$ w_{\mathrm{comp}} \f$ for every baseline,
+frequency, and time step in the simulation (metres)
+
 @param[in,out] *d_sum_visi_XX_real Pointer to array to sum real XX visibility
 into
 @param[in,out] *d_sum_visi_XX_imag Pointer to array to sum imaginary XX
@@ -582,19 +603,30 @@ visibility into
 into
 @param[in,out] *d_sum_visi_YY_imag Pointer to array to sum imaginary YY
 visibility into
-@param[in] *d_allsteps_wavelengths Wavelength for every baseline, frequency, and
 time step in the simulation
-@param[in] *d_ls \f$l\f$ sky coord for all time steps for all SHAPELETs
-@param[in] *d_ms \f$m\f$ sky coord for all time steps for all SHAPELETs
-@param[in] *d_ns \f$n\f$ sky coord for all time steps for all SHAPELETs
+
 @param[in] *d_shape_pas Position angles for all SHAPELETs (radians)
-@param[in] *d_shape_majors Major axis for all SHAPELETs (FWHM, radians)
-@param[in] *d_shape_minors Minor axis for all SHAPELETs (FWHM, radians)
-@param[in] num_shape Number of SHAPELETs components
+@param[in] *d_shape_majors \f$\beta_1 \f$ scaling (major axis) for all SHAPELETs
+(radians)
+@param[in] *d_shape_minors \f$\beta_2 \f$ scaling (minor axis for all SHAPELETs
+(radians)
+
+@param[in] *d_shape_n1s Array of first order of 2D shapelet basis function
+@param[in] *d_shape_n2s Array of second order of 2D shapelet basis function
+@param[in] *d_shape_coeffs Array of scaling coefficients for basis functions
+@param[in] *d_shape_param_indexes Array of index mapping basis functions to
+COMPONENT parameters
+
+@param[in] *d_shape_ls \f$l\f$ sky coord for all time steps for all SHAPELETs
+@param[in] *d_shape_ms \f$m\f$ sky coord for all time steps for all SHAPELETs
+@param[in] *d_shape_ns \f$n\f$ sky coord for all time steps for all SHAPELETs
+@param[in] *d_sbf Shapelet basis function lookup table
+@param[in] num_shapes Number of SHAPELETs components
 @param[in] num_baselines Number of baselines for one time, one frequency step
 @param[in] num_freqs Number of frequencies in simulation
 @param[in] num_visis Overall number of visibilities (baselines*freqs*times) in
 simulation
+@param[in] num_coeffs Number of shapelet basis functions and coefficents
 @param[in] num_times Number of time steps in simulation
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
 @param[in] *d_primay_beam_J00 Array of primary beam J[0,0]
@@ -606,8 +638,8 @@ simulation
 @param[in] *d_primay_beam_J11 Array of primary beam J[1,1]
 (east-west leakage)
 */
-__global__ void kern_calc_visi_shapelets(float *d_shape_ras,float *d_shape_decs,
-      float *d_shape_freqs, float *d_shape_stokesI, float *d_shape_stokesQ,
+__global__ void kern_calc_visi_shapelets(float *d_shape_freqs,
+      float *d_shape_stokesI, float *d_shape_stokesQ,
       float *d_shape_stokesU, float *d_shape_stokesV, float *d_shape_SIs,
       float *d_us, float *d_vs, float *d_ws,
       float *d_allsteps_wavelengths,

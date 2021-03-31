@@ -138,14 +138,16 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
     FEE_beam = base_beam_settings.FEE_beam;
     FEE_beam_zenith = base_beam_settings.FEE_beam_zenith;
 
+    //Only needs to be done once per frequency as zenith never moves, so do
+    //this outside the sky model chunk loop
     printf("Getting FEE beam normalisation...\n");
     get_HDFBeam_normalisation(FEE_beam_zenith, FEE_beam);
+    //Free the zenith pointing as done with it now
+    free_FEE_primary_beam_from_GPU(base_beam_settings.FEE_beam_zenith);
     printf(" done.\n");
 
-    free_FEE_primary_beam_from_GPU(base_beam_settings.FEE_beam_zenith);
-
     printf("Copying the FEE beam across to the GPU...");
-    copy_FEE_primary_beam_to_GPU(FEE_beam, woden_settings->num_time_steps);
+    copy_FEE_primary_beam_to_GPU(FEE_beam);
     printf(" done.\n");
   }
 
@@ -708,7 +710,6 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
 
       cudaErrorCheckKernel("kern_calc_visi_shapelets",
               kern_calc_visi_shapelets, grid, threads,
-              d_shape_ras, d_shape_decs,
               d_shape_freqs, d_shape_stokesI, d_shape_stokesQ,
               d_shape_stokesU, d_shape_stokesV, d_shape_SIs,
               d_us, d_vs, d_ws, d_allsteps_wavelengths,

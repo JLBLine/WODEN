@@ -1,36 +1,25 @@
-#define kP1BlockSize 64
+/*! \file
+  Device methods to calculate the MWA FEE primary beam response
+  @author J.L.B. Line
+*/
+// #define kP1BlockSize 64
 #include "cudacheck.h"
 #include "woden_struct_defs.h"
 
-extern "C" void calc_CUDA_FEE_beam(float *azs, float *zas,
-                                   float *sin_para_angs, float *cos_para_angs,
-                                   int num_components, int num_time_steps,
-                                   RTS_MWA_FEE_beam_t *FEE_beam,
-                                   int rotation, int scaling);
+/**
+@brief Copy the spherical harmonic MWA FEE coeffs from host to device
 
-__global__ void kern_rotate_FEE_beam(cuFloatComplex *d_FEE_beam_gain_matrices,
-                                float *d_sin_para_angs, float *d_cos_para_angs,
-                                int num_components, int num_time_steps);
+@details Copies `FEE_beam->M`, `FEE_beam->N`, `FEE_beam->Q1`, `FEE_beam->Q2`
+into `FEE_beam->d_M`, `FEE_beam->d_N`, `FEE_beam->d_Q1`, `FEE_beam->d_Q2`,
+reshaping from 2D arrays into 1D arrays.
 
-extern "C" void get_HDFBeam_normalisation(RTS_MWA_FEE_beam_t *FEE_beam_zenith,
-                RTS_MWA_FEE_beam_t *FEE_beam);
+@param[in,out] FEE_beam `RTS_MWA_FEE_beam_t` which has been initialised with
+`FEE_primary_beam.RTS_MWAFEEInit`
 
-extern "C" void free_FEE_primary_beam_from_GPU(RTS_MWA_FEE_beam_t *primary_beam);
+*/
+extern "C" void copy_FEE_primary_beam_to_GPU(RTS_MWA_FEE_beam_t *FEE_beam);
 
-extern "C" void copy_FEE_primary_beam_to_GPU(RTS_MWA_FEE_beam_t *FEE_beam,
-                                             int num_time_steps);
-
-extern "C" void calc_FEE_beam(float *az, float *za, int num_azza,
-           float *sin_para_angs, float *cos_para_angs,
-           int num_time_steps, RTS_MWA_FEE_beam_t *primary_beam,
-           float _Complex *h_FEE_beam_gains,
-           int scaling);
-
-extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
-           float *sin_para_angs, float *cos_para_angs,
-           int num_time_steps, int num_components,
-           float rotation, RTS_MWA_FEE_beam_t *primary_beam,
-           float _Complex *TileGainMatrices, int scaling);
+__device__ void RTS_CUDA_pm_polynomial_value_singlef(int n, int m, float x, float *values );
 
 __global__ void RTS_P1SINfKernel( float *d_theta, cuFloatComplex *rts_P_sin,
            cuFloatComplex *rts_p1, int nmax, int num_coords);
@@ -56,11 +45,32 @@ __global__ void kern_calc_sigmaTP(cuFloatComplex *TileGainMatrices,
 __global__ void kern_apply_FEE_norm(cuFloatComplex *TileGainMatrices,
            cuFloatComplex *d_norm_fac, int num_coords );
 
+__global__ void kern_rotate_FEE_beam(cuFloatComplex *d_FEE_beam_gain_matrices,
+                                float *d_sin_para_angs, float *d_cos_para_angs,
+                                int num_components, int num_time_steps);
+
+extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
+           float *sin_para_angs, float *cos_para_angs,
+           int num_time_steps, int num_components,
+           float rotation, RTS_MWA_FEE_beam_t *primary_beam,
+           float _Complex *TileGainMatrices, int scaling);
+
+extern "C" void calc_CUDA_FEE_beam(float *azs, float *zas,
+                                   float *sin_para_angs, float *cos_para_angs,
+                                   int num_components, int num_time_steps,
+                                   RTS_MWA_FEE_beam_t *FEE_beam,
+                                   int rotation, int scaling);
+
+extern "C" void get_HDFBeam_normalisation(RTS_MWA_FEE_beam_t *FEE_beam_zenith,
+                RTS_MWA_FEE_beam_t *FEE_beam);
+
 __global__ void kern_map_FEE_beam_gains(cuFloatComplex *d_FEE_beam_gain_matrices,
     cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
     cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11,
     int num_freqs, int num_components, int num_visis, int num_baselines,
     int num_times);
+
+extern "C" void free_FEE_primary_beam_from_GPU(RTS_MWA_FEE_beam_t *primary_beam);
 
 extern "C" void test_RTS_CUDA_FEE_beam(int num_components,
            float *azs, float *zas,

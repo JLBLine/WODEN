@@ -47,6 +47,19 @@ mkdir -p data
 #    --primary_beam=MWA_FEE \
 #    --no_tidy
 
+#run_woden.py \
+#    --ra0=56.0 --dec0=-39.0 \
+#    --num_freq_channels=16 --num_time_steps=14 \
+#    --freq_res=80e+3 --time_res=8.0 \
+#    --cat_filename=srclist_grid.txt \
+#    --metafits_filename=1102865128_metafits_ppds.fits \
+#    --band_nums=1,2,3 --output_uvfits_prepend=./data/grid_pointing \
+#    --primary_beam=Gaussian \
+#    --gauss_ra_point=56.0 \
+#    --gauss_dec_point=-39.0 \
+#    --no_tidy \
+#    --chunking_size=17000
+
 run_woden.py \
     --ra0=56.0 --dec0=-39.0 \
     --num_freq_channels=16 --num_time_steps=14 \
@@ -55,5 +68,4 @@ run_woden.py \
     --metafits_filename=1102865128_metafits_ppds.fits \
     --band_nums=1,2,3 --output_uvfits_prepend=./data/grid_pointing \
     --primary_beam=MWA_FEE \
-    --no_tidy \
-    --chunking_size=9000
+    --chunking_size=17000

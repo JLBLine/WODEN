@@ -259,8 +259,14 @@ void source_component_common(int num_components,
 
   else if (beam_settings.beamtype == FEE_BEAM) {
 
+    //Rotate FEE beam by parallactic angle
+    int rotation = 1;
+    //Normalise FEE beam to zenith
+    int scaling = 1;
+
     calc_CUDA_FEE_beam(azs, zas, sin_para_angs, cos_para_angs,
-           num_components, woden_settings->num_time_steps, FEE_beam, 1, 1);
+           num_components, woden_settings->num_time_steps, FEE_beam,
+           rotation, scaling);
 
     threads.x = 64;
     threads.y = 4;
@@ -405,8 +411,8 @@ __global__ void kern_calc_visi_gaussian(float *d_gauss_ras, float *d_gauss_decs,
   }
 }
 
-__global__ void kern_calc_visi_shapelets(float *d_shape_ras,float *d_shape_decs,
-      float *d_shape_freqs, float *d_shape_stokesI, float *d_shape_stokesQ,
+__global__ void kern_calc_visi_shapelets(float *d_shape_freqs,
+      float *d_shape_stokesI, float *d_shape_stokesQ,
       float *d_shape_stokesU, float *d_shape_stokesV, float *d_shape_SIs,
       float *d_us, float *d_vs, float *d_ws,
       float *d_allsteps_wavelengths,

@@ -35,6 +35,7 @@ This documentation is under construction. Stand by as I put it together.
   :maxdepth: 1
 
   calculate_visibilities
+  FEE_primary_beam_cuda
   primary_beam_cuda
   source_components
 
