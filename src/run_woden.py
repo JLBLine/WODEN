@@ -9,6 +9,7 @@ from astropy.coordinates import EarthLocation
 from astropy import units as u
 
 from numpy import *
+from numpy import exp as np_exp
 from struct import unpack
 from subprocess import call, check_output
 # from jdcal import gcal2jd
@@ -398,6 +399,74 @@ def make_baseline_date_arrays(num_antennas, date, num_time_steps, time_res):
 
     return baselines_array, date_array
 
+##OSKAR phase tracks, but the MWA correlator doesn't, so we have to undo
+##any phase tracking done
+def remove_phase_tracking(frequencies=None, wws_seconds=None,
+                          num_time_steps=None, v_container=None,
+                          num_baselines=None):
+    '''Undoes any phase tracking applied to data - to phase track, a phase was applied
+    to counter the delay term caused by w term of baseline - so just apply the opposite
+    w term.'''
+
+    sign = 1
+    PhaseConst = 2j * pi * sign
+
+    num_freqs = len(frequencies)
+
+    for time_ind in arange(num_time_steps):
+
+        these_wws_secs = wws_seconds[time_ind*num_baselines:(time_ind + 1)*num_baselines]
+
+        for freq_ind, freq in enumerate(frequencies):
+
+            xx_re = v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,0,0]
+            xx_im = v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,0,1]
+
+            yy_re = v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,1,0]
+            yy_im = v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,1,1]
+
+            xy_re = v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,2,0]
+            xy_im = v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,2,1]
+
+            yx_re = v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,3,0]
+            yx_im = v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,3,1]
+
+            xx_comp = xx_re + 1j*xx_im
+            yy_comp = yy_re + 1j*yy_im
+            xy_comp = xy_re + 1j*xy_im
+            yx_comp = yx_re + 1j*yx_im
+
+            ##theory - so normal phase delay is caused by path difference across
+            ##a base line, which is u*l + v*m + w*n
+            ##To phase track, you insert a phase to make sure there is no w contribution at
+            ##phase centre; this is when n = 1, so you insert a phase thus:
+            ##a base line, which is u*l + v*m + w*(n - 1)
+            ##So we just need to remove the effect of the -w term
+
+            # print(real(xx_comp[:3]), imag(xx_comp[:3]))
+
+            wws = these_wws_secs * freq
+            phase_rotate = np_exp( PhaseConst * wws)
+            xx_comp = xx_comp * phase_rotate
+            yy_comp = yy_comp * phase_rotate
+            xy_comp = xy_comp * phase_rotate
+            yx_comp = yx_comp * phase_rotate
+
+            # print(real(xx_comp[:3]), imag(xx_comp[:3]))
+
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,0,0] = real(xx_comp)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,0,1] = imag(xx_comp)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,1,0] = real(yy_comp)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,1,1] = imag(yy_comp)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,2,0] = real(xy_comp)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,2,1] = imag(xy_comp)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,3,0] = real(yx_comp)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,3,1] = imag(yx_comp)
+
+            #rotated_visis = visibilities
+
+    return v_container
+
 if __name__ == "__main__":
     import argparse
     from argparse import RawTextHelpFormatter
@@ -516,6 +585,8 @@ if __name__ == "__main__":
         help='WODEN will crop out sky model information that is below the horizon for the given LST. By default, for each SOURCE in the sky model, if any COMPONENT is below the horizon, the entire source will be flagged. If --sky_crop_components is included WODEN will include any COMPONENT above the horizon, regardless of which SOURCE it belongs to.')
 
     sim_group = parser.add_argument_group('SIMULATOR OPTIONS')
+    sim_group.add_argument('--remove_phase_tracking', default=False, action='store_true',
+        help='By adding this flag, remove the phase tracking of the visibilities - use this to feed uvfits into the RTS')
     sim_group.add_argument('--no_tidy', default=False, action='store_true',
         help='Defaults to deleting output binary files from woden and json files. Add this flag to not delete those files')
     sim_group.add_argument('--nvprof', default=False, action='store_true',
@@ -684,11 +755,23 @@ if __name__ == "__main__":
         uus,vvs,wws,v_container = load_data(filename=filename,num_baselines=num_baselines,
                                             num_freq_channels=num_freq_channels,num_time_steps=num_time_steps)
 
+
+        if args.remove_phase_tracking:
+            frequencies = band_low_freq + arange(num_freq_channels)*ch_width
+
+            print(frequencies)
+
+            v_container = remove_phase_tracking(frequencies=frequencies,
+                                      wws_seconds=wws,
+                                      num_time_steps=num_time_steps,
+                                      v_container=v_container,
+                                      num_baselines=num_baselines)
+
         ##X,Y,Z are stored in a 2D array in units of seconds in the uvfits file
         XYZ_array = empty((num_antennas,3))
-        XYZ_array[:,0] = X / VELC
-        XYZ_array[:,1] = Y / VELC
-        XYZ_array[:,2] = Z / VELC
+        XYZ_array[:,0] = X
+        XYZ_array[:,1] = Y
+        XYZ_array[:,2] = Z
 
         hdu_ant = make_antenna_table(XYZ_array=XYZ_array,telescope_name=args.telescope_name,
                       num_antennas=num_antennas, freq_cent=central_freq_chan_value,
