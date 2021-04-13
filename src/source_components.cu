@@ -416,7 +416,7 @@ __global__ void kern_calc_visi_shapelets(float *d_shape_freqs,
       float *d_shape_stokesU, float *d_shape_stokesV, float *d_shape_SIs,
       float *d_us, float *d_vs, float *d_ws,
       float *d_allsteps_wavelengths,
-      float *d_u_s_metres, float *d_v_s_metres, float *d_w_s_metres,
+      float *d_u_shapes, float *d_v_shapes, float *d_w_shapes,
       float *d_sum_visi_XX_real, float *d_sum_visi_XX_imag,
       float *d_sum_visi_XY_real, float *d_sum_visi_XY_imag,
       float *d_sum_visi_YX_real, float *d_sum_visi_YX_imag,
@@ -459,13 +459,11 @@ __global__ void kern_calc_visi_shapelets(float *d_shape_freqs,
     float sinpa = sin(pa);
     float cospa = cos(pa);
 
-    float d_wavelength = d_allsteps_wavelengths[iBaseline];
-
-    float u_s = d_u_s_metres[iComponent*num_visis + iBaseline] / d_wavelength;
-    float v_s = d_v_s_metres[iComponent*num_visis + iBaseline] / d_wavelength;
+    float u_shape = d_u_shapes[iComponent*num_visis + iBaseline];
+    float v_shape = d_v_shapes[iComponent*num_visis + iBaseline];
     //
-    float x = (cospa*v_s + sinpa*u_s); // major axis
-    float y = (-sinpa*v_s + cospa*u_s); // minor axis
+    float x = (cospa*v_shape + sinpa*u_shape); // major axis
+    float y = (-sinpa*v_shape + cospa*u_shape); // minor axis
 
     //Scales the FWHM to std to match basis functions, and account for the
     //basis functions being stored with beta = 1.0

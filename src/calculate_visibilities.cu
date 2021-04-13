@@ -692,6 +692,7 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
                             kern_calc_uvw_shapelet, grid, threads,
                             d_X_diff, d_Y_diff, d_Z_diff,
                             d_u_s_metres, d_v_s_metres, d_w_s_metres,
+                            d_allsteps_wavelengths,
                             d_allsteps_lsts, d_shape_ras, d_shape_decs,
                             num_baselines, num_visis, num_shapes);
 

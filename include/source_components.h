@@ -405,9 +405,9 @@ simulation
 @param[in] *d_primay_beam_J01 Array of primary beam J[0,1]
 (north-south leakage)
 @param[in] *d_primay_beam_J10 Array of primary beam J[1,0]
-(east-west gain)
-@param[in] *d_primay_beam_J11 Array of primary beam J[1,1]
 (east-west leakage)
+@param[in] *d_primay_beam_J11 Array of primary beam J[1,1]
+(east-west gain)
 */
 __global__ void kern_calc_visi_point(float *d_point_ras, float *d_point_decs,
       float *d_point_freqs, float *d_point_stokesI, float *d_point_stokesQ,
@@ -502,9 +502,9 @@ simulation
 @param[in] *d_primay_beam_J01 Array of primary beam J[0,1]
 (north-south leakage)
 @param[in] *d_primay_beam_J10 Array of primary beam J[1,0]
-(east-west gain)
-@param[in] *d_primay_beam_J11 Array of primary beam J[1,1]
 (east-west leakage)
+@param[in] *d_primay_beam_J11 Array of primary beam J[1,1]
+(east-west gain)
 */
 __global__ void kern_calc_visi_gaussian(float *d_gauss_ras, float *d_gauss_decs,
       float *d_gauss_freqs, float *d_gauss_stokesI, float *d_gauss_stokesQ,
@@ -580,12 +580,12 @@ step in the simulation (wavelengths)
 
 @param[in] *d_allsteps_wavelengths Wavelength for every baseline, frequency,
 and time step in the simulation
-@param[in] *d_u_s_metres Array of \f$ u_{\mathrm{comp}} \f$ for every baseline,
-frequency, and time step in the simulation (metres)
-@param[in] *d_v_s_metres Array of \f$ v_{\mathrm{comp}} \f$ for every baseline,
-frequency, and time step in the simulation (metres)
-@param[in] *d_w_s_metres Array of \f$ w_{\mathrm{comp}} \f$ for every baseline,
-frequency, and time step in the simulation (metres)
+@param[in] *d_u_shapes Array of \f$ u_{\mathrm{comp}} \f$ for every baseline,
+frequency, and time step in the simulation (wavelengths)
+@param[in] *d_v_shapes Array of \f$ v_{\mathrm{comp}} \f$ for every baseline,
+frequency, and time step in the simulation (wavelengths)
+@param[in] *d_w_shapes Array of \f$ w_{\mathrm{comp}} \f$ for every baseline,
+frequency, and time step in the simulation (wavelengths)
 
 @param[in,out] *d_sum_visi_XX_real Pointer to array to sum real XX visibility
 into
@@ -634,16 +634,16 @@ simulation
 @param[in] *d_primay_beam_J01 Array of primary beam J[0,1]
 (north-south leakage)
 @param[in] *d_primay_beam_J10 Array of primary beam J[1,0]
-(east-west gain)
-@param[in] *d_primay_beam_J11 Array of primary beam J[1,1]
 (east-west leakage)
+@param[in] *d_primay_beam_J11 Array of primary beam J[1,1]
+(east-west gain)
 */
 __global__ void kern_calc_visi_shapelets(float *d_shape_freqs,
       float *d_shape_stokesI, float *d_shape_stokesQ,
       float *d_shape_stokesU, float *d_shape_stokesV, float *d_shape_SIs,
       float *d_us, float *d_vs, float *d_ws,
       float *d_allsteps_wavelengths,
-      float *d_u_s_metres, float *d_v_s_metres, float *d_w_s_metres,
+      float *d_u_shapes, float *d_v_shapes, float *d_w_shapes,
       float *d_sum_visi_XX_real, float *d_sum_visi_XX_imag,
       float *d_sum_visi_XY_real, float *d_sum_visi_XY_imag,
       float *d_sum_visi_YX_real, float *d_sum_visi_YX_imag,
@@ -657,10 +657,6 @@ __global__ void kern_calc_visi_shapelets(float *d_shape_freqs,
       const int num_coeffs, int num_times, int beamtype,
       cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
       cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11);
-
-
-
-
 
 // __global__ void kern_extrap_stokes(int num_visis, int num_components,
 //            float *d_allsteps_wavelengths, float *d_ref_freqs, float *d_SIs,

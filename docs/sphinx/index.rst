@@ -36,6 +36,7 @@ This documentation is under construction. Stand by as I put it together.
 
   calculate_visibilities
   FEE_primary_beam_cuda
+  fundamental_coords
   primary_beam_cuda
   source_components
 
