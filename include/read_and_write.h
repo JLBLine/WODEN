@@ -10,8 +10,9 @@
 #include <fitsio.h>
 #include "woden_struct_defs.h"
 
-//Somthing WEIRD is up with documentation package 'breathe', so having to
-//include the definition value in the comment
+//Somthing WEIRD is up with the way I'm using the documentation package
+//'breathe', so having to include the definition value in the documentation
+//string to get values to appear (sigh)
 
 /**"SOURCE" - Line beginning / containing SOURCE information (includes number of COMPONENTS) */
 #define SRC_KEY         "SOURCE"
@@ -65,7 +66,7 @@ void RTS_ENH2XYZ_local(float E, float N, float H, float lat,
 
  @details The WODEN sourcelist at `filename` should contain a number of
  sources, with the basic structure:
- 
+
             SOURCE source_name P 1 G 0 S 0 0
             COMPONENT POINT 4.0 -27.0
             LINEAR 1.8e+08 10.0 0 0 0 -0.8

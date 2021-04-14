@@ -1,3 +1,8 @@
+/*! \file
+  Device methods to calculate interferometric coorindates \f$u,v,w\f$ and
+  \f$l,m,n\f$.
+*/
+
 #include <math.h>
 #include <stdint.h>
 #include <fitsio.h>

@@ -490,11 +490,12 @@ woden_settings_t * read_json_settings(const char *filename){
   json_object_object_get_ex(parsed_json, "time_res", &time_res);
   json_object_object_get_ex(parsed_json, "cat_filename", &cat_filename);
   json_object_object_get_ex(parsed_json, "sky_crop_components", &sky_crop_type);
-  json_object_object_get_ex(parsed_json, "use_gaussian_beam", &gaussian_beam);
+  
   json_object_object_get_ex(parsed_json, "chunking_size", &chunking_size);
   json_object_object_get_ex(parsed_json, "array_layout", &array_layout_file_path);
   json_object_object_get_ex(parsed_json, "jd_date", &jd_date);
 
+  json_object_object_get_ex(parsed_json, "use_gaussian_beam", &gaussian_beam);
   json_object_object_get_ex(parsed_json, "gauss_beam_FWHM", &gauss_beam_FWHM);
   json_object_object_get_ex(parsed_json, "gauss_beam_ref_freq", &gauss_beam_ref_freq);
 
@@ -518,7 +519,7 @@ woden_settings_t * read_json_settings(const char *filename){
 
   printf("LATITUDE IS %.1f\n", woden_settings->latitude/DD2R);
 
-  woden_settings->lst_base = (float)json_object_get_double(lst_base)*D2R;
+  woden_settings->lst_base = (float)json_object_get_double(lst_base)*DD2R;
   woden_settings->ra0 = (float)json_object_get_double(ra0)*DD2R;
   woden_settings->dec0 = (float)json_object_get_double(dec0)*DD2R;
   woden_settings->num_freqs = json_object_get_int(num_freqs);

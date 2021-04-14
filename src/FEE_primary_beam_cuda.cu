@@ -7,7 +7,6 @@
 #include <stdio.h>
 
 #include "cudacomplex.h"
-// #include "legendre_polynomial.h"
 #include "cudacheck.h"
 #include "FEE_primary_beam_cuda.h"
 

@@ -84,7 +84,7 @@ beam_settings_t fill_primary_beam_settings(woden_settings_t *woden_settings,
             woden_settings->gauss_beam_FWHM,woden_settings->gauss_beam_ref_freq / 1e+6  );
 
     //Set constants used in beam calculation
-    beam_settings.beam_FWHM_rad = woden_settings->gauss_beam_FWHM * D2R;
+    beam_settings.beam_FWHM_rad = woden_settings->gauss_beam_FWHM * DD2R;
     beam_settings.beam_ref_freq = woden_settings->gauss_beam_ref_freq;
 
     //Store all ha (which change with lst) that the beam needs to be calculated at.

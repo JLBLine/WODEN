@@ -5,7 +5,6 @@
 #include <assert.h>
 
 #include "FEE_primary_beam.h"
-#include "legendre_polynomial.h"
 
 /****************************
 Find the nearest freq in the element pattern hdf file

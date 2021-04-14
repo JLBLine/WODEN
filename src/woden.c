@@ -155,8 +155,6 @@ int main(int argc, char **argv) {
     }
 
     visibility_set_t *visibility_set = malloc(sizeof(visibility_set_t));
-    visibility_set->sum_visi_real = malloc( num_visis * sizeof(float) );
-    visibility_set->sum_visi_imag = malloc( num_visis * sizeof(float) );
     visibility_set->us_metres = malloc( num_visis * sizeof(float) );
     visibility_set->vs_metres = malloc( num_visis * sizeof(float) );
     visibility_set->ws_metres = malloc( num_visis * sizeof(float) );

@@ -24,10 +24,14 @@ This documentation is under construction. Stand by as I put it together.
   :maxdepth: 1
 
   chunk_source
+  constants
   create_sky_model
   FEE_primary_beam
   primary_beam
+  print_help
   read_and_write
+  shapelet_basis
+  woden_struct_defs
 
 `CUDA` documentation
 ====================
@@ -35,6 +39,8 @@ This documentation is under construction. Stand by as I put it together.
   :maxdepth: 1
 
   calculate_visibilities
+  cudacheck
+  cudacomplex
   FEE_primary_beam_cuda
   fundamental_coords
   primary_beam_cuda

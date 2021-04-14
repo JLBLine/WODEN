@@ -3,7 +3,6 @@
 #include <cuComplex.h>
 #include <complex.h>
 #include <math.h>
-#include "woden.h"
 #include "calculate_visibilities.h"
 #include "shapelet_basis.h"
 #include "cudacomplex.h"
