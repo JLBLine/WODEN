@@ -7,6 +7,11 @@ The WODEN visibility simulator
 =================================
 This documentation is under construction. Stand by as I put it together.
 
+Sticking this here because I can't work out why it isn't working
+
+.. automodule:: run_woden
+   :members:
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
@@ -15,8 +20,6 @@ This documentation is under construction. Stand by as I put it together.
 ==================
 .. toctree::
   :maxdepth: 1
-
-  run_woden
 
 `C` documentation
 ====================
