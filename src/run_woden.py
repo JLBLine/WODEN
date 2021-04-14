@@ -24,7 +24,12 @@ MWA_LONG = 116.670813889
 VELC = 299792458.0
 SOLAR2SIDEREAL = 1.00274
 
-WODEN_DIR = environ['WODEN_DIR']
+read_the_docs_build = environ.get('READTHEDOCS', None) == 'True'
+
+if read_the_docs_build:
+    WODEN_DIR = "not-needed"
+else:
+    WODEN_DIR = environ['WODEN_DIR']
 
 def command(cmd):
     """
