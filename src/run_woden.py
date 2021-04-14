@@ -12,11 +12,11 @@ from numpy import *
 from numpy import exp as np_exp
 from struct import unpack
 from subprocess import call, check_output
-# from jdcal import gcal2jd
 from os import environ
 import os
 import warnings
 
+##Constants
 R2D = 180.0 / pi
 D2R = pi / 180.0
 MWA_LAT = -26.7033194444
@@ -27,6 +27,14 @@ SOLAR2SIDEREAL = 1.00274
 WODEN_DIR = environ['WODEN_DIR']
 
 def command(cmd):
+    """
+    \brief Runs the string `cmd` using `subprocess.call`
+
+    @param[in] cmd String to be run on the command line
+
+
+
+    """
     call(cmd,shell=True)
     # print(cmd)
 
@@ -467,27 +475,16 @@ def remove_phase_tracking(frequencies=None, wws_seconds=None,
 
     return v_container
 
-if __name__ == "__main__":
+def get_parser():
     import argparse
     from argparse import RawTextHelpFormatter
 
     class SmartFormatter(argparse.HelpFormatter):
-        def _split_lines(self, text, width):
-            if text.startswith('R|'):
-                return text[2:].splitlines()
-            # this is the RawTextHelpFormatter._split_lines
-            return argparse.HelpFormatter._split_lines(self, text, width)
-
-    ##Find out where the git repo is, cd in and grab the git label
-    ##TODO do this in a better way
-    fileloc = os.path.realpath(__file__)
-    cwd = os.getcwd()
-    os.chdir(('/').join(fileloc.split('/')[:-1]))
-    gitlabel = check_output(["git", "describe", "--always"],universal_newlines=True).strip()
-    ##Get back to where we were before
-    os.chdir(cwd)
-
-    print("You are using WODEN commit %s" %gitlabel)
+            def _split_lines(self, text, width):
+                if text.startswith('R|'):
+                    return text[2:].splitlines()
+                # this is the RawTextHelpFormatter._split_lines
+                return argparse.HelpFormatter._split_lines(self, text, width)
 
     parser = argparse.ArgumentParser(description="Run the WODEN simulator and profit. \
                 WODEN is setup to simulate MWA-style observations, where the \
@@ -593,6 +590,23 @@ if __name__ == "__main__":
         help='Add to switch on the nvidia profiler when running woden')
     sim_group.add_argument('--chunking_size', type=int, default=0, help='The chunk size to break up the point sources into for processing - defaults to 0 (do not perform chunking)')
 
+    return parser
+
+if __name__ == "__main__":
+
+    ##Find out where the git repo is, cd in and grab the git label
+    ##TODO do this in a better way
+    fileloc = os.path.realpath(__file__)
+    cwd = os.getcwd()
+    os.chdir(('/').join(fileloc.split('/')[:-1]))
+    gitlabel = check_output(["git", "describe", "--always"],universal_newlines=True).strip()
+    ##Get back to where we were before
+    os.chdir(cwd)
+
+    print("You are using WODEN commit %s" %gitlabel)
+
+    ##Grab the parser and parse some args
+    parser = get_parser()
     args = parser.parse_args()
 
     # def false_test(option,name):
