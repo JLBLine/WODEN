@@ -14,7 +14,7 @@ void print_cmdline_help() {
   printf("\t+ time_res: Time resolution (s) of the simulation\n");
   printf("\t+ frequency_resolution: Fine channel frequnecy resolution (Hz)\n");
   printf("\t+ jd_date: Julian date of the start of the observation\n");
-  printf("\t+ LST: Local Sidereal Time at the start of the observation (radians)\n");
+  printf("\t+ LST: Local Sidereal Time at the start of the observation (deg)\n");
   printf("\t+ lowest_channel_freq: Frequency of the lowest fine channel of\n");
       printf("\t\tband 1 in the simulation \n");
   printf("\t+ coarse_band_width: the frequency bandwidth of each band (Hz)\n");

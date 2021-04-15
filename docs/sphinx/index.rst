@@ -17,6 +17,7 @@ This documentation is under construction. Stand by as I put it together.
   :maxdepth: 1
 
   run_woden
+  convert_WSClean_list_to_WODEN
 
 `C` documentation
 ====================
