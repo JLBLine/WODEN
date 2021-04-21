@@ -393,6 +393,46 @@ __global__ void kern_sum_emn_PT_by_M(cuFloatComplex *emn_T, cuFloatComplex *emn_
   }
 }
 
+__global__ void kern_sum_emn_PT_by_M_loop(cuFloatComplex *emn_T, cuFloatComplex *emn_P,
+           float *d_emn_T_sum_real, float *d_emn_T_sum_imag,
+           float *d_emn_P_sum_real, float *d_emn_P_sum_imag,
+           float *d_m_range, float *d_M, int nMN, int nmax, int num_coords){
+
+  const int iCoord = threadIdx.x + (blockDim.x*blockIdx.x);
+  // const int iM_index = threadIdx.y + (blockDim.y*blockIdx.y);
+  // const int iM_value = threadIdx.z + (blockDim.z*blockIdx.z);
+
+  int n_pols = 2;
+  int num_sum_M = 2*nmax + 1;
+
+  // if(iM_index < n_pols*nMN && iM_value < num_sum_M && iCoord < num_coords) {
+  if(iCoord < num_coords) {
+
+    for (int iM_index = 0; iM_index < n_pols*nMN; iM_index++) {
+      int iPol = (int)floorf((float)iM_index / (float)nMN);
+
+      for (int iM_value = 0; iM_value < num_sum_M; iM_value++) {
+        if (d_M[iM_index] == d_m_range[iM_value]) {
+          cuFloatComplex emn_P_value = emn_P[n_pols*nMN*iCoord + iM_index];
+          cuFloatComplex emn_T_value = emn_T[n_pols*nMN*iCoord + iM_index];
+
+          // atomicAdd(&d_emn_P_sum_real[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax], emn_P_value.x);
+          // atomicAdd(&d_emn_P_sum_imag[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax], emn_P_value.y);
+          //
+          // atomicAdd(&d_emn_T_sum_real[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax], emn_T_value.x);
+          // atomicAdd(&d_emn_T_sum_imag[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax], emn_T_value.y);
+
+          d_emn_P_sum_real[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax] += emn_P_value.x;
+          d_emn_P_sum_imag[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax] += emn_P_value.y;
+
+          d_emn_T_sum_real[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax] += emn_T_value.x;
+          d_emn_T_sum_imag[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax] += emn_T_value.y;
+        }
+      }
+    }
+  }
+}
+
 __global__ void kern_map_emn(cuFloatComplex *TileGainMatrices,
                 float *d_emn_T_sum_real, float *d_emn_T_sum_imag,
                 float *d_emn_P_sum_real, float *d_emn_P_sum_imag,
@@ -580,6 +620,14 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
   grid.x = (int)ceil( (float)num_coords / threads.x);
   grid.y = (int)ceil( (2.0*(float)primary_beam->nMN) / threads.y);
   grid.z = (int)ceil( ((float)nmax*2.0 + 1.0) / threads.z);
+
+  // threads.x = 128;
+  // threads.y = 1;
+  // threads.z = 1;
+  //
+  // grid.x = (int)ceil( (float)num_coords / threads.x);
+  // grid.y = 1;
+  // grid.z = 1;
 
   cudaErrorCheckKernel("kern_sum_emn_PT_by_M",
                         kern_sum_emn_PT_by_M, grid, threads,
