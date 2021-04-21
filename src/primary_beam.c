@@ -3,12 +3,7 @@
 #include <erfa.h>
 #include <complex.h>
 
-// extern void get_HDFBeam_normalisation(beam_settings_t beam_settings);
-//
-// extern void copy_FEE_primary_beam_to_GPU(beam_settings_t beam_settings,
-//                                              int num_time_steps);
-
-void calc_para_angle(catsource_t *cropped_src, float *lsts,
+void calc_para_angle(catsource_t *cropped_src, float *lsts, double latitude,
                      int num_time_steps){
 
   cropped_src->sin_point_para_angs = malloc( cropped_src->n_points * num_time_steps * sizeof(float) );
@@ -24,33 +19,13 @@ void calc_para_angle(catsource_t *cropped_src, float *lsts,
     for ( int time_step = 0; time_step < num_time_steps; time_step++ ) {
 
       float ha = lsts[time_step] - cropped_src->point_ras[point];
-      para_angle = eraHd2pa((double)ha, (double)cropped_src->point_decs[point], (double)MWA_LAT_RAD);
-
-      // printf("PARA FUN %d %.8f %.8f %.8f\n",point*num_time_steps + time_step,ha,cropped_src->point_decs[point],para_angle );
-
-      // double this_ha, this_dec;
-      //
-      // float alt = M_PI/2 - cropped_src->point_zas[point*num_time_steps + time_step];
-      // eraAe2hd((double)cropped_src->point_azs[point*num_time_steps + time_step], (double)alt, (double)MWA_LAT_RAD,
-      //          &this_ha, &this_dec);
-      //
-      // para_angle = eraHd2pa(this_ha, this_dec, (double)MWA_LAT_RAD);
+      para_angle = eraHd2pa((double)ha, (double)cropped_src->point_decs[point], latitude);
 
       cropped_src->sin_point_para_angs[point*num_time_steps + time_step] = sinf((float)para_angle + M_PI/2.0);
       cropped_src->cos_point_para_angs[point*num_time_steps + time_step] = cosf((float)para_angle + M_PI/2.0);
 
-      // printf("PARA FUN %d %.8f %.8f %.8f\n",point*num_time_steps + time_step,
-      //       para_angle,sinf((float)para_angle + M_PI/2.0),
-      //       cosf((float)para_angle + M_PI/2.0) );
-
-
-
     }
   }//END point component loop
-
-  // for (size_t i = 0; i < cropped_src->n_points; i++) {
-  //   printf("RIGHT HERE 1 %.5f %.5f\n",cropped_src->sin_point_para_angs[i],cropped_src->cos_point_para_angs[i] );
-  // }
 
   for (int gauss = 0; gauss < cropped_src->n_gauss; gauss++) {
 
@@ -58,7 +33,7 @@ void calc_para_angle(catsource_t *cropped_src, float *lsts,
     for ( int time_step = 0; time_step < num_time_steps; time_step++ ) {
 
       float ha = lsts[time_step] - cropped_src->gauss_ras[gauss];
-      para_angle = eraHd2pa((double)ha, (double)cropped_src->gauss_decs[gauss], (double)MWA_LAT_RAD);
+      para_angle = eraHd2pa((double)ha, (double)cropped_src->gauss_decs[gauss], latitude);
 
       cropped_src->sin_gauss_para_angs[gauss*num_time_steps + time_step] = sinf((float)para_angle + M_PI/2.0);
       cropped_src->cos_gauss_para_angs[gauss*num_time_steps + time_step] = cosf((float)para_angle + M_PI/2.0);
@@ -70,7 +45,7 @@ void calc_para_angle(catsource_t *cropped_src, float *lsts,
     for ( int time_step = 0; time_step < num_time_steps; time_step++ ) {
 
       float ha = lsts[time_step] - cropped_src->shape_ras[shape];
-      para_angle = eraHd2pa((double)ha, (double)cropped_src->shape_decs[shape], (double)MWA_LAT_RAD);
+      para_angle = eraHd2pa((double)ha, (double)cropped_src->shape_decs[shape], latitude);
 
       cropped_src->sin_shape_para_angs[shape*num_time_steps + time_step] = sinf((float)para_angle + M_PI/2.0);
       cropped_src->cos_shape_para_angs[shape*num_time_steps + time_step] = cosf((float)para_angle + M_PI/2.0);
@@ -109,13 +84,7 @@ beam_settings_t fill_primary_beam_settings(woden_settings_t *woden_settings,
             woden_settings->gauss_beam_FWHM,woden_settings->gauss_beam_ref_freq / 1e+6  );
 
     //Set constants used in beam calculation
-    beam_settings.beam_FWHM_rad = woden_settings->gauss_beam_FWHM * D2R;
-    //TODO I cannot for the life of me work out how to cudaMalloc and Memcpy
-    //a single float (argh) so put the ref freq in an array (embarrassment)
-    // float beam_ref_freq_array[1] = {woden_settings->gauss_beam_ref_freq};
-    // beam_settings.beam_ref_freq_array = malloc(sizeof(float));
-    // beam_settings.beam_ref_freq_array = beam_ref_freq_array;
-
+    beam_settings.beam_FWHM_rad = woden_settings->gauss_beam_FWHM * DD2R;
     beam_settings.beam_ref_freq = woden_settings->gauss_beam_ref_freq;
 
     //Store all ha (which change with lst) that the beam needs to be calculated at.
@@ -129,57 +98,40 @@ beam_settings_t fill_primary_beam_settings(woden_settings_t *woden_settings,
     beam_settings.beam_shape_decs = malloc(woden_settings->num_time_steps * cropped_src->n_shapes * sizeof(float));
 
     //Loop over all time and point components and calculate ha
-    for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
-      for (int component = 0; component < cropped_src->n_points; component++) {
-        int step = cropped_src->n_points*time_step + component;
-
+    for (int component = 0; component < cropped_src->n_points; component++) {
+      for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
+        int step = component*num_time_steps + time_step;
         beam_settings.beam_point_has[step] = lsts[time_step] - cropped_src->point_ras[component];
         beam_settings.beam_point_decs[step] = cropped_src->point_decs[component];
-
-      }//point loop
+      }
+    }//point loop
 
     //Loop over all time and gausscomp components and calculate ha
-      for (int component = 0; component < cropped_src->n_gauss; component++) {
-        int step = cropped_src->n_gauss*time_step + component;
-
+    for (int component = 0; component < cropped_src->n_gauss; component++) {
+      for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
+        int step = component*num_time_steps + time_step;
         beam_settings.beam_gausscomp_has[step] = lsts[time_step] - cropped_src->gauss_ras[component];
         beam_settings.beam_gausscomp_decs[step] = cropped_src->gauss_decs[component];
-      }//gausscomp loop
+      }
+    }//gausscomp loop
 
     //Loop over all time and shape components and calculate ha
-      for (int component = 0; component < cropped_src->n_shapes; component++) {
-        int step = cropped_src->n_shapes*time_step + component;
-
+    for (int component = 0; component < cropped_src->n_shapes; component++) {
+      for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
+        int step = component*num_time_steps + time_step;
         beam_settings.beam_shape_has[step] = lsts[time_step] - cropped_src->shape_ras[component];
         beam_settings.beam_shape_decs[step] = cropped_src->shape_decs[component];
-      }//shape loop
+      }
+    }//shape loop
 
-    }//gaussian beam time loop
   } // End if (woden_settings->gaussian_beam)
 
   else if (woden_settings->beamtype == FEE_BEAM) {
     beam_settings.beamtype = FEE_BEAM;
 
-    //Get the parallactic angle of the zenith for every time step
     //Need to rotate the FEE model which is stored in theta/phi pols by the
     //parallactic angle to obtain XX/YY
-    //There are 4 normalisations to calculate, so need 4 times num time steps
-    beam_settings.para_cosrot = malloc(woden_settings->num_time_steps*MAX_POLS*sizeof(float));
-    beam_settings.para_sinrot = malloc(woden_settings->num_time_steps*MAX_POLS*sizeof(float));
-
-    double para_angle;
-    for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
-
-      float zenith_HA = 0.0;
-      para_angle = eraHd2pa((double)zenith_HA, (double)MWA_LAT_RAD, (double)MWA_LAT_RAD);
-
-      for (size_t pol_direction = 0; pol_direction < MAX_POLS; pol_direction++) {
-        beam_settings.para_cosrot[time_step*MAX_POLS + pol_direction] = cosf((float)para_angle + M_PI/2.0);
-        beam_settings.para_sinrot[time_step*MAX_POLS + pol_direction] = sinf((float)para_angle + M_PI/2.0);
-      }
-    }
-
-    calc_para_angle(cropped_src, lsts, num_time_steps);
+    calc_para_angle(cropped_src, lsts, woden_settings->latitude, num_time_steps);
   }
 
   else if (woden_settings->beamtype == ANALY_DIPOLE) {

@@ -125,6 +125,10 @@ include_directories("${CMAKE_SOURCE_DIR}/include" ${JSONC_INC} ${CFITSIO_INC} ${
 ##Generate libraries from the C and CUDA source code
 add_library(wodenC SHARED ${CSOURCES})
 add_library(wodenCUDA SHARED ${CUDASOURCES})
+## For CMake versions > 3.18, the arch flag settings are handled by
+## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
+## replace the CUDA_FLAG lines above with something like
+set_property(TARGET wodenCUDA PROPERTY CUDA_ARCHITECTURES OFF)
 
 ##make the final WODEN executable, linking the libraries
 add_executable(woden src/woden.c)

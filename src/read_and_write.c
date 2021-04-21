@@ -1,3 +1,12 @@
+/*******************************************************************************
+*  Methods to read in simulation parameters from a .json file,
+*  read in data from source catalogues, read/generate array layouts, and move
+*  the array back to J2000.
+*  @author J.L.B. Line
+*
+*  Please see documentation in ../include/read_and_write.h or online at
+*  https://woden.readthedocs.io/en/latest/index.html
+*******************************************************************************/
 #include "read_and_write.h"
 #include "constants.h"
 #include <stdio.h>
@@ -5,24 +14,10 @@
 #include <string.h>
 #include <json.h>
 #include <fitsio.h>
-// #include <erfa.h>
 #include <pal.h>
 
-// enum component_type {POINT=0, GAUSSIAN, SHAPELET};
-
-/*********************************
-// Taken from the RTS (Mitchell et al 2008)
-// All credit to the original authors
-// https://github.com/ICRAR/mwa-RTS.git
-  convert coords in local topocentric East, North, Height units to
-  'local' XYZ units. Local means Z point north, X points through the equator from the geocenter
-  along the local meridian and Y is East.
-  This is like the absolute system except that zero lon is now
-  the local meridian rather than prime meridian.
-  Latitude is geodetic, in radian.
-  This is what you want for constructing the local antenna positions in a UVFITS antenna table.
-**********************************/
-void ENH2XYZ_local(float E, float N, float H, float lat, float *X, float *Y, float *Z) {
+void RTS_ENH2XYZ_local(float E, float N, float H, float lat,
+                       float *X, float *Y, float *Z) {
   float sl,cl;
 
   sl = sinf(lat);
@@ -32,14 +27,6 @@ void ENH2XYZ_local(float E, float N, float H, float lat, float *X, float *Y, flo
   *Z = N*cl + H*sl;
 }
 
-/**************************
-***************************/
-// Taken from the RTS (Mitchell et al 2008)
-// All credit to the original authors
-// https://github.com/ICRAR/mwa-RTS.git
-/* lmst, lmst2000 are the local mean sidereal times in radians
- * for the obs. and J2000 epochs.
- */
 void RTS_precXYZ(double rmat[3][3], double x, double y, double z, double lmst,
          double *xp, double *yp, double *zp, double lmst2000) {
 
@@ -462,6 +449,7 @@ woden_settings_t * read_json_settings(const char *filename){
 
   struct json_object *parsed_json;
   struct json_object *lst_base;
+  struct json_object *latitude;
   struct json_object *ra0;
   struct json_object *dec0;
   struct json_object *num_baselines;
@@ -490,6 +478,7 @@ woden_settings_t * read_json_settings(const char *filename){
 	parsed_json = json_tokener_parse(buffer);
 
   json_object_object_get_ex(parsed_json, "LST", &lst_base);
+  json_object_object_get_ex(parsed_json, "latitude", &latitude);
   json_object_object_get_ex(parsed_json, "ra0", &ra0);
   json_object_object_get_ex(parsed_json, "dec0", &dec0);
   json_object_object_get_ex(parsed_json, "num_freqs", &num_freqs);
@@ -501,11 +490,12 @@ woden_settings_t * read_json_settings(const char *filename){
   json_object_object_get_ex(parsed_json, "time_res", &time_res);
   json_object_object_get_ex(parsed_json, "cat_filename", &cat_filename);
   json_object_object_get_ex(parsed_json, "sky_crop_components", &sky_crop_type);
-  json_object_object_get_ex(parsed_json, "use_gaussian_beam", &gaussian_beam);
+  
   json_object_object_get_ex(parsed_json, "chunking_size", &chunking_size);
   json_object_object_get_ex(parsed_json, "array_layout", &array_layout_file_path);
   json_object_object_get_ex(parsed_json, "jd_date", &jd_date);
 
+  json_object_object_get_ex(parsed_json, "use_gaussian_beam", &gaussian_beam);
   json_object_object_get_ex(parsed_json, "gauss_beam_FWHM", &gauss_beam_FWHM);
   json_object_object_get_ex(parsed_json, "gauss_beam_ref_freq", &gauss_beam_ref_freq);
 
@@ -517,7 +507,19 @@ woden_settings_t * read_json_settings(const char *filename){
   woden_settings_t * woden_settings;
   woden_settings = malloc( sizeof(woden_settings_t) );
 
-  woden_settings->lst_base = (float)json_object_get_double(lst_base)*D2R;
+  //Boolean whether to use gaussian primary beam
+  int lat_true = json_object_get_boolean(latitude);
+
+  if (lat_true == 1) {
+    woden_settings->latitude = json_object_get_double(latitude)*DD2R;
+  }
+  else {
+    woden_settings->latitude = MWA_LAT_RAD;
+  }
+
+  printf("LATITUDE IS %.1f\n", woden_settings->latitude/DD2R);
+
+  woden_settings->lst_base = (float)json_object_get_double(lst_base)*DD2R;
   woden_settings->ra0 = (float)json_object_get_double(ra0)*DD2R;
   woden_settings->dec0 = (float)json_object_get_double(dec0)*DD2R;
   woden_settings->num_freqs = json_object_get_int(num_freqs);
@@ -555,7 +557,7 @@ woden_settings_t * read_json_settings(const char *filename){
 
     float beam_ref_freq = (float)json_object_get_double(gauss_beam_ref_freq);
     //If gauss_beam_ref_freq has been set in the json file, use it
-    //Otherwise, set the defult FWHM of 20 deg
+    //Otherwise, set the reference to 150e+6
     if (beam_ref_freq > 0.0) {
       woden_settings->gauss_beam_ref_freq = beam_ref_freq;
     } else {
@@ -637,10 +639,9 @@ woden_settings_t * read_json_settings(const char *filename){
 void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
                        woden_settings_t *woden_settings) {
 
-
   double lst     = (double)woden_settings->lst_base;
   double ra      = (double)woden_settings->lst_base;
-  double dec     = (double)MWA_LAT_RAD;
+  double dec     = woden_settings->latitude;
 
   int n_tile    = array_layout->num_tiles;
 
@@ -666,18 +667,18 @@ void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
   double u_prec, v_prec, w_prec;
 
   double v1[3], v2[3], ra2000, dec2000;
-  //
-  /****************************************************************************************************************
-   * Change the various coordinates to the J2000 mean system
-   ****************************************************************************************************************/
 
-  // palDcs2c   - convert the apparent direction to direction cosines
-  // palDmxv    - perform the 3-d forward unitary transformation: v2 = tmatpn * v1
-  // palDcc2s   - convert cartesian coordinates back to spherical coordinates (i.e. zenith in the J2000 mean system).
-  // palDranrm  - normalize into range 0-2 pi.
+  /**
+  ****************************************************************************
+  * Change the various coordinates to the J2000 mean system
+  ****************************************************************************
+  * palDcs2c   - convert the apparent direction to direction cosines
+  * palDmxv    - perform the 3-d forward unitary transformation: v2 = tmatpn * v1
+  * palDcc2s   - convert cartesian coordinates back to spherical coordinates (i.e. zenith in the J2000 mean system).
+  * palDranrm  - normalize into range 0-2 pi.
+  */
 
   // Change the coordinates of the initial phase centre
-
   palDcs2c(ra, dec, v1);
   // eraS2c( ra, dec, v1 );
   palDmxv(J2000_transformation, v1, v2);
@@ -689,7 +690,7 @@ void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
 
   woden_settings->lst_base = (float)lmst2000;
 
-  //
+  //Possible that this is needed in the future
   // // Change the coordinates of the FOV centre (do we need to test that they are set?)
   //
   // ra  = (double)arr_spec->obsepoch_lst - rts_options->context.point_cent_ha;
@@ -729,7 +730,6 @@ void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
     Z_epoch = (double)array_layout->ant_Z[st];
     RTS_precXYZ( J2000_transformation, X_epoch,Y_epoch,Z_epoch, lst, &X_prec,&Y_prec,&Z_prec, lmst2000 );
     // calcUVW( ha2000,dec2000, X_prec,Y_prec,Z_prec, &u_prec,&v_prec,&w_prec );
-
     // printf("%.3f %.3f %.3f %.3f %.3f %.3f\n",X_epoch,Y_epoch,Z_epoch,X_prec,Y_prec,Z_prec );
 
     // Update stored coordinates
@@ -741,11 +741,6 @@ void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
     // arr_spec->stations[st1].coord_enh.height = w_prec;
 
   } // st1
-
-  /****************************************************************************************************************
-   * Clean up and return
-   ****************************************************************************************************************/
-
 } // RTS_PrecessXYZtoJ2000
 
 
@@ -788,7 +783,7 @@ array_layout_t * calc_XYZ_diffs(woden_settings_t *woden_settings){
 
   //malloc some arrays for holding array coords
 
-  array_layout->latitude = MWA_LAT*DD2R;
+  array_layout->latitude = woden_settings->latitude;
   array_layout->num_baselines = (array_layout->num_tiles*(array_layout->num_tiles-1)) / 2;
 
   array_layout->ant_X = malloc( array_layout->num_tiles * sizeof(float) );
@@ -797,8 +792,8 @@ array_layout_t * calc_XYZ_diffs(woden_settings_t *woden_settings){
 
   for (int i = 0; i < array_layout->num_tiles; i++) {
     //Convert to local X,Y,Z
-    ENH2XYZ_local(array_layout->ant_east[i], array_layout->ant_north[i], array_layout->ant_height[i],
-                  array_layout->latitude,
+    RTS_ENH2XYZ_local(array_layout->ant_east[i], array_layout->ant_north[i], array_layout->ant_height[i],
+                  (float)array_layout->latitude,
                   &(array_layout->ant_X[i]), &(array_layout->ant_Y[i]), &(array_layout->ant_Z[i]));
   }
 

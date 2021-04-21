@@ -2,3 +2,8 @@ build
 ./build/*
 ./src/tests
 ./src/tests/*
+./docs/doxygen/html/*
+./docs/doxygen/latex/*
+./docs/doxygen/xml/*
+./docs/sphinx/_build/*
+./docs/WODEN_implementation*

@@ -16,12 +16,10 @@
 #include "FEE_primary_beam.h"
 #include "read_and_write.h"
 
-// #include "FEE_primary_beam_cuda.h"
 
 extern void calculate_visibilities(array_layout_t * array_layout,
-  source_catalogue_t *cropped_sky_models,
-  woden_settings_t *woden_settings, visibility_set_t *visibility_set,
-  visibility_set_t *chunk_visibility_set, float *sbf, int num_chunks);
+  source_catalogue_t *cropped_sky_models, woden_settings_t *woden_settings,
+  visibility_set_t *visibility_set, float *sbf);
 
 int main(int argc, char **argv) {
 
@@ -33,6 +31,13 @@ int main(int argc, char **argv) {
 
   //If --help is passed, print help
   if (strcmp("--help", argv[1]) == 0) {
+    print_cmdline_help();
+    exit(1);
+
+  }
+
+  //If -h is passed, print help
+  if (strcmp("-h", argv[1]) == 0) {
     print_cmdline_help();
     exit(1);
 
@@ -73,6 +78,7 @@ int main(int argc, char **argv) {
   float sdec0,cdec0;
   sdec0 = sin(woden_settings->dec0); cdec0=cos(woden_settings->dec0);
 
+  printf("Setting initial LST to %.5fdeg\n",woden_settings->lst_base/DD2R );
   printf("Setting phase centre RA,DEC %.5fdeg %.5fdeg\n",woden_settings->ra0/DD2R, woden_settings->dec0/DD2R);
 
   //Used for calculating l,m,n for components
@@ -101,7 +107,8 @@ int main(int argc, char **argv) {
   //into one single SOURCE
   printf("Horizon cropping sky model and calculating az/za for all components for observation\n");
   catsource_t *cropped_src;
-  cropped_src = crop_sky_model(raw_srccat, lsts, num_time_steps, woden_settings->sky_crop_type);
+  cropped_src = crop_sky_model(raw_srccat, lsts, woden_settings->latitude,
+                               num_time_steps, woden_settings->sky_crop_type);
 
   printf("Finished cropping and calculating az/za\n");
 
@@ -123,43 +130,38 @@ int main(int argc, char **argv) {
 
     woden_settings->base_band_freq = base_band_freq;
 
-    beam_settings.FEE_beam = malloc(sizeof(copy_primary_beam_t));
+    beam_settings.FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
     // //We need the zenith beam to get the normalisation
-    beam_settings.FEE_beam_zenith = malloc(sizeof(copy_primary_beam_t));
+    beam_settings.FEE_beam_zenith = malloc(sizeof(RTS_MWA_FEE_beam_t));
 
     //The intial setup of the FEE beam is done on the CPU, so call it here
     if (woden_settings->beamtype == FEE_BEAM){
-      float base_middle_freq = base_band_freq + woden_settings->coarse_band_width/2.0;
+      float base_middle_freq = base_band_freq + (woden_settings->coarse_band_width/2.0);
     //
-      // Just use one single tile beam for all for now - will need a certain
-      // number in the future to include dipole flagging
-      int st = 0;
-      printf("Middle freq is %f\n",base_middle_freq );
+      printf("Middle freq is %.8e \n",base_middle_freq );
     //
       float float_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     //
       printf("Setting up the zenith FEE beam...");
-      RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam_zenith, float_zenith_delays, st);
+      RTS_MWAFEEInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam_zenith, float_zenith_delays);
       printf(" done.\n");
 
       printf("Setting up the FEE beam...");
-      RTS_HDFBeamInit(woden_settings->hdf5_beam_path, base_middle_freq,
-            beam_settings.FEE_beam, woden_settings->FEE_ideal_delays, st);
+      RTS_MWAFEEInit(woden_settings->hdf5_beam_path, base_middle_freq,
+            beam_settings.FEE_beam, woden_settings->FEE_ideal_delays);
       printf(" done.\n");
 
     }
 
     visibility_set_t *visibility_set = malloc(sizeof(visibility_set_t));
-    visibility_set->sum_visi_real = malloc( num_visis * sizeof(float) );
-    visibility_set->sum_visi_imag = malloc( num_visis * sizeof(float) );
     visibility_set->us_metres = malloc( num_visis * sizeof(float) );
     visibility_set->vs_metres = malloc( num_visis * sizeof(float) );
     visibility_set->ws_metres = malloc( num_visis * sizeof(float) );
-    visibility_set->sha0s = malloc( num_visis * sizeof(float) );
-    visibility_set->cha0s = malloc( num_visis * sizeof(float) );
-    visibility_set->lsts = malloc( num_visis * sizeof(float) );
-    visibility_set->wavelengths = malloc( num_visis * sizeof(float) );
+    visibility_set->allsteps_sha0s = malloc( num_visis * sizeof(float) );
+    visibility_set->allsteps_cha0s = malloc( num_visis * sizeof(float) );
+    visibility_set->allsteps_lsts = malloc( num_visis * sizeof(float) );
+    visibility_set->allsteps_wavelengths = malloc( num_visis * sizeof(float) );
     visibility_set->channel_frequencies = malloc( (int)woden_settings->num_freqs * sizeof(float) );
 
     visibility_set->sum_visi_XX_real = malloc( num_visis * sizeof(float) );
@@ -171,14 +173,15 @@ int main(int argc, char **argv) {
     visibility_set->sum_visi_YY_real = malloc( num_visis * sizeof(float) );
     visibility_set->sum_visi_YY_imag = malloc( num_visis * sizeof(float) );
 
-    visibility_set->sum_visi_real = malloc( num_visis * sizeof(float) );
-    visibility_set->sum_visi_imag = malloc( num_visis * sizeof(float) );
-
     //Fill in the fine channel frequencies
     for (int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++) {
       frequency = base_band_freq + (woden_settings->frequency_resolution*freq_step);
       visibility_set->channel_frequencies[freq_step] = frequency;
     }
+
+    //For easy indexing when running on GPUs, make 4 arrays that match
+    //the settings for every baseline, frequency, and time step in the
+    //simulation.
 
     //Fill in visibility settings in order of baseline,freq,time
     //Order matches that of a uvfits file (I live in the past)
@@ -193,10 +196,10 @@ int main(int argc, char **argv) {
         int step = woden_settings->num_baselines*(time_step*woden_settings->num_freqs + freq_step);
 
         for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {
-          visibility_set->cha0s[step + baseline] = cha0;
-          visibility_set->sha0s[step + baseline] = sha0;
-          visibility_set->lsts[step + baseline] = lsts[time_step];
-          visibility_set->wavelengths[step + baseline] = wavelength;
+          visibility_set->allsteps_cha0s[step + baseline] = cha0;
+          visibility_set->allsteps_sha0s[step + baseline] = sha0;
+          visibility_set->allsteps_lsts[step + baseline] = lsts[time_step];
+          visibility_set->allsteps_wavelengths[step + baseline] = wavelength;
         }//baseline loop
       }//freq loop
     }//time loop
@@ -208,7 +211,6 @@ int main(int argc, char **argv) {
     int num_chunks;
     //TODO should we chunk outside the band for-loop so that we can reuse the chunks for each band (should be the same)
     if (num_components > woden_settings->chunking_size) {
-      printf("Chunking sky model\n");
       num_chunks = num_components / woden_settings->chunking_size;
 
       if (num_components % woden_settings->chunking_size != 0) {
@@ -239,7 +241,8 @@ int main(int argc, char **argv) {
     for (int chunk = 0; chunk < num_chunks; chunk++) {
 
       fill_chunk_src(temp_cropped_src, cropped_src, num_chunks, chunk,
-                     woden_settings->chunking_size, woden_settings->num_time_steps,
+                     woden_settings->chunking_size,
+                     woden_settings->num_time_steps,
                      &point_iter, &gauss_iter, &shape_iter);
 
       //Add the number of shapelets onto the full source catalogue value
@@ -257,59 +260,21 @@ int main(int argc, char **argv) {
       cropped_sky_models->beam_settings[chunk] = beam_settings_chunk;
 
     }
-
     printf("Sky model chunked.\n");
 
-    //setup a temporary visibility set that calculate_visibilities will populate
-    visibility_set_t *chunk_visibility_set = malloc(sizeof(visibility_set_t));
-
-    chunk_visibility_set->us_metres = malloc( num_visis * sizeof(float) );
-    chunk_visibility_set->vs_metres = malloc( num_visis * sizeof(float) );
-    chunk_visibility_set->ws_metres = malloc( num_visis * sizeof(float) );
-
-    chunk_visibility_set->sha0s = visibility_set->sha0s;
-    chunk_visibility_set->cha0s = visibility_set->cha0s;
-    chunk_visibility_set->lsts = visibility_set->lsts;
-    chunk_visibility_set->wavelengths = visibility_set->wavelengths;
-    chunk_visibility_set->channel_frequencies = visibility_set->channel_frequencies;
-
-    chunk_visibility_set->sum_visi_XX_real = malloc( num_visis * sizeof(float) );
-    chunk_visibility_set->sum_visi_XX_imag = malloc( num_visis * sizeof(float) );
-    chunk_visibility_set->sum_visi_XY_real = malloc( num_visis * sizeof(float) );
-    chunk_visibility_set->sum_visi_XY_imag = malloc( num_visis * sizeof(float) );
-    chunk_visibility_set->sum_visi_YX_real = malloc( num_visis * sizeof(float) );
-    chunk_visibility_set->sum_visi_YX_imag = malloc( num_visis * sizeof(float) );
-    chunk_visibility_set->sum_visi_YY_real = malloc( num_visis * sizeof(float) );
-    chunk_visibility_set->sum_visi_YY_imag = malloc( num_visis * sizeof(float) );
-
     calculate_visibilities(array_layout, cropped_sky_models,
-                  woden_settings, visibility_set, chunk_visibility_set,
-                  sbf, num_chunks);
+                  woden_settings, visibility_set, sbf);
 
     printf("GPU calls for band %d finished\n",band_num );
 
     free(temp_cropped_src);
 
-    free( chunk_visibility_set->us_metres );
-    free( chunk_visibility_set->vs_metres );
-    free( chunk_visibility_set->ws_metres );
-
-    free(chunk_visibility_set->sum_visi_XX_real);
-    free(chunk_visibility_set->sum_visi_XX_imag);
-    free(chunk_visibility_set->sum_visi_XY_real);
-    free(chunk_visibility_set->sum_visi_XY_imag);
-    free(chunk_visibility_set->sum_visi_YX_real);
-    free(chunk_visibility_set->sum_visi_YX_imag);
-    free(chunk_visibility_set->sum_visi_YY_real);
-    free(chunk_visibility_set->sum_visi_YY_imag);
-    //
-    free( chunk_visibility_set );
-
-    // if (woden_settings->beamtype == FEE_BEAM) {
-    //   free_FEE_primary_beam_from_GPU(beam_settings.FEE_beam);
-    // }
-
     //Dumps u,v,w (metres), Re(vis), Im(vis) to a binary file
+    //Output order is by baseline (fastest changing), frequency, time (slowest
+    //changing)
+    //This means the us_metres, vs_metres, ws_metres are repeated over frequency,
+    //but keeps the dimensions of the output sane
+
     FILE *output_visi;
     char buf[0x100];
     snprintf(buf, sizeof(buf), "output_visi_band%02d.dat", band_num);
@@ -325,8 +290,6 @@ int main(int argc, char **argv) {
     fwrite(visibility_set->us_metres, num_visis*sizeof(float), 1, output_visi);
     fwrite(visibility_set->vs_metres, num_visis*sizeof(float), 1, output_visi);
     fwrite(visibility_set->ws_metres, num_visis*sizeof(float), 1, output_visi);
-    // fwrite(visibility_set->sum_visi_real, num_visis*sizeof(float), 1, output_visi);
-    // fwrite(visibility_set->sum_visi_imag, num_visis*sizeof(float), 1, output_visi);
 
     fwrite(visibility_set->sum_visi_XX_real, num_visis*sizeof(float), 1, output_visi);
     fwrite(visibility_set->sum_visi_XX_imag, num_visis*sizeof(float), 1, output_visi);
@@ -362,13 +325,13 @@ int main(int argc, char **argv) {
     //
 
     //Free up that memory
-    free( visibility_set->us_metres );
-    free( visibility_set->vs_metres );
-    free( visibility_set->ws_metres );
-    free( visibility_set->sha0s );
-    free( visibility_set->cha0s );
-    free( visibility_set->lsts );
-    free( visibility_set->wavelengths );
+    free(visibility_set->us_metres);
+    free(visibility_set->vs_metres);
+    free(visibility_set->ws_metres);
+    free(visibility_set->allsteps_sha0s);
+    free(visibility_set->allsteps_cha0s);
+    free(visibility_set->allsteps_lsts);
+    free(visibility_set->allsteps_wavelengths);
 
     free(visibility_set->sum_visi_XX_real);
     free(visibility_set->sum_visi_XX_imag);
@@ -380,6 +343,12 @@ int main(int argc, char **argv) {
     free(visibility_set->sum_visi_YY_imag);
 
     free( visibility_set );
+
+    //Release the CPU MWA FEE beam if required
+    if (woden_settings->beamtype == FEE_BEAM){
+      RTS_freeHDFBeam(beam_settings.FEE_beam);
+      RTS_freeHDFBeam(beam_settings.FEE_beam_zenith);
+    }
 
   }//band loop
   printf("WODEN is done\n");

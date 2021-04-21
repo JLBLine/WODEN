@@ -6,15 +6,15 @@
 #include "constants.h"
 
 __device__ void calc_uvw(float *d_X_diff, float *d_Y_diff, float *d_Z_diff,
-           float d_sdec0, float d_cdec0, float d_sha0, float d_cha0,
+           float sdec0, float cdec0, float sha0, float cha0,
            int iBaseline, int num_baselines,
            float * u, float * v, float * w) {
 
   int mod_baseline = iBaseline - num_baselines*floorf((float)iBaseline / (float)num_baselines);
 
-  * u = (d_sha0*d_X_diff[mod_baseline]) + (d_cha0*d_Y_diff[mod_baseline]);
-  * v = (d_sdec0*d_sha0*d_Y_diff[mod_baseline]) + (d_cdec0*d_Z_diff[mod_baseline]) - (d_sdec0*d_cha0*d_X_diff[mod_baseline]);
-  * w = (d_cdec0*d_cha0*d_X_diff[mod_baseline]) - (d_cdec0*d_sha0*d_Y_diff[mod_baseline]) + (d_sdec0*d_Z_diff[mod_baseline]);
+  * u = (sha0*d_X_diff[mod_baseline]) + (cha0*d_Y_diff[mod_baseline]);
+  * v = -(sdec0*cha0*d_X_diff[mod_baseline]) + (sdec0*sha0*d_Y_diff[mod_baseline]) + (cdec0*d_Z_diff[mod_baseline]);
+  * w = (cdec0*cha0*d_X_diff[mod_baseline]) - (cdec0*sha0*d_Y_diff[mod_baseline]) + (sdec0*d_Z_diff[mod_baseline]);
 
 }
 
@@ -51,7 +51,7 @@ __global__ void kern_calc_uvw(float *d_X_diff, float *d_Y_diff, float *d_Z_diff,
 }
 
 __global__ void kern_calc_uvw_shapelet(float *d_X_diff, float *d_Y_diff, float *d_Z_diff,
-      float *d_u_s_metres, float *d_v_s_metres, float *d_w_s_metres,
+      float *d_u_shapes, float *d_v_shapes, float *d_w_shapes, float *d_wavelengths,
       float *d_lsts, float *d_ras, float *d_decs,
       const int num_baselines, const int num_visis,
       const int num_shapes) {
@@ -61,40 +61,37 @@ __global__ void kern_calc_uvw_shapelet(float *d_X_diff, float *d_Y_diff, float *
 
   if(iBaseline < num_visis && iComponent < num_shapes) {
 
-    float u_s, v_s, w_s;
+    float u_shape, v_shape, w_shape;
     //TODO do the sin/cos outside of the GPU kernel?
     float d_sdec0 = sinf(d_decs[iComponent]);
     float d_cdec0 = cosf(d_decs[iComponent]);
     float d_sha0 = sinf(d_lsts[iBaseline] - d_ras[iComponent]);
     float d_cha0 = cosf(d_lsts[iBaseline] - d_ras[iComponent]);
+    float d_wavelength = d_wavelengths[iBaseline];
 
     calc_uvw(d_X_diff, d_Y_diff, d_Z_diff,
                d_sdec0, d_cdec0, d_sha0, d_cha0,
                iBaseline, num_baselines,
-               &u_s, &v_s, &w_s);
+               &u_shape, &v_shape, &w_shape);
 
-    d_u_s_metres[num_visis*iComponent + iBaseline] = u_s;
-    d_v_s_metres[num_visis*iComponent + iBaseline] = v_s;
-    d_w_s_metres[num_visis*iComponent + iBaseline] = w_s;
+    d_u_shapes[num_visis*iComponent + iBaseline] = u_shape / d_wavelength;
+    d_v_shapes[num_visis*iComponent + iBaseline] = v_shape / d_wavelength;
+    d_w_shapes[num_visis*iComponent + iBaseline] = w_shape / d_wavelength;
   }
 }
 
 __device__ void calc_lmn(float ra0, float sdec0, float cdec0,
-                         float d_ra, float d_dec,
+                         float ra, float dec,
                          float * l, float * m, float * n){
-  // float d_sdec0 = d_angles_array[0];
-  // float d_cdec0 = d_angles_array[1];
-  // float d_ra0 = d_angles_array[2];
-
   float cdec;
   float sdec;
   float cdra;
   float sdra;
 
-  cdec = cosf(d_dec);
-  sdec = sinf(d_dec);
-  cdra = cosf((d_ra - ra0));
-  sdra = sinf((d_ra - ra0));
+  cdec = cosf(dec);
+  sdec = sinf(dec);
+  cdra = cosf((ra - ra0));
+  sdra = sinf((ra - ra0));
 
   * l = cdec*sdra;
   * m = sdec*cdec0 - cdec*sdec0*cdra;

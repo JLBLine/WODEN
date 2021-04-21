@@ -8,7 +8,6 @@
 #include "fundamental_coords.h"
 #include "cudacheck.h"
 
-
 __device__ void twoD_Gaussian(float x, float y, float xo, float yo,
            float sigma_x, float sigma_y,
            float cos_theta, float sin_theta, float sin_2theta,
@@ -38,16 +37,12 @@ __global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
   // components on other axis?
   if (iFreq < num_freqs && iLMcoord < num_components * num_times) {
 
-    //The l,m coords for the beam locations are for every component, every time
-    //step in a 1D array. We are calculating over frequency as well and then
-    //putting results into d_gauss_beam_reals, d_gauss_beam_imags, so have to do some
-    //fun index maths to work out what time / component / freq we are on,
-    //and where to put the output
-    int time_ind = (int)floorf((float)iLMcoord / (float)num_components);
-    int component = iLMcoord - time_ind*num_components;
+    int component = (int)floorf((float)iLMcoord / (float)num_times);
+    int time_ind = iLMcoord - component*num_times;
     int beam_ind = num_freqs*time_ind*num_components + (num_components*iFreq) + component;
 
     float d_beam_real, d_beam_imag;
+    //Convert FWHM into standard dev, and scale for frequency
     float std = (fwhm_lm / FWHM_FACTOR) * (beam_ref_freq / d_freqs[iFreq]);
 
     twoD_Gaussian(d_beam_ls[iLMcoord], d_beam_ms[iLMcoord], 0, 0,
@@ -56,10 +51,6 @@ __global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
 
     d_primay_beam_J00[beam_ind] = make_cuComplex(d_beam_real, d_beam_imag);
     d_primay_beam_J11[beam_ind] = make_cuComplex(d_beam_real, d_beam_imag);
-
-    // printf("%f %f %f %f %f\n",std, fwhm_lm, FWHM_FACTOR, beam_ref_freq , d_freqs[iFreq] );
-
-    // printf("iFreq,iLMcoord,d_beam_ls[iLMcoord],d_beam_ms[iLMcoord],d_beam_real %d %d %f %f %f\n",iFreq,iLMcoord,d_beam_ls[iLMcoord],d_beam_ms[iLMcoord],d_beam_real );
 
   }
 }
@@ -112,8 +103,6 @@ extern "C" void calculate_gaussian_beam(int num_components, int num_time_steps,
                        num_freqs, num_time_steps, num_components,
                        d_primay_beam_J00, d_primay_beam_J11);
 
-  // printf("Finished a gaussian beam kernel\n");
-
   cudaFree( d_beam_ns );
   cudaFree( d_beam_ms );
   cudaFree( d_beam_ls );
@@ -121,6 +110,7 @@ extern "C" void calculate_gaussian_beam(int num_components, int num_time_steps,
   cudaFree( d_beam_has );
 }
 
+//TODO rewrite this so it works, incorporate into testing
 // extern "C" void testing_gaussian_beam( float *beam_has, float *beam_decs,
 //            float *beam_angles_array, float *beam_freqs, float *ref_freq_array,
 //            float *beam_ls, float *beam_ms,
@@ -237,8 +227,6 @@ __device__ void analytic_dipole(float az, float za, float wavelength,
   tempX.x = voltage_parallel_X;
   tempY.x = voltage_parallel_Y;
 
-  // printf("%.5f %.5f %.5f %.5f %.5f\n",az,za,wavelength,tempX.x,tempY.x );
-
   //No imaginary components so set to 0
   tempX.y = 0;
   tempY.y = 0;
@@ -250,7 +238,7 @@ __device__ void analytic_dipole(float az, float za, float wavelength,
 
 __global__ void kern_analytic_dipole_beam(float *d_azs, float *d_zas,
            float *d_freqs, int num_freqs, int num_times, int num_components,
-           cuFloatComplex *d_analy_beam_X, cuFloatComplex *d_analy_beam_Y) {
+           cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J11) {
   // Start by computing which baseline we're going to do
   const int iCoord = threadIdx.x + (blockDim.x*blockIdx.x);
   const int iFreq = threadIdx.y + (blockDim.y*blockIdx.y);
@@ -271,6 +259,8 @@ __global__ void kern_analytic_dipole_beam(float *d_azs, float *d_zas,
     analytic_dipole(d_azs[iCoord], d_zas[iCoord], wavelength,
                &d_beam_X, &d_beam_Y);
 
+    //Should really calculate this normalisation outside of this kernel - we are
+    //massively increasing the number calculations for no reason
     analytic_dipole(0.0, 0.0, wavelength,
                &d_beam_norm_X, &d_beam_norm_Y);
 
@@ -279,8 +269,8 @@ __global__ void kern_analytic_dipole_beam(float *d_azs, float *d_zas,
     normed_X.x = normed_X.x / d_beam_norm_X.x;
     normed_Y.x = normed_Y.x / d_beam_norm_Y.x;
 
-    d_analy_beam_X[beam_ind] = normed_X;
-    d_analy_beam_Y[beam_ind] = normed_Y;
+    d_primay_beam_J00[beam_ind] = normed_X;
+    d_primay_beam_J00[beam_ind] = normed_Y;
 
   }
 }
@@ -289,13 +279,9 @@ __global__ void kern_analytic_dipole_beam(float *d_azs, float *d_zas,
 extern "C" void calculate_analytic_dipole_beam(int num_components,
      int num_time_steps, int num_freqs,
      float *azs, float *zas, float *d_freqs,
-     cuFloatComplex *d_analy_beam_X, cuFloatComplex *d_analy_beam_Y){
+     cuFloatComplex * d_primay_beam_J00, cuFloatComplex *d_primay_beam_J11){
 
   int num_beam_azza = num_components * num_time_steps;
-
-  // for (size_t i = 0; i < num_components; i++) {
-  //   printf("Analy beam az,za %.5f %.5f \n",azs[i],zas[i] );
-  // }
 
   float *d_azs = NULL;
   cudaErrorCheckCall( cudaMalloc( (void**)&d_azs, num_beam_azza*sizeof(float)) );
@@ -314,16 +300,11 @@ extern "C" void calculate_analytic_dipole_beam(int num_components,
   grid.x = (int)ceil( (float)num_beam_azza  / (float)threads.x );
   grid.y = (int)ceil( (float)num_freqs / (float)threads.y );
 
-  // printf("Doing a beam gaussian beam kernel\n");
-  // kern_analytic_dipole_beam<<< grid, threads >>>(d_azs, d_zas,
-  //            d_freqs, num_freqs, num_time_steps, num_components,
-  //            d_analy_beam_X, d_analy_beam_Y);
-
   cudaErrorCheckKernel("kern_analytic_dipole_beam",
              kern_analytic_dipole_beam, grid, threads,
              d_azs, d_zas, d_freqs, num_freqs,
              num_time_steps, num_components,
-             d_analy_beam_X, d_analy_beam_Y);
+             d_primay_beam_J00, d_primay_beam_J11);
 
   cudaErrorCheckCall( cudaFree(d_azs) );
   cudaErrorCheckCall( cudaFree(d_zas) );
