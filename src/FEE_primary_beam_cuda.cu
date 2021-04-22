@@ -620,8 +620,8 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
   cudaErrorCheckCall( cudaMemcpy(d_m_range, primary_beam->m_range,
                       (2*nmax + 1)*sizeof(float), cudaMemcpyHostToDevice ) );
 
-  threads.x = 16;
-  threads.y = 16;
+  threads.x = 8;
+  threads.y = 32;
   threads.z = 1;
   //
   grid.x = (int)ceil( (float)num_coords / threads.x);
