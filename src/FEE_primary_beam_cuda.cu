@@ -369,6 +369,52 @@ __global__ void kern_sum_emn_PT_by_M(cuFloatComplex *emn_T, cuFloatComplex *emn_
            float *d_m_range, float *d_M, int nMN, int nmax, int num_coords){
 
   const int iCoord = threadIdx.x + (blockDim.x*blockIdx.x);
+  const int iM_value = threadIdx.y + (blockDim.y*blockIdx.y);
+
+  int n_pols = 2;
+  int num_sum_M = 2*nmax + 1;
+
+  if(iCoord < num_coords && iM_value < num_sum_M) {
+
+    for (int iM_index = 0; iM_index < n_pols*nMN; iM_index++) {
+      int iPol = (int)floorf((float)iM_index / (float)nMN);
+
+      if (d_M[iM_index] == d_m_range[iM_value]) {
+        cuFloatComplex emn_P_value = emn_P[n_pols*nMN*iCoord + iM_index];
+        cuFloatComplex emn_T_value = emn_T[n_pols*nMN*iCoord + iM_index];
+
+        d_emn_P_sum_real[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax] += emn_P_value.x;
+        d_emn_P_sum_imag[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax] += emn_P_value.y;
+
+        d_emn_T_sum_real[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax] += emn_T_value.x;
+        d_emn_T_sum_imag[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax] += emn_T_value.y;
+      }
+    }
+  }
+}
+
+/*
+Currently not used - this kernel is up to twice as fast as kern_sum_emn_PT_by_M,
+but as it uses atomic add, it's not deterministic. Differences are extremely
+small, but nicer to have the same result out when run with same inputs. This
+kernel a very small fraction of that main woden executable so ignore atomic
+version for now, but leave here incase it's useful in the future. Should be
+called with
+
+threads.x = 16;
+threads.y = 8;
+threads.z = 8;
+
+grid.x = (int)ceil( (float)num_coords / threads.x);
+grid.y = (int)ceil( (2.0*(float)primary_beam->nMN) / threads.y);
+grid.z = (int)ceil( ((float)nmax*2.0 + 1.0) / threads.z);
+*/
+__global__ void kern_sum_emn_PT_by_M_atomic(cuFloatComplex *emn_T, cuFloatComplex *emn_P,
+           float *d_emn_T_sum_real, float *d_emn_T_sum_imag,
+           float *d_emn_P_sum_real, float *d_emn_P_sum_imag,
+           float *d_m_range, float *d_M, int nMN, int nmax, int num_coords){
+
+  const int iCoord = threadIdx.x + (blockDim.x*blockIdx.x);
   const int iM_index = threadIdx.y + (blockDim.y*blockIdx.y);
   const int iM_value = threadIdx.z + (blockDim.z*blockIdx.z);
 
@@ -389,46 +435,6 @@ __global__ void kern_sum_emn_PT_by_M(cuFloatComplex *emn_T, cuFloatComplex *emn_
       atomicAdd(&d_emn_T_sum_real[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax], emn_T_value.x);
       atomicAdd(&d_emn_T_sum_imag[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax], emn_T_value.y);
 
-    }
-  }
-}
-
-__global__ void kern_sum_emn_PT_by_M_loop(cuFloatComplex *emn_T, cuFloatComplex *emn_P,
-           float *d_emn_T_sum_real, float *d_emn_T_sum_imag,
-           float *d_emn_P_sum_real, float *d_emn_P_sum_imag,
-           float *d_m_range, float *d_M, int nMN, int nmax, int num_coords){
-
-  const int iCoord = threadIdx.x + (blockDim.x*blockIdx.x);
-  // const int iM_index = threadIdx.y + (blockDim.y*blockIdx.y);
-  // const int iM_value = threadIdx.z + (blockDim.z*blockIdx.z);
-
-  int n_pols = 2;
-  int num_sum_M = 2*nmax + 1;
-
-  // if(iM_index < n_pols*nMN && iM_value < num_sum_M && iCoord < num_coords) {
-  if(iCoord < num_coords) {
-
-    for (int iM_index = 0; iM_index < n_pols*nMN; iM_index++) {
-      int iPol = (int)floorf((float)iM_index / (float)nMN);
-
-      for (int iM_value = 0; iM_value < num_sum_M; iM_value++) {
-        if (d_M[iM_index] == d_m_range[iM_value]) {
-          cuFloatComplex emn_P_value = emn_P[n_pols*nMN*iCoord + iM_index];
-          cuFloatComplex emn_T_value = emn_T[n_pols*nMN*iCoord + iM_index];
-
-          // atomicAdd(&d_emn_P_sum_real[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax], emn_P_value.x);
-          // atomicAdd(&d_emn_P_sum_imag[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax], emn_P_value.y);
-          //
-          // atomicAdd(&d_emn_T_sum_real[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax], emn_T_value.x);
-          // atomicAdd(&d_emn_T_sum_imag[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax], emn_T_value.y);
-
-          d_emn_P_sum_real[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax] += emn_P_value.x;
-          d_emn_P_sum_imag[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax] += emn_P_value.y;
-
-          d_emn_T_sum_real[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax] += emn_T_value.x;
-          d_emn_T_sum_imag[n_pols*num_sum_M*iCoord + iPol*num_sum_M + (int)d_m_range[iM_value] + nmax] += emn_T_value.y;
-        }
-      }
     }
   }
 }
@@ -558,6 +564,7 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
                     num_coords * nMN * n_pols * sizeof(float _Complex)) );
   //
   //
+  // threads.x = 128;
   threads.x = 128;
   threads.y = 2;
   threads.z = 1;
@@ -614,20 +621,12 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
                       (2*nmax + 1)*sizeof(float), cudaMemcpyHostToDevice ) );
 
   threads.x = 16;
-  threads.y = 8;
-  threads.z = 8;
-
-  grid.x = (int)ceil( (float)num_coords / threads.x);
-  grid.y = (int)ceil( (2.0*(float)primary_beam->nMN) / threads.y);
-  grid.z = (int)ceil( ((float)nmax*2.0 + 1.0) / threads.z);
-
-  // threads.x = 128;
-  // threads.y = 1;
-  // threads.z = 1;
+  threads.y = 16;
+  threads.z = 1;
   //
-  // grid.x = (int)ceil( (float)num_coords / threads.x);
-  // grid.y = 1;
-  // grid.z = 1;
+  grid.x = (int)ceil( (float)num_coords / threads.x);
+  grid.z = (int)ceil( ((float)nmax*2.0 + 1.0) / threads.y);
+  grid.z = 1;
 
   cudaErrorCheckKernel("kern_sum_emn_PT_by_M",
                         kern_sum_emn_PT_by_M, grid, threads,
@@ -833,24 +832,26 @@ __global__ void kern_map_FEE_beam_gains(cuFloatComplex *d_FEE_beam_gain_matrices
     int num_times){
 
   //All baselines at all freqs and all times
-  int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
-  //Direction on sky
-  int iComponent = threadIdx.y + (blockDim.y*blockIdx.y);
+  int iComponent = threadIdx.x + (blockDim.x*blockIdx.x);
+  //time step
+  int iTime = threadIdx.y + (blockDim.y*blockIdx.y);
 
-  if(iBaseline < num_visis && iComponent < num_components ) {
+  if(iComponent < num_components && iTime < num_times ) {
 
-    //I hate indexing, good grief
-    int time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
-    int freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+    //Where this component and time step lives in the current array
+    int current_ind = iComponent*num_times + iTime;
 
-    int current_ind = iComponent*num_times + time_ind;
-    int new_ind = num_freqs*time_ind*num_components + (num_components*freq_ind) + iComponent;
-
-    d_primay_beam_J00[new_ind] = d_FEE_beam_gain_matrices[current_ind*MAX_POLS + 0];
-    d_primay_beam_J01[new_ind] = d_FEE_beam_gain_matrices[current_ind*MAX_POLS + 1];
-    d_primay_beam_J10[new_ind] = d_FEE_beam_gain_matrices[current_ind*MAX_POLS + 2];
-    d_primay_beam_J11[new_ind] = d_FEE_beam_gain_matrices[current_ind*MAX_POLS + 3];
-
+    //For the FEE beam currently, only have resolution of 1.28MHz, so assign
+    //the same beam value to all frequencies in this band (hence the loop)
+    for (size_t freq_ind = 0; freq_ind < num_freqs; freq_ind++) {
+      //Get an index to shove into the generic beam jones containers
+      int new_ind = num_freqs*iTime*num_components + (num_components*freq_ind) + iComponent;
+      //Split up the polarisations
+      d_primay_beam_J00[new_ind] = d_FEE_beam_gain_matrices[current_ind*MAX_POLS + 0];
+      d_primay_beam_J01[new_ind] = d_FEE_beam_gain_matrices[current_ind*MAX_POLS + 1];
+      d_primay_beam_J10[new_ind] = d_FEE_beam_gain_matrices[current_ind*MAX_POLS + 2];
+      d_primay_beam_J11[new_ind] = d_FEE_beam_gain_matrices[current_ind*MAX_POLS + 3];
+    }
   }
 }
 

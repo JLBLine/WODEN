@@ -268,10 +268,16 @@ void source_component_common(int num_components,
            num_components, woden_settings->num_time_steps, FEE_beam,
            rotation, scaling);
 
+    // threads.x = 16;
+    // threads.y = 16;
+    // grid.x = (int)ceil( (float)woden_settings->num_visis / (float)threads.x );
+    // grid.y = (int)ceil( ((float)num_components) / ((float)threads.y) );
+
     threads.x = 16;
     threads.y = 16;
-    grid.x = (int)ceil( (float)woden_settings->num_visis / (float)threads.x );
-    grid.y = (int)ceil( ((float)num_components) / ((float)threads.y) );
+    grid.x = (int)ceil( ((float)num_components) / ((float)threads.x) );
+    grid.y = (int)ceil( (float)woden_settings->num_time_steps / (float)threads.y );
+
 
     cudaErrorCheckKernel("kern_map_FEE_beam_gains",
               kern_map_FEE_beam_gains, grid, threads,
