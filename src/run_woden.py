@@ -775,41 +775,49 @@ def get_parser():
     import argparse
     from argparse import RawTextHelpFormatter
 
-    class SmartFormatter(argparse.HelpFormatter):
-            def _split_lines(self, text, width):
-                if text.startswith('R|'):
-                    return text[2:].splitlines()
-                # this is the RawTextHelpFormatter._split_lines
-                return argparse.HelpFormatter._split_lines(self, text, width)
 
-    parser = argparse.ArgumentParser(description="Run the WODEN simulator and profit. \
-                WODEN is setup to simulate MWA-style observations, where the \
-                full frequency bandwidth is split into 24 'coarse' bands, each \
-                of which is split into fine channels. This naturally allows \
-                any simulation to be split across multiple GPUs as separate \
-                processes.",formatter_class=SmartFormatter)
+    class SmartFormatter(argparse.HelpFormatter):
+        """Argparse by default ignores all \n and \t formatters. If you start
+        a help class with R| the formatters will be respected."""
+        def _split_lines(self, text, width):
+            if text.startswith('R|'):
+                return text[2:].splitlines()
+            # this is the RawTextHelpFormatter._split_lines
+            return argparse.HelpFormatter._split_lines(self, text, width)
+
+    parser = argparse.ArgumentParser(description="Run the WODEN simulator and profit. "
+                "WODEN is setup to simulate MWA-style observations, where the "
+                "full frequency bandwidth is split into 24 'coarse' bands, each "
+                "of which is split into fine channels. This naturally allows "
+                "any simulation to be split across multiple GPUs as separate "
+                "processes.", formatter_class=SmartFormatter)
 
     freq_group = parser.add_argument_group('FREQUENCY OPTIONS')
     freq_group.add_argument('--band_nums', default='all',
-        help='Defaults to running 24 coarse bands. Alternatively, enter required numbers delineated by commas, e.g. --band_nums=1,7,9')
+        help='Defaults to running 24 coarse bands. Alternatively, enter required'
+             ' numbers delineated by commas, e.g. --band_nums=1,7,9')
     freq_group.add_argument('--lowest_channel_freq', default=False,
-        help='Set the frequency (Hz) of the lowest channel for band 1. \
-              If using a metafits file, this will override the frequency in the metafits')
+        help='Set the frequency (Hz) of the lowest channel for band 1. '
+             'If using a metafits file, this will override the frequency in'
+             ' the metafits')
     freq_group.add_argument('--coarse_band_width', default=1.28e+6,
         help='Set the width of each coarse band \
-              If using a metafits file, this will override the frequency in the metafits')
+              If using a metafits file, this will override the frequency in '
+              'the metafits')
     freq_group.add_argument('--num_freq_channels', default='obs',
-        help='Number of fine frequency channels to simulate - defaults to --coarse_band_width / --freq_res')
+        help='Number of fine frequency channels to simulate - defaults to '
+             '--coarse_band_width / --freq_res')
     freq_group.add_argument('--freq_res', type=float, default=False,
-        help='Fine channel frequnecy resolution (Hz) - will default to what is in the metafits')
+        help='Fine channel frequnecy resolution (Hz) - will default to what'
+             ' is in the metafits')
 
     time_group = parser.add_argument_group('TIME OPTIONS')
     time_group.add_argument('--num_time_steps', default='False',
-        help='The number of time steps to simualte. Defaults to how many are in \
-              if the metafits if using metafits')
+        help='The number of time steps to simualte. Defaults to how many are in'
+             'the metafits if using metafits')
     time_group.add_argument('--time_res', type=float,default=False,
-        help='Time resolution (s) - will default to what is in the metafits \
-              if the metafits if using metafits')
+        help='Time resolution (s) - will default to what is in the metafits '
+              'if the metafits if using metafits')
 
 
     obs_group = parser.add_argument_group('OBSERVATION OPTIONS')
@@ -818,10 +826,10 @@ def get_parser():
     obs_group.add_argument('--dec0', type=float,
         help='Dec of the desired phase centre (deg)')
     obs_group.add_argument('--date', default=False,
-        help='Initial UTC date of the observatio in format YYYY-MM-DDThh:mm:ss \
-             This is used to set the LST and array precession. This is set \
-             automatically when reading a metafits but including this will \
-             override the date in the metafits')
+        help='Initial UTC date of the observatio in format YYYY-MM-DDThh:mm:ss '
+             'This is used to set the LST and array precession. This is set '
+             'automatically when reading a metafits but including this will '
+             'override the date in the metafits')
 
     tel_group = parser.add_argument_group('TELESCOPE OPTIONS')
     tel_group.add_argument('--latitude', default=MWA_LAT, type=float,
@@ -829,40 +837,43 @@ def get_parser():
     tel_group.add_argument('--longitude', default=MWA_LONG, type=float,
         help='Longitude (deg) of the array - defaults to MWA at 116.670813889')
     tel_group.add_argument('--array_layout', default=False,
-        help='Instead of reading the array layout from the metafits file, read from a text file. \
-              Store antenna positions as offset from array centre, in east, north, height coords (metres)')
+        help='Instead of reading the array layout from the metafits file, read'
+             ' from a text file. Store antenna positions as offset from array '
+             'centre, in east, north, height coords (metres)')
     tel_group.add_argument('--primary_beam', default="MWA_FEE",
-        help="R|Which primary beam to use in the simulation. Options are:\n\
-            - MWA_FEE (MWA fully embedded element model)\n\
-            - Gaussian (Analytic symmetric Gaussian  \n\
-                 see --gauss_beam_FWHM \n\
-                 and --gauss_beam_ref_freq for fine control) \n\
-            - EDA2 (Analytic dipole with a ground mesh) \n\
-            - none (Don't use a primary beam at all)")
+        help="R|Which primary beam to use in the simulation. Options are:\n"
+            "\t MWA_FEE (MWA fully embedded element model)\n"
+            "\t Gaussian (Analytic symmetric Gaussian)\n"
+            "\t\t see --gauss_beam_FWHM\n"
+            "\t\t and --gauss_beam_ref_freq for fine control)\n"
+            "\t EDA2 (Analytic dipole with a ground mesh) \n"
+            "\t none (Don't use a primary beam at all)")
 
     tel_group.add_argument('--gauss_beam_FWHM', default=False,
-        help='The FWHM of the Gaussian beam in deg - WODEN defaults to using 20 deg if this is not set')
+        help='The FWHM of the Gaussian beam in deg - WODEN defaults to using'
+             ' 20 deg if this is not set')
     tel_group.add_argument('--gauss_beam_ref_freq', default=False,
-        help='The frequency at which the gauss beam FWHM is set at. If not set, WODEN will default to 150MHz.')
+        help='The frequency at which the gauss beam FWHM is set at. If not set,'
+             ' WODEN will default to 150MHz.')
     tel_group.add_argument('--gauss_ra_point', default=False,
-        help='The initial RA (deg) to point the Gaussian beam at. This will be \
-              used to calculate an hour angle at which the beam will remain \
-              pointed at for the duration of the observation. Defaults to the \
-              RA of the metafits if available, or the RA of the phase centre \
-              if not')
+        help='The initial RA (deg) to point the Gaussian beam at. This will be '
+              'used to calculate an hour angle at which the beam will remain '
+              'pointed at for the duration of the observation. Defaults to the '
+              'RA of the metafits if available, or the RA of the phase centre '
+              'if not')
     tel_group.add_argument('--gauss_dec_point', default=False,
-        help='The initial Dec (deg) to point the Gaussian beam at. Defaults \
-        to the Dec of the metafits if available, or the Dec of the phase centre \
-        if not')
+        help='The initial Dec (deg) to point the Gaussian beam at. Defaults '
+        'to the Dec of the metafits if available, or the Dec of the phase centre'
+        ' if not')
 
-    tel_group.add_argument('--hdf5_beam_path', default='/home/jline/software/useful/mwa_full_embedded_element_pattern.h5',
+    tel_group.add_argument('--hdf5_beam_path', default=False,
         help='Location of the hdf5 file holding the FEE beam coefficients')
     tel_group.add_argument('--MWA_FEE_delays',
-        help='A list of 16 delays to point the MWA FEE primary beam model, \
-              enter as as list like \
-              --MWA_FEE_delays=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] \
-              for a zenith pointing. Read directly from the metafits if using a \
-              metafits file')
+        help='R|A list of 16 delays to point the MWA FEE primary beam model, \n'
+              'enter as as list like \n'
+              '\t--MWA_FEE_delays=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] \n'
+              'for a zenith pointing. Read directly from the metafits if using \n'
+              ' a metafits file')
     tel_group.add_argument('--telescope_name', default='MWA',
         help='Name of telescope written out to the uvfits file, defaults to MWA')
 
@@ -871,20 +882,32 @@ def get_parser():
     input_group.add_argument('--cat_filename',
         help='Path to WODEN style sky model')
     input_group.add_argument('--metafits_filename',default=False,
-        help='MWA style metafits file to base the simulation on. Array layout, frequency and time parameters are all set by this option, but can be overridden using other arguments')
+        help='MWA style metafits file to base the simulation on. Array layout,'
+             ' frequency and time parameters are all set by this option, but '
+             'can be overridden using other arguments')
     input_group.add_argument('--output_uvfits_prepend',default='output',
-        help='Prepend name for uvfits - will append band%%02d.uvfits %%band_num at the end. Defaults to "output".')
+        help='Prepend name for uvfits - will append band%%02d.uvfits %%band_num '
+             'at the end. Defaults to "output".')
     input_group.add_argument('--sky_crop_components', default=False, action='store_true',
-        help='WODEN will crop out sky model information that is below the horizon for the given LST. By default, for each SOURCE in the sky model, if any COMPONENT is below the horizon, the entire source will be flagged. If --sky_crop_components is included WODEN will include any COMPONENT above the horizon, regardless of which SOURCE it belongs to.')
+        help='WODEN will crop out sky model information that is below the '
+             'horizon for the given LST. By default, for each SOURCE in the '
+             'sky model, if any COMPONENT is below the horizon, the entire '
+             'source will be flagged. If --sky_crop_components is included '
+             'WODEN will include any COMPONENT above the horizon, regardless '
+             'of which SOURCE it belongs to.')
 
     sim_group = parser.add_argument_group('SIMULATOR OPTIONS')
     sim_group.add_argument('--remove_phase_tracking', default=False, action='store_true',
-        help='By adding this flag, remove the phase tracking of the visibilities - use this to feed uvfits into the RTS')
+        help='By adding this flag, remove the phase tracking of the '
+             'visibilities - use this to feed uvfits into the RTS')
     sim_group.add_argument('--no_tidy', default=False, action='store_true',
-        help='Defaults to deleting output binary files from woden and json files. Add this flag to not delete those files')
+        help='Defaults to deleting output binary files from woden and json '
+             'files. Add this flag to not delete those files')
     sim_group.add_argument('--nvprof', default=False, action='store_true',
         help='Add to switch on the nvidia profiler when running woden')
-    sim_group.add_argument('--chunking_size', type=int, default=0, help='The chunk size to break up the point sources into for processing - defaults to 0 (do not perform chunking)')
+    sim_group.add_argument('--chunking_size', type=int, default=0,
+        help='The chunk size to break up the point sources into for processing '
+             '- defaults to 0 (do not perform chunking)')
 
     return parser
 
@@ -913,6 +936,32 @@ if __name__ == "__main__":
     #         exit()
     #     else:
     #         return option
+
+    if args.primary_beam not in ['MWA_FEE', 'Gaussian', 'EDA2', 'none', 'None']:
+        exit('Primary beam option --primary_beam must be one of:\n'
+             '\t MWA_FEE, Gaussian, EDA2, none\n'
+             'User has entered --primary_beam={:s}\n'
+             'Please fix and try again. Exiting now'.format(args.primary_beam))
+
+    if args.primary_beam in ['None', 'none']:
+        args.primary_beam = 'none'
+
+
+    ##If we're using the MWA FEE beam, make sure we can find the stored
+    ##spherical harmonics file
+    if args.primary_beam == 'MWA_FEE':
+        if args.hdf5_beam_path:
+            if not os.path.isfile(args.hdf5_beam_path):
+                exit('Could not open hdf5 MWA FEE path as specified by user as:\n'
+                     '\t--hdf5_beam_path={:s}.\n'
+                     'This will cause WODEN to fail, exiting now'.format(args.hdf5_beam_path))
+        else:
+            try:
+                MWA_FEE_HDF5 = environ['MWA_FEE_HDF5']
+            except KeyError:
+                exit('To use MWA FEE beam, either --hdf5_beam_path or environment\n'
+                     'variable MWA_FEE_HDF5 must point towards the file\n'
+                     'mwa_full_embedded_element_pattern.h5. Exiting now as WODEN will fail.')
 
     FEE_delays = False
 
