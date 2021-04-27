@@ -841,11 +841,11 @@ def get_parser():
              ' from a text file. Store antenna positions as offset from array '
              'centre, in east, north, height coords (metres)')
     tel_group.add_argument('--primary_beam', default="MWA_FEE",
-        help="R|Which primary beam to use in the simulation. Options are:\n"
+        help="R|Which primary beam to use in the simulation.\nOptions are:\n"
             "\t MWA_FEE (MWA fully embedded element model)\n"
             "\t Gaussian (Analytic symmetric Gaussian)\n"
-            "\t\t see --gauss_beam_FWHM\n"
-            "\t\t and --gauss_beam_ref_freq for fine control)\n"
+            "\t\t see --gauss_beam_FWHM and\n"
+            "\t\t and --gauss_beam_ref_freq for\nfine control)\n"
             "\t EDA2 (Analytic dipole with a ground mesh) \n"
             "\t none (Don't use a primary beam at all)")
 
@@ -869,11 +869,11 @@ def get_parser():
     tel_group.add_argument('--hdf5_beam_path', default=False,
         help='Location of the hdf5 file holding the FEE beam coefficients')
     tel_group.add_argument('--MWA_FEE_delays',
-        help='R|A list of 16 delays to point the MWA FEE primary beam model, \n'
-              'enter as as list like \n'
-              '\t--MWA_FEE_delays=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] \n'
-              'for a zenith pointing. Read directly from the metafits if using \n'
-              ' a metafits file')
+        help='R|A list of 16 delays to point the MWA FEE primary beam \n'
+              'model enter as as list like: \n'
+              '--MWA_FEE_delays=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]\n'
+              'for a zenith pointing. This is read directly from\n'
+              'the metafits if using a metafits file')
     tel_group.add_argument('--telescope_name', default='MWA',
         help='Name of telescope written out to the uvfits file, defaults to MWA')
 
@@ -958,6 +958,7 @@ if __name__ == "__main__":
         else:
             try:
                 MWA_FEE_HDF5 = environ['MWA_FEE_HDF5']
+                args.hdf5_beam_path = MWA_FEE_HDF5
             except KeyError:
                 exit('To use MWA FEE beam, either --hdf5_beam_path or environment\n'
                      'variable MWA_FEE_HDF5 must point towards the file\n'
@@ -1048,7 +1049,8 @@ if __name__ == "__main__":
             height = array_layout[:,2]
 
         except:
-            exit("Could not open array layout file:\n%s\nexiting before woe beings" %args.array_layout)
+            exit("Could not open array layout file:\n"
+                 "\t{:s}\nExiting before woe beings".format(args.array_layout))
 
         array_layout_name = args.array_layout
 
