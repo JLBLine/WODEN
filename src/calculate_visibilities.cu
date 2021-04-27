@@ -318,19 +318,10 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
                  woden_settings, beam_settings, FEE_beam);
 
 
-      if (num_points == 1) {
-        threads.x = 128;
-        threads.y = 1;
-        grid.x = grid.x = (int)ceil( (float)num_visis / (float)threads.x );
-        grid.y = 1;
-      }
-      else {
-        threads.x = 64;
-        threads.y = 4;
-        grid.x = (int)ceil( (float)num_visis / (float)threads.x );
-        grid.y = (int)ceil( ((float)num_points) / ((float)threads.y) );
-
-      }
+      threads.x = 128;
+      threads.y = 1;
+      grid.x = grid.x = (int)ceil( (float)num_visis / (float)threads.x );
+      grid.y = 1;
 
       cudaErrorCheckKernel("kern_calc_visi_point",
                            kern_calc_visi_point, grid, threads,
@@ -473,18 +464,10 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
                  beam_settings.beam_gausscomp_decs,
                  woden_settings, beam_settings, FEE_beam);
 
-      if (num_gauss == 1) {
-       threads.x = 128;
-       threads.y = 1;
-       grid.x = grid.x = (int)ceil( (float)num_visis / (float)threads.x );
-       grid.y = 1;
-      }
-      else {
-       threads.x = 64;
-       threads.y = 4;
-       grid.x = (int)ceil( (float)num_visis / (float)threads.x );
-       grid.y = (int)ceil( ((float)num_gauss) / ((float)threads.y) );
-      }
+      threads.x = 128;
+      threads.y = 1;
+      grid.x = grid.x = (int)ceil( (float)num_visis / (float)threads.x );
+      grid.y = 1;
 
       cudaErrorCheckKernel("kern_calc_visi_gaussian",
               kern_calc_visi_gaussian, grid, threads,
@@ -695,18 +678,10 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
                             d_allsteps_lsts, d_shape_ras, d_shape_decs,
                             num_baselines, num_visis, num_shapes);
 
-      if (catsource.n_shape_coeffs == 1) {
-        threads.x = 64;
-        threads.y = 1;
-        grid.x = (int)ceil( (float)num_visis / (float)threads.x );
-        grid.y = 1;
-      }
-      else {
-        threads.x = 64;
-        threads.y = 4;
-        grid.x = (int)ceil( (float)num_visis / (float)threads.x );
-        grid.y = (int)ceil( ((float)catsource.n_shape_coeffs) / ((float)threads.y) );
-      }
+      threads.x = 128;
+      threads.y = 1;
+      grid.x = (int)ceil( (float)num_visis / (float)threads.x );
+      grid.y = 1;
 
       cudaErrorCheckKernel("kern_calc_visi_shapelets",
               kern_calc_visi_shapelets, grid, threads,

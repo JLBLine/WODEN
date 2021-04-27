@@ -226,10 +226,6 @@ and sum them into real and imaginary XX,XY,YX,YY visibilities arrays
 @details Uses `get_beam_gains` and `apply_beam_gains` as described above to
 apply the gains - see descriptions for what should be the arguments to them.
 
-Uses `atomicAdd` to sum the resultant visibilities over COMPONENTS for each
-baseline / time / frequency step. Can't atomic add cuFloatComplex so split
-final result into real/imag arrays `d_sim_visi_*_real` and `d_sim_visi_*_imag`
-
 @param[in] iBaseline Index of which baseline, freq, and time we are on
 @param[in] iComponent COMPONENT index
 @param[in] num_freqs Number of frequencies in simulation
@@ -266,7 +262,6 @@ visibility into
 into
 @param[in,out] *d_sum_visi_YY_imag Pointer to array to sum imaginary YY
 visibility into
-
 */
 __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
            int num_baselines, int num_components, int num_times, int beamtype,
@@ -347,12 +342,14 @@ POINT COMPONENTs, and sum the outputs to `d_sum_visi_*_real`,
 `d_sum_visi_*_imag`.
 
 @details Uses the functions `extrap_stokes`, `calc_measurement_equation`,
-`update_sum_visis` as detailed above to calculate the visibilities
+`update_sum_visis` as detailed above to calculate the visibilities. Sets off
+a thread for each visibility to be calculate, with each thread looping over
+all COMPONENTs. This seems to keep the memory access low enough to be faster
+than having a second dimension over COMPONENT.
 
-When called with `dim3 grid, threads`, kernel should be called with both
-`grid.x` and `grid.y` defined, where:
+When called with `dim3 grid, threads`, kernel should be called with `grid.x`
+defined, where:
  - grid.x * threads.x >= `num_visi`
- - grid.y * threads.y >= `num_points`
 
 @param[in] *d_point_ras Right Ascensions of all POINTSs (radians)
 @param[in] *d_point_decs Declinations of all POINTS (radians)
@@ -443,10 +440,13 @@ k_y &=& -\sin(\phi_{PAj})v + \cos(\phi_{PA})u
 where \f$ \theta_{\mathrm{maj}}, \theta_{\mathrm{min}}, \phi_{PA} \f$ are the
 major axis, minor axis, and position angle.
 
-When called with `dim3 grid, threads`, kernel should be called with both
-`grid.x` and `grid.y` defined, where:
+Sets off a thread for each visibility to be calculate, with each thread
+looping over all COMPONENTs. This seems to keep the memory access low enough
+to be faster than having a second dimension over COMPONENT.
+
+When called with `dim3 grid, threads`, kernel should be called with `grid.x`
+defined, where:
  - grid.x * threads.x >= `num_visi`
- - grid.y * threads.y >= `num_points`
 
 @param[in] *d_gauss_ras Right Ascensions of all GAUSSIANs (radians)
 @param[in] *d_gauss_decs Declinations of all GAUSSIANs (radians)
@@ -553,13 +553,16 @@ use the same COMPONENT \f$l,m,n\f$. The array `d_shape_param_indexes` is
 used to match the basis function information `d_shape_n1s`, `d_shape_n2s`,
 `d_shape_coeffs` to the COPMONENT information (e.g. `d_shape_ls`).
 
+Sets off a thread for each visibility to be calculate, with each thread
+looping over all cofficients. This seems to keep the memory access low enough
+to be faster than having a second dimension over coefficient.
+
 `d_sbf` is the shapelet basis function lookup table, and should have been
 generated with `shapelet_basis.create_sbf` and copied into device memory.
 
-When called with `dim3 grid, threads`, kernel should be called with both
-`grid.x` and `grid.y` defined, where:
+When called with `dim3 grid, threads`, kernel should be called with `grid.x`
+defined, where:
  - grid.x * threads.x >= `num_visi`
- - grid.y * threads.y >= `num_coeffs`
 
 @param[in] *d_shape_freqs Frequencies in the simulation (Hz)
 @param[in] *d_shape_stokesI Array of reference Stokes I flux densities for all

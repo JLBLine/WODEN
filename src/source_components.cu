@@ -192,17 +192,17 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
                     flux_I, flux_Q, flux_U, flux_V,
                     visi_component, &visi_XX, &visi_XY, &visi_YX, &visi_YY);
 
-    atomicAdd(&d_sum_visi_XX_real[iBaseline],visi_XX.x);
-    atomicAdd(&d_sum_visi_XX_imag[iBaseline],visi_XX.y);
+    d_sum_visi_XX_real[iBaseline] += visi_XX.x;
+    d_sum_visi_XX_imag[iBaseline] += visi_XX.y;
 
-    atomicAdd(&d_sum_visi_XY_real[iBaseline],visi_XY.x);
-    atomicAdd(&d_sum_visi_XY_imag[iBaseline],visi_XY.y);
+    d_sum_visi_XY_real[iBaseline] += visi_XY.x;
+    d_sum_visi_XY_imag[iBaseline] += visi_XY.y;
 
-    atomicAdd(&d_sum_visi_YX_real[iBaseline],visi_YX.x);
-    atomicAdd(&d_sum_visi_YX_imag[iBaseline],visi_YX.y);
+    d_sum_visi_YX_real[iBaseline] += visi_YX.x;
+    d_sum_visi_YX_imag[iBaseline] += visi_YX.y;
 
-    atomicAdd(&d_sum_visi_YY_real[iBaseline],visi_YY.x);
-    atomicAdd(&d_sum_visi_YY_imag[iBaseline],visi_YY.y);
+    d_sum_visi_YY_real[iBaseline] += visi_YY.x;
+    d_sum_visi_YY_imag[iBaseline] += visi_YY.y;
 
 }
 
@@ -268,10 +268,16 @@ void source_component_common(int num_components,
            num_components, woden_settings->num_time_steps, FEE_beam,
            rotation, scaling);
 
-    threads.x = 64;
-    threads.y = 4;
-    grid.x = (int)ceil( (float)woden_settings->num_visis / (float)threads.x );
-    grid.y = (int)ceil( ((float)num_components) / ((float)threads.y) );
+    // threads.x = 16;
+    // threads.y = 16;
+    // grid.x = (int)ceil( (float)woden_settings->num_visis / (float)threads.x );
+    // grid.y = (int)ceil( ((float)num_components) / ((float)threads.y) );
+
+    threads.x = 16;
+    threads.y = 16;
+    grid.x = (int)ceil( ((float)num_components) / ((float)threads.x) );
+    grid.y = (int)ceil( (float)woden_settings->num_time_steps / (float)threads.y );
+
 
     cudaErrorCheckKernel("kern_map_FEE_beam_gains",
               kern_map_FEE_beam_gains, grid, threads,
@@ -309,37 +315,41 @@ __global__ void kern_calc_visi_point(float *d_point_ras, float *d_point_decs,
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
-  const int iComponent = threadIdx.y + (blockDim.y*blockIdx.y);
-
-  if(iBaseline < num_visis && iComponent < num_points) {
+  // const int iComponent = threadIdx.y + (blockDim.y*blockIdx.y);
+  // if(iBaseline < num_visis && iComponent < num_points) {
+  if(iBaseline < num_visis) {
 
     float point_flux_I;
     float point_flux_Q;
     float point_flux_U;
     float point_flux_V;
 
-    extrap_stokes(d_allsteps_wavelengths, d_point_freqs,
-                 d_point_stokesI, d_point_stokesQ,
-                 d_point_stokesU, d_point_stokesV,
-                 d_point_SIs, iComponent, iBaseline,
-                 &point_flux_I, &point_flux_Q, &point_flux_U, &point_flux_V);
-
     cuFloatComplex visi_point;
-    visi_point = calc_measurement_equation(d_us, d_vs, d_ws,
-                           d_ls, d_ms, d_ns,
-                           iBaseline, iComponent);
 
-    update_sum_visis(iBaseline, iComponent, num_freqs,
-           num_baselines, num_points, num_times, beamtype,
-           d_primay_beam_J00, d_primay_beam_J01,
-           d_primay_beam_J10, d_primay_beam_J11,
-           visi_point,
-           point_flux_I, point_flux_Q, point_flux_U, point_flux_V,
-           d_sum_visi_XX_real, d_sum_visi_XX_imag,
-           d_sum_visi_XY_real, d_sum_visi_XY_imag,
-           d_sum_visi_YX_real, d_sum_visi_YX_imag,
-           d_sum_visi_YY_real, d_sum_visi_YY_imag);
+    for (size_t iComponent = 0; iComponent < num_points; iComponent++) {
 
+      extrap_stokes(d_allsteps_wavelengths, d_point_freqs,
+                   d_point_stokesI, d_point_stokesQ,
+                   d_point_stokesU, d_point_stokesV,
+                   d_point_SIs, iComponent, iBaseline,
+                   &point_flux_I, &point_flux_Q, &point_flux_U, &point_flux_V);
+
+
+      visi_point = calc_measurement_equation(d_us, d_vs, d_ws,
+                             d_ls, d_ms, d_ns,
+                             iBaseline, iComponent);
+
+      update_sum_visis(iBaseline, iComponent, num_freqs,
+             num_baselines, num_points, num_times, beamtype,
+             d_primay_beam_J00, d_primay_beam_J01,
+             d_primay_beam_J10, d_primay_beam_J11,
+             visi_point,
+             point_flux_I, point_flux_Q, point_flux_U, point_flux_V,
+             d_sum_visi_XX_real, d_sum_visi_XX_imag,
+             d_sum_visi_XY_real, d_sum_visi_XY_imag,
+             d_sum_visi_YX_real, d_sum_visi_YX_imag,
+             d_sum_visi_YY_real, d_sum_visi_YY_imag);
+    }
   }
 }
 
@@ -361,53 +371,58 @@ __global__ void kern_calc_visi_gaussian(float *d_gauss_ras, float *d_gauss_decs,
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
-  const int iComponent = threadIdx.y + (blockDim.y*blockIdx.y);
+  // const int iComponent = threadIdx.y + (blockDim.y*blockIdx.y);
 
-  if(iBaseline < num_visis && iComponent < num_gauss) {
+  // if(iBaseline < num_visis && iComponent < num_gauss) {
+  if(iBaseline < num_visis) {
 
     float gauss_flux_I;
     float gauss_flux_Q;
     float gauss_flux_U;
     float gauss_flux_V;
-
-    extrap_stokes(d_allsteps_wavelengths, d_gauss_freqs,
-                 d_gauss_stokesI, d_gauss_stokesQ,
-                 d_gauss_stokesU, d_gauss_stokesV,
-                 d_gauss_SIs, iComponent, iBaseline,
-                 &gauss_flux_I, &gauss_flux_Q, &gauss_flux_U, &gauss_flux_V);
-
     cuFloatComplex visi_gauss;
-    visi_gauss = calc_measurement_equation(d_us, d_vs, d_ws,
-                           d_ls, d_ms, d_ns,
-                           iBaseline, iComponent);
 
-    cuFloatComplex V_envelop = make_cuFloatComplex( 1.0, 0.0 );
+    for (size_t iComponent = 0; iComponent < num_gauss; iComponent++) {
 
-    float pa = d_gauss_pas[iComponent];
-    float u = d_us[iBaseline];
-    float v = d_vs[iBaseline];
-    float sinpa = sin(pa);
-    float cospa = cos(pa);
+      extrap_stokes(d_allsteps_wavelengths, d_gauss_freqs,
+                   d_gauss_stokesI, d_gauss_stokesQ,
+                   d_gauss_stokesU, d_gauss_stokesV,
+                   d_gauss_SIs, iComponent, iBaseline,
+                   &gauss_flux_I, &gauss_flux_Q, &gauss_flux_U, &gauss_flux_V);
 
-    float x =  cospa*v + sinpa*u; // major axis
-    float y = -sinpa*v + cospa*u; // minor axis
-    float invsig_x = d_gauss_majors[iComponent];
-    float invsig_y = d_gauss_minors[iComponent];
 
-    V_envelop = make_cuFloatComplex( exp( -0.5 * ( x*x*invsig_x*invsig_x*M_PI_2_2_LN_2 + y*y*invsig_y*invsig_y*M_PI_2_2_LN_2 ) ), 0.0 );
+      visi_gauss = calc_measurement_equation(d_us, d_vs, d_ws,
+                             d_ls, d_ms, d_ns,
+                             iBaseline, iComponent);
 
-    visi_gauss = cuCmulf(visi_gauss, V_envelop);
+      cuFloatComplex V_envelop = make_cuFloatComplex( 1.0, 0.0 );
 
-    update_sum_visis(iBaseline, iComponent, num_freqs,
-           num_baselines, num_gauss, num_times, beamtype,
-           d_primay_beam_J00, d_primay_beam_J01,
-           d_primay_beam_J10, d_primay_beam_J11,
-           visi_gauss,
-           gauss_flux_I, gauss_flux_Q, gauss_flux_U, gauss_flux_V,
-           d_sum_visi_XX_real, d_sum_visi_XX_imag,
-           d_sum_visi_XY_real, d_sum_visi_XY_imag,
-           d_sum_visi_YX_real, d_sum_visi_YX_imag,
-           d_sum_visi_YY_real, d_sum_visi_YY_imag);
+      float pa = d_gauss_pas[iComponent];
+      float u = d_us[iBaseline];
+      float v = d_vs[iBaseline];
+      float sinpa = sin(pa);
+      float cospa = cos(pa);
+
+      float x =  cospa*v + sinpa*u; // major axis
+      float y = -sinpa*v + cospa*u; // minor axis
+      float invsig_x = d_gauss_majors[iComponent];
+      float invsig_y = d_gauss_minors[iComponent];
+
+      V_envelop = make_cuFloatComplex( exp( -0.5 * ( x*x*invsig_x*invsig_x*M_PI_2_2_LN_2 + y*y*invsig_y*invsig_y*M_PI_2_2_LN_2 ) ), 0.0 );
+
+      visi_gauss = cuCmulf(visi_gauss, V_envelop);
+
+      update_sum_visis(iBaseline, iComponent, num_freqs,
+             num_baselines, num_gauss, num_times, beamtype,
+             d_primay_beam_J00, d_primay_beam_J01,
+             d_primay_beam_J10, d_primay_beam_J11,
+             visi_gauss,
+             gauss_flux_I, gauss_flux_Q, gauss_flux_U, gauss_flux_V,
+             d_sum_visi_XX_real, d_sum_visi_XX_imag,
+             d_sum_visi_XY_real, d_sum_visi_XY_imag,
+             d_sum_visi_YX_real, d_sum_visi_YX_imag,
+             d_sum_visi_YY_real, d_sum_visi_YY_imag);
+    }
   }
 }
 
@@ -434,94 +449,99 @@ __global__ void kern_calc_visi_shapelets(float *d_shape_freqs,
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
-  const int iCoeff = threadIdx.y + (blockDim.y*blockIdx.y);
+  // const int iCoeff = threadIdx.y + (blockDim.y*blockIdx.y);
 
-  if (iBaseline < num_visis && iCoeff < num_coeffs) {
-    int iComponent = d_shape_param_indexes[iCoeff];
+  // if (iBaseline < num_visis && iCoeff < num_coeffs) {
+  if (iBaseline < num_visis) {
 
     float shape_flux_I;
     float shape_flux_Q;
     float shape_flux_U;
     float shape_flux_V;
-
-    extrap_stokes(d_allsteps_wavelengths, d_shape_freqs,
-                 d_shape_stokesI, d_shape_stokesQ,
-                 d_shape_stokesU, d_shape_stokesV,
-                 d_shape_SIs, iComponent, iBaseline,
-                 &shape_flux_I, &shape_flux_Q, &shape_flux_U, &shape_flux_V);
-
     cuFloatComplex visi_shape;
-    visi_shape = calc_measurement_equation(d_us, d_vs, d_ws,
-                          d_shape_ls, d_shape_ms, d_shape_ns,
-                          iBaseline, iComponent);
 
-    float pa = d_shape_pas[iComponent];
-    float sinpa = sin(pa);
-    float cospa = cos(pa);
+    for (int iCoeff = 0; iCoeff < num_coeffs; iCoeff++) {
 
-    float u_shape = d_u_shapes[iComponent*num_visis + iBaseline];
-    float v_shape = d_v_shapes[iComponent*num_visis + iBaseline];
-    //
-    float x = (cospa*v_shape + sinpa*u_shape); // major axis
-    float y = (-sinpa*v_shape + cospa*u_shape); // minor axis
+      int iComponent = d_shape_param_indexes[iCoeff];
 
-    //Scales the FWHM to std to match basis functions, and account for the
-    //basis functions being stored with beta = 1.0
-    //Basis functions have been stored in such a way that x is in the same
-    //direction as on sky, but y is opposite, so include negative here
-    float const_x = (d_shape_majors[iComponent]*SQRT_M_PI_2_2_LN_2)/sbf_dx;
-    float const_y = -(d_shape_minors[iComponent]*SQRT_M_PI_2_2_LN_2)/sbf_dx;
+      extrap_stokes(d_allsteps_wavelengths, d_shape_freqs,
+                   d_shape_stokesI, d_shape_stokesQ,
+                   d_shape_stokesU, d_shape_stokesV,
+                   d_shape_SIs, iComponent, iBaseline,
+                   &shape_flux_I, &shape_flux_Q, &shape_flux_U, &shape_flux_V);
 
-    // I^(n1+n2) = Ipow_lookup[(n1+n2) % 4]
-    cuFloatComplex Ipow_lookup[] = { make_cuFloatComplex(  1.0,  0.0 ),
-                                     make_cuFloatComplex(  0.0,  1.0 ),
-                                     make_cuFloatComplex( -1.0,  0.0 ),
-                                     make_cuFloatComplex(  0.0, -1.0 ) };
 
-    float xlow, xhigh, ylow, yhigh, u_value, v_value, f_hat, *sbf_n;
+      visi_shape = calc_measurement_equation(d_us, d_vs, d_ws,
+                            d_shape_ls, d_shape_ms, d_shape_ns,
+                            iBaseline, iComponent);
 
-    // find the indices in the basis functions for u*beta_u and v*beta_v
+      float pa = d_shape_pas[iComponent];
+      float sinpa = sin(pa);
+      float cospa = cos(pa);
 
-    float xpos = x*const_x + sbf_c;
-    float ypos = y*const_y + sbf_c;
+      float u_shape = d_u_shapes[iComponent*num_visis + iBaseline];
+      float v_shape = d_v_shapes[iComponent*num_visis + iBaseline];
 
-    int xindex = (int)floor(xpos);
-    int yindex = (int)floor(ypos);
-    //
-    int n1 = (int)d_shape_n1s[iCoeff];
-    int n2 = (int)d_shape_n2s[iCoeff];
+      float x = (cospa*v_shape + sinpa*u_shape); // major axis
+      float y = (-sinpa*v_shape + cospa*u_shape); // minor axis
 
-    // if ( n1 < 0 || n2 < 0 || n1 >= sbf_N || n2 >= sbf_N ) continue;
+      //Scales the FWHM to std to match basis functions, and account for the
+      //basis functions being stored with beta = 1.0
+      //Basis functions have been stored in such a way that x is in the same
+      //direction as on sky, but y is opposite, so include negative here
+      float const_x = (d_shape_majors[iComponent]*SQRT_M_PI_2_2_LN_2)/sbf_dx;
+      float const_y = -(d_shape_minors[iComponent]*SQRT_M_PI_2_2_LN_2)/sbf_dx;
 
-    f_hat = d_shape_coeffs[iCoeff];
-    //
-    sbf_n = &d_sbf[n1*sbf_L];
-    xlow  = sbf_n[xindex];
-    xhigh = sbf_n[xindex+1];
-    u_value = xlow + (xhigh-xlow)*(xpos-xindex);
+      // I^(n1+n2) = Ipow_lookup[(n1+n2) % 4]
+      cuFloatComplex Ipow_lookup[] = { make_cuFloatComplex(  1.0,  0.0 ),
+                                       make_cuFloatComplex(  0.0,  1.0 ),
+                                       make_cuFloatComplex( -1.0,  0.0 ),
+                                       make_cuFloatComplex(  0.0, -1.0 ) };
 
-    sbf_n = &d_sbf[n2*sbf_L];
-    ylow  = sbf_n[yindex];
-    yhigh = sbf_n[yindex+1];
-    v_value = ylow + (yhigh-ylow)*(ypos-yindex);
+      float xlow, xhigh, ylow, yhigh, u_value, v_value, f_hat, *sbf_n;
 
-    // accumulate the intensity model for baseline pair (u,v)
-    cuFloatComplex V_envelop = make_cuFloatComplex( 0.0, 0.0 );
-    V_envelop = V_envelop + Ipow_lookup[(n1+n2) % 4] * f_hat * u_value*v_value;
+      // find the indices in the basis functions for u*beta_u and v*beta_v
 
-    visi_shape = cuCmulf(visi_shape, V_envelop);
+      float xpos = x*const_x + sbf_c;
+      float ypos = y*const_y + sbf_c;
 
-    update_sum_visis(iBaseline, iComponent, num_freqs,
-           num_baselines, num_shapes, num_times, beamtype,
-           d_primay_beam_J00, d_primay_beam_J01,
-           d_primay_beam_J10, d_primay_beam_J11,
-           visi_shape,
-           shape_flux_I, shape_flux_Q, shape_flux_U, shape_flux_V,
-           d_sum_visi_XX_real, d_sum_visi_XX_imag,
-           d_sum_visi_XY_real, d_sum_visi_XY_imag,
-           d_sum_visi_YX_real, d_sum_visi_YX_imag,
-           d_sum_visi_YY_real, d_sum_visi_YY_imag);
+      int xindex = (int)floor(xpos);
+      int yindex = (int)floor(ypos);
+      //
+      int n1 = (int)d_shape_n1s[iCoeff];
+      int n2 = (int)d_shape_n2s[iCoeff];
 
+      // if ( n1 < 0 || n2 < 0 || n1 >= sbf_N || n2 >= sbf_N ) continue;
+
+      f_hat = d_shape_coeffs[iCoeff];
+      //
+      sbf_n = &d_sbf[n1*sbf_L];
+      xlow  = sbf_n[xindex];
+      xhigh = sbf_n[xindex+1];
+      u_value = xlow + (xhigh-xlow)*(xpos-xindex);
+
+      sbf_n = &d_sbf[n2*sbf_L];
+      ylow  = sbf_n[yindex];
+      yhigh = sbf_n[yindex+1];
+      v_value = ylow + (yhigh-ylow)*(ypos-yindex);
+
+      // accumulate the intensity model for baseline pair (u,v)
+      cuFloatComplex V_envelop = make_cuFloatComplex( 0.0, 0.0 );
+      V_envelop = V_envelop + Ipow_lookup[(n1+n2) % 4] * f_hat * u_value*v_value;
+
+      visi_shape = cuCmulf(visi_shape, V_envelop);
+
+      update_sum_visis(iBaseline, iComponent, num_freqs,
+             num_baselines, num_shapes, num_times, beamtype,
+             d_primay_beam_J00, d_primay_beam_J01,
+             d_primay_beam_J10, d_primay_beam_J11,
+             visi_shape,
+             shape_flux_I, shape_flux_Q, shape_flux_U, shape_flux_V,
+             d_sum_visi_XX_real, d_sum_visi_XX_imag,
+             d_sum_visi_XY_real, d_sum_visi_XY_imag,
+             d_sum_visi_YX_real, d_sum_visi_YX_imag,
+             d_sum_visi_YY_real, d_sum_visi_YY_imag);
+    }
   }
 }
 

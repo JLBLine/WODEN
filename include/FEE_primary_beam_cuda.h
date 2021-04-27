@@ -219,14 +219,10 @@ and so we require an array containing the range of possible `m` values
 `emn_T`, `emn_P` (`d_M`), to ensure we are summing the correct values and not
 double counting anything.
 
-I changed this function to be an `atomicAdd` operation to save memory, so
-the complex outputs are split into real and imaginary.
-
 When called with `dim3 grid, threads`, kernel should be called with all
-`grid.x`, `grid.y`, and `grid.z` defined, where:
+`grid.x` and `grid.y` defined, where:
  - grid.x * threads.x >= `num_coords`
- - grid.y * threads.y >= `2*nMN`
- - grid.z * threads.z >= `nmax*2 + 1`
+ - grid.y * threads.y >= `2*nmax + 1`
 
 @param[in] emn_T theta polarisation outputs of `RTS_getTileGainsKernel`
 @param[in] emn_P phi polarisation outputs of `RTS_getTileGainsKernel`
@@ -260,9 +256,6 @@ Output ordering in `TileGainMatrices` is ordered by
 `J_theta_x,J_phi_x,J_theta_y,J_phi_y` (where `theta,phi` is polarisation,
 `x,y` are dipole orientation), and these four values are then repeated for each
 direction on the sky.
-
-I changed this function to be an `atomicAdd` operation to save memory, so
-the complex outputs are split into real and imaginary.
 
 When called with `dim3 grid, threads`, kernel should be called with
 `grid.x` and `grid.y` defined, where:
