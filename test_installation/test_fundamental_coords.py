@@ -138,12 +138,15 @@ class TestFundamentalCoords():
                                                                 sdec0, cdec0, cha0s, sha0s,
                                                                 wavelengths)
 
+        # d_u_copy = d_u.get()
+        # print(u[d_u_copy == 0])
+        # print(d_u_copy)
 
         ##Check the GPU function matches the python version and append to errors
         ##if not
-        ##Check they match to a relative tolerance defined at top of tile, rtol
-        ##Floating point error / whatever numpy is doing under the hood means
-        ##they never match perfectly
+        ##Check if array values match to within a relative value (less than
+        ##0.001% relative difference). Either floating point error or
+        ##differences between CUDA and python mean they differ slightly
         errors = []
 
         u_close = np.isclose(u, d_u.get(),rtol=rtol, atol=atol)
