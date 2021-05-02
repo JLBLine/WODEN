@@ -535,9 +535,9 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
 
       float *d_allsteps_lsts=NULL;
 
-      float *d_u_s_metres = NULL;
-      float *d_v_s_metres = NULL;
-      float *d_w_s_metres = NULL;
+      float *d_u_shapes = NULL;
+      float *d_v_shapes = NULL;
+      float *d_w_shapes = NULL;
 
       //Who likes cudaMalloc cudaMallocs? We like cudaMalloc cudaMallocs
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_ras),
@@ -623,11 +623,11 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
       cudaErrorCheckCall( cudaMemcpy( d_allsteps_lsts, visibility_set->allsteps_lsts,
                              num_visis*sizeof(float), cudaMemcpyHostToDevice) );
 
-      cudaErrorCheckCall( cudaMalloc( (void**)&d_u_s_metres,
+      cudaErrorCheckCall( cudaMalloc( (void**)&d_u_shapes,
                           num_shapes*num_visis*sizeof(float)) );
-      cudaErrorCheckCall( cudaMalloc( (void**)&d_v_s_metres,
+      cudaErrorCheckCall( cudaMalloc( (void**)&d_v_shapes,
                           num_shapes*num_visis*sizeof(float)) );
-      cudaErrorCheckCall( cudaMalloc( (void**)&d_w_s_metres,
+      cudaErrorCheckCall( cudaMalloc( (void**)&d_w_shapes,
                           num_shapes*num_visis*sizeof(float)) );
 
       //Only the FEE beam currently yields cross pol values, so only malloc what
@@ -673,7 +673,7 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
       cudaErrorCheckKernel("kern_calc_uvw_shapelet",
                             kern_calc_uvw_shapelet, grid, threads,
                             d_X_diff, d_Y_diff, d_Z_diff,
-                            d_u_s_metres, d_v_s_metres, d_w_s_metres,
+                            d_u_shapes, d_v_shapes, d_w_shapes,
                             d_allsteps_wavelengths,
                             d_allsteps_lsts, d_shape_ras, d_shape_decs,
                             num_baselines, num_visis, num_shapes);
@@ -688,7 +688,7 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
               d_shape_freqs, d_shape_stokesI, d_shape_stokesQ,
               d_shape_stokesU, d_shape_stokesV, d_shape_SIs,
               d_us, d_vs, d_ws, d_allsteps_wavelengths,
-              d_u_s_metres, d_v_s_metres, d_w_s_metres,
+              d_u_shapes, d_v_shapes, d_w_shapes,
               d_sum_visi_XX_real, d_sum_visi_XX_imag,
               d_sum_visi_XY_real, d_sum_visi_XY_imag,
               d_sum_visi_YX_real, d_sum_visi_YX_imag,
@@ -714,9 +714,9 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
       cudaErrorCheckCall( cudaFree(d_ns) );
       cudaErrorCheckCall( cudaFree(d_ms) );
       cudaErrorCheckCall( cudaFree(d_ls) );
-      cudaErrorCheckCall( cudaFree(d_w_s_metres) );
-      cudaErrorCheckCall( cudaFree(d_v_s_metres) );
-      cudaErrorCheckCall( cudaFree(d_u_s_metres) );
+      cudaErrorCheckCall( cudaFree(d_w_shapes) );
+      cudaErrorCheckCall( cudaFree(d_v_shapes) );
+      cudaErrorCheckCall( cudaFree(d_u_shapes) );
       cudaErrorCheckCall( cudaFree(d_allsteps_lsts) );
       cudaErrorCheckCall( cudaFree(d_shape_param_indexes) );
       cudaErrorCheckCall( cudaFree(d_shape_n2s) );

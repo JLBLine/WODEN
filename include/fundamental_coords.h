@@ -177,3 +177,8 @@ __global__ void kern_calc_lmn(float ra0, float sdec0, float cdec0,
            float *d_ras, float *d_decs,
            float *d_l, float *d_m, float *d_n,
            int num_components);
+
+
+extern "C" void test_kern_calc_lmn(float ra0, float dec0,
+                                  float *ras, float *decs, int num_coords,
+                                  float * ls, float * ms, float * ns);
