@@ -2,6 +2,11 @@ file(GLOB CUDASOURCES "../../../src/fundamental_coords.cu")
 
 add_library(fundamental_coordsCUDA SHARED ${CUDASOURCES})
 
+## For CMake versions > 3.18, the arch flag settings are handled by
+## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
+## replace the CUDA_FLAG lines above with something like
+set_property(TARGET fundamental_coordsCUDA PROPERTY CUDA_ARCHITECTURES OFF)
+
 ##Test l,m,n functions
 add_executable(test_lmn_coords_app
     test_lmn_coords.c

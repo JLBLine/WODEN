@@ -182,3 +182,8 @@ __global__ void kern_calc_lmn(float ra0, float sdec0, float cdec0,
 extern "C" void test_kern_calc_lmn(float ra0, float dec0,
                                   float *ras, float *decs, int num_coords,
                                   float * ls, float * ms, float * ns);
+
+extern "C" void test_kern_calc_uvw_shapelet(float *X_diff, float *Y_diff, float *Z_diff,
+           float *u_shapes, float *v_shapes, float *w_shapes, float *wavelengths,
+           float *lsts, float *ras, float *decs,
+           int num_baselines, int num_visis, int num_shapes);

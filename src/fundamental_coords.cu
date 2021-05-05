@@ -240,7 +240,6 @@ extern "C" void test_kern_calc_uvw(float *X_diff, float *Y_diff, float *Z_diff,
   threads.x = 128;
   grid.x = (int)ceil( (float)num_visis / (float)threads.x );
 
-
   cudaErrorCheckKernel("kern_calc_uvw",
           kern_calc_uvw, grid, threads,
           d_X_diff, d_Y_diff, d_Z_diff,
@@ -274,6 +273,86 @@ extern "C" void test_kern_calc_uvw(float *X_diff, float *Y_diff, float *Z_diff,
 
   cudaErrorCheckCall( cudaFree(d_sha0s) );
   cudaErrorCheckCall( cudaFree(d_cha0s) );
+
+  cudaErrorCheckCall( cudaFree(d_X_diff) );
+  cudaErrorCheckCall( cudaFree(d_Y_diff) );
+  cudaErrorCheckCall( cudaFree(d_Z_diff) );
+
+}
+
+extern "C" void test_kern_calc_uvw_shapelet(float *X_diff, float *Y_diff, float *Z_diff,
+           float *u_shapes, float *v_shapes, float *w_shapes, float *wavelengths,
+           float *lsts, float *ras, float *decs,
+           int num_baselines, int num_visis, int num_shapes) {
+
+  float *d_X_diff = NULL;
+  float *d_Y_diff = NULL;
+  float *d_Z_diff = NULL;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_X_diff, num_baselines*sizeof(float) ) );
+  cudaErrorCheckCall( cudaMemcpy( d_X_diff, X_diff,
+                      num_baselines*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_Y_diff, num_baselines*sizeof(float) ) );
+  cudaErrorCheckCall( cudaMemcpy( d_Y_diff, Y_diff,
+                      num_baselines*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_Z_diff, num_baselines*sizeof(float) ) );
+  cudaErrorCheckCall( cudaMemcpy( d_Z_diff, Z_diff,
+                      num_baselines*sizeof(float), cudaMemcpyHostToDevice ) );
+
+  float *d_lsts = NULL;
+  float *d_ras = NULL;
+  float *d_decs = NULL;
+  float *d_wavelengths = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_lsts, num_visis*sizeof(float) ) );
+  cudaErrorCheckCall( cudaMemcpy( d_lsts, lsts,
+                      num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_ras, num_visis*sizeof(float) ) );
+  cudaErrorCheckCall( cudaMemcpy( d_ras, ras,
+                      num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_decs, num_visis*sizeof(float) ) );
+  cudaErrorCheckCall( cudaMemcpy( d_decs, decs,
+                      num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_wavelengths, num_visis*sizeof(float) ) );
+  cudaErrorCheckCall( cudaMemcpy( d_wavelengths, wavelengths,
+                      num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+
+  float *d_u_shapes = NULL;
+  float *d_v_shapes = NULL;
+  float *d_w_shapes = NULL;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_u_shapes, num_shapes*num_visis*sizeof(float) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_v_shapes, num_shapes*num_visis*sizeof(float) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_w_shapes, num_shapes*num_visis*sizeof(float) ) );
+
+  dim3 grid, threads;
+
+  threads.x = 64;
+  grid.x = (int)ceil( (float)num_visis / (float)threads.x );
+
+  threads.y = 2;
+  grid.y = (int)ceil( (float)num_shapes / (float)threads.y );
+
+  cudaErrorCheckKernel("kern_calc_uvw_shapelet",
+          kern_calc_uvw_shapelet, grid, threads,
+          d_X_diff, d_Y_diff, d_Z_diff,
+          d_u_shapes, d_v_shapes, d_w_shapes, d_wavelengths,
+          d_lsts, d_ras, d_decs,
+          num_baselines, num_visis, num_shapes);
+
+  cudaErrorCheckCall( cudaMemcpy(u_shapes, d_u_shapes,
+                             num_shapes*num_visis*sizeof(float),cudaMemcpyDeviceToHost) );
+  cudaErrorCheckCall( cudaMemcpy(v_shapes, d_v_shapes,
+                             num_shapes*num_visis*sizeof(float),cudaMemcpyDeviceToHost) );
+  cudaErrorCheckCall( cudaMemcpy(w_shapes, d_w_shapes,
+                             num_shapes*num_visis*sizeof(float),cudaMemcpyDeviceToHost) );
+
+  cudaErrorCheckCall( cudaFree(d_u_shapes) );
+  cudaErrorCheckCall( cudaFree(d_v_shapes) );
+  cudaErrorCheckCall( cudaFree(d_w_shapes) );
+
+  cudaErrorCheckCall( cudaFree(d_lsts) );
+  cudaErrorCheckCall( cudaFree(d_ras) );
+  cudaErrorCheckCall( cudaFree(d_decs) );
 
   cudaErrorCheckCall( cudaFree(d_X_diff) );
   cudaErrorCheckCall( cudaFree(d_Y_diff) );
