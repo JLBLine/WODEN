@@ -1119,8 +1119,6 @@ if __name__ == "__main__":
         if args.remove_phase_tracking:
             frequencies = band_low_freq + arange(num_freq_channels)*ch_width
 
-            print(frequencies)
-
             v_container = remove_phase_tracking(frequencies=frequencies,
                                       wws_seconds=wws,
                                       num_time_steps=num_time_steps,

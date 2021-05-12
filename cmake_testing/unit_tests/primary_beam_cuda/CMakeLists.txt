@@ -8,16 +8,16 @@ add_library(primary_beam_cudaCUDA SHARED
 ## replace the CUDA_FLAG lines above with something like
 set_property(TARGET primary_beam_cudaCUDA PROPERTY CUDA_ARCHITECTURES OFF)
 
-# ##Test gaussian beam functions
-# add_executable(test_gaussian_beam_app
-#     test_gaussian_beam.c
-# )
-# target_link_libraries(test_gaussian_beam_app
-#     Unity
-#     primary_beam_cudaCUDA
-#     ${CC_LINKLIBS}
-# )
-# add_test(test_gaussian_beam test_gaussian_beam_app)
+##Test gaussian beam functions
+add_executable(test_gaussian_beam_app
+    test_gaussian_beam.c
+)
+target_link_libraries(test_gaussian_beam_app
+    Unity
+    primary_beam_cudaCUDA
+    ${CC_LINKLIBS}
+)
+add_test(CUDA_test_gaussian_beam test_gaussian_beam_app)
 
 
 
@@ -30,4 +30,4 @@ target_link_libraries(test_analytic_beam_app
     primary_beam_cudaCUDA
     ${CC_LINKLIBS}
 )
-add_test(test_analytic_beam test_analytic_beam_app)
+add_test(CUDA_test_analytic_beam test_analytic_beam_app)

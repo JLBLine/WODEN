@@ -26,7 +26,18 @@ set(TARGET_GROUP production CACHE STRING "Group to build")
 
 include_directories("${CMAKE_SOURCE_DIR}/../include/")
 
-set(CC_LINKLIBS "-lm -pthread")
+
+set(HINTS_ERFA_INC "/usr/local/include/;${ERFA_ROOT}/include/;${ERFA_ROOT}")
+set(HINTS_ERFA_LIB "/usr/local/lib/;${ERFA_ROOT}/src/.libs/;${ERFA_ROOT}.libs/;${ERFA_ROOT};${ERFA_ROOT}/lib/")
+
+find_path(ERFA_INC erfa.h HINTS ${HINTS_ERFA_INC})
+find_library(ERFA_LIB erfa HINTS ${HINTS_ERFA_LIB} REQUIRED)
+if(ERFA_LIB)
+  message(STATUS "ERFA includes path: ${ERFA_INC}")
+  message(STATUS "ERFA library path: ${ERFA_LIB}")
+endif()
+
+set(CC_LINKLIBS "-pthread -lm ${ERFA_LIB}")
 
 if(TARGET_GROUP STREQUAL production)
     # add_subdirectory(main)

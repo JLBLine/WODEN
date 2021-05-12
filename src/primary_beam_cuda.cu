@@ -115,8 +115,11 @@ __device__ void analytic_dipole(float az, float za, float wavelength,
 
   float dipole_height_m = 0.3;
 
-  float theta_parallel_X = acos(sin(za)*sin(az));
-  float theta_parallel_Y = acos(sin(za)*cos(az));
+  //Here, X means a north-south aligned dipole
+  //      Y means an east-west aligned dipole
+
+  float theta_parallel_X = acos(sin(za)*cos(az));
+  float theta_parallel_Y = acos(sin(za)*sin(az));
 
   float d_in_lambda = (2. * dipole_height_m)/wavelength;
   float gp_effect_array = 2. * sin(M_PI*d_in_lambda*cos(za));
@@ -170,6 +173,7 @@ __global__ void kern_analytic_dipole_beam(float *d_azs, float *d_zas,
     cuFloatComplex normed_X = d_beam_X;
     cuFloatComplex normed_Y = d_beam_Y;
 
+    //Analytic beam is entirely real, so can just normalise by real values
     normed_X.x = normed_X.x / d_beam_norm_X.x;
     normed_Y.x = normed_Y.x / d_beam_norm_Y.x;
 

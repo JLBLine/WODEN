@@ -15,7 +15,7 @@ target_link_libraries(test_lmn_coords_app
     Unity
     fundamental_coordsCUDA
 )
-add_test(test_lmn_coords test_lmn_coords_app)
+add_test(CUDA_test_lmn_coords test_lmn_coords_app)
 
 
 
@@ -28,4 +28,4 @@ target_link_libraries(test_uvw_coords_app
     fundamental_coordsCUDA
     ${CC_LINKLIBS}
 )
-add_test(test_uvw_coords test_uvw_coords_app)
+add_test(CUDA_test_uvw_coords test_uvw_coords_app)
