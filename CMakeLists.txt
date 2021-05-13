@@ -122,48 +122,79 @@ set(CC_LINKLIBS "-lm -pthread ${CFITSIO_LIB} ${JSONC_LIB} ${ERFA_LIB} ${HDF5_LIB
 ##All the WODEN header dirs are in include dir
 include_directories("${CMAKE_SOURCE_DIR}/include" ${JSONC_INC} ${CFITSIO_INC} ${ERFA_INC} ${HDF5_INC} ${PAL_INC})
 
-##Generate libraries from the C and CUDA source code
-add_library(wodenC SHARED ${CSOURCES})
-add_library(wodenCUDA SHARED ${CUDASOURCES})
-## For CMake versions > 3.18, the arch flag settings are handled by
-## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
-## replace the CUDA_FLAG lines above with something like
-set_property(TARGET wodenCUDA PROPERTY CUDA_ARCHITECTURES OFF)
+##Choose whether we are created the main executable, or making the unit tests
+set(TARGET_GROUP production CACHE STRING "Group to build")
 
-##make the final WODEN executable, linking the libraries
-add_executable(woden src/woden.c)
-target_link_libraries(woden wodenC wodenCUDA ${CC_LINKLIBS})
-add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
+##If making production code
+if(TARGET_GROUP STREQUAL production)
+    ##Generate libraries from the C and CUDA source code
+    add_library(wodenC SHARED ${CSOURCES})
+    add_library(wodenCUDA SHARED ${CUDASOURCES})
+    ## For CMake versions > 3.18, the arch flag settings are handled by
+    ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
+    ## replace the CUDA_FLAG lines above with something like
+    set_property(TARGET wodenCUDA PROPERTY CUDA_ARCHITECTURES OFF)
 
-SET_SOURCE_FILES_PROPERTIES(
-  src/FEE_primary_beam.c
-  PROPERTIES
-  COMPILE_DEFINITIONS "H5Dopen_vers=2;H5Gopen_vers=2"
-)
+    ##make the final WODEN executable, linking the libraries
+    add_executable(woden src/woden.c)
+    target_link_libraries(woden wodenC wodenCUDA ${CC_LINKLIBS})
+    add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
 
-##Make a symlink to run_woden.py so it's easy to find
-set(link_woden "run_woden.py")
-find_path(WODENPY run_woden.py HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
-if(WODENPY)
-  message(STATUS "WODENPY path: ${WODENPY}")
+    # SET_SOURCE_FILES_PROPERTIES(
+    #   src/FEE_primary_beam.c
+    #   PROPERTIES
+    #   COMPILE_DEFINITIONS "H5Dopen_vers=2;H5Gopen_vers=2"
+    # )
+
+    ##Make a symlink to run_woden.py so it's easy to find
+    set(link_woden "run_woden.py")
+    find_path(WODENPY run_woden.py HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
+    if(WODENPY)
+      message(STATUS "WODENPY path: ${WODENPY}")
+    endif()
+    set(target_woden "${WODENPY}/run_woden.py")
+    ADD_CUSTOM_TARGET(target_woden ALL
+                      COMMAND ${CMAKE_COMMAND} -E create_symlink ${target_woden} ${link_woden})
+
+    ##Make a symlink to convert_WSClean_list_to_WODEN.py so it's easy to find
+    set(link_convert "convert_WSClean_list_to_WODEN.py")
+    find_path(CONVERTWSCLEAN run_woden.py HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
+    if(CONVERTWSCLEAN)
+      message(STATUS "CONVERTWSCLEAN path: ${WODENPY}")
+    endif()
+    set(target_convert "${CONVERTWSCLEAN}/convert_WSClean_list_to_WODEN.py")
+    ADD_CUSTOM_TARGET(target_convert ALL
+                      COMMAND ${CMAKE_COMMAND} -E create_symlink ${target_convert} ${link_convert})
+
+    ##Copy the variable init script so this file can be put in bashrc
+    find_path(INIT_WODEN init_WODEN.sh HINTS "${CMAKE_CURRENT_LIST_DIR}/templates/")
+    if(INIT_WODEN)
+      message(STATUS "INIT_WODEN path: ${INIT_WODEN}")
+    endif()
+    configure_file("${INIT_WODEN}/init_WODEN.sh" init_WODEN.sh COPYONLY)
+
+##If making test code
+elseif(TARGET_GROUP STREQUAL test)
+
+      include(CTest)
+
+      set(HINTS_UNITY "${UNITY_ROOT};${UNITY_ROOT}/src/;/usr/local/Unity/src/")
+
+      find_path(UNITY_DIR unity.h HINTS ${HINTS_UNITY})
+
+      if(UNITY_DIR)
+        message(STATUS "UNITY src path: ${UNITY_DIR}")
+      endif()
+
+      add_library(Unity STATIC
+          "${UNITY_DIR}/unity.c"
+      )
+
+      target_include_directories(Unity PUBLIC
+          "${UNITY_DIR}"
+      )
+
+      add_subdirectory(cmake_testing/unit_tests)
+else()
+    message(FATAL_ERROR "Given TARGET_GROUP unknown")
 endif()
-set(target_woden "${WODENPY}/run_woden.py")
-ADD_CUSTOM_TARGET(target_woden ALL
-                  COMMAND ${CMAKE_COMMAND} -E create_symlink ${target_woden} ${link_woden})
-
-##Make a symlink to convert_WSClean_list_to_WODEN.py so it's easy to find
-set(link_convert "convert_WSClean_list_to_WODEN.py")
-find_path(CONVERTWSCLEAN run_woden.py HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
-if(CONVERTWSCLEAN)
-  message(STATUS "CONVERTWSCLEAN path: ${WODENPY}")
-endif()
-set(target_convert "${CONVERTWSCLEAN}/convert_WSClean_list_to_WODEN.py")
-ADD_CUSTOM_TARGET(target_convert ALL
-                  COMMAND ${CMAKE_COMMAND} -E create_symlink ${target_convert} ${link_convert})
-
-##Copy the variable init script so this file can be put in bashrc
-find_path(INIT_WODEN init_WODEN.sh HINTS "${CMAKE_CURRENT_LIST_DIR}/templates/")
-if(INIT_WODEN)
-  message(STATUS "INIT_WODEN path: ${INIT_WODEN}")
-endif()
-configure_file("${INIT_WODEN}/init_WODEN.sh" init_WODEN.sh COPYONLY)

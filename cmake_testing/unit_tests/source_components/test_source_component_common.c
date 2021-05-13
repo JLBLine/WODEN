@@ -6,6 +6,7 @@
 
 #include "constants.h"
 #include "woden_struct_defs.h"
+#include "FEE_primary_beam.h"
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
@@ -24,11 +25,190 @@ extern void test_source_component_common(int num_components,
            beam_settings_t beam_settings,
            RTS_MWA_FEE_beam_t *FEE_beam);
 
+extern void get_HDFBeam_normalisation(RTS_MWA_FEE_beam_t *FEE_beam_zenith,
+                RTS_MWA_FEE_beam_t *FEE_beam);
+
+extern void free_FEE_primary_beam_from_GPU(RTS_MWA_FEE_beam_t *primary_beam);
+
+extern void copy_FEE_primary_beam_to_GPU(RTS_MWA_FEE_beam_t *FEE_beam);
+
 #define UNITY_INCLUDE_FLOAT
+
+/*******************************************************************************
+Here are a bunch of predefined arrays to be used
+Some are inputs for tests, others are expected outputs
+*******************************************************************************/
+
+float azs[] = {4.71238899, 4.71238899, 4.71238899, 4.71238899, 4.71238899,
+               4.71238899, 4.71238899, 4.71238899, 4.71238899, 4.71238899,
+               4.71238899, 4.71238899, 0.00000000, 0.00000000, 0.00000000,
+               1.57079637, 1.57079637, 1.57079637, 1.57079637, 1.57079637,
+               1.57079637, 1.57079637, 1.57079637, 1.57079637, 1.57079637,
+               1.57079637, 1.57079637};
+float zas[] = {1.57079631, 1.57079631, 1.57079631, 1.04719766, 1.04719766,
+               1.04719766, 0.78539832, 0.78539832, 0.78539832, 0.52359898,
+               0.52359898, 0.52359898, 0.00000000, 0.00000000, 0.00000000,
+               0.52359875, 0.52359875, 0.52359875, 0.78539820, 0.78539820,
+               0.78539820, 1.04719760, 1.04719760, 1.04719760, 1.57079637,
+               1.57079637, 1.57079637};
+
+float sin_para_angs[] = {1.00000000, 1.00000000, 1.00000000, 1.00000000,
+                         1.00000000, 1.00000000, 1.00000000, 1.00000000,
+                         1.00000000, 1.00000000, 1.00000000, 1.00000000,
+                         0.00000000, 0.00000000, 0.00000000, -1.00000000,
+                         -1.00000000, -1.00000000, -1.00000000, -1.00000000,
+                         -1.00000000, -1.00000000, -1.00000000, -1.00000000,
+                         -1.00000000, -1.00000000, -1.00000000};
+
+float cos_para_angs[] = {0.00000000, 0.00000000, 0.00000000, 0.00000000,
+                         0.00000000, 0.00000000, 0.00000000, 0.00000000,
+                         0.00000000, 0.00000000, 0.00000000, 0.00000000,
+                         1.00000000, 1.00000000, 1.00000000, 0.00000000,
+                         0.00000000, 0.00000000, 0.00000000, 0.00000000,
+                         0.00000000, 0.00000000, 0.00000000, 0.00000000,
+                         0.00000000, 0.00000000, 0.00000000};
+
+float gauss_expected[] = { 0.2806705, 0.3856093, 0.5297833, 0.7278620,
+                           1.0000000, 0.7278622, 0.5297834, 0.3856093,
+                           0.2806705, 0.0062056, 0.0221101, 0.0787758,
+                           0.2806702, 1.0000000, 0.2806705, 0.0787759,
+                           0.0221101, 0.0062056,
+                           0.2806705, 0.3856093, 0.5297833, 0.7278620,
+                           1.0000000, 0.7278622, 0.5297834, 0.3856093,
+                           0.2806705, 0.0062056, 0.0221101, 0.0787758,
+                           0.2806702, 1.0000000, 0.2806705, 0.0787759,
+                           0.0221101, 0.0062056,
+                           0.2806705, 0.3856093, 0.5297833, 0.7278620,
+                           1.0000000, 0.7278622, 0.5297834, 0.3856093,
+                           0.2806705, 0.0062056, 0.0221101, 0.0787758,
+                           0.2806702, 1.0000000, 0.2806705, 0.0787759,
+                           0.0221101, 0.0062056};
+
+float analy_expec_J00[] = { 0.0000000, 0.5257682, 0.7312802, 0.8807548, 1.0000000,
+                    0.8807548, 0.7312803, 0.5257683, 0.0000000, 0.0000000,
+                    0.6182293, 0.8162959, 0.9315211, 1.0000000, 0.9315211,
+                    0.8162960, 0.6182294, 0.0000000, 0.0000001, 0.5257682,
+                    0.7312802, 0.8807548, 1.0000000, 0.8807548, 0.7312803,
+                    0.5257683, 0.0000000, 0.0000000, 0.6182293, 0.8162959,
+                    0.9315211, 1.0000000, 0.9315211, 0.8162960, 0.6182294,
+                    0.0000000, 0.0000000, 0.5257682, 0.7312802, 0.8807548,
+                    1.0000000, 0.8807548, 0.7312803, 0.5257683, 0.0000000,
+                    0.0000001, 0.6182293, 0.8162959, 0.9315211, 1.0000000,
+                    0.9315211, 0.8162960, 0.6182294, 0.0000000 };
+
+float analy_expec_J11[] = { 0.0000000, 0.2628839, 0.5170931, 0.7627559, 1.0000000,
+                    0.7627561, 0.5170933, 0.2628841, 0.0000000, 0.0000000,
+                    0.3091144, 0.5772082, 0.8067207, 1.0000000, 0.8067210,
+                    0.5772084, 0.3091146, 0.0000000, 0.0000000, 0.2628839,
+                    0.5170931, 0.7627559, 1.0000000, 0.7627561, 0.5170933,
+                    0.2628841, 0.0000000, 0.0000000, 0.3091144, 0.5772082,
+                    0.8067207, 1.0000000, 0.8067210, 0.5772084, 0.3091146,
+                    0.0000000, 0.0000000, 0.2628839, 0.5170931, 0.7627559,
+                    1.0000000, 0.7627561, 0.5170933, 0.2628841, 0.0000000,
+                    0.0000000, 0.3091144, 0.5772082, 0.8067207, 1.0000000,
+                    0.8067210, 0.5772084, 0.3091146, 0.0000000 };
+
+float fee_expec_J00_re[] = { -0.0000036, -0.0000707, 0.0000195, 0.0000860,
+                  0.0002512, 0.0000867, 0.0000197, -0.0000710, -0.0000035,
+                  -0.0000036, -0.0000707, 0.0000195, 0.0000860, 0.0002512,
+                  0.0000867, 0.0000197, -0.0000710, -0.0000035, -0.0000036,
+                  -0.0000707, 0.0000195, 0.0000860, 0.0002512, 0.0000867,
+                  0.0000197, -0.0000710, -0.0000035, -0.0000036, -0.0000707,
+                  0.0000195, 0.0000860, 0.0002512, 0.0000867, 0.0000197,
+                  -0.0000710, -0.0000035, -0.0000036, -0.0000707, 0.0000195,
+                  0.0000860, 0.0002512, 0.0000867, 0.0000197, -0.0000710,
+                  -0.0000035, -0.0000036, -0.0000707, 0.0000195, 0.0000860,
+                  0.0002512, 0.0000867, 0.0000197, -0.0000710, -0.0000035 };
+
+float fee_expec_J00_im[] = { 0.0000008, -0.0000328, -0.0000167, 0.0000288,
+                  0.0001243, 0.0000291, -0.0000164, -0.0000324, 0.0000006,
+                  0.0000008, -0.0000328, -0.0000167, 0.0000288, 0.0001243,
+                  0.0000291, -0.0000164, -0.0000324, 0.0000006, 0.0000008,
+                  -0.0000328, -0.0000167, 0.0000288, 0.0001243, 0.0000291,
+                  -0.0000164, -0.0000324, 0.0000006, 0.0000008, -0.0000328,
+                  -0.0000167, 0.0000288, 0.0001243, 0.0000291, -0.0000164,
+                  -0.0000324, 0.0000006, 0.0000008, -0.0000328, -0.0000167,
+                  0.0000288, 0.0001243, 0.0000291, -0.0000164, -0.0000324,
+                  0.0000006, 0.0000008, -0.0000328, -0.0000167, 0.0000288,
+                  0.0001243, 0.0000291, -0.0000164, -0.0000324, 0.0000006 };
+
+float fee_expec_J01_re[] = { -0.0029124, 0.0510724, 0.2057645, 0.0950377,
+                   0.9703817, 0.0950371, 0.2057633, 0.0510722, -0.0029126,
+                   -0.0029124, 0.0510724, 0.2057645, 0.0950377, 0.9703817,
+                   0.0950371, 0.2057633, 0.0510722, -0.0029126, -0.0029124,
+                   0.0510724, 0.2057645, 0.0950377, 0.9703817, 0.0950371,
+                   0.2057633, 0.0510722, -0.0029126, -0.0029124, 0.0510724,
+                   0.2057645, 0.0950377, 0.9703817, 0.0950371, 0.2057633,
+                   0.0510722, -0.0029126, -0.0029124, 0.0510724, 0.2057645,
+                   0.0950377, 0.9703817, 0.0950371, 0.2057633, 0.0510722,
+                   -0.0029126, -0.0029124, 0.0510724, 0.2057645, 0.0950377,
+                   0.9703817, 0.0950371, 0.2057633, 0.0510722, -0.0029126 };
+
+float fee_expec_J01_im[] = { -0.0000438, 0.0094490, 0.0335542, 0.0188814,
+                  0.2415767, 0.0188819, 0.0335540, 0.0094488, -0.0000439,
+                  -0.0000438, 0.0094490, 0.0335542, 0.0188814, 0.2415767,
+                  0.0188819, 0.0335540, 0.0094488, -0.0000439, -0.0000438,
+                  0.0094490, 0.0335542, 0.0188814, 0.2415767, 0.0188819,
+                  0.0335540, 0.0094488, -0.0000439, -0.0000438, 0.0094490,
+                  0.0335542, 0.0188814, 0.2415767, 0.0188819, 0.0335540,
+                  0.0094488, -0.0000439, -0.0000438, 0.0094490, 0.0335542,
+                  0.0188814, 0.2415767, 0.0188819, 0.0335540, 0.0094488,
+                  -0.0000439, -0.0000438, 0.0094490, 0.0335542, 0.0188814,
+                  0.2415767, 0.0188819, 0.0335540, 0.0094488, -0.0000439 };
+
+float fee_expec_J10_re[] = { 0.0016467, -0.0212285, -0.1320742, -0.0687671,
+                -0.9701791, -0.0687667, -0.1320757, -0.0212311, 0.0016451,
+                0.0016467, -0.0212285, -0.1320742, -0.0687671, -0.9701791,
+                -0.0687667, -0.1320757, -0.0212311, 0.0016451, 0.0016467,
+                -0.0212285, -0.1320742, -0.0687671, -0.9701791, -0.0687667,
+                -0.1320757, -0.0212311, 0.0016451, 0.0016467, -0.0212285,
+                -0.1320742, -0.0687671, -0.9701791, -0.0687667, -0.1320757,
+                -0.0212311, 0.0016451, 0.0016467, -0.0212285, -0.1320742,
+                -0.0687671, -0.9701791, -0.0687667, -0.1320757, -0.0212311,
+                0.0016451, 0.0016467, -0.0212285, -0.1320742, -0.0687671,
+                -0.9701791, -0.0687667, -0.1320757, -0.0212311, 0.0016451 };
+
+float fee_expec_J10_im[] = { 0.0008441, 0.0186237, -0.0165366, -0.0381620,
+                -0.2423892, -0.0381634, -0.0165374, 0.0186229, 0.0008454,
+                0.0008441, 0.0186237, -0.0165366, -0.0381620, -0.2423892,
+                -0.0381634, -0.0165374, 0.0186229, 0.0008454, 0.0008441,
+                0.0186237, -0.0165366, -0.0381620, -0.2423892, -0.0381634,
+                -0.0165374, 0.0186229, 0.0008454, 0.0008441, 0.0186237,
+                -0.0165366, -0.0381620, -0.2423892, -0.0381634, -0.0165374,
+                0.0186229, 0.0008454, 0.0008441, 0.0186237, -0.0165366,
+                -0.0381620, -0.2423892, -0.0381634, -0.0165374, 0.0186229,
+                0.0008454, 0.0008441, 0.0186237, -0.0165366, -0.0381620,
+                -0.2423892, -0.0381634, -0.0165374, 0.0186229, 0.0008454 };
+
+float fee_expec_J11_re[] = { -0.0000014, -0.0000088, -0.0000159, -0.0000640,
+                 -0.0002477, -0.0000634, -0.0000149, -0.0000075, -0.0000018,
+                 -0.0000014, -0.0000088, -0.0000159, -0.0000640, -0.0002477,
+                 -0.0000634, -0.0000149, -0.0000075, -0.0000018, -0.0000014,
+                 -0.0000088, -0.0000159, -0.0000640, -0.0002477, -0.0000634,
+                 -0.0000149, -0.0000075, -0.0000018, -0.0000014, -0.0000088,
+                 -0.0000159, -0.0000640, -0.0002477, -0.0000634, -0.0000149,
+                 -0.0000075, -0.0000018, -0.0000014, -0.0000088, -0.0000159,
+                 -0.0000640, -0.0002477, -0.0000634, -0.0000149, -0.0000075,
+                 -0.0000018, -0.0000014, -0.0000088, -0.0000159, -0.0000640,
+                 -0.0002477, -0.0000634, -0.0000149, -0.0000075, -0.0000018 };
+
+float fee_expec_J11_im[] = { 0.0000041, 0.0000744, 0.0000205, -0.0001054,
+                -0.0001180, -0.0001041, 0.0000226, 0.0000758, 0.0000037,
+                0.0000041, 0.0000744, 0.0000205, -0.0001054, -0.0001180,
+                -0.0001041, 0.0000226, 0.0000758, 0.0000037, 0.0000041,
+                0.0000744, 0.0000205, -0.0001054, -0.0001180, -0.0001041,
+                0.0000226, 0.0000758, 0.0000037, 0.0000041, 0.0000744,
+                0.0000205, -0.0001054, -0.0001180, -0.0001041, 0.0000226,
+                0.0000758, 0.0000037, 0.0000041, 0.0000744, 0.0000205,
+                -0.0001054, -0.0001180, -0.0001041, 0.0000226, 0.0000758,
+                0.0000037, 0.0000041, 0.0000744, 0.0000205, -0.0001054,
+                -0.0001180, -0.0001041, 0.0000226, 0.0000758, 0.0000037 };
 
 /*
 Test that l,m,n and beam values are calculated correctly by `source_component_common`
 for a constant Dec=0, latitude=0, and all beam types
+There are other tests for the l,m,n coords and beam functions, so no need to
+test millions of scenarios here, so stick with Dec=0
 */
 void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa_fee_hdf5) {
 
@@ -55,7 +235,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     decs[i] = dec0;
   }
 
-
+  //Get the settings into a woden_settings_t struct
   woden_settings_t *woden_settings = malloc(sizeof(woden_settings_t));
   woden_settings->num_freqs = num_freqs;
   woden_settings->num_time_steps = num_times;
@@ -65,9 +245,6 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
   beam_settings_t beam_settings;
   beam_settings.beamtype = beamtype;
-
-
-  RTS_MWA_FEE_beam_t *FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
 
   /*********************************************************************
   Code used to generate the az / za and parallactic angles is below
@@ -107,54 +284,12 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   }
   */
 
-  float azs[] = {4.71238899, 4.71238899, 4.71238899, 4.71238899, 4.71238899,
-                 4.71238899, 4.71238899, 4.71238899, 4.71238899, 4.71238899,
-                 4.71238899, 4.71238899, 0.00000000, 0.00000000, 0.00000000,
-                 1.57079637, 1.57079637, 1.57079637, 1.57079637, 1.57079637,
-                 1.57079637, 1.57079637, 1.57079637, 1.57079637, 1.57079637,
-                 1.57079637, 1.57079637};
-  float zas[] = {1.57079631, 1.57079631, 1.57079631, 1.04719766, 1.04719766,
-                 1.04719766, 0.78539832, 0.78539832, 0.78539832, 0.52359898,
-                 0.52359898, 0.52359898, 0.00000000, 0.00000000, 0.00000000,
-                 0.52359875, 0.52359875, 0.52359875, 0.78539820, 0.78539820,
-                 0.78539820, 1.04719760, 1.04719760, 1.04719760, 1.57079637,
-                 1.57079637, 1.57079637};
-
-  float sin_para_angs[] = {1.00000000, 1.00000000, 1.00000000, 1.00000000,
-                           1.00000000, 1.00000000, 1.00000000, 1.00000000,
-                           1.00000000, 1.00000000, 1.00000000, 1.00000000,
-                           0.00000000, 0.00000000, 0.00000000, -1.00000000,
-                           -1.00000000, -1.00000000, -1.00000000, -1.00000000,
-                           -1.00000000, -1.00000000, -1.00000000, -1.00000000,
-                           -1.00000000, -1.00000000, -1.00000000};
-
-  float cos_para_angs[] = {0.00000000, 0.00000000, 0.00000000, 0.00000000,
-                           0.00000000, 0.00000000, 0.00000000, 0.00000000,
-                           0.00000000, 0.00000000, 0.00000000, 0.00000000,
-                           1.00000000, 1.00000000, 1.00000000, 0.00000000,
-                           0.00000000, 0.00000000, 0.00000000, 0.00000000,
-                           0.00000000, 0.00000000, 0.00000000, 0.00000000,
-                           0.00000000, 0.00000000, 0.00000000};
-
-  float _Complex *primay_beam_J00 = calloc(num_beam_values, sizeof(float _Complex));
-  float _Complex *primay_beam_J01 = calloc(num_beam_values, sizeof(float _Complex));
-  float _Complex *primay_beam_J10 = calloc(num_beam_values, sizeof(float _Complex));
-  float _Complex *primay_beam_J11 = calloc(num_beam_values, sizeof(float _Complex));
-
-  float *ls = malloc(num_components*sizeof(float));
-  float *ms = malloc(num_components*sizeof(float));
-  float *ns = malloc(num_components*sizeof(float));
-
-  float l_expected[9] = {-1.0, -sqrt(3)/2.0, -sqrt(2)/2.0, -0.5,
-                          0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0, 1.0};
-  float n_expected[9] = {0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0,
-                         1.0, sqrt(3)/2.0, sqrt(2)/2.0, 0.5, 0.0};
-
   float freqs[] = {100e+6, 200e+6};
 
   float *beam_has = malloc(num_components*num_times*sizeof(float));
   float *beam_decs = malloc(num_components*num_times*sizeof(float));
 
+  //Make ha/dec coords if using the Gaussian beam
   if (beamtype == GAUSS_BEAM) {
     //Stick the Gaussian beam pointed at zenith
     //We're testing at latitude=zero
@@ -174,22 +309,50 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     }
   }
 
-  float gauss_expected[] = { 0.2806705, 0.3856093, 0.5297833, 0.7278620,
-                             1.0000000, 0.7278622, 0.5297834, 0.3856093,
-                             0.2806705, 0.0062056, 0.0221101, 0.0787758,
-                             0.2806702, 1.0000000, 0.2806705, 0.0787759,
-                             0.0221101, 0.0062056,
-                             0.2806705, 0.3856093, 0.5297833, 0.7278620,
-                             1.0000000, 0.7278622, 0.5297834, 0.3856093,
-                             0.2806705, 0.0062056, 0.0221101, 0.0787758,
-                             0.2806702, 1.0000000, 0.2806705, 0.0787759,
-                             0.0221101, 0.0062056,
-                             0.2806705, 0.3856093, 0.5297833, 0.7278620,
-                             1.0000000, 0.7278622, 0.5297834, 0.3856093,
-                             0.2806705, 0.0062056, 0.0221101, 0.0787758,
-                             0.2806702, 1.0000000, 0.2806705, 0.0787759,
-                             0.0221101, 0.0062056};
-  // //Run the CUDA code
+  RTS_MWA_FEE_beam_t *FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
+  //If FEE_BEAM, call the C code to interrogate the hdf5 file and set beam
+  //things up
+  if (beamtype == FEE_BEAM) {
+
+    //Get a zenith pointing beam for normalisation purposes
+    RTS_MWA_FEE_beam_t *FEE_beam_zenith = malloc(sizeof(RTS_MWA_FEE_beam_t));
+
+    float base_middle_freq = 150e+6;
+//
+    float float_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                     0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    //
+    printf("\n\tSetting up the zenith FEE beam...");
+    RTS_MWAFEEInit(mwa_fee_hdf5, base_middle_freq, FEE_beam_zenith, float_zenith_delays);
+    printf(" done.\n");
+
+    printf("\tSetting up the FEE beam...");
+    RTS_MWAFEEInit(mwa_fee_hdf5, base_middle_freq, FEE_beam, float_zenith_delays);
+    printf(" done.\n");
+
+    printf("\tGetting FEE beam normalisation...");
+    get_HDFBeam_normalisation(FEE_beam_zenith, FEE_beam);
+    //Free the zenith pointing as done with it now
+    free_FEE_primary_beam_from_GPU(FEE_beam_zenith);
+    printf(" done.\n");
+
+    printf("\tCopying the FEE beam across to the GPU...");
+    copy_FEE_primary_beam_to_GPU(FEE_beam);
+    printf(" done.\n");
+
+  }
+
+  //Output arrays
+  float _Complex *primay_beam_J00 = calloc(num_beam_values, sizeof(float _Complex));
+  float _Complex *primay_beam_J01 = calloc(num_beam_values, sizeof(float _Complex));
+  float _Complex *primay_beam_J10 = calloc(num_beam_values, sizeof(float _Complex));
+  float _Complex *primay_beam_J11 = calloc(num_beam_values, sizeof(float _Complex));
+
+  float *ls = malloc(num_components*sizeof(float));
+  float *ms = malloc(num_components*sizeof(float));
+  float *ns = malloc(num_components*sizeof(float));
+
+  //Run the CUDA code
   test_source_component_common(num_components,
              primay_beam_J00, primay_beam_J01,
              primay_beam_J10, primay_beam_J11,
@@ -201,30 +364,11 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
              beam_settings,
              FEE_beam);
 
-  float analy_expec_J00[] = { 0.0000000, 0.5257682, 0.7312802, 0.8807548, 1.0000000,
-                      0.8807548, 0.7312803, 0.5257683, 0.0000000, 0.0000000,
-                      0.6182293, 0.8162959, 0.9315211, 1.0000000, 0.9315211,
-                      0.8162960, 0.6182294, 0.0000000, 0.0000001, 0.5257682,
-                      0.7312802, 0.8807548, 1.0000000, 0.8807548, 0.7312803,
-                      0.5257683, 0.0000000, 0.0000000, 0.6182293, 0.8162959,
-                      0.9315211, 1.0000000, 0.9315211, 0.8162960, 0.6182294,
-                      0.0000000, 0.0000000, 0.5257682, 0.7312802, 0.8807548,
-                      1.0000000, 0.8807548, 0.7312803, 0.5257683, 0.0000000,
-                      0.0000001, 0.6182293, 0.8162959, 0.9315211, 1.0000000,
-                      0.9315211, 0.8162960, 0.6182294, 0.0000000 };
 
-  float analy_expec_J11[] = { 0.0000000, 0.2628839, 0.5170931, 0.7627559, 1.0000000,
-                      0.7627561, 0.5170933, 0.2628841, 0.0000000, 0.0000000,
-                      0.3091144, 0.5772082, 0.8067207, 1.0000000, 0.8067210,
-                      0.5772084, 0.3091146, 0.0000000, 0.0000000, 0.2628839,
-                      0.5170931, 0.7627559, 1.0000000, 0.7627561, 0.5170933,
-                      0.2628841, 0.0000000, 0.0000000, 0.3091144, 0.5772082,
-                      0.8067207, 1.0000000, 0.8067210, 0.5772084, 0.3091146,
-                      0.0000000, 0.0000000, 0.2628839, 0.5170931, 0.7627559,
-                      1.0000000, 0.7627561, 0.5170933, 0.2628841, 0.0000000,
-                      0.0000000, 0.3091144, 0.5772082, 0.8067207, 1.0000000,
-                      0.8067210, 0.5772084, 0.3091146, 0.0000000 };
-
+  float l_expected[9] = {-1.0, -sqrt(3)/2.0, -sqrt(2)/2.0, -0.5,
+                          0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0, 1.0};
+  float n_expected[9] = {0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0,
+                         1.0, sqrt(3)/2.0, sqrt(2)/2.0, 0.5, 0.0};
 
   //Check the l values match expectations
   TEST_ASSERT_EQUAL_FLOAT_ARRAY(l_expected, ls, num_components);
@@ -233,6 +377,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     TEST_ASSERT_FLOAT_WITHIN(2e-7, n_expected[i], ns[i]);
   }
 
+  //Depending on beamtype, check results match expectations
   if (beamtype == GAUSS_BEAM) {
     for (size_t output = 0; output < num_beam_values; output++) {
       // printf("%.7f %.5f %.5f %.5f %.5f %.5f %.7f %.5f\n",
@@ -254,12 +399,6 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   }
   else if (beamtype == ANALY_DIPOLE) {
     for (size_t output = 0; output < num_beam_values; output++) {
-      // printf("%.7f %.5f %.5f %.5f %.5f %.5f %.7f %.5f\n",
-      //     creal(primay_beam_J00[output]), cimag(primay_beam_J00[output]),
-      //     creal(primay_beam_J01[output]), cimag(primay_beam_J01[output]),
-      //     creal(primay_beam_J10[output]), cimag(primay_beam_J10[output]),
-      //     creal(primay_beam_J11[output]), cimag(primay_beam_J11[output]));
-
           TEST_ASSERT_FLOAT_WITHIN(1e-7, analy_expec_J00[output], creal(primay_beam_J00[output]));
           TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J00[output]));
           TEST_ASSERT_EQUAL_FLOAT(0.0, creal(primay_beam_J01[output]));
@@ -270,25 +409,23 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
           TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J11[output]));
     }
   }
-  //No cross-pols so multiply expected values by 2.0
   else if (beamtype == FEE_BEAM) {
     for (size_t output = 0; output < num_beam_values; output++) {
-      // printf("%.7f %.5f %.5f %.5f %.5f %.5f %.7f %.5f\n",
-      //     creal(primay_beam_J00[output]), cimag(primay_beam_J00[output]),
-      //     creal(primay_beam_J01[output]), cimag(primay_beam_J01[output]),
-      //     creal(primay_beam_J10[output]), cimag(primay_beam_J10[output]),
-      //     creal(primay_beam_J11[output]), cimag(primay_beam_J11[output]));
+
+      TEST_ASSERT_FLOAT_WITHIN(1e-7, fee_expec_J00_re[output], creal(primay_beam_J00[output]));
+      TEST_ASSERT_FLOAT_WITHIN(1e-7, fee_expec_J00_im[output], cimag(primay_beam_J00[output]));
+      TEST_ASSERT_FLOAT_WITHIN(1e-7, fee_expec_J01_re[output], creal(primay_beam_J01[output]));
+      TEST_ASSERT_FLOAT_WITHIN(1e-7, fee_expec_J01_im[output], cimag(primay_beam_J01[output]));
+      TEST_ASSERT_FLOAT_WITHIN(1e-7, fee_expec_J10_re[output], creal(primay_beam_J10[output]));
+      TEST_ASSERT_FLOAT_WITHIN(1e-7, fee_expec_J10_im[output], cimag(primay_beam_J10[output]));
+      TEST_ASSERT_FLOAT_WITHIN(1e-7, fee_expec_J11_re[output], creal(primay_beam_J11[output]));
+      TEST_ASSERT_FLOAT_WITHIN(1e-7, fee_expec_J11_im[output], cimag(primay_beam_J11[output]));
     }
   }
   else {
-    //Don't need to calculat beam values for NO_BEAM, so these values
+    //Don't need to calculate beam values for NO_BEAM, so these values
     //should still be zero, as we initialised the array with calloc
     for (size_t output = 0; output < num_beam_values; output++) {
-      // printf("%.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
-      //     creal(primay_beam_J00[output]), cimag(primay_beam_J00[output]),
-      //     creal(primay_beam_J01[output]), cimag(primay_beam_J01[output]),
-      //     creal(primay_beam_J10[output]), cimag(primay_beam_J10[output]),
-      //     creal(primay_beam_J11[output]), cimag(primay_beam_J11[output]));
 
           TEST_ASSERT_EQUAL_FLOAT(0.0, creal(primay_beam_J00[output]));
           TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J00[output]));
@@ -321,38 +458,39 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 }
 
 /*
-This test checks varying the measurement equation with beamtype=FEE_BEAM
+This test checks source_component_common with beamtype=FEE_BEAM
 */
 void test_source_component_common_ConstantDecFEEBeam(void) {
+  //Look for environment variable MWA_FEE_HDF5, which should point
+  //towards mwa_full_embedded_element_pattern.h5. If we can't find it,
+  //can't run the tests, so don't
   char* mwa_fee_hdf5 = getenv("MWA_FEE_HDF5");
 
   if (mwa_fee_hdf5) {
     printf("MWA_FEE_HDF5: %s", mwa_fee_hdf5 );
+    test_source_component_common_ConstantDecChooseBeams(FEE_BEAM, mwa_fee_hdf5);
   }
   else {
     printf("MWA_FEE_HDF5 not found - not running MWA_FEE beam test");
   }
-
-
-  test_source_component_common_ConstantDecChooseBeams(FEE_BEAM, mwa_fee_hdf5);
 }
 
 /*
-This test checks varying the measurement equation with beamtype=ANALY_DIPOLE
+This test checks source_component_common with beamtype=ANALY_DIPOLE
 */
 void test_source_component_common_ConstantDecAnalyBeam(void) {
   test_source_component_common_ConstantDecChooseBeams(ANALY_DIPOLE, " ");
 }
 
 /*
-This test checks varying the measurement equation with beamtype=GAUSS_BEAM
+This test checks source_component_common with beamtype=GAUSS_BEAM
 */
 void test_source_component_common_ConstantDecGaussBeam(void) {
   test_source_component_common_ConstantDecChooseBeams(GAUSS_BEAM, " ");
 }
 
 /*
-This test checks varying the measurement equation with beamtype=NO_BEAM
+This test checks source_component_common with beamtype=NO_BEAM
 */
 void test_source_component_common_ConstantDecNoBeam(void) {
   test_source_component_common_ConstantDecChooseBeams(NO_BEAM, " ");
@@ -366,9 +504,6 @@ int main(void)
     RUN_TEST(test_source_component_common_ConstantDecGaussBeam);
     RUN_TEST(test_source_component_common_ConstantDecAnalyBeam);
     RUN_TEST(test_source_component_common_ConstantDecFEEBeam);
-
-
-
 
     return UNITY_END();
 }
