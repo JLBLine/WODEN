@@ -299,8 +299,8 @@ void source_component_common(int num_components,
   }
 }
 
-__global__ void kern_calc_visi_point(float *d_point_ras, float *d_point_decs,
-           float *d_point_freqs, float *d_point_stokesI, float *d_point_stokesQ,
+__global__ void kern_calc_visi_point(float *d_point_freqs,
+           float *d_point_stokesI, float *d_point_stokesQ,
            float *d_point_stokesU, float *d_point_stokesV, float *d_point_SIs,
            float *d_us, float *d_vs, float *d_ws,
            float *d_sum_visi_XX_real, float *d_sum_visi_XX_imag,
@@ -316,8 +316,6 @@ __global__ void kern_calc_visi_point(float *d_point_ras, float *d_point_decs,
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
-  // const int iComponent = threadIdx.y + (blockDim.y*blockIdx.y);
-  // if(iBaseline < num_visis && iComponent < num_points) {
   if(iBaseline < num_visis) {
 
     float point_flux_I;
@@ -1279,14 +1277,13 @@ extern "C" void test_source_component_common(int num_components,
 
 extern "C" void test_kern_calc_visi_point(int num_components, int num_baselines,
           int num_freqs, int num_visis, int num_times, int beamtype,
-          float *ras, float *decs,
           float *component_freqs,
           float *flux_I, float *flux_Q, float *flux_U, float *flux_V,
           float *SIs, float *us, float *vs, float *ws,
-          float _Complex *sum_visi_XX_real, float _Complex *sum_visi_XX_imag,
-          float _Complex *sum_visi_XY_real, float _Complex *sum_visi_XY_imag,
-          float _Complex *sum_visi_YX_real, float _Complex *sum_visi_YX_imag,
-          float _Complex *sum_visi_YY_real, float _Complex *sum_visi_YY_imag,
+          float *sum_visi_XX_real, float *sum_visi_XX_imag,
+          float *sum_visi_XY_real, float *sum_visi_XY_imag,
+          float *sum_visi_YX_real, float *sum_visi_YX_imag,
+          float *sum_visi_YY_real, float *sum_visi_YY_imag,
           float *allsteps_wavelengths,
           float *ls, float *ms, float *ns,
           float _Complex *primay_beam_J00, float _Complex *primay_beam_J01,
@@ -1344,15 +1341,6 @@ extern "C" void test_kern_calc_visi_point(int num_components, int num_baselines,
   cudaErrorCheckCall( cudaMemcpy(d_component_freqs, component_freqs,
                         num_components*sizeof(float), cudaMemcpyHostToDevice ));
 
-  float *d_ras = NULL;
-  float *d_decs = NULL;
-
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_ras, num_components*sizeof(float) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_decs, num_components*sizeof(float) ));
-
-  cudaErrorCheckCall( cudaMemcpy(d_ras, ras, num_components*sizeof(float), cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_decs, decs, num_components*sizeof(float), cudaMemcpyHostToDevice ));
-
   float *d_flux_I = NULL;
   float *d_flux_Q = NULL;
   float *d_flux_U = NULL;
@@ -1402,7 +1390,6 @@ extern "C" void test_kern_calc_visi_point(int num_components, int num_baselines,
 
   cudaErrorCheckKernel("kern_calc_visi_point",
       kern_calc_visi_point, grid, threads,
-      d_ras, d_decs,
       d_component_freqs, d_flux_I, d_flux_Q, d_flux_U, d_flux_V, d_SIs,
       d_us, d_vs, d_ws,
       d_sum_visi_XX_real, d_sum_visi_XX_imag,
@@ -1434,8 +1421,6 @@ extern "C" void test_kern_calc_visi_point(int num_components, int num_baselines,
                              num_visis*sizeof(float), cudaMemcpyDeviceToHost ));
 
 
-  cudaErrorCheckCall(  cudaFree( d_ras ) );
-  cudaErrorCheckCall(  cudaFree( d_decs ) );
   cudaErrorCheckCall(  cudaFree( d_component_freqs ) );
   cudaErrorCheckCall(  cudaFree( d_flux_I ) );
   cudaErrorCheckCall(  cudaFree( d_flux_Q ) );

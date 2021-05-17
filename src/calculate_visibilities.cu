@@ -325,7 +325,6 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
 
       cudaErrorCheckKernel("kern_calc_visi_point",
                            kern_calc_visi_point, grid, threads,
-                           d_point_ras, d_point_decs,
                            d_point_freqs, d_point_stokesI, d_point_stokesQ,
                            d_point_stokesU, d_point_stokesV, d_point_SIs,
                            d_us, d_vs, d_ws,
