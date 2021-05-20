@@ -194,7 +194,7 @@ elseif(TARGET_GROUP STREQUAL test)
           "${UNITY_DIR}"
       )
 
-      add_subdirectory(cmake_testing/unit_tests)
+      add_subdirectory(cmake_testing)
 else()
     message(FATAL_ERROR "Given TARGET_GROUP unknown")
 endif()
