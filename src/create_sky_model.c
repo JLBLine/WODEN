@@ -9,7 +9,6 @@
 #include <erfa.h>
 #include <math.h>
 #include "constants.h"
-// #include "read_and_write.h"
 #include "create_sky_model.h"
 
 

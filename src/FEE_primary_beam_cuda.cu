@@ -5,6 +5,7 @@
 #include <complex.h>
 #include <assert.h>
 #include <stdio.h>
+#include <erfa.h>
 
 #include "cudacomplex.h"
 #include "cudacheck.h"
@@ -720,6 +721,15 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
   cudaErrorCheckCall( cudaFree( primary_beam->rts_P_sin ) );
   cudaErrorCheckCall( cudaFree( primary_beam->rts_P1 ) );
 
+  //undo the azimuth rotation in case user keeps using the same az/za
+  //otherwise we'll just keep spinning around and around and around
+  for (size_t phi_ind = 0; phi_ind < num_coords; phi_ind++) {
+    phi[phi_ind] = (M_PI/2.0) - phi[phi_ind];
+    if(phi[phi_ind] < 0){
+      phi[phi_ind] += 2.0*M_PI;
+    }
+  }
+
 }
 
 extern "C" void calc_CUDA_FEE_beam(float *azs, float *zas,
@@ -863,14 +873,35 @@ extern "C" void free_FEE_primary_beam_from_GPU(RTS_MWA_FEE_beam_t *primary_beam)
 }
 
 extern "C" void test_RTS_CUDA_FEE_beam(int num_components,
-           float *azs, float *zas,
-           float *sin_para_angs, float *cos_para_angs,
+           float *azs, float *zas, float latitude,
            RTS_MWA_FEE_beam_t *FEE_beam_zenith,
            RTS_MWA_FEE_beam_t *FEE_beam,
            int rotation, int scaling,
            float _Complex *FEE_beam_gains){
 
+  //Just taking in a list of az/za, so set to single time step
+  //Don;t need any fancy ordering of outputs
   int num_time_steps = 1;
+
+  //Get the parallatic angles
+  float *sin_para_angs = NULL;
+  float *cos_para_angs = NULL;
+
+  sin_para_angs = (float *)malloc(num_components*sizeof(float));
+  cos_para_angs = (float *)malloc(num_components*sizeof(float));
+
+  double ha, dec, el, para_angle;
+
+  for (size_t comp = 0; comp < num_components; comp++) {
+    el = M_PI - zas[comp];
+
+    eraAe2hd((double)azs[comp], el, (double)latitude, &ha, &dec);
+    para_angle = eraHd2pa(ha, dec, (double)latitude);
+
+    sin_para_angs[comp] = sinf((float)(para_angle));
+    cos_para_angs[comp] = cosf((float)(para_angle));
+
+  }
 
   printf("Getting FEE beam normalisation...\n");
   get_HDFBeam_normalisation(FEE_beam_zenith, FEE_beam);
@@ -892,7 +923,7 @@ extern "C" void test_RTS_CUDA_FEE_beam(int num_components,
             num_components*num_time_steps*MAX_POLS*sizeof(float _Complex),
             cudaMemcpyDeviceToHost) );
 
-  // free_FEE_primary_beam_from_GPU(FEE_beam_zenith);
-  // printf("GPU beam realeased, calculation complete\n");
+  free_FEE_primary_beam_from_GPU(FEE_beam_zenith);
+  printf("GPU beam realeased, calculation complete\n");
 
 }

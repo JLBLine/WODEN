@@ -21,8 +21,7 @@ typedef enum {BELOW, ///< above the horizon
 
 /**
 @brief Convert Right Ascension, Declination into Azimuth and Zenith Angle
-for the
-given LST and Latitude
+for the given LST and Latitude
 
 @details All angles are in radians. Uses the `erfa` function `eraHd2ae` to
 perform the calculation.

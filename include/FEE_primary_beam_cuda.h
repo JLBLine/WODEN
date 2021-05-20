@@ -570,8 +570,7 @@ spherical harmonic coeffs for desired pointing
 `XX,XY,YX,YY`, and then by az/za)
 */
 extern "C" void test_RTS_CUDA_FEE_beam(int num_components,
-           float *azs, float *zas,
-           float *sin_para_angs, float *cos_para_angs,
+           float *azs, float *zas, float latitude,
            RTS_MWA_FEE_beam_t *FEE_beam_zenith,
            RTS_MWA_FEE_beam_t *FEE_beam,
            int rotation, int scaling,

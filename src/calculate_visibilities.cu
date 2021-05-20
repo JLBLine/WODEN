@@ -470,7 +470,6 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
 
       cudaErrorCheckKernel("kern_calc_visi_gaussian",
               kern_calc_visi_gaussian, grid, threads,
-              d_gauss_ras, d_gauss_decs,
               d_gauss_freqs, d_gauss_stokesI, d_gauss_stokesQ,
               d_gauss_stokesU, d_gauss_stokesV, d_gauss_SIs,
               d_us, d_vs, d_ws,

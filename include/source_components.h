@@ -446,8 +446,6 @@ When called with `dim3 grid, threads`, kernel should be called with `grid.x`
 defined, where:
  - grid.x * threads.x >= `num_visi`
 
-@param[in] *d_gauss_ras Right Ascensions of all GAUSSIANs (radians)
-@param[in] *d_gauss_decs Declinations of all GAUSSIANs (radians)
 @param[in] *d_gauss_freqs Frequencies in the simulation (Hz)
 @param[in] *d_gauss_stokesI Array of reference Stokes I flux densities for all
 GAUSSIANs (Jy)
@@ -504,8 +502,8 @@ simulation
 @param[in] *d_primay_beam_J11 Array of primary beam J[1,1]
 (east-west gain)
 */
-__global__ void kern_calc_visi_gaussian(float *d_gauss_ras, float *d_gauss_decs,
-      float *d_gauss_freqs, float *d_gauss_stokesI, float *d_gauss_stokesQ,
+__global__ void kern_calc_visi_gaussian(float *d_gauss_freqs,
+      float *d_gauss_stokesI, float *d_gauss_stokesQ,
       float *d_gauss_stokesU, float *d_gauss_stokesV, float *d_gauss_SIs,
       float *d_us, float *d_vs, float *d_ws,
       float *d_sum_visi_XX_real, float *d_sum_visi_XX_imag,

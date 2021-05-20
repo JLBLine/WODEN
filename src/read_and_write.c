@@ -490,7 +490,7 @@ woden_settings_t * read_json_settings(const char *filename){
   json_object_object_get_ex(parsed_json, "time_res", &time_res);
   json_object_object_get_ex(parsed_json, "cat_filename", &cat_filename);
   json_object_object_get_ex(parsed_json, "sky_crop_components", &sky_crop_type);
-  
+
   json_object_object_get_ex(parsed_json, "chunking_size", &chunking_size);
   json_object_object_get_ex(parsed_json, "array_layout", &array_layout_file_path);
   json_object_object_get_ex(parsed_json, "jd_date", &jd_date);
@@ -690,7 +690,11 @@ void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
 
   woden_settings->lst_base = (float)lmst2000;
 
-  //Possible that this is needed in the future
+  /****************************************************************************
+  * Possible that this is needed in the future, so leave here for now
+  ****************************************************************************/
+
+  //
   // // Change the coordinates of the FOV centre (do we need to test that they are set?)
   //
   // ra  = (double)arr_spec->obsepoch_lst - rts_options->context.point_cent_ha;
@@ -742,8 +746,6 @@ void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
 
   } // st1
 } // RTS_PrecessXYZtoJ2000
-
-
 
 array_layout_t * calc_XYZ_diffs(woden_settings_t *woden_settings){
 

@@ -187,7 +187,8 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
                &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
 
 
-
+    // printf("%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n",
+    // g1x.x, D1x.x, D1y.x, g1y.x, g2x.y, D2x.y, D2y.y, g2y.y );
 
     cuFloatComplex visi_XX;
     cuFloatComplex visi_XY;
@@ -352,8 +353,8 @@ __global__ void kern_calc_visi_point(float *d_point_freqs,
   }
 }
 
-__global__ void kern_calc_visi_gaussian(float *d_gauss_ras, float *d_gauss_decs,
-           float *d_gauss_freqs, float *d_gauss_stokesI, float *d_gauss_stokesQ,
+__global__ void kern_calc_visi_gaussian(float *d_gauss_freqs,
+           float *d_gauss_stokesI, float *d_gauss_stokesQ,
            float *d_gauss_stokesU, float *d_gauss_stokesV, float *d_gauss_SIs,
            float *d_us, float *d_vs, float *d_ws,
            float *d_sum_visi_XX_real, float *d_sum_visi_XX_imag,
@@ -1325,45 +1326,58 @@ extern "C" void test_kern_calc_visi_point(int num_components, int num_baselines,
   cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J11,
                                       num_beam_values*sizeof(float _Complex) ));
 
+  cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J00, primay_beam_J00,
+              num_beam_values*sizeof(float _Complex), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J01, primay_beam_J01,
+              num_beam_values*sizeof(float _Complex), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J10, primay_beam_J10,
+              num_beam_values*sizeof(float _Complex), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J11, primay_beam_J11,
+              num_beam_values*sizeof(float _Complex), cudaMemcpyHostToDevice ));
+
   float *d_ls = NULL;
   float *d_ms = NULL;
   float *d_ns = NULL;
-  float *d_component_freqs = NULL;
+
 
   cudaErrorCheckCall( cudaMalloc( (void**)&d_ls, num_components*sizeof(float) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_ms, num_components*sizeof(float) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_ns, num_components*sizeof(float) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_component_freqs, num_components*sizeof(float) ));
 
-  cudaErrorCheckCall( cudaMemcpy(d_ls, ls, num_components*sizeof(float), cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_ms, ms, num_components*sizeof(float), cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_ns, ns, num_components*sizeof(float), cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_component_freqs, component_freqs,
-                        num_components*sizeof(float), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_ls, ls, num_components*sizeof(float),
+                                           cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_ms, ms, num_components*sizeof(float),
+                                           cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_ns, ns, num_components*sizeof(float),
+                                           cudaMemcpyHostToDevice ));
+
 
   float *d_flux_I = NULL;
   float *d_flux_Q = NULL;
   float *d_flux_U = NULL;
   float *d_flux_V = NULL;
   float *d_SIs = NULL;
+  float *d_component_freqs = NULL;
 
-
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_I, num_components*num_freqs*sizeof(float) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_Q, num_components*num_freqs*sizeof(float) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_U, num_components*num_freqs*sizeof(float) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_V, num_components*num_freqs*sizeof(float) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_SIs, num_components*num_freqs*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_I, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_Q, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_U, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_V, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_SIs, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_component_freqs, num_components*sizeof(float) ));
 
   cudaErrorCheckCall( cudaMemcpy(d_flux_I, flux_I,
-                             num_components*num_freqs*sizeof(float), cudaMemcpyHostToDevice ));
+                             num_components*sizeof(float), cudaMemcpyHostToDevice ));
   cudaErrorCheckCall( cudaMemcpy(d_flux_Q, flux_Q,
-                             num_components*num_freqs*sizeof(float), cudaMemcpyHostToDevice ));
+                             num_components*sizeof(float), cudaMemcpyHostToDevice ));
   cudaErrorCheckCall( cudaMemcpy(d_flux_U, flux_U,
-                             num_components*num_freqs*sizeof(float), cudaMemcpyHostToDevice ));
+                             num_components*sizeof(float), cudaMemcpyHostToDevice ));
   cudaErrorCheckCall( cudaMemcpy(d_flux_V, flux_V,
-                             num_components*num_freqs*sizeof(float), cudaMemcpyHostToDevice ));
+                             num_components*sizeof(float), cudaMemcpyHostToDevice ));
   cudaErrorCheckCall( cudaMemcpy(d_SIs, SIs,
-                             num_components*num_freqs*sizeof(float), cudaMemcpyHostToDevice ));
+                             num_components*sizeof(float), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_component_freqs, component_freqs,
+                        num_components*sizeof(float), cudaMemcpyHostToDevice ));
 
   float *d_sum_visi_XX_real = NULL;
   float *d_sum_visi_XY_real = NULL;
@@ -1382,6 +1396,25 @@ extern "C" void test_kern_calc_visi_point(int num_components, int num_baselines,
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XY_imag, num_visis*sizeof(float) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YX_imag, num_visis*sizeof(float) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YY_imag, num_visis*sizeof(float) ));
+
+  //Make sure the visis start at zero by copying across host versions, which
+  //should be set to zero already
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_XX_real, sum_visi_XX_real,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_XY_real, sum_visi_XY_real,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_YX_real, sum_visi_YX_real,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_YY_real, sum_visi_YY_real,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_XX_imag, sum_visi_XX_imag,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_XY_imag, sum_visi_XY_imag,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_YX_imag, sum_visi_YX_imag,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_YY_imag, sum_visi_YY_imag,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
 
   dim3 grid, threads;
 
@@ -1447,4 +1480,520 @@ extern "C" void test_kern_calc_visi_point(int num_components, int num_baselines,
   cudaErrorCheckCall( cudaFree( d_ls ) );
   cudaErrorCheckCall( cudaFree( d_ms ) );
   cudaErrorCheckCall( cudaFree( d_ns ) );
+}
+
+extern "C" void test_kern_calc_visi_gaussian(int num_components, int num_baselines,
+          int num_freqs, int num_visis, int num_times, int beamtype,
+          float *component_freqs,
+          float *flux_I, float *flux_Q, float *flux_U, float *flux_V,
+          float *SIs, float *us, float *vs, float *ws,
+          float *sum_visi_XX_real, float *sum_visi_XX_imag,
+          float *sum_visi_XY_real, float *sum_visi_XY_imag,
+          float *sum_visi_YX_real, float *sum_visi_YX_imag,
+          float *sum_visi_YY_real, float *sum_visi_YY_imag,
+          float *allsteps_wavelengths,
+          float *ls, float *ms, float *ns,
+          float *gauss_pas, float *gauss_majors, float *gauss_minors,
+          float _Complex *primay_beam_J00, float _Complex *primay_beam_J01,
+          float _Complex *primay_beam_J10, float _Complex *primay_beam_J11){
+
+
+  float *d_us = NULL;
+  float *d_vs = NULL;
+  float *d_ws = NULL;
+  float *d_allsteps_wavelengths = NULL;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_us, num_visis*sizeof(float) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_vs, num_visis*sizeof(float) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_ws, num_visis*sizeof(float) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_allsteps_wavelengths, num_visis*sizeof(float) ) );
+
+  cudaErrorCheckCall( cudaMemcpy(d_us, us,
+                             num_visis*sizeof(float), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_vs, vs,
+                             num_visis*sizeof(float), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_ws, ws,
+                             num_visis*sizeof(float), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_allsteps_wavelengths, allsteps_wavelengths,
+                             num_visis*sizeof(float), cudaMemcpyHostToDevice ))
+
+  float _Complex *d_primay_beam_J00 = NULL;
+  float _Complex *d_primay_beam_J01 = NULL;
+  float _Complex *d_primay_beam_J10 = NULL;
+  float _Complex *d_primay_beam_J11 = NULL;
+
+  int num_beam_values = num_components*num_freqs*num_times;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J00,
+                                      num_beam_values*sizeof(float _Complex) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01,
+                                      num_beam_values*sizeof(float _Complex) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J10,
+                                      num_beam_values*sizeof(float _Complex) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J11,
+                                      num_beam_values*sizeof(float _Complex) ));
+
+  cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J00, primay_beam_J00,
+              num_beam_values*sizeof(float _Complex), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J01, primay_beam_J01,
+              num_beam_values*sizeof(float _Complex), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J10, primay_beam_J10,
+              num_beam_values*sizeof(float _Complex), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J11, primay_beam_J11,
+              num_beam_values*sizeof(float _Complex), cudaMemcpyHostToDevice ));
+
+  float *d_ls = NULL;
+  float *d_ms = NULL;
+  float *d_ns = NULL;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_ls, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_ms, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_ns, num_components*sizeof(float) ));
+
+  cudaErrorCheckCall( cudaMemcpy(d_ls, ls, num_components*sizeof(float),
+                                           cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_ms, ms, num_components*sizeof(float),
+                                           cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_ns, ns, num_components*sizeof(float),
+                                           cudaMemcpyHostToDevice ));
+
+
+  float *d_gauss_pas = NULL;
+  float *d_gauss_majors = NULL;
+  float *d_gauss_minors = NULL;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_gauss_pas, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_gauss_majors, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_gauss_minors, num_components*sizeof(float) ));
+
+  cudaErrorCheckCall( cudaMemcpy(d_gauss_pas, gauss_pas, num_components*sizeof(float),
+                                           cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_gauss_majors, gauss_majors, num_components*sizeof(float),
+                                           cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_gauss_minors, gauss_minors, num_components*sizeof(float),
+                                           cudaMemcpyHostToDevice ));
+
+  float *d_flux_I = NULL;
+  float *d_flux_Q = NULL;
+  float *d_flux_U = NULL;
+  float *d_flux_V = NULL;
+  float *d_SIs = NULL;
+  float *d_component_freqs = NULL;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_I, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_Q, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_U, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_V, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_SIs, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_component_freqs, num_components*sizeof(float) ));
+
+  cudaErrorCheckCall( cudaMemcpy(d_flux_I, flux_I,
+                             num_components*sizeof(float), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_flux_Q, flux_Q,
+                             num_components*sizeof(float), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_flux_U, flux_U,
+                             num_components*sizeof(float), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_flux_V, flux_V,
+                             num_components*sizeof(float), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_SIs, SIs,
+                             num_components*sizeof(float), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_component_freqs, component_freqs,
+                        num_components*sizeof(float), cudaMemcpyHostToDevice ));
+
+  float *d_sum_visi_XX_real = NULL;
+  float *d_sum_visi_XY_real = NULL;
+  float *d_sum_visi_YX_real = NULL;
+  float *d_sum_visi_YY_real = NULL;
+  float *d_sum_visi_XX_imag = NULL;
+  float *d_sum_visi_XY_imag = NULL;
+  float *d_sum_visi_YX_imag = NULL;
+  float *d_sum_visi_YY_imag = NULL;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XX_real, num_visis*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XY_real, num_visis*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YX_real, num_visis*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YY_real, num_visis*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XX_imag, num_visis*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XY_imag, num_visis*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YX_imag, num_visis*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YY_imag, num_visis*sizeof(float) ));
+
+  //Make sure the visis start at zero by copying across host versions, which
+  //should be set to zero already
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_XX_real, sum_visi_XX_real,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_XY_real, sum_visi_XY_real,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_YX_real, sum_visi_YX_real,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_YY_real, sum_visi_YY_real,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_XX_imag, sum_visi_XX_imag,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_XY_imag, sum_visi_XY_imag,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_YX_imag, sum_visi_YX_imag,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_YY_imag, sum_visi_YY_imag,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+
+  dim3 grid, threads;
+
+  threads.x = 128;
+  grid.x = (int)ceil( (float)num_visis / (float)threads.x );
+
+  cudaErrorCheckKernel("kern_calc_visi_gaussian",
+      kern_calc_visi_gaussian, grid, threads,
+      d_component_freqs, d_flux_I, d_flux_Q, d_flux_U, d_flux_V, d_SIs,
+      d_us, d_vs, d_ws,
+      d_sum_visi_XX_real, d_sum_visi_XX_imag,
+      d_sum_visi_XY_real, d_sum_visi_XY_imag,
+      d_sum_visi_YX_real, d_sum_visi_YX_imag,
+      d_sum_visi_YY_real, d_sum_visi_YY_imag,
+      d_allsteps_wavelengths,
+      d_ls, d_ms, d_ns,
+      d_gauss_pas, d_gauss_majors, d_gauss_minors,
+      num_components, num_baselines, num_freqs, num_visis,
+      num_times, beamtype,
+      (cuFloatComplex *)d_primay_beam_J00, (cuFloatComplex *)d_primay_beam_J01,
+      (cuFloatComplex *)d_primay_beam_J10, (cuFloatComplex *)d_primay_beam_J11);
+
+  cudaErrorCheckCall( cudaMemcpy(sum_visi_XX_real, d_sum_visi_XX_real,
+                             num_visis*sizeof(float), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(sum_visi_XY_real, d_sum_visi_XY_real,
+                             num_visis*sizeof(float), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(sum_visi_YX_real, d_sum_visi_YX_real,
+                             num_visis*sizeof(float), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(sum_visi_YY_real, d_sum_visi_YY_real,
+                             num_visis*sizeof(float), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(sum_visi_XX_imag, d_sum_visi_XX_imag,
+                             num_visis*sizeof(float), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(sum_visi_XY_imag, d_sum_visi_XY_imag,
+                             num_visis*sizeof(float), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(sum_visi_YX_imag, d_sum_visi_YX_imag,
+                             num_visis*sizeof(float), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(sum_visi_YY_imag, d_sum_visi_YY_imag,
+                             num_visis*sizeof(float), cudaMemcpyDeviceToHost ));
+
+
+  cudaErrorCheckCall(  cudaFree( d_component_freqs ) );
+  cudaErrorCheckCall(  cudaFree( d_flux_I ) );
+  cudaErrorCheckCall(  cudaFree( d_flux_Q ) );
+  cudaErrorCheckCall(  cudaFree( d_flux_U ) );
+  cudaErrorCheckCall(  cudaFree( d_flux_V ) );
+  cudaErrorCheckCall(  cudaFree( d_SIs ) );
+  cudaErrorCheckCall(  cudaFree( d_us ) );
+  cudaErrorCheckCall(  cudaFree( d_vs ) );
+  cudaErrorCheckCall(  cudaFree( d_ws ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_XX_real ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_XX_imag ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_XY_real ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_XY_imag ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_YX_real ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_YX_imag ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_YY_real ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_YY_imag ) );
+  cudaErrorCheckCall(  cudaFree( d_allsteps_wavelengths ) );
+
+  cudaErrorCheckCall( cudaFree( d_primay_beam_J00 ) );
+  cudaErrorCheckCall( cudaFree( d_primay_beam_J01 ) );
+  cudaErrorCheckCall( cudaFree( d_primay_beam_J10 ) );
+  cudaErrorCheckCall( cudaFree( d_primay_beam_J11 ) );
+  cudaErrorCheckCall( cudaFree( d_ls ) );
+  cudaErrorCheckCall( cudaFree( d_ms ) );
+  cudaErrorCheckCall( cudaFree( d_ns ) );
+
+  cudaErrorCheckCall( cudaFree( d_gauss_pas ) );
+  cudaErrorCheckCall( cudaFree( d_gauss_majors ) );
+  cudaErrorCheckCall( cudaFree( d_gauss_minors ) );
+}
+
+
+extern "C" void test_kern_calc_visi_shapelet(int num_components, int num_baselines,
+          int num_freqs, int num_visis, int num_times, int num_coeffs, int beamtype,
+          float *component_freqs,
+          float *flux_I, float *flux_Q, float *flux_U, float *flux_V,
+          float *SIs, float *us, float *vs, float *ws,
+          float *sum_visi_XX_real, float *sum_visi_XX_imag,
+          float *sum_visi_XY_real, float *sum_visi_XY_imag,
+          float *sum_visi_YX_real, float *sum_visi_YX_imag,
+          float *sum_visi_YY_real, float *sum_visi_YY_imag,
+          float *allsteps_wavelengths,
+          float *ls, float *ms, float *ns,
+          float *shape_pas, float *shape_majors, float *shape_minors,
+          float _Complex *primay_beam_J00, float _Complex *primay_beam_J01,
+          float _Complex *primay_beam_J10, float _Complex *primay_beam_J11,
+          float *u_shapes, float *v_shapes, float *w_shapes,
+          float *shape_n1s, float *shape_n2s, float *shape_coeffs,
+          float *shape_param_indexes, float *sbf){
+
+  float *d_sbf=NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&(d_sbf), sbf_N*sbf_L*sizeof(float) ));
+  cudaErrorCheckCall( cudaMemcpy( d_sbf, sbf, sbf_N*sbf_L*sizeof(float),
+                      cudaMemcpyHostToDevice ));
+
+  float *d_shape_param_indexes=NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_param_indexes),
+                      num_coeffs*sizeof(float)) );
+  cudaErrorCheckCall( cudaMemcpy( d_shape_param_indexes,
+         shape_param_indexes, num_coeffs*sizeof(float), cudaMemcpyHostToDevice) );
+
+  float *d_shape_coeffs=NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_coeffs),
+                      num_coeffs*sizeof(float)) );
+  cudaErrorCheckCall( cudaMemcpy( d_shape_coeffs,
+         shape_coeffs, num_coeffs*sizeof(float), cudaMemcpyHostToDevice) );
+
+  float *d_shape_n1s=NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_n1s),
+                      num_coeffs*sizeof(float)) );
+  cudaErrorCheckCall( cudaMemcpy( d_shape_n1s,
+         shape_n1s, num_coeffs*sizeof(float), cudaMemcpyHostToDevice) );
+
+  float *d_shape_n2s=NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_n2s),
+                      num_coeffs*sizeof(float)) );
+  cudaErrorCheckCall( cudaMemcpy( d_shape_n2s,
+         shape_n2s, num_coeffs*sizeof(float), cudaMemcpyHostToDevice) );
+
+  float *d_u_shapes = NULL;
+  float *d_v_shapes = NULL;
+  float *d_w_shapes = NULL;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_u_shapes,
+                                     num_components*num_visis*sizeof(float) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_v_shapes,
+                                     num_components*num_visis*sizeof(float) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_w_shapes,
+                                     num_components*num_visis*sizeof(float) ) );
+
+  cudaErrorCheckCall( cudaMemcpy(d_u_shapes, u_shapes,
+              num_components*num_visis*sizeof(float), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_v_shapes, v_shapes,
+              num_components*num_visis*sizeof(float), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_w_shapes, w_shapes,
+              num_components*num_visis*sizeof(float), cudaMemcpyHostToDevice ));
+
+
+  float *d_us = NULL;
+  float *d_vs = NULL;
+  float *d_ws = NULL;
+  float *d_allsteps_wavelengths = NULL;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_us, num_visis*sizeof(float) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_vs, num_visis*sizeof(float) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_ws, num_visis*sizeof(float) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_allsteps_wavelengths, num_visis*sizeof(float) ) );
+
+  cudaErrorCheckCall( cudaMemcpy(d_us, us,
+                             num_visis*sizeof(float), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_vs, vs,
+                             num_visis*sizeof(float), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_ws, ws,
+                             num_visis*sizeof(float), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_allsteps_wavelengths, allsteps_wavelengths,
+                             num_visis*sizeof(float), cudaMemcpyHostToDevice ))
+
+  float _Complex *d_primay_beam_J00 = NULL;
+  float _Complex *d_primay_beam_J01 = NULL;
+  float _Complex *d_primay_beam_J10 = NULL;
+  float _Complex *d_primay_beam_J11 = NULL;
+
+  int num_beam_values = num_components*num_freqs*num_times;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J00,
+                                      num_beam_values*sizeof(float _Complex) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01,
+                                      num_beam_values*sizeof(float _Complex) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J10,
+                                      num_beam_values*sizeof(float _Complex) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J11,
+                                      num_beam_values*sizeof(float _Complex) ));
+
+  cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J00, primay_beam_J00,
+              num_beam_values*sizeof(float _Complex), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J01, primay_beam_J01,
+              num_beam_values*sizeof(float _Complex), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J10, primay_beam_J10,
+              num_beam_values*sizeof(float _Complex), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J11, primay_beam_J11,
+              num_beam_values*sizeof(float _Complex), cudaMemcpyHostToDevice ));
+
+  float *d_ls = NULL;
+  float *d_ms = NULL;
+  float *d_ns = NULL;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_ls, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_ms, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_ns, num_components*sizeof(float) ));
+
+  cudaErrorCheckCall( cudaMemcpy(d_ls, ls, num_components*sizeof(float),
+                                           cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_ms, ms, num_components*sizeof(float),
+                                           cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_ns, ns, num_components*sizeof(float),
+                                           cudaMemcpyHostToDevice ));
+
+
+  float *d_shape_pas = NULL;
+  float *d_shape_majors = NULL;
+  float *d_shape_minors = NULL;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_shape_pas, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_shape_majors, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_shape_minors, num_components*sizeof(float) ));
+
+  cudaErrorCheckCall( cudaMemcpy(d_shape_pas, shape_pas, num_components*sizeof(float),
+                                           cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_shape_majors, shape_majors, num_components*sizeof(float),
+                                           cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_shape_minors, shape_minors, num_components*sizeof(float),
+                                           cudaMemcpyHostToDevice ));
+
+  float *d_flux_I = NULL;
+  float *d_flux_Q = NULL;
+  float *d_flux_U = NULL;
+  float *d_flux_V = NULL;
+  float *d_SIs = NULL;
+  float *d_component_freqs = NULL;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_I, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_Q, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_U, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_V, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_SIs, num_components*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_component_freqs, num_components*sizeof(float) ));
+
+  cudaErrorCheckCall( cudaMemcpy(d_flux_I, flux_I,
+                             num_components*sizeof(float), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_flux_Q, flux_Q,
+                             num_components*sizeof(float), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_flux_U, flux_U,
+                             num_components*sizeof(float), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_flux_V, flux_V,
+                             num_components*sizeof(float), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_SIs, SIs,
+                             num_components*sizeof(float), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_component_freqs, component_freqs,
+                        num_components*sizeof(float), cudaMemcpyHostToDevice ));
+
+  float *d_sum_visi_XX_real = NULL;
+  float *d_sum_visi_XY_real = NULL;
+  float *d_sum_visi_YX_real = NULL;
+  float *d_sum_visi_YY_real = NULL;
+  float *d_sum_visi_XX_imag = NULL;
+  float *d_sum_visi_XY_imag = NULL;
+  float *d_sum_visi_YX_imag = NULL;
+  float *d_sum_visi_YY_imag = NULL;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XX_real, num_visis*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XY_real, num_visis*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YX_real, num_visis*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YY_real, num_visis*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XX_imag, num_visis*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XY_imag, num_visis*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YX_imag, num_visis*sizeof(float) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YY_imag, num_visis*sizeof(float) ));
+
+  //Make sure the visis start at zero by copying across host versions, which
+  //should be set to zero already
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_XX_real, sum_visi_XX_real,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_XY_real, sum_visi_XY_real,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_YX_real, sum_visi_YX_real,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_YY_real, sum_visi_YY_real,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_XX_imag, sum_visi_XX_imag,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_XY_imag, sum_visi_XY_imag,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_YX_imag, sum_visi_YX_imag,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy( d_sum_visi_YY_imag, sum_visi_YY_imag,
+    num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+
+  dim3 grid, threads;
+
+  threads.x = 128;
+  grid.x = (int)ceil( (float)num_visis / (float)threads.x );
+
+  cudaErrorCheckKernel("kern_calc_visi_shapelets",
+      kern_calc_visi_shapelets, grid, threads,
+      d_component_freqs, d_flux_I, d_flux_Q, d_flux_U, d_flux_V, d_SIs,
+      d_us, d_vs, d_ws,
+      d_allsteps_wavelengths,
+      d_u_shapes, d_v_shapes, d_w_shapes,
+      d_sum_visi_XX_real, d_sum_visi_XX_imag,
+      d_sum_visi_XY_real, d_sum_visi_XY_imag,
+      d_sum_visi_YX_real, d_sum_visi_YX_imag,
+      d_sum_visi_YY_real, d_sum_visi_YY_imag,
+      d_shape_pas, d_shape_majors, d_shape_minors,
+      d_shape_n1s, d_shape_n2s, d_shape_coeffs,
+      d_shape_param_indexes,
+      d_ls, d_ms, d_ns,
+      d_sbf,
+      num_components, num_baselines, num_freqs, num_visis,
+      num_coeffs, num_times, beamtype,
+      (cuFloatComplex *)d_primay_beam_J00, (cuFloatComplex *)d_primay_beam_J01,
+      (cuFloatComplex *)d_primay_beam_J10, (cuFloatComplex *)d_primay_beam_J11);
+
+  cudaErrorCheckCall( cudaMemcpy(sum_visi_XX_real, d_sum_visi_XX_real,
+                             num_visis*sizeof(float), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(sum_visi_XY_real, d_sum_visi_XY_real,
+                             num_visis*sizeof(float), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(sum_visi_YX_real, d_sum_visi_YX_real,
+                             num_visis*sizeof(float), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(sum_visi_YY_real, d_sum_visi_YY_real,
+                             num_visis*sizeof(float), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(sum_visi_XX_imag, d_sum_visi_XX_imag,
+                             num_visis*sizeof(float), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(sum_visi_XY_imag, d_sum_visi_XY_imag,
+                             num_visis*sizeof(float), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(sum_visi_YX_imag, d_sum_visi_YX_imag,
+                             num_visis*sizeof(float), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(sum_visi_YY_imag, d_sum_visi_YY_imag,
+                             num_visis*sizeof(float), cudaMemcpyDeviceToHost ));
+
+  cudaErrorCheckCall(  cudaFree( d_component_freqs ) );
+  cudaErrorCheckCall(  cudaFree( d_flux_I ) );
+  cudaErrorCheckCall(  cudaFree( d_flux_Q ) );
+  cudaErrorCheckCall(  cudaFree( d_flux_U ) );
+  cudaErrorCheckCall(  cudaFree( d_flux_V ) );
+  cudaErrorCheckCall(  cudaFree( d_SIs ) );
+  cudaErrorCheckCall(  cudaFree( d_us ) );
+  cudaErrorCheckCall(  cudaFree( d_vs ) );
+  cudaErrorCheckCall(  cudaFree( d_ws ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_XX_real ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_XX_imag ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_XY_real ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_XY_imag ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_YX_real ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_YX_imag ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_YY_real ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_YY_imag ) );
+  cudaErrorCheckCall(  cudaFree( d_allsteps_wavelengths ) );
+
+  cudaErrorCheckCall( cudaFree( d_primay_beam_J00 ) );
+  cudaErrorCheckCall( cudaFree( d_primay_beam_J01 ) );
+  cudaErrorCheckCall( cudaFree( d_primay_beam_J10 ) );
+  cudaErrorCheckCall( cudaFree( d_primay_beam_J11 ) );
+  cudaErrorCheckCall( cudaFree( d_ls ) );
+  cudaErrorCheckCall( cudaFree( d_ms ) );
+  cudaErrorCheckCall( cudaFree( d_ns ) );
+
+  cudaErrorCheckCall( cudaFree( d_shape_pas ) );
+  cudaErrorCheckCall( cudaFree( d_shape_majors ) );
+  cudaErrorCheckCall( cudaFree( d_shape_minors ) );
+
+  cudaErrorCheckCall( cudaFree( d_u_shapes ) );
+  cudaErrorCheckCall( cudaFree( d_v_shapes ) );
+  cudaErrorCheckCall( cudaFree( d_w_shapes ) );
+  cudaErrorCheckCall( cudaFree( d_shape_n1s ) );
+  cudaErrorCheckCall( cudaFree( d_shape_n2s ) );
+  cudaErrorCheckCall( cudaFree( d_shape_coeffs ) );
+  cudaErrorCheckCall( cudaFree( d_shape_param_indexes ) );
+  cudaErrorCheckCall( cudaFree( d_sbf ) );
+
 }
