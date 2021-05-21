@@ -95,6 +95,9 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
   //Will contain the array srcs, and the number of sources n_src
   source_catalogue_t *srccat=NULL;
 
+  //Total number of SHAPELET COMPONENTs in the entire source catalogue
+  srccat->num_shapelets;
+
   //Reading in things
   FILE *fp=NULL;
   char line[BUFSIZ];
@@ -189,6 +192,9 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
       }
 
       srcs[n_src-1].n_comps = srcs[n_src-1].n_points + srcs[n_src-1].n_gauss + srcs[n_src-1].n_shapes;
+
+      //Update the total count of SHAPELET COMPONENTs in the entire source catalogue
+      srccat->num_shapelets += srcs[n_src-1].n_shapes;
 
       // printf("New source: name: <%s>, Comps:%d  P:%d  G:%d  S:%d-%d \n",
       //       srcs[n_src-1].name, srcs[n_src-1].n_comps, srcs[n_src-1].n_points, srcs[n_src-1].n_gauss,

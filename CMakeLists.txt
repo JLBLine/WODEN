@@ -158,7 +158,7 @@ if(TARGET_GROUP STREQUAL production)
 
     ##Make a symlink to convert_WSClean_list_to_WODEN.py so it's easy to find
     set(link_convert "convert_WSClean_list_to_WODEN.py")
-    find_path(CONVERTWSCLEAN run_woden.py HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
+    find_path(CONVERTWSCLEAN convert_WSClean_list_to_WODEN.py HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
     if(CONVERTWSCLEAN)
       message(STATUS "CONVERTWSCLEAN path: ${WODENPY}")
     endif()
@@ -193,8 +193,8 @@ elseif(TARGET_GROUP STREQUAL test)
       target_include_directories(Unity PUBLIC
           "${UNITY_DIR}"
       )
-
       add_subdirectory(cmake_testing)
+
 else()
     message(FATAL_ERROR "Given TARGET_GROUP unknown")
 endif()
