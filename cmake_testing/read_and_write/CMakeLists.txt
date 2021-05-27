@@ -1,13 +1,13 @@
 # # ##Test the east,north,height to X,Y,Z works
-add_executable(test_RTS_ENH2XYZ_local_app
-    test_RTS_ENH2XYZ_local.c
-    ../../src/read_and_write.c
-)
-target_link_libraries(test_RTS_ENH2XYZ_local_app
-    Unity
-    ${CC_LINKLIBS}
-)
-add_test(C_test_RTS_ENH2XYZ_local test_RTS_ENH2XYZ_local_app)
+# add_executable(test_RTS_ENH2XYZ_local_app
+#     test_RTS_ENH2XYZ_local.c
+#     ../../src/read_and_write.c
+# )
+# target_link_libraries(test_RTS_ENH2XYZ_local_app
+#     Unity
+#     ${CC_LINKLIBS}
+# )
+# add_test(C_test_RTS_ENH2XYZ_local test_RTS_ENH2XYZ_local_app)
 
 
 # ##Make a bunch of symlinks to sky models for testing
@@ -22,9 +22,11 @@ set(S2 "srclist_singlegauss.txt")
 set(S3 "srclist_singleshape.txt")
 set(S4 "srclist_threesources.txt")
 set(S5 "srclist_threecomponents.txt")
+set(S6 "srclist_mulitple_source-components.txt")
+
 
 ## Loop through them and write a symlink so the testing executable can find them
-foreach(X IN LISTS S1 S2 S3 S4 S5)
+foreach(X IN LISTS S1 S2 S3 S4 S5 S6)
     # set(link_singlegauss ${X})
     ADD_CUSTOM_TARGET(target_${X} ALL
         COMMAND ${CMAKE_COMMAND} -E create_symlink "${SRCLIST_PATH}/${X}" "${X}")

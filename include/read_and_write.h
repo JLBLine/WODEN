@@ -77,10 +77,11 @@ For a more detailed explanation of the sky model, please see the
 documentation at
 @todo Link the online documentation when there is a link
 
+@param[in] *raw_srccat Struct to contain sky model information
 @param[in] *filename Path to a WODEN-style sky model
-@return A pointer to a populated `source_catalogue_t` struct
+@return Integer where 0 if read was successful, 1 if failed
  */
-source_catalogue_t * read_source_catalogue(const char *filename);
+int read_source_catalogue(const char *filename, source_catalogue_t *raw_srccat);
 
 
 /**

@@ -71,7 +71,7 @@ void RTS_mat_transpose(double rmat1[3][3], double rmat2[3][3]) {
 // All credit to the original authors
 // https://github.com/ICRAR/mwa-RTS.git
 **********************************/
-source_catalogue_t * read_source_catalogue(const char *filename) {
+int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
   int result, n_src=0, n_comps=0, n_freqs=0;
   int src_found=0, comp_found=0;
   int src_key, src_end, comp_key, comp_end, freq_key;
@@ -93,7 +93,7 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
   catsource_t *srcs=NULL;
 
   //Will contain the array srcs, and the number of sources n_src
-  source_catalogue_t *srccat=NULL;
+  // source_catalogue_t *srccat=NULL;
 
   //Total number of SHAPELET COMPONENTs in the entire source catalogue
   srccat->num_shapelets;
@@ -105,15 +105,16 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
   /* open file */
   if ((fp=fopen(filename,"r"))==NULL) {
     printf("read_source_catalogue error: failed to open source file <%s>\n", filename);
-    exit(1);
+    // exit(1);
+    return 1;
   }
 
-  /* allocate the catalogue object */
-  srccat = malloc( sizeof(source_catalogue_t) );
-  if (srccat==NULL) {
-    printf("read_source_catalogue error: no malloc for srccat\n");
-    return NULL;
-  }
+  // /* allocate the catalogue object */
+  // srccat = malloc( sizeof(source_catalogue_t) );
+  // if (srccat==NULL) {
+  //   printf("read_source_catalogue error: no malloc for srccat\n");
+  //   return NULL;
+  // }
 
   //Read in line by line and do "smart" things accordingly
   while(fgets(line,BUFSIZ,fp) != NULL) {
@@ -154,7 +155,8 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
     if (src_found && src_key) {
         printf("read_source_catalogue error: found source key in line <%s> while already reading a source\n",
               line );
-        return NULL;
+        // return NULL;
+        return 1;
     }
 
     else if (src_key) {
@@ -165,7 +167,8 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
       srcs = realloc(srcs,sizeof(catsource_t)*n_src);
       if (srcs == NULL) {
         printf("read_source_catalogue error: no realloc for cat\n");
-        return NULL;
+        // return NULL;
+        return 1;
       }
 
       comp_found=0;
@@ -188,7 +191,8 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
                         &(srcs[n_src-1].n_shapes), &(srcs[n_src-1].n_shape_coeffs) );
       if (result != 5) {
           printf("read_source_catalogue error %d: problem reading cal source input line <%s>\n", result,line );
-          return NULL;
+          return 1;
+          // return NULL;
       }
 
       srcs[n_src-1].n_comps = srcs[n_src-1].n_points + srcs[n_src-1].n_gauss + srcs[n_src-1].n_shapes;
@@ -255,7 +259,8 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
       result = sscanf( line, "%*s %s %f %f", comp_type, &ra, &dec );
       if (result != 3) {
           printf("CS_ReadSourceList error: problem reading cal component input line <%s>\n", line );
-          return NULL;
+          // return NULL;
+          return 1;
       }
 
       if(strncmp(comp_type, POINT_KEY, strlen(POINT_KEY))==0) type_key=POINT;
@@ -286,7 +291,8 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
 
         default:
           printf("CS_ReadSourceList error: unknown source type: %s \n", comp_type );
-          return NULL;
+          // return NULL;
+          return 1;
 
 
       }//switch (type_key)
@@ -297,7 +303,8 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
       result = sscanf( line, "%*s %f %f %f %f %f", &freq, &flux_I, &flux_Q, &flux_U, &flux_V );
       if (result != 5) {
           printf("%d CS_ReadSourceList error: problem reading cal component input line <%s>\n", result, line );
-          return NULL;
+          // return NULL;
+          return 1;
       }
 
       switch (type_key) {
@@ -333,7 +340,8 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
 
       default:
         printf("%d CS_ReadSourceList error assigning info from line: <%s>\n", type_key, line );
-        return NULL;
+        // return NULL;
+        return 1;
 
       }//switch (type_key)
 
@@ -346,7 +354,8 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
       result = sscanf( line, "%*s %f %f %f %f %f %f", &freq, &flux_I, &flux_Q, &flux_U, &flux_V, &SI );
       if (result != 6) {
           printf("%d CS_ReadSourceList error: problem reading cal component input line <%s>\n", result, line );
-          return NULL;
+          // return NULL;
+          return 1;
       }
 
       switch (type_key) {
@@ -382,7 +391,8 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
 
       default:
         printf("%d CS_ReadSourceList error assigning info from line: <%s>\n", type_key, line );
-        return NULL;
+        // return NULL;
+        return 1;
 
       }//switch (type_key)
 
@@ -392,7 +402,8 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
       result = sscanf( line, "%*s %f %f %f", &coeff1, &coeff2, &coeff3 );
       if (result != 3) {
           printf("%d CS_ReadSourceList error: problem reading coeffs input line <%s>\n", result, line );
-          return NULL;
+          // return NULL;
+          return 1;
       }
 
       switch (type_key) {
@@ -410,7 +421,8 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
 
       default:
         printf("CS_ReadSourceList error assigning info from line: <%s>\n", line );
-        return NULL;
+        // return NULL;
+        return 1;
       }//switch (type_key)
     }//if (param_key && comp_found==1)
 
@@ -418,7 +430,8 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
       result = sscanf( line, "%*s %f %f %f", &coeff1, &coeff2, &coeff3 );
       if (result != 3) {
           printf("%d CS_ReadSourceList error: problem reading coeffs input line <%s>\n", result, line );
-          return NULL;
+          // return NULL;
+          return 1;
       }
 
       switch (type_key) {
@@ -431,7 +444,8 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
 
       default:
         printf("CS_ReadSourceList error assigning info from line: <%s>\n", line );
-        return NULL;
+        // return NULL;
+        return 1;
       }//switch (type_key)
       coeff_ind++;
     }//if (param_key && comp_found==1)
@@ -446,7 +460,7 @@ source_catalogue_t * read_source_catalogue(const char *filename) {
   srccat->catsources = srcs;
   srccat->num_sources = n_src;
 
-  return srccat;
+  return 0;
 } //read_sources
 
 woden_settings_t * read_json_settings(const char *filename){
@@ -525,7 +539,8 @@ woden_settings_t * read_json_settings(const char *filename){
 
   printf("LATITUDE IS %.1f\n", woden_settings->latitude/DD2R);
 
-  woden_settings->lst_base = (float)json_object_get_double(lst_base)*DD2R;
+  woden_settings->lst_base = json_object_get_double(lst_base)*DD2R;
+  // woden_settings->lst_base = 0.0;
   woden_settings->ra0 = (float)json_object_get_double(ra0)*DD2R;
   woden_settings->dec0 = (float)json_object_get_double(dec0)*DD2R;
   woden_settings->num_freqs = json_object_get_int(num_freqs);

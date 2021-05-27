@@ -281,18 +281,75 @@ void test_read_source_catalogue_ThreeComponents(void) {
 
 }
 
+void test_read_source_catalogue_MultiSourceComponents(void) {
+  // // Read in the source catalogue
+  source_catalogue_t *raw_srccat;
+  raw_srccat = read_source_catalogue("srclist_mulitple_source-components.txt");
+  //
+  //Expected overall numbers
+  int num_sources = 5;
+  int num_shapelets = 4;
 
+  //Expected numbers for all sources
+  // int source_indexes[] = {0}
+  int n_comps[] = {1, 1, 1, 3, 6};
+  int n_points[] = {1, 0, 0, 1, 2};
+  int n_gauss[] = {0, 1, 0, 1, 2};
+  int n_shapes[] = {0, 0, 1, 1, 2};
+  int n_shape_coeffs[] = {0, 0, 4, 4, 8};
+
+  for (int source_index = 0; source_index < num_sources; source_index++) {
+    check_single_source_numbers(raw_srccat,
+                                num_sources,  num_shapelets,
+                                n_comps[source_index], n_points[source_index],
+                                n_gauss[source_index],  n_shapes[source_index],
+                                n_shape_coeffs[source_index], source_index);
+  }
+
+  //Check that the POINT components are located where expected
+  //Index of array if the SOURCE index. Second number is the COMPONENT in that
+  //particular SOURCE
+  check_single_component_point(raw_srccat->catsources[0], 0);
+  check_single_component_point(raw_srccat->catsources[3], 0);
+  check_single_component_point(raw_srccat->catsources[4], 0);
+  check_single_component_point(raw_srccat->catsources[4], 1);
+  //
+  //Check that the GAUSSIAN components are located where expected
+  //Index of array if the SOURCE index. Second number is the COMPONENT in that
+  //particular SOURCE
+  check_single_component_gauss(raw_srccat->catsources[1], 0);
+  check_single_component_gauss(raw_srccat->catsources[3], 0);
+  check_single_component_gauss(raw_srccat->catsources[4], 0);
+  check_single_component_gauss(raw_srccat->catsources[4], 1);
+  //
+  //Check that the SHAPELET components are located where expected
+  //Index of array if the SOURCE index. Second number is the COMPONENT in that
+  //particular SOURCE
+  check_single_component_shapelet(raw_srccat->catsources[2], 0);
+  check_single_component_shapelet(raw_srccat->catsources[3], 0);
+  check_single_component_shapelet(raw_srccat->catsources[4], 0);
+  check_single_component_shapelet(raw_srccat->catsources[4], 1);
+
+}
+
+void test_read_source_catalogue_MissingFile(void) {
+  // // Read in the source catalogue
+  source_catalogue_t *raw_srccat;
+  raw_srccat = read_source_catalogue("not_a_file.txt");
+};
 
 //Run test using unity
 int main(void)
 {
     UNITY_BEGIN();
 
-    RUN_TEST(test_read_source_catalogue_SinglePoint);
-    RUN_TEST(test_read_source_catalogue_SingleGaussian);
-    RUN_TEST(test_read_source_catalogue_SingleShapelet);
-    RUN_TEST(test_read_source_catalogue_ThreeSources);
-    RUN_TEST(test_read_source_catalogue_ThreeComponents);
+    // RUN_TEST(test_read_source_catalogue_SinglePoint);
+    // RUN_TEST(test_read_source_catalogue_SingleGaussian);
+    // RUN_TEST(test_read_source_catalogue_SingleShapelet);
+    // RUN_TEST(test_read_source_catalogue_ThreeSources);
+    // RUN_TEST(test_read_source_catalogue_ThreeComponents);
+    // RUN_TEST(test_read_source_catalogue_MultiSourceComponents);
+    RUN_TEST(test_read_source_catalogue_MissingFile);
 
     return UNITY_END();
 }

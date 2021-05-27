@@ -101,7 +101,14 @@ int main(int argc, char **argv) {
 
   //Read in the source catalogue
   source_catalogue_t *raw_srccat;
-  raw_srccat = read_source_catalogue(woden_settings->cat_filename);
+  raw_srccat = malloc( sizeof(source_catalogue_t) );
+  int status;
+  status = read_source_catalogue(woden_settings->cat_filename, raw_srccat);
+
+  if (status == 1) {
+    printf("read_source_catalogue failed. Exiting now\n");
+    exit(1);
+  }
 
   //Crop emission below the horizon, and collapse all SOURCES from raw_srccat
   //into one single SOURCE
