@@ -13,15 +13,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <json.h>
-#include <fitsio.h>
 #include <pal.h>
 
 void RTS_ENH2XYZ_local(float E, float N, float H, float lat,
                        float *X, float *Y, float *Z) {
   float sl,cl;
-
   sl = sinf(lat);
   cl = cosf(lat);
+
   *X = -N*sl + H*cl;
   *Y = E;
   *Z = N*cl + H*sl;
@@ -72,10 +71,10 @@ void RTS_mat_transpose(double rmat1[3][3], double rmat2[3][3]) {
 // https://github.com/ICRAR/mwa-RTS.git
 **********************************/
 int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
-  int result, n_src=0, n_comps=0, n_freqs=0;
+  int result, n_src=0, n_comps=0;
   int src_found=0, comp_found=0;
-  int src_key, src_end, comp_key, comp_end, freq_key;
-  int linear_key, type_key, param_key, coeff_key;
+  int src_key=0, src_end=0, comp_key=0, comp_end=0, freq_key=0;
+  int linear_key=0, type_key=0, param_key=0, coeff_key=0;
 
   char comp_type[16];
   float ra, dec;
@@ -83,8 +82,8 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
   float SI;
   float coeff1, coeff2, coeff3;
 
-  int point_ind, gauss_ind, shape_ind;
-  int coeff_ind;
+  int point_ind=0, gauss_ind=0, shape_ind=0;
+  int coeff_ind=0;
 
   //So we know how many s_coeffs we have put into S1_coeffs for each source
 
@@ -92,11 +91,9 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
   //containing catsource_t structs
   catsource_t *srcs=NULL;
 
-  //Will contain the array srcs, and the number of sources n_src
-  // source_catalogue_t *srccat=NULL;
-
   //Total number of SHAPELET COMPONENTs in the entire source catalogue
-  srccat->num_shapelets;
+  //Start it off at zero
+  srccat->num_shapelets = 0;
 
   //Reading in things
   FILE *fp=NULL;
@@ -116,9 +113,10 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
   //   return NULL;
   // }
 
+
+  int line_number = 1;
   //Read in line by line and do "smart" things accordingly
   while(fgets(line,BUFSIZ,fp) != NULL) {
-
     /* skip blank lines and comments */
     if (line[0]=='\n' || line[0] == '#'|| line[0] == '\0') continue;
 
@@ -138,13 +136,13 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
     if ( (src_key==0 && src_end==0 && comp_key==0 && comp_end==0 && freq_key==0 && param_key==0 && coeff_key==0 && linear_key==0) ||
          (src_found==0 && src_key==0) /* i.e., haven't started a new source */ ) {
         // printf("%c%c%c%c %s %d %d\n",line[0],line[1],line[2],line[3],FREQ_KEY,freq_key,strncmp(line, FREQ_KEY, strlen(FREQ_KEY)));
-        printf("read_source_catalogue: skipping bad line: %s\n",line);
-        continue;
+        printf("read_source_catalogue: line %d is bad, please fix this line:\n\t%s\n",line_number, line);
+        return 1;
     }
 
     if (src_end) {
         if (srcs[n_src-1].n_comps == 0){
-            printf("WARNING: source <%s> had no components\n", srcs[n_src-1].name );
+            printf("WARNING read_source_catalogue: source <%s> had no components\n", srcs[n_src-1].name );
             n_src--;
         }
         src_found=0;
@@ -153,7 +151,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
 
     /* is this the start of a new source, or more information for the current source? */
     if (src_found && src_key) {
-        printf("read_source_catalogue error: found source key in line <%s> while already reading a source\n",
+        printf("read_source_catalogue error: found source key in line: \n %s \n while already reading a source\n",
               line );
         // return NULL;
         return 1;
@@ -190,7 +188,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
                         &(srcs[n_src-1].n_points), &(srcs[n_src-1].n_gauss),
                         &(srcs[n_src-1].n_shapes), &(srcs[n_src-1].n_shape_coeffs) );
       if (result != 5) {
-          printf("read_source_catalogue error %d: problem reading cal source input line <%s>\n", result,line );
+          printf("read_source_catalogue error: problem reading line %d:\n\t %s \n", line_number,line );
           return 1;
           // return NULL;
       }
@@ -214,6 +212,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
       srcs[n_src-1].point_ref_stokesU = malloc( srcs[n_src-1].n_points * sizeof(float) );
       srcs[n_src-1].point_ref_stokesV = malloc( srcs[n_src-1].n_points * sizeof(float) );
       srcs[n_src-1].point_ref_freqs = malloc( srcs[n_src-1].n_points * sizeof(float) );
+
       //Gaussian params
       srcs[n_src-1].gauss_ras = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
       srcs[n_src-1].gauss_decs = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
@@ -226,7 +225,6 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
       srcs[n_src-1].gauss_majors = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
       srcs[n_src-1].gauss_minors = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
       srcs[n_src-1].gauss_pas = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
-
       //Shapelet params
       srcs[n_src-1].shape_ras = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
       srcs[n_src-1].shape_decs = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
@@ -239,7 +237,6 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
       srcs[n_src-1].shape_majors = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
       srcs[n_src-1].shape_minors = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
       srcs[n_src-1].shape_pas = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
-
       //Need bigger arrays to hold the coeffs - make a shape_param_indexes
       //array so we can map each n1.n2,coeff to the corresponding pa,major,minor
       //when we have multiple shapelet models within a source
@@ -258,7 +255,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
 
       result = sscanf( line, "%*s %s %f %f", comp_type, &ra, &dec );
       if (result != 3) {
-          printf("CS_ReadSourceList error: problem reading cal component input line <%s>\n", line );
+          printf("read_source_catalogue error %d: problem reading cal component input line number %d\n\t %s \n", result, line_number, line );
           // return NULL;
           return 1;
       }
@@ -290,7 +287,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
         break;
 
         default:
-          printf("CS_ReadSourceList error: unknown source type: %s \n", comp_type );
+          printf("read_source_catalogue error: unknown source type: %s on line %d:\n\t %s \n", comp_type,line_number, line );
           // return NULL;
           return 1;
 
@@ -302,7 +299,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
 
       result = sscanf( line, "%*s %f %f %f %f %f", &freq, &flux_I, &flux_Q, &flux_U, &flux_V );
       if (result != 5) {
-          printf("%d CS_ReadSourceList error: problem reading cal component input line <%s>\n", result, line );
+          printf("read_source_catalogue error %d: problem reading cal component input line number %d\n\t %s \n", result, line_number, line );
           // return NULL;
           return 1;
       }
@@ -339,7 +336,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
         break;
 
       default:
-        printf("%d CS_ReadSourceList error assigning info from line: <%s>\n", type_key, line );
+        printf("%d read_source_catalogue error assigning info from line %d:\n\t<%s>\n", type_key,  line_number, line );
         // return NULL;
         return 1;
 
@@ -353,7 +350,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
       //I'm ignoring Stokes Q,U,V for now
       result = sscanf( line, "%*s %f %f %f %f %f %f", &freq, &flux_I, &flux_Q, &flux_U, &flux_V, &SI );
       if (result != 6) {
-          printf("%d CS_ReadSourceList error: problem reading cal component input line <%s>\n", result, line );
+          printf("%d read_source_catalogue error: problem reading cal component input from line %d:\n\t<%s>\n", result, line_number, line );
           // return NULL;
           return 1;
       }
@@ -367,8 +364,6 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
           srcs[n_src-1].point_ref_stokesU[point_ind-1] = flux_U;
           srcs[n_src-1].point_ref_stokesV[point_ind-1] = flux_V;
           srcs[n_src-1].point_SIs[point_ind-1] = SI;
-          // LOGV( LOG_LOW, "New source component: <%s> component %d, ra: %8.5f hrs, dec: %+9.5f deg\n",
-          //       cat[n_src-1].components[n_comps-1].ra*DR2H, cat[n_src-1].components[n_comps-1].dec*DR2D );
         break;
 
         case GAUSSIAN:
@@ -390,7 +385,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
         break;
 
       default:
-        printf("%d CS_ReadSourceList error assigning info from line: <%s>\n", type_key, line );
+        printf("%d read_source_catalogue error assigning info from line %d:\n\t<%s>\n", type_key,  line_number, line );
         // return NULL;
         return 1;
 
@@ -401,7 +396,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
     else if (param_key && comp_found==1) {
       result = sscanf( line, "%*s %f %f %f", &coeff1, &coeff2, &coeff3 );
       if (result != 3) {
-          printf("%d CS_ReadSourceList error: problem reading coeffs input line <%s>\n", result, line );
+          printf("%d read_source_catalogue error: problem reading component input from line %d:\n\t<%s>\n", result, line_number, line );
           // return NULL;
           return 1;
       }
@@ -420,7 +415,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
         break;
 
       default:
-        printf("CS_ReadSourceList error assigning info from line: <%s>\n", line );
+        printf("read_source_catalogue error: problem reading component input from line %d:\n\t %s \n", line_number, line );
         // return NULL;
         return 1;
       }//switch (type_key)
@@ -429,7 +424,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
     else if (coeff_key && comp_found==1) {
       result = sscanf( line, "%*s %f %f %f", &coeff1, &coeff2, &coeff3 );
       if (result != 3) {
-          printf("%d CS_ReadSourceList error: problem reading coeffs input line <%s>\n", result, line );
+          printf("read_source_catalogue error: problem reading coeffs component input from line %d:\n\t %s \n", line_number, line );
           // return NULL;
           return 1;
       }
@@ -443,7 +438,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
         break;
 
       default:
-        printf("CS_ReadSourceList error assigning info from line: <%s>\n", line );
+        printf("read_source_catalogue error: problem reading input from line %d:\n\t<%s>\n", line_number, line );
         // return NULL;
         return 1;
       }//switch (type_key)
@@ -453,7 +448,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
     else if (comp_end==1) {
       comp_found = 0;
     }
-
+    line_number += 1;
   }//while fgets(line,BUFSIZ,fp) != NULL)
 
   /* set pointers and counts in the final catalogue object */
@@ -463,7 +458,8 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
   return 0;
 } //read_sources
 
-woden_settings_t * read_json_settings(const char *filename){
+int read_json_settings(const char *filename,
+                                      woden_settings_t *woden_settings){
   FILE *fp;
 	char buffer[1024];
 
@@ -472,7 +468,6 @@ woden_settings_t * read_json_settings(const char *filename){
   struct json_object *latitude;
   struct json_object *ra0;
   struct json_object *dec0;
-  struct json_object *num_baselines;
   struct json_object *num_freqs;
   struct json_object *frequency_resolution;
   struct json_object *base_low_freq;
@@ -491,9 +486,21 @@ woden_settings_t * read_json_settings(const char *filename){
   struct json_object *EDA2_beam;
   struct json_object *array_layout_file_path;
 
-	fp = fopen(filename,"r");
-	fread(buffer, 1024, 1, fp);
+	// fp = fopen(filename,"r");
+  /* open file */
+  if ((fp=fopen(filename,"r"))==NULL) {
+    printf("read_json_settings: failed to open json file:\n\t %s \n", filename);
+    // exit(1);
+    return 1;
+  }
+
+  size_t status = fread(buffer, 1024, 1, fp);
 	fclose(fp);
+
+  if (status == 1) {
+    printf("Failed to read data from the given .json file stream\n");
+    return 1;
+  }
 
 	parsed_json = json_tokener_parse(buffer);
 
@@ -524,8 +531,8 @@ woden_settings_t * read_json_settings(const char *filename){
 
   json_object_object_get_ex(parsed_json, "use_EDA2_beam", &EDA2_beam);
 
-  woden_settings_t * woden_settings;
-  woden_settings = malloc( sizeof(woden_settings_t) );
+  // woden_settings_t *woden_settings;
+  // woden_settings = malloc( sizeof(woden_settings_t) );
 
   //Boolean whether to use gaussian primary beam
   int lat_true = json_object_get_boolean(latitude);
@@ -561,8 +568,20 @@ woden_settings_t * read_json_settings(const char *filename){
   //Boolean whether to use gaussian primary beam
   int gauss_beam = json_object_get_boolean(gaussian_beam);
 
-  //Boolean whether to use gaussian primary beam
+  //Boolean whether to use the MWA FEE beam
   int fee_beam = json_object_get_boolean(FEE_beam);
+
+  //Boolean whether to use the MWA FEE beam
+  int eda2_beam = json_object_get_boolean(EDA2_beam);
+
+  if (gauss_beam + fee_beam + eda2_beam > 1 ) {
+    printf("You have selected more than one primary beam type in the .json file\n");
+    printf("You can have only ONE of the following:\n");
+    printf("\t\"use_gaussian_beam\": True\n");
+    printf("\t\"use_FEE_beam\": True\n");
+    printf("\t\"use_EDA2_beam\": True\n");
+    return 1;
+  }
 
   if (gauss_beam) {
     woden_settings->beamtype = GAUSS_BEAM;
@@ -599,20 +618,27 @@ woden_settings_t * read_json_settings(const char *filename){
     struct json_object *delay;
     struct json_object *FEE_ideal_delays;
     int delays_length;
-  	// size_t i;
 
     json_object_object_get_ex(parsed_json, "FEE_delays", &FEE_ideal_delays);
     delays_length = json_object_array_length(FEE_ideal_delays);
 
     if (delays_length != 16) {
-      printf("FEE_delays in json file must be an array of length 16\nExiting now");
-      exit(1);
+      printf("FEE_delays in json file must be an array of length 16");
+      return 1;
     }
 
   	for(int i=0;i<delays_length;i++) {
   		delay = json_object_array_get_idx(FEE_ideal_delays, i);
   		woden_settings->FEE_ideal_delays[i] = (float)json_object_get_double(delay);
   	}
+
+    woden_settings->hdf5_beam_path = json_object_get_string(hdf5_beam_path);
+
+    if (woden_settings->hdf5_beam_path == NULL) {
+      printf("Must specify path the MWA FEE hdf5 file for MWA FEE Beam simulation \n");
+      return 1;
+    }
+
   }
 
   else if (EDA2_beam){
@@ -628,19 +654,26 @@ woden_settings_t * read_json_settings(const char *filename){
   woden_settings->array_layout_file = json_object_get_boolean(array_layout_file_path);
   if (woden_settings->array_layout_file) {
     woden_settings->array_layout_file_path = json_object_get_string(array_layout_file_path);
-    printf("Will use east,north,height coords from this file: %s\n", woden_settings->array_layout_file_path);
+    // printf("Will use east,north,height coords from this file: %s\n", woden_settings->array_layout_file_path);
+
+    FILE *fp_test_array=NULL;
+
+    if ((fp_test_array = fopen(woden_settings->array_layout_file_path,"r"))==NULL) {
+      printf("Reading of array_layout file:\n %s\nhas failed", woden_settings->array_layout_file_path);
+      fclose(fp_test_array);
+      return 1;
+    }
+
+
   } else {
     printf("WODEN needs an east,north,height coordinate list. Specify using \
     'array_layout' in setting file\n");
-    exit(1);
+    return 1;
   }
-
-  woden_settings->hdf5_beam_path = json_object_get_string(hdf5_beam_path);
 
   struct json_object *band_num;
   struct json_object *band_nums;
   size_t num_bands;
-	// size_t i;
 
   json_object_object_get_ex(parsed_json, "band_nums", &band_nums);
   num_bands = json_object_array_length(band_nums);
@@ -653,10 +686,16 @@ woden_settings_t * read_json_settings(const char *filename){
     woden_settings->band_nums[i] = json_object_get_int(band_num);
   }
 
-  return woden_settings;
+  //Everything was fine
+  return 0;
 
 }
 
+/**
+As said in the include file/help, this is an RTS function to rotate the array
+back to J2000. There are a number of lines commented out, which I don't think
+I need, but am leaving here in case I do one day
+*/
 void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
                        woden_settings_t *woden_settings) {
 
@@ -683,9 +722,9 @@ void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
 
   // const double c=VEL_LIGHT;
   // int st1;
-  double lmst2000, ha2000; // ant_u_ep, ant_v_ep, ant_w_ep;
+  double lmst2000; //ha2000; // ant_u_ep, ant_v_ep, ant_w_ep;
   double X_epoch, Y_epoch, Z_epoch, X_prec, Y_prec, Z_prec;
-  double u_prec, v_prec, w_prec;
+  // double u_prec, v_prec, w_prec;
 
   double v1[3], v2[3], ra2000, dec2000;
 
@@ -707,9 +746,10 @@ void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
   ra2000 = palDranrm(ra2000);
 
   lmst2000 = ra2000;
-  ha2000 = 0.0;
+  // ha2000 = 0.0;
 
   woden_settings->lst_base = (float)lmst2000;
+  //TODO change the ra2000 to lmst
 
   /****************************************************************************
   * Possible that this is needed in the future, so leave here for now
@@ -768,7 +808,8 @@ void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
   } // st1
 } // RTS_PrecessXYZtoJ2000
 
-array_layout_t * calc_XYZ_diffs(woden_settings_t *woden_settings){
+array_layout_t * calc_XYZ_diffs(woden_settings_t *woden_settings,
+                                int do_precession){
 
   array_layout_t * array_layout;
   array_layout = malloc( sizeof(array_layout_t) );
@@ -820,9 +861,7 @@ array_layout_t * calc_XYZ_diffs(woden_settings_t *woden_settings){
                   &(array_layout->ant_X[i]), &(array_layout->ant_Y[i]), &(array_layout->ant_Z[i]));
   }
 
-  //TODO when we implement non-phase track mode, make this a variable
-  int phase_tracking = 1;
-  if (phase_tracking == 1) {
+  if (do_precession == 1) {
     RTS_PrecessXYZtoJ2000(array_layout, woden_settings);
   }
 

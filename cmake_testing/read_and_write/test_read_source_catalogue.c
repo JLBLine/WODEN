@@ -27,7 +27,7 @@ void check_single_source_numbers(source_catalogue_t *raw_srccat,
   //                                 raw_srccat->catsources[source_index].n_gauss,
   //                                 raw_srccat->catsources[source_index].n_shapes,
   //                                 raw_srccat->catsources[source_index].n_shape_coeffs );
-
+  //
   TEST_ASSERT_EQUAL_INT(num_sources, raw_srccat->num_sources);
   TEST_ASSERT_EQUAL_INT(num_shapelets, raw_srccat->num_shapelets);
   TEST_ASSERT_EQUAL_INT(n_comps, raw_srccat->catsources[source_index].n_comps);
@@ -113,12 +113,17 @@ void check_single_component_shapelet(catsource_t catsource, int comp_index) {
 
 /*
 Test whether a single point source is read in correctly
+Use this to test in some allmost broken srclists
 */
-void test_read_source_catalogue_SinglePoint(void)
+void test_read_source_catalogue_SinglePoint(char *srclist)
 {
   // Read in the source catalogue
-  source_catalogue_t *raw_srccat;
-  raw_srccat = read_source_catalogue("srclist_singlepoint.txt");
+  source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );
+  int status=0;
+  status = read_source_catalogue(srclist, raw_srccat);
+
+  //Zero means we're happy
+  TEST_ASSERT_EQUAL_INT(0, status);
 
   //Expected values
   int num_sources = 1;
@@ -134,11 +139,24 @@ void test_read_source_catalogue_SinglePoint(void)
                               num_sources,  num_shapelets,  n_comps,
                               n_points,  n_gauss,  n_shapes,
                               n_shape_coeffs, 0);
-
-  //Check the POINT specific values in the first COMPONENT
-  //of the first SOURCE are correct
+  //
+  // //Check the POINT specific values in the first COMPONENT
+  // //of the first SOURCE are correct
   check_single_component_point(raw_srccat->catsources[0], 0);
 }
+
+void test_read_source_catalogue_SinglePointGood(void) {
+  test_read_source_catalogue_SinglePoint("srclist_singlepoint.txt");
+}
+
+void test_read_source_catalogue_SinglePointEmpty(void) {
+  test_read_source_catalogue_SinglePoint("srclist_empty_line.txt");
+}
+
+void test_read_source_catalogue_SinglePointComments(void) {
+  test_read_source_catalogue_SinglePoint("srclist_comment.txt");
+}
+
 
 /*
 Test whether a single Gaussian source is read in correctly
@@ -146,8 +164,12 @@ Test whether a single Gaussian source is read in correctly
 void test_read_source_catalogue_SingleGaussian(void)
 {
   // Read in the source catalogue
-  source_catalogue_t *raw_srccat;
-  raw_srccat = read_source_catalogue("srclist_singlegauss.txt");
+  source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );
+  int status=0;
+  status = read_source_catalogue("srclist_singlegauss.txt", raw_srccat);
+
+  //Zero means we're happy
+  TEST_ASSERT_EQUAL_INT(0, status);
 
   //Expected values
   int num_sources = 1;
@@ -176,8 +198,12 @@ Test whether a single shapelet source is read in correctly
 void test_read_source_catalogue_SingleShapelet(void)
 {
   // Read in the source catalogue
-  source_catalogue_t *raw_srccat;
-  raw_srccat = read_source_catalogue("srclist_singleshape.txt");
+  source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );
+  int status=0;
+  status = read_source_catalogue("srclist_singleshape.txt", raw_srccat);
+
+  //Zero means we're happy
+  TEST_ASSERT_EQUAL_INT(0, status);
 
   //Expected values
   int num_sources = 1;
@@ -207,8 +233,12 @@ ordered as POINT, GAUSSIAN, SHAPELET, read in correctly
 */
 void test_read_source_catalogue_ThreeSources(void) {
   // // Read in the source catalogue
-  source_catalogue_t *raw_srccat;
-  raw_srccat = read_source_catalogue("srclist_threesources.txt");
+  source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );
+  int status=0;
+  status = read_source_catalogue("srclist_threesources.txt", raw_srccat);
+
+  //Zero means we're happy
+  TEST_ASSERT_EQUAL_INT(0, status);
   //
   //Expected overall numbers
   int num_sources = 3;
@@ -246,9 +276,13 @@ void test_read_source_catalogue_ThreeSources(void) {
 
 void test_read_source_catalogue_ThreeComponents(void) {
   // // Read in the source catalogue
-  source_catalogue_t *raw_srccat;
-  raw_srccat = read_source_catalogue("srclist_threecomponents.txt");
-  //
+  source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );
+  int status=0;
+  status = read_source_catalogue("srclist_threecomponents.txt", raw_srccat);
+
+  //Zero means we're happy
+  TEST_ASSERT_EQUAL_INT(0, status);
+
   //Expected overall numbers
   int num_sources = 1;
   int num_shapelets = 1;
@@ -283,8 +317,12 @@ void test_read_source_catalogue_ThreeComponents(void) {
 
 void test_read_source_catalogue_MultiSourceComponents(void) {
   // // Read in the source catalogue
-  source_catalogue_t *raw_srccat;
-  raw_srccat = read_source_catalogue("srclist_mulitple_source-components.txt");
+  source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );
+  int status=0;
+  status = read_source_catalogue("srclist_mulitple_source-components.txt", raw_srccat);
+
+  //Zero means we're happy
+  TEST_ASSERT_EQUAL_INT(0, status);
   //
   //Expected overall numbers
   int num_sources = 5;
@@ -333,23 +371,58 @@ void test_read_source_catalogue_MultiSourceComponents(void) {
 }
 
 void test_read_source_catalogue_MissingFile(void) {
-  // // Read in the source catalogue
-  source_catalogue_t *raw_srccat;
-  raw_srccat = read_source_catalogue("not_a_file.txt");
+  // Read in the source catalogue
+  source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );
+  int status=0;
+  status = read_source_catalogue("not_a_file.txt", raw_srccat);
+  //status=1 means this catalogue read failed, so this fail is a pass
+  TEST_ASSERT_EQUAL_INT(1, status);
 };
 
+void test_read_source_catalogue_BadSpell(void) {
+  // Read in the source catalogue
+  source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );
+  int status=0;
+  status = read_source_catalogue("srclist_badspell.txt", raw_srccat);
+  //status=1 means this catalogue read failed, so this fail is a pass
+  TEST_ASSERT_EQUAL_INT(1, status);
+};
+
+void test_read_source_catalogue_BadCoeff(void) {
+  // Read in the source catalogue
+  source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );
+  int status=0;
+  status = read_source_catalogue("srclist_badcoeff.txt", raw_srccat);
+  //status=1 means this catalogue read failed, so this fail is a pass
+  TEST_ASSERT_EQUAL_INT(1, status);
+};
+
+//Test if the number of components for a SOURCE are missing
+void test_read_source_catalogue_NoCompNumbers(void) {
+  // Read in the source catalogue
+  source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );
+  int status=0;
+  status = read_source_catalogue("srclist_no-comp_numbers.txt", raw_srccat);
+  //status=1 means this catalogue read failed, so this fail is a pass
+  TEST_ASSERT_EQUAL_INT(1, status);
+};
 //Run test using unity
 int main(void)
 {
     UNITY_BEGIN();
 
-    // RUN_TEST(test_read_source_catalogue_SinglePoint);
-    // RUN_TEST(test_read_source_catalogue_SingleGaussian);
-    // RUN_TEST(test_read_source_catalogue_SingleShapelet);
-    // RUN_TEST(test_read_source_catalogue_ThreeSources);
-    // RUN_TEST(test_read_source_catalogue_ThreeComponents);
-    // RUN_TEST(test_read_source_catalogue_MultiSourceComponents);
+    RUN_TEST(test_read_source_catalogue_SinglePointGood);
+    RUN_TEST(test_read_source_catalogue_SinglePointEmpty);
+    RUN_TEST(test_read_source_catalogue_SinglePointComments);
+    RUN_TEST(test_read_source_catalogue_SingleGaussian);
+    RUN_TEST(test_read_source_catalogue_SingleShapelet);
+    RUN_TEST(test_read_source_catalogue_ThreeSources);
+    RUN_TEST(test_read_source_catalogue_ThreeComponents);
+    RUN_TEST(test_read_source_catalogue_MultiSourceComponents);
     RUN_TEST(test_read_source_catalogue_MissingFile);
+    RUN_TEST(test_read_source_catalogue_BadSpell);
+    RUN_TEST(test_read_source_catalogue_BadCoeff);
+    RUN_TEST(test_read_source_catalogue_NoCompNumbers);
 
     return UNITY_END();
 }

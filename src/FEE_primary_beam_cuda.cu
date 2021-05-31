@@ -115,8 +115,8 @@ extern "C" void copy_FEE_primary_beam_to_GPU(RTS_MWA_FEE_beam_t *FEE_beam){
 
   h_params = (float *)malloc(arrSize*sizeof(float) );
 
-  for(unsigned int i=0; i< n_pols; i++){
-    for(unsigned int j=0; j<nMN; j++){
+  for(int i=0; i< n_pols; i++){
+    for(int j=0; j<nMN; j++){
       h_params[j+(i*nMN)] = (float)(FEE_beam->M[i][j]);
     }
   }
@@ -124,8 +124,8 @@ extern "C" void copy_FEE_primary_beam_to_GPU(RTS_MWA_FEE_beam_t *FEE_beam){
   cudaErrorCheckCall( cudaMemcpy(FEE_beam->d_M, h_params,
                       arrSize*sizeof(float), cudaMemcpyHostToDevice ) );
 
-  for(unsigned int i=0; i<n_pols; i++){
-    for(unsigned int j=0; j<nMN; j++){
+  for(int i=0; i<n_pols; i++){
+    for(int j=0; j<nMN; j++){
       h_params[j+(i*nMN)] = (float)(FEE_beam->N[i][j]);
     }
   }
@@ -138,8 +138,8 @@ extern "C" void copy_FEE_primary_beam_to_GPU(RTS_MWA_FEE_beam_t *FEE_beam){
   float _Complex *h_Qdata;
   h_Qdata = (float _Complex *)malloc(arrSize*sizeof(float _Complex) );
 
-  for(unsigned int i=0; i< n_pols; i++){
-    for(unsigned int j=0; j<nMN; j++){
+  for(int i=0; i< n_pols; i++){
+    for(int j=0; j<nMN; j++){
         h_Qdata[j+(i*nMN)] = FEE_beam->Q1[i][j];
     }
   }
@@ -147,8 +147,8 @@ extern "C" void copy_FEE_primary_beam_to_GPU(RTS_MWA_FEE_beam_t *FEE_beam){
   cudaErrorCheckCall( cudaMemcpy(FEE_beam->d_Q1, h_Qdata,
                       arrSize*nStations*sizeof(float _Complex), cudaMemcpyHostToDevice ) );
 
-  for(unsigned int i=0; i< n_pols; i++){
-    for(unsigned int j=0; j<nMN; j++){
+  for(int i=0; i< n_pols; i++){
+    for(int j=0; j<nMN; j++){
         h_Qdata[j+(i*nMN)] = FEE_beam->Q2[i][j];
     }
   }
@@ -521,7 +521,7 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
   int n_pols = 2;
   int num_coords = num_time_steps*num_components;
 
-  for (size_t phi_ind = 0; phi_ind < num_coords; phi_ind++) {
+  for (int phi_ind = 0; phi_ind < num_coords; phi_ind++) {
     phi[phi_ind] = (M_PI/2.0) - phi[phi_ind];
     if(phi[phi_ind] < 0){
       phi[phi_ind] += 2.0*M_PI;
@@ -723,7 +723,7 @@ extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
 
   //undo the azimuth rotation in case user keeps using the same az/za
   //otherwise we'll just keep spinning around and around and around
-  for (size_t phi_ind = 0; phi_ind < num_coords; phi_ind++) {
+  for (int phi_ind = 0; phi_ind < num_coords; phi_ind++) {
     phi[phi_ind] = (M_PI/2.0) - phi[phi_ind];
     if(phi[phi_ind] < 0){
       phi[phi_ind] += 2.0*M_PI;
@@ -892,7 +892,7 @@ extern "C" void test_RTS_CUDA_FEE_beam(int num_components,
 
   double ha, dec, el, para_angle;
 
-  for (size_t comp = 0; comp < num_components; comp++) {
+  for (int comp = 0; comp < num_components; comp++) {
     el = M_PI - zas[comp];
 
     eraAe2hd((double)azs[comp], el, (double)latitude, &ha, &dec);

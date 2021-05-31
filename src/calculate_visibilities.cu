@@ -320,7 +320,7 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
 
       threads.x = 128;
       threads.y = 1;
-      grid.x = grid.x = (int)ceil( (float)num_visis / (float)threads.x );
+      grid.x = (int)ceil( (float)num_visis / (float)threads.x );
       grid.y = 1;
 
       cudaErrorCheckKernel("kern_calc_visi_point",
@@ -465,7 +465,7 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
 
       threads.x = 128;
       threads.y = 1;
-      grid.x = grid.x = (int)ceil( (float)num_visis / (float)threads.x );
+      grid.x = (int)ceil( (float)num_visis / (float)threads.x );
       grid.y = 1;
 
       cudaErrorCheckKernel("kern_calc_visi_gaussian",

@@ -141,9 +141,6 @@ void increment_shapelet(catsource_t *temp_cropped_src, catsource_t *cropped_src,
   temp_cropped_src->shape_n2s = cropped_src->shape_n2s + * shape_iter;
   temp_cropped_src->shape_param_indexes = cropped_src->shape_param_indexes + * shape_iter;
 
-  int max_shape_param_index = 0;
-  int this_index = 0;
-
   //only chunk over coeffs, so we need all the az / za for every chunk,
   //so we don't iterate the pointer here
 
@@ -383,7 +380,7 @@ beam_settings_t make_beam_settings_chunk(beam_settings_t beam_settings,
 
   beam_settings_t beam_settings_chunk;
 
-  if (beam_settings_chunk.beamtype == GAUSS_BEAM) {
+  if (beam_settings.beamtype == GAUSS_BEAM) {
 
     beam_settings_chunk.gauss_sdec = beam_settings.gauss_sdec;
     beam_settings_chunk.gauss_cdec = beam_settings.gauss_cdec;

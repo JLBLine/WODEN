@@ -105,7 +105,6 @@ def get_LST(latitude=None,longitude=None,date=None):
     observing_time = Time(date, scale='utc', location=observing_location)
     ##Grab the LST
     LST = observing_time.sidereal_time('apparent')
-    print('WHAT WHAT',LST.value*15.0)
     return LST.value*15.0
 
 def RTS_encode_baseline(b1, b2):

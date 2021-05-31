@@ -1,0 +1,18 @@
+{
+  "ra0": 0.0000000000,
+  "dec0": -27.0000000000,
+  "num_freqs": 16,
+  "num_time_steps": 4,
+  "cat_filename": "srclist_singlepoint.txt",
+  "time_res": 2.0,
+  "frequency_resolution": 40000.0,
+  "chunking_size": 5000,
+  "jd_date": 2457278.2010995,
+  "LST": 0.44312771,
+  "array_layout": "WODEN_array_layout.txt",
+  "lowest_channel_freq": 1.6703500000e+08,
+  "latitude": -26.70331944,
+  "coarse_band_width": 1.2800000000e+06,
+  "sky_crop_components": True,
+  "band_nums": [1,4,9]
+}

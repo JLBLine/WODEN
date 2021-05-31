@@ -57,22 +57,11 @@ endif()
 ##Find the source codes
 file(GLOB CSOURCES "src/*.c")
 file(GLOB CUDASOURCES "src/*.cu")
-#set(WODEN_INC "include" )
 
 ##Find the following libraries
-##Use can specify CFITSIO_ROOT and JSONC_LIB when running Cmake
-set(HINTS_CFITSIO_LIB "${CFITSIO_ROOT}/lib;${CFITSIO_ROOT}")
-set(HINTS_CFITSIO_INC "${CFITSIO_ROOT}/include;${CFITSIO_ROOT}")
-
-find_path(CFITSIO_INC fitsio.h HINTS ${HINTS_CFITSIO_INC})
-find_library(CFITSIO_LIB cfitsio HINTS ${HINTS_CFITSIO_LIB} REQUIRED)
-if(CFITSIO_LIB)
-  message(STATUS "CFITSIO include path: ${CFITSIO_INC}")
-  message(STATUS "CFITSIO library path: ${CFITSIO_LIB}")
-endif()
 
 
-set(HINTS_JSONC_LIB "${JSONC_ROOT}/lib;${JSONC_ROOT}/lib64;${JSONC_ROOT}")
+set(HINTS_JSONC_LIB "${JSONC_ROOT}/lib;${JSONC_ROOT}/lib64;${JSONC_ROOT};/usr/local/lib/")
 set(HINTS_JSONC_INC "${JSONC_ROOT}/include;${JSONC_ROOT}/include/json-c;${JSONC_ROOT};/usr/include/json-c/;/usr/local/include/json-c/")
 
 find_path(JSONC_INC json.h HINTS ${HINTS_JSONC_INC})
@@ -117,19 +106,27 @@ if(PAL_LIB)
 endif()
 
 ##Set the linkers for the C code
-set(CC_LINKLIBS "-lm -pthread ${CFITSIO_LIB} ${JSONC_LIB} ${ERFA_LIB} ${HDF5_LIB} ${PAL_LIB}")
+set(CC_LINKLIBS "-lm -pthread ${JSONC_LIB} ${ERFA_LIB} ${HDF5_LIB} ${PAL_LIB}")
 
 ##All the WODEN header dirs are in include dir
-include_directories("${CMAKE_SOURCE_DIR}/include" ${JSONC_INC} ${CFITSIO_INC} ${ERFA_INC} ${HDF5_INC} ${PAL_INC})
+include_directories("${CMAKE_SOURCE_DIR}/include" ${JSONC_INC}
+                     ${ERFA_INC} ${HDF5_INC} ${PAL_INC})
 
 ##Choose whether we are created the main executable, or making the unit tests
 set(TARGET_GROUP production CACHE STRING "Group to build")
+
+# SET(GCC_COVERAGE_COMPILE_FLAGS "-Wall")
+# add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
 
 ##If making production code
 if(TARGET_GROUP STREQUAL production)
     ##Generate libraries from the C and CUDA source code
     add_library(wodenC SHARED ${CSOURCES})
+    ##Compile C code with all warnings and optimise
+    target_compile_options(wodenC PRIVATE -O3 -Wall)
     add_library(wodenCUDA SHARED ${CUDASOURCES})
+    ##Compile CUDA code with all warnings
+    target_compile_options(wodenCUDA PRIVATE --compiler-options -Wall)
     ## For CMake versions > 3.18, the arch flag settings are handled by
     ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
     ## replace the CUDA_FLAG lines above with something like
@@ -138,13 +135,8 @@ if(TARGET_GROUP STREQUAL production)
     ##make the final WODEN executable, linking the libraries
     add_executable(woden src/woden.c)
     target_link_libraries(woden wodenC wodenCUDA ${CC_LINKLIBS})
-    add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
+    target_compile_options(woden PRIVATE -O3 -Wall)
 
-    # SET_SOURCE_FILES_PROPERTIES(
-    #   src/FEE_primary_beam.c
-    #   PROPERTIES
-    #   COMPILE_DEFINITIONS "H5Dopen_vers=2;H5Gopen_vers=2"
-    # )
 
     ##Make a symlink to run_woden.py so it's easy to find
     set(link_woden "run_woden.py")
@@ -180,7 +172,7 @@ elseif(TARGET_GROUP STREQUAL test)
 
       set(HINTS_UNITY "${UNITY_ROOT};${UNITY_ROOT}/src/;/usr/local/Unity/src/")
 
-      find_path(UNITY_DIR unity.h HINTS ${HINTS_UNITY})
+      find_path(UNITY_DIR unity.c HINTS ${HINTS_UNITY})
 
       if(UNITY_DIR)
         message(STATUS "UNITY src path: ${UNITY_DIR}")

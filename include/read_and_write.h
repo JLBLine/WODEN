@@ -7,7 +7,6 @@
 #pragma once
 #include <math.h>
 #include <stdint.h>
-#include <fitsio.h>
 #include "woden_struct_defs.h"
 
 //Somthing WEIRD is up with the way I'm using the documentation package
@@ -74,10 +73,13 @@ void RTS_ENH2XYZ_local(float E, float N, float H, float lat,
             ENDSOURCE
 
 For a more detailed explanation of the sky model, please see the
-documentation at
-@todo Link the online documentation when there is a link
+documentation at @todo Link the online documentation when there is a link.
 
-@param[in] *raw_srccat Struct to contain sky model information
+Note that `raw_srccat` should be memory intialised, so declare with something
+like `source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );`
+before feeding into this function.
+
+@param[in] *raw_srccat Struct to contain sky model information.
 @param[in] *filename Path to a WODEN-style sky model
 @return Integer where 0 if read was successful, 1 if failed
  */
@@ -95,21 +97,26 @@ int read_source_catalogue(const char *filename, source_catalogue_t *raw_srccat);
  * @param[in] *filename Path to a WODEN *.json settings file
  * @return A pointer to a populated `woden_settings_t` struct
  */
-woden_settings_t * read_json_settings(const char *filename);
+int read_json_settings(const char *filename, woden_settings_t *woden_settings);
 
 /**
- * @brief Populates an `array_layout_t` struct with useful antenna coords and
- * baseline lengths for the array layout specified in `*woden_settings`
- *
- * @details Explicitly, tries to read the array layout stored at
- * `woden_settings->array_layout_file_path`, storeds the E,N,H coords,
- * converts to and stores X,Y,Z coords, and calculates the baseline lengths
- * in the X,Y,Z frame
- *
- * @param[in] *woden_settings Pointer to a `woden_settings_t` struct
- * @return A pointer to a populated `array_layout_t` struct
+@brief Populates an `array_layout_t` struct with useful antenna coords and
+baseline lengths for the array layout specified in `*woden_settings`
+
+@details Explicitly, tries to read the array layout stored at
+`woden_settings->array_layout_file_path`, stores the E,N,H coords,
+converts to and stores X,Y,Z coords, and calculates the baseline lengths
+in the X,Y,Z frame. If `do_precession=1`, it will rotate the X,Y,Z to J2000
+(based off of mjd in `woden_settings`). This should be equivalent to rotating
+the sky to the present day to account for precession. Assumes the sky model is
+in J2000 coords.
+
+@param[in] *woden_settings Pointer to a `woden_settings_t` struct
+@param[in] do_precession Whether to precess back to J2000 or not (0 False, 1 True)
+@return A pointer to a populated `array_layout_t` struct
  */
-array_layout_t * calc_XYZ_diffs(woden_settings_t *woden_settings);
+array_layout_t * calc_XYZ_diffs(woden_settings_t *woden_settings,
+                                int do_precession);
 
 /**
  * @brief Rotates the array coordinates in `x,y,z` from the current date to
@@ -131,25 +138,24 @@ void RTS_precXYZ(double rmat[3][3], double x, double y, double z, double lmst,
          double *xp, double *yp, double *zp, double lmst2000);
 
 /**
-* @brief Performs calculations to rotate the array coordinates from the
-* current date back to their positions in J2000
-*
-* @details For any simulation on a date other than 01/01/2000, a J2000 sky model
-* must be precessed to the current date, or the sources are in an incorrect
-* location. Rather than precess every source however, we can just rotate the
-* array itself back to J2000. I think this ignores the intrinsic velocities
-* of each source but covers the Earth based precessions and what not.
-* Explicitly, these three arrays in `array_layout` are updated:
-* array_layout->ant_X,
-* array_layout->ant_Y,
-* array_layout->ant_Z
-*
-* Many, many calls to `pal` are made.
-*
-* @param[in,out] *array_layout An `array_layout_t` struct containing the array
-* layout
-* @param[in] *woden_settings A `woden_settings_t` struct containing
-* observational settings
+@brief Performs calculations to rotate the array coordinates from the
+current date back to their positions in J2000
+
+@details For any simulation on a date other than 01/01/2000, a J2000 sky model
+must be precessed to the current date, or the sources are in an incorrect
+location. Rather than precess every source however, we can just rotate the
+array itself back to J2000. I think this ignores the intrinsic velocities
+of each source but covers the Earth based precessions and what not.
+Explicitly, these three arrays in `array_layout` are updated:
+`array_layout->ant_X`,
+`array_layout->ant_Y`,
+`array_layout->ant_Z`, along with `woden_settings->lst_base`, as moving the
+array effectively changes the LST. Many, many calls to `pal` are made.
+
+@param[in,out] *array_layout An `array_layout_t` struct containing the array
+layout
+@param[in] *woden_settings A `woden_settings_t` struct containing
+observational settings
 */
 void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
                        woden_settings_t *woden_settings);

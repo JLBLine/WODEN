@@ -1,0 +1,7 @@
+SOURCE singlepoint P 1 G 0 S 0 0
+COMPONENT POINT 1.0 -30.0
+##Here is a comment
+FREQ 150e+6 1.0 0 0 0
+ENDCOMPONENT
+#Here is another comment
+ENDSOURCE

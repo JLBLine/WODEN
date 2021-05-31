@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <fitsio.h>
 #include <erfa.h>
 #include <complex.h>
 
@@ -43,6 +42,9 @@ int main(int argc, char **argv) {
 
   }
 
+  //Is everything OK integer
+  int status=0;
+
   //Create the shapelet basis function array
   float *sbf;
   sbf = NULL;
@@ -50,8 +52,13 @@ int main(int argc, char **argv) {
   sbf = create_sbf(sbf);
 
   //Read in the settings from the controlling json file
-  woden_settings_t *woden_settings;
-  woden_settings = read_json_settings(argv[1]);
+  woden_settings_t *woden_settings = malloc( sizeof(woden_settings_t) );;
+  status = read_json_settings(argv[1], woden_settings);
+
+  if (status == 1) {
+    printf("read_json_settings failed. Exiting now\n");
+    exit(1);
+  }
 
   if (woden_settings->chunking_size > MAX_CHUNKING_SIZE) {
     printf("Current maximum allowable chunk size is %d.  Defaulting to this value.", MAX_CHUNKING_SIZE);
@@ -64,7 +71,9 @@ int main(int argc, char **argv) {
   //Create the array layout in instrument-centric X,Y,Z using positions
   //Rotate back to J2000 if necessary
   array_layout_t * array_layout;
-  array_layout = calc_XYZ_diffs(woden_settings);
+  //Hard code to rotate back to J2000 at the moment
+  int do_precession = 1;
+  array_layout = calc_XYZ_diffs(woden_settings, do_precession);
   woden_settings->num_baselines = array_layout->num_baselines;
 
   //Set some constants based on the settings
@@ -100,9 +109,9 @@ int main(int argc, char **argv) {
   }
 
   //Read in the source catalogue
-  source_catalogue_t *raw_srccat;
-  raw_srccat = malloc( sizeof(source_catalogue_t) );
-  int status;
+  source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );
+  //Malloc srccat
+  // srccat =
   status = read_source_catalogue(woden_settings->cat_filename, raw_srccat);
 
   if (status == 1) {
@@ -151,11 +160,11 @@ int main(int argc, char **argv) {
                                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     //
       printf("Setting up the zenith FEE beam...");
-      RTS_MWAFEEInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam_zenith, float_zenith_delays);
+      status = RTS_MWAFEEInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam_zenith, float_zenith_delays);
       printf(" done.\n");
 
       printf("Setting up the FEE beam...");
-      RTS_MWAFEEInit(woden_settings->hdf5_beam_path, base_middle_freq,
+      status = RTS_MWAFEEInit(woden_settings->hdf5_beam_path, base_middle_freq,
             beam_settings.FEE_beam, woden_settings->FEE_ideal_delays);
       printf(" done.\n");
 
