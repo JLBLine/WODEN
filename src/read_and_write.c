@@ -458,8 +458,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
   return 0;
 } //read_sources
 
-int read_json_settings(const char *filename,
-                                      woden_settings_t *woden_settings){
+int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
   FILE *fp;
 	char buffer[1024];
 
@@ -485,15 +484,14 @@ int read_json_settings(const char *filename,
   struct json_object *jd_date;
   struct json_object *EDA2_beam;
   struct json_object *array_layout_file_path;
-
-	// fp = fopen(filename,"r");
+  //
   /* open file */
   if ((fp=fopen(filename,"r"))==NULL) {
     printf("read_json_settings: failed to open json file:\n\t %s \n", filename);
     // exit(1);
     return 1;
   }
-
+  //
   size_t status = fread(buffer, 1024, 1, fp);
 	fclose(fp);
 
@@ -501,9 +499,9 @@ int read_json_settings(const char *filename,
     printf("Failed to read data from the given .json file stream\n");
     return 1;
   }
-
+  //
 	parsed_json = json_tokener_parse(buffer);
-
+  //
   json_object_object_get_ex(parsed_json, "LST", &lst_base);
   json_object_object_get_ex(parsed_json, "latitude", &latitude);
   json_object_object_get_ex(parsed_json, "ra0", &ra0);
@@ -530,13 +528,13 @@ int read_json_settings(const char *filename,
   json_object_object_get_ex(parsed_json, "hdf5_beam_path", &hdf5_beam_path);
 
   json_object_object_get_ex(parsed_json, "use_EDA2_beam", &EDA2_beam);
-
+  //
   // woden_settings_t *woden_settings;
   // woden_settings = malloc( sizeof(woden_settings_t) );
-
+  //
   //Boolean whether to use gaussian primary beam
   int lat_true = json_object_get_boolean(latitude);
-
+  //
   if (lat_true == 1) {
     woden_settings->latitude = json_object_get_double(latitude)*DD2R;
   }
@@ -547,7 +545,6 @@ int read_json_settings(const char *filename,
   printf("LATITUDE IS %.1f\n", woden_settings->latitude/DD2R);
 
   woden_settings->lst_base = json_object_get_double(lst_base)*DD2R;
-  // woden_settings->lst_base = 0.0;
   woden_settings->ra0 = (float)json_object_get_double(ra0)*DD2R;
   woden_settings->dec0 = (float)json_object_get_double(dec0)*DD2R;
   woden_settings->num_freqs = json_object_get_int(num_freqs);
@@ -658,9 +655,8 @@ int read_json_settings(const char *filename,
 
     FILE *fp_test_array=NULL;
 
-    if ((fp_test_array = fopen(woden_settings->array_layout_file_path,"r"))==NULL) {
+    if ((fp_test_array=fopen(woden_settings->array_layout_file_path,"r"))==NULL) {
       printf("Reading of array_layout file:\n %s\nhas failed", woden_settings->array_layout_file_path);
-      fclose(fp_test_array);
       return 1;
     }
 
@@ -670,7 +666,7 @@ int read_json_settings(const char *filename,
     'array_layout' in setting file\n");
     return 1;
   }
-
+  
   struct json_object *band_num;
   struct json_object *band_nums;
   size_t num_bands;

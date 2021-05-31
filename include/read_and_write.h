@@ -87,15 +87,16 @@ int read_source_catalogue(const char *filename, source_catalogue_t *raw_srccat);
 
 
 /**
- * @brief Takes a path to .json WODEN parameter file, and populates a
- * `woden_settings_t` struct with the contents of `filename`.
- *
- * @details For what can be included in the .json file, see the documentation
- * for
- * @todo Work out how to link the print_help function here
- *
- * @param[in] *filename Path to a WODEN *.json settings file
- * @return A pointer to a populated `woden_settings_t` struct
+@brief Takes a path to .json WODEN parameter file, and populates a
+`woden_settings_t` struct with the contents of `filename`.
+
+@details For what can be included in the .json file, see the documentation
+for
+@todo Work out how to link the print_help function here
+
+@param[in] *filename Path to a WODEN *.json settings file
+@param[in,out] A pointer to a populated `woden_settings_t` struct
+ @return Integer where 0 if read was successful, 1 if failed
  */
 int read_json_settings(const char *filename, woden_settings_t *woden_settings);
 

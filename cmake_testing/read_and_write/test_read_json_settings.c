@@ -52,7 +52,7 @@ void test_read_json_settings_MWAFEE(void) {
   //Read in the settings from the controlling json file
   woden_settings_t *woden_settings = malloc( sizeof(woden_settings_t) );
   status = read_json_settings("run_woden_MWAFEE.json", woden_settings);
-
+  //
   TEST_ASSERT_EQUAL_INT(0, status);
 
   //Check generic observation params have been read in correctly
