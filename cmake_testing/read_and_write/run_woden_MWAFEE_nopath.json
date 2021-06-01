@@ -9,7 +9,7 @@
   "chunking_size": 5000,
   "jd_date": 2457278.2010995,
   "LST": 0.44312771,
-  "array_layout": "WODEN_array_layout.txt",
+  "array_layout": "example_array_layout.txt",
   "lowest_channel_freq": 1.6703500000e+08,
   "latitude": -26.70331944,
   "coarse_band_width": 1.2800000000e+06,

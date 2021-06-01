@@ -32,7 +32,7 @@ void check_observation_params(woden_settings_t *woden_settings) {
   TEST_ASSERT_EQUAL_INT(5000 ,woden_settings->chunking_size);
 
   TEST_ASSERT_EQUAL_INT(1, woden_settings->array_layout_file);
-  TEST_ASSERT_EQUAL_STRING("WODEN_array_layout.txt", woden_settings->array_layout_file_path);
+  TEST_ASSERT_EQUAL_STRING("example_array_layout.txt", woden_settings->array_layout_file_path);
   TEST_ASSERT_EQUAL_INT(3, woden_settings->num_bands);
 
   int expect_band_nums[] = {1,4,9};

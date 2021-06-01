@@ -542,7 +542,7 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
     woden_settings->latitude = MWA_LAT_RAD;
   }
 
-  printf("LATITUDE IS %.1f\n", woden_settings->latitude/DD2R);
+  printf("Latitude of array is set to %.1f\n", woden_settings->latitude/DD2R);
 
   woden_settings->lst_base = json_object_get_double(lst_base)*DD2R;
   woden_settings->ra0 = (float)json_object_get_double(ra0)*DD2R;
@@ -666,7 +666,7 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
     'array_layout' in setting file\n");
     return 1;
   }
-  
+
   struct json_object *band_num;
   struct json_object *band_nums;
   size_t num_bands;

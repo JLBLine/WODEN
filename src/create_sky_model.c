@@ -30,14 +30,14 @@ void convert_radec2azza(double ra, double dec, double lst, double latitude,
 
 }
 
-/*********************************
+/******************************************************************************
 // Takes a zenith angle and checks if it's below the horizon. Depending on
 // whether we are cropping all SOURCEs partially below the horizon, or
 // retaining all COMPONENTs, update either all_comps_above_horizon or
 // sky_crop_type. If the component is a shapelet, we also need to cycle
 // through the catsource.shape_param_indexes, checking which ones match this
 // shape index (int shape), and update num_shape_coeff_retained accordingly
-**********************************/
+*******************************************************************************/
 void horizon_test(double za, e_sky_crop sky_crop_type,
      e_horizon * all_comps_above_horizon, int * num_comp_retained,
      int * num_shape_coeff_retained, int num_shape_coeff_component,
@@ -72,7 +72,6 @@ void horizon_test(double za, e_sky_crop sky_crop_type,
   else {
     printf("ERROR: create_sky_model.c:crop_sky_model: needs a correct sky_crop_type, allowed is 0 (CROP_SOURCES), 1 (CROP_COMPONENTS), given was %d \n", sky_crop_type );
   }
-
 }
 
 /*********************************
@@ -135,6 +134,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
       convert_radec2azza((double)raw_srccat->catsources[src].point_ras[point],
                          (double)raw_srccat->catsources[src].point_decs[point],
                          (double)lsts[0], latitude, &az, &za);
+
       raw_srccat->catsources[src].point_azs[point] = az;
       raw_srccat->catsources[src].point_zas[point] = za;
       //Check if components are above the horizon, and count how many
@@ -207,6 +207,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
   cropped_src->n_points = num_point_comp_retained;
   cropped_src->n_gauss = num_gauss_comp_retained;
   cropped_src->n_shapes = num_shape_comp_retained;
+  cropped_src->n_comps = num_point_comp_retained + num_gauss_comp_retained + num_shape_comp_retained;
   cropped_src->n_shape_coeffs = num_shape_coeff_retained;
 
   cropped_src->point_ras = malloc( num_point_comp_retained * sizeof(float) );
@@ -379,7 +380,6 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
       }//End shapelet component loop
     }//End retained sources loop
   }//End if sky_crop_type == CROP_SOURCES
-
   else if (sky_crop_type == CROP_COMPONENTS) {
     printf("Point components after cropping %d\n",num_point_comp_retained );
     printf("Gaussian components after cropping %d\n",num_gauss_comp_retained );
