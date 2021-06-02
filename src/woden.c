@@ -9,7 +9,7 @@
 #include "woden_struct_defs.h"
 #include "create_sky_model.h"
 #include "shapelet_basis.h"
-#include "chunk_source.h"
+#include "chunk_sky_model.h"
 #include "print_help.h"
 #include "primary_beam.h"
 #include "FEE_primary_beam.h"
