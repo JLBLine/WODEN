@@ -13,314 +13,260 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 
 
 /*
-`create_sky_model:horizon_test` is designed to be used by
-`create_sky_model:crop_sky_model`.
-
-`horizon_test` takes information on a single COMPONENT of a SOURCE in a sky
-model and tests whether it is above or below the horizon. Depending on
-whether we are cropping the sky model by SOURCE or by COMPONENT, it updates
-various counters to effec the sky model cropping. SHAPELETs are complicating
-factors as a single position can match multiple basis function parameters (of
-any length) so `horizon_test` does some logic to count how many SHAPELET
-parameters are being retained.
+`chunk_sky_model::null_*_comps` are functions that NULLs out specific parts of
+the sky model. Test by setting up a polpulated `catsource_t` and seeing if
+correct parts become NULL
 */
+
+float one_array[] = {1};
+
+/*
+Make the polpulated catsource_t struct. Just stick everything equal to 1.0
+*/
+catsource_t * make_sky_model(void) {
+
+  catsource_t *src = malloc(sizeof(catsource_t));
+
+    src->n_comps = 1;
+    src->n_points= 1;
+    src->n_gauss = 1;
+    src->n_shapes = 1;
+    src->n_shape_coeffs = 1;
+
+    src->point_ras = one_array;
+    src->point_decs = one_array;
+    src->point_ref_freqs = one_array;
+    src->point_ref_stokesI = one_array;
+    src->point_ref_stokesQ = one_array;
+    src->point_ref_stokesU = one_array;
+    src->point_ref_stokesV = one_array;
+    src->point_SIs = one_array;
+    src->point_azs = one_array;
+    src->point_zas = one_array;
+    src->cos_point_para_angs = one_array;
+    src->sin_point_para_angs = one_array;
+
+    src->gauss_ras = one_array;
+    src->gauss_decs = one_array;
+    src->gauss_ref_freqs = one_array;
+    src->gauss_ref_stokesI = one_array;
+    src->gauss_ref_stokesQ = one_array;
+    src->gauss_ref_stokesU = one_array;
+    src->gauss_ref_stokesV = one_array;
+    src->gauss_SIs = one_array;
+    src->gauss_majors = one_array;
+    src->gauss_minors = one_array;
+    src->gauss_pas = one_array;
+    src->gauss_azs = one_array;
+    src->gauss_zas = one_array;
+    src->cos_gauss_para_angs = one_array;
+    src->sin_gauss_para_angs = one_array;
+
+    src->shape_ras = one_array;
+    src->shape_decs = one_array;
+    src->shape_ref_freqs = one_array;
+    src->shape_ref_stokesI = one_array;
+    src->shape_ref_stokesQ = one_array;
+    src->shape_ref_stokesU = one_array;
+    src->shape_ref_stokesV = one_array;
+    src->shape_SIs = one_array;
+    src->shape_majors = one_array;
+    src->shape_minors = one_array;
+    src->shape_pas = one_array;
+    src->shape_azs = one_array;
+    src->shape_zas = one_array;
+    src->cos_shape_para_angs = one_array;
+    src->sin_shape_para_angs = one_array;
+    src->shape_coeffs = one_array;
+    src->shape_n1s = one_array;
+    src->shape_n2s = one_array;
+    src->shape_param_indexes = one_array;
+
+}
 
 
 /*
-Test when a POINT/GAUSSIAN/SHAPELET type component is above horizon and cropping by
-SOURCE
+Check that POINT values have NOT be NULL-ed
 */
-void test_horizon_test_CropSourceAbove(void)
-{
+void assert_point_retained(catsource_t *src) {
 
-  //Stick a component above zenith which is not a SHAPELET
-  double za = 0;
-  int num_shape_coeff_retained = 0;
-  int num_shape_coeff_component = 0;
-  float *shape_param_indexes;
-  int shape = 0;
-  //We want to crop by whole SOURCE not by COMPONENT
-  e_sky_crop sky_crop_type = CROP_SOURCES;
-  //All components are currently above horizon
-  e_horizon all_comps_above_horizon = ABOVE;
-  //This number is used when sky_crop_type = CROP_COMPONENTS
-  int num_comp_retained = 0;
+  TEST_ASSERT_EQUAL_INT(1, src->n_points);
 
-  horizon_test(za, sky_crop_type,
-       &all_comps_above_horizon, &num_comp_retained,
-       &num_shape_coeff_retained, num_shape_coeff_component,
-       shape_param_indexes, shape);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->point_ras, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->point_decs, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->point_ref_freqs, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->point_ref_stokesI, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->point_ref_stokesQ, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->point_ref_stokesU, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->point_ref_stokesV, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->point_SIs, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->point_azs, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->point_zas, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->cos_point_para_angs, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->sin_point_para_angs, 1);
+}
 
-  //We should get that everything is still above horizon
-  TEST_ASSERT_EQUAL_INT(ABOVE, all_comps_above_horizon);
-  //SHAPELET stuff should still be zero
-  TEST_ASSERT_EQUAL_INT(0, num_shape_coeff_retained);
-  TEST_ASSERT_EQUAL_INT(0, num_shape_coeff_component);
+
+/*
+Check that GAUSSIAN values have NOT be NULL-ed
+*/
+void assert_gauss_retained(catsource_t *src) {
+
+  TEST_ASSERT_EQUAL_INT(1, src->n_gauss);
+
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_ras, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_decs, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_ref_freqs, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_ref_stokesI, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_ref_stokesQ, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_ref_stokesU, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_ref_stokesV, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_SIs, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_majors, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_minors, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_pas, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_azs, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_zas, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->cos_gauss_para_angs, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->sin_gauss_para_angs, 1);
+}
+
+/*
+Check that SHAPELET values have NOT be NULL-ed
+*/
+void assert_shape_retained(catsource_t *src) {
+
+  TEST_ASSERT_EQUAL_INT(1, src->n_shapes);
+  TEST_ASSERT_EQUAL_INT(1, src->n_shape_coeffs);
+
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_ras, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_decs, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_ref_freqs, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_ref_stokesI, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_ref_stokesQ, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_ref_stokesU, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_ref_stokesV, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_SIs, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_majors, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_minors, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_pas, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_azs, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_zas, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->cos_shape_para_angs, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->sin_shape_para_angs, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_coeffs, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_n1s, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_n2s, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_param_indexes, 1);
+}
+
+/*
+Test POINT source nulling works correctly
+*/
+void test_null_point_comps_DoesTheNull(void) {
+  //Make sky model
+  catsource_t *src =  make_sky_model();
+
+  //Function to be tested
+  null_point_comps(src);
+
+  //Test things are nulled
+  TEST_ASSERT_EQUAL_INT(0, src->n_points);
+
+  TEST_ASSERT_NULL(src->point_ras);
+  TEST_ASSERT_NULL(src->point_decs);
+  TEST_ASSERT_NULL(src->point_ref_freqs);
+  TEST_ASSERT_NULL(src->point_ref_stokesI);
+  TEST_ASSERT_NULL(src->point_ref_stokesQ);
+  TEST_ASSERT_NULL(src->point_ref_stokesU);
+  TEST_ASSERT_NULL(src->point_ref_stokesV);
+  TEST_ASSERT_NULL(src->point_SIs);
+  TEST_ASSERT_NULL(src->point_azs);
+  TEST_ASSERT_NULL(src->point_zas);
+  TEST_ASSERT_NULL(src->cos_point_para_angs);
+  TEST_ASSERT_NULL(src->sin_point_para_angs);
+
+
+  //Check the GAUSS and SHAPELET stuff is left alone
+  assert_gauss_retained(src);
+  assert_shape_retained(src);
 
 }
 
 /*
-Test when a POINT/GAUSSIAN/SHAPELET type component is below horizon and cropping by
-SOURCE
+Test GAUSS source nulling works correctly
 */
-void test_horizon_test_CropSourceBelow(void)
-{
+void test_null_gauss_comps_DoesTheNull(void) {
+  //Make sky model
+  catsource_t *src =  make_sky_model();
 
-  //Stick a component below horizon which is not a SHAPELET
-  double za = M_PI;
-  int num_shape_coeff_retained = 0;
-  int num_shape_coeff_component = 0;
-  float *shape_param_indexes;
-  int shape = 0;
-  //We want to crop by whole SOURCE not by COMPONENT
-  e_sky_crop sky_crop_type = CROP_SOURCES;
-  //All components are currently above horizon
-  e_horizon all_comps_above_horizon = ABOVE;
-  //This number is used when sky_crop_type = CROP_COMPONENTS
-  int num_comp_retained = 0;
+  //Function to be tested
+  null_gauss_comps(src);
 
-  horizon_test(za, sky_crop_type,
-       &all_comps_above_horizon, &num_comp_retained,
-       &num_shape_coeff_retained, num_shape_coeff_component,
-       shape_param_indexes, shape);
+  //Test things are nulled
+  TEST_ASSERT_EQUAL_INT(0, src->n_gauss);
 
-  //We should get that everything is still above horizon
-  TEST_ASSERT_EQUAL_INT(BELOW, all_comps_above_horizon);
-  //SHAPELET stuff should still be zero
-  TEST_ASSERT_EQUAL_INT(0, num_shape_coeff_retained);
-  TEST_ASSERT_EQUAL_INT(0, num_shape_coeff_component);
+  TEST_ASSERT_NULL(src->gauss_ras);
+  TEST_ASSERT_NULL(src->gauss_decs);
+  TEST_ASSERT_NULL(src->gauss_ref_freqs);
+  TEST_ASSERT_NULL(src->gauss_ref_stokesI);
+  TEST_ASSERT_NULL(src->gauss_ref_stokesQ);
+  TEST_ASSERT_NULL(src->gauss_ref_stokesU);
+  TEST_ASSERT_NULL(src->gauss_ref_stokesV);
+  TEST_ASSERT_NULL(src->gauss_SIs);
+  TEST_ASSERT_NULL(src->gauss_majors);
+  TEST_ASSERT_NULL(src->gauss_minors);
+  TEST_ASSERT_NULL(src->gauss_pas);
+  TEST_ASSERT_NULL(src->gauss_azs);
+  TEST_ASSERT_NULL(src->gauss_zas);
+  TEST_ASSERT_NULL(src->cos_gauss_para_angs);
+  TEST_ASSERT_NULL(src->sin_gauss_para_angs);
+
+  //Check the POINT and SHAPELET stuff is left alone
+  assert_point_retained(src);
+  assert_shape_retained(src);
 
 }
 
-/*
-Test when a POINT/GAUSSIAN type component is above horizon and cropping by
-COMPONENT
-*/
-void test_horizon_test_PointCropComponentAbove(void)
-{
-
-  //Stick a component above zenith which is not a SHAPELET
-  double za = 0;
-  int num_shape_coeff_retained = 0;
-  int num_shape_coeff_component = 0;
-  float *shape_param_indexes;
-  int shape = 0;
-  //We want to crop by COMPONENT not whole SOURCE
-  e_sky_crop sky_crop_type = CROP_COMPONENTS;
-  //Say in cropping in this SOURCE so far has found 1 COMPONENT
-  //above the horizon, we should have these values
-  int num_comp_retained = 1;
-  e_horizon all_comps_above_horizon = ABOVE;
-
-  horizon_test(za, sky_crop_type,
-       &all_comps_above_horizon, &num_comp_retained,
-       &num_shape_coeff_retained, num_shape_coeff_component,
-       shape_param_indexes, shape);
-
-  //We should get that everything is still above horizon
-  TEST_ASSERT_EQUAL_INT(ABOVE, all_comps_above_horizon);
-  //We should increment the number of retained COMPONENTs
-  TEST_ASSERT_EQUAL_INT(2, num_comp_retained);
-  //SHAPELET stuff should still be zero
-  TEST_ASSERT_EQUAL_INT(0, num_shape_coeff_retained);
-  TEST_ASSERT_EQUAL_INT(0, num_shape_coeff_component);
-
-}
 
 /*
-Test when a POINT/GAUSSIAN type component is below horizon and cropping by
-COMPONENT
+Test SHAPELET source nulling works correctly
 */
-void test_horizon_test_PointCropComponentBelow(void)
-{
+void test_null_shape_comps_DoesTheNull(void) {
+  //Make sky model
+  catsource_t *src =  make_sky_model();
 
-  //Stick a component above zenith which is not a SHAPELET
-  double za = M_PI;
-  int num_shape_coeff_retained = 0;
-  int num_shape_coeff_component = 0;
-  float *shape_param_indexes;
-  int shape = 0;
-  //We want to crop by COMPONENT not whole SOURCE
-  e_sky_crop sky_crop_type = CROP_COMPONENTS;
-  //Say in cropping in this SOURCE so far has found 1 COMPONENT
-  //above the horizon, we should have these values
-  int num_comp_retained = 1;
-  e_horizon all_comps_above_horizon = ABOVE;
+  //Function to be tested
+  null_shapelet_comps(src);
 
-  horizon_test(za, sky_crop_type,
-       &all_comps_above_horizon, &num_comp_retained,
-       &num_shape_coeff_retained, num_shape_coeff_component,
-       shape_param_indexes, shape);
+  //Test things are nulled
+  TEST_ASSERT_EQUAL_INT(0, src->n_shapes);
+  TEST_ASSERT_EQUAL_INT(0, src->n_shape_coeffs);
 
-  //Number of retained COMPONENTs should not have incremented
-  TEST_ASSERT_EQUAL_INT(1, num_comp_retained);
-  //SHAPELET stuff should still be zero
-  TEST_ASSERT_EQUAL_INT(0, num_shape_coeff_retained);
-  TEST_ASSERT_EQUAL_INT(0, num_shape_coeff_component);
+  TEST_ASSERT_NULL(src->shape_ras);
+  TEST_ASSERT_NULL(src->shape_decs);
+  TEST_ASSERT_NULL(src->shape_ref_freqs);
+  TEST_ASSERT_NULL(src->shape_ref_stokesI);
+  TEST_ASSERT_NULL(src->shape_ref_stokesQ);
+  TEST_ASSERT_NULL(src->shape_ref_stokesU);
+  TEST_ASSERT_NULL(src->shape_ref_stokesV);
+  TEST_ASSERT_NULL(src->shape_SIs);
+  TEST_ASSERT_NULL(src->shape_majors);
+  TEST_ASSERT_NULL(src->shape_minors);
+  TEST_ASSERT_NULL(src->shape_pas);
+  TEST_ASSERT_NULL(src->shape_azs);
+  TEST_ASSERT_NULL(src->shape_zas);
+  TEST_ASSERT_NULL(src->cos_shape_para_angs);
+  TEST_ASSERT_NULL(src->sin_shape_para_angs);
+  TEST_ASSERT_NULL(src->shape_coeffs);
+  TEST_ASSERT_NULL(src->shape_n1s);
+  TEST_ASSERT_NULL(src->shape_n2s);
+  TEST_ASSERT_NULL(src->shape_param_indexes);
 
-}
+  //Check the POINT and SHAPELET stuff is left alone
+  assert_point_retained(src);
+  assert_gauss_retained(src);
 
-/*
-Test that when cropping by COMPONENT with multiple SHAPELET components in a
-SOURCE works. We'll test with 3 COMPONENTs. This function will test each
-COMPONENT index (shape) against expected outcomes
-*/
-
-void test_horizon_test_ShapeletCropComponent(double za, int shape,
-                                             int num_shape_coeff_retained,
-                                             int num_comp_retained,
-                                             int out_num_shape_coeff_retained,
-                                             int out_num_comp_retained) {
-
-  //The param index array maps shapelet basis functions to their respective
-  //COMPONENT info (like ra,dec,flux etc)
-  float shape_param_indexes[] = {0, 0, 1, 1, 1, 1, 2};
-  int num_shape_coeff_component = 7;
-  //We want to crop by COMPONENT not whole SOURCE
-  e_sky_crop sky_crop_type = CROP_COMPONENTS;
-  e_horizon all_comps_above_horizon = ABOVE;
-
-  //Run function for testing
-  horizon_test(za, sky_crop_type,
-       &all_comps_above_horizon, &num_comp_retained,
-       &num_shape_coeff_retained, num_shape_coeff_component,
-       shape_param_indexes, shape);
-
-  //Test outcomes are as expected
-  TEST_ASSERT_EQUAL_INT(out_num_shape_coeff_retained, num_shape_coeff_retained);
-  TEST_ASSERT_EQUAL_INT(out_num_comp_retained, num_comp_retained);
-}
-
-/*
-Test when SHAPELET COMPONENT 0 is above horizon
-*/
-void test_horizon_test_ShapeletCropComponent0Above(void){
-
-  //Initial conditions
-  double za = 0.0;
-  int shape = 0;
-  int num_shape_coeff_retained = 0;
-  int num_comp_retained = 0;
-  //Outcomes based on conditions and what is in shape_param_indexes
-  int out_num_shape_coeff_retained = 2;
-  int out_num_comp_retained = 1;
-
-  test_horizon_test_ShapeletCropComponent(za, shape,
-                                          num_shape_coeff_retained,
-                                          num_comp_retained,
-                                          out_num_shape_coeff_retained,
-                                          out_num_comp_retained);
-}
-
-/*
-Test when SHAPELET COMPONENT 0 is below horizon
-*/
-void test_horizon_test_ShapeletCropComponent0Below(void){
-
-  //Initial conditions
-  double za = M_PI;
-  int shape = 0;
-  int num_shape_coeff_retained = 0;
-  int num_comp_retained = 0;
-  //Outcomes based on conditions and what is in shape_param_indexes
-  int out_num_shape_coeff_retained = 0;
-  int out_num_comp_retained = 0;
-
-  test_horizon_test_ShapeletCropComponent(za, shape,
-                                          num_shape_coeff_retained,
-                                          num_comp_retained,
-                                          out_num_shape_coeff_retained,
-                                          out_num_comp_retained);
-}
-
-/*
-Test when SHAPELET COMPONENT 1 is above horizon
-*/
-void test_horizon_test_ShapeletCropComponent1Above(void){
-
-  //Initial conditions
-  double za = 0.0;
-  int shape = 1;
-  //Let's say COMPONENT 0 was retained
-  int num_shape_coeff_retained = 2;
-  int num_comp_retained = 1;
-  //Outcomes based on conditions and what is in shape_param_indexes
-  //Should get 4 extra coeffs retained, and one COMPONENT
-  int out_num_shape_coeff_retained = 6;
-  int out_num_comp_retained = 2;
-
-  test_horizon_test_ShapeletCropComponent(za, shape,
-                                          num_shape_coeff_retained,
-                                          num_comp_retained,
-                                          out_num_shape_coeff_retained,
-                                          out_num_comp_retained);
-}
-
-/*
-Test when SHAPELET COMPONENT 0 is below horizon
-*/
-void test_horizon_test_ShapeletCropComponent1Below(void){
-
-  //Initial conditions
-  double za = M_PI;
-  int shape = 1;
-  //Let's say COMPONENT 0 was retained
-  int num_shape_coeff_retained = 2;
-  int num_comp_retained = 1;
-  //Nothing should change as below horizon
-  int out_num_shape_coeff_retained = 2;
-  int out_num_comp_retained = 1;
-
-  test_horizon_test_ShapeletCropComponent(za, shape,
-                                          num_shape_coeff_retained,
-                                          num_comp_retained,
-                                          out_num_shape_coeff_retained,
-                                          out_num_comp_retained);
-}
-
-/*
-Test when SHAPELET COMPONENT 2 is above horizon
-*/
-void test_horizon_test_ShapeletCropComponent2Above(void){
-
-  //Initial conditions
-  double za = 0.0;
-  int shape = 2;
-  //Let's say COMPONENT 0 was retained
-  int num_shape_coeff_retained = 2;
-  int num_comp_retained = 1;
-  //Outcomes based on conditions and what is in shape_param_indexes
-  //Should get 4 extra coeffs retained, and one COMPONENT
-  int out_num_shape_coeff_retained = 3;
-  int out_num_comp_retained = 2;
-
-  test_horizon_test_ShapeletCropComponent(za, shape,
-                                          num_shape_coeff_retained,
-                                          num_comp_retained,
-                                          out_num_shape_coeff_retained,
-                                          out_num_comp_retained);
-}
-
-/*
-Test when SHAPELET COMPONENT 2 is below horizon
-*/
-void test_horizon_test_ShapeletCropComponent2Below(void){
-
-  //Initial conditions
-  double za = M_PI;
-  int shape = 2;
-  //Let's say COMPONENT 0 was retained
-  int num_shape_coeff_retained = 2;
-  int num_comp_retained = 1;
-  //Nothing should change as below horizon
-  int out_num_shape_coeff_retained = 2;
-  int out_num_comp_retained = 1;
-
-  test_horizon_test_ShapeletCropComponent(za, shape,
-                                          num_shape_coeff_retained,
-                                          num_comp_retained,
-                                          out_num_shape_coeff_retained,
-                                          out_num_comp_retained);
 }
 
 //Run test using unity
@@ -328,16 +274,9 @@ int main(void)
 {
     UNITY_BEGIN();
 
-    RUN_TEST(test_horizon_test_CropSourceAbove);
-    RUN_TEST(test_horizon_test_CropSourceBelow);
-    RUN_TEST(test_horizon_test_PointCropComponentAbove);
-    RUN_TEST(test_horizon_test_PointCropComponentBelow);
-    RUN_TEST(test_horizon_test_ShapeletCropComponent0Above);
-    RUN_TEST(test_horizon_test_ShapeletCropComponent0Below);
-    RUN_TEST(test_horizon_test_ShapeletCropComponent1Above);
-    RUN_TEST(test_horizon_test_ShapeletCropComponent1Below);
-    RUN_TEST(test_horizon_test_ShapeletCropComponent2Above);
-    RUN_TEST(test_horizon_test_ShapeletCropComponent2Below);
+    RUN_TEST(test_null_point_comps_DoesTheNull);
+    RUN_TEST(test_null_gauss_comps_DoesTheNull);
+    RUN_TEST(test_null_shape_comps_DoesTheNull);
 
     return UNITY_END();
 }
