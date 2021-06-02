@@ -169,3 +169,8 @@ beam_settings_t make_beam_settings_chunk(beam_settings_t beam_settings,
                 catsource_t *temp_cropped_src, catsource_t *cropped_src,
                 woden_settings_t *woden_settings,
                 int point_iter, int gauss_iter, int shape_iter);
+
+
+
+source_catalogue_t * create_chunked_sky_models(catsource_t *cropped_src,
+                                              woden_settings_t *woden_settings);

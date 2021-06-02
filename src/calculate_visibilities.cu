@@ -291,15 +291,15 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
       //we need here
       if (beam_settings.beamtype == FEE_BEAM) {
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01,
-                  beam_settings.num_point_beam_values*sizeof(cuFloatComplex) ));
+                  beam_settings.num_point_primarybeam_values*sizeof(cuFloatComplex) ));
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J10,
-                  beam_settings.num_point_beam_values*sizeof(cuFloatComplex) ));
+                  beam_settings.num_point_primarybeam_values*sizeof(cuFloatComplex) ));
       }
 
       cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J00,
-                  beam_settings.num_point_beam_values*sizeof(cuFloatComplex) ));
+                  beam_settings.num_point_primarybeam_values*sizeof(cuFloatComplex) ));
       cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J11,
-                  beam_settings.num_point_beam_values*sizeof(cuFloatComplex) ));
+                  beam_settings.num_point_primarybeam_values*sizeof(cuFloatComplex) ));
       //
       cudaErrorCheckCall( cudaMalloc( (void**)&d_ls, num_points*sizeof(float) ) );
       cudaErrorCheckCall( cudaMalloc( (void**)&d_ms, num_points*sizeof(float) ) );
@@ -438,15 +438,15 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
       //we need here
       if (beam_settings.beamtype == FEE_BEAM) {
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01,
-              beam_settings.num_gausscomp_beam_values*sizeof(cuFloatComplex)) );
+              beam_settings.num_gauss_primarybeam_values*sizeof(cuFloatComplex)) );
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J10,
-              beam_settings.num_gausscomp_beam_values*sizeof(cuFloatComplex)) );
+              beam_settings.num_gauss_primarybeam_values*sizeof(cuFloatComplex)) );
       }
 
       cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J00,
-            beam_settings.num_gausscomp_beam_values*sizeof(cuFloatComplex)) );
+            beam_settings.num_gauss_primarybeam_values*sizeof(cuFloatComplex)) );
       cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J11,
-            beam_settings.num_gausscomp_beam_values*sizeof(cuFloatComplex)) );
+            beam_settings.num_gauss_primarybeam_values*sizeof(cuFloatComplex)) );
 
       cudaErrorCheckCall( cudaMalloc( (void**)&d_ls, num_gauss*sizeof(float)) );
       cudaErrorCheckCall( cudaMalloc( (void**)&d_ms, num_gauss*sizeof(float)) );
@@ -632,15 +632,15 @@ extern "C" void calculate_visibilities(array_layout_t * array_layout,
       //we need here
       if (beam_settings.beamtype == FEE_BEAM) {
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01,
-                  beam_settings.num_shape_beam_values*sizeof(cuFloatComplex)) );
+                  beam_settings.num_shape_primarybeam_values*sizeof(cuFloatComplex)) );
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J10,
-                  beam_settings.num_shape_beam_values*sizeof(cuFloatComplex)) );
+                  beam_settings.num_shape_primarybeam_values*sizeof(cuFloatComplex)) );
       }
 
       cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J00,
-                beam_settings.num_shape_beam_values*sizeof(cuFloatComplex)) );
+                beam_settings.num_shape_primarybeam_values*sizeof(cuFloatComplex)) );
       cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J11,
-                beam_settings.num_shape_beam_values*sizeof(cuFloatComplex)) );
+                beam_settings.num_shape_primarybeam_values*sizeof(cuFloatComplex)) );
 
 
       source_component_common(num_shapes,

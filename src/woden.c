@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
   sbf = create_sbf(sbf);
 
   //Read in the settings from the controlling json file
-  woden_settings_t *woden_settings = malloc( sizeof(woden_settings_t) );;
+  woden_settings_t *woden_settings = malloc( sizeof(woden_settings_t) );
   status = read_json_settings(argv[1], woden_settings);
 
   if (status == 1) {
@@ -126,6 +126,11 @@ int main(int argc, char **argv) {
   cropped_src = crop_sky_model(raw_srccat, lsts, woden_settings->latitude,
                                num_time_steps, woden_settings->sky_crop_type);
 
+  source_catalogue_t *cropped_sky_models = create_chunked_sky_models(cropped_src,
+                                                                     woden_settings);
+
+  int num_chunks = cropped_sky_models->num_sources;
+
   printf("Finished cropping and calculating az/za\n");
 
   //Setup some beam settings given user chose parameters
@@ -147,7 +152,7 @@ int main(int argc, char **argv) {
     woden_settings->base_band_freq = base_band_freq;
 
     beam_settings.FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
-    // //We need the zenith beam to get the normalisation
+    //We need the zenith beam to get the normalisation
     beam_settings.FEE_beam_zenith = malloc(sizeof(RTS_MWA_FEE_beam_t));
 
     //The intial setup of the FEE beam is done on the CPU, so call it here
@@ -224,47 +229,47 @@ int main(int argc, char **argv) {
     //component here
 
     int num_components = cropped_src->n_points + cropped_src->n_gauss + cropped_src->n_shape_coeffs;
-    int num_chunks;
-    //TODO should we chunk outside the band for-loop so that we can reuse the chunks for each band (should be the same)
-    if (num_components > woden_settings->chunking_size) {
-      num_chunks = num_components / woden_settings->chunking_size;
+    // int num_chunks;
+    // //TODO should we chunk outside the band for-loop so that we can reuse the chunks for each band (should be the same)
+    // if (num_components > woden_settings->chunking_size) {
+    //   num_chunks = num_components / woden_settings->chunking_size;
+    //
+    //   if (num_components % woden_settings->chunking_size != 0) {
+    //     num_chunks = num_chunks + 1;
+    //   }
+    //   printf("Number of chunks required is %d\n",  num_chunks);
+    // } else {
+    //   num_chunks = 1;
+    // }
 
-      if (num_components % woden_settings->chunking_size != 0) {
-        num_chunks = num_chunks + 1;
-      }
-      printf("Number of chunks required is %d\n",  num_chunks);
-    } else {
-      num_chunks = 1;
-    }
-
-    //Make a struct to contain sky as many sky models and beam settings as
-    //needed
-    source_catalogue_t *cropped_sky_models;
-    cropped_sky_models = malloc(sizeof(source_catalogue_t));
-
-    cropped_sky_models->num_sources = num_chunks;
-    cropped_sky_models->num_shapelets = 0;
-    cropped_sky_models->catsources = malloc(num_chunks*sizeof(catsource_t));
-    cropped_sky_models->beam_settings = malloc(num_chunks*sizeof(beam_settings_t));
-
-    catsource_t *temp_cropped_src = malloc(sizeof(catsource_t));
-    int point_iter = 0;
-    int gauss_iter = 0;
-    int shape_iter = 0;
-
-    printf("Chunking sky model..\n");
+    // //Make a struct to contain sky as many sky models and beam settings as
+    // //needed
+    // source_catalogue_t *cropped_sky_models;
+    // cropped_sky_models = malloc(sizeof(source_catalogue_t));
+    //
+    // cropped_sky_models->num_sources = num_chunks;
+    // cropped_sky_models->num_shapelets = 0;
+    // cropped_sky_models->catsources = malloc(num_chunks*sizeof(catsource_t));
+    // cropped_sky_models->beam_settings = malloc(num_chunks*sizeof(beam_settings_t));
+    //
+    // catsource_t *temp_cropped_src = malloc(sizeof(catsource_t));
+    // int point_iter = 0;
+    // int gauss_iter = 0;
+    // int shape_iter = 0;
+    //
+    // printf("Chunking sky model..\n");
     //For each chunk, calculate the visibilities for those components
     for (int chunk = 0; chunk < num_chunks; chunk++) {
 
-      fill_chunk_src(temp_cropped_src, cropped_src, num_chunks, chunk,
-                     woden_settings->chunking_size,
-                     woden_settings->num_time_steps,
-                     &point_iter, &gauss_iter, &shape_iter);
-
-      //Add the number of shapelets onto the full source catalogue value
-      //so we know if we need to setup shapelet basis functions in GPU memory
-      //or not
-      cropped_sky_models->num_shapelets += temp_cropped_src->n_shapes;
+      // fill_chunk_src(temp_cropped_src, cropped_src, num_chunks, chunk,
+      //                woden_settings->chunking_size,
+      //                woden_settings->num_time_steps,
+      //                &point_iter, &gauss_iter, &shape_iter);
+      //
+      // //Add the number of shapelets onto the full source catalogue value
+      // //so we know if we need to setup shapelet basis functions in GPU memory
+      // //or not
+      // cropped_sky_models->num_shapelets += temp_cropped_src->n_shapes;
 
       beam_settings_t beam_settings_chunk;
       beam_settings_chunk = make_beam_settings_chunk(beam_settings, temp_cropped_src,
@@ -272,7 +277,7 @@ int main(int argc, char **argv) {
 
       // printf("Managed to chunk the beam %d\n",chunk );
 
-      cropped_sky_models->catsources[chunk] = *temp_cropped_src;
+      // cropped_sky_models->catsources[chunk] = *temp_cropped_src;
       cropped_sky_models->beam_settings[chunk] = beam_settings_chunk;
 
     }

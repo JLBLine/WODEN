@@ -39,18 +39,17 @@ void calc_para_angle(catsource_t *cropped_src, float *lsts, double latitude,
 
 /**
 @brief Given the settings specified in `woden_settings`, populate a
-`beam_settings_t` struct with appropriate attributes to be used in primary
-beam modelling.
+`beam_settings_t` and `catsource_t` struct with appropriate attributes to be
+used in primary beam modelling.
 
 @details If using a `GAUSS_BEAM` primary beam, calculate the hour angle and
-declination of the pointing centre for all times steps, for all components in
+declination of the pointing centre for all times steps, and for all components in
 sky model `cropped_src`. If using `FEE_BEAM`, calculate the parallactic angle
 for all times steps, for all components.
 
 @param[in,out] *cropped_src A populated `catsource_t` sky model
 @param[in] *woden_settings A populated `woden_settings_t` struct
 @param[in] *lsts All local sidereal times in the simulation
-@param[in] num_time_steps Number of time steps in the simulation
 
 @return `beam_settings` - a populated `beam_settings_t` struct containing
 attributes necessary to simulate the requested beam response
@@ -60,5 +59,5 @@ calculating parallactic angle can be expensive. Consider multi-threading this
 somehow
 
 */
-beam_settings_t fill_primary_beam_settings(woden_settings_t *woden_settings,
-                catsource_t *cropped_src,  float *lsts, int num_time_steps);
+beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
+                catsource_t *cropped_src,  float *lsts);

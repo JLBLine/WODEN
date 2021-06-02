@@ -387,9 +387,9 @@ beam_settings_t make_beam_settings_chunk(beam_settings_t beam_settings,
     beam_settings_chunk.gauss_ha = beam_settings.gauss_ha;
 
     // //Number of beam calculations needed for point components
-    // beam_settings_chunk.num_point_beam_values = temp_cropped_src->n_points * woden_settings->num_time_steps * woden_settings->num_freqs;
-    // beam_settings_chunk.num_gausscomp_beam_values = temp_cropped_src->n_gauss * woden_settings->num_time_steps * woden_settings->num_freqs;
-    // beam_settings_chunk.num_shape_beam_values = temp_cropped_src->n_shapes * woden_settings->num_time_steps * woden_settings->num_freqs;
+    // beam_settings_chunk.num_point_primarybeam_values = temp_cropped_src->n_points * woden_settings->num_time_steps * woden_settings->num_freqs;
+    // beam_settings_chunk.num_gauss_primarybeam_values = temp_cropped_src->n_gauss * woden_settings->num_time_steps * woden_settings->num_freqs;
+    // beam_settings_chunk.num_shape_primarybeam_values = temp_cropped_src->n_shapes * woden_settings->num_time_steps * woden_settings->num_freqs;
 
     beam_settings_chunk.beamtype = beam_settings.beamtype;
 
@@ -444,14 +444,67 @@ beam_settings_t make_beam_settings_chunk(beam_settings_t beam_settings,
     beam_settings_chunk = beam_settings;
   }
 
-  beam_settings_chunk.num_point_beam_values = temp_cropped_src->n_points * woden_settings->num_time_steps * woden_settings->num_freqs;
-  beam_settings_chunk.num_gausscomp_beam_values = temp_cropped_src->n_gauss * woden_settings->num_time_steps * woden_settings->num_freqs;
-  beam_settings_chunk.num_shape_beam_values = temp_cropped_src->n_shapes * woden_settings->num_time_steps * woden_settings->num_freqs;
+  beam_settings_chunk.num_point_primarybeam_values = temp_cropped_src->n_points * woden_settings->num_time_steps * woden_settings->num_freqs;
+  beam_settings_chunk.num_gauss_primarybeam_values = temp_cropped_src->n_gauss * woden_settings->num_time_steps * woden_settings->num_freqs;
+  beam_settings_chunk.num_shape_primarybeam_values = temp_cropped_src->n_shapes * woden_settings->num_time_steps * woden_settings->num_freqs;
 
   // printf("INSIDE make_beam_settings_chunk %d %d\n",
-  //         beam_settings_chunk.num_point_beam_values,
-  //         beam_settings.num_point_beam_values );
+  //         beam_settings_chunk.num_point_primarybeam_values,
+  //         beam_settings.num_point_primarybeam_values );
 
   return beam_settings_chunk;
 
+}
+
+
+source_catalogue_t * create_chunked_sky_models(catsource_t *cropped_src,
+                                               woden_settings_t *woden_settings) {
+
+  int num_components = cropped_src->n_points + cropped_src->n_gauss + cropped_src->n_shape_coeffs;
+  int num_chunks;
+  //TODO should we chunk outside the band for-loop so that we can reuse the chunks for each band (should be the same)
+  if (num_components > woden_settings->chunking_size) {
+    num_chunks = num_components / woden_settings->chunking_size;
+
+    if (num_components % woden_settings->chunking_size != 0) {
+      num_chunks = num_chunks + 1;
+    }
+    printf("Number of chunks required is %d\n",  num_chunks);
+  } else {
+    num_chunks = 1;
+  }
+
+  source_catalogue_t *chunked_sky_models;
+  chunked_sky_models = malloc(sizeof(source_catalogue_t));
+
+  chunked_sky_models->num_sources = num_chunks;
+  chunked_sky_models->num_shapelets = 0;
+  chunked_sky_models->catsources = malloc(num_chunks*sizeof(catsource_t));
+  chunked_sky_models->beam_settings = malloc(num_chunks*sizeof(beam_settings_t));
+
+  catsource_t *temp_cropped_src = malloc(sizeof(catsource_t));
+  int point_iter = 0;
+  int gauss_iter = 0;
+  int shape_iter = 0;
+
+  printf("Chunking sky model..\n");
+  //For each chunk, calculate the visibilities for those components
+  for (int chunk = 0; chunk < num_chunks; chunk++) {
+
+    fill_chunk_src(temp_cropped_src, cropped_src, num_chunks, chunk,
+                   woden_settings->chunking_size,
+                   woden_settings->num_time_steps,
+                   &point_iter, &gauss_iter, &shape_iter);
+
+    //Add the number of shapelets onto the full source catalogue value
+    //so we know if we need to setup shapelet basis functions in GPU memory
+    //or not
+    chunked_sky_models->num_shapelets += temp_cropped_src->n_shapes;
+
+    chunked_sky_models->catsources[chunk] = *temp_cropped_src;
+
+  }
+  printf("Sky model chunked.\n");
+  // free(temp_cropped_src);
+  return chunked_sky_models;
 }
