@@ -22,33 +22,32 @@ float point_decs[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
 float gauss_ras[] = {115*DD2R , 125*DD2R, 130*DD2R};
 float gauss_decs[] = {-15*DD2R , -20*DD2R, -25*DD2R};
 
-float shape_ras[] = {235*DD2R , 240*DD2R, 245*DD2R};
+float shape_ras[] = {235*DD2R , 250*DD2R, 265*DD2R};
 float shape_decs[] = {-35*DD2R , -40*DD2R, -45*DD2R};
 
-float expec_point_sin_para[] = {}
+float expec_point_sin_para[] = {-0.0039216, -0.6142135, -0.6142136, -0.0156904,
+                                -0.5764040, -0.6534451, -0.0353442, -0.5401087,
+                                -0.6939089 };
 
--0.0039216
--0.6142135
--0.6142136
--0.0156904
--0.5764040
--0.6534451
--0.0353442
--0.5401087
--0.6939089
+float expec_point_cos_para[] = {-0.9999923, -0.7891399, 0.7891398, 0.9998769,
+                                -0.8171648, 0.7569739, 0.9993752, -0.8415953,
+                                 0.7200627 };
 
+float expec_gauss_sin_para[] = {-0.5432732, -0.9341043, -0.6122640, -0.6251023,
+                                -0.8344397, -0.5628954, -0.6805615, -0.2228374,
+                                -0.5384376 };
 
- -0.9999923
- -0.7891399
- 0.7891398
- 0.9998769
- -0.8171648
- 0.7569739
- 0.9993752
- -0.8415953
- 0.7200627
+float expec_gauss_cos_para[] = {0.8395559, -0.3570003, -0.7906534, 0.7805428,
+                                0.5510992, -0.8265281, 0.7326910, 0.9748556,
+                                -0.8426654 };
 
+float expec_shape_sin_para[] = {-0.6794566, -0.5854309, 0.8773373, -0.5505476,
+                                -0.7216252, 0.8188159, -0.3965520, -0.8523725,
+                                 0.5593383 };
 
+float expec_shape_cos_para[] = {-0.7337157, 0.8107223, -0.4798742, -0.8348038,
+                                 0.6922840, 0.5740561, -0.9180123, 0.5229351,
+                                 0.8289395 };
 /*
 Make the polpulated catsource_t struct. Stick in some necessary values
 */
@@ -147,12 +146,27 @@ void test_fill_primary_beam_settings(woden_settings_t *woden_settings) {
     }
   } else if (woden_settings->beamtype == FEE_BEAM) {
     // printf("HERE %d %d\n",woden_settings->beamtype, beam_settings->beamtype );
-    TEST_ASSERT_EQUAL_INT(FEE_BEAM, beam_settings->beamtype );
+    TEST_ASSERT_EQUAL_INT(FEE_BEAM, beam_settings->beamtype);
 
-    for (int para = 0; para < 9; para++) {
-      printf("%.7f %.7f\n",src->sin_point_para_angs[para],
-                           src->cos_point_para_angs[para] );
-    }
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_point_sin_para,
+                                  src->sin_point_para_angs, 9);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_point_cos_para,
+                                  src->cos_point_para_angs, 9);
+
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_gauss_sin_para,
+                                  src->sin_gauss_para_angs, 9);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_gauss_cos_para,
+                                  src->cos_gauss_para_angs, 9);
+
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_shape_sin_para,
+                                  src->sin_shape_para_angs, 9);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_shape_cos_para,
+                                  src->cos_shape_para_angs, 9);
+
+    // for (int para = 0; para < 9; para++) {
+    //   printf("%.7f %.7f\n",src->sin_shape_para_angs[para],
+    //                        src->cos_shape_para_angs[para] );
+    // }
   }
 
   else if (woden_settings->beamtype == ANALY_DIPOLE) {
