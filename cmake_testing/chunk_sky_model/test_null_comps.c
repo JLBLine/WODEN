@@ -45,6 +45,8 @@ catsource_t * make_sky_model(void) {
     src->point_zas = one_array;
     src->cos_point_para_angs = one_array;
     src->sin_point_para_angs = one_array;
+    src->point_gaussbeam_has = one_array;
+    src->point_gaussbeam_decs = one_array;
 
     src->gauss_ras = one_array;
     src->gauss_decs = one_array;
@@ -61,6 +63,8 @@ catsource_t * make_sky_model(void) {
     src->gauss_zas = one_array;
     src->cos_gauss_para_angs = one_array;
     src->sin_gauss_para_angs = one_array;
+    src->gauss_gaussbeam_has = one_array;
+    src->gauss_gaussbeam_decs = one_array;
 
     src->shape_ras = one_array;
     src->shape_decs = one_array;
@@ -77,6 +81,8 @@ catsource_t * make_sky_model(void) {
     src->shape_zas = one_array;
     src->cos_shape_para_angs = one_array;
     src->sin_shape_para_angs = one_array;
+    src->shape_gaussbeam_has = one_array;
+    src->shape_gaussbeam_decs = one_array;
     src->shape_coeffs = one_array;
     src->shape_n1s = one_array;
     src->shape_n2s = one_array;
@@ -104,6 +110,8 @@ void assert_point_retained(catsource_t *src) {
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->point_zas, 1);
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->cos_point_para_angs, 1);
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->sin_point_para_angs, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->point_gaussbeam_has, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->point_gaussbeam_decs, 1);
 }
 
 
@@ -129,6 +137,8 @@ void assert_gauss_retained(catsource_t *src) {
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_zas, 1);
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->cos_gauss_para_angs, 1);
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->sin_gauss_para_angs, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_gaussbeam_has, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_gaussbeam_decs, 1);
 }
 
 /*
@@ -154,6 +164,8 @@ void assert_shape_retained(catsource_t *src) {
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_zas, 1);
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->cos_shape_para_angs, 1);
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->sin_shape_para_angs, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_gaussbeam_has, 1);
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_gaussbeam_decs, 1);
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_coeffs, 1);
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_n1s, 1);
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_n2s, 1);
@@ -185,7 +197,8 @@ void test_null_point_comps_DoesTheNull(void) {
   TEST_ASSERT_NULL(src->point_zas);
   TEST_ASSERT_NULL(src->cos_point_para_angs);
   TEST_ASSERT_NULL(src->sin_point_para_angs);
-
+  TEST_ASSERT_NULL(src->point_gaussbeam_has);
+  TEST_ASSERT_NULL(src->point_gaussbeam_decs);
 
   //Check the GAUSS and SHAPELET stuff is left alone
   assert_gauss_retained(src);
@@ -221,6 +234,8 @@ void test_null_gauss_comps_DoesTheNull(void) {
   TEST_ASSERT_NULL(src->gauss_zas);
   TEST_ASSERT_NULL(src->cos_gauss_para_angs);
   TEST_ASSERT_NULL(src->sin_gauss_para_angs);
+  TEST_ASSERT_NULL(src->gauss_gaussbeam_has);
+  TEST_ASSERT_NULL(src->gauss_gaussbeam_decs);
 
   //Check the POINT and SHAPELET stuff is left alone
   assert_point_retained(src);
@@ -258,6 +273,8 @@ void test_null_shape_comps_DoesTheNull(void) {
   TEST_ASSERT_NULL(src->shape_zas);
   TEST_ASSERT_NULL(src->cos_shape_para_angs);
   TEST_ASSERT_NULL(src->sin_shape_para_angs);
+  TEST_ASSERT_NULL(src->shape_gaussbeam_has);
+  TEST_ASSERT_NULL(src->shape_gaussbeam_decs);
   TEST_ASSERT_NULL(src->shape_coeffs);
   TEST_ASSERT_NULL(src->shape_n1s);
   TEST_ASSERT_NULL(src->shape_n2s);

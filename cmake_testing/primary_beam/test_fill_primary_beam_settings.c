@@ -11,7 +11,6 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 
 #define UNITY_INCLUDE_FLOAT
 
-
 /*
 DESCRIPTION HERE
 */

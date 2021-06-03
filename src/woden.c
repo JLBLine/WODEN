@@ -134,7 +134,7 @@ int main(int argc, char **argv) {
   printf("Finished cropping and calculating az/za\n");
 
   //Setup some beam settings given user chose parameters
-  beam_settings_t beam_settings;
+  beam_settings_t *beam_settings;
   beam_settings = fill_primary_beam_settings(woden_settings, cropped_src,
                                             lsts, num_time_steps);
 
@@ -151,9 +151,9 @@ int main(int argc, char **argv) {
 
     woden_settings->base_band_freq = base_band_freq;
 
-    beam_settings.FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
+    beam_settings->FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
     //We need the zenith beam to get the normalisation
-    beam_settings.FEE_beam_zenith = malloc(sizeof(RTS_MWA_FEE_beam_t));
+    beam_settings->FEE_beam_zenith = malloc(sizeof(RTS_MWA_FEE_beam_t));
 
     //The intial setup of the FEE beam is done on the CPU, so call it here
     if (woden_settings->beamtype == FEE_BEAM){
@@ -165,12 +165,12 @@ int main(int argc, char **argv) {
                                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     //
       printf("Setting up the zenith FEE beam...");
-      status = RTS_MWAFEEInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings.FEE_beam_zenith, float_zenith_delays);
+      status = RTS_MWAFEEInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings->FEE_beam_zenith, float_zenith_delays);
       printf(" done.\n");
 
       printf("Setting up the FEE beam...");
       status = RTS_MWAFEEInit(woden_settings->hdf5_beam_path, base_middle_freq,
-            beam_settings.FEE_beam, woden_settings->FEE_ideal_delays);
+            beam_settings->FEE_beam, woden_settings->FEE_ideal_delays);
       printf(" done.\n");
 
     }
@@ -259,28 +259,28 @@ int main(int argc, char **argv) {
     //
     // printf("Chunking sky model..\n");
     //For each chunk, calculate the visibilities for those components
-    for (int chunk = 0; chunk < num_chunks; chunk++) {
-
-      // fill_chunk_src(temp_cropped_src, cropped_src, num_chunks, chunk,
-      //                woden_settings->chunking_size,
-      //                woden_settings->num_time_steps,
-      //                &point_iter, &gauss_iter, &shape_iter);
-      //
-      // //Add the number of shapelets onto the full source catalogue value
-      // //so we know if we need to setup shapelet basis functions in GPU memory
-      // //or not
-      // cropped_sky_models->num_shapelets += temp_cropped_src->n_shapes;
-
-      beam_settings_t beam_settings_chunk;
-      beam_settings_chunk = make_beam_settings_chunk(beam_settings, temp_cropped_src,
-                            cropped_src, woden_settings, point_iter, gauss_iter, shape_iter);
-
-      // printf("Managed to chunk the beam %d\n",chunk );
-
-      // cropped_sky_models->catsources[chunk] = *temp_cropped_src;
-      cropped_sky_models->beam_settings[chunk] = beam_settings_chunk;
-
-    }
+    // for (int chunk = 0; chunk < num_chunks; chunk++) {
+    //
+    //   // fill_chunk_src(temp_cropped_src, cropped_src, num_chunks, chunk,
+    //   //                woden_settings->chunking_size,
+    //   //                woden_settings->num_time_steps,
+    //   //                &point_iter, &gauss_iter, &shape_iter);
+    //   //
+    //   // //Add the number of shapelets onto the full source catalogue value
+    //   // //so we know if we need to setup shapelet basis functions in GPU memory
+    //   // //or not
+    //   // cropped_sky_models->num_shapelets += temp_cropped_src->n_shapes;
+    //
+    //   beam_settings_t beam_settings_chunk;
+    //   beam_settings_chunk = make_beam_settings_chunk(beam_settings, temp_cropped_src,
+    //                         cropped_src, woden_settings, point_iter, gauss_iter, shape_iter);
+    //
+    //   // printf("Managed to chunk the beam %d\n",chunk );
+    //
+    //   // cropped_sky_models->catsources[chunk] = *temp_cropped_src;
+    //   cropped_sky_models->beam_settings[chunk] = beam_settings_chunk;
+    //
+    // }
     printf("Sky model chunked.\n");
 
     calculate_visibilities(array_layout, cropped_sky_models,
