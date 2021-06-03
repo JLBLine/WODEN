@@ -55,7 +55,7 @@ in `cropped_src` and point to in `temp_cropped_src`
 @param[in] num_time_steps Number of time steps in the simulation
 */
 void increment_point(catsource_t *temp_cropped_src, catsource_t *cropped_src,
-                     int point_iter, int num_time_steps);
+                     int * point_iter, int num_time_steps);
 
 /**
 @brief When chunking the sky model in `cropped_src`, use `gauss_iter` to
@@ -75,7 +75,7 @@ in `cropped_src` and point to in `temp_cropped_src`
 @param[in] num_time_steps Number of time steps in the simulation
 */
 void increment_gauss(catsource_t *temp_cropped_src, catsource_t *cropped_src,
-                     int gauss_iter, int num_time_steps);
+                     int * gauss_iter, int num_time_steps);
 
 /**
 @brief When chunking the sky model in `cropped_src`, use `shape_iter` to
@@ -96,7 +96,7 @@ in `cropped_src` and point to in `temp_cropped_src`
 @param[in] num_time_steps Number of time steps in the simulation
 */
 void increment_shapelet(catsource_t *temp_cropped_src, catsource_t *cropped_src,
-                     int shape_iter, int num_time_steps);
+                     int * shape_iter, int num_time_steps);
 
 // /**
 // @brief When splitting the sky model `cropped_src` into `num_chunks` smaller
