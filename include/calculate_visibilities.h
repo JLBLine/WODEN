@@ -75,5 +75,6 @@ struct
       other attributes may be required.
 */
 extern "C" void calculate_visibilities(array_layout_t * array_layout,
-  source_catalogue_t *cropped_sky_models, woden_settings_t *woden_settings,
-  visibility_set_t *visibility_set, float *sbf);
+  source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
+  woden_settings_t *woden_settings,  visibility_set_t *visibility_set,
+  float *sbf);

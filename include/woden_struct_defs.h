@@ -234,7 +234,7 @@ typedef struct _woden_settings_t {
   e_beamtype beamtype;  /*!< What type of primary beam to simulate with */
   float gauss_beam_FWHM;  /*!< FWHM of Gaussian primary beam (degrees)*/
   float gauss_beam_ref_freq;  /*!< Reference frequency for given Gaussian primary beam FWHM*/
-  int chunking_size;  /*!< Maximum number of COMPONENTs to include in a single chunk*/
+  long int chunking_size;  /*!< Maximum number of COMPONENTs to include in a single chunk*/
   const char* hdf5_beam_path;  /*!< Path to *.hf file containing MWA FEE beam
   spherical harmonic information*/
   double jd_date;  /*!< Julian date at beginning of simulation*/

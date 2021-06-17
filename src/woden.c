@@ -15,10 +15,11 @@
 #include "FEE_primary_beam.h"
 #include "read_and_write.h"
 
-
+//Main CUDA executable to link in
 extern void calculate_visibilities(array_layout_t * array_layout,
-  source_catalogue_t *cropped_sky_models, woden_settings_t *woden_settings,
-  visibility_set_t *visibility_set, float *sbf);
+  source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
+  woden_settings_t *woden_settings,  visibility_set_t *visibility_set,
+  float *sbf);
 
 int main(int argc, char **argv) {
 
@@ -61,7 +62,7 @@ int main(int argc, char **argv) {
   }
 
   if (woden_settings->chunking_size > MAX_CHUNKING_SIZE) {
-    printf("Current maximum allowable chunk size is %d.  Defaulting to this value.", MAX_CHUNKING_SIZE);
+    printf("Current maximum allowable chunk size is %ld.  Defaulting to this value.", MAX_CHUNKING_SIZE);
     woden_settings->chunking_size = MAX_CHUNKING_SIZE;
   }
   else if (woden_settings->chunking_size < 1 ) {
@@ -122,21 +123,22 @@ int main(int argc, char **argv) {
   //Crop emission below the horizon, and collapse all SOURCES from raw_srccat
   //into one single SOURCE
   printf("Horizon cropping sky model and calculating az/za for all components for observation\n");
-  catsource_t *cropped_src;
-  cropped_src = crop_sky_model(raw_srccat, lsts, woden_settings->latitude,
+  // catsource_t *cropped_src;
+  catsource_t *cropped_src = crop_sky_model(raw_srccat, lsts, woden_settings->latitude,
                                num_time_steps, woden_settings->sky_crop_type);
-
-  source_catalogue_t *cropped_sky_models = create_chunked_sky_models(cropped_src,
-                                                                     woden_settings);
-
-  int num_chunks = cropped_sky_models->num_sources;
 
   printf("Finished cropping and calculating az/za\n");
 
   //Setup some beam settings given user chose parameters
-  beam_settings_t *beam_settings;
-  beam_settings = fill_primary_beam_settings(woden_settings, cropped_src,
-                                            lsts, num_time_steps);
+  beam_settings_t *beam_settings = fill_primary_beam_settings(woden_settings,
+                                                             cropped_src, lsts);
+
+  source_catalogue_t *cropped_sky_models = create_chunked_sky_models(cropped_src,
+                                                                     woden_settings);
+
+  // int num_chunks = cropped_sky_models->num_sources;
+
+
 
   //MWA correlator data is split into 24 'coarse' bands of 1.28MHz bandwidth,
   //which is typically split into 10, 20, or 40kHz fine channels
@@ -228,7 +230,7 @@ int main(int argc, char **argv) {
     //Calculating a single shapelet coeff is equivalent to a point/gauss so treat as a
     //component here
 
-    int num_components = cropped_src->n_points + cropped_src->n_gauss + cropped_src->n_shape_coeffs;
+    // int num_components = cropped_src->n_points + cropped_src->n_gauss + cropped_src->n_shape_coeffs;
     // int num_chunks;
     // //TODO should we chunk outside the band for-loop so that we can reuse the chunks for each band (should be the same)
     // if (num_components > woden_settings->chunking_size) {
@@ -281,14 +283,13 @@ int main(int argc, char **argv) {
     //   cropped_sky_models->beam_settings[chunk] = beam_settings_chunk;
     //
     // }
-    printf("Sky model chunked.\n");
 
-    calculate_visibilities(array_layout, cropped_sky_models,
+    calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
                   woden_settings, visibility_set, sbf);
 
     printf("GPU calls for band %d finished\n",band_num );
 
-    free(temp_cropped_src);
+    // free(temp_cropped_src);
 
     //Dumps u,v,w (metres), Re(vis), Im(vis) to a binary file
     //Output order is by baseline (fastest changing), frequency, time (slowest
@@ -367,8 +368,8 @@ int main(int argc, char **argv) {
 
     //Release the CPU MWA FEE beam if required
     if (woden_settings->beamtype == FEE_BEAM){
-      RTS_freeHDFBeam(beam_settings.FEE_beam);
-      RTS_freeHDFBeam(beam_settings.FEE_beam_zenith);
+      RTS_freeHDFBeam(beam_settings->FEE_beam);
+      RTS_freeHDFBeam(beam_settings->FEE_beam_zenith);
     }
 
   }//band loop

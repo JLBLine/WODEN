@@ -52,7 +52,7 @@ Convert standard deviation to FWHM for a Gaussian */
 //max number of COMPONENTs to calculate simultaneously--------------------------
 /*! 260000 \n
 Default number of COMPONENTs to process per chunk */
-#define MAX_CHUNKING_SIZE 260000
+#define MAX_CHUNKING_SIZE 100000000000
 
 //RTS MWA FEE beam constants----------------------------------------------------
 /*! 16 \n

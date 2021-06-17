@@ -502,6 +502,10 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
     }//End raw_srccat source loop
   }//End if sky_crop_type == CROP_COMPONENTS
 
+  // cropped_src->num_point_primarybeam_values = cropped_src->n_points * woden_settings->num_time_steps * woden_settings->num_freqs;
+  // cropped_src->num_gauss_primarybeam_values = cropped_src->n_gauss * woden_settings->num_time_steps * woden_settings->num_freqs;
+  // cropped_src->num_shape_primarybeam_values = cropped_src->n_shapes * woden_settings->num_time_steps * woden_settings->num_freqs;
+
   return cropped_src;
 
 }

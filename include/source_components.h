@@ -333,7 +333,7 @@ void source_component_common(int num_components,
            float *sin_para_angs, float *cos_para_angs,
            float *beam_has, float *beam_decs,
            woden_settings_t *woden_settings,
-           beam_settings_t beam_settings,
+           beam_settings_t *beam_settings,
            RTS_MWA_FEE_beam_t *FEE_beam);
 
 /**

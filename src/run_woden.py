@@ -559,7 +559,7 @@ def write_json(num_time_steps=None, num_freqs=None,
         outfile.write('  "cat_filename": "%s",\n' %args.cat_filename)
         outfile.write('  "time_res": %.5f,\n' %time_res)
         outfile.write('  "frequency_resolution": %.3f,\n' %freq_res)
-        outfile.write('  "chunking_size": %d,\n' %args.chunking_size)
+        outfile.write('  "chunking_size": %d,\n' %int(args.chunking_size))
         outfile.write('  "jd_date": %.16f,\n' %jd_date)
         outfile.write('  "LST": %.8f,\n' %lst)
         outfile.write('  "array_layout": "%s",\n' %array_layout_name)
@@ -905,7 +905,7 @@ def get_parser():
              'files. Add this flag to not delete those files')
     sim_group.add_argument('--nvprof', default=False, action='store_true',
         help='Add to switch on the nvidia profiler when running woden')
-    sim_group.add_argument('--chunking_size', type=int, default=0,
+    sim_group.add_argument('--chunking_size', type=float, default=0,
         help='The chunk size to break up the point sources into for processing '
              '- defaults to 0 (do not perform chunking)')
 

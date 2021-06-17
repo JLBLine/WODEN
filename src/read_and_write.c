@@ -646,7 +646,7 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
     woden_settings->beamtype = NO_BEAM;
   }
 
-  woden_settings->chunking_size = json_object_get_int(chunking_size);
+  woden_settings->chunking_size = json_object_get_int64(chunking_size);
 
   woden_settings->array_layout_file = json_object_get_boolean(array_layout_file_path);
   if (woden_settings->array_layout_file) {

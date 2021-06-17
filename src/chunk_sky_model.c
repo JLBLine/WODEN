@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include "read_and_write.h"
 
-//Switch through different POINT, GAUSSIAN, SHAPELET simulation states, where
-//we can either be simulating one type of component, or a combination
-enum component_case {P=0, G, S, PG, PS, GS, PGS};
+//Switch through different POINT and GAUSSIAN chunking states - if P, only
+//POINTs in a chunk, PG both POINT and GAUSSIAN, G just GAUSSIAN
+enum component_case {P=0, PG, G};
 
 void null_point_comps(catsource_t *temp_cropped_src){
   temp_cropped_src->point_ras = NULL;
@@ -22,6 +22,7 @@ void null_point_comps(catsource_t *temp_cropped_src){
   temp_cropped_src->point_gaussbeam_decs = NULL;
 
   temp_cropped_src->n_points = 0;
+  temp_cropped_src->num_point_primarybeam_values = 0;
 
 }
 
@@ -45,6 +46,7 @@ void null_gauss_comps(catsource_t *temp_cropped_src){
   temp_cropped_src->gauss_gaussbeam_decs = NULL;
 
   temp_cropped_src->n_gauss = 0;
+  temp_cropped_src->num_gauss_primarybeam_values = 0;
 
 }
 
@@ -73,6 +75,7 @@ void null_shapelet_comps(catsource_t *temp_cropped_src){
 
   temp_cropped_src->n_shapes = 0;
   temp_cropped_src->n_shape_coeffs = 0;
+  temp_cropped_src->num_shape_primarybeam_values = 0;
 
 }
 
@@ -99,6 +102,7 @@ void increment_point(catsource_t *temp_cropped_src, catsource_t *cropped_src,
 
 void increment_gauss(catsource_t *temp_cropped_src, catsource_t *cropped_src,
                      int * gauss_iter, int num_time_steps){
+
   //increment the required pointers to point at the beginning of the next chunk
   temp_cropped_src->gauss_ras = cropped_src->gauss_ras + * gauss_iter;
   temp_cropped_src->gauss_decs = cropped_src->gauss_decs + * gauss_iter;
@@ -130,6 +134,8 @@ void increment_shapelet(catsource_t *temp_cropped_src, catsource_t *cropped_src,
   //ras,azs, minors, etc each time, just iterate the coeffs, n1s, n2s
   //do this because there should be many coeffs per components, and not
   //many components, due to the nature of shapelets
+  temp_cropped_src->n_shapes = cropped_src->n_shapes;
+
   temp_cropped_src->shape_ras = cropped_src->shape_ras;
   temp_cropped_src->shape_decs = cropped_src->shape_decs;
   temp_cropped_src->shape_ref_stokesI = cropped_src->shape_ref_stokesI;
@@ -155,13 +161,13 @@ void increment_shapelet(catsource_t *temp_cropped_src, catsource_t *cropped_src,
   temp_cropped_src->shape_zas = cropped_src->shape_zas;
   temp_cropped_src->sin_shape_para_angs = cropped_src->sin_shape_para_angs;
   temp_cropped_src->cos_shape_para_angs = cropped_src->cos_shape_para_angs;
-  temp_cropped_src->point_gaussbeam_has = cropped_src->point_gaussbeam_has;
-  temp_cropped_src->point_gaussbeam_decs = cropped_src->point_gaussbeam_decs;
+  temp_cropped_src->shape_gaussbeam_has = cropped_src->shape_gaussbeam_has;
+  temp_cropped_src->shape_gaussbeam_decs = cropped_src->shape_gaussbeam_decs;
 }
 
 void fill_chunk_src_with_pointgauss(catsource_t *temp_cropped_src,
      catsource_t *cropped_src, int chunk_ind, int comps_per_chunk,
-     int num_time_steps) {
+     woden_settings_t *woden_settings) {
 
   //Splitting POINTs and GAUSSIANS into lovely chunks that our GPU can chew
   //First we have to ascertain where in the chunking we are, and which type
@@ -169,7 +175,7 @@ void fill_chunk_src_with_pointgauss(catsource_t *temp_cropped_src,
 
   //Lower and upper indexes of components covered in this chunk
   int lower_comp_ind = chunk_ind * comps_per_chunk;
-  int upper_comp_ind = (chunk_ind + 1) * comps_per_chunk - 1;
+  int upper_comp_ind = (chunk_ind + 1) * comps_per_chunk;
 
   //comp_case is used to ascertain what combo of POINT,GAUSSIAN,SHAPELET we have
   int comp_case = -1;
@@ -182,14 +188,14 @@ void fill_chunk_src_with_pointgauss(catsource_t *temp_cropped_src,
   //BEGIN work out what component type and how many of each component
   //types we need to shove into the temp_cropped_src
 
-  //If chunk lies within the number of POINT components
-  if (cropped_src->n_points > upper_comp_ind){
+  //If there are enough POINTs to fill the whole chunk
+  if (cropped_src->n_points >= upper_comp_ind){
     comp_case = P;
     temp_cropped_src->n_points = comps_per_chunk;
     point_iter = chunk_ind * comps_per_chunk;
   }
-  //If chunk contains POINT components, but extends beyond the number POINT components
-  else if ((cropped_src->n_points <= upper_comp_ind + 1) && (cropped_src->n_points > lower_comp_ind)){
+  //If chunk contains POINT components, but there is space for GAUSSIANs
+  else if ((cropped_src->n_points < upper_comp_ind) && (cropped_src->n_points > lower_comp_ind)){
 
     point_iter = chunk_ind * comps_per_chunk;
     //If there are no GAUSSIANs we only have POINT
@@ -249,43 +255,92 @@ void fill_chunk_src_with_pointgauss(catsource_t *temp_cropped_src,
     null_shapelet_comps(temp_cropped_src);
     //Increment the pointers to the correct indexes
     increment_point(temp_cropped_src, cropped_src,
-                    &point_iter, num_time_steps);
+                    &point_iter, woden_settings->num_time_steps);
   }
   else if (comp_case == PG) {
     null_shapelet_comps(temp_cropped_src);
     increment_point(temp_cropped_src, cropped_src,
-                    point_iter, num_time_steps);
+                    &point_iter, woden_settings->num_time_steps);
+
     increment_gauss(temp_cropped_src, cropped_src,
-                    &gauss_iter, num_time_steps);
+                    &gauss_iter, woden_settings->num_time_steps);
   }
   else if (comp_case == G) {
     null_point_comps(temp_cropped_src);
     null_shapelet_comps(temp_cropped_src);
     increment_gauss(temp_cropped_src, cropped_src,
-                    &gauss_iter, num_time_steps);
+                    &gauss_iter, woden_settings->num_time_steps);
   }
   else {
     printf("Chunking failed to group POINT,GAUSSIAN components sensibly. Something terrible has happened\n");
   }
+
+  temp_cropped_src->num_point_primarybeam_values = temp_cropped_src->n_points*woden_settings->num_freqs*woden_settings->num_time_steps;
+  temp_cropped_src->num_gauss_primarybeam_values = temp_cropped_src->n_gauss*woden_settings->num_freqs*woden_settings->num_time_steps;
+}
+
+void fill_chunk_src_with_shapelets(catsource_t *temp_cropped_src,
+     catsource_t *cropped_src, int chunk_ind, int coeffs_per_chunk,
+     woden_settings_t *woden_settings) {
+
+  //Upper indexes of components covered in this chunk
+  int upper_comp_ind = (chunk_ind + 1) * coeffs_per_chunk;
+
+  //These ints are used to do pointer arithmatic to grab the correct portions
+  //of arrays out of `cropped_src` and into `temp_cropped_src`
+  int shape_iter = chunk_ind * coeffs_per_chunk;
+
+  //If there are enough coeffs to fill the chunk?
+  if (cropped_src->n_shape_coeffs >= upper_comp_ind){
+    temp_cropped_src->n_shape_coeffs = coeffs_per_chunk;
+
+  }
+  else { //Otherwise just set the remainder
+    temp_cropped_src->n_shape_coeffs = cropped_src->n_shape_coeffs % coeffs_per_chunk;
+  }
+
+  null_point_comps(temp_cropped_src);
+  null_gauss_comps(temp_cropped_src);
+  increment_shapelet(temp_cropped_src, cropped_src,
+                    &shape_iter, woden_settings->num_time_steps);
+  temp_cropped_src->num_shape_primarybeam_values = temp_cropped_src->n_shapes*woden_settings->num_freqs*woden_settings->num_time_steps;
 }
 
 
 source_catalogue_t * create_chunked_sky_models(catsource_t *cropped_src,
                                                woden_settings_t *woden_settings) {
 
-  int num_components = cropped_src->n_points + cropped_src->n_gauss + cropped_src->n_shape_coeffs;
-  int num_chunks;
-  //TODO should we chunk outside the band for-loop so that we can reuse the chunks for each band (should be the same)
-  if (num_components > woden_settings->chunking_size) {
-    num_chunks = num_components / woden_settings->chunking_size;
+  //Ok, so we split POINT and GAUSSIANs up by whole COMPONENT into the chunked
+  //sky models. We split SHAPELETs up by their basis function information,
+  //which I shorthand to 'coeff' here. I've had trouble with running SHAPELETs
+  //at the same time as many POINT/GAUSSIANs, so split them up separately
 
-    if (num_components % woden_settings->chunking_size != 0) {
-      num_chunks = num_chunks + 1;
-    }
-    printf("Number of chunks required is %d\n",  num_chunks);
-  } else {
-    num_chunks = 1;
+  //Chunking size says how many visibility calculations we can do on the GPU
+  //at once, where one calculation here means:
+  // one component * one time step * one frequency step * one baseline
+  //Here we work out how many components we can stick on the GPU and remain
+  //below the `chunking_size`.
+
+  long int chunking_size = woden_settings->chunking_size;
+  int num_baselines = woden_settings->num_baselines;
+  int num_freqs = woden_settings->num_freqs;
+  int num_time_steps = woden_settings->num_time_steps;
+
+
+  int comps_per_chunk = (int)floorf((float)chunking_size / (float)(num_baselines * num_freqs * num_time_steps));
+
+  if (comps_per_chunk < 1) {
+    comps_per_chunk = 1;
   }
+  //Numbers of things we are splitting up
+  int num_comps_to_chunk = cropped_src->n_points + cropped_src->n_gauss;
+  int num_coeffs_to_chunk = cropped_src->n_shape_coeffs;
+
+  //How many chunks we need for the POINT/GAUSS, and the SHAPELETs
+  int num_comp_chunks = (int)ceilf((float)num_comps_to_chunk / (float)comps_per_chunk);
+  int num_coeff_chunks = (int)ceilf((float)num_coeffs_to_chunk / (float)comps_per_chunk);
+
+  int num_chunks = num_comp_chunks + num_coeff_chunks;
 
   source_catalogue_t *chunked_sky_models;
   chunked_sky_models = malloc(sizeof(source_catalogue_t));
@@ -293,34 +348,34 @@ source_catalogue_t * create_chunked_sky_models(catsource_t *cropped_src,
   chunked_sky_models->num_sources = num_chunks;
   chunked_sky_models->num_shapelets = 0;
   chunked_sky_models->catsources = malloc(num_chunks*sizeof(catsource_t));
-  // chunked_sky_models->beam_settings = malloc(num_chunks*sizeof(beam_settings_t));
 
   catsource_t *temp_cropped_src = malloc(sizeof(catsource_t));
-  // int point_iter = 0;
-  // int gauss_iter = 0;
-  // int shape_iter = 0;
 
-  printf("Chunking sky model..\n");
-  //For each chunk, calculate the visibilities for those components
-  for (int chunk = 0; chunk < num_chunks; chunk++) {
+  printf("Number of chunks required is %d\n", num_chunks);
+  printf("Chunking sky model.. ");
+  //Chunk the POINT/GAUSS first
+  for (int comp_chunk = 0; comp_chunk < num_comp_chunks; comp_chunk++) {
 
-    // fill_chunk_src(temp_cropped_src, cropped_src, num_chunks, chunk,
-    //                woden_settings->chunking_size,
-    //                woden_settings->num_time_steps,
-    //                &point_iter, &gauss_iter, &shape_iter);
+    fill_chunk_src_with_pointgauss(temp_cropped_src, cropped_src, comp_chunk,
+                               comps_per_chunk, woden_settings);
 
-    fill_chunk_src_with_pointgauss(temp_cropped_src, cropped_src, chunk,
-                   woden_settings->chunking_size,
-                   woden_settings->num_time_steps);
+    chunked_sky_models->catsources[comp_chunk] = *temp_cropped_src;
+
+  }
+
+  for (int coeff_chunk = 0; coeff_chunk < num_coeff_chunks; coeff_chunk++) {
+
+    fill_chunk_src_with_shapelets(temp_cropped_src, cropped_src, coeff_chunk,
+                              comps_per_chunk, woden_settings);
 
     //Add the number of shapelets onto the full source catalogue value
     //so we know if we need to setup shapelet basis functions in GPU memory
     //or not
     chunked_sky_models->num_shapelets += temp_cropped_src->n_shapes;
-
-    chunked_sky_models->catsources[chunk] = *temp_cropped_src;
+    chunked_sky_models->catsources[num_comp_chunks + coeff_chunk] = *temp_cropped_src;
 
   }
+
   printf("Sky model chunked.\n");
   // free(temp_cropped_src);
   return chunked_sky_models;

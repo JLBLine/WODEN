@@ -22,7 +22,7 @@ extern void test_source_component_common(int num_components,
            float *sin_para_angs, float *cos_para_angs,
            float *beam_has, float *beam_decs,
            woden_settings_t *woden_settings,
-           beam_settings_t beam_settings,
+           beam_settings_t *beam_settings,
            RTS_MWA_FEE_beam_t *FEE_beam);
 
 extern void get_HDFBeam_normalisation(RTS_MWA_FEE_beam_t *FEE_beam_zenith,
@@ -243,8 +243,8 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   woden_settings->sdec0 = sinf(dec0);
   woden_settings->cdec0 = cosf(dec0);
 
-  beam_settings_t beam_settings;
-  beam_settings.beamtype = beamtype;
+  beam_settings_t *beam_settings = malloc(sizeof(beam_settings_t));
+  beam_settings->beamtype = beamtype;
 
   /*********************************************************************
   Code used to generate the az / za and parallactic angles is below
@@ -293,11 +293,11 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   if (beamtype == GAUSS_BEAM) {
     //Stick the Gaussian beam pointed at zenith
     //We're testing at latitude=zero
-    beam_settings.gauss_ha = 0.0;
-    beam_settings.gauss_sdec = 0.0;
-    beam_settings.gauss_cdec = 1.0;
-    beam_settings.beam_FWHM_rad = 80.0*DD2R;
-    beam_settings.beam_ref_freq = 150e+6;
+    beam_settings->gauss_ha = 0.0;
+    beam_settings->gauss_sdec = 0.0;
+    beam_settings->gauss_cdec = 1.0;
+    beam_settings->beam_FWHM_rad = 80.0*DD2R;
+    beam_settings->beam_ref_freq = 150e+6;
 
     for (size_t component = 0; component < num_components; component++) {
       for (size_t time_ind = 0; time_ind < num_times; time_ind++) {

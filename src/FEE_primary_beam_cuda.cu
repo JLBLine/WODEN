@@ -739,7 +739,6 @@ extern "C" void calc_CUDA_FEE_beam(float *azs, float *zas,
                                    int rotation, int scaling) {
 
   // printf("\tDoing FEE beam tings\n");
-
   cudaErrorCheckCall( cudaMalloc( (void **)&FEE_beam->d_FEE_beam_gain_matrices, num_time_steps*num_components*MAX_POLS*sizeof(float _Complex)) );
 
   //Ensure gains are zero before summing results to them

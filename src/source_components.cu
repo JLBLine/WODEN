@@ -221,7 +221,7 @@ void source_component_common(int num_components,
            float *sin_para_angs, float *cos_para_angs,
            float *beam_has, float *beam_decs,
            woden_settings_t *woden_settings,
-           beam_settings_t beam_settings,
+           beam_settings_t *beam_settings,
            RTS_MWA_FEE_beam_t *FEE_beam){
 
   dim3 grid, threads;
@@ -242,29 +242,29 @@ void source_component_common(int num_components,
 
   //If using a gaussian primary beam, calculate beam values for all freqs,
   //lsts and point component locations
-  if (beam_settings.beamtype == GAUSS_BEAM) {
+  if (beam_settings->beamtype == GAUSS_BEAM) {
 
     //TODO currently hardcoded to have beam position angle = 0.
     //Should this change with az/za?
     float cos_theta = 1.0;
     float sin_theta = 0.0;
     float sin_2theta = 0.0;
-    float fwhm_lm = sinf(beam_settings.beam_FWHM_rad);
+    float fwhm_lm = sinf(beam_settings->beam_FWHM_rad);
 
     printf("\tDoing gaussian beam tings\n");
 
     calculate_gaussian_beam(num_components,
          woden_settings->num_time_steps, woden_settings->num_freqs,
-         beam_settings.gauss_ha, beam_settings.gauss_sdec,
-         beam_settings.gauss_cdec,
+         beam_settings->gauss_ha, beam_settings->gauss_sdec,
+         beam_settings->gauss_cdec,
          fwhm_lm, cos_theta, sin_theta, sin_2theta,
-         beam_settings.beam_ref_freq, d_freqs,
+         beam_settings->beam_ref_freq, d_freqs,
          beam_has, beam_decs,
          d_primay_beam_J00, d_primay_beam_J11);
 
   }// end if beam == GAUSS
 
-  else if (beam_settings.beamtype == FEE_BEAM) {
+  else if (beam_settings->beamtype == FEE_BEAM) {
 
     //Rotate FEE beam by parallactic angle
     int rotation = 1;
@@ -272,7 +272,7 @@ void source_component_common(int num_components,
     int scaling = 1;
 
     calc_CUDA_FEE_beam(azs, zas, sin_para_angs, cos_para_angs,
-           num_components, woden_settings->num_time_steps, FEE_beam,
+           num_components, woden_settings->num_time_steps, beam_settings->FEE_beam,
            rotation, scaling);
 
     threads.x = 16;
@@ -291,7 +291,7 @@ void source_component_common(int num_components,
               woden_settings->num_time_steps);
   }
 
-  else if (beam_settings.beamtype == ANALY_DIPOLE) {
+  else if (beam_settings->beamtype == ANALY_DIPOLE) {
     printf("\tDoing analytic_dipole (EDA2 beam)\n");
 
     calculate_analytic_dipole_beam(num_components,
@@ -1201,7 +1201,7 @@ extern "C" void test_source_component_common(int num_components,
            float *sin_para_angs, float *cos_para_angs,
            float *beam_has, float *beam_decs,
            woden_settings_t *woden_settings,
-           beam_settings_t beam_settings,
+           beam_settings_t *beam_settings,
            RTS_MWA_FEE_beam_t *FEE_beam){
 
   float _Complex *d_primay_beam_J00 = NULL;
