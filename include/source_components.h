@@ -322,7 +322,6 @@ COMPONENTs
 @param[in] beam_decs Declinations for all time steps for all COMPONENTs (radians)
 @param[in] woden_settings A populated `woden_settings_t` struct
 @param[in] beam_settings A populated `beam_settings_t` struct
-@param[in] FEE_beam An initialised `RTS_MWA_FEE_beam_t` struct
 
 */
 void source_component_common(int num_components,
@@ -333,8 +332,7 @@ void source_component_common(int num_components,
            float *sin_para_angs, float *cos_para_angs,
            float *beam_has, float *beam_decs,
            woden_settings_t *woden_settings,
-           beam_settings_t *beam_settings,
-           RTS_MWA_FEE_beam_t *FEE_beam);
+           beam_settings_t *beam_settings);
 
 /**
 @brief Kernel to calculate the visibility response to a number `num_point` of

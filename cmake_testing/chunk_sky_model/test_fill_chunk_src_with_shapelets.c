@@ -56,92 +56,11 @@ void test_fill_chunk_src_with_shapelets(int chunking_size,
     fill_chunk_src_with_shapelets(temp_cropped_src, cropped_src, chunk_ind,
                                    coeffs_per_chunk, woden_settings);
 
-    //How far through all coeffs are we with this chunk
-    int chunk_coeff_ind = chunk_ind*coeffs_per_chunk;
-    //How many POINT sources are left after this chunk index
-    int coeff_remainder = cropped_src->n_shape_coeffs - chunk_coeff_ind;
+    // Check the outputs are correct for this chunk
 
-    //Things to use in logic below
-    int expected_n_coeffs = 0;
-    int chunk_remainder = 0;
-
-    if (coeff_remainder > 0) { //There are SHAPELET sources, how many should there be?
-      if (coeff_remainder >= coeffs_per_chunk) { //SHAPELET sources fill the whole chunk
-        expected_n_coeffs = coeffs_per_chunk;
-      } else { //Not enough shapelet coeffs to fill the chunk
-        expected_n_coeffs = coeff_remainder;
-      }
-    }
-    else {
-      printf("SHOULD NOT BE HERE\n");
-    }
-
-    if (expected_n_coeffs > 0) {
-      // printf("Found POINT, chunk_ind %d expected_n_points %d\n",chunk_ind, expected_n_points );
-
-      TEST_ASSERT_EQUAL_INT(expected_n_coeffs, temp_cropped_src->n_shape_coeffs);
-      TEST_ASSERT_EQUAL_INT(cropped_src->n_shapes, temp_cropped_src->n_shapes);
-      //
-      //As we only split over basis function coeff info, all of these arrrays
-      //should just be pointer copies
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_ras,
-                              temp_cropped_src->shape_ras, cropped_src->n_shapes);
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_decs,
-                              temp_cropped_src->shape_decs, cropped_src->n_shapes);
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_ref_freqs,
-                              temp_cropped_src->shape_ref_freqs, cropped_src->n_shapes);
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_ref_stokesI,
-                              temp_cropped_src->shape_ref_stokesI, cropped_src->n_shapes);
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_ref_stokesQ,
-                              temp_cropped_src->shape_ref_stokesQ, cropped_src->n_shapes);
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_ref_stokesU,
-                              temp_cropped_src->shape_ref_stokesU, cropped_src->n_shapes);
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_ref_stokesV,
-                              temp_cropped_src->shape_ref_stokesV, cropped_src->n_shapes);
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_SIs,
-                              temp_cropped_src->shape_SIs, cropped_src->n_shapes);
-      //
-      //As we only split over basis function coeff info, all of these arrrays
-      //should just be pointer copies
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_azs,
-                      temp_cropped_src->shape_azs, cropped_src->n_shapes*num_time_steps);
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_zas,
-                      temp_cropped_src->shape_zas, cropped_src->n_shapes*num_time_steps);
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->cos_shape_para_angs,
-            temp_cropped_src->cos_shape_para_angs, cropped_src->n_shapes*num_time_steps);
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->sin_shape_para_angs,
-            temp_cropped_src->sin_shape_para_angs, cropped_src->n_shapes*num_time_steps);
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_gaussbeam_has,
-            temp_cropped_src->shape_gaussbeam_has, cropped_src->n_shapes*num_time_steps);
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_gaussbeam_decs,
-            temp_cropped_src->shape_gaussbeam_decs, cropped_src->n_shapes*num_time_steps);
-
-
-      //THESE are the arrays that should actually be split up
-      //With the way I've set up the sky model creation, the coeff splitting
-      //should yield arrays which are the index of cropped_src integer divided
-      //by number of coeffs per shapelet
-
-      float *expec_repeat_shape_array = malloc(expected_n_coeffs*sizeof(float));
-
-      int new_ind = 0;
-      for (int orig_index = chunk_coeff_ind; orig_index < chunk_coeff_ind + expected_n_coeffs; orig_index++) {
-        expec_repeat_shape_array[new_ind] = (float)(orig_index / num_coeff_per_shape);
-        new_ind ++;
-      }
-
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_shape_array,
-                      temp_cropped_src->shape_coeffs, expected_n_coeffs);
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_shape_array,
-                      temp_cropped_src->shape_n1s, expected_n_coeffs);
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_shape_array,
-                      temp_cropped_src->shape_n2s, expected_n_coeffs);
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_shape_array,
-                      temp_cropped_src->shape_param_indexes, expected_n_coeffs);
-
-      free(expec_repeat_shape_array);
-
-    }
+    check_shapelet_chunking(chunk_ind, coeffs_per_chunk, num_time_steps,
+                            num_coeff_per_shape, cropped_src,
+                            temp_cropped_src);
 
   } //END iteration over all chunks
   free_sky_model(cropped_src);

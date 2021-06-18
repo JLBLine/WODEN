@@ -134,7 +134,7 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
 
     //Need to rotate the FEE model which is stored in theta/phi pols by the
     //parallactic angle to obtain XX/YY
-    calc_para_angle(cropped_src, lsts, woden_settings->latitude, woden_settings->num_time_steps);
+    calc_para_angle(cropped_src, lsts, (double)woden_settings->latitude, woden_settings->num_time_steps);
   }
 
   else if (woden_settings->beamtype == ANALY_DIPOLE) {

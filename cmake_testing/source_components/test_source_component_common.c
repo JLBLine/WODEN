@@ -22,8 +22,7 @@ extern void test_source_component_common(int num_components,
            float *sin_para_angs, float *cos_para_angs,
            float *beam_has, float *beam_decs,
            woden_settings_t *woden_settings,
-           beam_settings_t *beam_settings,
-           RTS_MWA_FEE_beam_t *FEE_beam);
+           beam_settings_t *beam_settings);
 
 extern void get_HDFBeam_normalisation(RTS_MWA_FEE_beam_t *FEE_beam_zenith,
                 RTS_MWA_FEE_beam_t *FEE_beam);
@@ -309,7 +308,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     }
   }
 
-  RTS_MWA_FEE_beam_t *FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
+  beam_settings->FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
   //If FEE_BEAM, call the C code to interrogate the hdf5 file and set beam
   //things up
   if (beamtype == FEE_BEAM) {
@@ -327,17 +326,17 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     printf(" done.\n");
 
     printf("\tSetting up the FEE beam...");
-    RTS_MWAFEEInit(mwa_fee_hdf5, base_middle_freq, FEE_beam, float_zenith_delays);
+    RTS_MWAFEEInit(mwa_fee_hdf5, base_middle_freq, beam_settings->FEE_beam, float_zenith_delays);
     printf(" done.\n");
 
     printf("\tGetting FEE beam normalisation...");
-    get_HDFBeam_normalisation(FEE_beam_zenith, FEE_beam);
+    get_HDFBeam_normalisation(FEE_beam_zenith, beam_settings->FEE_beam);
     //Free the zenith pointing as done with it now
     free_FEE_primary_beam_from_GPU(FEE_beam_zenith);
     printf(" done.\n");
 
     printf("\tCopying the FEE beam across to the GPU...");
-    copy_FEE_primary_beam_to_GPU(FEE_beam);
+    copy_FEE_primary_beam_to_GPU(beam_settings->FEE_beam);
     printf(" done.\n");
 
   }
@@ -352,6 +351,8 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   float *ms = malloc(num_components*sizeof(float));
   float *ns = malloc(num_components*sizeof(float));
 
+  printf("Happy\n");
+
   //Run the CUDA code
   test_source_component_common(num_components,
              primay_beam_J00, primay_beam_J01,
@@ -361,9 +362,9 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
              sin_para_angs, cos_para_angs,
              beam_has, beam_decs,
              woden_settings,
-             beam_settings,
-             FEE_beam);
+             beam_settings);
 
+  printf("No happy\n");
 
   float l_expected[9] = {-1.0, -sqrt(3)/2.0, -sqrt(2)/2.0, -0.5,
                           0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0, 1.0};

@@ -314,7 +314,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                  catsource.point_azs, catsource.point_zas,
                  catsource.sin_point_para_angs, catsource.cos_point_para_angs,
                  catsource.point_gaussbeam_has, catsource.point_gaussbeam_decs,
-                 woden_settings, beam_settings, beam_settings->FEE_beam);
+                 woden_settings, beam_settings);
 
       threads.x = 128;
       threads.y = 1;
@@ -459,7 +459,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                  catsource.sin_gauss_para_angs, catsource.cos_gauss_para_angs,
                  catsource.gauss_gaussbeam_has,
                  catsource.gauss_gaussbeam_decs,
-                 woden_settings, beam_settings, beam_settings->FEE_beam);
+                 woden_settings, beam_settings);
 
       threads.x = 128;
       threads.y = 1;
@@ -650,7 +650,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
            catsource.sin_shape_para_angs, catsource.cos_shape_para_angs,
            catsource.shape_gaussbeam_has,
            catsource.shape_gaussbeam_decs,
-           woden_settings, beam_settings, beam_settings->FEE_beam);
+           woden_settings, beam_settings);
 
 
       if (num_shapes == 1) {

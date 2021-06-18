@@ -95,8 +95,8 @@ A struct to contain values for the MWA Fully Embbedded Element primary beam
 typedef struct _RTS_MWA_FEE_beam {
   double _Complex **Q1; /*!< Beam modes used for Spherical Harmonic model */
   double _Complex **Q2; /*!< Beam modes used for Spherical Harmonic model */
-  double _Complex **p_T; /*!< Some pre-computed theta related values used in tile response */
-  double _Complex **p_P; /*!< Some pre-computed phi related values used in tile response */
+  // double _Complex **p_T; /*!< Some pre-computed theta related values used in tile response */
+  // double _Complex **p_P; /*!< Some pre-computed phi related values used in tile response */
   double **M; /*!< First order of spherical harmonics */
   double **N; /*!< Second order of spherical harmonics */
   int nmax; /*!< Maximum order of spherical harmonic */
@@ -139,18 +139,6 @@ typedef struct _beam_settings_t {
     float gauss_sdec; /*!< Sine of the declination of the pointing for a Gaussian primary beam */
     float gauss_cdec; /*!< Cosine of the declination of the pointing for a Gaussian primary beam */
     float gauss_ha; /*!< Hour angle of the pointing for a Gaussian primary beam */
-
-    // float *beam_point_has; /*!< Hour angle of POINT components used for Gaussian beam calculations */
-    // float *beam_point_decs; /*!< Declinations of POINT components used for Gaussian beam calculations */
-    // int num_point_beam_values; /*!< Number of beam calculations needed for POINT components */
-    //
-    // float *beam_gausscomp_has; /*!< Hour angle of GAUSSIAN components used for Gaussian beam calculations */
-    // float *beam_gausscomp_decs; /*!< Declinations of GAUSSIAN components used for Gaussian beam calculations */
-    // int num_gauss_beam_values; /*!< Number of beam calculations needed for GAUSSIAN components */
-    //
-    // float *beam_shape_has; /*!< Hour angle of SHAPELET components used for Gaussian beam calculations */
-    // float *beam_shape_decs; /*!< Declinations of SHAPELET components used for Gaussian beam calculations */
-    // int num_shape_beam_values; /*!< Number of beam calculations needed for SHAPELET components */
 
     float beam_FWHM_rad; /*!< FWHM of requested Gaussian primary beam, at reference frequnecy */
     float beam_ref_freq; /*!< Reference frequency for the given FWHM of Gaussian primary beam */

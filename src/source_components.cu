@@ -221,8 +221,7 @@ void source_component_common(int num_components,
            float *sin_para_angs, float *cos_para_angs,
            float *beam_has, float *beam_decs,
            woden_settings_t *woden_settings,
-           beam_settings_t *beam_settings,
-           RTS_MWA_FEE_beam_t *FEE_beam){
+           beam_settings_t *beam_settings){
 
   dim3 grid, threads;
 
@@ -283,7 +282,7 @@ void source_component_common(int num_components,
 
     cudaErrorCheckKernel("kern_map_FEE_beam_gains",
               kern_map_FEE_beam_gains, grid, threads,
-              (cuFloatComplex *)FEE_beam->d_FEE_beam_gain_matrices,
+              (cuFloatComplex *)beam_settings->FEE_beam->d_FEE_beam_gain_matrices,
               d_primay_beam_J00, d_primay_beam_J01,
               d_primay_beam_J10, d_primay_beam_J11,
               woden_settings->num_freqs, num_components,
@@ -1201,8 +1200,7 @@ extern "C" void test_source_component_common(int num_components,
            float *sin_para_angs, float *cos_para_angs,
            float *beam_has, float *beam_decs,
            woden_settings_t *woden_settings,
-           beam_settings_t *beam_settings,
-           RTS_MWA_FEE_beam_t *FEE_beam){
+           beam_settings_t *beam_settings){
 
   float _Complex *d_primay_beam_J00 = NULL;
   float _Complex *d_primay_beam_J01 = NULL;
@@ -1250,8 +1248,7 @@ extern "C" void test_source_component_common(int num_components,
            d_ras, d_decs, azs, zas,
            sin_para_angs, cos_para_angs,
            beam_has, beam_decs,
-           woden_settings, beam_settings,
-           FEE_beam);
+           woden_settings, beam_settings);
 
   cudaErrorCheckCall( cudaMemcpy(primay_beam_J00, d_primay_beam_J00,
               num_beam_values*sizeof(float _Complex), cudaMemcpyDeviceToHost ));

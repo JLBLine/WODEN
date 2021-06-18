@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <math.h>
+#include <unity.h>
 
 #include "constants.h"
 #include "woden_struct_defs.h"
@@ -164,4 +165,260 @@ void free_sky_model(catsource_t *cropped_src) {
   free(cropped_src->shape_coeffs);
 
   free(cropped_src);
+}
+
+
+void check_pointgauss_chunking(int chunk_ind, int comps_per_chunk,
+                             int num_time_steps,
+                             int * point_accum, int * gauss_accum,
+                             catsource_t *cropped_src,
+                             catsource_t *temp_cropped_src) {
+
+  //How many components overall to be chunked
+  int num_comps_to_chunk = cropped_src->n_points + cropped_src->n_gauss;
+
+  //How far through all components are we with this chunk
+  int chunk_comp_ind = chunk_ind*comps_per_chunk;
+  //How many POINT sources are left after this chunk index
+  int point_remainder = cropped_src->n_points - chunk_comp_ind;
+
+  //Things to use in logic below
+  int expected_n_points = 0;
+  int expected_n_gauss = 0;
+  int chunk_remainder = 0;
+  int gauss_remainder = 0;
+
+  if (point_remainder > 0) { //There are POINT sources, how many should there be?
+
+    if (point_remainder >= comps_per_chunk) { //POINT sources fill the whole chunk
+      expected_n_points = comps_per_chunk;
+    } else { //Not enough point sources to fill the chunk
+      expected_n_points = point_remainder;
+
+      //How many component can fit into rest of chunk?
+      chunk_remainder = comps_per_chunk - expected_n_points;
+      //See if GAUSS fill the remainder or are smaller
+      if (cropped_src->n_gauss > chunk_remainder) {
+        expected_n_gauss = chunk_remainder;
+      } else if ( cropped_src->n_gauss > 0) {
+        expected_n_gauss = cropped_src->n_gauss;
+      } else {
+        expected_n_gauss = 0;
+      }
+    } //END there are POINTs, not enough point sources to fill the chunk
+
+  } else { //There are no POINT sources in chunk
+    expected_n_points = 0;
+
+    gauss_remainder = num_comps_to_chunk - chunk_comp_ind;
+
+    if (gauss_remainder >= comps_per_chunk) { //POINT sources fill the whole chunk
+      expected_n_gauss = comps_per_chunk;
+    } else { //Not enough point sources to fill the chunk
+      expected_n_gauss = gauss_remainder;
+    }
+  } //END there are no POINT sources
+
+  // printf("expect point, gauss %d %d\n",expected_n_points,expected_n_gauss );
+  if (expected_n_points > 0) {
+    // printf("Found POINT, chunk_ind %d expected_n_points %d\n",chunk_ind, expected_n_points );
+
+    TEST_ASSERT_EQUAL_INT(expected_n_points, temp_cropped_src->n_points);
+
+    float *expec_index_point_array = malloc(expected_n_points*sizeof(float));
+    make_index_array(expec_index_point_array, expected_n_points, * point_accum);
+
+    float *expec_repeat_point_array = malloc(num_time_steps*expected_n_points*sizeof(float));
+    make_repeat_array(expec_repeat_point_array, expected_n_points,
+                      num_time_steps, * point_accum);
+
+    //Check POINT source params were split correctly
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_point_array,
+                            temp_cropped_src->point_ras, expected_n_points);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_point_array,
+                            temp_cropped_src->point_decs, expected_n_points);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_point_array,
+                            temp_cropped_src->point_ref_freqs, expected_n_points);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_point_array,
+                            temp_cropped_src->point_ref_stokesI, expected_n_points);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_point_array,
+                            temp_cropped_src->point_ref_stokesQ, expected_n_points);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_point_array,
+                            temp_cropped_src->point_ref_stokesU, expected_n_points);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_point_array,
+                            temp_cropped_src->point_ref_stokesV, expected_n_points);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_point_array,
+                            temp_cropped_src->point_SIs, expected_n_points);
+    //
+    //Check POINT source prinary beam params were split correctly
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_point_array,
+                    temp_cropped_src->point_azs, expected_n_points*num_time_steps);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_point_array,
+                    temp_cropped_src->point_zas, expected_n_points*num_time_steps);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_point_array,
+          temp_cropped_src->cos_point_para_angs, expected_n_points*num_time_steps);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_point_array,
+          temp_cropped_src->sin_point_para_angs, expected_n_points*num_time_steps);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_point_array,
+          temp_cropped_src->point_gaussbeam_has, expected_n_points*num_time_steps);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_point_array,
+          temp_cropped_src->point_gaussbeam_decs, expected_n_points*num_time_steps);
+
+    free(expec_index_point_array);
+    free(expec_repeat_point_array);
+
+  }
+
+  if (expected_n_gauss > 0) {
+    // printf("Found GAUSS, chunk_ind %d expected_n_gausss %d\n",chunk_ind, expected_n_gauss );
+    TEST_ASSERT_EQUAL_INT(expected_n_gauss, temp_cropped_src->n_gauss);
+
+    float *expec_index_gauss_array = malloc(expected_n_gauss*sizeof(float));
+    make_index_array(expec_index_gauss_array, expected_n_gauss, * gauss_accum);
+
+    float *expec_repeat_gauss_array = malloc(num_time_steps*expected_n_gauss*sizeof(float));
+    make_repeat_array(expec_repeat_gauss_array, expected_n_gauss,
+                      num_time_steps, * gauss_accum);
+
+    //Check GAUSS source params were split correctly
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_gauss_array,
+                                  temp_cropped_src->gauss_ras, expected_n_gauss);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_gauss_array,
+                                  temp_cropped_src->gauss_decs, expected_n_gauss);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_gauss_array,
+                                  temp_cropped_src->gauss_ref_freqs, expected_n_gauss);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_gauss_array,
+                                  temp_cropped_src->gauss_ref_stokesI, expected_n_gauss);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_gauss_array,
+                                  temp_cropped_src->gauss_ref_stokesQ, expected_n_gauss);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_gauss_array,
+                                  temp_cropped_src->gauss_ref_stokesU, expected_n_gauss);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_gauss_array,
+                                  temp_cropped_src->gauss_ref_stokesV, expected_n_gauss);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_gauss_array,
+                                  temp_cropped_src->gauss_SIs, expected_n_gauss);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_gauss_array,
+                                  temp_cropped_src->gauss_pas, expected_n_gauss);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_gauss_array,
+                                  temp_cropped_src->gauss_majors, expected_n_gauss);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_gauss_array,
+                                  temp_cropped_src->gauss_minors, expected_n_gauss);
+
+    //Check GAUSS source prinary beam params were split correctly
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_gauss_array,
+                    temp_cropped_src->gauss_azs, expected_n_gauss*num_time_steps);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_gauss_array,
+                    temp_cropped_src->gauss_zas, expected_n_gauss*num_time_steps);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_gauss_array,
+          temp_cropped_src->cos_gauss_para_angs, expected_n_gauss*num_time_steps);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_gauss_array,
+          temp_cropped_src->sin_gauss_para_angs, expected_n_gauss*num_time_steps);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_gauss_array,
+          temp_cropped_src->gauss_gaussbeam_has, expected_n_gauss*num_time_steps);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_gauss_array,
+          temp_cropped_src->gauss_gaussbeam_decs, expected_n_gauss*num_time_steps);
+
+    free(expec_index_gauss_array);
+    free(expec_repeat_gauss_array);
+  }
+  * point_accum += expected_n_points;
+  * gauss_accum += expected_n_gauss;
+
+}
+
+
+
+
+void check_shapelet_chunking(int chunk_ind, int coeffs_per_chunk,
+                             int num_time_steps,
+                             int num_coeff_per_shape,
+                             catsource_t *cropped_src,
+                             catsource_t *temp_cropped_src){
+
+  //How far through all coeffs are we with this chunk
+  int chunk_coeff_ind = chunk_ind*coeffs_per_chunk;
+  //How many POINT sources are left after this chunk index
+  int coeff_remainder = cropped_src->n_shape_coeffs - chunk_coeff_ind;
+
+  //Things to use in logic below
+  int expected_n_coeffs = 0;
+  int chunk_remainder = 0;
+
+  if (coeff_remainder > 0) { //There are SHAPELET sources, how many should there be?
+    if (coeff_remainder >= coeffs_per_chunk) { //SHAPELET sources fill the whole chunk
+      expected_n_coeffs = coeffs_per_chunk;
+    } else { //Not enough shapelet coeffs to fill the chunk
+      expected_n_coeffs = coeff_remainder;
+    }
+  }
+  else {
+    printf("SHOULD NOT BE HERE\n");
+  }
+
+  if (expected_n_coeffs > 0) {
+    // printf("Found POINT, chunk_ind %d expected_n_points %d\n",chunk_ind, expected_n_points );
+
+    TEST_ASSERT_EQUAL_INT(expected_n_coeffs, temp_cropped_src->n_shape_coeffs);
+    TEST_ASSERT_EQUAL_INT(cropped_src->n_shapes, temp_cropped_src->n_shapes);
+    //
+    //As we only split over basis function coeff info, all of these arrrays
+    //should just be pointer copies
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_ras,
+                            temp_cropped_src->shape_ras, cropped_src->n_shapes);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_decs,
+                            temp_cropped_src->shape_decs, cropped_src->n_shapes);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_ref_freqs,
+                            temp_cropped_src->shape_ref_freqs, cropped_src->n_shapes);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_ref_stokesI,
+                            temp_cropped_src->shape_ref_stokesI, cropped_src->n_shapes);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_ref_stokesQ,
+                            temp_cropped_src->shape_ref_stokesQ, cropped_src->n_shapes);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_ref_stokesU,
+                            temp_cropped_src->shape_ref_stokesU, cropped_src->n_shapes);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_ref_stokesV,
+                            temp_cropped_src->shape_ref_stokesV, cropped_src->n_shapes);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_SIs,
+                            temp_cropped_src->shape_SIs, cropped_src->n_shapes);
+    //
+    //As we only split over basis function coeff info, all of these arrrays
+    //should just be pointer copies
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_azs,
+                    temp_cropped_src->shape_azs, cropped_src->n_shapes*num_time_steps);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_zas,
+                    temp_cropped_src->shape_zas, cropped_src->n_shapes*num_time_steps);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->cos_shape_para_angs,
+          temp_cropped_src->cos_shape_para_angs, cropped_src->n_shapes*num_time_steps);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->sin_shape_para_angs,
+          temp_cropped_src->sin_shape_para_angs, cropped_src->n_shapes*num_time_steps);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_gaussbeam_has,
+          temp_cropped_src->shape_gaussbeam_has, cropped_src->n_shapes*num_time_steps);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_gaussbeam_decs,
+          temp_cropped_src->shape_gaussbeam_decs, cropped_src->n_shapes*num_time_steps);
+
+
+    //THESE are the arrays that should actually be split up
+    //With the way I've set up the sky model creation, the coeff splitting
+    //should yield arrays which are the index of cropped_src integer divided
+    //by number of coeffs per shapelet
+
+    float *expec_repeat_shape_array = malloc(expected_n_coeffs*sizeof(float));
+
+    int new_ind = 0;
+    for (int orig_index = chunk_coeff_ind; orig_index < chunk_coeff_ind + expected_n_coeffs; orig_index++) {
+      expec_repeat_shape_array[new_ind] = (float)(orig_index / num_coeff_per_shape);
+      new_ind ++;
+    }
+
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_shape_array,
+                    temp_cropped_src->shape_coeffs, expected_n_coeffs);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_shape_array,
+                    temp_cropped_src->shape_n1s, expected_n_coeffs);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_shape_array,
+                    temp_cropped_src->shape_n2s, expected_n_coeffs);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_shape_array,
+                    temp_cropped_src->shape_param_indexes, expected_n_coeffs);
+
+    free(expec_repeat_shape_array);
+
+  }
 }

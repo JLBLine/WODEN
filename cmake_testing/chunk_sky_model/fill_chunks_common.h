@@ -34,3 +34,21 @@ catsource_t * make_sky_model(int num_points, int num_gauss,
 
 //Frees the created sky model
 void free_sky_model(catsource_t *cropped_src);
+
+/*
+Check the point/gaussian chunking has worked for a particular chunk
+*/
+void check_pointgauss_chunking(int chunk_ind, int comps_per_chunk,
+                             int num_time_steps,
+                             int * point_accum, int * gauss_accum,
+                             catsource_t *cropped_src,
+                             catsource_t *temp_cropped_src);
+
+/*
+Check the shapelet chunking has worked for a particular chunk
+*/
+void check_shapelet_chunking(int chunk_ind, int coeffs_per_chunk,
+                             int num_time_steps,
+                             int num_coeff_per_shape,
+                             catsource_t *cropped_src,
+                             catsource_t *temp_cropped_src);

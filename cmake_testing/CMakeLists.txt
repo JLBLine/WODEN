@@ -1,9 +1,13 @@
+##Test CUDA code
 add_subdirectory(fundamental_coords)
-add_subdirectory(primary_beam)
+add_subdirectory(FEE_primary_beam_cuda)
 add_subdirectory(primary_beam_cuda)
 add_subdirectory(source_components)
-add_subdirectory(FEE_primary_beam_cuda)
-add_subdirectory(shapelet_basis)
-add_subdirectory(read_and_write)
-add_subdirectory(create_sky_model)
+
+##Test C code
 add_subdirectory(chunk_sky_model)
+add_subdirectory(create_sky_model)
+add_subdirectory(FEE_primary_beam)
+add_subdirectory(primary_beam)
+add_subdirectory(read_and_write)
+add_subdirectory(shapelet_basis)

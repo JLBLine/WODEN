@@ -133,11 +133,9 @@ int main(int argc, char **argv) {
   beam_settings_t *beam_settings = fill_primary_beam_settings(woden_settings,
                                                              cropped_src, lsts);
 
+  // Chunk the sky models into smaller pieces that fit onto the GPU
   source_catalogue_t *cropped_sky_models = create_chunked_sky_models(cropped_src,
                                                                      woden_settings);
-
-  // int num_chunks = cropped_sky_models->num_sources;
-
 
 
   //MWA correlator data is split into 24 'coarse' bands of 1.28MHz bandwidth,
@@ -227,76 +225,16 @@ int main(int argc, char **argv) {
       }//freq loop
     }//time loop
 
-    //Calculating a single shapelet coeff is equivalent to a point/gauss so treat as a
-    //component here
-
-    // int num_components = cropped_src->n_points + cropped_src->n_gauss + cropped_src->n_shape_coeffs;
-    // int num_chunks;
-    // //TODO should we chunk outside the band for-loop so that we can reuse the chunks for each band (should be the same)
-    // if (num_components > woden_settings->chunking_size) {
-    //   num_chunks = num_components / woden_settings->chunking_size;
-    //
-    //   if (num_components % woden_settings->chunking_size != 0) {
-    //     num_chunks = num_chunks + 1;
-    //   }
-    //   printf("Number of chunks required is %d\n",  num_chunks);
-    // } else {
-    //   num_chunks = 1;
-    // }
-
-    // //Make a struct to contain sky as many sky models and beam settings as
-    // //needed
-    // source_catalogue_t *cropped_sky_models;
-    // cropped_sky_models = malloc(sizeof(source_catalogue_t));
-    //
-    // cropped_sky_models->num_sources = num_chunks;
-    // cropped_sky_models->num_shapelets = 0;
-    // cropped_sky_models->catsources = malloc(num_chunks*sizeof(catsource_t));
-    // cropped_sky_models->beam_settings = malloc(num_chunks*sizeof(beam_settings_t));
-    //
-    // catsource_t *temp_cropped_src = malloc(sizeof(catsource_t));
-    // int point_iter = 0;
-    // int gauss_iter = 0;
-    // int shape_iter = 0;
-    //
-    // printf("Chunking sky model..\n");
-    //For each chunk, calculate the visibilities for those components
-    // for (int chunk = 0; chunk < num_chunks; chunk++) {
-    //
-    //   // fill_chunk_src(temp_cropped_src, cropped_src, num_chunks, chunk,
-    //   //                woden_settings->chunking_size,
-    //   //                woden_settings->num_time_steps,
-    //   //                &point_iter, &gauss_iter, &shape_iter);
-    //   //
-    //   // //Add the number of shapelets onto the full source catalogue value
-    //   // //so we know if we need to setup shapelet basis functions in GPU memory
-    //   // //or not
-    //   // cropped_sky_models->num_shapelets += temp_cropped_src->n_shapes;
-    //
-    //   beam_settings_t beam_settings_chunk;
-    //   beam_settings_chunk = make_beam_settings_chunk(beam_settings, temp_cropped_src,
-    //                         cropped_src, woden_settings, point_iter, gauss_iter, shape_iter);
-    //
-    //   // printf("Managed to chunk the beam %d\n",chunk );
-    //
-    //   // cropped_sky_models->catsources[chunk] = *temp_cropped_src;
-    //   cropped_sky_models->beam_settings[chunk] = beam_settings_chunk;
-    //
-    // }
-
     calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
                   woden_settings, visibility_set, sbf);
 
     printf("GPU calls for band %d finished\n",band_num );
-
-    // free(temp_cropped_src);
 
     //Dumps u,v,w (metres), Re(vis), Im(vis) to a binary file
     //Output order is by baseline (fastest changing), frequency, time (slowest
     //changing)
     //This means the us_metres, vs_metres, ws_metres are repeated over frequency,
     //but keeps the dimensions of the output sane
-
     FILE *output_visi;
     char buf[0x100];
     snprintf(buf, sizeof(buf), "output_visi_band%02d.dat", band_num);
