@@ -3,7 +3,7 @@
 #include <math.h>
 
 #include "constants.h"
-#include "read_and_write.h"
+#include "woden_settings.h"
 #include "create_sky_model.h"
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */

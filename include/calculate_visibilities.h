@@ -17,6 +17,7 @@
 
 @details Uses the telescope model described in `array_layout`, an
 array of sky models and beam settings described by `cropped_sky_models`,
+the primary beam settings described by `beam_settings`
 and the simulation settings described in `woden_settings` to run the GPU
 simulation. `sbf` is the shapelet basis function, which will be copied in device
 memory if SHAPELET components are present in the sky models. `num_chunks`
@@ -26,6 +27,7 @@ the resultant visibilities into `visibility_set`.
 @param[in] *array_layout Pointer to an `array_layout_t` struct
 @param[in] *cropped_sky_models Pointer to a populated `source_catalogue_t`
 struct
+@param[in] *beam_settings Pointer to populated `beam_settings_t` struct
 @param[in] *woden_settings Pointer to a populated `woden_settings_t` struct
 @param[in,out] *visibility_set Pointer to an initialised visibility_set_t struct
 @param[in] *sbf An array of gridded shapelet basis function values as created by

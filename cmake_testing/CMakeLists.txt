@@ -5,9 +5,10 @@ add_subdirectory(primary_beam_cuda)
 add_subdirectory(source_components)
 
 ##Test C code
+add_subdirectory(array_layout)
 add_subdirectory(chunk_sky_model)
 add_subdirectory(create_sky_model)
 add_subdirectory(FEE_primary_beam)
 add_subdirectory(primary_beam)
-add_subdirectory(read_and_write)
+add_subdirectory(woden_settings)
 add_subdirectory(shapelet_basis)

@@ -13,7 +13,7 @@
 into `FEE_beam->d_M`, `FEE_beam->d_N`, `FEE_beam->d_Q1`, `FEE_beam->d_Q2`,
 reshaping from 2D arrays into 1D arrays.
 
-@param[in,out] FEE_beam `RTS_MWA_FEE_beam_t` which has been initialised with
+@param[in,out] *FEE_beam `RTS_MWA_FEE_beam_t` which has been initialised with
 `FEE_primary_beam.RTS_MWAFEEInit`
 
 */
@@ -558,8 +558,7 @@ must be allocated.
 @param[in] num_components Number of azimuth and zenith angles
 @param[in] azs Array of azimuth values (radians)
 @param[in] zas Array of zenith angle values (radians)
-@param[in] sin_para_angs Sine of the parallactic angle for all az,za
-@param[in] cos_para_angs Cosine of the parallactic angle for all az,za
+@param[in] latitude Latitude of the instrument (radians)
 @param[in, out] FEE_beam_zenith An initialised `RTS_MWA_FEE_beam_t` containing
 MWA FEE spherical harmonic coeffs for a zenith pointing
 @param[in, out] FEE_beam An initialised `RTS_MWA_FEE_beam_t` containing MWA FEE

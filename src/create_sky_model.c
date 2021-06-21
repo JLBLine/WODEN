@@ -1,15 +1,410 @@
 /*******************************************************************************
-*  Methods to crop a WODEN style sky model to everything above the horizon.
+*  Methods to read in and crop a WODEN style sky model to everything
+*  above the horizon.
 *  @author J.L.B. Line
 *
 *  Please see documentation in ../include/create_sky_model.h or online at
 *  https://woden.readthedocs.io/en/latest/index.html
 *******************************************************************************/
 #include <stdio.h>
+#include <string.h>
 #include <erfa.h>
 #include <math.h>
 #include "constants.h"
 #include "create_sky_model.h"
+
+/*********************************
+// Taken and edited from the RTS (Mitchell et al 2008)
+// All credit to the original authors
+// https://github.com/ICRAR/mwa-RTS.git
+**********************************/
+int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
+  int result, n_src=0, n_comps=0;
+  int src_found=0, comp_found=0;
+  int src_key=0, src_end=0, comp_key=0, comp_end=0, freq_key=0;
+  int linear_key=0, type_key=0, param_key=0, coeff_key=0;
+
+  char comp_type[16];
+  float ra, dec;
+  float freq, flux_I, flux_Q, flux_U, flux_V;
+  float SI;
+  float coeff1, coeff2, coeff3;
+
+  int point_ind=0, gauss_ind=0, shape_ind=0;
+  int coeff_ind=0;
+
+  //So we know how many s_coeffs we have put into S1_coeffs for each source
+
+  //Array that will end up being as long as the number of sources,
+  //containing catsource_t structs
+  catsource_t *srcs=NULL;
+
+  //Total number of SHAPELET COMPONENTs in the entire source catalogue
+  //Start it off at zero
+  srccat->num_shapelets = 0;
+
+  //Reading in things
+  FILE *fp=NULL;
+  char line[BUFSIZ];
+
+  /* open file */
+  if ((fp=fopen(filename,"r"))==NULL) {
+    printf("read_source_catalogue error: failed to open source file <%s>\n", filename);
+    // exit(1);
+    return 1;
+  }
+
+  // /* allocate the catalogue object */
+  // srccat = malloc( sizeof(source_catalogue_t) );
+  // if (srccat==NULL) {
+  //   printf("read_source_catalogue error: no malloc for srccat\n");
+  //   return NULL;
+  // }
+
+
+  int line_number = 1;
+  //Read in line by line and do "smart" things accordingly
+  while(fgets(line,BUFSIZ,fp) != NULL) {
+    /* skip blank lines and comments */
+    if (line[0]=='\n' || line[0] == '#'|| line[0] == '\0') continue;
+
+    /* lines must start with one of the following keywords... which one is it? */
+    linear_key = src_key = src_end = comp_key = comp_end = freq_key = param_key = coeff_key = 0;
+    if(strncmp(line, SRC_KEY, strlen(SRC_KEY))==0) src_key=1;
+    if(strncmp(line, SRC_END, strlen(SRC_END))==0) src_end=1;
+    if(strncmp(line, COMP_KEY, strlen(COMP_KEY))==0) comp_key=1;
+    if(strncmp(line, COMP_END, strlen(COMP_END))==0) comp_end=1;
+    if(strncmp(line, FREQ_KEY, strlen(FREQ_KEY))==0) freq_key=1;
+    if(strncmp(line, LINEAR_KEY, strlen(LINEAR_KEY))==0) linear_key=1;
+    if(strncmp(line, GPARAMS_KEY, strlen(GPARAMS_KEY))==0) param_key=1;
+    if(strncmp(line, SPARAMS_KEY, strlen(SPARAMS_KEY))==0) param_key=1;
+    if(strncmp(line, SCOEFF_KEY, strlen(SCOEFF_KEY))==0) coeff_key=1;
+
+    /* if a source key hasn't been found, skip lines until one is found */
+    if ( (src_key==0 && src_end==0 && comp_key==0 && comp_end==0 && freq_key==0 && param_key==0 && coeff_key==0 && linear_key==0) ||
+         (src_found==0 && src_key==0) /* i.e., haven't started a new source */ ) {
+        // printf("%c%c%c%c %s %d %d\n",line[0],line[1],line[2],line[3],FREQ_KEY,freq_key,strncmp(line, FREQ_KEY, strlen(FREQ_KEY)));
+        printf("read_source_catalogue: line %d is bad, please fix this line:\n\t%s\n",line_number, line);
+        return 1;
+    }
+
+    if (src_end) {
+        if (srcs[n_src-1].n_comps == 0){
+            printf("WARNING read_source_catalogue: source <%s> had no components\n", srcs[n_src-1].name );
+            n_src--;
+        }
+        src_found=0;
+        continue;
+    }
+
+    /* is this the start of a new source, or more information for the current source? */
+    if (src_found && src_key) {
+        printf("read_source_catalogue error: found source key in line: \n %s \n while already reading a source\n",
+              line );
+        // return NULL;
+        return 1;
+    }
+
+    else if (src_key) {
+
+      /* found a new source. make more room, get the details */
+      src_found=1;
+      n_src++;
+      srcs = realloc(srcs,sizeof(catsource_t)*n_src);
+      if (srcs == NULL) {
+        printf("read_source_catalogue error: no realloc for cat\n");
+        // return NULL;
+        return 1;
+      }
+
+      comp_found=0;
+      point_ind=0;
+      gauss_ind=0;
+      shape_ind=0;
+      coeff_ind=0;
+
+      // srcs[n_src-1].name = NULL;
+      srcs[n_src-1].n_comps = 0;
+      srcs[n_src-1].n_points = 0;
+      srcs[n_src-1].n_gauss = 0;
+      srcs[n_src-1].n_shapes = 0;
+      srcs[n_src-1].n_shape_coeffs = 0;
+
+      //Line should look like <SOURCE name P %d G %d S %d %d>
+      //%*s ignores input so we don't have to read in useless input
+      result = sscanf( line, "%*s %s %*s %d %*s %d %*s %d %d", srcs[n_src-1].name,
+                        &(srcs[n_src-1].n_points), &(srcs[n_src-1].n_gauss),
+                        &(srcs[n_src-1].n_shapes), &(srcs[n_src-1].n_shape_coeffs) );
+      if (result != 5) {
+          printf("read_source_catalogue error: problem reading line %d:\n\t %s \n", line_number,line );
+          return 1;
+          // return NULL;
+      }
+
+      srcs[n_src-1].n_comps = srcs[n_src-1].n_points + srcs[n_src-1].n_gauss + srcs[n_src-1].n_shapes;
+
+      //Update the total count of SHAPELET COMPONENTs in the entire source catalogue
+      srccat->num_shapelets += srcs[n_src-1].n_shapes;
+
+      // printf("New source: name: <%s>, Comps:%d  P:%d  G:%d  S:%d-%d \n",
+      //       srcs[n_src-1].name, srcs[n_src-1].n_comps, srcs[n_src-1].n_points, srcs[n_src-1].n_gauss,
+      //       srcs[n_src-1].n_shapes, srcs[n_src-1].n_shape_coeffs );
+
+      //Now we know the number of sources, do some mallocing
+      //Pointsource params
+      srcs[n_src-1].point_ras = malloc( srcs[n_src-1].n_points * sizeof(float) );
+      srcs[n_src-1].point_decs = malloc( srcs[n_src-1].n_points * sizeof(float) );
+      srcs[n_src-1].point_SIs = malloc( srcs[n_src-1].n_points * sizeof(float) );
+      srcs[n_src-1].point_ref_stokesI = malloc( srcs[n_src-1].n_points * sizeof(float) );
+      srcs[n_src-1].point_ref_stokesQ = malloc( srcs[n_src-1].n_points * sizeof(float) );
+      srcs[n_src-1].point_ref_stokesU = malloc( srcs[n_src-1].n_points * sizeof(float) );
+      srcs[n_src-1].point_ref_stokesV = malloc( srcs[n_src-1].n_points * sizeof(float) );
+      srcs[n_src-1].point_ref_freqs = malloc( srcs[n_src-1].n_points * sizeof(float) );
+
+      //Gaussian params
+      srcs[n_src-1].gauss_ras = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
+      srcs[n_src-1].gauss_decs = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
+      srcs[n_src-1].gauss_SIs = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
+      srcs[n_src-1].gauss_ref_stokesI = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
+      srcs[n_src-1].gauss_ref_stokesQ = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
+      srcs[n_src-1].gauss_ref_stokesU = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
+      srcs[n_src-1].gauss_ref_stokesV = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
+      srcs[n_src-1].gauss_ref_freqs = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
+      srcs[n_src-1].gauss_majors = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
+      srcs[n_src-1].gauss_minors = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
+      srcs[n_src-1].gauss_pas = malloc( srcs[n_src-1].n_gauss * sizeof(float) );
+      //Shapelet params
+      srcs[n_src-1].shape_ras = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_decs = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_ref_stokesI = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_SIs = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_ref_stokesQ = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_ref_stokesU = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_ref_stokesV = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_ref_freqs = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_majors = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_minors = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      srcs[n_src-1].shape_pas = malloc( srcs[n_src-1].n_shapes * sizeof(float) );
+      //Need bigger arrays to hold the coeffs - make a shape_param_indexes
+      //array so we can map each n1.n2,coeff to the corresponding pa,major,minor
+      //when we have multiple shapelet models within a source
+      srcs[n_src-1].shape_n1s = malloc( srcs[n_src-1].n_shape_coeffs * sizeof(float) );
+      srcs[n_src-1].shape_n2s = malloc( srcs[n_src-1].n_shape_coeffs * sizeof(float) );
+      srcs[n_src-1].shape_coeffs = malloc( srcs[n_src-1].n_shape_coeffs * sizeof(float) );
+      srcs[n_src-1].shape_param_indexes = malloc( srcs[n_src-1].n_shape_coeffs * sizeof(float) );
+
+    }
+
+    else if (comp_key) {
+
+      /* found a new source component. get the details */
+      comp_found=1;
+      n_comps++;
+
+      result = sscanf( line, "%*s %s %f %f", comp_type, &ra, &dec );
+      if (result != 3) {
+          printf("read_source_catalogue error %d: problem reading cal component input line number %d\n\t %s \n", result, line_number, line );
+          // return NULL;
+          return 1;
+      }
+
+      if(strncmp(comp_type, POINT_KEY, strlen(POINT_KEY))==0) type_key=POINT;
+      if(strncmp(comp_type, GAUSSIAN_KEY, strlen(GAUSSIAN_KEY))==0) type_key=GAUSSIAN;
+      if(strncmp(comp_type, SHAPELET_KEY, strlen(SHAPELET_KEY))==0) type_key=SHAPELET;
+
+      switch (type_key) {
+        case POINT:
+          point_ind++;
+          /* convert to radian */
+          srcs[n_src-1].point_ras[point_ind-1] = ra * DH2R;
+          srcs[n_src-1].point_decs[point_ind-1] = dec * DD2R;
+          // LOGV( LOG_LOW, "New source component: <%s> component %d, ra: %8.5f hrs, dec: %+9.5f deg\n",
+          //       cat[n_src-1].components[n_comps-1].ra*DR2H, cat[n_src-1].components[n_comps-1].dec*DR2D );
+        break;
+
+        case GAUSSIAN:
+          gauss_ind++;
+          srcs[n_src-1].gauss_ras[gauss_ind-1] = ra * DH2R;
+          srcs[n_src-1].gauss_decs[gauss_ind-1] = dec * DD2R;
+        break;
+
+        case SHAPELET:
+          shape_ind++;
+          srcs[n_src-1].shape_ras[shape_ind-1] = ra * DH2R;
+          srcs[n_src-1].shape_decs[shape_ind-1] = dec * DD2R;
+        break;
+
+        default:
+          printf("read_source_catalogue error: unknown source type: %s on line %d:\n\t %s \n", comp_type,line_number, line );
+          // return NULL;
+          return 1;
+
+
+      }//switch (type_key)
+    }//if (comp_key)
+
+    else if (freq_key && comp_found==1) {
+
+      result = sscanf( line, "%*s %f %f %f %f %f", &freq, &flux_I, &flux_Q, &flux_U, &flux_V );
+      if (result != 5) {
+          printf("read_source_catalogue error %d: problem reading cal component input line number %d\n\t %s \n", result, line_number, line );
+          // return NULL;
+          return 1;
+      }
+
+      switch (type_key) {
+        case POINT:
+
+          srcs[n_src-1].point_ref_freqs[point_ind-1] = freq;
+          srcs[n_src-1].point_ref_stokesI[point_ind-1] = flux_I;
+          srcs[n_src-1].point_ref_stokesQ[point_ind-1] = flux_Q;
+          srcs[n_src-1].point_ref_stokesU[point_ind-1] = flux_U;
+          srcs[n_src-1].point_ref_stokesV[point_ind-1] = flux_V;
+          srcs[n_src-1].point_SIs[point_ind-1] = DEFAULT_SI;
+          // LOGV( LOG_LOW, "New source component: <%s> component %d, ra: %8.5f hrs, dec: %+9.5f deg\n",
+          //       cat[n_src-1].components[n_comps-1].ra*DR2H, cat[n_src-1].components[n_comps-1].dec*DR2D );
+        break;
+
+        case GAUSSIAN:
+          srcs[n_src-1].gauss_ref_freqs[gauss_ind-1] = freq;
+          srcs[n_src-1].gauss_ref_stokesI[gauss_ind-1] = flux_I;
+          srcs[n_src-1].gauss_ref_stokesQ[gauss_ind-1] = flux_Q;
+          srcs[n_src-1].gauss_ref_stokesU[gauss_ind-1] = flux_U;
+          srcs[n_src-1].gauss_ref_stokesV[gauss_ind-1] = flux_V;
+          srcs[n_src-1].gauss_SIs[gauss_ind-1] = DEFAULT_SI;
+        break;
+
+        case SHAPELET:
+          srcs[n_src-1].shape_ref_freqs[shape_ind-1] = freq;
+          srcs[n_src-1].shape_ref_stokesI[shape_ind-1] = flux_I;
+          srcs[n_src-1].shape_ref_stokesQ[shape_ind-1] = flux_Q;
+          srcs[n_src-1].shape_ref_stokesU[shape_ind-1] = flux_U;
+          srcs[n_src-1].shape_ref_stokesV[shape_ind-1] = flux_V;
+          srcs[n_src-1].shape_SIs[shape_ind-1] = DEFAULT_SI;
+        break;
+
+      default:
+        printf("%d read_source_catalogue error assigning info from line %d:\n\t<%s>\n", type_key,  line_number, line );
+        // return NULL;
+        return 1;
+
+      }//switch (type_key)
+
+    }//if (freq_key && comp_found==1)
+
+
+    else if (linear_key && comp_found==1) {
+
+      //I'm ignoring Stokes Q,U,V for now
+      result = sscanf( line, "%*s %f %f %f %f %f %f", &freq, &flux_I, &flux_Q, &flux_U, &flux_V, &SI );
+      if (result != 6) {
+          printf("%d read_source_catalogue error: problem reading cal component input from line %d:\n\t<%s>\n", result, line_number, line );
+          // return NULL;
+          return 1;
+      }
+
+      switch (type_key) {
+        case POINT:
+
+          srcs[n_src-1].point_ref_freqs[point_ind-1] = freq;
+          srcs[n_src-1].point_ref_stokesI[point_ind-1] = flux_I;
+          srcs[n_src-1].point_ref_stokesQ[point_ind-1] = flux_Q;
+          srcs[n_src-1].point_ref_stokesU[point_ind-1] = flux_U;
+          srcs[n_src-1].point_ref_stokesV[point_ind-1] = flux_V;
+          srcs[n_src-1].point_SIs[point_ind-1] = SI;
+        break;
+
+        case GAUSSIAN:
+          srcs[n_src-1].gauss_ref_freqs[gauss_ind-1] = freq;
+          srcs[n_src-1].gauss_ref_stokesI[gauss_ind-1] = flux_I;
+          srcs[n_src-1].gauss_ref_stokesQ[gauss_ind-1] = flux_Q;
+          srcs[n_src-1].gauss_ref_stokesU[gauss_ind-1] = flux_U;
+          srcs[n_src-1].gauss_ref_stokesV[gauss_ind-1] = flux_V;
+          srcs[n_src-1].gauss_SIs[gauss_ind-1] = SI;
+        break;
+
+        case SHAPELET:
+          srcs[n_src-1].shape_ref_freqs[shape_ind-1] = freq;
+          srcs[n_src-1].shape_ref_stokesI[shape_ind-1] = flux_I;
+          srcs[n_src-1].shape_ref_stokesQ[shape_ind-1] = flux_Q;
+          srcs[n_src-1].shape_ref_stokesU[shape_ind-1] = flux_U;
+          srcs[n_src-1].shape_ref_stokesV[shape_ind-1] = flux_V;
+          srcs[n_src-1].shape_SIs[shape_ind-1] = SI;
+        break;
+
+      default:
+        printf("%d read_source_catalogue error assigning info from line %d:\n\t<%s>\n", type_key,  line_number, line );
+        // return NULL;
+        return 1;
+
+      }//switch (type_key)
+
+    }//if (freq_key && comp_found==1)
+
+    else if (param_key && comp_found==1) {
+      result = sscanf( line, "%*s %f %f %f", &coeff1, &coeff2, &coeff3 );
+      if (result != 3) {
+          printf("%d read_source_catalogue error: problem reading component input from line %d:\n\t<%s>\n", result, line_number, line );
+          // return NULL;
+          return 1;
+      }
+
+      switch (type_key) {
+        case GAUSSIAN:
+          srcs[n_src-1].gauss_pas[gauss_ind-1] =  coeff1 * DD2R;
+          srcs[n_src-1].gauss_majors[gauss_ind-1] = coeff2 * (DD2R / 60.0);
+          srcs[n_src-1].gauss_minors[gauss_ind-1] = coeff3 * (DD2R / 60.0);
+        break;
+
+        case SHAPELET:
+          srcs[n_src-1].shape_pas[shape_ind-1] =  coeff1 * DD2R;
+          srcs[n_src-1].shape_majors[shape_ind-1] = coeff2 * (DD2R / 60.0);
+          srcs[n_src-1].shape_minors[shape_ind-1] = coeff3 * (DD2R / 60.0);
+        break;
+
+      default:
+        printf("read_source_catalogue error: problem reading component input from line %d:\n\t %s \n", line_number, line );
+        // return NULL;
+        return 1;
+      }//switch (type_key)
+    }//if (param_key && comp_found==1)
+
+    else if (coeff_key && comp_found==1) {
+      result = sscanf( line, "%*s %f %f %f", &coeff1, &coeff2, &coeff3 );
+      if (result != 3) {
+          printf("read_source_catalogue error: problem reading coeffs component input from line %d:\n\t %s \n", line_number, line );
+          // return NULL;
+          return 1;
+      }
+
+      switch (type_key) {
+        case SHAPELET:
+          srcs[n_src-1].shape_n1s[coeff_ind] = coeff1;
+          srcs[n_src-1].shape_n2s[coeff_ind] = coeff2;
+          srcs[n_src-1].shape_coeffs[coeff_ind] = coeff3;
+          srcs[n_src-1].shape_param_indexes[coeff_ind] = shape_ind - 1;
+        break;
+
+      default:
+        printf("read_source_catalogue error: problem reading input from line %d:\n\t<%s>\n", line_number, line );
+        // return NULL;
+        return 1;
+      }//switch (type_key)
+      coeff_ind++;
+    }//if (param_key && comp_found==1)
+
+    else if (comp_end==1) {
+      comp_found = 0;
+    }
+    line_number += 1;
+  }//while fgets(line,BUFSIZ,fp) != NULL)
+
+  /* set pointers and counts in the final catalogue object */
+  srccat->catsources = srcs;
+  srccat->num_sources = n_src;
+
+  return 0;
+} //read_sources
 
 
 /*********************************

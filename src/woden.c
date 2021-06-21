@@ -13,7 +13,9 @@
 #include "print_help.h"
 #include "primary_beam.h"
 #include "FEE_primary_beam.h"
-#include "read_and_write.h"
+#include "woden_settings.h"
+#include "visibility_set.h"
+#include "array_layout.h"
 
 //Main CUDA executable to link in
 extern void calculate_visibilities(array_layout_t * array_layout,
@@ -61,58 +63,18 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  if (woden_settings->chunking_size > MAX_CHUNKING_SIZE) {
-    printf("Current maximum allowable chunk size is %ld.  Defaulting to this value.", MAX_CHUNKING_SIZE);
-    woden_settings->chunking_size = MAX_CHUNKING_SIZE;
-  }
-  else if (woden_settings->chunking_size < 1 ) {
-    woden_settings->chunking_size = MAX_CHUNKING_SIZE;
-  }
-
   //Create the array layout in instrument-centric X,Y,Z using positions
   //Rotate back to J2000 if necessary
   array_layout_t * array_layout;
   //Hard code to rotate back to J2000 at the moment
   int do_precession = 1;
   array_layout = calc_XYZ_diffs(woden_settings, do_precession);
-  woden_settings->num_baselines = array_layout->num_baselines;
 
-  //Set some constants based on the settings
-  float ha0, sha0, cha0;
-  float wavelength;
-  float frequency;
-  const int num_visis = woden_settings->num_baselines * woden_settings->num_time_steps * woden_settings->num_freqs;
-
-  woden_settings->num_visis = num_visis;
-
-  float sdec0,cdec0;
-  sdec0 = sin(woden_settings->dec0); cdec0=cos(woden_settings->dec0);
-
-  printf("Setting initial LST to %.5fdeg\n",woden_settings->lst_base/DD2R );
-  printf("Setting phase centre RA,DEC %.5fdeg %.5fdeg\n",woden_settings->ra0/DD2R, woden_settings->dec0/DD2R);
-
-  //Used for calculating l,m,n for components
-  // float angles_array[3] = {sdec0, cdec0, woden_settings->ra0};
-  woden_settings->sdec0 = sdec0;
-  woden_settings->cdec0 = cdec0;
-
-  int num_time_steps = woden_settings->num_time_steps;
-
-  //Calculate all lsts for this observation
-  float lsts[num_time_steps];
-
-  for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
-    float lst = woden_settings->lst_base + time_step*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
-
-    //Add half a time_res so we are sampling centre of each time step
-    lst += 0.5*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
-    lsts[time_step] = lst;
-  }
+  //Setup all LSTs array for all time steps in this simulation
+  float *lsts = setup_lsts_and_phase_centre(woden_settings);
 
   //Read in the source catalogue
   source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );
-  //Malloc srccat
-  // srccat =
   status = read_source_catalogue(woden_settings->cat_filename, raw_srccat);
 
   if (status == 1) {
@@ -122,10 +84,10 @@ int main(int argc, char **argv) {
 
   //Crop emission below the horizon, and collapse all SOURCES from raw_srccat
   //into one single SOURCE
-  printf("Horizon cropping sky model and calculating az/za for all components for observation\n");
+  printf("Horizon cropping sky model and calculating az/za for all components\nfor observation\n");
   // catsource_t *cropped_src;
   catsource_t *cropped_src = crop_sky_model(raw_srccat, lsts, woden_settings->latitude,
-                               num_time_steps, woden_settings->sky_crop_type);
+                               woden_settings->num_time_steps, woden_settings->sky_crop_type);
 
   printf("Finished cropping and calculating az/za\n");
 
@@ -175,133 +137,30 @@ int main(int argc, char **argv) {
 
     }
 
-    visibility_set_t *visibility_set = malloc(sizeof(visibility_set_t));
-    visibility_set->us_metres = malloc( num_visis * sizeof(float) );
-    visibility_set->vs_metres = malloc( num_visis * sizeof(float) );
-    visibility_set->ws_metres = malloc( num_visis * sizeof(float) );
-    visibility_set->allsteps_sha0s = malloc( num_visis * sizeof(float) );
-    visibility_set->allsteps_cha0s = malloc( num_visis * sizeof(float) );
-    visibility_set->allsteps_lsts = malloc( num_visis * sizeof(float) );
-    visibility_set->allsteps_wavelengths = malloc( num_visis * sizeof(float) );
-    visibility_set->channel_frequencies = malloc( (int)woden_settings->num_freqs * sizeof(float) );
+    //Setup the visibility container
+    visibility_set_t *visibility_set = setup_visibility_set(woden_settings->num_visis);
 
-    visibility_set->sum_visi_XX_real = malloc( num_visis * sizeof(float) );
-    visibility_set->sum_visi_XX_imag = malloc( num_visis * sizeof(float) );
-    visibility_set->sum_visi_XY_real = malloc( num_visis * sizeof(float) );
-    visibility_set->sum_visi_XY_imag = malloc( num_visis * sizeof(float) );
-    visibility_set->sum_visi_YX_real = malloc( num_visis * sizeof(float) );
-    visibility_set->sum_visi_YX_imag = malloc( num_visis * sizeof(float) );
-    visibility_set->sum_visi_YY_real = malloc( num_visis * sizeof(float) );
-    visibility_set->sum_visi_YY_imag = malloc( num_visis * sizeof(float) );
+    //Fill in the time/freq/baseline settings in `visiblity_set` needed by
+    //calculate_visibilities
+    fill_timefreq_visibility_set(visibility_set, woden_settings,
+                                 base_band_freq, lsts);
 
-    //Fill in the fine channel frequencies
-    for (int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++) {
-      frequency = base_band_freq + (woden_settings->frequency_resolution*freq_step);
-      visibility_set->channel_frequencies[freq_step] = frequency;
-    }
-
-    //For easy indexing when running on GPUs, make 4 arrays that match
-    //the settings for every baseline, frequency, and time step in the
-    //simulation.
-
-    //Fill in visibility settings in order of baseline,freq,time
-    //Order matches that of a uvfits file (I live in the past)
-
-    for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
-      ha0 = lsts[time_step] - woden_settings->ra0;
-      sha0 = sin(ha0); cha0=cos(ha0);
-
-      for (int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++) {
-        frequency = base_band_freq + (woden_settings->frequency_resolution*freq_step);
-        wavelength = VELC / frequency;
-        int step = woden_settings->num_baselines*(time_step*woden_settings->num_freqs + freq_step);
-
-        for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {
-          visibility_set->allsteps_cha0s[step + baseline] = cha0;
-          visibility_set->allsteps_sha0s[step + baseline] = sha0;
-          visibility_set->allsteps_lsts[step + baseline] = lsts[time_step];
-          visibility_set->allsteps_wavelengths[step + baseline] = wavelength;
-        }//baseline loop
-      }//freq loop
-    }//time loop
-
+    //Launch the CUDA code
     calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
                   woden_settings, visibility_set, sbf);
 
     printf("GPU calls for band %d finished\n",band_num );
 
-    //Dumps u,v,w (metres), Re(vis), Im(vis) to a binary file
-    //Output order is by baseline (fastest changing), frequency, time (slowest
-    //changing)
-    //This means the us_metres, vs_metres, ws_metres are repeated over frequency,
-    //but keeps the dimensions of the output sane
-    FILE *output_visi;
-    char buf[0x100];
-    snprintf(buf, sizeof(buf), "output_visi_band%02d.dat", band_num);
+    //Write out binary file for python code to read and convert to uvfits
+    write_visi_set_binary(visibility_set, band_num, woden_settings->num_visis);
 
-    output_visi = fopen(buf,"wb");
-
-    if(output_visi == NULL)
-    {
-        printf("Could not open output_visi_band%02d.dat - exiting", band_num);
-        exit(1);
-    }
-
-    fwrite(visibility_set->us_metres, num_visis*sizeof(float), 1, output_visi);
-    fwrite(visibility_set->vs_metres, num_visis*sizeof(float), 1, output_visi);
-    fwrite(visibility_set->ws_metres, num_visis*sizeof(float), 1, output_visi);
-
-    fwrite(visibility_set->sum_visi_XX_real, num_visis*sizeof(float), 1, output_visi);
-    fwrite(visibility_set->sum_visi_XX_imag, num_visis*sizeof(float), 1, output_visi);
-    fwrite(visibility_set->sum_visi_XY_real, num_visis*sizeof(float), 1, output_visi);
-    fwrite(visibility_set->sum_visi_XY_imag, num_visis*sizeof(float), 1, output_visi);
-    fwrite(visibility_set->sum_visi_YX_real, num_visis*sizeof(float), 1, output_visi);
-    fwrite(visibility_set->sum_visi_YX_imag, num_visis*sizeof(float), 1, output_visi);
-    fwrite(visibility_set->sum_visi_YY_real, num_visis*sizeof(float), 1, output_visi);
-    fwrite(visibility_set->sum_visi_YY_imag, num_visis*sizeof(float), 1, output_visi);
-
-    fflush(output_visi);
-    fclose(output_visi);
-
-
-    // // Dumps u,v,w (metres), Re(vis), Im(vis) directly to text file - useful for
-    // // bug hunting with small outputs
-    // FILE *output_visi_text;
-    // char buff[0x100];
-    // snprintf(buff, sizeof(buff), "output_visi_band%02d.txt", band_num);
-    // output_visi_text = fopen(buff,"w");
-    // for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
-    //   for ( int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++ ) {
-    //     for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {
-    //       int step = woden_settings->num_baselines*(time_step*woden_settings->num_freqs + freq_step);
-    //       fprintf(output_visi_text,"%f %f %f %f %f\n",visibility_set->us_metres[step + baseline],
-    //               visibility_set->vs_metres[step + baseline],visibility_set->ws_metres[step + baseline],
-    //               visibility_set->sum_visi_XX_real[step + baseline],visibility_set->sum_visi_XX_imag[step + baseline]);
-    //     }
-    //   }
-    // }
-    // fflush(output_visi_text);
-    // fclose(output_visi_text);
-    //
+    //Writes out a text file with u,v,w XX_re, XX_im. Useful for bug hunting
+    //in desperation
+    // write_visi_set_text(visibility_set, band_num, woden_settings);
 
     //Free up that memory
-    free(visibility_set->us_metres);
-    free(visibility_set->vs_metres);
-    free(visibility_set->ws_metres);
-    free(visibility_set->allsteps_sha0s);
-    free(visibility_set->allsteps_cha0s);
-    free(visibility_set->allsteps_lsts);
-    free(visibility_set->allsteps_wavelengths);
-
-    free(visibility_set->sum_visi_XX_real);
-    free(visibility_set->sum_visi_XX_imag);
-    free(visibility_set->sum_visi_XY_real);
-    free(visibility_set->sum_visi_XY_imag);
-    free(visibility_set->sum_visi_YX_real);
-    free(visibility_set->sum_visi_YX_imag);
-    free(visibility_set->sum_visi_YY_real);
-    free(visibility_set->sum_visi_YY_imag);
-
+    free_visi_set_inputs(visibility_set);
+    free_visi_set_outputs(visibility_set);
     free( visibility_set );
 
     //Release the CPU MWA FEE beam if required

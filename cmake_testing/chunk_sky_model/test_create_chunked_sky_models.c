@@ -174,7 +174,7 @@ void test_create_chunked_sky_models_P87760_G12207_S121_678_C1e10_Time056(void){
   int num_shapes = 121;
   int num_coeff_per_shape = 678;
 
-  int chunking_size = 1e10;
+  long int chunking_size = 1e10;
 
   int num_time_steps = 56;
   int num_baselines = 8128;

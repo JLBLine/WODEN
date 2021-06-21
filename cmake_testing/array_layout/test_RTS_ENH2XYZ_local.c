@@ -3,7 +3,7 @@
 #include <math.h>
 
 #include "constants.h"
-#include "read_and_write.h"
+#include "array_layout.h"
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */

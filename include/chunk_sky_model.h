@@ -98,55 +98,73 @@ in `cropped_src` and point to in `temp_cropped_src`
 void increment_shapelet(catsource_t *temp_cropped_src, catsource_t *cropped_src,
                      int * shape_iter, int num_time_steps);
 
-// /**
-// @brief When splitting the sky model `cropped_src` into `num_chunks` smaller
-// sky models each of size `chunking_size`, fill the chunked sky model
-// `temp_cropped_src`at index `chunk_ind` with the correct number of POINT,
-// GAUSSIAN, and SHAPELET parameters.
-//
-// @details Here we are splitting the sky model `cropped_src` into `num_chunks`
-// smaller sky models, each containing a number (`chunking_size`) of components.
-// This function returns a single 'chunked' sky model in `temp_cropped_src`, which
-// when iterating through `num_chunks`, corresponds to the chunked model at index
-// `chunk_ind`.
-//
-// The function performs a large amount
-// of logic to generate the correct combination of POINT, GAUSSIAN, and SHAPELET
-// type components, that add up to the `chunking_size`, and not include any
-// previously used components. Furthermore, as each SHAPELET component is expected
-// to have multiple SHAPELET_coefficients, it is more efficient to split the sky
-// model by the number of SHAPELET_coefficients rather than SHAPELET components.
-// `point_iter`, `gauss_iter`, `shape_iter` are all used by the function
-// `make_beam_settings_chunk` so returns their updated values.
-//
-// @param[in,out] *temp_cropped_src Pointer to a `catsource_t` struct to contain
-// the 'chunked' sky model
-// @param[in] *cropped_src Pointer to a `catsource_t` struct that contains the full
-// sky model
-// @param[in] num_chunks The number of chunks `cropped_src` is being split into
-// @param[in] chunk_ind The index of the chunked sky model to be returned
-// @param[in] chunking_size Number of components to put in each chunk
-// @param[in] num_time_steps Number of time steps in the simulation
-// @param[in,out] *point_iter Pointer to integer to correctly index the POINT
-// component information in `cropped_src`
-// @param[in,out] *gauss_iter Pointer to integer to correctly index the GAUSSIAN
-// component information in `cropped_src`
-// @param[in,out] *shape_iter Pointer to integer to correctly index the SHAPELET
-// component information in `cropped_src`
-// */
-// void fill_chunk_src(catsource_t *temp_cropped_src, catsource_t *cropped_src,
-//      int num_chunks, int chunk_ind, int chunking_size, int num_time_steps,
-//      int * point_iter, int * gauss_iter, int * shape_iter);
+/**
+@brief When splitting the sky model `cropped_src` into `num_chunks` smaller
+sky models each of size `chunking_size`, fill the chunked sky model
+`temp_cropped_src` at index `chunk_ind` with the correct number of POINT and
+GAUSSIAN component settings.
+
+@details Here we are splitting the sky model `cropped_src` into `num_chunks`
+smaller sky models, each containing a number (`comps_per_chunk`) of components.
+This function returns a single 'chunked' sky model in `temp_cropped_src`, which
+when iterating through the total number of POINT and GAUSSIAN components
+in chunks of size `comps_per_chunk`, corresponds to the chunked model at index
+`chunk_ind`.
 
 
-
+@param[in,out] *temp_cropped_src Pointer to a `catsource_t` struct to contain
+the 'chunked' sky model
+@param[in] *cropped_src Pointer to a `catsource_t` struct that contains the full
+sky model
+@param[in] chunk_ind The index of the chunked sky model to be returned
+@param[in] comps_per_chunk Number of components to put in each chunk
+@param[in] *woden_settings A populated `woden_settings_t` containing the
+simulation setting
+*/
 void fill_chunk_src_with_pointgauss(catsource_t *temp_cropped_src,
      catsource_t *cropped_src, int chunk_ind, int comps_per_chunk,
      woden_settings_t *woden_settings);
 
+/**
+@brief When splitting the sky model `cropped_src` into `num_chunks` smaller
+sky models each of size `chunking_size`, fill the chunked sky model
+`temp_cropped_src` at index `chunk_ind` with the correct number of SHAPELET
+component settings.
+
+@details When splitting the sky model up, we split SHAPELET components
+separately to POINT and GAUSSIANs as the besis functions take up more GPU
+memory - this can butt heads with primary beam calculations that also take up
+memory for POINT and GAUSSIANs. This function returns a single 'chunked' sky
+model in `temp_cropped_src`, which when iterating through the total number of
+SHAPELET basis functions in chunks of size `comps_per_chunk`, corresponds to
+the chunked model at index `chunk_ind`.
+
+@param[in,out] *temp_cropped_src Pointer to a `catsource_t` struct to contain
+the 'chunked' sky model
+@param[in] *cropped_src Pointer to a `catsource_t` struct that contains the full
+sky model
+@param[in] chunk_ind The index of the chunked sky model to be returned
+@param[in] coeffs_per_chunk Number of basis function params to put in each chunk
+@param[in] *woden_settings A populated `woden_settings_t` containing the
+simulation setting
+*/
 void fill_chunk_src_with_shapelets(catsource_t *temp_cropped_src,
      catsource_t *cropped_src, int chunk_ind, int coeffs_per_chunk,
      woden_settings_t *woden_settings);
 
+/**
+@brief Takes the sky model in `cropped_src` and splits it into bitesize pieces
+to fit on the GPU. Returns the models inside a `source_catalogue_t` struct,
+with the models stored in `source_catalogue_t->catsources`.
+
+@details This is basically a wrapper around `fill_chunk_src_with_pointgauss`
+and `fill_chunk_src_with_shapelets`
+
+@param[in] *cropped_src Pointer to a `catsource_t` struct that contains the full
+@param[in] *woden_settings A populated `woden_settings_t` containing the
+simulation settings, including the chunking size
+@returns `source_catalogue_t` A struct containing the chunked sky models
+that can be fed into `calculate_visibilities::calculate_visibilities`.
+*/
 source_catalogue_t * create_chunked_sky_models(catsource_t *cropped_src,
-                                              woden_settings_t *woden_settings);
+                                               woden_settings_t *woden_settings);

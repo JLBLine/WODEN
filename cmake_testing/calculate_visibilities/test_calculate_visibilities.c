@@ -5,20 +5,17 @@
 
 #include "constants.h"
 #include "woden_struct_defs.h"
-#include "FEE_primary_beam.h"
-#include "test_RTS_FEE_beam.h"
-// #include "test_kern_calc_visi_common.h"
+#include "calculate_visibilities.h"
+#include "shapelet_basis.h"
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
 //External CUDA code we're linking in
-extern void test_RTS_CUDA_FEE_beam(int num_components,
-           float *azs, float *zas, float latitude,
-           RTS_MWA_FEE_beam_t *FEE_beam_zenith,
-           RTS_MWA_FEE_beam_t *FEE_beam,
-           int rotation, int scaling,
-           float _Complex *FEE_beam_gains);
+extern void calculate_visibilities(array_layout_t *array_layout,
+  source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
+  woden_settings_t *woden_settings, visibility_set_t *visibility_set,
+  float *sbf);
 
 #define UNITY_INCLUDE_FLOAT
 
@@ -32,10 +29,9 @@ float off_zenith1_delays[16] = {0.0, 4.0, 8.0, 12.0, 0.0, 4.0, 8.0, 12.0,
 float off_zenith2_delays[16] = {0.0, 2.0, 4.0, 8.0, 2.0, 4.0, 8.0, 12.0,
                                 4.0, 8.0, 12.0, 16.0, 8.0, 12.0, 16.0, 20.0};
 
-void test_RTS_CUDA_FEE_beam_VaryFreqVaryPointing(float freq, float *delays,
-                                                 char* mwa_fee_hdf5,
-                                                 float *expected,
-                                                 char *outname) {
+void test_calculate_visibilities(source_catalogue_t *cropped_sky_models,
+                                 beam_settings_t *beam_settings,
+                                 woden_settings_t *woden_settings) {
 
   //Call the C code to interrogate the hdf5 file and set beam things up
   RTS_MWA_FEE_beam_t *FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
@@ -142,38 +138,6 @@ void test_RTS_CUDA_FEE_beam_100MHz_zenith(void) {
   check_for_env_and_run_test(100e+6, zenith_delays, zenith_100, "zenith_100.txt");
 }
 
-void test_RTS_CUDA_FEE_beam_150MHz_zenith(void) {
-  check_for_env_and_run_test(150e+6, zenith_delays, zenith_150, "zenith_150.txt");
-}
-
-void test_RTS_CUDA_FEE_beam_200MHz_zenith(void) {
-  check_for_env_and_run_test(200e+6, zenith_delays, zenith_200, "zenith_200.txt");
-}
-
-void test_RTS_CUDA_FEE_beam_100MHz_off_zenith1(void) {
-  check_for_env_and_run_test(100e+6, off_zenith1_delays, offzen1_100, "offzen1_100.txt");
-}
-
-void test_RTS_CUDA_FEE_beam_150MHz_off_zenith1(void) {
-  check_for_env_and_run_test(150e+6, off_zenith1_delays, offzen1_150, "offzen1_150.txt");
-}
-
-void test_RTS_CUDA_FEE_beam_200MHz_off_zenith1(void) {
-  check_for_env_and_run_test(200e+6, off_zenith1_delays, offzen1_200, "offzen1_200.txt");
-}
-
-void test_RTS_CUDA_FEE_beam_100MHz_off_zenith2(void) {
-  check_for_env_and_run_test(100e+6, off_zenith2_delays, offzen2_100, "offzen2_100.txt");
-}
-
-void test_RTS_CUDA_FEE_beam_150MHz_off_zenith2(void) {
-  check_for_env_and_run_test(150e+6, off_zenith2_delays, offzen2_150, "offzen2_150.txt");
-}
-
-void test_RTS_CUDA_FEE_beam_200MHz_off_zenith2(void) {
-  check_for_env_and_run_test(200e+6, off_zenith2_delays, offzen2_200, "offzen2_200.txt");
-}
-
 
 //Run the test with unity
 int main(void)
@@ -181,16 +145,6 @@ int main(void)
     UNITY_BEGIN();
 
     RUN_TEST(test_RTS_CUDA_FEE_beam_100MHz_zenith);
-    RUN_TEST(test_RTS_CUDA_FEE_beam_150MHz_zenith);
-    RUN_TEST(test_RTS_CUDA_FEE_beam_200MHz_zenith);
-
-    RUN_TEST(test_RTS_CUDA_FEE_beam_100MHz_off_zenith1);
-    RUN_TEST(test_RTS_CUDA_FEE_beam_150MHz_off_zenith1);
-    RUN_TEST(test_RTS_CUDA_FEE_beam_200MHz_off_zenith1);
-
-    RUN_TEST(test_RTS_CUDA_FEE_beam_100MHz_off_zenith2);
-    RUN_TEST(test_RTS_CUDA_FEE_beam_150MHz_off_zenith2);
-    RUN_TEST(test_RTS_CUDA_FEE_beam_200MHz_off_zenith2);
 
     return UNITY_END();
 }

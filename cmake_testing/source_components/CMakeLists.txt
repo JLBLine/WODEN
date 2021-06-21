@@ -1,4 +1,4 @@
-
+#
 add_library(source_componentsCUDA SHARED
             "../../src/source_components.cu"
             "../../src/fundamental_coords.cu"
@@ -11,7 +11,7 @@ add_library(source_componentsCUDA SHARED
 set_property(TARGET source_componentsCUDA PROPERTY CUDA_ARCHITECTURES OFF)
 
 include_directories("${CMAKE_SOURCE_DIR}/cmake_testing/source_components")
-
+#
 ##Test flux extrapolation
 add_executable(test_extrap_stokes_app
     test_extrap_stokes.c

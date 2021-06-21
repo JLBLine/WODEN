@@ -120,10 +120,12 @@ set(TARGET_GROUP production CACHE STRING "Group to build")
 
 ##If making production code
 if(TARGET_GROUP STREQUAL production)
-    ##Generate libraries from the C and CUDA source code
+    ##Generate library from the C
     add_library(wodenC SHARED ${CSOURCES})
     ##Compile C code with all warnings and optimise
     target_compile_options(wodenC PRIVATE -O3 -Wall)
+
+    ##Generate library for the CUDA code
     add_library(wodenCUDA SHARED ${CUDASOURCES})
     ##Compile CUDA code with all warnings
     target_compile_options(wodenCUDA PRIVATE --compiler-options -Wall)
@@ -134,7 +136,7 @@ if(TARGET_GROUP STREQUAL production)
 
     ##make the final WODEN executable, linking the libraries
     add_executable(woden src/woden.c)
-    target_link_libraries(woden wodenC wodenCUDA ${CC_LINKLIBS})
+    target_link_libraries(woden PUBLIC wodenC wodenCUDA ${CC_LINKLIBS})
     target_compile_options(woden PRIVATE -O3 -Wall)
 
 

@@ -95,8 +95,6 @@ A struct to contain values for the MWA Fully Embbedded Element primary beam
 typedef struct _RTS_MWA_FEE_beam {
   double _Complex **Q1; /*!< Beam modes used for Spherical Harmonic model */
   double _Complex **Q2; /*!< Beam modes used for Spherical Harmonic model */
-  // double _Complex **p_T; /*!< Some pre-computed theta related values used in tile response */
-  // double _Complex **p_P; /*!< Some pre-computed phi related values used in tile response */
   double **M; /*!< First order of spherical harmonics */
   double **N; /*!< Second order of spherical harmonics */
   int nmax; /*!< Maximum order of spherical harmonic */

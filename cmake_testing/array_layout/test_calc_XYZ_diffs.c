@@ -3,7 +3,7 @@
 #include <math.h>
 
 #include "constants.h"
-#include "read_and_write.h"
+#include "array_layout.h"
 #include "woden_struct_defs.h"
 #include "test_RTS_XYZ_common.h"
 

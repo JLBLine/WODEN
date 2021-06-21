@@ -12,6 +12,7 @@
 #include "primary_beam_cuda.h"
 #include "FEE_primary_beam_cuda.h"
 #include "cudacheck.h"
+#include "visibility_set.h"
 
 extern "C" void calculate_visibilities(array_layout_t *array_layout,
   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
@@ -25,26 +26,30 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
   //Setup chunk_visibility_set to hold the visibility outputs of each
   //sky chunk simulation
-  visibility_set_t *chunk_visibility_set = (visibility_set_t *)malloc(sizeof(visibility_set_t));
+  // visibility_set_t *chunk_visibility_set = (visibility_set_t *)malloc(sizeof(visibility_set_t));
+  //
+  // chunk_visibility_set->us_metres = (float *)malloc( num_visis * sizeof(float) );
+  // chunk_visibility_set->vs_metres = (float *)malloc( num_visis * sizeof(float) );
+  // chunk_visibility_set->ws_metres = (float *)malloc( num_visis * sizeof(float) );
+  //
+  // chunk_visibility_set->sum_visi_XX_real = (float *)malloc( num_visis * sizeof(float) );
+  // chunk_visibility_set->sum_visi_XX_imag = (float *)malloc( num_visis * sizeof(float) );
+  // chunk_visibility_set->sum_visi_XY_real = (float *)malloc( num_visis * sizeof(float) );
+  // chunk_visibility_set->sum_visi_XY_imag = (float *)malloc( num_visis * sizeof(float) );
+  // chunk_visibility_set->sum_visi_YX_real = (float *)malloc( num_visis * sizeof(float) );
+  // chunk_visibility_set->sum_visi_YX_imag = (float *)malloc( num_visis * sizeof(float) );
+  // chunk_visibility_set->sum_visi_YY_real = (float *)malloc( num_visis * sizeof(float) );
+  // chunk_visibility_set->sum_visi_YY_imag = (float *)malloc( num_visis * sizeof(float) );
 
-  chunk_visibility_set->us_metres = (float *)malloc( num_visis * sizeof(float) );
-  chunk_visibility_set->vs_metres = (float *)malloc( num_visis * sizeof(float) );
-  chunk_visibility_set->ws_metres = (float *)malloc( num_visis * sizeof(float) );
+  visibility_set_t *chunk_visibility_set = setup_visibility_set(num_visis);
 
+  //Copy across settings for simulation - we always simulate all time steps
+  //and frequncies for each chunk
   chunk_visibility_set->allsteps_sha0s = visibility_set->allsteps_sha0s;
   chunk_visibility_set->allsteps_cha0s = visibility_set->allsteps_cha0s;
   chunk_visibility_set->allsteps_lsts = visibility_set->allsteps_lsts;
   chunk_visibility_set->allsteps_wavelengths = visibility_set->allsteps_wavelengths;
   chunk_visibility_set->channel_frequencies = visibility_set->channel_frequencies;
-
-  chunk_visibility_set->sum_visi_XX_real = (float *)malloc( num_visis * sizeof(float) );
-  chunk_visibility_set->sum_visi_XX_imag = (float *)malloc( num_visis * sizeof(float) );
-  chunk_visibility_set->sum_visi_XY_real = (float *)malloc( num_visis * sizeof(float) );
-  chunk_visibility_set->sum_visi_XY_imag = (float *)malloc( num_visis * sizeof(float) );
-  chunk_visibility_set->sum_visi_YX_real = (float *)malloc( num_visis * sizeof(float) );
-  chunk_visibility_set->sum_visi_YX_imag = (float *)malloc( num_visis * sizeof(float) );
-  chunk_visibility_set->sum_visi_YY_real = (float *)malloc( num_visis * sizeof(float) );
-  chunk_visibility_set->sum_visi_YY_imag = (float *)malloc( num_visis * sizeof(float) );
 
   float *d_X_diff = NULL;
   float *d_Y_diff = NULL;
@@ -796,23 +801,13 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   } //chunk loop
 
   //Free the chunk_visibility_set
-  free( chunk_visibility_set->us_metres );
-  free( chunk_visibility_set->vs_metres );
-  free( chunk_visibility_set->ws_metres );
-
-  free(chunk_visibility_set->sum_visi_XX_real);
-  free(chunk_visibility_set->sum_visi_XX_imag);
-  free(chunk_visibility_set->sum_visi_XY_real);
-  free(chunk_visibility_set->sum_visi_XY_imag);
-  free(chunk_visibility_set->sum_visi_YX_real);
-  free(chunk_visibility_set->sum_visi_YX_imag);
-  free(chunk_visibility_set->sum_visi_YY_real);
-  free(chunk_visibility_set->sum_visi_YY_imag);
-  //
+  free_visi_set_outputs(chunk_visibility_set);
   free( chunk_visibility_set );
+  //We don't call free_visi_set_inputs as arrays free-ed by that function are
+  //just pointers to the original `visiblity_set` in this instance. Only call
+  //that in woden::main
 
   //Free up the GPU memory
-
   cudaErrorCheckCall( cudaFree(d_freqs) );
 
   cudaErrorCheckCall( cudaFree(d_ws) );

@@ -19,23 +19,25 @@ This documentation is under construction. Stand by as I put it together.
   run_woden
   convert_WSClean_list_to_WODEN
 
-`C` documentation
-====================
+`C` API documentation
+======================
 .. toctree::
   :maxdepth: 1
 
-  chunk_source
+  array_layout
+  chunk_sky_model
   constants
   create_sky_model
   FEE_primary_beam
   primary_beam
   print_help
-  read_and_write
   shapelet_basis
+  visibility_set
+  woden_settings
   woden_struct_defs
 
-`CUDA` documentation
-====================
+`CUDA` API documentation
+========================
 .. toctree::
   :maxdepth: 1
 

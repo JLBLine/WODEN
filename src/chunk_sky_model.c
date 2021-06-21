@@ -1,5 +1,6 @@
 #include <stdio.h>
-#include "read_and_write.h"
+#include <math.h>
+#include "woden_struct_defs.h"
 
 //Switch through different POINT and GAUSSIAN chunking states - if P, only
 //POINTs in a chunk, PG both POINT and GAUSSIAN, G just GAUSSIAN

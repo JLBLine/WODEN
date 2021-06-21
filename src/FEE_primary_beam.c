@@ -111,6 +111,8 @@ int RTS_MWAFEEInit(const char *h5filename, float freq_Hz, RTS_MWA_FEE_beam_t *pb
     H5Dclose(dataset);
   }
 
+  // printf("MAX LENGTH %d\n",max_length );
+
   double _Complex *Q1, *Q2;
 
   /* Allocate space for two polarizations */
