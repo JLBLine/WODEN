@@ -1,6 +1,6 @@
 add_library(FEE_primary_beam_cudaCUDA SHARED
             "../../src/FEE_primary_beam_cuda.cu")
-
+#
 ## For CMake versions > 3.18, the arch flag settings are handled by
 ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
 ## replace the CUDA_FLAG lines above with something like

@@ -49,9 +49,7 @@ int main(int argc, char **argv) {
   int status=0;
 
   //Create the shapelet basis function array
-  float *sbf;
-  sbf = NULL;
-  sbf = malloc( sbf_N * sbf_L * sizeof(float) );
+  float *sbf = malloc( sbf_N * sbf_L * sizeof(float) );
   sbf = create_sbf(sbf);
 
   //Read in the settings from the controlling json file

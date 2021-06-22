@@ -32,7 +32,6 @@ visiblities (baselines*freqs*time_steps) and takes the sine and cosine of the
 declination of the phase centre and stores in `woden_settings->sdec0`,
 `woden_settings->cdec0`
 
-@param[in] *filename Path to a WODEN *.json settings file
 @param[in,out] *woden_settings A pointer to a populated `woden_settings_t` struct
 @return `lsts` Array of all LSTs in the simulation (radians)
 */

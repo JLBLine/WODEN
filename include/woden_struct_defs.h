@@ -156,7 +156,7 @@ typedef struct _source_catalogue_t {
     int num_sources; /*!< Number of SOURCES in this `source_catalogue_t`*/
     int num_shapelets; /*!< Total number of SHAPELET components in this `source_catalogue_t` */
     catsource_t *catsources; /*!< Multiple sky models to simulate */
-    beam_settings_t *beam_settings; /*!< Primary beam settings corresponding to `catsources` */
+    // beam_settings_t *beam_settings; /*!< Primary beam settings corresponding to `catsources` */
 } source_catalogue_t;
 
 /**

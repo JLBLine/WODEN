@@ -5,7 +5,10 @@
 
 #include "constants.h"
 #include "woden_struct_defs.h"
-#include "calculate_visibilities.h"
+#include "FEE_primary_beam.h"
+#include "shapelet_basis.h"
+#include "woden_settings.h"
+#include "visibility_set.h"
 #include "shapelet_basis.h"
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
@@ -17,126 +20,179 @@ extern void calculate_visibilities(array_layout_t *array_layout,
   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
   float *sbf);
 
+#define NUM_BASELINES 3
+#define NUM_FREQS 3
+#define NUM_TIME_STEPS 2
+
 #define UNITY_INCLUDE_FLOAT
 
 //Different delays settings, which control the pointing of the MWA beam
 float zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
-float off_zenith1_delays[16] = {0.0, 4.0, 8.0, 12.0, 0.0, 4.0, 8.0, 12.0,
-                                0.0, 4.0, 8.0, 12.0, 0.0, 4.0, 8.0, 12.0};
-
-float off_zenith2_delays[16] = {0.0, 2.0, 4.0, 8.0, 2.0, 4.0, 8.0, 12.0,
-                                4.0, 8.0, 12.0, 16.0, 8.0, 12.0, 16.0, 20.0};
-
 void test_calculate_visibilities(source_catalogue_t *cropped_sky_models,
                                  beam_settings_t *beam_settings,
-                                 woden_settings_t *woden_settings) {
+                                 woden_settings_t *woden_settings,
+                                 int beamtype, float base_band_freq) {
 
-  //Call the C code to interrogate the hdf5 file and set beam things up
-  RTS_MWA_FEE_beam_t *FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
+  array_layout_t *array_layout = malloc(sizeof(array_layout_t));
 
-  //Get a zenith pointing beam for normalisation purposes
-  RTS_MWA_FEE_beam_t *FEE_beam_zenith = malloc(sizeof(RTS_MWA_FEE_beam_t));
+  array_layout->X_diff_metres = malloc(NUM_BASELINES*sizeof(float));
+  array_layout->Y_diff_metres = malloc(NUM_BASELINES*sizeof(float));
+  array_layout->Z_diff_metres = malloc(NUM_BASELINES*sizeof(float));
 
-  printf("\n\tSetting up the zenith FEE beam...");
-  RTS_MWAFEEInit(mwa_fee_hdf5, freq, FEE_beam_zenith, zenith_delays);
-  printf(" done.\n");
-
-  printf("\tSetting up the FEE beam...");
-  RTS_MWAFEEInit(mwa_fee_hdf5, freq, FEE_beam, delays);
-  printf(" done.\n");
-
-  //Set up a bunch of az/za
-  int num_za = 36;
-  int num_az = 144;
-
-  float za_res = (90.0 / num_za)*DD2R;
-  float az_res = (360.0 / num_az)*DD2R;
-
-  int num_azza = num_za*num_az;
-
-  float *zas = malloc(num_azza*sizeof(float));
-  float *azs = malloc(num_azza*sizeof(float));
-
-  int count = 0;
-  for (int az = 0; az < num_az; az++) {
-    for (int za = 0; za < num_za; za++) {
-      zas[count] = za*za_res;
-      azs[count] = az*az_res;
-      count ++;
-    }
+  for (int baseline = 0; baseline < NUM_BASELINES; baseline++) {
+    array_layout->X_diff_metres[baseline] = (baseline + 1) * 100;
+    array_layout->Y_diff_metres[baseline] = (baseline + 1) * 100;
+    array_layout->Z_diff_metres[baseline] = 0.0;
   }
 
-  //Rotate by parallactic angles
-  int rotation = 1;
-  //Scale to zenith
-  int scaling = 1;
+  int status = 0;
 
-  int num_pols = 4;
-  float _Complex *FEE_beam_gains = malloc(num_pols*num_azza*sizeof(float _Complex));
+  //The intial setup of the FEE beam is done on the CPU, so call it here
+  if (woden_settings->beamtype == FEE_BEAM){
 
-  //Run the CUDA code
-  test_RTS_CUDA_FEE_beam(num_azza,
-             azs, zas, MWA_LAT,
-             FEE_beam_zenith,
-             FEE_beam,
-             rotation, scaling,
-             FEE_beam_gains);
+    beam_settings->FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
+      //We need the zenith beam to get the normalisation
+    beam_settings->FEE_beam_zenith = malloc(sizeof(RTS_MWA_FEE_beam_t));
 
-  //Check the values are within tolerance
-  float tol = 1e-6;
-  for (size_t comp = 0; comp < num_azza; comp++) {
-    TEST_ASSERT_FLOAT_WITHIN(tol, expected[2*num_pols*comp+0], creal(FEE_beam_gains[num_pols*comp+0]) );
-    TEST_ASSERT_FLOAT_WITHIN(tol, expected[2*num_pols*comp+1], cimag(FEE_beam_gains[num_pols*comp+0]) );
-    TEST_ASSERT_FLOAT_WITHIN(tol, expected[2*num_pols*comp+2], creal(FEE_beam_gains[num_pols*comp+1]) );
-    TEST_ASSERT_FLOAT_WITHIN(tol, expected[2*num_pols*comp+3], cimag(FEE_beam_gains[num_pols*comp+1]) );
-    TEST_ASSERT_FLOAT_WITHIN(tol, expected[2*num_pols*comp+4], creal(FEE_beam_gains[num_pols*comp+2]) );
-    TEST_ASSERT_FLOAT_WITHIN(tol, expected[2*num_pols*comp+5], cimag(FEE_beam_gains[num_pols*comp+2]) );
-    TEST_ASSERT_FLOAT_WITHIN(tol, expected[2*num_pols*comp+6], creal(FEE_beam_gains[num_pols*comp+3]) );
-    TEST_ASSERT_FLOAT_WITHIN(tol, expected[2*num_pols*comp+7], cimag(FEE_beam_gains[num_pols*comp+3]) );
-  }
-
-  // FILE *beam_values_out;
-  // char buff[0x100];
-  // snprintf(buff, sizeof(buff), outname);
-  // beam_values_out = fopen(buff,"w");
+    float base_middle_freq = base_band_freq + (woden_settings->coarse_band_width/2.0);
   //
-  // for (size_t comp = 0; comp < num_azza; comp++) {
-  //   fprintf(beam_values_out, "%.5f %.5f %.7f %.7f %.7f %.7f %.7f %.7f %.7f %.7f\n",
-  //   azs[comp], zas[comp],
-  //   creal(FEE_beam_gains[num_pols*comp+0]), cimag(FEE_beam_gains[num_pols*comp+0]),
-  //   creal(FEE_beam_gains[num_pols*comp+1]), cimag(FEE_beam_gains[num_pols*comp+1]),
-  //   creal(FEE_beam_gains[num_pols*comp+2]), cimag(FEE_beam_gains[num_pols*comp+2]),
-  //   creal(FEE_beam_gains[num_pols*comp+3]), cimag(FEE_beam_gains[num_pols*comp+3]));
-  // }
+    printf("Middle freq is %.8e \n",base_middle_freq );
+  //
+    float float_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                     0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+  //
+    printf("Setting up the zenith FEE beam...");
+    status = RTS_MWAFEEInit(woden_settings->hdf5_beam_path, base_middle_freq,
+                            beam_settings->FEE_beam_zenith, zenith_delays);
+    printf(" done.\n");
 
-}
+    printf("Setting up the FEE beam...");
+    status = RTS_MWAFEEInit(woden_settings->hdf5_beam_path, base_middle_freq,
+          beam_settings->FEE_beam, woden_settings->FEE_ideal_delays);
+    printf(" done.\n");
 
-/*
-Check whether the environment variable for the FEE hdf5 beam exists, don't run
-the test if it's missing
-*/
-void check_for_env_and_run_test(float freq, float *delays, float *expected,
-                                char *outname) {
-  char* mwa_fee_hdf5 = getenv("MWA_FEE_HDF5");
-
-  if (mwa_fee_hdf5) {
-    printf("MWA_FEE_HDF5: %s", mwa_fee_hdf5 );
-    test_RTS_CUDA_FEE_beam_VaryFreqVaryPointing(freq, delays, mwa_fee_hdf5, expected, outname);
   }
-  else {
-    printf("MWA_FEE_HDF5 not found - not running test_RTS_FEE_beam test");
+
+  float *sbf = NULL;
+  if (cropped_sky_models->num_shapelets > 0) {
+    sbf = malloc( sbf_N * sbf_L * sizeof(float) );
+    sbf = create_sbf(sbf);
+  }
+
+  visibility_set_t *visibility_set = setup_visibility_set(woden_settings->num_visis);
+
+  float lsts[] = {0.0, M_PI / 2};
+
+  fill_timefreq_visibility_set(visibility_set, woden_settings,
+                               base_band_freq, lsts);
+
+  calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
+                         woden_settings, visibility_set, sbf);
+
+  for (size_t visi = 0; visi < woden_settings->num_visis; visi++) {
+    printf("%.4f %.4f %.4f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
+            visibility_set->us_metres[visi],
+            visibility_set->vs_metres[visi],
+            visibility_set->ws_metres[visi],
+            visibility_set->sum_visi_XX_real[visi],
+            visibility_set->sum_visi_XX_imag[visi],
+            visibility_set->sum_visi_XY_real[visi],
+            visibility_set->sum_visi_XY_imag[visi],
+            visibility_set->sum_visi_YX_real[visi],
+            visibility_set->sum_visi_YX_imag[visi],
+            visibility_set->sum_visi_YY_real[visi],
+            visibility_set->sum_visi_YY_imag[visi]);
   }
 }
 
-/*
-Run the test but vary the frequency and pointings. Compare to pre-calculated
-values that are stored in test_RTS_FEE_beam.h
-*/
-void test_RTS_CUDA_FEE_beam_100MHz_zenith(void) {
-  check_for_env_and_run_test(100e+6, zenith_delays, zenith_100, "zenith_100.txt");
+void test_calculate_visibilities_NoBeam_Point_PhaseCent() {
+  source_catalogue_t *cropped_sky_models = malloc(sizeof(cropped_sky_models));
+
+  cropped_sky_models->num_sources = 1;
+  cropped_sky_models->num_shapelets = 0;
+  cropped_sky_models->catsources = malloc(sizeof(catsource_t));
+
+  float one_array[] = {1.0};
+  float zero_array[] = {0.0};
+
+  cropped_sky_models->catsources[0].n_comps = 1;
+  cropped_sky_models->catsources[0].n_points = 1;
+  cropped_sky_models->catsources[0].n_gauss = 0;
+  cropped_sky_models->catsources[0].n_shapes = 0;
+  cropped_sky_models->catsources[0].n_shape_coeffs = 0;
+
+  cropped_sky_models->catsources[0].point_ref_stokesI = one_array;
+  cropped_sky_models->catsources[0].point_ref_stokesQ = zero_array;
+  cropped_sky_models->catsources[0].point_ref_stokesU = zero_array;
+  cropped_sky_models->catsources[0].point_ref_stokesV = zero_array;
+  cropped_sky_models->catsources[0].point_SIs = zero_array;
+  // // cropped_sky_models->catsource[0].point_azs = zero_array;
+  // // cropped_sky_models->catsource[0].point_zas = zero_array;
+  //
+  float ra0 = 0.0;
+  float dec0 = MWA_LAT_RAD;
+
+  float ra_array[] = {ra0};
+  float dec_array[] = {dec0};
+  float freq_array[] = {150e+6};
+  //
+  cropped_sky_models->catsources[0].point_ras = ra_array;
+  cropped_sky_models->catsources[0].point_decs = dec_array;
+  cropped_sky_models->catsources[0].point_ref_freqs = freq_array;
+
+  beam_settings_t *beam_settings = malloc(sizeof(beam_settings));
+
+  beam_settings->beamtype = NO_BEAM;
+
+  woden_settings_t *woden_settings = malloc(sizeof(woden_settings_t));
+
+  woden_settings->ra0 = ra0;
+  woden_settings->dec0 = dec0;
+  woden_settings->sdec0 = sinf(dec0);
+  woden_settings->cdec0 = cosf(dec0);
+  woden_settings->num_baselines = NUM_BASELINES;
+  woden_settings->num_freqs = NUM_FREQS;
+  woden_settings->num_time_steps = NUM_TIME_STEPS;
+  woden_settings->beamtype = NO_BEAM;
+  woden_settings->num_visis = NUM_BASELINES * NUM_FREQS * NUM_TIME_STEPS;
+  woden_settings->coarse_band_width = 1.28e+6;
+
+  float base_band_freq = 120e+6;
+
+  test_calculate_visibilities(cropped_sky_models,
+                              beam_settings, woden_settings,
+                              beam_settings->beamtype, base_band_freq);
+
 }
+
+
+
+// /*
+// Check whether the environment variable for the FEE hdf5 beam exists, don't run
+// the test if it's missing
+// */
+// void check_for_env_and_run_test(float freq, float *delays, float *expected,
+//                                 char *outname) {
+//   char* mwa_fee_hdf5 = getenv("MWA_FEE_HDF5");
+//
+//   if (mwa_fee_hdf5) {
+//     printf("MWA_FEE_HDF5: %s", mwa_fee_hdf5 );
+//     test_RTS_CUDA_FEE_beam_VaryFreqVaryPointing(freq, delays, mwa_fee_hdf5, expected, outname);
+//   }
+//   else {
+//     printf("MWA_FEE_HDF5 not found - not running test_RTS_FEE_beam test");
+//   }
+// }
+//
+// /*
+// Run the test but vary the frequency and pointings. Compare to pre-calculated
+// values that are stored in test_RTS_FEE_beam.h
+// */
+// void test_RTS_CUDA_FEE_beam_100MHz_zenith(void) {
+//   check_for_env_and_run_test(100e+6, zenith_delays, zenith_100, "zenith_100.txt");
+// }
 
 
 //Run the test with unity
@@ -144,7 +200,7 @@ int main(void)
 {
     UNITY_BEGIN();
 
-    RUN_TEST(test_RTS_CUDA_FEE_beam_100MHz_zenith);
+    RUN_TEST(test_calculate_visibilities_NoBeam_Point_PhaseCent);
 
     return UNITY_END();
 }

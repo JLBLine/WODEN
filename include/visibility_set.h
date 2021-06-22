@@ -64,14 +64,76 @@ void fill_timefreq_visibility_set(visibility_set_t *visibility_set,
                                   float base_band_freq,
                                   float *lsts);
 
+/**
+@brief Write out the simulated visibilities to a binary file
+
+@details Dumps u,v,w (metres), XX Real, XX Imag, XY Real, XY Imag,
+YX Real, YX Imag, YY Real, YY Imag (Jy) to a binary file
+Output order is by baseline (fastest changing), frequency, time (slowest
+changing). This means the us_metres, vs_metres, ws_metres are repeated over
+frequency, but keeps the dimensions of the output sane. Output is written as
+"output_visi_band%02d.dat", `band_num`.
+
+@param[in] *visibility_set `visibility_set_t` populated with visibility
+data to be written out
+@param[in] band_num Number of the band being processed (used for output name
+@param[in] num_visis Number of visibilities to output
+
+*/
 void write_visi_set_binary(visibility_set_t *visibility_set,
                            int band_num, int num_visis);
+/**
+@brief Write out XX visibilities and u,v,w to a text file
 
+@details Used for desperation debugging. Just writes u,v,w (metres),
+XX Real, XX Imag (Jy)
+
+@param[in] *visibility_set `visibility_set_t` populated with visibility
+data to be written out
+@param[in] band_num Number of the band being processed (used for output name
+@param[in] *woden_settings Populated `woden_settings_t` used to run the
+simulation
+*/
 void write_visi_set_text(visibility_set_t *visibility_set, int band_num,
                          woden_settings_t *woden_settings);
 
+/**
+@brief Free the settings that were used for this visibility set
+
+@details We don't free everything inside visibility_set as inside
+`calculate_visibilities`we set these arrays as pointers as don't want to
+free the original allocation. This function frees:
+
+    visibility_set->allsteps_sha0s
+    visibility_set->allsteps_cha0s
+    visibility_set->allsteps_lsts
+    visibility_set->allsteps_wavelengths
+    visibility_set->channel_frequencies
+
+
+@param[in,out] *visibility_set Contains arrays that need freeing
+*/
 void free_visi_set_inputs(visibility_set_t *visibility_set);
 
+/**
+@brief Free the output arrays in `visibility_set`
+
+@details This function frees:
+
+    visibility_set->us_metres
+    visibility_set->vs_metres
+    visibility_set->ws_metres
+    visibility_set->sum_visi_XX_real
+    visibility_set->sum_visi_XX_imag
+    visibility_set->sum_visi_XY_real
+    visibility_set->sum_visi_XY_imag
+    visibility_set->sum_visi_YX_real
+    visibility_set->sum_visi_YX_imag
+    visibility_set->sum_visi_YY_real
+    visibility_set->sum_visi_YY_imag
+
+@param[in,out] *visibility_set Contains arrays that need freeing
+*/
 void free_visi_set_outputs(visibility_set_t *visibility_set);
 
 
