@@ -1,3 +1,11 @@
+/*
+`calculate_visibilities::calculate_visibilities` is the gateway function
+to all CUDA functionality in WODEN. We'll test here in one baseline, frequency,
+and time configuration. We'll vary the sky model, the primary beam, and the
+phase centre to check some of the various possible combinations of
+simulations in WODEN
+*/
+
 #include <math.h>
 #include <unity.h>
 #include <stdlib.h>
@@ -24,6 +32,9 @@ extern void calculate_visibilities(array_layout_t *array_layout,
 #define NUM_FREQS 3
 #define NUM_TIME_STEPS 2
 
+// float one_array[] = {1.0};
+// float zero_array[] = {0.0};
+
 #define UNITY_INCLUDE_FLOAT
 
 //Different delays settings, which control the pointing of the MWA beam
@@ -33,7 +44,9 @@ float zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 void test_calculate_visibilities(source_catalogue_t *cropped_sky_models,
                                  beam_settings_t *beam_settings,
                                  woden_settings_t *woden_settings,
-                                 int beamtype, float base_band_freq) {
+                                 int beamtype) {
+
+  float base_band_freq = 120e+6;
 
   array_layout_t *array_layout = malloc(sizeof(array_layout_t));
 
@@ -88,6 +101,7 @@ void test_calculate_visibilities(source_catalogue_t *cropped_sky_models,
   fill_timefreq_visibility_set(visibility_set, woden_settings,
                                base_band_freq, lsts);
 
+  //CUDA code that we're testing
   calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
                          woden_settings, visibility_set, sbf);
 
@@ -107,63 +121,93 @@ void test_calculate_visibilities(source_catalogue_t *cropped_sky_models,
   }
 }
 
-void test_calculate_visibilities_NoBeam_Point_PhaseCent() {
+source_catalogue_t * make_cropped_sky_models(float ra0, float dec0,
+                                             int n_points, int n_gauss,
+                                             int n_shapes, int n_shape_coeffs,
+                                             int num_sources, int n_comps) {
+
   source_catalogue_t *cropped_sky_models = malloc(sizeof(cropped_sky_models));
+  cropped_sky_models->num_sources = num_sources;
+  cropped_sky_models->num_shapelets = n_shapes*n_comps;
+  cropped_sky_models->catsources = malloc(num_sources*sizeof(catsource_t));
 
-  cropped_sky_models->num_sources = 1;
-  cropped_sky_models->num_shapelets = 0;
-  cropped_sky_models->catsources = malloc(sizeof(catsource_t));
+  for (int cats_ind = 0; cats_ind < num_sources; cats_ind++) {
+    cropped_sky_models->catsources[cats_ind].n_comps = n_points + n_gauss + n_shapes;
+    cropped_sky_models->catsources[cats_ind].n_points = n_points;
+    cropped_sky_models->catsources[cats_ind].n_gauss = n_gauss;
+    cropped_sky_models->catsources[cats_ind].n_shapes = n_shapes;
+    cropped_sky_models->catsources[cats_ind].n_shape_coeffs = n_shape_coeffs;
 
-  float one_array[] = {1.0};
-  float zero_array[] = {0.0};
+    if (n_points > 0) {
+      cropped_sky_models->catsources[cats_ind].point_ref_stokesI = malloc(n_points*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].point_ref_stokesQ = malloc(n_points*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].point_ref_stokesU = malloc(n_points*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].point_ref_stokesV = malloc(n_points*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].point_SIs = malloc(n_points*sizeof(float));
 
-  cropped_sky_models->catsources[0].n_comps = 1;
-  cropped_sky_models->catsources[0].n_points = 1;
-  cropped_sky_models->catsources[0].n_gauss = 0;
-  cropped_sky_models->catsources[0].n_shapes = 0;
-  cropped_sky_models->catsources[0].n_shape_coeffs = 0;
+      cropped_sky_models->catsources[cats_ind].point_ras = malloc(n_points*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].point_decs = malloc(n_points*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].point_ref_freqs = malloc(n_points*sizeof(float));
 
-  cropped_sky_models->catsources[0].point_ref_stokesI = one_array;
-  cropped_sky_models->catsources[0].point_ref_stokesQ = zero_array;
-  cropped_sky_models->catsources[0].point_ref_stokesU = zero_array;
-  cropped_sky_models->catsources[0].point_ref_stokesV = zero_array;
-  cropped_sky_models->catsources[0].point_SIs = zero_array;
-  // // cropped_sky_models->catsource[0].point_azs = zero_array;
-  // // cropped_sky_models->catsource[0].point_zas = zero_array;
-  //
+      for (int point = 0; point < n_points; point++) {
+        cropped_sky_models->catsources[cats_ind].point_ras[point] = ra0;
+        cropped_sky_models->catsources[cats_ind].point_decs[point] = dec0;
+        cropped_sky_models->catsources[cats_ind].point_ref_freqs[point] = 150e+6;
+
+        cropped_sky_models->catsources[cats_ind].point_ref_stokesI[point] = 1.0;
+        cropped_sky_models->catsources[cats_ind].point_ref_stokesQ[point] = 0.0;
+        cropped_sky_models->catsources[cats_ind].point_ref_stokesU[point] = 0.0;
+        cropped_sky_models->catsources[cats_ind].point_ref_stokesV[point] = 0.0;
+        cropped_sky_models->catsources[cats_ind].point_SIs[point] = 0.0;
+      }
+    }
+  }
+  return cropped_sky_models;
+}
+
+woden_settings_t * make_woden_settings(float ra0, float dec0) {
+
+    woden_settings_t *woden_settings = malloc(sizeof(woden_settings_t));
+
+    woden_settings->ra0 = ra0;
+    woden_settings->dec0 = dec0;
+    woden_settings->sdec0 = sinf(dec0);
+    woden_settings->cdec0 = cosf(dec0);
+    woden_settings->num_baselines = NUM_BASELINES;
+    woden_settings->num_freqs = NUM_FREQS;
+    woden_settings->num_time_steps = NUM_TIME_STEPS;
+    woden_settings->num_visis = NUM_BASELINES * NUM_FREQS * NUM_TIME_STEPS;
+    woden_settings->coarse_band_width = 1.28e+6;
+
+    return woden_settings;
+
+}
+
+void test_calculate_visibilities_NoBeam_Point_PhaseCent(void) {
+
   float ra0 = 0.0;
   float dec0 = MWA_LAT_RAD;
 
-  float ra_array[] = {ra0};
-  float dec_array[] = {dec0};
-  float freq_array[] = {150e+6};
-  //
-  cropped_sky_models->catsources[0].point_ras = ra_array;
-  cropped_sky_models->catsources[0].point_decs = dec_array;
-  cropped_sky_models->catsources[0].point_ref_freqs = freq_array;
+  int n_points = 1;
+  int n_gauss = 0;
+  int n_shapes = 0; int n_shape_coeffs = 0;
+  int num_sources = 1;
+  int n_comps = 1;
+
+  source_catalogue_t *cropped_sky_models = make_cropped_sky_models(ra0, dec0,
+                                                    n_points, n_gauss, n_shapes,
+                                                    n_shape_coeffs, num_sources,
+                                                    n_comps);
 
   beam_settings_t *beam_settings = malloc(sizeof(beam_settings));
-
   beam_settings->beamtype = NO_BEAM;
 
-  woden_settings_t *woden_settings = malloc(sizeof(woden_settings_t));
-
-  woden_settings->ra0 = ra0;
-  woden_settings->dec0 = dec0;
-  woden_settings->sdec0 = sinf(dec0);
-  woden_settings->cdec0 = cosf(dec0);
-  woden_settings->num_baselines = NUM_BASELINES;
-  woden_settings->num_freqs = NUM_FREQS;
-  woden_settings->num_time_steps = NUM_TIME_STEPS;
+  woden_settings_t *woden_settings = make_woden_settings(ra0, dec0);
   woden_settings->beamtype = NO_BEAM;
-  woden_settings->num_visis = NUM_BASELINES * NUM_FREQS * NUM_TIME_STEPS;
-  woden_settings->coarse_band_width = 1.28e+6;
-
-  float base_band_freq = 120e+6;
 
   test_calculate_visibilities(cropped_sky_models,
                               beam_settings, woden_settings,
-                              beam_settings->beamtype, base_band_freq);
+                              beam_settings->beamtype);
 
 }
 
