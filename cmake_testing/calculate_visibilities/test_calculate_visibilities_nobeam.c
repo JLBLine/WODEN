@@ -61,7 +61,7 @@ void test_calculate_visibilities_NoBeam(int n_points, int n_gauss, int n_shapes,
                                                     n_points, n_gauss, n_shapes,
                                                     num_sources);
 
-  beam_settings_t *beam_settings = malloc(sizeof(beam_settings));
+  beam_settings_t *beam_settings = malloc(sizeof(beam_settings_t));
   beam_settings->beamtype = NO_BEAM;
 
   woden_settings_t *woden_settings = make_woden_settings(RA0, MWA_LAT_RAD);

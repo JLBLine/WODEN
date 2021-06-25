@@ -29,7 +29,7 @@ void test_calculate_visibilities_GaussBeam(int n_points, int n_gauss, int n_shap
                                                     n_points, n_gauss, n_shapes,
                                                     num_sources);
 
-  beam_settings_t *beam_settings = malloc(sizeof(beam_settings));
+  beam_settings_t *beam_settings = malloc(sizeof(beam_settings_t));
   beam_settings->beamtype = GAUSS_BEAM;
 
   //Make some fiducial settings - point beam slightly away
@@ -54,7 +54,7 @@ void test_calculate_visibilities_GaussBeam(int n_points, int n_gauss, int n_shap
   float gain1 = 0.970296 * (n_points + n_gauss + n_shapes)*num_sources;
   float gain2 = 0.335948 * (n_points + n_gauss + n_shapes)*num_sources;
 
-  test_comp_phase_centre_twogains(visibility_set, gain1, gain2);
+  test_comp_phase_centre_twogains(visibility_set, gain1, gain1, gain2, gain2);
 
   // for (size_t visi = 0; visi < NUM_VISI; visi++) {
   //   printf("%.6f %.1f %.1f %.1f %.1f %.1f %.6f %.1f\n",

@@ -89,7 +89,7 @@ int RTS_MWAFEEInit(const char *h5filename, float freq_Hz, RTS_MWA_FEE_beam_t *pb
 
     /* Get max length of spherical wave table */
 
-  hid_t    dataset, dataspace;
+  hid_t  dataset, dataspace;
   hsize_t dims_out[2];
 
   int n_ant = 16;
@@ -295,12 +295,15 @@ int RTS_MWAFEEInit(const char *h5filename, float freq_Hz, RTS_MWA_FEE_beam_t *pb
   free(Q2);
 
   H5Fclose(file);
+  H5Sclose(dataspace);
 
   pb->m_range = malloc((2*pb->nmax + 1)*sizeof(float) );
 
   for (int m = 0; m < 2*pb->nmax + 1; m++) {
     pb->m_range[m] = -(float)pb->nmax + (float)m;
   }
+
+  // printf("AT END OF C BEAM STUFF\n");
 
   return status;
 

@@ -15,6 +15,22 @@ are launched by calculate_visibilities::calculate_visibilities`
 #include <stdlib.h>
 #include <complex.h>
 
+// #include <stdio.h>
+// #include <stdlib.h>
+// #include <string.h>
+//
+// #include "constants.h"
+// #include "woden_struct_defs.h"
+// #include "create_sky_model.h"
+// #include "shapelet_basis.h"
+// #include "chunk_sky_model.h"
+// #include "print_help.h"
+// #include "primary_beam.h"
+// #include "FEE_primary_beam.h"
+// #include "woden_settings.h"
+// #include "visibility_set.h"
+// #include "array_layout.h"
+
 #include "test_calculate_visibilities_common.h"
 
 //External CUDA code we're linking in
@@ -25,12 +41,17 @@ extern void calculate_visibilities(array_layout_t *array_layout,
 
 #define UNITY_INCLUDE_FLOAT
 
+//Just two LSTs to check things change with time
+float lsts[] = {0.0, M_PI / 4};
+
+float azs[] = {0.0, 4.528359553989764};
+float zas[] = {0.0, 0.6978088917603547};
+
+float para_angs[] = {0.0, 1.7548257531898224};
+
 //Different delays settings, which control the pointing of the MWA beam
 float zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-
-//Just two LSTs to check things change with time
-float lsts[] = {0.0, M_PI / 4};
 
 /*
 Create a number of SOURCEs and input into a sky model catalogue `source_catalogue_t`
@@ -72,8 +93,13 @@ source_catalogue_t * make_cropped_sky_models(float ra0, float dec0,
       cropped_sky_models->catsources[cats_ind].point_decs = malloc(n_points*sizeof(float));
       cropped_sky_models->catsources[cats_ind].point_ref_freqs = malloc(n_points*sizeof(float));
 
-      cropped_sky_models->catsources[cats_ind].point_gaussbeam_has = malloc(n_points*NUM_TIME_STEPS);
-      cropped_sky_models->catsources[cats_ind].point_gaussbeam_decs = malloc(n_points*NUM_TIME_STEPS);
+      cropped_sky_models->catsources[cats_ind].point_gaussbeam_has = malloc(n_points*NUM_TIME_STEPS*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].point_gaussbeam_decs = malloc(n_points*NUM_TIME_STEPS*sizeof(float));
+
+      cropped_sky_models->catsources[cats_ind].point_azs = malloc(n_points*NUM_TIME_STEPS*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].point_zas = malloc(n_points*NUM_TIME_STEPS*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].sin_point_para_angs = malloc(n_points*NUM_TIME_STEPS*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].cos_point_para_angs = malloc(n_points*NUM_TIME_STEPS*sizeof(float));
 
       for (int point = 0; point < n_points; point++) {
         cropped_sky_models->catsources[cats_ind].point_ras[point] = ra0;
@@ -90,6 +116,11 @@ source_catalogue_t * make_cropped_sky_models(float ra0, float dec0,
           int step = point*NUM_TIME_STEPS + time;
           cropped_sky_models->catsources[cats_ind].point_gaussbeam_has[step] = lsts[time] - RA0;
           cropped_sky_models->catsources[cats_ind].point_gaussbeam_decs[step] = MWA_LAT_RAD;
+
+          cropped_sky_models->catsources[cats_ind].point_azs[step] = azs[time];
+          cropped_sky_models->catsources[cats_ind].point_zas[step] = zas[time];
+          cropped_sky_models->catsources[cats_ind].sin_point_para_angs[step] = sinf(para_angs[time]);
+          cropped_sky_models->catsources[cats_ind].cos_point_para_angs[step] = cosf(para_angs[time]);
         }
 
 
@@ -112,8 +143,13 @@ source_catalogue_t * make_cropped_sky_models(float ra0, float dec0,
       cropped_sky_models->catsources[cats_ind].gauss_minors = malloc(n_gauss*sizeof(float));
       cropped_sky_models->catsources[cats_ind].gauss_pas = malloc(n_gauss*sizeof(float));
 
-      cropped_sky_models->catsources[cats_ind].gauss_gaussbeam_has = malloc(n_gauss*NUM_TIME_STEPS);
-      cropped_sky_models->catsources[cats_ind].gauss_gaussbeam_decs = malloc(n_gauss*NUM_TIME_STEPS);
+      cropped_sky_models->catsources[cats_ind].gauss_gaussbeam_has = malloc(n_gauss*NUM_TIME_STEPS*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].gauss_gaussbeam_decs = malloc(n_gauss*NUM_TIME_STEPS*sizeof(float));
+
+      cropped_sky_models->catsources[cats_ind].gauss_azs = malloc(n_gauss*NUM_TIME_STEPS*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].gauss_zas = malloc(n_gauss*NUM_TIME_STEPS*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].sin_gauss_para_angs = malloc(n_gauss*NUM_TIME_STEPS*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].cos_gauss_para_angs = malloc(n_gauss*NUM_TIME_STEPS*sizeof(float));
 
       for (int gauss = 0; gauss < n_gauss; gauss++) {
         cropped_sky_models->catsources[cats_ind].gauss_ras[gauss] = ra0;
@@ -134,6 +170,11 @@ source_catalogue_t * make_cropped_sky_models(float ra0, float dec0,
           int step = gauss*NUM_TIME_STEPS + time;
           cropped_sky_models->catsources[cats_ind].gauss_gaussbeam_has[step] = lsts[time] - RA0;
           cropped_sky_models->catsources[cats_ind].gauss_gaussbeam_decs[step] = MWA_LAT_RAD;
+
+          cropped_sky_models->catsources[cats_ind].gauss_azs[step] = azs[time];
+          cropped_sky_models->catsources[cats_ind].gauss_zas[step] = zas[time];
+          cropped_sky_models->catsources[cats_ind].sin_gauss_para_angs[step] = sinf(para_angs[time]);
+          cropped_sky_models->catsources[cats_ind].cos_gauss_para_angs[step] = cosf(para_angs[time]);
         }
       }
     }
@@ -159,8 +200,13 @@ source_catalogue_t * make_cropped_sky_models(float ra0, float dec0,
       cropped_sky_models->catsources[cats_ind].shape_n2s = malloc(n_shapes);
       cropped_sky_models->catsources[cats_ind].shape_param_indexes = malloc(n_shapes);
 
-      cropped_sky_models->catsources[cats_ind].shape_gaussbeam_has = malloc(n_shapes*NUM_TIME_STEPS);
-      cropped_sky_models->catsources[cats_ind].shape_gaussbeam_decs = malloc(n_shapes*NUM_TIME_STEPS);
+      cropped_sky_models->catsources[cats_ind].shape_gaussbeam_has = malloc(n_shapes*NUM_TIME_STEPS*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].shape_gaussbeam_decs = malloc(n_shapes*NUM_TIME_STEPS*sizeof(float));
+
+      cropped_sky_models->catsources[cats_ind].shape_azs = malloc(n_shapes*NUM_TIME_STEPS*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].shape_zas = malloc(n_shapes*NUM_TIME_STEPS*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].sin_shape_para_angs = malloc(n_shapes*NUM_TIME_STEPS*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].cos_shape_para_angs = malloc(n_shapes*NUM_TIME_STEPS*sizeof(float));
 
       for (int shape = 0; shape < n_shapes; shape++) {
         cropped_sky_models->catsources[cats_ind].shape_ras[shape] = ra0;
@@ -187,6 +233,11 @@ source_catalogue_t * make_cropped_sky_models(float ra0, float dec0,
           int step = shape*NUM_TIME_STEPS + time;
           cropped_sky_models->catsources[cats_ind].shape_gaussbeam_has[step] = lsts[time] - RA0;
           cropped_sky_models->catsources[cats_ind].shape_gaussbeam_decs[step] = MWA_LAT_RAD;
+
+          cropped_sky_models->catsources[cats_ind].shape_azs[step] = azs[time];
+          cropped_sky_models->catsources[cats_ind].shape_zas[step] = zas[time];
+          cropped_sky_models->catsources[cats_ind].sin_shape_para_angs[step] = sinf(para_angs[time]);
+          cropped_sky_models->catsources[cats_ind].cos_shape_para_angs[step] = cosf(para_angs[time]);
         }
       }
     }
@@ -219,6 +270,11 @@ void free_sky_model(source_catalogue_t *cropped_sky_models) {
 
       free(cropped_sky_models->catsources[cats_ind].point_gaussbeam_has);
       free(cropped_sky_models->catsources[cats_ind].point_gaussbeam_decs);
+
+      free(cropped_sky_models->catsources[cats_ind].point_azs);
+      free(cropped_sky_models->catsources[cats_ind].point_zas);
+      free(cropped_sky_models->catsources[cats_ind].sin_point_para_angs);
+      free(cropped_sky_models->catsources[cats_ind].cos_point_para_angs);
     }
 
     if (n_gauss > 0) {
@@ -235,6 +291,14 @@ void free_sky_model(source_catalogue_t *cropped_sky_models) {
       free(cropped_sky_models->catsources[cats_ind].gauss_majors);
       free(cropped_sky_models->catsources[cats_ind].gauss_minors);
       free(cropped_sky_models->catsources[cats_ind].gauss_pas);
+
+      free(cropped_sky_models->catsources[cats_ind].gauss_gaussbeam_has);
+      free(cropped_sky_models->catsources[cats_ind].gauss_gaussbeam_decs);
+
+      free(cropped_sky_models->catsources[cats_ind].gauss_azs);
+      free(cropped_sky_models->catsources[cats_ind].gauss_zas);
+      free(cropped_sky_models->catsources[cats_ind].sin_gauss_para_angs);
+      free(cropped_sky_models->catsources[cats_ind].cos_gauss_para_angs);
     }
 
     if (n_shapes > 0) {
@@ -257,6 +321,14 @@ void free_sky_model(source_catalogue_t *cropped_sky_models) {
       free(cropped_sky_models->catsources[cats_ind].shape_n2s);
       free(cropped_sky_models->catsources[cats_ind].shape_param_indexes);
 
+      free(cropped_sky_models->catsources[cats_ind].shape_gaussbeam_has);
+      free(cropped_sky_models->catsources[cats_ind].shape_gaussbeam_decs);
+
+      free(cropped_sky_models->catsources[cats_ind].shape_azs);
+      free(cropped_sky_models->catsources[cats_ind].shape_zas);
+      free(cropped_sky_models->catsources[cats_ind].sin_shape_para_angs);
+      free(cropped_sky_models->catsources[cats_ind].cos_shape_para_angs);
+
     }
   }
   free(cropped_sky_models->catsources);
@@ -276,9 +348,11 @@ woden_settings_t * make_woden_settings(float ra0, float dec0) {
     woden_settings->num_time_steps = NUM_TIME_STEPS;
     woden_settings->num_visis = NUM_BASELINES * NUM_FREQS * NUM_TIME_STEPS;
     woden_settings->coarse_band_width = 1.28e+6;
+    //Make the fine channel width insanely small so beam changes little
+    //with frequency - that way we can test for just one gain value per time
+    woden_settings->frequency_resolution = 1;
 
     return woden_settings;
-
 }
 
 /*
@@ -341,7 +415,8 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
                                  float ra0, float dec0,
                                  int beamtype) {
 
-  float base_band_freq = 120e+6;
+  float base_band_freq = BASE_BAND_FREQ;
+  // float base_band_freq = 120e+6;
 
   array_layout_t *array_layout = malloc(sizeof(array_layout_t));
 
@@ -353,34 +428,6 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
     array_layout->X_diff_metres[baseline] = (baseline + 1) * 100;
     array_layout->Y_diff_metres[baseline] = (baseline + 1) * 100;
     array_layout->Z_diff_metres[baseline] = 0.0;
-  }
-
-  int status = 0;
-
-  //The intial setup of the FEE beam is done on the CPU, so call it here
-  if (woden_settings->beamtype == FEE_BEAM){
-
-    beam_settings->FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
-      //We need the zenith beam to get the normalisation
-    beam_settings->FEE_beam_zenith = malloc(sizeof(RTS_MWA_FEE_beam_t));
-
-    float base_middle_freq = base_band_freq + (woden_settings->coarse_band_width/2.0);
-  //
-    printf("Middle freq is %.8e \n",base_middle_freq );
-  //
-    float float_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                                     0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-  //
-    printf("Setting up the zenith FEE beam...");
-    status = RTS_MWAFEEInit(woden_settings->hdf5_beam_path, base_middle_freq,
-                            beam_settings->FEE_beam_zenith, zenith_delays);
-    printf(" done.\n");
-
-    printf("Setting up the FEE beam...");
-    status = RTS_MWAFEEInit(woden_settings->hdf5_beam_path, base_middle_freq,
-          beam_settings->FEE_beam, woden_settings->FEE_ideal_delays);
-    printf(" done.\n");
-
   }
 
   float *sbf = NULL;
@@ -396,28 +443,72 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
   fill_timefreq_visibility_set(visibility_set, woden_settings,
                                base_band_freq, lsts);
 
-  //CUDA code that we're testing
-  calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
+  if (beam_settings->beamtype == FEE_BEAM) {
+    char* mwa_fee_hdf5 = getenv("MWA_FEE_HDF5");
+
+    if (mwa_fee_hdf5) {
+      printf("MWA_FEE_HDF5: %s\n", mwa_fee_hdf5 );
+
+      beam_settings->FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
+      // // //We need the zenith beam to get the normalisation
+      beam_settings->FEE_beam_zenith = malloc(sizeof(RTS_MWA_FEE_beam_t));
+      // //
+      float base_middle_freq = BASE_BAND_FREQ + (woden_settings->coarse_band_width/2.0);
+      //
+      // // printf("Middle freq %.1f\n",base_middle_freq / 1e6 );
+      //
+      int status;
+      status = RTS_MWAFEEInit(mwa_fee_hdf5, base_middle_freq,
+                             beam_settings->FEE_beam_zenith, zenith_delays);
+
+      status = RTS_MWAFEEInit(mwa_fee_hdf5, base_middle_freq,
+                              beam_settings->FEE_beam, zenith_delays);
+      printf("STATUS %d\n",status );
+      //
+      printf("Calling CUDA\n");
+      calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
+                             woden_settings, visibility_set, sbf);
+      printf("CUDA has finished\n");
+
+      // for (size_t visi = 0; visi < woden_settings->num_visis; visi++) {
+      //   printf("%.4f %.4f %.4f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
+      //           visibility_set->us_metres[visi],
+      //           visibility_set->vs_metres[visi],
+      //           visibility_set->ws_metres[visi],
+      //           visibility_set->sum_visi_XX_real[visi],
+      //           visibility_set->sum_visi_XX_imag[visi],
+      //           visibility_set->sum_visi_XY_real[visi],
+      //           visibility_set->sum_visi_XY_imag[visi],
+      //           visibility_set->sum_visi_YX_real[visi],
+      //           visibility_set->sum_visi_YX_imag[visi],
+      //           visibility_set->sum_visi_YY_real[visi],
+      //           visibility_set->sum_visi_YY_imag[visi]);
+      // }
+
+      RTS_freeHDFBeam(beam_settings->FEE_beam);
+      RTS_freeHDFBeam(beam_settings->FEE_beam_zenith);
+
+      // free(beam_settings->FEE_beam);
+      // free(beam_settings->FEE_beam_zenith);
+
+    } else {
+      printf("MWA_FEE_HDF5 not found - not running test_RTS_FEE_beam test");
+    }
+  } else {//CUDA code that we're testing
+    calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
                          woden_settings, visibility_set, sbf);
+  }
 
   //Be free my pretties!
-  free(sbf);
-  free_sky_model(cropped_sky_models);
+  if (cropped_sky_models->num_shapelets > 0) {
+    free(sbf);
+  }
 
-  // for (size_t visi = 0; visi < woden_settings->num_visis; visi++) {
-  //   printf("%.4f %.4f %.4f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
-  //           visibility_set->us_metres[visi],
-  //           visibility_set->vs_metres[visi],
-  //           visibility_set->ws_metres[visi],
-  //           visibility_set->sum_visi_XX_real[visi],
-  //           visibility_set->sum_visi_XX_imag[visi],
-  //           visibility_set->sum_visi_XY_real[visi],
-  //           visibility_set->sum_visi_XY_imag[visi],
-  //           visibility_set->sum_visi_YX_real[visi],
-  //           visibility_set->sum_visi_YX_imag[visi],
-  //           visibility_set->sum_visi_YY_real[visi],
-  //           visibility_set->sum_visi_YY_imag[visi]);
-  // }
+  free_sky_model(cropped_sky_models);
+  free(array_layout->X_diff_metres);
+  free(array_layout->Y_diff_metres);
+  free(array_layout->Z_diff_metres);
+  // free(array_layout);
 
   test_uvw(visibility_set, lsts, ra0, dec0);
 
@@ -426,21 +517,23 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
 }
 
 /*
+This test works for beams that change with time, but have no cross-pol info
+Can just test whether the XX/YY real values match expected
 */
 void test_comp_phase_centre_twogains(visibility_set_t *visibility_set,
-                                     float gain1, float gain2) {
+                                     float gain1xx, float gain1yy,
+                                     float gain2xx, float gain2yy) {
 
-  // printf("GAINS %.1f %.1f\n",gain1, gain2 );
+  float *expec_gainsxx = malloc(NUM_VISI*sizeof(float));
+  float *expec_gainsyy = malloc(NUM_VISI*sizeof(float));
 
-  float *expec_gains = malloc(NUM_VISI*sizeof(float));
-
-  float gains[] = {gain1, gain2};
-
-  // printf("GAINS %.1f %.1f\n",gain1, gain2 );
+  float gainsxx[] = {gain1xx, gain2xx};
+  float gainsyy[] = {gain1yy, gain2yy};
 
   for (int time = 0; time < NUM_TIME_STEPS; time++) {
     for (int visi = 0; visi < NUM_VISI/2; visi++) {
-      expec_gains[time*(NUM_VISI/2) + visi] = gains[time];
+      expec_gainsxx[time*(NUM_VISI/2) + visi] = gainsxx[time];
+      expec_gainsyy[time*(NUM_VISI/2) + visi] = gainsyy[time];
     }
 
   }
@@ -449,7 +542,8 @@ void test_comp_phase_centre_twogains(visibility_set_t *visibility_set,
   //the real vary slightly for baseline (I've set the major/minor to be small
   //enough to be close to 1.0 but not quite)
 
-  float gain;
+  float gainxx;
+  float gainyy;
   for (size_t visi = 0; visi < NUM_VISI; visi++) {
   //   printf("%.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
   //           visibility_set->sum_visi_XX_real[visi],
@@ -461,42 +555,20 @@ void test_comp_phase_centre_twogains(visibility_set_t *visibility_set,
   //           visibility_set->sum_visi_YY_imag[visi],
   //           visibility_set->sum_visi_YY_real[visi] );
 
-    gain = expec_gains[visi];
+    gainxx = expec_gainsxx[visi];
+    gainyy = expec_gainsyy[visi];
     // printf("Expec GAIN %.1f\n",gain );
 
-    TEST_ASSERT_FLOAT_WITHIN(gain*1e-4, gain, visibility_set->sum_visi_XX_real[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gain*1e-4, 0.0, visibility_set->sum_visi_XX_imag[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gain*1e-4, 0.0, visibility_set->sum_visi_XY_real[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gain*1e-4, 0.0, visibility_set->sum_visi_XY_imag[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gain*1e-4, 0.0, visibility_set->sum_visi_YX_real[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gain*1e-4, 0.0, visibility_set->sum_visi_YX_imag[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gain*1e-4, 0.0, visibility_set->sum_visi_YY_imag[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gain*1e-4, gain, visibility_set->sum_visi_YY_real[visi]);
-  }
-  free(expec_gains);
-}
+    TEST_ASSERT_FLOAT_WITHIN(gainxx*1e-4, gainxx, visibility_set->sum_visi_XX_real[visi]);
+    TEST_ASSERT_FLOAT_WITHIN(gainxx*1e-4, 0.0, visibility_set->sum_visi_XX_imag[visi]);
+    TEST_ASSERT_FLOAT_WITHIN(gainxx*1e-4, 0.0, visibility_set->sum_visi_XY_real[visi]);
+    TEST_ASSERT_FLOAT_WITHIN(gainxx*1e-4, 0.0, visibility_set->sum_visi_XY_imag[visi]);
+    TEST_ASSERT_FLOAT_WITHIN(gainxx*1e-4, 0.0, visibility_set->sum_visi_YX_real[visi]);
+    TEST_ASSERT_FLOAT_WITHIN(gainxx*1e-4, 0.0, visibility_set->sum_visi_YX_imag[visi]);
+    TEST_ASSERT_FLOAT_WITHIN(gainyy*1e-4, gainyy, visibility_set->sum_visi_YY_real[visi]);
+    TEST_ASSERT_FLOAT_WITHIN(gainyy*1e-4, 0.0, visibility_set->sum_visi_YY_imag[visi]);
 
-// /*
-// Check whether the environment variable for the FEE hdf5 beam exists, don't run
-// the test if it's missing
-// */
-// void check_for_env_and_run_test(float freq, float *delays, float *expected,
-//                                 char *outname) {
-//   char* mwa_fee_hdf5 = getenv("MWA_FEE_HDF5");
-//
-//   if (mwa_fee_hdf5) {
-//     printf("MWA_FEE_HDF5: %s", mwa_fee_hdf5 );
-//     test_RTS_CUDA_FEE_beam_VaryFreqVaryPointing(freq, delays, mwa_fee_hdf5, expected, outname);
-//   }
-//   else {
-//     printf("MWA_FEE_HDF5 not found - not running test_RTS_FEE_beam test");
-//   }
-// }
-//
-// /*
-// Run the test but vary the frequency and pointings. Compare to pre-calculated
-// values that are stored in test_RTS_FEE_beam.h
-// */
-// void test_RTS_CUDA_FEE_beam_100MHz_zenith(void) {
-//   check_for_env_and_run_test(100e+6, zenith_delays, zenith_100, "zenith_100.txt");
-// }
+  }
+  free(expec_gainsxx);
+  free(expec_gainsyy);
+}

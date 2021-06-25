@@ -250,7 +250,7 @@ void source_component_common(int num_components,
     float sin_2theta = 0.0;
     float fwhm_lm = sinf(beam_settings->beam_FWHM_rad);
 
-    printf("\tDoing gaussian beam tings\n");
+    printf("\tDoing Gaussian Beam\n");
 
     calculate_gaussian_beam(num_components,
          woden_settings->num_time_steps, woden_settings->num_freqs,
@@ -269,6 +269,8 @@ void source_component_common(int num_components,
     int rotation = 1;
     //Normalise FEE beam to zenith
     int scaling = 1;
+
+    printf("\tDoing MWA FEE Beam\n");
 
     calc_CUDA_FEE_beam(azs, zas, sin_para_angs, cos_para_angs,
            num_components, woden_settings->num_time_steps, beam_settings->FEE_beam,
