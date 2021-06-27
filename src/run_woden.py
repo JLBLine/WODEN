@@ -8,6 +8,8 @@ from astropy.time import Time
 from astropy.coordinates import EarthLocation
 from astropy import units as u
 
+from erfa import gd2gc
+
 from numpy import *
 from numpy import exp as np_exp
 from struct import unpack
@@ -21,6 +23,7 @@ R2D = 180.0 / pi
 D2R = pi / 180.0
 MWA_LAT = -26.7033194444
 MWA_LONG = 116.670813889
+MWA_HEIGHT = 377.0
 VELC = 299792458.0
 SOLAR2SIDEREAL = 1.00274
 
@@ -76,7 +79,7 @@ def calc_jdcal(date):
     ##then the fraction goes into the data array for PTYPE5
     return jd_day, jd_fraction
 
-def get_LST(latitude=None,longitude=None,date=None):
+def get_LST(latitude=None,longitude=None,date=None,height=None):
     """
     For the given Earth location and UTC date return the local sidereal time
     in degrees. Uses `astropy.time.Time`_ and `astropy.coordinates.EarthLocation`_
@@ -100,7 +103,7 @@ def get_LST(latitude=None,longitude=None,date=None):
 
     """
     ##Setup location
-    observing_location = EarthLocation(lat=latitude*u.deg, lon=longitude*u.deg, height=0.0)
+    observing_location = EarthLocation(lat=latitude*u.deg, lon=longitude*u.deg, height=height)
     ##Setup time at that locatoin
     observing_time = Time(date, scale='utc', location=observing_location)
     ##Grab the LST
@@ -165,7 +168,8 @@ def RTS_decode_baseline(blcode):
 
 
 def make_antenna_table(XYZ_array=None,telescope_name=None,num_antennas=None,
-                       freq_cent=None,date=None):
+                       freq_cent=None,date=None,
+                       longitude=None, latitude=None, array_height=None):
     """Write an antenna table for a uvfits file. This is the first table in
     the uvfits file that encodes antenna positions, with some header keywords.
     Uses `astropy.io.fits.BinTableHDU`_ to create the table.
@@ -186,12 +190,17 @@ def make_antenna_table(XYZ_array=None,telescope_name=None,num_antennas=None,
     date : string
         UTC date/time in format YYYY-MM-DDThh:mm:ss to give to the 'RDATE'
         header keyword
+    longitude : float
+        Longitude of the array (deg)
+    latitude : float
+        Latitude of the array (deg)
+    array_height : float
+        Height of the array above sea level (metres)
 
     Returns
     -------
     hdu_ant : `astropy.io.fits.hdu.table.BinTableHDU`
         Populated uvfits antenna table
-
     """
 
     ##Make some values for certain columns
@@ -228,13 +237,13 @@ def make_antenna_table(XYZ_array=None,telescope_name=None,num_antennas=None,
         hdu_ant = fits.BinTableHDU.from_columns(coldefs, name="AIPS AN")
 
     ##-----Add some header values that seem to be needed by casa/RTS/WSClean
+    ##Absolute reference point of the centre of the array
+    ##Use erfa to calculate this
+    arrX, arrY, arrZ = gd2gc(1, longitude*D2R, latitude*D2R, array_height)
 
-    ##Absolute reference point of the centre of the array - this is hardcoded to
-    ##the MWA at the moment; X,Y,Z are relative to this
-    ##TODO get the equation to work this out from lat/lon
-    hdu_ant.header['ARRAYX']  = -2559453.2906
-    hdu_ant.header['ARRAYY']  = 5095371.73544
-    hdu_ant.header['ARRAYZ']  = -2849056.77357
+    hdu_ant.header['ARRAYX']  = arrX
+    hdu_ant.header['ARRAYY']  = arrY
+    hdu_ant.header['ARRAYZ']  = arrZ
 
     hdu_ant.header['FREQ']    = freq_cent
     hdu_ant.header['RDATE']   = date
@@ -243,7 +252,7 @@ def make_antenna_table(XYZ_array=None,telescope_name=None,num_antennas=None,
     hdu_ant.header['NUMORB']  = 0
     hdu_ant.header['NOPCAL']  = 0
     hdu_ant.header['POLTYPE'] = '        '
-    hdu_ant.header['CREATOR']   = 'WODEN_uvfits_writer'
+    hdu_ant.header['CREATOR'] = 'WODEN_uvfits_writer'
 
     return hdu_ant
 
@@ -372,7 +381,7 @@ def create_uvfits(v_container=None,freq_cent=None,
     hdulist.writeto(output_uvfits_name,overwrite=True)
     hdulist.close()
 
-def enh2xyz(east,north,height,latitude=MWA_LAT*D2R):
+def enh2xyz(east, north, height, latitude=MWA_LAT*D2R):
     """
     Takes local east, north, height coords for a given latitude (radians)
     and returns local X,Y,Z coords to put in the uvfits antenna table
@@ -836,6 +845,8 @@ def get_parser():
         help='Latitude (deg) of the array - defaults to MWA at -26.7033194444')
     tel_group.add_argument('--longitude', default=MWA_LONG, type=float,
         help='Longitude (deg) of the array - defaults to MWA at 116.670813889')
+    tel_group.add_argument('--array_height', default=MWA_HEIGHT, type=float,
+        help='Height (m) of the array above sea level - defaults to MWA at 377.0')
     tel_group.add_argument('--array_layout', default=False,
         help='Instead of reading the array layout from the metafits file, read'
              ' from a text file. Store antenna positions as offset from array '
@@ -1020,7 +1031,9 @@ if __name__ == "__main__":
 
     latitude = float(args.latitude)
     longitude = float(args.longitude)
-    lst_deg = get_LST(latitude=latitude,longitude=longitude,date=initial_date)
+    array_height = float(args.array_height)
+    lst_deg = get_LST(latitude=latitude,longitude=longitude,height=array_height,
+                      date=initial_date)
 
     if args.MWA_FEE_delays: FEE_delays = args.MWA_FEE_delays
 
@@ -1096,7 +1109,7 @@ if __name__ == "__main__":
 
 
 
-    X,Y,Z = enh2xyz(east, north, height,MWA_LAT*D2R)
+    X,Y,Z = enh2xyz(east, north, height, latitude*D2R)
 
     ##Get the central frequency channels, used in the uvfits header
     central_freq_chan = int(floor(num_freq_channels / 2.0))
@@ -1133,7 +1146,8 @@ if __name__ == "__main__":
 
         hdu_ant = make_antenna_table(XYZ_array=XYZ_array,telescope_name=args.telescope_name,
                       num_antennas=num_antennas, freq_cent=central_freq_chan_value,
-                      date=initial_date)
+                      date=initial_date,
+                      longitude=longitude, latitude=latitude, array_height=array_height)
 
         baselines_array, date_array = make_baseline_date_arrays(num_antennas,
                                       initial_date, num_time_steps, time_res)
