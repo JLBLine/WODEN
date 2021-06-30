@@ -14,8 +14,8 @@ import run_woden as rw
 ##Vehicle for running tests
 class Test(unittest.TestCase):
     def test_make_antenna_table(self):
-        """Tests the `rw.get_LST` function, which should calculate the
-        Local Sidereal Time for a given Long/Lat and UTC date"""
+        """Tests the `rw.make_antenna_table` function, which should create
+        the antenna table that goes into a uvfits file"""
 
         ##Some input test params
         date = "2019-06-12T13:04:12"
@@ -55,7 +55,26 @@ class Test(unittest.TestCase):
         self.assertTrue(np.array_equal(XYZ_array, ant_table.data['STABXYZ']))
         self.assertTrue(np.array_equal(nothing_array, ant_table.data['ORBPARM']))
         self.assertTrue(np.array_equal(np.arange(1, num_antennas+1), ant_table.data['NOSTA']))
+        self.assertTrue(np.array_equal(np.zeros(num_antennas), ant_table.data['MNTSTA']))
+        self.assertTrue(np.array_equal(np.zeros(num_antennas), ant_table.data['STAXOF']))
+        self.assertTrue(np.array_equal(np.array(['X']*num_antennas), ant_table.data['POLTYA']))
+        self.assertTrue(np.array_equal(np.zeros(num_antennas), ant_table.data['POLAA']))
+        self.assertTrue(np.array_equal(np.zeros(num_antennas), ant_table.data['POLCALA']))
+        self.assertTrue(np.array_equal(np.array(['Y']*num_antennas), ant_table.data['POLTYB']))
+        self.assertTrue(np.array_equal(np.zeros(num_antennas), ant_table.data['POLAB']))
+        self.assertTrue(np.array_equal(np.zeros(num_antennas), ant_table.data['POLCALB']))
 
+        self.assertAlmostEqual(ant_table.header['ARRAYX'], -2559453.6265158253)
+        self.assertAlmostEqual(ant_table.header['ARRAYY'], 5095371.541942583)
+        self.assertAlmostEqual(ant_table.header['ARRAYZ'], -2849056.817561836)
+        self.assertEqual(ant_table.header['FREQ'], freq_cent)
+        self.assertEqual(ant_table.header['RDATE'], date)
+        self.assertEqual(ant_table.header['TIMSYS'], 'UTC')
+        self.assertEqual(ant_table.header['ARRNAM'], telescope_name )
+        self.assertEqual(ant_table.header['NUMORB'], 0)
+        self.assertEqual(ant_table.header['NOPCAL'], 0)
+        self.assertEqual(ant_table.header['POLTYPE'], '')
+        self.assertEqual(ant_table.header['CREATOR'], 'WODEN_uvfits_writer')
 
 ##Run the test
 if __name__ == '__main__':

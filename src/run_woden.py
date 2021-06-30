@@ -10,29 +10,28 @@ from astropy import units as u
 
 from erfa import gd2gc
 
-from numpy import *
-from numpy import exp as np_exp
+import numpy as np
 from struct import unpack
 from subprocess import call, check_output
-from os import environ
 import os
 import warnings
+import sys
 
 ##Constants
-R2D = 180.0 / pi
-D2R = pi / 180.0
+R2D = 180.0 / np.pi
+D2R = np.pi / 180.0
 MWA_LAT = -26.7033194444
 MWA_LONG = 116.670813889
 MWA_HEIGHT = 377.0
 VELC = 299792458.0
 SOLAR2SIDEREAL = 1.00274
 
-read_the_docs_build = environ.get('READTHEDOCS', None) == 'True'
+read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 
 if read_the_docs_build:
     WODEN_DIR = "not-needed"
 else:
-    WODEN_DIR = environ['WODEN_DIR']
+    WODEN_DIR = os.environ['WODEN_DIR']
 
 def command(cmd):
     """
@@ -72,7 +71,7 @@ def calc_jdcal(date):
     t = Time(date)
     jd = t.jd
 
-    jd_day = floor(jd)
+    jd_day = np.floor(jd)
     jd_fraction = (jd - jd_day)
 
     ##The header of the uvdata file takes the integer, and
@@ -204,25 +203,25 @@ def make_antenna_table(XYZ_array=None,telescope_name=None,num_antennas=None,
     """
 
     ##Make some values for certain columns
-    annnames = array(["%05d" %ant for ant in range(1,num_antennas+1)])
-    xlabels = array(['X']*num_antennas)
-    ylabels = array(['Y']*num_antennas)
+    annnames = np.array(["%05d" %ant for ant in range(1,num_antennas+1)])
+    xlabels = np.array(['X']*num_antennas)
+    ylabels = np.array(['Y']*num_antennas)
 
     ##Make a number of FITS columns to create the antenna table from
     col1 = fits.Column(array=annnames,name='ANNAME',format='5A')
     col2 = fits.Column(array=XYZ_array,name='STABXYZ',format='3D')
     ##col3 makes an empty array, and the format states skip reading this column
     ##Just replicating the example uvfits I've been using
-    col3 = fits.Column(array=array([]),name='ORBPARM',format='0D')
-    col4 = fits.Column(array=arange(1,num_antennas+1),name='NOSTA',format='1J')
-    col5 = fits.Column(array=zeros(num_antennas),name='MNTSTA',format='1J')
-    col6 = fits.Column(array=zeros(num_antennas),name='STAXOF',format='1E')
+    col3 = fits.Column(array=np.array([]),name='ORBPARM',format='0D')
+    col4 = fits.Column(array=np.arange(1,num_antennas+1),name='NOSTA',format='1J')
+    col5 = fits.Column(array=np.zeros(num_antennas),name='MNTSTA',format='1J')
+    col6 = fits.Column(array=np.zeros(num_antennas),name='STAXOF',format='1E')
     col7 = fits.Column(array=xlabels,name='POLTYA',format='1A')
-    col8 = fits.Column(array=zeros(num_antennas),name='POLAA',format='1E')
-    col9 = fits.Column(array=zeros(num_antennas),name='POLCALA',format='1E')
+    col8 = fits.Column(array=np.zeros(num_antennas),name='POLAA',format='1E')
+    col9 = fits.Column(array=np.zeros(num_antennas),name='POLCALA',format='1E')
     col10 = fits.Column(array=ylabels,name='POLTYB',format='1A')
-    col11 = fits.Column(array=zeros(num_antennas),name='POLAB',format='1E')
-    col12 = fits.Column(array=zeros(num_antennas),name='POLCALB',format='1E')
+    col11 = fits.Column(array=np.zeros(num_antennas),name='POLAB',format='1E')
+    col12 = fits.Column(array=np.zeros(num_antennas),name='POLCALB',format='1E')
 
     ##Stick the columns into a ColDefs
     coldefs = fits.ColDefs([col1,col2,col3,col4,col5,col6, \
@@ -320,6 +319,11 @@ def create_uvfits(v_container=None,freq_cent=None,
 
     ##TODO replace all of this with an interface with pyuvdata
 
+    if not uu.shape[0]==vv.shape[0]==ww.shape[0]==baselines_array.shape[0]==date_array.shape[0]==v_container.shape[0]:
+        sys.exit("run_woden.create_uvfits: The first dimension of the arrays:\n"
+                 "v_container, uu, vv, ww, baselines_array, date_array\n"
+                 "must be equal to make a uvfits file. Exiting now.")
+
     uvparnames = ['UU','VV','WW','BASELINE','DATE']
     parvals = [uu,vv,ww,baselines_array,date_array]
 
@@ -407,8 +411,8 @@ def enh2xyz(east, north, height, latitude=MWA_LAT*D2R):
         Local Z antenna location
     """
 
-    sl = sin(latitude)
-    cl = cos(latitude)
+    sl = np.sin(latitude)
+    cl = np.cos(latitude)
     X = -north*sl + height*cl
     Y = east
     Z = north*cl + height*sl
@@ -451,13 +455,13 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
         read_data = f.read()
     f.close()
 
-    data = frombuffer(read_data,dtype=float32)
+    data = np.frombuffer(read_data,dtype=np.float32)
 
     n_data = num_time_steps * num_baselines
-    v_container = zeros((n_data,1,1,num_freq_channels,4,3))
-    uus = zeros(n_data)
-    vvs = zeros(n_data)
-    wws = zeros(n_data)
+    v_container = np.zeros((n_data,1,1,num_freq_channels,4,3))
+    uus = np.zeros(n_data)
+    vvs = np.zeros(n_data)
+    wws = np.zeros(n_data)
 
     num_visi = num_time_steps * num_freq_channels * num_baselines
 
@@ -474,7 +478,7 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
     im_YY_base = 10*num_visi
 
     num_cols = 11
-    for time_ind in arange(num_time_steps):
+    for time_ind in np.arange(num_time_steps):
 
         time_step = num_baselines * time_ind * num_freq_channels
         u_ind = u_base + time_step
@@ -485,7 +489,7 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
         vvs[time_ind*num_baselines:(time_ind + 1)*num_baselines] = data[v_ind:v_ind+num_baselines] / VELC
         wws[time_ind*num_baselines:(time_ind + 1)*num_baselines] = data[w_ind:w_ind+num_baselines] / VELC
 
-        for freq_ind in arange(num_freq_channels):
+        for freq_ind in np.arange(num_freq_channels):
 
             freq_step = num_baselines * (time_ind * num_freq_channels + freq_ind)
 
@@ -509,10 +513,10 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
             v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,3,1] = data[imag_YX_ind:imag_YX_ind+num_baselines]
 
             ##Set the weight for everything to one
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,0,2] = ones(num_baselines)
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,1,2] = ones(num_baselines)
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,2,2] = ones(num_baselines)
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,3,2] = ones(num_baselines)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,0,2] = np.ones(num_baselines)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,1,2] = np.ones(num_baselines)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,2,2] = np.ones(num_baselines)
+            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,3,2] = np.ones(num_baselines)
 
     return uus, vvs, wws, v_container
 
@@ -574,14 +578,13 @@ def write_json(num_time_steps=None, num_freqs=None,
         outfile.write('  "array_layout": "%s",\n' %array_layout_name)
         outfile.write('  "lowest_channel_freq": %.10e,\n' %lowest_channel_freq)
         outfile.write('  "latitude": %.8f,\n' %latitude)
-        # outfile.write('  "longitude": %.8f,\n' %longitude)
         outfile.write('  "coarse_band_width": %.10e,\n' %float(args.coarse_band_width))
 
         if args.sky_crop_components:
-            outfile.write('  "sky_crop_components": True,\n')
+            outfile.write('  "sky_crop_components": "True",\n')
 
         if args.primary_beam == 'Gaussian':
-            outfile.write('  "use_gaussian_beam": True,\n')
+            outfile.write('  "use_gaussian_beam": "True",\n')
             if args.gauss_beam_FWHM:
                 outfile.write('  "gauss_beam_FWHM": %.10f,\n' %float(args.gauss_beam_FWHM))
 
@@ -598,13 +601,12 @@ def write_json(num_time_steps=None, num_freqs=None,
                 outfile.write('  "gauss_dec_point": %.8f,\n' %float(args.dec0))
 
         elif args.primary_beam == 'MWA_FEE':
-            outfile.write('  "use_FEE_beam": True,\n')
+            outfile.write('  "use_FEE_beam": "True",\n')
             outfile.write('  "hdf5_beam_path": "%s",\n' %args.hdf5_beam_path)
             outfile.write('  "FEE_delays": %s,\n ' %FEE_delays)
 
         elif args.primary_beam == 'EDA2':
-            outfile.write('  "use_EDA2_beam": True,\n')
-
+            outfile.write('  "use_EDA2_beam": "True",\n')
 
         if len(band_nums) == 1:
             band_str = '[%d]' %band_nums[0]
@@ -645,30 +647,29 @@ def make_baseline_date_arrays(num_antennas, date, num_time_steps, time_res):
     """
 
     num_baselines = int(((num_antennas - 1)*num_antennas) / 2)
-    template_baselines = empty(num_baselines)
+    template_baselines = np.empty(num_baselines)
 
     ##Loop over all antenna combinations and encode the baseline pair
     baseline_ind = 0
-    for b1 in arange(num_antennas - 1):
-        for b2 in arange(b1+1,num_antennas):
+    for b1 in np.arange(num_antennas - 1):
+        for b2 in np.arange(b1+1,num_antennas):
             template_baselines[baseline_ind] = RTS_encode_baseline(b1+1, b2+1)
             baseline_ind += 1
 
     ##Calculate the Julian date, which get's split up into the header (int_jd)
     ##and DATE array (float_jd)
     ##array in the
-    int_jd, float_jd = calc_jdcal(initial_date)
-    # jd_date = int_jd + float_jd
+    int_jd, float_jd = calc_jdcal(date)
 
     ##Need an array the length of number of baselines worth of the fractional jd date
-    float_jd_array = ones(num_baselines)*float_jd
+    float_jd_array = np.ones(num_baselines)*float_jd
 
     ##Create empty data structures for final uvfits file
     n_data = num_time_steps * num_baselines
-    baselines_array = zeros(n_data)
-    date_array = zeros(n_data)
+    baselines_array = np.zeros(n_data)
+    date_array = np.zeros(n_data)
 
-    for time_ind,time in enumerate(arange(0,num_time_steps*time_res,time_res)):
+    for time_ind,time in enumerate(np.arange(0,num_time_steps*time_res,time_res)):
         time_ind_lower = time_ind*num_baselines
         baselines_array[time_ind_lower:time_ind_lower+num_baselines] = template_baselines
 
@@ -683,12 +684,14 @@ def remove_phase_tracking(frequencies=None, wws_seconds=None,
                           num_time_steps=None, v_container=None,
                           num_baselines=None):
     """
+    WARNING - currently does not change the :math:`u,v,w` coordinates, so they
+    are still defined via the original phase centre. This function really is
+    just to feed uvfits into the RTS (which generates it's own u,v,w using the
+    antenna table)
+
     Undoes phase tracking applied by WODEN - to phase track, a phase was applied
     to counter the delay term caused by :math:`w` term of baseline - so just
     apply the opposite effect of the w term, i.e.
-
-    WARNING - currently does not change the :math:`u,v,w` coordinates, so they
-    are still defined via the original phase centre.
 
     .. math::
         V^\\prime = V \\exp(2\pi i w)
@@ -721,7 +724,7 @@ def remove_phase_tracking(frequencies=None, wws_seconds=None,
 
     num_freqs = len(frequencies)
 
-    for time_ind in arange(num_time_steps):
+    for time_ind in np.arange(num_time_steps):
 
         these_wws_secs = wws_seconds[time_ind*num_baselines:(time_ind + 1)*num_baselines]
 
@@ -752,7 +755,7 @@ def remove_phase_tracking(frequencies=None, wws_seconds=None,
             ##So we just need to remove the effect of the -w term
 
             wws = these_wws_secs * freq
-            phase_rotate = np_exp( PhaseConst * wws)
+            phase_rotate = np.exp( PhaseConst * wws)
             xx_comp = xx_comp * phase_rotate
             yy_comp = yy_comp * phase_rotate
             xy_comp = xy_comp * phase_rotate
@@ -968,7 +971,7 @@ if __name__ == "__main__":
                      'This will cause WODEN to fail, exiting now'.format(args.hdf5_beam_path))
         else:
             try:
-                MWA_FEE_HDF5 = environ['MWA_FEE_HDF5']
+                MWA_FEE_HDF5 = os.environ['MWA_FEE_HDF5']
                 args.hdf5_beam_path = MWA_FEE_HDF5
             except KeyError:
                 exit('To use MWA FEE beam, either --hdf5_beam_path or environment\n'
@@ -996,8 +999,8 @@ if __name__ == "__main__":
 
             num_time_steps = int(f[0].header['NSCANS'])
 
-            delays = array(f[0].header['DELAYS'].split(','),dtype=int)
-            delays[where(delays == 32)] = 0
+            delays = np.array(f[0].header['DELAYS'].split(','),dtype=int)
+            delays[np.where(delays == 32)] = 0
             FEE_delays = str(list(delays))
 
             ##If user hasn't specified a pointing for a Gaussian beam,
@@ -1021,7 +1024,7 @@ if __name__ == "__main__":
     if args.num_time_steps: num_time_steps = int(args.num_time_steps)
 
     if args.num_freq_channels == 'obs':
-        num_freq_channels = int(floor(coarse_band_width / ch_width))
+        num_freq_channels = int(np.floor(coarse_band_width / ch_width))
     else:
         num_freq_channels = int(args.num_freq_channels)
 
@@ -1041,7 +1044,7 @@ if __name__ == "__main__":
         band_nums = range(1,25)
     else:
         try:
-            band_nums = list(array(args.band_nums.split(','),dtype=int))
+            band_nums = list(np.array(args.band_nums.split(','),dtype=int))
         except:
             print('-----------------------------------------------------')
             print('Failed to convert --band_nums into something sensible. Exiting now!!')
@@ -1054,7 +1057,7 @@ if __name__ == "__main__":
 
     if args.array_layout:
         try:
-            array_layout = loadtxt(args.array_layout)
+            array_layout = np.loadtxt(args.array_layout)
             num_antennas,_ = array_layout.shape
 
             east = array_layout[:,0]
@@ -1070,14 +1073,14 @@ if __name__ == "__main__":
     else:
         ##Using metafits for array layout. In the metafits it lists XX,YY for each
         ##antenna so we select every second one
-        selection = arange(0,len(east),2)
+        selection = np.arange(0,len(east),2)
         num_antennas = int(len(selection))
 
         east = east[selection]
         north = north[selection]
         height = height[selection]
 
-        array_layout = zeros((num_antennas,3))
+        array_layout = np.zeros((num_antennas,3))
 
         array_layout[:,0] = east
         array_layout[:,1] = north
@@ -1085,7 +1088,7 @@ if __name__ == "__main__":
 
         array_layout_name = 'WODEN_array_layout.txt'
 
-        savetxt(array_layout_name,array_layout)
+        np.savetxt(array_layout_name,array_layout)
 
     ##Write json file
     json_name = 'run_woden_%s.json' %args.band_nums
@@ -1112,7 +1115,7 @@ if __name__ == "__main__":
     X,Y,Z = enh2xyz(east, north, height, latitude*D2R)
 
     ##Get the central frequency channels, used in the uvfits header
-    central_freq_chan = int(floor(num_freq_channels / 2.0))
+    central_freq_chan = int(np.floor(num_freq_channels / 2.0))
 
     ##Loop over coarse frequency band
     for band in band_nums:
@@ -1130,7 +1133,7 @@ if __name__ == "__main__":
 
 
         if args.remove_phase_tracking:
-            frequencies = band_low_freq + arange(num_freq_channels)*ch_width
+            frequencies = band_low_freq + np.arange(num_freq_channels)*ch_width
 
             v_container = remove_phase_tracking(frequencies=frequencies,
                                       wws_seconds=wws,
@@ -1139,7 +1142,7 @@ if __name__ == "__main__":
                                       num_baselines=num_baselines)
 
         ##X,Y,Z are stored in a 2D array in units of seconds in the uvfits file
-        XYZ_array = empty((num_antennas,3))
+        XYZ_array = np.empty((num_antennas,3))
         XYZ_array[:,0] = X
         XYZ_array[:,1] = Y
         XYZ_array[:,2] = Z
