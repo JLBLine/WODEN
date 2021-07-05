@@ -910,6 +910,36 @@ def get_parser():
 def select_argument_and_check(parser_arg, parser_value,
                               metafits_arg, parser_string,
                               do_exit=True):
+    """Some arguments taken from the argparse.parser should override settings
+    from the metafits if present. If the parser argument `parser_arg` is
+    defined (i.e. not False), update it to equal `parser_value`. If not defined,
+    update `parser_arg` to `metafits_arg`, which is the value read in from
+    the metafits file. If both `parser_arg` and `metafits_arg` are False,
+    WODEN will fail, so exit with a message. Use `parser_string` to define
+    which parser arguement has failed; this will be included in the error
+    message.
+
+    Parameters
+    ----------
+    parser_arg : attribute of `argparse.Namespace`
+        The option in `args` to update
+    parser_value : Expected type for `parser_arg`
+        The value to set `parser_arg` to (e.g. float(parser_arg))
+    metafits_arg : Expected type for `parser_arg`
+        The value read in from the metafits if using metafits; False if not
+    parser_string : string
+        The parser option under test to be written out in the error message,
+        e.g. "--MWA_FEE_delays"
+    do_exit : Boolean
+        Whether to call `sys.exit` upon both `parser_arg` and `metafits_arg`
+        being False. Defaults to True
+
+    Returns
+    -------
+    parser_arg : attribute of `argparse.Namespace`
+        The update option in `args`
+    """
+
     ##If a parser arg is there, reset it to the parser_value give
     if parser_arg:
         parser_arg = parser_value
@@ -929,7 +959,17 @@ def select_argument_and_check(parser_arg, parser_value,
 
 def select_correct_enh(args):
     """Depending on whether we are reading the array layout from the metafits
-    file or a text file, read in the correct amount of east,north,height coords"""
+    file or a text file, read in the correct amount of east,north,height coords.
+    Sets `args.east`, `args.north`, `args.height`, `args.num_antennas`, and
+    `args.array_layout_name`.
+
+    Parameters
+    ----------
+    args : `argparse.Namespace`
+        The populated arguments `args = parser.parse_args()`` as returned from
+        the parser given by :func:`~run_woden.get_parser`
+    """
+
     if args.array_layout == "from_the_metafits":
         ##Using metafits for array layout. Have previously read in e,n,h
         ##In the metafits it lists XX,YY for each antenna so we select every second one
@@ -965,49 +1005,24 @@ def select_correct_enh(args):
         args.array_layout_name = args.array_layout
 
 
-def ensure_required_args(args):
-    required = [args.num_freq_channels,
-                args.num_time_steps,
-                args.cat_filename,
-                args.time_res,
-                args.freq_res,
-                args.array_layout_name,
-                args.lowest_channel_freq,
-                args.latitude,
-                args.coarse_band_width,
-                args.date,
-                args.band_nums]
-
-    labels = ["args.num_freq_channels",
-              "args.num_time_steps",
-              "args.cat_filename",
-              "args.time_res",
-              "args.freq_res",
-              "args.array_layout_name",
-              "args.lowest_channel_freq",
-              "args.latitude",
-              "args.coarse_band_width",
-              "args.date",
-              "args.band_nums"]
-
-    missing_args = []
-    missing_labels = []
-
-    for req, lab in zip(required, labels):
-        if not req:
-            missing_args.append(req)
-            missing_labels.append(lab)
-
-    if len(missing_args) > 0:
-        print("MISSING ARGS ALL IS LOST")
-        print(missing_labels)
-
-    # print(missing_args)
-
 def check_args(args):
     """Check that the combination of arguments parsed will work with the
     WODEN executable. Attempts to grab information from a metafits file if
-    possible"""
+    possible. Should error with helpful messages if a combination that won't
+    work is attempted by the user
+
+    Parameters
+    ----------
+    args : `argparse.Namespace`
+        The populated arguments `args = parser.parse_args()`` as returned from
+        the parser given by :func:`~run_woden.get_parser`
+
+    Returns
+    -------
+    args : `argparse.Namespacer`
+        The populated arguments which will now have been checked and had
+        information from metafits incorporated if requested
+    """
 
     if args.primary_beam not in ['MWA_FEE', 'Gaussian', 'EDA2', 'none', 'None']:
         exit('Primary beam option --primary_beam must be one of:\n'
@@ -1170,10 +1185,6 @@ def check_args(args):
 
     ##Either read the array layout from a file or use what was in the metafits
     select_correct_enh(args)
-
-    ##Now we've read in everything given the arguments from the user, ensure
-    ##we have enough to successfully run WODEN. If not, throw an error
-    # ensure_required_args(args)
 
     return args
 
