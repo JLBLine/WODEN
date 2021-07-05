@@ -38,6 +38,9 @@ typedef struct _catsource_t {
   float *point_zas; /*!< POINT source zenith angles for all time steps */
   float *sin_point_para_angs; /*!< Sine of parallatic angle for all POINT source az,za */
   float *cos_point_para_angs; /*!< Cosine of parallatic angle for all POINT source az,za */
+  float *point_gaussbeam_has; /*!< Hour angle of POINT components used for Gaussian beam calculations */
+  float *point_gaussbeam_decs; /*!< Declinations of POINT components used for Gaussian beam calculations */
+  int num_point_primarybeam_values; /*!< Number of beam calculations needed for POINT components */
 
   //Gaussian params
   float *gauss_ras; /*!< GAUSSIAN source right ascensions (radians) */
@@ -55,6 +58,9 @@ typedef struct _catsource_t {
   float *gauss_zas; /*!< GAUSSIAN source zenith angles for all time steps */
   float *sin_gauss_para_angs; /*!< Sine of parallatic angle for all GAUSSIAN source az,za */
   float *cos_gauss_para_angs; /*!< Cosine of parallatic angle for all GAUSSIAN source az,za */
+  float *gauss_gaussbeam_has; /*!< Hour angle of GAUSSIAN components used for Gaussian beam calculations */
+  float *gauss_gaussbeam_decs; /*!< Declinations of GAUSSIAN components used for Gaussian beam calculations */
+  int num_gauss_primarybeam_values; /*!< Number of beam calculations needed for GAUSSIAN components */
 
   //Shapelet params
   float *shape_ras; /*!< SHAPELET source right ascensions (radians) */
@@ -77,6 +83,9 @@ typedef struct _catsource_t {
   float *shape_zas; /*!< SHAPELET source zenith angles for all time steps */
   float *sin_shape_para_angs; /*!< Sine of parallatic angle for all SHAPELET source az,za */
   float *cos_shape_para_angs; /*!< Cosine of parallatic angle for all SHAPELET source az,za */
+  float *shape_gaussbeam_has; /*!< Hour angle of SHAPELET components used for Gaussian beam calculations */
+  float *shape_gaussbeam_decs; /*!< Declinations of SHAPELET components used for Gaussian beam calculations */
+  int num_shape_primarybeam_values; /*!< Number of beam calculations needed for SHAPELET components */
 
 } catsource_t;
 
@@ -86,8 +95,6 @@ A struct to contain values for the MWA Fully Embbedded Element primary beam
 typedef struct _RTS_MWA_FEE_beam {
   double _Complex **Q1; /*!< Beam modes used for Spherical Harmonic model */
   double _Complex **Q2; /*!< Beam modes used for Spherical Harmonic model */
-  double _Complex **p_T; /*!< Some pre-computed theta related values used in tile response */
-  double _Complex **p_P; /*!< Some pre-computed phi related values used in tile response */
   double **M; /*!< First order of spherical harmonics */
   double **N; /*!< Second order of spherical harmonics */
   int nmax; /*!< Maximum order of spherical harmonic */
@@ -131,18 +138,6 @@ typedef struct _beam_settings_t {
     float gauss_cdec; /*!< Cosine of the declination of the pointing for a Gaussian primary beam */
     float gauss_ha; /*!< Hour angle of the pointing for a Gaussian primary beam */
 
-    float *beam_point_has; /*!< Hour angle of POINT components used for Gaussian beam calculations */
-    float *beam_point_decs; /*!< Declinations of POINT components used for Gaussian beam calculations */
-    int num_point_beam_values; /*!< Number of beam calculations needed for POINT components */
-
-    float *beam_gausscomp_has; /*!< Hour angle of GAUSSIAN components used for Gaussian beam calculations */
-    float *beam_gausscomp_decs; /*!< Declinations of GAUSSIAN components used for Gaussian beam calculations */
-    int num_gausscomp_beam_values; /*!< Number of beam calculations needed for GAUSSIAN components */
-
-    float *beam_shape_has; /*!< Hour angle of SHAPELET components used for Gaussian beam calculations */
-    float *beam_shape_decs; /*!< Declinations of SHAPELET components used for Gaussian beam calculations */
-    int num_shape_beam_values; /*!< Number of beam calculations needed for SHAPELET components */
-
     float beam_FWHM_rad; /*!< FWHM of requested Gaussian primary beam, at reference frequnecy */
     float beam_ref_freq; /*!< Reference frequency for the given FWHM of Gaussian primary beam */
     int beamtype; /*!< What type of primary beam to simulate - see `e_beamtype` */
@@ -161,7 +156,7 @@ typedef struct _source_catalogue_t {
     int num_sources; /*!< Number of SOURCES in this `source_catalogue_t`*/
     int num_shapelets; /*!< Total number of SHAPELET components in this `source_catalogue_t` */
     catsource_t *catsources; /*!< Multiple sky models to simulate */
-    beam_settings_t *beam_settings; /*!< Primary beam settings corresponding to `catsources` */
+    // beam_settings_t *beam_settings; /*!< Primary beam settings corresponding to `catsources` */
 } source_catalogue_t;
 
 /**
@@ -223,9 +218,9 @@ typedef struct _woden_settings_t {
   int *band_nums;  /*!< Which number coarse bands to simulate (e.g 1,4,6) */
   int sky_crop_type;  /*!< Whether to crop sky models by SOURCE or COMPONENT */
   e_beamtype beamtype;  /*!< What type of primary beam to simulate with */
-  float gauss_beam_FWHM;  /*!< FWHM of Gaussian primary beam (radians)*/
+  float gauss_beam_FWHM;  /*!< FWHM of Gaussian primary beam (degrees)*/
   float gauss_beam_ref_freq;  /*!< Reference frequency for given Gaussian primary beam FWHM*/
-  int chunking_size;  /*!< Maximum number of COMPONENTs to include in a single chunk*/
+  long int chunking_size;  /*!< Maximum number of COMPONENTs to include in a single chunk*/
   const char* hdf5_beam_path;  /*!< Path to *.hf file containing MWA FEE beam
   spherical harmonic information*/
   double jd_date;  /*!< Julian date at beginning of simulation*/

@@ -5,7 +5,6 @@
 
 #include <math.h>
 #include <stdint.h>
-#include <fitsio.h>
 
 /**
 @brief Use the given baseline lengths in local `X,Y,Z` coords, and a given

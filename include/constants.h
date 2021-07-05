@@ -36,7 +36,7 @@ Latitude of the MWA (degrees) */
 #define MWA_LAT -26.703319
 /*! -26.703319*DD2R \n
 Latitude of the MWA (radians) */
-#define MWA_LAT_RAD -26.703319*DD2R
+#define MWA_LAT_RAD -0.46606083776035967
 
 //shapelet related conversion---------------------------------------------------
 /*! 7.11941466249375271693034 \n
@@ -52,7 +52,7 @@ Convert standard deviation to FWHM for a Gaussian */
 //max number of COMPONENTs to calculate simultaneously--------------------------
 /*! 260000 \n
 Default number of COMPONENTs to process per chunk */
-#define MAX_CHUNKING_SIZE 260000
+#define MAX_CHUNKING_SIZE 10000000000
 
 //RTS MWA FEE beam constants----------------------------------------------------
 /*! 16 \n

@@ -248,7 +248,15 @@ arrays `analy_beam_X, analy_beam_Y`.
 @param[in,out] *analy_beam_Y Array to store the east-west beam response in
 
 */
-extern "C" void test_analytic_dipole_beam(int num_components,
-     int num_time_steps, int num_freqs,
-     float *azs, float *zas, float *freqs,
-     float _Complex *analy_beam_X, float _Complex *analy_beam_Y);
+// extern "C" void test_analytic_dipole_beam(int num_components,
+//      int num_time_steps, int num_freqs,
+//      float *azs, float *zas, float *freqs,
+//      float _Complex *analy_beam_X, float _Complex *analy_beam_Y);
+//
+//
+//
+// extern "C" void test_kern_gaussian_beam(float *beam_ls, float *beam_ms,
+//            float beam_ref_freq, float *freqs,
+//            float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
+//            int num_freqs, int num_time_steps, int num_components,
+//            float _Complex *primay_beam_J00, float _Complex *primay_beam_J11);

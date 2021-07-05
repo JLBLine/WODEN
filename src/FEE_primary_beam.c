@@ -11,7 +11,7 @@ Find the nearest freq in the element pattern hdf file
 ****************************/
 herr_t RTS_op_func (hid_t loc_id, const char *name, const H5L_info_t *info,
             void *operator_data) {
-    herr_t          status, return_val = 0;
+    herr_t          status = 0;
     H5O_info_t      infobuf;
     struct opdata   *od = (struct opdata *) operator_data;
                                 /* Type conversion */
@@ -30,7 +30,7 @@ herr_t RTS_op_func (hid_t loc_id, const char *name, const H5L_info_t *info,
 	        od->freq_out = freq_entry;
       }
     }
-    return return_val;
+    return status;
 }
 
 int RTS_MWAFEEInit(const char *h5filename, float freq_Hz, RTS_MWA_FEE_beam_t *pb, float *FEE_delays){
@@ -50,7 +50,7 @@ int RTS_MWAFEEInit(const char *h5filename, float freq_Hz, RTS_MWA_FEE_beam_t *pb
     /* Get nearest frequency by iterating over dataset in HDF file */
 
     //file = H5Fopen(H5FILE_NAME, H5F_ACC_RDONLY, H5P_DEFAULT);
-    status = H5Oget_info (file, &infobuf);
+    status = H5Oget_info(file, &infobuf);
     od.freq_in = freq_Hz;
     od.freq_out = -1.0;
     od.least_diff = -1.0;
@@ -89,7 +89,7 @@ int RTS_MWAFEEInit(const char *h5filename, float freq_Hz, RTS_MWA_FEE_beam_t *pb
 
     /* Get max length of spherical wave table */
 
-  hid_t    dataset, dataspace;
+  hid_t  dataset, dataspace;
   hsize_t dims_out[2];
 
   int n_ant = 16;
@@ -110,6 +110,8 @@ int RTS_MWAFEEInit(const char *h5filename, float freq_Hz, RTS_MWA_FEE_beam_t *pb
     }
     H5Dclose(dataset);
   }
+
+  // printf("MAX LENGTH %d\n",max_length );
 
   double _Complex *Q1, *Q2;
 
@@ -293,6 +295,7 @@ int RTS_MWAFEEInit(const char *h5filename, float freq_Hz, RTS_MWA_FEE_beam_t *pb
   free(Q2);
 
   H5Fclose(file);
+  H5Sclose(dataspace);
 
   pb->m_range = malloc((2*pb->nmax + 1)*sizeof(float) );
 
@@ -300,7 +303,9 @@ int RTS_MWAFEEInit(const char *h5filename, float freq_Hz, RTS_MWA_FEE_beam_t *pb
     pb->m_range[m] = -(float)pb->nmax + (float)m;
   }
 
-  return 0;
+  // printf("AT END OF C BEAM STUFF\n");
+
+  return status;
 
 }
 

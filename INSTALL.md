@@ -2,18 +2,24 @@
 WODEN is built around the `atomicAdd` function so you will need an NVIDIA GPU to run it. Currently, WODEN has only been tested and run on linux, specifically Ubuntu 18.04 and 16.04, and the OzStar super cluster of Swinburne University. If you're mad keen to run on Windows or Mac, please contact Jack at jack.line@curtin.edu.au and we can give it a go.
 
 ## Dependencies
-CMake (https://cmake.org) version >= 3.10 \
-NVIDIA CUDA (https://developer.nvidia.com/cuda-downloads) \
-CFITSIO (https://heasarc.gsfc.nasa.gov/fitsio/) \
-json-c (https://github.com/json-c/json-c) \
-ERFA (Essential Routines for Fundamental Astronomy) (https://github.com/liberfa/erfa)
+ - CMake https://cmake.org version >= 3.10 \
+ - NVIDIA CUDA https://developer.nvidia.com/cuda-downloads \
+ - json-c https://github.com/json-c/json-c \
+ - ERFA (Essential Routines for Fundamental Astronomy) https://github.com/liberfa/erfa \
+ - HDF5 https://www.hdfgroup.org/downloads/hdf5/ - if on Ubuntu, do something like `sudo apt install libhdf5-serial-dev` \
+ - PAL (Positional Astronomy Library) https://github.com/Starlink/pal/releases - Easiest thing is to download a release version from this page, rather than trying to install from git. Then do
+```sh
+./configure --prefix=/usr/local --without-starlink
+    make
+    make install
+```
+which if something like Ubuntu will put the `include` files in `/usr/local/include/star` and `lib` in `/usr/local/lib`. Make sure `/usr/local/lib` is in your `LD_LIBRARY_PATH` so `WODEN` can find the PAL library.
 
 The wrapper `run_woden.py` relies on the python modules:
 astropy
 numpy
 struct
 subprocess
-jdcal
 
 Note in future work I plan removing the bespoke uvfits behaviour and linking with pyuvdata (https://pyuvdata.readthedocs.io/en/latest/).
 
@@ -66,3 +72,35 @@ The `json-c` library is dynamic, so you need to ensure that WODEN can see it whe
 ```
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/dir/containing/json-c/lib/
 ```
+
+# Installing tests
+You can run the unit/itegration tests I use for developing `WODEN` to check your system / the code runs as expected. The tests are compiled using the same `cmake` script as the main code. The tests use the following C library:
+
+ - Unity https://github.com/ThrowTheSwitch/Unity/releases
+
+You don't need to install Unity anywhere, `WODEN` uses the `C` library directly. You just need to tell `WODEN` where Unity lives in your system (in the example below I have downloaded the Unity release version 2.5.2). You also need to add `TARGET_GROUP=test` to your command to tell CMake to build tests instead of the main code:
+
+```sh
+cd WODEN/build
+cmake .. -DTARGET_GROUP=test -DUNITY_ROOT=/usr/local/Unity-2.5.2
+make
+```
+
+Once that compiles, you can run the tests by running
+```
+ctest
+```
+NOTE - To test MWA Fully Embedded Element beam code, you must have the environment variable
+```
+MWA_FEE_HDF5=/path/to/mwa_full_embedded_element_pattern.h5
+```
+declared. If you don't have that, the MWA FEE beam code tests will just be skipped. If you want more detail of what the tests are doing, run `ctest --verbose`.
+
+
+
+WARNING - once you have done this, to go back to compiling the main `woden`
+executable, you need to run
+```
+cmake .. -DTARGET_GROUP=production
+```
+otherwise you'll just keep building the tests.
