@@ -23,11 +23,22 @@ class PretendArgs():
         self.sky_crop_components = False
         self.primary_beam = "none"
 
+        self.num_freq_channels = 16
+        self.num_time_steps = 14
+        self.time_res = 2.0
+        self.freq_res = 40e+3
+
+        self.array_layout_name = 'WODEN_array_layout.txt'
+        self.lowest_channel_freq = 160e+6
+        self.latitude = -26.7
+        self.band_nums = [1,8,10]
+
         ##Set the optional arguments to False
         self.gauss_beam_FWHM = False
         self.gauss_beam_ref_freq = False
         self.gauss_ra_point = False
         self.gauss_dec_point = False
+        self.MWA_FEE_delays = False
 
     def __init__(self):
         self.make_basic_args()
@@ -38,18 +49,9 @@ class Test(unittest.TestCase):
     into the WODEN executable"""
     def make_basic_inputs(self, json_name):
         """Make some basis input arguments for `rw.write_json`"""
-        self.num_freqs = 16
-        self.num_time_steps = 14
-        self.time_res = 2.0
-        self.freq_res = 40e+3
         self.jd_date = 2458647.044583333
-        self.lst = 10.0
-        self.array_layout_name = 'WODEN_array_layout.txt'
-        self.lowest_channel_freq = 160e+6
-        self.latitude = -26.7
-        self.band_nums = [1,8,10]
         self.json_name = json_name
-        self.FEE_delays = None
+        self.lst = 10.0
         self.args = PretendArgs()
 
     def check_basic_inputs(self):
@@ -65,44 +67,38 @@ class Test(unittest.TestCase):
 
         self.assertEqual(self.args.ra0 ,data['ra0'])
         self.assertEqual(self.args.dec0 ,data['dec0'])
-        self.assertEqual(self.num_freqs ,data['num_freqs'])
-        self.assertEqual(self.num_time_steps ,data['num_time_steps'])
+        self.assertEqual(self.args.num_freq_channels ,data['num_freqs'])
+        self.assertEqual(self.args.num_time_steps ,data['num_time_steps'])
         self.assertEqual(self.args.cat_filename ,data['cat_filename'])
-        self.assertEqual(self.time_res ,data['time_res'])
-        self.assertEqual(self.freq_res ,data['frequency_resolution'])
+        self.assertEqual(self.args.time_res ,data['time_res'])
+        self.assertEqual(self.args.freq_res ,data['frequency_resolution'])
         self.assertEqual(self.args.chunking_size ,data['chunking_size'])
         self.assertEqual(self.jd_date ,data['jd_date'])
         self.assertEqual(self.lst ,data['LST'])
-        self.assertEqual(self.array_layout_name ,data['array_layout'])
-        self.assertEqual(self.lowest_channel_freq ,data['lowest_channel_freq'])
-        self.assertEqual(self.latitude ,data['latitude'])
+        self.assertEqual(self.args.array_layout_name ,data['array_layout'])
+        self.assertEqual(self.args.lowest_channel_freq ,data['lowest_channel_freq'])
+        self.assertEqual(self.args.latitude ,data['latitude'])
         self.assertEqual(self.args.coarse_band_width ,data['coarse_band_width'])
-        self.assertEqual(self.band_nums ,data['band_nums'])
+        self.assertEqual(self.args.band_nums ,data['band_nums'])
 
     def call_write_json(self):
         """Calls the function under test"""
-        rw.write_json(num_time_steps=self.num_time_steps, num_freqs=self.num_freqs,
-                   band_nums=self.band_nums, json_name=self.json_name,
-                   freq_res=self.freq_res, lst=self.lst,
-                   time_res=self.time_res, jd_date=self.jd_date,
-                   lowest_channel_freq=self.lowest_channel_freq,
-                   latitude=self.latitude, FEE_delays=self.FEE_delays,
-                   array_layout_name=self.array_layout_name,
-                   args=self.args)
+        rw.write_json(json_name=self.json_name, lst=self.lst,
+                   jd_date=self.jd_date, args=self.args)
 
-    # def test_write_minimum_json(self):
-    #     """Test that a .json file is written correctly with the minimum set
-    #     of input arguments. Test by calling function, reading in resultant
-    #     .json file and checking the outputs match"""
-    #
-    #     ##Some input test params
-    #     self.make_basic_inputs("test_write_minimum_json.json")
-    #
-    #     ##Code to be tested
-    #     self.call_write_json()
-    #
-    #     ##Check the basic outputs
-    #     self.check_basic_inputs()
+    def test_write_minimum_json(self):
+        """Test that a .json file is written correctly with the minimum set
+        of input arguments. Test by calling function, reading in resultant
+        .json file and checking the outputs match"""
+
+        ##Some input test params
+        self.make_basic_inputs("test_write_minimum_json.json")
+
+        ##Code to be tested
+        self.call_write_json()
+
+        ##Check the basic outputs
+        self.check_basic_inputs()
 
     def test_write_gaussian_beam(self):
         """Test that the Gaussian primary beam options work correctly"""
@@ -111,20 +107,6 @@ class Test(unittest.TestCase):
         self.make_basic_inputs("test_write_gaussian_beam.json")
         ##Add in primary_beam as Gaussian to inputs
         self.args.primary_beam = 'Gaussian'
-
-        ##Code to be tested
-        self.call_write_json()
-
-        ##Check the basic outputs
-        self.check_basic_inputs()
-
-        ##Check the extra arguments have resulting in correct outputs
-        ##Defaults for Gaussian beam are to point at initial phase centre
-        self.assertTrue(self.data['use_gaussian_beam'])
-        self.assertEqual(self.args.ra0, self.data['gauss_ra_point'])
-        self.assertEqual(self.args.dec0, self.data['gauss_dec_point'])
-
-        ##DO it again but add in some more optional arguments
         self.args.gauss_beam_FWHM = 20.0
         self.args.gauss_beam_ref_freq = 180e+6
         self.args.gauss_ra_point = 60.0
@@ -153,9 +135,9 @@ class Test(unittest.TestCase):
         ##Add in primary_beam as Gaussian to inputs
         self.args.primary_beam = 'MWA_FEE'
         self.args.hdf5_beam_path = "This_is_the_way"
-        self.FEE_delays = "[0,2,4,6,0,2,4,6,0,2,4,6,0,2,4,6]"
+        self.args.MWA_FEE_delays = "[0,2,4,6,0,2,4,6,0,2,4,6,0,2,4,6]"
         ##turn string of list into an actual list
-        FEE_delays = [int(delay) for delay in self.FEE_delays.strip("[]").split(',')]
+        FEE_delays = [int(delay) for delay in self.args.MWA_FEE_delays.strip("[]").split(',')]
 
         ##Code to be tested
         self.call_write_json()

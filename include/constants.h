@@ -36,7 +36,7 @@ Latitude of the MWA (degrees) */
 #define MWA_LAT -26.703319
 /*! -26.703319*DD2R \n
 Latitude of the MWA (radians) */
-#define MWA_LAT_RAD -26.703319*DD2R
+#define MWA_LAT_RAD -0.46606083776035967
 
 //shapelet related conversion---------------------------------------------------
 /*! 7.11941466249375271693034 \n

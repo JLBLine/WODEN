@@ -38,10 +38,14 @@ void print_cmdline_help() {
       printf("\t\tsimulation pointed at the RA,DEC specified by --gauss_ra_point\n");
       printf("\t\tand --gauss_dec_point\n");
   printf("\t+ gauss_beam_FWHM: Sets the FWHM of the gaussian primary beam (degrees)\n");
+    printf("\t\tDefaults to 20 deg if not included\n");
   printf("\t+ gauss_beam_ref_freq: The frequency (Hz) at which gauss_beam_FWHM is\n");
       printf("\t\tsetThe beam FWHM will scale with frequency about this reference\n");
+      printf("\t\tDefaults to 150MHZ if not included\n");
   printf("\t+ gauss_ra_point: The initial RA (deg) to point the Gaussian beam at\n");
+    printf("\t\tMUST be include if use_gaussian_beam=True\n");
   printf("\t+ gauss_dec_point: he initial Dec (deg) to point the Gaussian beam at\n");
+    printf("\t\tMUST be include if use_gaussian_beam=True\n");
 
   printf("\t+ use_EDA2_beam=True: Use the EDA2 beam (Analytic dipole with a ground mesh)\n");
 
