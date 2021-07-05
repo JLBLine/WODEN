@@ -192,7 +192,7 @@ class Test(unittest.TestCase):
     def test_read_metafits_succeeds(self):
         self.make_required_args()
         ##Add a path to a metafits to the options
-        self.inputs.append("--metafits_filename=1202815152_metafits_ppds.fits")
+        self.inputs.append("--metafits_filename={:s}/1202815152_metafits_ppds.fits".format(code_dir))
 
         ##Run the parser and get the args
         args = self.run_parser_on_inputs()
@@ -317,7 +317,7 @@ class Test(unittest.TestCase):
         ##have no path to the hdf5 file. Should fail
         self.make_minimum_required_args_without_metafits()
         self.inputs.append('--primary_beam=MWA_FEE')
-        self.inputs.append("--metafits_filename=1202815152_metafits_ppds.fits")
+        self.inputs.append("--metafits_filename={:s}/1202815152_metafits_ppds.fits".format(code_dir))
         args = self.assert_check_args_errors()
 
         ##This time, set the environment variable to the hdf5 file. Should
