@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Wrapper script to generate json input files for, and to run,
 the GPU WODEN code. Author: J.L.B. Line
 """
@@ -1288,10 +1288,14 @@ if __name__ == "__main__":
             if args.no_tidy:
                 pass
             else:
-                command("rm %s" %filename)
+                command("rm {:s}".format(filename))
 
         ##Tidy up or not
         if args.no_tidy:
             pass
         else:
-            command("rm %s" %json_name)
+            command("rm {:s}".format(json_name))
+            ##if we generated a text file containing the array layout
+            ##from the metafits, delete it now
+            if args.array_layout == 'from_the_metafits':
+                command("rm {:s}".format("WODEN_array_layout.txt"))

@@ -18,17 +18,10 @@ sys.path.insert(0, os.path.abspath('../../src/'))
 
 read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 
-# ##TODO sort this out so it works
-# if read_the_docs_build:
-#     subprocess.call('cd ../doxygen; doxygen', shell=True)
-#
-# else:
 pwd = os.getcwd()
-# subprocess.call('cd ../../doxygen', shell=True)
 os.chdir('../doxygen')
 print("pwd is {:s}".format(os.getcwd()))
 subprocess.call('doxygen Doxyfile', shell=True)
-    # subprocess.call('cd {:s}'.format(pwd), shell=True)
 
 # -- Project information -----------------------------------------------------
 
@@ -54,6 +47,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx.ext.coverage',
+    'sphinx.ext.autosectionlabel',
     'breathe'
 ]
 

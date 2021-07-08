@@ -154,11 +154,21 @@ if(TARGET_GROUP STREQUAL production)
     set(link_convert "convert_WSClean_list_to_WODEN.py")
     find_path(CONVERTWSCLEAN convert_WSClean_list_to_WODEN.py HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
     if(CONVERTWSCLEAN)
-      message(STATUS "CONVERTWSCLEAN path: ${WODENPY}")
+      message(STATUS "CONVERTWSCLEAN path: ${CONVERTWSCLEAN}")
     endif()
     set(target_convert "${CONVERTWSCLEAN}/convert_WSClean_list_to_WODEN.py")
     ADD_CUSTOM_TARGET(target_convert ALL
                       COMMAND ${CMAKE_COMMAND} -E create_symlink ${target_convert} ${link_convert})
+
+    ##Make a symlink to uv2ms.py so it's easy to find
+    set(link_uv2ms "uv2ms.py")
+    find_path(UV2MS uv2ms.py HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
+    if(UV2MS)
+      message(STATUS "UV2MS path: ${UV2MS}")
+    endif()
+    set(target_uv2ms "${UV2MS}/uv2ms.py")
+    ADD_CUSTOM_TARGET(target_uv2ms ALL
+                      COMMAND ${CMAKE_COMMAND} -E create_symlink ${target_uv2ms} ${link_uv2ms})
 
     ##Copy the variable init script so this file can be put in bashrc
     find_path(INIT_WODEN init_WODEN.sh HINTS "${CMAKE_CURRENT_LIST_DIR}/templates/")

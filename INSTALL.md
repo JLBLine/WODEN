@@ -1,5 +1,5 @@
 # WODEN installation
-WODEN is built around the `atomicAdd` function so you will need an NVIDIA GPU to run it. Currently, WODEN has only been tested and run on linux, specifically Ubuntu 18.04 and 16.04, and the OzStar super cluster of Swinburne University. If you're mad keen to run on Windows or Mac, please contact Jack at jack.line@curtin.edu.au and we can give it a go.
+WODEN is built on CUDA so you will need an NVIDIA GPU to run it. Currently, WODEN has only been tested and run on linux, specifically Ubuntu 16.04 up to 20.04,the OzStar super cluster of Swinburne University, and Garrwarla cluster of Pawsey. If you're mad keen to run on Windows or Mac, please contact Jack at jack.line@curtin.edu.au and we can give it a go.
 
 ## Dependencies
  - CMake https://cmake.org version >= 3.10 \
@@ -42,10 +42,12 @@ cmake .. \
     -DJSONC_ROOT=/path/to/json-c/installation \
     -DCFITSIO_ROOT=/path/to/cfitsio/installation
 ```
-All NVIDIA GPUs have a specfic compute capability, which relates to their internal architecture. You can tell the compiler which architecture to compile for, which in theory should make compilation quicker, and ensure the code runs correctly on your GPU. You can find out the compute value here (https://developer.nvidia.com/cuda-gpus), and pass it to CMake via:
+All NVIDIA GPUs have a specific compute capability, which relates to their internal architecture. You can tell the compiler which architecture to compile for, which in theory should make compilation quicker, and ensure the code runs correctly on your GPU. You can find out the compute value here (https://developer.nvidia.com/cuda-gpus), and pass it to CMake via:
 ```
 cmake .. -DCUDA_ARCH=6.0
 ```
+>WARNING - for newer CUDA versions, some compute capabilities are deprecated, so the compiler leaves them out by default. For example, using CUDA version 11.2, compute capabilities 3.5 to 5.0 are ignored. If you card has a compute capability of 5.0, you _must_ include the flag `-DCUDA_ARCH=5.0`, otherwise the `nvcc` compiler will not create an executable capable of running on your device.
+
 If you need to pass extra flags to your CUDA compiler, you can do so by adding something like the following
 ```sh
 -DCMAKE_CUDA_FLAGS="-someflag"
@@ -98,7 +100,7 @@ declared. If you don't have that, the MWA FEE beam code tests will just be skipp
 
 
 
-WARNING - once you have done this, to go back to compiling the main `woden`
+> WARNING - once you have done this, to go back to compiling the main `woden`
 executable, you need to run
 ```
 cmake .. -DTARGET_GROUP=production
