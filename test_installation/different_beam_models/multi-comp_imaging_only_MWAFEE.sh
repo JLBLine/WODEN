@@ -9,9 +9,9 @@ ${CASA_DIR}/casa --nologger -c  ${WODEN_DIR}/uv2ms.py \
     --band_nums=1,2
 
 ##CLEAN them up
-wsclean -name ./images/multi-comp_grid_MWA_FEE -size 1500 1500 -niter 10000 \
+wsclean -name ./images/multi-comp_grid_MWA_FEE -size 1250 1250 -niter 30000 \
     -auto-threshold 0.5 -auto-mask 3 \
-    -pol I -multiscale -weight briggs 0 -scale 0.03 -j 8 -mgain 0.85 \
+    -pol I -multiscale -weight briggs 0 -scale 0.02 -j 8 -mgain 0.85 \
     -no-update-model-required \
     ./data/multi-comp_grid_MWA_FEE_band*.ms
 

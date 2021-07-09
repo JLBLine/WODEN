@@ -1,4 +1,3 @@
-rm -r point_models/data
-rm -r gauss_models/data
-rm -r shapelet_models/data
-rm -r multicomp_model/data
+rm -r single_component_models/data
+rm -r grid_component_models/data
+rm -r different_beam_models/data

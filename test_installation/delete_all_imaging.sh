@@ -1,6 +1,5 @@
 #!/bin/sh
 
-rm -r point_models/images
-rm -r gauss_models/images
-rm -r shapelet_models/images
-rm -r multicomp_model/images
+rm -r single_component_models/images
+rm -r grid_component_models/images
+rm -r different_beam_models/images
