@@ -17,6 +17,7 @@ This documentation is under construction. Stand by as I put it together.
   installation/installation
   testing/cmake_testing
   testing/script_testing
+  examples/example_simulations
   API_reference/API_index
 
 Indices and tables
