@@ -89,7 +89,7 @@ For these simulations, I've switched off the primary beam, and set the spectral 
   2601     +16.916           +44.1038     -0.104652    +264.247     +43998.6
   Total flux: 999.95 mJy
 
-This shows that we are within 50 nJy of the expected 1 Jy (taking into account that this is a CLEANed image with pixelisation effects).
+This shows that we are within 50 micro Jy of the expected 1 Jy (taking into account that this is a CLEANed image with pixelisation effects).
 
 Grid Component Models
 ^^^^^^^^^^^^^^^^^^^^^^^^
