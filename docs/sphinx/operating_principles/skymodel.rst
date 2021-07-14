@@ -1,5 +1,5 @@
-WODEN sky model format
-========================
+``WODEN`` sky model format
+============================
 
 .. _Line et al. 2020: https://doi.org/10.1017/pasa.2020.18
 .. _SHAMFI readthedocs: https://shamfi.readthedocs.io/en/latest/
@@ -7,8 +7,12 @@ WODEN sky model format
 
 The ``WODEN`` source catalogue is a modified version of the ``RTS`` srclist. In the current version of ``WODEN``, you create one single SOURCE which can include as many COMPONENTS as desired, each of type ``POINT``, ``GAUSSIAN`` or ``SHAPELET``. A ``POINT`` is a dirac delta point source model, a GAUSSIAN is a 2D Gaussian model (with a major, minor, and position angle), and a ``SHAPELET`` model uses multiple 'shapelet' basis functions to build a model. For details on the model types, see `Line et al. 2020`_. If you want to build a shapelet model, you can use the software ``SHAMFI``, which you can read about on the `SHAMFI readthedocs`_.
 
-Currently, every source is given a simple power-law frequency behaviour
+Currently, every source is given a simple power-law frequency behaviour as:
 
+.. math::
+  S = S_0 \left( \frac{\nu_0}{\nu} \right)^\alpha
+
+where :math:`S` is the flux density at frequency :math:`\nu`, with a reference flux density :math:`S_0`, reference frequency :math:`\nu_0`, and spectral index  :math:`\alpha`.
 
 Point sources
 ^^^^^^^^^^^^^^^^^^^^

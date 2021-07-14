@@ -106,7 +106,7 @@ convert_WSClean_list_to_WODEN.py \
 ```
 
 ## 4. WODEN sky model
-The WODEN sky model uses point sources, elliptical Gaussians, and shapelet models. All sources are currently given a power-law spectral behaviour. A full [breakdown of the sky model lives here on readthedocs](https://woden.readthedocs.io/en/latest/skymodel/skymodel.html). As an idea, here is a simple sky model of thee point sources:
+The WODEN sky model uses point sources, elliptical Gaussians, and shapelet models. All sources are currently given a power-law spectral behaviour. A full [breakdown of the sky model lives here on readthedocs](https://woden.readthedocs.io/en/latest/operating_principles/skymodel.html). As an idea, here is a simple sky model of thee point sources:
 
 ```
 SOURCE multi_point P 3 G 0 S 0 0
