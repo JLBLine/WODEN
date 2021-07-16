@@ -23,7 +23,7 @@ Documentation
 -----------------
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    installation/installation
    testing/cmake_testing

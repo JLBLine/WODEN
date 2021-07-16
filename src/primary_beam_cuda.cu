@@ -318,3 +318,46 @@ extern "C" void test_kern_gaussian_beam(float *beam_ls, float *beam_ms,
   cudaErrorCheckCall( cudaFree(d_primay_beam_J11 ) );
 
 }
+
+
+extern "C" void test_calculate_gaussian_beam(int num_components, int num_time_steps,
+     int num_freqs, float ha0, float sdec0, float cdec0,
+     float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
+     float beam_ref_freq, float *freqs,
+     float *beam_has, float *beam_decs,
+     float _Complex *primay_beam_J00, float _Complex *primay_beam_J11) {
+
+  int num_beam_hadec = num_components * num_time_steps;
+
+  float *d_freqs = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_freqs, num_freqs*sizeof(float) ) );
+  cudaErrorCheckCall( cudaMemcpy(d_freqs, freqs,
+                           num_freqs*sizeof(float), cudaMemcpyHostToDevice ) );
+
+  float _Complex *d_primay_beam_J00 = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J00,
+                                   num_freqs*num_beam_hadec*sizeof(float _Complex)) );
+
+  float _Complex *d_primay_beam_J11 = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J11,
+                                   num_freqs*num_beam_hadec*sizeof(float _Complex)) );
+
+
+  calculate_gaussian_beam(num_components, num_time_steps,
+                         num_freqs, ha0, sdec0, cdec0,
+                         fwhm_lm, cos_theta, sin_theta, sin_2theta,
+                         beam_ref_freq, d_freqs,
+                         beam_has, beam_decs,
+                         (cuFloatComplex *)d_primay_beam_J00,
+                         (cuFloatComplex *)d_primay_beam_J11);
+
+  cudaErrorCheckCall( cudaMemcpy(primay_beam_J00, d_primay_beam_J00,
+                 num_freqs*num_beam_hadec*sizeof(float _Complex), cudaMemcpyDeviceToHost) );
+  cudaErrorCheckCall( cudaMemcpy(primay_beam_J11, d_primay_beam_J11,
+                 num_freqs*num_beam_hadec*sizeof(float _Complex), cudaMemcpyDeviceToHost) );
+
+  cudaErrorCheckCall( cudaFree(d_freqs ) );
+  cudaErrorCheckCall( cudaFree(d_primay_beam_J00 ) );
+  cudaErrorCheckCall( cudaFree(d_primay_beam_J11 ) );
+
+}

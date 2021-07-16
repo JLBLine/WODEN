@@ -429,8 +429,8 @@ the basic visibility into a GAUSSIAN:
 
 \f{eqnarray*}{
 \mathrm{V}_{\mathrm{env}}&=& \exp\left( -\frac{\pi^2}{4\ln(2)} \left( k_x^2\theta_{\mathrm{maj}}^2 + k_y^2\theta_{\mathrm{min}}^2\right) \right) \\
-k_x &=&  \cos(\phi_{PAj})v + \sin(\phi_{PA})u \\
-k_y &=& -\sin(\phi_{PAj})v + \cos(\phi_{PA})u
+k_x &=&  \cos(\phi_{PAj})v + \sin(\phi_{PAj})u \\
+k_y &=& -\sin(\phi_{PAj})v + \cos(\phi_{PAj})u
 \f}
 
 where \f$ \theta_{\mathrm{maj}}, \theta_{\mathrm{min}}, \phi_{PA} \f$ are the
