@@ -26,6 +26,8 @@ bibliography: paper.bib
 # Statement of need
 We need it to feed into `[@Mitchell2008]`.
 
+That citation didn't work, does the example one work? `@Pearson:2017` 
+
 # Example application
 
 `WODEN` paper
