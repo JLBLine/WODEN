@@ -134,7 +134,7 @@ This tests that we can override the array layout with a specified text file. Uns
 .. image:: EDA2_layout_image.png
    :width: 300pt
 
-but this is what we expect. That's it for the simple installation tests. If you want to really test out the simulation capabilities of ``WODEN``, check out the :ref:`Example simulations`  section, which has bigger and better simulations.
+but this is what we expect. That's it for the simple installation tests. If you want to really test out the simulation capabilities of ``WODEN``, check out the :ref:`WODEN demonstrated via examples`  section, which has bigger and better simulations.
 
 Deleting test outputs
 ------------------------

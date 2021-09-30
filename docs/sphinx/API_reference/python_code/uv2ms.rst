@@ -3,6 +3,8 @@
 
 Helper script to convert ``uvfits`` files to ``measurement sets`` using ``casa``.
 
+.. _uv2ms command line running options:
+
 *Command line running options*
 -------------------------------
 

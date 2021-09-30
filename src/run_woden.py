@@ -4,7 +4,7 @@ the GPU WODEN code. Author: J.L.B. Line
 """
 from __future__ import print_function
 from astropy.io import fits
-from astropy.time import Time
+from astropy.time import Time, TimeDelta
 from astropy.coordinates import EarthLocation
 from astropy import units as u
 
@@ -78,11 +78,16 @@ def calc_jdcal(date):
     ##then the fraction goes into the data array for PTYPE5
     return jd_day, jd_fraction
 
-def get_LST(latitude=None,longitude=None,date=None,height=None):
+def get_uvfits_date_and_position_constants(latitude=None,longitude=None,
+                                           date=None,height=None):
     """
-    For the given Earth location and UTC date return the local sidereal time
-    in degrees. Uses `astropy.time.Time`_ and `astropy.coordinates.EarthLocation`_
-
+    Returns a number of date and time based values that are needed for uvfits
+    headers. For the given Earth location and UTC date return the local sidereal
+    time (deg), the Greenwich sidereal time at 0 hours on the given date (deg),
+    the rotational speed of Earth on the given date (in degrees per day), and
+    the difference between UT1 and UTC.
+    Uses `astropy.time.Time`_ and `astropy.coordinates.EarthLocation`_ to make
+    the calculations.
 
     .. _astropy.time.Time: https://docs.astropy.org/en/stable/time/
     .. _astropy.coordinates.EarthLocation: https://docs.astropy.org/en/stable/api/astropy.coordinates.EarthLocation.html?highlight=EarthLocation
@@ -99,7 +104,14 @@ def get_LST(latitude=None,longitude=None,date=None,height=None):
 
     Returns
     -------
-
+    LST_deg : float
+        Local sidereal time (degrees)
+    GST0_deg : float
+        Greenwich sidereal time at 0 hours on the given date (degrees)
+    DEGPDY : float
+        Rotational speed of Earth on the given date (degrees per day)
+    ut1utc : float
+        Difference between UT1 and UTC (secs)
     """
     ##Setup location
     observing_location = EarthLocation(lat=latitude*u.deg, lon=longitude*u.deg, height=height)
@@ -107,7 +119,29 @@ def get_LST(latitude=None,longitude=None,date=None,height=None):
     observing_time = Time(date, scale='utc', location=observing_location)
     ##Grab the LST
     LST = observing_time.sidereal_time('apparent')
-    return LST.value*15.0
+    LST_deg = LST.value*15.0
+
+    ##uvfits file needs to know the greenwich sidereal time at 0 hours
+    ##on the date in question
+    zero_date = date.split('T')[0] + "T00:00:00"
+    zero_time = Time(zero_date, scale='utc', location=observing_location)
+    GST0 = zero_time.sidereal_time('apparent', 'greenwich')
+    GST0_deg = GST0.value*15.0
+
+    ##It also needs to know the rotational rate of the Earth on that day, in
+    ##units of degrees per day
+    ##Do this by measuring the LST exactly a day later
+
+    date_plus_one_day =  observing_time + TimeDelta(1*u.day)
+    LST_plusone = date_plus_one_day.sidereal_time('apparent')
+
+    LST_plusone_deg = LST_plusone.value*15.0
+
+    DEGPDY = 360.0 + (LST_plusone_deg - LST_deg)
+
+    ut1utc = float(observing_time.delta_ut1_utc)
+
+    return LST_deg, GST0_deg, DEGPDY, ut1utc
 
 def RTS_encode_baseline(b1, b2):
     """The ancient aips/miriad extended way of encoding a baseline by antenna
@@ -166,9 +200,9 @@ def RTS_decode_baseline(blcode):
     return b1,b2
 
 
-def make_antenna_table(XYZ_array=None,telescope_name=None,num_antennas=None,
-                       freq_cent=None,date=None,
-                       longitude=None, latitude=None, array_height=None):
+def make_antenna_table(XYZ_array=None, telescope_name=None,num_antennas=None,
+                       freq_cent=None, date=None, gst0_deg=None, degpdy=None,
+                       ut1utc=None, longitude=None, latitude=None, array_height=None):
     """Write an antenna table for a uvfits file. This is the first table in
     the uvfits file that encodes antenna positions, with some header keywords.
     Uses `astropy.io.fits.BinTableHDU`_ to create the table.
@@ -189,6 +223,12 @@ def make_antenna_table(XYZ_array=None,telescope_name=None,num_antennas=None,
     date : string
         UTC date/time in format YYYY-MM-DDThh:mm:ss to give to the 'RDATE'
         header keyword
+    gst0_deg : float
+        Greenwich sidereal time at 0 hours on the given date (degrees)
+    degpdy : float
+        Rotational speed of Earth on the given date (degrees per day)
+    ut1utc : float
+        Difference between UT1 and UTC (secs)
     longitude : float
         Longitude of the array (deg)
     latitude : float
@@ -244,8 +284,15 @@ def make_antenna_table(XYZ_array=None,telescope_name=None,num_antennas=None,
     hdu_ant.header['ARRAYY']  = arrY
     hdu_ant.header['ARRAYZ']  = arrZ
 
-    hdu_ant.header['FREQ']    = freq_cent
-    hdu_ant.header['RDATE']   = date
+    hdu_ant.header['FREQ'] = freq_cent
+    hdu_ant.header['RDATE'] = date
+    hdu_ant.header['GSTIA0'] = gst0_deg
+    hdu_ant.header['DEGPDY'] = degpdy
+
+    hdu_ant.header['UT1UTC'] = ut1utc
+    hdu_ant.header['XYZHAND'] = 'RIGHT'
+    hdu_ant.header['FRAME'] = '????'
+
     hdu_ant.header['TIMSYS']  = 'UTC     '
     hdu_ant.header['ARRNAM']  = telescope_name
     hdu_ant.header['NUMORB']  = 0
@@ -259,6 +306,8 @@ def create_uvfits(v_container=None,freq_cent=None,
                   central_freq_chan=None,ch_width=None,
                   ra_point=None, dec_point=None,
                   output_uvfits_name=None,uu=None,vv=None,ww=None,
+                  longitude=None, latitude=None, array_height=None,
+                  telescope_name=None,
                   baselines_array=None, date_array=None,
                   int_jd=None, hdu_ant=None, gitlabel=False):
     """
@@ -283,6 +332,7 @@ def create_uvfits(v_container=None,freq_cent=None,
 
         - 1st axis: ordered by baseline (fastest changing) and then time step
           (slowest changing).
+        - 2nd, 3rd axes: essentially do nothing in these uvfits, are placeholders
         - 4th axis: ordered with increasing frequency
         - 5th axis: ordered by polarisation in the order of XX,YY,XY,YX
         - 6th axis: ordered by real visi part, imaginary visi part, weighting
@@ -309,7 +359,7 @@ def create_uvfits(v_container=None,freq_cent=None,
     date_array : float array
         Fractional julian date array to put in 'DATE' array (days)
     int_jd : int
-        Integer julian date to put in the header as 'PZERO5'
+        Integer julian date to put in the header as 'PZERO4'
     hdu_ant : `astropy.io.fits.hdu.table.BinTableHDU`
         Populated uvfits antenna table
     gitlabel : string
@@ -324,11 +374,43 @@ def create_uvfits(v_container=None,freq_cent=None,
                  "v_container, uu, vv, ww, baselines_array, date_array\n"
                  "must be equal to make a uvfits file. Exiting now.")
 
-    uvparnames = ['UU','VV','WW','BASELINE','DATE']
-    parvals = [uu,vv,ww,baselines_array,date_array]
+    antenna1_array = np.empty(len(baselines_array))
+    antenna2_array = np.empty(len(baselines_array))
+
+    for antind, baseline in enumerate(baselines_array):
+        ant1, ant2 = RTS_decode_baseline(baseline)
+
+        antenna1_array[antind] = ant1
+        antenna2_array[antind] = ant2
+
+    ##stick a bunch of ones in why not
+    subarray = np.ones(len(baselines_array))
+
+    uvparnames = ['UU','VV','WW','DATE','BASELINE', 'ANTENNA1', 'ANTENNA2', 'SUBARRAY']
+    parvals = [uu,vv,ww,date_array,baselines_array, antenna1_array, antenna2_array, subarray]
+
+    # Optional INTTIM length of time data were integrated over (seconds)
 
     uvhdu = fits.GroupData(v_container,parnames=uvparnames,pardata=parvals,bitpix=-32)
     uvhdu = fits.GroupsHDU(uvhdu)
+
+    ## Write the parameters scaling explictly because they are omitted if default 1/0
+    uvhdu.header['PSCAL1'] = 1.0
+    uvhdu.header['PZERO1'] = 0.0
+    uvhdu.header['PSCAL2'] = 1.0
+    uvhdu.header['PZERO2'] = 0.0
+    uvhdu.header['PSCAL3'] = 1.0
+    uvhdu.header['PZERO3'] = 0.0
+    uvhdu.header['PSCAL4'] = 1.0
+    uvhdu.header['PZERO4'] = float(int_jd)
+    uvhdu.header['PSCAL5'] = 1.0
+    uvhdu.header['PZERO5'] = 0.0
+    uvhdu.header['PSCAL6'] = 1.0
+    uvhdu.header['PZERO6'] = 0.0
+    uvhdu.header['PSCAL7'] = 1.0
+    uvhdu.header['PZERO7'] = 0.0
+    uvhdu.header['PSCAL8'] = 1.0
+    uvhdu.header['PZERO8'] = 0.0
 
     ###uvfits standards
     uvhdu.header['CTYPE2'] = 'COMPLEX '
@@ -357,25 +439,19 @@ def create_uvfits(v_container=None,freq_cent=None,
     uvhdu.header['CRPIX6'] = 1.0
     uvhdu.header['CDELT6'] = 1.0
 
-    ## Write the parameters scaling explictly because they are omitted if default 1/0
-    uvhdu.header['PSCAL1'] = 1.0
-    uvhdu.header['PZERO1'] = 0.0
-    uvhdu.header['PSCAL2'] = 1.0
-    uvhdu.header['PZERO2'] = 0.0
-    uvhdu.header['PSCAL3'] = 1.0
-    uvhdu.header['PZERO3'] = 0.0
-    uvhdu.header['PSCAL4'] = 1.0
-    uvhdu.header['PZERO4'] = 0.0
-    uvhdu.header['PSCAL5'] = 1.0
-
-    # int_jd, float_jd = calc_jdcal(date)
-    uvhdu.header['PZERO5'] = float(int_jd)
-
     ##Old observation parameters that were/are needed in CHIPS
     uvhdu.header['OBJECT']  = 'Undefined'
     uvhdu.header['OBSRA']   = ra_point
     uvhdu.header['OBSDEC']  = dec_point
-    # uvhdu.header['TELESCOP'] = 'MWA'
+
+    uvhdu.header['TELESCOP'] = telescope_name
+    uvhdu.header['LAT']      = latitude
+    uvhdu.header['LON']      = longitude
+    uvhdu.header['ALT']      = array_height
+    ## For everything WODEN can simulate, there are no extra instruments on
+    ## the telescope (I guess this is for different feed horns on a dish and
+    ## similar things to that?) so just set it to the telescope name
+    uvhdu.header['INSTRUME'] = telescope_name
 
     ##Add in the gitlabel so we know what version generated the file
     if gitlabel: uvhdu.header['GITLABEL'] = gitlabel
@@ -1207,8 +1283,8 @@ if __name__ == "__main__":
 
     args = check_args(args)
 
-    lst_deg = get_LST(latitude=args.latitude, longitude=args.longitude,
-                      height=args.array_height, date=args.date)
+    lst_deg, gst0_deg, degpdy, ut1utc = get_uvfits_date_and_position_constants(latitude=args.latitude, longitude=args.longitude,
+                        height=args.array_height, date=args.date)
 
     int_jd, float_jd = calc_jdcal(args.date)
     jd_date = int_jd + float_jd
@@ -1267,8 +1343,8 @@ if __name__ == "__main__":
 
             hdu_ant = make_antenna_table(XYZ_array=XYZ_array,telescope_name=args.telescope_name,
                           num_antennas=args.num_antennas, freq_cent=central_freq_chan_value,
-                          date=args.date,
-                          longitude=args.longitude, latitude=args.latitude,
+                          date=args.date, gst0_deg=gst0_deg, degpdy=degpdy,
+                          ut1utc=ut1utc, longitude=args.longitude, latitude=args.latitude,
                           array_height=args.array_height)
 
             baselines_array, date_array = make_baseline_date_arrays(args.num_antennas,
@@ -1281,7 +1357,10 @@ if __name__ == "__main__":
                           date_array=date_array,
                           central_freq_chan=central_freq_chan,
                           ch_width=args.freq_res, int_jd=int_jd,
-                          hdu_ant=hdu_ant, gitlabel=gitlabel)
+                          hdu_ant=hdu_ant, gitlabel=gitlabel,
+                          longitude=args.longitude, latitude=args.latitude,
+                          array_height=args.array_height,
+                          telescope_name=args.telescope_name,)
 
 
             ##Tidy up or not

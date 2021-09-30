@@ -19,9 +19,12 @@ class Test(unittest.TestCase):
     def make_dummy_intputs(self):
         """Makes some inputs used to pass to rw.create_uvfits"""
         self.date = "2019-06-12T13:04:12"
+        self.gst0_deg = 260.0303917560829
+        self.degpdy = 360.98563614850775
+        self.ut1utc = -0.17421478816666666
         self.num_antennas = 10
         self.freq_cent = 160e+6
-        self.telescope_name = "TESTTELE"
+        self.telescope_name = "MWA"
         self.longitude = 116.670813889
         self.latitude = -26.7033194444
         self.array_height = 377.0
@@ -39,7 +42,6 @@ class Test(unittest.TestCase):
 
         self.output_uvfits_name = "unittest_example.uvfits"
 
-
     def test_create_uvfits_outputs(self):
         """Tests the `rw.create_uvfits` function, which should take a whole
         heap of inputs and write out a uvits. Test by running funciton,
@@ -52,7 +54,8 @@ class Test(unittest.TestCase):
         ant_table = rw.make_antenna_table(XYZ_array=self.XYZ_array,
                       telescope_name=self.telescope_name,
                       num_antennas=self.num_antennas, freq_cent=self.freq_cent,
-                      date=self.date,
+                      date=self.date, gst0_deg=self.gst0_deg,
+                      degpdy=self.degpdy, ut1utc=self.ut1utc,
                       longitude=self.longitude, latitude=self.latitude,
                       array_height=self.array_height)
 
@@ -66,6 +69,7 @@ class Test(unittest.TestCase):
         vv = np.arange(self.num_baselines*self.num_time_steps) + self.num_baselines
         ww = np.arange(self.num_baselines*self.num_time_steps) + 2*self.num_baselines
         baselines_array = np.arange(self.num_baselines*self.num_time_steps)
+
         date_array = np.ones(self.num_time_steps*self.num_baselines)*0.04458333319
         ##Add a second of time onto the second half of the date array
         date_array[self.num_baselines:] += (1 / (24.0*60.0*60.0))
@@ -78,7 +82,9 @@ class Test(unittest.TestCase):
                   v_container=v_container,
                   uu=uu, vv=vv, ww=ww,
                   baselines_array=baselines_array, date_array=date_array,
-                  hdu_ant=ant_table)
+                  hdu_ant=ant_table, telescope_name=self.telescope_name,
+                  longitude=self.longitude, latitude=self.latitude,
+                  array_height=self.array_height)
 
         self.assertTrue(os.path.isfile(self.output_uvfits_name))
 
@@ -113,6 +119,11 @@ class Test(unittest.TestCase):
             self.assertAlmostEqual(ant_table.header['ARRAYY'], 5095371.541942583)
             self.assertAlmostEqual(ant_table.header['ARRAYZ'], -2849056.817561836)
             self.assertEqual(ant_table.header['FREQ'], self.freq_cent)
+            self.assertAlmostEqual(ant_table.header['GSTIA0'], self.gst0_deg, delta=1e-9)
+            self.assertAlmostEqual(ant_table.header['DEGPDY'], self.degpdy, delta=1e-9)
+            self.assertAlmostEqual(ant_table.header['UT1UTC'], self.ut1utc, delta=1e-9)
+            self.assertEqual(ant_table.header['XYZHAND'], 'RIGHT')
+            self.assertEqual(ant_table.header['FRAME'], '????')
             self.assertEqual(ant_table.header['RDATE'], self.date)
             self.assertEqual(ant_table.header['TIMSYS'], 'UTC')
             self.assertEqual(ant_table.header['ARRNAM'], self.telescope_name )
@@ -128,7 +139,7 @@ class Test(unittest.TestCase):
             self.assertTrue(np.array_equal(baselines_array, data_table.data['BASELINE']))
             ##Astropy automatically adds the header value to the DATE array,
             ##so need to subtract before comparison
-            self.assertTrue(np.array_equal(date_array, data_table.data['DATE']) - data_table.header['PZERO5'])
+            self.assertTrue(np.array_equal(date_array, data_table.data['DATE']) - data_table.header['PZERO4'])
 
             ##Check the actual visisbility values are correct
             self.assertTrue(np.allclose(v_container, data_table.data.data))
@@ -161,13 +172,21 @@ class Test(unittest.TestCase):
             self.assertEqual(1.0, data_table.header['PSCAL3'])
             self.assertEqual(0.0, data_table.header['PZERO3'])
             self.assertEqual(1.0, data_table.header['PSCAL4'])
-            self.assertEqual(0.0, data_table.header['PZERO4'])
+            ##This is the date array so has an offset for JD date
+            self.assertEqual(float(self.int_jd), data_table.header['PZERO4'])
             self.assertEqual(1.0, data_table.header['PSCAL5'])
-            self.assertEqual(float(self.int_jd), data_table.header['PZERO5'])
+            self.assertEqual(0.0, data_table.header['PZERO5'])
+
             self.assertEqual('Undefined', data_table.header['OBJECT'])
             self.assertEqual(self.ra_point, data_table.header['OBSRA'])
             self.assertEqual(self.dec_point, data_table.header['OBSDEC'])
             self.assertEqual(self.gitlabel, data_table.header['GITLABEL'])
+
+            self.assertEqual(data_table.header['TELESCOP'], self.telescope_name)
+            self.assertEqual(data_table.header['LAT'], self.latitude)
+            self.assertEqual(data_table.header['LON'], self.longitude)
+            self.assertEqual(data_table.header['ALT'], self.array_height)
+            self.assertEqual(data_table.header['INSTRUME'], self.telescope_name)
 
     def test_error_for_unequal_arrays(self):
         """Tests the `rw.create_uvfits` function. Function should fail with

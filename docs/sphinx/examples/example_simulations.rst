@@ -1,3 +1,5 @@
+.. _WODEN demonstrated via examples:
+
 ``WODEN`` demonstrated via examples
 =====================================
 
