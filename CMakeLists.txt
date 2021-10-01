@@ -180,6 +180,9 @@ if(TARGET_GROUP STREQUAL production)
 ##If making test code
 elseif(TARGET_GROUP STREQUAL test)
 
+      set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/externals/CMake-codecov/cmake" ${CMAKE_MODULE_PATH})
+      find_package(codecov)
+
       include(CTest)
 
       set(HINTS_UNITY "${UNITY_ROOT};${UNITY_ROOT}/src/;/usr/local/Unity/src/")
@@ -198,6 +201,8 @@ elseif(TARGET_GROUP STREQUAL test)
           "${UNITY_DIR}"
       )
       add_subdirectory(cmake_testing)
+
+      coverage_evaluate()
 
 else()
     message(FATAL_ERROR "Given TARGET_GROUP unknown")

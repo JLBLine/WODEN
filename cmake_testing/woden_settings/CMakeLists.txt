@@ -26,13 +26,17 @@ foreach(X IN LISTS J1 J2 J3 J4 J5 J6 J7 J8 J9)
         COMMAND ${CMAKE_COMMAND} -E create_symlink "${JSON_PATH}/${X}" "${X}")
 endforeach()
 
+add_library(woden_settings SHARED "${CMAKE_SOURCE_DIR}/src/woden_settings.c")
+## Accumulate the coverage from the tests
+add_coverage(woden_settings)
+
 # ##Test reading of WODEN catalogue works
 add_executable(test_read_json_settings_app
     test_read_json_settings.c
-    ../../src/woden_settings.c
 )
 target_link_libraries(test_read_json_settings_app
     Unity
+    woden_settings
     ${CC_LINKLIBS}
 )
 add_test(C_test_read_json_settings test_read_json_settings_app)
@@ -41,10 +45,10 @@ add_test(C_test_read_json_settings test_read_json_settings_app)
 # ##Test reading of WODEN catalogue works
 add_executable(test_setup_lsts_and_phase_centre_app
     test_setup_lsts_and_phase_centre.c
-    ../../src/woden_settings.c
 )
 target_link_libraries(test_setup_lsts_and_phase_centre_app
     Unity
+    woden_settings
     ${CC_LINKLIBS}
 )
 add_test(C_test_setup_lsts_and_phase_centre test_setup_lsts_and_phase_centre_app)

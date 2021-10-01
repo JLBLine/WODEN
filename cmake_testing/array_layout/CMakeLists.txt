@@ -2,13 +2,18 @@
 ##get the absolute path OK here
 find_path(LAYOUT_PATH "example_array_layout.txt" HINTS "${CMAKE_CURRENT_LIST_DIR}")
 
+add_library(array_layout SHARED "${CMAKE_SOURCE_DIR}/src/array_layout.c")
+## Accumulate the coverage from the tests
+add_coverage(array_layout)
+
 # ##Test the east,north,height to X,Y,Z works
 add_executable(test_RTS_ENH2XYZ_local_app
     test_RTS_ENH2XYZ_local.c
-    ../../src/array_layout.c
+
 )
 target_link_libraries(test_RTS_ENH2XYZ_local_app
     Unity
+    array_layout
     ${CC_LINKLIBS}
 )
 add_test(C_test_RTS_ENH2XYZ_local test_RTS_ENH2XYZ_local_app)
@@ -23,20 +28,20 @@ endforeach()
 # ##Test calculating baseline length in X,Y,Z works
 add_executable(test_calc_XYZ_diffs_app
     test_calc_XYZ_diffs.c
-    ../../src/array_layout.c
 )
 target_link_libraries(test_calc_XYZ_diffs_app
     Unity
+    array_layout
     ${CC_LINKLIBS}
 )
 add_test(C_test_calc_XYZ_diffs test_calc_XYZ_diffs_app)
 
 add_executable(test_RTS_PrecessXYZtoJ2000_app
     test_RTS_PrecessXYZtoJ2000.c
-    ../../src/array_layout.c
 )
 target_link_libraries(test_RTS_PrecessXYZtoJ2000_app
     Unity
+    array_layout
     ${CC_LINKLIBS}
 )
 add_test(C_test_RTS_PrecessXYZtoJ2000 test_RTS_PrecessXYZtoJ2000_app)

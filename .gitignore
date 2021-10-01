@@ -27,3 +27,10 @@ docs/sphinx/operating_principles/run_EDA2_beam
 docs/sphinx/operating_principles/run_EDA2_beam.o
 docs/sphinx/operating_principles/run_Gaussian_beam
 docs/sphinx/operating_principles/run_Gaussian_beam.o
+
+
+coverage_outputs/htmlcov
+coverage_outputs/*.gcov
+coverage_outputs/*.xml
+coverage_outputs/codecov
+coverage_outputs/.coverage
