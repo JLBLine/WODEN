@@ -91,7 +91,11 @@ you have a newer NVIDIA GPU, you should be able to simply run::
   $ cmake ..
   $ make -j 4
 
-et voila, your code is compiled. If this worked, head to the 'Post Compilation' section below to finish off your installation. If it didn't, and you're not used to ``cmake``, check out the 'Machine specifics' for help.
+et voila, your code is compiled. If this worked, and you're happy to install ``WODEN`` into the system default location, just run::
+
+  $ sudo make install
+
+(usually the default is something like ``/usr/local`` hence you need admin privileges). If complilation fails or you're not used to ``cmake``, check out the 'Machine specifics' for help. If you don't want to install or don't have admin rights, head to the 'Post Compilation' section below to finish off your installation.
 
 .. warning:: Even if the code compiled, if your GPU has a compute capability < 5.1, newer versions of ``nvcc`` won't compile code that will work. You'll get error messages like "No kernel image available". Check out how to fix that in 'Machine specifics' below.
 
@@ -118,10 +122,10 @@ If you need to pass extra flags to your CUDA compiler, you can do so by adding s
   -DCMAKE_CUDA_FLAGS="-Dsomeflag"
 
 
-Post compilation (required)
-##############################
+Post compilation (required if you don't run ``make install``)
+###############################################################
 
-Once compiled, just add::
+If you don't run ``make install``, ``run_woden.py`` won't be able to find the ``woden`` executable. Default installation locations often need admin privileges. If you can't install to them (or just want to keep ``WODEN`` contained inside a single directory), you can instead just add::
 
   source /path/to/your/location/WODEN/build/init_WODEN.sh
 
