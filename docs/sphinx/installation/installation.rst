@@ -1,15 +1,13 @@
+*************
 Installation
-=============
+*************
 
 WODEN is built on CUDA so you will need an NVIDIA GPU to run it. Currently, WODEN has only been tested and run on linux, specifically Ubuntu 16.04 up to 20.04, the OzStar super cluster of Swinburne University, and Garrawarla cluster of Pawsey. If you're mad keen to run on Windows or Mac, please contact Jack at jack.l.b.line@gmail.com and we can give it a go.
 
 Dependencies
--------------
+##############
 
-``WODEN`` has a number of dependencies so it doesn't reinvent the wheel. I've linked detailed instructions on how I installed them on Ubuntu 20.04 here, and listed them below.
-
-.. toctree::
-  :maxdepth: 2
+``WODEN`` has a number of dependencies so it doesn't reinvent the wheel. A brief list of them here is followed by detailed instructions on how I installed them in the following subsection. Note that the explicit installation instructions I have included for ``json-c``, ``erfa``, and ``pal`` are the only way I have reliably managed to install these packages - the package installation manager sometimes does whacky things for them.
 
   dependencies
 
@@ -21,8 +19,70 @@ Dependencies
 - **PAL** - https://github.com/Starlink/pal/releases
 - **python >= 3.6**
 
+How to install dependencies
+****************************
+
+These instructions are for Ubuntu 20.04, but can be used as a guide for other
+linux-like systems.
+
++ **CMake** - https://cmake.org version >= 3.10::
+
+   $ sudo snap install cmake
+
++ **NVIDIA CUDA** - https://developer.nvidia.com/cuda-downloads. I typically download the runfile option, which you run as::
+
+  $ sudo sh cuda_11.2.2_460.32.03_linux.run
+
+  but I do NOT install the drivers at this point, as I'll already have drivers. Up to you and how your system works. Also, don't ignore the step of adding something like ``export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-11.2/lib64`` to your ``~/.bashrc``, or your system won't find ``CUDA``.
++ **json-c** - https://github.com/json-c/json-c. This is a typical ``cmake`` installation::
+
+  $ git clone https://github.com/json-c/json-c.git
+  $ cd json-c
+  $ mkdir build && cd build
+  $ cmake ..
+  $ make -j 4
+  $ sudo make install
+
+  When you run ``cmake ..`` you should find out what dependencies you are missing and can install them as needed.
++ **ERFA** - https://github.com/liberfa/erfa/releases. I think it's best to install a release version of ``ERFA``. Comes with a ``configure`` file, while the ``git`` repo doesn't. An installation route would look like::
+
+  $ wget https://github.com/liberfa/erfa/releases/download/v2.0.0/erfa-2.0.0.tar.gz
+  $ tar -xvf erfa-2.0.0.tar.gz
+  $ cd erfa-2.0.0
+  $ ./configure
+  $ make -j 4
+  $ sudo make install
++ **HDF5** - https://www.hdfgroup.org/downloads/hdf5/ - just do::
+
+  $ sudo apt install libhdf5-serial-dev
++ **PAL** - https://github.com/Starlink/pal/releases - ``PAL`` is a little mental with it's default installation paths. I *HIGHLY* recommmend downloading a release version, and then using the ``--without-starlink`` option::
+
+  $ wget https://github.com/Starlink/pal/releases/download/v0.9.8/pal-0.9.8.tar.gz
+  $ tar -xvf pal-0.9.8.tar.gz
+  $ cd pal-0.9.8
+  $ ./configure --prefix=/usr/local --without-starlink
+  $ make
+  $ sudo make install
+
+  Doing it this way installs things in normal locations, making life easier during linking.
++ **python >= 3.6** - the best way to run ``WODEN`` is through the script ``run_woden.py``, which has a number of package dependencies. One of these is ``pyerfa``, which uses f-strings during installation, so you have to use a python version >= 3.6. Sorry. The requirements can be found in ``WODEN/docs/sphinx/sphinx/requirements.txt``, which you can install via something like::
+
+  $ pip3 install -r requirements.txt
+
+For completeness, those packages are::
+
+  sphinx_argparse
+  breathe
+  astropy
+  numpy
+  pyerfa
+
+The first two packages are used for the documentation.
+
+Phew! That's it for now.
+
 Compiling ``WODEN``
----------------------
+######################
 
 In an ideal world, if the installation of your dependencies went perfectly and
 you have a newer NVIDIA GPU, you should be able to simply run::
@@ -38,7 +98,7 @@ et voila, your code is compiled. If this worked, head to the 'Post Compilation' 
 .. warning:: Even if the code compiled, if your GPU has a compute capability < 5.1, newer versions of ``nvcc`` won't compile code that will work. You'll get error messages like "No kernel image available". Check out how to fix that in 'Machine specifics' below.
 
 Machine specifics
-------------------
+######################
 ``cmake`` is pretty good at trying to find all the necessary libraries, but every machine is unique, so often you'll need to point ``cmake`` in the correct direction. To that end, I've include 4 keywords: ``JSONC_ROOT``, ``ERFA_ROOT``, ``HDF5_ROOT``, ``PAL_ROOT`` that you can pass to ``cmake``. When passing an option to ``cmake``, you add ``-D`` to the front. For example, on ``OzStar``, I used the command::
 
   $ cmake ..  -DJSONC_ROOT=/fred/oz048/jline/software/json-c/install/
@@ -61,7 +121,7 @@ If you need to pass extra flags to your CUDA compiler, you can do so by adding s
 
 
 Post compilation (required)
-----------------------------
+##############################
 
 Once compiled, just add::
 
@@ -70,7 +130,7 @@ Once compiled, just add::
 to your ``~/.bash_rc`` (where you replace ``/path/to/your/location`` to wherever you installed ``WODEN``). This will create the variable ``$WODEN_DIR``, and add it to your ``$PATH``. This allows ``run_woden.py`` to find the ``woden`` executable.
 
 Post compilation (optional)
-----------------------------
+###############################
 
 If you want to use the MWA FEE primary beam model, you must have the stored spherical harmonic coefficients hdf5 file ``mwa_full_embedded_element_pattern.h5``. You can then define this environment variable in your ``~/.bash_rc``::
 
