@@ -1,9 +1,27 @@
 mkdir -p images
-#rm images/*
+
+##See if we can find where the scripts live - annoyingly, have to give an
+##absolute path to casa to run uv2ms.py, so need to know where it lives
+
+##This checks if the ENV VARIABLE WODEN_DIR does not exists
+if [ -z ${WODEN_DIR+x} ]; then
+
+echo "WODEN_DIR is unset. Searching for uv2ms.py instead"
+##This searches for uv2ms.py apparently
+uv2ms=$(command -v uv2ms.py)
+echo "Will attempt to use ${uv2ms}"
+
+##If it exists, use it
+else
+uv2ms="${WODEN_DIR}/uv2ms.py"
+echo "WODEN_DIR is is set to '${WODEN_DIR}'.";
+echo "Will use ${uv2ms}"
+
+fi
 
 ##Convert uvfits to measurement sets. --nologger stops a logging popup
 ##that can slow things down. Remove it if you want a graphical logger
-${CASA_DIR}/casa --nologger -c  ${WODEN_DIR}/uv2ms.py \
+${CASA_DIR}/casa --nologger -c  ${uv2ms} \
   --uvfits_prepend=./data/FornaxA_msclean_band \
   --band_nums=1,2,3,4,5
 

@@ -139,36 +139,21 @@ if(TARGET_GROUP STREQUAL production)
     target_link_libraries(woden PUBLIC wodenC wodenCUDA ${CC_LINKLIBS})
     target_compile_options(woden PRIVATE -O3 -Wall)
 
-
-    ##Make a symlink to run_woden.py so it's easy to find
-    set(link_woden "run_woden.py")
-    find_path(WODENPY run_woden.py HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
-    if(WODENPY)
-      message(STATUS "WODENPY path: ${WODENPY}")
+    ##Macro to search for a filename in the `src` dir and make a symlink
+    ##into the build dir
+    macro(make_python_symlink filename)
+    find_path(THISPY ${filename} HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
+    if(THISPY)
+      message(STATUS "${filename} path: ${THISPY}")
     endif()
-    set(target_woden "${WODENPY}/run_woden.py")
-    ADD_CUSTOM_TARGET(target_woden ALL
-                      COMMAND ${CMAKE_COMMAND} -E create_symlink ${target_woden} ${link_woden})
+    set(path_filename "${THISPY}/${filename}")
+    ADD_CUSTOM_TARGET(${filename} ALL
+                      COMMAND ${CMAKE_COMMAND} -E create_symlink ${path_filename} ${filename})
+    endmacro(make_python_symlink)
 
-    ##Make a symlink to convert_WSClean_list_to_WODEN.py so it's easy to find
-    set(link_convert "convert_WSClean_list_to_WODEN.py")
-    find_path(CONVERTWSCLEAN convert_WSClean_list_to_WODEN.py HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
-    if(CONVERTWSCLEAN)
-      message(STATUS "CONVERTWSCLEAN path: ${CONVERTWSCLEAN}")
-    endif()
-    set(target_convert "${CONVERTWSCLEAN}/convert_WSClean_list_to_WODEN.py")
-    ADD_CUSTOM_TARGET(target_convert ALL
-                      COMMAND ${CMAKE_COMMAND} -E create_symlink ${target_convert} ${link_convert})
-
-    ##Make a symlink to uv2ms.py so it's easy to find
-    set(link_uv2ms "uv2ms.py")
-    find_path(UV2MS uv2ms.py HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
-    if(UV2MS)
-      message(STATUS "UV2MS path: ${UV2MS}")
-    endif()
-    set(target_uv2ms "${UV2MS}/uv2ms.py")
-    ADD_CUSTOM_TARGET(target_uv2ms ALL
-                      COMMAND ${CMAKE_COMMAND} -E create_symlink ${target_uv2ms} ${link_uv2ms})
+    make_python_symlink("run_woden.py")
+    make_python_symlink("uv2ms.py")
+    make_python_symlink("convert_WSClean_list_to_WODEN.py")
 
     ##Copy the variable init script so this file can be put in bashrc
     find_path(INIT_WODEN init_WODEN.sh HINTS "${CMAKE_CURRENT_LIST_DIR}/templates/")
@@ -176,6 +161,30 @@ if(TARGET_GROUP STREQUAL production)
       message(STATUS "INIT_WODEN path: ${INIT_WODEN}")
     endif()
     configure_file("${INIT_WODEN}/init_WODEN.sh" init_WODEN.sh COPYONLY)
+
+    ###===========INSTALLATION OPTIONS==========================================
+    ##Setup a generic installation location thingy
+    include(GNUInstallDirs)
+
+    ##Copy python scripts into bin directory
+    macro(install_symlink filename)
+    find_path(THISPY ${filename} HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
+    install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${THISPY}/${filename} ${CMAKE_INSTALL_FULL_BINDIR}/${filename})")
+    # install(CODE "message(\"-- Created symlink: ${THISPY}/${filename} -> ${CMAKE_INSTALL_BINDIR}/${filename}\")")
+    endmacro(install_symlink)
+
+    install_symlink("run_woden.py")
+    install_symlink("uv2ms.py")
+    install_symlink("convert_WSClean_list_to_WODEN.py")
+
+    install(TARGETS woden
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+    install(TARGETS wodenCUDA wodenC
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+    ###===========INSTALLATION OPTIONS==========================================
+
 
 ##If making test code
 elseif(TARGET_GROUP STREQUAL test)

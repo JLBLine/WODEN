@@ -9,8 +9,6 @@ Dependencies
 
 ``WODEN`` has a number of dependencies so it doesn't reinvent the wheel. A brief list of them here is followed by detailed instructions on how I installed them in the following subsection. Note that the explicit installation instructions I have included for ``json-c``, ``erfa``, and ``pal`` are the only way I have reliably managed to install these packages - the package installation manager sometimes does whacky things for them.
 
-  dependencies
-
 - **CMake** - https://cmake.org version >= 3.10
 - **NVIDIA CUDA** - https://developer.nvidia.com/cuda-downloads
 - **json-c** - https://github.com/json-c/json-c

@@ -26,13 +26,6 @@ MWA_HEIGHT = 377.0
 VELC = 299792458.0
 SOLAR2SIDEREAL = 1.00274
 
-read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
-
-if read_the_docs_build:
-    WODEN_DIR = "not-needed"
-else:
-    WODEN_DIR = os.environ['WODEN_DIR']
-
 def command(cmd):
     """
     Runs the command string `cmd` using `subprocess.call`
@@ -1265,6 +1258,29 @@ def check_args(args):
     return args
 
 if __name__ == "__main__":
+
+    ##If we're at readthe docs, we don't need to know where woden exe lives
+    read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
+
+    WODEN_DIR = 'unset'
+
+    if read_the_docs_build:
+        WODEN_DIR = "not-needed"
+    else:
+        ##If the user is using 'init_WODEN.sh' in their bashrc, look for it
+        try:
+            WODEN_DIR = os.environ['WODEN_DIR']
+        ##If it doesn't exist, try and find it in the path
+        except KeyError:
+            for path in os.environ["PATH"].split(os.pathsep):
+                woden_exe_path = os.path.join(path, 'woden')
+                if os.path.isfile(woden_exe_path):
+                    print(os.access(woden_exe_path, os.X_OK))
+
+                    WODEN_DIR = '/'.join(woden_exe_path.split('/')[:-1])
+
+    ##Print where we found woden executable
+    print(f'Using the WODEN living here: {WODEN_DIR}/woden')
 
     ##Find out where the git repo is, cd in and grab the git label
     ##TODO do this in a better way
