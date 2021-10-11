@@ -155,12 +155,27 @@ if(TARGET_GROUP STREQUAL production)
     make_python_symlink("uv2ms.py")
     make_python_symlink("convert_WSClean_list_to_WODEN.py")
 
-    ##Copy the variable init script so this file can be put in bashrc
-    find_path(INIT_WODEN init_WODEN.sh HINTS "${CMAKE_CURRENT_LIST_DIR}/templates/")
-    if(INIT_WODEN)
-      message(STATUS "INIT_WODEN path: ${INIT_WODEN}")
-    endif()
-    configure_file("${INIT_WODEN}/init_WODEN.sh" init_WODEN.sh COPYONLY)
+    ##Want to run a python command everytime we make the code, in case paths
+    ##have changed. CMake doesn't seem to want to run a command unless the
+    ##output is missing. So make a custom target including a file '__header.h'
+    ##that will never exist, to trick CMake into running the command below
+    ##everytime
+    add_custom_target(
+        write_init_WODEN ALL
+        DEPENDS
+            ${CMAKE_CURRENT_BINARY_DIR}/__header.h
+            init_WODEN.sh
+    )
+    ##Find python so we can run a python script
+    include(FindPythonInterp)
+    ##Run the command that will create / edit the init_WODEN.sh script. Make
+    ##__header.h a dependency so it will always run
+    add_custom_command(
+            OUTPUT
+                ${CMAKE_CURRENT_BINARY_DIR}/__header.h
+                init_WODEN.sh
+            COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/src/update_init_WODEN.py
+    )
 
     ###===========INSTALLATION OPTIONS==========================================
     ##Setup a generic installation location thingy
