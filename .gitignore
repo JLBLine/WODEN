@@ -18,6 +18,8 @@ examples/EDA2_haslam/pygsm_woden-list_100MHz_n256.txt
 examples/EDA2_haslam/images
 examples/EDA2_haslam/data
 
+externals
+
 docs/sphinx/operating_principles/MWAFEE_beamvalues-vs-freq.txt
 docs/sphinx/operating_principles/MWAFEE_beamvalues_180MHz.txt
 docs/sphinx/operating_principles/azza_values.txt
@@ -28,9 +30,11 @@ docs/sphinx/operating_principles/run_EDA2_beam.o
 docs/sphinx/operating_principles/run_Gaussian_beam
 docs/sphinx/operating_principles/run_Gaussian_beam.o
 
-
 coverage_outputs/htmlcov
 coverage_outputs/*.gcov
 coverage_outputs/*.xml
 coverage_outputs/codecov
 coverage_outputs/.coverage
+
+test_installation/*/data
+test_installation/*/images

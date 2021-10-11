@@ -21,6 +21,13 @@ I installed ``unity`` via::
 
 That way, ``cmake`` can find ``unity``. However, you don't need to install Unity anywhere, as ``WODEN`` uses the ``C`` code directly. You just need to tell ``WODEN`` where Unity lives in your system (for example, you could download a release version e.g. version 2.5.2 - see example below for how to link without installation).
 
+You'll also need to initiate the ``git submodule`` that runs code coverage. Simply navigate to the ``WODEN`` directory and run::
+
+  $ git submodule init
+  $ git submodule update
+
+which will pull in the relevant ``CMake-codecov`` dependencies. This allows us to track code coverage for the ``python`` and ``C`` code (no free tools exist for ``CUDA`` at the time of writing, boooo).
+
 To tell ``cmake`` to build tests, you add ``TARGET_GROUP=test`` to your command to tell CMake to build tests instead of the main code::
 
   $ cd $WODEN_DIR
