@@ -18,10 +18,10 @@ include_directories("${CMAKE_SOURCE_DIR}/cmake_testing/calculate_visibilities")
 add_executable(test_calculate_visibilities_nobeam_app
     test_calculate_visibilities_nobeam.c
     test_calculate_visibilities_common.c
-    ../../src/FEE_primary_beam.c
-    ../../src/visibility_set.c
-    ../../src/woden_settings.c
-    ../../src/shapelet_basis.c
+    ${CMAKE_SOURCE_DIR}/src/FEE_primary_beam.c
+    ${CMAKE_SOURCE_DIR}/src/visibility_set.c
+    ${CMAKE_SOURCE_DIR}/src/woden_settings.c
+    ${CMAKE_SOURCE_DIR}/src/shapelet_basis.c
 )
 target_link_libraries(test_calculate_visibilities_nobeam_app
     Unity
@@ -35,10 +35,10 @@ add_test(CUDA_test_calculate_visibilities_nobeam test_calculate_visibilities_nob
 add_executable(test_calculate_visibilities_gaussbeam_app
     test_calculate_visibilities_gaussbeam.c
     test_calculate_visibilities_common.c
-    ../../src/FEE_primary_beam.c
-    ../../src/visibility_set.c
-    ../../src/woden_settings.c
-    ../../src/shapelet_basis.c
+    ${CMAKE_SOURCE_DIR}/src/FEE_primary_beam.c
+    ${CMAKE_SOURCE_DIR}/src/visibility_set.c
+    ${CMAKE_SOURCE_DIR}/src/woden_settings.c
+    ${CMAKE_SOURCE_DIR}/src/shapelet_basis.c
 )
 target_link_libraries(test_calculate_visibilities_gaussbeam_app
     Unity
@@ -51,10 +51,10 @@ add_test(CUDA_test_calculate_visibilities_gaussbeam test_calculate_visibilities_
 add_executable(test_calculate_visibilities_edabeam_app
     test_calculate_visibilities_edabeam.c
     test_calculate_visibilities_common.c
-    ../../src/FEE_primary_beam.c
-    ../../src/visibility_set.c
-    ../../src/woden_settings.c
-    ../../src/shapelet_basis.c
+    ${CMAKE_SOURCE_DIR}/src/FEE_primary_beam.c
+    ${CMAKE_SOURCE_DIR}/src/visibility_set.c
+    ${CMAKE_SOURCE_DIR}/src/woden_settings.c
+    ${CMAKE_SOURCE_DIR}/src/shapelet_basis.c
 )
 target_link_libraries(test_calculate_visibilities_edabeam_app
     Unity

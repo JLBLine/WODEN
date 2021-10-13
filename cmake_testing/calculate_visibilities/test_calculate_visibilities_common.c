@@ -15,22 +15,6 @@ are launched by calculate_visibilities::calculate_visibilities`
 #include <stdlib.h>
 #include <complex.h>
 
-// #include <stdio.h>
-// #include <stdlib.h>
-// #include <string.h>
-//
-// #include "constants.h"
-// #include "woden_struct_defs.h"
-// #include "create_sky_model.h"
-// #include "shapelet_basis.h"
-// #include "chunk_sky_model.h"
-// #include "print_help.h"
-// #include "primary_beam.h"
-// #include "FEE_primary_beam.h"
-// #include "woden_settings.h"
-// #include "visibility_set.h"
-// #include "array_layout.h"
-
 #include "test_calculate_visibilities_common.h"
 
 //External CUDA code we're linking in

@@ -71,7 +71,7 @@ void test_calculate_visibilities_EDA2Beam_OneSource_SinglePoint(void) {
   test_calculate_visibilities_EDA2Beam(n_points, n_gauss, n_shapes, num_sources);
 }
 
-void test_calculate_visibilities_EDA2Beam_OneSource_SingleEDA2(void) {
+void test_calculate_visibilities_EDA2Beam_OneSource_SingleGauss(void) {
   int n_points = 0;
   int n_gauss = 1;
   int n_shapes = 0;
@@ -107,7 +107,7 @@ void test_calculate_visibilities_EDA2Beam_ThreeSource_SinglePoint(void) {
 
 }
 
-void test_calculate_visibilities_EDA2Beam_ThreeSource_SingleEDA2(void) {
+void test_calculate_visibilities_EDA2Beam_ThreeSource_SingleGauss(void) {
   int n_points = 0;
   int n_gauss = 1;
   int n_shapes = 0;
@@ -174,13 +174,13 @@ int main(void)
     UNITY_BEGIN();
     //Test with a single SOURCE, single COMPONENT
     RUN_TEST(test_calculate_visibilities_EDA2Beam_OneSource_SinglePoint);
-    RUN_TEST(test_calculate_visibilities_EDA2Beam_OneSource_SingleEDA2);
+    RUN_TEST(test_calculate_visibilities_EDA2Beam_OneSource_SingleGauss);
     RUN_TEST(test_calculate_visibilities_EDA2Beam_OneSource_SingleShape);
     RUN_TEST(test_calculate_visibilities_EDA2Beam_OneSource_SingleAll);
 
     //Test with three SOURCEs, single COPMONENT
     RUN_TEST(test_calculate_visibilities_EDA2Beam_ThreeSource_SinglePoint);
-    RUN_TEST(test_calculate_visibilities_EDA2Beam_ThreeSource_SingleEDA2);
+    RUN_TEST(test_calculate_visibilities_EDA2Beam_ThreeSource_SingleGauss);
     RUN_TEST(test_calculate_visibilities_EDA2Beam_ThreeSource_SingleShape);
     RUN_TEST(test_calculate_visibilities_EDA2Beam_ThreeSource_SingleAll);
 

@@ -180,8 +180,6 @@ void test_calculate_visibilities_NoBeam_ThreeSource_ThreeAll(void) {
   test_calculate_visibilities_NoBeam(n_points, n_gauss, n_shapes, num_sources);
 }
 
-
-
 //Run the test with unity
 int main(void)
 {
