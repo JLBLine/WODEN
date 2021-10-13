@@ -4,8 +4,6 @@ import numpy as np
 
 with open('test_RTS_FEE_beam.h', 'w') as outfile:
 
-    # names = ['zenith_100']
-
     names = ['zenith_100', 'zenith_150', 'zenith_200',
              'offzen1_100', 'offzen1_150', 'offzen1_200',
              'offzen2_100', 'offzen2_150', 'offzen2_200']

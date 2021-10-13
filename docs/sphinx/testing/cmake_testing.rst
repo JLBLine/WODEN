@@ -101,6 +101,9 @@ The sections below give an outline of the tests performed in each directory.
    :maxdepth: 1
 
    cmake_testing/array_layout
+   cmake_testing/chunk_sky_model
+   cmake_testing/create_sky_model
+   cmake_testing/FEE_primary_beam
 
 
 ``CUDA`` code tests:
@@ -109,5 +112,6 @@ The sections below give an outline of the tests performed in each directory.
    :maxdepth: 1
 
    cmake_testing/calculate_visibilities
+   cmake_testing/FEE_primary_beam_cuda
 
 .. note:: To be able to test ``CUDA`` functions that are designed to work solely in GPU memory, it's necessary to write wrapper functions that allocate GPU memory, pass the data into the ``CUDA`` code to be tested, and then copy the results back into host memory. I've kept these 'intermediate' test functions inside the ``*.cu`` files that contain the code being tested, as it's not straight forward / performance degrading to have them in separate files. On casual inspection it looks like there are many functions in the ``*.cu`` files I haven't written tests for, but the extra functions are there *because* of testing. Sigh.

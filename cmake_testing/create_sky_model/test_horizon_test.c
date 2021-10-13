@@ -19,7 +19,7 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 `horizon_test` takes information on a single COMPONENT of a SOURCE in a sky
 model and tests whether it is above or below the horizon. Depending on
 whether we are cropping the sky model by SOURCE or by COMPONENT, it updates
-various counters to effec the sky model cropping. SHAPELETs are complicating
+various counters that effect the sky model cropping. SHAPELETs are complicating
 factors as a single position can match multiple basis function parameters (of
 any length) so `horizon_test` does some logic to count how many SHAPELET
 parameters are being retained.
