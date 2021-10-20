@@ -10,8 +10,7 @@ void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
 /*
-Include the declaration of the CUDA code wrapper functions here to avoid
-compilation warnings
+CUDA code we are linking in
 */
 extern void test_kern_calc_uvw(float *X_diff, float *Y_diff, float *Z_diff,
            float *u_metres, float *v_metres, float *w_metres,

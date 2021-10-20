@@ -1,7 +1,9 @@
 
 add_library(primary_beam_cudaCUDA SHARED
-            "../../src/primary_beam_cuda.cu"
-            "../../src/fundamental_coords.cu")
+            "${CMAKE_SOURCE_DIR}/src/primary_beam_cuda.cu"
+            "${CMAKE_SOURCE_DIR}/src/fundamental_coords.cu")
+
+
 
 ## For CMake versions > 3.18, the arch flag settings are handled by
 ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
@@ -22,12 +24,12 @@ add_test(CUDA_test_gaussian_beam test_gaussian_beam_app)
 
 
 ##Test analytic beam functions
-add_executable(test_analytic_beam_app
-    test_analytic_beam.c
+add_executable(test_analytic_dipole_beam_app
+    test_analytic_dipole_beam.c
 )
-target_link_libraries(test_analytic_beam_app
+target_link_libraries(test_analytic_dipole_beam_app
     Unity
     primary_beam_cudaCUDA
     ${CC_LINKLIBS}
 )
-add_test(CUDA_test_analytic_beam test_analytic_beam_app)
+add_test(CUDA_test_analytic_dipole_beam test_analytic_dipole_beam_app)

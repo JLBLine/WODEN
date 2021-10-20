@@ -9,12 +9,10 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 
 //External CUDA code we're linking in
 extern void test_kern_calc_lmn(float ra0, float dec0,
-                                  float *ras, float *decs, int num_coords,
-                                  float * ls, float * ms, float * ns);
+                               float *ras, float *decs, int num_coords,
+                               float * ls, float * ms, float * ns);
 
 #define UNITY_INCLUDE_FLOAT
-
-// void setup_lmn_params()
 
 void test_kern_calc_lmn_GivesCorrectlCoords(void)
 {
@@ -49,9 +47,8 @@ void test_kern_calc_lmn_GivesCorrectlCoords(void)
 
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(l_expected, ls, num_points);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(zeroes, ms, num_points);
-    // // TEST_ASSERT_EQUAL_FLOAT_ARRAY(n_expected, ns, num_points);
-    // //Here, when n should be 0.0, we get some floating point error from the
-    // //sin/cos functions
+    // Here, when n should be 0.0, we get some floating point error from the
+    // sin/cos functions
     for (int i = 0; i < num_points; i++) {
       // printf("%.8f %.8f %.8f\n",n_expected[i], ns[i], n_expected[i] - ns[i] );
       TEST_ASSERT_FLOAT_WITHIN(2e-7, n_expected[i], ns[i]);
@@ -98,9 +95,8 @@ void test_kern_calc_lmn_GivesCorrectmCoords(void)
 
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(zeroes, ls, num_points);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(m_expected, ms, num_points);
-    // TEST_ASSERT_EQUAL_FLOAT_ARRAY(n_expected, ns, num_points);
-    //Here, when n should be 0.0, we get some floating point error from the
-    //sin/cos functions
+    // Here, when n should be 0.0, we get some floating point error from the
+    // sin/cos functions
     for (int i = 0; i < num_points; i++) {
       TEST_ASSERT_FLOAT_WITHIN(2e-7, n_expected[i], ns[i]);
     }

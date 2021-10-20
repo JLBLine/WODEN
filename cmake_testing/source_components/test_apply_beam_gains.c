@@ -122,7 +122,7 @@ void test_kern_apply_beam_gains_GiveCorrectValues(void) {
     TEST_ASSERT_EQUAL_FLOAT(expec_YY_im[gain], cimag(visi_YYs[gain]) );
   }
 
-  // //Be free my beauties
+  //Be free my beauties
   free(flux_Is);
   free(flux_Qs);
   free(flux_Us);

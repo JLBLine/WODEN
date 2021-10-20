@@ -80,8 +80,9 @@ void test_kern_calc_visi_point_Varylmn(int beamtype) {
       frequency = freq_base + freq_step*freq_inc;
       wavelength = VELC / frequency;
       for (int baseline = 0; baseline < num_baselines; baseline++) {
-        args_ft->us[count] = ((baseline + 1)*10) / wavelength;
-        args_ft->vs[count] = ((baseline + 1)*10) / wavelength;
+        args_ft->us[count] = ((baseline + 1)*100) / wavelength;
+        args_ft->vs[count] = ((baseline + 1)*100) / wavelength;
+        //ws are usually smaller than u,v
         args_ft->ws[count] = ((baseline + 1)*10) / wavelength;
 
         args_ft->allsteps_wavelengths[count] = wavelength;
@@ -145,7 +146,8 @@ void test_kern_calc_visi_point_VarylmnNoBeam(void) {
 /*
 Test the __device__ code that updates the summed visibilities by grabbing the
 correct beam gain and mesurement equation, multiplying and summing onto the visi
-Here we keep the component visibilities and fluxes constant and vary the beam gains
+Here we test for multiple l,m,n, vary the flux of the components, but keep
+the beam gains constant
 Test works for all primary beam types
 */
 void test_kern_calc_visi_point_VarylmnVaryFlux(int beamtype) {
@@ -178,9 +180,9 @@ void test_kern_calc_visi_point_VarylmnVaryFlux(int beamtype) {
     args_ft->primay_beam_J11[visi] = 1.0 + I*0.0;
   }
 
-  //Just stick Stokes I to 1.0, SI to zero, and reference freqs to 150MHz
+  //Just stick Stokes I to the component value, and SI to -0.8
   for (size_t comp = 0; comp < num_components; comp++) {
-    args_ft->flux_I[comp] = comp;
+    args_ft->flux_I[comp] = comp + 1;
     args_ft->SIs[comp] = -0.8;
     args_ft->component_freqs[comp] = 150e+6;
   }
@@ -200,8 +202,9 @@ void test_kern_calc_visi_point_VarylmnVaryFlux(int beamtype) {
       wavelength = VELC / frequency;
 
       for (int baseline = 0; baseline < num_baselines; baseline++) {
-        args_ft->us[count] = ((baseline + 1)*10) / wavelength;
-        args_ft->vs[count] = ((baseline + 1)*10) / wavelength;
+        args_ft->us[count] = ((baseline + 1)*100) / wavelength;
+        args_ft->vs[count] = ((baseline + 1)*100) / wavelength;
+        //ws are usually smaller than u,v
         args_ft->ws[count] = ((baseline + 1)*10) / wavelength;
 
         args_ft->allsteps_wavelengths[count] = wavelength;
@@ -227,7 +230,7 @@ void test_kern_calc_visi_point_VarylmnVaryFlux(int beamtype) {
           args_ft->primay_beam_J10, args_ft->primay_beam_J11);
 
   //Check all results are within 0.1% of expected value
-  float frac_tol = 5e-3;
+  float frac_tol = 1e-3;
   test_visi_outputs(num_visis, num_components, num_baselines, num_freqs,
                     frac_tol, beamtype, args_ft, POINT);
 
@@ -262,12 +265,17 @@ void test_kern_calc_visi_point_VarylmnVaryFluxNoBeam(void) {
   test_kern_calc_visi_point_VarylmnVaryFlux(NO_BEAM);
 }
 
-
+/*
+Test the __device__ code that updates the summed visibilities by grabbing the
+correct beam gain and mesurement equation, multiplying and summing onto the visi
+Here we keep the fluxes constant and vary the beam gains
+Test works for all primary beam types
+*/
 void test_kern_calc_visi_point_VarylmnVaryBeam(int beamtype) {
 
-  int num_baselines = 10.0;
-  int num_times = 5.0;
-  int num_freqs = 3.0;
+  int num_baselines = 10;
+  int num_times = 5;
+  int num_freqs = 3;
 
   int num_visis = num_baselines*num_times*num_freqs;
 
@@ -285,12 +293,17 @@ void test_kern_calc_visi_point_VarylmnVaryBeam(int beamtype) {
 
   int num_beam_values = num_freqs*num_times*num_components;
 
-  //Stick the gains to one everywhere
+  float beam_inc = 1.0 / num_beam_values;
+
+  //Vary the beam values from close to zero up to 1.0
   for (size_t beam = 0; beam < num_beam_values; beam++) {
-    args_ft->primay_beam_J00[beam] = beam + I*0.0;
-    args_ft->primay_beam_J01[beam] = beam + I*0.0;
-    args_ft->primay_beam_J10[beam] = beam + I*0.0;
-    args_ft->primay_beam_J11[beam] = beam + I*0.0;
+
+    args_ft->primay_beam_J00[beam] = beam_inc*(beam + 1.0) + I*0.0;
+    args_ft->primay_beam_J01[beam] = beam_inc*(beam + 1.0) + I*0.0;
+    args_ft->primay_beam_J10[beam] = beam_inc*(beam + 1.0) + I*0.0;
+    args_ft->primay_beam_J11[beam] = beam_inc*(beam + 1.0) + I*0.0;
+
+    // printf("THINGYU %.3f\n",beam_inc*(beam + 1.0) );
   }
 
   //Just stick Stokes I to 1.0, SI to zero, and reference freqs to 150MHz
@@ -315,8 +328,9 @@ void test_kern_calc_visi_point_VarylmnVaryBeam(int beamtype) {
       wavelength = VELC / frequency;
 
       for (int baseline = 0; baseline < num_baselines; baseline++) {
-        args_ft->us[count] = ((baseline + 1)*10) / wavelength;
-        args_ft->vs[count] = ((baseline + 1)*10) / wavelength;
+        args_ft->us[count] = ((baseline + 1)*100) / wavelength;
+        args_ft->vs[count] = ((baseline + 1)*100) / wavelength;
+        //ws are usually smaller than u,v
         args_ft->ws[count] = ((baseline + 1)*10) / wavelength;
 
         // args_ft->us[count] = 0.0;
@@ -346,7 +360,7 @@ void test_kern_calc_visi_point_VarylmnVaryBeam(int beamtype) {
           args_ft->primay_beam_J10, args_ft->primay_beam_J11);
 
   //Check all results are within 1% of expected value
-  float frac_tol = 1e-2;
+  float frac_tol = 1e-3;
   test_visi_outputs(num_visis, num_components, num_baselines, num_freqs,
                     frac_tol, beamtype, args_ft, POINT);
 
@@ -395,7 +409,7 @@ int main(void)
     RUN_TEST(test_kern_calc_visi_point_VarylmnVaryFluxGaussBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnVaryFluxAnalyBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnVaryFluxNoBeam);
-
+    //
     RUN_TEST(test_kern_calc_visi_point_VarylmnVaryBeamFEEBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnVaryBeamGaussBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnVaryBeamAnalyBeam);

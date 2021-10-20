@@ -17,6 +17,11 @@ extern void test_kern_gaussian_beam(float *beam_ls, float *beam_ms,
 
 #define UNITY_INCLUDE_FLOAT
 
+/*
+This function calls test_kern_gaussian_beam. It calculates a set of l,m input
+coords, either varying l or m, keeping the other coord set to zero. This way
+it tests a strip in l or m
+*/
 void get_1D_gaussian_values(float *beam_ls, float *beam_ms,
                             float _Complex *primay_beam_J00,
                             float _Complex *primay_beam_J11,

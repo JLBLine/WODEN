@@ -84,7 +84,7 @@ If you want more detail of what the tests are doing, run::
 What do the tests actually do?
 ---------------------------------
 
-The tests are located in ``WODEN/cmake_testing``, and each directory within contains tests
+The tests are all located in ``WODEN/cmake_testing``, and each directory within contains tests
 for a different file from ``WODEN/src``. Within each test directory, there are separate files for testing different functions, which include the function name. As an example, the directory ``WODEN/cmake_testing/array_layout`` contains tests for the file ``WODEN/src/array_layout.c``, and contains test files that test the following functions::
 
   cmake_testing/array_layout/test_calc_XYZ_diffs.c -> src/array_layout.c::calc_XYZ_diffs
@@ -95,8 +95,6 @@ for a different file from ``WODEN/src``. Within each test directory, there are s
 
 The sections below give an outline of the tests performed in each directory.
 
-``C`` code tests:
-
 .. toctree::
    :maxdepth: 1
 
@@ -104,7 +102,9 @@ The sections below give an outline of the tests performed in each directory.
    cmake_testing/chunk_sky_model
    cmake_testing/create_sky_model
    cmake_testing/FEE_primary_beam
-
+   cmake_testing/fundamental_coords
+   cmake_testing/primary_beam
+   cmake_testing/shapelet_basis
 
 ``CUDA`` code tests:
 
@@ -113,5 +113,7 @@ The sections below give an outline of the tests performed in each directory.
 
    cmake_testing/calculate_visibilities
    cmake_testing/FEE_primary_beam_cuda
+   cmake_testing/primary_beam_cuda
+   cmake_testing/source_components
 
 .. note:: To be able to test ``CUDA`` functions that are designed to work solely in GPU memory, it's necessary to write wrapper functions that allocate GPU memory, pass the data into the ``CUDA`` code to be tested, and then copy the results back into host memory. I've kept these 'intermediate' test functions inside the ``*.cu`` files that contain the code being tested, as it's not straight forward / performance degrading to have them in separate files. On casual inspection it looks like there are many functions in the ``*.cu`` files I haven't written tests for, but the extra functions are there *because* of testing. Sigh.

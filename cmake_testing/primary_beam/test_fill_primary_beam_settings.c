@@ -139,6 +139,30 @@ void test_fill_primary_beam_settingsMWAFEEBeam(void) {
 
 }
 
+/*
+Test `fill_primary_beam_settings` when `beamtype = ANALY_DIPOLE`
+*/
+void test_fill_primary_beam_settingsEDA2Beam(void) {
+
+  woden_settings_t *woden_settings = make_woden_settings();
+  woden_settings->beamtype = ANALY_DIPOLE;
+
+  test_fill_primary_beam_settings(woden_settings);
+
+}
+
+/*
+Test `fill_primary_beam_settings` when `beamtype = NO_BEAM`
+*/
+void test_fill_primary_beam_settingsNoBeam(void) {
+
+  woden_settings_t *woden_settings = make_woden_settings();
+  woden_settings->beamtype = NO_BEAM;
+
+  test_fill_primary_beam_settings(woden_settings);
+
+}
+
 
 
 //Run test using unity
@@ -148,6 +172,8 @@ int main(void)
 
     RUN_TEST(test_fill_primary_beam_settingsGaussBeam);
     RUN_TEST(test_fill_primary_beam_settingsMWAFEEBeam);
+    RUN_TEST(test_fill_primary_beam_settingsEDA2Beam);
+    RUN_TEST(test_fill_primary_beam_settingsNoBeam);
 
     return UNITY_END();
 }

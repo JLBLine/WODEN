@@ -1,4 +1,4 @@
-file(GLOB CUDASOURCES "../../src/fundamental_coords.cu")
+file(GLOB CUDASOURCES "${CMAKE_SOURCE_DIR}/src/fundamental_coords.cu")
 
 add_library(fundamental_coordsCUDA SHARED ${CUDASOURCES})
 

@@ -351,8 +351,6 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   float *ms = malloc(num_components*sizeof(float));
   float *ns = malloc(num_components*sizeof(float));
 
-  printf("Happy\n");
-
   //Run the CUDA code
   test_source_component_common(num_components,
              primay_beam_J00, primay_beam_J01,
@@ -363,8 +361,6 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
              beam_has, beam_decs,
              woden_settings,
              beam_settings);
-
-  printf("No happy\n");
 
   float l_expected[9] = {-1.0, -sqrt(3)/2.0, -sqrt(2)/2.0, -0.5,
                           0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0, 1.0};
