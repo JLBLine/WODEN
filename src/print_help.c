@@ -54,4 +54,8 @@ void print_cmdline_help() {
       printf("\t\tabove horizon, regardless of which source they belong to\n");
   printf("\t+ chunking_size: The chunk size to break up the point sources into \n");
       printf("\t\tfor processing\n");
+
+  printf("\t+ no_precession=True: By default, the array layout is precessed back\n");
+      printf("\t\tto a J2000 frame to match the sky model. Add this to switch off\n");
+      printf("\t\tthis precession \n");
 }

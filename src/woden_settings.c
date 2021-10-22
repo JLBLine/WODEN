@@ -40,6 +40,7 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
   struct json_object *jd_date;
   struct json_object *EDA2_beam;
   struct json_object *array_layout_file_path;
+  struct json_object *no_precession;
   //
   /* open file */
   if ((fp=fopen(filename,"r"))==NULL) {
@@ -84,18 +85,20 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
   json_object_object_get_ex(parsed_json, "hdf5_beam_path", &hdf5_beam_path);
 
   json_object_object_get_ex(parsed_json, "use_EDA2_beam", &EDA2_beam);
+  json_object_object_get_ex(parsed_json, "no_precession", &no_precession);
   //
-  // woden_settings_t *woden_settings;
-  // woden_settings = malloc( sizeof(woden_settings_t) );
   //
   //Boolean whether to use gaussian primary beam
-  int lat_true = json_object_get_boolean(latitude);
-  //
-  if (lat_true == 1) {
-    woden_settings->latitude = json_object_get_double(latitude)*DD2R;
+  // int lat_true = json_object_get_boolean(latitude);
+
+  //See whether latitude has been set or not
+  int lat_true = json_object_get_type(latitude);
+
+  if (lat_true == 0) {
+    woden_settings->latitude = MWA_LAT_RAD;
   }
   else {
-    woden_settings->latitude = MWA_LAT_RAD;
+    woden_settings->latitude = json_object_get_double(latitude)*DD2R;
   }
 
   printf("Latitude of array is set to %.1f\n", woden_settings->latitude/DD2R);
@@ -126,6 +129,15 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
 
   //Boolean whether to use the MWA FEE beam
   int eda2_beam = json_object_get_boolean(EDA2_beam);
+
+  //Boolean whether to use apply precession to array or not
+  int no_precess = json_object_get_boolean(no_precession);
+
+  if (no_precess) {
+    woden_settings->do_precession = 0;
+  } else {
+    woden_settings->do_precession = 1;
+  }
 
   if (gauss_beam + fee_beam + eda2_beam > 1 ) {
     printf("You have selected more than one primary beam type in the .json file\n");

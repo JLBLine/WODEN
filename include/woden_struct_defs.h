@@ -234,6 +234,8 @@ typedef struct _woden_settings_t {
   float gauss_dec_point;  /*!< The initial Declination to point the Gaussian beam at (radians)*/
   int num_visis;  /*!< Total number of visiblities to simulate, so freqs*times*baselines */
   float base_band_freq;  /*!< The lowest fine channel frequency in the current band being simulated*/
+  int do_precession; /*!< Boolean of whether to apply precession to the
+  array layout or not*/
 
 } woden_settings_t;
 

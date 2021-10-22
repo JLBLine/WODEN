@@ -57,6 +57,8 @@ void test_read_json_settings_MWAFEE(void) {
 
   //Check generic observation params have been read in correctly
   check_observation_params(woden_settings);
+  //Check precession is switched on (default)
+  TEST_ASSERT_EQUAL_INT(1, woden_settings->do_precession);
 
   //Check MWA FEE beam specific values
   float expect_delays[] = {0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3};
@@ -77,6 +79,8 @@ void test_read_json_settings_GaussBeam(char *json_path, int default_gauss) {
   //Read in the settings from the controlling json file
   woden_settings_t *woden_settings = malloc( sizeof(woden_settings_t) );
   status = read_json_settings(json_path, woden_settings);
+  //Check precession is switched on (default)
+  TEST_ASSERT_EQUAL_INT(1, woden_settings->do_precession);
 
   TEST_ASSERT_EQUAL_INT(0, status);
 
@@ -133,6 +137,8 @@ void test_read_json_settings_EDA2(void) {
 
   //Check generic observation params have been read in correctly
   check_observation_params(woden_settings);
+  //Check precession is switched on (default)
+  TEST_ASSERT_EQUAL_INT(1, woden_settings->do_precession);
 
   //Check EDA2 beam specific value
   TEST_ASSERT_EQUAL_INT(ANALY_DIPOLE, woden_settings->beamtype);
@@ -154,6 +160,8 @@ void test_read_json_settings_NoBeam(void) {
 
   //Check generic observation params have been read in correctly
   check_observation_params(woden_settings);
+  //Check precession is switched on (default)
+  TEST_ASSERT_EQUAL_INT(1, woden_settings->do_precession);
 
   //Check EDA2 beam specific value
   TEST_ASSERT_EQUAL_INT(NO_BEAM, woden_settings->beamtype);
@@ -206,6 +214,28 @@ void test_read_json_settings_MWAFEENoPath(void) {
 }
 
 
+/*
+Read in a json settings file and check values are good
+Check that using no beam is selected
+*/
+void test_read_json_settings_NoPrecession(void) {
+
+  int status=0;
+  //Read in the settings from the controlling json file
+  woden_settings_t *woden_settings = malloc( sizeof(woden_settings_t) );
+  status = read_json_settings("run_woden_noprecession.json", woden_settings);
+
+  TEST_ASSERT_EQUAL_INT(0, status);
+
+  //Check generic observation params have been read in correctly
+  check_observation_params(woden_settings);
+
+  //Check precession beam specific value - should be switched off now
+  TEST_ASSERT_EQUAL_INT(0, woden_settings->do_precession);
+
+}
+
+
 
 //Run test using unity
 int main(void)
@@ -220,6 +250,7 @@ int main(void)
     RUN_TEST(test_read_json_settings_MultiBeam);
     RUN_TEST(test_read_json_settings_MWAFEEBadDelay);
     RUN_TEST(test_read_json_settings_MWAFEENoPath);
+    RUN_TEST(test_read_json_settings_NoPrecession);
 
     return UNITY_END();
 }

@@ -346,32 +346,32 @@ set of *l,m,n* coords, which have the a known set of outcomes:
      - :math:`1.0`
      - :math:`0`
    * - :math:`\pi/6`
-     - 0.042573751633895596
+     - 0.0425737516338956
      - 0.9981858300655398
      - :math:`\sqrt{3}/2`
      - :math:`0.5`
    * - :math:`\pi/4`
-     - 0.06459032446351305
+     - 0.0645903244635131
      - 0.9958193510729726
      - :math:`\sqrt{2}/2`
      - :math:`\sqrt{2}/2`
    * - :math:`\pi/3`
-     - 0.08714498635555
+     - 0.0871449863555500
      - 0.9923766939555675
      - :math:`0.5`
      - :math:`\sqrt{3}/2`
    * - :math:`\pi/2`
-     - 0.13406958403644692
+     - 0.1340695840364469
      - 0.9818608319271057
      - :math:`0.0`
      - :math:`1.0`
    * - :math:`2\pi/3`
-     - 0.18386579112092066
+     - 0.1838657911209207
      - 0.9656017510914922
      - :math:`-0.5`
      - :math:`\sqrt{3}/2`
    * - :math:`3\pi/4`
-     - 0.21007551483722917
+     - 0.2100755148372292
      - 0.9548489703255412
      - :math:`-\sqrt{2}/2`
      - :math:`\sqrt{2}/2`
@@ -382,11 +382,11 @@ set of *l,m,n* coords, which have the a known set of outcomes:
      - :math:`0.5`
    * - :math:`\pi`
      - 0.2958758547680685
-     - 0.908248290463863
+     - 0.9082482904638630
      - :math:`-1.0`
      - :math:`0.0`
    * - :math:`7\pi/6`
-     - 0.362272565447042
+     - 0.3622725654470420
      - 0.8587882024392495
      - :math:`-\sqrt{3}/2`
      - :math:`-0.5`
@@ -520,7 +520,7 @@ In this test, I run every combination of :math:`l,m,n` and :math:`u,v,w = b` for
 :math:`\phi_{\mathrm{simple}}` from the tables above, and assert that the real and
 imaginary of every output visibility match the expected values of
 :math:`\sin(\phi_{\mathrm{simple}})` and :math:`\cos(\phi_{\mathrm{simple}})`,
-to within an absolute tolerance of 5e-2. This seems like a big number, and that's
+to within an fractional tolerance of 5e-2. This seems like a big number, and that's
 because there is an accuracy limit to the float sine/cosine functions in ``CUDA``.
 The error scales with the length of baseline, as shown in this plot below. Here,
 I have plotted the fractional offset of the recovered value of

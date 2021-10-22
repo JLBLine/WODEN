@@ -163,13 +163,6 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
   //                   0.9656017510914922, 0.9548489703255412, 0.9419870701468823, 0.908248290463863,
   //                   0.8587882024392495, 0.8242637492968862};
 
-  float all_ls[] = {0.0000000000,0.0425737516,0.0645903245,0.0871449864,0.1340695840,0.1838657911,0.2100755148,0.2373397983,0.2958758548,0.3622725654,0.4003681254};
-
-  float all_ms[] = {0.0000000000,0.0425737516,0.0645903245,0.0871449864,0.1340695840,0.1838657911,0.2100755148,0.2373397983,0.2958758548,0.3622725654,0.4003681254};
-
-  float all_ns[] = {1.0000000000,0.9981858301,0.9958193511,0.9923766940,0.9818608319,0.9656017511,0.9548489703,0.9419870701,0.9082482905,0.8587882024,0.8242637493};
-
-
   float target_angles[] = {0.0, M_PI/6.0, M_PI/4.0, M_PI/3.0, M_PI/2.0,
                            2*M_PI/3, 3*M_PI/4, 5*M_PI/6, M_PI,
                            7*M_PI/6, 5*M_PI/4};
@@ -180,6 +173,18 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
   float expec_res[] = {1.0, sqrt(3.0)/2.0, sqrt(2)/2.0, 0.5, 0.0,
                        -0.5, -sqrt(2)/2.0, -sqrt(3.0)/2.0, -1.0,
                        -sqrt(3.0)/2.0, -sqrt(2)/2.0};
+
+  float all_ls[] = {0.0000000000000000,0.0425737516338956,0.0645903244635131,0.0871449863555500,
+                    0.1340695840364469,0.1838657911209207,0.2100755148372292,0.2373397982598921,
+                    0.2958758547680685,0.3622725654470420,0.4003681253515569};
+
+  float all_ms[] = {0.0000000000000000,0.0425737516338956,0.0645903244635131,0.0871449863555500,
+                    0.1340695840364469,0.1838657911209207,0.2100755148372292,0.2373397982598921,
+                    0.2958758547680685,0.3622725654470420,0.4003681253515569};
+
+  float all_ns[] = {1.0000000000000000,0.9981858300655398,0.9958193510729726,0.9923766939555675,
+                    0.9818608319271057,0.9656017510914922,0.9548489703255412,0.9419870701468823,
+                    0.9082482904638630,0.8587882024392495,0.8242637492968862};
 
   //We'll set up a number of u,v,w that that should result in adding multiples
   //of 2*pi to the desired target angle, for each target angle, so we have
@@ -279,7 +284,7 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
       im_diff_sum += fabs(cimag(visis[baseline]) - expec_ims[comp]);
       num_in_sum += 1;
 
-      fprintf(output_text,"%.1f %.10f %.10f %.10f %.10f\n",us[baseline], expec_res[comp],
+      fprintf(output_text,"%.1f %.16f %.16f %.16f %.16f\n",us[baseline], expec_res[comp],
                                                            creal(visis[baseline]),
                                                            expec_ims[comp],
                                                            cimag(visis[baseline]));
@@ -294,13 +299,8 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
         TEST_ASSERT_FLOAT_WITHIN(tol*expec_res[comp], expec_res[comp], creal(visis[baseline]));
         TEST_ASSERT_FLOAT_WITHIN(tol*expec_ims[comp], expec_ims[comp], cimag(visis[baseline]));
 
-        // re_diff_sum += fabs(creal(visis[baseline]) - expec_res[comp]) / expec_res[comp];
-        // im_diff_sum += fabs(cimag(visis[baseline]) - expec_ims[comp]) / expec_ims[comp];
-        // num_in_sum += 1;
       }
-      // ind ++;
     }
-    // }
   }
 
   printf("Mean real offset %.6f imag offset %.6f\n",re_diff_sum / num_in_sum, im_diff_sum / num_in_sum );

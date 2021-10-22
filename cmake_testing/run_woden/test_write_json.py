@@ -39,6 +39,7 @@ class PretendArgs():
         self.gauss_ra_point = False
         self.gauss_dec_point = False
         self.MWA_FEE_delays = False
+        self.no_precession = False
 
     def __init__(self):
         self.make_basic_args()
@@ -166,6 +167,23 @@ class Test(unittest.TestCase):
 
         ##Check the extra arguments have resulting in correct outputs
         self.assertTrue(self.data['use_EDA2_beam'])
+
+    def test_write_no_precession(self):
+        """Test that no_precession is written when selected in args"""
+
+        ##Some input test params
+        self.make_basic_inputs("test_write_np_precess.json")
+        ##Add in primary_beam as Gaussian to inputs
+        self.args.no_precession = True
+
+        ##Code to be tested
+        self.call_write_json()
+
+        ##Check the basic outputs
+        self.check_basic_inputs()
+
+        ##Check the extra arguments have resulting in correct outputs
+        self.assertTrue(self.data['no_precession'])
 
 ##Run the test
 if __name__ == '__main__':

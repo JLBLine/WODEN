@@ -106,6 +106,7 @@ def get_uvfits_date_and_position_constants(latitude=None,longitude=None,
     ut1utc : float
         Difference between UT1 and UTC (secs)
     """
+
     ##Setup location
     observing_location = EarthLocation(lat=latitude*u.deg, lon=longitude*u.deg, height=height)
     ##Setup time at that locatoin
@@ -113,6 +114,11 @@ def get_uvfits_date_and_position_constants(latitude=None,longitude=None,
     ##Grab the LST
     LST = observing_time.sidereal_time('apparent')
     LST_deg = LST.value*15.0
+
+    # GST = observing_time.sidereal_time('apparent', 'greenwich')
+    # GST_deg = GST.value*15.0
+    #
+    # print(f"Located at {latitude}, {longitude}, date {date} LST {LST_deg:1f} GST {GST_deg:1f}")
 
     ##uvfits file needs to know the greenwich sidereal time at 0 hours
     ##on the date in question
@@ -630,6 +636,9 @@ def write_json(json_name=None, jd_date=None, lst=None, args=None):
         if args.sky_crop_components:
             outfile.write('  "sky_crop_components": "True",\n')
 
+        if args.no_precession:
+            outfile.write('  "no_precession": "True",\n')
+
         if args.primary_beam == 'Gaussian':
             outfile.write('  "use_gaussian_beam": "True",\n')
             if args.gauss_beam_FWHM:
@@ -882,6 +891,9 @@ def get_parser():
              'This is used to set the LST and array precession. This is set '
              'automatically when reading a metafits but including this will '
              'override the date in the metafits')
+    obs_group.add_argument('--no_precession', default=False, action='store_true',
+        help='By default, WODEN rotates the array back to J2000 to match '
+             'the input sky catalogue. Add this to switch off precession')
 
     tel_group = parser.add_argument_group('TELESCOPE OPTIONS')
     tel_group.add_argument('--latitude', default=MWA_LAT, type=float,

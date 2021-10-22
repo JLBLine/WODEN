@@ -64,9 +64,7 @@ int main(int argc, char **argv) {
   //Create the array layout in instrument-centric X,Y,Z using positions
   //Rotate back to J2000 if necessary
   array_layout_t * array_layout;
-  //Hard code to rotate back to J2000 at the moment
-  int do_precession = 1;
-  array_layout = calc_XYZ_diffs(woden_settings, do_precession);
+  array_layout = calc_XYZ_diffs(woden_settings, woden_settings->do_precession);
 
   //Setup all LSTs array for all time steps in this simulation
   float *lsts = setup_lsts_and_phase_centre(woden_settings);

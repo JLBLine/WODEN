@@ -237,7 +237,10 @@ void get_expected(int visi, int num_components, int num_baselines,
   for (size_t comp = 0; comp < num_components; comp++) {
     // printf("%.5f %.5f %.5f\n", ls[comp], ms[comp], ns[comp] );
     temp = 2*M_PI*( args_ft->us[visi]*args_ft->ls[comp] + args_ft->vs[visi]*args_ft->ms[comp] + args_ft->ws[visi]*(args_ft->ns[comp]-1) );
-    sincosf(temp, &(expec_im_inc), &(expec_re_inc));
+    // sincosf(temp, &(expec_im_inc), &(expec_re_inc));
+
+    expec_im_inc = sinf(temp);
+    expec_re_inc = cosf(temp);
 
     visi_freq = VELC / args_ft->allsteps_wavelengths[visi];
     flux_ratio = powf(visi_freq / args_ft->component_freqs[comp], args_ft->SIs[comp]);
@@ -257,8 +260,16 @@ void get_expected(int visi, int num_components, int num_baselines,
       xx_gain = xx_gain*xx_gain;
     }
 
+    float expec_re_before = expec_re_inc;
+    float expec_im_before = expec_im_inc;
+
     expec_re_inc = expec_re_inc*flux_extrap*xx_gain;
     expec_im_inc = expec_im_inc*flux_extrap*xx_gain;
+
+    // if (visi == 113) {
+    //   printf("C predict %.6f %.6f %.1f %.1f %.6f %.6f\n",expec_re_before, expec_im_before,
+    //                  xx_gain, xx_gain, expec_re_inc, expec_im_inc);
+    // }
 
     float _Complex visi_env = 0.0 + I*0.0;
 
@@ -295,10 +306,14 @@ void test_visi_outputs(int num_visis, int num_components,
                   beamtype, args_ft, component_type,
                   &expec_re, &expec_im);
 
-    // if (visi == 0) {
-    //   printf("%d %.1f %.1f %.1f\n",
-    //         visi, expec_re, args_ft->sum_visi_XX_real[visi],
-    //         args_ft->sum_visi_YY_real[visi]);
+    // if (visi == 113) {
+    //   // printf("%d %.1f %.1f %.1f\n", visi, expec_re, args_ft->sum_visi_XX_real[visi],
+    //   //                               args_ft->sum_visi_YY_real[visi]);
+    //   printf("%d %.7f %.7f %.7f\n", visi, expec_im, args_ft->sum_visi_XX_imag[visi],
+    //                                 args_ft->sum_visi_YY_imag[visi]);
+    //
+    //   TEST_ASSERT_FLOAT_WITHIN(frac_tol, 1.0, args_ft->sum_visi_XX_real[visi] / expec_re);
+    //   TEST_ASSERT_FLOAT_WITHIN(frac_tol, 1.0, args_ft->sum_visi_XX_imag[visi] / expec_im);
     // }
 
     // printf("%d %.1f %.1f %.1f\n",
@@ -318,6 +333,7 @@ void test_visi_outputs(int num_visis, int num_components,
 
     if (beamtype == FEE_BEAM) {
       //FEE beam has cross pols which double everything when using just Stokes I
+      //and setting the cross pols to 1.0 as well as the gains
       //Also means cross-pols are non-zero
       TEST_ASSERT_FLOAT_WITHIN(frac_tol*2, 2.0, args_ft->sum_visi_XX_real[visi] / expec_re);
       TEST_ASSERT_FLOAT_WITHIN(frac_tol*2, 2.0, args_ft->sum_visi_XX_imag[visi] / expec_im);
@@ -329,7 +345,7 @@ void test_visi_outputs(int num_visis, int num_components,
       TEST_ASSERT_FLOAT_WITHIN(frac_tol*2, 2.0, args_ft->sum_visi_YY_imag[visi] / expec_im);
     }
     else {
-      //
+
       TEST_ASSERT_FLOAT_WITHIN(frac_tol, 1.0, args_ft->sum_visi_XX_real[visi] / expec_re);
       TEST_ASSERT_FLOAT_WITHIN(frac_tol, 1.0, args_ft->sum_visi_XX_imag[visi] / expec_im);
       TEST_ASSERT_EQUAL_FLOAT(0.0, args_ft->sum_visi_XY_real[visi]);
