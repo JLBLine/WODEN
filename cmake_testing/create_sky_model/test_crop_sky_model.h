@@ -6,8 +6,8 @@
 #define LST3 230.0*DD2R
 
 //First POINT SOURCE information
-float point0_ras[] = {0.0, DD2R, 2*DD2R};
-float point0_decs[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
+double point0_ras[] = {0.0, DD2R, 2*DD2R};
+double point0_decs[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
 float point0_ref_freqs[] = {100e+6, 150e+6, 200e+6};
 float point0_ref_stokesI[] = {1.0, 2.0, 3.0};
 float point0_ref_stokesQ[] = {0.0, 0.0, 0.0};
@@ -16,8 +16,8 @@ float point0_ref_stokesV[] = {0.0, 0.0, 0.0};
 float point0_SIs[] = {-0.8, -0.2, 0.3};
 
 //Second POINT SOURCE information
-float point1_ras[] = {106*DD2R, 108*DD2R, 110*DD2R};
-float point1_decs[] = {-30*DD2R, -30*DD2R, -30*DD2R};
+double point1_ras[] = {106*DD2R, 108*DD2R, 110*DD2R};
+double point1_decs[] = {-30*DD2R, -30*DD2R, -30*DD2R};
 float point1_ref_freqs[] = {125e+6, 175e+6, 2225e+6};
 float point1_ref_stokesI[] = {5.0, 6.0, 7.0};
 float point1_ref_stokesQ[] = {0.0, 0.0, 0.0};
@@ -28,8 +28,8 @@ float point1_SIs[] = {1.0, -0.4, -1.1};
 //First GAUSSIAN SOURCE information
 //Doesn't matter if this is same as POINT, there are other
 //unique fields that ensure wrong things aren't being tested
-float gauss0_ras[] = {0.0, DD2R, 2*DD2R};
-float gauss0_decs[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
+double gauss0_ras[] = {0.0, DD2R, 2*DD2R};
+double gauss0_decs[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
 float gauss0_ref_freqs[] = {100e+6, 150e+6, 200e+6};
 float gauss0_ref_stokesI[] = {1.0, 2.0, 3.0};
 float gauss0_ref_stokesQ[] = {0.0, 0.0, 0.0};
@@ -41,8 +41,8 @@ float gauss0_minors[] = {1.0, 2.0, 3.0};
 float gauss0_pas[] = {0.0, 45.0, 90.0};
 
 //Second GAUSSIAN SOURCE information
-float gauss1_ras[] = {106*DD2R, 108*DD2R, 110*DD2R};
-float gauss1_decs[] = {-30*DD2R, -30*DD2R, -30*DD2R};
+double gauss1_ras[] = {106*DD2R, 108*DD2R, 110*DD2R};
+double gauss1_decs[] = {-30*DD2R, -30*DD2R, -30*DD2R};
 float gauss1_ref_freqs[] = {125e+6, 175e+6, 2225e+6};
 float gauss1_ref_stokesI[] = {5.0, 6.0, 7.0};
 float gauss1_ref_stokesQ[] = {0.0, 0.0, 0.0};
@@ -56,8 +56,8 @@ float gauss1_pas[] = {180.0, 225.0, 270.0};
 //First SHAPELET SOURCE information
 //Doesn't matter if this is same as POINT, there are other
 //unique fields that ensure wrong things aren't being tested
-float shape0_ras[] = {0.0, DD2R, 2*DD2R};
-float shape0_decs[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
+double shape0_ras[] = {0.0, DD2R, 2*DD2R};
+double shape0_decs[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
 float shape0_ref_freqs[] = {100e+6, 150e+6, 200e+6};
 float shape0_ref_stokesI[] = {1.0, 2.0, 3.0};
 float shape0_ref_stokesQ[] = {0.0, 0.0, 0.0};
@@ -78,8 +78,8 @@ float shape0_n2s[] = {97, 91, 23, 14, 93, 18, 32, 14, 97, 11};
 float shape0_param_indexes[] = {0, 0, 1, 1, 1, 2, 2, 2, 2, 2};
 
 //Second SHAPELET SOURCE information
-float shape1_ras[] = {106*DD2R, 108*DD2R, 110*DD2R};
-float shape1_decs[] = {-30*DD2R, -30*DD2R, -30*DD2R};
+double shape1_ras[] = {106*DD2R, 108*DD2R, 110*DD2R};
+double shape1_decs[] = {-30*DD2R, -30*DD2R, -30*DD2R};
 float shape1_ref_freqs[] = {125e+6, 175e+6, 2225e+6};
 float shape1_ref_stokesI[] = {5.0, 6.0, 7.0};
 float shape1_ref_stokesQ[] = {0.0, 0.0, 0.0};
@@ -100,8 +100,8 @@ float shape1_n2s[] = {16, 4, 27, 94, 73, 55, 56};
 float shape1_param_indexes[] = {0, 0, 0, 0, 1, 2, 2};
 
 //Expected az/za for all time steps for the different LSTs
-float expec_az_LST0[] = {3.141593, 4.711403, 4.710422, 1.574718,
-                         1.573736, 1.572753, 1.578640, 1.577657,
+float expec_az_LST0[] = {0.000000, 4.711406, 4.710422, 1.574718,
+                         1.573735, 1.572752, 1.578640, 1.577657,
                          1.576674, 2.157931, 2.155993, 2.154062 };
 float expec_za_LST0[] = {0.000000, 0.003909, 0.007817, 0.015592,
                          0.011683, 0.007775, 0.031183, 0.027275,

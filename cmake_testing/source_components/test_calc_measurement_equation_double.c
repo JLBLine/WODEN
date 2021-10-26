@@ -12,7 +12,7 @@ void sincosf(float x, float *sin, float *cos);
 void sincos(double x, double *sin, double *cos);
 
 //External CUDA code we're linking in
-extern void test_kern_calc_measurement_equation(int num_components,
+extern void test_kern_calc_measurement_equation_double(int num_components,
                   int num_baselines,
                   double *us, double *vs, double *ws,
                   double *ls, double *ms, double *ns,
@@ -50,29 +50,6 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
                        -0.5, -sqrt(2)/2.0, -sqrt(3.0)/2.0, -1.0,
                        -sqrt(3.0)/2.0, -sqrt(2)/2.0};
 
-  // double *all_ls = malloc(all_components*sizeof(double));
-  // double *all_ms = malloc(all_components*sizeof(double));
-  // double *all_ns = malloc(all_components*sizeof(double));
-  //
-  // double phi_simple;
-  // double numer, denom;
-  // double l,m,n;
-  //
-  // for (int comp = 0; comp < all_components; comp++) {
-  //   phi_simple = target_angles[comp];
-  //   numer = sqrt(2.0)*sqrt(-phi_simple*phi_simple -4*M_PI*phi_simple + 8*M_PI*M_PI) + phi_simple + 2*M_PI;
-  //   denom = 6*M_PI;
-  //   n = numer / denom;
-  //
-  //   l = sqrt(1.0 - n*n) / sqrt(2.0);
-  //   printf("%.8f %.8f %.8f\n",l,l,n );
-  //
-  //   all_ls[comp] = l;
-  //   all_ms[comp] = l;
-  //   all_ns[comp] = n;
-  //
-  // }
-
   double all_ls[] = {0.0000000000000000,0.0425737516338956,0.0645903244635131,0.0871449863555500,
                     0.1340695840364469,0.1838657911209207,0.2100755148372292,0.2373397982598921,
                     0.2958758547680685,0.3622725654470420,0.4003681253515569};
@@ -89,14 +66,14 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
   //of 2*pi to the desired target angle, for each target angle, so we have
   //to loop over each over the l coords
 
-  int num_baselines = 6;
+  int num_baselines = 5;
 
   double *us = malloc(num_baselines*sizeof(double));
   double *vs = malloc(num_baselines*sizeof(double));
   double *ws = malloc(num_baselines*sizeof(double));
 
   // double multipliers[] = {10000.0};
-  double multipliers[] = {0.0, 1.0, 10.0, 100.0, 1000.0, 10000.0};
+  double multipliers[] = {1.0, 10.0, 100.0, 1000.0, 10000.0};
   double uvw;
 
   int num_components = 1;
@@ -106,7 +83,7 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
   double *ns = malloc(sizeof(double));
 
   //Space for outputs
-  double _Complex *visis = malloc(num_baselines*num_components*sizeof(double _Complex));
+  float _Complex *visis = malloc(num_baselines*num_components*sizeof(double _Complex));
 
   double re_diff_sum = 0.0;
   double im_diff_sum = 0.0;
@@ -155,27 +132,18 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
     }
 
     //Run the CUDA code
-    test_kern_calc_measurement_equation(num_components, num_baselines,
+    test_kern_calc_measurement_equation_double(num_components, num_baselines,
                                         us, vs, ws, ls, ms, ns, visis);
-
-    //Fill values with what should have been found
-    int ind = 0;
-    double temp;
-    double expec_re, expec_im;
-
-    // printf("=======Expected Real %.7f, Imag %.7f=======================================\n", expec_res[comp], expec_ims[comp]);
 
     for (size_t baseline = 0; baseline < num_baselines; baseline++) {
 
-      temp = 2.0*M_PI*( us[baseline]*ls[0] + vs[baseline]*ms[0] + ws[baseline]*(ns[0]-1) );
-
-      expec_im = sin(temp);
-      expec_re = cos(temp);
-
-      //For those interested
-
       // printf("uvw %.1f \t Real C %.9f CUDA %.9f Diff C %.9f CUDA %.9f\n",us[baseline], expec_re, creal(visis[baseline]), expec_re - expec_res[comp], creal(visis[baseline]) - expec_res[comp]); //,
       // printf("uvw %.1f \t Imag C %.9f CUDA %.9f Diff C %.9f CUDA %.9f\n",us[baseline], expec_im, cimag(visis[baseline]), expec_im - expec_ims[comp], cimag(visis[baseline]) - expec_ims[comp]); //,
+
+      printf("uvw %.1f \t Real expec %.9f CUDA %.9f Diff %.9f\n",us[baseline], expec_res[comp], creal(visis[baseline]),
+                                                                         creal(visis[baseline]) - expec_res[comp]); //,
+      printf("uvw %.1f \t Imag expec %.9f CUDA %.9f Diff %.9f\n",us[baseline], expec_ims[comp], cimag(visis[baseline]),
+                                                                         cimag(visis[baseline]) - expec_ims[comp]); //,
 
       float tol = 1e-4;
 

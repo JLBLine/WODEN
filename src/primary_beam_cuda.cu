@@ -24,7 +24,7 @@ __host__ __device__ void twoD_Gaussian(float x, float y, float xo, float yo,
 
 }
 
-__global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
+__global__ void kern_gaussian_beam(double *d_beam_ls, double *d_beam_ms,
            float beam_ref_freq, float *d_freqs,
            float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
            int num_freqs, int num_times, int num_components,
@@ -45,7 +45,7 @@ __global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
     //Convert FWHM into standard dev, and scale for frequency
     float std = (fwhm_lm / FWHM_FACTOR) * (beam_ref_freq / d_freqs[iFreq]);
 
-    twoD_Gaussian(d_beam_ls[iLMcoord], d_beam_ms[iLMcoord], 0, 0,
+    twoD_Gaussian((float)d_beam_ls[iLMcoord], (float)d_beam_ms[iLMcoord], 0, 0,
                std, std, cos_theta, sin_theta, sin_2theta,
                &d_beam_real, &d_beam_imag);
 
@@ -60,29 +60,29 @@ extern "C" void calculate_gaussian_beam(int num_components, int num_time_steps,
      int num_freqs, float ha0, float sdec0, float cdec0,
      float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
      float beam_ref_freq, float *d_freqs,
-     float *beam_has, float *beam_decs,
+     double *beam_has, double *beam_decs,
      cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J11){
 
   int num_beam_hadec = num_components * num_time_steps;
 
-  float *d_beam_has = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_has, num_beam_hadec*sizeof(float)) );
+  double *d_beam_has = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_has, num_beam_hadec*sizeof(double)) );
   cudaErrorCheckCall( cudaMemcpy( d_beam_has, beam_has,
-                      num_beam_hadec*sizeof(float), cudaMemcpyHostToDevice) );
+                      num_beam_hadec*sizeof(double), cudaMemcpyHostToDevice) );
 
-  float *d_beam_decs = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_decs, num_beam_hadec*sizeof(float)) );
+  double *d_beam_decs = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_decs, num_beam_hadec*sizeof(double)) );
   cudaErrorCheckCall( cudaMemcpy( d_beam_decs, beam_decs,
-                      num_beam_hadec*sizeof(float), cudaMemcpyHostToDevice) );
+                      num_beam_hadec*sizeof(double), cudaMemcpyHostToDevice) );
 
-  float *d_beam_ls = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_ls, num_beam_hadec*sizeof(float)) );
+  double *d_beam_ls = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_ls, num_beam_hadec*sizeof(double)) );
 
-  float *d_beam_ms = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_ms, num_beam_hadec*sizeof(float)) );
+  double *d_beam_ms = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_ms, num_beam_hadec*sizeof(double)) );
 
-  float *d_beam_ns = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_ns, num_beam_hadec*sizeof(float)) );
+  double *d_beam_ns = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_ns, num_beam_hadec*sizeof(double)) );
 
   dim3 grid, threads;
   threads.x = 128;
@@ -258,7 +258,7 @@ extern "C" void test_analytic_dipole_beam(int num_components,
 
 }
 
-extern "C" void test_kern_gaussian_beam(float *beam_ls, float *beam_ms,
+extern "C" void test_kern_gaussian_beam(double *beam_ls, double *beam_ms,
            float beam_ref_freq, float *freqs,
            float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
            int num_freqs, int num_time_steps, int num_components,
@@ -266,15 +266,15 @@ extern "C" void test_kern_gaussian_beam(float *beam_ls, float *beam_ms,
 
   int num_beam_hadec = num_components * num_time_steps;
 
-  float *d_beam_ls = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_ls, num_beam_hadec*sizeof(float)) );
+  double *d_beam_ls = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_ls, num_beam_hadec*sizeof(double)) );
   cudaErrorCheckCall( cudaMemcpy(d_beam_ls, beam_ls,
-                           num_beam_hadec*sizeof(float), cudaMemcpyHostToDevice ) );
+                           num_beam_hadec*sizeof(double), cudaMemcpyHostToDevice ) );
 
-  float *d_beam_ms = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_ms, num_beam_hadec*sizeof(float)) );
+  double *d_beam_ms = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_ms, num_beam_hadec*sizeof(double)) );
   cudaErrorCheckCall( cudaMemcpy(d_beam_ms, beam_ms,
-                           num_beam_hadec*sizeof(float), cudaMemcpyHostToDevice ) );
+                           num_beam_hadec*sizeof(double), cudaMemcpyHostToDevice ) );
 
   float *d_freqs = NULL;
   cudaErrorCheckCall( cudaMalloc( (void**)&d_freqs, num_freqs*sizeof(float) ) );
@@ -324,7 +324,7 @@ extern "C" void test_calculate_gaussian_beam(int num_components, int num_time_st
      int num_freqs, float ha0, float sdec0, float cdec0,
      float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
      float beam_ref_freq, float *freqs,
-     float *beam_has, float *beam_decs,
+     double *beam_has, double *beam_decs,
      float _Complex *primay_beam_J00, float _Complex *primay_beam_J11) {
 
   int num_beam_hadec = num_components * num_time_steps;

@@ -78,7 +78,7 @@ complex `J[0,0]` response in
 complex `J[1,1]` response in
 
 */
-__global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
+__global__ void kern_gaussian_beam(double *d_beam_ls, double *d_beam_ms,
            float beam_ref_freq, float *d_freqs,
            float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
            int num_freqs, int num_times, int num_components,
@@ -126,14 +126,8 @@ extern "C" void calculate_gaussian_beam(int num_components, int num_time_steps,
      int num_freqs, float ha0, float sdec0, float cdec0,
      float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
      float beam_ref_freq, float *d_freqs,
-     float *beam_has, float *beam_decs,
+     double *beam_has, double *beam_decs,
      cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J11);
-
-// extern "C" void testing_gaussian_beam( float *beam_has, float *beam_decs,
-//            float *beam_angles_array, float *beam_freqs, float *ref_freq_array,
-//            float *beam_ls, float *beam_ms,
-//            int num_components, int num_times, int num_freqs,
-//            float *beam_reals, float *beam_imags);
 
 /**
 @brief Calculate the beam response of a north-south (X) and east-west (Y)
@@ -150,7 +144,6 @@ size on the sky scales with frequency hence the need for `wavelength`
 @param[in,out] d_beam_Y Complex beam value for east-west dipole
 
 */
-
 __device__ void analytic_dipole(float az, float za, float wavelength,
            cuFloatComplex * d_beam_X, cuFloatComplex * d_beam_Y);
 
@@ -248,15 +241,3 @@ arrays `analy_beam_X, analy_beam_Y`.
 @param[in,out] *analy_beam_Y Array to store the east-west beam response in
 
 */
-// extern "C" void test_analytic_dipole_beam(int num_components,
-//      int num_time_steps, int num_freqs,
-//      float *azs, float *zas, float *freqs,
-//      float _Complex *analy_beam_X, float _Complex *analy_beam_Y);
-//
-//
-//
-// extern "C" void test_kern_gaussian_beam(float *beam_ls, float *beam_ms,
-//            float beam_ref_freq, float *freqs,
-//            float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
-//            int num_freqs, int num_time_steps, int num_components,
-//            float _Complex *primay_beam_J00, float _Complex *primay_beam_J11);

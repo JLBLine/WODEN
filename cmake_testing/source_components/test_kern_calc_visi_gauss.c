@@ -23,7 +23,7 @@ extern void test_kern_calc_visi_gaussian(int num_components, int num_baselines,
           float *sum_visi_YX_real, float *sum_visi_YX_imag,
           float *sum_visi_YY_real, float *sum_visi_YY_imag,
           float *allsteps_wavelengths,
-          float *ls, float *ms, float *ns,
+          double *ls, double *ms, double *ns,
           float *gauss_pas, float *gauss_majors, float *gauss_minors,
           float _Complex *primay_beam_J00, float _Complex *primay_beam_J01,
           float _Complex *primay_beam_J10, float _Complex *primay_beam_J11);

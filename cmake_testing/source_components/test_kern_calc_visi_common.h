@@ -22,9 +22,9 @@ typedef struct _args_for_testing_t {
   int num_visis;
   int num_beam_values;
 
-  float *ls;
-  float *ms;
-  float *ns;
+  double *ls;
+  double *ms;
+  double *ns;
   float _Complex *primay_beam_J00;
   float _Complex *primay_beam_J01;
   float _Complex *primay_beam_J10;

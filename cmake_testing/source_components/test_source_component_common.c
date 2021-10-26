@@ -17,10 +17,10 @@ void sincosf(float x, float *sin, float *cos);
 extern void test_source_component_common(int num_components,
            float _Complex *primay_beam_J00, float _Complex *primay_beam_J01,
            float _Complex *primay_beam_J10, float _Complex *primay_beam_J11,
-           float *freqs, float *ls, float *ms, float *ns,
-           float *ras, float *decs, float *azs, float *zas,
+           float *freqs, double *ls, double *ms, double *ns,
+           double *ras, double *decs, float *azs, float *zas,
            float *sin_para_angs, float *cos_para_angs,
-           float *beam_has, float *beam_decs,
+           double *beam_has, double *beam_decs,
            woden_settings_t *woden_settings,
            beam_settings_t *beam_settings);
 
@@ -222,12 +222,12 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   float ra0 = 0.0*DD2R;
   float dec0 = 0.0*DD2R;
 
-  float *decs = malloc(num_components*sizeof(float));
-  float *zeroes = calloc(num_components, sizeof(float));
+  double *decs = malloc(num_components*sizeof(double));
+  double *zeroes = calloc(num_components, sizeof(double));
 
   //Keep RA between 0 and 2*pi here but enter RAs that should return
   //negative l values
-  float ras[9] = {(3*M_PI)/2, (5*M_PI)/3, (7*M_PI)/4, (11*M_PI)/6,
+  double ras[9] = {(3*M_PI)/2, (5*M_PI)/3, (7*M_PI)/4, (11*M_PI)/6,
                    0.0, M_PI/6, M_PI/4, M_PI/3, M_PI/2};
 
   for (int i = 0; i < num_components; i++) {
@@ -285,8 +285,8 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
   float freqs[] = {100e+6, 200e+6};
 
-  float *beam_has = malloc(num_components*num_times*sizeof(float));
-  float *beam_decs = malloc(num_components*num_times*sizeof(float));
+  double *beam_has = malloc(num_components*num_times*sizeof(double));
+  double *beam_decs = malloc(num_components*num_times*sizeof(double));
 
   //Make ha/dec coords if using the Gaussian beam
   if (beamtype == GAUSS_BEAM) {
@@ -347,9 +347,9 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   float _Complex *primay_beam_J10 = calloc(num_beam_values, sizeof(float _Complex));
   float _Complex *primay_beam_J11 = calloc(num_beam_values, sizeof(float _Complex));
 
-  float *ls = malloc(num_components*sizeof(float));
-  float *ms = malloc(num_components*sizeof(float));
-  float *ns = malloc(num_components*sizeof(float));
+  double *ls = malloc(num_components*sizeof(double));
+  double *ms = malloc(num_components*sizeof(double));
+  double *ns = malloc(num_components*sizeof(double));
 
   //Run the CUDA code
   test_source_component_common(num_components,
@@ -368,9 +368,10 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
                          1.0, sqrt(3)/2.0, sqrt(2)/2.0, 0.5, 0.0};
 
   //Check the l values match expectations
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(l_expected, ls, num_components);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(zeroes, ms, num_components);
+
   for (int i = 0; i < num_components; i++) {
+    TEST_ASSERT_EQUAL_FLOAT(l_expected[i], (float)ls[i]);
+    TEST_ASSERT_EQUAL_FLOAT(0.0, (float)ms[i]);
     TEST_ASSERT_FLOAT_WITHIN(2e-7, n_expected[i], ns[i]);
   }
 
@@ -378,10 +379,10 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   if (beamtype == GAUSS_BEAM) {
     for (size_t output = 0; output < num_beam_values; output++) {
       // printf("%.7f %.5f %.5f %.5f %.5f %.5f %.7f %.5f\n",
-          // creal(primay_beam_J00[output]), cimag(primay_beam_J00[output]),
-          // creal(primay_beam_J01[output]), cimag(primay_beam_J01[output]),
-          // creal(primay_beam_J10[output]), cimag(primay_beam_J10[output]),
-          // creal(primay_beam_J11[output]), cimag(primay_beam_J11[output]));
+      //     creal(primay_beam_J00[output]), cimag(primay_beam_J00[output]),
+      //     creal(primay_beam_J01[output]), cimag(primay_beam_J01[output]),
+      //     creal(primay_beam_J10[output]), cimag(primay_beam_J10[output]),
+      //     creal(primay_beam_J11[output]), cimag(primay_beam_J11[output]));
 
           TEST_ASSERT_EQUAL_FLOAT(gauss_expected[output], creal(primay_beam_J00[output]));
           TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J00[output]));

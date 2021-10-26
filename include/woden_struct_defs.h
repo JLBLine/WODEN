@@ -26,8 +26,8 @@ typedef struct _catsource_t {
   int n_shape_coeffs; /*!< Total number of SHAPELET coefficients */
 
   //Pointsource params
-  float *point_ras; /*!< POINT source right ascensions (radians) */
-  float *point_decs; /*!< POINT source declinations (radians) */
+  double *point_ras; /*!< POINT source right ascensions (radians) */
+  double *point_decs; /*!< POINT source declinations (radians) */
   float *point_ref_freqs; /*!< POINT source Flux density reference frequencies (Hz) */
   float *point_ref_stokesI; /*!< POINT source Stokes I reference flux density (Jy) */
   float *point_ref_stokesQ; /*!< POINT source Stokes Q reference flux density (Jy) */
@@ -38,13 +38,13 @@ typedef struct _catsource_t {
   float *point_zas; /*!< POINT source zenith angles for all time steps */
   float *sin_point_para_angs; /*!< Sine of parallatic angle for all POINT source az,za */
   float *cos_point_para_angs; /*!< Cosine of parallatic angle for all POINT source az,za */
-  float *point_gaussbeam_has; /*!< Hour angle of POINT components used for Gaussian beam calculations */
-  float *point_gaussbeam_decs; /*!< Declinations of POINT components used for Gaussian beam calculations */
+  double *point_gaussbeam_has; /*!< Hour angle of POINT components used for Gaussian beam calculations */
+  double *point_gaussbeam_decs; /*!< Declinations of POINT components used for Gaussian beam calculations */
   int num_point_primarybeam_values; /*!< Number of beam calculations needed for POINT components */
 
   //Gaussian params
-  float *gauss_ras; /*!< GAUSSIAN source right ascensions (radians) */
-  float *gauss_decs; /*!< GAUSSIAN source declinations (radians) */
+  double *gauss_ras; /*!< GAUSSIAN source right ascensions (radians) */
+  double *gauss_decs; /*!< GAUSSIAN source declinations (radians) */
   float *gauss_ref_freqs; /*!< GAUSSIAN source Flux density reference frequencies (Hz) */
   float *gauss_ref_stokesI; /*!< GAUSSIAN source Stokes I reference flux density (Jy) */
   float *gauss_ref_stokesQ; /*!< GAUSSIAN source Stokes Q reference flux density (Jy) */
@@ -58,13 +58,13 @@ typedef struct _catsource_t {
   float *gauss_zas; /*!< GAUSSIAN source zenith angles for all time steps */
   float *sin_gauss_para_angs; /*!< Sine of parallatic angle for all GAUSSIAN source az,za */
   float *cos_gauss_para_angs; /*!< Cosine of parallatic angle for all GAUSSIAN source az,za */
-  float *gauss_gaussbeam_has; /*!< Hour angle of GAUSSIAN components used for Gaussian beam calculations */
-  float *gauss_gaussbeam_decs; /*!< Declinations of GAUSSIAN components used for Gaussian beam calculations */
+  double *gauss_gaussbeam_has; /*!< Hour angle of GAUSSIAN components used for Gaussian beam calculations */
+  double *gauss_gaussbeam_decs; /*!< Declinations of GAUSSIAN components used for Gaussian beam calculations */
   int num_gauss_primarybeam_values; /*!< Number of beam calculations needed for GAUSSIAN components */
 
   //Shapelet params
-  float *shape_ras; /*!< SHAPELET source right ascensions (radians) */
-  float *shape_decs; /*!< SHAPELET source declinations (radians) */
+  double *shape_ras; /*!< SHAPELET source right ascensions (radians) */
+  double *shape_decs; /*!< SHAPELET source declinations (radians) */
   float *shape_ref_freqs; /*!< SHAPELET source Flux density reference frequencies (Hz) */
   float *shape_ref_stokesI; /*!< SHAPELET source Stokes I reference flux density (Jy) */
   float *shape_ref_stokesQ; /*!< SHAPELET source Stokes Q reference flux density (Jy) */
@@ -83,8 +83,8 @@ typedef struct _catsource_t {
   float *shape_zas; /*!< SHAPELET source zenith angles for all time steps */
   float *sin_shape_para_angs; /*!< Sine of parallatic angle for all SHAPELET source az,za */
   float *cos_shape_para_angs; /*!< Cosine of parallatic angle for all SHAPELET source az,za */
-  float *shape_gaussbeam_has; /*!< Hour angle of SHAPELET components used for Gaussian beam calculations */
-  float *shape_gaussbeam_decs; /*!< Declinations of SHAPELET components used for Gaussian beam calculations */
+  double *shape_gaussbeam_has; /*!< Hour angle of SHAPELET components used for Gaussian beam calculations */
+  double *shape_gaussbeam_decs; /*!< Declinations of SHAPELET components used for Gaussian beam calculations */
   int num_shape_primarybeam_values; /*!< Number of beam calculations needed for SHAPELET components */
 
 } catsource_t;
@@ -226,7 +226,7 @@ typedef struct _woden_settings_t {
   double jd_date;  /*!< Julian date at beginning of simulation*/
   bool array_layout_file;  /*!< Do we have a path to the array layout or not */
   const char* array_layout_file_path;  /*!< Path to file containing E,N,H coords of array layout */
-  float latitude;  /*!< Latitude of the array to simulate (radians) */
+  double latitude;  /*!< Latitude of the array to simulate (radians) */
   float longitude;  /*!< Longitude of the array to simulate (radians) */
   float FEE_ideal_delays[16]; /*!< Delay values specifying the pointing for the MWA FEE beam model */
   float coarse_band_width;  /*!< Frequency bandwidth of a single coarse band (Hz)*/

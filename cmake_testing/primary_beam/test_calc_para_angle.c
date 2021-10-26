@@ -21,7 +21,7 @@ void test_calc_para_angle() {
 
   //Function being tested
   int num_time_steps = 3;
-  calc_para_angle(src, lsts, src->point_decs[0], num_time_steps);
+  calc_para_angle(src, lsts, MWA_LAT_RAD, num_time_steps);
 
   TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_point_sin_para,
                                 src->sin_point_para_angs, 9);

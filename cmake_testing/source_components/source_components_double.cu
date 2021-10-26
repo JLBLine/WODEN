@@ -64,7 +64,7 @@ __global__ void kern_calc_measurement_equation(int num_components, int num_basel
   }
 }
 
-extern "C" void test_kern_calc_measurement_equation(int num_components,
+extern "C" void test_kern_calc_measurement_equation_double(int num_components,
                   int num_baselines,
                   double *us, double *vs, double *ws,
                   double *ls, double *ms, double *ns,

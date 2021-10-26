@@ -1,5 +1,5 @@
 add_library(FEE_primary_beam_cudaCUDA SHARED
-            "../../src/FEE_primary_beam_cuda.cu")
+            "${CMAKE_SOURCE_DIR}/src/FEE_primary_beam_cuda.cu")
 #
 ## For CMake versions > 3.18, the arch flag settings are handled by
 ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
@@ -11,7 +11,7 @@ include_directories("${CMAKE_SOURCE_DIR}/cmake_testing/FEE_primary_beam_cuda")
 # ##Test the point source visibility kernel
 add_executable(test_RTS_FEE_beam_app
     test_RTS_FEE_beam.c
-    ../../src/FEE_primary_beam.c
+    ${CMAKE_SOURCE_DIR}/src/FEE_primary_beam.c
 )
 target_link_libraries(test_RTS_FEE_beam_app
     Unity

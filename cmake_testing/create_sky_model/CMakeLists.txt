@@ -31,7 +31,7 @@ add_library(create_sky_model SHARED "${CMAKE_SOURCE_DIR}/src/create_sky_model.c"
 ## Accumulate the coverage from the tests
 add_coverage(create_sky_model)
 
-# ##Test reading of WODEN catalogue works
+##Test reading of WODEN catalogue works
 add_executable(test_read_source_catalogue_app
     test_read_source_catalogue.c
 )
@@ -42,7 +42,7 @@ target_link_libraries(test_read_source_catalogue_app
 )
 add_test(C_test_read_source_catalogue test_read_source_catalogue_app)
 
-# ##Test the horizon test function works
+##Test the horizon test function works
 add_executable(test_horizon_test_app
     test_horizon_test.c
 )
@@ -53,7 +53,7 @@ target_link_libraries(test_horizon_test_app
 )
 add_test(C_test_horizon_test test_horizon_test_app)
 
-# ##Test the horizon cropping function creates sky models correctly
+##Test the horizon cropping function creates sky models correctly
 add_executable(test_crop_sky_model_app
     test_crop_sky_model.c
 )

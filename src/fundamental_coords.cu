@@ -54,7 +54,7 @@ __global__ void kern_calc_uvw(float *d_X_diff, float *d_Y_diff, float *d_Z_diff,
 /*TODO: this might be faster to just loop over the inside the kernel? */
 __global__ void kern_calc_uvw_shapelet(float *d_X_diff, float *d_Y_diff, float *d_Z_diff,
       float *d_u_shapes, float *d_v_shapes, float *d_w_shapes, float *d_wavelengths,
-      float *d_lsts, float *d_ras, float *d_decs,
+      float *d_lsts, double *d_ras, double *d_decs,
       const int num_baselines, const int num_visis,
       const int num_shapes) {
   // Start by computing which baseline we're going to do
@@ -65,10 +65,10 @@ __global__ void kern_calc_uvw_shapelet(float *d_X_diff, float *d_Y_diff, float *
 
     float u_shape, v_shape, w_shape;
     //TODO do the sin/cos outside of the GPU kernel?
-    float d_sdec0 = sinf(d_decs[iComponent]);
-    float d_cdec0 = cosf(d_decs[iComponent]);
-    float d_sha0 = sinf(d_lsts[iBaseline] - d_ras[iComponent]);
-    float d_cha0 = cosf(d_lsts[iBaseline] - d_ras[iComponent]);
+    float d_sdec0 = sinf((float)d_decs[iComponent]);
+    float d_cdec0 = cosf((float)d_decs[iComponent]);
+    float d_sha0 = sinf(d_lsts[iBaseline] - (float)d_ras[iComponent]);
+    float d_cha0 = cosf(d_lsts[iBaseline] - (float)d_ras[iComponent]);
     float d_wavelength = d_wavelengths[iBaseline];
 
     calc_uvw(d_X_diff, d_Y_diff, d_Z_diff,
@@ -83,12 +83,12 @@ __global__ void kern_calc_uvw_shapelet(float *d_X_diff, float *d_Y_diff, float *
 }
 
 __device__ void calc_lmn(float ra0, float sdec0, float cdec0,
-                         float ra, float dec,
-                         float * l, float * m, float * n){
-  float cdec;
-  float sdec;
-  float cdra;
-  float sdra;
+                         double ra, double dec,
+                         double * l, double * m, double * n){
+  double cdec;
+  double sdec;
+  double cdra;
+  double sdra;
 
   cdec = cos(dec);
   sdec = sin(dec);
@@ -99,27 +99,21 @@ __device__ void calc_lmn(float ra0, float sdec0, float cdec0,
   * m = sdec*cdec0 - cdec*sdec0*cdra;
   * n = sdec*sdec0 + cdec*cdec0*cdra;
 
-  //n as calculated above returns
-  //Note we could calculate n this way, which gives zero at the horizon, but
-  //anything below the horizon should have a negative n, and this makes n
+  //Note we could calculate n this way, which gives exactly zero at the horizon,
+  //but anything below the horizon should have a negative n, and this makes n
   //positive everywhere
-  // float temp_n = sqrt(1.0 -temp_l*temp_l - temp_m*temp_m );
-  //
-  // * l = temp_l;
-  // * m = temp_m;
-  // * n = temp_n;
-
+  // double temp_n = sqrt(1.0 -temp_l*temp_l - temp_m*temp_m );
 }
 
 __global__ void kern_calc_lmn(float ra0, float sdec0, float cdec0,
-                              float *d_ras, float *d_decs,
-                              float *d_l, float *d_m, float *d_n,
+                              double *d_ras, double *d_decs,
+                              double *d_l, double *d_m, double *d_n,
                               int num_components){
 
   const int iComponent = threadIdx.x + (blockDim.x*blockIdx.x);
 
   if (iComponent < num_components){
-    float l, m, n;
+    double l, m, n;
 
     calc_lmn(ra0, sdec0, cdec0,
              d_ras[iComponent], d_decs[iComponent],
@@ -137,28 +131,28 @@ __global__ void kern_calc_lmn(float ra0, float sdec0, float cdec0,
 *******************************************************************************/
 
 extern "C" void test_kern_calc_lmn(float ra0, float dec0,
-                                   float *ras, float *decs, int num_coords,
-                                   float * ls, float * ms, float * ns) {
+                                   double *ras, double *decs, int num_coords,
+                                   double * ls, double * ms, double * ns) {
 
-  float *d_ls = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_ls, num_coords*sizeof(float) ) );
+  double *d_ls = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_ls, num_coords*sizeof(double) ) );
 
-  float *d_ms = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_ms, num_coords*sizeof(float) ) );
+  double *d_ms = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_ms, num_coords*sizeof(double) ) );
 
-  float *d_ns = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_ns, num_coords*sizeof(float) ) );
+  double *d_ns = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_ns, num_coords*sizeof(double) ) );
 
 
-  float *d_ras = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_ras, num_coords*sizeof(float) ) );
+  double *d_ras = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_ras, num_coords*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy(d_ras, ras,
-                           num_coords*sizeof(float), cudaMemcpyHostToDevice ) );
+                           num_coords*sizeof(double), cudaMemcpyHostToDevice ) );
 
-  float *d_decs = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_decs, num_coords*sizeof(float) ) );
+  double *d_decs = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_decs, num_coords*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy(d_decs, decs,
-                           num_coords*sizeof(float), cudaMemcpyHostToDevice ) );
+                           num_coords*sizeof(double), cudaMemcpyHostToDevice ) );
 
   dim3 grid, threads;
 
@@ -172,11 +166,11 @@ extern "C" void test_kern_calc_lmn(float ra0, float dec0,
           num_coords);
 
   cudaErrorCheckCall( cudaMemcpy(ls, d_ls,
-                             num_coords*sizeof(float),cudaMemcpyDeviceToHost) );
+                             num_coords*sizeof(double),cudaMemcpyDeviceToHost) );
   cudaErrorCheckCall( cudaMemcpy(ms, d_ms,
-                             num_coords*sizeof(float),cudaMemcpyDeviceToHost) );
+                             num_coords*sizeof(double),cudaMemcpyDeviceToHost) );
   cudaErrorCheckCall( cudaMemcpy(ns, d_ns,
-                             num_coords*sizeof(float),cudaMemcpyDeviceToHost) );
+                             num_coords*sizeof(double),cudaMemcpyDeviceToHost) );
 
   cudaErrorCheckCall( cudaFree(d_ls) );
   cudaErrorCheckCall( cudaFree(d_ms) );
@@ -282,7 +276,7 @@ extern "C" void test_kern_calc_uvw(float *X_diff, float *Y_diff, float *Z_diff,
 
 extern "C" void test_kern_calc_uvw_shapelet(float *X_diff, float *Y_diff, float *Z_diff,
            float *u_shapes, float *v_shapes, float *w_shapes, float *wavelengths,
-           float *lsts, float *ras, float *decs,
+           float *lsts, double *ras, double *decs,
            int num_baselines, int num_visis, int num_shapes) {
 
   float *d_X_diff = NULL;
@@ -300,18 +294,18 @@ extern "C" void test_kern_calc_uvw_shapelet(float *X_diff, float *Y_diff, float 
                       num_baselines*sizeof(float), cudaMemcpyHostToDevice ) );
 
   float *d_lsts = NULL;
-  float *d_ras = NULL;
-  float *d_decs = NULL;
+  double *d_ras = NULL;
+  double *d_decs = NULL;
   float *d_wavelengths = NULL;
   cudaErrorCheckCall( cudaMalloc( (void**)&d_lsts, num_visis*sizeof(float) ) );
   cudaErrorCheckCall( cudaMemcpy( d_lsts, lsts,
                       num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_ras, num_visis*sizeof(float) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_ras, num_visis*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy( d_ras, ras,
-                      num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_decs, num_visis*sizeof(float) ) );
+                      num_visis*sizeof(double), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_decs, num_visis*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy( d_decs, decs,
-                      num_visis*sizeof(float), cudaMemcpyHostToDevice ) );
+                      num_visis*sizeof(double), cudaMemcpyHostToDevice ) );
   cudaErrorCheckCall( cudaMalloc( (void**)&d_wavelengths, num_visis*sizeof(float) ) );
   cudaErrorCheckCall( cudaMemcpy( d_wavelengths, wavelengths,
                       num_visis*sizeof(float), cudaMemcpyHostToDevice ) );

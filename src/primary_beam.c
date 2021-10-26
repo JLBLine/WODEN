@@ -21,8 +21,8 @@ void calc_para_angle(catsource_t *cropped_src, float *lsts, double latitude,
     double para_angle;
     for ( int time_step = 0; time_step < num_time_steps; time_step++ ) {
 
-      float ha = lsts[time_step] - cropped_src->point_ras[point];
-      para_angle = eraHd2pa((double)ha, (double)cropped_src->point_decs[point], latitude);
+      double ha = (double)lsts[time_step] - cropped_src->point_ras[point];
+      para_angle = eraHd2pa(ha, cropped_src->point_decs[point], latitude);
 
       cropped_src->sin_point_para_angs[point*num_time_steps + time_step] = sinf((float)para_angle + M_PI/2.0);
       cropped_src->cos_point_para_angs[point*num_time_steps + time_step] = cosf((float)para_angle + M_PI/2.0);
@@ -35,8 +35,8 @@ void calc_para_angle(catsource_t *cropped_src, float *lsts, double latitude,
     double para_angle;
     for ( int time_step = 0; time_step < num_time_steps; time_step++ ) {
 
-      float ha = lsts[time_step] - cropped_src->gauss_ras[gauss];
-      para_angle = eraHd2pa((double)ha, (double)cropped_src->gauss_decs[gauss], latitude);
+      double ha = (double)lsts[time_step] - cropped_src->gauss_ras[gauss];
+      para_angle = eraHd2pa(ha, cropped_src->gauss_decs[gauss], latitude);
 
       cropped_src->sin_gauss_para_angs[gauss*num_time_steps + time_step] = sinf((float)para_angle + M_PI/2.0);
       cropped_src->cos_gauss_para_angs[gauss*num_time_steps + time_step] = cosf((float)para_angle + M_PI/2.0);
@@ -47,8 +47,8 @@ void calc_para_angle(catsource_t *cropped_src, float *lsts, double latitude,
     double para_angle;
     for ( int time_step = 0; time_step < num_time_steps; time_step++ ) {
 
-      float ha = lsts[time_step] - cropped_src->shape_ras[shape];
-      para_angle = eraHd2pa((double)ha, (double)cropped_src->shape_decs[shape], latitude);
+      double ha = (double)lsts[time_step] - cropped_src->shape_ras[shape];
+      para_angle = eraHd2pa((double)ha, cropped_src->shape_decs[shape], latitude);
 
       cropped_src->sin_shape_para_angs[shape*num_time_steps + time_step] = sinf((float)para_angle + M_PI/2.0);
       cropped_src->cos_shape_para_angs[shape*num_time_steps + time_step] = cosf((float)para_angle + M_PI/2.0);
@@ -89,20 +89,20 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
     beam_settings->beam_ref_freq = woden_settings->gauss_beam_ref_freq;
 
     //Store all ha (which change with lst) that the beam needs to be calculated at.
-    cropped_src->point_gaussbeam_has = malloc(woden_settings->num_time_steps * cropped_src->n_points * sizeof(float));
-    cropped_src->point_gaussbeam_decs = malloc(woden_settings->num_time_steps * cropped_src->n_points * sizeof(float));
+    cropped_src->point_gaussbeam_has = malloc(woden_settings->num_time_steps * cropped_src->n_points * sizeof(double));
+    cropped_src->point_gaussbeam_decs = malloc(woden_settings->num_time_steps * cropped_src->n_points * sizeof(double));
 
-    cropped_src->gauss_gaussbeam_has = malloc(woden_settings->num_time_steps * cropped_src->n_gauss * sizeof(float));
-    cropped_src->gauss_gaussbeam_decs = malloc(woden_settings->num_time_steps * cropped_src->n_gauss * sizeof(float));
+    cropped_src->gauss_gaussbeam_has = malloc(woden_settings->num_time_steps * cropped_src->n_gauss * sizeof(double));
+    cropped_src->gauss_gaussbeam_decs = malloc(woden_settings->num_time_steps * cropped_src->n_gauss * sizeof(double));
 
-    cropped_src->shape_gaussbeam_has = malloc(woden_settings->num_time_steps * cropped_src->n_shapes * sizeof(float));
-    cropped_src->shape_gaussbeam_decs = malloc(woden_settings->num_time_steps * cropped_src->n_shapes * sizeof(float));
+    cropped_src->shape_gaussbeam_has = malloc(woden_settings->num_time_steps * cropped_src->n_shapes * sizeof(double));
+    cropped_src->shape_gaussbeam_decs = malloc(woden_settings->num_time_steps * cropped_src->n_shapes * sizeof(double));
 
     //Loop over all time and point components and calculate ha
     for (int component = 0; component < cropped_src->n_points; component++) {
       for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
         int step = component*woden_settings->num_time_steps + time_step;
-        cropped_src->point_gaussbeam_has[step] = lsts[time_step] - cropped_src->point_ras[component];
+        cropped_src->point_gaussbeam_has[step] = (double)lsts[time_step] - cropped_src->point_ras[component];
         cropped_src->point_gaussbeam_decs[step] = cropped_src->point_decs[component];
         // printf("THIS THING %.6f %.6f %.8f\n",cropped_src->point_ras[component],
         //                                      cropped_src->point_decs[component], MWA_LAT_RAD );
@@ -113,7 +113,7 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
     for (int component = 0; component < cropped_src->n_gauss; component++) {
       for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
         int step = component*woden_settings->num_time_steps + time_step;
-        cropped_src->gauss_gaussbeam_has[step] = lsts[time_step] - cropped_src->gauss_ras[component];
+        cropped_src->gauss_gaussbeam_has[step] = (double)lsts[time_step] - cropped_src->gauss_ras[component];
         cropped_src->gauss_gaussbeam_decs[step] = cropped_src->gauss_decs[component];
       }
     }//gausscomp loop
@@ -122,7 +122,7 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
     for (int component = 0; component < cropped_src->n_shapes; component++) {
       for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
         int step = component*woden_settings->num_time_steps + time_step;
-        cropped_src->shape_gaussbeam_has[step] = lsts[time_step] - cropped_src->shape_ras[component];
+        cropped_src->shape_gaussbeam_has[step] = (double)lsts[time_step] - cropped_src->shape_ras[component];
         cropped_src->shape_gaussbeam_decs[step] = cropped_src->shape_decs[component];
       }
     }//shape loop

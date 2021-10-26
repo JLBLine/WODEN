@@ -23,6 +23,13 @@ void make_index_array(float *index_array, int array_length, int offset) {
   }
 }
 
+//Populate an array with index values. Add an offset of `offset`
+void make_index_array_double(double *index_array, int array_length, int offset) {
+  for (int index = 0; index < array_length; index++) {
+    index_array[index] = (double)(index + offset);
+  }
+}
+
 /*
 Given a maximum value `num_value`, populate an array from 0 to `num_value`-1,
 repeating each value `num_repeat times`, also add an `offset` value
@@ -36,6 +43,18 @@ void make_repeat_array(float *repeat_array, int num_value, int num_repeat,
   for (int value = 0; value < num_value; value++) {
     for (int repeat = 0; repeat < num_repeat; repeat++) {
       repeat_array[index] = offset + value;
+      index ++;
+    }
+
+  }
+}
+
+void make_repeat_array_double(double *repeat_array, int num_value, int num_repeat,
+                       int offset) {
+  int index = 0;
+  for (int value = 0; value < num_value; value++) {
+    for (int repeat = 0; repeat < num_repeat; repeat++) {
+      repeat_array[index] = (double)(offset + value);
       index ++;
     }
 
@@ -69,9 +88,12 @@ catsource_t * make_sky_model(int num_points, int num_gauss,
   float *index_point_array = malloc(num_points*sizeof(float));
   make_index_array(index_point_array, num_points, 0);
 
+  double *index_point_array_double = malloc(num_points*sizeof(double));
+  make_index_array_double(index_point_array_double, num_points, 0);
+
   //Populate POINT intrinsic properties
-  cropped_src->point_ras = index_point_array;
-  cropped_src->point_decs = index_point_array;
+  cropped_src->point_ras = index_point_array_double;
+  cropped_src->point_decs = index_point_array_double;
   cropped_src->point_ref_freqs = index_point_array;
   cropped_src->point_ref_stokesI = index_point_array;
   cropped_src->point_ref_stokesQ = index_point_array;
@@ -82,23 +104,33 @@ catsource_t * make_sky_model(int num_points, int num_gauss,
   //Make repeating array for POINT primary beam related values
   float *repeat_point_array = malloc(num_time_steps*num_points*sizeof(float));
   make_repeat_array(repeat_point_array, num_points, num_time_steps, 0);
+
+  double *repeat_point_array_double = malloc(num_time_steps*num_points*sizeof(double));
+  make_repeat_array_double(repeat_point_array_double, num_points, num_time_steps, 0);
+
   cropped_src->point_azs = repeat_point_array;
   cropped_src->point_zas = repeat_point_array;
   cropped_src->cos_point_para_angs = repeat_point_array;
   cropped_src->sin_point_para_angs = repeat_point_array;
-  cropped_src->point_gaussbeam_has = repeat_point_array;
-  cropped_src->point_gaussbeam_decs = repeat_point_array;
+  cropped_src->point_gaussbeam_has = repeat_point_array_double;
+  cropped_src->point_gaussbeam_decs = repeat_point_array_double;
 
   //Repeat process for GAUSSIAN and SHAPELETs
 
   float *index_gauss_array = malloc(num_gauss*sizeof(float));
   make_index_array(index_gauss_array, num_gauss, 0);
 
+  double *index_gauss_array_double = malloc(num_gauss*sizeof(double));
+  make_index_array_double(index_gauss_array_double, num_gauss, 0);
+
   float *repeat_gauss_array = malloc(num_time_steps*num_gauss*sizeof(float));
   make_repeat_array(repeat_gauss_array, num_gauss, num_time_steps, 0);
 
-  cropped_src->gauss_ras = index_gauss_array;
-  cropped_src->gauss_decs = index_gauss_array;
+  double *repeat_gauss_array_double = malloc(num_time_steps*num_gauss*sizeof(double));
+  make_repeat_array_double(repeat_gauss_array_double, num_gauss, num_time_steps, 0);
+
+  cropped_src->gauss_ras = index_gauss_array_double;
+  cropped_src->gauss_decs = index_gauss_array_double;
   cropped_src->gauss_ref_freqs = index_gauss_array;
   cropped_src->gauss_ref_stokesI = index_gauss_array;
   cropped_src->gauss_ref_stokesQ = index_gauss_array;
@@ -112,17 +144,23 @@ catsource_t * make_sky_model(int num_points, int num_gauss,
   cropped_src->gauss_zas = repeat_gauss_array;
   cropped_src->cos_gauss_para_angs = repeat_gauss_array;
   cropped_src->sin_gauss_para_angs = repeat_gauss_array;
-  cropped_src->gauss_gaussbeam_has = repeat_gauss_array;
-  cropped_src->gauss_gaussbeam_decs = repeat_gauss_array;
+  cropped_src->gauss_gaussbeam_has = repeat_gauss_array_double;
+  cropped_src->gauss_gaussbeam_decs = repeat_gauss_array_double;
 
   float *index_shape_array = malloc(num_shapes*sizeof(float));
   make_index_array(index_shape_array, num_shapes, 0);
 
+  double *index_shape_array_double = malloc(num_shapes*sizeof(double));
+  make_index_array_double(index_shape_array_double, num_shapes, 0);
+
   float *repeat_shape_array = malloc(num_time_steps*num_shapes*sizeof(float));
   make_repeat_array(repeat_shape_array, num_shapes, num_time_steps, 0);
 
-  cropped_src->shape_ras = index_shape_array;
-  cropped_src->shape_decs = index_shape_array;
+  double *repeat_shape_array_double = malloc(num_time_steps*num_shapes*sizeof(double));
+  make_repeat_array_double(repeat_shape_array_double, num_shapes, num_time_steps, 0);
+
+  cropped_src->shape_ras = index_shape_array_double;
+  cropped_src->shape_decs = index_shape_array_double;
   cropped_src->shape_ref_freqs = index_shape_array;
   cropped_src->shape_ref_stokesI = index_shape_array;
   cropped_src->shape_ref_stokesQ = index_shape_array;
@@ -136,8 +174,8 @@ catsource_t * make_sky_model(int num_points, int num_gauss,
   cropped_src->shape_zas = repeat_shape_array;
   cropped_src->cos_shape_para_angs = repeat_shape_array;
   cropped_src->sin_shape_para_angs = repeat_shape_array;
-  cropped_src->shape_gaussbeam_has = repeat_shape_array;
-  cropped_src->shape_gaussbeam_decs = repeat_shape_array;
+  cropped_src->shape_gaussbeam_has = repeat_shape_array_double;
+  cropped_src->shape_gaussbeam_decs = repeat_shape_array_double;
 
   //These arrays also contain repeating values
   float *repeat_coeffs_array = malloc(num_coeff_per_shape*num_shapes*sizeof(float));
@@ -157,10 +195,13 @@ void free_sky_model(catsource_t *cropped_src) {
   //These point to the unique arrays we made in `make_sky_model`
   //so freeing just these is enough
   free(cropped_src->point_ras);
+  free(cropped_src->point_ref_freqs);
   free(cropped_src->point_azs);
   free(cropped_src->gauss_ras);
+  free(cropped_src->gauss_ref_freqs);
   free(cropped_src->gauss_azs);
   free(cropped_src->shape_ras);
+  free(cropped_src->shape_ref_freqs);
   free(cropped_src->shape_azs);
   free(cropped_src->shape_coeffs);
 
@@ -232,11 +273,15 @@ void check_pointgauss_chunking(int chunk_ind, int comps_per_chunk,
     make_repeat_array(expec_repeat_point_array, expected_n_points,
                       num_time_steps, * point_accum);
 
+
     //Check POINT source params were split correctly
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_point_array,
-                            temp_cropped_src->point_ras, expected_n_points);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_point_array,
-                            temp_cropped_src->point_decs, expected_n_points);
+    //It's a massive hassle to get ASSERT DOUBLE stuff working, so just
+    //iterate over double outputs and cast to float to check answers
+
+    for (int i = 0; i < expected_n_points; i++) {
+      TEST_ASSERT_EQUAL_FLOAT(expec_index_point_array[i], (float)temp_cropped_src->point_ras[i]);
+      TEST_ASSERT_EQUAL_FLOAT(expec_index_point_array[i], (float)temp_cropped_src->point_decs[i]);
+    }
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_point_array,
                             temp_cropped_src->point_ref_freqs, expected_n_points);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_point_array,
@@ -259,10 +304,18 @@ void check_pointgauss_chunking(int chunk_ind, int comps_per_chunk,
           temp_cropped_src->cos_point_para_angs, expected_n_points*num_time_steps);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_point_array,
           temp_cropped_src->sin_point_para_angs, expected_n_points*num_time_steps);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_point_array,
-          temp_cropped_src->point_gaussbeam_has, expected_n_points*num_time_steps);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_point_array,
-          temp_cropped_src->point_gaussbeam_decs, expected_n_points*num_time_steps);
+
+    //Again, these are double arrays, so loop through and cast to float for
+    //an easy check
+    for (int i = 0; i < expected_n_points*num_time_steps; i++) {
+      // printf("%.4f %.4f %.4f\n", expec_repeat_point_array[i],
+      //                      temp_cropped_src->point_gaussbeam_has[i],
+      //                      temp_cropped_src->point_gaussbeam_decs[i]);
+      TEST_ASSERT_EQUAL_FLOAT(expec_repeat_point_array[i],
+                             (float)temp_cropped_src->point_gaussbeam_has[i]);
+      TEST_ASSERT_EQUAL_FLOAT(expec_repeat_point_array[i],
+                             (float)temp_cropped_src->point_gaussbeam_decs[i]);
+    }
 
     free(expec_index_point_array);
     free(expec_repeat_point_array);
@@ -281,10 +334,10 @@ void check_pointgauss_chunking(int chunk_ind, int comps_per_chunk,
                       num_time_steps, * gauss_accum);
 
     //Check GAUSS source params were split correctly
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_gauss_array,
-                                  temp_cropped_src->gauss_ras, expected_n_gauss);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_gauss_array,
-                                  temp_cropped_src->gauss_decs, expected_n_gauss);
+    for (int i = 0; i < expected_n_gauss; i++) {
+      TEST_ASSERT_EQUAL_FLOAT(expec_index_gauss_array[i], (float)temp_cropped_src->gauss_ras[i]);
+      TEST_ASSERT_EQUAL_FLOAT(expec_index_gauss_array[i], (float)temp_cropped_src->gauss_decs[i]);
+    }
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_gauss_array,
                                   temp_cropped_src->gauss_ref_freqs, expected_n_gauss);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_index_gauss_array,
@@ -313,10 +366,12 @@ void check_pointgauss_chunking(int chunk_ind, int comps_per_chunk,
           temp_cropped_src->cos_gauss_para_angs, expected_n_gauss*num_time_steps);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_gauss_array,
           temp_cropped_src->sin_gauss_para_angs, expected_n_gauss*num_time_steps);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_gauss_array,
-          temp_cropped_src->gauss_gaussbeam_has, expected_n_gauss*num_time_steps);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_gauss_array,
-          temp_cropped_src->gauss_gaussbeam_decs, expected_n_gauss*num_time_steps);
+    for (int i = 0; i < expected_n_gauss*num_time_steps; i++) {
+      TEST_ASSERT_EQUAL_FLOAT(expec_repeat_gauss_array[i],
+                             (float)temp_cropped_src->gauss_gaussbeam_has[i]);
+      TEST_ASSERT_EQUAL_FLOAT(expec_repeat_gauss_array[i],
+                             (float)temp_cropped_src->gauss_gaussbeam_decs[i]);
+    }
 
     free(expec_index_gauss_array);
     free(expec_repeat_gauss_array);
@@ -363,10 +418,13 @@ void check_shapelet_chunking(int chunk_ind, int coeffs_per_chunk,
     //
     //As we only split over basis function coeff info, all of these arrrays
     //should just be pointer copies
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_ras,
-                            temp_cropped_src->shape_ras, cropped_src->n_shapes);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_decs,
-                            temp_cropped_src->shape_decs, cropped_src->n_shapes);
+    for (int i = 0; i < cropped_src->n_shapes; i++) {
+      TEST_ASSERT_EQUAL_FLOAT((float)cropped_src->shape_ras[i],
+                                         (float)temp_cropped_src->shape_ras[i]);
+      TEST_ASSERT_EQUAL_FLOAT((float)cropped_src->shape_decs[i],
+                                        (float)temp_cropped_src->shape_decs[i]);
+    }
+
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_ref_freqs,
                             temp_cropped_src->shape_ref_freqs, cropped_src->n_shapes);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_ref_stokesI,
@@ -394,6 +452,13 @@ void check_shapelet_chunking(int chunk_ind, int coeffs_per_chunk,
           temp_cropped_src->shape_gaussbeam_has, cropped_src->n_shapes*num_time_steps);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_gaussbeam_decs,
           temp_cropped_src->shape_gaussbeam_decs, cropped_src->n_shapes*num_time_steps);
+
+    for (int i = 0; i < cropped_src->n_shapes*num_time_steps; i++) {
+      TEST_ASSERT_EQUAL_FLOAT((float)cropped_src->shape_gaussbeam_has[i],
+                             (float)temp_cropped_src->shape_gaussbeam_has[i]);
+      TEST_ASSERT_EQUAL_FLOAT((float)cropped_src->shape_gaussbeam_decs[i],
+                             (float)temp_cropped_src->shape_gaussbeam_decs[i]);
+    }
 
 
     //THESE are the arrays that should actually be split up

@@ -11,12 +11,12 @@
 Bunch of settings and expected output arrays. Defined in expected_para_angles.c
 */
 extern float lsts[];
-extern float point_ras[];
-extern float point_decs[];
-extern float gauss_ras[];
-extern float gauss_decs[];
-extern float shape_ras[];
-extern float shape_decs[];
+extern double point_ras[];
+extern double point_decs[];
+extern double gauss_ras[];
+extern double gauss_decs[];
+extern double shape_ras[];
+extern double shape_decs[];
 extern float expec_point_sin_para[];
 extern float expec_point_cos_para[];
 extern float expec_gauss_sin_para[];

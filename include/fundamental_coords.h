@@ -130,7 +130,7 @@ steps (metres)
 */
 __global__ void kern_calc_uvw_shapelet(float *d_X_diff, float *d_Y_diff, float *d_Z_diff,
       float *d_u_shapes, float *d_v_shapes, float *d_w_shapes, float *d_wavelengths,
-      float *d_lsts, float *d_ras, float *d_decs,
+      float *d_lsts, double *d_ras, double *d_decs,
       const int num_baselines, const int num_visis,
       const int num_shapes);
 
@@ -151,8 +151,8 @@ and phase centre
 
 */
 __device__ void calc_lmn(float ra0, float sdec0, float cdec0,
-           float ra, float dec,
-           float * l, float * m, float * n);
+           double ra, double dec,
+           double * l, double * m, double * n);
 
 /**
 @brief Calculate interferometric \f$l,m,n\f$ image coords for a set of
@@ -173,6 +173,6 @@ RA,Dec coodinates, with a single RA/Dec phase centre.
  @param[in] num_components Number of RA,Dec coords
 */
 __global__ void kern_calc_lmn(float ra0, float sdec0, float cdec0,
-           float *d_ras, float *d_decs,
-           float *d_l, float *d_m, float *d_n,
+           double *d_ras, double *d_decs,
+           double *d_l, double *d_m, double *d_n,
            int num_components);

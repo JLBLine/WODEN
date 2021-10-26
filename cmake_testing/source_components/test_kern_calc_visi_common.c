@@ -26,9 +26,9 @@ void malloc_args_for_testing(args_for_testing_t *args_ft,
   args_ft->num_visis = num_visis;
   args_ft->num_beam_values = num_beam_values;
 
-  args_ft->ls = malloc(num_components*sizeof(float));
-  args_ft->ms = malloc(num_components*sizeof(float));
-  args_ft->ns = malloc(num_components*sizeof(float));
+  args_ft->ls = malloc(num_components*sizeof(double));
+  args_ft->ms = malloc(num_components*sizeof(double));
+  args_ft->ns = malloc(num_components*sizeof(double));
 
   //Assume we just want Stokes I
   args_ft->flux_I = malloc(num_components*sizeof(float));
@@ -229,7 +229,8 @@ void get_expected(int visi, int num_components, int num_baselines,
                   args_for_testing_t *args_ft,
                   int component_type,
                   float * expec_re, float * expec_im) {
-  float expec_re_inc, expec_im_inc, temp;
+  float expec_re_inc, expec_im_inc;
+  double temp;
   float flux_ratio, visi_freq, flux_extrap, xx_gain;
   int time_ind, freq_ind, beam_ind;
   * expec_re = 0.0;
@@ -239,8 +240,8 @@ void get_expected(int visi, int num_components, int num_baselines,
     temp = 2*M_PI*( args_ft->us[visi]*args_ft->ls[comp] + args_ft->vs[visi]*args_ft->ms[comp] + args_ft->ws[visi]*(args_ft->ns[comp]-1) );
     // sincosf(temp, &(expec_im_inc), &(expec_re_inc));
 
-    expec_im_inc = sinf(temp);
-    expec_re_inc = cosf(temp);
+    expec_im_inc = (float)sin(temp);
+    expec_re_inc = (float)cos(temp);
 
     visi_freq = VELC / args_ft->allsteps_wavelengths[visi];
     flux_ratio = powf(visi_freq / args_ft->component_freqs[comp], args_ft->SIs[comp]);
@@ -260,8 +261,8 @@ void get_expected(int visi, int num_components, int num_baselines,
       xx_gain = xx_gain*xx_gain;
     }
 
-    float expec_re_before = expec_re_inc;
-    float expec_im_before = expec_im_inc;
+    // float expec_re_before = expec_re_inc;
+    // float expec_im_before = expec_im_inc;
 
     expec_re_inc = expec_re_inc*flux_extrap*xx_gain;
     expec_im_inc = expec_im_inc*flux_extrap*xx_gain;

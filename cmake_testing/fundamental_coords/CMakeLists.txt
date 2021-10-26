@@ -18,7 +18,7 @@ target_link_libraries(test_lmn_coords_app
 add_test(CUDA_test_lmn_coords test_lmn_coords_app)
 
 
-
+#
 ##Test u,v,w functions
 add_executable(test_uvw_coords_app
     test_uvw_coords.c

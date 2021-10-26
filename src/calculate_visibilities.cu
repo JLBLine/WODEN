@@ -25,22 +25,6 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   const int num_freqs = woden_settings->num_freqs;
 
   //Setup chunk_visibility_set to hold the visibility outputs of each
-  //sky chunk simulation
-  // visibility_set_t *chunk_visibility_set = (visibility_set_t *)malloc(sizeof(visibility_set_t));
-  //
-  // chunk_visibility_set->us_metres = (float *)malloc( num_visis * sizeof(float) );
-  // chunk_visibility_set->vs_metres = (float *)malloc( num_visis * sizeof(float) );
-  // chunk_visibility_set->ws_metres = (float *)malloc( num_visis * sizeof(float) );
-  //
-  // chunk_visibility_set->sum_visi_XX_real = (float *)malloc( num_visis * sizeof(float) );
-  // chunk_visibility_set->sum_visi_XX_imag = (float *)malloc( num_visis * sizeof(float) );
-  // chunk_visibility_set->sum_visi_XY_real = (float *)malloc( num_visis * sizeof(float) );
-  // chunk_visibility_set->sum_visi_XY_imag = (float *)malloc( num_visis * sizeof(float) );
-  // chunk_visibility_set->sum_visi_YX_real = (float *)malloc( num_visis * sizeof(float) );
-  // chunk_visibility_set->sum_visi_YX_imag = (float *)malloc( num_visis * sizeof(float) );
-  // chunk_visibility_set->sum_visi_YY_real = (float *)malloc( num_visis * sizeof(float) );
-  // chunk_visibility_set->sum_visi_YY_imag = (float *)malloc( num_visis * sizeof(float) );
-
   visibility_set_t *chunk_visibility_set = setup_visibility_set(num_visis);
 
   //Copy across settings for simulation - we always simulate all time steps
@@ -132,14 +116,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                         cudaMemcpyHostToDevice ));
   }
 
-  // RTS_MWA_FEE_beam_t *FEE_beam;
-  // RTS_MWA_FEE_beam_t *FEE_beam_zenith;
-
   if (beam_settings->beamtype == FEE_BEAM){
-
-    // beam_settings = cropped_sky_models->beam_settings[0];
-    // FEE_beam = beam_settings.FEE_beam;
-    // FEE_beam_zenith = beam_settings.FEE_beam_zenith;
 
     //Only needs to be done once per frequency as zenith never moves, so do
     //this outside the sky model chunk loop
@@ -160,9 +137,6 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
     catsource_t catsource;
     catsource = cropped_sky_models->catsources[chunk];
-
-    // beam_settings_t beam_settings;
-    // beam_settings = cropped_sky_models->beam_settings[chunk];
 
     //Make sure the temp visis are 0 at the start of each chunk
     for (int visi = 0; visi < num_visis; visi++) {
@@ -235,15 +209,15 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     cuFloatComplex *d_primay_beam_J10 = NULL;
     cuFloatComplex *d_primay_beam_J11 = NULL;
     //Same goes for l,m,n coords
-    float *d_ls=NULL;
-    float *d_ms=NULL;
-    float *d_ns=NULL;
+    double *d_ls=NULL;
+    double *d_ms=NULL;
+    double *d_ns=NULL;
 
     if (num_points > 0) {
       printf("\tDoing point components\n");
 
-      float *d_point_ras=NULL;
-      float *d_point_decs=NULL;
+      double *d_point_ras=NULL;
+      double *d_point_decs=NULL;
       float *d_point_freqs=NULL;
       float *d_point_stokesI=NULL;
       float *d_point_stokesQ=NULL;
@@ -252,14 +226,14 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       float *d_point_SIs=NULL;
 
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_ras),
-                          num_points*sizeof(float) ) );
+                          num_points*sizeof(double) ) );
       cudaErrorCheckCall( cudaMemcpy( d_point_ras, catsource.point_ras,
-                          num_points*sizeof(float), cudaMemcpyHostToDevice ) );
+                          num_points*sizeof(double), cudaMemcpyHostToDevice ) );
 
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_decs),
-                          num_points*sizeof(float) ) );
+                          num_points*sizeof(double) ) );
       cudaErrorCheckCall( cudaMemcpy( d_point_decs, catsource.point_decs,
-                          num_points*sizeof(float), cudaMemcpyHostToDevice ) );
+                          num_points*sizeof(double), cudaMemcpyHostToDevice ) );
 
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_freqs),
                           num_points*sizeof(float) ) );
@@ -305,9 +279,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J11,
                   catsource.num_point_primarybeam_values*sizeof(cuFloatComplex) ));
       //
-      cudaErrorCheckCall( cudaMalloc( (void**)&d_ls, num_points*sizeof(float) ) );
-      cudaErrorCheckCall( cudaMalloc( (void**)&d_ms, num_points*sizeof(float) ) );
-      cudaErrorCheckCall( cudaMalloc( (void**)&d_ns, num_points*sizeof(float) ) );
+      cudaErrorCheckCall( cudaMalloc( (void**)&d_ls, num_points*sizeof(double) ) );
+      cudaErrorCheckCall( cudaMalloc( (void**)&d_ms, num_points*sizeof(double) ) );
+      cudaErrorCheckCall( cudaMalloc( (void**)&d_ns, num_points*sizeof(double) ) );
 
       //This calculates l,m,n for all components, and any beam calculations
       //that are needed - uses the same methods for all component types
@@ -369,8 +343,8 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     if (num_gauss > 0) {
       printf("\tDoing gaussian components\n");
 
-      float *d_gauss_ras=NULL;
-      float *d_gauss_decs=NULL;
+      double *d_gauss_ras=NULL;
+      double *d_gauss_decs=NULL;
       float *d_gauss_pas=NULL;
       float *d_gauss_majors=NULL;
       float *d_gauss_minors=NULL;
@@ -413,14 +387,14 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                           num_gauss*sizeof(float), cudaMemcpyHostToDevice) );
 
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_gauss_ras),
-                          num_gauss*sizeof(float)) );
+                          num_gauss*sizeof(double)) );
       cudaErrorCheckCall( cudaMemcpy( d_gauss_ras, catsource.gauss_ras,
-                          num_gauss*sizeof(float), cudaMemcpyHostToDevice) );
+                          num_gauss*sizeof(double), cudaMemcpyHostToDevice) );
 
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_gauss_decs),
-                          num_gauss*sizeof(float)) );
+                          num_gauss*sizeof(double)) );
       cudaErrorCheckCall( cudaMemcpy( d_gauss_decs, catsource.gauss_decs,
-                          num_gauss*sizeof(float), cudaMemcpyHostToDevice) );
+                          num_gauss*sizeof(double), cudaMemcpyHostToDevice) );
 
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_gauss_pas),
                           num_gauss*sizeof(float)) );
@@ -451,9 +425,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J11,
             catsource.num_gauss_primarybeam_values*sizeof(cuFloatComplex)) );
 
-      cudaErrorCheckCall( cudaMalloc( (void**)&d_ls, num_gauss*sizeof(float)) );
-      cudaErrorCheckCall( cudaMalloc( (void**)&d_ms, num_gauss*sizeof(float)) );
-      cudaErrorCheckCall( cudaMalloc( (void**)&d_ns, num_gauss*sizeof(float)) );
+      cudaErrorCheckCall( cudaMalloc( (void**)&d_ls, num_gauss*sizeof(double)) );
+      cudaErrorCheckCall( cudaMalloc( (void**)&d_ms, num_gauss*sizeof(double)) );
+      cudaErrorCheckCall( cudaMalloc( (void**)&d_ns, num_gauss*sizeof(double)) );
 
       source_component_common(num_gauss,
                  d_primay_beam_J00, d_primay_beam_J01,
@@ -517,8 +491,8 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     if (num_shapes > 0) {
       printf("\tDoing shapelet components\n");
 
-      float *d_shape_ras=NULL;
-      float *d_shape_decs=NULL;
+      double *d_shape_ras=NULL;
+      double *d_shape_decs=NULL;
       float *d_shape_freqs=NULL;
       float *d_shape_stokesI=NULL;
       float *d_shape_stokesQ=NULL;
@@ -542,14 +516,14 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
       //Who likes cudaMalloc cudaMallocs? We like cudaMalloc cudaMallocs
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_ras),
-                          num_shapes*sizeof(float)) );
+                          num_shapes*sizeof(double)) );
       cudaErrorCheckCall( cudaMemcpy( d_shape_ras, catsource.shape_ras,
-              num_shapes*sizeof(float), cudaMemcpyHostToDevice) );
+              num_shapes*sizeof(double), cudaMemcpyHostToDevice) );
 
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_decs),
-                          num_shapes*sizeof(float)) );
+                          num_shapes*sizeof(double)) );
       cudaErrorCheckCall( cudaMemcpy( d_shape_decs, catsource.shape_decs,
-              num_shapes*sizeof(float), cudaMemcpyHostToDevice) );
+              num_shapes*sizeof(double), cudaMemcpyHostToDevice) );
 
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_freqs),
                           num_shapes*sizeof(float)) );
@@ -616,9 +590,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       cudaErrorCheckCall( cudaMemcpy( d_shape_param_indexes,
              catsource.shape_param_indexes, catsource.n_shape_coeffs*sizeof(float), cudaMemcpyHostToDevice) );
 
-      cudaErrorCheckCall( cudaMalloc( (void**)&(d_ls), num_shapes*sizeof(float)) );
-      cudaErrorCheckCall( cudaMalloc( (void**)&(d_ms), num_shapes*sizeof(float)) );
-      cudaErrorCheckCall( cudaMalloc( (void**)&(d_ns), num_shapes*sizeof(float)) );
+      cudaErrorCheckCall( cudaMalloc( (void**)&(d_ls), num_shapes*sizeof(double)) );
+      cudaErrorCheckCall( cudaMalloc( (void**)&(d_ms), num_shapes*sizeof(double)) );
+      cudaErrorCheckCall( cudaMalloc( (void**)&(d_ns), num_shapes*sizeof(double)) );
 
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_allsteps_lsts), num_visis*sizeof(float)) );
       cudaErrorCheckCall( cudaMemcpy( d_allsteps_lsts, visibility_set->allsteps_lsts,

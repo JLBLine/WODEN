@@ -2,14 +2,14 @@
 
 float lsts[] = {1*DD2R, 120*DD2R, 240*DD2R};
 
-float point_ras[] = {0 , 5*DD2R, 10*DD2R};
-float point_decs[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
+double point_ras[] = {0 , 5*DD2R, 10*DD2R};
+double point_decs[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
 
-float gauss_ras[] = {115*DD2R , 125*DD2R, 130*DD2R};
-float gauss_decs[] = {-15*DD2R , -20*DD2R, -25*DD2R};
+double gauss_ras[] = {115*DD2R , 125*DD2R, 130*DD2R};
+double gauss_decs[] = {-15*DD2R , -20*DD2R, -25*DD2R};
 
-float shape_ras[] = {235*DD2R , 250*DD2R, 265*DD2R};
-float shape_decs[] = {-35*DD2R , -40*DD2R, -45*DD2R};
+double shape_ras[] = {235*DD2R , 250*DD2R, 265*DD2R};
+double shape_decs[] = {-35*DD2R , -40*DD2R, -45*DD2R};
 
 float expec_point_sin_para[] = {-0.0039216, -0.6142135, -0.6142136, -0.0156904,
                                 -0.5764040, -0.6534451, -0.0353442, -0.5401087,

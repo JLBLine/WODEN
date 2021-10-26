@@ -75,8 +75,8 @@ this yields the correct output visibilities.
 @return `visi`, a `cuFloatComplex` of the visibility
 */
 __device__ cuFloatComplex calc_measurement_equation(float *d_us,
-           float *d_vs, float *d_ws, float *d_ls, float *d_ms, float *d_ns,
-           int iBaseline, int iComponent);
+           float *d_vs, float *d_ws, double *d_ls, double *d_ms, double *d_ns,
+           const int iBaseline, const int iComponent);
 
 /**
 @brief Given primary beam gains and leakage terms for antenna 1
@@ -327,10 +327,10 @@ COMPONENTs
 void source_component_common(int num_components,
            cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
            cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11,
-           float *d_freqs, float *d_ls, float *d_ms, float *d_ns,
-           float *d_ras, float *d_decs, float *azs, float *zas,
+           float *d_freqs, double *d_ls, double *d_ms, double *d_ns,
+           double *d_ras, double *d_decs, float *azs, float *zas,
            float *sin_para_angs, float *cos_para_angs,
-           float *beam_has, float *beam_decs,
+           double *beam_has, double *beam_decs,
            woden_settings_t *woden_settings,
            beam_settings_t *beam_settings);
 
@@ -411,7 +411,7 @@ __global__ void kern_calc_visi_point(float *d_point_freqs,
       float *d_sum_visi_YX_real, float *d_sum_visi_YX_imag,
       float *d_sum_visi_YY_real, float *d_sum_visi_YY_imag,
       float *d_allsteps_wavelengths,
-      float *d_ls, float *d_ms, float *d_ns,
+      double *d_ls, double *d_ms, double *d_ns,
       int num_points, int num_baselines, int num_freqs, int num_visis,
       int num_times, int beamtype,
       cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
@@ -509,7 +509,7 @@ __global__ void kern_calc_visi_gaussian(float *d_gauss_freqs,
       float *d_sum_visi_YX_real, float *d_sum_visi_YX_imag,
       float *d_sum_visi_YY_real, float *d_sum_visi_YY_imag,
       float *d_allsteps_wavelengths,
-      float *d_ls, float *d_ms, float *d_ns,
+      double *d_ls, double *d_ms, double *d_ns,
       float *d_gauss_pas, float *d_gauss_majors, float *d_gauss_minors,
       int num_gauss, int num_baselines, int num_freqs, int num_visis,
       int num_times, int beamtype,
@@ -614,9 +614,9 @@ time step in the simulation
 @param[in] *d_shape_param_indexes Array of index mapping basis functions to
 COMPONENT parameters
 
-@param[in] *d_shape_ls \f$l\f$ sky coord for all time steps for all SHAPELETs
-@param[in] *d_shape_ms \f$m\f$ sky coord for all time steps for all SHAPELETs
-@param[in] *d_shape_ns \f$n\f$ sky coord for all time steps for all SHAPELETs
+@param[in] *d_ls \f$l\f$ sky coord for all time steps for all SHAPELETs
+@param[in] *d_ms \f$m\f$ sky coord for all time steps for all SHAPELETs
+@param[in] *d_ns \f$n\f$ sky coord for all time steps for all SHAPELETs
 @param[in] *d_sbf Shapelet basis function lookup table
 @param[in] num_shapes Number of SHAPELETs components
 @param[in] num_baselines Number of baselines for one time, one frequency step
@@ -648,21 +648,9 @@ __global__ void kern_calc_visi_shapelets(float *d_shape_freqs,
       float *d_shape_pas, float *d_shape_majors, float *d_shape_minors,
       float *d_shape_n1s, float *d_shape_n2s, float *d_shape_coeffs,
       float *d_shape_param_indexes,
-      float *d_shape_ls, float *d_shape_ms, float *d_shape_ns,
+      double *d_ls, double *d_ms, double *d_ns,
       float *d_sbf,
       int num_shapes, int num_baselines, int num_freqs, int num_visis,
       const int num_coeffs, int num_times, int beamtype,
       cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
       cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11);
-
-// __global__ void kern_extrap_stokes(int num_visis, int num_components,
-//            float *d_allsteps_wavelengths, float *d_ref_freqs, float *d_SIs,
-//            float *d_ref_stokesI, float *d_ref_stokesQ,
-//            float *d_ref_stokesU, float *d_ref_stokesV,
-//            float *d_flux_I, float *d_flux_Q,
-//            float *d_flux_U, float *d_flux_V );
-
-// extern "C" void test_extrap_flux(catsource_t *catsource,
-//            const int num_visis, const int num_components,
-//            float *allsteps_wavelengths, float *flux_I, float *flux_Q,
-//            float *flux_U, float *flux_V );

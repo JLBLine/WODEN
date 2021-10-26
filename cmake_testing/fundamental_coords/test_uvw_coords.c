@@ -21,7 +21,7 @@ extern void test_kern_calc_uvw(float *X_diff, float *Y_diff, float *Z_diff,
 
 extern void test_kern_calc_uvw_shapelet(float *X_diff, float *Y_diff, float *Z_diff,
            float *u_shapes, float *v_shapes, float *w_shapes, float *wavelengths,
-           float *lsts, float *ras, float *decs,
+           float *lsts, double *ras, double *decs,
            int num_baselines, int num_visis, int num_shapes);
 
 
@@ -332,8 +332,8 @@ void test_kern_calc_uvw_shapelet_RotateWithTimeScalesByWavelength(void){
     //Check values for 5 different shapelet components, with different RA values
     int num_components = 5;
 
-    float *ras = malloc(num_components*sizeof(float));
-    float *decs = malloc(num_components*sizeof(float));
+    double *ras = malloc(num_components*sizeof(double));
+    double *decs = malloc(num_components*sizeof(double));
 
     for (size_t i = 0; i < num_components; i++) {
       ras[i] = i*DD2R;

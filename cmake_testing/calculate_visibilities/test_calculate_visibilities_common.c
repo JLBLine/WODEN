@@ -73,12 +73,12 @@ source_catalogue_t * make_cropped_sky_models(float ra0, float dec0,
       cropped_sky_models->catsources[cats_ind].point_ref_stokesV = malloc(n_points*sizeof(float));
       cropped_sky_models->catsources[cats_ind].point_SIs = malloc(n_points*sizeof(float));
 
-      cropped_sky_models->catsources[cats_ind].point_ras = malloc(n_points*sizeof(float));
-      cropped_sky_models->catsources[cats_ind].point_decs = malloc(n_points*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].point_ras = malloc(n_points*sizeof(double));
+      cropped_sky_models->catsources[cats_ind].point_decs = malloc(n_points*sizeof(double));
       cropped_sky_models->catsources[cats_ind].point_ref_freqs = malloc(n_points*sizeof(float));
 
-      cropped_sky_models->catsources[cats_ind].point_gaussbeam_has = malloc(n_points*NUM_TIME_STEPS*sizeof(float));
-      cropped_sky_models->catsources[cats_ind].point_gaussbeam_decs = malloc(n_points*NUM_TIME_STEPS*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].point_gaussbeam_has = malloc(n_points*NUM_TIME_STEPS*sizeof(double));
+      cropped_sky_models->catsources[cats_ind].point_gaussbeam_decs = malloc(n_points*NUM_TIME_STEPS*sizeof(double));
 
       cropped_sky_models->catsources[cats_ind].point_azs = malloc(n_points*NUM_TIME_STEPS*sizeof(float));
       cropped_sky_models->catsources[cats_ind].point_zas = malloc(n_points*NUM_TIME_STEPS*sizeof(float));
@@ -98,7 +98,7 @@ source_catalogue_t * make_cropped_sky_models(float ra0, float dec0,
 
         for (size_t time = 0; time < NUM_TIME_STEPS; time++) {
           int step = point*NUM_TIME_STEPS + time;
-          cropped_sky_models->catsources[cats_ind].point_gaussbeam_has[step] = lsts[time] - RA0;
+          cropped_sky_models->catsources[cats_ind].point_gaussbeam_has[step] = (double)lsts[time] - RA0;
           cropped_sky_models->catsources[cats_ind].point_gaussbeam_decs[step] = MWA_LAT_RAD;
 
           cropped_sky_models->catsources[cats_ind].point_azs[step] = azs[time];
@@ -119,16 +119,16 @@ source_catalogue_t * make_cropped_sky_models(float ra0, float dec0,
       cropped_sky_models->catsources[cats_ind].gauss_ref_stokesV = malloc(n_gauss*sizeof(float));
       cropped_sky_models->catsources[cats_ind].gauss_SIs = malloc(n_gauss*sizeof(float));
 
-      cropped_sky_models->catsources[cats_ind].gauss_ras = malloc(n_gauss*sizeof(float));
-      cropped_sky_models->catsources[cats_ind].gauss_decs = malloc(n_gauss*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].gauss_ras = malloc(n_gauss*sizeof(double));
+      cropped_sky_models->catsources[cats_ind].gauss_decs = malloc(n_gauss*sizeof(double));
       cropped_sky_models->catsources[cats_ind].gauss_ref_freqs = malloc(n_gauss*sizeof(float));
 
       cropped_sky_models->catsources[cats_ind].gauss_majors = malloc(n_gauss*sizeof(float));
       cropped_sky_models->catsources[cats_ind].gauss_minors = malloc(n_gauss*sizeof(float));
       cropped_sky_models->catsources[cats_ind].gauss_pas = malloc(n_gauss*sizeof(float));
 
-      cropped_sky_models->catsources[cats_ind].gauss_gaussbeam_has = malloc(n_gauss*NUM_TIME_STEPS*sizeof(float));
-      cropped_sky_models->catsources[cats_ind].gauss_gaussbeam_decs = malloc(n_gauss*NUM_TIME_STEPS*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].gauss_gaussbeam_has = malloc(n_gauss*NUM_TIME_STEPS*sizeof(double));
+      cropped_sky_models->catsources[cats_ind].gauss_gaussbeam_decs = malloc(n_gauss*NUM_TIME_STEPS*sizeof(double));
 
       cropped_sky_models->catsources[cats_ind].gauss_azs = malloc(n_gauss*NUM_TIME_STEPS*sizeof(float));
       cropped_sky_models->catsources[cats_ind].gauss_zas = malloc(n_gauss*NUM_TIME_STEPS*sizeof(float));
@@ -152,7 +152,7 @@ source_catalogue_t * make_cropped_sky_models(float ra0, float dec0,
 
         for (size_t time = 0; time < NUM_TIME_STEPS; time++) {
           int step = gauss*NUM_TIME_STEPS + time;
-          cropped_sky_models->catsources[cats_ind].gauss_gaussbeam_has[step] = lsts[time] - RA0;
+          cropped_sky_models->catsources[cats_ind].gauss_gaussbeam_has[step] = (double)lsts[time] - RA0;
           cropped_sky_models->catsources[cats_ind].gauss_gaussbeam_decs[step] = MWA_LAT_RAD;
 
           cropped_sky_models->catsources[cats_ind].gauss_azs[step] = azs[time];
@@ -171,8 +171,8 @@ source_catalogue_t * make_cropped_sky_models(float ra0, float dec0,
       cropped_sky_models->catsources[cats_ind].shape_ref_stokesV = malloc(n_shapes*sizeof(float));
       cropped_sky_models->catsources[cats_ind].shape_SIs = malloc(n_shapes*sizeof(float));
 
-      cropped_sky_models->catsources[cats_ind].shape_ras = malloc(n_shapes*sizeof(float));
-      cropped_sky_models->catsources[cats_ind].shape_decs = malloc(n_shapes*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].shape_ras = malloc(n_shapes*sizeof(double));
+      cropped_sky_models->catsources[cats_ind].shape_decs = malloc(n_shapes*sizeof(double));
       cropped_sky_models->catsources[cats_ind].shape_ref_freqs = malloc(n_shapes*sizeof(float));
 
       cropped_sky_models->catsources[cats_ind].shape_majors = malloc(n_shapes*sizeof(float));
@@ -184,8 +184,8 @@ source_catalogue_t * make_cropped_sky_models(float ra0, float dec0,
       cropped_sky_models->catsources[cats_ind].shape_n2s = malloc(n_shapes);
       cropped_sky_models->catsources[cats_ind].shape_param_indexes = malloc(n_shapes);
 
-      cropped_sky_models->catsources[cats_ind].shape_gaussbeam_has = malloc(n_shapes*NUM_TIME_STEPS*sizeof(float));
-      cropped_sky_models->catsources[cats_ind].shape_gaussbeam_decs = malloc(n_shapes*NUM_TIME_STEPS*sizeof(float));
+      cropped_sky_models->catsources[cats_ind].shape_gaussbeam_has = malloc(n_shapes*NUM_TIME_STEPS*sizeof(double));
+      cropped_sky_models->catsources[cats_ind].shape_gaussbeam_decs = malloc(n_shapes*NUM_TIME_STEPS*sizeof(double));
 
       cropped_sky_models->catsources[cats_ind].shape_azs = malloc(n_shapes*NUM_TIME_STEPS*sizeof(float));
       cropped_sky_models->catsources[cats_ind].shape_zas = malloc(n_shapes*NUM_TIME_STEPS*sizeof(float));
@@ -215,7 +215,7 @@ source_catalogue_t * make_cropped_sky_models(float ra0, float dec0,
 
         for (size_t time = 0; time < NUM_TIME_STEPS; time++) {
           int step = shape*NUM_TIME_STEPS + time;
-          cropped_sky_models->catsources[cats_ind].shape_gaussbeam_has[step] = lsts[time] - RA0;
+          cropped_sky_models->catsources[cats_ind].shape_gaussbeam_has[step] = (double)lsts[time] - RA0;
           cropped_sky_models->catsources[cats_ind].shape_gaussbeam_decs[step] = MWA_LAT_RAD;
 
           cropped_sky_models->catsources[cats_ind].shape_azs[step] = azs[time];

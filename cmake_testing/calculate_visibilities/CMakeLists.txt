@@ -47,7 +47,7 @@ target_link_libraries(test_calculate_visibilities_gaussbeam_app
 )
 add_test(CUDA_test_calculate_visibilities_gaussbeam test_calculate_visibilities_gaussbeam_app)
 
-# ##Test the main calculate_visibilities function using the EDA2 primary beam
+##Test the main calculate_visibilities function using the EDA2 primary beam
 add_executable(test_calculate_visibilities_edabeam_app
     test_calculate_visibilities_edabeam.c
     test_calculate_visibilities_common.c

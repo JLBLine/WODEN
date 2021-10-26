@@ -15,63 +15,91 @@ void sincos(double x, double *sin, double *cos);
 extern void test_kern_calc_measurement_equation(int num_components,
                   int num_baselines,
                   float *us, float *vs, float *ws,
-                  float *ls, float *ms, float *ns,
+                  double *ls, double *ms, double *ns,
                   float _Complex *visis);
 
 #define UNITY_INCLUDE_FLOAT
 
 /*
-Setup 1000 u,v,w coords and 100 l,m,n coords, and send them off to
+Setup 10000 u,v,w coords and 3600 l,m,n coords, and send them off to
 kern_calc_measurement_equation to calculate the measurement equation.
 Check against a calculation made with C
 */
 void test_kern_calc_measurement_equation_ComparedToC(void) {
 
-  //Set up some test condition inputs
-  int num_baselines = 1000;
-  int num_components = 100;
+  // //Set up some test condition inputs
 
-  //This is a reasonable range based on MWA
-  float max_u = 1000.0;
-  float max_v = 1000.0;
-  float max_w = 20.0;
+  //Just going off reasonable values for the MWA here
+  float max_u = 1000;
+  float max_v = 1000;
+  float max_w = 100;
 
-  // float u_inc = (2*max_u) / num_baselines;
-  // float v_inc = (2*max_v) / num_baselines;
-  // float w_inc = (2*max_w) / num_baselines;
+  float u_inc = 20;
+  float v_inc = 20;
+  float w_inc = 0.2;
 
-  float u_inc = 2;
-  float v_inc = 2;
-  float w_inc = 0.04;
+  int num_us = 2*max_u / u_inc;
+  int num_vs = 2*max_v / v_inc;
+
+  int num_baselines = num_us*num_vs;
 
   float *us = malloc(num_baselines*sizeof(float));
   float *vs = malloc(num_baselines*sizeof(float));
   float *ws = malloc(num_baselines*sizeof(float));
 
-  for (size_t baseline = 0; baseline < num_baselines; baseline++) {
-    us[baseline] = -max_u + u_inc*baseline;
-    vs[baseline] = -max_v + v_inc*baseline;
-    ws[baseline] = -max_w + w_inc*baseline;
+  for (int u_ind = 0; u_ind < num_us; u_ind++) {
+    for (int v_ind = 0; v_ind < num_vs; v_ind++) {
+      us[u_ind*num_vs + v_ind] = -max_u + u_inc*u_ind;
+      vs[u_ind*num_vs + v_ind] = -max_v + v_inc*v_ind;
+      ws[u_ind*num_vs + v_ind] = -max_w + w_inc*u_ind;
+
+      // printf("%.3f %.3f %.3f\n",us[u_ind*num_vs + v_ind],
+      //                           vs[u_ind*num_vs + v_ind],
+      //                           ws[u_ind*num_vs + v_ind] );
+    }
   }
 
-  float *ls = malloc(num_components*sizeof(float));
-  float *ms = malloc(num_components*sizeof(float));
-  float *ns = malloc(num_components*sizeof(float));
+  //Setup polar coords to sample to whole l,m sky
+  double r_inc = 0.05;
+  double phi_inc = 2.0;
 
-  // float l_inc = 1.4 / num_components;
-  // float m_inc = 1.4 / num_components;
-  float l_inc = 0.014;
-  float m_inc = 0.014;
-  float l, m;
+  int num_phis = 360.0 / phi_inc;
+  int num_rs = 1.0 / r_inc;
 
-  for (size_t component = 0; component < num_components; component++) {
-    l =  -0.7 + l_inc*component;
-    m =  -0.7 + m_inc*component;
-    ls[component] = l;
-    ms[component] = m;
-    ns[component] = sqrt(1 - l*l - m*m);
+  int num_components = num_phis*num_rs;
+
+  printf("Number baselines %d Number Components %d \n",num_baselines,num_components );
+
+  double *ls = malloc(num_components*sizeof(double));
+  double *ms = malloc(num_components*sizeof(double));
+  double *ns = malloc(num_components*sizeof(double));
+
+  double r, phi;
+  double l, m;
+
+  for (int r_ind = 0; r_ind < num_rs; r_ind++) {
+    for (int phi_ind = 0; phi_ind < num_phis; phi_ind++) {
+
+      r = r_inc + r_inc*r_ind;
+      phi = phi_inc*phi_ind*(M_PI / 180.0);
+
+      l = cos(phi)*r;
+      m = sin(phi)*r;
+
+      ls[r_ind*num_phis + phi_ind] = l;
+      ms[r_ind*num_phis + phi_ind] = m;
+      ns[r_ind*num_phis + phi_ind] = sqrt(1 - l*l - m*m);
+
+      // if (l == 1.0) {
+      //   printf("%.6f %.6f %.6f %.1f\n",ls[r_ind*num_phis + phi_ind],
+      //                             ms[r_ind*num_phis + phi_ind],
+      //                             ns[r_ind*num_phis + phi_ind],
+      //                             sqrt(l*l + m*m + ns[r_ind*num_phis + phi_ind]*ns[r_ind*num_phis + phi_ind]));
+      // }
+
+
+    }
   }
-
 
   //Space for outputs
   float _Complex *visis = malloc(num_baselines*num_components*sizeof(float _Complex));
@@ -80,44 +108,27 @@ void test_kern_calc_measurement_equation_ComparedToC(void) {
   test_kern_calc_measurement_equation(num_components, num_baselines,
                                       us, vs, ws, ls, ms, ns, visis);
 
-  //Make some expected value arrays
-  double *expec_res = malloc(num_baselines*num_components*sizeof(double));
-  double *expec_ims = malloc(num_baselines*num_components*sizeof(double));
-
-  float *visi_res = malloc(num_baselines*num_components*sizeof(float));
-  float *visi_ims = malloc(num_baselines*num_components*sizeof(float));
-
   //Fill values with what should have been found
   int ind = 0;
-  float temp;
+  double temp;
   double expec_re, expec_im;
 
   for (size_t baseline = 0; baseline < num_baselines; baseline++) {
     for (size_t comp = 0; comp < num_components; comp++) {
 
-      temp = 2.0*M_PI*( us[baseline]*ls[comp] + vs[baseline]*ms[comp] + ws[baseline]*(ns[comp]-1) );
-      sincos((double)temp, &(expec_im), &(expec_re));
-
-      expec_res[ind] = expec_re;
-      expec_ims[ind] = expec_im;
-
-      visi_res[ind] = creal(visis[ind]);
-      visi_ims[ind] = cimag(visis[ind]);
-
-      float tol = 1e-3; //5e-3
+      //Do the measurement equation using C
+      temp = 2.0*M_PI*( (double)us[baseline]*ls[comp] + (double)vs[baseline]*ms[comp] + (double)ws[baseline]*(ns[comp]-1) );
+      sincos(temp, &(expec_im), &(expec_re));
 
       // printf("%.10f %.10f %.10f %.10f %.10f %.10f\n",us[baseline],ls[comp],vs[baseline],ms[comp],ws[baseline],ns[comp] );
-      // printf("%.7f %.7f %.7f %.7f\n",creal(visis[ind]), expec_re, tol*fabs(expec_re), creal(visis[ind]) - expec_re  );
-      // printf("%.7f %.7f %.7f %.7f\n",cimag(visis[ind]), expec_im, tol*fabs(expec_im), cimag(visis[ind]) - expec_im  );
+      // printf("%.7f %.7f %.7f %.7f\n",creal(visis[ind]), expec_re, tol*abs(expec_re), creal(visis[ind]) - expec_re  );
+      // printf("%.7f %.7f %.7f %.7f\n",cimag(visis[ind]), expec_im, tol*abs(expec_im), cimag(visis[ind]) - expec_im  );
 
-      printf("%.9f %.9f\n", creal(visis[ind]), expec_re); //, tol*fabs(expec_re), creal(visis[ind]) - expec_re  );
-      printf("%.9f %.9f\n", cimag(visis[ind]), expec_im); //, tol*fabs(expec_im), cimag(visis[ind]) - expec_im  );
-
-      float re_tol = tol*fabs(expec_re);
+      float tol = 1e-6;
 
       //Check within some tolerance
-      TEST_ASSERT_FLOAT_WITHIN(re_tol, expec_re, creal(visis[ind]));
-      // TEST_ASSERT_FLOAT_WITHIN(tol*fabs(expec_im), expec_im, cimag(visis[ind]));
+      TEST_ASSERT_FLOAT_WITHIN(tol, (float)expec_re, creal(visis[ind]));
+      TEST_ASSERT_FLOAT_WITHIN(tol, (float)expec_im, cimag(visis[ind]));
 
       ind ++;
     }
@@ -131,10 +142,6 @@ void test_kern_calc_measurement_equation_ComparedToC(void) {
   free(ms);
   free(ns);
   free(visis);
-  free(expec_res);
-  free(expec_ims);
-  free(visi_res);
-  free(visi_ims);
 
 }
 
@@ -151,18 +158,6 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
 
   int all_components = 11;
 
-  // float all_ls[] = {0.0, 0.042573751633895596, 0.06459032446351305, 0.08714498635555, 0.13406958403644692,
-  //                   0.18386579112092066, 0.21007551483722917, 0.2373397982598921, 0.2958758547680685,
-  //                   0.362272565447042, 0.4003681253515569};
-  //
-  // float all_ms[] = {0.0, 0.042573751633895596, 0.06459032446351305, 0.08714498635555, 0.13406958403644692,
-  //                   0.18386579112092066, 0.21007551483722917, 0.2373397982598921, 0.2958758547680685,
-  //                   0.362272565447042, 0.4003681253515569};
-  //
-  // float all_ns[] = {1.0, 0.9981858300655398, 0.9958193510729726, 0.9923766939555675, 0.9818608319271057,
-  //                   0.9656017510914922, 0.9548489703255412, 0.9419870701468823, 0.908248290463863,
-  //                   0.8587882024392495, 0.8242637492968862};
-
   float target_angles[] = {0.0, M_PI/6.0, M_PI/4.0, M_PI/3.0, M_PI/2.0,
                            2*M_PI/3, 3*M_PI/4, 5*M_PI/6, M_PI,
                            7*M_PI/6, 5*M_PI/4};
@@ -174,15 +169,15 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
                        -0.5, -sqrt(2)/2.0, -sqrt(3.0)/2.0, -1.0,
                        -sqrt(3.0)/2.0, -sqrt(2)/2.0};
 
-  float all_ls[] = {0.0000000000000000,0.0425737516338956,0.0645903244635131,0.0871449863555500,
+  double all_ls[] = {0.0000000000000000,0.0425737516338956,0.0645903244635131,0.0871449863555500,
                     0.1340695840364469,0.1838657911209207,0.2100755148372292,0.2373397982598921,
                     0.2958758547680685,0.3622725654470420,0.4003681253515569};
 
-  float all_ms[] = {0.0000000000000000,0.0425737516338956,0.0645903244635131,0.0871449863555500,
+  double all_ms[] = {0.0000000000000000,0.0425737516338956,0.0645903244635131,0.0871449863555500,
                     0.1340695840364469,0.1838657911209207,0.2100755148372292,0.2373397982598921,
                     0.2958758547680685,0.3622725654470420,0.4003681253515569};
 
-  float all_ns[] = {1.0000000000000000,0.9981858300655398,0.9958193510729726,0.9923766939555675,
+  double all_ns[] = {1.0000000000000000,0.9981858300655398,0.9958193510729726,0.9923766939555675,
                     0.9818608319271057,0.9656017510914922,0.9548489703255412,0.9419870701468823,
                     0.9082482904638630,0.8587882024392495,0.8242637492968862};
 
@@ -190,21 +185,21 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
   //of 2*pi to the desired target angle, for each target angle, so we have
   //to loop over each over the l coords
 
-  int num_baselines = 6;
+  int num_baselines = 5;
 
   float *us = malloc(num_baselines*sizeof(float));
   float *vs = malloc(num_baselines*sizeof(float));
   float *ws = malloc(num_baselines*sizeof(float));
 
   // float multipliers[] = {1000.0, 10000.0};
-  float multipliers[] = {0.0, 1.0, 10.0, 100.0, 1000.0, 10000.0};
+  float multipliers[] = {1.0, 10.0, 100.0, 1000.0, 10000.0};
   float uvw;
 
   int num_components = 1;
 
-  float *ls = malloc(sizeof(float));
-  float *ms = malloc(sizeof(float));
-  float *ns = malloc(sizeof(float));
+  double *ls = malloc(sizeof(double));
+  double *ms = malloc(sizeof(double));
+  double *ns = malloc(sizeof(double));
 
   //Space for outputs
   float _Complex *visis = malloc(num_baselines*num_components*sizeof(float _Complex));
@@ -260,25 +255,24 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
                                         us, vs, ws, ls, ms, ns, visis);
 
     //Fill values with what should have been found
-    int ind = 0;
-    float temp;
-    float expec_re, expec_im;
+    // int ind = 0;
+    // float temp;
+    // float expec_re, expec_im;
 
     // printf("=======Expected Real %.7f, Imag %.7f=======================================\n", expec_res[comp], expec_ims[comp]);
 
     for (size_t baseline = 0; baseline < num_baselines; baseline++) {
 
-      temp = 2.0*M_PI*( us[baseline]*ls[0] + vs[baseline]*ms[0] + ws[baseline]*(ns[0]-1) );
-
-      expec_im = sinf(temp);
-      expec_re = cosf(temp);
+      // temp = 2.0*M_PI*( us[baseline]*ls[0] + vs[baseline]*ms[0] + ws[baseline]*(ns[0]-1) );
+      //
+      // expec_im = sinf(temp);
+      // expec_re = cosf(temp);
 
       //For those interested
+      // printf("uvw %.1f \t Real C %.9f CUDA %.9f Diff C %.9f CUDA %.9f\n",us[baseline], expec_res[comp], creal(visis[baseline]), expec_res[comp] - expec_res[comp], creal(visis[baseline]) - expec_res[comp]); //,
+      // printf("uvw %.1f \t Imag C %.9f CUDA %.9f Diff C %.9f CUDA %.9f\n",us[baseline], expec_ims[comp], cimag(visis[baseline]), expec_ims[comp] - expec_ims[comp], cimag(visis[baseline]) - expec_ims[comp]); //,
 
-      // printf("uvw %.1f \t Real C %.9f CUDA %.9f Diff C %.9f CUDA %.9f\n",us[baseline], expec_re, creal(visis[baseline]), expec_re - expec_res[comp], creal(visis[baseline]) - expec_res[comp]); //,
-      // printf("uvw %.1f \t Imag C %.9f CUDA %.9f Diff C %.9f CUDA %.9f\n",us[baseline], expec_im, cimag(visis[baseline]), expec_im - expec_ims[comp], cimag(visis[baseline]) - expec_ims[comp]); //,
-
-      float tol = 5e-2;
+      float tol = 2e-3;
 
       re_diff_sum += fabs(creal(visis[baseline]) - expec_res[comp]);
       im_diff_sum += fabs(cimag(visis[baseline]) - expec_ims[comp]);
@@ -317,10 +311,6 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
   free(ms);
   free(ns);
   free(visis);
-  // free(expec_res);
-  // free(expec_ims);
-  // free(visi_res);
-  // free(visi_ims);
 
 }
 
@@ -328,8 +318,7 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
 int main(void)
 {
     UNITY_BEGIN();
-    // RUN_TEST(test_kern_calc_measurement_equation_ComparedToC);
-
+    RUN_TEST(test_kern_calc_measurement_equation_ComparedToC);
     RUN_TEST(test_kern_calc_measurement_equation_GiveCorrectValues);
 
     return UNITY_END();
