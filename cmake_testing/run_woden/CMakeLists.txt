@@ -37,10 +37,10 @@ add_test(python_test_remove_phase_tracking ${PYTHON_EXECUTABLE}
 add_test(python_test_argument_inputs ${PYTHON_EXECUTABLE}
          ${CMAKE_CURRENT_SOURCE_DIR}/test_argument_inputs.py)
 
-add_test(python_test_read_uvfits_into_pyuvdata ${PYTHON_EXECUTABLE}
-         ${CMAKE_CURRENT_SOURCE_DIR}/test_read_uvfits_into_pyuvdata.py)
-
 ##Set an environment variable for the ctest of this, so we can find a path
 ##to some test files that live in this dir
 set_tests_properties(python_test_argument_inputs PROPERTIES
          ENVIRONMENT CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})
+
+add_test(python_test_read_uvfits_into_pyuvdata ${PYTHON_EXECUTABLE}
+         ${CMAKE_CURRENT_SOURCE_DIR}/test_read_uvfits_into_pyuvdata.py)

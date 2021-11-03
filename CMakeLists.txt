@@ -120,24 +120,49 @@ set(TARGET_GROUP production CACHE STRING "Group to build")
 
 ##If making production code
 if(TARGET_GROUP STREQUAL production)
+    ##Do it for the float code first--------------------------------------------
     ##Generate library from the C
-    add_library(wodenC SHARED ${CSOURCES})
+    add_library(wodenC_float SHARED ${CSOURCES})
     ##Compile C code with all warnings and optimise
-    target_compile_options(wodenC PRIVATE -O3 -Wall)
+    target_compile_options(wodenC_float PRIVATE -O3 -Wall)
 
     ##Generate library for the CUDA code
-    add_library(wodenCUDA SHARED ${CUDASOURCES})
+    add_library(wodenCUDA_float SHARED ${CUDASOURCES})
     ##Compile CUDA code with all warnings
-    target_compile_options(wodenCUDA PRIVATE --compiler-options -Wall)
+    target_compile_options(wodenCUDA_float PRIVATE --compiler-options -Wall)
     ## For CMake versions > 3.18, the arch flag settings are handled by
     ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
     ## replace the CUDA_FLAG lines above with something like
-    set_property(TARGET wodenCUDA PROPERTY CUDA_ARCHITECTURES OFF)
+    set_property(TARGET wodenCUDA_float PROPERTY CUDA_ARCHITECTURES OFF)
 
     ##make the final WODEN executable, linking the libraries
-    add_executable(woden src/woden.c)
-    target_link_libraries(woden PUBLIC wodenC wodenCUDA ${CC_LINKLIBS})
-    target_compile_options(woden PRIVATE -O3 -Wall)
+    add_executable(woden_float src/woden.c)
+    target_link_libraries(woden_float PUBLIC wodenC_float
+                          wodenCUDA_float ${CC_LINKLIBS})
+    target_compile_options(woden_float PRIVATE -O3 -Wall)
+
+    ##Now do it for double by adding compilation switch-------------------------
+    ##Generate library from the C
+    add_library(wodenC_double SHARED ${CSOURCES})
+    ##Compile C code with all warnings and optimise
+    target_compile_options(wodenC_double PRIVATE -O3 -Wall -DDOUBLE_PRECISION)
+
+    ##Generate library for the CUDA code
+    add_library(wodenCUDA_double SHARED ${CUDASOURCES})
+    ##Compile CUDA code with all warnings
+    target_compile_options(wodenCUDA_double PRIVATE -DDOUBLE_PRECISION
+                           --compiler-options -Wall)
+    ## For CMake versions > 3.18, the arch flag settings are handled by
+    ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
+    ## replace the CUDA_FLAG lines above with something like
+    set_property(TARGET wodenCUDA_double PROPERTY CUDA_ARCHITECTURES OFF)
+
+    ##Make the double precision version
+    ##make the final WODEN executable, linking the libraries
+    add_executable(woden_double src/woden.c)
+    target_link_libraries(woden_double PUBLIC wodenC_double
+                          wodenCUDA_double ${CC_LINKLIBS})
+    target_compile_options(woden_double PRIVATE -O3 -Wall -DDOUBLE_PRECISION)
 
     ##Macro to search for a filename in the `src` dir and make a symlink
     ##into the build dir
@@ -192,10 +217,10 @@ if(TARGET_GROUP STREQUAL production)
     install_symlink("uv2ms.py")
     install_symlink("convert_WSClean_list_to_WODEN.py")
 
-    install(TARGETS woden
+    install(TARGETS woden_float woden_double
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-    install(TARGETS wodenCUDA wodenC
+    install(TARGETS wodenCUDA_float wodenC_float wodenCUDA_double wodenC_double
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
     ###===========INSTALLATION OPTIONS==========================================
@@ -204,8 +229,12 @@ if(TARGET_GROUP STREQUAL production)
 ##If making test code
 elseif(TARGET_GROUP STREQUAL test)
 
-      set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/externals/CMake-codecov/cmake" ${CMAKE_MODULE_PATH})
-      find_package(codecov)
+      # set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/externals/CMake-codecov/cmake" ${CMAKE_MODULE_PATH})
+      # find_package(codecov)
+
+      # if(codecov_FOUND)
+      #   message(STATUS "Found codecov")
+      # endif()
 
       include(CTest)
 
@@ -226,7 +255,7 @@ elseif(TARGET_GROUP STREQUAL test)
       )
       add_subdirectory(cmake_testing)
 
-      coverage_evaluate()
+      # coverage_evaluate()
 
 else()
     message(FATAL_ERROR "Given TARGET_GROUP unknown")

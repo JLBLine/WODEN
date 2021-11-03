@@ -14,13 +14,13 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 #define UNITY_INCLUDE_FLOAT
 
 //Different delays settings, which control the pointing of the MWA beam
-float delays1[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+user_precision_t delays1[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
-float delays2[16] = {0.0, 4.0, 8.0, 12.0, 0.0, 4.0, 8.0, 12.0,
+user_precision_t delays2[16] = {0.0, 4.0, 8.0, 12.0, 0.0, 4.0, 8.0, 12.0,
                      0.0, 4.0, 8.0, 12.0, 0.0, 4.0, 8.0, 12.0};
 
-float delays3[16] = {0.0, 2.0, 4.0, 8.0, 2.0, 4.0, 8.0, 12.0,
+user_precision_t delays3[16] = {0.0, 2.0, 4.0, 8.0, 2.0, 4.0, 8.0, 12.0,
                      4.0, 8.0, 12.0, 16.0, 8.0, 12.0, 16.0, 20.0};
 
 
@@ -37,7 +37,7 @@ for a number of delay settings and frequencies by checking a few values in the
 Run RTS_MWAFEEInit, and check that populated arrays match exected values
 (which are defined in test_RTS_MWAFEEInit.h)
 */
-void test_RTS_MWAFEEInit(float freq, float *delays,
+void test_RTS_MWAFEEInit(user_precision_t freq, user_precision_t *delays,
                          char* mwa_fee_hdf5,
                          double *expec_Q1_real, double *expec_Q1_imag,
                          double *expec_Q2_real, double *expec_Q2_imag){
@@ -56,12 +56,12 @@ void test_RTS_MWAFEEInit(float freq, float *delays,
   for (int pol = 0; pol < 2; pol++) {
     for (int index = 0; index < NUM_TEST_INDEXES; index++) {
       test_index = indexes_to_test[index];
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, (float)expec_Q1_real[loop_index],creal(FEE_beam->Q1[pol][test_index]));
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, (float)expec_Q1_imag[loop_index],cimag(FEE_beam->Q1[pol][test_index]));
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, (float)expec_Q2_real[loop_index],creal(FEE_beam->Q2[pol][test_index]));
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, (float)expec_Q2_imag[loop_index],cimag(FEE_beam->Q2[pol][test_index]));
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, (float)expec_M[loop_index],FEE_beam->M[pol][test_index]);
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, (float)expec_N[loop_index],FEE_beam->N[pol][test_index]);
+      TEST_ASSERT_FLOAT_WITHIN(1e-7, (user_precision_t)expec_Q1_real[loop_index],creal(FEE_beam->Q1[pol][test_index]));
+      TEST_ASSERT_FLOAT_WITHIN(1e-7, (user_precision_t)expec_Q1_imag[loop_index],cimag(FEE_beam->Q1[pol][test_index]));
+      TEST_ASSERT_FLOAT_WITHIN(1e-7, (user_precision_t)expec_Q2_real[loop_index],creal(FEE_beam->Q2[pol][test_index]));
+      TEST_ASSERT_FLOAT_WITHIN(1e-7, (user_precision_t)expec_Q2_imag[loop_index],cimag(FEE_beam->Q2[pol][test_index]));
+      TEST_ASSERT_FLOAT_WITHIN(1e-7, (user_precision_t)expec_M[loop_index],FEE_beam->M[pol][test_index]);
+      TEST_ASSERT_FLOAT_WITHIN(1e-7, (user_precision_t)expec_N[loop_index],FEE_beam->N[pol][test_index]);
 
       loop_index += 1;
     }
@@ -123,7 +123,7 @@ void test_RTS_MWAFEEInit(float freq, float *delays,
 Check whether the environment variable for the FEE hdf5 beam exists, don't run
 the test if it's missing
 */
-void check_for_env_and_run_test(float freq, float *delays,
+void check_for_env_and_run_test(user_precision_t freq, user_precision_t *delays,
                                 double *expec_Q1_real, double *expec_Q1_imag,
                                 double *expec_Q2_real, double *expec_Q2_imag) {
 

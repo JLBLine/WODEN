@@ -6,20 +6,21 @@
 
 #include "constants.h"
 #include "woden_struct_defs.h"
+#include "woden_precision_defs.h"
 #include "FEE_primary_beam.h"
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
-void sincosf(float x, float *sin, float *cos);
+// void sincos(user_precision_t x, user_precision_t *sin, user_precision_t *cos);
 
 //External CUDA code we're linking in
 extern void test_source_component_common(int num_components,
-           float _Complex *primay_beam_J00, float _Complex *primay_beam_J01,
-           float _Complex *primay_beam_J10, float _Complex *primay_beam_J11,
-           float *freqs, double *ls, double *ms, double *ns,
-           double *ras, double *decs, float *azs, float *zas,
-           float *sin_para_angs, float *cos_para_angs,
+           user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J01,
+           user_precision_complex_t *primay_beam_J10, user_precision_complex_t *primay_beam_J11,
+           user_precision_t *freqs, double *ls, double *ms, double *ns,
+           double *ras, double *decs, user_precision_t *azs, user_precision_t *zas,
+           user_precision_t *sin_para_angs, user_precision_t *cos_para_angs,
            double *beam_has, double *beam_decs,
            woden_settings_t *woden_settings,
            beam_settings_t *beam_settings);
@@ -38,20 +39,20 @@ Here are a bunch of predefined arrays to be used
 Some are inputs for tests, others are expected outputs
 *******************************************************************************/
 
-float azs[] = {4.71238899, 4.71238899, 4.71238899, 4.71238899, 4.71238899,
+user_precision_t azs[] = {4.71238899, 4.71238899, 4.71238899, 4.71238899, 4.71238899,
                4.71238899, 4.71238899, 4.71238899, 4.71238899, 4.71238899,
                4.71238899, 4.71238899, 0.00000000, 0.00000000, 0.00000000,
                1.57079637, 1.57079637, 1.57079637, 1.57079637, 1.57079637,
                1.57079637, 1.57079637, 1.57079637, 1.57079637, 1.57079637,
                1.57079637, 1.57079637};
-float zas[] = {1.57079631, 1.57079631, 1.57079631, 1.04719766, 1.04719766,
+user_precision_t zas[] = {1.57079631, 1.57079631, 1.57079631, 1.04719766, 1.04719766,
                1.04719766, 0.78539832, 0.78539832, 0.78539832, 0.52359898,
                0.52359898, 0.52359898, 0.00000000, 0.00000000, 0.00000000,
                0.52359875, 0.52359875, 0.52359875, 0.78539820, 0.78539820,
                0.78539820, 1.04719760, 1.04719760, 1.04719760, 1.57079637,
                1.57079637, 1.57079637};
 
-float sin_para_angs[] = {1.00000000, 1.00000000, 1.00000000, 1.00000000,
+user_precision_t sin_para_angs[] = {1.00000000, 1.00000000, 1.00000000, 1.00000000,
                          1.00000000, 1.00000000, 1.00000000, 1.00000000,
                          1.00000000, 1.00000000, 1.00000000, 1.00000000,
                          0.00000000, 0.00000000, 0.00000000, -1.00000000,
@@ -59,7 +60,7 @@ float sin_para_angs[] = {1.00000000, 1.00000000, 1.00000000, 1.00000000,
                          -1.00000000, -1.00000000, -1.00000000, -1.00000000,
                          -1.00000000, -1.00000000, -1.00000000};
 
-float cos_para_angs[] = {0.00000000, 0.00000000, 0.00000000, 0.00000000,
+user_precision_t cos_para_angs[] = {0.00000000, 0.00000000, 0.00000000, 0.00000000,
                          0.00000000, 0.00000000, 0.00000000, 0.00000000,
                          0.00000000, 0.00000000, 0.00000000, 0.00000000,
                          1.00000000, 1.00000000, 1.00000000, 0.00000000,
@@ -67,7 +68,7 @@ float cos_para_angs[] = {0.00000000, 0.00000000, 0.00000000, 0.00000000,
                          0.00000000, 0.00000000, 0.00000000, 0.00000000,
                          0.00000000, 0.00000000, 0.00000000};
 
-float gauss_expected[] = { 0.2806705, 0.3856093, 0.5297833, 0.7278620,
+user_precision_t gauss_expected[] = { 0.2806705, 0.3856093, 0.5297833, 0.7278620,
                            1.0000000, 0.7278622, 0.5297834, 0.3856093,
                            0.2806705, 0.0062056, 0.0221101, 0.0787758,
                            0.2806702, 1.0000000, 0.2806705, 0.0787759,
@@ -83,125 +84,114 @@ float gauss_expected[] = { 0.2806705, 0.3856093, 0.5297833, 0.7278620,
                            0.2806702, 1.0000000, 0.2806705, 0.0787759,
                            0.0221101, 0.0062056};
 
-float analy_expec_J00[] = { 0.0000000, 0.5257682, 0.7312802, 0.8807548, 1.0000000,
-                    0.8807548, 0.7312803, 0.5257683, 0.0000000, 0.0000000,
-                    0.6182293, 0.8162959, 0.9315211, 1.0000000, 0.9315211,
-                    0.8162960, 0.6182294, 0.0000000, 0.0000001, 0.5257682,
-                    0.7312802, 0.8807548, 1.0000000, 0.8807548, 0.7312803,
-                    0.5257683, 0.0000000, 0.0000000, 0.6182293, 0.8162959,
-                    0.9315211, 1.0000000, 0.9315211, 0.8162960, 0.6182294,
-                    0.0000000, 0.0000000, 0.5257682, 0.7312802, 0.8807548,
-                    1.0000000, 0.8807548, 0.7312803, 0.5257683, 0.0000000,
-                    0.0000001, 0.6182293, 0.8162959, 0.9315211, 1.0000000,
-                    0.9315211, 0.8162960, 0.6182294, 0.0000000 };
+user_precision_t analy_expec_J00[] = { 0.00000002, 0.52576818, 0.73128019,
+  0.88075472, 1.00000000, 0.88075483, 0.73128027, 0.52576824, -0.00000005,
+  0.00000002, 0.61822932, 0.81629589, 0.93152102, 1.00000000, 0.93152109,
+  0.81629596, 0.61822938, -0.00000006, 0.00000002, 0.52576818, 0.73128019,
+  0.88075472, 1.00000000, 0.88075483, 0.73128027, 0.52576824, -0.00000005,
+  0.00000002, 0.61822932, 0.81629589, 0.93152102, 1.00000000, 0.93152109,
+  0.81629596, 0.61822938, -0.00000006, 0.00000002, 0.52576818, 0.73128019,
+  0.88075472, 1.00000000, 0.88075483, 0.73128027, 0.52576824, -0.00000005,
+  0.00000002, 0.61822932, 0.81629589, 0.93152102, 1.00000000, 0.93152109,
+  0.81629596, 0.61822938, -0.00000006 };
 
-float analy_expec_J11[] = { 0.0000000, 0.2628839, 0.5170931, 0.7627559, 1.0000000,
-                    0.7627561, 0.5170933, 0.2628841, 0.0000000, 0.0000000,
-                    0.3091144, 0.5772082, 0.8067207, 1.0000000, 0.8067210,
-                    0.5772084, 0.3091146, 0.0000000, 0.0000000, 0.2628839,
-                    0.5170931, 0.7627559, 1.0000000, 0.7627561, 0.5170933,
-                    0.2628841, 0.0000000, 0.0000000, 0.3091144, 0.5772082,
-                    0.8067207, 1.0000000, 0.8067210, 0.5772084, 0.3091146,
-                    0.0000000, 0.0000000, 0.2628839, 0.5170931, 0.7627559,
-                    1.0000000, 0.7627561, 0.5170933, 0.2628841, 0.0000000,
-                    0.0000000, 0.3091144, 0.5772082, 0.8067207, 1.0000000,
-                    0.8067210, 0.5772084, 0.3091146, 0.0000000 };
+user_precision_t analy_expec_J11[] = { 0.00000000, 0.26288404, 0.51709310,
+  0.76275588, 1.00000000, 0.76275607, 0.51709322, 0.26288410, -0.00000000,
+  0.00000000, 0.30911460, 0.57720827, 0.80672078, 1.00000000, 0.80672094,
+  0.57720839, 0.30911466, -0.00000000, 0.00000000, 0.26288404, 0.51709310,
+  0.76275588, 1.00000000, 0.76275607, 0.51709322, 0.26288410, -0.00000000,
+  0.00000000, 0.30911460, 0.57720827, 0.80672078, 1.00000000, 0.80672094,
+  0.57720839, 0.30911466, -0.00000000, 0.00000000, 0.26288404, 0.51709310,
+  0.76275588, 1.00000000, 0.76275607, 0.51709322, 0.26288410, -0.00000000,
+  0.00000000, 0.30911460, 0.57720827, 0.80672078, 1.00000000, 0.80672094,
+  0.57720839, 0.30911466, -0.00000000 };
 
-float fee_expec_J00_re[] = { -0.0000036, -0.0000707, 0.0000195, 0.0000860,
-                  0.0002512, 0.0000867, 0.0000197, -0.0000710, -0.0000035,
-                  -0.0000036, -0.0000707, 0.0000195, 0.0000860, 0.0002512,
-                  0.0000867, 0.0000197, -0.0000710, -0.0000035, -0.0000036,
-                  -0.0000707, 0.0000195, 0.0000860, 0.0002512, 0.0000867,
-                  0.0000197, -0.0000710, -0.0000035, -0.0000036, -0.0000707,
-                  0.0000195, 0.0000860, 0.0002512, 0.0000867, 0.0000197,
-                  -0.0000710, -0.0000035, -0.0000036, -0.0000707, 0.0000195,
-                  0.0000860, 0.0002512, 0.0000867, 0.0000197, -0.0000710,
-                  -0.0000035, -0.0000036, -0.0000707, 0.0000195, 0.0000860,
-                  0.0002512, 0.0000867, 0.0000197, -0.0000710, -0.0000035 };
+user_precision_t fee_expec_J00_re[] = { -0.00000375, -0.00007259, 0.00001992, 0.00008827,
+  0.00025053, 0.00008904, 0.00002027, -0.00007286, -0.00000362, -0.00000375, -0.00007259,
+  0.00001992, 0.00008827, 0.00025053, 0.00008904, 0.00002027, -0.00007286, -0.00000362,
+  -0.00000375, -0.00007259, 0.00001992, 0.00008827, 0.00025053, 0.00008904, 0.00002027,
+  -0.00007286, -0.00000362, -0.00000375, -0.00007259, 0.00001992, 0.00008827,
+  0.00025053, 0.00008904, 0.00002027, -0.00007286, -0.00000362, -0.00000375,
+  -0.00007259, 0.00001992, 0.00008827, 0.00025053, 0.00008904, 0.00002027, -0.00007286,
+  -0.00000362, -0.00000375, -0.00007259, 0.00001992, 0.00008827, 0.00025053,
+  0.00008904, 0.00002027, -0.00007286, -0.00000362 };
 
-float fee_expec_J00_im[] = { 0.0000008, -0.0000328, -0.0000167, 0.0000288,
-                  0.0001243, 0.0000291, -0.0000164, -0.0000324, 0.0000006,
-                  0.0000008, -0.0000328, -0.0000167, 0.0000288, 0.0001243,
-                  0.0000291, -0.0000164, -0.0000324, 0.0000006, 0.0000008,
-                  -0.0000328, -0.0000167, 0.0000288, 0.0001243, 0.0000291,
-                  -0.0000164, -0.0000324, 0.0000006, 0.0000008, -0.0000328,
-                  -0.0000167, 0.0000288, 0.0001243, 0.0000291, -0.0000164,
-                  -0.0000324, 0.0000006, 0.0000008, -0.0000328, -0.0000167,
-                  0.0000288, 0.0001243, 0.0000291, -0.0000164, -0.0000324,
-                  0.0000006, 0.0000008, -0.0000328, -0.0000167, 0.0000288,
-                  0.0001243, 0.0000291, -0.0000164, -0.0000324, 0.0000006 };
+user_precision_t fee_expec_J00_im[] = { 0.00000086, -0.00003368, -0.00001715,
+  0.00002948, 0.00012354, 0.00002986, -0.00001680, -0.00003321, 0.00000057,
+  0.00000086, -0.00003368, -0.00001715, 0.00002948, 0.00012354, 0.00002986,
+  -0.00001680, -0.00003321, 0.00000057, 0.00000086, -0.00003368, -0.00001715,
+  0.00002948, 0.00012354, 0.00002986, -0.00001680, -0.00003321, 0.00000057,
+  0.00000086, -0.00003368, -0.00001715, 0.00002948, 0.00012354, 0.00002986,
+  -0.00001680, -0.00003321, 0.00000057, 0.00000086, -0.00003368, -0.00001715,
+  0.00002948, 0.00012354, 0.00002986, -0.00001680, -0.00003321, 0.00000057,
+  0.00000086, -0.00003368, -0.00001715, 0.00002948, 0.00012354, 0.00002986,
+  -0.00001680, -0.00003321, 0.00000057 };
 
-float fee_expec_J01_re[] = { -0.0029124, 0.0510724, 0.2057645, 0.0950377,
-                   0.9703817, 0.0950371, 0.2057633, 0.0510722, -0.0029126,
-                   -0.0029124, 0.0510724, 0.2057645, 0.0950377, 0.9703817,
-                   0.0950371, 0.2057633, 0.0510722, -0.0029126, -0.0029124,
-                   0.0510724, 0.2057645, 0.0950377, 0.9703817, 0.0950371,
-                   0.2057633, 0.0510722, -0.0029126, -0.0029124, 0.0510724,
-                   0.2057645, 0.0950377, 0.9703817, 0.0950371, 0.2057633,
-                   0.0510722, -0.0029126, -0.0029124, 0.0510724, 0.2057645,
-                   0.0950377, 0.9703817, 0.0950371, 0.2057633, 0.0510722,
-                   -0.0029126, -0.0029124, 0.0510724, 0.2057645, 0.0950377,
-                   0.9703817, 0.0950371, 0.2057633, 0.0510722, -0.0029126 };
+user_precision_t fee_expec_J01_re[] = { -0.00299196, 0.05242207, 0.21119083,
+  0.09754611, 0.97041277, 0.09754551, 0.21118965, 0.05242191, -0.00299213,
+  -0.00299196, 0.05242207, 0.21119083, 0.09754611, 0.97041277, 0.09754551,
+  0.21118965, 0.05242191, -0.00299213, -0.00299196, 0.05242207, 0.21119083,
+  0.09754611, 0.97041277, 0.09754551, 0.21118965, 0.05242191, -0.00299213,
+  -0.00299196, 0.05242207, 0.21119083, 0.09754611, 0.97041277, 0.09754551,
+  0.21118965, 0.05242191, -0.00299213, -0.00299196, 0.05242207, 0.21119083,
+  0.09754611, 0.97041277, 0.09754551, 0.21118965, 0.05242191, -0.00299213,
+  -0.00299196, 0.05242207, 0.21119083, 0.09754611, 0.97041277, 0.09754551,
+  0.21118965, 0.05242191, -0.00299213 };
 
-float fee_expec_J01_im[] = { -0.0000438, 0.0094490, 0.0335542, 0.0188814,
-                  0.2415767, 0.0188819, 0.0335540, 0.0094488, -0.0000439,
-                  -0.0000438, 0.0094490, 0.0335542, 0.0188814, 0.2415767,
-                  0.0188819, 0.0335540, 0.0094488, -0.0000439, -0.0000438,
-                  0.0094490, 0.0335542, 0.0188814, 0.2415767, 0.0188819,
-                  0.0335540, 0.0094488, -0.0000439, -0.0000438, 0.0094490,
-                  0.0335542, 0.0188814, 0.2415767, 0.0188819, 0.0335540,
-                  0.0094488, -0.0000439, -0.0000438, 0.0094490, 0.0335542,
-                  0.0188814, 0.2415767, 0.0188819, 0.0335540, 0.0094488,
-                  -0.0000439, -0.0000438, 0.0094490, 0.0335542, 0.0188814,
-                  0.2415767, 0.0188819, 0.0335540, 0.0094488, -0.0000439 };
+user_precision_t fee_expec_J01_im[] = { -0.00004542, 0.00969854, 0.03443863,
+  0.01937939, 0.24145197, 0.01937985, 0.03443851, 0.00969827, -0.00004550,
+  -0.00004542, 0.00969854, 0.03443863, 0.01937939, 0.24145197, 0.01937985,
+   0.03443851, 0.00969827, -0.00004550, -0.00004542, 0.00969854, 0.03443863,
+   0.01937939, 0.24145197, 0.01937985, 0.03443851, 0.00969827, -0.00004550,
+   -0.00004542, 0.00969854, 0.03443863, 0.01937939, 0.24145197, 0.01937985,
+   0.03443851, 0.00969827, -0.00004550, -0.00004542, 0.00969854, 0.03443863,
+    0.01937939, 0.24145197, 0.01937985, 0.03443851, 0.00969827, -0.00004550,
+    -0.00004542, 0.00969854, 0.03443863, 0.01937939, 0.24145197, 0.01937985,
+     0.03443851, 0.00969827, -0.00004550 };
 
-float fee_expec_J10_re[] = { 0.0016467, -0.0212285, -0.1320742, -0.0687671,
-                -0.9701791, -0.0687667, -0.1320757, -0.0212311, 0.0016451,
-                0.0016467, -0.0212285, -0.1320742, -0.0687671, -0.9701791,
-                -0.0687667, -0.1320757, -0.0212311, 0.0016451, 0.0016467,
-                -0.0212285, -0.1320742, -0.0687671, -0.9701791, -0.0687667,
-                -0.1320757, -0.0212311, 0.0016451, 0.0016467, -0.0212285,
-                -0.1320742, -0.0687671, -0.9701791, -0.0687667, -0.1320757,
-                -0.0212311, 0.0016451, 0.0016467, -0.0212285, -0.1320742,
-                -0.0687671, -0.9701791, -0.0687667, -0.1320757, -0.0212311,
-                0.0016451, 0.0016467, -0.0212285, -0.1320742, -0.0687671,
-                -0.9701791, -0.0687667, -0.1320757, -0.0212311, 0.0016451 };
+user_precision_t fee_expec_J10_re[] = {0.00169129, -0.02178988, -0.13555926,
+  -0.07058298, -0.97021026, -0.07058250, -0.13556084, -0.02179252, 0.00168970,
+  0.00169129, -0.02178988, -0.13555926, -0.07058298, -0.97021026, -0.07058250,
+  -0.13556084, -0.02179252, 0.00168970, 0.00169129, -0.02178988, -0.13555926,
+  -0.07058298, -0.97021026, -0.07058250, -0.13556084, -0.02179252, 0.00168970,
+  0.00169129, -0.02178988, -0.13555926, -0.07058298, -0.97021026, -0.07058250,
+  -0.13556084, -0.02179252, 0.00168970, 0.00169129, -0.02178988, -0.13555926,
+  -0.07058298, -0.97021026, -0.07058250, -0.13556084, -0.02179252, 0.00168970,
+  0.00169129, -0.02178988, -0.13555926, -0.07058298, -0.97021026, -0.07058250,
+  -0.13556084, -0.02179252, 0.00168970  };
 
-float fee_expec_J10_im[] = { 0.0008441, 0.0186237, -0.0165366, -0.0381620,
-                -0.2423892, -0.0381634, -0.0165374, 0.0186229, 0.0008454,
-                0.0008441, 0.0186237, -0.0165366, -0.0381620, -0.2423892,
-                -0.0381634, -0.0165374, 0.0186229, 0.0008454, 0.0008441,
-                0.0186237, -0.0165366, -0.0381620, -0.2423892, -0.0381634,
-                -0.0165374, 0.0186229, 0.0008454, 0.0008441, 0.0186237,
-                -0.0165366, -0.0381620, -0.2423892, -0.0381634, -0.0165374,
-                0.0186229, 0.0008454, 0.0008441, 0.0186237, -0.0165366,
-                -0.0381620, -0.2423892, -0.0381634, -0.0165374, 0.0186229,
-                0.0008454, 0.0008441, 0.0186237, -0.0165366, -0.0381620,
-                -0.2423892, -0.0381634, -0.0165374, 0.0186229, 0.0008454 };
+user_precision_t fee_expec_J10_im[] = { 0.00086604, 0.01911517, -0.01697326,
+  -0.03916865, -0.24226442, -0.03917003, -0.01697404, 0.01911435, 0.00086739,
+  0.00086604, 0.01911517, -0.01697326, -0.03916865, -0.24226442, -0.03917003,
+  -0.01697404, 0.01911435, 0.00086739, 0.00086604, 0.01911517, -0.01697326,
+  -0.03916865, -0.24226442, -0.03917003, -0.01697404, 0.01911435, 0.00086739,
+  0.00086604, 0.01911517, -0.01697326, -0.03916865, -0.24226442, -0.03917003,
+  -0.01697404, 0.01911435, 0.00086739, 0.00086604, 0.01911517, -0.01697326,
+  -0.03916865, -0.24226442, -0.03917003, -0.01697404, 0.01911435, 0.00086739,
+   0.00086604, 0.01911517, -0.01697326, -0.03916865, -0.24226442, -0.03917003,
+   -0.01697404, 0.01911435, 0.00086739 };
 
-float fee_expec_J11_re[] = { -0.0000014, -0.0000088, -0.0000159, -0.0000640,
-                 -0.0002477, -0.0000634, -0.0000149, -0.0000075, -0.0000018,
-                 -0.0000014, -0.0000088, -0.0000159, -0.0000640, -0.0002477,
-                 -0.0000634, -0.0000149, -0.0000075, -0.0000018, -0.0000014,
-                 -0.0000088, -0.0000159, -0.0000640, -0.0002477, -0.0000634,
-                 -0.0000149, -0.0000075, -0.0000018, -0.0000014, -0.0000088,
-                 -0.0000159, -0.0000640, -0.0002477, -0.0000634, -0.0000149,
-                 -0.0000075, -0.0000018, -0.0000014, -0.0000088, -0.0000159,
-                 -0.0000640, -0.0002477, -0.0000634, -0.0000149, -0.0000075,
-                 -0.0000018, -0.0000014, -0.0000088, -0.0000159, -0.0000640,
-                 -0.0002477, -0.0000634, -0.0000149, -0.0000075, -0.0000018 };
+user_precision_t fee_expec_J11_re[] = { -0.00000147, -0.00000903, -0.00001642,
+  -0.00006570, -0.00024691, -0.00006504, -0.00001520, -0.00000766, -0.00000182,
+  -0.00000147, -0.00000903, -0.00001642, -0.00006570, -0.00024691, -0.00006504,
+  -0.00001520, -0.00000766, -0.00000182, -0.00000147, -0.00000903, -0.00001642,
+  -0.00006570, -0.00024691, -0.00006504, -0.00001520, -0.00000766, -0.00000182,
+  -0.00000147, -0.00000903, -0.00001642, -0.00006570, -0.00024691, -0.00006504,
+  -0.00001520, -0.00000766, -0.00000182, -0.00000147, -0.00000903, -0.00001642,
+  -0.00006570, -0.00024691, -0.00006504, -0.00001520, -0.00000766, -0.00000182,
+  -0.00000147, -0.00000903, -0.00001642, -0.00006570, -0.00024691, -0.00006504,
+  -0.00001520, -0.00000766, -0.00000182 };
 
-float fee_expec_J11_im[] = { 0.0000041, 0.0000744, 0.0000205, -0.0001054,
-                -0.0001180, -0.0001041, 0.0000226, 0.0000758, 0.0000037,
-                0.0000041, 0.0000744, 0.0000205, -0.0001054, -0.0001180,
-                -0.0001041, 0.0000226, 0.0000758, 0.0000037, 0.0000041,
-                0.0000744, 0.0000205, -0.0001054, -0.0001180, -0.0001041,
-                0.0000226, 0.0000758, 0.0000037, 0.0000041, 0.0000744,
-                0.0000205, -0.0001054, -0.0001180, -0.0001041, 0.0000226,
-                0.0000758, 0.0000037, 0.0000041, 0.0000744, 0.0000205,
-                -0.0001054, -0.0001180, -0.0001041, 0.0000226, 0.0000758,
-                0.0000037, 0.0000041, 0.0000744, 0.0000205, -0.0001054,
-                -0.0001180, -0.0001041, 0.0000226, 0.0000758, 0.0000037 };
+user_precision_t fee_expec_J11_im[] = { 0.00000424, 0.00007635, 0.00002101,
+  -0.00010817, -0.00011722, -0.00010677, 0.00002321, 0.00007781, 0.00000384,
+  0.00000424, 0.00007635, 0.00002101, -0.00010817, -0.00011722, -0.00010677,
+   0.00002321, 0.00007781, 0.00000384, 0.00000424, 0.00007635, 0.00002101,
+   -0.00010817, -0.00011722, -0.00010677, 0.00002321, 0.00007781, 0.00000384,
+    0.00000424, 0.00007635, 0.00002101, -0.00010817, -0.00011722, -0.00010677,
+    0.00002321, 0.00007781, 0.00000384, 0.00000424, 0.00007635, 0.00002101,
+    -0.00010817, -0.00011722, -0.00010677, 0.00002321, 0.00007781, 0.00000384,
+    0.00000424, 0.00007635, 0.00002101, -0.00010817, -0.00011722, -0.00010677,
+    0.00002321, 0.00007781, 0.00000384 };
 
 /*
 Test that l,m,n and beam values are calculated correctly by `source_component_common`
@@ -215,12 +205,12 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   int num_times = 3;
   int num_freqs = 2;
   int num_components = 9;
-  int num_baselines = 5;
+  // int num_baselines = 5;
 
   int num_beam_values = num_times*num_freqs*num_components;
 
-  float ra0 = 0.0*DD2R;
-  float dec0 = 0.0*DD2R;
+  user_precision_t ra0 = 0.0*DD2R;
+  user_precision_t dec0 = 0.0*DD2R;
 
   double *decs = malloc(num_components*sizeof(double));
   double *zeroes = calloc(num_components, sizeof(double));
@@ -239,8 +229,8 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   woden_settings->num_freqs = num_freqs;
   woden_settings->num_time_steps = num_times;
   woden_settings->ra0 = ra0;
-  woden_settings->sdec0 = sinf(dec0);
-  woden_settings->cdec0 = cosf(dec0);
+  woden_settings->sdec0 = sin(dec0);
+  woden_settings->cdec0 = cos(dec0);
 
   beam_settings_t *beam_settings = malloc(sizeof(beam_settings_t));
   beam_settings->beamtype = beamtype;
@@ -250,10 +240,10 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   Stick into permanent arrays so test doesn't rely on erfa.
   **********************************************************************
 
-  float *zas = malloc(num_components*num_times*sizeof(float));
-  float *azs = malloc(num_components*num_times*sizeof(float));
-  float *sin_para_angs = malloc(num_components*num_times*sizeof(float));
-  float *cos_para_angs = malloc(num_components*num_times*sizeof(float));
+  user_precision_t *zas = malloc(num_components*num_times*sizeof(user_precision_t));
+  user_precision_t *azs = malloc(num_components*num_times*sizeof(user_precision_t));
+  user_precision_t *sin_para_angs = malloc(num_components*num_times*sizeof(user_precision_t));
+  user_precision_t *cos_para_angs = malloc(num_components*num_times*sizeof(user_precision_t));
 
   //Let's say the sources are stationary on the sky to keep the maths in the
   //test to a minimum
@@ -268,22 +258,22 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
       eraHd2ae(ha, (double)decs[component], latitude, &erfa_az, &el );
 
-      azs[component*num_times + time_ind] = (float)erfa_az;
-      zas[component*num_times + time_ind] = M_PI / 2. - (float)el;
+      azs[component*num_times + time_ind] = (user_precision_t)erfa_az;
+      zas[component*num_times + time_ind] = M_PI / 2. - (user_precision_t)el;
 
       para_angle = eraHd2pa(ha, (double)decs[component], latitude);
 
-      sin_para_angs[component*num_times + time_ind] = (float)sin(para_angle);
-      cos_para_angs[component*num_times + time_ind] = (float)cos(para_angle);
+      sin_para_angs[component*num_times + time_ind] = (user_precision_t)sin(para_angle);
+      cos_para_angs[component*num_times + time_ind] = (user_precision_t)cos(para_angle);
 
       printf("%d %.8f %.8f %.8f %.8f\n",component*num_times + time_ind,
-                                 (float)erfa_az, M_PI / 2. - (float)el,
-                                 (float)sin(para_angle), (float)cos(para_angle));
+                                 (user_precision_t)erfa_az, M_PI / 2. - (user_precision_t)el,
+                                 (user_precision_t)sin(para_angle), (user_precision_t)cos(para_angle));
     }
   }
   */
 
-  float freqs[] = {100e+6, 200e+6};
+  user_precision_t freqs[] = {100e+6, 200e+6};
 
   double *beam_has = malloc(num_components*num_times*sizeof(double));
   double *beam_decs = malloc(num_components*num_times*sizeof(double));
@@ -316,17 +306,17 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     //Get a zenith pointing beam for normalisation purposes
     RTS_MWA_FEE_beam_t *FEE_beam_zenith = malloc(sizeof(RTS_MWA_FEE_beam_t));
 
-    float base_middle_freq = 150e+6;
+    user_precision_t base_middle_freq = 150e+6;
 //
-    float float_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    user_precision_t user_precision_t_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     //
     printf("\n\tSetting up the zenith FEE beam...");
-    RTS_MWAFEEInit(mwa_fee_hdf5, base_middle_freq, FEE_beam_zenith, float_zenith_delays);
+    RTS_MWAFEEInit(mwa_fee_hdf5, base_middle_freq, FEE_beam_zenith, user_precision_t_zenith_delays);
     printf(" done.\n");
 
     printf("\tSetting up the FEE beam...");
-    RTS_MWAFEEInit(mwa_fee_hdf5, base_middle_freq, beam_settings->FEE_beam, float_zenith_delays);
+    RTS_MWAFEEInit(mwa_fee_hdf5, base_middle_freq, beam_settings->FEE_beam, user_precision_t_zenith_delays);
     printf(" done.\n");
 
     printf("\tGetting FEE beam normalisation...");
@@ -342,10 +332,10 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   }
 
   //Output arrays
-  float _Complex *primay_beam_J00 = calloc(num_beam_values, sizeof(float _Complex));
-  float _Complex *primay_beam_J01 = calloc(num_beam_values, sizeof(float _Complex));
-  float _Complex *primay_beam_J10 = calloc(num_beam_values, sizeof(float _Complex));
-  float _Complex *primay_beam_J11 = calloc(num_beam_values, sizeof(float _Complex));
+  user_precision_complex_t *primay_beam_J00 = calloc(num_beam_values, sizeof(user_precision_complex_t));
+  user_precision_complex_t *primay_beam_J01 = calloc(num_beam_values, sizeof(user_precision_complex_t));
+  user_precision_complex_t *primay_beam_J10 = calloc(num_beam_values, sizeof(user_precision_complex_t));
+  user_precision_complex_t *primay_beam_J11 = calloc(num_beam_values, sizeof(user_precision_complex_t));
 
   double *ls = malloc(num_components*sizeof(double));
   double *ms = malloc(num_components*sizeof(double));
@@ -362,17 +352,17 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
              woden_settings,
              beam_settings);
 
-  float l_expected[9] = {-1.0, -sqrt(3)/2.0, -sqrt(2)/2.0, -0.5,
+  user_precision_t l_expected[9] = {-1.0, -sqrt(3)/2.0, -sqrt(2)/2.0, -0.5,
                           0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0, 1.0};
-  float n_expected[9] = {0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0,
+  user_precision_t n_expected[9] = {0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0,
                          1.0, sqrt(3)/2.0, sqrt(2)/2.0, 0.5, 0.0};
 
   //Check the l values match expectations
 
   for (int i = 0; i < num_components; i++) {
-    TEST_ASSERT_EQUAL_FLOAT(l_expected[i], (float)ls[i]);
+    TEST_ASSERT_EQUAL_FLOAT((float)l_expected[i], (float)ls[i]);
     TEST_ASSERT_EQUAL_FLOAT(0.0, (float)ms[i]);
-    TEST_ASSERT_FLOAT_WITHIN(2e-7, n_expected[i], ns[i]);
+    TEST_ASSERT_FLOAT_WITHIN(2e-7, (float)n_expected[i], (float)ns[i]);
   }
 
   //Depending on beamtype, check results match expectations
@@ -396,28 +386,45 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     }
   }
   else if (beamtype == ANALY_DIPOLE) {
+
+    float tol;
+
+    #ifdef DOUBLE_PRECISION
+      tol = 1e-7;
+    #else
+      tol = 1e-6;
+    #endif
+
     for (size_t output = 0; output < num_beam_values; output++) {
-          TEST_ASSERT_FLOAT_WITHIN(1e-7, analy_expec_J00[output], creal(primay_beam_J00[output]));
+          TEST_ASSERT_FLOAT_WITHIN(tol, analy_expec_J00[output], creal(primay_beam_J00[output]));
           TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J00[output]));
           TEST_ASSERT_EQUAL_FLOAT(0.0, creal(primay_beam_J01[output]));
           TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J01[output]));
           TEST_ASSERT_EQUAL_FLOAT(0.0, creal(primay_beam_J10[output]));
           TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J10[output]));
-          TEST_ASSERT_FLOAT_WITHIN(1e-7, analy_expec_J11[output], creal(primay_beam_J11[output]));
+          TEST_ASSERT_FLOAT_WITHIN(tol, analy_expec_J11[output], creal(primay_beam_J11[output]));
           TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J11[output]));
     }
   }
   else if (beamtype == FEE_BEAM) {
-    for (size_t output = 0; output < num_beam_values; output++) {
 
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, fee_expec_J00_re[output], creal(primay_beam_J00[output]));
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, fee_expec_J00_im[output], cimag(primay_beam_J00[output]));
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, fee_expec_J01_re[output], creal(primay_beam_J01[output]));
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, fee_expec_J01_im[output], cimag(primay_beam_J01[output]));
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, fee_expec_J10_re[output], creal(primay_beam_J10[output]));
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, fee_expec_J10_im[output], cimag(primay_beam_J10[output]));
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, fee_expec_J11_re[output], creal(primay_beam_J11[output]));
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, fee_expec_J11_im[output], cimag(primay_beam_J11[output]));
+    float tol;
+
+    #ifdef DOUBLE_PRECISION
+      tol = 1e-7;
+    #else
+      tol = 3e-2;
+    #endif
+
+    for (int output = 0; output < num_beam_values; output++) {
+      TEST_ASSERT_FLOAT_WITHIN(tol, fee_expec_J00_re[output], creal(primay_beam_J00[output]));
+      TEST_ASSERT_FLOAT_WITHIN(tol, fee_expec_J00_im[output], cimag(primay_beam_J00[output]));
+      TEST_ASSERT_FLOAT_WITHIN(tol, fee_expec_J01_re[output], creal(primay_beam_J01[output]));
+      TEST_ASSERT_FLOAT_WITHIN(tol, fee_expec_J01_im[output], cimag(primay_beam_J01[output]));
+      TEST_ASSERT_FLOAT_WITHIN(tol, fee_expec_J10_re[output], creal(primay_beam_J10[output]));
+      TEST_ASSERT_FLOAT_WITHIN(tol, fee_expec_J10_im[output], cimag(primay_beam_J10[output]));
+      TEST_ASSERT_FLOAT_WITHIN(tol, fee_expec_J11_re[output], creal(primay_beam_J11[output]));
+      TEST_ASSERT_FLOAT_WITHIN(tol, fee_expec_J11_im[output], cimag(primay_beam_J11[output]));
     }
   }
   else {
@@ -447,11 +454,6 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   free(ls);
   free(ms);
   free(ns);
-
-  // free(zas);
-  // free(azs);
-  // free(sin_para_angs);
-  // free(cos_para_angs);
 
 }
 

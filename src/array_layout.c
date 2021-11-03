@@ -5,6 +5,7 @@
 *  Please see documentation in ../include/array_layout.h or online at
 *  https://woden.readthedocs.io/en/latest/index.html
 *******************************************************************************/
+#include "woden_precision_defs.h"
 #include "woden_struct_defs.h"
 #include "constants.h"
 #include <stdio.h>
@@ -13,11 +14,12 @@
 #include <json.h>
 #include <pal.h>
 
-void RTS_ENH2XYZ_local(float E, float N, float H, float lat,
-                       float *X, float *Y, float *Z) {
-  float sl,cl;
-  sl = sinf(lat);
-  cl = cosf(lat);
+void RTS_ENH2XYZ_local(user_precision_t E, user_precision_t N, user_precision_t H,
+                       user_precision_t lat,
+                       user_precision_t *X, user_precision_t *Y, user_precision_t *Z) {
+  user_precision_t sl, cl;
+  sl = sin(lat);
+  cl = cos(lat);
 
   *X = -N*sl + H*cl;
   *Y = E;
@@ -120,7 +122,7 @@ void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
   lmst2000 = ra2000;
   // ha2000 = 0.0;
 
-  woden_settings->lst_base = (float)lmst2000;
+  woden_settings->lst_base = (user_precision_t)lmst2000;
   //TODO change the ra2000 to lmst
 
   /****************************************************************************
@@ -198,21 +200,31 @@ array_layout_t * calc_XYZ_diffs(woden_settings_t *woden_settings,
 
   //gcc 7.5.0 on my desktop will not perform realloc later in the code
   //unless I do an initial malloc here
-  array_layout->ant_east = malloc(sizeof(float));
-  array_layout->ant_north = malloc(sizeof(float));
-  array_layout->ant_height = malloc(sizeof(float));
+  array_layout->ant_east = malloc(sizeof(user_precision_t));
+  array_layout->ant_north = malloc(sizeof(user_precision_t));
+  array_layout->ant_height = malloc(sizeof(user_precision_t));
 
   while(fgets(line,BUFSIZ,fp) != NULL) {
 
     num_tiles += 1;
 
-    array_layout->ant_east = realloc(array_layout->ant_east,sizeof(float)*num_tiles);
-    array_layout->ant_north = realloc(array_layout->ant_north,sizeof(float)*num_tiles);
-    array_layout->ant_height = realloc(array_layout->ant_height,sizeof(float)*num_tiles);
+    array_layout->ant_east = realloc(array_layout->ant_east,
+                                    sizeof(user_precision_t)*num_tiles);
+    array_layout->ant_north = realloc(array_layout->ant_north,
+                                    sizeof(user_precision_t)*num_tiles);
+    array_layout->ant_height = realloc(array_layout->ant_height,
+                                    sizeof(user_precision_t)*num_tiles);
 
-    sscanf( line, "%f %f %f", &array_layout->ant_east[num_tiles-1],
-                              &array_layout->ant_north[num_tiles-1],
-                              &array_layout->ant_height[num_tiles-1] );
+    //If wanting double precision, need to read in with double precision
+    #ifdef DOUBLE_PRECISION
+      sscanf( line, "%lf %lf %lf", &array_layout->ant_east[num_tiles-1],
+                                   &array_layout->ant_north[num_tiles-1],
+                                   &array_layout->ant_height[num_tiles-1] );
+    #else
+      sscanf( line, "%f %f %f", &array_layout->ant_east[num_tiles-1],
+                                &array_layout->ant_north[num_tiles-1],
+                                &array_layout->ant_height[num_tiles-1] );
+    #endif
   }
 
   array_layout->num_tiles = num_tiles;
@@ -223,24 +235,26 @@ array_layout_t * calc_XYZ_diffs(woden_settings_t *woden_settings,
   array_layout->num_baselines = (array_layout->num_tiles*(array_layout->num_tiles-1)) / 2;
   woden_settings->num_baselines = array_layout->num_baselines;
 
-  array_layout->ant_X = malloc( array_layout->num_tiles * sizeof(float) );
-  array_layout->ant_Y = malloc( array_layout->num_tiles * sizeof(float) );
-  array_layout->ant_Z = malloc( array_layout->num_tiles * sizeof(float) );
+  array_layout->ant_X = malloc( array_layout->num_tiles * sizeof(user_precision_t) );
+  array_layout->ant_Y = malloc( array_layout->num_tiles * sizeof(user_precision_t) );
+  array_layout->ant_Z = malloc( array_layout->num_tiles * sizeof(user_precision_t) );
 
   for (int i = 0; i < array_layout->num_tiles; i++) {
     //Convert to local X,Y,Z
-    RTS_ENH2XYZ_local(array_layout->ant_east[i], array_layout->ant_north[i], array_layout->ant_height[i],
-                  (float)array_layout->latitude,
-                  &(array_layout->ant_X[i]), &(array_layout->ant_Y[i]), &(array_layout->ant_Z[i]));
+    RTS_ENH2XYZ_local(array_layout->ant_east[i], array_layout->ant_north[i],
+                      array_layout->ant_height[i],
+                      (user_precision_t)array_layout->latitude,
+                      &(array_layout->ant_X[i]), &(array_layout->ant_Y[i]),
+                      &(array_layout->ant_Z[i]));
   }
 
   if (do_precession == 1) {
     RTS_PrecessXYZtoJ2000(array_layout, woden_settings);
   }
 
-  array_layout->X_diff_metres = malloc( array_layout->num_baselines * sizeof(float) );
-  array_layout->Y_diff_metres = malloc( array_layout->num_baselines * sizeof(float) );
-  array_layout->Z_diff_metres = malloc( array_layout->num_baselines * sizeof(float) );
+  array_layout->X_diff_metres = malloc( array_layout->num_baselines * sizeof(user_precision_t) );
+  array_layout->Y_diff_metres = malloc( array_layout->num_baselines * sizeof(user_precision_t) );
+  array_layout->Z_diff_metres = malloc( array_layout->num_baselines * sizeof(user_precision_t) );
 
   int baseline_ind = 0;
   for (int ant1 = 0; ant1 < array_layout->num_tiles - 1; ant1++) {

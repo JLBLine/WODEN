@@ -33,7 +33,8 @@ herr_t RTS_op_func (hid_t loc_id, const char *name, const H5L_info_t *info,
     return status;
 }
 
-int RTS_MWAFEEInit(const char *h5filename, float freq_Hz, RTS_MWA_FEE_beam_t *pb, float *FEE_delays){
+int RTS_MWAFEEInit(const char *h5filename, user_precision_t freq_Hz,
+                   RTS_MWA_FEE_beam_t *pb, user_precision_t *FEE_delays){
 
   hid_t       file, group;         /* handles */
   herr_t          status;
@@ -71,14 +72,14 @@ int RTS_MWAFEEInit(const char *h5filename, float freq_Hz, RTS_MWA_FEE_beam_t *pb
 
   /* Set complex excitation voltages */
 
-  float lam;
-  float _Complex Vcplx[N_COPOL][NUM_DIPOLES];
+  user_precision_t lam;
+  user_precision_complex_t Vcplx[N_COPOL][NUM_DIPOLES];
 
   lam = VELC/(od.freq_out); // Should this be freq_out??
 
   for (int pol=0; pol < N_COPOL; pol++){
     for (int i=0; i<NUM_DIPOLES; i++) {
-      float phase;
+      user_precision_t phase;
       phase = (-2.0*M_PI*DQ/lam)*FEE_delays[i];
 
       //TODO implement dipole flagging and/or dipole amplitudes here
@@ -297,10 +298,10 @@ int RTS_MWAFEEInit(const char *h5filename, float freq_Hz, RTS_MWA_FEE_beam_t *pb
   H5Fclose(file);
   H5Sclose(dataspace);
 
-  pb->m_range = malloc((2*pb->nmax + 1)*sizeof(float) );
+  pb->m_range = malloc((2*pb->nmax + 1)*sizeof(user_precision_t) );
 
   for (int m = 0; m < 2*pb->nmax + 1; m++) {
-    pb->m_range[m] = -(float)pb->nmax + (float)m;
+    pb->m_range[m] = -(user_precision_t)pb->nmax + (user_precision_t)m;
   }
 
   // printf("AT END OF C BEAM STUFF\n");

@@ -5,6 +5,7 @@
 
 #include <math.h>
 #include <stdint.h>
+#include "woden_precision_defs.h"
 
 /**
 @brief Use the given baseline lengths in local `X,Y,Z` coords, and a given
@@ -30,10 +31,13 @@ these latter arrays do not change with time.
 @param[in,out] v Output `v` coord (metres)
 @param[in,out] w Output `w` coord (metres)
 */
-__device__ void calc_uvw(float *d_X_diff, float *d_Y_diff, float *d_Z_diff,
-           float sdec0, float cdec0, float sha0, float cha0,
-           int iBaseline, int num_baselines,
-           float * u, float * v, float * w);
+__device__ void calc_uvw(user_precision_t *d_X_diff, user_precision_t *d_Y_diff,
+                         user_precision_t *d_Z_diff,
+                         user_precision_t sdec0, user_precision_t cdec0,
+                         user_precision_t sha0, user_precision_t cha0,
+                         int iBaseline, int num_baselines,
+                         user_precision_t * u, user_precision_t * v,
+                         user_precision_t * w);
 
 /**
 @brief Calculate the \f$u,v,w\f$ in metres and in wavelengths for multiple
@@ -74,11 +78,12 @@ baselines, frequencies, and time steps
 @param[in] num_visis Total number of `u,v,w` coords to be calculated
 @param[in] num_baselines Number of baselines for a single time step
 */
-__global__ void kern_calc_uvw(float *d_X_diff, float *d_Y_diff, float *d_Z_diff,
-           float *d_u_metres, float *d_v_metres, float *d_w_metres,
-           float *d_u, float *d_v, float *d_w, float *d_wavelengths,
-           float sdec0, float cdec0,
-           float *d_cha0s, float *d_sha0s,
+__global__ void kern_calc_uvw(user_precision_t *d_X_diff, user_precision_t *d_Y_diff,
+           user_precision_t *d_Z_diff, user_precision_t *d_u_metres,
+           user_precision_t *d_v_metres, user_precision_t *d_w_metres,
+           user_precision_t *d_u, user_precision_t *d_v, user_precision_t *d_w, user_precision_t *d_wavelengths,
+           user_precision_t sdec0, user_precision_t cdec0,
+           user_precision_t *d_cha0s, user_precision_t *d_sha0s,
            int num_visis, int num_baselines);
 
 
@@ -128,9 +133,11 @@ steps (metres)
 @param[in] num_shapes Number of SHAPELET COMPONENTs
 
 */
-__global__ void kern_calc_uvw_shapelet(float *d_X_diff, float *d_Y_diff, float *d_Z_diff,
-      float *d_u_shapes, float *d_v_shapes, float *d_w_shapes, float *d_wavelengths,
-      float *d_lsts, double *d_ras, double *d_decs,
+__global__ void kern_calc_uvw_shapelet(user_precision_t *d_X_diff,
+      user_precision_t *d_Y_diff, user_precision_t *d_Z_diff,
+      user_precision_t *d_u_shapes, user_precision_t *d_v_shapes,
+      user_precision_t *d_w_shapes, user_precision_t *d_wavelengths,
+      user_precision_t *d_lsts, double *d_ras, double *d_decs,
       const int num_baselines, const int num_visis,
       const int num_shapes);
 
@@ -150,9 +157,10 @@ and phase centre
 @param[in] n Output \f$n\f$ coodinate
 
 */
-__device__ void calc_lmn(float ra0, float sdec0, float cdec0,
-           double ra, double dec,
-           double * l, double * m, double * n);
+__device__ void calc_lmn(user_precision_t ra0, user_precision_t sdec0,
+                         user_precision_t cdec0,
+                         double ra, double dec,
+                         double * l, double * m, double * n);
 
 /**
 @brief Calculate interferometric \f$l,m,n\f$ image coords for a set of
@@ -172,7 +180,8 @@ RA,Dec coodinates, with a single RA/Dec phase centre.
  @param[in,out] d_n Output \f$n\f$ coodinates
  @param[in] num_components Number of RA,Dec coords
 */
-__global__ void kern_calc_lmn(float ra0, float sdec0, float cdec0,
-           double *d_ras, double *d_decs,
-           double *d_l, double *d_m, double *d_n,
-           int num_components);
+__global__ void kern_calc_lmn(user_precision_t ra0, user_precision_t sdec0,
+                              user_precision_t cdec0,
+                              double *d_ras, double *d_decs,
+                              double *d_l, double *d_m, double *d_n,
+                              int num_components);

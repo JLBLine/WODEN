@@ -31,7 +31,7 @@ void test_create_chunked_sky_models(int chunking_size,
                                             num_coeff_per_shape, num_time_steps);
 
   //Set some dummy baseline, frequency simulation settings
-  int num_visis = num_baselines * num_freqs * num_time_steps;
+  // int num_visis = num_baselines * num_freqs * num_time_steps;
 
   woden_settings_t *woden_settings = malloc(sizeof(woden_settings_t));
   woden_settings->num_freqs = num_freqs;
@@ -41,12 +41,12 @@ void test_create_chunked_sky_models(int chunking_size,
 
   // //
   int num_comps_to_chunk = cropped_src->n_points + cropped_src->n_gauss;
-  int comps_per_chunk = (int)floorf((float)chunking_size / (float)(num_baselines * num_freqs * num_time_steps));
-  int num_comp_chunks = (int)ceilf((float)num_comps_to_chunk / (float)comps_per_chunk);
+  int comps_per_chunk = (int)floorf((user_precision_t)chunking_size / (user_precision_t)(num_baselines * num_freqs * num_time_steps));
+  int num_comp_chunks = (int)ceilf((user_precision_t)num_comps_to_chunk / (user_precision_t)comps_per_chunk);
 
   int num_coeffs_to_chunk = cropped_src->n_shape_coeffs;
-  int coeffs_per_chunk = (int)floorf((float)chunking_size / (float)(num_baselines * num_freqs * num_time_steps));
-  int num_coeff_chunks = (int)ceilf((float)num_coeffs_to_chunk / (float)coeffs_per_chunk);
+  int coeffs_per_chunk = (int)floorf((user_precision_t)chunking_size / (user_precision_t)(num_baselines * num_freqs * num_time_steps));
+  int num_coeff_chunks = (int)ceilf((user_precision_t)num_coeffs_to_chunk / (user_precision_t)coeffs_per_chunk);
   //
 
   //Function to be testsd

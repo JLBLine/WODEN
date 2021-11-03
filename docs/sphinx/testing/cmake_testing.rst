@@ -1,7 +1,15 @@
 Testing via ``ctest``
 ======================
 
-This is totally optional, but you can run the unit / integration tests I use for developing ``WODEN`` to check your system / the code runs as expected. The tests are compiled using the same ``cmake`` script as the main code.
+This is totally optional, but you can run the unit / integration tests I use for
+developing ``WODEN`` to check your system / the code runs as expected. The tests
+are compiled using the same ``cmake`` script as the main code.
+
+ALL tests are compiled in both FLOAT and DOUBLE precision, meaning the same
+test code is used to test the two different precision versions, with the compiler
+dropping in the necessary precision. Unless explicitly noted in the details
+in :ref:`What do the tests actually do?`, the tests require the same level
+of accuracy from the FLOAT and DOUBLE precision versions.
 
 Dependencies
 -------------
@@ -53,22 +61,23 @@ You should see something like the following if successful::
 
   $ ctest
   Test project /home/jline/software/WODEN/build
-        Start  1: C_test_RTS_ENH2XYZ_local
-   1/49 Test  #1: C_test_RTS_ENH2XYZ_local ......................   Passed    0.00 sec
-        Start  2: C_test_calc_XYZ_diffs
-   2/49 Test  #2: C_test_calc_XYZ_diffs .........................   Passed    0.00 sec
-        Start  3: C_test_RTS_PrecessXYZtoJ2000
-   3/49 Test  #3: C_test_RTS_PrecessXYZtoJ2000 ..................   Passed    0.00 sec
-        Start  4: C_test_null_comps
-   4/49 Test  #4: C_test_null_comps .............................   Passed    0.00 sec
-        Start  5: C_test_fill_chunk_src_with_pointgauss
-   5/49 Test  #5: C_test_fill_chunk_src_with_pointgauss .........   Passed    0.03 sec
-        Start  6: C_test_fill_chunk_src_with_shapelets
-   6/49 Test  #6: C_test_fill_chunk_src_with_shapelets ..........   Passed    0.01 sec
-        Start  7: C_test_create_chunked_sky_models
-   7/49 Test  #7: C_test_create_chunked_sky_models ..............   Passed    0.27 sec
-        Start  8: C_test_read_source_catalogue
-   8/49 Test  #8: C_test_read_source_catalogue ..................   Passed    0.00 sec
+         Start  1: C_test_RTS_ENH2XYZ_local_float
+    1/87 Test  #1: C_test_RTS_ENH2XYZ_local_float .......................   Passed    0.00 sec
+         Start  2: C_test_calc_XYZ_diffs_float
+    2/87 Test  #2: C_test_calc_XYZ_diffs_float ..........................   Passed    0.00 sec
+         Start  3: C_test_RTS_PrecessXYZtoJ2000_float
+    3/87 Test  #3: C_test_RTS_PrecessXYZtoJ2000_float ...................   Passed    0.00 sec
+         Start  4: C_test_RTS_ENH2XYZ_local_double
+    4/87 Test  #4: C_test_RTS_ENH2XYZ_local_double ......................   Passed    0.00 sec
+         Start  5: C_test_calc_XYZ_diffs_double
+    5/87 Test  #5: C_test_calc_XYZ_diffs_double .........................   Passed    0.00 sec
+         Start  6: C_test_RTS_PrecessXYZtoJ2000_double
+    6/87 Test  #6: C_test_RTS_PrecessXYZtoJ2000_double ..................   Passed    0.00 sec
+         Start  7: C_test_null_comps_float
+    7/87 Test  #7: C_test_null_comps_float ..............................   Passed    0.00 sec
+         Start  8: C_test_fill_chunk_src_with_pointgauss_float
+    8/87 Test  #8: C_test_fill_chunk_src_with_pointgauss_float ..........   Passed    0.03 sec
+         Start  9: C_test_fill_chunk_src_with_shapelets_float
    ...etc etc
 
 .. note:: To test MWA Fully Embedded Element beam code, you must have the environment variable::

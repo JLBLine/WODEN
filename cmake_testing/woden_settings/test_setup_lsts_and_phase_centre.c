@@ -18,9 +18,9 @@ simulation works as expected
 void check_setup_lsts_and_phase_centre(woden_settings_t *woden_settings) {
 
   //Function to be tested
-  float *lsts = setup_lsts_and_phase_centre(woden_settings);
+  user_precision_t *lsts = setup_lsts_and_phase_centre(woden_settings);
 
-  float *expected_lsts = malloc(woden_settings->num_time_steps*sizeof(float));
+  user_precision_t *expected_lsts = malloc(woden_settings->num_time_steps*sizeof(user_precision_t));
 
   for (int time_step = 0; time_step < woden_settings->num_time_steps ; time_step++) {
     expected_lsts[time_step] = woden_settings->lst_base + (time_step + 0.5)*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
@@ -29,8 +29,8 @@ void check_setup_lsts_and_phase_centre(woden_settings_t *woden_settings) {
   int num_visis = woden_settings->num_baselines*woden_settings->num_time_steps*woden_settings->num_freqs;
   TEST_ASSERT_EQUAL_INT(num_visis, woden_settings->num_visis);
 
-  TEST_ASSERT_EQUAL_FLOAT(sinf(woden_settings->dec0), woden_settings->sdec0);
-  TEST_ASSERT_EQUAL_FLOAT(cosf(woden_settings->dec0), woden_settings->cdec0);
+  TEST_ASSERT_EQUAL_FLOAT(sin(woden_settings->dec0), woden_settings->sdec0);
+  TEST_ASSERT_EQUAL_FLOAT(cos(woden_settings->dec0), woden_settings->cdec0);
 
   TEST_ASSERT_EQUAL_FLOAT_ARRAY(expected_lsts, lsts, woden_settings->num_time_steps);
 

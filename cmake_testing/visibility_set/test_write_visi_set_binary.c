@@ -23,22 +23,22 @@ void test_write_visi_set_binary() {
   int num_visis = 3;
 
   //Do so mallocing
-  visibility_set->us_metres = malloc( num_visis * sizeof(float) );
-  visibility_set->vs_metres = malloc( num_visis * sizeof(float) );
-  visibility_set->ws_metres = malloc( num_visis * sizeof(float) );
+  visibility_set->us_metres = malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->vs_metres = malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->ws_metres = malloc( num_visis * sizeof(user_precision_t) );
 
-  visibility_set->sum_visi_XX_real = malloc( num_visis * sizeof(float) );
-  visibility_set->sum_visi_XX_imag = malloc( num_visis * sizeof(float) );
-  visibility_set->sum_visi_XY_real = malloc( num_visis * sizeof(float) );
-  visibility_set->sum_visi_XY_imag = malloc( num_visis * sizeof(float) );
-  visibility_set->sum_visi_YX_real = malloc( num_visis * sizeof(float) );
-  visibility_set->sum_visi_YX_imag = malloc( num_visis * sizeof(float) );
-  visibility_set->sum_visi_YY_real = malloc( num_visis * sizeof(float) );
-  visibility_set->sum_visi_YY_imag = malloc( num_visis * sizeof(float) );
+  visibility_set->sum_visi_XX_real = malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->sum_visi_XX_imag = malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->sum_visi_XY_real = malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->sum_visi_XY_imag = malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->sum_visi_YX_real = malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->sum_visi_YX_imag = malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->sum_visi_YY_real = malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->sum_visi_YY_imag = malloc( num_visis * sizeof(user_precision_t) );
 
 
   //make some outputs
-  for (size_t visi = 0; visi < num_visis; visi++) {
+  for (int visi = 0; visi < num_visis; visi++) {
     visibility_set->us_metres[visi] = visi*11 + 0;
     visibility_set->vs_metres[visi] = visi*11 + 1;
     visibility_set->ws_metres[visi] = visi*11 + 2;
@@ -55,11 +55,11 @@ void test_write_visi_set_binary() {
 
   //Generate expected output array
   int num_outputs = 33;
-  float *expec_outputs = malloc(num_outputs*sizeof(float));
-  int expec_ind;
+  user_precision_t *expec_outputs = malloc(num_outputs*sizeof(user_precision_t));
+  int expec_ind = 0;
 
-  for (size_t out_ind = 0; out_ind < 11; out_ind++) {
-    for (size_t visi = 0; visi < num_visis; visi++) {
+  for (int out_ind = 0; out_ind < 11; out_ind++) {
+    for (int visi = 0; visi < num_visis; visi++) {
       expec_outputs[expec_ind] = visi*11 + out_ind;
       expec_ind ++;
     }
@@ -73,17 +73,20 @@ void test_write_visi_set_binary() {
 
   //Reading in things
   FILE *fp=NULL;
-  char line[BUFSIZ];
+  // char line[BUFSIZ];
   fp = fopen("output_visi_band05.dat","rb");
 
   //Assert that we wrote something and so managed to read it in
   TEST_ASSERT_NOT_NULL(fp);
 
-  //Decode the floats and see if it matches expectations
-  float output;
-  for (size_t out_ind = 0; out_ind < num_outputs; out_ind++) {
-    fread((void*)(&output), sizeof(float), 1, fp);
-    TEST_ASSERT_EQUAL_FLOAT(output, expec_outputs[out_ind]);
+  int result = 0;
+
+  //Decode the user_precision_ts and see if it matches expectations
+  user_precision_t output;
+  for (int out_ind = 0; out_ind < num_outputs; out_ind++) {
+    result = fread((void*)(&output), sizeof(user_precision_t), 1, fp);
+    TEST_ASSERT_EQUAL_INT(1, result);
+    TEST_ASSERT_EQUAL_FLOAT((float)output, (float)expec_outputs[out_ind]);
   }
 }
 

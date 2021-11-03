@@ -61,7 +61,7 @@ void test_read_json_settings_MWAFEE(void) {
   TEST_ASSERT_EQUAL_INT(1, woden_settings->do_precession);
 
   //Check MWA FEE beam specific values
-  float expect_delays[] = {0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3};
+  user_precision_t expect_delays[] = {0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3};
   TEST_ASSERT_EQUAL_FLOAT_ARRAY(expect_delays, woden_settings->FEE_ideal_delays, 16);
   TEST_ASSERT_EQUAL_INT(FEE_BEAM, woden_settings->beamtype);
   TEST_ASSERT_EQUAL_STRING("/home/jline/software/useful/mwa_full_embedded_element_pattern.h5",

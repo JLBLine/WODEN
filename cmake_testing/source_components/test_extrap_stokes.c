@@ -4,17 +4,18 @@
 #include <complex.h>
 
 #include "constants.h"
+#include "woden_precision_defs.h"
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
 //External CUDA code we're linking in
 extern void test_kern_extrap_stokes(int num_extrap_freqs, int num_components,
-           float *extrap_wavelengths, float *ref_freqs, float *SIs,
-           float *ref_stokesI, float *ref_stokesQ,
-           float *ref_stokesU, float *ref_stokesV,
-           float *flux_I, float *flux_Q,
-           float *flux_U, float *flux_V);
+           user_precision_t *extrap_wavelengths, user_precision_t *ref_freqs, user_precision_t *SIs,
+           user_precision_t *ref_stokesI, user_precision_t *ref_stokesQ,
+           user_precision_t *ref_stokesU, user_precision_t *ref_stokesV,
+           user_precision_t *flux_I, user_precision_t *flux_Q,
+           user_precision_t *flux_U, user_precision_t *flux_V);
 
 #define UNITY_INCLUDE_FLOAT
 
@@ -27,21 +28,21 @@ void test_kern_extrap_stokes_GivesCorrectValues(void) {
   int num_extrap_freqs = 5;
   int num_components = 5;
 
-  float extrap_wavelengths[5] = {VELC/50e+6, VELC/100e+6, VELC/150e+6,
+  user_precision_t extrap_wavelengths[5] = {VELC/50e+6, VELC/100e+6, VELC/150e+6,
                                  VELC/200e+6, VELC/250e+6};
-  float ref_freqs[5] = {50e+6, 100e+6, 150e+6, 200e+6, 250e+6};
-  float SIs[5] = {0.0, -0.8, 0.5, -0.5, 1.0};
+  user_precision_t ref_freqs[5] = {50e+6, 100e+6, 150e+6, 200e+6, 250e+6};
+  user_precision_t SIs[5] = {0.0, -0.8, 0.5, -0.5, 1.0};
 
-  float ref_stokesI[5] = {1.0, 1.0, 1.0, 1.0, 1.0};
-  float ref_stokesQ[5] = {0.0, 0.0, 1.0, 0.0, 0.0};
-  float ref_stokesU[5] = {0.0, 0.0, 0.0, 1.0, 0.0};
-  float ref_stokesV[5] = {0.0, 0.0, 0.0, 0.0, 1.0};
+  user_precision_t ref_stokesI[5] = {1.0, 1.0, 1.0, 1.0, 1.0};
+  user_precision_t ref_stokesQ[5] = {0.0, 0.0, 1.0, 0.0, 0.0};
+  user_precision_t ref_stokesU[5] = {0.0, 0.0, 0.0, 1.0, 0.0};
+  user_precision_t ref_stokesV[5] = {0.0, 0.0, 0.0, 0.0, 1.0};
 
   //Space for outputs
-  float *flux_I = malloc(num_extrap_freqs*num_components*sizeof(float));
-  float *flux_Q = malloc(num_extrap_freqs*num_components*sizeof(float));
-  float *flux_U = malloc(num_extrap_freqs*num_components*sizeof(float));
-  float *flux_V = malloc(num_extrap_freqs*num_components*sizeof(float));
+  user_precision_t *flux_I = malloc(num_extrap_freqs*num_components*sizeof(user_precision_t));
+  user_precision_t *flux_Q = malloc(num_extrap_freqs*num_components*sizeof(user_precision_t));
+  user_precision_t *flux_U = malloc(num_extrap_freqs*num_components*sizeof(user_precision_t));
+  user_precision_t *flux_V = malloc(num_extrap_freqs*num_components*sizeof(user_precision_t));
 
   //Run the CUDA code
   test_kern_extrap_stokes(num_extrap_freqs, num_components,
@@ -52,18 +53,18 @@ void test_kern_extrap_stokes_GivesCorrectValues(void) {
                            flux_U, flux_V);
 
   //Make some expected value arrays
-  float *expec_flux_I = malloc(num_extrap_freqs*num_components*sizeof(float));
-  float *expec_flux_Q = malloc(num_extrap_freqs*num_components*sizeof(float));
-  float *expec_flux_U = malloc(num_extrap_freqs*num_components*sizeof(float));
-  float *expec_flux_V = malloc(num_extrap_freqs*num_components*sizeof(float));
+  user_precision_t *expec_flux_I = malloc(num_extrap_freqs*num_components*sizeof(user_precision_t));
+  user_precision_t *expec_flux_Q = malloc(num_extrap_freqs*num_components*sizeof(user_precision_t));
+  user_precision_t *expec_flux_U = malloc(num_extrap_freqs*num_components*sizeof(user_precision_t));
+  user_precision_t *expec_flux_V = malloc(num_extrap_freqs*num_components*sizeof(user_precision_t));
 
   //Fill values with what should have been found
   int ind = 0;
-  for (size_t comp = 0; comp < num_components; comp++) {
-    for (size_t extrap = 0; extrap < num_extrap_freqs; extrap++) {
+  for (int comp = 0; comp < num_components; comp++) {
+    for (int extrap = 0; extrap < num_extrap_freqs; extrap++) {
 
-      float extrap_freq = VELC / extrap_wavelengths[extrap];
-      float flux_ratio = powf(extrap_freq / ref_freqs[comp], SIs[comp]);
+      user_precision_t extrap_freq = VELC / extrap_wavelengths[extrap];
+      user_precision_t flux_ratio = pow(extrap_freq / ref_freqs[comp], SIs[comp]);
 
       expec_flux_I[ind] = ref_stokesI[comp] * flux_ratio;
       expec_flux_Q[ind] = ref_stokesQ[comp] * flux_ratio;

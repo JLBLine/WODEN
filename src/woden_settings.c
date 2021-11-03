@@ -8,6 +8,8 @@
 *******************************************************************************/
 #include "woden_settings.h"
 #include "constants.h"
+#include "woden_precision_defs.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -104,19 +106,19 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
   printf("Latitude of array is set to %.1f\n", woden_settings->latitude/DD2R);
 
   woden_settings->lst_base = json_object_get_double(lst_base)*DD2R;
-  woden_settings->ra0 = (float)json_object_get_double(ra0)*DD2R;
-  woden_settings->dec0 = (float)json_object_get_double(dec0)*DD2R;
+  woden_settings->ra0 = (user_precision_t)json_object_get_double(ra0)*DD2R;
+  woden_settings->dec0 = (user_precision_t)json_object_get_double(dec0)*DD2R;
   woden_settings->num_freqs = json_object_get_int(num_freqs);
-  woden_settings->frequency_resolution = (float)json_object_get_double(frequency_resolution);
+  woden_settings->frequency_resolution = (user_precision_t)json_object_get_double(frequency_resolution);
 
-  woden_settings->base_low_freq = (float)json_object_get_double(base_low_freq);
-  woden_settings->coarse_band_width = (float)json_object_get_double(coarse_band_width);
+  woden_settings->base_low_freq = (user_precision_t)json_object_get_double(base_low_freq);
+  woden_settings->coarse_band_width = (user_precision_t)json_object_get_double(coarse_band_width);
 
   woden_settings->num_time_steps = json_object_get_int(num_time_steps);
-  woden_settings->time_res = (float)json_object_get_double(time_res);
+  woden_settings->time_res = (user_precision_t)json_object_get_double(time_res);
   woden_settings->cat_filename = json_object_get_string(cat_filename);
   woden_settings->hdf5_beam_path = json_object_get_string(hdf5_beam_path);
-  woden_settings->jd_date = (float)json_object_get_double(jd_date);
+  woden_settings->jd_date = (user_precision_t)json_object_get_double(jd_date);
 
   //Boolean setting whether to crop sources by SOURCE or by COMPONENT
   woden_settings->sky_crop_type = json_object_get_boolean(sky_crop_type);
@@ -151,7 +153,7 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
   if (gauss_beam) {
     woden_settings->beamtype = GAUSS_BEAM;
 
-    float beam_FWHM = (float)json_object_get_double(gauss_beam_FWHM);
+    user_precision_t beam_FWHM = (user_precision_t)json_object_get_double(gauss_beam_FWHM);
     //If the gauss_beam_FWHM has been set in the json file, use it
     //Otherwise, set the defult FWHM of 20 deg
     if (beam_FWHM > 0.0) {
@@ -160,7 +162,7 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
       woden_settings->gauss_beam_FWHM = 20.0;
     }
 
-    float beam_ref_freq = (float)json_object_get_double(gauss_beam_ref_freq);
+    user_precision_t beam_ref_freq = (user_precision_t)json_object_get_double(gauss_beam_ref_freq);
     //If gauss_beam_ref_freq has been set in the json file, use it
     //Otherwise, set the reference to 150e+6
     if (beam_ref_freq > 0.0) {
@@ -173,8 +175,8 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
     struct json_object *gauss_dec_point;
     json_object_object_get_ex(parsed_json, "gauss_ra_point", &gauss_ra_point);
     json_object_object_get_ex(parsed_json, "gauss_dec_point", &gauss_dec_point);
-    woden_settings->gauss_ra_point = (float)json_object_get_double(gauss_ra_point)*DD2R;
-    woden_settings->gauss_dec_point = (float)json_object_get_double(gauss_dec_point)*DD2R;
+    woden_settings->gauss_ra_point = (user_precision_t)json_object_get_double(gauss_ra_point)*DD2R;
+    woden_settings->gauss_dec_point = (user_precision_t)json_object_get_double(gauss_dec_point)*DD2R;
 
   }
   else if (fee_beam){
@@ -194,7 +196,7 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
 
   	for(int i=0;i<delays_length;i++) {
   		delay = json_object_array_get_idx(FEE_ideal_delays, i);
-  		woden_settings->FEE_ideal_delays[i] = (float)json_object_get_double(delay);
+  		woden_settings->FEE_ideal_delays[i] = (user_precision_t)json_object_get_double(delay);
   	}
 
     woden_settings->hdf5_beam_path = json_object_get_string(hdf5_beam_path);
@@ -262,13 +264,13 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
   return 0;
 
 }
-float * setup_lsts_and_phase_centre(woden_settings_t *woden_settings){
+user_precision_t * setup_lsts_and_phase_centre(woden_settings_t *woden_settings){
   //Useful number to have
   const int num_visis = woden_settings->num_baselines * woden_settings->num_time_steps * woden_settings->num_freqs;
   woden_settings->num_visis = num_visis;
 
   //Phase centre details
-  float sdec0,cdec0;
+  user_precision_t sdec0,cdec0;
   sdec0 = sin(woden_settings->dec0); cdec0=cos(woden_settings->dec0);
 
   printf("Setting initial LST to %.5fdeg\n",woden_settings->lst_base/DD2R );
@@ -279,10 +281,10 @@ float * setup_lsts_and_phase_centre(woden_settings_t *woden_settings){
   woden_settings->cdec0 = cdec0;
 
   //Calculate all lsts for this observation
-  float *lsts = malloc(woden_settings->num_time_steps*sizeof(float));
+  user_precision_t *lsts = malloc(woden_settings->num_time_steps*sizeof(user_precision_t));
 
   for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
-    float lst = woden_settings->lst_base + time_step*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
+    user_precision_t lst = woden_settings->lst_base + time_step*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
 
     //Add half a time_res so we are sampling centre of each time step
     lst += 0.5*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;

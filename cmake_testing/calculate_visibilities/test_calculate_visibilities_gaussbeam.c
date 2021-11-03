@@ -33,9 +33,9 @@ void test_calculate_visibilities_GaussBeam(int n_points, int n_gauss, int n_shap
   beam_settings->beamtype = GAUSS_BEAM;
 
   //Make some fiducial settings - point beam slightly away
-  float dec_point = -30.0*DD2R;
-  beam_settings->gauss_sdec = sinf(dec_point);
-  beam_settings->gauss_cdec = cosf(dec_point);
+  user_precision_t dec_point = -30.0*DD2R;
+  beam_settings->gauss_sdec = sin(dec_point);
+  beam_settings->gauss_cdec = cos(dec_point);
   beam_settings->gauss_ha = 5.0*DD2R;
 
   beam_settings->beam_FWHM_rad = 60*DD2R;
@@ -48,11 +48,11 @@ void test_calculate_visibilities_GaussBeam(int n_points, int n_gauss, int n_shap
                                           beam_settings, woden_settings, RA0, MWA_LAT_RAD,
                                           beam_settings->beamtype);
 
-  // float gain = (n_points + n_gauss + n_shapes)*num_sources;
+  // user_precision_t gain = (n_points + n_gauss + n_shapes)*num_sources;
   // test_comp_phase_centre(visibility_set, gain);
 
-  float gain1 = 0.970296 * (n_points + n_gauss + n_shapes)*num_sources;
-  float gain2 = 0.335948 * (n_points + n_gauss + n_shapes)*num_sources;
+  user_precision_t gain1 = 0.970296 * (n_points + n_gauss + n_shapes)*num_sources;
+  user_precision_t gain2 = 0.335948 * (n_points + n_gauss + n_shapes)*num_sources;
 
   test_comp_phase_centre_twogains(visibility_set, gain1, gain1, gain2, gain2);
 

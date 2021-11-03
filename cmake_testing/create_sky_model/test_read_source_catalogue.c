@@ -93,10 +93,10 @@ void check_single_component_shapelet(catsource_t catsource, int comp_index) {
   TEST_ASSERT_EQUAL_FLOAT((7.0/60.0)*DD2R, catsource.shape_majors[comp_index]);
   TEST_ASSERT_EQUAL_FLOAT((5.0/60.0)*DD2R, catsource.shape_minors[comp_index]);
 
-  float expected_n1s[] = {0.0, 14.0, 41.0, 37.0};
-  float expected_n2s[] = {0.0, 2.0, -15.0, 7.0};
-  float expected_coeffs[] = {0.48255952, -0.18494293, -0.08973978, -0.22137849};
-  float expected_param_indexes[] = {comp_index, comp_index, comp_index, comp_index};
+  user_precision_t expected_n1s[] = {0.0, 14.0, 41.0, 37.0};
+  user_precision_t expected_n2s[] = {0.0, 2.0, -15.0, 7.0};
+  user_precision_t expected_coeffs[] = {0.48255952, -0.18494293, -0.08973978, -0.22137849};
+  user_precision_t expected_param_indexes[] = {comp_index, comp_index, comp_index, comp_index};
 
   //Increment the array pointer to the start of the parameters for this
   //particular component index (each set of params is 4 long)

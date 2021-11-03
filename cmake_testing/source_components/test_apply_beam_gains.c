@@ -4,21 +4,22 @@
 #include <complex.h>
 
 #include "constants.h"
+#include "woden_precision_defs.h"
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
 //External CUDA code we're linking in
-extern void test_kern_apply_beam_gains(int num_gains, float _Complex *g1xs,
-          float _Complex *D1xs,
-          float _Complex *D1ys, float _Complex *g1ys,
-          float _Complex *g2xs, float _Complex *D2xs,
-          float _Complex *D2ys, float _Complex *g2ys,
-          float *flux_Is, float *flux_Qs,
-          float *flux_Us, float *flux_Vs,
-          float _Complex *visi_components,
-          float _Complex *visi_XXs, float _Complex *visi_XYs,
-          float _Complex *visi_YXs, float _Complex *visi_YYs);
+extern void test_kern_apply_beam_gains(int num_gains, user_precision_complex_t *g1xs,
+          user_precision_complex_t *D1xs,
+          user_precision_complex_t *D1ys, user_precision_complex_t *g1ys,
+          user_precision_complex_t *g2xs, user_precision_complex_t *D2xs,
+          user_precision_complex_t *D2ys, user_precision_complex_t *g2ys,
+          user_precision_t *flux_Is, user_precision_t *flux_Qs,
+          user_precision_t *flux_Us, user_precision_t *flux_Vs,
+          user_precision_complex_t *visi_components,
+          user_precision_complex_t *visi_XXs, user_precision_complex_t *visi_XYs,
+          user_precision_complex_t *visi_YXs, user_precision_complex_t *visi_YYs);
 
 #define UNITY_INCLUDE_FLOAT
 
@@ -27,35 +28,41 @@ Test that the code applying beam gains to Stokes parameter fluxes works
 */
 void test_kern_apply_beam_gains_GiveCorrectValues(void) {
 
+  // #ifdef DOUBLE_PRECISION
+  // printf("WODEN is using DOUBLE precision\n");
+  // #else
+  // printf("WODEN is using FLOAT precision\n");
+  // #endif
+
   //Set up some test condition inputs
   int num_gains = 16;
 
   //Set some fun gain params
-  float _Complex g1xs[] = {1.0 + I*0.0, 1.0 + I*0.0, 1.0 + I*0.0, 1.0 + I*0.0,
+  user_precision_complex_t g1xs[] = {1.0 + I*0.0, 1.0 + I*0.0, 1.0 + I*0.0, 1.0 + I*0.0,
                            0.0 + I*0.0, 0.0 + I*0.0, 0.0 + I*0.0, 0.0 + I*0.0,
                            2.0 + I*0.0, 2.0 + I*0.0, 2.0 + I*0.0, 2.0 + I*0.0,
                            1.0 + I*2.0, 1.0 + I*2.0, 1.0 + I*2.0, 1.0 + I*2.0};
 
-  float _Complex D1xs[] = {0.0 + I*0.0, 0.0 + I*0.0, 0.0 + I*0.0, 0.0 + I*0.0,
+  user_precision_complex_t D1xs[] = {0.0 + I*0.0, 0.0 + I*0.0, 0.0 + I*0.0, 0.0 + I*0.0,
                            1.0 + I*0.0, 1.0 + I*0.0, 1.0 + I*0.0, 1.0 + I*0.0,
                            2.0 + I*0.0, 2.0 + I*0.0, 2.0 + I*0.0, 2.0 + I*0.0,
                            3.0 + I*4.0, 3.0 + I*4.0, 3.0 + I*4.0, 3.0 + I*4.0};
 
-  float _Complex D1ys[] = {0.0 + I*0.0, 0.0 + I*0.0, 0.0 + I*0.0, 0.0 + I*0.0,
+  user_precision_complex_t D1ys[] = {0.0 + I*0.0, 0.0 + I*0.0, 0.0 + I*0.0, 0.0 + I*0.0,
                            1.0 + I*0.0, 1.0 + I*0.0, 1.0 + I*0.0, 1.0 + I*0.0,
                            2.0 + I*0.0, 2.0 + I*0.0, 2.0 + I*0.0, 2.0 + I*0.0,
                            5.0 + I*6.0, 5.0 + I*6.0, 5.0 + I*6.0, 5.0 + I*6.0};
 
-  float _Complex g1ys[] = {1.0 + I*0.0, 1.0 + I*0.0, 1.0 + I*0.0, 1.0 + I*0.0,
+  user_precision_complex_t g1ys[] = {1.0 + I*0.0, 1.0 + I*0.0, 1.0 + I*0.0, 1.0 + I*0.0,
                            0.0 + I*0.0, 0.0 + I*0.0, 0.0 + I*0.0, 0.0 + I*0.0,
                            2.0 + I*0.0, 2.0 + I*0.0, 2.0 + I*0.0, 2.0 + I*0.0,
                            7.0 + I*8.0, 7.0 + I*8.0, 7.0 + I*8.0, 7.0 + I*8.0};
 
   //Cycle through the Stokes parameters
-  float *flux_Is = calloc(num_gains, sizeof(float));
-  float *flux_Qs = calloc(num_gains, sizeof(float));
-  float *flux_Us = calloc(num_gains, sizeof(float));
-  float *flux_Vs = calloc(num_gains, sizeof(float));
+  user_precision_t *flux_Is = calloc(num_gains, sizeof(user_precision_t));
+  user_precision_t *flux_Qs = calloc(num_gains, sizeof(user_precision_t));
+  user_precision_t *flux_Us = calloc(num_gains, sizeof(user_precision_t));
+  user_precision_t *flux_Vs = calloc(num_gains, sizeof(user_precision_t));
 
   flux_Is[0] = flux_Is[4] = flux_Is[8] = flux_Is[12] = 1.0;
   flux_Qs[1] = flux_Qs[5] = flux_Qs[9] = flux_Qs[13] = 1.0;
@@ -63,17 +70,17 @@ void test_kern_apply_beam_gains_GiveCorrectValues(void) {
   flux_Vs[3] = flux_Vs[7] = flux_Vs[11] = flux_Vs[15] = 1.0;
 
   //Just keep the visibility component equal to 1.0 + 0.0j for all entries
-  float _Complex *visi_components = malloc(num_gains*sizeof(float _Complex));
+  user_precision_complex_t *visi_components = malloc(num_gains*sizeof(user_precision_complex_t));
 
   for (size_t gain = 0; gain < num_gains; gain++) {
     visi_components[gain] = 1.0 + I*0.0;
   }
 
   //Space for outputs
-  float _Complex *visi_XXs = malloc(num_gains*sizeof(float _Complex));
-  float _Complex *visi_XYs = malloc(num_gains*sizeof(float _Complex));
-  float _Complex *visi_YXs = malloc(num_gains*sizeof(float _Complex));
-  float _Complex *visi_YYs = malloc(num_gains*sizeof(float _Complex));
+  user_precision_complex_t *visi_XXs = malloc(num_gains*sizeof(user_precision_complex_t));
+  user_precision_complex_t *visi_XYs = malloc(num_gains*sizeof(user_precision_complex_t));
+  user_precision_complex_t *visi_YXs = malloc(num_gains*sizeof(user_precision_complex_t));
+  user_precision_complex_t *visi_YYs = malloc(num_gains*sizeof(user_precision_complex_t));
 
   //Run the CUDA code
   test_kern_apply_beam_gains(num_gains, g1xs, D1xs, D1ys, g1ys,
@@ -85,21 +92,21 @@ void test_kern_apply_beam_gains_GiveCorrectValues(void) {
                                         visi_YXs, visi_YYs);
 
   //Expected outputs
-  float expec_XX_re[] =  {1.0, 1.0, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0,
+  user_precision_t expec_XX_re[] =  {1.0, 1.0, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0,
                           8.0, 0.0, 8.0, 0.0, 30.0, -20.0, 22.0, -4.0};
-  float expec_XY_re[] =  {0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+  user_precision_t expec_XY_re[] =  {0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
                           8.0, 0.0, 8.0, 0.0, 70.0, -36.0, 62.0, -4.0};
-  float expec_YX_re[] =  {0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+  user_precision_t expec_YX_re[] =  {0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
                           8.0, 0.0, 8.0, 0.0, 70.0, -36.0, 62.0, -4.0};
-  float expec_YY_re[] =  {1.0, -1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0,
+  user_precision_t expec_YY_re[] =  {1.0, -1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0,
                           8.0, 0.0, 8.0, 0.0, 174.0, -52.0, 166.0, -4.0};
-  float expec_XX_im[] =  {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  user_precision_t expec_XX_im[] =  {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-  float expec_XY_im[] =  {0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, -1.0,
+  user_precision_t expec_XY_im[] =  {0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, -1.0,
                           0.0, 0.0, 0.0, 0.0, 8.0, 0.0, 8.0, -16.0};
-  float expec_YX_im[] =  {0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0,
+  user_precision_t expec_YX_im[] =  {0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0,
                           0.0, 0.0, 0.0, 0.0, -8.0, 0.0, -8.0, 16.0};
-  float expec_YY_im[] =  {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  user_precision_t expec_YY_im[] =  {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
   // for (size_t gain = 0; gain < num_gains; gain++) {

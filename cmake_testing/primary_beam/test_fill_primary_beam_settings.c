@@ -34,6 +34,13 @@ Call `fill_primary_beam_settings` with the given `woden_settings`
 and sky model `src`
 */
 void test_fill_primary_beam_settings(woden_settings_t *woden_settings) {
+
+  #ifdef DOUBLE_PRECISION
+    printf("WODEN is using DOUBLE precision\n");
+  #else
+    printf("WODEN is using FLOAT precision\n");
+  #endif
+
   //Make sky model
   catsource_t *src = make_sky_model();
 

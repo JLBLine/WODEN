@@ -18,7 +18,7 @@ extern "C" {
 @brief Create a `visibility_set_t` and return it with a number of arrays
 malloc-ed to the sizeof `num_visis`.
 
-@details Mallocs `num_visis*sizeof(float)` for the following arrays:
+@details Mallocs `num_visis*sizeof(user_precision_t)` for the following arrays:
 
     visibility_set->us_metres
     visibility_set->vs_metres
@@ -61,8 +61,8 @@ containing simulation settings
 */
 void fill_timefreq_visibility_set(visibility_set_t *visibility_set,
                                   woden_settings_t *woden_settings,
-                                  float base_band_freq,
-                                  float *lsts);
+                                  user_precision_t base_band_freq,
+                                  user_precision_t *lsts);
 
 /**
 @brief Write out the simulated visibilities to a binary file

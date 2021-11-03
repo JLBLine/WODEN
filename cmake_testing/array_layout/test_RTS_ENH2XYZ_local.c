@@ -20,8 +20,8 @@ void test_RTS_ENH2XYZ_local_GivesCorrectValues(void)
 {
   int num_coords = 10;
 
-  float X,Y,Z;
-  float east, north, height;
+  user_precision_t X,Y,Z;
+  user_precision_t east, north, height;
 
   //Loop over 10 example coords
   for (int coord = 0; coord < num_coords; coord++) {

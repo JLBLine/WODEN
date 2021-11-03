@@ -43,9 +43,15 @@ void test_RTS_PrecessXYZtoJ2000_GivesCorrectValues(void)
   RTS_PrecessXYZtoJ2000(array_layout, woden_settings);
 
   //Check rotations give correct answers
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_X_prec, array_layout->ant_X, 8);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_Y_prec, array_layout->ant_Y, 8);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_Z_prec, array_layout->ant_Z, 8);
+
+  for (int i = 0; i < 8; i++) {
+    TEST_ASSERT_EQUAL_FLOAT((float)expec_X_prec[i],
+                            (float)array_layout->ant_X[i]);
+    TEST_ASSERT_EQUAL_FLOAT((float)expec_Y_prec[i],
+                            (float)array_layout->ant_Y[i]);
+    TEST_ASSERT_EQUAL_FLOAT((float)expec_Z_prec[i],
+                            (float)array_layout->ant_Z[i]);
+  }
 
   TEST_ASSERT_EQUAL_FLOAT(LST_AFTER, woden_settings->lst_base);
 

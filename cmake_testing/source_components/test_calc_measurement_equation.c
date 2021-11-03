@@ -4,19 +4,20 @@
 #include <complex.h>
 
 #include "constants.h"
+#include "woden_precision_defs.h"
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
-void sincosf(float x, float *sin, float *cos);
+// void sincos(float x, float *sin, float *cos);
 void sincos(double x, double *sin, double *cos);
 
 //External CUDA code we're linking in
 extern void test_kern_calc_measurement_equation(int num_components,
                   int num_baselines,
-                  float *us, float *vs, float *ws,
+                  user_precision_t *us, user_precision_t *vs, user_precision_t *ws,
                   double *ls, double *ms, double *ns,
-                  float _Complex *visis);
+                  user_precision_complex_t *visis);
 
 #define UNITY_INCLUDE_FLOAT
 
@@ -30,22 +31,22 @@ void test_kern_calc_measurement_equation_ComparedToC(void) {
   // //Set up some test condition inputs
 
   //Just going off reasonable values for the MWA here
-  float max_u = 1000;
-  float max_v = 1000;
-  float max_w = 100;
+  user_precision_t max_u = 1000;
+  user_precision_t max_v = 1000;
+  user_precision_t max_w = 100;
 
-  float u_inc = 20;
-  float v_inc = 20;
-  float w_inc = 0.2;
+  user_precision_t u_inc = 20;
+  user_precision_t v_inc = 20;
+  user_precision_t w_inc = 0.2;
 
   int num_us = 2*max_u / u_inc;
   int num_vs = 2*max_v / v_inc;
 
   int num_baselines = num_us*num_vs;
 
-  float *us = malloc(num_baselines*sizeof(float));
-  float *vs = malloc(num_baselines*sizeof(float));
-  float *ws = malloc(num_baselines*sizeof(float));
+  user_precision_t *us = malloc(num_baselines*sizeof(user_precision_t));
+  user_precision_t *vs = malloc(num_baselines*sizeof(user_precision_t));
+  user_precision_t *ws = malloc(num_baselines*sizeof(user_precision_t));
 
   for (int u_ind = 0; u_ind < num_us; u_ind++) {
     for (int v_ind = 0; v_ind < num_vs; v_ind++) {
@@ -97,12 +98,11 @@ void test_kern_calc_measurement_equation_ComparedToC(void) {
       //                             sqrt(l*l + m*m + ns[r_ind*num_phis + phi_ind]*ns[r_ind*num_phis + phi_ind]));
       // }
 
-
     }
   }
 
   //Space for outputs
-  float _Complex *visis = malloc(num_baselines*num_components*sizeof(float _Complex));
+  user_precision_complex_t *visis = malloc(num_baselines*num_components*sizeof(user_precision_complex_t));
 
   //Run the CUDA code
   test_kern_calc_measurement_equation(num_components, num_baselines,
@@ -124,11 +124,11 @@ void test_kern_calc_measurement_equation_ComparedToC(void) {
       // printf("%.7f %.7f %.7f %.7f\n",creal(visis[ind]), expec_re, tol*abs(expec_re), creal(visis[ind]) - expec_re  );
       // printf("%.7f %.7f %.7f %.7f\n",cimag(visis[ind]), expec_im, tol*abs(expec_im), cimag(visis[ind]) - expec_im  );
 
-      float tol = 1e-6;
+      float tol = 1e-12;
 
       //Check within some tolerance
-      TEST_ASSERT_FLOAT_WITHIN(tol, (float)expec_re, creal(visis[ind]));
-      TEST_ASSERT_FLOAT_WITHIN(tol, (float)expec_im, cimag(visis[ind]));
+      TEST_ASSERT_FLOAT_WITHIN(tol, expec_re, creal(visis[ind]));
+      TEST_ASSERT_FLOAT_WITHIN(tol, expec_im, cimag(visis[ind]));
 
       ind ++;
     }
@@ -158,14 +158,14 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
 
   int all_components = 11;
 
-  float target_angles[] = {0.0, M_PI/6.0, M_PI/4.0, M_PI/3.0, M_PI/2.0,
+  user_precision_t target_angles[] = {0.0, M_PI/6.0, M_PI/4.0, M_PI/3.0, M_PI/2.0,
                            2*M_PI/3, 3*M_PI/4, 5*M_PI/6, M_PI,
                            7*M_PI/6, 5*M_PI/4};
 
-  float expec_ims[] = {0.0, 0.5, sqrt(2)/2.0, sqrt(3.0)/2.0, 1.0,
+  user_precision_t expec_ims[] = {0.0, 0.5, sqrt(2)/2.0, sqrt(3.0)/2.0, 1.0,
                        sqrt(3.0)/2.0, sqrt(2)/2.0, 0.5, 0.0,
                        -0.5, -sqrt(2)/2.0};
-  float expec_res[] = {1.0, sqrt(3.0)/2.0, sqrt(2)/2.0, 0.5, 0.0,
+  user_precision_t expec_res[] = {1.0, sqrt(3.0)/2.0, sqrt(2)/2.0, 0.5, 0.0,
                        -0.5, -sqrt(2)/2.0, -sqrt(3.0)/2.0, -1.0,
                        -sqrt(3.0)/2.0, -sqrt(2)/2.0};
 
@@ -187,13 +187,13 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
 
   int num_baselines = 5;
 
-  float *us = malloc(num_baselines*sizeof(float));
-  float *vs = malloc(num_baselines*sizeof(float));
-  float *ws = malloc(num_baselines*sizeof(float));
+  user_precision_t *us = malloc(num_baselines*sizeof(user_precision_t));
+  user_precision_t *vs = malloc(num_baselines*sizeof(user_precision_t));
+  user_precision_t *ws = malloc(num_baselines*sizeof(user_precision_t));
 
-  // float multipliers[] = {1000.0, 10000.0};
-  float multipliers[] = {1.0, 10.0, 100.0, 1000.0, 10000.0};
-  float uvw;
+  // user_precision_t multipliers[] = {1000.0, 10000.0};
+  user_precision_t multipliers[] = {1.0, 10.0, 100.0, 1000.0, 10000.0};
+  user_precision_t uvw;
 
   int num_components = 1;
 
@@ -202,18 +202,14 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
   double *ns = malloc(sizeof(double));
 
   //Space for outputs
-  float _Complex *visis = malloc(num_baselines*num_components*sizeof(float _Complex));
+  user_precision_complex_t *visis = malloc(num_baselines*num_components*sizeof(user_precision_complex_t));
 
-  float re_diff_sum = 0.0;
-  float im_diff_sum = 0.0;
+  //Some things to count up how wrong things are in total
+  user_precision_t re_diff_sum = 0.0;
+  user_precision_t im_diff_sum = 0.0;
   int num_in_sum = 0;
 
-  float re_diff;
-  float im_diff;
-
   FILE *output_text;
-  // char buff[0x100];
-  // snprintf(buff, sizeof(buff), "measurement_eq_outcomes.txt");
   output_text = fopen("measurement_eq_outcomes.txt","w");
 
   for (int comp = 0; comp < all_components; comp++) {
@@ -235,12 +231,6 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
         uvw = (target_angles[comp] + 2*M_PI*multipliers[baseline]) / target_angles[comp];
       }
 
-      // printf("%.1f\n",uvw );
-
-      us[baseline] = 0.0;
-      vs[baseline] = 0.0;
-      ws[baseline] = 0.0;
-
       us[baseline] = uvw;
       vs[baseline] = uvw;
       ws[baseline] = uvw;
@@ -254,28 +244,16 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
     test_kern_calc_measurement_equation(num_components, num_baselines,
                                         us, vs, ws, ls, ms, ns, visis);
 
-    //Fill values with what should have been found
-    // int ind = 0;
-    // float temp;
-    // float expec_re, expec_im;
+    for (int baseline = 0; baseline < num_baselines; baseline++) {
 
-    // printf("=======Expected Real %.7f, Imag %.7f=======================================\n", expec_res[comp], expec_ims[comp]);
+      #ifdef DOUBLE_PRECISION
+        float tol = 1e-9;
+      #else
+        float tol = 2e-3;
+      #endif
 
-    for (size_t baseline = 0; baseline < num_baselines; baseline++) {
-
-      // temp = 2.0*M_PI*( us[baseline]*ls[0] + vs[baseline]*ms[0] + ws[baseline]*(ns[0]-1) );
-      //
-      // expec_im = sinf(temp);
-      // expec_re = cosf(temp);
-
-      //For those interested
-      // printf("uvw %.1f \t Real C %.9f CUDA %.9f Diff C %.9f CUDA %.9f\n",us[baseline], expec_res[comp], creal(visis[baseline]), expec_res[comp] - expec_res[comp], creal(visis[baseline]) - expec_res[comp]); //,
-      // printf("uvw %.1f \t Imag C %.9f CUDA %.9f Diff C %.9f CUDA %.9f\n",us[baseline], expec_ims[comp], cimag(visis[baseline]), expec_ims[comp] - expec_ims[comp], cimag(visis[baseline]) - expec_ims[comp]); //,
-
-      float tol = 2e-3;
-
-      re_diff_sum += fabs(creal(visis[baseline]) - expec_res[comp]);
-      im_diff_sum += fabs(cimag(visis[baseline]) - expec_ims[comp]);
+      re_diff_sum += abs(creal(visis[baseline]) - expec_res[comp]);
+      im_diff_sum += abs(cimag(visis[baseline]) - expec_ims[comp]);
       num_in_sum += 1;
 
       fprintf(output_text,"%.1f %.16f %.16f %.16f %.16f\n",us[baseline], expec_res[comp],
@@ -283,16 +261,13 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
                                                            expec_ims[comp],
                                                            cimag(visis[baseline]));
 
-
       if (expec_res[comp] == 0.0 || expec_ims[comp] == 0.0) {
-
         TEST_ASSERT_FLOAT_WITHIN(tol, expec_res[comp], creal(visis[baseline]));
         TEST_ASSERT_FLOAT_WITHIN(tol, expec_ims[comp], cimag(visis[baseline]));
       } else {
-        // //Check within some tolerance
+        //Check within some tolerance
         TEST_ASSERT_FLOAT_WITHIN(tol*expec_res[comp], expec_res[comp], creal(visis[baseline]));
         TEST_ASSERT_FLOAT_WITHIN(tol*expec_ims[comp], expec_ims[comp], cimag(visis[baseline]));
-
       }
     }
   }

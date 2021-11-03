@@ -1,13 +1,6 @@
-// #include <math.h>
-// #include <unity.h>
-// #include <stdlib.h>
-// #include <complex.h>
-//
-// #include "constants.h"
-// #include "woden_struct_defs.h"
 #include "test_kern_calc_visi_common.h"
 
-void sincosf(float x, float *sin, float *cos);
+// void sincos(user_precision_t x, user_precision_t *sin, user_precision_t *cos);
 
 #define UNITY_INCLUDE_FLOAT
 
@@ -31,49 +24,49 @@ void malloc_args_for_testing(args_for_testing_t *args_ft,
   args_ft->ns = malloc(num_components*sizeof(double));
 
   //Assume we just want Stokes I
-  args_ft->flux_I = malloc(num_components*sizeof(float));
-  args_ft->flux_Q = calloc(num_components, sizeof(float));
-  args_ft->flux_U = calloc(num_components, sizeof(float));
-  args_ft->flux_V = calloc(num_components, sizeof(float));
-  args_ft->SIs = malloc(num_components*sizeof(float));
-  args_ft->component_freqs = malloc(num_components*sizeof(float));
+  args_ft->flux_I = malloc(num_components*sizeof(user_precision_t));
+  args_ft->flux_Q = calloc(num_components, sizeof(user_precision_t));
+  args_ft->flux_U = calloc(num_components, sizeof(user_precision_t));
+  args_ft->flux_V = calloc(num_components, sizeof(user_precision_t));
+  args_ft->SIs = malloc(num_components*sizeof(user_precision_t));
+  args_ft->component_freqs = malloc(num_components*sizeof(user_precision_t));
 
-  args_ft->us = malloc(num_visis*sizeof(float));
-  args_ft->vs = malloc(num_visis*sizeof(float));
-  args_ft->ws = malloc(num_visis*sizeof(float));
-  args_ft->allsteps_wavelengths = malloc(num_visis*sizeof(float));
+  args_ft->us = malloc(num_visis*sizeof(user_precision_t));
+  args_ft->vs = malloc(num_visis*sizeof(user_precision_t));
+  args_ft->ws = malloc(num_visis*sizeof(user_precision_t));
+  args_ft->allsteps_wavelengths = malloc(num_visis*sizeof(user_precision_t));
 
-  args_ft->primay_beam_J00 = malloc(num_beam_values*sizeof(float _Complex));
-  args_ft->primay_beam_J01 = malloc(num_beam_values*sizeof(float _Complex));
-  args_ft->primay_beam_J10 = malloc(num_beam_values*sizeof(float _Complex));
-  args_ft->primay_beam_J11 = malloc(num_beam_values*sizeof(float _Complex));
+  args_ft->primay_beam_J00 = malloc(num_beam_values*sizeof(user_precision_complex_t));
+  args_ft->primay_beam_J01 = malloc(num_beam_values*sizeof(user_precision_complex_t));
+  args_ft->primay_beam_J10 = malloc(num_beam_values*sizeof(user_precision_complex_t));
+  args_ft->primay_beam_J11 = malloc(num_beam_values*sizeof(user_precision_complex_t));
 
   //GAUSS/SHAPELET STUFF
-  args_ft->pas = malloc(num_components*sizeof(float));
-  args_ft->majors = malloc(num_components*sizeof(float));
-  args_ft->minors = malloc(num_components*sizeof(float));
+  args_ft->pas = malloc(num_components*sizeof(user_precision_t));
+  args_ft->majors = malloc(num_components*sizeof(user_precision_t));
+  args_ft->minors = malloc(num_components*sizeof(user_precision_t));
 
   //Make sure arrays to hold summed visis are initialised to zero
-  args_ft->sum_visi_XX_real = calloc(num_visis, sizeof(float));
-  args_ft->sum_visi_XX_imag = calloc(num_visis, sizeof(float));
-  args_ft->sum_visi_XY_real = calloc(num_visis, sizeof(float));
-  args_ft->sum_visi_XY_imag = calloc(num_visis, sizeof(float));
-  args_ft->sum_visi_YX_real = calloc(num_visis, sizeof(float));
-  args_ft->sum_visi_YX_imag = calloc(num_visis, sizeof(float));
-  args_ft->sum_visi_YY_real = calloc(num_visis, sizeof(float));
-  args_ft->sum_visi_YY_imag = calloc(num_visis, sizeof(float));
+  args_ft->sum_visi_XX_real = calloc(num_visis, sizeof(user_precision_t));
+  args_ft->sum_visi_XX_imag = calloc(num_visis, sizeof(user_precision_t));
+  args_ft->sum_visi_XY_real = calloc(num_visis, sizeof(user_precision_t));
+  args_ft->sum_visi_XY_imag = calloc(num_visis, sizeof(user_precision_t));
+  args_ft->sum_visi_YX_real = calloc(num_visis, sizeof(user_precision_t));
+  args_ft->sum_visi_YX_imag = calloc(num_visis, sizeof(user_precision_t));
+  args_ft->sum_visi_YY_real = calloc(num_visis, sizeof(user_precision_t));
+  args_ft->sum_visi_YY_imag = calloc(num_visis, sizeof(user_precision_t));
 
   if (component_type == SHAPELET) {
     args_ft->num_coeffs = num_coeffs;
-    args_ft->sbf = malloc( sbf_N * sbf_L * sizeof(float) );
+    args_ft->sbf = malloc( sbf_N * sbf_L * sizeof(user_precision_t) );
     args_ft->sbf = create_sbf(args_ft->sbf);
-    args_ft->u_shapes = malloc(num_components*num_visis*sizeof(float));
-    args_ft->v_shapes = malloc(num_components*num_visis*sizeof(float));
-    args_ft->w_shapes = malloc(num_components*num_visis*sizeof(float));
-    args_ft->shape_n1s = malloc(num_coeffs*sizeof(float));
-    args_ft->shape_n2s = malloc(num_coeffs*sizeof(float));
-    args_ft->shape_coeffs = malloc(num_coeffs*sizeof(float));
-    args_ft->shape_param_indexes = malloc(num_coeffs*sizeof(float));
+    args_ft->u_shapes = malloc(num_components*num_visis*sizeof(user_precision_t));
+    args_ft->v_shapes = malloc(num_components*num_visis*sizeof(user_precision_t));
+    args_ft->w_shapes = malloc(num_components*num_visis*sizeof(user_precision_t));
+    args_ft->shape_n1s = malloc(num_coeffs*sizeof(user_precision_t));
+    args_ft->shape_n2s = malloc(num_coeffs*sizeof(user_precision_t));
+    args_ft->shape_coeffs = malloc(num_coeffs*sizeof(user_precision_t));
+    args_ft->shape_param_indexes = malloc(num_coeffs*sizeof(user_precision_t));
   }
 }
 
@@ -144,36 +137,38 @@ void create_lmn(args_for_testing_t *args_ft) {
   }
 }
 
-float _Complex visi_env_shape(int comp, int visi, int coeff,
+user_precision_complex_t visi_env_shape(int comp, int visi, int coeff,
                               args_for_testing_t *args_ft ) {
-  float pa = args_ft->pas[comp];
-  float sinpa = sin(pa);
-  float cospa = cos(pa);
+  user_precision_t pa = args_ft->pas[comp];
+  user_precision_t sinpa = sin(pa);
+  user_precision_t cospa = cos(pa);
 
-  float u_shape = args_ft->u_shapes[comp*args_ft->num_visis + visi];
-  float v_shape = args_ft->v_shapes[comp*args_ft->num_visis + visi];
+  user_precision_t u_shape = args_ft->u_shapes[comp*args_ft->num_visis + visi];
+  user_precision_t v_shape = args_ft->v_shapes[comp*args_ft->num_visis + visi];
 
-  float x = (cospa*v_shape + sinpa*u_shape); // major axis
-  float y = (-sinpa*v_shape + cospa*u_shape); // minor axis
+  user_precision_t x = (cospa*v_shape + sinpa*u_shape); // major axis
+  user_precision_t y = (-sinpa*v_shape + cospa*u_shape); // minor axis
 
   //Scales the FWHM to std to match basis functions, and account for the
   //basis functions being stored with beta = 1.0
   //Basis functions have been stored in such a way that x is in the same
   //direction as on sky, but y is opposite, so include negative here
-  float const_x = (args_ft->majors[comp]*SQRT_M_PI_2_2_LN_2)/sbf_dx;
-  float const_y = -(args_ft->minors[comp]*SQRT_M_PI_2_2_LN_2)/sbf_dx;
+  user_precision_t const_x = (args_ft->majors[comp]*SQRT_M_PI_2_2_LN_2)/sbf_dx;
+  user_precision_t const_y = -(args_ft->minors[comp]*SQRT_M_PI_2_2_LN_2)/sbf_dx;
 
-  float _Complex Ipow_lookup[] = { 1.0 + I*0.0,
-                                   0.0 + I*1.0,
-                                  -1.0 + I*0.0,
-                                   0.0 + I*-1.0 };
+  // printf("%d %.5f %.5f\n", visi, const_x, const_y  );
 
-  float xlow, xhigh, ylow, yhigh, u_value, v_value, f_hat, *sbf_n;
+  user_precision_complex_t Ipow_lookup[] = { 1.0 + I*0.0,
+                                             0.0 + I*1.0,
+                                            -1.0 + I*0.0,
+                                             0.0 + I*-1.0 };
+
+  user_precision_t xlow, xhigh, ylow, yhigh, u_value, v_value, f_hat, *sbf_n;
 
   // find the indices in the basis functions for u*beta_u and v*beta_v
 
-  float xpos = x*const_x + sbf_c;
-  float ypos = y*const_y + sbf_c;
+  user_precision_t xpos = x*const_x + sbf_c;
+  user_precision_t ypos = y*const_y + sbf_c;
 
   int xindex = (int)floor(xpos);
   int yindex = (int)floor(ypos);
@@ -196,26 +191,26 @@ float _Complex visi_env_shape(int comp, int visi, int coeff,
   v_value = ylow + (yhigh-ylow)*(ypos-yindex);
 
   // accumulate the intensity model for baseline pair (u,v)
-  float _Complex visi_env = 0.0 + I*0.0;
+  user_precision_complex_t visi_env = 0.0 + I*0.0;
   visi_env = visi_env + Ipow_lookup[(n1+n2) % 4] * f_hat * u_value*v_value;
 
   return visi_env;
 }
 
-float _Complex visi_env_gauss(int comp, int visi,
+user_precision_complex_t visi_env_gauss(int comp, int visi,
                               args_for_testing_t *args_ft ) {
-  float pa = args_ft->pas[comp];
-  float u = args_ft->us[visi];
-  float v = args_ft->vs[visi];
-  float sinpa = sin(pa);
-  float cospa = cos(pa);
+  user_precision_t pa = args_ft->pas[comp];
+  user_precision_t u = args_ft->us[visi];
+  user_precision_t v = args_ft->vs[visi];
+  user_precision_t sinpa = sin(pa);
+  user_precision_t cospa = cos(pa);
 
-  float x =  cospa*v + sinpa*u; // major axis
-  float y = -sinpa*v + cospa*u; // minor axis
-  float invsig_x = args_ft->majors[comp];
-  float invsig_y = args_ft->minors[comp];
+  user_precision_t x =  cospa*v + sinpa*u; // major axis
+  user_precision_t y = -sinpa*v + cospa*u; // minor axis
+  user_precision_t invsig_x = args_ft->majors[comp];
+  user_precision_t invsig_y = args_ft->minors[comp];
 
-  float _Complex visi_env = exp( -0.5 * ( x*x*invsig_x*invsig_x*M_PI_2_2_LN_2 + y*y*invsig_y*invsig_y*M_PI_2_2_LN_2 ) ) + I*0.0;
+  user_precision_complex_t visi_env = exp( -0.5 * ( x*x*invsig_x*invsig_x*M_PI_2_2_LN_2 + y*y*invsig_y*invsig_y*M_PI_2_2_LN_2 ) ) + I*0.0;
 
   return visi_env;
 }
@@ -228,23 +223,23 @@ void get_expected(int visi, int num_components, int num_baselines,
                   int num_freqs, int beamtype,
                   args_for_testing_t *args_ft,
                   int component_type,
-                  float * expec_re, float * expec_im) {
-  float expec_re_inc, expec_im_inc;
+                  user_precision_t * expec_re, user_precision_t * expec_im) {
+  user_precision_t expec_re_inc, expec_im_inc;
   double temp;
-  float flux_ratio, visi_freq, flux_extrap, xx_gain;
+  user_precision_t flux_ratio, visi_freq, flux_extrap, xx_gain;
   int time_ind, freq_ind, beam_ind;
   * expec_re = 0.0;
   * expec_im = 0.0;
   for (size_t comp = 0; comp < num_components; comp++) {
     // printf("%.5f %.5f %.5f\n", ls[comp], ms[comp], ns[comp] );
     temp = 2*M_PI*( args_ft->us[visi]*args_ft->ls[comp] + args_ft->vs[visi]*args_ft->ms[comp] + args_ft->ws[visi]*(args_ft->ns[comp]-1) );
-    // sincosf(temp, &(expec_im_inc), &(expec_re_inc));
+    // sincos(temp, &(expec_im_inc), &(expec_re_inc));
 
-    expec_im_inc = (float)sin(temp);
-    expec_re_inc = (float)cos(temp);
+    expec_im_inc = (user_precision_t)sin(temp);
+    expec_re_inc = (user_precision_t)cos(temp);
 
     visi_freq = VELC / args_ft->allsteps_wavelengths[visi];
-    flux_ratio = powf(visi_freq / args_ft->component_freqs[comp], args_ft->SIs[comp]);
+    flux_ratio = pow(visi_freq / args_ft->component_freqs[comp], args_ft->SIs[comp]);
     flux_extrap = flux_ratio*args_ft->flux_I[comp];
 
     //Do some indexing so we can call up correct instrumental gain
@@ -261,9 +256,6 @@ void get_expected(int visi, int num_components, int num_baselines,
       xx_gain = xx_gain*xx_gain;
     }
 
-    // float expec_re_before = expec_re_inc;
-    // float expec_im_before = expec_im_inc;
-
     expec_re_inc = expec_re_inc*flux_extrap*xx_gain;
     expec_im_inc = expec_im_inc*flux_extrap*xx_gain;
 
@@ -272,7 +264,7 @@ void get_expected(int visi, int num_components, int num_baselines,
     //                  xx_gain, xx_gain, expec_re_inc, expec_im_inc);
     // }
 
-    float _Complex visi_env = 0.0 + I*0.0;
+    user_precision_complex_t visi_env = 0.0 + I*0.0;
 
     if (component_type == POINT) {
       visi_env = 1.0 + I*0.0;
@@ -289,18 +281,19 @@ void get_expected(int visi, int num_components, int num_baselines,
         }
       }
     }
-    * expec_re += expec_re_inc*creal(visi_env) - expec_im_inc*cimag(visi_env);
-    * expec_im += expec_re_inc*cimag(visi_env) + expec_im_inc*creal(visi_env);
+    * expec_re += (expec_re_inc*creal(visi_env) - expec_im_inc*cimag(visi_env));
+    * expec_im += (expec_re_inc*cimag(visi_env) + expec_im_inc*creal(visi_env));
   }
 }
 
 //Take input parameters and test whether GPU outputs match expectations
 void test_visi_outputs(int num_visis, int num_components,
                        int num_baselines, int num_freqs,
-                       float frac_tol,
+                       user_precision_t frac_tol,
                        int beamtype,  args_for_testing_t *args_ft,
                        int component_type) {
-  float expec_re, expec_im;
+
+  user_precision_t expec_re, expec_im;
   for (int visi = 0; visi < num_visis; visi++) {
 
       get_expected(visi, num_components, num_baselines, num_freqs,
@@ -317,9 +310,7 @@ void test_visi_outputs(int num_visis, int num_components,
     //   TEST_ASSERT_FLOAT_WITHIN(frac_tol, 1.0, args_ft->sum_visi_XX_imag[visi] / expec_im);
     // }
 
-    // printf("%d %.1f %.1f %.1f\n",
-    //       visi, expec_re, args_ft->sum_visi_XX_real[visi],
-    //       args_ft->sum_visi_YY_real[visi]);
+    // printf("%.12f %.12f\n", expec_re, args_ft->sum_visi_XX_real[visi]);
 
     // printf("%d %.5f %.5f %.5f %.5f %.5f %.5f\n",
     //       visi, expec_re, expec_im,

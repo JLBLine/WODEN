@@ -22,24 +22,30 @@
 #define RA0 0.0
 #define BASE_BAND_FREQ 120000000.0
 
-source_catalogue_t * make_cropped_sky_models(float ra0, float dec0,
+//External CUDA code we're linking in
+extern void calculate_visibilities(array_layout_t *array_layout,
+  source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
+  woden_settings_t *woden_settings, visibility_set_t *visibility_set,
+  user_precision_t *sbf);
+
+source_catalogue_t * make_cropped_sky_models(user_precision_t ra0, user_precision_t dec0,
                                              int n_points, int n_gauss,
                                              int n_shapes,
                                              int num_sources);
 
 void free_sky_model(source_catalogue_t *cropped_sky_models);
 
-woden_settings_t * make_woden_settings(float ra0, float dec0);
+woden_settings_t * make_woden_settings(user_precision_t ra0, user_precision_t dec0);
 
-void test_uvw(visibility_set_t *visibility_set,  float *lsts,
-              float ra0, float dec0);
+void test_uvw(visibility_set_t *visibility_set,  user_precision_t *lsts,
+              user_precision_t ra0, user_precision_t dec0);
 
 visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_models,
                                  beam_settings_t *beam_settings,
                                  woden_settings_t *woden_settings,
-                                 float ra0, float dec0,
+                                 user_precision_t ra0, user_precision_t dec0,
                                  int beamtype);
 
 void test_comp_phase_centre_twogains(visibility_set_t *visibility_set,
-                                     float gain1xx, float gain1yy,
-                                     float gain2xx, float gain2yy);
+                                     user_precision_t gain1xx, user_precision_t gain1yy,
+                                     user_precision_t gain2xx, user_precision_t gain2yy);

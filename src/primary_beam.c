@@ -3,18 +3,18 @@
 #include <erfa.h>
 #include <complex.h>
 
-void calc_para_angle(catsource_t *cropped_src, float *lsts, double latitude,
-                     int num_time_steps){
+void calc_para_angle(catsource_t *cropped_src, user_precision_t *lsts,
+                     double latitude, int num_time_steps){
 
   //At the moment, we calculate one beam value in frequency for MWA FEE as the resolution
   //is 1.28MHz. We should interpolate this in the future (might be memory hungry)
   //So only need to malloc enough para angles to cover time, and not freq
-  cropped_src->sin_point_para_angs = malloc( cropped_src->n_points * num_time_steps * sizeof(float) );
-  cropped_src->cos_point_para_angs = malloc( cropped_src->n_points * num_time_steps * sizeof(float) );
-  cropped_src->sin_gauss_para_angs = malloc( cropped_src->n_gauss * num_time_steps * sizeof(float) );
-  cropped_src->cos_gauss_para_angs = malloc( cropped_src->n_gauss * num_time_steps * sizeof(float) );
-  cropped_src->sin_shape_para_angs = malloc( cropped_src->n_shapes * num_time_steps * sizeof(float) );
-  cropped_src->cos_shape_para_angs = malloc( cropped_src->n_shapes * num_time_steps * sizeof(float) );
+  cropped_src->sin_point_para_angs = malloc( cropped_src->n_points * num_time_steps * sizeof(user_precision_t) );
+  cropped_src->cos_point_para_angs = malloc( cropped_src->n_points * num_time_steps * sizeof(user_precision_t) );
+  cropped_src->sin_gauss_para_angs = malloc( cropped_src->n_gauss * num_time_steps * sizeof(user_precision_t) );
+  cropped_src->cos_gauss_para_angs = malloc( cropped_src->n_gauss * num_time_steps * sizeof(user_precision_t) );
+  cropped_src->sin_shape_para_angs = malloc( cropped_src->n_shapes * num_time_steps * sizeof(user_precision_t) );
+  cropped_src->cos_shape_para_angs = malloc( cropped_src->n_shapes * num_time_steps * sizeof(user_precision_t) );
 
   for (int point = 0; point < cropped_src->n_points; point++) {
 
@@ -24,8 +24,8 @@ void calc_para_angle(catsource_t *cropped_src, float *lsts, double latitude,
       double ha = (double)lsts[time_step] - cropped_src->point_ras[point];
       para_angle = eraHd2pa(ha, cropped_src->point_decs[point], latitude);
 
-      cropped_src->sin_point_para_angs[point*num_time_steps + time_step] = sinf((float)para_angle + M_PI/2.0);
-      cropped_src->cos_point_para_angs[point*num_time_steps + time_step] = cosf((float)para_angle + M_PI/2.0);
+      cropped_src->sin_point_para_angs[point*num_time_steps + time_step] = sin((user_precision_t)para_angle + M_PI/2.0);
+      cropped_src->cos_point_para_angs[point*num_time_steps + time_step] = cos((user_precision_t)para_angle + M_PI/2.0);
 
     }
   }//END point component loop
@@ -38,8 +38,8 @@ void calc_para_angle(catsource_t *cropped_src, float *lsts, double latitude,
       double ha = (double)lsts[time_step] - cropped_src->gauss_ras[gauss];
       para_angle = eraHd2pa(ha, cropped_src->gauss_decs[gauss], latitude);
 
-      cropped_src->sin_gauss_para_angs[gauss*num_time_steps + time_step] = sinf((float)para_angle + M_PI/2.0);
-      cropped_src->cos_gauss_para_angs[gauss*num_time_steps + time_step] = cosf((float)para_angle + M_PI/2.0);
+      cropped_src->sin_gauss_para_angs[gauss*num_time_steps + time_step] = sin((user_precision_t)para_angle + M_PI/2.0);
+      cropped_src->cos_gauss_para_angs[gauss*num_time_steps + time_step] = cos((user_precision_t)para_angle + M_PI/2.0);
     }
   }//END gauss component loop
 
@@ -50,14 +50,14 @@ void calc_para_angle(catsource_t *cropped_src, float *lsts, double latitude,
       double ha = (double)lsts[time_step] - cropped_src->shape_ras[shape];
       para_angle = eraHd2pa((double)ha, cropped_src->shape_decs[shape], latitude);
 
-      cropped_src->sin_shape_para_angs[shape*num_time_steps + time_step] = sinf((float)para_angle + M_PI/2.0);
-      cropped_src->cos_shape_para_angs[shape*num_time_steps + time_step] = cosf((float)para_angle + M_PI/2.0);
+      cropped_src->sin_shape_para_angs[shape*num_time_steps + time_step] = sin((user_precision_t)para_angle + M_PI/2.0);
+      cropped_src->cos_shape_para_angs[shape*num_time_steps + time_step] = cos((user_precision_t)para_angle + M_PI/2.0);
     }
   }//END shape component loop
 }
 
 beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
-                                        catsource_t *cropped_src, float *lsts) {
+                            catsource_t *cropped_src, user_precision_t *lsts) {
 
 
   //Setup primary beam settings for observation
@@ -74,8 +74,8 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
     beam_settings->beamtype = GAUSS_BEAM;
 
     //Angles used in calculating beam centred l,m,ns
-    beam_settings->gauss_sdec = sinf(woden_settings->gauss_dec_point);
-    beam_settings->gauss_cdec = cosf(woden_settings->gauss_dec_point);
+    beam_settings->gauss_sdec = sin(woden_settings->gauss_dec_point);
+    beam_settings->gauss_cdec = cos(woden_settings->gauss_dec_point);
     beam_settings->gauss_ha = woden_settings->lst_base - woden_settings->gauss_ra_point;
 
     printf("Setting up Gaussian primary beam settings\n");

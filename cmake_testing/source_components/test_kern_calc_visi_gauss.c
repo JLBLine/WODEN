@@ -7,7 +7,7 @@
 #include "woden_struct_defs.h"
 #include "test_kern_calc_visi_common.h"
 
-void sincosf(float x, float *sin, float *cos);
+// void sincos(user_precision_t x, user_precision_t *sin, user_precision_t *cos);
 
 void setUp (void) {} /* Is run before eVary test, put unit init calls here. */
 void tearDown (void) {} /* Is run after eVary test, put unit clean-up calls here. */
@@ -15,20 +15,29 @@ void tearDown (void) {} /* Is run after eVary test, put unit clean-up calls here
 //External CUDA code we're linking in
 extern void test_kern_calc_visi_gaussian(int num_components, int num_baselines,
           int num_freqs, int num_visis, int num_times, int beamtype,
-          float *component_freqs,
-          float *flux_I, float *flux_Q, float *flux_U, float *flux_V,
-          float *SIs, float *us, float *vs, float *ws,
-          float *sum_visi_XX_real, float *sum_visi_XX_imag,
-          float *sum_visi_XY_real, float *sum_visi_XY_imag,
-          float *sum_visi_YX_real, float *sum_visi_YX_imag,
-          float *sum_visi_YY_real, float *sum_visi_YY_imag,
-          float *allsteps_wavelengths,
+          user_precision_t *component_freqs,
+          user_precision_t *flux_I, user_precision_t *flux_Q, user_precision_t *flux_U, user_precision_t *flux_V,
+          user_precision_t *SIs, user_precision_t *us, user_precision_t *vs, user_precision_t *ws,
+          user_precision_t *sum_visi_XX_real, user_precision_t *sum_visi_XX_imag,
+          user_precision_t *sum_visi_XY_real, user_precision_t *sum_visi_XY_imag,
+          user_precision_t *sum_visi_YX_real, user_precision_t *sum_visi_YX_imag,
+          user_precision_t *sum_visi_YY_real, user_precision_t *sum_visi_YY_imag,
+          user_precision_t *allsteps_wavelengths,
           double *ls, double *ms, double *ns,
-          float *gauss_pas, float *gauss_majors, float *gauss_minors,
-          float _Complex *primay_beam_J00, float _Complex *primay_beam_J01,
-          float _Complex *primay_beam_J10, float _Complex *primay_beam_J11);
+          user_precision_t *gauss_pas, user_precision_t *gauss_majors, user_precision_t *gauss_minors,
+          user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J01,
+          user_precision_complex_t *primay_beam_J10, user_precision_complex_t *primay_beam_J11);
 
 #define UNITY_INCLUDE_FLOAT
+
+//Change required accuracy of outputs for different precisions
+#ifdef DOUBLE_PRECISION
+  //Accurate to within 0.00000000001%
+  #define FRAC_TOL 1e-12
+#else
+  //Accurate to within 0.001%
+  #define FRAC_TOL 1e-5
+#endif
 
 /*
 Test the __global__ code that calculates visibilities for gauss sources
@@ -47,7 +56,7 @@ void test_kern_calc_visi_gauss_Varylmn(int beamtype) {
   //Container for many arrays to feed the GPU
   args_for_testing_t *args_ft = malloc(sizeof(args_for_testing_t));
   //Allocate memory
-  int num_coeffs; //Only applies for SHAPELET
+  int num_coeffs = 0; //Only applies for SHAPELET
   malloc_args_for_testing(args_ft, num_baselines, num_times,
                           num_freqs, num_components, num_coeffs, GAUSSIAN);
 
@@ -75,20 +84,19 @@ void test_kern_calc_visi_gauss_Varylmn(int beamtype) {
     args_ft->minors[comp] = 3.0*(DD2R / 60.0);
   }
 
-  float _Complex *visi_envs = malloc(num_components*sizeof(float _Complex));
-
   //Make up some u,v,w values and scale by wavelength in correct order
   int count = 0;
-  float freq_base = 150e+6;
-  float freq_inc = 25e+6;
-  float wavelength, frequency;
+  user_precision_t freq_base = 150e+6;
+  user_precision_t freq_inc = 25e+6;
+  user_precision_t wavelength, frequency;
   for ( int time_step = 0; time_step < num_times; time_step++ ) {
     for (int freq_step = 0; freq_step < num_freqs; freq_step++) {
       frequency = freq_base + freq_step*freq_inc;
       wavelength = VELC / frequency;
       for (int baseline = 0; baseline < num_baselines; baseline++) {
-        args_ft->us[count] = ((baseline + 1)*10) / wavelength;
-        args_ft->vs[count] = ((baseline + 1)*10) / wavelength;
+        args_ft->us[count] = ((baseline + 1)*100) / wavelength;
+        args_ft->vs[count] = ((baseline + 1)*100) / wavelength;
+        //ws are usually smaller than u,v
         args_ft->ws[count] = ((baseline + 1)*10) / wavelength;
 
         args_ft->allsteps_wavelengths[count] = wavelength;
@@ -115,9 +123,8 @@ void test_kern_calc_visi_gauss_Varylmn(int beamtype) {
           args_ft->primay_beam_J10, args_ft->primay_beam_J11);
 
   //Check all results are within 0.1% of expected value
-  float frac_tol = 1e-3;
   test_visi_outputs(num_visis, num_components, num_baselines, num_freqs,
-                    frac_tol, beamtype, args_ft, GAUSSIAN);
+                    FRAC_TOL, beamtype, args_ft, GAUSSIAN);
 
   free_args_for_testing( args_ft, GAUSSIAN );
 }
@@ -169,7 +176,7 @@ void test_kern_calc_visi_gauss_VarylmnVaryFlux(int beamtype) {
   //Container for many arrays to feed the GPU
   args_for_testing_t *args_ft = malloc(sizeof(args_for_testing_t));
   //Allocate memory
-  int num_coeffs; //Only applies for SHAPELET
+  int num_coeffs = 0; //Only applies for SHAPELET
   malloc_args_for_testing(args_ft, num_baselines, num_times,
                           num_freqs, num_components, num_coeffs, GAUSSIAN);
 
@@ -199,12 +206,9 @@ void test_kern_calc_visi_gauss_VarylmnVaryFlux(int beamtype) {
 
   //Make up some u,v,w values and scale by wavelength in correct order
   int count = 0;
-  float freq_base = 150e+6;
-  float freq_inc = 25e+6;
-  float wavelength, frequency;
-
-  float *expected_flux = malloc(num_visis*sizeof(float));
-
+  user_precision_t freq_base = 150e+6;
+  user_precision_t freq_inc = 25e+6;
+  user_precision_t wavelength, frequency;
 
   for ( int time_step = 0; time_step < num_times; time_step++ ) {
     for (int freq_step = 0; freq_step < num_freqs; freq_step++) {
@@ -212,8 +216,9 @@ void test_kern_calc_visi_gauss_VarylmnVaryFlux(int beamtype) {
       wavelength = VELC / frequency;
 
       for (int baseline = 0; baseline < num_baselines; baseline++) {
-        args_ft->us[count] = ((baseline + 1)*10) / wavelength;
-        args_ft->vs[count] = ((baseline + 1)*10) / wavelength;
+        args_ft->us[count] = ((baseline + 1)*100) / wavelength;
+        args_ft->vs[count] = ((baseline + 1)*100) / wavelength;
+        //ws are usually smaller than u,v
         args_ft->ws[count] = ((baseline + 1)*10) / wavelength;
 
         args_ft->allsteps_wavelengths[count] = wavelength;
@@ -239,10 +244,8 @@ void test_kern_calc_visi_gauss_VarylmnVaryFlux(int beamtype) {
           args_ft->primay_beam_J00, args_ft->primay_beam_J01,
           args_ft->primay_beam_J10, args_ft->primay_beam_J11);
 
-  //Check all results are within 0.1% of expected value
-  float frac_tol = 5e-3;
   test_visi_outputs(num_visis, num_components, num_baselines, num_freqs,
-                    frac_tol, beamtype, args_ft, GAUSSIAN);
+                    FRAC_TOL, beamtype, args_ft, GAUSSIAN);
 
   free_args_for_testing( args_ft, GAUSSIAN );
 }
@@ -289,7 +292,7 @@ void test_kern_calc_visi_gauss_VarylmnVaryBeam(int beamtype) {
   //Container for many arrays to feed the GPU
   args_for_testing_t *args_ft = malloc(sizeof(args_for_testing_t));
   //Allocate memory
-  int num_coeffs; //Only applies for SHAPELET
+  int num_coeffs = 0; //Only applies for SHAPELET
   malloc_args_for_testing(args_ft, num_baselines, num_times,
                           num_freqs, num_components, num_coeffs, GAUSSIAN);
 
@@ -319,12 +322,9 @@ void test_kern_calc_visi_gauss_VarylmnVaryBeam(int beamtype) {
 
   //Make up some u,v,w values and scale by wavelength in correct order
   int count = 0;
-  float freq_base = 150e+6;
-  float freq_inc = 25e+6;
-  float wavelength, frequency;
-
-  float *expected_flux = malloc(num_visis*sizeof(float));
-
+  user_precision_t freq_base = 150e+6;
+  user_precision_t freq_inc = 25e+6;
+  user_precision_t wavelength, frequency;
 
   for ( int time_step = 0; time_step < num_times; time_step++ ) {
     for (int freq_step = 0; freq_step < num_freqs; freq_step++) {
@@ -332,8 +332,9 @@ void test_kern_calc_visi_gauss_VarylmnVaryBeam(int beamtype) {
       wavelength = VELC / frequency;
 
       for (int baseline = 0; baseline < num_baselines; baseline++) {
-        args_ft->us[count] = ((baseline + 1)*10) / wavelength;
-        args_ft->vs[count] = ((baseline + 1)*10) / wavelength;
+        args_ft->us[count] = ((baseline + 1)*100) / wavelength;
+        args_ft->vs[count] = ((baseline + 1)*100) / wavelength;
+        //ws are usually smaller than u,v
         args_ft->ws[count] = ((baseline + 1)*10) / wavelength;
 
         // args_ft->us[count] = 0.0;
@@ -363,10 +364,8 @@ void test_kern_calc_visi_gauss_VarylmnVaryBeam(int beamtype) {
           args_ft->primay_beam_J00, args_ft->primay_beam_J01,
           args_ft->primay_beam_J10, args_ft->primay_beam_J11);
 
-  //Check all results are within 1% of expected value
-  float frac_tol = 1e-2;
   test_visi_outputs(num_visis, num_components, num_baselines, num_freqs,
-                    frac_tol, beamtype, args_ft, GAUSSIAN);
+                    FRAC_TOL, beamtype, args_ft, GAUSSIAN);
 
   free_args_for_testing( args_ft, GAUSSIAN );
 }
@@ -415,7 +414,7 @@ void test_kern_calc_visi_gauss_VarylmnVaryPAMajMin(int beamtype) {
   //Container for many arrays to feed the GPU
   args_for_testing_t *args_ft = malloc(sizeof(args_for_testing_t));
   //Allocate memory
-  int num_coeffs; //Only applies for SHAPELET
+  int num_coeffs = 0; //Only applies for SHAPELET
   malloc_args_for_testing(args_ft, num_baselines, num_times,
                           num_freqs, num_components, num_coeffs, GAUSSIAN);
 
@@ -443,20 +442,19 @@ void test_kern_calc_visi_gauss_VarylmnVaryPAMajMin(int beamtype) {
     args_ft->minors[comp] = (comp + 2)*(DD2R / 60.0);
   }
 
-  float _Complex *visi_envs = malloc(num_components*sizeof(float _Complex));
-
   //Make up some u,v,w values and scale by wavelength in correct order
   int count = 0;
-  float freq_base = 150e+6;
-  float freq_inc = 25e+6;
-  float wavelength, frequency;
+  user_precision_t freq_base = 150e+6;
+  user_precision_t freq_inc = 25e+6;
+  user_precision_t wavelength, frequency;
   for ( int time_step = 0; time_step < num_times; time_step++ ) {
     for (int freq_step = 0; freq_step < num_freqs; freq_step++) {
       frequency = freq_base + freq_step*freq_inc;
       wavelength = VELC / frequency;
       for (int baseline = 0; baseline < num_baselines; baseline++) {
-        args_ft->us[count] = ((baseline + 1)*10) / wavelength;
-        args_ft->vs[count] = ((baseline + 1)*10) / wavelength;
+        args_ft->us[count] = ((baseline + 1)*100) / wavelength;
+        args_ft->vs[count] = ((baseline + 1)*100) / wavelength;
+        //ws are usually smaller than u,v
         args_ft->ws[count] = ((baseline + 1)*10) / wavelength;
 
         args_ft->allsteps_wavelengths[count] = wavelength;
@@ -482,10 +480,8 @@ void test_kern_calc_visi_gauss_VarylmnVaryPAMajMin(int beamtype) {
           args_ft->primay_beam_J00, args_ft->primay_beam_J01,
           args_ft->primay_beam_J10, args_ft->primay_beam_J11);
 
-  //Check all results are within 0.1% of expected value
-  float frac_tol = 1e-3;
   test_visi_outputs(num_visis, num_components, num_baselines, num_freqs,
-                    frac_tol, beamtype, args_ft, GAUSSIAN);
+                    FRAC_TOL, beamtype, args_ft, GAUSSIAN);
 
   free_args_for_testing( args_ft, GAUSSIAN );
 }

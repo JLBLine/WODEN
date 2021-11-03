@@ -216,7 +216,7 @@ give the same results so feed in the correct COMPONENT array via functions
 below
 */
 void test_azza_coords(double lst_base, int num_comps,
-                      float *calc_azs, float *calc_zas){
+                      user_precision_t *calc_azs, user_precision_t *calc_zas){
 
   //Compare calculated az/za for all time steps to expectation
   //Some of these are small numbers so test within an accuracy
@@ -262,8 +262,8 @@ void check_point_values_after_crop(double lst_base, catsource_t *cropped_src,
   //If cropping by COMPONENT, there should be a 4th component
   if (lst_base == LST0) {
     for (int i = 0; i < 3; i++) {
-      TEST_ASSERT_EQUAL_FLOAT((float)point0_ras[i], (float)cropped_src->point_ras[i]);
-      TEST_ASSERT_EQUAL_FLOAT((float)point0_decs[i], (float)cropped_src->point_decs[i]);
+      TEST_ASSERT_EQUAL_FLOAT((user_precision_t)point0_ras[i], (user_precision_t)cropped_src->point_ras[i]);
+      TEST_ASSERT_EQUAL_FLOAT((user_precision_t)point0_decs[i], (user_precision_t)cropped_src->point_decs[i]);
     }
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_ref_freqs, cropped_src->point_ref_freqs, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_ref_stokesI,
@@ -282,8 +282,8 @@ void check_point_values_after_crop(double lst_base, catsource_t *cropped_src,
     } else if (sky_crop_type == CROP_COMPONENTS) {
       TEST_ASSERT_EQUAL_INT(4, cropped_src->n_points);
       //test that 4th COMPONENT is equal to the first of point1
-      TEST_ASSERT_EQUAL_FLOAT((float)point1_ras[0], (float)cropped_src->point_ras[3]);
-      TEST_ASSERT_EQUAL_FLOAT((float)point1_decs[0], (float)cropped_src->point_decs[3]);
+      TEST_ASSERT_EQUAL_FLOAT((user_precision_t)point1_ras[0], (user_precision_t)cropped_src->point_ras[3]);
+      TEST_ASSERT_EQUAL_FLOAT((user_precision_t)point1_decs[0], (user_precision_t)cropped_src->point_decs[3]);
       TEST_ASSERT_EQUAL_FLOAT(point1_ref_freqs[0], cropped_src->point_ref_freqs[3]);
       TEST_ASSERT_EQUAL_FLOAT(point1_ref_stokesI[0],
                              cropped_src->point_ref_stokesI[3]);
@@ -304,8 +304,8 @@ void check_point_values_after_crop(double lst_base, catsource_t *cropped_src,
     // TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_ras, cropped_src->point_ras, 3);
     // TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_decs, cropped_src->point_decs, 3);
     for (int i = 0; i < 3; i++) {
-      TEST_ASSERT_EQUAL_FLOAT((float)point0_ras[i], (float)cropped_src->point_ras[i]);
-      TEST_ASSERT_EQUAL_FLOAT((float)point0_decs[i], (float)cropped_src->point_decs[i]);
+      TEST_ASSERT_EQUAL_FLOAT((user_precision_t)point0_ras[i], (user_precision_t)cropped_src->point_ras[i]);
+      TEST_ASSERT_EQUAL_FLOAT((user_precision_t)point0_decs[i], (user_precision_t)cropped_src->point_decs[i]);
     }
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_ref_freqs, cropped_src->point_ref_freqs, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_ref_stokesI,
@@ -323,8 +323,8 @@ void check_point_values_after_crop(double lst_base, catsource_t *cropped_src,
     // TEST_ASSERT_EQUAL_FLOAT_ARRAY(point1_ras, cropped_src->point_ras + 3, 3);
     // TEST_ASSERT_EQUAL_FLOAT_ARRAY(point1_decs, cropped_src->point_decs + 3, 3);
     for (int i = 0; i < 3; i++) {
-      TEST_ASSERT_EQUAL_FLOAT((float)point1_ras[i], (float)cropped_src->point_ras[3+i]);
-      TEST_ASSERT_EQUAL_FLOAT((float)point1_decs[i], (float)cropped_src->point_decs[3+i]);
+      TEST_ASSERT_EQUAL_FLOAT((user_precision_t)point1_ras[i], (user_precision_t)cropped_src->point_ras[3+i]);
+      TEST_ASSERT_EQUAL_FLOAT((user_precision_t)point1_decs[i], (user_precision_t)cropped_src->point_decs[3+i]);
     }
 
 
@@ -342,8 +342,8 @@ void check_point_values_after_crop(double lst_base, catsource_t *cropped_src,
   } else if (lst_base == LST2) { //first source should have been cropped, second retained
     TEST_ASSERT_EQUAL_INT(3, cropped_src->n_points);
     for (int i = 0; i < 3; i++) {
-      TEST_ASSERT_EQUAL_FLOAT((float)point1_ras[i], (float)cropped_src->point_ras[i]);
-      TEST_ASSERT_EQUAL_FLOAT((float)point1_decs[i], (float)cropped_src->point_decs[i]);
+      TEST_ASSERT_EQUAL_FLOAT((user_precision_t)point1_ras[i], (user_precision_t)cropped_src->point_ras[i]);
+      TEST_ASSERT_EQUAL_FLOAT((user_precision_t)point1_decs[i], (user_precision_t)cropped_src->point_decs[i]);
     }
     // TEST_ASSERT_EQUAL_FLOAT_ARRAY(point1_ras, cropped_src->point_ras, 3);
     // TEST_ASSERT_EQUAL_FLOAT_ARRAY(point1_decs, cropped_src->point_decs, 3);
@@ -373,7 +373,7 @@ void test_crop_sky_model_Point(double lst_base, e_sky_crop sky_crop_type) {
   //Setup the lsts - the first of this list is used in calculating az/za
   //for cropping. Once cropped, az/za is calculated for all surviving COMPONENTs
   int num_time_steps = 3;
-  float lsts[] = {lst_base, lst_base+60*SOLAR2SIDEREAL*DS2R,
+  user_precision_t lsts[] = {lst_base, lst_base+60*SOLAR2SIDEREAL*DS2R,
                   lst_base + 120.0*SOLAR2SIDEREAL*DS2R};
 
   //Create the input sky catalogue
@@ -544,7 +544,7 @@ void test_crop_sky_model_Gauss(double lst_base, e_sky_crop sky_crop_type) {
   //Setup the lsts - the first of this list is used in calculating az/za
   //for cropping. Once cropped, az/za is calculated for all surviving COMPONENTs
   int num_time_steps = 3;
-  float lsts[] = {lst_base, lst_base+60*SOLAR2SIDEREAL*DS2R,
+  user_precision_t lsts[] = {lst_base, lst_base+60*SOLAR2SIDEREAL*DS2R,
                   lst_base + 120.0*SOLAR2SIDEREAL*DS2R};
 
   //Create the input sky catalogue
@@ -657,7 +657,7 @@ void check_shape_values_after_crop(double lst_base, catsource_t *cropped_src,
       TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_n1s, cropped_src->shape_n1s + 10, 4);
       TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_n2s, cropped_src->shape_n2s + 10, 4);
       //There is now a 4th component, so the param indexes should be 3
-      float expec_param_indexes1[] = {3, 3, 3, 3};
+      user_precision_t expec_param_indexes1[] = {3, 3, 3, 3};
       TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_param_indexes1,
                                     cropped_src->shape_param_indexes + 10, 4);
 
@@ -710,7 +710,7 @@ void check_shape_values_after_crop(double lst_base, catsource_t *cropped_src,
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_n2s, cropped_src->shape_n2s + 10, 7);
 
     //The indexes are additive coeffs from second SOURCE are higher than shape1
-    float expec_param_indexes2[] = {3, 3, 3, 3, 4, 5, 5};
+    user_precision_t expec_param_indexes2[] = {3, 3, 3, 3, 4, 5, 5};
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_param_indexes2,
                                   cropped_src->shape_param_indexes + 10, 7);
 
@@ -756,7 +756,7 @@ void test_crop_sky_model_Shape(double lst_base, e_sky_crop sky_crop_type) {
   //Setup the lsts - the first of this list is used in calculating az/za
   //for cropping. Once cropped, az/za is calculated for all surviving COMPONENTs
   int num_time_steps = 3;
-  float lsts[] = {lst_base, lst_base+60*SOLAR2SIDEREAL*DS2R,
+  user_precision_t lsts[] = {lst_base, lst_base+60*SOLAR2SIDEREAL*DS2R,
                   lst_base + 120.0*SOLAR2SIDEREAL*DS2R};
 
   //Create the input sky catalogue
@@ -822,7 +822,7 @@ void test_crop_sky_model_AllTypes(double lst_base, e_sky_crop sky_crop_type) {
   //Setup the lsts - the first of this list is used in calculating az/za
   //for cropping. Once cropped, az/za is calculated for all surviving COMPONENTs
   int num_time_steps = 3;
-  float lsts[] = {lst_base, lst_base+60*SOLAR2SIDEREAL*DS2R,
+  user_precision_t lsts[] = {lst_base, lst_base+60*SOLAR2SIDEREAL*DS2R,
                   lst_base + 120.0*SOLAR2SIDEREAL*DS2R};
 
   //Create the input sky catalogue

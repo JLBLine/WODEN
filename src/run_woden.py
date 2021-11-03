@@ -493,14 +493,17 @@ def enh2xyz(east, north, height, latitude=MWA_LAT*D2R):
     Z = north*cl + height*sl
     return X,Y,Z
 
-def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_steps=None):
+def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_steps=None,
+              precision=None):
     """
     Read the WODEN binary output and shove into a numpy arrays, ready to be put
     into a uvfits file. Data in WODEN binaries is ordered by baseline (fastest
     changing), frequency, and time (slowest changing). Visibility coords and
     data are read in, with the visi data output into an array of
     `shape=(num_time_steps*num_baselines,1,1,num_freq_channels,4,3))`, which is
-    appropriate for a uvfits file.
+    appropriate for a uvfits file. Needs to know whether WODEN was run with
+    'float' (32 bit) or 'double' (64 bit) precision to read in the data
+    correctly.
 
     Parameters
     ----------
@@ -512,6 +515,8 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
         Number of frequencies in the binary file
     num_time_steps : int
         Number of time steps in the binary file
+    precision : string
+        Precision WODEN was run with - either 'float' or 'double'
 
     Returns
     -------
@@ -530,7 +535,11 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
         read_data = f.read()
     f.close()
 
-    data = np.frombuffer(read_data,dtype=np.float32)
+    ##numpy needs to know if we have 32 (float) or 64 (double) bit precision
+    if precision == 'float':
+        data = np.frombuffer(read_data,dtype=np.float32)
+    elif precision == 'double':
+        data = np.frombuffer(read_data,dtype=np.float64)
 
     n_data = num_time_steps * num_baselines
     v_container = np.zeros((n_data,1,1,num_freq_channels,4,3))
@@ -964,6 +973,9 @@ def get_parser():
              'of which SOURCE it belongs to.')
 
     sim_group = parser.add_argument_group('SIMULATOR OPTIONS')
+    sim_group.add_argument('--precision', default='double',
+        help='What precision to run WODEN at. Options are "double" or "float". '
+             'Defaults to "double"')
     sim_group.add_argument('--remove_phase_tracking', default=False, action='store_true',
         help='By adding this flag, remove the phase tracking of the '
              'visibilities - use this to feed uvfits into the RTS')
@@ -976,6 +988,7 @@ def get_parser():
     sim_group.add_argument('--dry_run', default=False, action='store_true',
         help='Add this to NOT call the WODEN executable - this will just write '
              'out the .json file and do nothing else')
+
 
     ##Add a number of hidden arguments. This means we can add attributes to
     ##the args object to conveniently pass things into functions, but without
@@ -1264,6 +1277,11 @@ def check_args(args):
         if args.gauss_beam_ref_freq: args.gauss_beam_ref_freq = float(args.gauss_beam_ref_freq)
         if args.gauss_beam_FWHM: args.gauss_beam_FWHM = float(args.gauss_beam_FWHM)
 
+    if args.precision not in ['double', 'float']:
+        print(f"Arg --precision={args.precision} is not valid. Should be either"
+              "'double' or 'float'. Setting to 'double'")
+        args.precision='double'
+
     ##Either read the array layout from a file or use what was in the metafits
     select_correct_enh(args)
 
@@ -1273,6 +1291,17 @@ if __name__ == "__main__":
 
     ##If we're at readthe docs, we don't need to know where woden exe lives
     read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
+
+    ##Grab the parser and parse some args
+    parser = get_parser()
+    args = parser.parse_args()
+
+    args = check_args(args)
+
+    if args.precision == 'float':
+        woden_exe = "woden_float"
+    elif args.precision == 'double':
+        woden_exe = "woden_double"
 
     WODEN_DIR = 'unset'
 
@@ -1285,14 +1314,14 @@ if __name__ == "__main__":
         ##If it doesn't exist, try and find it in the path
         except KeyError:
             for path in os.environ["PATH"].split(os.pathsep):
-                woden_exe_path = os.path.join(path, 'woden')
+                woden_exe_path = os.path.join(path, woden_exe)
                 if os.path.isfile(woden_exe_path):
                     print(os.access(woden_exe_path, os.X_OK))
 
                     WODEN_DIR = '/'.join(woden_exe_path.split('/')[:-1])
 
     ##Print where we found woden executable
-    print(f'Using the WODEN living here: {WODEN_DIR}/woden')
+    print(f'Using the WODEN living here: {WODEN_DIR}/{woden_exe}')
 
     ##Find out where the git repo is, cd in and grab the git label
     ##TODO do this in a better way
@@ -1304,12 +1333,6 @@ if __name__ == "__main__":
     os.chdir(cwd)
 
     print("You are using WODEN commit %s" %gitlabel)
-
-    ##Grab the parser and parse some args
-    parser = get_parser()
-    args = parser.parse_args()
-
-    args = check_args(args)
 
     lst_deg, gst0_deg, degpdy, ut1utc = get_uvfits_date_and_position_constants(latitude=args.latitude, longitude=args.longitude,
                         height=args.array_height, date=args.date)
@@ -1330,7 +1353,12 @@ if __name__ == "__main__":
     if args.dry_run:
         pass
     else:
-        command('%s/woden %s' %(WODEN_DIR,json_name))
+        # if args.precision == 'float':
+        #
+        # else:
+        #     command('%s/woden_double %s' %(WODEN_DIR,json_name))
+
+        command(f'{WODEN_DIR}/{woden_exe} {json_name}')
 
         X,Y,Z = enh2xyz(args.east, args.north, args.height, args.latitude*D2R)
         ##X,Y,Z are stored in a 2D array in units of seconds in the uvfits file
@@ -1357,7 +1385,8 @@ if __name__ == "__main__":
             filename = "output_visi_band{:02d}.dat".format(band)
             uus,vvs,wws,v_container = load_data(filename=filename,num_baselines=num_baselines,
                                                 num_freq_channels=args.num_freq_channels,
-                                                num_time_steps=args.num_time_steps)
+                                                num_time_steps=args.num_time_steps,
+                                                precision=args.precision)
 
 
             if args.remove_phase_tracking:

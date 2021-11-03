@@ -23,6 +23,13 @@ void test_calc_para_angle() {
   int num_time_steps = 3;
   calc_para_angle(src, lsts, MWA_LAT_RAD, num_time_steps);
 
+  #ifdef DOUBLE_PRECISION
+    printf("WODEN is using DOUBLE precision\n");
+  #else
+    printf("WODEN is using FLOAT precision\n");
+  #endif
+
+  //Unity seems able to convert the double outputs in float for testing here
   TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_point_sin_para,
                                 src->sin_point_para_angs, 9);
   TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_point_cos_para,

@@ -4,42 +4,31 @@
 
 #include "constants.h"
 #include "woden_struct_defs.h"
-
+#include "woden_precision_defs.h"
 
 
 visibility_set_t * setup_visibility_set(int num_visis) {
   visibility_set_t *visibility_set = (visibility_set_t *)malloc(sizeof(visibility_set_t));
-  visibility_set->us_metres = (float *)malloc( num_visis * sizeof(float) );
-  visibility_set->vs_metres = (float *)malloc( num_visis * sizeof(float) );
-  visibility_set->ws_metres = (float *)malloc( num_visis * sizeof(float) );
+  visibility_set->us_metres = (user_precision_t *)malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->vs_metres = (user_precision_t *)malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->ws_metres = (user_precision_t *)malloc( num_visis * sizeof(user_precision_t) );
 
-  visibility_set->sum_visi_XX_real = (float *)malloc( num_visis * sizeof(float) );
-  visibility_set->sum_visi_XX_imag = (float *)malloc( num_visis * sizeof(float) );
-  visibility_set->sum_visi_XY_real = (float *)malloc( num_visis * sizeof(float) );
-  visibility_set->sum_visi_XY_imag = (float *)malloc( num_visis * sizeof(float) );
-  visibility_set->sum_visi_YX_real = (float *)malloc( num_visis * sizeof(float) );
-  visibility_set->sum_visi_YX_imag = (float *)malloc( num_visis * sizeof(float) );
-  visibility_set->sum_visi_YY_real = (float *)malloc( num_visis * sizeof(float) );
-  visibility_set->sum_visi_YY_imag = (float *)malloc( num_visis * sizeof(float) );
-
-  // for (int visi = 0; visi < num_visis; visi++) {
-  //   visibility_set->sum_visi_XX_real[visi] = 0;
-  //   visibility_set->sum_visi_XX_imag[visi] = 0;
-  //   visibility_set->sum_visi_XY_real[visi] = 0;
-  //   visibility_set->sum_visi_XY_imag[visi] = 0;
-  //   visibility_set->sum_visi_YX_real[visi] = 0;
-  //   visibility_set->sum_visi_YX_imag[visi] = 0;
-  //   visibility_set->sum_visi_YY_real[visi] = 0;
-  //   visibility_set->sum_visi_YY_imag[visi] = 0;
-  // }
+  visibility_set->sum_visi_XX_real = (user_precision_t *)malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->sum_visi_XX_imag = (user_precision_t *)malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->sum_visi_XY_real = (user_precision_t *)malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->sum_visi_XY_imag = (user_precision_t *)malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->sum_visi_YX_real = (user_precision_t *)malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->sum_visi_YX_imag = (user_precision_t *)malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->sum_visi_YY_real = (user_precision_t *)malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->sum_visi_YY_imag = (user_precision_t *)malloc( num_visis * sizeof(user_precision_t) );
 
   return visibility_set;
 }
 
 void fill_timefreq_visibility_set(visibility_set_t *visibility_set,
                                   woden_settings_t *woden_settings,
-                                  float base_band_freq,
-                                  float *lsts) {
+                                  user_precision_t base_band_freq,
+                                  user_precision_t *lsts) {
 
   //For easy indexing when running on GPUs, make 4 arrays that match
   //the settings for every baseline, frequency, and time step in the
@@ -48,13 +37,13 @@ void fill_timefreq_visibility_set(visibility_set_t *visibility_set,
   //Order matches that of a uvfits file (I live in the past)
 
   int num_visis = woden_settings->num_visis;
-  visibility_set->allsteps_sha0s = malloc( num_visis * sizeof(float) );
-  visibility_set->allsteps_cha0s = malloc( num_visis * sizeof(float) );
-  visibility_set->allsteps_lsts = malloc( num_visis * sizeof(float) );
-  visibility_set->allsteps_wavelengths = malloc( num_visis * sizeof(float) );
-  visibility_set->channel_frequencies = malloc( (int)woden_settings->num_freqs * sizeof(float) );
+  visibility_set->allsteps_sha0s = malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->allsteps_cha0s = malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->allsteps_lsts = malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->allsteps_wavelengths = malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->channel_frequencies = malloc( (int)woden_settings->num_freqs * sizeof(user_precision_t) );
 
-  float wavelength, frequency;
+  user_precision_t wavelength, frequency;
   //Fill in the fine channel frequencies
   for (int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++) {
     frequency = base_band_freq + (woden_settings->frequency_resolution*freq_step);
@@ -62,7 +51,7 @@ void fill_timefreq_visibility_set(visibility_set_t *visibility_set,
   }
 
   //Fill the time/frequency settings for all baseline/freq/time
-  float ha0, sha0, cha0;
+  user_precision_t ha0, sha0, cha0;
 
   for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
     ha0 = lsts[time_step] - woden_settings->ra0;
@@ -102,18 +91,18 @@ void write_visi_set_binary(visibility_set_t *visibility_set,
       exit(1);
   }
 
-  fwrite(visibility_set->us_metres, num_visis*sizeof(float), 1, output_visi);
-  fwrite(visibility_set->vs_metres, num_visis*sizeof(float), 1, output_visi);
-  fwrite(visibility_set->ws_metres, num_visis*sizeof(float), 1, output_visi);
+  fwrite(visibility_set->us_metres, num_visis*sizeof(user_precision_t), 1, output_visi);
+  fwrite(visibility_set->vs_metres, num_visis*sizeof(user_precision_t), 1, output_visi);
+  fwrite(visibility_set->ws_metres, num_visis*sizeof(user_precision_t), 1, output_visi);
 
-  fwrite(visibility_set->sum_visi_XX_real, num_visis*sizeof(float), 1, output_visi);
-  fwrite(visibility_set->sum_visi_XX_imag, num_visis*sizeof(float), 1, output_visi);
-  fwrite(visibility_set->sum_visi_XY_real, num_visis*sizeof(float), 1, output_visi);
-  fwrite(visibility_set->sum_visi_XY_imag, num_visis*sizeof(float), 1, output_visi);
-  fwrite(visibility_set->sum_visi_YX_real, num_visis*sizeof(float), 1, output_visi);
-  fwrite(visibility_set->sum_visi_YX_imag, num_visis*sizeof(float), 1, output_visi);
-  fwrite(visibility_set->sum_visi_YY_real, num_visis*sizeof(float), 1, output_visi);
-  fwrite(visibility_set->sum_visi_YY_imag, num_visis*sizeof(float), 1, output_visi);
+  fwrite(visibility_set->sum_visi_XX_real, num_visis*sizeof(user_precision_t), 1, output_visi);
+  fwrite(visibility_set->sum_visi_XX_imag, num_visis*sizeof(user_precision_t), 1, output_visi);
+  fwrite(visibility_set->sum_visi_XY_real, num_visis*sizeof(user_precision_t), 1, output_visi);
+  fwrite(visibility_set->sum_visi_XY_imag, num_visis*sizeof(user_precision_t), 1, output_visi);
+  fwrite(visibility_set->sum_visi_YX_real, num_visis*sizeof(user_precision_t), 1, output_visi);
+  fwrite(visibility_set->sum_visi_YX_imag, num_visis*sizeof(user_precision_t), 1, output_visi);
+  fwrite(visibility_set->sum_visi_YY_real, num_visis*sizeof(user_precision_t), 1, output_visi);
+  fwrite(visibility_set->sum_visi_YY_imag, num_visis*sizeof(user_precision_t), 1, output_visi);
 
   fflush(output_visi);
   fclose(output_visi);
@@ -132,9 +121,22 @@ void write_visi_set_text(visibility_set_t *visibility_set, int band_num,
     for ( int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++ ) {
       for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {
         int step = woden_settings->num_baselines*(time_step*woden_settings->num_freqs + freq_step);
-        fprintf(output_visi_text,"%f %f %f %f %f\n",visibility_set->us_metres[step + baseline],
-                visibility_set->vs_metres[step + baseline],visibility_set->ws_metres[step + baseline],
-                visibility_set->sum_visi_XX_real[step + baseline],visibility_set->sum_visi_XX_imag[step + baseline]);
+
+        #ifdef DOUBLE_PRECISION
+          fprintf(output_visi_text,"%lf %lf %lf %lf %lf\n",
+                  visibility_set->us_metres[step + baseline],
+                  visibility_set->vs_metres[step + baseline],
+                  visibility_set->ws_metres[step + baseline],
+                  visibility_set->sum_visi_XX_real[step + baseline],
+                  visibility_set->sum_visi_XX_imag[step + baseline]);
+        #else
+          fprintf(output_visi_text,"%f %f %f %f %f\n",
+                  visibility_set->us_metres[step + baseline],
+                  visibility_set->vs_metres[step + baseline],
+                  visibility_set->ws_metres[step + baseline],
+                  visibility_set->sum_visi_XX_real[step + baseline],
+                  visibility_set->sum_visi_XX_imag[step + baseline]);
+        #endif
       }
     }
   }

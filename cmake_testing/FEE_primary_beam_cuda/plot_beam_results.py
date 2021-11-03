@@ -6,7 +6,8 @@ def make_ax_do_plot(fig, az, za, plot_ind, data, numx=2, numy=4,
     labels = ['XX real', 'XX imag', 'YY real', 'YY imag']
     ax = fig.add_subplot(numy, numx, plot_ind, projection='polar')
 
-    ax.scatter(az, za, c=np.log10(data), s=s, alpha=alpha)
+    sc = ax.scatter(az, za, c=np.log10(data), s=s, alpha=alpha)
+    plt.colorbar(sc)
 
     ax.set_ylim(0,np.pi/2)
     ax.set_yticklabels([])

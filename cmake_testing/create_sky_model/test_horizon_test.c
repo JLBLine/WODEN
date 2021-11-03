@@ -37,7 +37,7 @@ void test_horizon_test_CropSourceAbove(void)
   double za = 0;
   int num_shape_coeff_retained = 0;
   int num_shape_coeff_component = 0;
-  float *shape_param_indexes;
+  user_precision_t *shape_param_indexes = malloc(sizeof(user_precision_t));
   int shape = 0;
   //We want to crop by whole SOURCE not by COMPONENT
   e_sky_crop sky_crop_type = CROP_SOURCES;
@@ -57,6 +57,8 @@ void test_horizon_test_CropSourceAbove(void)
   TEST_ASSERT_EQUAL_INT(0, num_shape_coeff_retained);
   TEST_ASSERT_EQUAL_INT(0, num_shape_coeff_component);
 
+  free(shape_param_indexes);
+
 }
 
 /*
@@ -70,7 +72,7 @@ void test_horizon_test_CropSourceBelow(void)
   double za = M_PI;
   int num_shape_coeff_retained = 0;
   int num_shape_coeff_component = 0;
-  float *shape_param_indexes;
+  user_precision_t *shape_param_indexes = malloc(sizeof(user_precision_t));
   int shape = 0;
   //We want to crop by whole SOURCE not by COMPONENT
   e_sky_crop sky_crop_type = CROP_SOURCES;
@@ -90,6 +92,8 @@ void test_horizon_test_CropSourceBelow(void)
   TEST_ASSERT_EQUAL_INT(0, num_shape_coeff_retained);
   TEST_ASSERT_EQUAL_INT(0, num_shape_coeff_component);
 
+  free(shape_param_indexes);
+
 }
 
 /*
@@ -103,7 +107,7 @@ void test_horizon_test_PointCropComponentAbove(void)
   double za = 0;
   int num_shape_coeff_retained = 0;
   int num_shape_coeff_component = 0;
-  float *shape_param_indexes;
+  user_precision_t *shape_param_indexes = malloc(sizeof(user_precision_t));
   int shape = 0;
   //We want to crop by COMPONENT not whole SOURCE
   e_sky_crop sky_crop_type = CROP_COMPONENTS;
@@ -125,6 +129,8 @@ void test_horizon_test_PointCropComponentAbove(void)
   TEST_ASSERT_EQUAL_INT(0, num_shape_coeff_retained);
   TEST_ASSERT_EQUAL_INT(0, num_shape_coeff_component);
 
+  free(shape_param_indexes);
+
 }
 
 /*
@@ -138,7 +144,7 @@ void test_horizon_test_PointCropComponentBelow(void)
   double za = M_PI;
   int num_shape_coeff_retained = 0;
   int num_shape_coeff_component = 0;
-  float *shape_param_indexes;
+  user_precision_t *shape_param_indexes = malloc(sizeof(user_precision_t));
   int shape = 0;
   //We want to crop by COMPONENT not whole SOURCE
   e_sky_crop sky_crop_type = CROP_COMPONENTS;
@@ -158,6 +164,8 @@ void test_horizon_test_PointCropComponentBelow(void)
   TEST_ASSERT_EQUAL_INT(0, num_shape_coeff_retained);
   TEST_ASSERT_EQUAL_INT(0, num_shape_coeff_component);
 
+  free(shape_param_indexes);
+
 }
 
 /*
@@ -174,7 +182,7 @@ void test_horizon_test_ShapeletCropComponent(double za, int shape,
 
   //The param index array maps shapelet basis functions to their respective
   //COMPONENT info (like ra,dec,flux etc)
-  float shape_param_indexes[] = {0, 0, 1, 1, 1, 1, 2};
+  user_precision_t shape_param_indexes[] = {0, 0, 1, 1, 1, 1, 2};
   int num_shape_coeff_component = 7;
   //We want to crop by COMPONENT not whole SOURCE
   e_sky_crop sky_crop_type = CROP_COMPONENTS;

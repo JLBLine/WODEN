@@ -1,31 +1,40 @@
-file(GLOB CUDASOURCES "${CMAKE_SOURCE_DIR}/src/fundamental_coords.cu")
-
-add_library(fundamental_coordsCUDA SHARED ${CUDASOURCES})
-
-## For CMake versions > 3.18, the arch flag settings are handled by
-## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
-## replace the CUDA_FLAG lines above with something like
-set_property(TARGET fundamental_coordsCUDA PROPERTY CUDA_ARCHITECTURES OFF)
-
-##Test l,m,n functions
-add_executable(test_lmn_coords_app
-    test_lmn_coords.c
-)
-target_link_libraries(test_lmn_coords_app
-    Unity
-    fundamental_coordsCUDA
-)
-add_test(CUDA_test_lmn_coords test_lmn_coords_app)
 
 
-#
-##Test u,v,w functions
-add_executable(test_uvw_coords_app
-    test_uvw_coords.c
-)
-target_link_libraries(test_uvw_coords_app
-    Unity
-    fundamental_coordsCUDA
-    ${CC_LINKLIBS}
-)
-add_test(CUDA_test_uvw_coords test_uvw_coords_app)
+## Create tests for both float and double precision
+foreach(PRECISION IN LISTS FLOAT DOUBLE)
+  ##Set the flags depending on the precision
+  DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
+
+  add_library(fundamental_coordsCUDA_${PRECISION} SHARED
+              ${CMAKE_SOURCE_DIR}/src/fundamental_coords.cu)
+  target_compile_options(fundamental_coordsCUDA_${PRECISION} PRIVATE ${CUDA_FLAGS})
+
+  ## For CMake versions > 3.18, the arch flag settings are handled by
+  ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
+  ## replace the CUDA_FLAG lines above with something like
+  set_property(TARGET fundamental_coordsCUDA_${PRECISION} PROPERTY CUDA_ARCHITECTURES OFF)
+
+  ##Test l,m,n functions
+  add_executable(test_lmn_coords_${PRECISION}_app
+      test_lmn_coords.c
+  )
+  target_link_libraries(test_lmn_coords_${PRECISION}_app
+      Unity
+      fundamental_coordsCUDA_${PRECISION}
+  )
+  target_compile_options(test_lmn_coords_${PRECISION}_app PRIVATE ${C_FLAGS})
+  add_test(CUDA_test_lmn_coords_${PRECISION} test_lmn_coords_${PRECISION}_app)
+
+  ##Test u,v,w functions
+  add_executable(test_uvw_coords_${PRECISION}_app
+      test_uvw_coords.c
+  )
+  target_link_libraries(test_uvw_coords_${PRECISION}_app
+      Unity
+      fundamental_coordsCUDA_${PRECISION}
+      ${CC_LINKLIBS}
+  )
+  target_compile_options(test_uvw_coords_${PRECISION}_app PRIVATE ${C_FLAGS})
+  add_test(CUDA_test_uvw_coords_${PRECISION} test_uvw_coords_${PRECISION}_app)
+
+endforeach()

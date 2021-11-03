@@ -25,8 +25,9 @@
  * @param[in,out] *Y        Pointer to local Y coord to be filled (metres)
  * @param[in,out] *Z        Pointer to local Z coord to be filled (metres)
  */
-void RTS_ENH2XYZ_local(float E, float N, float H, float lat,
-                       float *X, float *Y, float *Z);
+void RTS_ENH2XYZ_local(user_precision_t E, user_precision_t N, user_precision_t H,
+                       user_precision_t lat,
+                       user_precision_t *X, user_precision_t *Y, user_precision_t *Z);
 
 /**
 @brief Populates an `array_layout_t` struct with useful antenna coords and

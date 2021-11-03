@@ -35,11 +35,13 @@ iComponent (Jy)
 @param[in,out] *flux_V Pointer to extrapolated Stokes V (Jy)
 
 */
-__device__ void extrap_stokes(float *d_allsteps_wavelengths, float *d_ref_freqs,
-           float *d_ref_stokesI, float *d_ref_stokesQ,
-           float *d_ref_stokesU, float *d_ref_stokesV,
-           float *d_SIs, int iComponent, int iBaseline,
-           float * flux_I, float * flux_Q, float * flux_U, float * flux_V);
+__device__ void extrap_stokes(user_precision_t *d_allsteps_wavelengths,
+           user_precision_t *d_ref_freqs,
+           user_precision_t *d_ref_stokesI, user_precision_t *d_ref_stokesQ,
+           user_precision_t *d_ref_stokesU, user_precision_t *d_ref_stokesV,
+           user_precision_t *d_SIs, int iComponent, int iBaseline,
+           user_precision_t * flux_I, user_precision_t * flux_Q,
+           user_precision_t * flux_U, user_precision_t * flux_V);
 
 /**
 @brief Calculate the complex exponential phase part of the visibility function
@@ -72,10 +74,11 @@ this yields the correct output visibilities.
 @param[in] *d_ns Pointer to \f$n\f$ coodinates
 @param[in] iBaseline Index for \f$u,v,w\f$
 @param[in] iComponent Index for \f$l,m,n\f$
-@return `visi`, a `cuFloatComplex` of the visibility
+@return `visi`, a `cuUserComplex` of the visibility
 */
-__device__ cuFloatComplex calc_measurement_equation(float *d_us,
-           float *d_vs, float *d_ws, double *d_ls, double *d_ms, double *d_ns,
+__device__ cuUserComplex calc_measurement_equation(user_precision_t *d_us,
+           user_precision_t *d_vs, user_precision_t *d_ws,
+           double *d_ls, double *d_ms, double *d_ns,
            const int iBaseline, const int iComponent);
 
 /**
@@ -150,15 +153,15 @@ component into a GAUSSIAN or SHAPELET component, and has been applied in
 @param[in,out] visi_YX Output YX instrumental visibility
 @param[in,out] visi_YY Output YY instrumental visibility
 */
-__device__ void apply_beam_gains(cuFloatComplex g1x, cuFloatComplex D1x,
-          cuFloatComplex D1y, cuFloatComplex g1y,
-          cuFloatComplex g2x, cuFloatComplex D2x,
-          cuFloatComplex D2y, cuFloatComplex g2y,
-          float flux_I, float flux_Q,
-          float flux_U, float flux_V,
-          cuFloatComplex visi_component,
-          cuFloatComplex * visi_XX, cuFloatComplex * visi_XY,
-          cuFloatComplex * visi_YX, cuFloatComplex * visi_YY);
+__device__ void apply_beam_gains(cuUserComplex g1x, cuUserComplex D1x,
+          cuUserComplex D1y, cuUserComplex g1y,
+          cuUserComplex g2x, cuUserComplex D2x,
+          cuUserComplex D2y, cuUserComplex g2y,
+          user_precision_t flux_I, user_precision_t flux_Q,
+          user_precision_t flux_U, user_precision_t flux_V,
+          cuUserComplex visi_component,
+          cuUserComplex * visi_XX, cuUserComplex * visi_XY,
+          cuUserComplex * visi_YX, cuUserComplex * visi_YY);
 
 /**
 @brief Given the type of primary beam simulated `beamtype`, select the beam
@@ -208,12 +211,12 @@ If `beamtype == NO_BEAM`, set `g1x = g1y = g2x = g2y = 1` and
 */
 __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
            int num_baselines, int num_components, int num_times, int beamtype,
-           cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
-           cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11,
-           cuFloatComplex * g1x, cuFloatComplex * D1x,
-           cuFloatComplex * D1y, cuFloatComplex * g1y,
-           cuFloatComplex * g2x, cuFloatComplex * D2x,
-           cuFloatComplex * D2y, cuFloatComplex * g2y);
+           cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
+           cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
+           cuUserComplex * g1x, cuUserComplex * D1x,
+           cuUserComplex * D1y, cuUserComplex * g1y,
+           cuUserComplex * g2x, cuUserComplex * D2x,
+           cuUserComplex * D2y, cuUserComplex * g2y);
 
 /**
 @brief Given the visibility between two recieving elements for a COMPONENT
@@ -264,15 +267,16 @@ into
 visibility into
 */
 __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
-           int num_baselines, int num_components, int num_times, int beamtype,
-           cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
-           cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11,
-           cuFloatComplex visi_component,
-           float flux_I, float flux_Q, float flux_U, float flux_V,
-           float *d_sum_visi_XX_real, float *d_sum_visi_XX_imag,
-           float *d_sum_visi_XY_real, float *d_sum_visi_XY_imag,
-           float *d_sum_visi_YX_real, float *d_sum_visi_YX_imag,
-           float *d_sum_visi_YY_real, float *d_sum_visi_YY_imag);
+    int num_baselines, int num_components, int num_times, int beamtype,
+    cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
+    cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
+    cuUserComplex visi_component,
+    user_precision_t flux_I, user_precision_t flux_Q,
+    user_precision_t flux_U, user_precision_t flux_V,
+    user_precision_t *d_sum_visi_XX_real, user_precision_t *d_sum_visi_XX_imag,
+    user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
+    user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
+    user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag);
 
 /**
 @brief Performs necessary calculations that are common to all POINT, GAUSSIAN,
@@ -325,11 +329,11 @@ COMPONENTs
 
 */
 void source_component_common(int num_components,
-           cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
-           cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11,
-           float *d_freqs, double *d_ls, double *d_ms, double *d_ns,
-           double *d_ras, double *d_decs, float *azs, float *zas,
-           float *sin_para_angs, float *cos_para_angs,
+           cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
+           cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
+           user_precision_t *d_freqs, double *d_ls, double *d_ms, double *d_ns,
+           double *d_ras, double *d_decs, user_precision_t *azs, user_precision_t *zas,
+           user_precision_t *sin_para_angs, user_precision_t *cos_para_angs,
            double *beam_has, double *beam_decs,
            woden_settings_t *woden_settings,
            beam_settings_t *beam_settings);
@@ -402,20 +406,21 @@ simulation
 @param[in] *d_primay_beam_J11 Array of primary beam J[1,1]
 (east-west gain)
 */
-__global__ void kern_calc_visi_point(float *d_point_freqs,
-      float *d_point_stokesI, float *d_point_stokesQ,
-      float *d_point_stokesU, float *d_point_stokesV, float *d_point_SIs,
-      float *d_us, float *d_vs, float *d_ws,
-      float *d_sum_visi_XX_real, float *d_sum_visi_XX_imag,
-      float *d_sum_visi_XY_real, float *d_sum_visi_XY_imag,
-      float *d_sum_visi_YX_real, float *d_sum_visi_YX_imag,
-      float *d_sum_visi_YY_real, float *d_sum_visi_YY_imag,
-      float *d_allsteps_wavelengths,
-      double *d_ls, double *d_ms, double *d_ns,
-      int num_points, int num_baselines, int num_freqs, int num_visis,
-      int num_times, int beamtype,
-      cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
-      cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11);
+__global__ void kern_calc_visi_point(user_precision_t *d_point_freqs,
+           user_precision_t *d_point_stokesI, user_precision_t *d_point_stokesQ,
+           user_precision_t *d_point_stokesU, user_precision_t *d_point_stokesV,
+           user_precision_t *d_point_SIs,
+           user_precision_t *d_us, user_precision_t *d_vs, user_precision_t *d_ws,
+           user_precision_t *d_sum_visi_XX_real, user_precision_t *d_sum_visi_XX_imag,
+           user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
+           user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
+           user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
+           user_precision_t *d_allsteps_wavelengths,
+           double *d_ls, double *d_ms, double *d_ns,
+           int num_points, int num_baselines, int num_freqs, int num_visis,
+           int num_times, int beamtype,
+           cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
+           cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11);
 
 /**
 @brief Kernel to calculate the visibility response to a number `num_gauss` of
@@ -500,21 +505,23 @@ simulation
 @param[in] *d_primay_beam_J11 Array of primary beam J[1,1]
 (east-west gain)
 */
-__global__ void kern_calc_visi_gaussian(float *d_gauss_freqs,
-      float *d_gauss_stokesI, float *d_gauss_stokesQ,
-      float *d_gauss_stokesU, float *d_gauss_stokesV, float *d_gauss_SIs,
-      float *d_us, float *d_vs, float *d_ws,
-      float *d_sum_visi_XX_real, float *d_sum_visi_XX_imag,
-      float *d_sum_visi_XY_real, float *d_sum_visi_XY_imag,
-      float *d_sum_visi_YX_real, float *d_sum_visi_YX_imag,
-      float *d_sum_visi_YY_real, float *d_sum_visi_YY_imag,
-      float *d_allsteps_wavelengths,
-      double *d_ls, double *d_ms, double *d_ns,
-      float *d_gauss_pas, float *d_gauss_majors, float *d_gauss_minors,
-      int num_gauss, int num_baselines, int num_freqs, int num_visis,
-      int num_times, int beamtype,
-      cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
-      cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11);
+__global__ void kern_calc_visi_gaussian(user_precision_t *d_gauss_freqs,
+           user_precision_t *d_gauss_stokesI, user_precision_t *d_gauss_stokesQ,
+           user_precision_t *d_gauss_stokesU, user_precision_t *d_gauss_stokesV,
+           user_precision_t *d_gauss_SIs,
+           user_precision_t *d_us, user_precision_t *d_vs, user_precision_t *d_ws,
+           user_precision_t *d_sum_visi_XX_real, user_precision_t *d_sum_visi_XX_imag,
+           user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
+           user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
+           user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
+           user_precision_t *d_allsteps_wavelengths,
+           double *d_ls, double *d_ms, double *d_ns,
+           user_precision_t *d_gauss_pas, user_precision_t *d_gauss_majors,
+           user_precision_t *d_gauss_minors,
+           int num_gauss, int num_baselines, int num_freqs, int num_visis,
+           int num_times, int beamtype,
+           cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
+           cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11);
 
 /**
 @brief Kernel to calculate the visibility response to a number `num_shapes` of
@@ -635,22 +642,25 @@ simulation
 @param[in] *d_primay_beam_J11 Array of primary beam J[1,1]
 (east-west gain)
 */
-__global__ void kern_calc_visi_shapelets(float *d_shape_freqs,
-      float *d_shape_stokesI, float *d_shape_stokesQ,
-      float *d_shape_stokesU, float *d_shape_stokesV, float *d_shape_SIs,
-      float *d_us, float *d_vs, float *d_ws,
-      float *d_allsteps_wavelengths,
-      float *d_u_shapes, float *d_v_shapes, float *d_w_shapes,
-      float *d_sum_visi_XX_real, float *d_sum_visi_XX_imag,
-      float *d_sum_visi_XY_real, float *d_sum_visi_XY_imag,
-      float *d_sum_visi_YX_real, float *d_sum_visi_YX_imag,
-      float *d_sum_visi_YY_real, float *d_sum_visi_YY_imag,
-      float *d_shape_pas, float *d_shape_majors, float *d_shape_minors,
-      float *d_shape_n1s, float *d_shape_n2s, float *d_shape_coeffs,
-      float *d_shape_param_indexes,
+__global__ void kern_calc_visi_shapelets(user_precision_t *d_shape_freqs,
+      user_precision_t *d_shape_stokesI, user_precision_t *d_shape_stokesQ,
+      user_precision_t *d_shape_stokesU, user_precision_t *d_shape_stokesV,
+      user_precision_t *d_shape_SIs,
+      user_precision_t *d_us, user_precision_t *d_vs, user_precision_t *d_ws,
+      user_precision_t *d_allsteps_wavelengths,
+      user_precision_t *d_u_shapes, user_precision_t *d_v_shapes,
+      user_precision_t *d_w_shapes,
+      user_precision_t *d_sum_visi_XX_real, user_precision_t *d_sum_visi_XX_imag,
+      user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
+      user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
+      user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
+      user_precision_t *d_shape_pas, user_precision_t *d_shape_majors,
+      user_precision_t *d_shape_minors,
+      user_precision_t *d_shape_n1s, user_precision_t *d_shape_n2s,
+      user_precision_t *d_shape_coeffs, user_precision_t *d_shape_param_indexes,
       double *d_ls, double *d_ms, double *d_ns,
-      float *d_sbf,
+      user_precision_t *d_sbf,
       int num_shapes, int num_baselines, int num_freqs, int num_visis,
       const int num_coeffs, int num_times, int beamtype,
-      cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
-      cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11);
+      cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
+      cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11);

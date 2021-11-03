@@ -26,9 +26,9 @@ void test_fill_timefreq_visibility() {
   woden_settings->num_baselines = 2;
   woden_settings->num_visis = woden_settings->num_freqs*woden_settings->num_time_steps*woden_settings->num_baselines;
 
-  float base_band_freq = VELC / 2;
+  user_precision_t base_band_freq = VELC / 2;
 
-  float lsts[] = {0.0, M_PI/2, 2*M_PI};
+  user_precision_t lsts[] = {0.0, M_PI/2, 2*M_PI};
 
   //Output container
   visibility_set_t *visibility_set = malloc(sizeof(visibility_set_t));
@@ -38,19 +38,19 @@ void test_fill_timefreq_visibility() {
                               base_band_freq, lsts);
 
   //Expected results
-  float expec_lsts[] = {0, 0, 0, 0, 0, 0,
+  user_precision_t expec_lsts[] = {0, 0, 0, 0, 0, 0,
                         M_PI/2, M_PI/2, M_PI/2, M_PI/2, M_PI/2, M_PI/2,
                         2*M_PI, 2*M_PI, 2*M_PI, 2*M_PI, 2*M_PI, 2*M_PI};
 
-  float expec_cha0s[] = {-1.0, -1.0, -1.0, -1.0, -1.0, -1.0,
+  user_precision_t expec_cha0s[] = {-1.0, -1.0, -1.0, -1.0, -1.0, -1.0,
                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                          -1.0, -1.0, -1.0, -1.0, -1.0, -1.0 };
 
-  float expec_sha0s[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  user_precision_t expec_sha0s[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                         -1.0, -1.0, -1.0, -1.0, -1.0, -1.0,
                          0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
-  float expec_wavelengths[] = {2.0, 2.0, 1.49974048, 1.49974048, 1.19966781, 1.19966781,
+  user_precision_t expec_wavelengths[] = {2.0, 2.0, 1.49974048, 1.49974048, 1.19966781, 1.19966781,
                                2.0, 2.0, 1.49974048, 1.49974048, 1.19966781, 1.19966781,
                                2.0, 2.0, 1.49974048, 1.49974048, 1.19966781, 1.19966781};
 
@@ -67,7 +67,7 @@ void test_fill_timefreq_visibility() {
     TEST_ASSERT_FLOAT_WITHIN(1e-7, expec_wavelengths[visi], visibility_set->allsteps_wavelengths[visi]);
   }
 
-  float expec_freqs[] = {VELC / 2, VELC / 2 + 50e+6, VELC / 2 + 100e+6};
+  user_precision_t expec_freqs[] = {VELC / 2, VELC / 2 + 50e+6, VELC / 2 + 100e+6};
 
   TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_freqs, visibility_set->channel_frequencies, woden_settings->num_freqs);
 

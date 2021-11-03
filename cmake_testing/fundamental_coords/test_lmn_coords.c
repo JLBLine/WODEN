@@ -3,12 +3,13 @@
 #include <math.h>
 
 #include "constants.h"
+#include "woden_precision_defs.h"
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
 //External CUDA code we're linking in
-extern void test_kern_calc_lmn(float ra0, float dec0,
+extern void test_kern_calc_lmn(user_precision_t ra0, user_precision_t dec0,
                                double *ras, double *decs, int num_coords,
                                double * ls, double * ms, double * ns);
 
@@ -16,8 +17,8 @@ extern void test_kern_calc_lmn(float ra0, float dec0,
 
 void test_kern_calc_lmn_GivesCorrectlCoords(void)
 {
-    float ra0 = 0.0*DD2R;
-    float dec0 = 0.0*DD2R;
+    user_precision_t ra0 = 0.0*DD2R;
+    user_precision_t dec0 = 0.0*DD2R;
 
     int num_points = 9;
     double *decs = malloc(num_points*sizeof(double));
@@ -40,18 +41,18 @@ void test_kern_calc_lmn_GivesCorrectlCoords(void)
     test_kern_calc_lmn(ra0, dec0, ras, decs, num_points,
                                    ls, ms, ns);
 
-    float l_expected[9] = {-1.0, -sqrt(3)/2.0, -sqrt(2)/2.0, -0.5,
+    user_precision_t l_expected[9] = {-1.0, -sqrt(3)/2.0, -sqrt(2)/2.0, -0.5,
                             0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0, 1.0};
-    float n_expected[9] = {0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0,
+    user_precision_t n_expected[9] = {0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0,
                            1.0, sqrt(3)/2.0, sqrt(2)/2.0, 0.5, 0.0};
 
-    // Here, when n should be 0.0, we get some floating point error from the
+    // Here, when n should be 0.0, we get some user_precision_ting point error from the
     // sin/cos functions
     for (int i = 0; i < num_points; i++) {
-      TEST_ASSERT_EQUAL_FLOAT(l_expected[i], (float)ls[i]);
-      TEST_ASSERT_EQUAL_FLOAT(0.0, (float)ms[i]);
+      TEST_ASSERT_EQUAL_FLOAT(l_expected[i], (user_precision_t)ls[i]);
+      TEST_ASSERT_EQUAL_FLOAT(0.0, (user_precision_t)ms[i]);
       TEST_ASSERT_FLOAT_WITHIN(2e-7, n_expected[i], ns[i]);
-    }    // Here, when n should be 0.0, we get some floating point error from the
+    }    // Here, when n should be 0.0, we get some user_precision_ting point error from the
         // sin/cos functions
 
     free(decs);
@@ -64,8 +65,8 @@ void test_kern_calc_lmn_GivesCorrectlCoords(void)
 
 void test_kern_calc_lmn_GivesCorrectmCoords(void)
 {
-    float ra0 = 0.0*DD2R;
-    float dec0 = 0.0*DD2R;
+    user_precision_t ra0 = 0.0*DD2R;
+    user_precision_t dec0 = 0.0*DD2R;
 
     int num_points = 9;
     double *ras = malloc(num_points*sizeof(double));
@@ -88,16 +89,16 @@ void test_kern_calc_lmn_GivesCorrectmCoords(void)
     test_kern_calc_lmn(ra0, dec0, ras, decs, num_points,
                                    ls, ms, ns);
 
-    float m_expected[9] = {-1.0, -sqrt(3)/2.0, -sqrt(2)/2.0, -0.5,
+    user_precision_t m_expected[9] = {-1.0, -sqrt(3)/2.0, -sqrt(2)/2.0, -0.5,
                             0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0, 1.0};
-    float n_expected[9] = {0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0,
+    user_precision_t n_expected[9] = {0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0,
                            1.0, sqrt(3)/2.0, sqrt(2)/2.0, 0.5, 0.0};
 
-    // Here, when n should be 0.0, we get some floating point error from the
+    // Here, when n should be 0.0, we get some user_precision_ting point error from the
     // sin/cos functions
     for (int i = 0; i < num_points; i++) {
-      TEST_ASSERT_EQUAL_FLOAT(0.0, (float)ls[i]);
-      TEST_ASSERT_EQUAL_FLOAT(m_expected[i], (float)ms[i]);
+      TEST_ASSERT_EQUAL_FLOAT(0.0, (user_precision_t)ls[i]);
+      TEST_ASSERT_EQUAL_FLOAT(m_expected[i], (user_precision_t)ms[i]);
       TEST_ASSERT_FLOAT_WITHIN(2e-7, n_expected[i], ns[i]);
     }
 

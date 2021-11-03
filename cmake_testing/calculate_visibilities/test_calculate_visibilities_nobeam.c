@@ -22,7 +22,7 @@ For a numbre of COMPONENTs at phase centre, with no beam model
 should just have a single gain in the XX and YY
 real visis
 */
-void test_comp_phase_centre_nobeam(visibility_set_t *visibility_set, float gain) {
+void test_comp_phase_centre_nobeam(visibility_set_t *visibility_set, user_precision_t gain) {
 
   //We're testing all COMPONENT types with this function, where the values of
   //the real vary slightly for baseline (I've set the major/minor to be small
@@ -71,7 +71,7 @@ void test_calculate_visibilities_NoBeam(int n_points, int n_gauss, int n_shapes,
                                           beam_settings, woden_settings, RA0, MWA_LAT_RAD,
                                           beam_settings->beamtype);
 
-  float gain = (n_points + n_gauss + n_shapes)*num_sources;
+  user_precision_t gain = (n_points + n_gauss + n_shapes)*num_sources;
   test_comp_phase_centre_nobeam(visibility_set, gain);
 
 }

@@ -12,22 +12,22 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 #define UNITY_INCLUDE_FLOAT
 
 void allocate_visi_set(visibility_set_t *visibility_set) {
-  visibility_set->us_metres = malloc(sizeof(float));
-  visibility_set->vs_metres = malloc(sizeof(float));
-  visibility_set->ws_metres = malloc(sizeof(float));
-  visibility_set->sum_visi_XX_real = malloc(sizeof(float));
-  visibility_set->sum_visi_XX_imag = malloc(sizeof(float));
-  visibility_set->sum_visi_XY_real = malloc(sizeof(float));
-  visibility_set->sum_visi_XY_imag = malloc(sizeof(float));
-  visibility_set->sum_visi_YX_real = malloc(sizeof(float));
-  visibility_set->sum_visi_YX_imag = malloc(sizeof(float));
-  visibility_set->sum_visi_YY_real = malloc(sizeof(float));
-  visibility_set->sum_visi_YY_imag = malloc(sizeof(float));
-  visibility_set->allsteps_sha0s = malloc(sizeof(float));
-  visibility_set->allsteps_cha0s = malloc(sizeof(float));
-  visibility_set->allsteps_lsts = malloc(sizeof(float));
-  visibility_set->allsteps_wavelengths = malloc(sizeof(float));
-  visibility_set->channel_frequencies = malloc(sizeof(float));
+  visibility_set->us_metres = malloc(sizeof(user_precision_t));
+  visibility_set->vs_metres = malloc(sizeof(user_precision_t));
+  visibility_set->ws_metres = malloc(sizeof(user_precision_t));
+  visibility_set->sum_visi_XX_real = malloc(sizeof(user_precision_t));
+  visibility_set->sum_visi_XX_imag = malloc(sizeof(user_precision_t));
+  visibility_set->sum_visi_XY_real = malloc(sizeof(user_precision_t));
+  visibility_set->sum_visi_XY_imag = malloc(sizeof(user_precision_t));
+  visibility_set->sum_visi_YX_real = malloc(sizeof(user_precision_t));
+  visibility_set->sum_visi_YX_imag = malloc(sizeof(user_precision_t));
+  visibility_set->sum_visi_YY_real = malloc(sizeof(user_precision_t));
+  visibility_set->sum_visi_YY_imag = malloc(sizeof(user_precision_t));
+  visibility_set->allsteps_sha0s = malloc(sizeof(user_precision_t));
+  visibility_set->allsteps_cha0s = malloc(sizeof(user_precision_t));
+  visibility_set->allsteps_lsts = malloc(sizeof(user_precision_t));
+  visibility_set->allsteps_wavelengths = malloc(sizeof(user_precision_t));
+  visibility_set->channel_frequencies = malloc(sizeof(user_precision_t));
 }
 
 /*
