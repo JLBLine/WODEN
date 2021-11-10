@@ -60,13 +60,22 @@ or run the following as required::
 
 Expected outcomes
 ------------------------
-
 Nearly all of these simulations use the MWA phase 1 array layout, with a maximum baseline length of about 3 km, giving a resolution of around 3 arcmin.
+
+Absolute Accuracy
+^^^^^^^^^^^^^^^^^^^^^^^^
+There is no imaging here, but runs an end-to-end simulation with a set of array layouts and sky models that should yield exact visibilities. The exact method is described in the JOSS paper
+
+The scripts run here are the scripts I used to create the plot in the JOSS paper.
+
+.. todo:: write the JOSS paper section and work out how to link back to this
+
+
 
 Single Component Models
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-You should end up with three very basis images, each of just a single component of type point, Gaussian, and shapelet::
+You should end up with three very basic images, each of just a single component of type point, Gaussian, and shapelet::
 
   $ cd WODEN/test_installation/single_component_models/images
   $ ls *image.fits

@@ -38,29 +38,29 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   chunk_visibility_set->allsteps_wavelengths = visibility_set->allsteps_wavelengths;
   chunk_visibility_set->channel_frequencies = visibility_set->channel_frequencies;
 
-  user_precision_t *d_X_diff = NULL;
-  user_precision_t *d_Y_diff = NULL;
-  user_precision_t *d_Z_diff = NULL;
+  double *d_X_diff = NULL;
+  double *d_Y_diff = NULL;
+  double *d_Z_diff = NULL;
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_X_diff, num_baselines*sizeof(user_precision_t) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_X_diff, num_baselines*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy( d_X_diff, array_layout->X_diff_metres,
-                      num_baselines*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_Y_diff, num_baselines*sizeof(user_precision_t) ) );
+                      num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_Y_diff, num_baselines*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy( d_Y_diff, array_layout->Y_diff_metres,
-                      num_baselines*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_Z_diff, num_baselines*sizeof(user_precision_t) ) );
+                      num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_Z_diff, num_baselines*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy( d_Z_diff, array_layout->Z_diff_metres,
-                      num_baselines*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+                      num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
 
-  user_precision_t *d_allsteps_sha0s = NULL;
-  user_precision_t *d_allsteps_cha0s = NULL;
+  double *d_allsteps_sha0s = NULL;
+  double *d_allsteps_cha0s = NULL;
   user_precision_t *d_allsteps_wavelengths = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_allsteps_sha0s, num_visis*sizeof(user_precision_t) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_allsteps_sha0s, num_visis*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy( d_allsteps_sha0s, visibility_set->allsteps_sha0s,
-                      num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_allsteps_cha0s, num_visis*sizeof(user_precision_t) ) );
+                      num_visis*sizeof(double), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_allsteps_cha0s, num_visis*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy( d_allsteps_cha0s, visibility_set->allsteps_cha0s,
-                      num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+                      num_visis*sizeof(double), cudaMemcpyHostToDevice ) );
   cudaErrorCheckCall( cudaMalloc( (void**)&d_allsteps_wavelengths,
                                          num_visis*sizeof(user_precision_t) ) );
   cudaErrorCheckCall( cudaMemcpy( d_allsteps_wavelengths, visibility_set->allsteps_wavelengths,
@@ -199,8 +199,8 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
             d_X_diff, d_Y_diff, d_Z_diff,
             d_u_metres, d_v_metres, d_w_metres,
             d_us, d_vs, d_ws, d_allsteps_wavelengths,
-            (user_precision_t)woden_settings->sdec0,
-            (user_precision_t)woden_settings->cdec0,
+            woden_settings->sdec0,
+            woden_settings->cdec0,
             d_allsteps_cha0s, d_allsteps_sha0s,
             num_visis, num_baselines);
 
@@ -528,7 +528,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       user_precision_t *d_shape_n2s=NULL;
       user_precision_t *d_shape_param_indexes=NULL;
 
-      user_precision_t *d_allsteps_lsts=NULL;
+      double *d_allsteps_lsts=NULL;
 
       user_precision_t *d_u_shapes = NULL;
       user_precision_t *d_v_shapes = NULL;
@@ -626,9 +626,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_ns), num_shapes*sizeof(double)) );
 
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_allsteps_lsts),
-                                          num_visis*sizeof(user_precision_t)) );
+                                          num_visis*sizeof(double)) );
       cudaErrorCheckCall( cudaMemcpy( d_allsteps_lsts, visibility_set->allsteps_lsts,
-                             num_visis*sizeof(user_precision_t),
+                             num_visis*sizeof(double),
                              cudaMemcpyHostToDevice) );
 
       cudaErrorCheckCall( cudaMalloc( (void**)&d_u_shapes,

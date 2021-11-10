@@ -3,7 +3,7 @@
 #include <erfa.h>
 #include <complex.h>
 
-void calc_para_angle(catsource_t *cropped_src, user_precision_t *lsts,
+void calc_para_angle(catsource_t *cropped_src, double *lsts,
                      double latitude, int num_time_steps){
 
   //At the moment, we calculate one beam value in frequency for MWA FEE as the resolution
@@ -21,7 +21,7 @@ void calc_para_angle(catsource_t *cropped_src, user_precision_t *lsts,
     double para_angle;
     for ( int time_step = 0; time_step < num_time_steps; time_step++ ) {
 
-      double ha = (double)lsts[time_step] - cropped_src->point_ras[point];
+      double ha = lsts[time_step] - cropped_src->point_ras[point];
       para_angle = eraHd2pa(ha, cropped_src->point_decs[point], latitude);
 
       cropped_src->sin_point_para_angs[point*num_time_steps + time_step] = sin((user_precision_t)para_angle + M_PI/2.0);
@@ -35,7 +35,7 @@ void calc_para_angle(catsource_t *cropped_src, user_precision_t *lsts,
     double para_angle;
     for ( int time_step = 0; time_step < num_time_steps; time_step++ ) {
 
-      double ha = (double)lsts[time_step] - cropped_src->gauss_ras[gauss];
+      double ha = lsts[time_step] - cropped_src->gauss_ras[gauss];
       para_angle = eraHd2pa(ha, cropped_src->gauss_decs[gauss], latitude);
 
       cropped_src->sin_gauss_para_angs[gauss*num_time_steps + time_step] = sin((user_precision_t)para_angle + M_PI/2.0);
@@ -47,7 +47,7 @@ void calc_para_angle(catsource_t *cropped_src, user_precision_t *lsts,
     double para_angle;
     for ( int time_step = 0; time_step < num_time_steps; time_step++ ) {
 
-      double ha = (double)lsts[time_step] - cropped_src->shape_ras[shape];
+      double ha = lsts[time_step] - cropped_src->shape_ras[shape];
       para_angle = eraHd2pa((double)ha, cropped_src->shape_decs[shape], latitude);
 
       cropped_src->sin_shape_para_angs[shape*num_time_steps + time_step] = sin((user_precision_t)para_angle + M_PI/2.0);
@@ -57,7 +57,7 @@ void calc_para_angle(catsource_t *cropped_src, user_precision_t *lsts,
 }
 
 beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
-                            catsource_t *cropped_src, user_precision_t *lsts) {
+                            catsource_t *cropped_src, double *lsts) {
 
 
   //Setup primary beam settings for observation
@@ -102,7 +102,7 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
     for (int component = 0; component < cropped_src->n_points; component++) {
       for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
         int step = component*woden_settings->num_time_steps + time_step;
-        cropped_src->point_gaussbeam_has[step] = (double)lsts[time_step] - cropped_src->point_ras[component];
+        cropped_src->point_gaussbeam_has[step] = lsts[time_step] - cropped_src->point_ras[component];
         cropped_src->point_gaussbeam_decs[step] = cropped_src->point_decs[component];
         // printf("THIS THING %.6f %.6f %.8f\n",cropped_src->point_ras[component],
         //                                      cropped_src->point_decs[component], MWA_LAT_RAD );
@@ -113,7 +113,7 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
     for (int component = 0; component < cropped_src->n_gauss; component++) {
       for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
         int step = component*woden_settings->num_time_steps + time_step;
-        cropped_src->gauss_gaussbeam_has[step] = (double)lsts[time_step] - cropped_src->gauss_ras[component];
+        cropped_src->gauss_gaussbeam_has[step] = lsts[time_step] - cropped_src->gauss_ras[component];
         cropped_src->gauss_gaussbeam_decs[step] = cropped_src->gauss_decs[component];
       }
     }//gausscomp loop
@@ -122,7 +122,7 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
     for (int component = 0; component < cropped_src->n_shapes; component++) {
       for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
         int step = component*woden_settings->num_time_steps + time_step;
-        cropped_src->shape_gaussbeam_has[step] = (double)lsts[time_step] - cropped_src->shape_ras[component];
+        cropped_src->shape_gaussbeam_has[step] = lsts[time_step] - cropped_src->shape_ras[component];
         cropped_src->shape_gaussbeam_decs[step] = cropped_src->shape_decs[component];
       }
     }//shape loop

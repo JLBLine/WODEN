@@ -20,19 +20,18 @@ void test_RTS_ENH2XYZ_local_GivesCorrectValues(void)
 {
   int num_coords = 10;
 
-  user_precision_t X,Y,Z;
-  user_precision_t east, north, height;
+  double X,Y,Z;
+  double east, north, height;
 
   //Loop over 10 example coords
   for (int coord = 0; coord < num_coords; coord++) {
-    east = (coord + 1)*10;
-    north = (coord + 2)*10;
-    height = (coord + 3)*10;
+    east = (coord + 1.)*10.;
+    north = (coord + 2.)*10.;
+    height = (coord + 3.)*10.;
 
     //test a latitude of 0.0
     RTS_ENH2XYZ_local(east, north, height, 0.0,
                       &X, &Y, &Z);
-    // printf("%.5f %.5f %.5f\n",X, Y, Z );
 
     TEST_ASSERT_EQUAL_FLOAT(height, X);
     TEST_ASSERT_EQUAL_FLOAT(east, Y);

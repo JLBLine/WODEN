@@ -30,7 +30,7 @@ copyright = '2021, J.L.B. Line'
 author = 'J.L.B. Line'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1'
+release = '1.1'
 
 # -- General configuration ---------------------------------------------------
 
@@ -50,6 +50,8 @@ extensions = [
     'sphinx.ext.autosectionlabel',
     'breathe'
 ]
+
+todo_include_todos = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

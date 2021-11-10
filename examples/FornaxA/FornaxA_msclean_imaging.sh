@@ -19,16 +19,21 @@ echo "Will use ${uv2ms}"
 
 fi
 
-##Convert uvfits to measurement sets. --nologger stops a logging popup
-##that can slow things down. Remove it if you want a graphical logger
-${CASA_DIR}/casa --nologger -c  ${uv2ms} \
-  --uvfits_prepend=./data/FornaxA_msclean_band \
-  --band_nums=1,2,3,4,5
+for precision in "float" "double"
+do
 
-wsclean -name ./images/FornaxA_msclean -size 350 350 -niter 80000 \
-  -auto-threshold 0.5 -auto-mask 3 \
-  -pol I -multiscale -weight briggs 0 -scale 0.004 -j 12 -mgain 0.85 \
-  -no-update-model-required \
-  ./data/FornaxA_msclean_band*.ms
+  ##Convert uvfits to measurement sets. --nologger stops a logging popup
+  ##that can slow things down. Remove it if you want a graphical logger
+  ${CASA_DIR}/casa --nologger -c  ${uv2ms} \
+    --uvfits_prepend=./data/FornaxA_msclean_${precision}_band \
+    --band_nums=1,2,3,4,5
 
-rm casa*.log
+  wsclean -name ./images/FornaxA_msclean_${precision} -size 350 350 -niter 80000 \
+    -auto-threshold 0.5 -auto-mask 3 \
+    -pol I -multiscale -weight briggs 0 -scale 0.004 -j 12 -mgain 0.85 \
+    -no-update-model-required \
+    ./data/FornaxA_msclean_${precision}_band*.ms
+
+  rm casa*.log
+
+done

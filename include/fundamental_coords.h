@@ -31,10 +31,10 @@ these latter arrays do not change with time.
 @param[in,out] v Output `v` coord (metres)
 @param[in,out] w Output `w` coord (metres)
 */
-__device__ void calc_uvw(user_precision_t *d_X_diff, user_precision_t *d_Y_diff,
-                         user_precision_t *d_Z_diff,
-                         user_precision_t sdec0, user_precision_t cdec0,
-                         user_precision_t sha0, user_precision_t cha0,
+__device__ void calc_uvw(double *d_X_diff, double *d_Y_diff,
+                         double *d_Z_diff,
+                         double sdec0, double cdec0,
+                         double sha0, double cha0,
                          int iBaseline, int num_baselines,
                          user_precision_t * u, user_precision_t * v,
                          user_precision_t * w);
@@ -78,12 +78,12 @@ baselines, frequencies, and time steps
 @param[in] num_visis Total number of `u,v,w` coords to be calculated
 @param[in] num_baselines Number of baselines for a single time step
 */
-__global__ void kern_calc_uvw(user_precision_t *d_X_diff, user_precision_t *d_Y_diff,
-           user_precision_t *d_Z_diff, user_precision_t *d_u_metres,
+__global__ void kern_calc_uvw(double *d_X_diff, double *d_Y_diff,
+           double *d_Z_diff, user_precision_t *d_u_metres,
            user_precision_t *d_v_metres, user_precision_t *d_w_metres,
            user_precision_t *d_u, user_precision_t *d_v, user_precision_t *d_w, user_precision_t *d_wavelengths,
-           user_precision_t sdec0, user_precision_t cdec0,
-           user_precision_t *d_cha0s, user_precision_t *d_sha0s,
+           double sdec0, double cdec0,
+           double *d_cha0s, double *d_sha0s,
            int num_visis, int num_baselines);
 
 
@@ -133,11 +133,11 @@ steps (metres)
 @param[in] num_shapes Number of SHAPELET COMPONENTs
 
 */
-__global__ void kern_calc_uvw_shapelet(user_precision_t *d_X_diff,
-      user_precision_t *d_Y_diff, user_precision_t *d_Z_diff,
+__global__ void kern_calc_uvw_shapelet(double *d_X_diff,
+      double *d_Y_diff, double *d_Z_diff,
       user_precision_t *d_u_shapes, user_precision_t *d_v_shapes,
       user_precision_t *d_w_shapes, user_precision_t *d_wavelengths,
-      user_precision_t *d_lsts, double *d_ras, double *d_decs,
+      double *d_lsts, double *d_ras, double *d_decs,
       const int num_baselines, const int num_visis,
       const int num_shapes);
 

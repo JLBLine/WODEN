@@ -20,6 +20,19 @@ phi_simples = [0.0, np.pi/6, np.pi/4, np.pi/3, np.pi/2, 2*np.pi/3,
 all_ras = []
 all_decs = []
 
+##Want to test flux extrapolation as well, so set something in the
+##catalogue that SHOULD extrapolate the 1 Jy at 299792458 Hz
+
+SI = -0.8
+
+target_freq = 299792458.0
+target_flux = 1.0
+
+ref_freq = 150e+6
+ref_flux = target_flux * (ref_freq / target_freq)**SI
+
+print(ref_flux)
+
 ##For known angles, calculate l,m,n coords and check they are legit
 for ind, phi_simple in enumerate(phi_simples):
 
@@ -41,6 +54,6 @@ for ind, phi_simple in enumerate(phi_simples):
     with open(f"sky_models/srclist_ang{ind:02d}.txt", 'w') as outfile:
         outfile.write("SOURCE testing P 1 G 0 S 0 0\n")
         outfile.write(f"COMPONENT POINT {ra:.16f} {dec:.16f}\n")
-        outfile.write(f"LINEAR 150e+6 1.0 0 0 0 0.0\n")
+        outfile.write(f"LINEAR 150e+6 {ref_flux:.16f} 0 0 0 -0.8\n")
         outfile.write(f"ENDCOMPONENT\n")
         outfile.write(f"ENDSOURCE")

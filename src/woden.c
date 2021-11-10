@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
   array_layout = calc_XYZ_diffs(woden_settings, woden_settings->do_precession);
 
   //Setup all LSTs array for all time steps in this simulation
-  user_precision_t *lsts = setup_lsts_and_phase_centre(woden_settings);
+  double *lsts = setup_lsts_and_phase_centre(woden_settings);
 
   //Read in the source catalogue
   source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );

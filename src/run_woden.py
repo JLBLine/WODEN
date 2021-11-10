@@ -627,8 +627,8 @@ def write_json(json_name=None, jd_date=None, lst=None, args=None):
     with open(json_name,'w+') as outfile:
 
         outfile.write('{\n')
-        outfile.write('  "ra0": {:.10f},\n'.format(args.ra0))
-        outfile.write('  "dec0": {:.10f},\n'.format(args.dec0))
+        outfile.write('  "ra0": {:.16f},\n'.format(args.ra0))
+        outfile.write('  "dec0": {:.16f},\n'.format(args.dec0))
         outfile.write('  "num_freqs": {:d},\n'.format(args.num_freq_channels))
         outfile.write('  "num_time_steps": {:d},\n'.format(args.num_time_steps))
         outfile.write('  "cat_filename": "{:s}",\n'.format(args.cat_filename))
@@ -636,10 +636,10 @@ def write_json(json_name=None, jd_date=None, lst=None, args=None):
         outfile.write('  "frequency_resolution": {:.3f},\n'.format(args.freq_res))
         outfile.write('  "chunking_size": {:d},\n'.format(int(args.chunking_size)))
         outfile.write('  "jd_date": {:.16f},\n'.format(jd_date))
-        outfile.write('  "LST": {:.8f},\n'.format(lst))
+        outfile.write('  "LST": {:.16f},\n'.format(lst))
         outfile.write('  "array_layout": "{:s}",\n'.format(args.array_layout_name))
         outfile.write('  "lowest_channel_freq": {:.10e},\n'.format(args.lowest_channel_freq))
-        outfile.write('  "latitude": {:.8f},\n'.format(args.latitude))
+        outfile.write('  "latitude": {:.16f},\n'.format(args.latitude))
         outfile.write('  "coarse_band_width": {:.10e},\n'.format(args.coarse_band_width))
 
         if args.sky_crop_components:

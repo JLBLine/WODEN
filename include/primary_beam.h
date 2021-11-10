@@ -33,7 +33,7 @@ device.
 @param[in] latitude Latitude of the array (radians)
 @param[in] num_time_steps Number of time steps in the simulation
 */
-void calc_para_angle(catsource_t *cropped_src, user_precision_t *lsts,
+void calc_para_angle(catsource_t *cropped_src, double *lsts,
                      double latitude, int num_time_steps);
 
 
@@ -60,4 +60,4 @@ somehow
 
 */
 beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
-                            catsource_t *cropped_src, user_precision_t *lsts);
+                            catsource_t *cropped_src, double *lsts);

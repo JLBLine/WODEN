@@ -103,8 +103,6 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
     woden_settings->latitude = json_object_get_double(latitude)*DD2R;
   }
 
-  printf("Latitude of array is set to %.1f\n", woden_settings->latitude/DD2R);
-
   woden_settings->lst_base = json_object_get_double(lst_base)*DD2R;
   woden_settings->ra0 = (user_precision_t)json_object_get_double(ra0)*DD2R;
   woden_settings->dec0 = (user_precision_t)json_object_get_double(dec0)*DD2R;
@@ -264,16 +262,16 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
   return 0;
 
 }
-user_precision_t * setup_lsts_and_phase_centre(woden_settings_t *woden_settings){
+double * setup_lsts_and_phase_centre(woden_settings_t *woden_settings){
   //Useful number to have
   const int num_visis = woden_settings->num_baselines * woden_settings->num_time_steps * woden_settings->num_freqs;
   woden_settings->num_visis = num_visis;
 
   //Phase centre details
-  user_precision_t sdec0,cdec0;
+  double sdec0,cdec0;
   sdec0 = sin(woden_settings->dec0); cdec0=cos(woden_settings->dec0);
 
-  printf("Setting initial LST to %.5fdeg\n",woden_settings->lst_base/DD2R );
+  printf("Setting initial LST to %.10fdeg\n",woden_settings->lst_base/DD2R );
   printf("Setting phase centre RA,DEC %.5fdeg %.5fdeg\n",woden_settings->ra0/DD2R, woden_settings->dec0/DD2R);
 
   //Used for calculating l,m,n for components
@@ -281,10 +279,10 @@ user_precision_t * setup_lsts_and_phase_centre(woden_settings_t *woden_settings)
   woden_settings->cdec0 = cdec0;
 
   //Calculate all lsts for this observation
-  user_precision_t *lsts = malloc(woden_settings->num_time_steps*sizeof(user_precision_t));
+  double *lsts = malloc(woden_settings->num_time_steps*sizeof(double));
 
   for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
-    user_precision_t lst = woden_settings->lst_base + time_step*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
+    double lst = woden_settings->lst_base + time_step*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
 
     //Add half a time_res so we are sampling centre of each time step
     lst += 0.5*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;

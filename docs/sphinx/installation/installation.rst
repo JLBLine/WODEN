@@ -53,7 +53,7 @@ linux-like systems.
 + **HDF5** - https://www.hdfgroup.org/downloads/hdf5/ - just do::
 
   $ sudo apt install libhdf5-serial-dev
-+ **PAL** - https://github.com/Starlink/pal/releases - ``PAL`` is a little mental with it's default installation paths. I *HIGHLY* recommmend downloading a release version, and then using the ``--without-starlink`` option::
++ **PAL** - https://github.com/Starlink/pal/releases - ``PAL`` is a little mental with it's default installation paths. I *HIGHLY* recommend downloading a release version, and then using the ``--without-starlink`` option::
 
   $ wget https://github.com/Starlink/pal/releases/download/v0.9.8/pal-0.9.8.tar.gz
   $ tar -xvf pal-0.9.8.tar.gz
@@ -74,8 +74,10 @@ For completeness, those packages are::
   astropy
   numpy
   pyerfa
+  palpy
+  matplotlib
 
-The first two packages are used for the documentation.
+The ``sphinx_argparse, breathe`` packages are used for the documentation, and ``palpy, matplotlib`` are only used in the ``test_installation/absolute_accuracy`` test, so if you're aiming for a minimal installation, you only need ``astropy, numpy, pyerfa``.
 
 Phew! That's it for now.
 

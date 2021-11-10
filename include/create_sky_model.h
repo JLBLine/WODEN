@@ -162,5 +162,5 @@ however require far more `erfa` az,za calculations, so for simulations with
 millions of sources, more practical to just tell the user to run multiple
 shorter simulations.
 */
-catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, user_precision_t *lsts,
+catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
               double latitude, int num_time_steps, e_sky_crop sky_crop_type);

@@ -28,7 +28,7 @@ visibility_set_t * setup_visibility_set(int num_visis) {
 void fill_timefreq_visibility_set(visibility_set_t *visibility_set,
                                   woden_settings_t *woden_settings,
                                   user_precision_t base_band_freq,
-                                  user_precision_t *lsts) {
+                                  double *lsts) {
 
   //For easy indexing when running on GPUs, make 4 arrays that match
   //the settings for every baseline, frequency, and time step in the
@@ -37,9 +37,9 @@ void fill_timefreq_visibility_set(visibility_set_t *visibility_set,
   //Order matches that of a uvfits file (I live in the past)
 
   int num_visis = woden_settings->num_visis;
-  visibility_set->allsteps_sha0s = malloc( num_visis * sizeof(user_precision_t) );
-  visibility_set->allsteps_cha0s = malloc( num_visis * sizeof(user_precision_t) );
-  visibility_set->allsteps_lsts = malloc( num_visis * sizeof(user_precision_t) );
+  visibility_set->allsteps_sha0s = malloc( num_visis * sizeof(double) );
+  visibility_set->allsteps_cha0s = malloc( num_visis * sizeof(double) );
+  visibility_set->allsteps_lsts = malloc( num_visis * sizeof(double) );
   visibility_set->allsteps_wavelengths = malloc( num_visis * sizeof(user_precision_t) );
   visibility_set->channel_frequencies = malloc( (int)woden_settings->num_freqs * sizeof(user_precision_t) );
 
@@ -51,7 +51,7 @@ void fill_timefreq_visibility_set(visibility_set_t *visibility_set,
   }
 
   //Fill the time/frequency settings for all baseline/freq/time
-  user_precision_t ha0, sha0, cha0;
+  double ha0, sha0, cha0;
 
   for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
     ha0 = lsts[time_step] - woden_settings->ra0;

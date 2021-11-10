@@ -37,7 +37,7 @@ void free_sky_model(source_catalogue_t *cropped_sky_models);
 
 woden_settings_t * make_woden_settings(user_precision_t ra0, user_precision_t dec0);
 
-void test_uvw(visibility_set_t *visibility_set,  user_precision_t *lsts,
+void test_uvw(visibility_set_t *visibility_set,  double *lsts,
               user_precision_t ra0, user_precision_t dec0);
 
 visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_models,

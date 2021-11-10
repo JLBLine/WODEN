@@ -38,6 +38,7 @@ can be reproduced on the command line using ``script.py --help``.
   C_code/print_help
   C_code/shapelet_basis
   C_code/visibility_set
+  C_code/woden_precision_defs
   C_code/woden_settings
   C_code/woden_struct_defs
 

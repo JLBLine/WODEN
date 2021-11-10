@@ -11,7 +11,7 @@
 /*
 Bunch of settings and expected output arrays. Defined in expected_para_angles.c
 */
-extern user_precision_t lsts[];
+extern double lsts[];
 extern double point_ras[];
 extern double point_decs[];
 extern double gauss_ras[];

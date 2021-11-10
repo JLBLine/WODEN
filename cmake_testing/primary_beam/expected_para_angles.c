@@ -1,7 +1,7 @@
 #include "expected_para_angles.h"
 #include "woden_precision_defs.h"
 
-user_precision_t lsts[] = {1*DD2R, 120*DD2R, 240*DD2R};
+double lsts[] = {1*DD2R, 120*DD2R, 240*DD2R};
 
 double point_ras[] = {0 , 5*DD2R, 10*DD2R};
 double point_decs[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};

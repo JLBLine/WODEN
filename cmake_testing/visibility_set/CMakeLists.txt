@@ -49,4 +49,17 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   add_test(C_test_write_visi_set_binary_${PRECISION}
            test_write_visi_set_binary_${PRECISION}_app)
 
+  ##Test writing to a text file
+  add_executable(test_write_visi_set_text_${PRECISION}_app
+      test_write_visi_set_text.c
+  )
+  target_link_libraries(test_write_visi_set_text_${PRECISION}_app
+      Unity gcov
+      visibility_set_${PRECISION}
+      ${CC_LINKLIBS}
+  )
+  target_compile_options(test_write_visi_set_text_${PRECISION}_app PRIVATE ${C_FLAGS})
+  add_test(C_test_write_visi_set_text_${PRECISION}
+           test_write_visi_set_text_${PRECISION}_app)
+
 endforeach()

@@ -11,4 +11,7 @@ cd ${come_home}/grid_component_models
 cd ${come_home}/different_beam_models
 ./multi-comp_sims_all_but_MWAFEE.sh
 
+cd ${come_home}/absolute_accuracy
+./run_the_absolute_accuracy_test.sh
+
 cd ${come_home}

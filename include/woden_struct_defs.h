@@ -170,11 +170,11 @@ typedef struct _visibility_set_t {
   and baselines*/
   user_precision_t *ws_metres; /*!< Output \f$w\f$ for all time steps, frequency steps,
   and baselines*/
-  user_precision_t *allsteps_sha0s; /*!< Sine of hour angle of phase centre for all
+  double *allsteps_sha0s; /*!< Sine of hour angle of phase centre for all
   time steps, frequency steps, and baselines*/
-  user_precision_t *allsteps_cha0s; /*!< Cosine of hour angle of phase centre for all
+  double *allsteps_cha0s; /*!< Cosine of hour angle of phase centre for all
   time steps, frequency steps, and baselines*/
-  user_precision_t *allsteps_lsts; /*!< Local sidereal time for all time steps,
+  double *allsteps_lsts; /*!< Local sidereal time for all time steps,
   frequency steps, and baselines (radians)*/
   user_precision_t *allsteps_wavelengths; /*!< Wavelengths for all time steps,
   frequency steps, and baselines (metres)*/
@@ -203,11 +203,11 @@ typedef struct _visibility_set_t {
 Struct to contain user defined settings for simulation
 */
 typedef struct _woden_settings_t {
-  user_precision_t lst_base; /*!< Local sidereal time for first time step (radians) */
-  user_precision_t ra0;  /*!< Right ascension of phase centre (radians)*/
-  user_precision_t dec0;  /*!< Declination of phase centre (radians)*/
-  user_precision_t sdec0;  /*!< Sine of Declination of phase centre (radians)*/
-  user_precision_t cdec0;  /*!< Cosine of Declination of phase centre (radians)*/
+  double lst_base; /*!< Local sidereal time for first time step (radians) */
+  double ra0;  /*!< Right ascension of phase centre (radians)*/
+  double dec0;  /*!< Declination of phase centre (radians)*/
+  double sdec0;  /*!< Sine of Declination of phase centre (radians)*/
+  double cdec0;  /*!< Cosine of Declination of phase centre (radians)*/
   int num_baselines;  /*!< Number of baselines this array layout has */
   int num_freqs;  /*!< Number of frequencies per coarse band*/
   user_precision_t frequency_resolution;  /*!< Frequency resolution of a fine channel (Hz)*/
@@ -246,18 +246,18 @@ sometimes called an antenna, sometimes called a 'tile' (MWA lingo). This is
 equivalent to a 'station' in SKA_LOW talk.
 */
 typedef struct _array_layout_t {
-    user_precision_t *ant_X; /*!< Local \f$X\f$ location of all antenna/tiles*/
-    user_precision_t *ant_Y; /*!< Local \f$Y\f$ location of all antenna/tiles*/
-    user_precision_t *ant_Z; /*!< Local \f$Z\f$ location of all antenna/tiles*/
-    user_precision_t *X_diff_metres; /*!< The length of all baselines in \f$X\f$ (metres)*/
-    user_precision_t *Y_diff_metres; /*!< The length of all baselines in \f$Y\f$ (metres)*/
-    user_precision_t *Z_diff_metres; /*!< The length of all baselines in \f$Z\f$ (metres)*/
-    user_precision_t *ant_east; /*!< Local east location of all antenna/tiles */
-    user_precision_t *ant_north; /*!< Local north location of all antenna/tiles */
-    user_precision_t *ant_height; /*!< Local height location of all antenna/tiles */
-    user_precision_t latitude; /*!< Latitude of the array (radians) */
+    double *ant_X; /*!< Local \f$X\f$ location of all antenna/tiles*/
+    double *ant_Y; /*!< Local \f$Y\f$ location of all antenna/tiles*/
+    double *ant_Z; /*!< Local \f$Z\f$ location of all antenna/tiles*/
+    double *X_diff_metres; /*!< The length of all baselines in \f$X\f$ (metres)*/
+    double *Y_diff_metres; /*!< The length of all baselines in \f$Y\f$ (metres)*/
+    double *Z_diff_metres; /*!< The length of all baselines in \f$Z\f$ (metres)*/
+    double *ant_east; /*!< Local east location of all antenna/tiles */
+    double *ant_north; /*!< Local north location of all antenna/tiles */
+    double *ant_height; /*!< Local height location of all antenna/tiles */
+    double latitude; /*!< Latitude of the array (radians) */
     int num_baselines; /*!< Number of baselines in the array */
     int num_tiles; /*!< Number of antenna/tiles in the array*/
-    user_precision_t lst_base; /*!< Local sidereal time of the first time step (radians)*/
+    double lst_base; /*!< Local sidereal time of the first time step (radians)*/
 
 } array_layout_t;

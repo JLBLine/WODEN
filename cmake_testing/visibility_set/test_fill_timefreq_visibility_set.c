@@ -28,7 +28,7 @@ void test_fill_timefreq_visibility() {
 
   user_precision_t base_band_freq = VELC / 2;
 
-  user_precision_t lsts[] = {0.0, M_PI/2, 2*M_PI};
+  double lsts[] = {0.0, M_PI/2, 2*M_PI};
 
   //Output container
   visibility_set_t *visibility_set = malloc(sizeof(visibility_set_t));
@@ -38,15 +38,15 @@ void test_fill_timefreq_visibility() {
                               base_band_freq, lsts);
 
   //Expected results
-  user_precision_t expec_lsts[] = {0, 0, 0, 0, 0, 0,
+  double expec_lsts[] = {0, 0, 0, 0, 0, 0,
                         M_PI/2, M_PI/2, M_PI/2, M_PI/2, M_PI/2, M_PI/2,
                         2*M_PI, 2*M_PI, 2*M_PI, 2*M_PI, 2*M_PI, 2*M_PI};
 
-  user_precision_t expec_cha0s[] = {-1.0, -1.0, -1.0, -1.0, -1.0, -1.0,
+  double expec_cha0s[] = {-1.0, -1.0, -1.0, -1.0, -1.0, -1.0,
                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                          -1.0, -1.0, -1.0, -1.0, -1.0, -1.0 };
 
-  user_precision_t expec_sha0s[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  double expec_sha0s[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                         -1.0, -1.0, -1.0, -1.0, -1.0, -1.0,
                          0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 

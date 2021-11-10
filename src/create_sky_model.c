@@ -504,7 +504,7 @@ void horizon_test(double za, e_sky_crop sky_crop_type,
 **********************************/
 
 
-catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, user_precision_t *lsts,
+catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
               double latitude, int num_time_steps, e_sky_crop sky_crop_type){
 
   for (size_t src = 0; src < raw_srccat->num_sources; src++){
@@ -547,7 +547,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, user_precision_t *l
       //Calculate az/za for all point components
       convert_radec2azza(raw_srccat->catsources[src].point_ras[point],
                          raw_srccat->catsources[src].point_decs[point],
-                         (double)lsts[0], latitude, &az, &za);
+                         lsts[0], latitude, &az, &za);
 
       raw_srccat->catsources[src].point_azs[point] = az;
       raw_srccat->catsources[src].point_zas[point] = za;
@@ -565,7 +565,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, user_precision_t *l
         //Calculate az/za for all gauss components
       convert_radec2azza(raw_srccat->catsources[src].gauss_ras[gauss],
                          raw_srccat->catsources[src].gauss_decs[gauss],
-                         (double)lsts[0], latitude, &az, &za);
+                         lsts[0], latitude, &az, &za);
       raw_srccat->catsources[src].gauss_azs[gauss] = az;
       raw_srccat->catsources[src].gauss_zas[gauss] = za;
       //Check if components are above the horizon, and count how many
@@ -582,7 +582,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, user_precision_t *l
       //Calculate az/za for all gauss components
       convert_radec2azza(raw_srccat->catsources[src].shape_ras[shape],
                          raw_srccat->catsources[src].shape_decs[shape],
-                         (double)lsts[0], latitude, &az, &za);
+                         lsts[0], latitude, &az, &za);
       raw_srccat->catsources[src].shape_azs[shape] = az;
       raw_srccat->catsources[src].shape_zas[shape] = za;
       //Check if components are above the horizon, and count how many
@@ -702,7 +702,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, user_precision_t *l
         for (size_t time_step = 0; time_step < num_time_steps; time_step++) {
           convert_radec2azza((double)raw_srccat->catsources[src].point_ras[point],
                              (double)raw_srccat->catsources[src].point_decs[point],
-                             (double)lsts[time_step], latitude, &az, &za);
+                             lsts[time_step], latitude, &az, &za);
           cropped_src->point_azs[point_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
           cropped_src->point_zas[point_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
         }
@@ -730,7 +730,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, user_precision_t *l
         for (size_t time_step = 0; time_step < num_time_steps; time_step++) {
           convert_radec2azza((double)raw_srccat->catsources[src].gauss_ras[gauss],
                              (double)raw_srccat->catsources[src].gauss_decs[gauss],
-                             (double)lsts[time_step], latitude, &az, &za);
+                             lsts[time_step], latitude, &az, &za);
           cropped_src->gauss_azs[gauss_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
           cropped_src->gauss_zas[gauss_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
         }
@@ -759,7 +759,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, user_precision_t *l
         for (size_t time_step = 0; time_step < num_time_steps; time_step++) {
           convert_radec2azza(raw_srccat->catsources[src].shape_ras[shape],
                              raw_srccat->catsources[src].shape_decs[shape],
-                             (double)lsts[time_step], latitude, &az, &za);
+                             lsts[time_step], latitude, &az, &za);
           cropped_src->shape_azs[shape_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
           cropped_src->shape_zas[shape_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
         }
@@ -825,7 +825,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, user_precision_t *l
           for (int time_step = 0; time_step < num_time_steps; time_step++) {
             convert_radec2azza((double)raw_srccat->catsources[src].point_ras[point],
                                (double)raw_srccat->catsources[src].point_decs[point],
-                               (double)lsts[time_step], latitude, &az, &za);
+                               lsts[time_step], latitude, &az, &za);
             cropped_src->point_azs[point_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
             cropped_src->point_zas[point_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
             // printf("AZ ZA %d %.7f %.7f\n",point_crop_component_index*num_time_steps + time_step,(user_precision_t)az,(user_precision_t)za );
@@ -857,7 +857,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, user_precision_t *l
           for (size_t time_step = 0; time_step < num_time_steps; time_step++) {
             convert_radec2azza((double)raw_srccat->catsources[src].gauss_ras[gauss],
                                (double)raw_srccat->catsources[src].gauss_decs[gauss],
-                               (double)lsts[time_step], latitude, &az, &za);
+                               lsts[time_step], latitude, &az, &za);
             cropped_src->gauss_azs[gauss_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
             cropped_src->gauss_zas[gauss_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
           }//End az/za calculation loop
@@ -887,7 +887,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, user_precision_t *l
           for (size_t time_step = 0; time_step < num_time_steps; time_step++) {
             convert_radec2azza(raw_srccat->catsources[src].shape_ras[shape],
                                raw_srccat->catsources[src].shape_decs[shape],
-                               (double)lsts[time_step], latitude, &az, &za);
+                               lsts[time_step], latitude, &az, &za);
             cropped_src->shape_azs[shape_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
             cropped_src->shape_zas[shape_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
           }//End az/za calculation loop

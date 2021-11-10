@@ -373,7 +373,7 @@ void test_crop_sky_model_Point(double lst_base, e_sky_crop sky_crop_type) {
   //Setup the lsts - the first of this list is used in calculating az/za
   //for cropping. Once cropped, az/za is calculated for all surviving COMPONENTs
   int num_time_steps = 3;
-  user_precision_t lsts[] = {lst_base, lst_base+60*SOLAR2SIDEREAL*DS2R,
+  double lsts[] = {lst_base, lst_base+60*SOLAR2SIDEREAL*DS2R,
                   lst_base + 120.0*SOLAR2SIDEREAL*DS2R};
 
   //Create the input sky catalogue
@@ -544,7 +544,7 @@ void test_crop_sky_model_Gauss(double lst_base, e_sky_crop sky_crop_type) {
   //Setup the lsts - the first of this list is used in calculating az/za
   //for cropping. Once cropped, az/za is calculated for all surviving COMPONENTs
   int num_time_steps = 3;
-  user_precision_t lsts[] = {lst_base, lst_base+60*SOLAR2SIDEREAL*DS2R,
+  double lsts[] = {lst_base, lst_base+60*SOLAR2SIDEREAL*DS2R,
                   lst_base + 120.0*SOLAR2SIDEREAL*DS2R};
 
   //Create the input sky catalogue
@@ -756,7 +756,7 @@ void test_crop_sky_model_Shape(double lst_base, e_sky_crop sky_crop_type) {
   //Setup the lsts - the first of this list is used in calculating az/za
   //for cropping. Once cropped, az/za is calculated for all surviving COMPONENTs
   int num_time_steps = 3;
-  user_precision_t lsts[] = {lst_base, lst_base+60*SOLAR2SIDEREAL*DS2R,
+  double lsts[] = {lst_base, lst_base+60*SOLAR2SIDEREAL*DS2R,
                   lst_base + 120.0*SOLAR2SIDEREAL*DS2R};
 
   //Create the input sky catalogue
@@ -822,7 +822,7 @@ void test_crop_sky_model_AllTypes(double lst_base, e_sky_crop sky_crop_type) {
   //Setup the lsts - the first of this list is used in calculating az/za
   //for cropping. Once cropped, az/za is calculated for all surviving COMPONENTs
   int num_time_steps = 3;
-  user_precision_t lsts[] = {lst_base, lst_base+60*SOLAR2SIDEREAL*DS2R,
+  double lsts[] = {lst_base, lst_base+60*SOLAR2SIDEREAL*DS2R,
                   lst_base + 120.0*SOLAR2SIDEREAL*DS2R};
 
   //Create the input sky catalogue

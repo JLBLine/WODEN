@@ -26,7 +26,7 @@ are launched by calculate_visibilities::calculate_visibilities`
 #define UNITY_INCLUDE_FLOAT
 
 //Just two LSTs to check things change with time
-user_precision_t lsts[] = {0.0, M_PI / 4};
+double lsts[] = {0.0, M_PI / 4};
 
 user_precision_t azs[] = {0.0, 4.528359553989764};
 user_precision_t zas[] = {0.0, 0.6978088917603547};
@@ -98,7 +98,7 @@ source_catalogue_t * make_cropped_sky_models(user_precision_t ra0, user_precisio
 
         for (size_t time = 0; time < NUM_TIME_STEPS; time++) {
           int step = point*NUM_TIME_STEPS + time;
-          cropped_sky_models->catsources[cats_ind].point_gaussbeam_has[step] = (double)lsts[time] - RA0;
+          cropped_sky_models->catsources[cats_ind].point_gaussbeam_has[step] = lsts[time] - RA0;
           cropped_sky_models->catsources[cats_ind].point_gaussbeam_decs[step] = MWA_LAT_RAD;
 
           cropped_sky_models->catsources[cats_ind].point_azs[step] = azs[time];
@@ -152,7 +152,7 @@ source_catalogue_t * make_cropped_sky_models(user_precision_t ra0, user_precisio
 
         for (size_t time = 0; time < NUM_TIME_STEPS; time++) {
           int step = gauss*NUM_TIME_STEPS + time;
-          cropped_sky_models->catsources[cats_ind].gauss_gaussbeam_has[step] = (double)lsts[time] - RA0;
+          cropped_sky_models->catsources[cats_ind].gauss_gaussbeam_has[step] = lsts[time] - RA0;
           cropped_sky_models->catsources[cats_ind].gauss_gaussbeam_decs[step] = MWA_LAT_RAD;
 
           cropped_sky_models->catsources[cats_ind].gauss_azs[step] = azs[time];
@@ -215,7 +215,7 @@ source_catalogue_t * make_cropped_sky_models(user_precision_t ra0, user_precisio
 
         for (size_t time = 0; time < NUM_TIME_STEPS; time++) {
           int step = shape*NUM_TIME_STEPS + time;
-          cropped_sky_models->catsources[cats_ind].shape_gaussbeam_has[step] = (double)lsts[time] - RA0;
+          cropped_sky_models->catsources[cats_ind].shape_gaussbeam_has[step] = lsts[time] - RA0;
           cropped_sky_models->catsources[cats_ind].shape_gaussbeam_decs[step] = MWA_LAT_RAD;
 
           cropped_sky_models->catsources[cats_ind].shape_azs[step] = azs[time];
@@ -344,7 +344,7 @@ Due to the way I've setup the array layout and phase centre,
 the uvw should be a simple reduced product between phase centre and lsts.
 Create some expected u,v,w arrays and compare to what we've found
 */
-void test_uvw(visibility_set_t *visibility_set,  user_precision_t *lsts,
+void test_uvw(visibility_set_t *visibility_set,  double *lsts,
               user_precision_t ra0, user_precision_t dec0) {
 
   int num_visis = NUM_BASELINES * NUM_FREQS * NUM_TIME_STEPS;
@@ -421,8 +421,6 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
   }
 
   visibility_set_t *visibility_set = setup_visibility_set(woden_settings->num_visis);
-
-  // user_precision_t lsts[] = {0.0, M_PI / 2};
 
   fill_timefreq_visibility_set(visibility_set, woden_settings,
                                base_band_freq, lsts);

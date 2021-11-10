@@ -23,9 +23,9 @@ void allocate_visi_set(visibility_set_t *visibility_set) {
   visibility_set->sum_visi_YX_imag = malloc(sizeof(user_precision_t));
   visibility_set->sum_visi_YY_real = malloc(sizeof(user_precision_t));
   visibility_set->sum_visi_YY_imag = malloc(sizeof(user_precision_t));
-  visibility_set->allsteps_sha0s = malloc(sizeof(user_precision_t));
-  visibility_set->allsteps_cha0s = malloc(sizeof(user_precision_t));
-  visibility_set->allsteps_lsts = malloc(sizeof(user_precision_t));
+  visibility_set->allsteps_sha0s = malloc(sizeof(double));
+  visibility_set->allsteps_cha0s = malloc(sizeof(double));
+  visibility_set->allsteps_lsts = malloc(sizeof(double));
   visibility_set->allsteps_wavelengths = malloc(sizeof(user_precision_t));
   visibility_set->channel_frequencies = malloc(sizeof(user_precision_t));
 }

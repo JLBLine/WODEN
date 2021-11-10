@@ -39,9 +39,9 @@ void test_calc_XYZ_diffs_GivesCorrectValues(int do_precession)
   TEST_ASSERT_EQUAL_INT(8, array_layout->num_tiles);
 
   //These are the values in "example_array_layout.txt"
-  user_precision_t expec_east[] = {84, 12, 86, 780, 813, 899, 460, 810};
-  user_precision_t expec_north[] = {112, 202, 377, 227, 561, 600, 70, 524};
-  user_precision_t expec_height[] = {3, 3, 5, 5, 7, 1, 0, 8};
+  double expec_east[] = {84, 12, 86, 780, 813, 899, 460, 810};
+  double expec_north[] = {112, 202, 377, 227, 561, 600, 70, 524};
+  double expec_height[] = {3, 3, 5, 5, 7, 1, 0, 8};
 
   //Check read them in correctly
   TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_east, array_layout->ant_east, 8);

@@ -18,9 +18,9 @@ simulation works as expected
 void check_setup_lsts_and_phase_centre(woden_settings_t *woden_settings) {
 
   //Function to be tested
-  user_precision_t *lsts = setup_lsts_and_phase_centre(woden_settings);
+  double *lsts = setup_lsts_and_phase_centre(woden_settings);
 
-  user_precision_t *expected_lsts = malloc(woden_settings->num_time_steps*sizeof(user_precision_t));
+  double *expected_lsts = malloc(woden_settings->num_time_steps*sizeof(double));
 
   for (int time_step = 0; time_step < woden_settings->num_time_steps ; time_step++) {
     expected_lsts[time_step] = woden_settings->lst_base + (time_step + 0.5)*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
