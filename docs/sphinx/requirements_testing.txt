@@ -3,3 +3,5 @@ breathe
 astropy
 numpy
 pyerfa
+palpy
+matplotlib
