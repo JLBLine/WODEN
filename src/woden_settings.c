@@ -113,10 +113,10 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
   woden_settings->coarse_band_width = (user_precision_t)json_object_get_double(coarse_band_width);
 
   woden_settings->num_time_steps = json_object_get_int(num_time_steps);
-  woden_settings->time_res = (user_precision_t)json_object_get_double(time_res);
+  woden_settings->time_res = json_object_get_double(time_res);
   woden_settings->cat_filename = json_object_get_string(cat_filename);
   woden_settings->hdf5_beam_path = json_object_get_string(hdf5_beam_path);
-  woden_settings->jd_date = (user_precision_t)json_object_get_double(jd_date);
+  woden_settings->jd_date = json_object_get_double(jd_date);
 
   //Boolean setting whether to crop sources by SOURCE or by COMPONENT
   woden_settings->sky_crop_type = json_object_get_boolean(sky_crop_type);

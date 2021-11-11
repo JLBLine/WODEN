@@ -4,30 +4,102 @@
 Visibility Calculations
 ========================
 
-This section assumes a basic understanding on radio interferometry, assuming you know what visibilities and baselines are, and are familiar with the :math:`u,v,w` and :math:`l,m,n` coordinate systems. I can recommend `Thompson, Moran, & Swenson 2017`_ if you are looking to learn / refresh these concepts. This section is basically a copy/paste from `Line et al. 2020`_.
+This section assumes a basic understanding on radio interferometry, assuming you know what visibilities and baselines are, and are familiar with the :math:`u,v,w` and :math:`l,m,n` coordinate systems. I can recommend `Thompson, Moran, & Swenson 2017`_ if you are looking to learn / refresh these concepts. Some of this section is basically a copy/paste from `Line et al. 2020`_.
 
 .. note:: In `Line et al. 2020`_, I detailed that I was using the ``atomicAdd`` functionality in CUDA. This is no longer true, as I've found a loop inside my kernels is actually faster than being fully parallel and using ``atomicAdd``. The calculations being made have remained the same.
 
 Measurement Equation and Point Sources
 ----------------------------------------
 
-``WODEN`` analytically generates a sky model directly in visibility space via the measurement equation (c.f. `Thompson, Moran, & Swenson 2017`_)
+``WODEN`` analytically generates a sky model directly in visibility space via the measurement equation (c.f. `Thompson, Moran, & Swenson 2017`_). Ignoring the effects of instrumental polarisation and the primary beam, this can be expressed as:
 
 .. math::
 
-  V(u,v,w) =   \int \mathcal{B}(l,m) I(l,m) \exp[-2\pi i(ul + vm + w(n-1))] \dfrac{dldm}{n},
+  V_s(u,v,w) =   \int \mathcal{S}_s(l,m) \exp[-2\pi i(ul + vm + w(n-1))] \dfrac{dldm}{n},
 
-where :math:`V(u,v,w)` is the measured visibility at baseline coordinates :math:`u,v,w`, given the sky intensity :math:`\mathcal{S}(l,m)` and instrument beam pattern :math:`\mathcal{B}(l,m)`, which are functions of the direction cosines :math:`l,m`, with :math:`n=\sqrt{1-l^2-m^2}`. This can be discretised for point sources such that
+where :math:`V_s(u,v,w)` is the measured visibility in some Stokes polarisation :math:`s` at baseline coordinates :math:`u,v,w`, given the sky intensity :math:`\mathcal{S}`, which is a function of the direction cosines :math:`l,m`, and :math:`n=\sqrt{1-l^2-m^2}`. This can be discretised for point sources such that
 
 .. math::
 
-    V(u_i,v_i,w_i) = \sum_j \mathcal{B}(l_j,m_j)\mathcal{S}(l_j,m_j) \exp[-2\pi i(u_il_j + v_im_j + w_i(n_j-1))],
+    V_s(u_i,v_i,w_i) = \sum_j \mathcal{S}_s(l_j,m_j) \exp[-2\pi i(u_il_j + v_im_j + w_i(n_j-1))],
 
 where :math:`u_i,v_i,w_i` are the visibility co-ordinates of the :math:`i^{\mathrm{th}}` baseline, and :math:`l_j`, :math:`m_j`, :math:`n_j` is the sky position of the :math:`j^{\mathrm{th}}` point source.
 
-:math:`\mathcal{S}(l,m)` includes all the Stokes parameters :math:`I, Q, U, V` in ``WODEN``, with these parameters extrapolated from an input catalogue, along with the position on the sky. :math:`u,v,w` are set by a supplied array layout, phase centre, and location on the Earth.
+Stokes parameters :math:`\mathcal{S}_I, \mathcal{S}_Q, \mathcal{S}_U, \mathcal{S}_V` are all extrapolated from an input catalogue, along with the position on the sky. :math:`u,v,w` are set by a supplied array layout, phase centre, and location on the Earth.
 
-.. note:: :math:`u_i,v_i,w_i`, :math:`\mathcal{S}`, and :math:`\mathcal{B}` are also functions of frequency, so must be calculated for each frequency steps as required.
+.. note:: :math:`u_i,v_i,w_i` and :math:`\mathcal{S}` are also functions of frequency, so must be calculated for each frequency steps as required.
+
+Apply Linear Stokes Polarisations and the Primary Beam
+---------------------------------------------------------
+``WODEN`` simulates dual-linear polarisation antennas, with each antenna/station having it's own primary beam shape. I can define the response of a dual polarisation antenna to direction :math:`l,m` as
+
+.. math::
+   \mathbf{J}(l,m) =
+   \begin{bmatrix}
+   g_x(l,m) & D_x(l,m) \\
+   D_y(l,m) & g_y(l,m)
+   \end{bmatrix},
+
+where :math:`g` are gain terms, :math:`D` are leakage terms, and :math:`x` refers to a north-south aligned antenna, and :math:`y` an east-west aligned antenna. When calculating the cross-correlation responses from antennas 1 and 2 towards direction :math:`l,m` to produce linear polarisation visibilities, these gains and leakages interact with the four Stokes polarisations :math:`I,Q,U,V` as
+
+.. math::
+   \begin{bmatrix}
+   V_{12\,XX}(l,m) \\
+   V_{12\,XY}(l,m) \\
+   V_{12\,YX}(l,m) \\
+   V_{12\,YY}(l,m)
+   \end{bmatrix} =
+   \mathbf{J}_1(l,m) \otimes \mathbf{J}_2^*(l,m)
+   \begin{bmatrix}
+   1 & 1 & 0 & 0 \\
+   0 & 0 & 1 & i \\
+   0 & 0 & 1 & -i \\
+   1 & -1 & 0 & 0
+   \end{bmatrix}
+   \begin{bmatrix}
+   V_{12\,I}(l,m) \\
+   V_{12\,Q}(l,m) \\
+   V_{12\,U}(l,m) \\
+   V_{12\,V}(l,m)
+   \end{bmatrix}
+
+
+where :math:`*` denotes a complex conjugate, and :math:`\otimes` an outer product. Explicitly, each visibility is
+
+.. math::
+   \begin{eqnarray*}
+   V_{12\,XX} = (g_{1x}g_{2x}^{\ast} + D_{1x}D_{2x}^{\ast})\mathrm{V}^{I}_{12}
+     +  (g_{1x}g_{2x}^{\ast} - D_{1x}D_{2x}^{\ast})\mathrm{V}^{Q}_{12} \\
+     +  (g_{1x}D_{2x}^{\ast} + D_{1x}g_{2x}^{\ast})\mathrm{V}^{U}_{12}
+     +  i(g_{1x}D_{2x}^{\ast} - D_{1x}g_{2x}^{\ast})\mathrm{V}^{V}_{12}
+   \end{eqnarray*}
+.. math::
+   \begin{eqnarray*}
+   V_{12\,XY} =
+        (g_{1x}D_{2y}^{\ast} + D_{1x}g_{2y}^{\ast})\mathrm{V}^{I}_{12}
+     +  (g_{1x}D_{2y}^{\ast} - D_{1x}g_{2y}^{\ast})\mathrm{V}^{Q}_{12} \\
+     +  (g_{1x}g_{2y}^{\ast} + D_{1x}D_{2y}^{\ast})\mathrm{V}^{U}_{12}
+     +  i(g_{1x}g_{2y}^{\ast} - D_{1x}D_{2y}^{\ast})\mathrm{V}^{V}_{12}
+   \end{eqnarray*}
+.. math::
+   \begin{eqnarray*}
+   V_{12\,YX} =
+        (D_{1y}g_{2x}^{\ast} + g_{1y}D_{2x}^{\ast})\mathrm{V}^{I}_{12}
+     +  (D_{1y}g_{2x}^{\ast} - g_{1y}D_{2x}^{\ast})\mathrm{V}^{Q}_{12} \\
+     +  (D_{1y}D_{2x}^{\ast} + g_{1y}g_{2x}^{\ast})\mathrm{V}^{U}_{12}
+     +  i(D_{1y}D_{2x}^{\ast} - g_{1y}g_{2x}^{\ast})\mathrm{V}^{V}_{12}
+   \end{eqnarray*}
+.. math::
+   \begin{eqnarray*}
+   V_{12\,YY} =
+        (D_{1y}D_{2y}^{\ast} + g_{1y}g_{2y}^{\ast})\mathrm{V}^{I}_{12}
+     +  (D_{1y}D_{2y}^{\ast} - g_{1y}g_{2y}^{\ast})\mathrm{V}^{Q}_{12} \\
+     +  (D_{1y}g_{2y}^{\ast} + g_{1y}D_{2y}^{\ast})\mathrm{V}^{U}_{12}
+     +  i(D_{1y}g_{2y}^{\ast} - g_{1y}D_{2y}^{\ast})\mathrm{V}^{V}_{12}
+   \end{eqnarray*}
+
+For each baseline, frequency, and time step, ``WODEN`` calculates all four linear polarisations as defined above for all directions :math:`l_j,m_j` in the sky model, and then sums over :math:`j`, to produce four full-sky linear Stokes polarisation visibilities per baseline/frequency/time.
+
 
 Gaussian and Shapelet sources
 ------------------------------
@@ -35,7 +107,7 @@ You can inject morphology into your sources analytically by tranforming a visibi
 
 .. math::
 
-  V(u_i,v_i,w_i) = \sum_j \xi_j(u_i,v_i)\mathcal{B}(l_j,m_j)\mathcal{S}(l_j,m_j) \exp[-2\pi i(u_il_j + v_im_j + w_i(n_j-1))],
+  V(u_i,v_i,w_i) = \sum_j \xi_j(u_i,v_i)\mathcal{S}(l_j,m_j) \exp[-2\pi i(u_il_j + v_im_j + w_i(n_j-1))],
 
 For a Gaussian, this envelope looks like
 

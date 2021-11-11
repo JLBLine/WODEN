@@ -157,8 +157,8 @@ and phase centre
 @param[in] n Output \f$n\f$ coodinate
 
 */
-__device__ void calc_lmn(user_precision_t ra0, user_precision_t sdec0,
-                         user_precision_t cdec0,
+__device__ void calc_lmn(double ra0, double sdec0,
+                         double cdec0,
                          double ra, double dec,
                          double * l, double * m, double * n);
 
@@ -180,8 +180,8 @@ RA,Dec coodinates, with a single RA/Dec phase centre.
  @param[in,out] d_n Output \f$n\f$ coodinates
  @param[in] num_components Number of RA,Dec coords
 */
-__global__ void kern_calc_lmn(user_precision_t ra0, user_precision_t sdec0,
-                              user_precision_t cdec0,
+__global__ void kern_calc_lmn(double ra0, double sdec0,
+                              double cdec0,
                               double *d_ras, double *d_decs,
                               double *d_l, double *d_m, double *d_n,
                               int num_components);

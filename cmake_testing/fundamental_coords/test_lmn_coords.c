@@ -9,7 +9,7 @@ void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
 //External CUDA code we're linking in
-extern void test_kern_calc_lmn(user_precision_t ra0, user_precision_t dec0,
+extern void test_kern_calc_lmn(double ra0, double dec0,
                                double *ras, double *decs, int num_coords,
                                double * ls, double * ms, double * ns);
 
@@ -17,8 +17,8 @@ extern void test_kern_calc_lmn(user_precision_t ra0, user_precision_t dec0,
 
 void test_kern_calc_lmn_GivesCorrectlCoords(void)
 {
-    user_precision_t ra0 = 0.0*DD2R;
-    user_precision_t dec0 = 0.0*DD2R;
+    double ra0 = 0.0*DD2R;
+    double dec0 = 0.0*DD2R;
 
     int num_points = 9;
     double *decs = malloc(num_points*sizeof(double));

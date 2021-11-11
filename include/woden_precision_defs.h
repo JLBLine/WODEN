@@ -8,17 +8,17 @@
 #pragma once
 
 #ifdef DOUBLE_PRECISION
-  /*! If -DDOUBLE_PRECISION flag is added a compliation,
+  /*! If -DDOUBLE_PRECISION flag is added a compilation,
   then user_precision_t is set to double */
   typedef double user_precision_t;
-  /*! If -DDOUBLE_PRECISION flag is added a compliation,
+  /*! If -DDOUBLE_PRECISION flag is added a compilation,
   then user_precision_complex_t is set to double _Complex */
   typedef double _Complex user_precision_complex_t;
 #else
-  /*! If -DDOUBLE_PRECISION flag is NOT added a compliation,
+  /*! If -DDOUBLE_PRECISION flag is NOT added a compilation,
   then user_precision_t defaults to float */
   typedef float user_precision_t;
-  /*! If -DDOUBLE_PRECISION flag is NOTE added a compliation,
+  /*! If -DDOUBLE_PRECISION flag is NOT added at compilation,
   then user_precision_complex_t defaults to float _Complex */
   typedef float _Complex user_precision_complex_t;
 #endif

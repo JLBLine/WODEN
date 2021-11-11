@@ -438,6 +438,9 @@ def create_uvfits(v_container=None,freq_cent=None,
     uvhdu.header['CRPIX6'] = 1.0
     uvhdu.header['CDELT6'] = 1.0
 
+    ##We're outputting into J2000
+    uvhdu.header['EPOCH'] = 2000.0
+
     ##Old observation parameters that were/are needed in CHIPS
     uvhdu.header['OBJECT']  = 'Undefined'
     uvhdu.header['OBSRA']   = ra_point

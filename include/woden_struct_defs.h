@@ -213,7 +213,7 @@ typedef struct _woden_settings_t {
   user_precision_t frequency_resolution;  /*!< Frequency resolution of a fine channel (Hz)*/
   user_precision_t base_low_freq;  /*!< The lowest fine channel frequency of band 1*/
   int num_time_steps;  /*!< Number of time steps to simulate*/
-  user_precision_t time_res;  /*!< Time resolution of simulation (seconds)*/
+  double time_res;  /*!< Time resolution of simulation (seconds)*/
   const char* cat_filename;  /*!< Path to WODEN-style sky model*/
   int num_bands;  /*!< Number of coarse frequency bands to simulate */
   int *band_nums;  /*!< Which number coarse bands to simulate (e.g 1,4,6) */

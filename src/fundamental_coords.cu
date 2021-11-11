@@ -89,8 +89,8 @@ __global__ void kern_calc_uvw_shapelet(double *d_X_diff,
   }
 }
 
-__device__ void calc_lmn(user_precision_t ra0, user_precision_t sdec0,
-                         user_precision_t cdec0,
+__device__ void calc_lmn(double ra0, double sdec0,
+                         double cdec0,
                          double ra, double dec,
                          double * l, double * m, double * n){
   double cdec;
@@ -113,8 +113,8 @@ __device__ void calc_lmn(user_precision_t ra0, user_precision_t sdec0,
   // double temp_n = sqrt(1.0 -temp_l*temp_l - temp_m*temp_m );
 }
 
-__global__ void kern_calc_lmn(user_precision_t ra0, user_precision_t sdec0,
-                              user_precision_t cdec0,
+__global__ void kern_calc_lmn(double ra0, double sdec0,
+                              double cdec0,
                               double *d_ras, double *d_decs,
                               double *d_l, double *d_m, double *d_n,
                               int num_components){
@@ -139,7 +139,7 @@ __global__ void kern_calc_lmn(user_precision_t ra0, user_precision_t sdec0,
                  Functions below to be used in unit tests
 *******************************************************************************/
 
-extern "C" void test_kern_calc_lmn(float ra0, float dec0,
+extern "C" void test_kern_calc_lmn(double ra0, double dec0,
                                    double *ras, double *decs, int num_coords,
                                    double * ls, double * ms, double * ns) {
 

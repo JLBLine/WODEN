@@ -1,3 +1,6 @@
+##Delete any old reports hanging around
+rm coverage.xml *.gcov
+
 ##Use the ctest C code outputs and run gcov over them for codecov
 gcov ../build/cmake_testing/array_layout/CMakeFiles/array_layout_float.dir/__/__/src/array_layout.c.gcda \
     ../build/cmake_testing/chunk_sky_model/CMakeFiles/chunk_sky_model_float.dir/__/__/src/chunk_sky_model.c.gcda \

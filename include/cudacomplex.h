@@ -14,8 +14,12 @@
 
 
 #ifdef DOUBLE_PRECISION
+/*! If -DDOUBLE_PRECISION flag is added at compilation,
+then cuUserComplex is set to cuDoubleComplex */
 typedef cuDoubleComplex cuUserComplex;
 #else
+/*! If -DDOUBLE_PRECISION flag is NOTE added at compilation,
+then cuUserComplex is set to cuFloatComplex */
 typedef cuFloatComplex cuUserComplex;
 #endif
 

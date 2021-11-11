@@ -36,9 +36,9 @@ standard deviations.
 @param[in] sigma_y Square root of variance in x
 @param[in] cos_theta Cosine of the rotation angle
 @param[in] sin_theta Sine of the rotation angle
+@param[in] sin_2theta Sine of two times the rotation angle
 @param[in,out] *d_beam_real Real part of the Gaussian repsonse
 @param[in,out] *d_beam_imag Imaginary part of the Gaussian reponse
-
 */
 __device__ void twoD_Gaussian(user_precision_t x, user_precision_t y,
            user_precision_t xo, user_precision_t yo,

@@ -32,10 +32,10 @@ The core functionality of `WODEN` is written in CUDA as interferometric simulati
 An interferometer creates visibilities $V$ by cross-correlating signals detected between pairs of antennas or dishes (baselines), described by coordinates $u,v,w$. Each visibility is sensitive to the entire sky, directions of which we describe by the direction cosines $l,m,n$. Ignoring the antenna response, the full integral can be discretised as
 
 \begin{equation} \label{eq:RIME}
-V_{\mathcal{S}}(u_i,v_i,w_i) = \\ \sum_j \mathcal{S}(l_j,m_j) \exp[-2\pi i(u_il_j + v_im_j + w_i(n_j-1))],
+V_s(u_i,v_i,w_i) = \\ \sum_j \mathcal{S}_s(l_j,m_j) \exp[-2\pi i(u_il_j + v_im_j + w_i(n_j-1))],
 \end{equation}
 
-where $u_i,v_i,w_i$ are the visibility coordinates of the $i^{\mathrm{th}}$ baseline, $l_j$, $m_j$, $n_j$ is the sky position of the $j^{\mathrm{th}}$ component in the sky model, and $\mathcal{S}(l_j,m_j)$ is the flux density of that component in a given Stokes polarisation. `WODEN` simulates dual-linear polarisation antennas, with each
+where $u_i,v_i,w_i$ are the visibility coordinates of the $i^{\mathrm{th}}$ baseline, $l_j$, $m_j$, $n_j$ is the sky position of the $j^{\mathrm{th}}$ component in the sky model, and $\mathcal{S}(l_j,m_j)$ is the flux density of that component in a given Stokes polarisation $s$. `WODEN` simulates dual-linear polarisation antennas, with each
 antenna/station having it's own primary beam shape. I can define the response of a dual polarisation antenna to direction $l,m$ as
 
 $$
@@ -50,10 +50,10 @@ where $g$ are gain terms, $D$ are leakage terms, and $\mathrm{ns}$ refers to nor
 
 \begin{equation}\label{eq:RIME_full}
 \begin{bmatrix}
-V_{12\,{\mathrm{ns}}\,{\mathrm{ns}}}(l,m) \\
-V_{12\,{\mathrm{ns}}\,{\mathrm{ew}}}(l,m) \\
-V_{12\,{\mathrm{ew}}\,{\mathrm{ns}}}(l,m) \\
-V_{12\,{\mathrm{ew}}\,{\mathrm{ew}}}(l,m)
+V_{12\,XX}(l,m) \\
+V_{12\,XY}(l,m) \\
+V_{12\,YX}(l,m) \\
+V_{12\,YY}(l,m)
 \end{bmatrix} =
 \mathbf{J}_1(l,m) \otimes \mathbf{J}_2^*(l,m)
 \begin{bmatrix}
@@ -70,14 +70,14 @@ V_{12\,V}(l,m)
 \end{bmatrix}
 \end{equation}
 
+
+
 where $*$ denotes a complex conjugate, and $\otimes$ an outer product (the result
-of this outer product is written explicitly in the `WODEN` documentation [here](https://woden.readthedocs.io/en/joss_review/operating_principles/visibility_calcs.html)). For each baseline, frequency, and time step, `WODEN` calculates all four linear polarisations[^1] as defined above for all directions $l,m$ in the sky model, and then sums over sky direction, to produce four full-sky linear Stokes polarisation visibilities per baseline/frequency/time.
+of this outer product is written explicitly in the `WODEN` documentation [here](https://woden.readthedocs.io/en/joss_review/operating_principles/visibility_calcs.html)). For each baseline, frequency, and time step, `WODEN` calculates all four linear Stokes polarisations ($V_{XX}, V_{XY}, V_{YX}, V_{YY}$) as defined above for all $l_j,m_j$ in the sky model, and then sums over $j$, to produce four full-sky linear Stokes polarisation visibilities per baseline/frequency/time.
 
 For a telescope like the MWA, the primary beam $\mathbf{J}(l,m)$ is a complicated pattern on the sky, which is sensitive to emission from directly overhead to all the way down to the horizon. To truly capture the effects of astrophysical foregrounds we therefore have to simulate the entire sky. The MWA Fully Embedded Element (FEE, @Sokolowski2017) model is currently the most accurate representation of the MWA primary beam, and is incorporated into `WODEN`.
 
 As the sky model of `WODEN` is a list of Right Ascension and Declinations with associated flux densities, the user has full control over the projection of the sky into visibilities. To simulate discrete foregrounds, one can simply input any sky catalogue specified in RA/Dec. For diffuse sky models, one could for example input a list of point source/elliptical Gaussians following the HEALPix projection [@HEALPix2005], or employ a TAN or SIN FITS [@FITS2002] projection. ``WODEN`` will simply calculate the measurement equation for all directions in the sky model.
-
-[^1]: Note that these output visibilities $V_{{\mathrm{ns}}\,{\mathrm{ns}}}, V_{{\mathrm{ns}}\,{\mathrm{ew}}}, V_{{\mathrm{ew}}\,{\mathrm{ns}}}, V_{{\mathrm{ew}}\,{\mathrm{ew}}}$ are often referred to as $V_{\mathrm{XX}}, V_{\mathrm{XY}}, V_{\mathrm{YX}}, V_{\mathrm{YY}}$. There is regular debate as to whether $X$ means north-south or east-west, so I've been explicit here.
 
 # Statement of need
 
@@ -89,9 +89,9 @@ Alternative approaches to interferometric simulations exist, such as [pyuvsim](h
 
 The goal of this section is to test the accuracy of the functionality of `WODEN`, including reading of inputs, the array coordinate calculations, the precession/nutation correction, $l,m,n$ and $u,v,w$ calculations, flux density frequency extrapolation via spectral index, calculation of Equation \ref{eq:RIME_full}, and writing out of the data to `uvfits` files.
 
-To test the absolute accuracy of `WODEN`, we first need a set of input parameters that have an analytically predictable outcome. If we ignore the beam response and polarisation, set the flux density of a source to one, and consider a single baseline and sky direction, the measurement equation (Equation \ref{eq:RIME}) becomes[^2]
+To test the absolute accuracy of `WODEN`, we first need a set of input parameters that have an analytically predictable outcome. If we ignore the beam response and polarisation, set the flux density of a source to one, and consider a single baseline and sky direction, the measurement equation (Equation \ref{eq:RIME}) becomes[^1]
 
-[^2]: Note there is no negative at the front inside the exponential for $V(u,v,w)$. After numerous comparisons to other simulation packages, and imaging to check the input source positions match, I find dropping the negative gives the correct outputs.
+[^1]: Note there is no negative at the front inside the exponential for $V(u,v,w)$. After numerous comparisons to other simulation packages, and imaging to check the input source positions match, I find dropping the negative gives the correct outputs.
 
 \begin{equation} \label{eq:RIME_simple}
 V(u,v,w) = \exp[2\pi i(ul + vm + w(n-1))].
@@ -183,7 +183,7 @@ where $\mathrm{n}$ is some integer. This means for a given $\phi_{\mathrm{simple
   b = \frac{\phi_{\mathrm{simple}} + 2\pi \mathrm{n}}{\phi_{\mathrm{simple}}}
 \end{gather*}
 
-for a range of $\mathrm{n}$ values. The values of $\mathrm{n}$ and the resultant size of b that I use in testing are shown in the table below.
+for a range of $\mathrm{n}$ values. The values of $\mathrm{n}$ and the resultant size of b that I use in testing are shown in Table \ref{tab:b_values}.
 
 \begin{table}[h]
 \begin{center}
@@ -243,11 +243,11 @@ Figure \ref{fig:WODEN_accuracy} shows the result of running multiple simulations
 Parameter & Value & Manifestation in simulation \\
 \hline
 \hline
-Date (UTC) & 2020-01-01 12:00:00.0 & `WODEN` must correct for precession and nutation \\
+Date (UTC) & 2020-01-01 12:00:00.0 & \texttt{WODEN} must correct for precession and nutation \\
 Latitude (deg) & 0.1095074 & After precess/nut correction, latitude is 0.0$^\circ$ \\
 Longitude (deg) & 79.6423588 & After precess/nut correction, LST is 0.0$^\circ$ \\
 Frequency (MHz) & 299.792458 & Means $\lambda = 1$, so wavelength scaled $u,v,w = E,N,H$ \\
-Reference frequency for sky model (MHz) & 150 & `WODEN` has to extrapolate the flux density \\
+Reference frequency for sky model (MHz) & 150 & \texttt{WODEN} has to extrapolate the flux density \\
 Spectral Index & -0.8 & Needed to extrapolate flux density \\
 Reference Stokes I flux density (Jy) & 1.7401375 & Should be extrapolated to a flux of 1.0 at the simulation frequency \\
 \hline
@@ -264,7 +264,7 @@ All array layouts, sky models, and simulations are run by `WODEN/test_installati
 
 [Version 1.0](https://github.com/JLBLine/WODEN/releases/tag/v1.0.0) of `WODEN` was fully 32 bit, which produced the green triangles in Figure \ref{fig:WODEN_accuracy}, with longer baselines consistently a few percent off expectations. A modest slow down by moving to a combined 32 and 64 bit "float" mode (orange squares) improves the accuracy to <= 0.2% on the longer baselines. The 64 bit "double" precision mode is consistent in precision across baseline length, sitting at < 2e-6% accuracy. The "float" and "double" modes are available in Version 1.1 (TODO link to release once release is made), and can be switched between via a command line option to `run_woden.py`. It should be noted that these offset errors are deterministic, meaning comparison between different simulations out of [Version 1.0](https://github.com/JLBLine/WODEN/releases/tag/v1.0.0) `WODEN` are consistent; these errors matter most when comparing to real data.
 
-As 32 and 64 bit precision calculations are performed in physically different parts of an NVIDIA GPU, with cards typically having less double precision hardware that single, the "double" version is slower that the "float". Each card will show a different slow-down between the two modes. As a test, I ran a simulation using a catalogue of over 300,000 sources. The number of sources above the horizon and the simulation settings used are listed in Table \ref{tab:benchmark_sim}, along with the speed difference between the "float" and "double" precision versions for two different GPU cards (TODO push this version and then run on Garrawarla).
+As 32 and 64 bit precision calculations are performed in physically different parts of an NVIDIA GPU, with cards typically having less double precision hardware that single, the "double" version is slower that the "float". Each card will show a different slow-down between the two modes. As a test, I ran a simulation using a catalogue of over 300,000 sources. The number of sources above the horizon and the simulation settings used are listed in Table \ref{tab:benchmark_sim}, along with the speed difference between the "float" and "double" precision versions for two different NVIDIA GPU cards.
 
 \renewcommand{\arraystretch}{1}
 \begin{table}[h]
@@ -276,19 +276,21 @@ Parameters & Value \\
 \hline
 Time steps & 14 \\
 Frequency channels & 80 \\
-Point sources components & 207,673 \\
+Point sources components & 207673 \\
 Gaussian components & 1182 \\
 Shapelet components (basis functions) & 62 (10400) \\
 Primary beam model & MWA FEE \\
 GTX 1080 Ti "float" simulation time & 10min 39sec \\
-GTX 1080 Ti "double" simulation time & 56m7.556s \\
+GTX 1080 Ti "double" simulation time & 56min 8sec \\
+V100 "float" simulation time & 3min 40sec \\
+V100 "double" simulation time & 5min 53sec \\
 \end{tabular}
 \caption{Benchmark simulation to compare "float" and "double" speeds. Each shapelet component can have several basis function calculations, each more expensive that a point source component calculation. The MWA FEE is the most computationally expensive beam model included with \texttt{WODEN}.}
 \label{tab:benchmark_sim}
 \end{center}
 \end{table}
 
-Given this > 5 times slow down on a desktop card, having the option to toggle between "float" and "double" allows quick experimentation in "float" mode and longer science-quality runs in "double".
+Given this > 5 times slow down on a desktop card, having the option to toggle between "float" and "double" allows quick experimentation in "float" mode and longer science-quality runs in "double". Luckily, for cards like the V100, the slow down is less than two.
 
 # Example application
 

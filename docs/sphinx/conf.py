@@ -21,7 +21,23 @@ read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 pwd = os.getcwd()
 os.chdir('../doxygen')
 print("pwd is {:s}".format(os.getcwd()))
-subprocess.call('doxygen Doxyfile', shell=True)
+
+##When updating documentation locally, can be really annoying running
+##doxygen when you don't need it, so set
+##export NO_RUN_WODEN_DOXYGEN=1
+##to switch it off. Can set
+##export NO_RUN_WODEN_DOXYGEN=0
+##to turn doxygen back on
+try:
+    norun = os.environ['NO_RUN_WODEN_DOXYGEN']
+    if int(norun):
+        run_doxygen = False
+    else:
+        run_doxygen = True
+except KeyError:
+    run_doxygen = True
+
+if run_doxygen: subprocess.call('doxygen Doxyfile', shell=True)
 
 # -- Project information -----------------------------------------------------
 
