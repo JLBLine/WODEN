@@ -1,0 +1,5 @@
+sphinx_argparse
+breathe
+astropy
+numpy
+pyerfa
