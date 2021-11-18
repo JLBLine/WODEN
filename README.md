@@ -9,9 +9,11 @@
 
 The unique part of `WODEN` is that it can simulate shapelet model sources (along with point and Gaussian) that are compatible with the `RTS` ([Mitchell et al. 2008](https://ieeexplore.ieee.org/document/4703504?arnumber=4703504 "IEEExplorer")). These models are generated with SHApelet Modelling For Interferometers ([SHAMFI](https://github.com/JLBLine/SHAMFI)), specified with the `--woden_srclist` SHAMFI option. It also includes a script to convert a multi-scale CLEAN component list out of [WSClean](https://sourceforge.net/projects/wsclean/) into a `WODEN`-style srclist (when running `WSClean` use the `-save-source-list` option). `WODEN` can also produce visibilities that can be fed directly into the `RTS` to allow testing of calibration and modelling methodologies.
 
+If you have feature requests or want to contribute to `WODEN`, have a read of the
+[guide to contributing](CONTRIBUTION_GUIDE.md) to get started. I welcome the feedback and/or help!
+
 Jack Line \
-July 2021 \
-Any issues, questions, wisdom, feel free to email me at jack.line@curtin.edu.au
+November 2021
 
 
 ## 1. Installation
@@ -31,8 +33,9 @@ $ cd WODEN
 $ mkdir build && cd build
 $ cmake ..
 $ make -j 4
+$ sudo make install #(this is optional)
 ```
-with a couple of post-compilation environment variables needed. Checkout the [installation guide on readthedocs](https://woden.readthedocs.io/en/latest/installation/installation.html#dependencies) for full details.
+with a couple of post-compilation environment variables needed (if you don't want to `make install`). Checkout the [installation guide on readthedocs](https://woden.readthedocs.io/en/latest/installation/installation.html#dependencies) for full details.
 
 ## 2. Testing
 There are two routes to test WODEN:
