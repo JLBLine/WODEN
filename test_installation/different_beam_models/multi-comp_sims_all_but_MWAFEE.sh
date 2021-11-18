@@ -12,7 +12,8 @@ do
      --cat_filename=../skymodels/srclist_multi-comp_grid.txt \
      --metafits_filename=../metafits/1102865128_metafits_ppds.fits \
      --band_nums=1,2,3 --output_uvfits_prepend=./data/multi-comp_grid_${beam} \
-     --primary_beam=${beam}
+     --primary_beam=${beam} \
+     --precision=float
 
 done
 
@@ -25,4 +26,5 @@ run_woden.py \
    --band_nums=1,2,3 --output_uvfits_prepend=./data/multi-comp_grid_EDA2 \
    --primary_beam=EDA2 \
    --array_layout=../array_layouts/EDA2_layout_255.txt \
+   --precision=float \
    --chunking_size=1e9
