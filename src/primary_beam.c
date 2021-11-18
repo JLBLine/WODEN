@@ -24,8 +24,8 @@ void calc_para_angle(catsource_t *cropped_src, double *lsts,
       double ha = lsts[time_step] - cropped_src->point_ras[point];
       para_angle = eraHd2pa(ha, cropped_src->point_decs[point], latitude);
 
-      cropped_src->sin_point_para_angs[point*num_time_steps + time_step] = sin((user_precision_t)para_angle + M_PI/2.0);
-      cropped_src->cos_point_para_angs[point*num_time_steps + time_step] = cos((user_precision_t)para_angle + M_PI/2.0);
+      cropped_src->sin_point_para_angs[point*num_time_steps + time_step] = sin(para_angle + M_PI/2.0);
+      cropped_src->cos_point_para_angs[point*num_time_steps + time_step] = cos(para_angle + M_PI/2.0);
 
     }
   }//END point component loop
@@ -38,8 +38,8 @@ void calc_para_angle(catsource_t *cropped_src, double *lsts,
       double ha = lsts[time_step] - cropped_src->gauss_ras[gauss];
       para_angle = eraHd2pa(ha, cropped_src->gauss_decs[gauss], latitude);
 
-      cropped_src->sin_gauss_para_angs[gauss*num_time_steps + time_step] = sin((user_precision_t)para_angle + M_PI/2.0);
-      cropped_src->cos_gauss_para_angs[gauss*num_time_steps + time_step] = cos((user_precision_t)para_angle + M_PI/2.0);
+      cropped_src->sin_gauss_para_angs[gauss*num_time_steps + time_step] = sin(para_angle + M_PI/2.0);
+      cropped_src->cos_gauss_para_angs[gauss*num_time_steps + time_step] = cos(para_angle + M_PI/2.0);
     }
   }//END gauss component loop
 
@@ -48,10 +48,10 @@ void calc_para_angle(catsource_t *cropped_src, double *lsts,
     for ( int time_step = 0; time_step < num_time_steps; time_step++ ) {
 
       double ha = lsts[time_step] - cropped_src->shape_ras[shape];
-      para_angle = eraHd2pa((double)ha, cropped_src->shape_decs[shape], latitude);
+      para_angle = eraHd2pa(ha, cropped_src->shape_decs[shape], latitude);
 
-      cropped_src->sin_shape_para_angs[shape*num_time_steps + time_step] = sin((user_precision_t)para_angle + M_PI/2.0);
-      cropped_src->cos_shape_para_angs[shape*num_time_steps + time_step] = cos((user_precision_t)para_angle + M_PI/2.0);
+      cropped_src->sin_shape_para_angs[shape*num_time_steps + time_step] = sin(para_angle + M_PI/2.0);
+      cropped_src->cos_shape_para_angs[shape*num_time_steps + time_step] = cos(para_angle + M_PI/2.0);
     }
   }//END shape component loop
 }

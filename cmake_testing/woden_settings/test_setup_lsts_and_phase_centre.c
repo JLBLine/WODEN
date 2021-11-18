@@ -9,7 +9,11 @@
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
-#define UNITY_INCLUDE_FLOAT
+#ifdef DOUBLE_PRECISION
+  double TOL = 1e-15;
+#else
+  double TOL = 1e-7;
+#endif
 
 /*
 Check the function that uses `woden_settings` to create the LSTs for the
@@ -29,10 +33,10 @@ void check_setup_lsts_and_phase_centre(woden_settings_t *woden_settings) {
   int num_visis = woden_settings->num_baselines*woden_settings->num_time_steps*woden_settings->num_freqs;
   TEST_ASSERT_EQUAL_INT(num_visis, woden_settings->num_visis);
 
-  TEST_ASSERT_EQUAL_FLOAT(sin(woden_settings->dec0), woden_settings->sdec0);
-  TEST_ASSERT_EQUAL_FLOAT(cos(woden_settings->dec0), woden_settings->cdec0);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, sin(woden_settings->dec0), woden_settings->sdec0);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, cos(woden_settings->dec0), woden_settings->cdec0);
 
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(expected_lsts, lsts, woden_settings->num_time_steps);
+  TEST_ASSERT_EQUAL_DOUBLE_ARRAY(expected_lsts, lsts, woden_settings->num_time_steps);
 
   free(lsts);
 }

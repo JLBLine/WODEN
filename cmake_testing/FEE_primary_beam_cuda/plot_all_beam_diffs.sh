@@ -5,6 +5,9 @@ ln -s ../../build/cmake_testing/FEE_primary_beam_cuda/*double*.txt .
 
 ##Then you can make hyperdrive outputs like this
 python compare_to_hyperdrive.py
+##Note that the command below uses the outputs from compare_to_hyperdrive.py
+##to generate test_RTS_FEE_beam.h, which is used as expected values in tests
+#python make_values_header.py
 
 ##Then can run the plotting scripts to compare the jones matrices
 ##from hyperdrive to

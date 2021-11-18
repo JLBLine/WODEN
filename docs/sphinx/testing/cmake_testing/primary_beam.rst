@@ -8,9 +8,10 @@ test_calc_para_angle.c
 ``primary_beam::calc_para_angle`` calculates the parallactic angle for
 all COMPONENTs, for all time steps. This test calls ``calc_para_angle`` for
 three POINT, three GAUSSIAN, and three SHAPELET COMPONENTs, for three different
-LSTs.. The different COMPONENT types are given different RA/Decs. The
+LSTs. The different COMPONENT types are given different RA/Decs. The
 results are compared to expected values, which are stored in
-``expected_para_angles.h``
+``expected_para_angles.h``. For FLOAT compiled code, the absolute tolerance
+threshold is set to 1e-7, and 1e-15 for DOUBLE compiled code.
 
 
 test_fill_primary_beam_settings.c
@@ -21,7 +22,7 @@ az,za coords have already been calculated by
 ``chunk_sky_model::create_chunked_sky_models``, which is sufficient for some
 beam models. There are two beam models that need further inputs:
 
-   - ``GAUSS_BEAM``: the Gaussian beam function uses *l,m,n* coords to      incorporate projection effects, so ``fill_primary_beam_settings`` calculates the hour angle of all COMPONENTs for all time steps, to feed into ``fundamental_coords::kern_calc_lmn`` later down the line
+   - ``GAUSS_BEAM``: the Gaussian beam function uses *l,m,n* coords to incorporate projection effects, so ``fill_primary_beam_settings`` calculates the hour angle of all COMPONENTs for all time steps, to feed into ``fundamental_coords::kern_calc_lmn`` later down the line
    - ``FEE_BEAM``: needs the parallactic angle to rotate the telescope-based coords into the Stokes frame
 
 The tests here call ``fill_primary_beam_settings`` for the four primary
@@ -56,3 +57,7 @@ beam types, and perform the following checks:
     - Assert that ``beam_settings->beamtype == ANALY_DIPOLE``
  - ``NO_BEAM``:
     - Assert that ``beam_settings->beamtype == NO_BEAM``
+
+For FLOAT compiled code, the absolute tolerance threshold on values is set to
+1e-7, and 1e-15 for DOUBLE compiled code. For values that are 64 bit in both the
+FLOAT and DOUBLE versions the values are tested using ``TEST_ASSERT_EQUAL_DOUBLE``.

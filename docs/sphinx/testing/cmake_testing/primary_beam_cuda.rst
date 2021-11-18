@@ -22,9 +22,10 @@ checked against the following calculations:
  - When setting *l* = 0, assert gain = :math:`\exp\left[-\frac{1}{2} \left( \frac{m}{\sigma} \frac{\nu}{\nu_0} \right)^2 \right]`
 
 where :math:`\nu_0` is the reference frequency, and :math:`\sigma_0` the std of
-the Gaussian in terms of *lm* coords. The real parts of the beam response are
-tested to be within an absolute tolerance of 1e-7, and the imaginary parts
-to be equal to zero.
+the Gaussian in terms of *l,m* coords. These calculations are made using ``C``
+with 64 bit precision.  The beam responses are tested to be within an absolute
+tolerance of 1e-10 from expectations for the FLOAT compiled code, and 1e-16 for
+the DOUBLE compiled code.
 
 test_analytic_dipole_beam.c
 ***********************************
@@ -36,4 +37,7 @@ those directions, and then frees the az/za coords from GPU memory.
 Nothing exiting in this test, just call the function for 25 directions on
 the sky, for two time steps and two frequencies (a total of 100 beam calculations),
 and check that the real beam gains match stored expected values, and the imaginary
-values equal zero.
+values equal zero. The expected values have been generated using the DOUBLE
+precision compiled code, and so the absolute tolerance of within 1e-12 is set
+by how many decimal places I've stored in the lookup table. The FLOAT precision
+must match within 1e-6 of these stored values.

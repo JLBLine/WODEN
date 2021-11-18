@@ -8,7 +8,11 @@
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
-#define UNITY_INCLUDE_FLOAT
+#ifdef DOUBLE_PRECISION
+  double TOL = 1e-15;
+#else
+  double TOL = 1e-7;
+#endif
 
 /*
 Check that the counts of number of SOURCEs and COMPONENT types in the
@@ -44,14 +48,14 @@ Assumes the catalogue being read in is one of the specific sky models made
 for testing in the WODEN/cmake_testing/read_and_write dir
 */
 void check_single_component_point(catsource_t catsource, int comp_index) {
-  TEST_ASSERT_EQUAL_FLOAT(15*1.0*DD2R, catsource.point_ras[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(-30.0*DD2R, catsource.point_decs[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(150e+6, catsource.point_ref_freqs[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(1.0, catsource.point_ref_stokesI[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(0.0, catsource.point_ref_stokesQ[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(0.0, catsource.point_ref_stokesU[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(0.0, catsource.point_ref_stokesV[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(-0.8, catsource.point_SIs[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 15*1.0*DD2R, catsource.point_ras[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, -30.0*DD2R, catsource.point_decs[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 150e+6, catsource.point_ref_freqs[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 1.0, catsource.point_ref_stokesI[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, catsource.point_ref_stokesQ[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, catsource.point_ref_stokesU[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, catsource.point_ref_stokesV[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, -0.8, catsource.point_SIs[comp_index]);
 }
 
 /*
@@ -60,18 +64,18 @@ Assumes the catalogue being read in is one of the specific sky models made
 for testing in the WODEN/cmake_testing/read_and_write dir
 */
 void check_single_component_gauss(catsource_t catsource, int comp_index) {
-  TEST_ASSERT_EQUAL_FLOAT(15*2.0*DD2R, catsource.gauss_ras[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(-30.0*DD2R, catsource.gauss_decs[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(150e+6, catsource.gauss_ref_freqs[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(2.0, catsource.gauss_ref_stokesI[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(0.0, catsource.gauss_ref_stokesQ[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(0.0, catsource.gauss_ref_stokesU[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(0.0, catsource.gauss_ref_stokesV[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(-0.8, catsource.gauss_SIs[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(-10.0*DD2R, catsource.gauss_pas[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT((3.0/60.0)*DD2R,
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 15*2.0*DD2R, catsource.gauss_ras[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, -30.0*DD2R, catsource.gauss_decs[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 150e+6, catsource.gauss_ref_freqs[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 2.0, catsource.gauss_ref_stokesI[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, catsource.gauss_ref_stokesQ[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, catsource.gauss_ref_stokesU[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, catsource.gauss_ref_stokesV[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, -0.8, catsource.gauss_SIs[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, -10.0*DD2R, catsource.gauss_pas[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, (3.0/60.0)*DD2R,
                           catsource.gauss_majors[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT((6.0/60.0)*DD2R,
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, (6.0/60.0)*DD2R,
                           catsource.gauss_minors[comp_index]);
 }
 
@@ -81,34 +85,33 @@ Assumes the catalogue being read in is one of the specific sky models made
 for testing in the WODEN/cmake_testing/read_and_write dir
 */
 void check_single_component_shapelet(catsource_t catsource, int comp_index) {
-  TEST_ASSERT_EQUAL_FLOAT(15*3.0*DD2R, catsource.shape_ras[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(20.0*DD2R, catsource.shape_decs[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(70e+6, catsource.shape_ref_freqs[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(3.0, catsource.shape_ref_stokesI[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(0.0, catsource.shape_ref_stokesQ[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(0.0, catsource.shape_ref_stokesU[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(0.0, catsource.shape_ref_stokesV[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(-0.8, catsource.shape_SIs[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT(56.0*DD2R, catsource.shape_pas[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT((7.0/60.0)*DD2R, catsource.shape_majors[comp_index]);
-  TEST_ASSERT_EQUAL_FLOAT((5.0/60.0)*DD2R, catsource.shape_minors[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 15*3.0*DD2R, catsource.shape_ras[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 20.0*DD2R, catsource.shape_decs[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 70e+6, catsource.shape_ref_freqs[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 3.0, catsource.shape_ref_stokesI[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, catsource.shape_ref_stokesQ[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, catsource.shape_ref_stokesU[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, catsource.shape_ref_stokesV[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, -0.8, catsource.shape_SIs[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 56.0*DD2R, catsource.shape_pas[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, (7.0/60.0)*DD2R, catsource.shape_majors[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, (5.0/60.0)*DD2R, catsource.shape_minors[comp_index]);
 
-  user_precision_t expected_n1s[] = {0.0, 14.0, 41.0, 37.0};
-  user_precision_t expected_n2s[] = {0.0, 2.0, -15.0, 7.0};
-  user_precision_t expected_coeffs[] = {0.48255952, -0.18494293, -0.08973978, -0.22137849};
-  user_precision_t expected_param_indexes[] = {comp_index, comp_index, comp_index, comp_index};
+  double expected_n1s[] = {0.0, 14.0, 41.0, 37.0};
+  double expected_n2s[] = {0.0, 2.0, -15.0, 7.0};
+  double expected_coeffs[] = {0.48255952, -0.18494293, -0.08973978, -0.22137849};
+  double expected_param_indexes[] = {comp_index, comp_index, comp_index, comp_index};
 
-  //Increment the array pointer to the start of the parameters for this
-  //particular component index (each set of params is 4 long)
-
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(expected_n1s,
-                                catsource.shape_n1s + (4*comp_index), 4);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(expected_n2s,
-                                catsource.shape_n2s + (4*comp_index), 4);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(expected_coeffs,
-                                catsource.shape_coeffs + (4*comp_index), 4);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(expected_param_indexes,
-                                catsource.shape_param_indexes + (4*comp_index), 4);
+  for (int param_index = 0; param_index < 4; param_index++) {
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_n1s[param_index],
+                      catsource.shape_n1s[4*comp_index + param_index]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_n2s[param_index],
+                      catsource.shape_n2s[4*comp_index + param_index]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_coeffs[param_index],
+                      catsource.shape_coeffs[4*comp_index + param_index]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_param_indexes[param_index],
+                      catsource.shape_param_indexes[4*comp_index + param_index]);
+  }
 }
 
 /*
@@ -370,6 +373,55 @@ void test_read_source_catalogue_MultiSourceComponents(void) {
 
 }
 
+
+
+
+
+
+
+
+/*
+Test whether a single point source is read in correctly when the SED is
+specified by the LINEAR keyword, not the FREQ keyword
+Use this to test in some allmost broken srclists
+*/
+void test_read_source_catalogue_Linear(void)
+{
+  // Read in the source catalogue
+  source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );
+  int status=0;
+  status = read_source_catalogue("srclist_linear.txt", raw_srccat);
+
+  //Zero means we're happy
+  TEST_ASSERT_EQUAL_INT(0, status);
+
+  //Expected values
+  int num_sources = 1;
+  int num_shapelets = 0;
+  int n_comps = 1;
+  int n_points = 1;
+  int n_gauss = 0;
+  int n_shapes = 0;
+  int n_shape_coeffs = 0;
+
+  //Check these values
+  check_single_source_numbers(raw_srccat,
+                              num_sources,  num_shapelets,  n_comps,
+                              n_points,  n_gauss,  n_shapes,
+                              n_shape_coeffs, 0);
+
+  // catsource_t catsource = raw_srccat->catsources[0];
+
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 15*17.0*DD2R, raw_srccat->catsources[0].point_ras[0]);
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, -23.4545756877980*DD2R, raw_srccat->catsources[0].point_decs[0]);
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 1748492837, raw_srccat->catsources[0].point_ref_freqs[0]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 1.0, raw_srccat->catsources[0].point_ref_stokesI[0]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 2.0, raw_srccat->catsources[0].point_ref_stokesQ[0]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 3.0, raw_srccat->catsources[0].point_ref_stokesU[0]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 4.0, raw_srccat->catsources[0].point_ref_stokesV[0]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, -0.198236, raw_srccat->catsources[0].point_SIs[0]);
+}
+
 void test_read_source_catalogue_MissingFile(void) {
   // Read in the source catalogue
   source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );
@@ -423,6 +475,7 @@ int main(void)
     RUN_TEST(test_read_source_catalogue_BadSpell);
     RUN_TEST(test_read_source_catalogue_BadCoeff);
     RUN_TEST(test_read_source_catalogue_NoCompNumbers);
+    RUN_TEST(test_read_source_catalogue_Linear);
 
     return UNITY_END();
 }

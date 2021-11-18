@@ -11,7 +11,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   ## Accumulate the coverage from the tests
   # add_coverage(chunk_sky_model_${PRECISION})
 
-  # ##Test the COMPONENT nulling function
+  ##Test the COMPONENT nulling function
   add_executable(test_null_comps_${PRECISION}_app
       test_null_comps.c
   )
@@ -51,7 +51,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   add_test(C_test_fill_chunk_src_with_shapelets_${PRECISION}
            test_fill_chunk_src_with_shapelets_${PRECISION}_app)
 
-  # ## Test the overall chunking function that wraps all this functionality works
+  ## Test the overall chunking function that wraps all this functionality works
   add_executable(test_create_chunked_sky_models_${PRECISION}_app
       test_create_chunked_sky_models.c
       fill_chunks_common.c

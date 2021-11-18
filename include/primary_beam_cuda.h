@@ -85,7 +85,7 @@ complex `J[1,1]` response in
 
 */
 __global__ void kern_gaussian_beam(double *d_beam_ls, double *d_beam_ms,
-           user_precision_t beam_ref_freq, user_precision_t *d_freqs,
+           double beam_ref_freq, double *d_freqs,
            user_precision_t fwhm_lm, user_precision_t cos_theta,
            user_precision_t sin_theta, user_precision_t sin_2theta,
            int num_freqs, int num_times, int num_components,
@@ -134,7 +134,7 @@ extern "C" void calculate_gaussian_beam(int num_components, int num_time_steps,
            user_precision_t sdec0, user_precision_t cdec0,
            user_precision_t fwhm_lm, user_precision_t cos_theta,
            user_precision_t sin_theta, user_precision_t sin_2theta,
-           user_precision_t beam_ref_freq, user_precision_t *d_freqs,
+           double beam_ref_freq, double *d_freqs,
            double *beam_has, double *beam_decs,
            cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J11);
 
@@ -190,7 +190,7 @@ complex `J[1,1]` response in
 
 */
 __global__ void kern_analytic_dipole_beam(user_precision_t *d_azs,
-           user_precision_t *d_zas,  user_precision_t *d_freqs, int num_freqs,
+           user_precision_t *d_zas,  double *d_freqs, int num_freqs,
            int num_times, int num_components,
            cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J11);
 
@@ -228,7 +228,7 @@ complex `J[1,1]` response in
 */
 extern "C" void calculate_analytic_dipole_beam(int num_components,
      int num_time_steps, int num_freqs,
-     user_precision_t *azs, user_precision_t *zas, user_precision_t *d_freqs,
+     user_precision_t *azs, user_precision_t *zas, double *d_freqs,
      cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J11);
 
 /**

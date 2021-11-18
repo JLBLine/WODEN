@@ -19,8 +19,6 @@ extern void test_kern_calc_measurement_equation(int num_components,
                   double *ls, double *ms, double *ns,
                   user_precision_complex_t *visis);
 
-#define UNITY_INCLUDE_FLOAT
-
 /*
 Setup 10000 u,v,w coords and 3600 l,m,n coords, and send them off to
 kern_calc_measurement_equation to calculate the measurement equation.
@@ -31,12 +29,12 @@ void test_kern_calc_measurement_equation_ComparedToC(void) {
   // //Set up some test condition inputs
 
   //Just going off reasonable values for the MWA here
-  user_precision_t max_u = 1000;
-  user_precision_t max_v = 1000;
-  user_precision_t max_w = 100;
+  user_precision_t max_u = 1000.;
+  user_precision_t max_v = 1000.;
+  user_precision_t max_w = 100.;
 
-  user_precision_t u_inc = 20;
-  user_precision_t v_inc = 20;
+  user_precision_t u_inc = 20.;
+  user_precision_t v_inc = 20.;
   user_precision_t w_inc = 0.2;
 
   int num_us = 2*max_u / u_inc;
@@ -124,11 +122,15 @@ void test_kern_calc_measurement_equation_ComparedToC(void) {
       // printf("%.7f %.7f %.7f %.7f\n",creal(visis[ind]), expec_re, tol*abs(expec_re), creal(visis[ind]) - expec_re  );
       // printf("%.7f %.7f %.7f %.7f\n",cimag(visis[ind]), expec_im, tol*abs(expec_im), cimag(visis[ind]) - expec_im  );
 
-      float tol = 1e-12;
+      #ifdef DOUBLE_PRECISION
+        double TOL = 1e-15;
+      #else
+        double TOL = 1e-7;
+      #endif
 
       //Check within some tolerance
-      TEST_ASSERT_FLOAT_WITHIN(tol, expec_re, creal(visis[ind]));
-      TEST_ASSERT_FLOAT_WITHIN(tol, expec_im, cimag(visis[ind]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_re, creal(visis[ind]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_im, cimag(visis[ind]));
 
       ind ++;
     }
@@ -158,15 +160,15 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
 
   int all_components = 11;
 
-  user_precision_t target_angles[] = {0.0, M_PI/6.0, M_PI/4.0, M_PI/3.0, M_PI/2.0,
+  double target_angles[] = {0.0, M_PI/6.0, M_PI/4.0, M_PI/3.0, M_PI/2.0,
                            2*M_PI/3, 3*M_PI/4, 5*M_PI/6, M_PI,
                            7*M_PI/6, 5*M_PI/4};
 
-  user_precision_t expec_ims[] = {0.0, 0.5, sqrt(2)/2.0, sqrt(3.0)/2.0, 1.0,
+  double expec_ims[] = {0.0, 0.5, sqrt(2.0)/2.0, sqrt(3.0)/2.0, 1.0,
                        sqrt(3.0)/2.0, sqrt(2)/2.0, 0.5, 0.0,
-                       -0.5, -sqrt(2)/2.0};
-  user_precision_t expec_res[] = {1.0, sqrt(3.0)/2.0, sqrt(2)/2.0, 0.5, 0.0,
-                       -0.5, -sqrt(2)/2.0, -sqrt(3.0)/2.0, -1.0,
+                       -0.5, -sqrt(2.0)/2.0};
+  double expec_res[] = {1.0, sqrt(3.0)/2.0, sqrt(2.0)/2.0, 0.5, 0.0,
+                       -0.5, -sqrt(2.0)/2.0, -sqrt(3.0)/2.0, -1.0,
                        -sqrt(3.0)/2.0, -sqrt(2)/2.0};
 
   double all_ls[] = {0.0000000000000000,0.0425737516338956,0.0645903244635131,0.0871449863555500,
@@ -210,7 +212,12 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
   int num_in_sum = 0;
 
   FILE *output_text;
-  output_text = fopen("measurement_eq_outcomes.txt","w");
+
+  #ifdef DOUBLE_PRECISION
+    output_text = fopen("measurement_eq_outcomes_double.txt","w");
+  #else
+    output_text = fopen("measurement_eq_outcomes_float.txt","w");
+  #endif
 
   for (int comp = 0; comp < all_components; comp++) {
     //Setup a number of u,v,w coords that should result in adding multiples
@@ -247,9 +254,9 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
     for (int baseline = 0; baseline < num_baselines; baseline++) {
 
       #ifdef DOUBLE_PRECISION
-        float tol = 1e-9;
+        double TOL = 2e-9;
       #else
-        float tol = 2e-3;
+        double TOL = 2e-3;
       #endif
 
       re_diff_sum += abs(creal(visis[baseline]) - expec_res[comp]);
@@ -261,14 +268,12 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
                                                            expec_ims[comp],
                                                            cimag(visis[baseline]));
 
-      if (expec_res[comp] == 0.0 || expec_ims[comp] == 0.0) {
-        TEST_ASSERT_FLOAT_WITHIN(tol, expec_res[comp], creal(visis[baseline]));
-        TEST_ASSERT_FLOAT_WITHIN(tol, expec_ims[comp], cimag(visis[baseline]));
-      } else {
-        //Check within some tolerance
-        TEST_ASSERT_FLOAT_WITHIN(tol*expec_res[comp], expec_res[comp], creal(visis[baseline]));
-        TEST_ASSERT_FLOAT_WITHIN(tol*expec_ims[comp], expec_ims[comp], cimag(visis[baseline]));
-      }
+      //Check within some tolerance
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_res[comp], creal(visis[baseline]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_ims[comp], cimag(visis[baseline]));
+      // printf("%.16f %.16f %.16f\n",(expec_res[comp] - creal(visis[baseline]))/expec_res[comp],
+      //                          expec_res[comp], creal(visis[baseline]) );
+
     }
   }
 

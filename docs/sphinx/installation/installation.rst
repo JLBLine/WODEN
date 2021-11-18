@@ -63,9 +63,9 @@ linux-like systems.
   $ sudo make install
 
   Doing it this way installs things in normal locations, making life easier during linking.
-+ **python >= 3.6** - the best way to run ``WODEN`` is through the script ``run_woden.py``, which has a number of package dependencies. One of these is ``pyerfa``, which uses f-strings during installation, so you have to use a python version >= 3.6. Sorry. The requirements can be found in ``WODEN/docs/sphinx/sphinx/requirements.txt``, which you can install via something like::
++ **python >= 3.6** - the best way to run ``WODEN`` is through the script ``run_woden.py``, which has a number of package dependencies. One of these is ``pyerfa``, which uses f-strings during installation, so you have to use a python version >= 3.6. Sorry. The requirements can be found in ``WODEN/docs/sphinx/sphinx/requirements_testing.txt``, which you can install via something like::
 
-  $ pip3 install -r requirements.txt
+  $ pip3 install -r requirements_testing.txt
 
 For completeness, those packages are::
 
@@ -77,7 +77,7 @@ For completeness, those packages are::
   palpy
   matplotlib
 
-The ``sphinx_argparse, breathe`` packages are used for the documentation, and ``palpy, matplotlib`` are only used in the ``test_installation/absolute_accuracy`` test, so if you're aiming for a minimal installation, you only need ``astropy, numpy, pyerfa``.
+The ``sphinx_argparse, breathe`` packages are used for the documentation. Further packages of ``palpy, matplotlib`` are only used in the ``test_installation/absolute_accuracy`` test, so if you're aiming for a minimal installation, you only need ``numpy, astropy, and pyerfa``.
 
 Phew! That's it for now.
 

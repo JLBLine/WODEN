@@ -56,12 +56,18 @@ void test_RTS_MWAFEEInit(user_precision_t freq, user_precision_t *delays,
   for (int pol = 0; pol < 2; pol++) {
     for (int index = 0; index < NUM_TEST_INDEXES; index++) {
       test_index = indexes_to_test[index];
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, (user_precision_t)expec_Q1_real[loop_index],creal(FEE_beam->Q1[pol][test_index]));
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, (user_precision_t)expec_Q1_imag[loop_index],cimag(FEE_beam->Q1[pol][test_index]));
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, (user_precision_t)expec_Q2_real[loop_index],creal(FEE_beam->Q2[pol][test_index]));
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, (user_precision_t)expec_Q2_imag[loop_index],cimag(FEE_beam->Q2[pol][test_index]));
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, (user_precision_t)expec_M[loop_index],FEE_beam->M[pol][test_index]);
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, (user_precision_t)expec_N[loop_index],FEE_beam->N[pol][test_index]);
+      TEST_ASSERT_DOUBLE_WITHIN(1e-7, expec_Q1_real[loop_index],
+                                          creal(FEE_beam->Q1[pol][test_index]));
+      TEST_ASSERT_DOUBLE_WITHIN(1e-7, expec_Q1_imag[loop_index],
+                                          cimag(FEE_beam->Q1[pol][test_index]));
+      TEST_ASSERT_DOUBLE_WITHIN(1e-7, expec_Q2_real[loop_index],
+                                          creal(FEE_beam->Q2[pol][test_index]));
+      TEST_ASSERT_DOUBLE_WITHIN(1e-7, expec_Q2_imag[loop_index],
+                                          cimag(FEE_beam->Q2[pol][test_index]));
+      TEST_ASSERT_DOUBLE_WITHIN(1e-7, expec_M[loop_index],
+                                                  FEE_beam->M[pol][test_index]);
+      TEST_ASSERT_DOUBLE_WITHIN(1e-7, expec_N[loop_index],
+                                                  FEE_beam->N[pol][test_index]);
 
       loop_index += 1;
     }
@@ -123,7 +129,7 @@ void test_RTS_MWAFEEInit(user_precision_t freq, user_precision_t *delays,
 Check whether the environment variable for the FEE hdf5 beam exists, don't run
 the test if it's missing
 */
-void check_for_env_and_run_test(user_precision_t freq, user_precision_t *delays,
+void check_for_env_and_run_test(double freq, user_precision_t *delays,
                                 double *expec_Q1_real, double *expec_Q1_imag,
                                 double *expec_Q2_real, double *expec_Q2_imag) {
 

@@ -8,7 +8,7 @@
 //First POINT SOURCE information
 double point0_ras[] = {0.0, DD2R, 2*DD2R};
 double point0_decs[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
-user_precision_t point0_ref_freqs[] = {100e+6, 150e+6, 200e+6};
+double point0_ref_freqs[] = {100e+6, 150e+6, 200e+6};
 user_precision_t point0_ref_stokesI[] = {1.0, 2.0, 3.0};
 user_precision_t point0_ref_stokesQ[] = {0.0, 0.0, 0.0};
 user_precision_t point0_ref_stokesU[] = {0.0, 0.0, 0.0};
@@ -18,7 +18,7 @@ user_precision_t point0_SIs[] = {-0.8, -0.2, 0.3};
 //Second POINT SOURCE information
 double point1_ras[] = {106*DD2R, 108*DD2R, 110*DD2R};
 double point1_decs[] = {-30*DD2R, -30*DD2R, -30*DD2R};
-user_precision_t point1_ref_freqs[] = {125e+6, 175e+6, 2225e+6};
+double point1_ref_freqs[] = {125e+6, 175e+6, 2225e+6};
 user_precision_t point1_ref_stokesI[] = {5.0, 6.0, 7.0};
 user_precision_t point1_ref_stokesQ[] = {0.0, 0.0, 0.0};
 user_precision_t point1_ref_stokesU[] = {0.0, 0.0, 0.0};
@@ -30,7 +30,7 @@ user_precision_t point1_SIs[] = {1.0, -0.4, -1.1};
 //unique fields that ensure wrong things aren't being tested
 double gauss0_ras[] = {0.0, DD2R, 2*DD2R};
 double gauss0_decs[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
-user_precision_t gauss0_ref_freqs[] = {100e+6, 150e+6, 200e+6};
+double gauss0_ref_freqs[] = {100e+6, 150e+6, 200e+6};
 user_precision_t gauss0_ref_stokesI[] = {1.0, 2.0, 3.0};
 user_precision_t gauss0_ref_stokesQ[] = {0.0, 0.0, 0.0};
 user_precision_t gauss0_ref_stokesU[] = {0.0, 0.0, 0.0};
@@ -43,7 +43,7 @@ user_precision_t gauss0_pas[] = {0.0, 45.0, 90.0};
 //Second GAUSSIAN SOURCE information
 double gauss1_ras[] = {106*DD2R, 108*DD2R, 110*DD2R};
 double gauss1_decs[] = {-30*DD2R, -30*DD2R, -30*DD2R};
-user_precision_t gauss1_ref_freqs[] = {125e+6, 175e+6, 2225e+6};
+double gauss1_ref_freqs[] = {125e+6, 175e+6, 2225e+6};
 user_precision_t gauss1_ref_stokesI[] = {5.0, 6.0, 7.0};
 user_precision_t gauss1_ref_stokesQ[] = {0.0, 0.0, 0.0};
 user_precision_t gauss1_ref_stokesU[] = {0.0, 0.0, 0.0};
@@ -58,7 +58,7 @@ user_precision_t gauss1_pas[] = {180.0, 225.0, 270.0};
 //unique fields that ensure wrong things aren't being tested
 double shape0_ras[] = {0.0, DD2R, 2*DD2R};
 double shape0_decs[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
-user_precision_t shape0_ref_freqs[] = {100e+6, 150e+6, 200e+6};
+double shape0_ref_freqs[] = {100e+6, 150e+6, 200e+6};
 user_precision_t shape0_ref_stokesI[] = {1.0, 2.0, 3.0};
 user_precision_t shape0_ref_stokesQ[] = {0.0, 0.0, 0.0};
 user_precision_t shape0_ref_stokesU[] = {0.0, 0.0, 0.0};
@@ -80,7 +80,7 @@ user_precision_t shape0_param_indexes[] = {0, 0, 1, 1, 1, 2, 2, 2, 2, 2};
 //Second SHAPELET SOURCE information
 double shape1_ras[] = {106*DD2R, 108*DD2R, 110*DD2R};
 double shape1_decs[] = {-30*DD2R, -30*DD2R, -30*DD2R};
-user_precision_t shape1_ref_freqs[] = {125e+6, 175e+6, 2225e+6};
+double shape1_ref_freqs[] = {125e+6, 175e+6, 2225e+6};
 user_precision_t shape1_ref_stokesI[] = {5.0, 6.0, 7.0};
 user_precision_t shape1_ref_stokesQ[] = {0.0, 0.0, 0.0};
 user_precision_t shape1_ref_stokesU[] = {0.0, 0.0, 0.0};
@@ -100,23 +100,31 @@ user_precision_t shape1_n2s[] = {16, 4, 27, 94, 73, 55, 56};
 user_precision_t shape1_param_indexes[] = {0, 0, 0, 0, 1, 2, 2};
 
 //Expected az/za for all time steps for the different LSTs
-double expec_az_LST0[] = {0.000000, 4.711406, 4.710422, 1.574718,
-                         1.573735, 1.572752, 1.578640, 1.577657,
-                         1.576674, 2.157931, 2.155993, 2.154062 };
-double expec_za_LST0[] = {0.000000, 0.003909, 0.007817, 0.015592,
-                         0.011683, 0.007775, 0.031183, 0.027275,
-                         0.023366, 1.559360, 1.556104, 1.552844 };
+double expec_az_LST0[] = {0.0000000000000, 4.7114059180153, 4.7104228481364,
+                          1.5747179058039, 1.5737347986641, 1.5727517139711,
+                          1.5786399615312, 1.5776566901038, 1.5766734710889,
+                          2.1579308795782, 2.1559930030733, 2.1540620700128 };
+double expec_za_LST0[] = {0.0000000000000, 0.0039086342333, 0.0078172646892,
+                          0.0155917779073, 0.0116831661944, 0.0077745431904,
+                          0.0311833160128, 0.0272747869414, 0.0233662315047,
+                          1.5593602379436, 1.5561040790870, 1.5528437438724 };
 
-double expec_az_LST1[] = {4.290059, 4.288420, 4.286777, 4.296546, 4.294927,
-                         4.293303, 4.302960, 4.301359, 4.299754, 1.865974,
-                         1.868474, 1.871082, 1.849412, 1.851193, 1.853052,
-                         1.837659, 1.838916, 1.840230 };
-double expec_za_LST1[] = {1.367464, 1.371028, 1.374589, 1.353222, 1.356796,
-                         1.360368, 1.338938, 1.342523, 1.346105, 0.252164,
-                         0.248425, 0.244690, 0.282076, 0.278320, 0.274564,
-                         0.312110, 0.308340, 0.304572 };
+double expec_az_LST1[] = {4.2900584634321, 4.2884202839903, 4.2867773246606,
+                          4.2965462595342, 4.2949268733767, 4.2933028168844,
+                          4.3029601663223, 4.3013591423068, 4.2997535551609,
+                          1.8659737209395, 1.8684735052647, 1.8710817825899,
+                          1.8494119996711, 1.8511930524957, 1.8530518584716,
+                          1.8376594596641, 1.8389159857357, 1.8402301007951 };
+double expec_za_LST1[] = {1.3674640552467, 1.3710279492557, 1.3745892053280,
+                          1.3532215231587, 1.3567957699779, 1.3603674468138,
+                          1.3389383598151, 1.3425226930563, 1.3461045223980,
+                          0.2521635568594, 0.2484253832967, 0.2446901374855,
+                          0.2820763899820, 0.2783194359053, 0.2745644502349,
+                          0.3121100672983, 0.3083404306473, 0.3045721247998 };
 
-double expec_az_LST2[] = {4.325259, 4.324010, 4.322756, 4.335071, 4.333856,
-                         4.332637, 4.344604, 4.343424, 4.342240 };
-double expec_za_LST2[] = { 1.117496, 1.121114, 1.124731, 1.088563, 1.092195,
-                          1.095826, 1.059518, 1.063164, 1.066809 };
+double expec_az_LST2[] = {4.3252592918701, 4.3240097928876, 4.3227558775006,
+                          4.3350706082457, 4.3338561058628, 4.3326372377189,
+                          4.3446042801037, 4.3434244460185, 4.3422402797543 };
+double expec_za_LST2[] = {1.1174960228303, 1.1211144827620, 1.1247310899676,
+                          1.0885625249286, 1.0921953358046, 1.0958263892164,
+                          1.0595178840782, 1.0631643040794, 1.0668090578716 };

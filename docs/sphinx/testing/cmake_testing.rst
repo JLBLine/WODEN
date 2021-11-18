@@ -9,7 +9,10 @@ ALL tests are compiled in both FLOAT and DOUBLE precision, meaning the same
 test code is used to test the two different precision versions, with the compiler
 dropping in the necessary precision. Unless explicitly noted in the details
 in :ref:`What do the tests actually do?`, the tests require the same level
-of accuracy from the FLOAT and DOUBLE precision versions.
+of accuracy from the FLOAT and DOUBLE precision versions. Most of the time
+the FLOAT version is accurate to an absolute tolerance of 1e-7, and the DOUBLE
+to 1e-15. Read the tolerances for specific functions in the sections listed in
+:ref:`What do the tests actually do?`.
 
 Dependencies
 -------------
@@ -100,9 +103,23 @@ for a different file from ``WODEN/src``. Within each test directory, there are s
   cmake_testing/array_layout/test_RTS_ENH2XYZ_local.c -> src/array_layout.c::RTS_ENH2XYZ_local
   cmake_testing/array_layout/test_RTS_PrecessXYZtoJ2000.c -> src/array_layout.c::RTS_PrecessXYZtoJ2000
 
+The ``C`` and ``CUDA`` functions are tested using the `Unity`_ library, which has useful functions like::
+
+  TEST_ASSERT_FLOAT_EQUAL();
+  TEST_ASSERT_DOUBLE_WITHIN();
+  TEST_ASSERT_NULL();
+
+allowing a simple testing of values. If a test says outputs are tested to be
+equal, it refers to the ``TEST_ASSERT_FLOAT_EQUAL`` or ``TEST_ASSERT_DOUBLE_EQUAL``
+function.
+
+.. _`Unity`: https://github.com/ThrowTheSwitch/Unity
+
 .. note:: For those unfamiliar with ``CMake`` testing, even though the tests are located in ``WODEN/cmake_testing/``, when you run ``ctest``, the test files are copied and run in ``WODEN/build/cmake_testing``, so any output from the tests will be located there.
 
 The sections below give an outline of the tests performed in each directory.
+
+``C`` code tests:
 
 .. toctree::
    :maxdepth: 1
@@ -111,9 +128,10 @@ The sections below give an outline of the tests performed in each directory.
    cmake_testing/chunk_sky_model
    cmake_testing/create_sky_model
    cmake_testing/FEE_primary_beam
-   cmake_testing/fundamental_coords
    cmake_testing/primary_beam
    cmake_testing/shapelet_basis
+   cmake_testing/visibility_set
+   cmake_testing/woden_settings
 
 ``CUDA`` code tests:
 
@@ -122,7 +140,15 @@ The sections below give an outline of the tests performed in each directory.
 
    cmake_testing/calculate_visibilities
    cmake_testing/FEE_primary_beam_cuda
+   cmake_testing/fundamental_coords
    cmake_testing/primary_beam_cuda
    cmake_testing/source_components
+
+``python`` code tests:
+
+.. toctree::
+   :maxdepth: 1
+
+   cmake_testing/run_woden
 
 .. note:: To be able to test ``CUDA`` functions that are designed to work solely in GPU memory, it's necessary to write wrapper functions that allocate GPU memory, pass the data into the ``CUDA`` code to be tested, and then copy the results back into host memory. I've kept these 'intermediate' test functions inside the ``*.cu`` files that contain the code being tested, as it's not straight forward / performance degrading to have them in separate files. On casual inspection it looks like there are many functions in the ``*.cu`` files I haven't written tests for, but the extra functions are there *because* of testing. Sigh.

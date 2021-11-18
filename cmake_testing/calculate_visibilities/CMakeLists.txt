@@ -25,12 +25,10 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)  #
 
   ##Quite a large number of C depenecies here so stick em in a library
   add_library(calculate_visibilities_Cdepends_${PRECISION} SHARED
-              test_calculate_visibilities_common.c
               ${CMAKE_SOURCE_DIR}/src/FEE_primary_beam.c
               ${CMAKE_SOURCE_DIR}/src/visibility_set.c
               ${CMAKE_SOURCE_DIR}/src/woden_settings.c
-              ${CMAKE_SOURCE_DIR}/src/shapelet_basis.c
-              ${UNITY_DIR}/unity.c)
+              ${CMAKE_SOURCE_DIR}/src/shapelet_basis.c)
   target_compile_options(calculate_visibilities_Cdepends_${PRECISION} PRIVATE ${C_FLAGS})
 
   ##----------------------------------------------------------------------------
@@ -41,11 +39,13 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)  #
   # ##Test the main calculate_visibilities function using no primary beam
   add_executable(test_calculate_visibilities_nobeam_${PRECISION}_app
       test_calculate_visibilities_nobeam.c
+      test_calculate_visibilities_common.c
   )
   target_link_libraries(test_calculate_visibilities_nobeam_${PRECISION}_app
       calculate_visibilities_Cdepends_${PRECISION}
       calculate_visibilitiesCUDA_${PRECISION}
       ${CC_LINKLIBS}
+      Unity
   )
   target_compile_options(test_calculate_visibilities_nobeam_${PRECISION}_app
                                                              PRIVATE ${C_FLAGS})
@@ -57,11 +57,13 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)  #
   ##Test the main calculate_visibilities function using the gaussian primary beam
   add_executable(test_calculate_visibilities_gaussbeam_${PRECISION}_app
       test_calculate_visibilities_gaussbeam.c
+      test_calculate_visibilities_common.c
   )
   target_link_libraries(test_calculate_visibilities_gaussbeam_${PRECISION}_app
       calculate_visibilities_Cdepends_${PRECISION}
       calculate_visibilitiesCUDA_${PRECISION}
       ${CC_LINKLIBS}
+      Unity
   )
   target_compile_options(test_calculate_visibilities_gaussbeam_${PRECISION}_app
                                                           PRIVATE ${C_FLAGS})
@@ -73,11 +75,13 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)  #
   ##Test the main calculate_visibilities function using the EDA2 primary beam
   add_executable(test_calculate_visibilities_edabeam_${PRECISION}_app
       test_calculate_visibilities_edabeam.c
+      test_calculate_visibilities_common.c
   )
   target_link_libraries(test_calculate_visibilities_edabeam_${PRECISION}_app
       calculate_visibilities_Cdepends_${PRECISION}
       calculate_visibilitiesCUDA_${PRECISION}
       ${CC_LINKLIBS}
+      Unity
   )
   target_compile_options(test_calculate_visibilities_edabeam_${PRECISION}_app
                                                           PRIVATE ${C_FLAGS})
@@ -89,11 +93,13 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)  #
   # ##Test the main calculate_visibilities function using the mwa fee primary beam
   add_executable(test_calculate_visibilities_mwafeebeam_${PRECISION}_app
       test_calculate_visibilities_mwafeebeam.c
+      test_calculate_visibilities_common.c
   )
   target_link_libraries(test_calculate_visibilities_mwafeebeam_${PRECISION}_app
       calculate_visibilities_Cdepends_${PRECISION}
       calculate_visibilitiesCUDA_${PRECISION}
       ${CC_LINKLIBS}
+      Unity
   )
   target_compile_options(test_calculate_visibilities_mwafeebeam_${PRECISION}_app
                                                           PRIVATE ${C_FLAGS})

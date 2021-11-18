@@ -26,7 +26,7 @@ extern void test_kern_calc_uvw_shapelet(double *X_diff, double *Y_diff, double *
                      int num_baselines, int num_visis, int num_shapes);
 
 
-#define UNITY_INCLUDE_FLOAT
+double TOL = 1e-16;
 
 /*
 Given the inputs, create simulation settings that woden.c would create
@@ -38,9 +38,9 @@ void setup_uvw_params(int num_times, int num_baselines, int num_freqs,
                       uvw_settings_t *uvw_settings) {
 
   for (int i = 0; i < num_baselines; i++) {
-    uvw_settings->X_diff[i] = i + 1;
-    uvw_settings->Y_diff[i] = i + 1;
-    uvw_settings->Z_diff[i] = i + 1;
+    uvw_settings->X_diff[i] = (i + 1)*1000.0;
+    uvw_settings->Y_diff[i] = (i + 1)*1000.0;
+    uvw_settings->Z_diff[i] = (i + 1)*1000.0;
   }
 
   double *lsts = malloc(num_times*sizeof(double));
@@ -56,7 +56,8 @@ void setup_uvw_params(int num_times, int num_baselines, int num_freqs,
   }
 
   double ha0, sha0, cha0;
-  user_precision_t frequency, wavelength;
+  double frequency;
+  user_precision_t wavelength;
 
   for ( int time_step = 0; time_step < num_times; time_step++ ) {
     ha0 = lsts[time_step] - ra0;
@@ -93,7 +94,6 @@ uvw_settings_t * setup_uvw_settings(int num_baselines, int num_visis,
   uvw_settings->Y_diff = malloc(num_baselines*sizeof(double));
   uvw_settings->Z_diff = malloc(num_baselines*sizeof(double));
 
-  // uvw_settings->lsts = malloc(num_times*sizeof(user_precision_t));
   uvw_settings->lsts = malloc(num_visis*sizeof(double));
   uvw_settings->wavelengths = malloc(num_visis*sizeof(user_precision_t));
   uvw_settings->cha0s = malloc(num_visis*sizeof(double));
@@ -139,6 +139,34 @@ void free_uvw_settings(uvw_settings_t * uvw_settings){
 
 }
 
+/* Loop over the results stored in uvw_settings and compare to the
+expected results to within some tolerance TOL*/
+
+void check_results(user_precision_t* u_metres_expec, user_precision_t* v_metres_expec,
+                   user_precision_t* w_metres_expec, user_precision_t* us_expec,
+                   user_precision_t* vs_expec, user_precision_t* ws_expec,
+                   uvw_settings_t *uvw_settings, int num_visis){
+
+    for (int visi = 0; visi < num_visis; visi++) {
+
+        // printf("%.16f %.16f\n",us_expec[visi], uvw_settings->us[visi]);
+
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, u_metres_expec[visi],
+                                 uvw_settings->u_metres[visi]);
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, v_metres_expec[visi],
+                                 uvw_settings->v_metres[visi]);
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, w_metres_expec[visi],
+                                 uvw_settings->w_metres[visi]);
+
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, us_expec[visi],
+                                 uvw_settings->us[visi]);
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, vs_expec[visi],
+                                 uvw_settings->vs[visi]);
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, ws_expec[visi],
+                                 uvw_settings->ws[visi]);
+    }
+}
+
 /*
 Checking the function fundamental_coords.cu::kern_calc_uvw
 Checks that the wavelength scaling of u,v,w is happening correctly. Set HA=0
@@ -157,8 +185,8 @@ void test_kern_calc_uvw_ScalesByWavelength(void){
 
     double lst_base = 0.0;
     user_precision_t time_res = 8.0;
-    user_precision_t freq_res = 50e+6;
-    user_precision_t base_band_freq = 300e+6;
+    double freq_res = 50e+6;
+    double base_band_freq = 300e+6;
 
     //Something to hold all the uvw input parameter arrays
     uvw_settings_t *uvw_settings;
@@ -210,14 +238,8 @@ void test_kern_calc_uvw_ScalesByWavelength(void){
     }//freq loop
   }//time loop
 
-  //Check they are equal
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(u_metres_expec, uvw_settings->u_metres, num_visis);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(v_metres_expec, uvw_settings->v_metres, num_visis);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(w_metres_expec, uvw_settings->w_metres, num_visis);
-
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(us_expec, uvw_settings->us, num_visis);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(vs_expec, uvw_settings->vs, num_visis);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(ws_expec, uvw_settings->ws, num_visis);
+  check_results(u_metres_expec, v_metres_expec, w_metres_expec,
+                us_expec, vs_expec, ws_expec, uvw_settings, num_visis);
 
   free_uvw_settings(uvw_settings);
 
@@ -242,8 +264,8 @@ void test_kern_calc_uvw_RotateWithTime(void){
 
     double lst_base = 0.0;
     user_precision_t time_res = 8.0;
-    user_precision_t freq_res = 50e+6;
-    user_precision_t base_band_freq = 300e+6;
+    double freq_res = 50e+6;
+    double base_band_freq = 300e+6;
 
     //Something to hold all the uvw input parameter arrays
     uvw_settings_t *uvw_settings;
@@ -294,14 +316,8 @@ void test_kern_calc_uvw_RotateWithTime(void){
     }//freq loop
   }//time loop
 
-  //Check they are equal
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(u_metres_expec, uvw_settings->u_metres, num_visis);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(v_metres_expec, uvw_settings->v_metres, num_visis);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(w_metres_expec, uvw_settings->w_metres, num_visis);
-
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(us_expec, uvw_settings->us, num_visis);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(vs_expec, uvw_settings->vs, num_visis);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(ws_expec, uvw_settings->ws, num_visis);
+  check_results(u_metres_expec, v_metres_expec, w_metres_expec,
+                us_expec, vs_expec, ws_expec, uvw_settings, num_visis);
 
   free_uvw_settings(uvw_settings);
 
@@ -325,8 +341,8 @@ void test_kern_calc_uvw_shapelet_RotateWithTimeScalesByWavelength(void){
 
     double lst_base = 0.0;
     user_precision_t time_res = 8.0;
-    user_precision_t freq_res = 50e+6;
-    user_precision_t base_band_freq = 300e+6;
+    double freq_res = 50e+6;
+    double base_band_freq = 300e+6;
 
     //Check values for 5 different shapelet components, with different RA values
     int num_components = 5;
@@ -334,7 +350,7 @@ void test_kern_calc_uvw_shapelet_RotateWithTimeScalesByWavelength(void){
     double *ras = malloc(num_components*sizeof(double));
     double *decs = malloc(num_components*sizeof(double));
 
-    for (size_t i = 0; i < num_components; i++) {
+    for (int i = 0; i < num_components; i++) {
       ras[i] = i*DD2R;
       decs[i] = 0.0;
     }
@@ -393,12 +409,14 @@ void test_kern_calc_uvw_shapelet_RotateWithTimeScalesByWavelength(void){
       }//freq loop
     }//time loop
   }//component loop
-  //
-  // //Check they are equal
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(us_expec, uvw_settings->us, num_visis*num_components);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(vs_expec, uvw_settings->vs, num_visis);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(ws_expec, uvw_settings->ws, num_visis);
-  //
+
+  for (int ind = 0; ind < num_visis*num_components; ind++) {
+
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, us_expec[ind], uvw_settings->us[ind]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, vs_expec[ind], uvw_settings->vs[ind]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, ws_expec[ind], uvw_settings->ws[ind]);
+  }
+
   free_uvw_settings(uvw_settings);
 
 }

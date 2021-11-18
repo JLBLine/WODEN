@@ -58,7 +58,9 @@ visibilities. These tests try a number of combinations of values that have
 a simple outcome, and tests that the function returns the expected values. The
 combinations are shown in the table below. For all combinations, the beam gain
 and leakage is used for both antennas in the above equations. Each entry is a
-complex values and should be read as *real,imag*.
+complex values and should be read as *real,imag*. Both FLOAT and DOUBLE code
+are just tested to a 32 bit accuracy here as these a simple numbers that require
+little precision.
 
 .. list-table::
    :widths: 25 25 25 25 25 25 25 25 25 25 25 25
@@ -276,6 +278,10 @@ calls ``source_components::kern_calc_measurement_equation``, which in turn
 is testing the device code ``source_components::calc_measurement_equation``
 (which is used internally in ``WODEN`` in another kernel that calls multiple
 device functions, so I had to write a new kernel to test it alone.)
+
+The following methodology is also written up the JOSS paper (TODO link JOSS
+paper once it's accepted), where it's used in a sky model + array layout through
+to visibility end-to-end version. Here we directly test the fuction above.
 
 ``calc_measurement_equation`` calculates the phase-tracking measurement equation:
 
@@ -519,23 +525,37 @@ This gives a range of baseline lengths from 1 to :math:`> 10^4` wavelengths.
 In this test, I run every combination of :math:`l,m,n` and :math:`u,v,w = b` for each
 :math:`\phi_{\mathrm{simple}}` from the tables above, and assert that the real and
 imaginary of every output visibility match the expected values of
-:math:`\sin(\phi_{\mathrm{simple}})` and :math:`\cos(\phi_{\mathrm{simple}})`,
-to within an fractional tolerance of 5e-2. This seems like a big number, and that's
-because there is an accuracy limit to the float sine/cosine functions in ``CUDA``.
+:math:`\sin(\phi_{\mathrm{simple}})` and :math:`\cos(\phi_{\mathrm{simple}})`.
+When compiling with FLOAT precision, I assert the outputs must be within
+an absolute tolerance of 2e-3, and for DOUBLE a tolerance of 2e-9.
+
 The error scales with the length of baseline, as shown in this plot below. Here,
 I have plotted the fractional offset of the recovered value of
-:math:`\sin(\phi_{\mathrm{simple}})` (imaginary part of the visibility) and :math:`\cos(\phi_{\mathrm{simple}})` (real part of the visibility), compared
+:math:`\sin(\phi_{\mathrm{simple}})` (imaginary part of the visibility) and
+:math:`\cos(\phi_{\mathrm{simple}})` (real part of the visibility), compared
 to their analytically expected outcome. I've plotted each :math:`\phi_{\mathrm{simple}}`
-as a different colour/symbol, as labelled in the bottom left plot.
-
-You can see as you increase baseline length, a general trend of increasing error
-is seen. Note these are the absolute differences plotted here, to work on a log10
-scale. In reality, it's close to 50% a negative or positive offset from expected.
+as a different symbol, with the FLOAT in blue and DOUBLE in orange.
 
 .. image:: measure_eq_results.png
   :width: 800
 
-.. TODO:: add in estimation of effect on calibration?
+You can see as you increase baseline length, a general trend of increasing error
+is seen. Note these are the absolute differences plotted here, to work on a log10
+scale. For the DOUBLE results, it's close to 50% a negative or positive offset
+from expected. The FLOAT results that perform the worst (where
+:math:`\phi_{\mathrm{simple}} = 3\pi/4,\, 7\pi/6`) correspond to values of :math:`b`
+with large fractional values (see the table above), showing how the 32 bit
+precision fails to truthfully report large fractional numbers.
+
+As a second test, I setup 10,000 *u,v,w* ranging from -1000 to 1000 wavelengths,
+and 3600 *l,m,n* coordinates that span the entire sky, and run them through
+``source_components::test_kern_calc_measurement_equation`` and check they
+equal the equivalent measurement equation as calculated by ``C`` in 64 bit precisions.
+This checks the kernel works for a range of input coordinates.
+I assert the ``CUDA`` outputs must be within an absolute tolerance of 1e-7 for
+the FLOAT code, and 1e-15 for the DOUBLE code.
+
+   .. TODO One day, could add in estimation of effect on calibration
 
 test_extrap_stokes.c
 ************************************
@@ -593,7 +613,9 @@ Each of these test cases is extrapolated to 50, 100, 150, 200, 250 MHz. The
 
    S_{\mathrm{extrap}} = S_{\mathrm{ref}} \left( \frac{\nu_{\mathrm{ref}}}{\nu_{\mathrm{extrap}}} \right)^{\alpha}
 
-as calculated internally by ``test_extrap_stokes.c``.
+as calculated in 64 bit precision in ``C`` code in ``test_extrap_stokes.c``.
+The FLOAT complied code must match the ``C`` estimate to within an absolute
+tolerance of 1e-7, and a tolerance of 1e-15 for the DOUBLE compiled code.
 
 test_get_beam_gains.c
 ************************************
@@ -619,6 +641,9 @@ and four beam models. Three different outcomes are expected given the beam model
  - FEE_BEAM: Both the beam gain and leakage terms are tested as this model includes leakage terms
  - NO_BEAM: The gain terms are tested to be 1.0, and leakage to be 0.0
 
+Both FLOAT and DOUBLE code are tested to a 32 bit accuracy here as these are
+simple numbers that require little precision.
+
 test_source_component_common.c
 ************************************
 This calls ``source_components::test_source_component_common``, which
@@ -632,7 +657,7 @@ Similarly to the tests in :ref:`test_lmn_coords.c`, I setup a slice of 9 *RA*
 coordinates, and hold the *Dec* constant, set the phase centre to
 *RA*:math:`_{\textrm{phase}}`, *Dec*:math:`_{\textrm{phase}}` = :math:`0^\circ, 0^\circ`.
 This way I can analytically predict what the *l,m,n* calculated coordinates
-should be.
+should be (which are tested to be within 1e-15 of expected values).
 
 In these tests I run with three time steps, two frequency steps (100 and 200 MHz),
 and five baselines (the coordinates of which don't matter, but change the size
@@ -645,6 +670,30 @@ For each primary beam type, I run the 9 COMPONENTs through the test, and check
 the calcualted *l,m,n* are correct, and check that the calculated beam values
 match a set of expected values, which are stored in ``test_source_component_common.c``. As with previous tests varying the primary beam, I check that leakage terms
 should be zero when the model doesn't include them.
+
+The absolute tolerance values used for the different beam models, for the two
+different precisions are shown in the table below. Note I've only stored the
+expected values for the ANALY_DIPOLE and FEE_BEAM to 1e-7 accuracy, as the
+accuracy of these functions beam functions is tested elsewhere. The
+GAUSS_BEAM values are calculated analytically in the same test as
+described in :ref:`test_gaussian_beam.c`.
+
+.. list-table::
+   :widths: 25 25 25
+   :header-rows: 1
+
+   * - Beam type
+     - FLOAT tolerance
+     - DOUBLE tolerance
+   * - GAUSS_BEAM
+     - 1e-7
+     - 1e-12
+   * - ANALY_DIPOLE
+     - 1e-6
+     - 1e-7
+   * - FEE_BEAM
+     - 3e-2
+     - 1e-7
 
 test_kern_calc_visi_point.c
 ************************************
@@ -663,32 +712,83 @@ I set up a grid of 25 *l,m* coords with *l,m* coords ranging over -0.5, -0.25,
 
 where :math:`b_{\mathrm{ind}}` is the baseline index, meaning the test covers
 the baseline range :math:`100 < u,v <= 1000` and :math:`10 < w <= 100`. The test
-also runs three frequncies, 150, 175, 200 MHz, and two time steps. As I providing
+also runs three frequncies, 150, 175, 200 MHz, and two time steps. As I am providing
 predefined *u,v,w*, I don't need to worry about LST effects, but I simulate with
 two time steps to make sure the resultant visibilities end up in the right order.
 
-Overall, I run three tests here:
+Overall, I run three groups of tests here:
 
  - Keeping the beam gains and flux densities constant at 1.0
  - Varying the flux densities with frequency and keeping the beam gains constant at 1.0. When varying the flux, I set the Stokes I flux of each component to it's index + 1, so we end up with a range of fluxes between 1 and 25. I set the spectral index to -0.8.
  - Varying the beam gains with frequency and keeping the flux densities constant at 1.0. As the beam can vary with time, frequency, and direction on sky, I assign each beam gain a different value. As *num_freqs*num_times*num_components* = 375, I set the real of all beam gains to :math:`\frac{1}{375}(B_{\mathrm{ind}} + 1)`, where :math:`B_{\mathrm{ind}}` is the beam value index. This way we get a unique value between 0 and 1 for all beam gains, allowing us to test time/frequency is handled correctly by the function under test
 
-Each test calls ``kern_calc_visi_point``, which should calculate the measurement
-equation for all baselines, time steps, frequency steps, and COMPONENTs.
+Each set of tests is run for all four primary beam types, so a total of 12 tests
+are called. Each test calls ``kern_calc_visi_point``, which should calculate
+the measurement equation for all baselines, time steps, frequency steps, and COMPONENTs.
 It should also sum over COMPONENTs to get the resultant visibility for each
 baseline, time, and freq. To test the outputs, I have created equivalent ``C``
-functions in ``test_kern_calc_visi_common`` to calculate the measurement
-equation for the given inputs. For all visibilities, I assert the ``CUDA``
-code output must match the ``C`` code output to within 0.1% of the ``C`` value,
-for both the real and imaginary parts.
+functions at 64 bit precisions in ``test_kern_calc_visi_common.c`` to calculate
+the measurement equation for the given inputs. For all visibilities, for the FLOAT version
+I assert the ``CUDA`` code output must match the ``C`` code output to
+within an fractional tolerance of 1e-5 to the ``C`` value, for both the real and
+imaginary parts. For the DOUBLE code, the fractional tolerance is 1e-13. I've
+switched to fractional tolerance here as the range of magnitudes covered by
+these visibilities means a small absolute tolernace will fail a large magnitude
+visibility when it reports a value that is correct to 1e-11%.
 
 test_kern_calc_visi_gauss.c
 ************************************
+This calls ``source_components::test_kern_calc_visi_gauss``, which
+calls ``source_components::kern_calc_visi_gauss``. This kernel calculates
+the visibility response for GAUSSIAN COMPONENTs for a number of sky directions, for
+all time and frequency steps, and all baselines.
+
+This runs all tests as described by :ref:`test_kern_calc_visi_point.c`, plus a
+fourth set of tests that varies the position angle, major, and minor axis of the
+input GAUSSIAN components, for a total of 16 tests. Again, I have ``C`` code to
+test the ``CUDA`` code against. I assert the ``CUDA`` code output must match the
+``C`` code output to within an fractional tolerance of 1e-5 to the ``C`` value,
+for both the real and imaginary parts. For the DOUBLE code, the fractional
+tolerance is 1e-13.
 
 test_kern_calc_visi_shape.c
 ************************************
+This calls ``source_components::test_kern_calc_visi_gauss``, which
+calls ``source_components::kern_calc_visi_gauss``. This kernel calculates
+the visibility response for GAUSSIAN COMPONENTs for a number of sky directions, for
+all time and frequency steps, and all baselines.
 
+This runs all tests as described by :ref:`test_kern_calc_visi_gauss.c`, plus a
+fifth set of tests that gives multiple shapelet basis function parameters to the
+input SHAPELET components, for a total of 20 tests. Again, I have ``C`` code
+to test the ``CUDA`` code against.
 
+The final 5th test really pushes the FLOAT code hard, as the range of magnitudes
+of the visibilities is large. As a result, FLOAT code is tested to to within a
+fractional tolerance of 1e-2 to the ``C`` values (which happens mostly when
+the expected value is around 1e-5 Jy, so a fractional offset of 1e-2 is an
+absolute offset of 1e-7 Jy), for both the real and imaginary parts.
+For the DOUBLE code, the fractional tolerance is 1e-12.
 
 test_update_sum_visis.c
 ************************************
+This calls ``source_components::test_kern_update_sum_visis``, which in turn calls
+``source_components::kern_update_sum_visis``. This kernel gathers pre-calculated
+primary beam values, unpolarised visibilities, Stokes flux densities, and
+combines them all into linear polarisation Stokes visibilities. It then
+sums all COMPONENTs together onto the final set of linear polarisation
+visibilities.
+
+This code runs three sets of tests, each with three baselines, four time steps, three frequencies, and ten COMPONENTs. For each set of tests, the input
+arrays that are being tested have their values set to the index of the value,
+making the summation able to test whether the correct time, frequency, and
+beam indexes are being summed into the resultant visibilities. The
+three sets of tests consist of:
+
+   - Varying the beam gains, while keeping the flux densities and unpolarised measurement equations constant.
+   - Varying the flux densities, while keeping the beam gains and unpolarised measurement equations constant.
+   - Varying the unpolarised measurement equations, while keeping the beam gains and flux densities constant.
+
+Each set of tests is run for all primary beam types, for a total of 12 tests.
+The different beam models have different expected values depending on whether
+they include leakage terms or not.

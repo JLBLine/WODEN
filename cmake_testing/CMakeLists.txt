@@ -12,8 +12,8 @@ set(DOUBLE_C_FLAGS -O3 -Wall -DDOUBLE_PRECISION)
 ##Flags to make C code compile in WODEN float or double modes,
 ##and to create code coverage reports. Only need these flags on the things
 ##we want to cover with tracking
-set(FLOAT_C_COVER_FLAGS -coverage )
-set(DOUBLE_C_COVER_FLAGS -coverage -DDOUBLE_PRECISION)
+set(FLOAT_C_COVER_FLAGS -coverage -O3 -Wall)
+set(DOUBLE_C_COVER_FLAGS -coverage -O3 -Wall -DDOUBLE_PRECISION)
 
 ##Flags to make CUDA code compile in WODEN float or double modes
 set(FLOAT_CUDA_FLAGS -g -G --compiler-options -Wall )

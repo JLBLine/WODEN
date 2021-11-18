@@ -107,10 +107,10 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
   woden_settings->ra0 = (user_precision_t)json_object_get_double(ra0)*DD2R;
   woden_settings->dec0 = (user_precision_t)json_object_get_double(dec0)*DD2R;
   woden_settings->num_freqs = json_object_get_int(num_freqs);
-  woden_settings->frequency_resolution = (user_precision_t)json_object_get_double(frequency_resolution);
+  woden_settings->frequency_resolution = json_object_get_double(frequency_resolution);
 
-  woden_settings->base_low_freq = (user_precision_t)json_object_get_double(base_low_freq);
-  woden_settings->coarse_band_width = (user_precision_t)json_object_get_double(coarse_band_width);
+  woden_settings->base_low_freq = json_object_get_double(base_low_freq);
+  woden_settings->coarse_band_width = json_object_get_double(coarse_band_width);
 
   woden_settings->num_time_steps = json_object_get_int(num_time_steps);
   woden_settings->time_res = json_object_get_double(time_res);
@@ -160,7 +160,7 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
       woden_settings->gauss_beam_FWHM = 20.0;
     }
 
-    user_precision_t beam_ref_freq = (user_precision_t)json_object_get_double(gauss_beam_ref_freq);
+    double beam_ref_freq = json_object_get_double(gauss_beam_ref_freq);
     //If gauss_beam_ref_freq has been set in the json file, use it
     //Otherwise, set the reference to 150e+6
     if (beam_ref_freq > 0.0) {
@@ -173,8 +173,8 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
     struct json_object *gauss_dec_point;
     json_object_object_get_ex(parsed_json, "gauss_ra_point", &gauss_ra_point);
     json_object_object_get_ex(parsed_json, "gauss_dec_point", &gauss_dec_point);
-    woden_settings->gauss_ra_point = (user_precision_t)json_object_get_double(gauss_ra_point)*DD2R;
-    woden_settings->gauss_dec_point = (user_precision_t)json_object_get_double(gauss_dec_point)*DD2R;
+    woden_settings->gauss_ra_point = json_object_get_double(gauss_ra_point)*DD2R;
+    woden_settings->gauss_dec_point = json_object_get_double(gauss_dec_point)*DD2R;
 
   }
   else if (fee_beam){

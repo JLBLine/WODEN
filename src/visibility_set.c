@@ -27,9 +27,8 @@ visibility_set_t * setup_visibility_set(int num_visis) {
 
 void fill_timefreq_visibility_set(visibility_set_t *visibility_set,
                                   woden_settings_t *woden_settings,
-                                  user_precision_t base_band_freq,
+                                  double base_band_freq,
                                   double *lsts) {
-
   //For easy indexing when running on GPUs, make 4 arrays that match
   //the settings for every baseline, frequency, and time step in the
   //simulation.
@@ -41,9 +40,10 @@ void fill_timefreq_visibility_set(visibility_set_t *visibility_set,
   visibility_set->allsteps_cha0s = malloc( num_visis * sizeof(double) );
   visibility_set->allsteps_lsts = malloc( num_visis * sizeof(double) );
   visibility_set->allsteps_wavelengths = malloc( num_visis * sizeof(user_precision_t) );
-  visibility_set->channel_frequencies = malloc( (int)woden_settings->num_freqs * sizeof(user_precision_t) );
+  visibility_set->channel_frequencies = malloc( (int)woden_settings->num_freqs * sizeof(double) );
 
-  user_precision_t wavelength, frequency;
+  user_precision_t wavelength;
+  double frequency;
   //Fill in the fine channel frequencies
   for (int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++) {
     frequency = base_band_freq + (woden_settings->frequency_resolution*freq_step);
@@ -59,7 +59,7 @@ void fill_timefreq_visibility_set(visibility_set_t *visibility_set,
 
     for (int freq_step = 0; freq_step < woden_settings->num_freqs; freq_step++) {
       frequency = base_band_freq + (woden_settings->frequency_resolution*freq_step);
-      wavelength = VELC / frequency;
+      wavelength = (VELC / frequency);
       int step = woden_settings->num_baselines*(time_step*woden_settings->num_freqs + freq_step);
 
       for (int baseline = 0; baseline < woden_settings->num_baselines; baseline++) {

@@ -61,7 +61,7 @@ containing simulation settings
 */
 void fill_timefreq_visibility_set(visibility_set_t *visibility_set,
                                   woden_settings_t *woden_settings,
-                                  user_precision_t base_band_freq,
+                                  double base_band_freq,
                                   double *lsts);
 
 /**

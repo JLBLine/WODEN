@@ -49,7 +49,7 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
 
   int count = 0;
   if (beamtype == FEE_BEAM || beamtype == ANALY_DIPOLE || beamtype == GAUSS_BEAM) {
-    for (size_t visi = 0; visi < num_components*num_times*num_freqs; visi++) {
+    for (int visi = 0; visi < num_components*num_times*num_freqs; visi++) {
       primay_beam_J00[visi] = count + I*0.0;
       primay_beam_J11[visi] = count + I*0.0;
       count ++ ;
@@ -59,7 +59,7 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
   //Only FEE_BEAM has cross-pols
   count = 0;
   if (beamtype == FEE_BEAM) {
-    for (size_t visi = 0; visi < num_components*num_times*num_freqs; visi++) {
+    for (int visi = 0; visi < num_components*num_times*num_freqs; visi++) {
       primay_beam_J01[visi] = count + I*0.0;
       primay_beam_J10[visi] = count + I*0.0;
       count ++ ;
@@ -94,7 +94,7 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
                              11.00, 11.00, 11.00, 15.00, 15.00, 15.00 };
 
   if (beamtype == ANALY_DIPOLE || beamtype == GAUSS_BEAM) {
-    for (size_t output = 0; output < num_visis*num_components; output++) {
+    for (int output = 0; output < num_visis*num_components; output++) {
 
       TEST_ASSERT_EQUAL_FLOAT(expected_order[output], creal(recover_g1x[output]));
       TEST_ASSERT_EQUAL_FLOAT(0.0, creal(recover_D1x[output]));
@@ -117,7 +117,7 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
     }
   }
   else if (beamtype == FEE_BEAM) {
-    for (size_t output = 0; output < num_visis*num_components; output++) {
+    for (int output = 0; output < num_visis*num_components; output++) {
 
       TEST_ASSERT_EQUAL_FLOAT(expected_order[output], creal(recover_g1x[output]));
       TEST_ASSERT_EQUAL_FLOAT(expected_order[output], creal(recover_D1x[output]));
@@ -140,7 +140,7 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
     }
   }
   else {
-    for (size_t output = 0; output < num_visis*num_components; output++) {
+    for (int output = 0; output < num_visis*num_components; output++) {
       TEST_ASSERT_EQUAL_FLOAT(1.0, creal(recover_g1x[output]));
       TEST_ASSERT_EQUAL_FLOAT(0.0, creal(recover_D1x[output]));
       TEST_ASSERT_EQUAL_FLOAT(0.0, creal(recover_D1y[output]));

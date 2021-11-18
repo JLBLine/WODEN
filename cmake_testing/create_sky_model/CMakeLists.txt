@@ -19,10 +19,11 @@ set(S8 "srclist_comment.txt")
 set(S9 "srclist_badspell.txt")
 set(S10 "srclist_badcoeff.txt")
 set(S11 "srclist_no-comp_numbers.txt")
+set(S12 "srclist_linear.txt")
 
 
 ## Loop through them and write a symlink so the testing executable can find them
-foreach(X IN LISTS S1 S2 S3 S4 S5 S6 S7 S8 S9 S10 S11)
+foreach(X IN LISTS S1 S2 S3 S4 S5 S6 S7 S8 S9 S10 S11 S12)
     ADD_CUSTOM_TARGET(target_${X} ALL
         COMMAND ${CMAKE_COMMAND} -E create_symlink "${SRCLIST_PATH}/${X}" "${X}")
 endforeach()

@@ -808,7 +808,7 @@ __global__ void kern_map_FEE_beam_gains(cuUserComplex *d_FEE_beam_gain_matrices,
 
     //For the FEE beam currently, only have resolution of 1.28MHz, so assign
     //the same beam value to all frequencies in this band (hence the loop)
-    for (size_t freq_ind = 0; freq_ind < num_freqs; freq_ind++) {
+    for (int freq_ind = 0; freq_ind < num_freqs; freq_ind++) {
       //Get an index to shove into the generic beam jones containers
       int new_ind = num_freqs*iTime*num_components + (num_components*freq_ind) + iComponent;
       //Split up the polarisations

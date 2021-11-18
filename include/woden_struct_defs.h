@@ -29,7 +29,7 @@ typedef struct _catsource_t {
   //Pointsource params
   double *point_ras; /*!< POINT source right ascensions (radians) */
   double *point_decs; /*!< POINT source declinations (radians) */
-  user_precision_t *point_ref_freqs; /*!< POINT source Flux density reference frequencies (Hz) */
+  double *point_ref_freqs; /*!< POINT source Flux density reference frequencies (Hz) */
   user_precision_t *point_ref_stokesI; /*!< POINT source Stokes I reference flux density (Jy) */
   user_precision_t *point_ref_stokesQ; /*!< POINT source Stokes Q reference flux density (Jy) */
   user_precision_t *point_ref_stokesU; /*!< POINT source Stokes U reference flux density (Jy) */
@@ -46,7 +46,7 @@ typedef struct _catsource_t {
   //Gaussian params
   double *gauss_ras; /*!< GAUSSIAN source right ascensions (radians) */
   double *gauss_decs; /*!< GAUSSIAN source declinations (radians) */
-  user_precision_t *gauss_ref_freqs; /*!< GAUSSIAN source Flux density reference frequencies (Hz) */
+  double *gauss_ref_freqs; /*!< GAUSSIAN source Flux density reference frequencies (Hz) */
   user_precision_t *gauss_ref_stokesI; /*!< GAUSSIAN source Stokes I reference flux density (Jy) */
   user_precision_t *gauss_ref_stokesQ; /*!< GAUSSIAN source Stokes Q reference flux density (Jy) */
   user_precision_t *gauss_ref_stokesU; /*!< GAUSSIAN source Stokes U reference flux density (Jy) */
@@ -66,7 +66,7 @@ typedef struct _catsource_t {
   //Shapelet params
   double *shape_ras; /*!< SHAPELET source right ascensions (radians) */
   double *shape_decs; /*!< SHAPELET source declinations (radians) */
-  user_precision_t *shape_ref_freqs; /*!< SHAPELET source Flux density reference frequencies (Hz) */
+  double *shape_ref_freqs; /*!< SHAPELET source Flux density reference frequencies (Hz) */
   user_precision_t *shape_ref_stokesI; /*!< SHAPELET source Stokes I reference flux density (Jy) */
   user_precision_t *shape_ref_stokesQ; /*!< SHAPELET source Stokes Q reference flux density (Jy) */
   user_precision_t *shape_ref_stokesU; /*!< SHAPELET source Stokes U reference flux density (Jy) */
@@ -137,10 +137,10 @@ A struct to contain settings pertaining to the primary beam
 typedef struct _beam_settings_t {
     user_precision_t gauss_sdec; /*!< Sine of the declination of the pointing for a Gaussian primary beam */
     user_precision_t gauss_cdec; /*!< Cosine of the declination of the pointing for a Gaussian primary beam */
-    user_precision_t gauss_ha; /*!< Hour angle of the pointing for a Gaussian primary beam */
+    double gauss_ha; /*!< Hour angle of the pointing for a Gaussian primary beam */
 
     user_precision_t beam_FWHM_rad; /*!< FWHM of requested Gaussian primary beam, at reference frequnecy */
-    user_precision_t beam_ref_freq; /*!< Reference frequency for the given FWHM of Gaussian primary beam */
+    double beam_ref_freq; /*!< Reference frequency for the given FWHM of Gaussian primary beam */
     int beamtype; /*!< What type of primary beam to simulate - see `e_beamtype` */
 
     RTS_MWA_FEE_beam_t *FEE_beam; /*!< Initialised MWA FEE beam model for desired pointing */
@@ -178,7 +178,7 @@ typedef struct _visibility_set_t {
   frequency steps, and baselines (radians)*/
   user_precision_t *allsteps_wavelengths; /*!< Wavelengths for all time steps,
   frequency steps, and baselines (metres)*/
-  user_precision_t *channel_frequencies; /*!< Frequencies for a frequency steps (Hz)*/
+  double *channel_frequencies; /*!< Frequencies for a frequency steps (Hz)*/
 
   user_precision_t *sum_visi_XX_real; /*!< Real values for XX polarisation for all time
   steps, frequency steps, and baselines */
@@ -210,8 +210,8 @@ typedef struct _woden_settings_t {
   double cdec0;  /*!< Cosine of Declination of phase centre (radians)*/
   int num_baselines;  /*!< Number of baselines this array layout has */
   int num_freqs;  /*!< Number of frequencies per coarse band*/
-  user_precision_t frequency_resolution;  /*!< Frequency resolution of a fine channel (Hz)*/
-  user_precision_t base_low_freq;  /*!< The lowest fine channel frequency of band 1*/
+  double frequency_resolution;  /*!< Frequency resolution of a fine channel (Hz)*/
+  double base_low_freq;  /*!< The lowest fine channel frequency of band 1*/
   int num_time_steps;  /*!< Number of time steps to simulate*/
   double time_res;  /*!< Time resolution of simulation (seconds)*/
   const char* cat_filename;  /*!< Path to WODEN-style sky model*/
@@ -220,7 +220,7 @@ typedef struct _woden_settings_t {
   int sky_crop_type;  /*!< Whether to crop sky models by SOURCE or COMPONENT */
   e_beamtype beamtype;  /*!< What type of primary beam to simulate with */
   user_precision_t gauss_beam_FWHM;  /*!< FWHM of Gaussian primary beam (degrees)*/
-  user_precision_t gauss_beam_ref_freq;  /*!< Reference frequency for given Gaussian primary beam FWHM*/
+  double gauss_beam_ref_freq;  /*!< Reference frequency for given Gaussian primary beam FWHM*/
   long int chunking_size;  /*!< Maximum number of COMPONENTs to include in a single chunk*/
   const char* hdf5_beam_path;  /*!< Path to *.hf file containing MWA FEE beam
   spherical harmonic information*/
@@ -231,10 +231,10 @@ typedef struct _woden_settings_t {
   user_precision_t longitude;  /*!< Longitude of the array to simulate (radians) */
   user_precision_t FEE_ideal_delays[16]; /*!< Delay values specifying the pointing for the MWA FEE beam model */
   user_precision_t coarse_band_width;  /*!< Frequency bandwidth of a single coarse band (Hz)*/
-  user_precision_t gauss_ra_point;  /*!< The initial Right Ascension to point the Gaussian beam at (radians)*/
-  user_precision_t gauss_dec_point;  /*!< The initial Declination to point the Gaussian beam at (radians)*/
+  double gauss_ra_point;  /*!< The initial Right Ascension to point the Gaussian beam at (radians)*/
+  double gauss_dec_point;  /*!< The initial Declination to point the Gaussian beam at (radians)*/
   int num_visis;  /*!< Total number of visiblities to simulate, so freqs*times*baselines */
-  user_precision_t base_band_freq;  /*!< The lowest fine channel frequency in the current band being simulated*/
+  double base_band_freq;  /*!< The lowest fine channel frequency in the current band being simulated*/
   int do_precession; /*!< Boolean of whether to apply precession to the
   array layout or not*/
 

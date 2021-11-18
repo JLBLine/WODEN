@@ -105,9 +105,9 @@ should be true:
 
 The tests ensure that the inputs yield the outputs as expected, and in
 the process check that the execution of the kernel yields the correct number
-of outputs. The tests require that the *n* coords be within an absolute tolerance
-of 2e-7 to pass. This is a result of the accuracy afforded by the ``sinf``,
-``cosf`` float cosine functions.
+of outputs. Note that this function is entirely 64-bit whether in FLOAT or
+DOUBLE compile mode. The absolute tolerance for outputs vs expectation tabled
+above is 1e-15 (this function is a good 'un).
 
 test_uvw_coords.c
 *********************************
@@ -118,8 +118,8 @@ This runs both ``fundamental_coords::test_kern_calc_uvw`` as well as
 
 Both kernels calculate *u,v,w* coords (in wavelenths) in slightly different circumstances.
 ``kern_calc_uvw`` calculates *u,v,w* coords towards a specified *RA,Dec* phase centre,
-for a given set of baseline lengths :math:`X_{\mathrm{diff}}, Y_{\mathrm{diff}}, Z_{\mathrm{diff}}`, for a number of LSTs and frequencies (meaning *u,v,w*
-change with time and frequency).
+for a given set of baseline lengths :math:`X_{\mathrm{diff}}, Y_{\mathrm{diff}}, Z_{\mathrm{diff}}`,
+for a number of LSTs and frequencies (meaning *u,v,w* change with time and frequency).
 ``kern_calc_uvw_shapelet`` does the above for a number of *u,v,w* coordinate systems,
 each centred on a different SHAPELET component.
 
@@ -139,4 +139,7 @@ Under these conditions, the following is true:
 where :math:`H_{\textrm{phase}}` is the hour angle of the phase centre. These tests
 check that this holds true over multiple time and frequency steps. In the case
 of ``kern_calc_uvw_shapelet``, this is checked for each SHAPELET component,
-making sure that the outputs are ordered as expected.
+making sure that the outputs are ordered as expected. Both the FLOAT and DOUBLE
+versions are tested within a tolerance of 1e-16 (this test compares the ``CUDA``
+code to the ``C`` code calculation of the above equations, so they agree
+very nicely).

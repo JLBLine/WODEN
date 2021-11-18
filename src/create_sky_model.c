@@ -26,9 +26,8 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
   int linear_key=0, type_key=0, param_key=0, coeff_key=0;
 
   char comp_type[16];
-  double ra, dec;
-  user_precision_t freq, flux_I, flux_Q, flux_U, flux_V;
-  user_precision_t SI;
+  double ra, dec, freq;
+  user_precision_t flux_I, flux_Q, flux_U, flux_V, SI;
   user_precision_t coeff1, coeff2, coeff3;
 
   int point_ind=0, gauss_ind=0, shape_ind=0;
@@ -54,14 +53,6 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
     // exit(1);
     return 1;
   }
-
-  // /* allocate the catalogue object */
-  // srccat = malloc( sizeof(source_catalogue_t) );
-  // if (srccat==NULL) {
-  //   printf("read_source_catalogue error: no malloc for srccat\n");
-  //   return NULL;
-  // }
-
 
   int line_number = 1;
   //Read in line by line and do "smart" things accordingly
@@ -160,7 +151,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
       srcs[n_src-1].point_ref_stokesQ = malloc( srcs[n_src-1].n_points * sizeof(user_precision_t) );
       srcs[n_src-1].point_ref_stokesU = malloc( srcs[n_src-1].n_points * sizeof(user_precision_t) );
       srcs[n_src-1].point_ref_stokesV = malloc( srcs[n_src-1].n_points * sizeof(user_precision_t) );
-      srcs[n_src-1].point_ref_freqs = malloc( srcs[n_src-1].n_points * sizeof(user_precision_t) );
+      srcs[n_src-1].point_ref_freqs = malloc( srcs[n_src-1].n_points * sizeof(double) );
 
       //Gaussian params
       srcs[n_src-1].gauss_ras = malloc( srcs[n_src-1].n_gauss * sizeof(double) );
@@ -170,7 +161,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
       srcs[n_src-1].gauss_ref_stokesQ = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
       srcs[n_src-1].gauss_ref_stokesU = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
       srcs[n_src-1].gauss_ref_stokesV = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
-      srcs[n_src-1].gauss_ref_freqs = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
+      srcs[n_src-1].gauss_ref_freqs = malloc( srcs[n_src-1].n_gauss * sizeof(double) );
       srcs[n_src-1].gauss_majors = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
       srcs[n_src-1].gauss_minors = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
       srcs[n_src-1].gauss_pas = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
@@ -182,7 +173,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
       srcs[n_src-1].shape_ref_stokesQ = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
       srcs[n_src-1].shape_ref_stokesU = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
       srcs[n_src-1].shape_ref_stokesV = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
-      srcs[n_src-1].shape_ref_freqs = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
+      srcs[n_src-1].shape_ref_freqs = malloc( srcs[n_src-1].n_shapes * sizeof(double) );
       srcs[n_src-1].shape_majors = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
       srcs[n_src-1].shape_minors = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
       srcs[n_src-1].shape_pas = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
@@ -250,7 +241,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
       #ifdef DOUBLE_PRECISION
         result = sscanf( line, "%*s %lf %lf %lf %lf %lf", &freq, &flux_I, &flux_Q, &flux_U, &flux_V );
       #else
-        result = sscanf( line, "%*s %f %f %f %f %f", &freq, &flux_I, &flux_Q, &flux_U, &flux_V );
+        result = sscanf( line, "%*s %lf %f %f %f %f", &freq, &flux_I, &flux_Q, &flux_U, &flux_V );
       #endif
       if (result != 5) {
           printf("read_source_catalogue error %d: problem reading cal component input line number %d\n\t %s \n", result, line_number, line );
@@ -304,7 +295,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
       #ifdef DOUBLE_PRECISION
         result = sscanf( line, "%*s %lf %lf %lf %lf %lf %lf", &freq, &flux_I, &flux_Q, &flux_U, &flux_V, &SI );
       #else
-        result = sscanf( line, "%*s %f %f %f %f %f %f", &freq, &flux_I, &flux_Q, &flux_U, &flux_V, &SI );
+        result = sscanf( line, "%*s %lf %f %f %f %f %f", &freq, &flux_I, &flux_Q, &flux_U, &flux_V, &SI );
       #endif
 
       if (result != 6) {
@@ -630,7 +621,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
   cropped_src->point_ref_stokesQ = malloc( num_point_comp_retained * sizeof(user_precision_t) );
   cropped_src->point_ref_stokesU = malloc( num_point_comp_retained * sizeof(user_precision_t) );
   cropped_src->point_ref_stokesV = malloc( num_point_comp_retained * sizeof(user_precision_t) );
-  cropped_src->point_ref_freqs = malloc( num_point_comp_retained * sizeof(user_precision_t) );
+  cropped_src->point_ref_freqs = malloc( num_point_comp_retained * sizeof(double) );
   cropped_src->point_SIs = malloc( num_point_comp_retained * sizeof(user_precision_t) );
 
   cropped_src->point_azs = malloc( num_point_comp_retained * num_time_steps * sizeof(user_precision_t) );
@@ -642,7 +633,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
   cropped_src->gauss_ref_stokesQ = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
   cropped_src->gauss_ref_stokesU = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
   cropped_src->gauss_ref_stokesV = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
-  cropped_src->gauss_ref_freqs = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
+  cropped_src->gauss_ref_freqs = malloc( num_gauss_comp_retained * sizeof(double) );
   cropped_src->gauss_SIs = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
   cropped_src->gauss_majors = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
   cropped_src->gauss_minors = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
@@ -657,7 +648,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
   cropped_src->shape_ref_stokesU = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
   cropped_src->shape_ref_stokesV = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
   cropped_src->shape_SIs = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
-  cropped_src->shape_ref_freqs = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
+  cropped_src->shape_ref_freqs = malloc( num_shape_comp_retained * sizeof(double) );
   cropped_src->shape_majors = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
   cropped_src->shape_minors = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
   cropped_src->shape_pas = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
@@ -699,9 +690,9 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
         cropped_src->point_SIs[point_crop_component_index] = raw_srccat->catsources[src].point_SIs[point];
 
         //Calculate az/za values for each point for all time steps
-        for (size_t time_step = 0; time_step < num_time_steps; time_step++) {
-          convert_radec2azza((double)raw_srccat->catsources[src].point_ras[point],
-                             (double)raw_srccat->catsources[src].point_decs[point],
+        for (int time_step = 0; time_step < num_time_steps; time_step++) {
+          convert_radec2azza(raw_srccat->catsources[src].point_ras[point],
+                             raw_srccat->catsources[src].point_decs[point],
                              lsts[time_step], latitude, &az, &za);
           cropped_src->point_azs[point_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
           cropped_src->point_zas[point_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
@@ -712,7 +703,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
       }//End point component loop
 
       //Loop over gauss components
-      for (size_t gauss = 0; gauss < raw_srccat->catsources[src].n_gauss; gauss++){
+      for (int gauss = 0; gauss < raw_srccat->catsources[src].n_gauss; gauss++){
         cropped_src->gauss_ras[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ras[gauss];
         cropped_src->gauss_decs[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_decs[gauss];
         cropped_src->gauss_ref_stokesI[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_stokesI[gauss];
@@ -727,9 +718,9 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
         cropped_src->gauss_pas[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_pas[gauss];
 
         //Calculate az/za values for each gauss for all time steps
-        for (size_t time_step = 0; time_step < num_time_steps; time_step++) {
-          convert_radec2azza((double)raw_srccat->catsources[src].gauss_ras[gauss],
-                             (double)raw_srccat->catsources[src].gauss_decs[gauss],
+        for (int time_step = 0; time_step < num_time_steps; time_step++) {
+          convert_radec2azza(raw_srccat->catsources[src].gauss_ras[gauss],
+                             raw_srccat->catsources[src].gauss_decs[gauss],
                              lsts[time_step], latitude, &az, &za);
           cropped_src->gauss_azs[gauss_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
           cropped_src->gauss_zas[gauss_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
@@ -740,7 +731,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
       }//End gauss component loop
       //
       //Loop over shapelet components
-      for (size_t shape = 0; shape < raw_srccat->catsources[src].n_shapes; shape++){
+      for (int shape = 0; shape < raw_srccat->catsources[src].n_shapes; shape++){
         cropped_src->shape_ras[shape_crop_component_index] = raw_srccat->catsources[src].shape_ras[shape];
         cropped_src->shape_decs[shape_crop_component_index] = raw_srccat->catsources[src].shape_decs[shape];
 
@@ -756,7 +747,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
         cropped_src->shape_pas[shape_crop_component_index] = raw_srccat->catsources[src].shape_pas[shape];
 
         //Calculate az/za values for each shapelet component for all time steps
-        for (size_t time_step = 0; time_step < num_time_steps; time_step++) {
+        for (int time_step = 0; time_step < num_time_steps; time_step++) {
           convert_radec2azza(raw_srccat->catsources[src].shape_ras[shape],
                              raw_srccat->catsources[src].shape_decs[shape],
                              lsts[time_step], latitude, &az, &za);
@@ -775,7 +766,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
           // and keep track of how many shapelet coeff components are in
           // the new cropped_src using shape_coeff_component_index
           // Do all this work now as the 1D array goes nicely into a GPU kernel
-          for (size_t coeff_ind = 0; coeff_ind < raw_srccat->catsources[src].n_shape_coeffs; coeff_ind++) {
+          for (int coeff_ind = 0; coeff_ind < raw_srccat->catsources[src].n_shape_coeffs; coeff_ind++) {
             cropped_src->shape_coeffs[shape_coeff_component_index] = raw_srccat->catsources[src].shape_coeffs[coeff_ind];
             cropped_src->shape_n1s[shape_coeff_component_index] = raw_srccat->catsources[src].shape_n1s[coeff_ind];
             cropped_src->shape_n2s[shape_coeff_component_index] = raw_srccat->catsources[src].shape_n2s[coeff_ind];
@@ -806,10 +797,10 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
     int shape_coeff_component_index = 0;
     //Loop over all sources in uncropped source catalogue and add all
     //components above the horizon to
-    for (size_t src = 0; src < raw_srccat->num_sources; src++){
+    for (int src = 0; src < raw_srccat->num_sources; src++){
 
       //Begin point component loop
-      for (size_t point = 0; point < raw_srccat->catsources[src].n_points; point++){
+      for (int point = 0; point < raw_srccat->catsources[src].n_points; point++){
         //Check if point component above horizon
         if (raw_srccat->catsources[src].point_zas[point] < M_PI / 2.0){
           cropped_src->point_ras[point_crop_component_index] = raw_srccat->catsources[src].point_ras[point];
@@ -823,8 +814,8 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
 
           //Calculate az/za values for each point for all time steps
           for (int time_step = 0; time_step < num_time_steps; time_step++) {
-            convert_radec2azza((double)raw_srccat->catsources[src].point_ras[point],
-                               (double)raw_srccat->catsources[src].point_decs[point],
+            convert_radec2azza(raw_srccat->catsources[src].point_ras[point],
+                               raw_srccat->catsources[src].point_decs[point],
                                lsts[time_step], latitude, &az, &za);
             cropped_src->point_azs[point_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
             cropped_src->point_zas[point_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
@@ -837,7 +828,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
 
 
       //Begin gauss component loop
-      for (size_t gauss = 0; gauss < raw_srccat->catsources[src].n_gauss; gauss++){
+      for (int gauss = 0; gauss < raw_srccat->catsources[src].n_gauss; gauss++){
         //Check if gauss component above horizon
         if (raw_srccat->catsources[src].gauss_zas[gauss] < M_PI / 2.0){
           cropped_src->gauss_ras[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ras[gauss];
@@ -854,9 +845,9 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
           cropped_src->gauss_pas[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_pas[gauss];
 
           //Calculate az/za values for each gauss for all time steps
-          for (size_t time_step = 0; time_step < num_time_steps; time_step++) {
-            convert_radec2azza((double)raw_srccat->catsources[src].gauss_ras[gauss],
-                               (double)raw_srccat->catsources[src].gauss_decs[gauss],
+          for (int time_step = 0; time_step < num_time_steps; time_step++) {
+            convert_radec2azza(raw_srccat->catsources[src].gauss_ras[gauss],
+                               raw_srccat->catsources[src].gauss_decs[gauss],
                                lsts[time_step], latitude, &az, &za);
             cropped_src->gauss_azs[gauss_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
             cropped_src->gauss_zas[gauss_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
@@ -867,7 +858,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
       }//End gauss component loop
 
       //Loop over shapelet components
-      for (size_t shape = 0; shape < raw_srccat->catsources[src].n_shapes; shape++){
+      for (int shape = 0; shape < raw_srccat->catsources[src].n_shapes; shape++){
 
         if (raw_srccat->catsources[src].shape_zas[shape] < M_PI / 2.0){
           cropped_src->shape_ras[shape_crop_component_index] = raw_srccat->catsources[src].shape_ras[shape];
@@ -884,7 +875,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
           cropped_src->shape_pas[shape_crop_component_index] = raw_srccat->catsources[src].shape_pas[shape];
 
           //Calculate az/za values for each shape for all time steps
-          for (size_t time_step = 0; time_step < num_time_steps; time_step++) {
+          for (int time_step = 0; time_step < num_time_steps; time_step++) {
             convert_radec2azza(raw_srccat->catsources[src].shape_ras[shape],
                                raw_srccat->catsources[src].shape_decs[shape],
                                lsts[time_step], latitude, &az, &za);
@@ -898,7 +889,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
           //the coeff,n1,n2 to each component, so check those indexes and grab
           //information if correct.
           // Do all this work now as the 1D array goes nicely into a GPU kernel
-          for (size_t coeff_ind = 0; coeff_ind < raw_srccat->catsources[src].n_shape_coeffs; coeff_ind++) {
+          for (int coeff_ind = 0; coeff_ind < raw_srccat->catsources[src].n_shape_coeffs; coeff_ind++) {
             //Check if we are on the cofrect component
             if ( (int)raw_srccat->catsources[src].shape_param_indexes[coeff_ind] == shape ){
               cropped_src->shape_coeffs[shape_coeff_component_index] = raw_srccat->catsources[src].shape_coeffs[coeff_ind];

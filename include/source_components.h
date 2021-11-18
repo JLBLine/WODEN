@@ -36,7 +36,7 @@ iComponent (Jy)
 
 */
 __device__ void extrap_stokes(user_precision_t *d_allsteps_wavelengths,
-           user_precision_t *d_ref_freqs,
+           double *d_ref_freqs,
            user_precision_t *d_ref_stokesI, user_precision_t *d_ref_stokesQ,
            user_precision_t *d_ref_stokesU, user_precision_t *d_ref_stokesV,
            user_precision_t *d_SIs, int iComponent, int iBaseline,
@@ -331,7 +331,7 @@ COMPONENTs
 void source_component_common(int num_components,
            cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
            cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
-           user_precision_t *d_freqs, double *d_ls, double *d_ms, double *d_ns,
+           double *d_freqs, double *d_ls, double *d_ms, double *d_ns,
            double *d_ras, double *d_decs, user_precision_t *azs, user_precision_t *zas,
            user_precision_t *sin_para_angs, user_precision_t *cos_para_angs,
            double *beam_has, double *beam_decs,
@@ -406,7 +406,7 @@ simulation
 @param[in] *d_primay_beam_J11 Array of primary beam J[1,1]
 (east-west gain)
 */
-__global__ void kern_calc_visi_point(user_precision_t *d_point_freqs,
+__global__ void kern_calc_visi_point(double *d_point_freqs,
            user_precision_t *d_point_stokesI, user_precision_t *d_point_stokesQ,
            user_precision_t *d_point_stokesU, user_precision_t *d_point_stokesV,
            user_precision_t *d_point_SIs,
@@ -505,7 +505,7 @@ simulation
 @param[in] *d_primay_beam_J11 Array of primary beam J[1,1]
 (east-west gain)
 */
-__global__ void kern_calc_visi_gaussian(user_precision_t *d_gauss_freqs,
+__global__ void kern_calc_visi_gaussian(double *d_gauss_freqs,
            user_precision_t *d_gauss_stokesI, user_precision_t *d_gauss_stokesQ,
            user_precision_t *d_gauss_stokesU, user_precision_t *d_gauss_stokesV,
            user_precision_t *d_gauss_SIs,
@@ -642,7 +642,7 @@ simulation
 @param[in] *d_primay_beam_J11 Array of primary beam J[1,1]
 (east-west gain)
 */
-__global__ void kern_calc_visi_shapelets(user_precision_t *d_shape_freqs,
+__global__ void kern_calc_visi_shapelets(double *d_shape_freqs,
       user_precision_t *d_shape_stokesI, user_precision_t *d_shape_stokesQ,
       user_precision_t *d_shape_stokesU, user_precision_t *d_shape_stokesV,
       user_precision_t *d_shape_SIs,

@@ -15,15 +15,15 @@
 #include "woden_precision_defs.h"
 
 __device__ void extrap_stokes(user_precision_t *d_allsteps_wavelengths,
-           user_precision_t *d_ref_freqs,
+           double *d_ref_freqs,
            user_precision_t *d_ref_stokesI, user_precision_t *d_ref_stokesQ,
            user_precision_t *d_ref_stokesU, user_precision_t *d_ref_stokesV,
            user_precision_t *d_SIs, int iComponent, int iBaseline,
            user_precision_t * flux_I, user_precision_t * flux_Q,
            user_precision_t * flux_U, user_precision_t * flux_V){
 
-  user_precision_t d_freq = VELC / d_allsteps_wavelengths[iBaseline];
-  user_precision_t d_ref_freq = d_ref_freqs[iComponent];
+  double d_freq = VELC / d_allsteps_wavelengths[iBaseline];
+  double d_ref_freq = d_ref_freqs[iComponent];
 
   user_precision_t flux_ratio = pow(d_freq / d_ref_freq, d_SIs[iComponent]);
 
@@ -94,26 +94,15 @@ __device__ void apply_beam_gains(cuUserComplex g1x, cuUserComplex D1x,
   cuUserComplex this_YX;
   cuUserComplex this_YY;
 
-  //Convert the Stokes into instrumental visibilities
-  // this_XX = cuCmulf(cuCmulf(g1x,g2x_conj) + cuCmulf(D1x,D2x_conj),visi_I);
-  // this_XX += cuCmulf(cuCmulf(g1x,g2x_conj) - cuCmulf(D1x,D2x_conj),visi_Q);
-  // this_XX += cuCmulf(cuCmulf(g1x,D2x_conj) + cuCmulf(D1x,g2x_conj),visi_U);
-  // this_XX += cuCmulf(cuCmulf(make_cuUserComplex(0.0,1.0),visi_V), cuCmulf(g1x,D2x_conj) - cuCmulf(D1x,g2x_conj) );
-  //
-  // this_XY = cuCmulf(cuCmulf(g1x,D2y_conj) + cuCmulf(D1x,g2y_conj),visi_I);
-  // this_XY += cuCmulf(cuCmulf(g1x,D2y_conj) - cuCmulf(D1x,g2y_conj),visi_Q);
-  // this_XY += cuCmulf(cuCmulf(g1x,g2y_conj) + cuCmulf(D1x,D2y_conj),visi_U);
-  // this_XY += cuCmulf(cuCmulf(make_cuUserComplex(0.0,1.0),visi_V), cuCmulf(g1x,g2y_conj) - cuCmulf(D1x,D2y_conj) );
-  //
-  // this_YX = cuCmulf(cuCmulf(D1y,g2x_conj) + cuCmulf(g1y,D2x_conj),visi_I);
-  // this_YX += cuCmulf(cuCmulf(D1y,g2x_conj) - cuCmulf(g1y,D2x_conj),visi_Q);
-  // this_YX += cuCmulf(cuCmulf(D1y,D2x_conj) + cuCmulf(g1y,g2x_conj),visi_U);
-  // this_YX += cuCmulf(cuCmulf(make_cuUserComplex(0.0,1.0),visi_V), cuCmulf(D1y,D2x_conj) - cuCmulf(g1y,g2x_conj) );
-  //
-  // this_YY = cuCmulf(cuCmulf(D1y,D2y_conj) + cuCmulf(g1y,g2y_conj),visi_I);
-  // this_YY += cuCmulf(cuCmulf(D1y,D2y_conj) - cuCmulf(g1y,g2y_conj),visi_Q);
-  // this_YY += cuCmulf(cuCmulf(D1y,g2y_conj) + cuCmulf(g1y,D2y_conj),visi_U);
-  // this_YY += cuCmulf(cuCmulf(make_cuUserComplex(0.0,1.0),visi_V), cuCmulf(D1y,g2y_conj) - cuCmulf(g1y,D2y_conj) );
+  // this_XX = (g1x*g2x_conj + D1x*D2x_conj);
+  // this_XY = (g1x*D2y_conj + D1x*g2y_conj);
+  // this_YX = (D1y*g2x_conj + g1y*D2x_conj);
+  // this_YY = (D1y*D2y_conj + g1y*g2y_conj);
+
+  // printf("XX %.16f %.16f\n",this_XX.x, this_XX.y );
+  // printf("XY %.16f %.16f\n",this_XY.x, this_XY.y );
+  // printf("YX %.16f %.16f\n",this_YX.x, this_YX.y );
+  // printf("YY %.16f %.16f\n",this_YY.x, this_YY.y );
 
   this_XX = (g1x*g2x_conj + D1x*D2x_conj)*visi_I;
   this_XX += (g1x*g2x_conj - D1x*D2x_conj)*visi_Q;
@@ -215,6 +204,8 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
                d_primay_beam_J10, d_primay_beam_J11,
                &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
 
+    // printf("BEAM GAINS %.16f %.16f\n",g1x.x*g1x.x,g1y.x*g1y.x );
+
     cuUserComplex visi_XX;
     cuUserComplex visi_XY;
     cuUserComplex visi_YX;
@@ -241,7 +232,7 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
 void source_component_common(int num_components,
            cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
            cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
-           user_precision_t *d_freqs, double *d_ls, double *d_ms, double *d_ns,
+           double *d_freqs, double *d_ls, double *d_ms, double *d_ns,
            double *d_ras, double *d_decs, user_precision_t *azs, user_precision_t *zas,
            user_precision_t *sin_para_angs, user_precision_t *cos_para_angs,
            double *beam_has, double *beam_decs,
@@ -253,7 +244,7 @@ void source_component_common(int num_components,
   threads.x = 128;
   threads.y = 1;
   threads.z = 1;
-  grid.x = (int)ceil( (user_precision_t)num_components / (user_precision_t)threads.x );
+  grid.x = (int)ceil( (float)num_components / (float)threads.x );
   grid.y = 1;
   grid.z = 1;
 
@@ -303,8 +294,8 @@ void source_component_common(int num_components,
 
     threads.x = 16;
     threads.y = 16;
-    grid.x = (int)ceil( ((user_precision_t)num_components) / ((user_precision_t)threads.x) );
-    grid.y = (int)ceil( (user_precision_t)woden_settings->num_time_steps / (user_precision_t)threads.y );
+    grid.x = (int)ceil( ((float)num_components) / ((float)threads.x) );
+    grid.y = (int)ceil( (float)woden_settings->num_time_steps / (float)threads.y );
 
 
     cudaErrorCheckKernel("kern_map_FEE_beam_gains",
@@ -326,7 +317,7 @@ void source_component_common(int num_components,
   }
 }
 
-__global__ void kern_calc_visi_point(user_precision_t *d_point_freqs,
+__global__ void kern_calc_visi_point(double *d_point_freqs,
            user_precision_t *d_point_stokesI, user_precision_t *d_point_stokesQ,
            user_precision_t *d_point_stokesU, user_precision_t *d_point_stokesV,
            user_precision_t *d_point_SIs,
@@ -380,7 +371,7 @@ __global__ void kern_calc_visi_point(user_precision_t *d_point_freqs,
   }
 }
 
-__global__ void kern_calc_visi_gaussian(user_precision_t *d_gauss_freqs,
+__global__ void kern_calc_visi_gaussian(double *d_gauss_freqs,
            user_precision_t *d_gauss_stokesI, user_precision_t *d_gauss_stokesQ,
            user_precision_t *d_gauss_stokesU, user_precision_t *d_gauss_stokesV,
            user_precision_t *d_gauss_SIs,
@@ -455,7 +446,7 @@ __global__ void kern_calc_visi_gaussian(user_precision_t *d_gauss_freqs,
   }
 }
 
-__global__ void kern_calc_visi_shapelets(user_precision_t *d_shape_freqs,
+__global__ void kern_calc_visi_shapelets(double *d_shape_freqs,
       user_precision_t *d_shape_stokesI, user_precision_t *d_shape_stokesQ,
       user_precision_t *d_shape_stokesU, user_precision_t *d_shape_stokesV,
       user_precision_t *d_shape_SIs,
@@ -581,7 +572,7 @@ __global__ void kern_calc_visi_shapelets(user_precision_t *d_shape_freqs,
 *******************************************************************************/
 
 __global__ void kern_extrap_stokes(int num_extrap_freqs, int num_components,
-           user_precision_t *d_extrap_wavelengths, user_precision_t *d_ref_freqs,
+           user_precision_t *d_extrap_wavelengths, double *d_ref_freqs,
            user_precision_t *d_SIs,
            user_precision_t *d_ref_stokesI, user_precision_t *d_ref_stokesQ,
            user_precision_t *d_ref_stokesU, user_precision_t *d_ref_stokesV,
@@ -616,7 +607,7 @@ __global__ void kern_extrap_stokes(int num_extrap_freqs, int num_components,
 }
 
 extern "C" void test_kern_extrap_stokes(int num_extrap_freqs, int num_components,
-           user_precision_t *extrap_wavelengths, user_precision_t *ref_freqs,
+           user_precision_t *extrap_wavelengths, double *ref_freqs,
            user_precision_t *SIs,
            user_precision_t *ref_stokesI, user_precision_t *ref_stokesQ,
            user_precision_t *ref_stokesU, user_precision_t *ref_stokesV,
@@ -624,7 +615,7 @@ extern "C" void test_kern_extrap_stokes(int num_extrap_freqs, int num_components
            user_precision_t *flux_U, user_precision_t *flux_V){
 
   user_precision_t *d_extrap_wavelengths = NULL;
-  user_precision_t *d_ref_freqs = NULL;
+  double *d_ref_freqs = NULL;
   user_precision_t *d_SIs = NULL;
   user_precision_t *d_ref_stokesI = NULL;
   user_precision_t *d_ref_stokesQ = NULL;
@@ -638,7 +629,7 @@ extern "C" void test_kern_extrap_stokes(int num_extrap_freqs, int num_components
   cudaErrorCheckCall( cudaMalloc( (void**)&d_extrap_wavelengths,
                                    num_extrap_freqs*sizeof(user_precision_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_ref_freqs,
-                                     num_components*sizeof(user_precision_t) ));
+                                     num_components*sizeof(double) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_SIs,
                                      num_components*sizeof(user_precision_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_ref_stokesI,
@@ -670,7 +661,7 @@ extern "C" void test_kern_extrap_stokes(int num_extrap_freqs, int num_components
   cudaErrorCheckCall( cudaMemcpy(d_ref_stokesV, ref_stokesV,
              num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
   cudaErrorCheckCall( cudaMemcpy(d_ref_freqs, ref_freqs,
-             num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
+             num_components*sizeof(double), cudaMemcpyHostToDevice ));
   cudaErrorCheckCall( cudaMemcpy(d_SIs, SIs,
              num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
 
@@ -678,8 +669,8 @@ extern "C" void test_kern_extrap_stokes(int num_extrap_freqs, int num_components
 
   threads.x = 16;
   threads.y = 16;
-  grid.x = (int)ceil( (user_precision_t)num_components / (user_precision_t)threads.x );
-  grid.y = (int)ceil( (user_precision_t)num_extrap_freqs / (user_precision_t)threads.y );
+  grid.x = (int)ceilf( (float)num_components / (float)threads.x );
+  grid.y = (int)ceilf( (float)num_extrap_freqs / (float)threads.y );
 
   cudaErrorCheckKernel("kern_extrap_stokes",
                         kern_extrap_stokes, grid, threads,
@@ -775,8 +766,8 @@ extern "C" void test_kern_calc_measurement_equation(int num_components,
 
   threads.x = 16;
   threads.y = 16;
-  grid.x = (int)ceil( (user_precision_t)num_baselines / (user_precision_t)threads.x );
-  grid.y = (int)ceil( (user_precision_t)num_components / (user_precision_t)threads.y );
+  grid.x = (int)ceilf( (float)num_baselines / (float)threads.x );
+  grid.y = (int)ceilf( (float)num_components / (float)threads.y );
 
   cudaErrorCheckKernel("kern_calc_measurement_equation",
                       kern_calc_measurement_equation, grid, threads,
@@ -998,7 +989,7 @@ __global__ void kern_get_beam_gains(int num_components, int num_baselines,
   // if(iBaseline < num_visis && iComponent < num_points) {
   if(iBaseline < num_visis) {
 
-    for (size_t iComponent = 0; iComponent < num_components; iComponent++) {
+    for (int iComponent = 0; iComponent < num_components; iComponent++) {
 
       cuUserComplex g1x;
       cuUserComplex D1x;
@@ -1308,7 +1299,7 @@ extern "C" void test_source_component_common(int num_components,
            user_precision_complex_t *primay_beam_J01,
            user_precision_complex_t *primay_beam_J10,
            user_precision_complex_t *primay_beam_J11,
-           user_precision_t *freqs, double *ls, double *ms, double *ns,
+           double *freqs, double *ls, double *ms, double *ns,
            double *ras, double *decs, user_precision_t *azs, user_precision_t *zas,
            user_precision_t *sin_para_angs, user_precision_t *cos_para_angs,
            double *beam_has, double *beam_decs,
@@ -1350,11 +1341,11 @@ extern "C" void test_source_component_common(int num_components,
   cudaErrorCheckCall( cudaMemcpy(d_decs, decs, num_components*sizeof(double),
                                                       cudaMemcpyHostToDevice ));
 
-  user_precision_t *d_freqs = NULL;
+  double *d_freqs = NULL;
   cudaErrorCheckCall( cudaMalloc( (void**)&d_freqs,
-                         woden_settings->num_freqs*sizeof(user_precision_t) ) );
+                         woden_settings->num_freqs*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy( d_freqs, freqs,
-    woden_settings->num_freqs*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+    woden_settings->num_freqs*sizeof(double), cudaMemcpyHostToDevice ) );
 
   source_component_common(num_components,
            (cuUserComplex *)d_primay_beam_J00,
@@ -1395,7 +1386,7 @@ extern "C" void test_source_component_common(int num_components,
 
 extern "C" void test_kern_calc_visi_point(int num_components, int num_baselines,
           int num_freqs, int num_visis, int num_times, int beamtype,
-          user_precision_t *component_freqs,
+          double *component_freqs,
           user_precision_t *flux_I, user_precision_t *flux_Q,
           user_precision_t *flux_U, user_precision_t *flux_V,
           user_precision_t *SIs, user_precision_t *us, user_precision_t *vs,
@@ -1479,7 +1470,7 @@ extern "C" void test_kern_calc_visi_point(int num_components, int num_baselines,
   user_precision_t *d_flux_U = NULL;
   user_precision_t *d_flux_V = NULL;
   user_precision_t *d_SIs = NULL;
-  user_precision_t *d_component_freqs = NULL;
+  double *d_component_freqs = NULL;
 
   cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_I,
                                      num_components*sizeof(user_precision_t) ));
@@ -1492,7 +1483,7 @@ extern "C" void test_kern_calc_visi_point(int num_components, int num_baselines,
   cudaErrorCheckCall( cudaMalloc( (void**)&d_SIs,
                                      num_components*sizeof(user_precision_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_component_freqs,
-                                     num_components*sizeof(user_precision_t) ));
+                                     num_components*sizeof(double) ));
 
   cudaErrorCheckCall( cudaMemcpy(d_flux_I, flux_I,
              num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
@@ -1505,7 +1496,7 @@ extern "C" void test_kern_calc_visi_point(int num_components, int num_baselines,
   cudaErrorCheckCall( cudaMemcpy(d_SIs, SIs,
              num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
   cudaErrorCheckCall( cudaMemcpy(d_component_freqs, component_freqs,
-             num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
+             num_components*sizeof(double), cudaMemcpyHostToDevice ));
 
   user_precision_t *d_sum_visi_XX_real = NULL;
   user_precision_t *d_sum_visi_XY_real = NULL;
@@ -1620,7 +1611,7 @@ extern "C" void test_kern_calc_visi_point(int num_components, int num_baselines,
 
 extern "C" void test_kern_calc_visi_gaussian(int num_components, int num_baselines,
   int num_freqs, int num_visis, int num_times, int beamtype,
-  user_precision_t *component_freqs,
+  double *component_freqs,
   user_precision_t *flux_I, user_precision_t *flux_Q,
   user_precision_t *flux_U, user_precision_t *flux_V, user_precision_t *SIs,
   user_precision_t *us, user_precision_t *vs, user_precision_t *ws,
@@ -1720,7 +1711,7 @@ extern "C" void test_kern_calc_visi_gaussian(int num_components, int num_baselin
   user_precision_t *d_flux_U = NULL;
   user_precision_t *d_flux_V = NULL;
   user_precision_t *d_SIs = NULL;
-  user_precision_t *d_component_freqs = NULL;
+  double *d_component_freqs = NULL;
 
   cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_I,
                                      num_components*sizeof(user_precision_t) ));
@@ -1733,7 +1724,7 @@ extern "C" void test_kern_calc_visi_gaussian(int num_components, int num_baselin
   cudaErrorCheckCall( cudaMalloc( (void**)&d_SIs,
                                      num_components*sizeof(user_precision_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_component_freqs,
-                                     num_components*sizeof(user_precision_t) ));
+                                     num_components*sizeof(double) ));
 
   cudaErrorCheckCall( cudaMemcpy(d_flux_I, flux_I,
              num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
@@ -1746,7 +1737,7 @@ extern "C" void test_kern_calc_visi_gaussian(int num_components, int num_baselin
   cudaErrorCheckCall( cudaMemcpy(d_SIs, SIs,
              num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
   cudaErrorCheckCall( cudaMemcpy(d_component_freqs, component_freqs,
-             num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
+             num_components*sizeof(double), cudaMemcpyHostToDevice ));
 
   user_precision_t *d_sum_visi_XX_real = NULL;
   user_precision_t *d_sum_visi_XY_real = NULL;
@@ -1866,7 +1857,7 @@ extern "C" void test_kern_calc_visi_gaussian(int num_components, int num_baselin
 
 extern "C" void test_kern_calc_visi_shapelet(int num_components, int num_baselines,
   int num_freqs, int num_visis, int num_times, int num_coeffs, int beamtype,
-  user_precision_t *component_freqs,
+  double *component_freqs,
   user_precision_t *flux_I, user_precision_t *flux_Q,
   user_precision_t *flux_U, user_precision_t *flux_V, user_precision_t *SIs,
   user_precision_t *us, user_precision_t *vs, user_precision_t *ws,
@@ -2020,7 +2011,7 @@ extern "C" void test_kern_calc_visi_shapelet(int num_components, int num_baselin
   user_precision_t *d_flux_U = NULL;
   user_precision_t *d_flux_V = NULL;
   user_precision_t *d_SIs = NULL;
-  user_precision_t *d_component_freqs = NULL;
+  double *d_component_freqs = NULL;
 
   cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_I,
                                      num_components*sizeof(user_precision_t) ));
@@ -2033,7 +2024,7 @@ extern "C" void test_kern_calc_visi_shapelet(int num_components, int num_baselin
   cudaErrorCheckCall( cudaMalloc( (void**)&d_SIs,
                                      num_components*sizeof(user_precision_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_component_freqs,
-                                     num_components*sizeof(user_precision_t) ));
+                                     num_components*sizeof(double) ));
 
   cudaErrorCheckCall( cudaMemcpy(d_flux_I, flux_I,
              num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
@@ -2046,7 +2037,7 @@ extern "C" void test_kern_calc_visi_shapelet(int num_components, int num_baselin
   cudaErrorCheckCall( cudaMemcpy(d_SIs, SIs,
              num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
   cudaErrorCheckCall( cudaMemcpy(d_component_freqs, component_freqs,
-             num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
+             num_components*sizeof(double), cudaMemcpyHostToDevice ));
 
   user_precision_t *d_sum_visi_XX_real = NULL;
   user_precision_t *d_sum_visi_XY_real = NULL;

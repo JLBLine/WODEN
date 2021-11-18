@@ -1,7 +1,9 @@
 .. _mwa_hyperbeam: https://pypi.org/project/mwa-hyperbeam/
 
+.. _FEE_primary_beam_cuda_cmake:
+
 ``FEE_primary_beam_cuda``
-=========================
+===========================
 Tests for the functions in ``WODEN/src/FEE_primary_beam_cuda.cu``. This is more
 of an integration test rather than a suite of individual function tests.
 
@@ -34,9 +36,9 @@ either with the parallactic angle rotation applied or not.
 All delay and frequency combinations are run with both parallactic angle rotation
 applied and not. For the FLOAT precision, the real and imaginary must match
 the ``hyperbeam`` values to within a absolute tolerance of 3e-2. For DOUBLE,
-they must match to within 1e-9.
+they must match to within 1e-13.
 
-.. note:: Given that the accuracy of the FLOAT precision is <= 3%, I suggest if you are comparing simulated visibilities to real data, that DOUBLE is the only way to go (which is accurate to <= 0.0000001%). However, if you are running some comparison simulations, the inaccuracy is a constant bias, and is still a good representation of the beam model, so is probably fine for internal comparison.
+.. note:: Given that the accuracy of the FLOAT precision is <= 3%, I suggest if you are comparing simulated visibilities to real data, that DOUBLE is the only way to go (which is accurate to <= 0.00000000001%). However, if you are running some comparison simulations, the inaccuracy is a constant bias, and is still a good representation of the beam model, so is probably fine for internal comparison.
 
 To convince yourself sensible values are stored in those test files, a very rough
 plotting script is included in as ``WODEN/cmake_testing/FEE_primary_beam_cuda/plot_beam_results.py``,

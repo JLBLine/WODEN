@@ -106,10 +106,10 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YY_imag,
                       num_visis*sizeof(user_precision_t) ) );
 
-  user_precision_t *d_freqs = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_freqs, num_freqs*sizeof(user_precision_t) ) );
+  double *d_freqs = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_freqs, num_freqs*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy( d_freqs, visibility_set->channel_frequencies,
-                      num_freqs*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+                      num_freqs*sizeof(double), cudaMemcpyHostToDevice ) );
 
   //if we have shapelets in our sky model, copy the shapelet basis functions
   //into GPU memory
@@ -223,7 +223,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
       double *d_point_ras=NULL;
       double *d_point_decs=NULL;
-      user_precision_t *d_point_freqs=NULL;
+      double *d_point_freqs=NULL;
       user_precision_t *d_point_stokesI=NULL;
       user_precision_t *d_point_stokesQ=NULL;
       user_precision_t *d_point_stokesU=NULL;
@@ -241,9 +241,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                           num_points*sizeof(double), cudaMemcpyHostToDevice ) );
 
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_freqs),
-                          num_points*sizeof(user_precision_t) ) );
+                          num_points*sizeof(double) ) );
       cudaErrorCheckCall( cudaMemcpy( d_point_freqs, catsource.point_ref_freqs,
-                          num_points*sizeof(user_precision_t),
+                          num_points*sizeof(double),
                           cudaMemcpyHostToDevice ) );
 
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_point_stokesI),
@@ -360,7 +360,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       user_precision_t *d_gauss_majors=NULL;
       user_precision_t *d_gauss_minors=NULL;
 
-      user_precision_t *d_gauss_freqs=NULL;
+      double *d_gauss_freqs=NULL;
       user_precision_t *d_gauss_stokesI=NULL;
       user_precision_t *d_gauss_stokesQ=NULL;
       user_precision_t *d_gauss_stokesU=NULL;
@@ -368,9 +368,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       user_precision_t *d_gauss_SIs=NULL;
 
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_gauss_freqs),
-                          num_gauss*sizeof(user_precision_t)) );
+                          num_gauss*sizeof(double)) );
       cudaErrorCheckCall( cudaMemcpy( d_gauss_freqs, catsource.gauss_ref_freqs,
-                          num_gauss*sizeof(user_precision_t),
+                          num_gauss*sizeof(double),
                           cudaMemcpyHostToDevice) );
 
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_gauss_stokesI),
@@ -513,7 +513,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
       double *d_shape_ras=NULL;
       double *d_shape_decs=NULL;
-      user_precision_t *d_shape_freqs=NULL;
+      double *d_shape_freqs=NULL;
       user_precision_t *d_shape_stokesI=NULL;
       user_precision_t *d_shape_stokesQ=NULL;
       user_precision_t *d_shape_stokesU=NULL;
@@ -546,9 +546,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
               num_shapes*sizeof(double), cudaMemcpyHostToDevice) );
 
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_freqs),
-                          num_shapes*sizeof(user_precision_t)) );
+                          num_shapes*sizeof(double)) );
       cudaErrorCheckCall( cudaMemcpy( d_shape_freqs, catsource.shape_ref_freqs,
-                          num_shapes*sizeof(user_precision_t),
+                          num_shapes*sizeof(double),
                           cudaMemcpyHostToDevice) );
 
       cudaErrorCheckCall( cudaMalloc( (void**)&(d_shape_stokesI),

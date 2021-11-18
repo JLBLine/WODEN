@@ -37,7 +37,7 @@ typedef struct _args_for_testing_t {
   user_precision_t *flux_U;
   user_precision_t *flux_V;
   user_precision_t *SIs;
-  user_precision_t *component_freqs;
+  double *component_freqs;
 
   user_precision_t *us;
   user_precision_t *vs;
@@ -92,11 +92,11 @@ void get_expected(int visi, int num_components, int num_baselines,
                   int num_freqs, int beamtype,
                   args_for_testing_t *args_ft,
                   int component_type,
-                  user_precision_t * expec_re, user_precision_t * expec_im);
+                  double * expec_re, double * expec_im);
 
 //Take input parameters and test whether GPU outputs match expectations
 void test_visi_outputs(int num_visis, int num_components,
                        int num_baselines, int num_freqs,
-                       user_precision_t frac_tol,
+                       double tol,
                        int beamtype,  args_for_testing_t *args_ft,
                        int component_type);

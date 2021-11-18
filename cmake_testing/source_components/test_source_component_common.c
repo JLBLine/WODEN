@@ -18,7 +18,7 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 extern void test_source_component_common(int num_components,
            user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J01,
            user_precision_complex_t *primay_beam_J10, user_precision_complex_t *primay_beam_J11,
-           user_precision_t *freqs, double *ls, double *ms, double *ns,
+           double *freqs, double *ls, double *ms, double *ns,
            double *ras, double *decs, user_precision_t *azs, user_precision_t *zas,
            user_precision_t *sin_para_angs, user_precision_t *cos_para_angs,
            double *beam_has, double *beam_decs,
@@ -32,7 +32,6 @@ extern void free_FEE_primary_beam_from_GPU(RTS_MWA_FEE_beam_t *primary_beam);
 
 extern void copy_FEE_primary_beam_to_GPU(RTS_MWA_FEE_beam_t *FEE_beam);
 
-#define UNITY_INCLUDE_FLOAT
 
 /*******************************************************************************
 Here are a bunch of predefined arrays to be used
@@ -68,23 +67,7 @@ user_precision_t cos_para_angs[] = {0.00000000, 0.00000000, 0.00000000, 0.000000
                          0.00000000, 0.00000000, 0.00000000, 0.00000000,
                          0.00000000, 0.00000000, 0.00000000};
 
-user_precision_t gauss_expected[] = { 0.2806705, 0.3856093, 0.5297833, 0.7278620,
-                           1.0000000, 0.7278622, 0.5297834, 0.3856093,
-                           0.2806705, 0.0062056, 0.0221101, 0.0787758,
-                           0.2806702, 1.0000000, 0.2806705, 0.0787759,
-                           0.0221101, 0.0062056,
-                           0.2806705, 0.3856093, 0.5297833, 0.7278620,
-                           1.0000000, 0.7278622, 0.5297834, 0.3856093,
-                           0.2806705, 0.0062056, 0.0221101, 0.0787758,
-                           0.2806702, 1.0000000, 0.2806705, 0.0787759,
-                           0.0221101, 0.0062056,
-                           0.2806705, 0.3856093, 0.5297833, 0.7278620,
-                           1.0000000, 0.7278622, 0.5297834, 0.3856093,
-                           0.2806705, 0.0062056, 0.0221101, 0.0787758,
-                           0.2806702, 1.0000000, 0.2806705, 0.0787759,
-                           0.0221101, 0.0062056};
-
-user_precision_t analy_expec_J00[] = { 0.00000002, 0.52576818, 0.73128019,
+double analy_expec_J00[] = { 0.00000002, 0.52576818, 0.73128019,
   0.88075472, 1.00000000, 0.88075483, 0.73128027, 0.52576824, -0.00000005,
   0.00000002, 0.61822932, 0.81629589, 0.93152102, 1.00000000, 0.93152109,
   0.81629596, 0.61822938, -0.00000006, 0.00000002, 0.52576818, 0.73128019,
@@ -95,7 +78,7 @@ user_precision_t analy_expec_J00[] = { 0.00000002, 0.52576818, 0.73128019,
   0.00000002, 0.61822932, 0.81629589, 0.93152102, 1.00000000, 0.93152109,
   0.81629596, 0.61822938, -0.00000006 };
 
-user_precision_t analy_expec_J11[] = { 0.00000000, 0.26288404, 0.51709310,
+double analy_expec_J11[] = { 0.00000000, 0.26288404, 0.51709310,
   0.76275588, 1.00000000, 0.76275607, 0.51709322, 0.26288410, -0.00000000,
   0.00000000, 0.30911460, 0.57720827, 0.80672078, 1.00000000, 0.80672094,
   0.57720839, 0.30911466, -0.00000000, 0.00000000, 0.26288404, 0.51709310,
@@ -106,7 +89,7 @@ user_precision_t analy_expec_J11[] = { 0.00000000, 0.26288404, 0.51709310,
   0.00000000, 0.30911460, 0.57720827, 0.80672078, 1.00000000, 0.80672094,
   0.57720839, 0.30911466, -0.00000000 };
 
-user_precision_t fee_expec_J00_re[] = { -0.00000375, -0.00007259, 0.00001992, 0.00008827,
+double fee_expec_J00_re[] = { -0.00000375, -0.00007259, 0.00001992, 0.00008827,
   0.00025053, 0.00008904, 0.00002027, -0.00007286, -0.00000362, -0.00000375, -0.00007259,
   0.00001992, 0.00008827, 0.00025053, 0.00008904, 0.00002027, -0.00007286, -0.00000362,
   -0.00000375, -0.00007259, 0.00001992, 0.00008827, 0.00025053, 0.00008904, 0.00002027,
@@ -116,7 +99,7 @@ user_precision_t fee_expec_J00_re[] = { -0.00000375, -0.00007259, 0.00001992, 0.
   -0.00000362, -0.00000375, -0.00007259, 0.00001992, 0.00008827, 0.00025053,
   0.00008904, 0.00002027, -0.00007286, -0.00000362 };
 
-user_precision_t fee_expec_J00_im[] = { 0.00000086, -0.00003368, -0.00001715,
+double fee_expec_J00_im[] = { 0.00000086, -0.00003368, -0.00001715,
   0.00002948, 0.00012354, 0.00002986, -0.00001680, -0.00003321, 0.00000057,
   0.00000086, -0.00003368, -0.00001715, 0.00002948, 0.00012354, 0.00002986,
   -0.00001680, -0.00003321, 0.00000057, 0.00000086, -0.00003368, -0.00001715,
@@ -127,7 +110,7 @@ user_precision_t fee_expec_J00_im[] = { 0.00000086, -0.00003368, -0.00001715,
   0.00000086, -0.00003368, -0.00001715, 0.00002948, 0.00012354, 0.00002986,
   -0.00001680, -0.00003321, 0.00000057 };
 
-user_precision_t fee_expec_J01_re[] = { -0.00299196, 0.05242207, 0.21119083,
+double fee_expec_J01_re[] = { -0.00299196, 0.05242207, 0.21119083,
   0.09754611, 0.97041277, 0.09754551, 0.21118965, 0.05242191, -0.00299213,
   -0.00299196, 0.05242207, 0.21119083, 0.09754611, 0.97041277, 0.09754551,
   0.21118965, 0.05242191, -0.00299213, -0.00299196, 0.05242207, 0.21119083,
@@ -138,7 +121,7 @@ user_precision_t fee_expec_J01_re[] = { -0.00299196, 0.05242207, 0.21119083,
   -0.00299196, 0.05242207, 0.21119083, 0.09754611, 0.97041277, 0.09754551,
   0.21118965, 0.05242191, -0.00299213 };
 
-user_precision_t fee_expec_J01_im[] = { -0.00004542, 0.00969854, 0.03443863,
+double fee_expec_J01_im[] = { -0.00004542, 0.00969854, 0.03443863,
   0.01937939, 0.24145197, 0.01937985, 0.03443851, 0.00969827, -0.00004550,
   -0.00004542, 0.00969854, 0.03443863, 0.01937939, 0.24145197, 0.01937985,
    0.03443851, 0.00969827, -0.00004550, -0.00004542, 0.00969854, 0.03443863,
@@ -149,7 +132,7 @@ user_precision_t fee_expec_J01_im[] = { -0.00004542, 0.00969854, 0.03443863,
     -0.00004542, 0.00969854, 0.03443863, 0.01937939, 0.24145197, 0.01937985,
      0.03443851, 0.00969827, -0.00004550 };
 
-user_precision_t fee_expec_J10_re[] = {0.00169129, -0.02178988, -0.13555926,
+double fee_expec_J10_re[] = {0.00169129, -0.02178988, -0.13555926,
   -0.07058298, -0.97021026, -0.07058250, -0.13556084, -0.02179252, 0.00168970,
   0.00169129, -0.02178988, -0.13555926, -0.07058298, -0.97021026, -0.07058250,
   -0.13556084, -0.02179252, 0.00168970, 0.00169129, -0.02178988, -0.13555926,
@@ -160,7 +143,7 @@ user_precision_t fee_expec_J10_re[] = {0.00169129, -0.02178988, -0.13555926,
   0.00169129, -0.02178988, -0.13555926, -0.07058298, -0.97021026, -0.07058250,
   -0.13556084, -0.02179252, 0.00168970  };
 
-user_precision_t fee_expec_J10_im[] = { 0.00086604, 0.01911517, -0.01697326,
+double fee_expec_J10_im[] = { 0.00086604, 0.01911517, -0.01697326,
   -0.03916865, -0.24226442, -0.03917003, -0.01697404, 0.01911435, 0.00086739,
   0.00086604, 0.01911517, -0.01697326, -0.03916865, -0.24226442, -0.03917003,
   -0.01697404, 0.01911435, 0.00086739, 0.00086604, 0.01911517, -0.01697326,
@@ -171,7 +154,7 @@ user_precision_t fee_expec_J10_im[] = { 0.00086604, 0.01911517, -0.01697326,
    0.00086604, 0.01911517, -0.01697326, -0.03916865, -0.24226442, -0.03917003,
    -0.01697404, 0.01911435, 0.00086739 };
 
-user_precision_t fee_expec_J11_re[] = { -0.00000147, -0.00000903, -0.00001642,
+double fee_expec_J11_re[] = { -0.00000147, -0.00000903, -0.00001642,
   -0.00006570, -0.00024691, -0.00006504, -0.00001520, -0.00000766, -0.00000182,
   -0.00000147, -0.00000903, -0.00001642, -0.00006570, -0.00024691, -0.00006504,
   -0.00001520, -0.00000766, -0.00000182, -0.00000147, -0.00000903, -0.00001642,
@@ -182,7 +165,7 @@ user_precision_t fee_expec_J11_re[] = { -0.00000147, -0.00000903, -0.00001642,
   -0.00000147, -0.00000903, -0.00001642, -0.00006570, -0.00024691, -0.00006504,
   -0.00001520, -0.00000766, -0.00000182 };
 
-user_precision_t fee_expec_J11_im[] = { 0.00000424, 0.00007635, 0.00002101,
+double fee_expec_J11_im[] = { 0.00000424, 0.00007635, 0.00002101,
   -0.00010817, -0.00011722, -0.00010677, 0.00002321, 0.00007781, 0.00000384,
   0.00000424, 0.00007635, 0.00002101, -0.00010817, -0.00011722, -0.00010677,
    0.00002321, 0.00007781, 0.00000384, 0.00000424, 0.00007635, 0.00002101,
@@ -192,6 +175,9 @@ user_precision_t fee_expec_J11_im[] = { 0.00000424, 0.00007635, 0.00002101,
     -0.00010817, -0.00011722, -0.00010677, 0.00002321, 0.00007781, 0.00000384,
     0.00000424, 0.00007635, 0.00002101, -0.00010817, -0.00011722, -0.00010677,
     0.00002321, 0.00007781, 0.00000384 };
+
+double TOL;
+
 
 /*
 Test that l,m,n and beam values are calculated correctly by `source_component_common`
@@ -209,8 +195,8 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
   int num_beam_values = num_times*num_freqs*num_components;
 
-  user_precision_t ra0 = 0.0*DD2R;
-  user_precision_t dec0 = 0.0*DD2R;
+  double ra0 = 0.0*DD2R;
+  double dec0 = 0.0*DD2R;
 
   double *decs = malloc(num_components*sizeof(double));
   double *zeroes = calloc(num_components, sizeof(double));
@@ -251,8 +237,8 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   double lst = 0.0;
   double latitude = 0.0;
 
-  for (size_t component = 0; component < num_components; component++) {
-    for (size_t time_ind = 0; time_ind < num_times; time_ind++) {
+  for (int component = 0; component < num_components; component++) {
+    for (int time_ind = 0; time_ind < num_times; time_ind++) {
 
       double ha = lst - ras[component];
 
@@ -273,7 +259,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   }
   */
 
-  user_precision_t freqs[] = {100e+6, 200e+6};
+  double freqs[] = {100e+6, 200e+6};
 
   double *beam_has = malloc(num_components*num_times*sizeof(double));
   double *beam_decs = malloc(num_components*num_times*sizeof(double));
@@ -288,8 +274,8 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     beam_settings->beam_FWHM_rad = 80.0*DD2R;
     beam_settings->beam_ref_freq = 150e+6;
 
-    for (size_t component = 0; component < num_components; component++) {
-      for (size_t time_ind = 0; time_ind < num_times; time_ind++) {
+    for (int component = 0; component < num_components; component++) {
+      for (int time_ind = 0; time_ind < num_times; time_ind++) {
 
         beam_has[component*num_times + time_ind] = ras[component];
         beam_decs[component*num_times + time_ind] = decs[component];
@@ -306,7 +292,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     //Get a zenith pointing beam for normalisation purposes
     RTS_MWA_FEE_beam_t *FEE_beam_zenith = malloc(sizeof(RTS_MWA_FEE_beam_t));
 
-    user_precision_t base_middle_freq = 150e+6;
+    double base_middle_freq = 150e+6;
 //
     user_precision_t user_precision_t_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
@@ -331,7 +317,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
   }
 
-  //Output arrays
+  // //Output arrays
   user_precision_complex_t *primay_beam_J00 = calloc(num_beam_values, sizeof(user_precision_complex_t));
   user_precision_complex_t *primay_beam_J01 = calloc(num_beam_values, sizeof(user_precision_complex_t));
   user_precision_complex_t *primay_beam_J10 = calloc(num_beam_values, sizeof(user_precision_complex_t));
@@ -352,94 +338,126 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
              woden_settings,
              beam_settings);
 
-  user_precision_t l_expected[9] = {-1.0, -sqrt(3)/2.0, -sqrt(2)/2.0, -0.5,
+  double l_expected[9] = {-1.0, -sqrt(3)/2.0, -sqrt(2)/2.0, -0.5,
                           0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0, 1.0};
-  user_precision_t n_expected[9] = {0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0,
+  double n_expected[9] = {0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0,
                          1.0, sqrt(3)/2.0, sqrt(2)/2.0, 0.5, 0.0};
 
   //Check the l values match expectations
+  //Both FLOAT and DOUBLE use 64 bit here so same tolerance
+  TOL = 1e-15;
 
   for (int i = 0; i < num_components; i++) {
-    TEST_ASSERT_EQUAL_FLOAT((float)l_expected[i], (float)ls[i]);
-    TEST_ASSERT_EQUAL_FLOAT(0.0, (float)ms[i]);
-    TEST_ASSERT_FLOAT_WITHIN(2e-7, (float)n_expected[i], (float)ns[i]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, l_expected[i], ls[i]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, ms[i]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, n_expected[i], ns[i]);
   }
 
   //Depending on beamtype, check results match expectations
+
+  //For the Gaussian beam, the way the l,m coords are set up measns we can
+  //analytically predict the values, so go through results and calcluate
+  //expected values, and compare to what we got
+  int beam_ind = 0;
   if (beamtype == GAUSS_BEAM) {
-    for (size_t output = 0; output < num_beam_values; output++) {
-      // printf("%.7f %.5f %.5f %.5f %.5f %.5f %.7f %.5f\n",
-      //     creal(primay_beam_J00[output]), cimag(primay_beam_J00[output]),
-      //     creal(primay_beam_J01[output]), cimag(primay_beam_J01[output]),
-      //     creal(primay_beam_J10[output]), cimag(primay_beam_J10[output]),
-      //     creal(primay_beam_J11[output]), cimag(primay_beam_J11[output]));
 
-          TEST_ASSERT_EQUAL_FLOAT(gauss_expected[output], creal(primay_beam_J00[output]));
-          TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J00[output]));
-          TEST_ASSERT_EQUAL_FLOAT(0.0, creal(primay_beam_J01[output]));
-          TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J01[output]));
-          TEST_ASSERT_EQUAL_FLOAT(0.0, creal(primay_beam_J10[output]));
-          TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J10[output]));
-          TEST_ASSERT_EQUAL_FLOAT(gauss_expected[output], creal(primay_beam_J11[output]));
-          TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J11[output]));
+    #ifdef DOUBLE_PRECISION
+      TOL = 1e-12;
+    #else
+      TOL = 1e-7;
+    #endif
 
+    double fwhm_lm = sin(beam_settings->beam_FWHM_rad);
+    double beam_ref_freq = 150e+6;
+
+    for (int time_ind = 0; time_ind < num_times; time_ind++) {
+      for (int freq_ind = 0; freq_ind < num_freqs; freq_ind++) {
+        for (int comp_ind = 0; comp_ind < num_components; comp_ind++) {
+
+          double std = (fwhm_lm / FWHM_FACTOR) * (beam_ref_freq / freqs[freq_ind]);
+          double exp_inside = (double)ls[comp_ind] / std;
+          double estimate = exp(-0.5*exp_inside*exp_inside);
+
+          //Only real gains have value in GAUSSIAN beam model
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, estimate,
+                                   creal(primay_beam_J00[beam_ind]));
+
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, estimate,
+                                   creal(primay_beam_J11[beam_ind]));
+
+          //Everything else should be zero
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J10[beam_ind]));
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J11[beam_ind]));
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J00[beam_ind]));
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, creal(primay_beam_J01[beam_ind]));
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J01[beam_ind]));
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, creal(primay_beam_J10[beam_ind]));
+
+          beam_ind += 1;
+
+        }
+      }
     }
   }
   else if (beamtype == ANALY_DIPOLE) {
 
-    float tol;
-
     #ifdef DOUBLE_PRECISION
-      tol = 1e-7;
+      TOL = 1e-7;
     #else
-      tol = 1e-6;
+      TOL = 1e-6;
     #endif
 
-    for (size_t output = 0; output < num_beam_values; output++) {
-          TEST_ASSERT_FLOAT_WITHIN(tol, analy_expec_J00[output], creal(primay_beam_J00[output]));
-          TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J00[output]));
-          TEST_ASSERT_EQUAL_FLOAT(0.0, creal(primay_beam_J01[output]));
-          TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J01[output]));
-          TEST_ASSERT_EQUAL_FLOAT(0.0, creal(primay_beam_J10[output]));
-          TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J10[output]));
-          TEST_ASSERT_FLOAT_WITHIN(tol, analy_expec_J11[output], creal(primay_beam_J11[output]));
-          TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J11[output]));
+    for (int output = 0; output < num_beam_values; output++) {
+
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, analy_expec_J00[output], creal(primay_beam_J00[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, analy_expec_J11[output], creal(primay_beam_J11[output]));
+
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J00[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, creal(primay_beam_J01[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J01[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, creal(primay_beam_J10[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J10[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J11[output]));
     }
   }
   else if (beamtype == FEE_BEAM) {
 
-    float tol;
-
     #ifdef DOUBLE_PRECISION
-      tol = 1e-7;
+      TOL = 1e-7;
     #else
-      tol = 3e-2;
+      TOL = 3e-2;
     #endif
 
     for (int output = 0; output < num_beam_values; output++) {
-      TEST_ASSERT_FLOAT_WITHIN(tol, fee_expec_J00_re[output], creal(primay_beam_J00[output]));
-      TEST_ASSERT_FLOAT_WITHIN(tol, fee_expec_J00_im[output], cimag(primay_beam_J00[output]));
-      TEST_ASSERT_FLOAT_WITHIN(tol, fee_expec_J01_re[output], creal(primay_beam_J01[output]));
-      TEST_ASSERT_FLOAT_WITHIN(tol, fee_expec_J01_im[output], cimag(primay_beam_J01[output]));
-      TEST_ASSERT_FLOAT_WITHIN(tol, fee_expec_J10_re[output], creal(primay_beam_J10[output]));
-      TEST_ASSERT_FLOAT_WITHIN(tol, fee_expec_J10_im[output], cimag(primay_beam_J10[output]));
-      TEST_ASSERT_FLOAT_WITHIN(tol, fee_expec_J11_re[output], creal(primay_beam_J11[output]));
-      TEST_ASSERT_FLOAT_WITHIN(tol, fee_expec_J11_im[output], cimag(primay_beam_J11[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J00_re[output], creal(primay_beam_J00[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J00_im[output], cimag(primay_beam_J00[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J01_re[output], creal(primay_beam_J01[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J01_im[output], cimag(primay_beam_J01[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J10_re[output], creal(primay_beam_J10[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J10_im[output], cimag(primay_beam_J10[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J11_re[output], creal(primay_beam_J11[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J11_im[output], cimag(primay_beam_J11[output]));
     }
   }
-  else {
-    //Don't need to calculate beam values for NO_BEAM, so these values
+  if (beamtype == NO_BEAM) {
+    //Don't need to calculate beam values for NO_BEAM, these values
     //should still be zero, as we initialised the array with calloc
-    for (size_t output = 0; output < num_beam_values; output++) {
+    //The function `source_components::get_beam_gains` which is called later
+    //by the COMPONENT kernels assigns gains on one and leakage of zero
+    //in the NO_BEAM case
 
-          TEST_ASSERT_EQUAL_FLOAT(0.0, creal(primay_beam_J00[output]));
-          TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J00[output]));
-          TEST_ASSERT_EQUAL_FLOAT(0.0, creal(primay_beam_J01[output]));
-          TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J01[output]));
-          TEST_ASSERT_EQUAL_FLOAT(0.0, creal(primay_beam_J10[output]));
-          TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J10[output]));
-          TEST_ASSERT_EQUAL_FLOAT(0.0, creal(primay_beam_J11[output]));
-          TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J11[output]));
+    TOL = 1e-15;
+
+    for (int output = 0; output < num_beam_values; output++) {
+
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, creal(primay_beam_J00[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J00[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, creal(primay_beam_J01[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J01[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, creal(primay_beam_J10[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J10[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, creal(primay_beam_J11[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J11[output]));
 
     }
   }
@@ -454,6 +472,8 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   free(ls);
   free(ms);
   free(ns);
+  free(beam_has);
+  free(beam_decs);
 
 }
 

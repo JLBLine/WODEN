@@ -11,12 +11,12 @@ the maximum number of COMPONENTs to put into each chunk.
 
 ``test_null_comps.c``
 ****************************
-Tests the functions ``chunk_sky_model::null_point_comps``, ``chunk_sky_model::null_gauss_comps``, and
-``chunk_sky_model::null_shapelet_comps``. These functions set either POINT, GAUSSIAN,
-or SHAPELET COMPONENT attributes of the sky model to ``NULL``. Tested here
-by setting up a dummy populated sky model, and making sure each function
-sets the correct attributes to ``NULL``. Also tests that other COMPONENT
-attributes are left as they are.
+Tests the functions ``chunk_sky_model::null_point_comps``,
+``chunk_sky_model::null_gauss_comps``, and ``chunk_sky_model::null_shapelet_comps``.
+These functions set either POINT, GAUSSIAN, or SHAPELET COMPONENT attributes of
+the sky model to ``NULL``. Tested here by setting up a dummy populated sky model,
+and making sure each function sets the correct attributes to ``NULL``.
+Also tests that other COMPONENT attributes are left as they are.
 
 
 ``test_fill_chunk_src_with_pointgauss.c``

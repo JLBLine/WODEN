@@ -39,11 +39,11 @@ void test_calculate_visibilities_EDA2Beam(int n_points, int n_gauss, int n_shape
                                           beam_settings, woden_settings, RA0, MWA_LAT_RAD,
                                           beam_settings->beamtype);
 
-  user_precision_t gain1xx = (n_points + n_gauss + n_shapes)*num_sources;
-  user_precision_t gain1yy = (n_points + n_gauss + n_shapes)*num_sources;
+  double gain1xx = (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
+  double gain1yy = (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
 
-  user_precision_t gain2xx = 0.6277595 * (n_points + n_gauss + n_shapes)*num_sources;
-  user_precision_t gain2yy = 0.3825515 * (n_points + n_gauss + n_shapes)*num_sources;
+  double gain2xx = 0.6277594613698111 * (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
+  double gain2yy = 0.3825515398230647 * (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
   //
   test_comp_phase_centre_twogains(visibility_set, gain1xx, gain1yy,
                                   gain2xx, gain2yy);

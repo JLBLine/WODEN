@@ -22,7 +22,6 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
       primary_beam_${PRECISION}
       ${CC_LINKLIBS}
   )
-
   ##Compile using the -DDOUBLE_PRECISION flag if needed
   target_compile_options(test_calc_para_angle_${PRECISION}_app PRIVATE ${C_FLAGS})
   add_test(C_test_calc_para_angle_${PRECISION} test_calc_para_angle_${PRECISION}_app)
@@ -40,7 +39,6 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   ##Compile using the -DDOUBLE_PRECISION flag if needed
   target_compile_options(test_fill_primary_beam_settings_${PRECISION}_app
                                                              PRIVATE ${C_FLAGS})
-
   add_test(C_test_fill_primary_beam_settings_${PRECISION}
            test_fill_primary_beam_settings_${PRECISION}_app)
 

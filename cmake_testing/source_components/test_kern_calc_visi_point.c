@@ -15,7 +15,7 @@ void tearDown (void) {} /* Is run after eVary test, put unit clean-up calls here
 //External CUDA code we're linking in
 extern void test_kern_calc_visi_point(int num_components, int num_baselines,
           int num_freqs, int num_visis, int num_times, int beamtype,
-          user_precision_t *component_freqs,
+          double *component_freqs,
           user_precision_t *flux_I, user_precision_t *flux_Q,
           user_precision_t *flux_U, user_precision_t *flux_V,
           user_precision_t *SIs, user_precision_t *us, user_precision_t *vs,
@@ -33,12 +33,11 @@ extern void test_kern_calc_visi_point(int num_components, int num_baselines,
 
 
 //Change required accuracy of outputs for different precisions
+//This is a fractional tolerance, not an absolute
 #ifdef DOUBLE_PRECISION
-  //Accurate to within 0.00000000001%
-  #define FRAC_TOL 1e-12
+  double FRAC_TOL = 1e-13;
 #else
-  //Accurate to within 0.001%
-  #define FRAC_TOL 1e-5
+  double FRAC_TOL = 1e-5;
 #endif
 
 
@@ -69,7 +68,7 @@ void test_kern_calc_visi_point_Varylmn(int beamtype) {
   int num_beam_values = num_freqs*num_times*num_components;
 
   //Stick the gains to one everywhere
-  for (size_t visi = 0; visi < num_beam_values; visi++) {
+  for (int visi = 0; visi < num_beam_values; visi++) {
     args_ft->primay_beam_J00[visi] = 1.0 + I*0.0;
     args_ft->primay_beam_J01[visi] = 1.0 + I*0.0;
     args_ft->primay_beam_J10[visi] = 1.0 + I*0.0;
@@ -77,7 +76,7 @@ void test_kern_calc_visi_point_Varylmn(int beamtype) {
   }
 
   //Just stick Stokes I to 1.0, SI to zero, and reference freqs to 150MHz
-  for (size_t comp = 0; comp < num_components; comp++) {
+  for (int comp = 0; comp < num_components; comp++) {
     args_ft->flux_I[comp] = 1.0;
     args_ft->SIs[comp] = 0.0;
     args_ft->component_freqs[comp] = 150e+6;
@@ -85,9 +84,10 @@ void test_kern_calc_visi_point_Varylmn(int beamtype) {
 
   //Make up some u,v,w values and scale by wavelength in correct order
   int count = 0;
-  user_precision_t freq_base = 150e+6;
-  user_precision_t freq_inc = 25e+6;
-  user_precision_t wavelength, frequency;
+  double freq_base = 150e+6;
+  double freq_inc = 25e+6;
+  user_precision_t wavelength;
+  double frequency;
   for ( int time_step = 0; time_step < num_times; time_step++ ) {
     for (int freq_step = 0; freq_step < num_freqs; freq_step++) {
       frequency = freq_base + freq_step*freq_inc;
@@ -184,7 +184,7 @@ void test_kern_calc_visi_point_VarylmnVaryFlux(int beamtype) {
   int num_beam_values = num_freqs*num_times*num_components;
 
   //Stick the gains to one everywhere
-  for (size_t visi = 0; visi < num_beam_values; visi++) {
+  for (int visi = 0; visi < num_beam_values; visi++) {
     args_ft->primay_beam_J00[visi] = 1.0 + I*0.0;
     args_ft->primay_beam_J01[visi] = 1.0 + I*0.0;
     args_ft->primay_beam_J10[visi] = 1.0 + I*0.0;
@@ -192,7 +192,7 @@ void test_kern_calc_visi_point_VarylmnVaryFlux(int beamtype) {
   }
 
   //Just stick Stokes I to the component value, and SI to -0.8
-  for (size_t comp = 0; comp < num_components; comp++) {
+  for (int comp = 0; comp < num_components; comp++) {
     args_ft->flux_I[comp] = comp + 1;
     args_ft->SIs[comp] = -0.8;
     args_ft->component_freqs[comp] = 150e+6;
@@ -200,10 +200,10 @@ void test_kern_calc_visi_point_VarylmnVaryFlux(int beamtype) {
 
   //Make up some u,v,w values and scale by wavelength in correct order
   int count = 0;
-  user_precision_t freq_base = 150e+6;
-  user_precision_t freq_inc = 25e+6;
-  user_precision_t wavelength, frequency;
-
+  double freq_base = 150e+6;
+  double freq_inc = 25e+6;
+  user_precision_t wavelength;
+  double frequency;
 
   for ( int time_step = 0; time_step < num_times; time_step++ ) {
     for (int freq_step = 0; freq_step < num_freqs; freq_step++) {
@@ -303,7 +303,7 @@ void test_kern_calc_visi_point_VarylmnVaryBeam(int beamtype) {
   user_precision_t beam_inc = 1.0 / num_beam_values;
 
   //Vary the beam values from close to zero up to 1.0
-  for (size_t beam = 0; beam < num_beam_values; beam++) {
+  for (int beam = 0; beam < num_beam_values; beam++) {
 
     args_ft->primay_beam_J00[beam] = beam_inc*(beam + 1.0) + I*0.0;
     args_ft->primay_beam_J01[beam] = beam_inc*(beam + 1.0) + I*0.0;
@@ -314,7 +314,7 @@ void test_kern_calc_visi_point_VarylmnVaryBeam(int beamtype) {
   }
 
   //Just stick Stokes I to 1.0, SI to zero, and reference freqs to 150MHz
-  for (size_t comp = 0; comp < num_components; comp++) {
+  for (int comp = 0; comp < num_components; comp++) {
     args_ft->flux_I[comp] = 1.0;
     args_ft->SIs[comp] = 0.0;
     args_ft->component_freqs[comp] = 150e+6;
@@ -322,9 +322,10 @@ void test_kern_calc_visi_point_VarylmnVaryBeam(int beamtype) {
 
   //Make up some u,v,w values and scale by wavelength in correct order
   int count = 0;
-  user_precision_t freq_base = 150e+6;
-  user_precision_t freq_inc = 25e+6;
-  user_precision_t wavelength, frequency;
+  double freq_base = 150e+6;
+  double freq_inc = 25e+6;
+  user_precision_t wavelength;
+  double frequency;
 
   for ( int time_step = 0; time_step < num_times; time_step++ ) {
     for (int freq_step = 0; freq_step < num_freqs; freq_step++) {
@@ -405,20 +406,21 @@ int main(void)
 {
     UNITY_BEGIN();
     //Test while varying beam gain for all beam types
+    RUN_TEST(test_kern_calc_visi_point_VarylmnNoBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnFEEBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnGaussBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnAnalyBeam);
-    RUN_TEST(test_kern_calc_visi_point_VarylmnNoBeam);
 
+    RUN_TEST(test_kern_calc_visi_point_VarylmnVaryFluxNoBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnVaryFluxFEEBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnVaryFluxGaussBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnVaryFluxAnalyBeam);
-    RUN_TEST(test_kern_calc_visi_point_VarylmnVaryFluxNoBeam);
-    //
+
+    RUN_TEST(test_kern_calc_visi_point_VarylmnVaryBeamNoBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnVaryBeamFEEBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnVaryBeamGaussBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnVaryBeamAnalyBeam);
-    RUN_TEST(test_kern_calc_visi_point_VarylmnVaryBeamNoBeam);
+
 
     return UNITY_END();
 }

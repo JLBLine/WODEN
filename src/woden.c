@@ -112,7 +112,7 @@ int main(int argc, char **argv) {
   for (size_t band = 0; band < woden_settings->num_bands; band++) {
     //Set the lower frequency edge for this coarse band
     int band_num = woden_settings->band_nums[band];
-    user_precision_t base_band_freq = ((band_num - 1)*woden_settings->coarse_band_width) + woden_settings->base_low_freq;
+    double base_band_freq = ((band_num - 1)*woden_settings->coarse_band_width) + woden_settings->base_low_freq;
     printf("Simulating band %02d with bottom freq %.8e\n",band_num,base_band_freq);
 
     woden_settings->base_band_freq = base_band_freq;
@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
 
     //The intial setup of the FEE beam is done on the CPU, so call it here
     if (woden_settings->beamtype == FEE_BEAM){
-      user_precision_t base_middle_freq = base_band_freq + (woden_settings->coarse_band_width/2.0);
+      double base_middle_freq = base_band_freq + (woden_settings->coarse_band_width/2.0);
     //
       printf("Middle freq is %.8e \n",base_middle_freq );
     //

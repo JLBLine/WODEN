@@ -18,12 +18,12 @@ extern double gauss_ras[];
 extern double gauss_decs[];
 extern double shape_ras[];
 extern double shape_decs[];
-extern user_precision_t expec_point_sin_para[];
-extern user_precision_t expec_point_cos_para[];
-extern user_precision_t expec_gauss_sin_para[];
-extern user_precision_t expec_gauss_cos_para[];
-extern user_precision_t expec_shape_sin_para[];
-extern user_precision_t expec_shape_cos_para[];
+extern double expec_point_sin_para[];
+extern double expec_point_cos_para[];
+extern double expec_gauss_sin_para[];
+extern double expec_gauss_cos_para[];
+extern double expec_shape_sin_para[];
+extern double expec_shape_cos_para[];
 
 /*
 Make the polpulated catsource_t struct. Stick in some necessary values

@@ -13,7 +13,9 @@ so some text files below are written to cause failure. See the table below
 for each test sky model and the expected result. The way each SOURCE and it's
 associated COMPONENTs are stored can affect the way the sky model is cropped,
 so all tests check that generated ``source_catalogue_t`` struct is structured
-correctly.
+correctly. For all floating point values, when compiling in FLOAT mode, test
+asserts that values are within an absolute tolerance of 1e-7, and 1e-15 when
+compiling in DOUBLE mode.
 
 .. list-table::
    :widths: 25 50 25
@@ -55,6 +57,9 @@ correctly.
    * - srclist_threesources.txt
      - Contains multiple SOURCEs each with a single COMPONENT
      - Check sky model values
+   * - srclist_linear.txt
+     - Contains a single POINT COMPONENT with the LINEAR keyword specifying the SED
+     - Check sky model values
 
 
 test_horizon_test.c
@@ -91,3 +96,7 @@ should result in different COMPONENT/SOURCEs being discarded. All tests check
 that the correct COMPONENT/SOURCEs are retained (including the SHAPELET basis
 function parameters), and that the correct az/za are calculated for each time
 step. The sky model setup and expected results are stored in ``test_crop_sky_model.h``.
+
+The azimuth and zenith angle outputs are tested to match expectations to within
+an absolute tolerance of 1e-6 for the FLOAT compiled code, and 1e-12 for the
+DOUBLE.

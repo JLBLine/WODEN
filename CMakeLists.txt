@@ -238,21 +238,25 @@ elseif(TARGET_GROUP STREQUAL test)
 
       include(CTest)
 
+      ##Find out where unity is hiding
       set(HINTS_UNITY "${UNITY_ROOT};${UNITY_ROOT}/src/;/usr/local/Unity/src/")
-
       find_path(UNITY_DIR unity.c HINTS ${HINTS_UNITY})
-
       if(UNITY_DIR)
         message(STATUS "UNITY src path: ${UNITY_DIR}")
       endif()
 
+      ##Compile Unity
       add_library(Unity STATIC
           "${UNITY_DIR}/unity.c"
       )
-
       target_include_directories(Unity PUBLIC
           "${UNITY_DIR}"
       )
+      ##Enable DOUBLE precision tests (whhhhhy is this not default CHRIST)
+      target_compile_options(Unity PUBLIC
+      -DUNITY_INCLUDE_DOUBLE -DUNITY_DOUBLE_PRECISION=1e-12)
+
+      ##Inlcude all the testing that lives in ./cmake_testing
       add_subdirectory(cmake_testing)
 
       # coverage_evaluate()

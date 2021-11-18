@@ -22,8 +22,6 @@ extern void test_RTS_CUDA_FEE_beam(int num_components,
            int rotation, int scaling,
            user_precision_complex_t *FEE_beam_gains);
 
-#define UNITY_INCLUDE_FLOAT
-
 //Different delays settings, which control the pointing of the MWA beam
 user_precision_t zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
@@ -34,10 +32,10 @@ user_precision_t off_zenith1_delays[16] = {0.0, 4.0, 8.0, 12.0, 0.0, 4.0, 8.0, 1
 user_precision_t off_zenith2_delays[16] = {0.0, 2.0, 4.0, 8.0, 2.0, 4.0, 8.0, 12.0,
                                 4.0, 8.0, 12.0, 16.0, 8.0, 12.0, 16.0, 20.0};
 
-void test_RTS_CUDA_FEE_beam_VaryFreqVaryPointing(user_precision_t freq,
+void test_RTS_CUDA_FEE_beam_VaryFreqVaryPointing(double freq,
                                                  user_precision_t *delays,
                                                  char* mwa_fee_hdf5,
-                                                 user_precision_t *expected,
+                                                 double *expected,
                                                  char *outname, int rotate) {
 
   //Call the C code to interrogate the hdf5 file and set beam things up
@@ -92,24 +90,26 @@ void test_RTS_CUDA_FEE_beam_VaryFreqVaryPointing(user_precision_t freq,
              rotate, scaling,
              FEE_beam_gains);
 
-  float tol = 0.0;
-
   #ifdef DOUBLE_PRECISION
-    tol = 1e-9;
+    double TOL = 1e-13;
   #else
-    tol = 3e-2;
+    double TOL = 3e-2;
   #endif
 
-  // // Check the values are within tolerance
-  for (size_t comp = 0; comp < num_azza; comp++) {
-    TEST_ASSERT_FLOAT_WITHIN(tol, expected[2*num_pols*comp+0], creal(FEE_beam_gains[num_pols*comp+0]) );
-    TEST_ASSERT_FLOAT_WITHIN(tol, expected[2*num_pols*comp+1], cimag(FEE_beam_gains[num_pols*comp+0]) );
-    TEST_ASSERT_FLOAT_WITHIN(tol, expected[2*num_pols*comp+2], creal(FEE_beam_gains[num_pols*comp+1]) );
-    TEST_ASSERT_FLOAT_WITHIN(tol, expected[2*num_pols*comp+3], cimag(FEE_beam_gains[num_pols*comp+1]) );
-    TEST_ASSERT_FLOAT_WITHIN(tol, expected[2*num_pols*comp+4], creal(FEE_beam_gains[num_pols*comp+2]) );
-    TEST_ASSERT_FLOAT_WITHIN(tol, expected[2*num_pols*comp+5], cimag(FEE_beam_gains[num_pols*comp+2]) );
-    TEST_ASSERT_FLOAT_WITHIN(tol, expected[2*num_pols*comp+6], creal(FEE_beam_gains[num_pols*comp+3]) );
-    TEST_ASSERT_FLOAT_WITHIN(tol, expected[2*num_pols*comp+7], cimag(FEE_beam_gains[num_pols*comp+3]) );
+  // // Check the values are within TOLerance
+  for (int comp = 0; comp < num_azza; comp++) {
+
+
+    // printf("%.16f %.16f\n",expected[2*num_pols*comp+0], creal(FEE_beam_gains[num_pols*comp+0]) );
+
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*num_pols*comp+0], creal(FEE_beam_gains[num_pols*comp+0]) );
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*num_pols*comp+1], cimag(FEE_beam_gains[num_pols*comp+0]) );
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*num_pols*comp+2], creal(FEE_beam_gains[num_pols*comp+1]) );
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*num_pols*comp+3], cimag(FEE_beam_gains[num_pols*comp+1]) );
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*num_pols*comp+4], creal(FEE_beam_gains[num_pols*comp+2]) );
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*num_pols*comp+5], cimag(FEE_beam_gains[num_pols*comp+2]) );
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*num_pols*comp+6], creal(FEE_beam_gains[num_pols*comp+3]) );
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*num_pols*comp+7], cimag(FEE_beam_gains[num_pols*comp+3]) );
   }
 
   FILE *beam_values_out;
@@ -147,15 +147,15 @@ void test_RTS_CUDA_FEE_beam_VaryFreqVaryPointing(user_precision_t freq,
 Check whether the environment variable for the FEE hdf5 beam exists, don't run
 the test if it's missing
 */
-void check_for_env_and_run_test(user_precision_t freq, user_precision_t *delays,
-                                user_precision_t *expected, user_precision_t *expected_rot,
+void check_for_env_and_run_test(double freq, user_precision_t *delays,
+                                double *expected, double *expected_rot,
                                 char *outname) {
   char* mwa_fee_hdf5 = getenv("MWA_FEE_HDF5");
 
   #ifdef DOUBLE_PRECISION
   printf("WODEN is using DOUBLE precision\n");
   #else
-  printf("WODEN is using FLOAT precision\n");
+  printf("WODEN is using DOUBLE precision\n");
   #endif
 
   if (mwa_fee_hdf5) {

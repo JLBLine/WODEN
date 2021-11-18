@@ -23,19 +23,18 @@ are launched by calculate_visibilities::calculate_visibilities`
 //   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
 //   user_precision_t *sbf);
 
-#define UNITY_INCLUDE_FLOAT
-
 //Just two LSTs to check things change with time
 double lsts[] = {0.0, M_PI / 4};
 
-user_precision_t azs[] = {0.0, 4.528359553989764};
-user_precision_t zas[] = {0.0, 0.6978088917603547};
+double azs[] = {0.0, 4.528359553989764};
+double zas[] = {0.0, 0.6978088917603547};
 
-user_precision_t para_angs[] = {0.0, 1.7548257531898224};
+double para_angs[] = {0.0, 1.7548257531898224};
 
 //Different delays settings, which control the pointing of the MWA beam
 user_precision_t zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
 
 /*
 Create a number of SOURCEs and input into a sky model catalogue `source_catalogue_t`
@@ -46,7 +45,7 @@ Keep everything to just Stokes I 1 Jy, and stick the source at phase centre
 We'll stick with just one shapelet coeff per shapelet compoenent as there
 are other tests to make sure SHAPELETs works elsewhere
 */
-source_catalogue_t * make_cropped_sky_models(user_precision_t ra0, user_precision_t dec0,
+source_catalogue_t * make_cropped_sky_models(double ra0, double dec0,
                                              int n_points, int n_gauss,
                                              int n_shapes,
                                              int num_sources) {
@@ -75,7 +74,7 @@ source_catalogue_t * make_cropped_sky_models(user_precision_t ra0, user_precisio
 
       cropped_sky_models->catsources[cats_ind].point_ras = malloc(n_points*sizeof(double));
       cropped_sky_models->catsources[cats_ind].point_decs = malloc(n_points*sizeof(double));
-      cropped_sky_models->catsources[cats_ind].point_ref_freqs = malloc(n_points*sizeof(user_precision_t));
+      cropped_sky_models->catsources[cats_ind].point_ref_freqs = malloc(n_points*sizeof(double));
 
       cropped_sky_models->catsources[cats_ind].point_gaussbeam_has = malloc(n_points*NUM_TIME_STEPS*sizeof(double));
       cropped_sky_models->catsources[cats_ind].point_gaussbeam_decs = malloc(n_points*NUM_TIME_STEPS*sizeof(double));
@@ -90,13 +89,13 @@ source_catalogue_t * make_cropped_sky_models(user_precision_t ra0, user_precisio
         cropped_sky_models->catsources[cats_ind].point_decs[point] = dec0;
         cropped_sky_models->catsources[cats_ind].point_ref_freqs[point] = 150e+6;
 
-        cropped_sky_models->catsources[cats_ind].point_ref_stokesI[point] = 1.0;
+        cropped_sky_models->catsources[cats_ind].point_ref_stokesI[point] = STOKESI;
         cropped_sky_models->catsources[cats_ind].point_ref_stokesQ[point] = 0.0;
         cropped_sky_models->catsources[cats_ind].point_ref_stokesU[point] = 0.0;
         cropped_sky_models->catsources[cats_ind].point_ref_stokesV[point] = 0.0;
         cropped_sky_models->catsources[cats_ind].point_SIs[point] = 0.0;
 
-        for (size_t time = 0; time < NUM_TIME_STEPS; time++) {
+        for (int time = 0; time < NUM_TIME_STEPS; time++) {
           int step = point*NUM_TIME_STEPS + time;
           cropped_sky_models->catsources[cats_ind].point_gaussbeam_has[step] = lsts[time] - RA0;
           cropped_sky_models->catsources[cats_ind].point_gaussbeam_decs[step] = MWA_LAT_RAD;
@@ -121,7 +120,7 @@ source_catalogue_t * make_cropped_sky_models(user_precision_t ra0, user_precisio
 
       cropped_sky_models->catsources[cats_ind].gauss_ras = malloc(n_gauss*sizeof(double));
       cropped_sky_models->catsources[cats_ind].gauss_decs = malloc(n_gauss*sizeof(double));
-      cropped_sky_models->catsources[cats_ind].gauss_ref_freqs = malloc(n_gauss*sizeof(user_precision_t));
+      cropped_sky_models->catsources[cats_ind].gauss_ref_freqs = malloc(n_gauss*sizeof(double));
 
       cropped_sky_models->catsources[cats_ind].gauss_majors = malloc(n_gauss*sizeof(user_precision_t));
       cropped_sky_models->catsources[cats_ind].gauss_minors = malloc(n_gauss*sizeof(user_precision_t));
@@ -140,17 +139,17 @@ source_catalogue_t * make_cropped_sky_models(user_precision_t ra0, user_precisio
         cropped_sky_models->catsources[cats_ind].gauss_decs[gauss] = dec0;
         cropped_sky_models->catsources[cats_ind].gauss_ref_freqs[gauss] = 150e+6;
 
-        cropped_sky_models->catsources[cats_ind].gauss_ref_stokesI[gauss] = 1.0;
+        cropped_sky_models->catsources[cats_ind].gauss_ref_stokesI[gauss] = STOKESI;
         cropped_sky_models->catsources[cats_ind].gauss_ref_stokesQ[gauss] = 0.0;
         cropped_sky_models->catsources[cats_ind].gauss_ref_stokesU[gauss] = 0.0;
         cropped_sky_models->catsources[cats_ind].gauss_ref_stokesV[gauss] = 0.0;
         cropped_sky_models->catsources[cats_ind].gauss_SIs[gauss] = 0.0;
 
-        cropped_sky_models->catsources[cats_ind].gauss_majors[gauss] = (0.1/60.0)*DD2R;
-        cropped_sky_models->catsources[cats_ind].gauss_minors[gauss] = (0.1/60.0)*DD2R;
+        cropped_sky_models->catsources[cats_ind].gauss_majors[gauss] = 1e-10;
+        cropped_sky_models->catsources[cats_ind].gauss_minors[gauss] = 1e-10;
         cropped_sky_models->catsources[cats_ind].gauss_pas[gauss] = 0;
 
-        for (size_t time = 0; time < NUM_TIME_STEPS; time++) {
+        for (int time = 0; time < NUM_TIME_STEPS; time++) {
           int step = gauss*NUM_TIME_STEPS + time;
           cropped_sky_models->catsources[cats_ind].gauss_gaussbeam_has[step] = lsts[time] - RA0;
           cropped_sky_models->catsources[cats_ind].gauss_gaussbeam_decs[step] = MWA_LAT_RAD;
@@ -173,7 +172,7 @@ source_catalogue_t * make_cropped_sky_models(user_precision_t ra0, user_precisio
 
       cropped_sky_models->catsources[cats_ind].shape_ras = malloc(n_shapes*sizeof(double));
       cropped_sky_models->catsources[cats_ind].shape_decs = malloc(n_shapes*sizeof(double));
-      cropped_sky_models->catsources[cats_ind].shape_ref_freqs = malloc(n_shapes*sizeof(user_precision_t));
+      cropped_sky_models->catsources[cats_ind].shape_ref_freqs = malloc(n_shapes*sizeof(double));
 
       cropped_sky_models->catsources[cats_ind].shape_majors = malloc(n_shapes*sizeof(user_precision_t));
       cropped_sky_models->catsources[cats_ind].shape_minors = malloc(n_shapes*sizeof(user_precision_t));
@@ -197,14 +196,14 @@ source_catalogue_t * make_cropped_sky_models(user_precision_t ra0, user_precisio
         cropped_sky_models->catsources[cats_ind].shape_decs[shape] = dec0;
         cropped_sky_models->catsources[cats_ind].shape_ref_freqs[shape] = 150e+6;
 
-        cropped_sky_models->catsources[cats_ind].shape_ref_stokesI[shape] = 1.0;
+        cropped_sky_models->catsources[cats_ind].shape_ref_stokesI[shape] = STOKESI;
         cropped_sky_models->catsources[cats_ind].shape_ref_stokesQ[shape] = 0.0;
         cropped_sky_models->catsources[cats_ind].shape_ref_stokesU[shape] = 0.0;
         cropped_sky_models->catsources[cats_ind].shape_ref_stokesV[shape] = 0.0;
         cropped_sky_models->catsources[cats_ind].shape_SIs[shape] = 0.0;
 
-        cropped_sky_models->catsources[cats_ind].shape_majors[shape] = (0.1/60.0)*DD2R;
-        cropped_sky_models->catsources[cats_ind].shape_minors[shape] = (0.1/60.0)*DD2R;
+        cropped_sky_models->catsources[cats_ind].shape_majors[shape] = 1e-10;
+        cropped_sky_models->catsources[cats_ind].shape_minors[shape] = 1e-10;
         cropped_sky_models->catsources[cats_ind].shape_pas[shape] = 0;
 
         //These settings basically make this shapelet a GAUSSIAN
@@ -213,7 +212,7 @@ source_catalogue_t * make_cropped_sky_models(user_precision_t ra0, user_precisio
         cropped_sky_models->catsources[cats_ind].shape_n2s[shape] = 0.0;
         cropped_sky_models->catsources[cats_ind].shape_param_indexes[shape] = 0.0;
 
-        for (size_t time = 0; time < NUM_TIME_STEPS; time++) {
+        for (int time = 0; time < NUM_TIME_STEPS; time++) {
           int step = shape*NUM_TIME_STEPS + time;
           cropped_sky_models->catsources[cats_ind].shape_gaussbeam_has[step] = lsts[time] - RA0;
           cropped_sky_models->catsources[cats_ind].shape_gaussbeam_decs[step] = MWA_LAT_RAD;
@@ -319,7 +318,7 @@ void free_sky_model(source_catalogue_t *cropped_sky_models) {
   free(cropped_sky_models);
 }
 
-woden_settings_t * make_woden_settings(user_precision_t ra0, user_precision_t dec0) {
+woden_settings_t * make_woden_settings(double ra0, double dec0) {
 
     woden_settings_t *woden_settings = malloc(sizeof(woden_settings_t));
 
@@ -334,7 +333,7 @@ woden_settings_t * make_woden_settings(user_precision_t ra0, user_precision_t de
     woden_settings->coarse_band_width = 1.28e+6;
     //Make the fine channel width insanely small so beam changes little
     //with frequency - that way we can test for just one gain value per time
-    woden_settings->frequency_resolution = 1;
+    woden_settings->frequency_resolution = 1e-6;
 
     return woden_settings;
 }
@@ -345,19 +344,19 @@ the uvw should be a simple reduced product between phase centre and lsts.
 Create some expected u,v,w arrays and compare to what we've found
 */
 void test_uvw(visibility_set_t *visibility_set,  double *lsts,
-              user_precision_t ra0, user_precision_t dec0) {
+              double ra0, double dec0) {
 
   int num_visis = NUM_BASELINES * NUM_FREQS * NUM_TIME_STEPS;
-  user_precision_t *expec_u = malloc(num_visis * sizeof(user_precision_t));
-  user_precision_t *expec_v = malloc(num_visis * sizeof(user_precision_t));
-  user_precision_t *expec_w = malloc(num_visis * sizeof(user_precision_t));
+  double *expec_u = malloc(num_visis * sizeof(double));
+  double *expec_v = malloc(num_visis * sizeof(double));
+  double *expec_w = malloc(num_visis * sizeof(double));
 
   int index = 0;
-  user_precision_t xy_length;
-  user_precision_t ha0;
-  for (size_t time = 0; time < NUM_TIME_STEPS; time++) {
+  double xy_length;
+  double ha0;
+  for (int time = 0; time < NUM_TIME_STEPS; time++) {
     ha0 = lsts[time] - ra0;
-    for (size_t freq = 0; freq < NUM_FREQS; freq++) {
+    for (int freq = 0; freq < NUM_FREQS; freq++) {
       for (int baseline = 0; baseline < NUM_BASELINES; baseline++) {
         xy_length = (baseline + 1) * 100;
         expec_u[index] = (cos(ha0) + sin(ha0))*xy_length;
@@ -369,20 +368,25 @@ void test_uvw(visibility_set_t *visibility_set,  double *lsts,
     }
   }
 
-  for (size_t visi = 0; visi < num_visis; visi++) {
+  #ifdef DOUBLE_PRECISION
+    double TOL = 1e-12;
+  #else
+    double TOL = 1e-5;
+  #endif
+
+  for (int visi = 0; visi < num_visis; visi++) {
     // printf("%.1f %.1f %.1f %.1f %.1f %.1f\n",
     //         visibility_set->us_metres[visi], expec_u[visi],
     //         visibility_set->vs_metres[visi], expec_v[visi],
     //         visibility_set->ws_metres[visi], expec_w[visi] );
-    TEST_ASSERT_FLOAT_WITHIN(1e-4, expec_u[visi], visibility_set->us_metres[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(1e-4, expec_v[visi], visibility_set->vs_metres[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(1e-4, expec_w[visi], visibility_set->ws_metres[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_u[visi],
+                              visibility_set->us_metres[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_v[visi],
+                              visibility_set->vs_metres[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_w[visi],
+                              visibility_set->ws_metres[visi]);
 
   }
-
-  // TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_u, visibility_set->us_metres, num_visis);
-  // TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_v, visibility_set->vs_metres, num_visis);
-  // TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_w, visibility_set->ws_metres, num_visis);
 
   free(expec_u);
   free(expec_v);
@@ -396,17 +400,17 @@ Checkthe u,v,w are correct and return the visibility_set for further testing
 visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_models,
                                  beam_settings_t *beam_settings,
                                  woden_settings_t *woden_settings,
-                                 user_precision_t ra0, user_precision_t dec0,
+                                 double ra0, double dec0,
                                  int beamtype) {
 
-  user_precision_t base_band_freq = BASE_BAND_FREQ;
+  double base_band_freq = BASE_BAND_FREQ;
   // user_precision_t base_band_freq = 120e+6;
 
   array_layout_t *array_layout = malloc(sizeof(array_layout_t));
 
-  array_layout->X_diff_metres = malloc(NUM_BASELINES*sizeof(user_precision_t));
-  array_layout->Y_diff_metres = malloc(NUM_BASELINES*sizeof(user_precision_t));
-  array_layout->Z_diff_metres = malloc(NUM_BASELINES*sizeof(user_precision_t));
+  array_layout->X_diff_metres = malloc(NUM_BASELINES*sizeof(double));
+  array_layout->Y_diff_metres = malloc(NUM_BASELINES*sizeof(double));
+  array_layout->Z_diff_metres = malloc(NUM_BASELINES*sizeof(double));
 
   for (int baseline = 0; baseline < NUM_BASELINES; baseline++) {
     array_layout->X_diff_metres[baseline] = (baseline + 1) * 100;
@@ -435,7 +439,7 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
       // // //We need the zenith beam to get the normalisation
       beam_settings->FEE_beam_zenith = malloc(sizeof(RTS_MWA_FEE_beam_t));
       // //
-      user_precision_t base_middle_freq = BASE_BAND_FREQ + (woden_settings->coarse_band_width/2.0);
+      double base_middle_freq = BASE_BAND_FREQ + (woden_settings->coarse_band_width/2.0);
       //
       // // printf("Middle freq %.1f\n",base_middle_freq / 1e6 );
       //
@@ -452,7 +456,7 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
                              woden_settings, visibility_set, sbf);
       printf("CUDA has finished\n");
 
-      // for (size_t visi = 0; visi < woden_settings->num_visis; visi++) {
+      // for (int visi = 0; visi < woden_settings->num_visis; visi++) {
       //   printf("%.4f %.4f %.4f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
       //           visibility_set->us_metres[visi],
       //           visibility_set->vs_metres[visi],
@@ -503,14 +507,14 @@ This test works for beams that change with time, but have no cross-pol info
 Can just test whether the XX/YY real values match expected
 */
 void test_comp_phase_centre_twogains(visibility_set_t *visibility_set,
-                                     user_precision_t gain1xx, user_precision_t gain1yy,
-                                     user_precision_t gain2xx, user_precision_t gain2yy) {
+                                     double gain1xx, double gain1yy,
+                                     double gain2xx, double gain2yy) {
 
-  user_precision_t *expec_gainsxx = malloc(NUM_VISI*sizeof(user_precision_t));
-  user_precision_t *expec_gainsyy = malloc(NUM_VISI*sizeof(user_precision_t));
+  double *expec_gainsxx = malloc(NUM_VISI*sizeof(double));
+  double *expec_gainsyy = malloc(NUM_VISI*sizeof(double));
 
-  user_precision_t gainsxx[] = {gain1xx, gain2xx};
-  user_precision_t gainsyy[] = {gain1yy, gain2yy};
+  double gainsxx[] = {gain1xx, gain2xx};
+  double gainsyy[] = {gain1yy, gain2yy};
 
   for (int time = 0; time < NUM_TIME_STEPS; time++) {
     for (int visi = 0; visi < NUM_VISI/2; visi++) {
@@ -520,13 +524,16 @@ void test_comp_phase_centre_twogains(visibility_set_t *visibility_set,
 
   }
 
+  #ifdef DOUBLE_PRECISION
+    double TOL = 1e-8;
+  #else
+    double TOL = 1e-5;
+  #endif
+
   //We're testing all COMPONENT types with this function, where the values of
   //the real vary slightly for baseline (I've set the major/minor to be small
   //enough to be close to 1.0 but not quite)
-
-  user_precision_t gainxx;
-  user_precision_t gainyy;
-  for (size_t visi = 0; visi < NUM_VISI; visi++) {
+  for (int visi = 0; visi < NUM_VISI; visi++) {
   //   printf("%.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
   //           visibility_set->sum_visi_XX_real[visi],
   //           visibility_set->sum_visi_XX_imag[visi],
@@ -537,18 +544,25 @@ void test_comp_phase_centre_twogains(visibility_set_t *visibility_set,
   //           visibility_set->sum_visi_YY_imag[visi],
   //           visibility_set->sum_visi_YY_real[visi] );
 
-    gainxx = expec_gainsxx[visi];
-    gainyy = expec_gainsyy[visi];
-    // printf("Expec GAIN %.1f\n",gain );
+    // printf("Expec GAIN %.16f %.16f\n", expec_gainsxx[visi]
+    //                             visibility_set->sum_visi_XX_real[visi] );
 
-    TEST_ASSERT_FLOAT_WITHIN(gainxx*1e-4, gainxx, visibility_set->sum_visi_XX_real[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gainxx*1e-4, 0.0, visibility_set->sum_visi_XX_imag[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gainxx*1e-4, 0.0, visibility_set->sum_visi_XY_real[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gainxx*1e-4, 0.0, visibility_set->sum_visi_XY_imag[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gainxx*1e-4, 0.0, visibility_set->sum_visi_YX_real[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gainxx*1e-4, 0.0, visibility_set->sum_visi_YX_imag[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gainyy*1e-4, gainyy, visibility_set->sum_visi_YY_real[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gainyy*1e-4, 0.0, visibility_set->sum_visi_YY_imag[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_gainsxx[visi],
+                              visibility_set->sum_visi_XX_real[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                              visibility_set->sum_visi_XX_imag[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                              visibility_set->sum_visi_XY_real[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                              visibility_set->sum_visi_XY_imag[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                              visibility_set->sum_visi_YX_real[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                              visibility_set->sum_visi_YX_imag[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_gainsyy[visi],
+                              visibility_set->sum_visi_YY_real[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                              visibility_set->sum_visi_YY_imag[visi]);
 
   }
   free(expec_gainsxx);

@@ -85,17 +85,20 @@ make sure ``calculate_visibilities`` is calling the appropriate functions:
      - 27
 
 All sources are given an *RA,Dec* equal to the phase centre, a spectral index
-of zero, and a flux density of 1.0 Jy. This way, the output visibilities (in the absence
-of a primary beam) should be fully real, and equal to the sum of the number of
-COMPONENTs in the sky model. GAUSSIAN and SHAPELET components with any size would
-cause a loss in flux, so I've set their major and minor axes to a minuscule number so
-they behave like point sources.
+of zero, and a flux density of 0.3333333333333333 Jy. This way, the output visibilities
+(in the absence of a primary beam) should be fully real, and equal to the sum of the number of
+COMPONENTs in the sky model multiplied by 0.3333333333333333. This numerical 1/3
+flux is a good test of the precision of the FLOAT and DOUBLE compiled codes.
+
+GAUSSIAN and SHAPELET components with any size cause a reduction of the real part
+of the visibility due to the extended size on the sky. For these tests, I've set
+their major and minor axes to 1e-10 to make them behave similarly to point sources.
 
 For all tests below, I setup a simulation with three baselines, three frequencies,
-and two timesteps. For all sky models, frequencies, timesteps, and baselines, I check:
+and two timesteps. For all sky models, frequencies, time steps, and baselines, I check:
 
  - The *u,v,w* are as expected
- - The visibilities are equal to the sum of the COMPONENTs (modulu the beam repsonse - see below)
+ - The real part of the visibilities are equal to number of COMPONENTs times 0.3333333333333333 Jy (modulu the beam repsonse - see below)
 
 To keep testing the *u,v,w* straight forward, I've set the baseline lengths in :math:`X` and :math:`Y` equal, (i.e. :math:`X_{\mathrm{diff}} = X_{\mathrm{ant1}} - X_{\mathrm{ant2}} = Y_{\mathrm{diff}}`), and the length in :math:`Z` to zero. With this configuration, the
 following is true:
@@ -107,13 +110,18 @@ following is true:
 where :math:`ha_0` is the hour angle of the phase centre, and :math:`\phi_{\mathrm{lat}}`
 the latitude of the array. The allows us to check the *u,v,w* are changing with time.
 
+For FLOAT compiled code, the absolute tolerance threshold on the *u,v,w*
+values is set to 1e-5, and 1e-12 for DOUBLE compiled code.
+
 ``test_calculate_visibilities_nobeam.c``
 *********************************************
 This runs the tests explained above, whilst switching the primary beam off. This
-really does check that real visibilities are equal to the number of COMPONENTs for all 12
-sky model configurations, and the imaginary equal to zero. A tolerance of within 0.1% of the
-expected value is applied when checking the visibilities (the same tolerance is applied for
-the following test files as well).
+really does check that real visibilities are equal to the number of COMPONENTs
+times 0.3333333333333333 for all 12 sky model configurations, and the imaginary
+equal to zero.
+
+For FLOAT compiled code, the absolute tolerance threshold on
+values is set to 1e-6, and 1e-9 for DOUBLE compiled code.
 
 ``test_calculate_visibilities_gaussbeam.c``
 *********************************************
@@ -125,6 +133,9 @@ COMPONENTs. The Gaussian beam is fully real and has no cross-pol values, so only
 check that the real XX and YY visibilities have value, and ensure all other
 visibility information is zero.
 
+For FLOAT compiled code, the absolute tolerance threshold on
+values is set to 1e-5, and 1e-8 for DOUBLE compiled code.
+
 ``test_calculate_visibilities_edabeam.c``
 *********************************************
 Runs exactly the same tests as ``test_calculate_visibilities_gaussbeam.c``, but
@@ -132,9 +143,18 @@ using the analytic single dipole beam (the EDA2 beam). Obviously tests the
 visiblities match the gain values that are expected for the EDA2 beam and not
 the Gaussian Beam test.
 
+For FLOAT compiled code, the absolute tolerance threshold on
+values is set to 1e-5, and 1e-8 for DOUBLE compiled code.
+
 ``test_calculate_visibilities_mwafeebeam.c``
 *********************************************
 Again, runs the same tests as ``test_calculate_visibilities_gaussbeam.c``, but
 this time for the coarse resolution MWA FEE primary beam. As this model is
 complex and includes mutual coupling, both the real and imaginary values
 for all XX, XY, YX, and YY polarisations are tested.
+
+For FLOAT compiled code, the absolute tolerance threshold on
+values is set to 4e-3, and 1e-7 for DOUBLE compiled code. The expected gains
+of the MWA FEE beam are taken from the DOUBLE compiled code, and so the large
+threshold for the FLOAT here is mostly due to the inaccuracy of the FLOAT
+MWA FEE beam code (see :ref:`FEE_primary_beam_cuda_cmake` for more discussion on this).

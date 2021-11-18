@@ -45,8 +45,8 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_compile_options(test_calc_XYZ_diffs_${PRECISION}_app PRIVATE ${C_FLAGS})
   add_test(C_test_calc_XYZ_diffs_${PRECISION} test_calc_XYZ_diffs_${PRECISION}_app)
-
-
+  
+  
   add_executable(test_RTS_PrecessXYZtoJ2000_${PRECISION}_app
       test_RTS_PrecessXYZtoJ2000.c
   )

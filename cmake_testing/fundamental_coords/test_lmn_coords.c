@@ -13,7 +13,8 @@ extern void test_kern_calc_lmn(double ra0, double dec0,
                                double *ras, double *decs, int num_coords,
                                double * ls, double * ms, double * ns);
 
-#define UNITY_INCLUDE_FLOAT
+// //Tolerance used for testing
+double TOL = 1e-15;
 
 void test_kern_calc_lmn_GivesCorrectlCoords(void)
 {
@@ -41,17 +42,17 @@ void test_kern_calc_lmn_GivesCorrectlCoords(void)
     test_kern_calc_lmn(ra0, dec0, ras, decs, num_points,
                                    ls, ms, ns);
 
-    user_precision_t l_expected[9] = {-1.0, -sqrt(3)/2.0, -sqrt(2)/2.0, -0.5,
+    double l_expected[9] = {-1.0, -sqrt(3)/2.0, -sqrt(2)/2.0, -0.5,
                             0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0, 1.0};
-    user_precision_t n_expected[9] = {0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0,
+    double n_expected[9] = {0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0,
                            1.0, sqrt(3)/2.0, sqrt(2)/2.0, 0.5, 0.0};
 
     // Here, when n should be 0.0, we get some user_precision_ting point error from the
     // sin/cos functions
     for (int i = 0; i < num_points; i++) {
-      TEST_ASSERT_EQUAL_FLOAT(l_expected[i], (user_precision_t)ls[i]);
-      TEST_ASSERT_EQUAL_FLOAT(0.0, (user_precision_t)ms[i]);
-      TEST_ASSERT_FLOAT_WITHIN(2e-7, n_expected[i], ns[i]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, l_expected[i], ls[i]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, ms[i]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, n_expected[i], ns[i]);
     }    // Here, when n should be 0.0, we get some user_precision_ting point error from the
         // sin/cos functions
 
@@ -65,8 +66,8 @@ void test_kern_calc_lmn_GivesCorrectlCoords(void)
 
 void test_kern_calc_lmn_GivesCorrectmCoords(void)
 {
-    user_precision_t ra0 = 0.0*DD2R;
-    user_precision_t dec0 = 0.0*DD2R;
+    double ra0 = 0.0*DD2R;
+    double dec0 = 0.0*DD2R;
 
     int num_points = 9;
     double *ras = malloc(num_points*sizeof(double));
@@ -89,17 +90,17 @@ void test_kern_calc_lmn_GivesCorrectmCoords(void)
     test_kern_calc_lmn(ra0, dec0, ras, decs, num_points,
                                    ls, ms, ns);
 
-    user_precision_t m_expected[9] = {-1.0, -sqrt(3)/2.0, -sqrt(2)/2.0, -0.5,
+    double m_expected[9] = {-1.0, -sqrt(3)/2.0, -sqrt(2)/2.0, -0.5,
                             0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0, 1.0};
-    user_precision_t n_expected[9] = {0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0,
+    double n_expected[9] = {0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0,
                            1.0, sqrt(3)/2.0, sqrt(2)/2.0, 0.5, 0.0};
 
     // Here, when n should be 0.0, we get some user_precision_ting point error from the
     // sin/cos functions
     for (int i = 0; i < num_points; i++) {
-      TEST_ASSERT_EQUAL_FLOAT(0.0, (user_precision_t)ls[i]);
-      TEST_ASSERT_EQUAL_FLOAT(m_expected[i], (user_precision_t)ms[i]);
-      TEST_ASSERT_FLOAT_WITHIN(2e-7, n_expected[i], ns[i]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, ls[i]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, m_expected[i], ms[i]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, n_expected[i], ns[i]);
     }
 
     free(ras);

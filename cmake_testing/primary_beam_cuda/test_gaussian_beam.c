@@ -11,12 +11,16 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 
 //External CUDA code we're linking in
 extern void test_kern_gaussian_beam(double *beam_ls, double *beam_ms,
-           user_precision_t beam_ref_freq, user_precision_t *freqs,
+           double beam_ref_freq, double *freqs,
            user_precision_t fwhm_lm, user_precision_t cos_theta, user_precision_t sin_theta, user_precision_t sin_2theta,
            int num_freqs, int num_time_steps, int num_components,
            user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J11);
 
-#define UNITY_INCLUDE_FLOAT
+#ifdef DOUBLE_PRECISION
+  double TOL = 1e-16;
+#else
+  double TOL = 1e-10;
+#endif
 
 /*
 This function calls test_kern_gaussian_beam. It calculates a set of l,m input
@@ -26,7 +30,7 @@ it tests a strip in l or m
 void get_1D_gaussian_values(double *beam_ls, double *beam_ms,
                             user_precision_complex_t *primay_beam_J00,
                             user_precision_complex_t *primay_beam_J11,
-                            user_precision_t *freqs, user_precision_t beam_ref_freq,
+                            double *freqs, double beam_ref_freq,
                             int vary_l, user_precision_t fwhm_lm,
                             int num_freqs, int num_times, int num_components){
 
@@ -54,7 +58,7 @@ void get_1D_gaussian_values(double *beam_ls, double *beam_ms,
     }
   }
 
-  user_precision_t freq_inc = 25e+5;
+  double freq_inc = 25e+5;
 
   for (int i = 0; i < num_freqs; i++) {
     freqs[i] = beam_ref_freq + i*freq_inc;
@@ -76,7 +80,7 @@ void test_analytic_dipole_beam_GivesCorrectlValues(void) {
   //Set full width half max to 20 deg, convert to l,m coord
   user_precision_t fwhm = 20.0;
   user_precision_t fwhm_lm = sin(fwhm*DD2R);
-  user_precision_t beam_ref_freq = 150e+6;
+  double beam_ref_freq = 150e+6;
 
   double *beam_ls = malloc(num_beam_values*sizeof(double));
   double *beam_ms = malloc(num_beam_values*sizeof(double));
@@ -84,7 +88,7 @@ void test_analytic_dipole_beam_GivesCorrectlValues(void) {
   user_precision_complex_t *primay_beam_J00 = malloc(num_beam_values*sizeof(user_precision_complex_t));
   user_precision_complex_t *primay_beam_J11 = malloc(num_beam_values*sizeof(user_precision_complex_t));
 
-  user_precision_t *freqs = malloc(num_freqs*sizeof(user_precision_t));
+  double *freqs = malloc(num_freqs*sizeof(user_precision_t));
 
   int vary_l = 1;
   get_1D_gaussian_values(beam_ls, beam_ms,
@@ -95,14 +99,14 @@ void test_analytic_dipole_beam_GivesCorrectlValues(void) {
 
   for (int i = 0; i < num_components; i++) {
 
-    user_precision_t std = (fwhm_lm / FWHM_FACTOR);
-    user_precision_t exp_inside = (user_precision_t)beam_ls[i] / std;
-    user_precision_t estimate = expf(-0.5*exp_inside*exp_inside);
+    double std = (fwhm_lm / FWHM_FACTOR);
+    double exp_inside = beam_ls[i] / std;
+    double estimate = exp(-0.5*exp_inside*exp_inside);
 
-    TEST_ASSERT_FLOAT_WITHIN(1e-7, estimate, creal(primay_beam_J00[i]));
-    TEST_ASSERT_FLOAT_WITHIN(1e-7, estimate, creal(primay_beam_J11[i]));
-    TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J00[i]));
-    TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J11[i]));
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, estimate, creal(primay_beam_J00[i]));
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, estimate, creal(primay_beam_J11[i]));
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J00[i]));
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J11[i]));
 
   }
 }
@@ -116,7 +120,7 @@ void test_analytic_dipole_beam_GivesCorrectmValues(void) {
   //Set full width half max to 20 deg, convert to l,m coord
   user_precision_t fwhm = 20.0;
   user_precision_t fwhm_lm = sin(fwhm*DD2R);
-  user_precision_t beam_ref_freq = 150e+6;
+  double beam_ref_freq = 150e+6;
 
   double *beam_ls = malloc(num_beam_values*sizeof(double));
   double *beam_ms = malloc(num_beam_values*sizeof(double));
@@ -124,7 +128,7 @@ void test_analytic_dipole_beam_GivesCorrectmValues(void) {
   user_precision_complex_t *primay_beam_J00 = malloc(num_beam_values*sizeof(user_precision_complex_t));
   user_precision_complex_t *primay_beam_J11 = malloc(num_beam_values*sizeof(user_precision_complex_t));
 
-  user_precision_t *freqs = malloc(num_freqs*sizeof(user_precision_t));
+  double *freqs = malloc(num_freqs*sizeof(user_precision_t));
 
   int vary_l = 0;
   get_1D_gaussian_values(beam_ls, beam_ms,
@@ -135,14 +139,14 @@ void test_analytic_dipole_beam_GivesCorrectmValues(void) {
 
   for (int i = 0; i < num_components; i++) {
 
-    user_precision_t std = (fwhm_lm / FWHM_FACTOR);
-    user_precision_t exp_inside = (user_precision_t)beam_ms[i] / std;
-    user_precision_t estimate = expf(-0.5*exp_inside*exp_inside);
+    double std = (fwhm_lm / FWHM_FACTOR);
+    double exp_inside = beam_ms[i] / std;
+    double estimate = exp(-0.5*exp_inside*exp_inside);
 
-    TEST_ASSERT_FLOAT_WITHIN(1e-7, estimate, creal(primay_beam_J00[i]));
-    TEST_ASSERT_FLOAT_WITHIN(1e-7, estimate, creal(primay_beam_J11[i]));
-    TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J00[i]));
-    TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J11[i]));
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, estimate, creal(primay_beam_J00[i]));
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, estimate, creal(primay_beam_J11[i]));
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J00[i]));
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J11[i]));
 
   }
 }
@@ -157,7 +161,7 @@ void test_analytic_dipole_beam_GivesCorrectlValuesByFreq(void) {
   //Set full width half max to 20 deg, convert to l,m coord
   user_precision_t fwhm = 20.0;
   user_precision_t fwhm_lm = sin(fwhm*DD2R);
-  user_precision_t beam_ref_freq = 150e+6;
+  double beam_ref_freq = 150e+6;
 
   double *beam_ls = malloc(num_beam_values*sizeof(double));
   double *beam_ms = malloc(num_beam_values*sizeof(double));
@@ -165,7 +169,7 @@ void test_analytic_dipole_beam_GivesCorrectlValuesByFreq(void) {
   user_precision_complex_t *primay_beam_J00 = malloc(num_beam_values*sizeof(user_precision_complex_t));
   user_precision_complex_t *primay_beam_J11 = malloc(num_beam_values*sizeof(user_precision_complex_t));
 
-  user_precision_t *freqs = malloc(num_freqs*sizeof(user_precision_t));
+  double *freqs = malloc(num_freqs*sizeof(user_precision_t));
 
   int vary_l = 1;
   get_1D_gaussian_values(beam_ls, beam_ms,
@@ -178,14 +182,14 @@ void test_analytic_dipole_beam_GivesCorrectlValuesByFreq(void) {
   for (int freq_ind = 0; freq_ind < num_freqs; freq_ind++) {
     for (int comp_ind = 0; comp_ind < num_components; comp_ind++) {
 
-      user_precision_t std = (fwhm_lm / FWHM_FACTOR) * (beam_ref_freq / freqs[freq_ind]);
-      user_precision_t exp_inside = (user_precision_t)beam_ls[comp_ind] / std;
-      user_precision_t estimate = expf(-0.5*exp_inside*exp_inside);
+      double std = (fwhm_lm / FWHM_FACTOR) * (beam_ref_freq / freqs[freq_ind]);
+      double exp_inside = beam_ls[comp_ind] / std;
+      double estimate = exp(-0.5*exp_inside*exp_inside);
 
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, estimate, creal(primay_beam_J00[beam_ind]));
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, estimate, creal(primay_beam_J11[beam_ind]));
-      TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J00[beam_ind]));
-      TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J11[beam_ind]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, estimate, creal(primay_beam_J00[beam_ind]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, estimate, creal(primay_beam_J11[beam_ind]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J00[beam_ind]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J11[beam_ind]));
 
       beam_ind += 1;
 
@@ -202,7 +206,7 @@ void test_analytic_dipole_beam_GivesCorrectmValuesByFreq(void) {
   //Set full width half max to 20 deg, convert to l,m coord
   user_precision_t fwhm = 20.0;
   user_precision_t fwhm_lm = sin(fwhm*DD2R);
-  user_precision_t beam_ref_freq = 150e+6;
+  double beam_ref_freq = 150e+6;
 
   double *beam_ls = malloc(num_beam_values*sizeof(double));
   double *beam_ms = malloc(num_beam_values*sizeof(double));
@@ -210,7 +214,7 @@ void test_analytic_dipole_beam_GivesCorrectmValuesByFreq(void) {
   user_precision_complex_t *primay_beam_J00 = malloc(num_beam_values*sizeof(user_precision_complex_t));
   user_precision_complex_t *primay_beam_J11 = malloc(num_beam_values*sizeof(user_precision_complex_t));
 
-  user_precision_t *freqs = malloc(num_freqs*sizeof(user_precision_t));
+  double *freqs = malloc(num_freqs*sizeof(user_precision_t));
 
   int vary_l = 0;
   get_1D_gaussian_values(beam_ls, beam_ms,
@@ -223,14 +227,14 @@ void test_analytic_dipole_beam_GivesCorrectmValuesByFreq(void) {
   for (int freq_ind = 0; freq_ind < num_freqs; freq_ind++) {
     for (int comp_ind = 0; comp_ind < num_components; comp_ind++) {
 
-      user_precision_t std = (fwhm_lm / FWHM_FACTOR) * (beam_ref_freq / freqs[freq_ind]);
-      user_precision_t exp_inside = (user_precision_t)beam_ms[comp_ind] / std;
-      user_precision_t estimate = expf(-0.5*exp_inside*exp_inside);
+      double std = (fwhm_lm / FWHM_FACTOR) * (beam_ref_freq / freqs[freq_ind]);
+      double exp_inside = beam_ms[comp_ind] / std;
+      double estimate = expf(-0.5*exp_inside*exp_inside);
 
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, estimate, creal(primay_beam_J00[beam_ind]));
-      TEST_ASSERT_FLOAT_WITHIN(1e-7, estimate, creal(primay_beam_J11[beam_ind]));
-      TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J00[beam_ind]));
-      TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(primay_beam_J11[beam_ind]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, estimate, creal(primay_beam_J00[beam_ind]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, estimate, creal(primay_beam_J11[beam_ind]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J00[beam_ind]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J11[beam_ind]));
 
       beam_ind += 1;
 
@@ -245,7 +249,7 @@ int main(void)
     RUN_TEST(test_analytic_dipole_beam_GivesCorrectlValues);
     RUN_TEST(test_analytic_dipole_beam_GivesCorrectmValues);
     RUN_TEST(test_analytic_dipole_beam_GivesCorrectlValuesByFreq);
-    // RUN_TEST(test_analytic_dipole_beam_GivesCorrectmValuesByFreq);
+    RUN_TEST(test_analytic_dipole_beam_GivesCorrectmValuesByFreq);
 
     return UNITY_END();
 }

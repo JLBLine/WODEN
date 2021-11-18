@@ -56,7 +56,7 @@ intialised at the closest stored frequency to `freq_Hz`.
 @param[in] FEE_delays Dipole delay factors to specify beam pointings
 
 */
-int RTS_MWAFEEInit(const char *h5filename, user_precision_t freq_Hz,
+int RTS_MWAFEEInit(const char *h5filename, double freq_Hz,
                    RTS_MWA_FEE_beam_t *pb, user_precision_t *FEE_delays);
 
 /**

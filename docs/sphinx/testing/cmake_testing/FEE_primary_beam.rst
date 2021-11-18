@@ -8,10 +8,10 @@ test_RTS_MWAFEEInit.c
 coefficients from ``mwa_full_embedded_element_pattern.h5`` and stores them in an ``RTS_MWA_FEE_beam_t`` struct, to be used later in MWA FEE beam calculations.
 There are four generated arrays that matter, which are::
 
-  RTS_MWA_FEE_beam_t->Q1 (float _Complex)
-  RTS_MWA_FEE_beam_t->Q2 (float _Complex)
-  RTS_MWA_FEE_beam_t->M (float)
-  RTS_MWA_FEE_beam_t->N (float)
+  RTS_MWA_FEE_beam_t->Q1 (double _Complex)
+  RTS_MWA_FEE_beam_t->Q2 (double _Complex)
+  RTS_MWA_FEE_beam_t->M (double)
+  RTS_MWA_FEE_beam_t->N (double)
 
 The MWA beam pointing direction on the sky is controlled by a set of 16 delays.
 A different delay setting is stored in a different table in the ``hdf5`` file.

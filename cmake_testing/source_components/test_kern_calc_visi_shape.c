@@ -1,4 +1,3 @@
-#include <math.h>
 #include <unity.h>
 #include <stdlib.h>
 #include <complex.h>
@@ -8,15 +7,13 @@
 #include "test_kern_calc_visi_common.h"
 #include "shapelet_basis.h"
 
-// void sincos(user_precision_t x, user_precision_t *sin, user_precision_t *cos);
-
 void setUp (void) {} /* Is run before eVary test, put unit init calls here. */
 void tearDown (void) {} /* Is run after eVary test, put unit clean-up calls here. */
 
 //External CUDA code we're linking in
 extern void test_kern_calc_visi_shapelet(int num_components, int num_baselines,
           int num_freqs, int num_visis, int num_times, int num_coeffs, int beamtype,
-          user_precision_t *component_freqs,
+          double *component_freqs,
           user_precision_t *flux_I, user_precision_t *flux_Q,
           user_precision_t *flux_U, user_precision_t *flux_V,
           user_precision_t *SIs, user_precision_t *us, user_precision_t *vs, user_precision_t *ws,
@@ -34,15 +31,12 @@ extern void test_kern_calc_visi_shapelet(int num_components, int num_baselines,
           user_precision_t *shape_n1s, user_precision_t *shape_n2s, user_precision_t *shape_coeffs,
           user_precision_t *shape_param_indexes, user_precision_t *sbf);
 
-#define UNITY_INCLUDE_FLOAT
-
 //Change required accuracy of outputs for different precisions
+//This is a fractional tolerance, not an absolute
 #ifdef DOUBLE_PRECISION
-  //Accurate to within 0.00000000001%
-  #define FRAC_TOL 1e-12
+  double FRAC_TOL = 1e-12;
 #else
-  //Accurate to within 0.001%
-  #define FRAC_TOL 1e-5
+  double FRAC_TOL = 1e-2;
 #endif
 
 /*
@@ -72,7 +66,7 @@ void test_kern_calc_visi_shape_Varylmn(int beamtype) {
   int num_beam_values = num_freqs*num_times*num_components;
 
   //Stick the gains to one everywhere
-  for (size_t visi = 0; visi < num_beam_values; visi++) {
+  for (int visi = 0; visi < num_beam_values; visi++) {
     args_ft->primay_beam_J00[visi] = 1.0 + I*0.0;
     args_ft->primay_beam_J01[visi] = 1.0 + I*0.0;
     args_ft->primay_beam_J10[visi] = 1.0 + I*0.0;
@@ -80,7 +74,7 @@ void test_kern_calc_visi_shape_Varylmn(int beamtype) {
   }
 
   //Just stick Stokes I to 1.0, SI to zero, and reference freqs to 150MHz
-  for (size_t comp = 0; comp < num_components; comp++) {
+  for (int comp = 0; comp < num_components; comp++) {
     args_ft->flux_I[comp] = 1.0;
     args_ft->SIs[comp] = 0.0;
     args_ft->component_freqs[comp] = 150e+6;
@@ -92,9 +86,10 @@ void test_kern_calc_visi_shape_Varylmn(int beamtype) {
 
   //Make up some u,v,w values and scale by wavelength in correct order
   int count = 0;
-  user_precision_t freq_base = 150e+6;
-  user_precision_t freq_inc = 25e+6;
-  user_precision_t wavelength, frequency;
+  double freq_base = 150e+6;
+  double freq_inc = 25e+6;
+  user_precision_t wavelength;
+  double frequency;
   for ( int time_step = 0; time_step < num_times; time_step++ ) {
     for (int freq_step = 0; freq_step < num_freqs; freq_step++) {
       frequency = freq_base + freq_step*freq_inc;
@@ -115,8 +110,8 @@ void test_kern_calc_visi_shape_Varylmn(int beamtype) {
   //Set the shapelet u,v,w same as the measurement equation one (this is not
   //true in reality but works fine for testing)
 
-  for (size_t comp = 0; comp < num_components; comp++) {
-    for (size_t visi = 0; visi < num_visis; visi++) {
+  for (int comp = 0; comp < num_components; comp++) {
+    for (int visi = 0; visi < num_visis; visi++) {
       args_ft->u_shapes[comp*num_visis + visi] = args_ft->us[visi];
       args_ft->v_shapes[comp*num_visis + visi] = args_ft->vs[visi];
       args_ft->w_shapes[comp*num_visis + visi] = args_ft->ws[visi];
@@ -124,7 +119,7 @@ void test_kern_calc_visi_shape_Varylmn(int beamtype) {
   }
 
   //This means we have a single basis function for every component
-  for (size_t coeff = 0; coeff < num_coeffs; coeff++) {
+  for (int coeff = 0; coeff < num_coeffs; coeff++) {
     args_ft->shape_n1s[coeff] = 0.0;
     args_ft->shape_n2s[coeff] = 0.0;
     args_ft->shape_coeffs[coeff] = 1.0;
@@ -215,7 +210,7 @@ void test_kern_calc_visi_shape_VarylmnVaryFlux(int beamtype) {
   int num_beam_values = num_freqs*num_times*num_components;
 
   //Stick the gains to one everywhere
-  for (size_t visi = 0; visi < num_beam_values; visi++) {
+  for (int visi = 0; visi < num_beam_values; visi++) {
     args_ft->primay_beam_J00[visi] = 1.0 + I*0.0;
     args_ft->primay_beam_J01[visi] = 1.0 + I*0.0;
     args_ft->primay_beam_J10[visi] = 1.0 + I*0.0;
@@ -223,7 +218,7 @@ void test_kern_calc_visi_shape_VarylmnVaryFlux(int beamtype) {
   }
 
   //Just stick Stokes I to 1.0, SI to zero, and reference freqs to 150MHz
-  for (size_t comp = 0; comp < num_components; comp++) {
+  for (int comp = 0; comp < num_components; comp++) {
     args_ft->flux_I[comp] = comp;
     args_ft->SIs[comp] = -0.8;
     args_ft->component_freqs[comp] = 150e+6;
@@ -235,9 +230,10 @@ void test_kern_calc_visi_shape_VarylmnVaryFlux(int beamtype) {
 
   //Make up some u,v,w values and scale by wavelength in correct order
   int count = 0;
-  user_precision_t freq_base = 150e+6;
-  user_precision_t freq_inc = 25e+6;
-  user_precision_t wavelength, frequency;
+  double freq_base = 150e+6;
+  double freq_inc = 25e+6;
+  user_precision_t wavelength;
+  double frequency;
 
   for ( int time_step = 0; time_step < num_times; time_step++ ) {
     for (int freq_step = 0; freq_step < num_freqs; freq_step++) {
@@ -259,8 +255,8 @@ void test_kern_calc_visi_shape_VarylmnVaryFlux(int beamtype) {
 
   //Set the shapelet u,v,w same as the measurement equation one (this is not
   //true in reality but works fine for testing)
-  for (size_t comp = 0; comp < num_components; comp++) {
-    for (size_t visi = 0; visi < num_visis; visi++) {
+  for (int comp = 0; comp < num_components; comp++) {
+    for (int visi = 0; visi < num_visis; visi++) {
       args_ft->u_shapes[comp*num_visis + visi] = args_ft->us[visi];
       args_ft->v_shapes[comp*num_visis + visi] = args_ft->vs[visi];
       args_ft->w_shapes[comp*num_visis + visi] = args_ft->ws[visi];
@@ -268,7 +264,7 @@ void test_kern_calc_visi_shape_VarylmnVaryFlux(int beamtype) {
   }
 
   //This means we have a single basis function for every component
-  for (size_t coeff = 0; coeff < num_coeffs; coeff++) {
+  for (int coeff = 0; coeff < num_coeffs; coeff++) {
     args_ft->shape_n1s[coeff] = 0.0;
     args_ft->shape_n2s[coeff] = 0.0;
     args_ft->shape_coeffs[coeff] = 1.0;
@@ -352,7 +348,7 @@ void test_kern_calc_visi_shape_VarylmnVaryBeam(int beamtype) {
   int num_beam_values = num_freqs*num_times*num_components;
 
   //Stick the gains to one everywhere
-  for (size_t beam = 0; beam < num_beam_values; beam++) {
+  for (int beam = 0; beam < num_beam_values; beam++) {
     args_ft->primay_beam_J00[beam] = beam + I*0.0;
     args_ft->primay_beam_J01[beam] = beam + I*0.0;
     args_ft->primay_beam_J10[beam] = beam + I*0.0;
@@ -360,7 +356,7 @@ void test_kern_calc_visi_shape_VarylmnVaryBeam(int beamtype) {
   }
 
   //Just stick Stokes I to 1.0, SI to zero, and reference freqs to 150MHz
-  for (size_t comp = 0; comp < num_components; comp++) {
+  for (int comp = 0; comp < num_components; comp++) {
     args_ft->flux_I[comp] = 1.0;
     args_ft->SIs[comp] = 0.0;
     args_ft->component_freqs[comp] = 150e+6;
@@ -372,9 +368,10 @@ void test_kern_calc_visi_shape_VarylmnVaryBeam(int beamtype) {
 
   //Make up some u,v,w values and scale by wavelength in correct order
   int count = 0;
-  user_precision_t freq_base = 150e+6;
-  user_precision_t freq_inc = 25e+6;
-  user_precision_t wavelength, frequency;
+  double freq_base = 150e+6;
+  double freq_inc = 25e+6;
+  user_precision_t wavelength;
+double frequency;
 
   for ( int time_step = 0; time_step < num_times; time_step++ ) {
     for (int freq_step = 0; freq_step < num_freqs; freq_step++) {
@@ -400,8 +397,8 @@ void test_kern_calc_visi_shape_VarylmnVaryBeam(int beamtype) {
 
   //Set the shapelet u,v,w same as the measurement equation one (this is not
   //true in reality but works fine for testing)
-  for (size_t comp = 0; comp < num_components; comp++) {
-    for (size_t visi = 0; visi < num_visis; visi++) {
+  for (int comp = 0; comp < num_components; comp++) {
+    for (int visi = 0; visi < num_visis; visi++) {
       args_ft->u_shapes[comp*num_visis + visi] = args_ft->us[visi];
       args_ft->v_shapes[comp*num_visis + visi] = args_ft->vs[visi];
       args_ft->w_shapes[comp*num_visis + visi] = args_ft->ws[visi];
@@ -409,7 +406,7 @@ void test_kern_calc_visi_shape_VarylmnVaryBeam(int beamtype) {
   }
 
   //This means we have a single basis function for every component
-  for (size_t coeff = 0; coeff < num_coeffs; coeff++) {
+  for (int coeff = 0; coeff < num_coeffs; coeff++) {
     args_ft->shape_n1s[coeff] = 0.0;
     args_ft->shape_n2s[coeff] = 0.0;
     args_ft->shape_coeffs[coeff] = 1.0;
@@ -495,7 +492,7 @@ void test_kern_calc_visi_shape_VarylmnVaryPAMajMin(int beamtype) {
   int num_beam_values = num_freqs*num_times*num_components;
 
   //Stick the gains to one everywhere
-  for (size_t visi = 0; visi < num_beam_values; visi++) {
+  for (int visi = 0; visi < num_beam_values; visi++) {
     args_ft->primay_beam_J00[visi] = 1.0 + I*0.0;
     args_ft->primay_beam_J01[visi] = 1.0 + I*0.0;
     args_ft->primay_beam_J10[visi] = 1.0 + I*0.0;
@@ -515,9 +512,10 @@ void test_kern_calc_visi_shape_VarylmnVaryPAMajMin(int beamtype) {
 
   //Make up some u,v,w values and scale by wavelength in correct order
   int count = 0;
-  user_precision_t freq_base = 150e+6;
-  user_precision_t freq_inc = 25e+6;
-  user_precision_t wavelength, frequency;
+  double freq_base = 150e+6;
+  double freq_inc = 25e+6;
+  user_precision_t wavelength;
+double frequency;
   for ( int time_step = 0; time_step < num_times; time_step++ ) {
     for (int freq_step = 0; freq_step < num_freqs; freq_step++) {
       frequency = freq_base + freq_step*freq_inc;
@@ -538,8 +536,8 @@ void test_kern_calc_visi_shape_VarylmnVaryPAMajMin(int beamtype) {
   //Set the shapelet u,v,w same as the measurement equation one (this is not
   //true in reality but works fine for testing)
 
-  for (size_t comp = 0; comp < num_components; comp++) {
-    for (size_t visi = 0; visi < num_visis; visi++) {
+  for (int comp = 0; comp < num_components; comp++) {
+    for (int visi = 0; visi < num_visis; visi++) {
       args_ft->u_shapes[comp*num_visis + visi] = args_ft->us[visi];
       args_ft->v_shapes[comp*num_visis + visi] = args_ft->vs[visi];
       args_ft->w_shapes[comp*num_visis + visi] = args_ft->ws[visi];
@@ -547,7 +545,7 @@ void test_kern_calc_visi_shape_VarylmnVaryPAMajMin(int beamtype) {
   }
 
   //This means we have a single basis function for every component
-  for (size_t coeff = 0; coeff < num_coeffs; coeff++) {
+  for (int coeff = 0; coeff < num_coeffs; coeff++) {
     args_ft->shape_n1s[coeff] = 0.0;
     args_ft->shape_n2s[coeff] = 0.0;
     args_ft->shape_coeffs[coeff] = 1.0;
@@ -632,7 +630,7 @@ void test_kern_calc_visi_shape_VarylmnMultipleCoeff(int beamtype) {
   int num_beam_values = num_freqs*num_times*num_components;
 
   //Stick the gains to one everywhere
-  for (size_t visi = 0; visi < num_beam_values; visi++) {
+  for (int visi = 0; visi < num_beam_values; visi++) {
     args_ft->primay_beam_J00[visi] = 1.0 + I*0.0;
     args_ft->primay_beam_J01[visi] = 1.0 + I*0.0;
     args_ft->primay_beam_J10[visi] = 1.0 + I*0.0;
@@ -640,7 +638,7 @@ void test_kern_calc_visi_shape_VarylmnMultipleCoeff(int beamtype) {
   }
 
   //Just stick Stokes I to 1.0, SI to zero, and reference freqs to 150MHz
-  for (size_t comp = 0; comp < num_components; comp++) {
+  for (int comp = 0; comp < num_components; comp++) {
     args_ft->flux_I[comp] = 1.0;
     args_ft->SIs[comp] = 0.0;
     args_ft->component_freqs[comp] = 150e+6;
@@ -651,9 +649,10 @@ void test_kern_calc_visi_shape_VarylmnMultipleCoeff(int beamtype) {
 
   //Make up some u,v,w values and scale by wavelength in correct order
   int count = 0;
-  user_precision_t freq_base = 150e+6;
-  user_precision_t freq_inc = 25e+6;
-  user_precision_t wavelength, frequency;
+  double freq_base = 150e+6;
+  double freq_inc = 25e+6;
+  user_precision_t wavelength;
+  double frequency;
   for ( int time_step = 0; time_step < num_times; time_step++ ) {
     for (int freq_step = 0; freq_step < num_freqs; freq_step++) {
       frequency = freq_base + freq_step*freq_inc;
@@ -674,8 +673,8 @@ void test_kern_calc_visi_shape_VarylmnMultipleCoeff(int beamtype) {
   //Set the shapelet u,v,w same as the measurement equation one (this is not
   //true in reality but works fine for testing)
 
-  for (size_t comp = 0; comp < num_components; comp++) {
-    for (size_t visi = 0; visi < num_visis; visi++) {
+  for (int comp = 0; comp < num_components; comp++) {
+    for (int visi = 0; visi < num_visis; visi++) {
       args_ft->u_shapes[comp*num_visis + visi] = args_ft->us[visi];
       args_ft->v_shapes[comp*num_visis + visi] = args_ft->vs[visi];
       args_ft->w_shapes[comp*num_visis + visi] = args_ft->ws[visi];

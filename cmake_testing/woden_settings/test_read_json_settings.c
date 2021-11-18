@@ -17,16 +17,16 @@ correctly
 */
 void check_observation_params(woden_settings_t *woden_settings) {
 
-  TEST_ASSERT_EQUAL_FLOAT(-26.70331944*DD2R,woden_settings->latitude);
-  TEST_ASSERT_EQUAL_FLOAT(0.44312771*DD2R, woden_settings->lst_base);
-  TEST_ASSERT_EQUAL_FLOAT(0.0, woden_settings->ra0);
-  TEST_ASSERT_EQUAL_FLOAT(-27*DD2R, woden_settings->dec0);
+  TEST_ASSERT_EQUAL_DOUBLE(-26.70331944*DD2R,woden_settings->latitude);
+  TEST_ASSERT_EQUAL_DOUBLE(0.44312771*DD2R, woden_settings->lst_base);
+  TEST_ASSERT_EQUAL_DOUBLE(0.0, woden_settings->ra0);
+  TEST_ASSERT_EQUAL_DOUBLE(-27*DD2R, woden_settings->dec0);
   TEST_ASSERT_EQUAL_INT(16, woden_settings->num_freqs);
-  TEST_ASSERT_EQUAL_FLOAT(40000.0, woden_settings->frequency_resolution);
-  TEST_ASSERT_EQUAL_FLOAT(1.67035e+08, woden_settings->base_low_freq);
-  TEST_ASSERT_EQUAL_FLOAT(1.28e+06, woden_settings->coarse_band_width);
+  TEST_ASSERT_EQUAL_DOUBLE(40000.0, woden_settings->frequency_resolution);
+  TEST_ASSERT_EQUAL_DOUBLE(1.67035e+08, woden_settings->base_low_freq);
+  TEST_ASSERT_EQUAL_DOUBLE(1.28e+06, woden_settings->coarse_band_width);
   TEST_ASSERT_EQUAL_INT(4, woden_settings->num_time_steps);
-  TEST_ASSERT_EQUAL_FLOAT(2.0, woden_settings->time_res);
+  TEST_ASSERT_EQUAL_DOUBLE(2.0, woden_settings->time_res);
   TEST_ASSERT_EQUAL_STRING("srclist_singlepoint.txt", woden_settings->cat_filename);
   TEST_ASSERT_EQUAL_FLOAT(2457278.2010995, woden_settings->jd_date);
   TEST_ASSERT_EQUAL_INT(5000 ,woden_settings->chunking_size);
@@ -87,20 +87,20 @@ void test_read_json_settings_GaussBeam(char *json_path, int default_gauss) {
   //Check generic observation params have been read in correctly
   check_observation_params(woden_settings);
 
-  TEST_ASSERT_EQUAL_FLOAT(56.13129905*DD2R, woden_settings->gauss_ra_point);
-  TEST_ASSERT_EQUAL_FLOAT(-39.47577940*DD2R, woden_settings->gauss_dec_point);
+  TEST_ASSERT_EQUAL_DOUBLE(56.13129905*DD2R, woden_settings->gauss_ra_point);
+  TEST_ASSERT_EQUAL_DOUBLE(-39.47577940*DD2R, woden_settings->gauss_dec_point);
   TEST_ASSERT_EQUAL_INT(GAUSS_BEAM, woden_settings->beamtype);
 
   //If no arguments provided for FWHM and ref freq should have default values
   if (default_gauss) {
 
     TEST_ASSERT_EQUAL_FLOAT(20.0, woden_settings->gauss_beam_FWHM);
-    TEST_ASSERT_EQUAL_FLOAT(150e+6, woden_settings->gauss_beam_ref_freq);
+    TEST_ASSERT_EQUAL_DOUBLE(150e+6, woden_settings->gauss_beam_ref_freq);
   }
   //If not, should have values specified
   else {
     TEST_ASSERT_EQUAL_FLOAT(60.0, woden_settings->gauss_beam_FWHM);
-    TEST_ASSERT_EQUAL_FLOAT(75e+6, woden_settings->gauss_beam_ref_freq);
+    TEST_ASSERT_EQUAL_DOUBLE(75e+6, woden_settings->gauss_beam_ref_freq);
 
   }
 }

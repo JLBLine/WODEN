@@ -62,18 +62,18 @@ if __name__ == '__main__':
             azs, zas = np.loadtxt("az-za_coords.txt", unpack=True)
             all_jones = beam.calc_jones_array(azs, zas, freq, delays, gains, True)
 
-            # with open(f"hyperbeam_{delay_name}_{int(freq/1e+6)}.txt", 'w+') as outfile:
-            #     for ind in np.arange(len(azs)):
-            #         reordered_jones = reorder_jones(all_jones[ind,:])
-            #
-            #         gx = reordered_jones[0]
-            #         Dx = reordered_jones[1]
-            #         Dy = reordered_jones[2]
-            #         gy = reordered_jones[3]
-            #
-            #         outfile.write(f"{azs[ind]:.16f} {zas[ind]:.16f} "
-            #                       f"{np.real(gx):.16f} {np.imag(gx):.16f} {np.real(Dx):.16f} {np.imag(Dx):.16f} "
-            #                       f"{np.real(Dy):.16f} {np.imag(Dy):.16f} {np.real(gy):.16f} {np.imag(gy):.16f}\n")
+            with open(f"hyperbeam_{delay_name}_{int(freq/1e+6)}.txt", 'w+') as outfile:
+                for ind in np.arange(len(azs)):
+                    reordered_jones = reorder_jones(all_jones[ind,:])
+
+                    gx = reordered_jones[0]
+                    Dx = reordered_jones[1]
+                    Dy = reordered_jones[2]
+                    gy = reordered_jones[3]
+
+                    outfile.write(f"{azs[ind]:.16f} {zas[ind]:.16f} "
+                                  f"{np.real(gx):.16f} {np.imag(gx):.16f} {np.real(Dx):.16f} {np.imag(Dx):.16f} "
+                                  f"{np.real(Dy):.16f} {np.imag(Dy):.16f} {np.real(gy):.16f} {np.imag(gy):.16f}\n")
 
             with open(f"hyperbeam_{delay_name}_{int(freq/1e+6)}_rot.txt", 'w+') as outfile:
                 for ind in np.arange(len(azs)):

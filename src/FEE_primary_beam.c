@@ -33,7 +33,7 @@ herr_t RTS_op_func (hid_t loc_id, const char *name, const H5L_info_t *info,
     return status;
 }
 
-int RTS_MWAFEEInit(const char *h5filename, user_precision_t freq_Hz,
+int RTS_MWAFEEInit(const char *h5filename, double freq_Hz,
                    RTS_MWA_FEE_beam_t *pb, user_precision_t *FEE_delays){
 
   hid_t       file, group;         /* handles */
@@ -75,7 +75,7 @@ int RTS_MWAFEEInit(const char *h5filename, user_precision_t freq_Hz,
   user_precision_t lam;
   user_precision_complex_t Vcplx[N_COPOL][NUM_DIPOLES];
 
-  lam = VELC/(od.freq_out); // Should this be freq_out??
+  lam = VELC/(od.freq_out);
 
   for (int pol=0; pol < N_COPOL; pol++){
     for (int i=0; i<NUM_DIPOLES; i++) {

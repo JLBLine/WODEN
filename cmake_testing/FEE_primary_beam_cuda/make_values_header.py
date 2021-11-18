@@ -17,7 +17,7 @@ with open('test_RTS_FEE_beam.h', 'w') as outfile:
 
     for name in names:
         az, za, g1r, g1i, D1r, D1i, D2r, D2i, g2r, g2i = np.loadtxt('hyperbeam_{:s}.txt'.format(name), unpack=True)
-        outfile.write('user_precision_t {:s}[] = {{ {:.18f}, {:.18f}, {:.18f}, {:.18f},\n    {:.18f}, {:.18f}, {:.18f}, {:.18f},\n'.format(name,
+        outfile.write('double {:s}[] = {{ {:.18f}, {:.18f}, {:.18f}, {:.18f},\n    {:.18f}, {:.18f}, {:.18f}, {:.18f},\n'.format(name,
                                             g1r[0], g1i[0], D1r[0], D1i[0], D2r[0], D2i[0], g2r[0], g2i[0]))
 
         for ind in range(1,len(az)-1):
