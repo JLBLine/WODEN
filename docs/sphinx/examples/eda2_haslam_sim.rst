@@ -15,7 +15,7 @@ To run the command, do::
 
   $ ./EDA2_haslam_simulation.sh
 
-which took 12 mins 45 secs on my machine. The command run is::
+which took (XX hours, benchmarking is running) on my machine (this is running in DOUBLE precision). The command run is::
 
   run_woden.py \
     --ra0=74.79589467 --dec0=-27.0 \

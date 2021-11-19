@@ -47,7 +47,7 @@ The sky model is specified using ``--cat_filename``, where we have used ``conver
     --file=msclean_output_from_WSClean-sources.txt \
     --outname=srclist_msclean_fornaxA_phase1+2.txt
 
-The sky model contains 4544 point and 1736 Gaussian components. The "float" precision version took about 23 seconds on my card, with the "double" taking about 105 seconds. If you run the imaging, you should get something that looks like this:
+The sky model contains 4544 point and 1736 Gaussian components. The "float" precision version took about 48 seconds on my card, with the "double" taking about 144 seconds. If you run the imaging, you should get something that looks like this:
 
 .. image:: FornaxA_msclean-image.png
    :width: 400pt
@@ -61,7 +61,7 @@ You can run and image the shapelet simulation via::
   $ ./FornaxA_shapelet_simulation.sh
   $ ./FornaxA_shapelet_imaging.sh
 
-with the "float" simulation taking 32 seconds on my GPU, the "double" taking 144 seconds, and the image looking like:
+with the "float" simulation taking 59 seconds on my GPU, the "double" taking 144 seconds, and the image looking like:
 
 .. image:: FornaxA_shapelets-image.png
    :width: 400pt

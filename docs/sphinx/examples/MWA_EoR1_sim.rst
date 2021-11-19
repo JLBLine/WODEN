@@ -27,7 +27,7 @@ Which contains the command::
     --primary_beam=MWA_FEE \
     --sky_crop_components
 
-Running this took 5 mins 30 seconds on my GPU. I've reduced the time and frequency resolution as specified in the ``metafits`` file to keep the size of the outputs smaller on your machine. If you wanted to run the full resolution data of this observation, (2s, 40kHz), you can just remove the ``--num_freq_channels, --num_time_steps, --freq_res, --time_res`` arguments.
+Running this took 55 mins 46 secs seconds on my GPU (running with the ``--precision=float`` flag runs in 10 min 39 sec). I've reduced the time and frequency resolution as specified in the ``metafits`` file to keep the size of the outputs smaller on your machine. If you wanted to run the full resolution data of this observation, (2s, 40kHz), you can just remove the ``--num_freq_channels, --num_time_steps, --freq_res, --time_res`` arguments.
 
 I've included two imaging commands::
 

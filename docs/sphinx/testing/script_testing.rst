@@ -3,7 +3,7 @@ Testing installation via scripts
 
 This is a straight-forward way to check your installation is working; just run some simple small simulations to check various functionality. Easiest way to check is to create images of the results. I've included a second set of scripts to convert the outputs to measurement sets and image them using ``WSClean``.
 
-.. note:: I've tried to make these tests computationally low, so they need < 1.5 GB of GPU RAM, and < 8 GB system RAM. Running all the simulations will need about 600 MB of storage, with the imaging adding a further 800 MB (for a total of < 1.5 GB storage). The simulations should take < 2 minutes on most GPUs, and imaging less that 10 minutes for most CPUs (far less for fancier CPUs). I ran these tests fine on my laptop which has an Intel i7 2.8 GHz CPU, 16 GB system RAM, and an NVIDIA GeForce 940MX card with 2 GB RAM.
+.. note:: I've tried to make these tests computationally low, so they need < 1.5 GB of GPU RAM, and < 8 GB system RAM. To do this, I've had to set ``--precision=float`` for some of the tests, to keep the memory requirements down. Running all the simulations will need about 600 MB of storage, with the imaging adding a further 800 MB (for a total of < 1.5 GB storage). The simulations should take < 2 minutes on most GPUs, and imaging less that 10 minutes for most CPUs (far less for fancier CPUs). I ran these tests fine on my laptop which has an Intel i7 2.8 GHz CPU, 16 GB system RAM, and an NVIDIA GeForce 940MX card with 2 GB RAM.
 
 Running the simulations
 ------------------------
@@ -64,13 +64,10 @@ Nearly all of these simulations use the MWA phase 1 array layout, with a maximum
 
 Absolute Accuracy
 ^^^^^^^^^^^^^^^^^^^^^^^^
-There is no imaging here, but runs an end-to-end simulation with a set of array layouts and sky models that should yield exact visibilities. The exact method is described in the JOSS paper
+There is no imaging here, but runs an end-to-end simulation with a set of array layouts and sky models that should yield exact visibilities. The exact method is described in the JOSS paper.
+The scripts run here are the exact scripts I used to create the plot in the JOSS paper.
 
-The scripts run here are the scripts I used to create the plot in the JOSS paper.
-
-.. todo:: write the JOSS paper section and work out how to link back to this
-
-
+.. todo:: Link the JOSS paper here once published
 
 Single Component Models
 ^^^^^^^^^^^^^^^^^^^^^^^^
