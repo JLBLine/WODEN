@@ -247,7 +247,7 @@ def make_antenna_table(XYZ_array=None, telescope_name=None,num_antennas=None,
     ylabels = np.array(['Y']*num_antennas)
 
     ##Make a number of FITS columns to create the antenna table from
-    col1 = fits.Column(array=annnames,name='ANNAME',format='5A')
+    col1 = fits.Column(array=annnames,name='ANNAME',format='8A')
     col2 = fits.Column(array=XYZ_array,name='STABXYZ',format='3D')
     ##col3 makes an empty array, and the format states skip reading this column
     ##Just replicating the example uvfits I've been using
@@ -737,7 +737,8 @@ def make_baseline_date_arrays(num_antennas, date, num_time_steps, time_res):
 
         ##Fill in the fractional julian date, after adding on the appropriate amount of
         ##time - /(24*60*60) because julian number is a fraction of a whole day
-        adjust_float_jd_array = float_jd_array + (float(time) / (24.0*60.0*60.0))
+        ##Should be the central time of the integration so add half a time resolution
+        adjust_float_jd_array = float_jd_array + ((float(time) + time_res/2.0) / (24.0*60.0*60.0))
         date_array[time_ind_lower:time_ind_lower+num_baselines] = adjust_float_jd_array
 
     return baselines_array, date_array
@@ -1096,7 +1097,7 @@ def select_correct_enh(args):
             args.height = array_layout[:,2]
 
         except:
-            exit("Could not open array layout file:\n"
+            exit("Could not read array layout file:\n"
                  "\t{:s}\nExiting before woe beings".format(args.array_layout))
 
         args.array_layout_name = args.array_layout
