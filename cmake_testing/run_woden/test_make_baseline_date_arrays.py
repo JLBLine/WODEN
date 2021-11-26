@@ -6,7 +6,7 @@ import numpy as np
 ##Do some disgusting path finding exercise, there must be a better way
 ##to do this
 fileloc = os.path.realpath(__file__)
-path.append('{:s}/../../src'.format(('/').join(fileloc.split('/')[:-1])))
+path.append("{:s}/../../src".format(("/").join(fileloc.split("/")[:-1])))
 
 ##Code we are testing
 import run_woden as rw
@@ -31,16 +31,17 @@ class Test(unittest.TestCase):
                                         259, 260, 515, 516, 772, 258, 259,
                                         260, 515, 516, 772])
 
-        expected_dates = np.array([0.04458333, 0.04458333, 0.04458333, 0.04458333,
-                                   0.04458333, 0.04458333, 0.04460648, 0.04460648,
-                                   0.04460648, 0.04460648, 0.04460648, 0.04460648,
-                                   0.04462963, 0.04462963, 0.04462963, 0.04462963,
-                                   0.04462963, 0.04462963])
+        expected_dates = np.array([0.04459490726, 0.04459490726, 0.04459490726,
+                                   0.04459490726, 0.04459490726, 0.04459490726,
+                                   0.04461805541, 0.04461805541, 0.04461805541,
+                                   0.04461805541, 0.04461805541, 0.04461805541,
+                                   0.04464120356, 0.04464120356, 0.04464120356,
+                                   0.04464120356, 0.04464120356, 0.04464120356])
 
         ##Check the outputs are within 1e-10 of expected values
         self.assertTrue(np.allclose(expected_baselines, baselines_array, atol=1e-10))
         self.assertTrue(np.allclose(expected_dates, date_array, atol=1e-10))
 
 ##Run the test
-if __name__ == '__main__':
+if __name__ == "__main__":
    unittest.main()
