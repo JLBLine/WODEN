@@ -574,3 +574,145 @@ extern "C" void test_RTS_CUDA_FEE_beam(int num_components,
            RTS_MWA_FEE_beam_t *FEE_beam,
            int rotation, int scaling,
            user_precision_complex_t *FEE_beam_gains);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+@brief Gets the normlisation factors for all beams in `beam_settings->FEE_beams`
+by calculating zenith responses for `beam_settings->FEE_beam_zeniths`.
+
+@details The FEE beam model is stored in theta/phi (instrument locked)
+polarisations. To therefore calculate the zenith normalisation values, actually
+need to calculate the beam at zenith with multiple azimuth values, and then
+from those directions, select the correct east-west/north south dipole and
+theta/phi polarisation output.
+
+This function calculates the beam nomalisation for multiple frequencies,
+and as such calls `FEE_primary_beam_cuda::get_HDFBeam_normalisation`
+multiple times.
+
+Both `beam_settings->FEE_beam_zeniths` and `beam_settings->FEE_beams`
+should have been initialised by using
+`FEE_primary_beam::multifreq_RTS_MWAFEEInit`
+
+@param[in] *beam_settings Populated `beam_settings_t` which has had
+`FEE_primary_beam::multifreq_RTS_MWAFEEInit` run on it
+*/
+extern "C" void multifreq_get_MWAFEE_normalisation(beam_settings_t *beam_settings);
+
+
+
+/**
+@brief Calculate the MWA FEE beam response for multiple frequencies and
+sky direction. All outputs are left on the device to be used in later
+calculations, rather than copied across to the host
+
+@details Calls `FEE_primary_beam_cuda::calc_CUDA_FEE_beam` for all
+`RTS_MWA_FEE_beam_t` in `beam_settings->FEE_beams`
+
+@param[in] *beam_settings Populated `beam_settings_t` which has had
+`FEE_primary_beam::multifreq_RTS_MWAFEEInit` run on it
+*/
+extern "C" void multifreq_calc_CUDA_FEE_beam(beam_settings_t *beam_settings,
+           user_precision_t *azs, user_precision_t *zas, int num_time_steps,
+           user_precision_t *sin_para_angs, user_precision_t *cos_para_angs,
+           int num_components, int rotation, int scaling);
+
+
+
+/**
+@brief Maps the gains found in `d_FEE_beam_gain_matrices` into the
+`d_primay_beam_J*` arrays
+
+@details Does the device code for the function `map_FEE_beam_gains_multi_freq`.
+Needed when running multiple frequencies of the MWA FEE model
+
+@param[in] *d_FEE_beam_gain_matrices Complex beam gains for frequency index `iFreq`
+@param[in,out] *d_primay_beam_J00 Complex `gx` beam Jones values
+@param[in,out] *d_primay_beam_J01 Complex `Dx` beam Jones values
+@param[in,out] *d_primay_beam_J10 Complex `Dy` beam Jones values
+@param[in,out] *d_primay_beam_J11 Complex `gy` beam Jones value
+@param[in] num_freqs Number of frequencies the MWA Beam was calculated at
+@param[in] num_components Number of components the MWA Beam was calculated for
+@param[in] num_times Number of times the MWA Beam was calculated for
+@param[in] iFreq The frequency index the gains in `d_FEE_beam_gain_matrices`
+correspond to
+
+*/
+__global__ void kern_map_FEE_beam_gains_multi_freq(cuUserComplex *d_FEE_beam_gain_matrices,
+           cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
+           cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
+           int num_freqs, int num_components, int num_times, int iFreq);
+
+
+/**
+@brief Maps the gains found in
+`beam_settings->FEE_beams[iFreq]->d_FEE_beam_gain_matrices` into the
+`d_primay_beam_J*` arrays
+
+@details Launches `kern_map_FEE_beam_gains_multi_freq` for each of the
+populated `RTS_MWA_FEE_beam_t` in `beam_settings->FEE_beams`, to separate
+the polarisations into the `d_primay_beam_J*` arrays.
+
+@param[in] *beam_settings `beam_settings_t` where `beam_settings->FEE_beams`
+has been populated using `FEE_primary_beam_cuda::multifreq_calc_CUDA_FEE_beam`
+@param[in,out] *d_primay_beam_J00 Complex `gx` beam Jones values
+@param[in,out] *d_primay_beam_J01 Complex `Dx` beam Jones values
+@param[in,out] *d_primay_beam_J10 Complex `Dy` beam Jones values
+@param[in,out] *d_primay_beam_J11 Complex `gy` beam Jones value
+@param[in] num_freqs Number of frequencies the MWA Beam was calculated at
+@param[in] num_components Number of components the MWA Beam was calculated for
+@param[in] num_times Number of times the MWA Beam was calculated for
+
+*/
+extern "C" void map_FEE_beam_gains_multi_freq(beam_settings_t *beam_settings,
+    cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
+    cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
+    int num_freqs, int num_components, int num_times);
+
+
+/**
+@brief This runs both `FEE_primary_beam_cuda::multifreq_calc_CUDA_FEE_beam`
+and `FEE_primary_beam_cuda::map_FEE_beam_gains_multi_freq` to calculate
+multiple sky directions and frequencies directly into the `d_primay_beam_J*`
+arrays
+
+@details assdfasd
+
+@param[in] *beam_settings `beam_settings_t` where `beam_settings->FEE_beams`
+has been intialised with `FEE_primary_beam_cuda::multifreq_get_MWAFEE_normalisation`
+@param[in] azs Array of azimuth values (radians)
+@param[in] zas Array of zenith angle values (radians)
+@param[in] sin_para_angs Sine of the parallactic angle for all az,za
+@param[in] cos_para_angs Cosine of the parallactic angle for all az,za
+@param[in] rotation
+@param[in] scaling
+@param[in,out] *d_primay_beam_J00 Complex `gx` beam Jones values
+@param[in,out] *d_primay_beam_J01 Complex `Dx` beam Jones values
+@param[in,out] *d_primay_beam_J10 Complex `Dy` beam Jones values
+@param[in,out] *d_primay_beam_J11 Complex `gy` beam Jones values
+@param[in] num_freqs Number of frequencies the MWA Beam was calculated at
+@param[in] num_components Number of components the MWA Beam was calculated for
+@param[in] num_times Number of time steps present in az, za
+
+*/
+extern "C" void run_and_map_multifreq_calc_CUDA_FEE_beam(beam_settings_t *beam_settings,
+        user_precision_t *azs, user_precision_t *zas,
+        user_precision_t *sin_para_angs, user_precision_t *cos_para_angs,
+        int num_components, int num_freqs, int num_times,
+        int rotation, int scaling,
+        cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
+        cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11);

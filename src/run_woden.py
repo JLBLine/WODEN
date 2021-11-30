@@ -667,6 +667,11 @@ def write_json(json_name=None, jd_date=None, lst=None, args=None):
             outfile.write('  "hdf5_beam_path": "%s",\n' %args.hdf5_beam_path)
             outfile.write('  "FEE_delays": %s,\n ' %args.MWA_FEE_delays)
 
+        elif args.primary_beam == 'MWA_FEE_interp':
+            outfile.write('  "use_FEE_interp_beam": "True",\n')
+            outfile.write('  "hdf5_beam_path": "%s",\n' %args.hdf5_beam_path)
+            outfile.write('  "FEE_delays": %s,\n ' %args.MWA_FEE_delays)
+
         elif args.primary_beam == 'EDA2':
             outfile.write('  "use_EDA2_beam": "True",\n')
 
@@ -921,13 +926,15 @@ def get_parser():
              'centre, in east, north, height coords (metres)')
     tel_group.add_argument('--primary_beam', default="none",
         help="R|Which primary beam to use in the simulation.\nOptions are:\n"
-            "\t MWA_FEE (MWA fully embedded element model)\n"
-            "\t Gaussian (Analytic symmetric Gaussian)\n"
+            "\t - MWA_FEE (MWA fully embedded element model)\n"
+            "\t - MWA_FEE_interp (MWA fully embedded element model that has had)\n"
+            "\t\t spherical harmonics interpolated over frequency\n"
+            "\t - Gaussian (Analytic symmetric Gaussian)\n"
             "\t\t see --gauss_beam_FWHM and\n"
             "\t\t and --gauss_beam_ref_freq for\nfine control)\n"
-            "\t EDA2 (Analytic dipole with a ground mesh) \n"
-            "\t none (Don't use a primary beam at all)\n"
-            "Defaults to none")
+            "\t - EDA2 (Analytic dipole with a ground mesh) \n"
+            "\t - none (Don't use a primary beam at all)\n"
+            "Defaults to --primary_beam=none")
 
     tel_group.add_argument('--gauss_beam_FWHM', default=False,
         help='The FWHM of the Gaussian beam in deg - WODEN defaults to using'
@@ -1122,9 +1129,10 @@ def check_args(args):
         information from metafits incorporated if requested
     """
 
-    if args.primary_beam not in ['MWA_FEE', 'Gaussian', 'EDA2', 'none', 'None']:
+    if args.primary_beam not in ['MWA_FEE', 'Gaussian', 'EDA2', 'none', 'None',
+                                 'MWA_FEE_interp']:
         exit('Primary beam option --primary_beam must be one of:\n'
-             '\t MWA_FEE, Gaussian, EDA2, none\n'
+             '\t MWA_FEE, MWA_FEE_interp, Gaussian, EDA2, none\n'
              'User has entered --primary_beam={:s}\n'
              'Please fix and try again. Exiting now'.format(args.primary_beam))
 
@@ -1152,6 +1160,27 @@ def check_args(args):
                 exit('To use MWA FEE beam, either --hdf5_beam_path or environment\n'
                      'variable MWA_FEE_HDF5 must point towards the file\n'
                      'mwa_full_embedded_element_pattern.h5. Exiting now as WODEN will fail.')
+
+    ##If we're using the MWA FEE beam, make sure we can find the stored
+    ##spherical harmonics file
+    if args.primary_beam == 'MWA_FEE_interp':
+        if args.hdf5_beam_path:
+            if not os.path.isfile(args.hdf5_beam_path):
+                exit('Could not open hdf5 MWA FEE path as specified by user as:\n'
+                     '\t--hdf5_beam_path={:s}.\n'
+                     'This will cause WODEN to fail, exiting now'.format(args.hdf5_beam_path))
+        else:
+            try:
+                MWA_FEE_HDF5_INTERP = os.environ['MWA_FEE_HDF5_INTERP']
+                args.hdf5_beam_path = MWA_FEE_HDF5_INTERP
+                if not os.path.isfile(args.hdf5_beam_path):
+                    exit('Could not open hdf5 MWA FEE path as specified by user as:\n'
+                         '\t--environ["MWA_FEE_HDF5_INTERP"]={:s}.\n'
+                         'This will cause WODEN to fail, exiting now'.format(args.hdf5_beam_path))
+            except KeyError:
+                exit('To use MWA FEE intrep beam, either --hdf5_beam_path or environment\n'
+                     'variable MWA_FEE_HDF5_INTERP must point towards the file\n'
+                     'MWA_embedded_element_pattern_rev2_interp_167_197MHz.h5. Exiting now as WODEN will fail.')
 
     ##variables that will be filled by metafits if reading a metafits
     ##set them as False here for testing later on
@@ -1241,7 +1270,7 @@ def check_args(args):
             exit(message)
 
     ##Do the test on MWA_FEE_delays only if this is an MWA_FEE simulation
-    if args.primary_beam == 'MWA_FEE':
+    if args.primary_beam == 'MWA_FEE' or args.primary_beam == 'MWA_FEE_interp':
         args.MWA_FEE_delays = select_argument_and_check(args.MWA_FEE_delays,
                                       args.MWA_FEE_delays,
                                       MWA_FEE_delays, "MWA_FEE_delays")

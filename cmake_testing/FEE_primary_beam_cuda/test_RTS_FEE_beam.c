@@ -132,7 +132,7 @@ void test_RTS_CUDA_FEE_beam_VaryFreqVaryPointing(double freq,
 
   beam_values_out = fopen(buff,"w");
 
-  for (size_t comp = 0; comp < num_azza; comp++) {
+  for (int comp = 0; comp < num_azza; comp++) {
     fprintf(beam_values_out, "%.16f %.16f %.16f %.16f %.16f %.16f %.16f %.16f %.16f %.16f\n",
     azs[comp], zas[comp],
     creal(FEE_beam_gains[num_pols*comp+0]), cimag(FEE_beam_gains[num_pols*comp+0]),
@@ -140,7 +140,6 @@ void test_RTS_CUDA_FEE_beam_VaryFreqVaryPointing(double freq,
     creal(FEE_beam_gains[num_pols*comp+2]), cimag(FEE_beam_gains[num_pols*comp+2]),
     creal(FEE_beam_gains[num_pols*comp+3]), cimag(FEE_beam_gains[num_pols*comp+3]));
   }
-
 }
 
 /*
@@ -155,7 +154,7 @@ void check_for_env_and_run_test(double freq, user_precision_t *delays,
   #ifdef DOUBLE_PRECISION
   printf("WODEN is using DOUBLE precision\n");
   #else
-  printf("WODEN is using DOUBLE precision\n");
+  printf("WODEN is using FLOAT precision\n");
   #endif
 
   if (mwa_fee_hdf5) {

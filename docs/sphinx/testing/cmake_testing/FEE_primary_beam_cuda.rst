@@ -4,8 +4,12 @@
 
 ``FEE_primary_beam_cuda``
 ===========================
-Tests for the functions in ``WODEN/src/FEE_primary_beam_cuda.cu``. This is more
-of an integration test rather than a suite of individual function tests.
+Tests for the functions in ``WODEN/src/FEE_primary_beam_cuda.cu``. The first
+single frequency function tests in depth whether the code is faithfully
+reproducing the MWA FEE beam for all directions on the sky, for a number of
+frequencies and delays. The multi-freq tests check that multiple frequencies
+are calculated in the same call, only for a few directions on the sky, as the
+accuracy is tested in depth in the single direction tests.
 
 test_RTS_FEE_beam.c
 *********************************
@@ -77,3 +81,33 @@ accuracy:
 
 .. image:: hyperbeam_zenith_100_rotzenith_100_rot_double_diff.png
   :width: 400
+
+.. test_multifreq_get_MWAFEE_normalisation.c
+.. *************************************************
+..
+.. Calls ``FEE_primary_beam_cuda::multifreq_get_MWAFEE_normalisation``, which gets
+.. the normalisation values for the FEE beams for all frequencies.
+
+test_run_and_map_multifreq_calc_CUDA_FEE_beam.c
+****************************************************
+This calls ``FEE_primary_beam_cuda::test_run_and_map_multifreq_calc_CUDA_FEE_beam``
+which in turn calls ``FEE_primary_beam_cuda:run_and_map_multifreq_calc_CUDA_FEE_beam``.
+This function handles calculating the MWA FEE beam for a given number of
+frequencies. It takes an initialised array of ``RTS_MWA_FEE_beam_t`` types and
+gathers the normalisation factors, beam values in all directions, and
+normalises them and rotates by parallactic angle. The test code takes az/za
+as inputs and calculates the parallactic angle values from those. Three
+tests are run, with three different pointings and three different frequency
+ranges. The output values are then tested against values output by ``hyperdrive``,
+with the FLOAT precision code tested to an absolute tolerance of 3e-2, and
+the DOUBLE a tolerance of 1e-13.
+
+Only five coordinate directions are tested, as the accuracy of the beam across
+the sky is tested for many many directions by ``test_RTS_FEE_beam.c``, which
+is using the same code. This test is really check that the correct frequencies
+are called. To visually compare the outputs of to ``hyperbeam``, you can
+run the script ``plot_multifreq_comparison.sh``, which yields output plots
+like this (for the DOUBLE code):
+
+.. image:: multi_zenith_freqs1.png
+  :width: 800

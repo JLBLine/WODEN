@@ -22,3 +22,20 @@ which can be found in ``test_RTS_MWAFEEInit.h``), and must be within an absolute
 tolerance of 1e-7 to pass. Only six array entries each are tested purely
 to keep the stored values to compare to down a reasonable number (but suffice
 as a test that things are working correctly).
+
+test_multifreq_RTS_MWAFEEInit.c
+*********************************
+``create_sky_model::multifreq_RTS_MWAFEEInit`` calls ``RTS_MWAFEEInit`` for
+multiple frequencies, storing the output ``RTS_MWA_FEE_beam_t`` structs in
+``beam_settings->FEE_beams``. This function is designed to be used in conjunction
+with the interpolated coefficient file
+``MWA_embedded_element_pattern_rev2_interp_167_197MHz.h5`` which is at a 40kHz
+resolution (between 167 - 197MHz). The ``mwa_full_embedded_element_pattern.h5``
+file is at 1.28MHz resolution, however covers 50 - 300MHz.
+
+This test calls the function for three different delays and frequencies,
+covering a range of frequencies between 167 and 197MHz. The first test calls
+32 frequencies so takes 30s per call. The first two
+elements in the ``Q1`` abd ``Q2`` arrays are tested for both polarisations for
+all requested frequencies, and must match to within an absolute tolerance of 1e-7
+to stored values.

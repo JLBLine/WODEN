@@ -148,27 +148,30 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
   freq_ind = (int)floorf( ((user_precision_t)iBaseline - ((user_precision_t)time_ind*(user_precision_t)num_baselines * (user_precision_t)num_freqs)) / (user_precision_t)num_baselines);
   beam_ind = num_freqs*time_ind*num_components + (num_components*freq_ind) + iComponent;
 
-  //Get XX,YY if using a beam
-  if (beamtype == FEE_BEAM || beamtype == ANALY_DIPOLE || beamtype == GAUSS_BEAM) {
-    * g1x = d_primay_beam_J00[beam_ind];
-    * g2x = d_primay_beam_J00[beam_ind];
-    * g1y = d_primay_beam_J11[beam_ind];
-    * g2y = d_primay_beam_J11[beam_ind];
-  }
-  else {
+    //Set gains to one if no beam
+  if (beamtype == NO_BEAM) {
     * g1x = make_cuUserComplex(1.0, 0.0);
     * g2x = make_cuUserComplex(1.0, 0.0);
     * g1y = make_cuUserComplex(1.0, 0.0);
     * g2y = make_cuUserComplex(1.0, 0.0);
   }
 
-  //Only FEE model has XY and YX at the moment
-  if (beamtype == FEE_BEAM) {
+  //Get gains if using a beam
+  else {
+    * g1x = d_primay_beam_J00[beam_ind];
+    * g2x = d_primay_beam_J00[beam_ind];
+    * g1y = d_primay_beam_J11[beam_ind];
+    * g2y = d_primay_beam_J11[beam_ind];
+  }
+
+  //Only MWA models have leakge terms at the moment
+  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP) {
     * D1x = d_primay_beam_J01[beam_ind];
     * D2x = d_primay_beam_J01[beam_ind];
     * D1y = d_primay_beam_J10[beam_ind];
     * D2y = d_primay_beam_J10[beam_ind];
   }
+  // Set leakage to zero if no leakage
   else {
     * D1x = make_cuUserComplex(0.0, 0.0);
     * D2x = make_cuUserComplex(0.0, 0.0);
@@ -306,6 +309,33 @@ void source_component_common(int num_components,
               woden_settings->num_freqs, num_components,
               woden_settings->num_visis, woden_settings->num_baselines,
               woden_settings->num_time_steps);
+
+    //Free up some GPU memory
+    cudaErrorCheckCall( cudaFree( beam_settings->FEE_beam->d_FEE_beam_gain_matrices) );
+
+  }
+
+  else if (beam_settings->beamtype == FEE_BEAM_INTERP) {
+
+    //Rotate FEE beam by parallactic angle
+    int rotation = 1;
+    //Normalise FEE beam to zenith
+    int scaling = 1;
+
+    printf("\tDoing freq interpolated MWA FEE Beam\n");
+
+    run_and_map_multifreq_calc_CUDA_FEE_beam(beam_settings,
+            azs, zas, sin_para_angs, cos_para_angs,
+            num_components, woden_settings->num_freqs, woden_settings->num_time_steps,
+            rotation, scaling,
+            d_primay_beam_J00, d_primay_beam_J01,
+            d_primay_beam_J10, d_primay_beam_J11);
+
+
+    for (int freq_ind = 0; freq_ind < beam_settings->num_MWAFEE; freq_ind++) {
+      RTS_MWA_FEE_beam_t *FEE_beam = &beam_settings->FEE_beams[freq_ind];
+      cudaErrorCheckCall( cudaFree(FEE_beam->d_FEE_beam_gain_matrices) );
+    }
   }
 
   else if (beam_settings->beamtype == ANALY_DIPOLE) {

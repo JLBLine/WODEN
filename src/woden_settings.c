@@ -38,6 +38,7 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
   struct json_object *gauss_beam_FWHM;
   struct json_object *gauss_beam_ref_freq;
   struct json_object *FEE_beam;
+  struct json_object *FEE_beam_interp;
   struct json_object *hdf5_beam_path;
   struct json_object *jd_date;
   struct json_object *EDA2_beam;
@@ -84,6 +85,7 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
   json_object_object_get_ex(parsed_json, "gauss_beam_ref_freq", &gauss_beam_ref_freq);
 
   json_object_object_get_ex(parsed_json, "use_FEE_beam", &FEE_beam);
+  json_object_object_get_ex(parsed_json, "use_FEE_interp_beam", &FEE_beam_interp);
   json_object_object_get_ex(parsed_json, "hdf5_beam_path", &hdf5_beam_path);
 
   json_object_object_get_ex(parsed_json, "use_EDA2_beam", &EDA2_beam);
@@ -127,6 +129,9 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
   //Boolean whether to use the MWA FEE beam
   int fee_beam = json_object_get_boolean(FEE_beam);
 
+  //Boolean whether to use the MWA FEE interpolated beam
+  int fee_beam_interp = json_object_get_boolean(FEE_beam_interp);
+
   //Boolean whether to use the MWA FEE beam
   int eda2_beam = json_object_get_boolean(EDA2_beam);
 
@@ -139,11 +144,12 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
     woden_settings->do_precession = 1;
   }
 
-  if (gauss_beam + fee_beam + eda2_beam > 1 ) {
+  if (gauss_beam + fee_beam + eda2_beam + fee_beam_interp > 1 ) {
     printf("You have selected more than one primary beam type in the .json file\n");
     printf("You can have only ONE of the following:\n");
     printf("\t\"use_gaussian_beam\": True\n");
     printf("\t\"use_FEE_beam\": True\n");
+    printf("\t\"use_FEE_beam_interp\": True\n");
     printf("\t\"use_EDA2_beam\": True\n");
     return 1;
   }
@@ -177,9 +183,40 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
     woden_settings->gauss_dec_point = json_object_get_double(gauss_dec_point)*DD2R;
 
   }
+
   else if (fee_beam){
     woden_settings->beamtype = FEE_BEAM;
 
+    woden_settings->hdf5_beam_path = json_object_get_string(hdf5_beam_path);
+
+    if (woden_settings->hdf5_beam_path == NULL) {
+      printf("Must specify path the MWA FEE hdf5 file for MWA FEE Beam simulation \n");
+      return 1;
+    }
+  }
+
+  else if (fee_beam_interp){
+    woden_settings->beamtype = FEE_BEAM_INTERP;
+
+    woden_settings->hdf5_beam_path = json_object_get_string(hdf5_beam_path);
+
+    if (woden_settings->hdf5_beam_path == NULL) {
+      printf("Must specify path the MWA FEE interpolated hdf5 file for interpolated MWA FEE Beam simulation \n");
+      return 1;
+    }
+  }
+
+  else if (EDA2_beam){
+    woden_settings->beamtype = ANALY_DIPOLE;
+  }
+
+  else {
+    woden_settings->beamtype = NO_BEAM;
+  }
+
+
+  //Both the FEE_BEAM and MWA_ANALY need delays values to steer the beam
+  if (fee_beam || fee_beam_interp) {
     struct json_object *delay;
     struct json_object *FEE_ideal_delays;
     int delays_length;
@@ -192,27 +229,16 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
       return 1;
     }
 
-  	for(int i=0;i<delays_length;i++) {
-  		delay = json_object_array_get_idx(FEE_ideal_delays, i);
-  		woden_settings->FEE_ideal_delays[i] = (user_precision_t)json_object_get_double(delay);
-  	}
-
-    woden_settings->hdf5_beam_path = json_object_get_string(hdf5_beam_path);
-
-    if (woden_settings->hdf5_beam_path == NULL) {
-      printf("Must specify path the MWA FEE hdf5 file for MWA FEE Beam simulation \n");
-      return 1;
+    for(int i=0;i<delays_length;i++) {
+      delay = json_object_array_get_idx(FEE_ideal_delays, i);
+      woden_settings->FEE_ideal_delays[i] = (user_precision_t)json_object_get_double(delay);
     }
-
   }
 
-  else if (EDA2_beam){
-    woden_settings->beamtype = ANALY_DIPOLE;
-  }
 
-  else {
-    woden_settings->beamtype = NO_BEAM;
-  }
+
+
+
 
   woden_settings->chunking_size = json_object_get_int64(chunking_size);
   //If user selects an insanely large chunking size gonna have problems, so limit it
