@@ -5,9 +5,11 @@
 
 #include "constants.h"
 #include "woden_struct_defs.h"
+#include "woden_precision_defs.h"
 #include "shapelet_basis.h"
 
-void sincosf(float x, float *sin, float *cos);
+// void sincos(float x, float *sin, float *cos);
+// void sincos(double x, double *sin, double *cos);
 
 #define UNITY_INCLUDE_FLOAT
 
@@ -22,49 +24,49 @@ typedef struct _args_for_testing_t {
   int num_visis;
   int num_beam_values;
 
-  float *ls;
-  float *ms;
-  float *ns;
-  float _Complex *primay_beam_J00;
-  float _Complex *primay_beam_J01;
-  float _Complex *primay_beam_J10;
-  float _Complex *primay_beam_J11;
+  double *ls;
+  double *ms;
+  double *ns;
+  user_precision_complex_t *primay_beam_J00;
+  user_precision_complex_t *primay_beam_J01;
+  user_precision_complex_t *primay_beam_J10;
+  user_precision_complex_t *primay_beam_J11;
 
-  float *flux_I;
-  float *flux_Q;
-  float *flux_U;
-  float *flux_V;
-  float *SIs;
-  float *component_freqs;
+  user_precision_t *flux_I;
+  user_precision_t *flux_Q;
+  user_precision_t *flux_U;
+  user_precision_t *flux_V;
+  user_precision_t *SIs;
+  double *component_freqs;
 
-  float *us;
-  float *vs;
-  float *ws;
-  float *allsteps_wavelengths;
+  user_precision_t *us;
+  user_precision_t *vs;
+  user_precision_t *ws;
+  user_precision_t *allsteps_wavelengths;
 
   //GAUSS/SHAPELET STUFF
-  float *pas;
-  float *majors;
-  float *minors;
+  user_precision_t *pas;
+  user_precision_t *majors;
+  user_precision_t *minors;
 
-  float *sum_visi_XX_real;
-  float *sum_visi_XX_imag;
-  float *sum_visi_XY_real;
-  float *sum_visi_XY_imag;
-  float *sum_visi_YX_real;
-  float *sum_visi_YX_imag;
-  float *sum_visi_YY_real;
-  float *sum_visi_YY_imag;
+  user_precision_t *sum_visi_XX_real;
+  user_precision_t *sum_visi_XX_imag;
+  user_precision_t *sum_visi_XY_real;
+  user_precision_t *sum_visi_XY_imag;
+  user_precision_t *sum_visi_YX_real;
+  user_precision_t *sum_visi_YX_imag;
+  user_precision_t *sum_visi_YY_real;
+  user_precision_t *sum_visi_YY_imag;
 
   //SHAPELET stuff
-  float *sbf;
-  float *u_shapes;
-  float *v_shapes;
-  float *w_shapes;
-  float *shape_n1s;
-  float *shape_n2s;
-  float *shape_coeffs;
-  float *shape_param_indexes;
+  user_precision_t *sbf;
+  user_precision_t *u_shapes;
+  user_precision_t *v_shapes;
+  user_precision_t *w_shapes;
+  user_precision_t *shape_n1s;
+  user_precision_t *shape_n2s;
+  user_precision_t *shape_coeffs;
+  user_precision_t *shape_param_indexes;
   int num_coeffs;
 
 } args_for_testing_t;
@@ -90,11 +92,11 @@ void get_expected(int visi, int num_components, int num_baselines,
                   int num_freqs, int beamtype,
                   args_for_testing_t *args_ft,
                   int component_type,
-                  float * expec_re, float * expec_im);
+                  double * expec_re, double * expec_im);
 
 //Take input parameters and test whether GPU outputs match expectations
 void test_visi_outputs(int num_visis, int num_components,
                        int num_baselines, int num_freqs,
-                       float frac_tol,
+                       double tol,
                        int beamtype,  args_for_testing_t *args_ft,
                        int component_type);

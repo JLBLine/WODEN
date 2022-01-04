@@ -136,8 +136,8 @@ and no greater than N
 @param[in] x The point at which the function is to be evaluated
 @param[in,out] values Array to store calculated function values within
 */
-__device__ void RTS_CUDA_pm_polynomial_value_singlef(int n, int m, float x,
-                                                     float *values );
+__device__ void RTS_CUDA_pm_polynomial_value_single(int n, int m,
+                                 user_precision_t x, user_precision_t *values );
 
 /**
 @brief This grabs a legendre polynomial value for a `theta` value in `d_theta`
@@ -162,7 +162,7 @@ When called with `dim3 grid, threads`, kernel should be called with both
 
 
 */
-__global__ void RTS_P1SINfKernel( float *d_theta, cuFloatComplex *rts_P_sin,
+__global__ void RTS_P1SINfKernel( user_precision_t *d_theta, cuFloatComplex *rts_P_sin,
            cuFloatComplex *rts_p1, int nmax, int num_coords);
 
 /**
@@ -201,9 +201,9 @@ still separated by order of spherical harmonic
 still separated by order of spherical harmonic
 
 */
-__global__ void RTS_getTileGainsKernel( float *d_phi, float *d_theta,
+__global__ void RTS_getTileGainsKernel( user_precision_t *d_phi, user_precision_t *d_theta,
            int nMN, int num_coords,
-           float *pb_M, float *pb_N,
+           user_precision_t *pb_M, user_precision_t *pb_N,
            cuFloatComplex *pb_Q1, cuFloatComplex *pb_Q2,
            cuFloatComplex *rts_P_sin, cuFloatComplex *rts_P1,
            cuFloatComplex *emn_T, cuFloatComplex *emn_P);
@@ -237,9 +237,9 @@ When called with `dim3 grid, threads`, kernel should be called with all
 @param[in] num_coords Number of theta/phi coords
 */
 __global__ void kern_sum_emn_PT_by_M(cuFloatComplex *emn_T, cuFloatComplex *emn_P,
-           float *d_emn_T_sum_real, float *d_emn_T_sum_imag,
-           float *d_emn_P_sum_real, float *d_emn_P_sum_imag,
-           float *d_m_range, float *d_M, int nMN, int nmax, int num_coords);
+           user_precision_t *d_emn_T_sum_real, user_precision_t *d_emn_T_sum_imag,
+           user_precision_t *d_emn_P_sum_real, user_precision_t *d_emn_P_sum_imag,
+           user_precision_t *d_m_range, user_precision_t *d_M, int nMN, int nmax, int num_coords);
 
 /**
 @brief This basically just maps the outputs of `kern_sum_emn_PT_by_M` into a
@@ -272,8 +272,8 @@ gains for all polaristations, dipole orientations, and sky coords
 @param[in] num_coords Number of sky direction coords
 */
 __global__ void kern_map_emn(cuFloatComplex *TileGainMatrices,
-                float *d_emn_T_sum_real, float *d_emn_T_sum_imag,
-                float *d_emn_P_sum_real, float *d_emn_P_sum_imag,
+                user_precision_t *d_emn_T_sum_real, user_precision_t *d_emn_T_sum_imag,
+                user_precision_t *d_emn_P_sum_real, user_precision_t *d_emn_P_sum_imag,
                 int nmax, int num_coords);
 
 /**
@@ -286,7 +286,7 @@ in `TileGainMatrices` are still tied to the `phi,theta` coord system (i.e.)
 before any parallactic angle rotation). `d_norm_fac` should be an array of 4
 values, appropriate to each polarisation in `TileGainMatrices`. The values in
 `d_norm_fac` should be the absolute value of the zenith gain, but input as a
-`float _Complex` type (so just have imaginary set to zero).
+`user_precision_complex_t` type (so just have imaginary set to zero).
 
 @param[in] TileGainMatrices A single 1D array that contains all complex beam
 gains for all polaristations, dipole orientations, and sky coords
@@ -331,7 +331,7 @@ defined, where:
  - grid.x * threads.x >= `num_coords`
 */
 __global__ void kern_rotate_FEE_beam(cuFloatComplex *d_FEE_beam_gain_matrices,
-                                float *d_sin_para_angs, float *d_cos_para_angs,
+                                user_precision_t *d_sin_para_angs, user_precision_t *d_cos_para_angs,
                                 int num_coords);
 
 /**
@@ -378,11 +378,11 @@ spherical harmonic coeffs for this pointing
 gains for all polaristations, dipole orientations, and sky coords
 @param[in] scaling 0=False, 1=True, Normlise results to zenith
 */
-extern "C" void RTS_CUDA_get_TileGains(float *phi, float *theta,
-           float *sin_para_angs, float *cos_para_angs,
+extern "C" void RTS_CUDA_get_TileGains(user_precision_t *phi, user_precision_t *theta,
+           user_precision_t *sin_para_angs, user_precision_t *cos_para_angs,
            int num_time_steps, int num_components,
-           float rotation, RTS_MWA_FEE_beam_t *primary_beam,
-           float _Complex *TileGainMatrices, int scaling);
+           user_precision_t rotation, RTS_MWA_FEE_beam_t *primary_beam,
+           user_precision_complex_t *TileGainMatrices, int scaling);
 
 /**
 @brief This function is basically a wrapper to
@@ -418,8 +418,8 @@ spherical harmonic coeffs for this pointing
 @param[in] rotation 0=False, 1=True, rotate results by parallactic angle
 @param[in] scaling 0=False, 1=True, Normlise results to zenith
 */
-extern "C" void calc_CUDA_FEE_beam(float *azs, float *zas,
-                                   float *sin_para_angs, float *cos_para_angs,
+extern "C" void calc_CUDA_FEE_beam(user_precision_t *azs, user_precision_t *zas,
+                                   user_precision_t *sin_para_angs, user_precision_t *cos_para_angs,
                                    int num_components, int num_time_steps,
                                    RTS_MWA_FEE_beam_t *FEE_beam,
                                    int rotation, int scaling);
@@ -514,9 +514,9 @@ memory
 @param[in] num_times Number of times steps
 
 */
-__global__ void kern_map_FEE_beam_gains(cuFloatComplex *d_FEE_beam_gain_matrices,
-    cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J01,
-    cuFloatComplex *d_primay_beam_J10, cuFloatComplex *d_primay_beam_J11,
+__global__ void kern_map_FEE_beam_gains(cuUserComplex *d_FEE_beam_gain_matrices,
+    cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
+    cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
     int num_freqs, int num_components, int num_visis, int num_baselines,
     int num_times);
 
@@ -569,8 +569,8 @@ spherical harmonic coeffs for desired pointing
 `XX,XY,YX,YY`, and then by az/za)
 */
 extern "C" void test_RTS_CUDA_FEE_beam(int num_components,
-           float *azs, float *zas, float latitude,
+           user_precision_t *azs, user_precision_t *zas, double latitude,
            RTS_MWA_FEE_beam_t *FEE_beam_zenith,
            RTS_MWA_FEE_beam_t *FEE_beam,
            int rotation, int scaling,
-           float _Complex *FEE_beam_gains);
+           user_precision_complex_t *FEE_beam_gains);

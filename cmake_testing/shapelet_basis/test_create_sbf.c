@@ -8,7 +8,11 @@
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
-#define UNITY_INCLUDE_FLOAT
+#ifdef DOUBLE_PRECISION
+  double TOL = 1e-15;
+#else
+  double TOL = 1e-7;
+#endif
 
 /*
 create_sbf just creates a massive array of shapelet basis functions
@@ -18,9 +22,9 @@ Here just test that a few array locations return the correct values
 void test_create_sbf_GivesCorrectValues(void)
 {
   //Create the shapelet basis function array
-  float *sbf;
+  user_precision_t *sbf;
   sbf = NULL;
-  sbf = malloc( sbf_N * sbf_L * sizeof(float) );
+  sbf = malloc( sbf_N * sbf_L * sizeof(user_precision_t) );
   sbf = create_sbf(sbf);
 
   int num_values = 20;
@@ -32,16 +36,16 @@ void test_create_sbf_GivesCorrectValues(void)
                         175187, 185198, 195209};
 
   //Matching expected values
-  float expected[] = { 1.000000, 0.140716, -0.637657, -0.466946, 0.222800,
-                       0.583891, 0.311201, -0.232771, -0.522817, -0.352797,
-                       0.081828, 0.426772, 0.454641, 0.185771, -0.180553,
-                       -0.422827, -0.424534, -0.211821, 0.090262, 0.336831};
+  double expected[] = {1.00000000, 0.14071601, -0.63765672, -0.46694581,
+                       0.22280003, 0.58389053, 0.31120116, -0.2327714,
+                       -0.52281663, -0.35279668, 0.081828458, 0.42677188,
+                       0.45464097, 0.18577076, -0.18055274, -0.42282655,
+                       -0.42453389, -0.21182068, 0.09026158, 0.33683096};
 
-  //Check that they are equal
-  for (size_t ind = 0; ind < num_values; ind++) {
-    TEST_ASSERT_EQUAL_FLOAT(expected[ind], sbf[test_indexes[ind]]);
+  //Check that they are within tolerance
+  for (int ind = 0; ind < num_values; ind++) {
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[ind], sbf[test_indexes[ind]]);
   }
-
   free(sbf);
 }
 

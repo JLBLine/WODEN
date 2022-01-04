@@ -9,4 +9,5 @@ run_woden.py \
    --cat_filename=../skymodels/srclist_multi-comp_grid.txt \
    --metafits_filename=../metafits/1102865128_metafits_ppds.fits \
    --band_nums=1,2,3 --output_uvfits_prepend=./data/multi-comp_grid_MWA_FEE \
-   --primary_beam=MWA_FEE
+   --primary_beam=MWA_FEE \
+   --precision=float

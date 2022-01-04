@@ -6,8 +6,8 @@ void print_cmdline_help() {
   printf("\n");
 
   printf("This woden_settings.json file must include:\n");
-  printf("\t+ ra0: RA phase centre (float in degrees)\n");
-  printf("\t+ dec0: Dec phase centre (float in degrees)\n");
+  printf("\t+ ra0: RA phase centre (degrees)\n");
+  printf("\t+ dec0: Dec phase centre (degrees)\n");
   printf("\t+ num_freqs: number of fine frequency channels to simulate (int)\n");
   printf("\t+ num_time_steps: number of time steps to simulate (int)\n");
   printf("\t+ cat_filename: path to and name of WODEN-style srclist (string)\n");
@@ -54,4 +54,8 @@ void print_cmdline_help() {
       printf("\t\tabove horizon, regardless of which source they belong to\n");
   printf("\t+ chunking_size: The chunk size to break up the point sources into \n");
       printf("\t\tfor processing\n");
+
+  printf("\t+ no_precession=True: By default, the array layout is precessed back\n");
+      printf("\t\tto a J2000 frame to match the sky model. Add this to switch off\n");
+      printf("\t\tthis precession \n");
 }

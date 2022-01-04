@@ -36,8 +36,9 @@ class Test(unittest.TestCase):
 
         return out_slice
 
-    def test_load_data(self):
-        """Does the binary file writing/reading and comparisons"""
+    def load_data(self, precision):
+        """Does the binary file writing/reading and comparisons, for either
+        precision=float or precision=double"""
 
         num_baselines = 20
         num_freq_channels = 4
@@ -96,15 +97,22 @@ class Test(unittest.TestCase):
         binary_array[9*num_visis:10*num_visis] = input_yy_re
         binary_array[10*num_visis:11*num_visis] = input_yy_im
 
-        ##Write them out to a binary file
-        filename = "test_load_data.dat"
-        binary_array.astype('float32').tofile(filename)
+        if precision == 'float':
+            ##Write them out to a binary file
+            filename = "test_load_data.dat"
+            binary_array.astype('float32').tofile(filename)
+
+        elif precision == 'double':
+            ##Write them out to a binary file
+            filename = "test_load_data.dat"
+            binary_array.astype('float64').tofile(filename)
 
         ##Read in binary file using code under test
         output_u, output_v, output_w, v_container = rw.load_data(filename=filename,
                                                  num_baselines=num_baselines,
                                                  num_freq_channels=num_freq_channels,
-                                                 num_time_steps=num_time_steps)
+                                                 num_time_steps=num_time_steps,
+                                                 precision=precision)
 
         ##Check the u,v,w positions are to millimetre precision
         mm_accuracy = 1e-3 / VELC
@@ -152,6 +160,14 @@ class Test(unittest.TestCase):
         self.assertTrue((np.all(v_container[:,0,0,:,1,2] == 1.0)))
         self.assertTrue((np.all(v_container[:,0,0,:,2,2] == 1.0)))
         self.assertTrue((np.all(v_container[:,0,0,:,3,2] == 1.0)))
+
+    def test_load_data_float(self):
+        """Runs the test in float precision"""
+        self.load_data('float')
+
+    def test_load_data_double(self):
+        """Runs the test in double precision"""
+        self.load_data('double')
 
 ##Run the test
 if __name__ == '__main__':

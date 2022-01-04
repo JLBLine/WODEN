@@ -2,7 +2,9 @@
 =====================================
 
 Convenience script included to convert ``WSClean`` CLEAN components into a
-sky model compatible with ``WODEN``
+sky model compatible with ``WODEN``.
+
+.. _convert_wsclean command line running options:
 
 *Command line running options*
 -------------------------------

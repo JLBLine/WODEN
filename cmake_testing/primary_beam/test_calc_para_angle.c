@@ -21,23 +21,30 @@ void test_calc_para_angle() {
 
   //Function being tested
   int num_time_steps = 3;
-  calc_para_angle(src, lsts, src->point_decs[0], num_time_steps);
+  calc_para_angle(src, lsts, MWA_LAT_RAD, num_time_steps);
 
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_point_sin_para,
-                                src->sin_point_para_angs, 9);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_point_cos_para,
-                                src->cos_point_para_angs, 9);
+  #ifdef DOUBLE_PRECISION
+    double TOL = 1e-15;
+  #else
+    double TOL = 1e-7;
+  #endif
 
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_gauss_sin_para,
-                                src->sin_gauss_para_angs, 9);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_gauss_cos_para,
-                                src->cos_gauss_para_angs, 9);
+  for (int ang = 0; ang < 9; ang++) {
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_point_sin_para[ang],
+                                   src->sin_point_para_angs[ang]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_point_cos_para[ang],
+                                   src->cos_point_para_angs[ang]);
 
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_shape_sin_para,
-                                src->sin_shape_para_angs, 9);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_shape_cos_para,
-                                src->cos_shape_para_angs, 9);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_gauss_sin_para[ang],
+                                   src->sin_gauss_para_angs[ang]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_gauss_cos_para[ang],
+                                   src->cos_gauss_para_angs[ang]);
 
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_shape_sin_para[ang],
+                                   src->sin_shape_para_angs[ang]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_shape_cos_para[ang],
+                                   src->cos_shape_para_angs[ang]);
+  }
 }
 
 //Run test using unity

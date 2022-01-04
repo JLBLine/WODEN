@@ -24,7 +24,6 @@ void test_RTS_PrecessXYZtoJ2000_GivesCorrectValues(void)
 
   woden_settings_t *woden_settings = malloc(sizeof(woden_settings_t));
   //Set up where woden_settings correctly
-  woden_settings->array_layout_file_path="example_array_layout.txt";
   woden_settings->latitude = MWA_LAT_RAD;
   woden_settings->jd_date = 2457278.2010995;
   woden_settings->lst_base = LST_BEFORE;
@@ -43,11 +42,17 @@ void test_RTS_PrecessXYZtoJ2000_GivesCorrectValues(void)
   RTS_PrecessXYZtoJ2000(array_layout, woden_settings);
 
   //Check rotations give correct answers
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_X_prec, array_layout->ant_X, 8);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_Y_prec, array_layout->ant_Y, 8);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_Z_prec, array_layout->ant_Z, 8);
 
-  TEST_ASSERT_EQUAL_FLOAT(LST_AFTER, woden_settings->lst_base);
+  for (int i = 0; i < 8; i++) {
+    TEST_ASSERT_EQUAL_DOUBLE(expec_X_prec[i],
+                             array_layout->ant_X[i]);
+    TEST_ASSERT_EQUAL_DOUBLE(expec_Y_prec[i],
+                             array_layout->ant_Y[i]);
+    TEST_ASSERT_EQUAL_DOUBLE(expec_Z_prec[i],
+                             array_layout->ant_Z[i]);
+  }
+
+  TEST_ASSERT_EQUAL_DOUBLE(LST_AFTER, woden_settings->lst_base);
 
 }
 

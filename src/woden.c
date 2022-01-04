@@ -5,8 +5,10 @@
 #include <erfa.h>
 #include <complex.h>
 
+#include "woden_precision_defs.h"
 #include "constants.h"
 #include "woden_struct_defs.h"
+
 #include "create_sky_model.h"
 #include "shapelet_basis.h"
 #include "chunk_sky_model.h"
@@ -21,9 +23,15 @@
 extern void calculate_visibilities(array_layout_t * array_layout,
   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
   woden_settings_t *woden_settings,  visibility_set_t *visibility_set,
-  float *sbf);
+  user_precision_t *sbf);
 
 int main(int argc, char **argv) {
+
+  #ifdef DOUBLE_PRECISION
+  printf("WODEN is using DOUBLE precision\n");
+  #else
+  printf("WODEN is using FLOAT precision\n");
+  #endif
 
   //If not enough arguments, print help
   if (argc < 2) {
@@ -49,7 +57,7 @@ int main(int argc, char **argv) {
   int status=0;
 
   //Create the shapelet basis function array
-  float *sbf = malloc( sbf_N * sbf_L * sizeof(float) );
+  user_precision_t *sbf = malloc( sbf_N * sbf_L * sizeof(user_precision_t) );
   sbf = create_sbf(sbf);
 
   //Read in the settings from the controlling json file
@@ -64,12 +72,10 @@ int main(int argc, char **argv) {
   //Create the array layout in instrument-centric X,Y,Z using positions
   //Rotate back to J2000 if necessary
   array_layout_t * array_layout;
-  //Hard code to rotate back to J2000 at the moment
-  int do_precession = 1;
-  array_layout = calc_XYZ_diffs(woden_settings, do_precession);
+  array_layout = calc_XYZ_diffs(woden_settings, woden_settings->do_precession);
 
   //Setup all LSTs array for all time steps in this simulation
-  float *lsts = setup_lsts_and_phase_centre(woden_settings);
+  double *lsts = setup_lsts_and_phase_centre(woden_settings);
 
   //Read in the source catalogue
   source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );
@@ -106,7 +112,7 @@ int main(int argc, char **argv) {
   for (size_t band = 0; band < woden_settings->num_bands; band++) {
     //Set the lower frequency edge for this coarse band
     int band_num = woden_settings->band_nums[band];
-    float base_band_freq = ((band_num - 1)*woden_settings->coarse_band_width) + woden_settings->base_low_freq;
+    double base_band_freq = ((band_num - 1)*woden_settings->coarse_band_width) + woden_settings->base_low_freq;
     printf("Simulating band %02d with bottom freq %.8e\n",band_num,base_band_freq);
 
     woden_settings->base_band_freq = base_band_freq;
@@ -117,15 +123,15 @@ int main(int argc, char **argv) {
 
     //The intial setup of the FEE beam is done on the CPU, so call it here
     if (woden_settings->beamtype == FEE_BEAM){
-      float base_middle_freq = base_band_freq + (woden_settings->coarse_band_width/2.0);
+      double base_middle_freq = base_band_freq + (woden_settings->coarse_band_width/2.0);
     //
       printf("Middle freq is %.8e \n",base_middle_freq );
     //
-      float float_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      user_precision_t user_precision_t_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     //
       printf("Setting up the zenith FEE beam...");
-      status = RTS_MWAFEEInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings->FEE_beam_zenith, float_zenith_delays);
+      status = RTS_MWAFEEInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings->FEE_beam_zenith, user_precision_t_zenith_delays);
       printf(" done.\n");
 
       printf("Setting up the FEE beam...");

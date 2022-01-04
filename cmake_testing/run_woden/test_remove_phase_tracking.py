@@ -162,35 +162,35 @@ class Test(unittest.TestCase):
         non-phase tracked visibilities. The unwrap the phase tracking from the
         phase tracked case, and check it matches the non-phase tracked case"""
 
-        num_antennas = 5
+        num_antennas = 50
 
         ##Make a random array layout
-        east = np.random.uniform(0, 1000, num_antennas)
-        north = np.random.uniform(0, 1000, num_antennas)
-        # height = np.random.uniform(0, 10, num_antennas)
-
-        height = np.zeros(num_antennas)
+        east = np.random.uniform(-1000, 1000, num_antennas)
+        north = np.random.uniform(-1000, 1000, num_antennas)
+        height = np.random.uniform(0, 10, num_antennas)
 
         ##Stick at the MRO, convert to X,Y,Z and find the baseline lengths
         X, Y, Z = self.enh2xyz(east, north, height, MWA_LAT_RAD)
         xdiffs, ydiffs, zdiffs = self.get_xyz_diffs(X, Y, Z)
 
+        print(f'Number of baselines: {len(xdiffs)}')
+
         ##Setup some overserving variables for zenith
 
         initial_lst = 0.0
-        ra_source = 0.0
-        dec_source = MWA_LAT_RAD
+        ra_source = 10.0*D2R
+        dec_source = -15.0*D2R
 
         ##Random phase centre
         ra_phase = 40*D2R
         dec_phase = -50.0*D2R
 
         ##Other inputs params
-        num_time_steps = 3
+        num_time_steps = 10
         time_res = 2.0
-        num_freqs = 3
+        num_freqs = 10
 
-        frequencies = np.arange(num_freqs)*50e+6 + 100e+6
+        frequencies = np.arange(num_freqs)*10e+6 + 100e+6
 
         ##Make data with phase tracking
         w_seconds_phased, v_container_phased = self.create_uvw_and_vcontainer(xdiffs,
@@ -206,6 +206,9 @@ class Test(unittest.TestCase):
                                       ra_source, dec_source, initial_lst,
                                       num_time_steps, time_res,
                                       phase_tracked=False)
+
+        ##Check we haven't accidentally made the same set of visis twice
+        self.assertFalse(np.allclose(v_container_nophased, v_container_phased, atol=1e-3))
 
         ## Take out the phase tracking from the phase tracked case
         ## using the code under test

@@ -6,7 +6,7 @@
 
 
 //Populate an array with index values. Add an offset of `offset`
-void make_index_array(float *index_array, int array_length, int offset);
+void make_index_array(user_precision_t *index_array, int array_length, int offset);
 
 /*
 Given a maximum value `num_value`, populate an array from 0 to `num_value`-1,
@@ -15,7 +15,7 @@ i.e. if num_value = 2, num_repeat_times = 3, offset=4 makes an array
 repeat_array[] = {4, 4, 4, 5, 5, 5}
 
 */
-void make_repeat_array(float *repeat_array, int num_value, int num_repeat,
+void make_repeat_array(user_precision_t *repeat_array, int num_value, int num_repeat,
                        int offset);
 
 

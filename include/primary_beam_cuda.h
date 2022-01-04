@@ -4,6 +4,9 @@
   Both models assume there is no leakage and beams are purely real.
 */
 
+#include "woden_precision_defs.h"
+#include "cudacomplex.h"
+
 /**
 @brief Calculate a two dimensional Gaussian
 
@@ -33,13 +36,16 @@ standard deviations.
 @param[in] sigma_y Square root of variance in x
 @param[in] cos_theta Cosine of the rotation angle
 @param[in] sin_theta Sine of the rotation angle
+@param[in] sin_2theta Sine of two times the rotation angle
 @param[in,out] *d_beam_real Real part of the Gaussian repsonse
 @param[in,out] *d_beam_imag Imaginary part of the Gaussian reponse
-
 */
-__device__ void twoD_Gaussian(float x, float y, float xo, float yo,
-           float sigma_x, float sigma_y, float cos_theta, float sin_theta,
-           float * d_beam_real, float * d_beam_imag);
+__device__ void twoD_Gaussian(user_precision_t x, user_precision_t y,
+           user_precision_t xo, user_precision_t yo,
+           user_precision_t sigma_x, user_precision_t sigma_y,
+           user_precision_t cos_theta, user_precision_t sin_theta,
+           user_precision_t sin_2theta,
+           user_precision_t * d_beam_real, user_precision_t * d_beam_imag);
 
 /**
 @brief Kernel to calculate a Gaussian primary beam response at the given
@@ -78,11 +84,12 @@ complex `J[0,0]` response in
 complex `J[1,1]` response in
 
 */
-__global__ void kern_gaussian_beam(float *d_beam_ls, float *d_beam_ms,
-           float beam_ref_freq, float *d_freqs,
-           float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
+__global__ void kern_gaussian_beam(double *d_beam_ls, double *d_beam_ms,
+           double beam_ref_freq, double *d_freqs,
+           user_precision_t fwhm_lm, user_precision_t cos_theta,
+           user_precision_t sin_theta, user_precision_t sin_2theta,
            int num_freqs, int num_times, int num_components,
-           cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J11);
+           cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J11);
 
 /**
 @brief Calculate the Gaussian primary beam response at the given hour angle and
@@ -123,17 +130,13 @@ complex `J[1,1]` response in
 
 */
 extern "C" void calculate_gaussian_beam(int num_components, int num_time_steps,
-     int num_freqs, float ha0, float sdec0, float cdec0,
-     float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
-     float beam_ref_freq, float *d_freqs,
-     float *beam_has, float *beam_decs,
-     cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J11);
-
-// extern "C" void testing_gaussian_beam( float *beam_has, float *beam_decs,
-//            float *beam_angles_array, float *beam_freqs, float *ref_freq_array,
-//            float *beam_ls, float *beam_ms,
-//            int num_components, int num_times, int num_freqs,
-//            float *beam_reals, float *beam_imags);
+           int num_freqs, user_precision_t ha0,
+           user_precision_t sdec0, user_precision_t cdec0,
+           user_precision_t fwhm_lm, user_precision_t cos_theta,
+           user_precision_t sin_theta, user_precision_t sin_2theta,
+           double beam_ref_freq, double *d_freqs,
+           double *beam_has, double *beam_decs,
+           cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J11);
 
 /**
 @brief Calculate the beam response of a north-south (X) and east-west (Y)
@@ -150,9 +153,9 @@ size on the sky scales with frequency hence the need for `wavelength`
 @param[in,out] d_beam_Y Complex beam value for east-west dipole
 
 */
-
-__device__ void analytic_dipole(float az, float za, float wavelength,
-           cuFloatComplex * d_beam_X, cuFloatComplex * d_beam_Y);
+__device__ void analytic_dipole(user_precision_t az, user_precision_t za,
+           user_precision_t wavelength,
+           cuUserComplex * d_beam_X, cuUserComplex * d_beam_Y);
 
 /**
 @brief Kernel to calculate an Analytic MWA Dipole over an infinite ground screen
@@ -186,9 +189,10 @@ complex `J[0,0]` response in
 complex `J[1,1]` response in
 
 */
-__global__ void kern_analytic_dipole_beam(float *d_azs, float *d_zas,
-           float *d_freqs, int num_freqs, int num_times, int num_components,
-           cuFloatComplex *d_primay_beam_J00, cuFloatComplex *d_primay_beam_J11);
+__global__ void kern_analytic_dipole_beam(user_precision_t *d_azs,
+           user_precision_t *d_zas,  double *d_freqs, int num_freqs,
+           int num_times, int num_components,
+           cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J11);
 
 /**
 @brief Calculate the Analytic Dipole over an infinite ground screen primary beam
@@ -224,8 +228,8 @@ complex `J[1,1]` response in
 */
 extern "C" void calculate_analytic_dipole_beam(int num_components,
      int num_time_steps, int num_freqs,
-     float *azs, float *zas, float *d_freqs,
-     cuFloatComplex * d_primay_beam_J00, cuFloatComplex * d_primay_beam_J11);
+     user_precision_t *azs, user_precision_t *zas, double *d_freqs,
+     cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J11);
 
 /**
 @brief Run `calculate_analytic_dipole_beam` from the host, performing all the
@@ -248,15 +252,3 @@ arrays `analy_beam_X, analy_beam_Y`.
 @param[in,out] *analy_beam_Y Array to store the east-west beam response in
 
 */
-// extern "C" void test_analytic_dipole_beam(int num_components,
-//      int num_time_steps, int num_freqs,
-//      float *azs, float *zas, float *freqs,
-//      float _Complex *analy_beam_X, float _Complex *analy_beam_Y);
-//
-//
-//
-// extern "C" void test_kern_gaussian_beam(float *beam_ls, float *beam_ms,
-//            float beam_ref_freq, float *freqs,
-//            float fwhm_lm, float cos_theta, float sin_theta, float sin_2theta,
-//            int num_freqs, int num_time_steps, int num_components,
-//            float _Complex *primay_beam_J00, float _Complex *primay_beam_J11);

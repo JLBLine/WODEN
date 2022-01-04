@@ -4,7 +4,7 @@ the GPU WODEN code. Author: J.L.B. Line
 """
 from __future__ import print_function
 from astropy.io import fits
-from astropy.time import Time
+from astropy.time import Time, TimeDelta
 from astropy.coordinates import EarthLocation
 from astropy import units as u
 
@@ -25,13 +25,6 @@ MWA_LONG = 116.670813889
 MWA_HEIGHT = 377.0
 VELC = 299792458.0
 SOLAR2SIDEREAL = 1.00274
-
-read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
-
-if read_the_docs_build:
-    WODEN_DIR = "not-needed"
-else:
-    WODEN_DIR = os.environ['WODEN_DIR']
 
 def command(cmd):
     """
@@ -78,11 +71,16 @@ def calc_jdcal(date):
     ##then the fraction goes into the data array for PTYPE5
     return jd_day, jd_fraction
 
-def get_LST(latitude=None,longitude=None,date=None,height=None):
+def get_uvfits_date_and_position_constants(latitude=None,longitude=None,
+                                           date=None,height=None):
     """
-    For the given Earth location and UTC date return the local sidereal time
-    in degrees. Uses `astropy.time.Time`_ and `astropy.coordinates.EarthLocation`_
-
+    Returns a number of date and time based values that are needed for uvfits
+    headers. For the given Earth location and UTC date return the local sidereal
+    time (deg), the Greenwich sidereal time at 0 hours on the given date (deg),
+    the rotational speed of Earth on the given date (in degrees per day), and
+    the difference between UT1 and UTC.
+    Uses `astropy.time.Time`_ and `astropy.coordinates.EarthLocation`_ to make
+    the calculations.
 
     .. _astropy.time.Time: https://docs.astropy.org/en/stable/time/
     .. _astropy.coordinates.EarthLocation: https://docs.astropy.org/en/stable/api/astropy.coordinates.EarthLocation.html?highlight=EarthLocation
@@ -99,15 +97,50 @@ def get_LST(latitude=None,longitude=None,date=None,height=None):
 
     Returns
     -------
-
+    LST_deg : float
+        Local sidereal time (degrees)
+    GST0_deg : float
+        Greenwich sidereal time at 0 hours on the given date (degrees)
+    DEGPDY : float
+        Rotational speed of Earth on the given date (degrees per day)
+    ut1utc : float
+        Difference between UT1 and UTC (secs)
     """
+
     ##Setup location
     observing_location = EarthLocation(lat=latitude*u.deg, lon=longitude*u.deg, height=height)
     ##Setup time at that locatoin
     observing_time = Time(date, scale='utc', location=observing_location)
     ##Grab the LST
     LST = observing_time.sidereal_time('apparent')
-    return LST.value*15.0
+    LST_deg = LST.value*15.0
+
+    # GST = observing_time.sidereal_time('apparent', 'greenwich')
+    # GST_deg = GST.value*15.0
+    #
+    # print(f"Located at {latitude}, {longitude}, date {date} LST {LST_deg:1f} GST {GST_deg:1f}")
+
+    ##uvfits file needs to know the greenwich sidereal time at 0 hours
+    ##on the date in question
+    zero_date = date.split('T')[0] + "T00:00:00"
+    zero_time = Time(zero_date, scale='utc', location=observing_location)
+    GST0 = zero_time.sidereal_time('apparent', 'greenwich')
+    GST0_deg = GST0.value*15.0
+
+    ##It also needs to know the rotational rate of the Earth on that day, in
+    ##units of degrees per day
+    ##Do this by measuring the LST exactly a day later
+
+    date_plus_one_day =  observing_time + TimeDelta(1*u.day)
+    LST_plusone = date_plus_one_day.sidereal_time('apparent')
+
+    LST_plusone_deg = LST_plusone.value*15.0
+
+    DEGPDY = 360.0 + (LST_plusone_deg - LST_deg)
+
+    ut1utc = float(observing_time.delta_ut1_utc)
+
+    return LST_deg, GST0_deg, DEGPDY, ut1utc
 
 def RTS_encode_baseline(b1, b2):
     """The ancient aips/miriad extended way of encoding a baseline by antenna
@@ -166,9 +199,9 @@ def RTS_decode_baseline(blcode):
     return b1,b2
 
 
-def make_antenna_table(XYZ_array=None,telescope_name=None,num_antennas=None,
-                       freq_cent=None,date=None,
-                       longitude=None, latitude=None, array_height=None):
+def make_antenna_table(XYZ_array=None, telescope_name=None,num_antennas=None,
+                       freq_cent=None, date=None, gst0_deg=None, degpdy=None,
+                       ut1utc=None, longitude=None, latitude=None, array_height=None):
     """Write an antenna table for a uvfits file. This is the first table in
     the uvfits file that encodes antenna positions, with some header keywords.
     Uses `astropy.io.fits.BinTableHDU`_ to create the table.
@@ -189,6 +222,12 @@ def make_antenna_table(XYZ_array=None,telescope_name=None,num_antennas=None,
     date : string
         UTC date/time in format YYYY-MM-DDThh:mm:ss to give to the 'RDATE'
         header keyword
+    gst0_deg : float
+        Greenwich sidereal time at 0 hours on the given date (degrees)
+    degpdy : float
+        Rotational speed of Earth on the given date (degrees per day)
+    ut1utc : float
+        Difference between UT1 and UTC (secs)
     longitude : float
         Longitude of the array (deg)
     latitude : float
@@ -208,7 +247,7 @@ def make_antenna_table(XYZ_array=None,telescope_name=None,num_antennas=None,
     ylabels = np.array(['Y']*num_antennas)
 
     ##Make a number of FITS columns to create the antenna table from
-    col1 = fits.Column(array=annnames,name='ANNAME',format='5A')
+    col1 = fits.Column(array=annnames,name='ANNAME',format='8A')
     col2 = fits.Column(array=XYZ_array,name='STABXYZ',format='3D')
     ##col3 makes an empty array, and the format states skip reading this column
     ##Just replicating the example uvfits I've been using
@@ -244,8 +283,15 @@ def make_antenna_table(XYZ_array=None,telescope_name=None,num_antennas=None,
     hdu_ant.header['ARRAYY']  = arrY
     hdu_ant.header['ARRAYZ']  = arrZ
 
-    hdu_ant.header['FREQ']    = freq_cent
-    hdu_ant.header['RDATE']   = date
+    hdu_ant.header['FREQ'] = freq_cent
+    hdu_ant.header['RDATE'] = date
+    hdu_ant.header['GSTIA0'] = gst0_deg
+    hdu_ant.header['DEGPDY'] = degpdy
+
+    hdu_ant.header['UT1UTC'] = ut1utc
+    hdu_ant.header['XYZHAND'] = 'RIGHT'
+    hdu_ant.header['FRAME'] = '????'
+
     hdu_ant.header['TIMSYS']  = 'UTC     '
     hdu_ant.header['ARRNAM']  = telescope_name
     hdu_ant.header['NUMORB']  = 0
@@ -259,6 +305,8 @@ def create_uvfits(v_container=None,freq_cent=None,
                   central_freq_chan=None,ch_width=None,
                   ra_point=None, dec_point=None,
                   output_uvfits_name=None,uu=None,vv=None,ww=None,
+                  longitude=None, latitude=None, array_height=None,
+                  telescope_name=None,
                   baselines_array=None, date_array=None,
                   int_jd=None, hdu_ant=None, gitlabel=False):
     """
@@ -283,6 +331,7 @@ def create_uvfits(v_container=None,freq_cent=None,
 
         - 1st axis: ordered by baseline (fastest changing) and then time step
           (slowest changing).
+        - 2nd, 3rd axes: essentially do nothing in these uvfits, are placeholders
         - 4th axis: ordered with increasing frequency
         - 5th axis: ordered by polarisation in the order of XX,YY,XY,YX
         - 6th axis: ordered by real visi part, imaginary visi part, weighting
@@ -309,7 +358,7 @@ def create_uvfits(v_container=None,freq_cent=None,
     date_array : float array
         Fractional julian date array to put in 'DATE' array (days)
     int_jd : int
-        Integer julian date to put in the header as 'PZERO5'
+        Integer julian date to put in the header as 'PZERO4'
     hdu_ant : `astropy.io.fits.hdu.table.BinTableHDU`
         Populated uvfits antenna table
     gitlabel : string
@@ -324,11 +373,43 @@ def create_uvfits(v_container=None,freq_cent=None,
                  "v_container, uu, vv, ww, baselines_array, date_array\n"
                  "must be equal to make a uvfits file. Exiting now.")
 
-    uvparnames = ['UU','VV','WW','BASELINE','DATE']
-    parvals = [uu,vv,ww,baselines_array,date_array]
+    antenna1_array = np.empty(len(baselines_array))
+    antenna2_array = np.empty(len(baselines_array))
+
+    for antind, baseline in enumerate(baselines_array):
+        ant1, ant2 = RTS_decode_baseline(baseline)
+
+        antenna1_array[antind] = ant1
+        antenna2_array[antind] = ant2
+
+    ##stick a bunch of ones in why not
+    subarray = np.ones(len(baselines_array))
+
+    uvparnames = ['UU','VV','WW','DATE','BASELINE', 'ANTENNA1', 'ANTENNA2', 'SUBARRAY']
+    parvals = [uu,vv,ww,date_array,baselines_array, antenna1_array, antenna2_array, subarray]
+
+    # Optional INTTIM length of time data were integrated over (seconds)
 
     uvhdu = fits.GroupData(v_container,parnames=uvparnames,pardata=parvals,bitpix=-32)
     uvhdu = fits.GroupsHDU(uvhdu)
+
+    ## Write the parameters scaling explictly because they are omitted if default 1/0
+    uvhdu.header['PSCAL1'] = 1.0
+    uvhdu.header['PZERO1'] = 0.0
+    uvhdu.header['PSCAL2'] = 1.0
+    uvhdu.header['PZERO2'] = 0.0
+    uvhdu.header['PSCAL3'] = 1.0
+    uvhdu.header['PZERO3'] = 0.0
+    uvhdu.header['PSCAL4'] = 1.0
+    uvhdu.header['PZERO4'] = float(int_jd)
+    uvhdu.header['PSCAL5'] = 1.0
+    uvhdu.header['PZERO5'] = 0.0
+    uvhdu.header['PSCAL6'] = 1.0
+    uvhdu.header['PZERO6'] = 0.0
+    uvhdu.header['PSCAL7'] = 1.0
+    uvhdu.header['PZERO7'] = 0.0
+    uvhdu.header['PSCAL8'] = 1.0
+    uvhdu.header['PZERO8'] = 0.0
 
     ###uvfits standards
     uvhdu.header['CTYPE2'] = 'COMPLEX '
@@ -357,25 +438,22 @@ def create_uvfits(v_container=None,freq_cent=None,
     uvhdu.header['CRPIX6'] = 1.0
     uvhdu.header['CDELT6'] = 1.0
 
-    ## Write the parameters scaling explictly because they are omitted if default 1/0
-    uvhdu.header['PSCAL1'] = 1.0
-    uvhdu.header['PZERO1'] = 0.0
-    uvhdu.header['PSCAL2'] = 1.0
-    uvhdu.header['PZERO2'] = 0.0
-    uvhdu.header['PSCAL3'] = 1.0
-    uvhdu.header['PZERO3'] = 0.0
-    uvhdu.header['PSCAL4'] = 1.0
-    uvhdu.header['PZERO4'] = 0.0
-    uvhdu.header['PSCAL5'] = 1.0
-
-    # int_jd, float_jd = calc_jdcal(date)
-    uvhdu.header['PZERO5'] = float(int_jd)
+    ##We're outputting into J2000
+    uvhdu.header['EPOCH'] = 2000.0
 
     ##Old observation parameters that were/are needed in CHIPS
     uvhdu.header['OBJECT']  = 'Undefined'
     uvhdu.header['OBSRA']   = ra_point
     uvhdu.header['OBSDEC']  = dec_point
-    # uvhdu.header['TELESCOP'] = 'MWA'
+
+    uvhdu.header['TELESCOP'] = telescope_name
+    uvhdu.header['LAT']      = latitude
+    uvhdu.header['LON']      = longitude
+    uvhdu.header['ALT']      = array_height
+    ## For everything WODEN can simulate, there are no extra instruments on
+    ## the telescope (I guess this is for different feed horns on a dish and
+    ## similar things to that?) so just set it to the telescope name
+    uvhdu.header['INSTRUME'] = telescope_name
 
     ##Add in the gitlabel so we know what version generated the file
     if gitlabel: uvhdu.header['GITLABEL'] = gitlabel
@@ -418,14 +496,17 @@ def enh2xyz(east, north, height, latitude=MWA_LAT*D2R):
     Z = north*cl + height*sl
     return X,Y,Z
 
-def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_steps=None):
+def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_steps=None,
+              precision=None):
     """
     Read the WODEN binary output and shove into a numpy arrays, ready to be put
     into a uvfits file. Data in WODEN binaries is ordered by baseline (fastest
     changing), frequency, and time (slowest changing). Visibility coords and
     data are read in, with the visi data output into an array of
     `shape=(num_time_steps*num_baselines,1,1,num_freq_channels,4,3))`, which is
-    appropriate for a uvfits file.
+    appropriate for a uvfits file. Needs to know whether WODEN was run with
+    'float' (32 bit) or 'double' (64 bit) precision to read in the data
+    correctly.
 
     Parameters
     ----------
@@ -437,6 +518,8 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
         Number of frequencies in the binary file
     num_time_steps : int
         Number of time steps in the binary file
+    precision : string
+        Precision WODEN was run with - either 'float' or 'double'
 
     Returns
     -------
@@ -455,7 +538,11 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
         read_data = f.read()
     f.close()
 
-    data = np.frombuffer(read_data,dtype=np.float32)
+    ##numpy needs to know if we have 32 (float) or 64 (double) bit precision
+    if precision == 'float':
+        data = np.frombuffer(read_data,dtype=np.float32)
+    elif precision == 'double':
+        data = np.frombuffer(read_data,dtype=np.float64)
 
     n_data = num_time_steps * num_baselines
     v_container = np.zeros((n_data,1,1,num_freq_channels,4,3))
@@ -543,8 +630,8 @@ def write_json(json_name=None, jd_date=None, lst=None, args=None):
     with open(json_name,'w+') as outfile:
 
         outfile.write('{\n')
-        outfile.write('  "ra0": {:.10f},\n'.format(args.ra0))
-        outfile.write('  "dec0": {:.10f},\n'.format(args.dec0))
+        outfile.write('  "ra0": {:.16f},\n'.format(args.ra0))
+        outfile.write('  "dec0": {:.16f},\n'.format(args.dec0))
         outfile.write('  "num_freqs": {:d},\n'.format(args.num_freq_channels))
         outfile.write('  "num_time_steps": {:d},\n'.format(args.num_time_steps))
         outfile.write('  "cat_filename": "{:s}",\n'.format(args.cat_filename))
@@ -552,14 +639,17 @@ def write_json(json_name=None, jd_date=None, lst=None, args=None):
         outfile.write('  "frequency_resolution": {:.3f},\n'.format(args.freq_res))
         outfile.write('  "chunking_size": {:d},\n'.format(int(args.chunking_size)))
         outfile.write('  "jd_date": {:.16f},\n'.format(jd_date))
-        outfile.write('  "LST": {:.8f},\n'.format(lst))
+        outfile.write('  "LST": {:.16f},\n'.format(lst))
         outfile.write('  "array_layout": "{:s}",\n'.format(args.array_layout_name))
         outfile.write('  "lowest_channel_freq": {:.10e},\n'.format(args.lowest_channel_freq))
-        outfile.write('  "latitude": {:.8f},\n'.format(args.latitude))
+        outfile.write('  "latitude": {:.16f},\n'.format(args.latitude))
         outfile.write('  "coarse_band_width": {:.10e},\n'.format(args.coarse_band_width))
 
         if args.sky_crop_components:
             outfile.write('  "sky_crop_components": "True",\n')
+
+        if args.no_precession:
+            outfile.write('  "no_precession": "True",\n')
 
         if args.primary_beam == 'Gaussian':
             outfile.write('  "use_gaussian_beam": "True",\n')
@@ -647,7 +737,8 @@ def make_baseline_date_arrays(num_antennas, date, num_time_steps, time_res):
 
         ##Fill in the fractional julian date, after adding on the appropriate amount of
         ##time - /(24*60*60) because julian number is a fraction of a whole day
-        adjust_float_jd_array = float_jd_array + (float(time) / (24.0*60.0*60.0))
+        ##Should be the central time of the integration so add half a time resolution
+        adjust_float_jd_array = float_jd_array + ((float(time) + time_res/2.0) / (24.0*60.0*60.0))
         date_array[time_ind_lower:time_ind_lower+num_baselines] = adjust_float_jd_array
 
     return baselines_array, date_array
@@ -813,6 +904,9 @@ def get_parser():
              'This is used to set the LST and array precession. This is set '
              'automatically when reading a metafits but including this will '
              'override the date in the metafits')
+    obs_group.add_argument('--no_precession', default=False, action='store_true',
+        help='By default, WODEN rotates the array back to J2000 to match '
+             'the input sky catalogue. Add this to switch off precession')
 
     tel_group = parser.add_argument_group('TELESCOPE OPTIONS')
     tel_group.add_argument('--latitude', default=MWA_LAT, type=float,
@@ -883,6 +977,9 @@ def get_parser():
              'of which SOURCE it belongs to.')
 
     sim_group = parser.add_argument_group('SIMULATOR OPTIONS')
+    sim_group.add_argument('--precision', default='double',
+        help='What precision to run WODEN at. Options are "double" or "float". '
+             'Defaults to "double"')
     sim_group.add_argument('--remove_phase_tracking', default=False, action='store_true',
         help='By adding this flag, remove the phase tracking of the '
              'visibilities - use this to feed uvfits into the RTS')
@@ -895,6 +992,7 @@ def get_parser():
     sim_group.add_argument('--dry_run', default=False, action='store_true',
         help='Add this to NOT call the WODEN executable - this will just write '
              'out the .json file and do nothing else')
+
 
     ##Add a number of hidden arguments. This means we can add attributes to
     ##the args object to conveniently pass things into functions, but without
@@ -999,7 +1097,7 @@ def select_correct_enh(args):
             args.height = array_layout[:,2]
 
         except:
-            exit("Could not open array layout file:\n"
+            exit("Could not read array layout file:\n"
                  "\t{:s}\nExiting before woe beings".format(args.array_layout))
 
         args.array_layout_name = args.array_layout
@@ -1183,12 +1281,51 @@ def check_args(args):
         if args.gauss_beam_ref_freq: args.gauss_beam_ref_freq = float(args.gauss_beam_ref_freq)
         if args.gauss_beam_FWHM: args.gauss_beam_FWHM = float(args.gauss_beam_FWHM)
 
+    if args.precision not in ['double', 'float']:
+        print(f"Arg --precision={args.precision} is not valid. Should be either"
+              "'double' or 'float'. Setting to 'double'")
+        args.precision='double'
+
     ##Either read the array layout from a file or use what was in the metafits
     select_correct_enh(args)
 
     return args
 
 if __name__ == "__main__":
+
+    ##If we're at readthe docs, we don't need to know where woden exe lives
+    read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
+
+    ##Grab the parser and parse some args
+    parser = get_parser()
+    args = parser.parse_args()
+
+    args = check_args(args)
+
+    if args.precision == 'float':
+        woden_exe = "woden_float"
+    elif args.precision == 'double':
+        woden_exe = "woden_double"
+
+    WODEN_DIR = 'unset'
+
+    if read_the_docs_build:
+        WODEN_DIR = "not-needed"
+    else:
+        ##If the user is using 'init_WODEN.sh' in their bashrc, look for it
+        try:
+            WODEN_DIR = os.environ['WODEN_DIR']
+        ##If it doesn't exist, try and find it in the path
+        except KeyError:
+            for path in os.environ["PATH"].split(os.pathsep):
+                woden_exe_path = os.path.join(path, woden_exe)
+                if os.path.isfile(woden_exe_path):
+                    print(os.access(woden_exe_path, os.X_OK))
+
+                    WODEN_DIR = '/'.join(woden_exe_path.split('/')[:-1])
+
+    ##Print where we found woden executable
+    print(f'Using the WODEN living here: {WODEN_DIR}/{woden_exe}')
 
     ##Find out where the git repo is, cd in and grab the git label
     ##TODO do this in a better way
@@ -1201,14 +1338,8 @@ if __name__ == "__main__":
 
     print("You are using WODEN commit %s" %gitlabel)
 
-    ##Grab the parser and parse some args
-    parser = get_parser()
-    args = parser.parse_args()
-
-    args = check_args(args)
-
-    lst_deg = get_LST(latitude=args.latitude, longitude=args.longitude,
-                      height=args.array_height, date=args.date)
+    lst_deg, gst0_deg, degpdy, ut1utc = get_uvfits_date_and_position_constants(latitude=args.latitude, longitude=args.longitude,
+                        height=args.array_height, date=args.date)
 
     int_jd, float_jd = calc_jdcal(args.date)
     jd_date = int_jd + float_jd
@@ -1226,7 +1357,12 @@ if __name__ == "__main__":
     if args.dry_run:
         pass
     else:
-        command('%s/woden %s' %(WODEN_DIR,json_name))
+        # if args.precision == 'float':
+        #
+        # else:
+        #     command('%s/woden_double %s' %(WODEN_DIR,json_name))
+
+        command(f'{WODEN_DIR}/{woden_exe} {json_name}')
 
         X,Y,Z = enh2xyz(args.east, args.north, args.height, args.latitude*D2R)
         ##X,Y,Z are stored in a 2D array in units of seconds in the uvfits file
@@ -1253,7 +1389,8 @@ if __name__ == "__main__":
             filename = "output_visi_band{:02d}.dat".format(band)
             uus,vvs,wws,v_container = load_data(filename=filename,num_baselines=num_baselines,
                                                 num_freq_channels=args.num_freq_channels,
-                                                num_time_steps=args.num_time_steps)
+                                                num_time_steps=args.num_time_steps,
+                                                precision=args.precision)
 
 
             if args.remove_phase_tracking:
@@ -1267,8 +1404,8 @@ if __name__ == "__main__":
 
             hdu_ant = make_antenna_table(XYZ_array=XYZ_array,telescope_name=args.telescope_name,
                           num_antennas=args.num_antennas, freq_cent=central_freq_chan_value,
-                          date=args.date,
-                          longitude=args.longitude, latitude=args.latitude,
+                          date=args.date, gst0_deg=gst0_deg, degpdy=degpdy,
+                          ut1utc=ut1utc, longitude=args.longitude, latitude=args.latitude,
                           array_height=args.array_height)
 
             baselines_array, date_array = make_baseline_date_arrays(args.num_antennas,
@@ -1281,7 +1418,10 @@ if __name__ == "__main__":
                           date_array=date_array,
                           central_freq_chan=central_freq_chan,
                           ch_width=args.freq_res, int_jd=int_jd,
-                          hdu_ant=hdu_ant, gitlabel=gitlabel)
+                          hdu_ant=hdu_ant, gitlabel=gitlabel,
+                          longitude=args.longitude, latitude=args.latitude,
+                          array_height=args.array_height,
+                          telescope_name=args.telescope_name,)
 
 
             ##Tidy up or not

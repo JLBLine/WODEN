@@ -1,5 +1,5 @@
 .. _Sokolowski et al. 2017: https://doi.org/10.1017/pasa.2017.54
-.. _polarised_source_and_FEE_beam.ipynb that lives here: https://github.com/JLBLine/polarisation_tests_for_FEE
+.. _polarised_source_and_FEE_beam.ipynb which lives here: https://github.com/JLBLine/polarisation_tests_for_FEE
 .. _Tingay et al. 2013: https://doi.org/10.1017/pasa.2012.007
 .. _Wayth et al. 2017: https://doi.org/10.1017/pasa.2017.27
 

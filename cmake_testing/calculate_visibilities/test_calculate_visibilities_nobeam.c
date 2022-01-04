@@ -17,12 +17,18 @@ are launched by calculate_visibilities::calculate_visibilities`
 
 #include "test_calculate_visibilities_common.h"
 
+#ifdef DOUBLE_PRECISION
+  double TOL = 1e-9;
+#else
+  double TOL = 1e-6;
+#endif
+
 /*
 For a numbre of COMPONENTs at phase centre, with no beam model
 should just have a single gain in the XX and YY
 real visis
 */
-void test_comp_phase_centre_nobeam(visibility_set_t *visibility_set, float gain) {
+void test_comp_phase_centre_nobeam(visibility_set_t *visibility_set, double gain) {
 
   //We're testing all COMPONENT types with this function, where the values of
   //the real vary slightly for baseline (I've set the major/minor to be small
@@ -38,21 +44,23 @@ void test_comp_phase_centre_nobeam(visibility_set_t *visibility_set, float gain)
   //           visibility_set->sum_visi_YY_imag[visi],
   //           visibility_set->sum_visi_YY_real[visi] );
 
-    TEST_ASSERT_FLOAT_WITHIN(gain*1e-4, gain, visibility_set->sum_visi_XX_real[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gain*1e-4, 0.0, visibility_set->sum_visi_XX_imag[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gain*1e-4, 0.0, visibility_set->sum_visi_XY_real[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gain*1e-4, 0.0, visibility_set->sum_visi_XY_imag[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gain*1e-4, 0.0, visibility_set->sum_visi_YX_real[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gain*1e-4, 0.0, visibility_set->sum_visi_YX_imag[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gain*1e-4, 0.0, visibility_set->sum_visi_YY_imag[visi]);
-    TEST_ASSERT_FLOAT_WITHIN(gain*1e-4, gain, visibility_set->sum_visi_YY_real[visi]);
+    // printf("%.11f %.11f\n",gain, visibility_set->sum_visi_XX_real[visi] );
+
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, gain, visibility_set->sum_visi_XX_real[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, visibility_set->sum_visi_XX_imag[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, visibility_set->sum_visi_XY_real[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, visibility_set->sum_visi_XY_imag[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, visibility_set->sum_visi_YX_real[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, visibility_set->sum_visi_YX_imag[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, visibility_set->sum_visi_YY_imag[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, gain, visibility_set->sum_visi_YY_real[visi]);
   }
 }
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
-#define UNITY_INCLUDE_FLOAT
+// #define UNITY_INCLUDE_FLOAT
 
 void test_calculate_visibilities_NoBeam(int n_points, int n_gauss, int n_shapes,
                                         int num_sources) {
@@ -71,7 +79,7 @@ void test_calculate_visibilities_NoBeam(int n_points, int n_gauss, int n_shapes,
                                           beam_settings, woden_settings, RA0, MWA_LAT_RAD,
                                           beam_settings->beamtype);
 
-  float gain = (n_points + n_gauss + n_shapes)*num_sources;
+  double gain = (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
   test_comp_phase_centre_nobeam(visibility_set, gain);
 
 }
@@ -179,8 +187,6 @@ void test_calculate_visibilities_NoBeam_ThreeSource_ThreeAll(void) {
   int num_sources = 3;
   test_calculate_visibilities_NoBeam(n_points, n_gauss, n_shapes, num_sources);
 }
-
-
 
 //Run the test with unity
 int main(void)

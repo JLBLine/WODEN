@@ -120,84 +120,146 @@ set(TARGET_GROUP production CACHE STRING "Group to build")
 
 ##If making production code
 if(TARGET_GROUP STREQUAL production)
+    ##Do it for the float code first--------------------------------------------
     ##Generate library from the C
-    add_library(wodenC SHARED ${CSOURCES})
+    add_library(wodenC_float SHARED ${CSOURCES})
     ##Compile C code with all warnings and optimise
-    target_compile_options(wodenC PRIVATE -O3 -Wall)
+    target_compile_options(wodenC_float PRIVATE -O3 -Wall)
 
     ##Generate library for the CUDA code
-    add_library(wodenCUDA SHARED ${CUDASOURCES})
+    add_library(wodenCUDA_float SHARED ${CUDASOURCES})
     ##Compile CUDA code with all warnings
-    target_compile_options(wodenCUDA PRIVATE --compiler-options -Wall)
+    target_compile_options(wodenCUDA_float PRIVATE --compiler-options -Wall)
     ## For CMake versions > 3.18, the arch flag settings are handled by
     ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
     ## replace the CUDA_FLAG lines above with something like
-    set_property(TARGET wodenCUDA PROPERTY CUDA_ARCHITECTURES OFF)
+    set_property(TARGET wodenCUDA_float PROPERTY CUDA_ARCHITECTURES OFF)
 
     ##make the final WODEN executable, linking the libraries
-    add_executable(woden src/woden.c)
-    target_link_libraries(woden PUBLIC wodenC wodenCUDA ${CC_LINKLIBS})
-    target_compile_options(woden PRIVATE -O3 -Wall)
+    add_executable(woden_float src/woden.c)
+    target_link_libraries(woden_float PUBLIC wodenC_float
+                          wodenCUDA_float ${CC_LINKLIBS})
+    target_compile_options(woden_float PRIVATE -O3 -Wall)
 
+    ##Now do it for double by adding compilation switch-------------------------
+    ##Generate library from the C
+    add_library(wodenC_double SHARED ${CSOURCES})
+    ##Compile C code with all warnings and optimise
+    target_compile_options(wodenC_double PRIVATE -O3 -Wall -DDOUBLE_PRECISION)
 
-    ##Make a symlink to run_woden.py so it's easy to find
-    set(link_woden "run_woden.py")
-    find_path(WODENPY run_woden.py HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
-    if(WODENPY)
-      message(STATUS "WODENPY path: ${WODENPY}")
+    ##Generate library for the CUDA code
+    add_library(wodenCUDA_double SHARED ${CUDASOURCES})
+    ##Compile CUDA code with all warnings
+    target_compile_options(wodenCUDA_double PRIVATE -DDOUBLE_PRECISION
+                           --compiler-options -Wall)
+    ## For CMake versions > 3.18, the arch flag settings are handled by
+    ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
+    ## replace the CUDA_FLAG lines above with something like
+    set_property(TARGET wodenCUDA_double PROPERTY CUDA_ARCHITECTURES OFF)
+
+    ##Make the double precision version
+    ##make the final WODEN executable, linking the libraries
+    add_executable(woden_double src/woden.c)
+    target_link_libraries(woden_double PUBLIC wodenC_double
+                          wodenCUDA_double ${CC_LINKLIBS})
+    target_compile_options(woden_double PRIVATE -O3 -Wall -DDOUBLE_PRECISION)
+
+    ##Macro to search for a filename in the `src` dir and make a symlink
+    ##into the build dir
+    macro(make_python_symlink filename)
+    find_path(THISPY ${filename} HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
+    if(THISPY)
+      message(STATUS "${filename} path: ${THISPY}")
     endif()
-    set(target_woden "${WODENPY}/run_woden.py")
-    ADD_CUSTOM_TARGET(target_woden ALL
-                      COMMAND ${CMAKE_COMMAND} -E create_symlink ${target_woden} ${link_woden})
+    set(path_filename "${THISPY}/${filename}")
+    ADD_CUSTOM_TARGET(${filename} ALL
+                      COMMAND ${CMAKE_COMMAND} -E create_symlink ${path_filename} ${filename})
+    endmacro(make_python_symlink)
 
-    ##Make a symlink to convert_WSClean_list_to_WODEN.py so it's easy to find
-    set(link_convert "convert_WSClean_list_to_WODEN.py")
-    find_path(CONVERTWSCLEAN convert_WSClean_list_to_WODEN.py HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
-    if(CONVERTWSCLEAN)
-      message(STATUS "CONVERTWSCLEAN path: ${CONVERTWSCLEAN}")
-    endif()
-    set(target_convert "${CONVERTWSCLEAN}/convert_WSClean_list_to_WODEN.py")
-    ADD_CUSTOM_TARGET(target_convert ALL
-                      COMMAND ${CMAKE_COMMAND} -E create_symlink ${target_convert} ${link_convert})
+    make_python_symlink("run_woden.py")
+    make_python_symlink("uv2ms.py")
+    make_python_symlink("convert_WSClean_list_to_WODEN.py")
 
-    ##Make a symlink to uv2ms.py so it's easy to find
-    set(link_uv2ms "uv2ms.py")
-    find_path(UV2MS uv2ms.py HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
-    if(UV2MS)
-      message(STATUS "UV2MS path: ${UV2MS}")
-    endif()
-    set(target_uv2ms "${UV2MS}/uv2ms.py")
-    ADD_CUSTOM_TARGET(target_uv2ms ALL
-                      COMMAND ${CMAKE_COMMAND} -E create_symlink ${target_uv2ms} ${link_uv2ms})
+    ##Want to run a python command everytime we make the code, in case paths
+    ##have changed. CMake doesn't seem to want to run a command unless the
+    ##output is missing. So make a custom target including a file '__header.h'
+    ##that will never exist, to trick CMake into running the command below
+    ##everytime
+    add_custom_target(
+        write_init_WODEN ALL
+        DEPENDS
+            ${CMAKE_CURRENT_BINARY_DIR}/__header.h
+            init_WODEN.sh
+    )
+    ##Find python so we can run a python script
+    include(FindPythonInterp)
+    ##Run the command that will create / edit the init_WODEN.sh script. Make
+    ##__header.h a dependency so it will always run
+    add_custom_command(
+            OUTPUT
+                ${CMAKE_CURRENT_BINARY_DIR}/__header.h
+                init_WODEN.sh
+            COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/src/update_init_WODEN.py
+    )
 
-    ##Copy the variable init script so this file can be put in bashrc
-    find_path(INIT_WODEN init_WODEN.sh HINTS "${CMAKE_CURRENT_LIST_DIR}/templates/")
-    if(INIT_WODEN)
-      message(STATUS "INIT_WODEN path: ${INIT_WODEN}")
-    endif()
-    configure_file("${INIT_WODEN}/init_WODEN.sh" init_WODEN.sh COPYONLY)
+    ###===========INSTALLATION OPTIONS==========================================
+    ##Setup a generic installation location thingy
+    include(GNUInstallDirs)
+
+    ##Copy python scripts into bin directory
+    macro(install_symlink filename)
+    find_path(THISPY ${filename} HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
+    install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${THISPY}/${filename} ${CMAKE_INSTALL_FULL_BINDIR}/${filename})")
+    # install(CODE "message(\"-- Created symlink: ${THISPY}/${filename} -> ${CMAKE_INSTALL_BINDIR}/${filename}\")")
+    endmacro(install_symlink)
+
+    install_symlink("run_woden.py")
+    install_symlink("uv2ms.py")
+    install_symlink("convert_WSClean_list_to_WODEN.py")
+
+    install(TARGETS woden_float woden_double
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+    install(TARGETS wodenCUDA_float wodenC_float wodenCUDA_double wodenC_double
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+    ###===========INSTALLATION OPTIONS==========================================
+
 
 ##If making test code
 elseif(TARGET_GROUP STREQUAL test)
 
+      # set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/externals/CMake-codecov/cmake" ${CMAKE_MODULE_PATH})
+      # find_package(codecov)
+
+      # if(codecov_FOUND)
+      #   message(STATUS "Found codecov")
+      # endif()
+
       include(CTest)
 
+      ##Find out where unity is hiding
       set(HINTS_UNITY "${UNITY_ROOT};${UNITY_ROOT}/src/;/usr/local/Unity/src/")
-
       find_path(UNITY_DIR unity.c HINTS ${HINTS_UNITY})
-
       if(UNITY_DIR)
         message(STATUS "UNITY src path: ${UNITY_DIR}")
       endif()
 
+      ##Compile Unity
       add_library(Unity STATIC
           "${UNITY_DIR}/unity.c"
       )
-
       target_include_directories(Unity PUBLIC
           "${UNITY_DIR}"
       )
+      ##Enable DOUBLE precision tests (whhhhhy is this not default CHRIST)
+      target_compile_options(Unity PUBLIC
+      -DUNITY_INCLUDE_DOUBLE -DUNITY_DOUBLE_PRECISION=1e-12)
+
+      ##Inlcude all the testing that lives in ./cmake_testing
       add_subdirectory(cmake_testing)
+
+      # coverage_evaluate()
 
 else()
     message(FATAL_ERROR "Given TARGET_GROUP unknown")

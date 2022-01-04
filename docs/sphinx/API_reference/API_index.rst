@@ -26,6 +26,31 @@ can be reproduced on the command line using ``script.py --help``.
 ``C`` code
 ----------------------
 
+The precision of most functions is determined at compilation time, via the
+following ``#ifdef`` statement found in ``WODEN/include/woden_precision_defs.h``:
+
+.. code-block:: C
+
+    #ifdef DOUBLE_PRECISION
+    /*! If -DDOUBLE_PRECISION flag is added at compilation,
+    then user_precision_t is set to double */
+    typedef double user_precision_t;
+    /*! If -DDOUBLE_PRECISION flag is added at compilation,
+    then user_precision_complex_t is set to double _Complex */
+    typedef double _Complex user_precision_complex_t;
+    #else
+    /*! If -DDOUBLE_PRECISION flag is NOT added at compilation,
+    then user_precision_t defaults to float */
+    typedef float user_precision_t;
+    /*! If -DDOUBLE_PRECISION flag is NOT added at compilation,
+    then user_precision_complex_t defaults to float _Complex */
+    typedef float _Complex user_precision_complex_t;
+    #endif
+
+So where you see ``user_precision_t`` in the API, this is either a ``float`` or
+``double``, and similarly ``user_precision_complex_t`` is either a ``float _Complex``
+or ``double _Complex``.
+
 .. toctree::
   :maxdepth: 1
 
@@ -38,11 +63,31 @@ can be reproduced on the command line using ``script.py --help``.
   C_code/print_help
   C_code/shapelet_basis
   C_code/visibility_set
+  C_code/woden_precision_defs
   C_code/woden_settings
   C_code/woden_struct_defs
 
 ``CUDA`` code
 -------------------------
+
+Similarly to ``C`` code, the precision of most functions is determined at
+compilation time, via the following ``#ifdef`` statement found in
+``WODEN/include/cudacomplex.h``:
+
+.. code-block:: C
+
+   #ifdef DOUBLE_PRECISION
+   /*! If -DDOUBLE_PRECISION flag is added at compilation,
+   then cuUserComplex is set to cuDoubleComplex */
+   typedef cuDoubleComplex cuUserComplex;
+   #else
+   /*! If -DDOUBLE_PRECISION flag is NOTE added at compilation,
+   then cuUserComplex is set to cuFloatComplex */
+   typedef cuFloatComplex cuUserComplex;
+   #endif
+
+meaning that ``cuUserComplex`` in the API either means ``cuFloatComplex`` or
+``cuDoubleComplex`` depending on compilation flags.
 
 .. toctree::
   :maxdepth: 1

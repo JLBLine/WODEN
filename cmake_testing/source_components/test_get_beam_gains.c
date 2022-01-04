@@ -5,6 +5,7 @@
 
 #include "constants.h"
 #include "woden_struct_defs.h"
+#include "woden_precision_defs.h"
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
@@ -12,12 +13,12 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 //External CUDA code we're linking in
 extern void test_kern_get_beam_gains(int num_freqs, int num_visis,
           int num_baselines, int num_components, int num_times, int beamtype,
-          float _Complex *primay_beam_J00, float _Complex *primay_beam_J01,
-          float _Complex *primay_beam_J10, float _Complex *primay_beam_J11,
-          float _Complex *recover_g1x, float _Complex *recover_D1x,
-          float _Complex *recover_D1y, float _Complex *recover_g1y,
-          float _Complex *recover_g2x, float _Complex *recover_D2x,
-          float _Complex *recover_D2y, float _Complex *recover_g2y);
+          user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J01,
+          user_precision_complex_t *primay_beam_J10, user_precision_complex_t *primay_beam_J11,
+          user_precision_complex_t *recover_g1x, user_precision_complex_t *recover_D1x,
+          user_precision_complex_t *recover_D1y, user_precision_complex_t *recover_g1y,
+          user_precision_complex_t *recover_g2x, user_precision_complex_t *recover_D2x,
+          user_precision_complex_t *recover_D2y, user_precision_complex_t *recover_g2y);
 
 #define UNITY_INCLUDE_FLOAT
 
@@ -27,6 +28,12 @@ for all beam types
 */
 void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
 
+  #ifdef DOUBLE_PRECISION
+  printf("WODEN is using DOUBLE precision\n");
+  #else
+  printf("WODEN is using FLOAT precision\n");
+  #endif
+
   int num_baselines = 3.0;
   int num_times = 2.0;
   int num_freqs = 2.0;
@@ -35,14 +42,14 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
 
   int num_components = 4.0;
 
-  float _Complex *primay_beam_J00 = malloc(num_freqs*num_times*num_components*sizeof(float _Complex));
-  float _Complex *primay_beam_J01 = malloc(num_freqs*num_times*num_components*sizeof(float _Complex));
-  float _Complex *primay_beam_J10 = malloc(num_freqs*num_times*num_components*sizeof(float _Complex));
-  float _Complex *primay_beam_J11 = malloc(num_freqs*num_times*num_components*sizeof(float _Complex));
+  user_precision_complex_t *primay_beam_J00 = malloc(num_freqs*num_times*num_components*sizeof(user_precision_complex_t));
+  user_precision_complex_t *primay_beam_J01 = malloc(num_freqs*num_times*num_components*sizeof(user_precision_complex_t));
+  user_precision_complex_t *primay_beam_J10 = malloc(num_freqs*num_times*num_components*sizeof(user_precision_complex_t));
+  user_precision_complex_t *primay_beam_J11 = malloc(num_freqs*num_times*num_components*sizeof(user_precision_complex_t));
 
   int count = 0;
   if (beamtype == FEE_BEAM || beamtype == ANALY_DIPOLE || beamtype == GAUSS_BEAM) {
-    for (size_t visi = 0; visi < num_components*num_times*num_freqs; visi++) {
+    for (int visi = 0; visi < num_components*num_times*num_freqs; visi++) {
       primay_beam_J00[visi] = count + I*0.0;
       primay_beam_J11[visi] = count + I*0.0;
       count ++ ;
@@ -52,21 +59,21 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
   //Only FEE_BEAM has cross-pols
   count = 0;
   if (beamtype == FEE_BEAM) {
-    for (size_t visi = 0; visi < num_components*num_times*num_freqs; visi++) {
+    for (int visi = 0; visi < num_components*num_times*num_freqs; visi++) {
       primay_beam_J01[visi] = count + I*0.0;
       primay_beam_J10[visi] = count + I*0.0;
       count ++ ;
     }
   }
 
-  float _Complex *recover_g1x = malloc(num_visis*num_components*sizeof(float _Complex));
-  float _Complex *recover_D1x = malloc(num_visis*num_components*sizeof(float _Complex));
-  float _Complex *recover_D1y = malloc(num_visis*num_components*sizeof(float _Complex));
-  float _Complex *recover_g1y = malloc(num_visis*num_components*sizeof(float _Complex));
-  float _Complex *recover_g2x = malloc(num_visis*num_components*sizeof(float _Complex));
-  float _Complex *recover_D2x = malloc(num_visis*num_components*sizeof(float _Complex));
-  float _Complex *recover_D2y = malloc(num_visis*num_components*sizeof(float _Complex));
-  float _Complex *recover_g2y = malloc(num_visis*num_components*sizeof(float _Complex));
+  user_precision_complex_t *recover_g1x = malloc(num_visis*num_components*sizeof(user_precision_complex_t));
+  user_precision_complex_t *recover_D1x = malloc(num_visis*num_components*sizeof(user_precision_complex_t));
+  user_precision_complex_t *recover_D1y = malloc(num_visis*num_components*sizeof(user_precision_complex_t));
+  user_precision_complex_t *recover_g1y = malloc(num_visis*num_components*sizeof(user_precision_complex_t));
+  user_precision_complex_t *recover_g2x = malloc(num_visis*num_components*sizeof(user_precision_complex_t));
+  user_precision_complex_t *recover_D2x = malloc(num_visis*num_components*sizeof(user_precision_complex_t));
+  user_precision_complex_t *recover_D2y = malloc(num_visis*num_components*sizeof(user_precision_complex_t));
+  user_precision_complex_t *recover_g2y = malloc(num_visis*num_components*sizeof(user_precision_complex_t));
 
   //Run the CUDA code
   test_kern_get_beam_gains(num_freqs, num_visis,
@@ -78,7 +85,7 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
           recover_g2x, recover_D2x,
           recover_D2y, recover_g2y);
 
-  float expected_order[] = { 0.00, 0.00, 0.00, 4.00, 4.00, 4.00, 8.00,
+  user_precision_t expected_order[] = { 0.00, 0.00, 0.00, 4.00, 4.00, 4.00, 8.00,
                              8.00, 8.00, 12.00, 12.00, 12.00, 1.00, 1.00,
                              1.00, 5.00, 5.00, 5.00, 9.00, 9.00, 9.00,
                              13.00, 13.00, 13.00, 2.00, 2.00, 2.00, 6.00,
@@ -87,7 +94,7 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
                              11.00, 11.00, 11.00, 15.00, 15.00, 15.00 };
 
   if (beamtype == ANALY_DIPOLE || beamtype == GAUSS_BEAM) {
-    for (size_t output = 0; output < num_visis*num_components; output++) {
+    for (int output = 0; output < num_visis*num_components; output++) {
 
       TEST_ASSERT_EQUAL_FLOAT(expected_order[output], creal(recover_g1x[output]));
       TEST_ASSERT_EQUAL_FLOAT(0.0, creal(recover_D1x[output]));
@@ -110,7 +117,7 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
     }
   }
   else if (beamtype == FEE_BEAM) {
-    for (size_t output = 0; output < num_visis*num_components; output++) {
+    for (int output = 0; output < num_visis*num_components; output++) {
 
       TEST_ASSERT_EQUAL_FLOAT(expected_order[output], creal(recover_g1x[output]));
       TEST_ASSERT_EQUAL_FLOAT(expected_order[output], creal(recover_D1x[output]));
@@ -133,7 +140,7 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
     }
   }
   else {
-    for (size_t output = 0; output < num_visis*num_components; output++) {
+    for (int output = 0; output < num_visis*num_components; output++) {
       TEST_ASSERT_EQUAL_FLOAT(1.0, creal(recover_g1x[output]));
       TEST_ASSERT_EQUAL_FLOAT(0.0, creal(recover_D1x[output]));
       TEST_ASSERT_EQUAL_FLOAT(0.0, creal(recover_D1y[output]));

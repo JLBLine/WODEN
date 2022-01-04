@@ -127,7 +127,7 @@ SHAPELET COMPONENT
 void horizon_test(double za, e_sky_crop sky_crop_type,
      e_horizon * all_comps_above_horizon, int * num_comp_retained,
      int * num_shape_coeff_retained, int num_shape_coeff_component,
-     float *shape_param_indexes, int shape);
+     user_precision_t *shape_param_indexes, int shape);
 
 /**
 @brief Takes the WODEN sky model `raw_srccat`, and crops either all SOURCEs or
@@ -162,5 +162,5 @@ however require far more `erfa` az,za calculations, so for simulations with
 millions of sources, more practical to just tell the user to run multiple
 shorter simulations.
 */
-catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, float *lsts,
+catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
               double latitude, int num_time_steps, e_sky_crop sky_crop_type);

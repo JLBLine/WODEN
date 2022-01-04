@@ -2,15 +2,19 @@
 
 [![status](https://joss.theoj.org/papers/bbc90ec4cd925ade93ed0781e571d247/status.svg)](https://joss.theoj.org/papers/bbc90ec4cd925ade93ed0781e571d247)
 
+[![codecov](https://codecov.io/gh/JLBLine/WODEN/branch/joss_review/graph/badge.svg?token=Q3JFCI5GOC)](https://codecov.io/gh/JLBLine/WODEN) _*note code coverage only applies to `python3` and `C` code, `CUDA` code is not currently supported by code coverage software_
+
 > The `WODEN` documentation lives [here on readthedocs](https://woden.readthedocs.io/en/latest/). If your internet has broken and you have already installed `WODEN`, you can build a local copy by navigating into `WODEN/docs/sphinx` and running `make html` (you'll need to have `doxygen` installed).
 
 `WODEN` is C / CUDA code designed to be able to simulate low-frequency radio interferometric data. It is written to be simplistic and *fast* to allow all-sky simulations. Although `WODEN` was primarily written to simulate Murchinson Widefield Array ([MWA, Tingay et al. 2013](https://doi.org/10.1017/pasa.2012.007)) visibilities, it is becoming less instrument-specific as time goes on. `WODEN` outputs `uvfits` files.
 
 The unique part of `WODEN` is that it can simulate shapelet model sources (along with point and Gaussian) that are compatible with the `RTS` ([Mitchell et al. 2008](https://ieeexplore.ieee.org/document/4703504?arnumber=4703504 "IEEExplorer")). These models are generated with SHApelet Modelling For Interferometers ([SHAMFI](https://github.com/JLBLine/SHAMFI)), specified with the `--woden_srclist` SHAMFI option. It also includes a script to convert a multi-scale CLEAN component list out of [WSClean](https://sourceforge.net/projects/wsclean/) into a `WODEN`-style srclist (when running `WSClean` use the `-save-source-list` option). `WODEN` can also produce visibilities that can be fed directly into the `RTS` to allow testing of calibration and modelling methodologies.
 
+If you have feature requests or want to contribute to `WODEN`, have a read of the
+[guide to contributing](CONTRIBUTION_GUIDE.md) to get started. I welcome the feedback and/or help!
+
 Jack Line \
-July 2021 \
-Any issues, questions, wisdom, feel free to email me at jack.line@curtin.edu.au
+January 2022
 
 
 ## 1. Installation
@@ -30,8 +34,9 @@ $ cd WODEN
 $ mkdir build && cd build
 $ cmake ..
 $ make -j 4
+$ sudo make install #(this is optional)
 ```
-with a couple of post-compilation environment variables needed. Checkout the [installation guide on readthedocs](https://woden.readthedocs.io/en/latest/installation/installation.html#dependencies) for full details.
+with a couple of post-compilation environment variables needed (if you don't want to `make install`). Checkout the [installation guide on readthedocs](https://woden.readthedocs.io/en/latest/installation/installation.html#dependencies) for full details.
 
 ## 2. Testing
 There are two routes to test WODEN:

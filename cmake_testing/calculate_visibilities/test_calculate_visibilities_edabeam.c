@@ -39,11 +39,11 @@ void test_calculate_visibilities_EDA2Beam(int n_points, int n_gauss, int n_shape
                                           beam_settings, woden_settings, RA0, MWA_LAT_RAD,
                                           beam_settings->beamtype);
 
-  float gain1xx = (n_points + n_gauss + n_shapes)*num_sources;
-  float gain1yy = (n_points + n_gauss + n_shapes)*num_sources;
+  double gain1xx = (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
+  double gain1yy = (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
 
-  float gain2xx = 0.6277595 * (n_points + n_gauss + n_shapes)*num_sources;
-  float gain2yy = 0.3825515 * (n_points + n_gauss + n_shapes)*num_sources;
+  double gain2xx = 0.6277594613698111 * (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
+  double gain2yy = 0.3825515398230647 * (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
   //
   test_comp_phase_centre_twogains(visibility_set, gain1xx, gain1yy,
                                   gain2xx, gain2yy);
@@ -71,7 +71,7 @@ void test_calculate_visibilities_EDA2Beam_OneSource_SinglePoint(void) {
   test_calculate_visibilities_EDA2Beam(n_points, n_gauss, n_shapes, num_sources);
 }
 
-void test_calculate_visibilities_EDA2Beam_OneSource_SingleEDA2(void) {
+void test_calculate_visibilities_EDA2Beam_OneSource_SingleGauss(void) {
   int n_points = 0;
   int n_gauss = 1;
   int n_shapes = 0;
@@ -107,7 +107,7 @@ void test_calculate_visibilities_EDA2Beam_ThreeSource_SinglePoint(void) {
 
 }
 
-void test_calculate_visibilities_EDA2Beam_ThreeSource_SingleEDA2(void) {
+void test_calculate_visibilities_EDA2Beam_ThreeSource_SingleGauss(void) {
   int n_points = 0;
   int n_gauss = 1;
   int n_shapes = 0;
@@ -174,13 +174,13 @@ int main(void)
     UNITY_BEGIN();
     //Test with a single SOURCE, single COMPONENT
     RUN_TEST(test_calculate_visibilities_EDA2Beam_OneSource_SinglePoint);
-    RUN_TEST(test_calculate_visibilities_EDA2Beam_OneSource_SingleEDA2);
+    RUN_TEST(test_calculate_visibilities_EDA2Beam_OneSource_SingleGauss);
     RUN_TEST(test_calculate_visibilities_EDA2Beam_OneSource_SingleShape);
     RUN_TEST(test_calculate_visibilities_EDA2Beam_OneSource_SingleAll);
 
     //Test with three SOURCEs, single COPMONENT
     RUN_TEST(test_calculate_visibilities_EDA2Beam_ThreeSource_SinglePoint);
-    RUN_TEST(test_calculate_visibilities_EDA2Beam_ThreeSource_SingleEDA2);
+    RUN_TEST(test_calculate_visibilities_EDA2Beam_ThreeSource_SingleGauss);
     RUN_TEST(test_calculate_visibilities_EDA2Beam_ThreeSource_SingleShape);
     RUN_TEST(test_calculate_visibilities_EDA2Beam_ThreeSource_SingleAll);
 

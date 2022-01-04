@@ -228,7 +228,7 @@ void test_fill_chunk_src_with_pointgauss_Point4544_Gauss1736_Chunk1e8_Time014(vo
   int num_freqs = 16;
 
   test_fill_chunk_src_with_pointgauss(chunking_size, num_points, num_gauss,
-                                        num_time_steps, num_baselines, num_freqs);
+                                      num_time_steps, num_baselines, num_freqs);
 }
 
 //Run test using unity

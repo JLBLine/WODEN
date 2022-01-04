@@ -17,6 +17,8 @@ The WODEN visibility simulator
 
 ``WODEN`` is C / CUDA code designed to be able to simulate low-frequency radio interferometric data. It is written to be simplistic and *fast* to allow all-sky simulations. Although ``WODEN`` was primarily written to simulate Murchinson Widefield Array (MWA, `Tingay et al. 2013`_) visibilities, it is becoming less instrument-specific as time goes on. `WODEN` outputs `uvfits` files.
 
+``WODEN`` has been written with Stokes polarisations in mind, and as such, users can input a fully Stokes `I,Q,U,V` model, which is then propagated fully through the polarised instrumental response (depending on which primary beam you select), and output into Stokes `XX,XY,YX,YY` polarisations. Note however that currently only a power-law SED is supported, a rotation measure is currently unsupported.
+
 The unique part of ``WODEN`` is that it can simulate shapelet model sources (along with point and Gaussian) that are compatible with the ``RTS`` (`Mitchell et al. 2008`_). These models are generated with SHApelet Modelling For Interferometers (`SHAMFI`_), specified with the ``--woden_srclist`` option. It also includes a script to convert a multi-scale CLEAN component list out of `WSClean`_ into a ``WODEN``-style srclist (when running ``WSClean`` use the ``-save-source-list`` option). ``WODEN`` can also produce visibilities that can be fed directly into the ``RTS`` to allow testing of calibration and modelling methodologies.
 
 Documentation

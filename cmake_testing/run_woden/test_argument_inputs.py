@@ -97,7 +97,7 @@ class Test(unittest.TestCase):
 
     def assert_check_args_errors(self):
         """Assert that `rw.check_args` errors when run on the parser returned
-        by `rw.get_parser` in run with the current arguments in `self.inputs`"""
+        by `rw.get_parser` is run with the current arguments in `self.inputs`"""
         ##call the argparser with the given inputs
         args = self.run_parser_on_inputs()
         ##Assert the code raisers a sys exit
@@ -221,7 +221,7 @@ class Test(unittest.TestCase):
 
     def test_EDA2_args_work(self):
         """Check that with a minimal set of arguments, the EDA2 primary
-        beam is selected by `ra.check_args` correctly"""
+        beam is selected by `rw.check_args` correctly"""
         self.make_minimum_required_args_without_metafits()
         self.inputs.append('--primary_beam=EDA2')
 
@@ -337,4 +337,4 @@ class Test(unittest.TestCase):
 
 ##Run the test
 if __name__ == '__main__':
-   unittest.main()
+    unittest.main()

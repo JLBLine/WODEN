@@ -21,54 +21,69 @@ are launched by calculate_visibilities::calculate_visibilities`
 extern void calculate_visibilities(array_layout_t *array_layout,
   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
-  float *sbf);
+  user_precision_t *sbf);
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
-#define UNITY_INCLUDE_FLOAT
-
 void test_comp_phase_centre_allgains(visibility_set_t *visibility_set,
-                                     float gain1xx_re, float gain1xx_im,
-                                     float gain1xy_re, float gain1xy_im,
-                                     float gain1yx_re, float gain1yx_im,
-                                     float gain1yy_re, float gain1yy_im,
-                                     float gain2xx_re, float gain2xx_im,
-                                     float gain2xy_re, float gain2xy_im,
-                                     float gain2yx_re, float gain2yx_im,
-                                     float gain2yy_re, float gain2yy_im) {
+                                     double gain1xx_re, double gain1xx_im,
+                                     double gain1xy_re, double gain1xy_im,
+                                     double gain1yx_re, double gain1yx_im,
+                                     double gain1yy_re, double gain1yy_im,
+                                     double gain2xx_re, double gain2xx_im,
+                                     double gain2xy_re, double gain2xy_im,
+                                     double gain2yx_re, double gain2yx_im,
+                                     double gain2yy_re, double gain2yy_im) {
 
-  float rtol = 1e-4;
-  float atol = 1e-5;
-
-  //Small float errors in the measurement equation mean that when at phase
+  //Small user_precision_t errors in the measurement equation mean that when at phase
   //centre, altough imaginary should be zero, you get fluctuations dependent
   //on u,v,w. So need a different tolerance here
-  //This is trade off we make for speed of float over using double
-  float main_pol_im_atol = 1e-3;
+  //The accuracy we get depends on whether we are float or double
+  #ifdef DOUBLE_PRECISION
+    double TOL = 1e-7;
+  #else
+    double TOL = 4e-3;
+  #endif
 
-  for (size_t visi = 0; visi < NUM_VISI; visi++) {
+  for (int visi = 0; visi < NUM_VISI; visi++) {
     if (visi < NUM_VISI / 2) {
-      TEST_ASSERT_FLOAT_WITHIN(gain1xx_re*rtol + atol, gain1xx_re, visibility_set->sum_visi_XX_real[visi]);
-      TEST_ASSERT_FLOAT_WITHIN(main_pol_im_atol + atol, gain1xx_im, visibility_set->sum_visi_XX_imag[visi]);
-      TEST_ASSERT_FLOAT_WITHIN(gain1xy_re*rtol + atol, gain1xy_re, visibility_set->sum_visi_XY_real[visi]);
-      TEST_ASSERT_FLOAT_WITHIN(gain1xy_im*rtol + atol, gain1xy_im, visibility_set->sum_visi_XY_imag[visi]);
-      TEST_ASSERT_FLOAT_WITHIN(gain1yx_re*rtol + atol, gain1yx_re, visibility_set->sum_visi_YX_real[visi]);
-      TEST_ASSERT_FLOAT_WITHIN(gain1yx_im*rtol + atol, gain1yx_im, visibility_set->sum_visi_YX_imag[visi]);
-      TEST_ASSERT_FLOAT_WITHIN(gain1yy_re*rtol + atol, gain1yy_re, visibility_set->sum_visi_YY_real[visi]);
-      TEST_ASSERT_FLOAT_WITHIN(main_pol_im_atol + atol, gain1yy_im, visibility_set->sum_visi_YY_imag[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain1xx_re,
+                                        visibility_set->sum_visi_XX_real[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain1xx_im,
+                                        visibility_set->sum_visi_XX_imag[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain1xy_re,
+                                        visibility_set->sum_visi_XY_real[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain1xy_im,
+                                        visibility_set->sum_visi_XY_imag[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain1yx_re,
+                                        visibility_set->sum_visi_YX_real[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain1yx_im,
+                                        visibility_set->sum_visi_YX_imag[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain1yy_re,
+                                        visibility_set->sum_visi_YY_real[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain1yy_im,
+                                        visibility_set->sum_visi_YY_imag[visi]);
     }
-    // } else {
-    //   TEST_ASSERT_FLOAT_WITHIN(gainxx*1e-4, gainxx, visibility_set->sum_visi_XX_real[visi]);
-    //   TEST_ASSERT_FLOAT_WITHIN(gainxx*1e-4, 0.0, visibility_set->sum_visi_XX_imag[visi]);
-    //   TEST_ASSERT_FLOAT_WITHIN(gainxx*1e-4, 0.0, visibility_set->sum_visi_XY_real[visi]);
-    //   TEST_ASSERT_FLOAT_WITHIN(gainxx*1e-4, 0.0, visibility_set->sum_visi_XY_imag[visi]);
-    //   TEST_ASSERT_FLOAT_WITHIN(gainxx*1e-4, 0.0, visibility_set->sum_visi_YX_real[visi]);
-    //   TEST_ASSERT_FLOAT_WITHIN(gainxx*1e-4, 0.0, visibility_set->sum_visi_YX_imag[visi]);
-    //   TEST_ASSERT_FLOAT_WITHIN(gainyy*1e-4, gainyy, visibility_set->sum_visi_YY_real[visi]);
-    //   TEST_ASSERT_FLOAT_WITHIN(gainyy*1e-4, 0.0, visibility_set->sum_visi_YY_imag[visi]);
-    // }
- }
+    else {
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain2xx_re,
+                                        visibility_set->sum_visi_XX_real[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain2xx_im,
+                                        visibility_set->sum_visi_XX_imag[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain2xy_re,
+                                        visibility_set->sum_visi_XY_real[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain2xy_im,
+                                        visibility_set->sum_visi_XY_imag[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain2yx_re,
+                                        visibility_set->sum_visi_YX_real[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain2yx_im,
+                                        visibility_set->sum_visi_YX_imag[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain2yy_re,
+                                        visibility_set->sum_visi_YY_real[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain2yy_im,
+                                        visibility_set->sum_visi_YY_imag[visi]);
+    }
+  }
 }
 
 void test_calculate_visibilities_MWAFEEBeam(int n_points, int n_gauss, int n_shapes,
@@ -103,23 +118,28 @@ void test_calculate_visibilities_MWAFEEBeam(int n_points, int n_gauss, int n_sha
   //           visibility_set->sum_visi_YY_imag[visi]);
   // }
 
-  float gain1xx_re = 0.99999422 * (n_points + n_gauss + n_shapes)*num_sources;
-  float gain1xx_im = -0.00000337 * (n_points + n_gauss + n_shapes)*num_sources;
-  float gain1xy_re = -0.00031884 * (n_points + n_gauss + n_shapes)*num_sources;
-  float gain1xy_im = -0.00000219 * (n_points + n_gauss + n_shapes)*num_sources;
-  float gain1yx_re = -0.00031884 * (n_points + n_gauss + n_shapes)*num_sources;
-  float gain1yx_im = 0.00000219 * (n_points + n_gauss + n_shapes)*num_sources;
-  float gain1yy_re = 0.99999422 * (n_points + n_gauss + n_shapes)*num_sources;
-  float gain1yy_im = -0.00000337 * (n_points + n_gauss + n_shapes)*num_sources;
+  float multiplier = (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
 
-  float gain2xx_re = 0.00650369 * (n_points + n_gauss + n_shapes)*num_sources;
-  float gain2xx_im = 0.00000000 * (n_points + n_gauss + n_shapes)*num_sources;
-  float gain2xy_re = -0.00043929 * (n_points + n_gauss + n_shapes)*num_sources;
-  float gain2xy_im = 0.00004266 * (n_points + n_gauss + n_shapes)*num_sources;
-  float gain2yx_re = -0.00043929 * (n_points + n_gauss + n_shapes)*num_sources;
-  float gain2yx_im = -0.00004266 * (n_points + n_gauss + n_shapes)*num_sources;
-  float gain2yy_re = 0.00366370 * (n_points + n_gauss + n_shapes)*num_sources;
-  float gain2yy_im = 0.00000000 * (n_points + n_gauss + n_shapes)*num_sources;
+
+  //These values are taken from the double precision version of the MWA FEE
+  //beam code
+  double gain1xx_re = 1.0000000388296133 * multiplier;
+  double gain1xx_im = 0.0 * multiplier;
+  double gain1xy_re = -0.0003180012451422 * multiplier;
+  double gain1xy_im = -0.0000022794060068 * multiplier;
+  double gain1yx_re = -0.0003180012451422 * multiplier;
+  double gain1yx_im = 0.0000022794060068 * multiplier;
+  double gain1yy_re = 1.0000000415988461 * multiplier;
+  double gain1yy_im = 0.0 * multiplier;
+
+  double gain2xx_re = 0.0069048406570405 * multiplier;
+  double gain2xx_im = 0.0 * multiplier;
+  double gain2xy_re = -0.0004663870439568 * multiplier;
+  double gain2xy_im = 0.0000452960552731 * multiplier;
+  double gain2yx_re = -0.0004663870439568 * multiplier;
+  double gain2yx_im = -0.0000452960552731 * multiplier;
+  double gain2yy_re = 0.0038896732780955* multiplier;
+  double gain2yy_im = 0.0 * multiplier;
 
   test_comp_phase_centre_allgains(visibility_set,
                                   gain1xx_re, gain1xx_im,
@@ -134,9 +154,6 @@ void test_calculate_visibilities_MWAFEEBeam(int n_points, int n_gauss, int n_sha
   free(beam_settings);
   free_visi_set_inputs(visibility_set);
   free_visi_set_outputs(visibility_set);
-
-  // free(visibility_set);
-
 }
 
 //Test with a single SOURCE, single COMPONENT

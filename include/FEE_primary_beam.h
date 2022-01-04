@@ -8,6 +8,7 @@
 #include "hdf5.h"
 #include "hdf5_hl.h"
 #include "constants.h"
+#include "woden_precision_defs.h"
 #include "woden_struct_defs.h"
 
 /**
@@ -55,8 +56,8 @@ intialised at the closest stored frequency to `freq_Hz`.
 @param[in] FEE_delays Dipole delay factors to specify beam pointings
 
 */
-int RTS_MWAFEEInit(const char *h5filename, float freq_Hz, RTS_MWA_FEE_beam_t *pb,
-                float *FEE_delays);
+int RTS_MWAFEEInit(const char *h5filename, double freq_Hz,
+                   RTS_MWA_FEE_beam_t *pb, user_precision_t *FEE_delays);
 
 /**
 @brief Free the stored spherical harmonic basis functions and coefficients in

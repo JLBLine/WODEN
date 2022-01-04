@@ -2,6 +2,7 @@
   A function to create a look-up shapelet basis function array, with relevant
   constants definitions.
 */
+#include "woden_precision_defs.h"
 
 //Somthing WEIRD is up with the way I'm using the documentation package
 //'breathe', so having to include the definition value in the documentation
@@ -23,7 +24,7 @@ If shapelet basis function is B(x), this is the x sampling resolution */
 /**
 @brief Create the 1D shapelet basis function look-up array `sbf`
 
-@details `sbf` should have `sbf_N * sbf_L * sizeof(float)` of memory allocated.
+@details `sbf` should have `sbf_N * sbf_L * sizeof(user_precision_t)` of memory allocated.
 
 Each 1D basis function is \f$B_n(x, \beta)\f$, with
 \f$n\f$ the basis function order, and \f$\beta \f$ the scaling factor. For all
@@ -35,7 +36,7 @@ with a resolution \f$ \Delta x = 0.01 \f$
 This single lookup array can then be used to generate 2D shapelet basis
 functions later on varying \f$\beta\f$ values via a scaling factor.
 
-@param[in] sbf An array with `sbf_N * sbf_L * sizeof(float)` of memory allocated
+@param[in] sbf An array with `sbf_N * sbf_L * sizeof(user_precision_t)` of memory allocated
 @returns The populated `sbf` array
 */
-float * create_sbf(float *sbf);
+user_precision_t * create_sbf(user_precision_t *sbf);

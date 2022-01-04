@@ -19,43 +19,61 @@ set(S8 "srclist_comment.txt")
 set(S9 "srclist_badspell.txt")
 set(S10 "srclist_badcoeff.txt")
 set(S11 "srclist_no-comp_numbers.txt")
+set(S12 "srclist_linear.txt")
 
 
 ## Loop through them and write a symlink so the testing executable can find them
-foreach(X IN LISTS S1 S2 S3 S4 S5 S6 S7 S8 S9 S10 S11)
+foreach(X IN LISTS S1 S2 S3 S4 S5 S6 S7 S8 S9 S10 S11 S12)
     ADD_CUSTOM_TARGET(target_${X} ALL
         COMMAND ${CMAKE_COMMAND} -E create_symlink "${SRCLIST_PATH}/${X}" "${X}")
 endforeach()
 
-# ##Test reading of WODEN catalogue works
-add_executable(test_read_source_catalogue_app
-    test_read_source_catalogue.c
-    ../../src/create_sky_model.c
-)
-target_link_libraries(test_read_source_catalogue_app
-    Unity
-    ${CC_LINKLIBS}
-)
-add_test(C_test_read_source_catalogue test_read_source_catalogue_app)
+## Create tests for both float and double precision
+foreach(PRECISION IN LISTS FLOAT DOUBLE)
 
-# ##Test the horizon test function works
-add_executable(test_horizon_test_app
-    test_horizon_test.c
-    ../../src/create_sky_model.c
-)
-target_link_libraries(test_horizon_test_app
-    Unity
-    ${CC_LINKLIBS}
-)
-add_test(C_test_horizon_test test_horizon_test_app)
+  ##Set the flags depending on the precision
+  DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
 
-# ##Test the horizon cropping function creates sky models correctly
-add_executable(test_crop_sky_model_app
-    test_crop_sky_model.c
-    ../../src/create_sky_model.c
-)
-target_link_libraries(test_crop_sky_model_app
-    Unity
-    ${CC_LINKLIBS}
-)
-add_test(C_test_crop_sky_model test_crop_sky_model_app)
+  add_library(create_sky_model_${PRECISION} SHARED "${CMAKE_SOURCE_DIR}/src/create_sky_model.c")
+  target_link_libraries(create_sky_model_${PRECISION} gcov)
+  target_compile_options(create_sky_model_${PRECISION} PRIVATE ${C_COVER_FLAGS})
+  ## Accumulate the coverage from the tests
+  # add_coverage(create_sky_model_${PRECISION})
+
+  ##Test reading of WODEN catalogue works
+  add_executable(test_read_source_catalogue_${PRECISION}_app
+      test_read_source_catalogue.c
+  )
+  target_link_libraries(test_read_source_catalogue_${PRECISION}_app
+      Unity gcov
+      create_sky_model_${PRECISION}
+      ${CC_LINKLIBS}
+  )
+  target_compile_options(test_read_source_catalogue_${PRECISION}_app PRIVATE ${C_FLAGS})
+  add_test(C_test_read_source_catalogue_${PRECISION} test_read_source_catalogue_${PRECISION}_app)
+
+  ##Test the horizon test function works
+  add_executable(test_horizon_test_${PRECISION}_app
+      test_horizon_test.c
+  )
+  target_link_libraries(test_horizon_test_${PRECISION}_app
+      Unity gcov
+      create_sky_model_${PRECISION}
+      ${CC_LINKLIBS}
+  )
+  target_compile_options(test_horizon_test_${PRECISION}_app PRIVATE ${C_FLAGS})
+  add_test(C_test_horizon_test_${PRECISION} test_horizon_test_${PRECISION}_app)
+
+  ##Test the horizon cropping function creates sky models correctly
+  add_executable(test_crop_sky_model_${PRECISION}_app
+      test_crop_sky_model.c
+  )
+  target_link_libraries(test_crop_sky_model_${PRECISION}_app
+      Unity gcov
+      create_sky_model_${PRECISION}
+      ${CC_LINKLIBS}
+  )
+  target_compile_options(test_crop_sky_model_${PRECISION}_app PRIVATE ${C_FLAGS})
+  add_test(C_test_crop_sky_model_${PRECISION} test_crop_sky_model_${PRECISION}_app)
+
+endforeach()

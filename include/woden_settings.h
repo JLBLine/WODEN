@@ -7,6 +7,7 @@
 #pragma once
 #include <math.h>
 #include <stdint.h>
+#include "woden_precision_defs.h"
 #include "woden_struct_defs.h"
 
 /**
@@ -35,4 +36,4 @@ declination of the phase centre and stores in `woden_settings->sdec0`,
 @param[in,out] *woden_settings A pointer to a populated `woden_settings_t` struct
 @return `lsts` Array of all LSTs in the simulation (radians)
 */
-float * setup_lsts_and_phase_centre(woden_settings_t *woden_settings);
+double * setup_lsts_and_phase_centre(woden_settings_t *woden_settings);
