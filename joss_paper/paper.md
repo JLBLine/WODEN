@@ -11,7 +11,7 @@ authors:
     orcid: 0000-0002-9130-5920
     affiliation: "1, 2" # (Multiple affiliations must be quoted)
 affiliations:
- - name: International Centre for Radio Astronomy Research, Curtin University, Perth, WA 6845, Australia
+ - name: International Centre for Radio Astronomy Research, Curtin Institute of Radio Astronomy, Perth, WA 6102, Australia
    index: 1
  - name: ARC Centre of Excellence for All Sky Astrophysics in 3 Dimensions (ASTRO 3D)
    index: 2
