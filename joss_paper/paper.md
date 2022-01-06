@@ -1,7 +1,7 @@
 ---
 title: '`WODEN`: A CUDA-enabled package to simulate low-frequency radio interferometric data'
 tags:
-  - Python
+  - python
   - C
   - CUDA
   - radio astronomy
@@ -23,7 +23,7 @@ bibliography: paper.bib
 
 `WODEN` is designed to simulate the response of a class of telescope known as an interferometer, producing output "visibilities" for a given astrophysical sky model. Simulated observations allow us to test other software packages that are designed to calibrate and analyse real interferometric data, including verifying expected behaviour with known inputs, and testing new sky modelling techniques. The `WODEN` sky model can be specified in Dirac-delta like functions on the sky (known in the field as "point sources"), elliptical Gaussian models, or built out of "shapelet" basis functions, allowing complicated morphologies to be created. Users are able to input a bespoke layout for the interferometer, vary a number of observational parameters including time of day, length of observation and frequency coverage, and select from a number of predefined primary beams which encode the response of the receiving elements of an interferometer. This allows simulations of a number of telescopes to be undertaken. `WODEN` works with input Stokes $I,Q,U,V$ polarisations as a sky model, simulating telescopes with dual linear polarisations, and outputting linear Stokes polarisations.
 
-The core functionality of `WODEN` is written in CUDA as interferometric simulations are computationally intensive but embarrassingly parallel. The performance of CUDA allows for large-scale simulations to be run including emission from all directions in the sky. This is paramount for interferometers with a wide field of view such as the Murchison Widefield Array [MWA, @Tingay2013]. A Python wrapper is used to take advantage of community packages such as [astropy](https://www.astropy.org/) [@astropy2013; @astropy2018] and [pyerfa](https://pypi.org/project/pyerfa/) [@pyerfa] and to present a user-friendly interface to `WODEN`. Those simulating MWA observations can use the MWA `metafits` file to quickly feed in observational parameters to `WODEN` to match real data.
+The core functionality of `WODEN` is written in CUDA as interferometric simulations are computationally intensive but embarrassingly parallel. The performance of CUDA allows for large-scale simulations to be run including emission from all directions in the sky. This is paramount for interferometers with a wide field of view such as the Murchison Widefield Array [MWA, @Tingay2013]. A python wrapper is used to take advantage of community packages such as [astropy](https://www.astropy.org/) [@astropy2013; @astropy2018] and [pyerfa](https://pypi.org/project/pyerfa/) [@pyerfa] and to present a user-friendly interface to `WODEN`. Those simulating MWA observations can use the MWA `metafits` file to quickly feed in observational parameters to `WODEN` to match real data.
 
 `WODEN` can be run to two levels of precision: a `woden_float` precision (which uses a mix of 32 and 64 bit floating precision), and a `woden_double` (which uses nearly entirely 64 bit precision). In the section titled "Estimation of accuracy and computational speed" below, `WODEN` is shown to produce visibilities to within 0.2% of the expected values when running in `woden_float` mode, and 0.000002% in `woden_double` mode, for baselines of length $\le 10$km.
 
