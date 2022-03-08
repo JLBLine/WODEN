@@ -1,4 +1,3 @@
-
 ##This runs hyperdrive and stores the results in text files
 python compare_to_hyperdrive_multi.py
 

@@ -82,11 +82,35 @@ accuracy:
 .. image:: hyperbeam_zenith_100_rotzenith_100_rot_double_diff.png
   :width: 400
 
-.. test_multifreq_get_MWAFEE_normalisation.c
-.. *************************************************
-..
-.. Calls ``FEE_primary_beam_cuda::multifreq_get_MWAFEE_normalisation``, which gets
-.. the normalisation values for the FEE beams for all frequencies.
+test_multifreq_get_MWAFEE_normalisation.c
+*************************************************
+
+Calls ``FEE_primary_beam_cuda::multifreq_get_MWAFEE_normalisation``, which gets
+the normalisation values for the FEE beams for all frequencies when using the
+interpolated MWA FEE beam. Test runs for two different combinations of delays
+and frequencies. Just tests the real values come back as correct, as the
+full integration test in ``test_run_and_map_multifreq_calc_CUDA_FEE_beam.c``
+tests everything.
+
+test_map_FEE_beam_gains_multi_freq.c
+*************************************************************
+Calls ``FEE_primary_beam_cuda::test_map_FEE_beam_gains_multi_freq``, which
+tests the function ``FEE_primary_beam_cuda::map_FEE_beam_gains_multi_freq``,
+which maps the outputs from ``FEE_primary_beam_cuda::multifreq_calc_CUDA_FEE_beam``
+into the primary beam gain arrays as used by the rest of the GPU code. Tests
+by inputting a set of dummy gains where the gain is based on the time, sky
+direction, and frequency index. The test checks these gains end up in the
+expected order after applying the mapping
+
+test_multifreq_calc_CUDA_FEE_beam.c
+**************************************
+This calls ``FEE_primary_beam_cuda::test_multifreq_calc_CUDA_FEE_beam``, which
+tests the function ``FEE_primary_beam_cuda::multifreq_calc_CUDA_FEE_beam``,
+which calculates the interpolated MWA FEE for multiple directions and frequencies.
+Tests by running with two combinations of delays, frequencies, and sky directions,
+and compares to stored values. This is one step away from the full integration test
+below, but it doesn't map the final gains into the 4 separate beam gain
+arrays used by the rest of the GPU code.
 
 test_run_and_map_multifreq_calc_CUDA_FEE_beam.c
 ****************************************************

@@ -1008,6 +1008,91 @@ extern "C" void test_RTS_CUDA_FEE_beam(int num_components,
 
 }
 
+extern "C" void test_map_FEE_beam_gains_multi_freq(beam_settings_t *beam_settings,
+                              user_precision_complex_t *primay_beam_J00,
+                              user_precision_complex_t *primay_beam_J01,
+                              user_precision_complex_t *primay_beam_J10,
+                              user_precision_complex_t *primay_beam_J11,
+                              int num_freqs, int num_components, int num_times){
+
+
+  //Setup some dummy gain values inside some `RTS_MWA_FEE_beam_t` types
+  //to mimic what happens with the actual MWA FEE code
+  //Each FEE beam holds all sky directions (components), all times steps
+  //for all polarisations, for one frequency
+
+  user_precision_complex_t *dummy_gains = (user_precision_complex_t *)malloc(MAX_POLS*num_components*num_times*sizeof(user_precision_complex_t));
+  user_precision_t gain;
+  RTS_MWA_FEE_beam_t *FEE_beam;
+
+  printf("num_freqs, num_components, num_times %d %d %d\n",num_freqs, num_components, num_times);
+
+  for (int freq = 0; freq < num_freqs; freq++) {
+    FEE_beam = &beam_settings->FEE_beams[freq];
+    cudaErrorCheckCall( cudaMalloc( (void **)&FEE_beam->d_FEE_beam_gain_matrices, num_times*num_components*MAX_POLS*sizeof(user_precision_complex_t)) );
+    for (int comp = 0; comp < num_components; comp++) {
+      for (int time = 0; time < num_times; time++) {
+        int stride = comp*num_times + time;
+
+        gain = time*num_freqs + freq;
+
+        dummy_gains[stride*MAX_POLS + 0] = {gain, gain};
+        dummy_gains[stride*MAX_POLS + 1] = {gain, gain};
+        dummy_gains[stride*MAX_POLS + 2] = {gain, gain};
+        dummy_gains[stride*MAX_POLS + 3] = {gain, gain};
+
+      }
+    }
+
+    cudaErrorCheckCall( cudaMemcpy(FEE_beam->d_FEE_beam_gain_matrices, dummy_gains, num_times*num_components*MAX_POLS*sizeof(user_precision_complex_t), cudaMemcpyHostToDevice )) ;
+
+  }
+
+  int num_beam_values = num_freqs*num_times*num_components;
+
+  user_precision_complex_t *d_primay_beam_J00 = NULL;
+  user_precision_complex_t *d_primay_beam_J01 = NULL;
+  user_precision_complex_t *d_primay_beam_J10 = NULL;
+  user_precision_complex_t *d_primay_beam_J11 = NULL;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J00,
+                          num_beam_values*sizeof(user_precision_complex_t ) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01,
+                          num_beam_values*sizeof(user_precision_complex_t ) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J10,
+                          num_beam_values*sizeof(user_precision_complex_t ) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J11,
+                          num_beam_values*sizeof(user_precision_complex_t ) ) );
+
+  map_FEE_beam_gains_multi_freq(beam_settings,
+         (cuUserComplex*)d_primay_beam_J00, (cuUserComplex*)d_primay_beam_J01,
+         (cuUserComplex*)d_primay_beam_J10, (cuUserComplex*)d_primay_beam_J11,
+         num_freqs, num_components, num_times);
+
+  cudaErrorCheckCall( cudaMemcpy(primay_beam_J00, d_primay_beam_J00,
+                      num_beam_values*sizeof(user_precision_complex_t),
+                      cudaMemcpyDeviceToHost) );
+  cudaErrorCheckCall( cudaMemcpy(primay_beam_J01, d_primay_beam_J01,
+                      num_beam_values*sizeof(user_precision_complex_t),
+                      cudaMemcpyDeviceToHost) );
+  cudaErrorCheckCall( cudaMemcpy(primay_beam_J10, d_primay_beam_J10,
+                      num_beam_values*sizeof(user_precision_complex_t),
+                      cudaMemcpyDeviceToHost) );
+  cudaErrorCheckCall( cudaMemcpy(primay_beam_J11, d_primay_beam_J11,
+                      num_beam_values*sizeof(user_precision_complex_t),
+                      cudaMemcpyDeviceToHost) );
+
+  cudaErrorCheckCall( cudaFree(d_primay_beam_J00) );
+  cudaErrorCheckCall( cudaFree(d_primay_beam_J01) );
+  cudaErrorCheckCall( cudaFree(d_primay_beam_J10) );
+  cudaErrorCheckCall( cudaFree(d_primay_beam_J11) );
+
+  for (int freq = 0; freq < num_freqs; freq++) {
+    FEE_beam = &beam_settings->FEE_beams[freq];
+    cudaErrorCheckCall( cudaFree( FEE_beam->d_FEE_beam_gain_matrices) );
+  }
+}
+
 
 extern "C" void test_multifreq_calc_CUDA_FEE_beam(beam_settings_t *beam_settings,
                             user_precision_t *azs, user_precision_t *zas,

@@ -41,6 +41,8 @@ test_installation/*/images
 
 cmake_testing/FEE_primary_beam_cuda/beam_plots
 cmake_testing/FEE_primary_beam_cuda/hyperbeam*
+cmake_testing/FEE_primary_beam_cuda/MWA_FEE_multifreq_gains*
+cmake_testing/FEE_primary_beam_cuda/*.png
 
 cmake_testing/source_components/plots
 

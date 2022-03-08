@@ -5,7 +5,7 @@ cp ../../build/cmake_testing/FEE_primary_beam_cuda/*double*.txt .
 """
 
 from os import environ
-##Change env variable to point to interpolated one
+##Change hyperbeam env variable to point to interpolated one
 environ['MWA_BEAM_FILE'] = environ['MWA_FEE_HDF5_INTERP']
 
 import mwa_hyperbeam
