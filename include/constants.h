@@ -67,3 +67,11 @@ Maximum number of polarisations after cross-correlation (XX, XY, YX, YY) */
 /*! 2 \n
 Number of polarisations before cross-correlation (X,Y) */
 #define N_COPOL 2
+
+/*! 0.29 \n
+Height of MWA dipole (meters) */
+#define MWA_DIPOLE_HEIGHT 0.3
+
+/*! 1.1 \n
+Separation of MWA dipoles (meters) */
+#define MWA_DIPOLE_SEP 1.1

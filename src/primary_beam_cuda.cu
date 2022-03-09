@@ -225,9 +225,328 @@ extern "C" void calculate_analytic_dipole_beam(int num_components,
 
 }
 
+__device__ void RTS_MWA_beam(user_precision_t az, user_precision_t za,
+           double ha, double dec,
+           double wavelength, double *d_metre_delays,
+           double latitude, int norm,
+           cuUserComplex * gx, cuUserComplex * Dx,
+           cuUserComplex * Dy, cuUserComplex * gy) {
+
+  // set elements of the look-dir vector
+  double proj_e = sin(za)*sin(az);
+  double proj_n = sin(za)*cos(az);
+  double proj_z = cos(za);
+
+  int n_cols = 4;
+  int n_rows = 4;
+
+  double multiplier = -(2 * M_PI) / wavelength;
+  double dipl_e, dipl_n, dipl_z;
+
+  int k = 0;
+
+  cuUserComplex x_dip;
+  cuUserComplex y_dip;
+
+  cuUserComplex gx_dip = {0.0, 0.0};
+  cuUserComplex Dx_dip = {0.0, 0.0};
+  cuUserComplex Dy_dip = {0.0, 0.0};
+  cuUserComplex gy_dip = {0.0, 0.0};
+
+  for (int i = 0; i < n_cols; i++) {
+    for (int j = 0; j < n_rows; j++) {
+
+      // set elements of the baseline vector
+      dipl_e = (i - 1.5) * MWA_DIPOLE_SEP;
+      dipl_n = (j - 1.5) * MWA_DIPOLE_SEP;
+      dipl_z = 0.0;
+
+      double phase = multiplier*(dipl_e*proj_e + dipl_n*proj_n + dipl_z*proj_z - d_metre_delays[k]);
+      double phaseshift_re = cos(phase);
+      double phaseshift_im = sin(phase);
+
+      //TODO You could get gains here from some dipole flagging scheme in the future
+
+      user_precision_t gainx = 1.0;
+      user_precision_t gainy = 1.0;
+
+      x_dip.x = gainx*phaseshift_re;
+      x_dip.y = gainx*phaseshift_im;
+      y_dip.x = gainy*phaseshift_re;
+      y_dip.y = gainy*phaseshift_im;
+
+      gx_dip += x_dip;
+      Dx_dip += x_dip;
+      Dy_dip += y_dip;
+      gy_dip += y_dip;
+
+      // printf("%.5f %.5f %.5f %.5f %.5f %.5f %.5f %.5f\n",
+      //       gx_dip.x, gx_dip.y, Dx_dip.x, Dx_dip.y,
+      //       Dy_dip.x, Dy_dip.y, gy_dip.x, gy_dip.y);
+
+      k += 1;
+    }
+  }
+
+  // float ground_plane = 2.0*sin(2.0*M_PI*MWA_DIPOLE_HEIGHT/wavelength*cos(angular_sep));
+  user_precision_t ground_plane = 2.0*sin(2.0*M_PI*MWA_DIPOLE_HEIGHT/wavelength*cos(za));
+
+  if (norm == 1){
+    ground_plane /= 2.0*sin(2.0*M_PI*MWA_DIPOLE_HEIGHT/wavelength);
+  }
+
+  user_precision_t ground_plane_div_dipoles = ground_plane / NUM_DIPOLES;
+
+  double coslat = cos(latitude);
+  double cosdec = cos(dec);
+  double cosha = cos(ha);
+  double sinlat = sin(latitude);
+  double sindec = sin(dec);
+  double sinha = sin(ha);
+
+  //Some kind of parallatic rotation?
+  user_precision_t rot0 = coslat*cosdec + sinlat*sindec*cosha;
+  user_precision_t rot1 = -sinlat*sinha;
+  user_precision_t rot2 = sindec*sinha;
+  user_precision_t rot3 = cosha;
+
+  cuUserComplex pgx = gx_dip * rot0 * ground_plane_div_dipoles;
+  cuUserComplex pDx = Dx_dip * rot1 * ground_plane_div_dipoles;
+  cuUserComplex pDy = Dy_dip * rot2 * ground_plane_div_dipoles;
+  cuUserComplex pgy = gy_dip * rot3 * ground_plane_div_dipoles;
+
+  //Explicitly set the imag to zero
+
+  pgx.y = 0;
+  pDx.y = 0;
+  pDy.y = 0;
+  pgy.y = 0;
+
+  * gx = pgx;
+  * Dx = pDx;
+  * Dy = pDy;
+  * gy = pgy;
+
+  // printf("Real gx Dx Dy gy %.5f %.5f %.5f %.5f \n", pgx.x, pDx.x, pDy.x, pgy.x );
+  // printf("Imag gx Dx Dy gy %.5f %.5f %.5f %.5f \n", pgx.y, pDx.y, pDy.y, pgy.y );
+
+}
+
+/*
+d_azs              num_times*num_components
+d_zas              num_times*num_components
+d_has              num_times*num_components
+d_decs             num_components
+d_angular_seps     num_times*num_components
+*/
+
+__global__ void kern_RTS_analytic_MWA_beam(user_precision_t *d_azs,
+           user_precision_t *d_zas,
+           user_precision_t *d_beam_has, user_precision_t *d_beam_decs,
+           double *d_metre_delays,
+           double *d_freqs, double latitude, int norm,
+           int num_freqs, int num_times, int num_components,
+           cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
+           cuUserComplex *d_Dys, cuUserComplex *d_gys) {
+
+  // Start by computing which baseline we're going to do
+  const int iCoord = threadIdx.x + (blockDim.x*blockIdx.x);
+  const int iFreq = threadIdx.y + (blockDim.y*blockIdx.y);
+
+  if (iFreq < num_freqs && iCoord < num_components * num_times) {
+
+    int component = (int)floorf((float)iCoord / (float)num_times);
+    int time_ind = iCoord - component*num_times;
+    int beam_ind = num_freqs*time_ind*num_components + (num_components*iFreq) + component;
+
+    cuUserComplex gx;
+    cuUserComplex Dx;
+    cuUserComplex Dy;
+    cuUserComplex gy;
+
+    double wavelength = VELC / d_freqs[iFreq];
+
+    // if (iCoord == 51009*2 && iFreq == 0) {
+    //   printf("%.5f %.5f %.5f %.5f %.5f %.5f\n",d_azs[iCoord], d_zas[iCoord],(double)d_beam_has[iCoord], d_beam_decs[iCoord], d_angular_seps[iCoord],(double)latitude  );
+    // }
+
+    RTS_MWA_beam(d_azs[iCoord], d_zas[iCoord],
+             (double)d_beam_has[iCoord], (double)d_beam_decs[iCoord],
+             wavelength, d_metre_delays,
+             latitude, norm,
+             &gx, &Dx, &Dy, &gy);
+
+    // if (iCoord == 181200 && iFreq == 0) {
+    //   printf("%.5f %.5f\n",gx.x, gx.y );
+    // }
+
+    // if (iCoord == 0) {
+    //   printf("%.1f %.1f %.1f %.1f %.1f %.1f %.5f %.5f %.5f %.5f\n",wavelength, d_azs[iCoord], d_zas[iCoord],d_beam_has[iCoord], d_beam_decs[comp_ind],d_angular_seps[iCoord], gx.x, Dx.x, Dy.x, gy.x  );
+    // }
+
+    // if (component == 0) {
+    // if (iCoord == 181200 && iFreq == 0) {
+    //   printf("DIS %d %d %.3f %.3f %.3f %.3f\n",time_ind, iFreq, d_beam_has[iCoord], d_beam_decs[iCoord],
+    //   d_azs[iCoord], d_zas[iCoord]);
+    //
+    //   printf("DIS %.3f %.3f %.3f %.3f\n",gx.x, Dx.x, Dy.x, gy.x);
+    //
+    // }
+
+    d_gxs[beam_ind] = gx;
+    d_Dxs[beam_ind] = Dx;
+    d_Dys[beam_ind] = Dy;
+    d_gys[beam_ind] = gy;
+
+    // printf("%.1f %.1f %.1f %.1f\n",gx.x, Dx.x, Dy.x, gy.x );
+
+  }
+}
+
+extern "C" void calculate_RTS_MWA_analytic_beam(int num_components,
+     int num_time_steps, int num_freqs,
+     user_precision_t *azs, user_precision_t *zas, user_precision_t *delays,
+     double latitude, int norm,
+     user_precision_t *beam_has, user_precision_t *beam_decs, double *d_freqs,
+     cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
+     cuUserComplex *d_Dys, cuUserComplex *d_gys){
+
+
+  int num_coords = num_components * num_time_steps;
+
+  user_precision_t *d_azs = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_azs, num_coords*sizeof(user_precision_t)) );
+  cudaErrorCheckCall( cudaMemcpy(d_azs, azs, num_coords*sizeof(user_precision_t),
+                      cudaMemcpyHostToDevice) );
+
+  user_precision_t *d_zas = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_zas, num_coords*sizeof(user_precision_t)) );
+  cudaErrorCheckCall( cudaMemcpy(d_zas, zas, num_coords*sizeof(user_precision_t),
+                      cudaMemcpyHostToDevice) );
+
+  //Copy across stuff that normally gets copied by `source_component_common`
+  user_precision_t *d_beam_has = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_has,
+                      num_coords*sizeof(user_precision_t)) );
+  cudaErrorCheckCall( cudaMemcpy(d_beam_has, beam_has,
+                      num_coords*sizeof(user_precision_t),
+                      cudaMemcpyHostToDevice) );
+
+  user_precision_t *d_beam_decs = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_decs,
+                      num_coords*sizeof(user_precision_t)) );
+  cudaErrorCheckCall( cudaMemcpy(d_beam_decs, beam_decs,
+                      num_coords*sizeof(user_precision_t),
+                      cudaMemcpyHostToDevice) );
+
+  //Apply the actual delay length added by MWA circuitry here, in metres - saves
+  //on computation inside the kernel
+  //Make a copy array so we don't modify the original
+  //Have to reorder the delays as listed in the metafits to match what
+  //the RTS analytic code
+  double *metre_delays = (double*)malloc(NUM_DIPOLES*sizeof(double));
+
+  for (int i = 0; i < 4; i++) {
+
+      metre_delays[3-i] = delays[0+i*4]*DQ;
+      metre_delays[7-i] = delays[1+i*4]*DQ;
+      metre_delays[11-i] = delays[2+i*4]*DQ;
+      metre_delays[15-i] = delays[3+i*4]*DQ;
+
+  }
+
+  //Copy over to the GPU
+  double *d_metre_delays = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_metre_delays, NUM_DIPOLES*sizeof(double)) );
+  cudaErrorCheckCall( cudaMemcpy(d_metre_delays, metre_delays, NUM_DIPOLES*sizeof(double),
+                      cudaMemcpyHostToDevice) );
+
+  dim3 grid, threads;
+  threads.x = 128;
+  threads.y = 1;
+
+  grid.x = (int)ceil( (float)num_coords  / (float)threads.x );
+  grid.y = (int)ceil( (float)num_freqs / (float)threads.y );
+
+  cudaErrorCheckKernel("kern_RTS_analytic_MWA_beam",
+             kern_RTS_analytic_MWA_beam, grid, threads,
+             d_azs, d_zas, d_beam_has, d_beam_decs, d_metre_delays,
+             d_freqs, latitude, norm,
+             num_freqs, num_time_steps, num_components,
+             d_gxs, d_Dxs, d_Dys, d_gys);
+
+  free(metre_delays);
+  cudaErrorCheckCall( cudaFree(d_azs) );
+  cudaErrorCheckCall( cudaFree(d_zas) );
+  // cudaErrorCheckCall( cudaFree(d_angular_seps) );
+  cudaErrorCheckCall( cudaFree(d_metre_delays) );
+  cudaErrorCheckCall( cudaFree(d_beam_has) );
+  cudaErrorCheckCall( cudaFree(d_beam_decs) );
+
+}
+
 /*******************************************************************************
                  Functions below to be used in unit tests
 *******************************************************************************/
+
+extern "C" void test_RTS_calculate_MWA_analytic_beam(int num_components,
+     int num_time_steps, int num_freqs,
+     user_precision_t *azs, user_precision_t *zas, user_precision_t *delays,
+     double latitude, int norm,
+     user_precision_t *beam_has, user_precision_t *beam_decs, double *freqs,
+     user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
+     user_precision_complex_t *Dys, user_precision_complex_t *gys) {
+
+  //Allocate space for beam gains
+  user_precision_complex_t *d_gxs = NULL;
+  user_precision_complex_t *d_Dxs = NULL;
+  user_precision_complex_t *d_Dys = NULL;
+  user_precision_complex_t *d_gys = NULL;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_gxs,
+    num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_Dxs,
+    num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_Dys,
+    num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_gys,
+    num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
+
+  double *d_freqs = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_freqs, num_freqs*sizeof(double)) );
+  cudaErrorCheckCall( cudaMemcpy(d_freqs, freqs, num_freqs*sizeof(double),
+                      cudaMemcpyHostToDevice) );
+
+  //Run
+  calculate_RTS_MWA_analytic_beam(num_components,
+       num_time_steps, num_freqs,
+       azs, zas, delays, latitude, norm,
+       beam_has, beam_decs, d_freqs,
+       (cuUserComplex*)d_gxs, (cuUserComplex*)d_Dxs,
+       (cuUserComplex*)d_Dys, (cuUserComplex*)d_gys);
+
+  cudaErrorCheckCall( cudaMemcpy(gxs, d_gxs,
+       num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
+       cudaMemcpyDeviceToHost) );
+  cudaErrorCheckCall( cudaMemcpy(Dxs, d_Dxs,
+       num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
+       cudaMemcpyDeviceToHost) );
+  cudaErrorCheckCall( cudaMemcpy(Dys, d_Dys,
+       num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
+       cudaMemcpyDeviceToHost) );
+  cudaErrorCheckCall( cudaMemcpy(gys, d_gys,
+       num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
+       cudaMemcpyDeviceToHost) );
+
+  cudaErrorCheckCall( cudaFree(d_gxs) );
+  cudaErrorCheckCall( cudaFree(d_Dxs) );
+  cudaErrorCheckCall( cudaFree(d_Dys) );
+  cudaErrorCheckCall( cudaFree(d_gys) );
+
+  cudaErrorCheckCall( cudaFree(d_freqs) );
+
+
+}
 
 extern "C" void test_analytic_dipole_beam(int num_components,
      int num_time_steps, int num_freqs,

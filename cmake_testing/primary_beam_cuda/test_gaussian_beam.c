@@ -71,7 +71,7 @@ void get_1D_gaussian_values(double *beam_ls, double *beam_ms,
                           primay_beam_J00, primay_beam_J11);
 }
 
-void test_analytic_dipole_beam_GivesCorrectlValues(void) {
+void test_GaussBeam_GivesCorrectlValues(void) {
   int num_freqs = 1;
   int num_times = 1;
   int num_components = 100;
@@ -88,7 +88,7 @@ void test_analytic_dipole_beam_GivesCorrectlValues(void) {
   user_precision_complex_t *primay_beam_J00 = malloc(num_beam_values*sizeof(user_precision_complex_t));
   user_precision_complex_t *primay_beam_J11 = malloc(num_beam_values*sizeof(user_precision_complex_t));
 
-  double *freqs = malloc(num_freqs*sizeof(user_precision_t));
+  double *freqs = malloc(num_freqs*sizeof(double));
 
   int vary_l = 1;
   get_1D_gaussian_values(beam_ls, beam_ms,
@@ -109,9 +109,15 @@ void test_analytic_dipole_beam_GivesCorrectlValues(void) {
     TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J11[i]));
 
   }
+
+  free(beam_ls);
+  free(beam_ms);
+  free(primay_beam_J00);
+  free(primay_beam_J11);
+  free(freqs);
 }
 
-void test_analytic_dipole_beam_GivesCorrectmValues(void) {
+void test_GaussBeam_GivesCorrectmValues(void) {
   int num_freqs = 1;
   int num_times = 1;
   int num_components = 100;
@@ -128,7 +134,7 @@ void test_analytic_dipole_beam_GivesCorrectmValues(void) {
   user_precision_complex_t *primay_beam_J00 = malloc(num_beam_values*sizeof(user_precision_complex_t));
   user_precision_complex_t *primay_beam_J11 = malloc(num_beam_values*sizeof(user_precision_complex_t));
 
-  double *freqs = malloc(num_freqs*sizeof(user_precision_t));
+  double *freqs = malloc(num_freqs*sizeof(double));
 
   int vary_l = 0;
   get_1D_gaussian_values(beam_ls, beam_ms,
@@ -149,10 +155,16 @@ void test_analytic_dipole_beam_GivesCorrectmValues(void) {
     TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J11[i]));
 
   }
+
+  free(beam_ls);
+  free(beam_ms);
+  free(primay_beam_J00);
+  free(primay_beam_J11);
+  free(freqs);
 }
 
 
-void test_analytic_dipole_beam_GivesCorrectlValuesByFreq(void) {
+void test_GaussBeam_GivesCorrectlValuesByFreq(void) {
   int num_freqs = 5;
   int num_times = 1;
   int num_components = 100;
@@ -169,7 +181,7 @@ void test_analytic_dipole_beam_GivesCorrectlValuesByFreq(void) {
   user_precision_complex_t *primay_beam_J00 = malloc(num_beam_values*sizeof(user_precision_complex_t));
   user_precision_complex_t *primay_beam_J11 = malloc(num_beam_values*sizeof(user_precision_complex_t));
 
-  double *freqs = malloc(num_freqs*sizeof(user_precision_t));
+  double *freqs = malloc(num_freqs*sizeof(double));
 
   int vary_l = 1;
   get_1D_gaussian_values(beam_ls, beam_ms,
@@ -195,9 +207,15 @@ void test_analytic_dipole_beam_GivesCorrectlValuesByFreq(void) {
 
     }
   }
+
+  free(beam_ls);
+  free(beam_ms);
+  free(primay_beam_J00);
+  free(primay_beam_J11);
+  free(freqs);
 }
 
-void test_analytic_dipole_beam_GivesCorrectmValuesByFreq(void) {
+void test_GaussBeam_GivesCorrectmValuesByFreq(void) {
   int num_freqs = 5;
   int num_times = 1;
   int num_components = 100;
@@ -214,7 +232,7 @@ void test_analytic_dipole_beam_GivesCorrectmValuesByFreq(void) {
   user_precision_complex_t *primay_beam_J00 = malloc(num_beam_values*sizeof(user_precision_complex_t));
   user_precision_complex_t *primay_beam_J11 = malloc(num_beam_values*sizeof(user_precision_complex_t));
 
-  double *freqs = malloc(num_freqs*sizeof(user_precision_t));
+  double *freqs = malloc(num_freqs*sizeof(double));
 
   int vary_l = 0;
   get_1D_gaussian_values(beam_ls, beam_ms,
@@ -240,16 +258,22 @@ void test_analytic_dipole_beam_GivesCorrectmValuesByFreq(void) {
 
     }
   }
+
+  free(beam_ls);
+  free(beam_ms);
+  free(primay_beam_J00);
+  free(primay_beam_J11);
+  free(freqs);
 }
 
 int main(void)
 {
     UNITY_BEGIN();
 
-    RUN_TEST(test_analytic_dipole_beam_GivesCorrectlValues);
-    RUN_TEST(test_analytic_dipole_beam_GivesCorrectmValues);
-    RUN_TEST(test_analytic_dipole_beam_GivesCorrectlValuesByFreq);
-    RUN_TEST(test_analytic_dipole_beam_GivesCorrectmValuesByFreq);
+    RUN_TEST(test_GaussBeam_GivesCorrectlValues);
+    RUN_TEST(test_GaussBeam_GivesCorrectmValues);
+    RUN_TEST(test_GaussBeam_GivesCorrectlValuesByFreq);
+    RUN_TEST(test_GaussBeam_GivesCorrectmValuesByFreq);
 
     return UNITY_END();
 }

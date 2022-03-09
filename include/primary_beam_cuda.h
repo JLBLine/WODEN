@@ -232,23 +232,121 @@ extern "C" void calculate_analytic_dipole_beam(int num_components,
      cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J11);
 
 /**
-@brief Run `calculate_analytic_dipole_beam` from the host, performing all the
-necessary device memory management to retrieve the analytic dipole response
-back to the host.
+@brief Calculate the analytic MWA beam response to a single az/za direction
+for a give wavelength and set of delays (`d_metre_delays`)
 
-@details Calculates the beam response of a north-south (X) and east-west (Y)
-analytic dipole on an infinite ground screen. See
-`calculate_analytic_dipole_beam` for details - this function wraps that one
-to run from the host, grabbing the device outputs and copying into the host
-arrays `analy_beam_X, analy_beam_Y`.
+@details Based on the RTS code found in ``mwa_tile::local_FillMatrices``. I
+think this code inherently does some kind of parallatic rotation,
+hence needs the ha/dec along with the az/za.
+
+
+@param[in] az Azimuth to calculate the beam toward (radians)
+@param[in] za Zenith angle to calculate the beam toward (radians)
+@param[in] ha Corresponding hour angle to the given `az, za`
+@param[in] dec Corresponding Declination to the given `az, za`
+@param[in] wavelength Wavelength to calculate the beam at (metres)
+@param[in] d_metre_delays The physical delays lengths added to each dipole to
+steer the beam (metres)
+@param[in] latitude Latitude of the array (radians)
+@param[in] norm Whether to normalise to zenith or not (1 to normalise, 0 to not)
+@param[in,out] *gx The gain for the north-south beam
+@param[in,out] *Dx The leakage for the north-south beam
+@param[in,out] *Dy The leakage for the east-west beam
+@param[in,out] *gy The gain for the east-west beam
+
+*/
+__device__ void RTS_MWA_beam(user_precision_t az, user_precision_t za,
+           double ha, double dec,
+           double wavelength, double *d_metre_delays,
+           double latitude, int norm,
+           cuUserComplex * gx, cuUserComplex * Dx,
+           cuUserComplex * Dy, cuUserComplex * gy);
+
+
+
+
+
+/**
+@brief Kernel to calculate the analytic MWA primary beam to a set of sky directions
+`d_azs` and `d_zas` for a given set of delays `d_metre_delays` and frequencies
+`d_freqs`.
+
+@details Kernel calls `primary_beam_cuda::RTS_MWA_beam`. The MWA primary beam
+is stationary on the sky for a given set of delays, so the Azimuth and Zenith
+Angles in `azs,zas` should contain `num_components*num_times` values,
+as the COMPONENTs move through the beam with time. The delays added to the
+paths of individual dipoles allow the beam to be 'pointed'. The physical
+length of these paths should be given in `d_metre_delays` (this conversion
+from the delays given in the MWA metafits is handled by
+`primary_beam_cuda::calculate_RTS_MWA_analytic_beam`)
+
+When called with `dim3 grid, threads`, kernel should be called with both
+`grid.x` and `grid.y` defined, where:
+ - grid.x * threads.x >= `num_components` * `num_time_steps`
+ - grid.y * threads.y >= `num_freqs`
+
+@param[in] *d_azs Array of Azimuth angles to calculate the beam towards (radians)
+@param[in] *d_zas Array of Zenith Angles to calculate the beam towards (radiany)
+@param[in] *d_beam_has Hour angles corresponding to `azs,zas` (radians)
+@param[in] *d_beam_decs Declinations corresponding to `azs,zas` (radians)
+@param[in] *d_metre_delays Delays that specify the pointing (path length, metres)
+@param[in] *d_freqs Array of frequencies to calculate beam at (Hz)
+@param[in] latitude Latitude of the array (radians)
+@param[in] norm Whether to normalise to zenith or not (1 to normalise, 0 to not)
+@param[in] num_freqs Number of frequencies being calculated
+@param[in] num_times Number of time steps being calculated
+@param[in] num_components Number of COMPONENTS the beam is calculated for
+@param[in,out] *d_gxs The gains for the north-south beam
+@param[in,out] *d_Dxs The leakages for the north-south beam
+@param[in,out] *d_Dys The leakages for the east-west beam
+@param[in,out] *d_gys The gains for the east-west beam
+
+*/
+__global__ void kern_RTS_analytic_MWA_beam(user_precision_t *d_azs,
+           user_precision_t *d_zas,
+           user_precision_t *d_beam_has, user_precision_t *d_beam_decs,
+           double *d_metre_delays,
+           double *d_freqs, double latitude, int norm,
+           int num_freqs, int num_times, int num_components,
+           cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
+           cuUserComplex *d_Dys, cuUserComplex *d_gys);
+
+/**
+@brief Calculate the analytic MWA primary beam to a set of sky directions
+`azs` and `zas` for a given set of delays `delays` as listed in an MWA metafits
+file, and frequencies `d_freqs`.
+
+@details Uses the kernel `primary_beam_cuda::kern_RTS_analytic_MWA_beam`.
+The MWA primary beam is stationary on the sky for a given set of delays,
+so the Azimuth and Zenith Angles in `azs,zas` should contain
+`num_components*num_times` values, as the COMPONENTs move through the beam
+with time. The delays added to the paths of individual dipoles allow the beam
+to be 'pointed'. The delays as listed in the metafits (given as `delays`) are
+listed in units of the delay time added internally to the tile (in seconds).
+This function coverts them into a path length (metres), as needed by
+`primary_beam_cuda::RTS_MWA_beam``.
 
 @param[in] num_components Number of COMPONENTS the beam is calculated for
 @param[in] num_time_steps Number of time steps being calculated
 @param[in] num_freqs Number of frequencies being calculated
-@param[in] azs Array of Azimuth angles to calculate the beam towards (radians)
-@param[in] zas Array of Zenith Angles to calculate the beam towards (radians)
-@param[in] *freqs Array of frequencies to calculate beam at (Hz)
-@param[in,out] *analy_beam_X Array to store the north-south beam response in
-@param[in,out] *analy_beam_Y Array to store the east-west beam response in
+@param[in] *azs Array of Azimuth angles to calculate the beam towards (radians)
+@param[in] *zas Array of Zenith Angles to calculate the beam towards (radiany)
+@param[in] *delays Delays that specificy the pointing (as reported in the MWA metafits)
+@param[in] latitude Latitude of the array (radians)
+@param[in] norm Whether to normalise to zenith or not (1 to normalise, 0 to not)
+@param[in] *beam_has Hour angles corresponding to `azs,zas` (radians)
+@param[in] *beam_decs Declinations corresponding to `azs,zas` (radians)
+@param[in] *d_freqs Array of frequencies to calculate beam at (Hz)
+@param[in,out] *d_gxs The gains for the north-south beam
+@param[in,out] *d_Dxs The leakages for the north-south beam
+@param[in,out] *d_Dys The leakages for the east-west beam
+@param[in,out] *d_gys The gains for the east-west beam
 
 */
+extern "C" void calculate_RTS_MWA_analytic_beam(int num_components,
+     int num_time_steps, int num_freqs,
+     user_precision_t *azs, user_precision_t *zas, user_precision_t *delays,
+     double latitude, int norm,
+     user_precision_t *beam_has, user_precision_t *beam_decs, double *d_freqs,
+     cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
+     cuUserComplex *d_Dys, cuUserComplex *d_gys);

@@ -45,6 +45,10 @@ cmake_testing/FEE_primary_beam_cuda/MWA_FEE_multifreq_gains*
 cmake_testing/FEE_primary_beam_cuda/*.png
 
 cmake_testing/source_components/plots
+cmake_testing/source_components/*.png
+
+cmake_testing/primary_beam_cuda/*.png
+cmake_testing/primary_beam_cuda/plots
 
 *importuvfits.last
 

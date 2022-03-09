@@ -623,8 +623,18 @@ calculations, rather than copied across to the host
 @details Calls `FEE_primary_beam_cuda::calc_CUDA_FEE_beam` for all
 `RTS_MWA_FEE_beam_t` in `beam_settings->FEE_beams`
 
-@param[in] *beam_settings Populated `beam_settings_t` which has had
-`FEE_primary_beam::multifreq_RTS_MWAFEEInit` run on it
+@details -
+
+@param[in] *beam_settings `beam_settings_t` where `beam_settings->FEE_beams`
+has been intialised with `FEE_primary_beam_cuda::multifreq_get_MWAFEE_normalisation`
+@param[in] azs Array of azimuth values (radians)
+@param[in] zas Array of zenith angle values (radians)
+@param[in] num_time_steps Number of time steps present in az, za
+@param[in] sin_para_angs Sine of the parallactic angle for all az,za
+@param[in] cos_para_angs Cosine of the parallactic angle for all az,za
+@param[in] num_components Number of components the MWA Beam was calculated for
+@param[in] rotation Boolean, whether to rotate by parallatic angle or not
+@param[in] scaling Boolean, whether to normalise to zenith or not
 */
 extern "C" void multifreq_calc_CUDA_FEE_beam(beam_settings_t *beam_settings,
            user_precision_t *azs, user_precision_t *zas, int num_time_steps,
@@ -690,7 +700,7 @@ and `FEE_primary_beam_cuda::map_FEE_beam_gains_multi_freq` to calculate
 multiple sky directions and frequencies directly into the `d_primay_beam_J*`
 arrays
 
-@details assdfasd
+@details -
 
 @param[in] *beam_settings `beam_settings_t` where `beam_settings->FEE_beams`
 has been intialised with `FEE_primary_beam_cuda::multifreq_get_MWAFEE_normalisation`
