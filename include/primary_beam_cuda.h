@@ -237,7 +237,11 @@ for a give wavelength and set of delays (`d_metre_delays`)
 
 @details Based on the RTS code found in ``mwa_tile::local_FillMatrices``. I
 think this code inherently does some kind of parallatic rotation,
-hence needs the ha/dec along with the az/za.
+hence needs the ha/dec along with the az/za. The delays added to the
+paths of individual dipoles allow the beam to be 'pointed'. The physical
+length of these paths should be given in `d_metre_delays` (this conversion
+from the delays given in the MWA metafits is handled by
+`primary_beam_cuda::calculate_RTS_MWA_analytic_beam`)
 
 
 @param[in] az Azimuth to calculate the beam toward (radians)
@@ -347,6 +351,6 @@ extern "C" void calculate_RTS_MWA_analytic_beam(int num_components,
      int num_time_steps, int num_freqs,
      user_precision_t *azs, user_precision_t *zas, user_precision_t *delays,
      double latitude, int norm,
-     user_precision_t *beam_has, user_precision_t *beam_decs, double *d_freqs,
+     double *beam_has, double *beam_decs, double *d_freqs,
      cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
      cuUserComplex *d_Dys, cuUserComplex *d_gys);

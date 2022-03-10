@@ -15,6 +15,7 @@ typedef enum {NO_BEAM, /*!< Do not use a primary beam in the simulation */
               FEE_BEAM_INTERP, /*!< Use the RTS MWA FEE primary beam at all
               frequencies. Should be using an hdf5 file that has been frequency
               interpolated*/
+              MWA_ANALY, /*!< Use an analytic MWA tile primary beam */
               }e_beamtype;
 
 /*!

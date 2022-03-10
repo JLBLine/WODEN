@@ -1,10 +1,4 @@
-# from astropy.io import fits
 import numpy as np
-# from astropy.wcs import WCS
-# from copy import deepcopy
-# import erfa
-# import matplotlib.pyplot as plt
-# from shamfi.shamfi_plotting import add_colourbar
 
 nside = 201
 

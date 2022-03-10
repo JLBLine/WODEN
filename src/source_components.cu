@@ -79,11 +79,6 @@ __device__ void apply_beam_gains(cuUserComplex g1x, cuUserComplex D1x,
   cuUserComplex g2y_conj = make_cuUserComplex(g2y.x,-g2y.y);
 
   //Create the Stokes visibilities
-  // cuUserComplex visi_I = cuCmulf(make_cuUserComplex(flux_I,0.0),visi_component );
-  // cuUserComplex visi_Q = cuCmulf(make_cuUserComplex(flux_Q,0.0),visi_component );
-  // cuUserComplex visi_U = cuCmulf(make_cuUserComplex(flux_U,0.0),visi_component );
-  // cuUserComplex visi_V = cuCmulf(make_cuUserComplex(flux_V,0.0),visi_component );
-
   cuUserComplex visi_I = make_cuUserComplex(flux_I, 0.0)*visi_component;
   cuUserComplex visi_Q = make_cuUserComplex(flux_Q, 0.0)*visi_component;
   cuUserComplex visi_U = make_cuUserComplex(flux_U, 0.0)*visi_component;
@@ -165,7 +160,7 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
   }
 
   //Only MWA models have leakge terms at the moment
-  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP) {
+  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY) {
     * D1x = d_primay_beam_J01[beam_ind];
     * D2x = d_primay_beam_J01[beam_ind];
     * D1y = d_primay_beam_J10[beam_ind];
@@ -207,7 +202,7 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
                d_primay_beam_J10, d_primay_beam_J11,
                &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
 
-    // printf("BEAM GAINS %.16f %.16f\n",g1x.x*g1x.x,g1y.x*g1y.x );
+    // printf("BEAM GAINS %.8f %.8f\n", g1x.x, g1y.x );
 
     cuUserComplex visi_XX;
     cuUserComplex visi_XY;
@@ -345,7 +340,23 @@ void source_component_common(int num_components,
          woden_settings->num_time_steps, woden_settings->num_freqs,
          azs, zas, d_freqs, d_primay_beam_J00, d_primay_beam_J11);
   }
-}
+
+  else if (beam_settings->beamtype == MWA_ANALY) {
+
+    //Always normalise to zenith
+    int norm = 1;
+
+    printf("\tDoing analytic MWA beam\n");
+
+    calculate_RTS_MWA_analytic_beam(num_components,
+         woden_settings->num_time_steps, woden_settings->num_freqs,
+         azs, zas, woden_settings->FEE_ideal_delays, MWA_LAT_RAD, norm,
+         beam_has, beam_decs, d_freqs,
+         d_primay_beam_J00, d_primay_beam_J01,
+         d_primay_beam_J10, d_primay_beam_J11);
+  }
+
+} //END source_component_common
 
 __global__ void kern_calc_visi_point(double *d_point_freqs,
            user_precision_t *d_point_stokesI, user_precision_t *d_point_stokesQ,

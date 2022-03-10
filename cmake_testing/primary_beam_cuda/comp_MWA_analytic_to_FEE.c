@@ -48,6 +48,9 @@ void test_MWA_FEE_beam_nside201() {
     user_precision_t delays[] = {6, 4, 2, 0, 8, 6, 4, 2,
                       10, 8, 6, 4, 12, 10, 8, 6};
 
+    // user_precision_t delays[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                      // 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
 
     int rotation=1;
     int scaling=1;

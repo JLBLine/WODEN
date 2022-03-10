@@ -13,7 +13,7 @@ VELC = 299792458.0
 MWA_LAT = -26.7033194444
 MWA_LAT_RAD = MWA_LAT * D2R
 
-lst_rad = 0.0
+lst_rad = 74.15019835*D2R
 lst_deg = lst_rad / D2R
 
 ##Setup a dummy FITS header with appropriate settings
@@ -108,6 +108,9 @@ with open('azza_radec_nside{:03d}.h'.format(nside),'w') as outfile:
     outfile.write(ha_arr)
     outfile.write(dec_arr)
 
+
+np.savez_compressed("az-za_coords.npz", az_arr=az_flat, za_arr=za_flat)
+
 ##Do some fiddling for plotting reasons
 has_plot = deepcopy(has)
 decs_plot = deepcopy(decs)
@@ -130,6 +133,8 @@ for arr, ax, label in zip(arr_plots, axs.flatten(),labels):
 plt.tight_layout()
 
 fig.savefig('coords_used_nside{:d}.png'.format(nside), bbox_inches='tight')
+
+
 
 
 # delays = [0]*16

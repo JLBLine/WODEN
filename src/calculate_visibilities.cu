@@ -287,7 +287,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
       //Only the FEE beam currently yields cross pol values, so only malloc what
       //we need here
-      if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP) {
+      if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP || beam_settings->beamtype == MWA_ANALY) {
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01,
                   catsource.num_point_primarybeam_values*sizeof(cuUserComplex) ));
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J10,
@@ -352,7 +352,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       cudaErrorCheckCall( cudaFree( d_primay_beam_J00 ) );
       cudaErrorCheckCall( cudaFree( d_primay_beam_J11 ) );
 
-      if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP) {
+      if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP || beam_settings->beamtype == MWA_ANALY) {
         cudaErrorCheckCall( cudaFree( d_primay_beam_J01 ) );
         cudaErrorCheckCall( cudaFree( d_primay_beam_J10 ) );
       }
@@ -441,7 +441,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
       //Only the FEE beam currently yields cross pol values, so only malloc what
       //we need here
-      if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP) {
+      if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP || beam_settings->beamtype == MWA_ANALY) {
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01,
               catsource.num_gauss_primarybeam_values*sizeof(cuUserComplex)) );
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J10,
@@ -493,7 +493,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       cudaErrorCheckCall( cudaFree(d_primay_beam_J00) );
       cudaErrorCheckCall( cudaFree(d_primay_beam_J11) );
 
-      if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP) {
+      if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP || beam_settings->beamtype == MWA_ANALY) {
         cudaErrorCheckCall( cudaFree( d_primay_beam_J01 ) );
         cudaErrorCheckCall( cudaFree( d_primay_beam_J10 ) );
       }
@@ -647,7 +647,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
       //Only the FEE beam currently yields cross pol values, so only malloc what
       //we need here
-      if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP) {
+      if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP || beam_settings->beamtype == MWA_ANALY) {
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01,
                   catsource.num_shape_primarybeam_values*sizeof(cuUserComplex)) );
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J10,
@@ -722,7 +722,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       cudaErrorCheckCall( cudaFree(d_primay_beam_J00) );
       cudaErrorCheckCall( cudaFree(d_primay_beam_J11) );
 
-      if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP) {
+      if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP || beam_settings->beamtype == MWA_ANALY) {
         cudaErrorCheckCall( cudaFree( d_primay_beam_J01 ) );
         cudaErrorCheckCall( cudaFree( d_primay_beam_J10 ) );
       }

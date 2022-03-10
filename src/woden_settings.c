@@ -44,6 +44,7 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
   struct json_object *EDA2_beam;
   struct json_object *array_layout_file_path;
   struct json_object *no_precession;
+  struct json_object *MWA_analy;
   //
   /* open file */
   if ((fp=fopen(filename,"r"))==NULL) {
@@ -90,6 +91,7 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
 
   json_object_object_get_ex(parsed_json, "use_EDA2_beam", &EDA2_beam);
   json_object_object_get_ex(parsed_json, "no_precession", &no_precession);
+  json_object_object_get_ex(parsed_json, "use_MWA_analy_beam", &MWA_analy);
   //
   //
   //Boolean whether to use gaussian primary beam
@@ -135,22 +137,16 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
   //Boolean whether to use the MWA FEE beam
   int eda2_beam = json_object_get_boolean(EDA2_beam);
 
-  //Boolean whether to use apply precession to array or not
-  int no_precess = json_object_get_boolean(no_precession);
+  int mwa_analy = json_object_get_boolean(MWA_analy);
 
-  if (no_precess) {
-    woden_settings->do_precession = 0;
-  } else {
-    woden_settings->do_precession = 1;
-  }
-
-  if (gauss_beam + fee_beam + eda2_beam + fee_beam_interp > 1 ) {
+  if (gauss_beam + fee_beam + eda2_beam + fee_beam_interp + mwa_analy > 1 ) {
     printf("You have selected more than one primary beam type in the .json file\n");
     printf("You can have only ONE of the following:\n");
     printf("\t\"use_gaussian_beam\": True\n");
     printf("\t\"use_FEE_beam\": True\n");
     printf("\t\"use_FEE_beam_interp\": True\n");
     printf("\t\"use_EDA2_beam\": True\n");
+    printf("\t\"use_MWA_analy_beam\": True\n");
     return 1;
   }
 
@@ -210,13 +206,17 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
     woden_settings->beamtype = ANALY_DIPOLE;
   }
 
+  else if (mwa_analy){
+    woden_settings->beamtype = MWA_ANALY;
+  }
+
   else {
     woden_settings->beamtype = NO_BEAM;
   }
 
 
   //Both the FEE_BEAM and MWA_ANALY need delays values to steer the beam
-  if (fee_beam || fee_beam_interp) {
+  if (MWA_analy || fee_beam || fee_beam_interp) {
     struct json_object *delay;
     struct json_object *FEE_ideal_delays;
     int delays_length;
@@ -235,10 +235,14 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
     }
   }
 
+  //Boolean whether to use apply precession to array or not
+  int no_precess = json_object_get_boolean(no_precession);
 
-
-
-
+  if (no_precess) {
+    woden_settings->do_precession = 0;
+  } else {
+    woden_settings->do_precession = 1;
+  }
 
   woden_settings->chunking_size = json_object_get_int64(chunking_size);
   //If user selects an insanely large chunking size gonna have problems, so limit it

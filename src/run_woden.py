@@ -672,6 +672,10 @@ def write_json(json_name=None, jd_date=None, lst=None, args=None):
             outfile.write('  "hdf5_beam_path": "%s",\n' %args.hdf5_beam_path)
             outfile.write('  "FEE_delays": %s,\n ' %args.MWA_FEE_delays)
 
+        elif args.primary_beam == 'MWA_analy':
+            outfile.write('  "use_MWA_analy_beam": "True",\n')
+            outfile.write('  "FEE_delays": %s,\n ' %args.MWA_FEE_delays)
+
         elif args.primary_beam == 'EDA2':
             outfile.write('  "use_EDA2_beam": "True",\n')
 
@@ -933,6 +937,7 @@ def get_parser():
             "\t\t see --gauss_beam_FWHM and\n"
             "\t\t and --gauss_beam_ref_freq for\nfine control)\n"
             "\t - EDA2 (Analytic dipole with a ground mesh) \n"
+            "\t - MWA_analy (MWA analytic model)\n"
             "\t - none (Don't use a primary beam at all)\n"
             "Defaults to --primary_beam=none")
 
@@ -1130,7 +1135,7 @@ def check_args(args):
     """
 
     if args.primary_beam not in ['MWA_FEE', 'Gaussian', 'EDA2', 'none', 'None',
-                                 'MWA_FEE_interp']:
+                                 'MWA_FEE_interp', 'MWA_analy']:
         exit('Primary beam option --primary_beam must be one of:\n'
              '\t MWA_FEE, MWA_FEE_interp, Gaussian, EDA2, none\n'
              'User has entered --primary_beam={:s}\n'
@@ -1255,6 +1260,8 @@ def check_args(args):
     args.array_layout = select_argument_and_check(args.array_layout, args.array_layout,
                                   array_layout, "array_layout")
 
+    ##TODO change this from MWA_FEE_delays to MWA_delays (or allow both via
+    ##some argparse magic)
     ##If the user has manually specified some MWA FEE delays, ensure they
     ##can be made into an array of 16 floats
     if args.MWA_FEE_delays:
@@ -1270,7 +1277,7 @@ def check_args(args):
             exit(message)
 
     ##Do the test on MWA_FEE_delays only if this is an MWA_FEE simulation
-    if args.primary_beam == 'MWA_FEE' or args.primary_beam == 'MWA_FEE_interp':
+    if args.primary_beam == 'MWA_FEE' or args.primary_beam == 'MWA_FEE_interp' or args.primary_beam == 'MWA_analy':
         args.MWA_FEE_delays = select_argument_and_check(args.MWA_FEE_delays,
                                       args.MWA_FEE_delays,
                                       MWA_FEE_delays, "MWA_FEE_delays")

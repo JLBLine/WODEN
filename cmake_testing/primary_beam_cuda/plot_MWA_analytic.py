@@ -177,10 +177,15 @@ def plot_jones_square(azs, zas, gx, Dx, Dy, gy, freqs, filename, tag='MWA_analy'
 
             print(np.max(np.abs(xx)), np.max(np.abs(yy)))
 
-            im1 = axs[0,0].imshow(np.log10(np.real(xx)), origin='lower') #,vmin=0,vmax=0.3)
-            im2 = axs[0,1].imshow(np.log10(np.real(xy)), origin='lower') #,vmin=0,vmax=0.3)
-            im3 = axs[1,0].imshow(np.log10(np.real(yx)), origin='lower') #,vmin=0,vmax=0.3)
-            im4 = axs[1,1].imshow(np.log10(np.real(yy)), origin='lower') #,vmin=0,vmax=0.3)
+            # im1 = axs[0,0].imshow(np.log10(np.real(xx)), origin='lower') #
+            # im2 = axs[0,1].imshow(np.log10(np.real(xy)), origin='lower') #
+            # im3 = axs[1,0].imshow(np.log10(np.real(yx)), origin='lower') #
+            # im4 = axs[1,1].imshow(np.log10(np.real(yy)), origin='lower') #
+
+            im1 = axs[0,0].imshow(np.real(xx), origin='lower',vmin=0,vmax=0.2)
+            im2 = axs[0,1].imshow(np.real(xy), origin='lower')# ,vmin=0,vmax=0.3)
+            im3 = axs[1,0].imshow(np.real(yx), origin='lower')# ,vmin=0,vmax=0.3)
+            im4 = axs[1,1].imshow(np.real(yy), origin='lower',vmin=0,vmax=0.2)
 
             ims = [im1, im2, im3, im4]
 
@@ -196,7 +201,7 @@ def plot_jones_square(azs, zas, gx, Dx, Dy, gy, freqs, filename, tag='MWA_analy'
                 ax.set_yticks([])
                 ax.set_xticks([])
 
-            fig.savefig(f'plots/inst_pol_{tag}_gains_nside{nside:d}_t{time:02d}_f{freq/1e+6:.3f}MHz.png',bbox_inches='tight')
+            fig.savefig(f'plots/linear_pol_{tag}_gains_nside{nside:d}_t{time:02d}_f{freq/1e+6:.3f}MHz.png',bbox_inches='tight')
             plt.close()
 
             # fig = plt.figure(figsize=(8,4))
@@ -239,7 +244,11 @@ if __name__ == '__main__':
     azs, zas, gx, Dx, Dy, gy, freqs = load_data(filename)
     plot_jones_square(azs, zas, gx, Dx, Dy, gy, freqs, filename,
                       num_times=2, num_freqs=2)
-
+    #
     filename = '../../build/cmake_testing/primary_beam_cuda/MWA_FEE_gains_azza40401.txt'
     azs, zas, gx, Dx, Dy, gy, freqs = load_data(filename)
     plot_jones_square(azs, zas, gx, Dx, Dy, gy, freqs, filename, tag='MWA_FEE')
+
+    # filename = 'RTS_analytic_beam_gains_azza40401.txt'
+    # azs, zas, gx, Dx, Dy, gy, freqs = load_data(filename)
+    # plot_jones_square(azs, zas, gx, Dx, Dy, gy, freqs, filename, tag='RTS_analy')

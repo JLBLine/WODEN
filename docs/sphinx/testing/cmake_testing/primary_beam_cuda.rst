@@ -78,7 +78,21 @@ as (``jones_MWA_analy_gains_nside201_t00_f150.000MHz.png``):
   :width: 800
 
 which gives us a sanity check that both beams point in the same direction for
-the same input az/za coords, and that they have similar structures on the sky.
+the same input az/za coords, and that they have similar structures on the sky,
+albeit they are negative of one another.
 
-The plotting script plots boths frequencies and time steps for the analytic
-beam, letting you visiually check that the outputs are ordered as expected.
+When we combine the gains and leakages to create linear Stokes, we see that
+we get similar beams. First of all, here is the RTS MWA analytic ``linear_pol_MWA_analy_gains_nside201_t00_f150.000MHz.png``:
+
+.. image:: linear_pol_MWA_analy_gains_nside201_t00_f150.000MHz.png
+  :width: 800
+
+Comparing that the MWA FEE beam ``linear_pol_MWA_FEE_gains_nside201_t00_f150.000MHz.png``:
+
+.. image:: linear_pol_MWA_FEE_gains_nside201_t00_f150.000MHz.png
+  :width: 800
+
+we see that all linear polarisations have the same signs and simliar structures.
+
+The plotting script plots both frequencies and time steps for the analytic
+beam, letting you visually check that the outputs are ordered as expected.
