@@ -519,15 +519,13 @@ extern "C" void RTS_CUDA_get_TileGains(user_precision_t *phi, user_precision_t *
                     num_coords * nMN * n_pols * sizeof(user_precision_complex_t)) );
   cudaErrorCheckCall( cudaMalloc( (void **)&primary_beam->emn_T,
                     num_coords * nMN * n_pols * sizeof(user_precision_complex_t)) );
-  //
-  //
-  // threads.x = 128;
+
   threads.x = 128;
   threads.y = 2;
   threads.z = 1;
   //
   grid.x = (int)ceil((user_precision_t)num_coords / (user_precision_t)threads.x);
-  grid.y = (int)ceil((user_precision_t)(nMN) / (user_precision_t)threads.y);
+  grid.y = (int)ceil((user_precision_t)nMN / (user_precision_t)threads.y);
   grid.z = n_pols;
 
   cudaErrorCheckKernel("RTS_getTileGainsKernel",
@@ -854,8 +852,6 @@ extern "C" void multifreq_calc_CUDA_FEE_beam(beam_settings_t *beam_settings,
            user_precision_t *sin_para_angs, user_precision_t *cos_para_angs,
            int num_components, int rotation, int scaling){
 
-  // printf("Calculating MWA FEE beams...");
-
   for (int freq_ind = 0; freq_ind < beam_settings->num_MWAFEE; freq_ind++) {
 
     RTS_MWA_FEE_beam_t *FEE_beam = &beam_settings->FEE_beams[freq_ind];
@@ -863,9 +859,7 @@ extern "C" void multifreq_calc_CUDA_FEE_beam(beam_settings_t *beam_settings,
     calc_CUDA_FEE_beam(azs, zas, sin_para_angs, cos_para_angs,
              num_components, num_time_steps, FEE_beam,
              rotation, scaling);
-
   }
-  // printf(" done\n");
 }
 
 __global__ void kern_map_FEE_beam_gains_multi_freq(cuUserComplex *d_FEE_beam_gain_matrices,
@@ -924,21 +918,17 @@ extern "C" void run_and_map_multifreq_calc_CUDA_FEE_beam(beam_settings_t *beam_s
         cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
         cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11){
 
-  // printf("Calculating MWA FEE beams...");
-
+  //Actually run all beams for all frequencies
   multifreq_calc_CUDA_FEE_beam(beam_settings, azs, zas, num_times,
                               sin_para_angs, cos_para_angs,
                               num_components, rotation, scaling);
-  // printf(" done\n");
 
-  // printf("Mapping MWA FEE beams...\n");
-
+  //Take the outputs and map them into d_primay_beam_J*
   map_FEE_beam_gains_multi_freq(beam_settings,
                                 d_primay_beam_J00, d_primay_beam_J01,
                                 d_primay_beam_J10, d_primay_beam_J11,
                                 num_freqs, num_components, num_times);
 
-  // printf(" done\n");
 }
 
 
@@ -1192,7 +1182,7 @@ extern "C" void test_run_and_map_multifreq_calc_CUDA_FEE_beam(beam_settings_t *b
   cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01, num_beam_values*sizeof(user_precision_complex_t ) ) );
   cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J10, num_beam_values*sizeof(user_precision_complex_t ) ) );
   cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J11, num_beam_values*sizeof(user_precision_complex_t ) ) );
-
+  //
   run_and_map_multifreq_calc_CUDA_FEE_beam(beam_settings,
                                           azs, zas,
                                           sin_para_angs, cos_para_angs,
@@ -1204,13 +1194,17 @@ extern "C" void test_run_and_map_multifreq_calc_CUDA_FEE_beam(beam_settings_t *b
                                           (cuUserComplex *)d_primay_beam_J11);
 
   cudaErrorCheckCall( cudaMemcpy(primay_beam_J00, d_primay_beam_J00,
-                num_beam_values*sizeof(user_precision_complex_t),cudaMemcpyDeviceToHost) );
+                               num_beam_values*sizeof(user_precision_complex_t),
+                               cudaMemcpyDeviceToHost) );
   cudaErrorCheckCall( cudaMemcpy(primay_beam_J01, d_primay_beam_J01,
-                num_beam_values*sizeof(user_precision_complex_t),cudaMemcpyDeviceToHost) );
+                               num_beam_values*sizeof(user_precision_complex_t),
+                               cudaMemcpyDeviceToHost) );
   cudaErrorCheckCall( cudaMemcpy(primay_beam_J10, d_primay_beam_J10,
-                num_beam_values*sizeof(user_precision_complex_t),cudaMemcpyDeviceToHost) );
+                               num_beam_values*sizeof(user_precision_complex_t),
+                               cudaMemcpyDeviceToHost) );
   cudaErrorCheckCall( cudaMemcpy(primay_beam_J11, d_primay_beam_J11,
-                num_beam_values*sizeof(user_precision_complex_t),cudaMemcpyDeviceToHost) );
+                               num_beam_values*sizeof(user_precision_complex_t),
+                               cudaMemcpyDeviceToHost) );
 
   cudaErrorCheckCall( cudaFree(d_primay_beam_J00) );
   cudaErrorCheckCall( cudaFree(d_primay_beam_J01) );

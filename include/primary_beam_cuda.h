@@ -266,10 +266,6 @@ __device__ void RTS_MWA_beam(user_precision_t az, user_precision_t za,
            cuUserComplex * gx, cuUserComplex * Dx,
            cuUserComplex * Dy, cuUserComplex * gy);
 
-
-
-
-
 /**
 @brief Kernel to calculate the analytic MWA primary beam to a set of sky directions
 `d_azs` and `d_zas` for a given set of delays `d_metre_delays` and frequencies

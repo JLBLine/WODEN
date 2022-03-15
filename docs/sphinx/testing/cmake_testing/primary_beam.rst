@@ -20,17 +20,19 @@ test_fill_primary_beam_settings.c
 struct to be used by ``calculate_visibilities::calculate_visibilities``. The
 az,za coords have already been calculated by
 ``chunk_sky_model::create_chunked_sky_models``, which is sufficient for some
-beam models. There are two beam models that need further inputs:
+beam models. There are a number of beam models that need further inputs:
 
-   - ``GAUSS_BEAM``: the Gaussian beam function uses *l,m,n* coords to incorporate projection effects, so ``fill_primary_beam_settings`` calculates the hour angle of all COMPONENTs for all time steps, to feed into ``fundamental_coords::kern_calc_lmn`` later down the line
-   - ``FEE_BEAM``: needs the parallactic angle to rotate the telescope-based coords into the Stokes frame
+   - ``GAUSS_BEAM`` and ``MWA_ANALY``: both need the hour angle of all COMPONENTs for all time steps, so ``fill_primary_beam_settings`` makes this calculation
+   - ``FEE_BEAM`` and ``FEE_BEAM_INTERP``: need the parallactic angle to rotate the telescope-based coords into the Stokes frame
 
-The tests here call ``fill_primary_beam_settings`` for the four primary
+The tests here call ``fill_primary_beam_settings`` for all primary
 beam types, and perform the following checks:
 
  - ``GAUSS_BEAM``:
     - Assert that ``beam_settings->beamtype == GAUSS_BEAM``
     - Assert that a number of constants are copied from ``woden_settings`` into ``beam_settings``
+
+ - ``GAUSS_BEAM`` or ``MWA_ANALY``
     - Assert that::
 
         src->point_gaussbeam_decs
@@ -40,9 +42,10 @@ beam types, and perform the following checks:
         src->shape_gaussbeam_decs
         src->shape_gaussbeam_has
 
-      have been set to the correct values for all COMPONENTs and time steps
- - ``FEE_BEAM``:
-    - Assert that ``beam_settings->beamtype == FEE_BEAM``
+      have been set to the correct values for all COMPONENTs and time steps.
+   .. note::
+     Even though the arrays say 'gaussbeam', really the HA/Dec are what's important, as the analytic MWA beam also needs them. In the next release, the ``catsource_t`` and ``source_catalogue_t`` structs will be overhauled with something far more sensible.
+ - ``FEE_BEAM`` or ``FEE_BEAM_INTERP``:
     - Assert that::
 
         src->sin_point_para_angs

@@ -51,10 +51,20 @@ class Test(unittest.TestCase):
         annnames = np.array(['00001', '00002', '00003', '00004', '00005',
                              '00006', '00007', '00008', '00009', '00010'])
 
-        ##This is a weirdo empty array type that seems to hang around in a
-        ##uvfits file
-        nothing_array = np.array([], dtype='|V8')
-        nothing_array.shape = (0,)
+        ##ant_table.data['ORBPARM'] is a weirdo empty array type that seems
+        ##to hang around in a uvfits file
+        ##At some point, the behaviour of astropy changes drastically so
+        ##this file gets read in as a totally different data type and shape
+        ##So based on what mood astropy is in, create an array to test against
+        ##SIIIIIIIIIIIIIIIIIGH
+
+        if ant_table.data['ORBPARM'].dtype == "float64":
+            nothing_array = np.array([], dtype='float64')
+            nothing_array.shape = (0,0)
+
+        else:
+            nothing_array = np.array([], dtype='|V8')
+            nothing_array.shape = (0,)
 
         ##Test that a bunch of named columns in the output array are equal======
         self.assertTrue(np.array_equal(annnames, ant_table.data['ANNAME']))
@@ -75,9 +85,9 @@ class Test(unittest.TestCase):
         self.assertAlmostEqual(ant_table.header['ARRAYZ'], -2849056.817561836)
         self.assertEqual(ant_table.header['FREQ'], freq_cent)
 
-        self.assertEqual(ant_table.header['GSTIA0'], gst0_deg)
-        self.assertEqual(ant_table.header['DEGPDY'], degpdy)
-        self.assertEqual(ant_table.header['UT1UTC'], ut1utc)
+        self.assertAlmostEqual(ant_table.header['GSTIA0'], gst0_deg)
+        self.assertAlmostEqual(ant_table.header['DEGPDY'], degpdy)
+        self.assertAlmostEqual(ant_table.header['UT1UTC'], ut1utc)
         self.assertEqual(ant_table.header['XYZHAND'], 'RIGHT')
         self.assertEqual(ant_table.header['FRAME'], '????')
 

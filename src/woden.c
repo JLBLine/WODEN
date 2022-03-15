@@ -199,5 +199,6 @@ int main(int argc, char **argv) {
     }
 
   }//band loop
+  free(woden_settings);
   printf("WODEN is done\n");
 }//main

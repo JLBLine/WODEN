@@ -45,29 +45,34 @@ class Test(unittest.TestCase):
         degpdy2 = 360.98565484299667
         ut1utc2 = 0.26520905895833335
 
+        delta = 3e-7
+
         ##Test LST
-        self.assertAlmostEqual(191.817149246, lst_loc1date1, delta=1e-9)
-        self.assertAlmostEqual(329.517149246, lst_loc2date1, delta=1e-9)
-        self.assertAlmostEqual(353.542251851, lst_loc1date2, delta=1e-9)
-        self.assertAlmostEqual(131.242251851, lst_loc2date2, delta=1e-9)
+        self.assertAlmostEqual(191.817149246, lst_loc1date1, delta=delta)
+        self.assertAlmostEqual(329.517149246, lst_loc2date1, delta=delta)
+        self.assertAlmostEqual(353.542251851, lst_loc1date2, delta=delta)
+        self.assertAlmostEqual(131.242251851, lst_loc2date2, delta=delta)
 
         ##Test GST0
-        self.assertAlmostEqual(gst0_1, gst0_loc1date1, delta=1e-9)
-        self.assertAlmostEqual(gst0_1, gst0_loc2date1, delta=1e-9)
-        self.assertAlmostEqual(gst0_2, gst0_loc1date2, delta=1e-9)
-        self.assertAlmostEqual(gst0_2, gst0_loc2date2, delta=1e-9)
+        self.assertAlmostEqual(gst0_1, gst0_loc1date1, delta=delta)
+        self.assertAlmostEqual(gst0_1, gst0_loc2date1, delta=delta)
+        self.assertAlmostEqual(gst0_2, gst0_loc1date2, delta=delta)
+        self.assertAlmostEqual(gst0_2, gst0_loc2date2, delta=delta)
 
         ##Test DEGPDY
-        self.assertAlmostEqual(degpdy1, degpdy_loc1date1, delta=1e-9)
-        self.assertAlmostEqual(degpdy1, degpdy_loc2date1, delta=1e-9)
-        self.assertAlmostEqual(degpdy2, degpdy_loc1date2, delta=1e-9)
-        self.assertAlmostEqual(degpdy2, degpdy_loc2date2, delta=1e-9)
+        self.assertAlmostEqual(degpdy1, degpdy_loc1date1, delta=delta)
+        self.assertAlmostEqual(degpdy1, degpdy_loc2date1, delta=delta)
+        self.assertAlmostEqual(degpdy2, degpdy_loc1date2, delta=delta)
+        self.assertAlmostEqual(degpdy2, degpdy_loc2date2, delta=delta)
 
+        ##Astropy varies wildly from version to version it seems
+        ##Up the delta here
+        delta = 4e-5
         ##Test UT1UTC
-        self.assertAlmostEqual(ut1utc1, ut1utc_loc1date1, delta=1e-9)
-        self.assertAlmostEqual(ut1utc1, ut1utc_loc2date1, delta=1e-9)
-        self.assertAlmostEqual(ut1utc2, ut1utc_loc1date2, delta=1e-9)
-        self.assertAlmostEqual(ut1utc2, ut1utc_loc2date2, delta=1e-9)
+        self.assertAlmostEqual(ut1utc1, ut1utc_loc1date1, delta=delta)
+        self.assertAlmostEqual(ut1utc1, ut1utc_loc2date1, delta=delta)
+        self.assertAlmostEqual(ut1utc2, ut1utc_loc1date2, delta=delta)
+        self.assertAlmostEqual(ut1utc2, ut1utc_loc2date2, delta=delta)
 
 ##Run the test
 if __name__ == '__main__':

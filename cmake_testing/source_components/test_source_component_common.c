@@ -1,13 +1,4 @@
-#include <math.h>
-#include <unity.h>
-#include <stdlib.h>
-#include <complex.h>
-#include <erfa.h>
-
-#include "constants.h"
-#include "woden_struct_defs.h"
-#include "woden_precision_defs.h"
-#include "FEE_primary_beam.h"
+#include "test_source_component_common.h"
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
@@ -32,152 +23,19 @@ extern void free_FEE_primary_beam_from_GPU(RTS_MWA_FEE_beam_t *primary_beam);
 
 extern void copy_FEE_primary_beam_to_GPU(RTS_MWA_FEE_beam_t *FEE_beam);
 
+//MWA FEE interp CUDA code
+extern void multifreq_get_MWAFEE_normalisation(beam_settings_t *beam_settings);
 
-/*******************************************************************************
-Here are a bunch of predefined arrays to be used
-Some are inputs for tests, others are expected outputs
-*******************************************************************************/
-
-user_precision_t azs[] = {4.71238899, 4.71238899, 4.71238899, 4.71238899, 4.71238899,
-               4.71238899, 4.71238899, 4.71238899, 4.71238899, 4.71238899,
-               4.71238899, 4.71238899, 0.00000000, 0.00000000, 0.00000000,
-               1.57079637, 1.57079637, 1.57079637, 1.57079637, 1.57079637,
-               1.57079637, 1.57079637, 1.57079637, 1.57079637, 1.57079637,
-               1.57079637, 1.57079637};
-user_precision_t zas[] = {1.57079631, 1.57079631, 1.57079631, 1.04719766, 1.04719766,
-               1.04719766, 0.78539832, 0.78539832, 0.78539832, 0.52359898,
-               0.52359898, 0.52359898, 0.00000000, 0.00000000, 0.00000000,
-               0.52359875, 0.52359875, 0.52359875, 0.78539820, 0.78539820,
-               0.78539820, 1.04719760, 1.04719760, 1.04719760, 1.57079637,
-               1.57079637, 1.57079637};
-
-user_precision_t sin_para_angs[] = {1.00000000, 1.00000000, 1.00000000, 1.00000000,
-                         1.00000000, 1.00000000, 1.00000000, 1.00000000,
-                         1.00000000, 1.00000000, 1.00000000, 1.00000000,
-                         0.00000000, 0.00000000, 0.00000000, -1.00000000,
-                         -1.00000000, -1.00000000, -1.00000000, -1.00000000,
-                         -1.00000000, -1.00000000, -1.00000000, -1.00000000,
-                         -1.00000000, -1.00000000, -1.00000000};
-
-user_precision_t cos_para_angs[] = {0.00000000, 0.00000000, 0.00000000, 0.00000000,
-                         0.00000000, 0.00000000, 0.00000000, 0.00000000,
-                         0.00000000, 0.00000000, 0.00000000, 0.00000000,
-                         1.00000000, 1.00000000, 1.00000000, 0.00000000,
-                         0.00000000, 0.00000000, 0.00000000, 0.00000000,
-                         0.00000000, 0.00000000, 0.00000000, 0.00000000,
-                         0.00000000, 0.00000000, 0.00000000};
-
-double analy_expec_J00[] = { 0.00000002, 0.52576818, 0.73128019,
-  0.88075472, 1.00000000, 0.88075483, 0.73128027, 0.52576824, -0.00000005,
-  0.00000002, 0.61822932, 0.81629589, 0.93152102, 1.00000000, 0.93152109,
-  0.81629596, 0.61822938, -0.00000006, 0.00000002, 0.52576818, 0.73128019,
-  0.88075472, 1.00000000, 0.88075483, 0.73128027, 0.52576824, -0.00000005,
-  0.00000002, 0.61822932, 0.81629589, 0.93152102, 1.00000000, 0.93152109,
-  0.81629596, 0.61822938, -0.00000006, 0.00000002, 0.52576818, 0.73128019,
-  0.88075472, 1.00000000, 0.88075483, 0.73128027, 0.52576824, -0.00000005,
-  0.00000002, 0.61822932, 0.81629589, 0.93152102, 1.00000000, 0.93152109,
-  0.81629596, 0.61822938, -0.00000006 };
-
-double analy_expec_J11[] = { 0.00000000, 0.26288404, 0.51709310,
-  0.76275588, 1.00000000, 0.76275607, 0.51709322, 0.26288410, -0.00000000,
-  0.00000000, 0.30911460, 0.57720827, 0.80672078, 1.00000000, 0.80672094,
-  0.57720839, 0.30911466, -0.00000000, 0.00000000, 0.26288404, 0.51709310,
-  0.76275588, 1.00000000, 0.76275607, 0.51709322, 0.26288410, -0.00000000,
-  0.00000000, 0.30911460, 0.57720827, 0.80672078, 1.00000000, 0.80672094,
-  0.57720839, 0.30911466, -0.00000000, 0.00000000, 0.26288404, 0.51709310,
-  0.76275588, 1.00000000, 0.76275607, 0.51709322, 0.26288410, -0.00000000,
-  0.00000000, 0.30911460, 0.57720827, 0.80672078, 1.00000000, 0.80672094,
-  0.57720839, 0.30911466, -0.00000000 };
-
-double fee_expec_J00_re[] = { -0.00000375, -0.00007259, 0.00001992, 0.00008827,
-  0.00025053, 0.00008904, 0.00002027, -0.00007286, -0.00000362, -0.00000375, -0.00007259,
-  0.00001992, 0.00008827, 0.00025053, 0.00008904, 0.00002027, -0.00007286, -0.00000362,
-  -0.00000375, -0.00007259, 0.00001992, 0.00008827, 0.00025053, 0.00008904, 0.00002027,
-  -0.00007286, -0.00000362, -0.00000375, -0.00007259, 0.00001992, 0.00008827,
-  0.00025053, 0.00008904, 0.00002027, -0.00007286, -0.00000362, -0.00000375,
-  -0.00007259, 0.00001992, 0.00008827, 0.00025053, 0.00008904, 0.00002027, -0.00007286,
-  -0.00000362, -0.00000375, -0.00007259, 0.00001992, 0.00008827, 0.00025053,
-  0.00008904, 0.00002027, -0.00007286, -0.00000362 };
-
-double fee_expec_J00_im[] = { 0.00000086, -0.00003368, -0.00001715,
-  0.00002948, 0.00012354, 0.00002986, -0.00001680, -0.00003321, 0.00000057,
-  0.00000086, -0.00003368, -0.00001715, 0.00002948, 0.00012354, 0.00002986,
-  -0.00001680, -0.00003321, 0.00000057, 0.00000086, -0.00003368, -0.00001715,
-  0.00002948, 0.00012354, 0.00002986, -0.00001680, -0.00003321, 0.00000057,
-  0.00000086, -0.00003368, -0.00001715, 0.00002948, 0.00012354, 0.00002986,
-  -0.00001680, -0.00003321, 0.00000057, 0.00000086, -0.00003368, -0.00001715,
-  0.00002948, 0.00012354, 0.00002986, -0.00001680, -0.00003321, 0.00000057,
-  0.00000086, -0.00003368, -0.00001715, 0.00002948, 0.00012354, 0.00002986,
-  -0.00001680, -0.00003321, 0.00000057 };
-
-double fee_expec_J01_re[] = { -0.00299196, 0.05242207, 0.21119083,
-  0.09754611, 0.97041277, 0.09754551, 0.21118965, 0.05242191, -0.00299213,
-  -0.00299196, 0.05242207, 0.21119083, 0.09754611, 0.97041277, 0.09754551,
-  0.21118965, 0.05242191, -0.00299213, -0.00299196, 0.05242207, 0.21119083,
-  0.09754611, 0.97041277, 0.09754551, 0.21118965, 0.05242191, -0.00299213,
-  -0.00299196, 0.05242207, 0.21119083, 0.09754611, 0.97041277, 0.09754551,
-  0.21118965, 0.05242191, -0.00299213, -0.00299196, 0.05242207, 0.21119083,
-  0.09754611, 0.97041277, 0.09754551, 0.21118965, 0.05242191, -0.00299213,
-  -0.00299196, 0.05242207, 0.21119083, 0.09754611, 0.97041277, 0.09754551,
-  0.21118965, 0.05242191, -0.00299213 };
-
-double fee_expec_J01_im[] = { -0.00004542, 0.00969854, 0.03443863,
-  0.01937939, 0.24145197, 0.01937985, 0.03443851, 0.00969827, -0.00004550,
-  -0.00004542, 0.00969854, 0.03443863, 0.01937939, 0.24145197, 0.01937985,
-   0.03443851, 0.00969827, -0.00004550, -0.00004542, 0.00969854, 0.03443863,
-   0.01937939, 0.24145197, 0.01937985, 0.03443851, 0.00969827, -0.00004550,
-   -0.00004542, 0.00969854, 0.03443863, 0.01937939, 0.24145197, 0.01937985,
-   0.03443851, 0.00969827, -0.00004550, -0.00004542, 0.00969854, 0.03443863,
-    0.01937939, 0.24145197, 0.01937985, 0.03443851, 0.00969827, -0.00004550,
-    -0.00004542, 0.00969854, 0.03443863, 0.01937939, 0.24145197, 0.01937985,
-     0.03443851, 0.00969827, -0.00004550 };
-
-double fee_expec_J10_re[] = {0.00169129, -0.02178988, -0.13555926,
-  -0.07058298, -0.97021026, -0.07058250, -0.13556084, -0.02179252, 0.00168970,
-  0.00169129, -0.02178988, -0.13555926, -0.07058298, -0.97021026, -0.07058250,
-  -0.13556084, -0.02179252, 0.00168970, 0.00169129, -0.02178988, -0.13555926,
-  -0.07058298, -0.97021026, -0.07058250, -0.13556084, -0.02179252, 0.00168970,
-  0.00169129, -0.02178988, -0.13555926, -0.07058298, -0.97021026, -0.07058250,
-  -0.13556084, -0.02179252, 0.00168970, 0.00169129, -0.02178988, -0.13555926,
-  -0.07058298, -0.97021026, -0.07058250, -0.13556084, -0.02179252, 0.00168970,
-  0.00169129, -0.02178988, -0.13555926, -0.07058298, -0.97021026, -0.07058250,
-  -0.13556084, -0.02179252, 0.00168970  };
-
-double fee_expec_J10_im[] = { 0.00086604, 0.01911517, -0.01697326,
-  -0.03916865, -0.24226442, -0.03917003, -0.01697404, 0.01911435, 0.00086739,
-  0.00086604, 0.01911517, -0.01697326, -0.03916865, -0.24226442, -0.03917003,
-  -0.01697404, 0.01911435, 0.00086739, 0.00086604, 0.01911517, -0.01697326,
-  -0.03916865, -0.24226442, -0.03917003, -0.01697404, 0.01911435, 0.00086739,
-  0.00086604, 0.01911517, -0.01697326, -0.03916865, -0.24226442, -0.03917003,
-  -0.01697404, 0.01911435, 0.00086739, 0.00086604, 0.01911517, -0.01697326,
-  -0.03916865, -0.24226442, -0.03917003, -0.01697404, 0.01911435, 0.00086739,
-   0.00086604, 0.01911517, -0.01697326, -0.03916865, -0.24226442, -0.03917003,
-   -0.01697404, 0.01911435, 0.00086739 };
-
-double fee_expec_J11_re[] = { -0.00000147, -0.00000903, -0.00001642,
-  -0.00006570, -0.00024691, -0.00006504, -0.00001520, -0.00000766, -0.00000182,
-  -0.00000147, -0.00000903, -0.00001642, -0.00006570, -0.00024691, -0.00006504,
-  -0.00001520, -0.00000766, -0.00000182, -0.00000147, -0.00000903, -0.00001642,
-  -0.00006570, -0.00024691, -0.00006504, -0.00001520, -0.00000766, -0.00000182,
-  -0.00000147, -0.00000903, -0.00001642, -0.00006570, -0.00024691, -0.00006504,
-  -0.00001520, -0.00000766, -0.00000182, -0.00000147, -0.00000903, -0.00001642,
-  -0.00006570, -0.00024691, -0.00006504, -0.00001520, -0.00000766, -0.00000182,
-  -0.00000147, -0.00000903, -0.00001642, -0.00006570, -0.00024691, -0.00006504,
-  -0.00001520, -0.00000766, -0.00000182 };
-
-double fee_expec_J11_im[] = { 0.00000424, 0.00007635, 0.00002101,
-  -0.00010817, -0.00011722, -0.00010677, 0.00002321, 0.00007781, 0.00000384,
-  0.00000424, 0.00007635, 0.00002101, -0.00010817, -0.00011722, -0.00010677,
-   0.00002321, 0.00007781, 0.00000384, 0.00000424, 0.00007635, 0.00002101,
-   -0.00010817, -0.00011722, -0.00010677, 0.00002321, 0.00007781, 0.00000384,
-    0.00000424, 0.00007635, 0.00002101, -0.00010817, -0.00011722, -0.00010677,
-    0.00002321, 0.00007781, 0.00000384, 0.00000424, 0.00007635, 0.00002101,
-    -0.00010817, -0.00011722, -0.00010677, 0.00002321, 0.00007781, 0.00000384,
-    0.00000424, 0.00007635, 0.00002101, -0.00010817, -0.00011722, -0.00010677,
-    0.00002321, 0.00007781, 0.00000384 };
+extern void test_run_and_map_multifreq_calc_CUDA_FEE_beam(beam_settings_t *beam_settings,
+    user_precision_t *azs, user_precision_t *zas, double latitude,
+    user_precision_complex_t *primay_beam_J00,
+    user_precision_complex_t *primay_beam_J01,
+    user_precision_complex_t *primay_beam_J10,
+    user_precision_complex_t *primay_beam_J11,
+    int num_freqs, int NUM_COMPS, int num_times,
+    int rotation, int scaling);
 
 double TOL;
-
 
 /*
 Test that l,m,n and beam values are calculated correctly by `source_component_common`
@@ -317,6 +175,29 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
   }
 
+  else if (beamtype == FEE_BEAM_INTERP) {
+
+    woden_settings->base_low_freq = 100e+6;
+    woden_settings->num_freqs = 2;
+    woden_settings->hdf5_beam_path = mwa_fee_hdf5;
+
+
+
+    //Setup up the MWA FEE beams on the CPU
+    multifreq_RTS_MWAFEEInit(beam_settings,  woden_settings, freqs);
+
+    //Send them to GPU and calculate normalisations
+    multifreq_get_MWAFEE_normalisation(beam_settings);
+
+  }
+
+  else if (beamtype == MWA_ANALY) {
+    //Zenith pointing is your friend
+    for(int i=0;i<16;i++) {
+        woden_settings->FEE_ideal_delays[i] = 0.0;
+    }
+  }
+
   // //Output arrays
   user_precision_complex_t *primay_beam_J00 = calloc(num_beam_values, sizeof(user_precision_complex_t));
   user_precision_complex_t *primay_beam_J01 = calloc(num_beam_values, sizeof(user_precision_complex_t));
@@ -438,8 +319,75 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
       TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J11_re[output], creal(primay_beam_J11[output]));
       TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J11_im[output], cimag(primay_beam_J11[output]));
     }
+
   }
-  if (beamtype == NO_BEAM) {
+  else if (beamtype == FEE_BEAM_INTERP) {
+
+    #ifdef DOUBLE_PRECISION
+      TOL = 1e-7;
+    #else
+      TOL = 3e-2;
+    #endif
+
+    for (int output = 0; output < num_beam_values; output++) {
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J00_re[output], creal(primay_beam_J00[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J00_im[output], cimag(primay_beam_J00[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J01_re[output], creal(primay_beam_J01[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J01_im[output], cimag(primay_beam_J01[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J10_re[output], creal(primay_beam_J10[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J10_im[output], cimag(primay_beam_J10[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J11_re[output], creal(primay_beam_J11[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J11_im[output], cimag(primay_beam_J11[output]));
+    }
+
+    for (int freq_ind = 0; freq_ind < beam_settings->num_MWAFEE; freq_ind++) {
+
+      RTS_MWA_FEE_beam_t *FEE_beam = &beam_settings->FEE_beams[freq_ind];
+      RTS_MWA_FEE_beam_t *FEE_beam_zenith = &beam_settings->FEE_beam_zeniths[freq_ind];
+
+      RTS_freeHDFBeam(FEE_beam);
+      RTS_freeHDFBeam(FEE_beam_zenith);
+
+    }
+  }
+  else if (beamtype == MWA_ANALY) {
+
+    #ifdef DOUBLE_PRECISION
+      TOL = 1e-12;
+    #else
+      TOL = 1e-7;
+    #endif
+
+    //All imaginary should be zero.Turns out for these ra,dec coords, the
+    //Dy leakages are essentially zero as well, test a few values equal zero
+    for (int output = 0; output < num_beam_values; output++) {
+
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, MWA_analy_expec_J00_re[output],
+                                  creal(primay_beam_J00[output]));
+
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, MWA_analy_expec_J01_re[output],
+                                  creal(primay_beam_J01[output]));
+
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, creal(primay_beam_J10[output]));
+
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, MWA_analy_expec_J11_re[output],
+                                  creal(primay_beam_J11[output]));
+
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J00[output]));
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J01[output]));
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J10[output]));
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J11[output]));
+
+        // printf("%.12f %.12f %.12f %.12f\n",creal(primay_beam_J00[output]),
+        // creal(primay_beam_J01[output]),
+        // creal(primay_beam_J10[output]),
+        // creal(primay_beam_J11[output]) );
+
+    }
+  }
+
+
+  else if (beamtype == NO_BEAM) {
     //Don't need to calculate beam values for NO_BEAM, these values
     //should still be zero, as we initialised the array with calloc
     //The function `source_components::get_beam_gains` which is called later
@@ -516,14 +464,42 @@ void test_source_component_common_ConstantDecNoBeam(void) {
   test_source_component_common_ConstantDecChooseBeams(NO_BEAM, " ");
 }
 
+/*
+This test checks source_component_common with beamtype=FEE_BEAM_INTERP
+*/
+void test_source_component_common_ConstantDecFEEBeamInterp(void) {
+  //Look for environment variable MWA_FEE_HDF5, which should point
+  //towards mwa_full_embedded_element_pattern.h5. If we can't find it,
+  //can't run the tests, so don't
+  char* mwa_fee_hdf5 = getenv("MWA_FEE_HDF5_INTERP");
+
+  if (mwa_fee_hdf5) {
+    printf("MWA_FEE_HDF5_INTERP: %s\n", mwa_fee_hdf5 );
+    test_source_component_common_ConstantDecChooseBeams(FEE_BEAM_INTERP, mwa_fee_hdf5);
+  }
+  else {
+    printf("MWA_FEE_HDF5_INTERP not found - not running MWA_FEE beam test");
+  }
+}
+
+/*
+This test checks source_component_common with beamtype=MWA_ANALY
+*/
+void test_source_component_common_ConstantDecMWAAnaly(void) {
+  test_source_component_common_ConstantDecChooseBeams(MWA_ANALY, " ");
+}
+
 //Run the test with unity
 int main(void)
 {
     UNITY_BEGIN();
+
     RUN_TEST(test_source_component_common_ConstantDecNoBeam);
     RUN_TEST(test_source_component_common_ConstantDecGaussBeam);
     RUN_TEST(test_source_component_common_ConstantDecAnalyBeam);
     RUN_TEST(test_source_component_common_ConstantDecFEEBeam);
+    RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterp);
+    RUN_TEST(test_source_component_common_ConstantDecMWAAnaly);
 
     return UNITY_END();
 }

@@ -344,8 +344,6 @@ int RTS_MWAFEEInit(const char *h5filename, double freq_Hz,
     pb->m_range[m] = -(user_precision_t)pb->nmax + (user_precision_t)m;
   }
 
-  // printf("AT END OF C BEAM STUFF\n");
-
   return status;
 
 }
@@ -400,11 +398,9 @@ int multifreq_RTS_MWAFEEInit(beam_settings_t *beam_settings,
     od.least_diff = -1.0;
 
     group = H5Gopen(file, "/", H5P_DEFAULT);
-    //
     H5Literate(group, H5_INDEX_NAME, H5_ITER_INC, NULL, RTS_op_func, (void *) &od);
 
     // printf("In freq, Out freq, %.1f %.1f\n",beam_freqs[freq_ind], od.freq_out );
-
 
     user_precision_t float_zenith_delays[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};

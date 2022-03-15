@@ -113,7 +113,7 @@ with open('azza_values.txt','w') as outfile:
 
 ##read in outputs from C/CUDA code
 
-used_az, used_za, gx_re, gx_im, Dx_re, Dx_im, Dy_re, Dy_im, gy_re, gy_im = np.loadtxt('MWAFEE_beamvalues_180MHz.txt',unpack=True)
+used_az, used_za, gx_re, gx_im, Dx_re, Dx_im, Dy_re, Dy_im, gy_re, gy_im = np.loadtxt('MWAanaly_beamvalues_180MHz.txt',unpack=True)
 
 def reshape_and_plot(data, ax, label, fig, vmin=False, vmax=False):
 
@@ -151,7 +151,7 @@ reshape_and_plot(gy_re, axs[3,0], 'Real $g_y$', fig)
 reshape_and_plot(gy_im, axs[3,1], 'Imag $g_y$', fig)
 
 plt.tight_layout()
-fig.savefig('MWAFEE_jones.png',bbox_inches='tight')
+fig.savefig('MWAanaly_jones.png',bbox_inches='tight')
 plt.close()
 
 gx = gx_re + 1j*gx_im
@@ -201,36 +201,5 @@ reshape_and_plot(np.real(YY), axs[3,0], 'Real YY', fig, vmin=0, vmax=0.1)
 reshape_and_plot(np.imag(YY), axs[3,1], 'Imag YY', fig)
 
 plt.tight_layout()
-fig.savefig('MWAFEE_instrumental_pols.png',bbox_inches='tight')
-plt.close()
-
-
-
-freqs, gx_re, gx_im, Dx_re, Dx_im, Dy_re, Dy_im, gy_re, gy_im = np.loadtxt('MWAFEE_beamvalues-vs-freq.txt',unpack=True)
-
-gx = gx_re + 1j*gx_im
-Dx = Dx_re + 1j*Dx_im
-Dy = Dy_re + 1j*Dy_im
-gy = gy_re + 1j*gy_im
-
-gx_conj = np.conjugate(gx)
-Dx_conj = np.conjugate(Dx)
-Dy_conj = np.conjugate(Dy)
-gy_conj = np.conjugate(gy)
-
-XX = (gx*gx_conj + Dx*Dx_conj)
-YY = (Dy*Dy_conj + gy*gy_conj)
-
-fig, ax = plt.subplots(1,1, figsize=(5,4))
-
-ax.plot(freqs / 1e6, np.real(XX), '-o', mfc='none', label='XX (real)')
-ax.plot(freqs / 1e6, np.real(YY), '-o', mfc='none', label='YY (real)')
-
-ax.legend()
-
-ax.set_xlabel('Frequency (MHz)')
-ax.set_ylabel('Beam gain')
-
-plt.tight_layout()
-fig.savefig('MWAFEE_beam_vs_freq.svg',bbox_inches='tight')
+fig.savefig('MWAanaly_instrumental_pols.png',bbox_inches='tight')
 plt.close()

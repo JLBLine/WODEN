@@ -41,6 +41,6 @@ add_test(python_test_argument_inputs ${PYTHON_EXECUTABLE}
 ##to some test files that live in this dir
 set_tests_properties(python_test_argument_inputs PROPERTIES
          ENVIRONMENT CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})
-
+#
 add_test(python_test_read_uvfits_into_pyuvdata ${PYTHON_EXECUTABLE}
          ${CMAKE_CURRENT_SOURCE_DIR}/test_read_uvfits_into_pyuvdata.py)

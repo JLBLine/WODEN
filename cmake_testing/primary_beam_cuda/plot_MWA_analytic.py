@@ -244,7 +244,7 @@ if __name__ == '__main__':
     azs, zas, gx, Dx, Dy, gy, freqs = load_data(filename)
     plot_jones_square(azs, zas, gx, Dx, Dy, gy, freqs, filename,
                       num_times=2, num_freqs=2)
-    #
+
     filename = '../../build/cmake_testing/primary_beam_cuda/MWA_FEE_gains_azza40401.txt'
     azs, zas, gx, Dx, Dy, gy, freqs = load_data(filename)
     plot_jones_square(azs, zas, gx, Dx, Dy, gy, freqs, filename, tag='MWA_FEE')

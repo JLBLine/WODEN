@@ -93,7 +93,7 @@ __device__ void apply_beam_gains(cuUserComplex g1x, cuUserComplex D1x,
   // this_XY = (g1x*D2y_conj + D1x*g2y_conj);
   // this_YX = (D1y*g2x_conj + g1y*D2x_conj);
   // this_YY = (D1y*D2y_conj + g1y*g2y_conj);
-
+  //
   // printf("XX %.16f %.16f\n",this_XX.x, this_XX.y );
   // printf("XY %.16f %.16f\n",this_XY.x, this_XY.y );
   // printf("YX %.16f %.16f\n",this_YX.x, this_YX.y );
@@ -157,6 +157,7 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
     * g2x = d_primay_beam_J00[beam_ind];
     * g1y = d_primay_beam_J11[beam_ind];
     * g2y = d_primay_beam_J11[beam_ind];
+
   }
 
   //Only MWA models have leakge terms at the moment
@@ -202,7 +203,7 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
                d_primay_beam_J10, d_primay_beam_J11,
                &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
 
-    // printf("BEAM GAINS %.8f %.8f\n", g1x.x, g1y.x );
+    // printf("%d %d BEAM GAINS %.8f %.8f\n", iBaseline, iComponent, g1x.x, g1y.x );
 
     cuUserComplex visi_XX;
     cuUserComplex visi_XY;
@@ -450,7 +451,6 @@ __global__ void kern_calc_visi_gaussian(double *d_gauss_freqs,
                    d_gauss_stokesU, d_gauss_stokesV,
                    d_gauss_SIs, iComponent, iBaseline,
                    &gauss_flux_I, &gauss_flux_Q, &gauss_flux_U, &gauss_flux_V);
-
 
       visi_gauss = calc_measurement_equation(d_us, d_vs, d_ws,
                              d_ls, d_ms, d_ns,

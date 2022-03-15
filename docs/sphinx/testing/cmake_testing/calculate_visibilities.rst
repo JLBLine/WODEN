@@ -158,3 +158,26 @@ values is set to 4e-3, and 1e-7 for DOUBLE compiled code. The expected gains
 of the MWA FEE beam are taken from the DOUBLE compiled code, and so the large
 threshold for the FLOAT here is mostly due to the inaccuracy of the FLOAT
 MWA FEE beam code (see :ref:`FEE_primary_beam_cuda_cmake` for more discussion on this).
+
+``test_calculate_visibilities_mwafeebeaminterp.c``
+****************************************************
+Same as ``test_calculate_visibilities_mwafeebeam.c``, but
+this time for the frequency interpolated MWA FEE primary beam. As this model is
+complex and includes mutual coupling, both the real and imaginary values
+for all XX, XY, YX, and YY polarisations are tested.
+
+For FLOAT compiled code, the absolute tolerance threshold on
+values is set to 3e-2, and 1e-7 for DOUBLE compiled code. The expected gains
+of the MWA FEE beam are taken from the DOUBLE compiled code, and so the large
+threshold for the FLOAT here is mostly due to the inaccuracy of the FLOAT
+MWA FEE beam code (see :ref:`FEE_primary_beam_cuda_cmake` for more discussion on this).
+
+``test_calculate_visibilities_mwaanalybeam.c``
+****************************************************
+Same as ``test_calculate_visibilities_mwafeebeam.c``, but
+this time for the analytic primary beam. As this model is real only but contains
+leakage terms, all real values are tested to match expectations, and all
+imaginary tested to be zero.
+
+For FLOAT compiled code, the absolute tolerance threshold on
+values is set to 1e-5, and 1e-9 for DOUBLE compiled code.

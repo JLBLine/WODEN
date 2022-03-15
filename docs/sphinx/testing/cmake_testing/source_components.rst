@@ -637,8 +637,8 @@ set the imaginary to zero.
 This test runs with two time steps, two frequency steps, three baselines,
 and four beam models. Three different outcomes are expected given the beam model:
 
- - ANALY_DIPOLE, GAUSS_BEAM: The values of the gains are testing to match the expected index. The leakage terms are tested to be zero as the models have no leakage terms
- - FEE_BEAM: Both the beam gain and leakage terms are tested as this model includes leakage terms
+ - ANALY_DIPOLE, GAUSS_BEAM: The values of the gains are tested to match the expected index. The leakage terms are tested to be zero as the models have no leakage terms
+ - FEE_BEAM, FEE_BEAM_INTERP, MWA_ANALY: Both the beam gain and leakage terms are tested as these models include leakage terms
  - NO_BEAM: The gain terms are tested to be 1.0, and leakage to be 0.0
 
 Both FLOAT and DOUBLE code are tested to a 32 bit accuracy here as these are
@@ -668,12 +668,12 @@ keep the test clean.
 
 For each primary beam type, I run the 9 COMPONENTs through the test, and check
 the calcualted *l,m,n* are correct, and check that the calculated beam values
-match a set of expected values, which are stored in ``test_source_component_common.c``. As with previous tests varying the primary beam, I check that leakage terms
+match a set of expected values, which are stored in ``test_source_component_common.h``. As with previous tests varying the primary beam, I check that leakage terms
 should be zero when the model doesn't include them.
 
 The absolute tolerance values used for the different beam models, for the two
 different precisions are shown in the table below. Note I've only stored the
-expected values for the ANALY_DIPOLE and FEE_BEAM to 1e-7 accuracy, as the
+expected values for some of the beams to 1e-7 accuracy, as the absolute
 accuracy of these functions beam functions is tested elsewhere. The
 GAUSS_BEAM values are calculated analytically in the same test as
 described in :ref:`test_gaussian_beam.c`.
@@ -694,6 +694,12 @@ described in :ref:`test_gaussian_beam.c`.
    * - FEE_BEAM
      - 3e-2
      - 1e-7
+   * - FEE_BEAM_INTERP
+     - 3e-2
+     - 1e-7
+   * - MWA_ANALY
+     - 1e-7
+     - 1e-12
 
 test_kern_calc_visi_point.c
 ************************************
@@ -722,7 +728,7 @@ Overall, I run three groups of tests here:
  - Varying the flux densities with frequency and keeping the beam gains constant at 1.0. When varying the flux, I set the Stokes I flux of each component to it's index + 1, so we end up with a range of fluxes between 1 and 25. I set the spectral index to -0.8.
  - Varying the beam gains with frequency and keeping the flux densities constant at 1.0. As the beam can vary with time, frequency, and direction on sky, I assign each beam gain a different value. As *num_freqs*num_times*num_components* = 375, I set the real of all beam gains to :math:`\frac{1}{375}(B_{\mathrm{ind}} + 1)`, where :math:`B_{\mathrm{ind}}` is the beam value index. This way we get a unique value between 0 and 1 for all beam gains, allowing us to test time/frequency is handled correctly by the function under test
 
-Each set of tests is run for all four primary beam types, so a total of 12 tests
+Each set of tests is run for all six primary beam types, so a total of 18 tests
 are called. Each test calls ``kern_calc_visi_point``, which should calculate
 the measurement equation for all baselines, time steps, frequency steps, and COMPONENTs.
 It should also sum over COMPONENTs to get the resultant visibility for each
@@ -745,7 +751,7 @@ all time and frequency steps, and all baselines.
 
 This runs all tests as described by :ref:`test_kern_calc_visi_point.c`, plus a
 fourth set of tests that varies the position angle, major, and minor axis of the
-input GAUSSIAN components, for a total of 16 tests. Again, I have ``C`` code to
+input GAUSSIAN components, for a total of 24 tests. Again, I have ``C`` code to
 test the ``CUDA`` code against. I assert the ``CUDA`` code output must match the
 ``C`` code output to within an fractional tolerance of 1e-5 to the ``C`` value,
 for both the real and imaginary parts. For the DOUBLE code, the fractional
@@ -760,7 +766,7 @@ all time and frequency steps, and all baselines.
 
 This runs all tests as described by :ref:`test_kern_calc_visi_gauss.c`, plus a
 fifth set of tests that gives multiple shapelet basis function parameters to the
-input SHAPELET components, for a total of 20 tests. Again, I have ``C`` code
+input SHAPELET components, for a total of 30 tests. Again, I have ``C`` code
 to test the ``CUDA`` code against.
 
 The final 5th test really pushes the FLOAT code hard, as the range of magnitudes
@@ -789,6 +795,6 @@ three sets of tests consist of:
    - Varying the flux densities, while keeping the beam gains and unpolarised measurement equations constant.
    - Varying the unpolarised measurement equations, while keeping the beam gains and flux densities constant.
 
-Each set of tests is run for all primary beam types, for a total of 12 tests.
+Each set of tests is run for all primary beam types, for a total of 18 tests.
 The different beam models have different expected values depending on whether
 they include leakage terms or not.

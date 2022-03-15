@@ -235,6 +235,57 @@ void test_read_json_settings_NoPrecession(void) {
 
 }
 
+/*
+Read in a json settings file and check values are good
+Check that analytic MWA beam specific parameters are read in correctly
+*/
+void test_read_json_settings_MWAanaly(void) {
+
+  int status=0;
+  //Read in the settings from the controlling json file
+  woden_settings_t *woden_settings = malloc( sizeof(woden_settings_t) );
+  status = read_json_settings("run_woden_MWA_analy.json", woden_settings);
+  //
+  TEST_ASSERT_EQUAL_INT(0, status);
+
+  //Check generic observation params have been read in correctly
+  check_observation_params(woden_settings);
+  //Check precession is switched on (default)
+  TEST_ASSERT_EQUAL_INT(1, woden_settings->do_precession);
+
+  //Check MWA FEE beam specific values
+  user_precision_t expect_delays[] = {0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3};
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY(expect_delays, woden_settings->FEE_ideal_delays, 16);
+  TEST_ASSERT_EQUAL_INT(MWA_ANALY, woden_settings->beamtype);
+}
+
+/*
+Read in a json settings file and check values are good
+Check that analytic interpolated MWA FEE beam specific parameters are read in correctly
+*/
+void test_read_json_settings_MWAFEE_interp(void) {
+
+  int status=0;
+  //Read in the settings from the controlling json file
+  woden_settings_t *woden_settings = malloc( sizeof(woden_settings_t) );
+  status = read_json_settings("run_woden_MWAFEE_interp.json", woden_settings);
+  //
+  TEST_ASSERT_EQUAL_INT(0, status);
+
+  //Check generic observation params have been read in correctly
+  check_observation_params(woden_settings);
+  //Check precession is switched on (default)
+  TEST_ASSERT_EQUAL_INT(1, woden_settings->do_precession);
+
+  //Check MWA FEE beam specific values
+  user_precision_t expect_delays[] = {0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3};
+  TEST_ASSERT_EQUAL_FLOAT_ARRAY(expect_delays, woden_settings->FEE_ideal_delays, 16);
+  TEST_ASSERT_EQUAL_INT(FEE_BEAM_INTERP, woden_settings->beamtype);
+
+  TEST_ASSERT_EQUAL_STRING("/home/jline/software/useful/MWA_embedded_element_pattern_rev2_interp_167_197MHz.h5",
+                            woden_settings->hdf5_beam_path);
+}
+
 
 
 //Run test using unity
@@ -251,6 +302,8 @@ int main(void)
     RUN_TEST(test_read_json_settings_MWAFEEBadDelay);
     RUN_TEST(test_read_json_settings_MWAFEENoPath);
     RUN_TEST(test_read_json_settings_NoPrecession);
+    RUN_TEST(test_read_json_settings_MWAanaly);
+    RUN_TEST(test_read_json_settings_MWAFEE_interp);
 
     return UNITY_END();
 }

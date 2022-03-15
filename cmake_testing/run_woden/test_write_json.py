@@ -151,6 +151,51 @@ class Test(unittest.TestCase):
         self.assertEqual(self.args.hdf5_beam_path, self.data['hdf5_beam_path'])
         self.assertEqual(FEE_delays, self.data['FEE_delays'])
 
+
+    def test_write_MWA_FEE_beam_interp(self):
+        """Test that the interpolated MWA FEE primary beam options work correctly"""
+
+        ##Some input test params
+        self.make_basic_inputs("test_write_mwafee_beam.json")
+        ##Add in primary_beam as Gaussian to inputs
+        self.args.primary_beam = 'MWA_FEE_interp'
+        self.args.hdf5_beam_path = "This_is_the_way"
+        self.args.MWA_FEE_delays = "[0,2,4,6,0,2,4,6,0,2,4,6,0,2,4,6]"
+        ##turn string of list into an actual list
+        FEE_delays = [int(delay) for delay in self.args.MWA_FEE_delays.strip("[]").split(',')]
+
+        ##Code to be tested
+        self.call_write_json()
+
+        ##Check the basic outputs
+        self.check_basic_inputs()
+
+        ##Check the extra arguments have resulting in correct outputs
+        self.assertTrue(self.data['use_FEE_interp_beam'])
+        self.assertEqual(self.args.hdf5_beam_path, self.data['hdf5_beam_path'])
+        self.assertEqual(FEE_delays, self.data['FEE_delays'])
+
+    def test_write_MWA_analy_beam(self):
+        """Test that the interpolated analytic MWA primary beam options work correctly"""
+
+        ##Some input test params
+        self.make_basic_inputs("test_write_mwafee_beam.json")
+        ##Add in primary_beam as Gaussian to inputs
+        self.args.primary_beam = 'MWA_analy'
+        self.args.MWA_FEE_delays = "[0,2,4,6,0,2,4,6,0,2,4,6,0,2,4,6]"
+        ##turn string of list into an actual list
+        FEE_delays = [int(delay) for delay in self.args.MWA_FEE_delays.strip("[]").split(',')]
+
+        ##Code to be tested
+        self.call_write_json()
+
+        ##Check the basic outputs
+        self.check_basic_inputs()
+
+        ##Check the extra arguments have resulting in correct outputs
+        self.assertTrue(self.data['use_MWA_analy_beam'])
+        self.assertEqual(FEE_delays, self.data['FEE_delays'])
+
     def test_write_EDA2_beam(self):
         """Test that the EDA2 primary beam options work correctly"""
 

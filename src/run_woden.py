@@ -1168,7 +1168,7 @@ def check_args(args):
 
     ##If we're using the MWA FEE beam, make sure we can find the stored
     ##spherical harmonics file
-    if args.primary_beam == 'MWA_FEE_interp':
+    elif args.primary_beam == 'MWA_FEE_interp':
         if args.hdf5_beam_path:
             if not os.path.isfile(args.hdf5_beam_path):
                 exit('Could not open hdf5 MWA FEE path as specified by user as:\n'

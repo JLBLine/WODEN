@@ -52,7 +52,7 @@ void test_kern_update_sum_visis_VaryGainChooseBeams(int beamtype) {
 
   //Fill in some varying beam gains based on beam type
   int count = 1;
-  if (beamtype == FEE_BEAM || beamtype == ANALY_DIPOLE || beamtype == GAUSS_BEAM) {
+  if (beamtype != NO_BEAM) {
     for (int visi = 0; visi < num_components*num_times*num_freqs; visi++) {
       primay_beam_J00[visi] = count + I*0.0;
       primay_beam_J11[visi] = count + I*0.0;
@@ -62,7 +62,7 @@ void test_kern_update_sum_visis_VaryGainChooseBeams(int beamtype) {
 
   //Only FEE_BEAM has cross-pols
   count = 1;
-  if (beamtype == FEE_BEAM) {
+  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY) {
     for (int visi = 0; visi < num_components*num_times*num_freqs; visi++) {
       primay_beam_J01[visi] = count + I*0.0;
       primay_beam_J10[visi] = count + I*0.0;
@@ -127,7 +127,7 @@ void test_kern_update_sum_visis_VaryGainChooseBeams(int beamtype) {
 
     }
   }
-  else if (beamtype == FEE_BEAM) {
+  else if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY) {
     for (int output = 0; output < num_visis; output++) {
 
       // printf("%.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
@@ -211,6 +211,20 @@ This test checks varying the gain with beamtype=NO_BEAM
 */
 void test_kern_update_sum_visis_VaryGainNoBeam(void) {
   test_kern_update_sum_visis_VaryGainChooseBeams(NO_BEAM);
+}
+
+/*
+This test checks varying the measurement equation with beamtype=FEE_BEAM_INTERP
+*/
+void test_kern_update_sum_visis_VaryGainFEEInterpBeam(void) {
+  test_kern_update_sum_visis_VaryGainChooseBeams(FEE_BEAM_INTERP);
+}
+
+/*
+This test checks varying the measurement equation with beamtype=MWA_ANALY
+*/
+void test_kern_update_sum_visis_VaryGainMWAAnaly(void) {
+  test_kern_update_sum_visis_VaryGainChooseBeams(MWA_ANALY);
 }
 
 /*
@@ -303,6 +317,7 @@ void test_kern_update_sum_visis_VaryFluxesChooseBeams(int beamtype) {
     }
   }
 
+  //These beams are fully real with no leakage terms
   if (beamtype == ANALY_DIPOLE || beamtype == GAUSS_BEAM) {
     for (int output = 0; output < num_visis; output++) {
 
@@ -323,8 +338,8 @@ void test_kern_update_sum_visis_VaryFluxesChooseBeams(int beamtype) {
 
     }
   }
-  //No cross-pols so multiply expected values by 2.0
-  else if (beamtype == FEE_BEAM) {
+  //No cross-pols in the expected values so multiply expected values by 2.0
+  else if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY) {
     for (int output = 0; output < num_visis; output++) {
 
       TEST_ASSERT_EQUAL_FLOAT(2*expected_order[output], sum_visi_XX_real[output]);
@@ -402,6 +417,20 @@ This test checks varying the gain with beamtype=NO_BEAM
 */
 void test_kern_update_sum_visis_VaryFluxesNoBeam(void) {
   test_kern_update_sum_visis_VaryFluxesChooseBeams(NO_BEAM);
+}
+
+/*
+This test checks varying the measurement equation with beamtype=FEE_BEAM_INTERP
+*/
+void test_kern_update_sum_visis_VaryFluxesFEEInterpBeam(void) {
+  test_kern_update_sum_visis_VaryFluxesChooseBeams(FEE_BEAM_INTERP);
+}
+
+/*
+This test checks varying the measurement equation with beamtype=MWA_ANALY
+*/
+void test_kern_update_sum_visis_VaryFluxesMWAAnaly(void) {
+  test_kern_update_sum_visis_VaryFluxesChooseBeams(MWA_ANALY);
 }
 
 
@@ -504,7 +533,7 @@ void test_kern_update_sum_visis_VaryVisiChooseBeams(int beamtype) {
     }
   }
   //No cross-pols so multiply expected values by 2.0
-  else if (beamtype == FEE_BEAM) {
+  else if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY) {
     for (int output = 0; output < num_visis; output++) {
 
       TEST_ASSERT_EQUAL_FLOAT(2*expected_order[output], sum_visi_XX_real[output]);
@@ -584,6 +613,20 @@ void test_kern_update_sum_visis_VaryVisiNoBeam(void) {
   test_kern_update_sum_visis_VaryVisiChooseBeams(NO_BEAM);
 }
 
+/*
+This test checks varying the measurement equation with beamtype=FEE_BEAM_INTERP
+*/
+void test_kern_update_sum_visis_VaryVisiFEEInterpBeam(void) {
+  test_kern_update_sum_visis_VaryVisiChooseBeams(FEE_BEAM_INTERP);
+}
+
+/*
+This test checks varying the measurement equation with beamtype=MWA_ANALY
+*/
+void test_kern_update_sum_visis_VaryVisiMWAAnaly(void) {
+  test_kern_update_sum_visis_VaryVisiChooseBeams(MWA_ANALY);
+}
+
 //Run the test with unity
 int main(void)
 {
@@ -593,18 +636,24 @@ int main(void)
     RUN_TEST(test_kern_update_sum_visis_VaryGainAnalyBeam);
     RUN_TEST(test_kern_update_sum_visis_VaryGainGaussBeam);
     RUN_TEST(test_kern_update_sum_visis_VaryGainNoBeam);
+    RUN_TEST(test_kern_update_sum_visis_VaryGainFEEInterpBeam);
+    RUN_TEST(test_kern_update_sum_visis_VaryGainMWAAnaly);
 
     //Test while varying component fluxes for all beam types
     RUN_TEST(test_kern_update_sum_visis_VaryFluxesFEEBeam);
     RUN_TEST(test_kern_update_sum_visis_VaryFluxesAnalyBeam);
     RUN_TEST(test_kern_update_sum_visis_VaryFluxesNoBeam);
     RUN_TEST(test_kern_update_sum_visis_VaryFluxesGaussBeam);
+    RUN_TEST(test_kern_update_sum_visis_VaryFluxesFEEInterpBeam);
+    RUN_TEST(test_kern_update_sum_visis_VaryFluxesMWAAnaly);
 
     //Test while varying base visibility for all beam types
     RUN_TEST(test_kern_update_sum_visis_VaryVisiFEEBeam);
     RUN_TEST(test_kern_update_sum_visis_VaryVisiAnalyBeam);
     RUN_TEST(test_kern_update_sum_visis_VaryVisiNoBeam);
     RUN_TEST(test_kern_update_sum_visis_VaryVisiGaussBeam);
+    RUN_TEST(test_kern_update_sum_visis_VaryVisiFEEInterpBeam);
+    RUN_TEST(test_kern_update_sum_visis_VaryVisiMWAAnaly);
 
     return UNITY_END();
 }

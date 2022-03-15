@@ -29,10 +29,12 @@ void print_cmdline_help() {
   printf("Optionally, the .json can include:\n");
   printf("\t+ latitude: Latitude of the array (deg) - defaults to MWA\n");
   printf("\t+ use_FEE_beam: use the MWA FEE primary beam model\n");
+  printf("\t+ use_FEE_interp_beam: use the frequency interpolated MWA FEE primary beam model\n");
   printf("\t+ hdf5_beam_path: Location of the hdf5 file holding the FEE beam\n");
       printf("\t\t coefficients\n");
   printf("\t+ FEE_delays: A array of 16 delays to point the MWA FEE primary beam\n");
       printf("\t\t model\n");
+  printf("\t+ use_MWA_analy_beam: use analytic MWA primary beam model\n");
 
   printf("\t+ use_gaussian_beam=True: Use a gaussian primary beam in the\n");
       printf("\t\tsimulation pointed at the RA,DEC specified by --gauss_ra_point\n");
