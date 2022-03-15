@@ -155,6 +155,20 @@ void test_kern_calc_visi_point_VarylmnNoBeam(void) {
 }
 
 /*
+This test checks varying the measurement equation with beamtype=FEE_BEAM_INTERP
+*/
+void test_kern_calc_visi_point_VarylmnFEEInterpBeam(void) {
+  test_kern_calc_visi_point_Varylmn(FEE_BEAM_INTERP);
+}
+
+/*
+This test checks varying the measurement equation with beamtype=MWA_ANALY
+*/
+void test_kern_calc_visi_point_VarylmnMWAAnaly(void) {
+  test_kern_calc_visi_point_Varylmn(MWA_ANALY);
+}
+
+/*
 Test the __device__ code that updates the summed visibilities by grabbing the
 correct beam gain and mesurement equation, multiplying and summing onto the visi
 Here we test for multiple l,m,n, vary the flux of the components, but keep
@@ -270,6 +284,20 @@ This test checks varying the measurement equation with beamtype=NO_BEAM
 */
 void test_kern_calc_visi_point_VarylmnVaryFluxNoBeam(void) {
   test_kern_calc_visi_point_VarylmnVaryFlux(NO_BEAM);
+}
+
+/*
+This test checks varying the measurement equation with beamtype=FEE_BEAM_INTERP
+*/
+void test_kern_calc_visi_point_VarylmnVaryFluxFEEInterpBeam(void) {
+  test_kern_calc_visi_point_VarylmnVaryFlux(FEE_BEAM_INTERP);
+}
+
+/*
+This test checks varying the measurement equation with beamtype=MWA_ANALY
+*/
+void test_kern_calc_visi_point_VarylmnVaryFluxMWAAnaly(void) {
+  test_kern_calc_visi_point_VarylmnVaryFlux(MWA_ANALY);
 }
 
 /*
@@ -401,6 +429,20 @@ void test_kern_calc_visi_point_VarylmnVaryBeamNoBeam(void) {
   test_kern_calc_visi_point_VarylmnVaryBeam(NO_BEAM);
 }
 
+/*
+This test checks varying the measurement equation with beamtype=FEE_BEAM_INTERP
+*/
+void test_kern_calc_visi_point_VarylmnVaryBeamFEEInterpBeam(void) {
+  test_kern_calc_visi_point_VarylmnVaryBeam(FEE_BEAM_INTERP);
+}
+
+/*
+This test checks varying the measurement equation with beamtype=MWA_ANALY
+*/
+void test_kern_calc_visi_point_VarylmnVaryBeamMWAAnaly(void) {
+  test_kern_calc_visi_point_VarylmnVaryBeam(MWA_ANALY);
+}
+
 //Run the test with unity
 int main(void)
 {
@@ -410,16 +452,22 @@ int main(void)
     RUN_TEST(test_kern_calc_visi_point_VarylmnFEEBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnGaussBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnAnalyBeam);
+    RUN_TEST(test_kern_calc_visi_point_VarylmnFEEInterpBeam);
+    RUN_TEST(test_kern_calc_visi_point_VarylmnMWAAnaly);
 
     RUN_TEST(test_kern_calc_visi_point_VarylmnVaryFluxNoBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnVaryFluxFEEBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnVaryFluxGaussBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnVaryFluxAnalyBeam);
+    RUN_TEST(test_kern_calc_visi_point_VarylmnVaryFluxFEEInterpBeam);
+    RUN_TEST(test_kern_calc_visi_point_VarylmnVaryFluxMWAAnaly);
 
     RUN_TEST(test_kern_calc_visi_point_VarylmnVaryBeamNoBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnVaryBeamFEEBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnVaryBeamGaussBeam);
     RUN_TEST(test_kern_calc_visi_point_VarylmnVaryBeamAnalyBeam);
+    RUN_TEST(test_kern_calc_visi_point_VarylmnVaryBeamFEEInterpBeam);
+    RUN_TEST(test_kern_calc_visi_point_VarylmnVaryBeamMWAAnaly);
 
 
     return UNITY_END();

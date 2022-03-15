@@ -79,11 +79,6 @@ __device__ void apply_beam_gains(cuUserComplex g1x, cuUserComplex D1x,
   cuUserComplex g2y_conj = make_cuUserComplex(g2y.x,-g2y.y);
 
   //Create the Stokes visibilities
-  // cuUserComplex visi_I = cuCmulf(make_cuUserComplex(flux_I,0.0),visi_component );
-  // cuUserComplex visi_Q = cuCmulf(make_cuUserComplex(flux_Q,0.0),visi_component );
-  // cuUserComplex visi_U = cuCmulf(make_cuUserComplex(flux_U,0.0),visi_component );
-  // cuUserComplex visi_V = cuCmulf(make_cuUserComplex(flux_V,0.0),visi_component );
-
   cuUserComplex visi_I = make_cuUserComplex(flux_I, 0.0)*visi_component;
   cuUserComplex visi_Q = make_cuUserComplex(flux_Q, 0.0)*visi_component;
   cuUserComplex visi_U = make_cuUserComplex(flux_U, 0.0)*visi_component;
@@ -98,7 +93,7 @@ __device__ void apply_beam_gains(cuUserComplex g1x, cuUserComplex D1x,
   // this_XY = (g1x*D2y_conj + D1x*g2y_conj);
   // this_YX = (D1y*g2x_conj + g1y*D2x_conj);
   // this_YY = (D1y*D2y_conj + g1y*g2y_conj);
-
+  //
   // printf("XX %.16f %.16f\n",this_XX.x, this_XX.y );
   // printf("XY %.16f %.16f\n",this_XY.x, this_XY.y );
   // printf("YX %.16f %.16f\n",this_YX.x, this_YX.y );
@@ -148,27 +143,31 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
   freq_ind = (int)floorf( ((user_precision_t)iBaseline - ((user_precision_t)time_ind*(user_precision_t)num_baselines * (user_precision_t)num_freqs)) / (user_precision_t)num_baselines);
   beam_ind = num_freqs*time_ind*num_components + (num_components*freq_ind) + iComponent;
 
-  //Get XX,YY if using a beam
-  if (beamtype == FEE_BEAM || beamtype == ANALY_DIPOLE || beamtype == GAUSS_BEAM) {
-    * g1x = d_primay_beam_J00[beam_ind];
-    * g2x = d_primay_beam_J00[beam_ind];
-    * g1y = d_primay_beam_J11[beam_ind];
-    * g2y = d_primay_beam_J11[beam_ind];
-  }
-  else {
+    //Set gains to one if no beam
+  if (beamtype == NO_BEAM) {
     * g1x = make_cuUserComplex(1.0, 0.0);
     * g2x = make_cuUserComplex(1.0, 0.0);
     * g1y = make_cuUserComplex(1.0, 0.0);
     * g2y = make_cuUserComplex(1.0, 0.0);
   }
 
-  //Only FEE model has XY and YX at the moment
-  if (beamtype == FEE_BEAM) {
+  //Get gains if using a beam
+  else {
+    * g1x = d_primay_beam_J00[beam_ind];
+    * g2x = d_primay_beam_J00[beam_ind];
+    * g1y = d_primay_beam_J11[beam_ind];
+    * g2y = d_primay_beam_J11[beam_ind];
+
+  }
+
+  //Only MWA models have leakge terms at the moment
+  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY) {
     * D1x = d_primay_beam_J01[beam_ind];
     * D2x = d_primay_beam_J01[beam_ind];
     * D1y = d_primay_beam_J10[beam_ind];
     * D2y = d_primay_beam_J10[beam_ind];
   }
+  // Set leakage to zero if no leakage
   else {
     * D1x = make_cuUserComplex(0.0, 0.0);
     * D2x = make_cuUserComplex(0.0, 0.0);
@@ -204,7 +203,7 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
                d_primay_beam_J10, d_primay_beam_J11,
                &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
 
-    // printf("BEAM GAINS %.16f %.16f\n",g1x.x*g1x.x,g1y.x*g1y.x );
+    // printf("%d %d BEAM GAINS %.8f %.8f\n", iBaseline, iComponent, g1x.x, g1y.x );
 
     cuUserComplex visi_XX;
     cuUserComplex visi_XY;
@@ -306,6 +305,33 @@ void source_component_common(int num_components,
               woden_settings->num_freqs, num_components,
               woden_settings->num_visis, woden_settings->num_baselines,
               woden_settings->num_time_steps);
+
+    //Free up some GPU memory
+    cudaErrorCheckCall( cudaFree( beam_settings->FEE_beam->d_FEE_beam_gain_matrices) );
+
+  }
+
+  else if (beam_settings->beamtype == FEE_BEAM_INTERP) {
+
+    //Rotate FEE beam by parallactic angle
+    int rotation = 1;
+    //Normalise FEE beam to zenith
+    int scaling = 1;
+
+    printf("\tDoing freq interpolated MWA FEE Beam\n");
+
+    run_and_map_multifreq_calc_CUDA_FEE_beam(beam_settings,
+            azs, zas, sin_para_angs, cos_para_angs,
+            num_components, woden_settings->num_freqs, woden_settings->num_time_steps,
+            rotation, scaling,
+            d_primay_beam_J00, d_primay_beam_J01,
+            d_primay_beam_J10, d_primay_beam_J11);
+
+
+    for (int freq_ind = 0; freq_ind < beam_settings->num_MWAFEE; freq_ind++) {
+      RTS_MWA_FEE_beam_t *FEE_beam = &beam_settings->FEE_beams[freq_ind];
+      cudaErrorCheckCall( cudaFree(FEE_beam->d_FEE_beam_gain_matrices) );
+    }
   }
 
   else if (beam_settings->beamtype == ANALY_DIPOLE) {
@@ -315,7 +341,23 @@ void source_component_common(int num_components,
          woden_settings->num_time_steps, woden_settings->num_freqs,
          azs, zas, d_freqs, d_primay_beam_J00, d_primay_beam_J11);
   }
-}
+
+  else if (beam_settings->beamtype == MWA_ANALY) {
+
+    //Always normalise to zenith
+    int norm = 1;
+
+    printf("\tDoing analytic MWA beam\n");
+
+    calculate_RTS_MWA_analytic_beam(num_components,
+         woden_settings->num_time_steps, woden_settings->num_freqs,
+         azs, zas, woden_settings->FEE_ideal_delays, MWA_LAT_RAD, norm,
+         beam_has, beam_decs, d_freqs,
+         d_primay_beam_J00, d_primay_beam_J01,
+         d_primay_beam_J10, d_primay_beam_J11);
+  }
+
+} //END source_component_common
 
 __global__ void kern_calc_visi_point(double *d_point_freqs,
            user_precision_t *d_point_stokesI, user_precision_t *d_point_stokesQ,
@@ -409,7 +451,6 @@ __global__ void kern_calc_visi_gaussian(double *d_gauss_freqs,
                    d_gauss_stokesU, d_gauss_stokesV,
                    d_gauss_SIs, iComponent, iBaseline,
                    &gauss_flux_I, &gauss_flux_Q, &gauss_flux_U, &gauss_flux_V);
-
 
       visi_gauss = calc_measurement_equation(d_us, d_vs, d_ws,
                              d_ls, d_ms, d_ns,

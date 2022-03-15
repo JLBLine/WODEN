@@ -8,20 +8,20 @@
 
 //External CUDA code we're linking in
 extern void test_RTS_CUDA_FEE_beam(int num_components,
-           float *azs, float *zas, float latitude,
+           user_precision_t *azs, user_precision_t *zas, double latitude,
            RTS_MWA_FEE_beam_t *FEE_beam_zenith,
            RTS_MWA_FEE_beam_t *FEE_beam,
            int rotation, int scaling,
-           float _Complex *FEE_beam_gains);
+           user_precision_complex_t *FEE_beam_gains);
 
 #define UNITY_INCLUDE_FLOAT
 
 //Different delays settings, which control the pointing of the MWA beam
-float zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+user_precision_t zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
-void run_RTS_MWA_FEE_beam(float *azs,  float *zas, int num_azza,
-                          float freq, float *delays,
+void run_RTS_MWA_FEE_beam(user_precision_t *azs,  user_precision_t *zas, int num_azza,
+                          double freq, user_precision_t *delays,
                           char* mwa_fee_hdf5,
                           char *outname) {
 
@@ -47,7 +47,7 @@ void run_RTS_MWA_FEE_beam(float *azs,  float *zas, int num_azza,
   int scaling = 1;
 
   int num_pols = 4;
-  float _Complex *FEE_beam_gains = malloc(num_pols*num_azza*sizeof(float _Complex));
+  user_precision_complex_t *FEE_beam_gains = malloc(num_pols*num_azza*sizeof(user_precision_complex_t));
 
   //Run the CUDA code
   test_RTS_CUDA_FEE_beam(num_azza,
@@ -58,9 +58,10 @@ void run_RTS_MWA_FEE_beam(float *azs,  float *zas, int num_azza,
              FEE_beam_gains);
 
     FILE *beam_values_out;
-    char buff[0x100];
-    snprintf(buff, sizeof(buff), outname);
-    beam_values_out = fopen(buff,"w");
+    // char buff[0x100];
+    // snprintf(buff, sizeof(buff), outname);
+    // beam_values_out = fopen(buff,"w");
+    beam_values_out = fopen(outname,"w");
 
     for (size_t comp = 0; comp < num_azza; comp++) {
       fprintf(beam_values_out, "%.5f %.5f %.7f %.7f %.7f %.7f %.7f %.7f %.7f %.7f\n",
@@ -78,18 +79,18 @@ void run_RTS_MWA_FEE_beam(float *azs,  float *zas, int num_azza,
 
 void RTS_MWA_beam_by_freq(char* mwa_fee_hdf5){
 
-  float *single_az = malloc(sizeof(float));
-  float *single_za = malloc(sizeof(float));
+  user_precision_t *single_az = malloc(sizeof(user_precision_t));
+  user_precision_t *single_za = malloc(sizeof(user_precision_t));
 
-  single_az[0] = 0.0;
-  single_za[0] = M_PI / 6;
+  single_az[0] = 55.0 * (M_PI / 180.0);
+  single_za[0] = 60.0 * (M_PI / 180.0);
 
   int num_azza = 1;
 
-  float freq;
+  double freq;
 
   int num_pols = 4;
-  float _Complex *FEE_beam_gains = malloc(num_pols*num_azza*sizeof(float _Complex));
+  user_precision_complex_t *FEE_beam_gains = malloc(num_pols*num_azza*sizeof(user_precision_complex_t));
 
   // /Call the C code to interrogate the hdf5 file and set beam things up
   RTS_MWA_FEE_beam_t *FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
@@ -97,21 +98,20 @@ void RTS_MWA_beam_by_freq(char* mwa_fee_hdf5){
   RTS_MWA_FEE_beam_t *FEE_beam_zenith = malloc(sizeof(RTS_MWA_FEE_beam_t));
 
 
-  float num_freqs = 65;
-  float *output_gains;
+  int num_freqs = 48;
 
-  float *out_gx_re = malloc(num_freqs*sizeof(float));
-  float *out_gx_im = malloc(num_freqs*sizeof(float));
-  float *out_Dx_re = malloc(num_freqs*sizeof(float));
-  float *out_Dx_im = malloc(num_freqs*sizeof(float));
-  float *out_Dy_re = malloc(num_freqs*sizeof(float));
-  float *out_Dy_im = malloc(num_freqs*sizeof(float));
-  float *out_gy_re = malloc(num_freqs*sizeof(float));
-  float *out_gy_im = malloc(num_freqs*sizeof(float));
-  float *freqs_used = malloc(num_freqs*sizeof(float));
+  user_precision_t *out_gx_re = malloc(num_freqs*sizeof(user_precision_t));
+  user_precision_t *out_gx_im = malloc(num_freqs*sizeof(user_precision_t));
+  user_precision_t *out_Dx_re = malloc(num_freqs*sizeof(user_precision_t));
+  user_precision_t *out_Dx_im = malloc(num_freqs*sizeof(user_precision_t));
+  user_precision_t *out_Dy_re = malloc(num_freqs*sizeof(user_precision_t));
+  user_precision_t *out_Dy_im = malloc(num_freqs*sizeof(user_precision_t));
+  user_precision_t *out_gy_re = malloc(num_freqs*sizeof(user_precision_t));
+  user_precision_t *out_gy_im = malloc(num_freqs*sizeof(user_precision_t));
+  user_precision_t *freqs_used = malloc(num_freqs*sizeof(user_precision_t));
 
   for (int i = 0; i < num_freqs; i++) {
-    freq = 100e+6 + i*2.56e+5;
+    freq = 168e+6 + i*240e+3;
 
     freqs_used[i] = freq;
 
@@ -129,8 +129,6 @@ void RTS_MWA_beam_by_freq(char* mwa_fee_hdf5){
     int rotation = 1;
     //Scale to zenith
     int scaling = 1;
-
-    int num_pols = 4;
 
     //Run the CUDA code
     test_RTS_CUDA_FEE_beam(num_azza,
@@ -191,8 +189,8 @@ int main(void)
   }
 
   int num_azzas = 0;
-  float *azs = malloc(sizeof(float));
-  float *zas = malloc(sizeof(float));
+  user_precision_t *azs = malloc(sizeof(user_precision_t));
+  user_precision_t *zas = malloc(sizeof(user_precision_t));
 
   // int result;
 
@@ -200,10 +198,10 @@ int main(void)
 
     num_azzas += 1;
 
-    azs = realloc(azs,sizeof(float)*num_azzas);
-    zas = realloc(zas,sizeof(float)*num_azzas);
+    azs = realloc(azs,sizeof(user_precision_t)*num_azzas);
+    zas = realloc(zas,sizeof(user_precision_t)*num_azzas);
 
-    sscanf( line, "%f %f", &azs[num_azzas-1], &zas[num_azzas-1] );
+    sscanf( line, "%lf %lf", &azs[num_azzas-1], &zas[num_azzas-1] );
 
   }
 

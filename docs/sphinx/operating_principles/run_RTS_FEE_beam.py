@@ -221,10 +221,10 @@ gy_conj = np.conjugate(gy)
 XX = (gx*gx_conj + Dx*Dx_conj)
 YY = (Dy*Dy_conj + gy*gy_conj)
 
-fig, ax = plt.subplots(1,1, figsize=(4,3))
+fig, ax = plt.subplots(1,1, figsize=(5,4))
 
-ax.plot(freqs / 1e6, np.abs(XX),label='XX')
-ax.plot(freqs / 1e6, np.abs(YY),label='YY')
+ax.plot(freqs / 1e6, np.real(XX), '-o', mfc='none', label='XX (real)')
+ax.plot(freqs / 1e6, np.real(YY), '-o', mfc='none', label='YY (real)')
 
 ax.legend()
 

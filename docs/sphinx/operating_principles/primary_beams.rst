@@ -5,13 +5,22 @@
 
 Primary Beams
 ================
-``WODEN`` has been written to include stationary primary beams. That means the beam is pointed at a constant azimuth / zenith angle during an observation. There are currently three primary beams available, which are detailed below.
+``WODEN`` has been written to include stationary primary beams. That means the beam is pointed at a constant azimuth / zenith angle during an observation. These are the beam models available at the
+moment:
 
+ * **None** - gains of 1.0, leakages 0.0
+ * **Gaussian** - a frequency dependent Gaussian beam; FWHM can be set by user
+ * **EDA2** - a single MWA dipole on an infinite ground screen
+ * **MWA analytic** - an analytic model of the MWA primary beam
+ * **MWA FEE (coarse)** - the Fully Embedded Element MWA model (1.28 MHz frequency resolution)
+ * **MWA FEE (interp)** - frequency interpolated MWA FEE model (80 kHz resolution between 167 - 197 MHz)
+
+See below for details on each model.
 
 MWA Fully Embedded Element
-----------------------------
+-----------------------------
 
-The Murchison Widefield Array (MWA, `Tingay et al. 2013`_) has 16 bow-tie dipoles arranged in a 4 by 4 grid as recieving elements, yielding a grating-lobe style primary beam.
+The Murchison Widefield Array (MWA, `Tingay et al. 2013`_) has 16 bow-tie dipoles arranged in a 4 by 4 grid as receiving elements, yielding a grating-lobe style primary beam.
 
 ``WODEN`` incudes a GPU-implementation of the MWA Fully Embedded Element (FEE) Beam pattern (`Sokolowski et al. 2017`_), which to date is the most accurate model of the MWA primary beam. This model is defined in a spherical harmonic coordinate system, which is polarisation-locked to instrumental azimuth / elevation coordinates. ``WODEN`` however uses Stokes parameters to define it's visibilities, and so a rotation of the beam about parallactic angle (as calculated using ``erfa``) is applied to align the FEE beam to move it into the Stokes frame.
 
@@ -32,7 +41,7 @@ Here, the subscript :math:`x` means a polarisation angle of :math:`0^\circ` and 
 .. image:: MWAFEE_jones.png
   :width: 400pt
 
-These plots are all sky, with northward at the top. If we assume the sky is totally Stokes I, this will yield instrumental polarisations (where 'XX' is North-South and 'YY' is East-West) like this:
+These plots are all sky, with northward at the top. If we assume the sky is totally Stokes I, this will yield linear polarisations (where 'XX' is North-South and 'YY' is East-West) like this:
 
 .. image:: MWAFEE_instrumental_pols.png
   :width: 400pt
@@ -40,12 +49,44 @@ These plots are all sky, with northward at the top. If we assume the sky is tota
 The MWA beam is electronically steered, which can be defined via integer delays and supplied to the MWA FEE beam. ``run_woden.py`` can read these directly from an MWA metafits file, or can be directly supplied using the ``--MWA_FEE_delays`` argument.
 
 
-.. warning:: The frequency resolution of the MWA FEE model is 1.28 MHz. I have NOT yet coded up a frequency interpolation, so the frequency response for a given direction looks something like the below. This is coming in the future.
+Coarse resolution model ``--primary_beam=MWA_FEE``
+***********************************************************
+
+
+The frequency resolution of the default MWA FEE model, which is stored in the file ``mwa_full_embedded_element_pattern.h5``, is 1.28 MHz. If you need a smooth frequency
+response, this might not be the best option for you, as you'll end up with something like
+this plot, which shows the linear Stokes towards an arbitrary direction as a function of frequency:
 
 .. image:: MWAFEE_beam_vs_freq.svg
   :width: 400pt
 
-In fact, when running using the MWA FEE band, I only calculate the beam response once per coarse band. If you set your ``--coarse_band_width`` to greater than 1.28 MHz you'll make this effect even worse. If you stick to normal MWA observational params (with the default 1.28 MHz) all will be fine.
+In fact, when running using ``--primary_beam=MWA_FEE``, I only calculate the beam response once per coarse band. If you set your ``--coarse_band_width`` to greater than 1.28 MHz you'll make this effect even worse.
+
+Interpolated resolution model ``--primary_beam=MWA_FEE_interp``
+******************************************************************
+Recently, Daniel Ung interpolated the spherical harmonic coefficients of the MWA FEE model, to
+produce a new ``hdf5`` file, ``MWA_embedded_element_pattern_rev2_interp_167_197MHz.h5``.
+This new file has an 80 kHz resolution, so when we reproduce the plot above, we see:
+
+.. image:: MWAFEE_beam_vs_freq_interp.svg
+  :width: 400pt
+
+.. warning:: However, this model is only interpolated between 167 and 197 MHz. Anything below 167 MHz will give the 167 MHz response, and similarly for above 197 MHz.
+
+MWA Analytic
+---------------------------
+If you want something representative of the MWA beam, which is smooth in frequency,
+the analytic MWA beam model (copied over from the ``RTS``) is a good option. It lacks
+the mutual coupling effects present in the FEE model, and is purely real, but when
+we plot the linear Stokes on the sky we see decent agreement with the FEE beam.
+
+.. TODO:: Capture the actual mathematics behind the model so people can reproduce
+
+.. image:: MWAanaly_instrumental_pols.png
+  :width: 400pt
+
+
+
 
 EDA2
 ------

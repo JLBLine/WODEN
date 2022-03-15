@@ -69,24 +69,36 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
   // beam_settings->num_gauss_primarybeam_values = cropped_src->n_gauss * woden_settings->num_time_steps * woden_settings->num_freqs;
   // beam_settings->num_shape_primarybeam_values = cropped_src->n_shapes * woden_settings->num_time_steps * woden_settings->num_freqs;
 
+  //TODO when we overhaul the `catsource_t` struct, we'll have a totally
+  //different function to calculate the beam has/decs. For now, we'll just
+  //use the old-school ones labelled with Gaussian beam for both the
+  //gaussian and MWA analytic beams
+  if (woden_settings->beamtype == GAUSS_BEAM || woden_settings->beamtype == MWA_ANALY) {
+    if (woden_settings->beamtype == GAUSS_BEAM){
 
-  if (woden_settings->beamtype == GAUSS_BEAM) {
-    beam_settings->beamtype = GAUSS_BEAM;
+      beam_settings->beamtype = GAUSS_BEAM;
 
-    //Angles used in calculating beam centred l,m,ns
-    beam_settings->gauss_sdec = sin(woden_settings->gauss_dec_point);
-    beam_settings->gauss_cdec = cos(woden_settings->gauss_dec_point);
-    beam_settings->gauss_ha = woden_settings->lst_base - woden_settings->gauss_ra_point;
+      //Angles used in calculating beam centred l,m,ns
+      beam_settings->gauss_sdec = sin(woden_settings->gauss_dec_point);
+      beam_settings->gauss_cdec = cos(woden_settings->gauss_dec_point);
+      beam_settings->gauss_ha = woden_settings->lst_base - woden_settings->gauss_ra_point;
 
-    printf("Setting up Gaussian primary beam settings\n");
-    printf("   pointing at HA, Dec = %.5fdeg, %.5fdeg\n",
-               beam_settings->gauss_ha/DD2R, woden_settings->gauss_dec_point/DD2R );
-    printf("   setting beam FWHM to %.5fdeg and ref freq to %.3fMHz\n",
-            woden_settings->gauss_beam_FWHM,woden_settings->gauss_beam_ref_freq / 1e+6  );
+      printf("Setting up Gaussian primary beam settings\n");
+      printf("   pointing at HA, Dec = %.5fdeg, %.5fdeg\n",
+                 beam_settings->gauss_ha/DD2R, woden_settings->gauss_dec_point/DD2R );
+      printf("   setting beam FWHM to %.5fdeg and ref freq to %.3fMHz\n",
+              woden_settings->gauss_beam_FWHM,woden_settings->gauss_beam_ref_freq / 1e+6  );
 
-    //Set constants used in beam calculation
-    beam_settings->beam_FWHM_rad = woden_settings->gauss_beam_FWHM * DD2R;
-    beam_settings->beam_ref_freq = woden_settings->gauss_beam_ref_freq;
+      //Set constants used in beam calculation
+      beam_settings->beam_FWHM_rad = woden_settings->gauss_beam_FWHM * DD2R;
+      beam_settings->beam_ref_freq = woden_settings->gauss_beam_ref_freq;
+
+    } else {
+      beam_settings->beamtype = MWA_ANALY;
+      printf("Setting up analytic MWA primary beam settings\n");
+    }
+
+
 
     //Store all ha (which change with lst) that the beam needs to be calculated at.
     cropped_src->point_gaussbeam_has = malloc(woden_settings->num_time_steps * cropped_src->n_points * sizeof(double));
@@ -106,6 +118,7 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
         cropped_src->point_gaussbeam_decs[step] = cropped_src->point_decs[component];
         // printf("THIS THING %.6f %.6f %.8f\n",cropped_src->point_ras[component],
         //                                      cropped_src->point_decs[component], MWA_LAT_RAD );
+        // printf("%.8f %.8f\n",cropped_src->point_gaussbeam_has[step],cropped_src->point_gaussbeam_decs[step] );
       }
     }//point loop
 
@@ -131,6 +144,14 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
 
   else if (woden_settings->beamtype == FEE_BEAM) {
     beam_settings->beamtype = FEE_BEAM;
+
+    //Need to rotate the FEE model which is stored in theta/phi pols by the
+    //parallactic angle to obtain XX/YY
+    calc_para_angle(cropped_src, lsts, (double)woden_settings->latitude, woden_settings->num_time_steps);
+  }
+
+  else if (woden_settings->beamtype == FEE_BEAM_INTERP) {
+    beam_settings->beamtype = FEE_BEAM_INTERP;
 
     //Need to rotate the FEE model which is stored in theta/phi pols by the
     //parallactic angle to obtain XX/YY

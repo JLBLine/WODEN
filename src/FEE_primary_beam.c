@@ -88,7 +88,7 @@ int RTS_MWAFEEInit(const char *h5filename, double freq_Hz,
     } //end for dipole
   } // end for pol
 
-    /* Get max length of spherical wave table */
+  /* Get max length of spherical wave table */
 
   hid_t  dataset, dataspace;
   hsize_t dims_out[2];
@@ -99,7 +99,7 @@ int RTS_MWAFEEInit(const char *h5filename, double freq_Hz,
   int n_pols = 2;
 
   /* Determine the maximum required size for the beam mode data */
-  /* Should check Y pol as well? */
+  /* Check both the X and Y pols*/
 
   for(int i = 1; i<n_ant+1;i++){
     sprintf(table_name,"X%d_%d",i,(int)od.freq_out);
@@ -110,9 +110,18 @@ int RTS_MWAFEEInit(const char *h5filename, double freq_Hz,
        max_length = dims_out[1]/2; // Complex number
     }
     H5Dclose(dataset);
-  }
+    H5Sclose(dataspace);
 
-  // printf("MAX LENGTH %d\n",max_length );
+    sprintf(table_name,"Y%d_%d",i,(int)od.freq_out);
+    dataset = H5Dopen(file, table_name, H5P_DEFAULT);
+    dataspace = H5Dget_space(dataset);
+    status  = H5Sget_simple_extent_dims(dataspace, dims_out, NULL);
+    if(dims_out[1]/2 > max_length){
+       max_length = dims_out[1]/2; // Complex number
+    }
+    H5Dclose(dataset);
+    H5Sclose(dataspace);
+  }
 
   double _Complex *Q1, *Q2;
 
@@ -138,9 +147,16 @@ int RTS_MWAFEEInit(const char *h5filename, double freq_Hz,
   Q2 = (double _Complex *)malloc(sizeof(double _Complex) * max_length);
 
   // Read in Q_modes_all
-  double Q_modes_all[3][2046];
+  // double Q_modes_all[3][2046];
 
   dataset = H5Dopen(file,"modes", H5P_DEFAULT);
+  dataspace = H5Dget_space(dataset);
+  status  = H5Sget_simple_extent_dims(dataspace, dims_out, NULL);
+
+  int q_modes_all_dim1 = (int)dims_out[1];
+
+  // printf("About to malloc %dx%d\n",dims_out[0], dims_out[1] );
+  double *Q_modes_all = malloc(dims_out[0]*dims_out[1]*sizeof(double));
 
   status = H5Dread(dataset, H5T_NATIVE_DOUBLE,
 	     H5S_ALL, H5S_ALL, H5P_DEFAULT, Q_modes_all);
@@ -154,7 +170,6 @@ int RTS_MWAFEEInit(const char *h5filename, double freq_Hz,
 
   for(int pol=0;pol<n_pols;pol++){
     Nmax[pol]=0;
-
     for(int ant_i=1; ant_i<n_ant+1;ant_i++){
 
       // re-initialise accumulation variables
@@ -164,21 +179,22 @@ int RTS_MWAFEEInit(const char *h5filename, double freq_Hz,
       }
 
       if(pol==0){
-        sprintf(table_name,"X%d_%d",ant_i,(int)od.freq_out);
+        sprintf(table_name, "X%d_%d", ant_i, (int)od.freq_out);
       } else {
-        sprintf(table_name,"Y%d_%d",ant_i,(int)od.freq_out);
+        sprintf(table_name, "Y%d_%d", ant_i, (int)od.freq_out);
       }
-      dataset = H5Dopen(file,table_name, H5P_DEFAULT);
+
+      dataset = H5Dopen(file, table_name, H5P_DEFAULT);
       dataspace = H5Dget_space(dataset);
       status  = H5Sget_simple_extent_dims(dataspace, dims_out, NULL);
+      // Q_all = malloc(sizeof(double) * dims_out[0] * dims_out[1]);
       Q_all = malloc(sizeof(double) * dims_out[0] * dims_out[1]);
       status = H5Dread(dataset, H5T_NATIVE_DOUBLE,
       	     H5S_ALL, H5S_ALL, H5P_DEFAULT, Q_all);
       H5Dclose(dataset);
 
       int my_len;
-
-      my_len = dims_out[1]; // max(Q_all.shape)
+      my_len = (int)dims_out[1]; // max(Q_all.shape)
 
       // Get Q_modes for this antenna
 
@@ -190,7 +206,8 @@ int RTS_MWAFEEInit(const char *h5filename, double freq_Hz,
       for(int q_i =0; q_i < my_len; q_i++){
         for(int q_j = 0; q_j < 3; q_j++){
           //	  Q_modes[q_i + my_len*q_j] = Q_modes_all[q_i][q_j];
-          Q_modes[q_i + my_len*q_j] = Q_modes_all[q_j][q_i];
+          // Q_modes[q_i + my_len*q_j] = (double)Q_modes_all[q_j][q_i];
+          Q_modes[q_i + my_len*q_j] = Q_modes_all[q_i + q_modes_all_dim1*q_j];
         }
       }
 
@@ -201,7 +218,7 @@ int RTS_MWAFEEInit(const char *h5filename, double freq_Hz,
 
       int *s1, *s2;
       double *M_vec, *N_vec;
-      int nM,nN;
+      int nM, nN;
 
       s1 = malloc(sizeof(int) * my_len);
       s2 = malloc(sizeof(int) * my_len);
@@ -253,9 +270,15 @@ int RTS_MWAFEEInit(const char *h5filename, double freq_Hz,
         memcpy(pb->N[pol],N_vec,sizeof(double) * nN);
 
         Nmax[pol] = max_n;
-        pb->nmax = Nmax[pol];
+        pb->nmax = (int)Nmax[pol];
         assert(nM==nN);
         pb->nMN = nM;
+        if (pol==0) {
+          pb->nMN0 = nM;
+        }
+        else if (pol==1) {
+          pb->nMN1 = nM;
+        }
       }
 
       nC = mC = 0;
@@ -282,18 +305,35 @@ int RTS_MWAFEEInit(const char *h5filename, double freq_Hz,
       free(s2);
       free(Q_modes);
       free(Q_all);
-
+    // printf("END OF DIPOLE LOOP %d %d %d %d\n",nM, nN, max_n, pb->nMN );
     } // loop over ant_i
-
   } // loop over XY pols
 
-  if(Nmax[0] != Nmax[1]){
-    printf("Beam Nmax is not equal for XY pols\n");
-    exit(1);
+  //Unfortunately, for 119 MHz, the Y pol has a higher order of spherical
+  //harmonic that the X pol. This means the arrays in pb->M[1], pb->N[1]
+  //are larger than in pb->M[0], pb->N[0], which hurts the GPU later down the
+  //road. So do some realloc and chuck some extra zeros on the end
+  if( Nmax[1] > Nmax[0]){
+    printf("\nNmax[1] > Nmax[0], fiddling the length of pb->M[0], pb->N[0] \n");
+
+    //Add extra memory
+    pb->M[0] = realloc(pb->M[0],sizeof(double)*pb->nMN1);
+    pb->N[0] = realloc(pb->N[0],sizeof(double)*pb->nMN1);
+    //Set new contents to zero. The coeffs in Q1, Q2 should be zero also,
+    //meaning these should contribute zero power to the overall beam.
+    //Just stops the GPU kernel wigging out from different size arrays
+    for (int i = pb->nMN0; i < pb->nMN1; i++) {
+      pb->M[0][i] = 0;
+      pb->N[0][i] = 0;
+      pb->Q1[0][i] = 0.0 + 0.0j;
+      pb->Q2[0][i] = 0.0 + 0.0j;
+    }
+
   }
 
   free(Q1);
   free(Q2);
+  free(Q_modes_all);
 
   H5Fclose(file);
   H5Sclose(dataspace);
@@ -303,8 +343,6 @@ int RTS_MWAFEEInit(const char *h5filename, double freq_Hz,
   for (int m = 0; m < 2*pb->nmax + 1; m++) {
     pb->m_range[m] = -(user_precision_t)pb->nmax + (user_precision_t)m;
   }
-
-  // printf("AT END OF C BEAM STUFF\n");
 
   return status;
 
@@ -328,4 +366,65 @@ void RTS_freeHDFBeam(RTS_MWA_FEE_beam_t *pb){
   free(pb->M);
   free(pb->N);
 
+}
+
+
+int multifreq_RTS_MWAFEEInit(beam_settings_t *beam_settings,
+                             woden_settings_t *woden_settings,
+                             double *beam_freqs) {
+
+  //Find out which frequency in the stored MWA FEE coeffs is closest to
+  //our lowest frequency
+  herr_t status;
+  hid_t file, group;         /* handles */
+  H5O_info_t infobuf;
+  struct opdata od;
+
+  file = H5Fopen(woden_settings->hdf5_beam_path, H5F_ACC_RDONLY, H5P_DEFAULT);
+  status = H5Oget_info(file, &infobuf);
+
+  beam_settings->num_MWAFEE = (int)woden_settings->num_freqs;
+  beam_settings->MWAFEE_freqs = malloc(beam_settings->num_MWAFEE*sizeof(double));
+
+  //Setup arrays to hold the beam and zenith beams for all frequencies
+  beam_settings->FEE_beams = malloc(beam_settings->num_MWAFEE*sizeof(RTS_MWA_FEE_beam_t));
+  beam_settings->FEE_beam_zeniths = malloc(beam_settings->num_MWAFEE*sizeof(RTS_MWA_FEE_beam_t));
+
+  printf("Initialising MWA FEE beams...");
+
+  for (int freq_ind = 0; freq_ind < beam_settings->num_MWAFEE; freq_ind++) {
+    od.freq_in = (float)beam_freqs[freq_ind];
+    od.freq_out = -1.0;
+    od.least_diff = -1.0;
+
+    group = H5Gopen(file, "/", H5P_DEFAULT);
+    H5Literate(group, H5_INDEX_NAME, H5_ITER_INC, NULL, RTS_op_func, (void *) &od);
+
+    // printf("In freq, Out freq, %.1f %.1f\n",beam_freqs[freq_ind], od.freq_out );
+
+    user_precision_t float_zenith_delays[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+    beam_settings->MWAFEE_freqs[freq_ind] = (double)od.freq_out;
+
+    //Setup zenith beams
+    status = RTS_MWAFEEInit(woden_settings->hdf5_beam_path,
+                            (double)od.freq_out,
+                            &beam_settings->FEE_beam_zeniths[freq_ind],
+                            float_zenith_delays);
+
+    //Setup beam at desired pointing
+    status = RTS_MWAFEEInit(woden_settings->hdf5_beam_path,
+                            (double)od.freq_out,
+                            &beam_settings->FEE_beams[freq_ind],
+                            woden_settings->FEE_ideal_delays);
+
+    H5Gclose(group);
+  }
+
+  H5Fclose(file);
+
+  printf(" done.\n");
+
+  return status;
 }

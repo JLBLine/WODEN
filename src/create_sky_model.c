@@ -696,6 +696,7 @@ catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
                              lsts[time_step], latitude, &az, &za);
           cropped_src->point_azs[point_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
           cropped_src->point_zas[point_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
+          // printf("AZ ZA %.7f %.7f\n",(user_precision_t)az,(user_precision_t)za );
         }
 
         point_crop_component_index ++;

@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.10)
 include(CheckLanguage)
 check_language(CUDA)
 
-project(woden VERSION 0.1 LANGUAGES CUDA CXX C)
+project(woden VERSION 1.2 LANGUAGES CUDA CXX C)
 
 ##Gotta find CUDA and get it to find libraries
 find_package(CUDA)

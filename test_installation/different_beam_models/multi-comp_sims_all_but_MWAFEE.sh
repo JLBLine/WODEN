@@ -2,7 +2,7 @@
 
 mkdir -p data
 
-for beam in "None" "Gaussian"
+for beam in "MWA_analy" "None" "Gaussian"
 do
 
   run_woden.py \
@@ -13,7 +13,7 @@ do
      --metafits_filename=../metafits/1102865128_metafits_ppds.fits \
      --band_nums=1,2,3 --output_uvfits_prepend=./data/multi-comp_grid_${beam} \
      --primary_beam=${beam} \
-     --precision=float
+     --precision=float \
 
 done
 

@@ -2,7 +2,7 @@
 include_directories("${CMAKE_SOURCE_DIR}/cmake_testing/source_components")
 
 ## Create tests for both float and double precision
-foreach(PRECISION IN LISTS FLOAT DOUBLE)  #
+foreach(PRECISION IN LISTS FLOAT DOUBLE)
   ##Set the flags depending on the precision
   DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
 
@@ -76,20 +76,6 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)  #
   add_test(CUDA_test_get_beam_gains_${PRECISION}
            test_get_beam_gains_${PRECISION}_app)
 
-  ##Test ${PRECISION}_applying primary beam gains and extrapolated fluxes to visibilities
-  add_executable(test_update_sum_visis_${PRECISION}_app
-      test_update_sum_visis.c
-  )
-  target_link_libraries(test_update_sum_visis_${PRECISION}_app
-      Unity
-      source_componentsCUDA_${PRECISION}
-      ${CC_LINKLIBS}
-  )
-  target_compile_options(test_update_sum_visis_${PRECISION}_app
-                         PRIVATE ${C_FLAGS})
-  add_test(CUDA_test_update_sum_visis_${PRECISION}
-           test_update_sum_visis_${PRECISION}_app)
-
   ##Test the common calls between all component types return expected values
   add_executable(test_source_component_common_${PRECISION}_app
       test_source_component_common.c
@@ -139,7 +125,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)  #
   add_test(CUDA_test_kern_calc_visi_gauss_${PRECISION}
            test_kern_calc_visi_gauss_${PRECISION}_app)
 
-  # ##Test the shapelet visibility kernel
+  ##Test the shapelet visibility kernel
   add_executable(test_kern_calc_visi_shape_${PRECISION}_app
       test_kern_calc_visi_shape.c
       test_kern_calc_visi_common.c
@@ -155,5 +141,19 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)  #
                          PRIVATE ${C_FLAGS})
   add_test(CUDA_test_kern_calc_visi_shape_${PRECISION}
            test_kern_calc_visi_shape_${PRECISION}_app)
+
+  ##Test applying primary beam gains and extrapolated fluxes to visibilities
+  add_executable(test_update_sum_visis_${PRECISION}_app
+      test_update_sum_visis.c
+  )
+  target_link_libraries(test_update_sum_visis_${PRECISION}_app
+      Unity
+      source_componentsCUDA_${PRECISION}
+      ${CC_LINKLIBS}
+  )
+  target_compile_options(test_update_sum_visis_${PRECISION}_app
+                         PRIVATE ${C_FLAGS})
+  add_test(CUDA_test_update_sum_visis_${PRECISION}
+           test_update_sum_visis_${PRECISION}_app)
 
 endforeach()

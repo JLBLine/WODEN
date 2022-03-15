@@ -118,7 +118,7 @@ void test_calculate_visibilities_MWAFEEBeam(int n_points, int n_gauss, int n_sha
   //           visibility_set->sum_visi_YY_imag[visi]);
   // }
 
-  float multiplier = (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
+  double multiplier = (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
 
 
   //These values are taken from the double precision version of the MWA FEE
@@ -151,9 +151,13 @@ void test_calculate_visibilities_MWAFEEBeam(int n_points, int n_gauss, int n_sha
                                   gain2yx_re, gain2yx_im,
                                   gain2yy_re, gain2yy_im);
 
+  RTS_freeHDFBeam(beam_settings->FEE_beam);
+  RTS_freeHDFBeam(beam_settings->FEE_beam_zenith);
+
   free(beam_settings);
   free_visi_set_inputs(visibility_set);
   free_visi_set_outputs(visibility_set);
+
 }
 
 //Test with a single SOURCE, single COMPONENT

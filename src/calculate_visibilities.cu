@@ -134,6 +134,15 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     copy_FEE_primary_beam_to_GPU(beam_settings->FEE_beam);
     printf(" done.\n");
   }
+  //If there are multiple MWA FEE beams in `beam_settings`, send them off
+  //to get their normalisations calculated
+  else if (beam_settings->beamtype == FEE_BEAM_INTERP){
+    //Send them to GPU and calculate normalisations
+
+    printf("Getting FEE beam normalisations and sending to GPU...");
+    multifreq_get_MWAFEE_normalisation(beam_settings);
+    printf(" done.\n");
+  }
 
   //Iterate through all sky model chunks, calculated visibilities are
   //added to chunk_visibility_set, and then summed onto visibility_set
@@ -278,7 +287,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
       //Only the FEE beam currently yields cross pol values, so only malloc what
       //we need here
-      if (beam_settings->beamtype == FEE_BEAM) {
+      if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP || beam_settings->beamtype == MWA_ANALY) {
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01,
                   catsource.num_point_primarybeam_values*sizeof(cuUserComplex) ));
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J10,
@@ -343,8 +352,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       cudaErrorCheckCall( cudaFree( d_primay_beam_J00 ) );
       cudaErrorCheckCall( cudaFree( d_primay_beam_J11 ) );
 
-      if (beam_settings->beamtype == FEE_BEAM){
-        cudaErrorCheckCall( cudaFree( beam_settings->FEE_beam->d_FEE_beam_gain_matrices) );
+      if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP || beam_settings->beamtype == MWA_ANALY) {
         cudaErrorCheckCall( cudaFree( d_primay_beam_J01 ) );
         cudaErrorCheckCall( cudaFree( d_primay_beam_J10 ) );
       }
@@ -433,7 +441,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
       //Only the FEE beam currently yields cross pol values, so only malloc what
       //we need here
-      if (beam_settings->beamtype == FEE_BEAM) {
+      if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP || beam_settings->beamtype == MWA_ANALY) {
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01,
               catsource.num_gauss_primarybeam_values*sizeof(cuUserComplex)) );
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J10,
@@ -485,10 +493,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       cudaErrorCheckCall( cudaFree(d_primay_beam_J00) );
       cudaErrorCheckCall( cudaFree(d_primay_beam_J11) );
 
-      if (beam_settings->beamtype == FEE_BEAM){
-        cudaErrorCheckCall( cudaFree(beam_settings->FEE_beam->d_FEE_beam_gain_matrices) );
-        cudaErrorCheckCall( cudaFree(d_primay_beam_J01) );
-        cudaErrorCheckCall( cudaFree(d_primay_beam_J10) );
+      if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP || beam_settings->beamtype == MWA_ANALY) {
+        cudaErrorCheckCall( cudaFree( d_primay_beam_J01 ) );
+        cudaErrorCheckCall( cudaFree( d_primay_beam_J10 ) );
       }
 
       cudaErrorCheckCall( cudaFree(d_ns) );
@@ -640,7 +647,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
       //Only the FEE beam currently yields cross pol values, so only malloc what
       //we need here
-      if (beam_settings->beamtype == FEE_BEAM) {
+      if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP || beam_settings->beamtype == MWA_ANALY) {
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01,
                   catsource.num_shape_primarybeam_values*sizeof(cuUserComplex)) );
         cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J10,
@@ -715,10 +722,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       cudaErrorCheckCall( cudaFree(d_primay_beam_J00) );
       cudaErrorCheckCall( cudaFree(d_primay_beam_J11) );
 
-      if (beam_settings->beamtype == FEE_BEAM){
-        cudaErrorCheckCall( cudaFree( beam_settings->FEE_beam->d_FEE_beam_gain_matrices) );
-        cudaErrorCheckCall( cudaFree(d_primay_beam_J01) );
-        cudaErrorCheckCall( cudaFree(d_primay_beam_J10) );
+      if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP || beam_settings->beamtype == MWA_ANALY) {
+        cudaErrorCheckCall( cudaFree( d_primay_beam_J01 ) );
+        cudaErrorCheckCall( cudaFree( d_primay_beam_J10 ) );
       }
 
       cudaErrorCheckCall( cudaFree(d_ns) );
@@ -847,6 +853,14 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
   if (woden_settings->beamtype == FEE_BEAM) {
     free_FEE_primary_beam_from_GPU(beam_settings->FEE_beam);
+  }
+  //If multiple MWA FEE beams, free them from the GPU
+  else if (woden_settings->beamtype == FEE_BEAM_INTERP) {
+    for (int freq_ind = 0; freq_ind < beam_settings->num_MWAFEE; freq_ind++) {
+
+    RTS_MWA_FEE_beam_t *FEE_beam = &beam_settings->FEE_beams[freq_ind];
+    free_FEE_primary_beam_from_GPU(FEE_beam);
+    }
   }
 
   cudaErrorCheckCall( cudaFree(d_sum_visi_XX_imag) );

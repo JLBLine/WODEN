@@ -20,15 +20,22 @@ examples/EDA2_haslam/data
 
 externals
 
-docs/sphinx/operating_principles/MWAFEE_beamvalues-vs-freq.txt
-docs/sphinx/operating_principles/MWAFEE_beamvalues_180MHz.txt
 docs/sphinx/operating_principles/azza_values.txt
+docs/sphinx/operating_principles/MWAanaly_beamvalues_180MHz.txt
+docs/sphinx/operating_principles/MWAFEE_beamvalues_180MHz.txt
+docs/sphinx/operating_principles/MWAFEE_beamvalues-vs-freq.txt
+docs/sphinx/operating_principles/MWAFEEinterp_beamvalues-vs-freq.txt
 docs/sphinx/operating_principles/run_RTS_FEE_beam
 docs/sphinx/operating_principles/run_RTS_FEE_beam.o
 docs/sphinx/operating_principles/run_EDA2_beam
 docs/sphinx/operating_principles/run_EDA2_beam.o
 docs/sphinx/operating_principles/run_Gaussian_beam
 docs/sphinx/operating_principles/run_Gaussian_beam.o
+docs/sphinx/operating_principles/run_RTS_FEE_beam_interp.o
+docs/sphinx/operating_principles/run_RTS_analy_beam.o
+docs/sphinx/operating_principles/run_RTS_analy_beam
+docs/sphinx/operating_principles/run_RTS_FEE_beam_interp
+docs/sphinx/operating_principles/MWAanaly_jones.png
 
 coverage_outputs/htmlcov
 coverage_outputs/*.gcov
@@ -41,8 +48,14 @@ test_installation/*/images
 
 cmake_testing/FEE_primary_beam_cuda/beam_plots
 cmake_testing/FEE_primary_beam_cuda/hyperbeam*
+cmake_testing/FEE_primary_beam_cuda/MWA_FEE_multifreq_gains*
+cmake_testing/FEE_primary_beam_cuda/*.png
 
 cmake_testing/source_components/plots
+cmake_testing/source_components/*.png
+
+cmake_testing/primary_beam_cuda/*.png
+cmake_testing/primary_beam_cuda/plots
 
 *importuvfits.last
 

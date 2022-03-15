@@ -306,8 +306,8 @@ void test_visi_outputs(int num_visis, int num_components,
     //       args_ft->sum_visi_YX_real[visi], args_ft->sum_visi_YX_imag[visi],
     //       args_ft->sum_visi_YY_real[visi], args_ft->sum_visi_YY_imag[visi]);
 
-    if (beamtype == FEE_BEAM) {
-      //FEE beam has cross pols which double everything when using just Stokes I
+    if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY ) {
+      //MWA beam has cross pols which double everything when using just Stokes I
       //and setting the cross pols to 1.0 as well as the gains
       //Also means cross-pols are non-zero
       TEST_ASSERT_DOUBLE_WITHIN(tol*expec_re, 2.0*expec_re, args_ft->sum_visi_XX_real[visi]);

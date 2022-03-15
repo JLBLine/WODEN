@@ -22,7 +22,7 @@ echo "Will use ${uv2ms}"
 fi
 
 
-for beam in "None" "Gaussian" "EDA2"
+for beam in "MWA_analy" "None" "Gaussian" "EDA2"
 do
   ##Convert uvfits to measurement sets. --nologger stops a logging popup
   ##that can slow things down. Remove it if you want a graphical logger

@@ -41,3 +41,58 @@ values equal zero. The expected values have been generated using the DOUBLE
 precision compiled code, and so the absolute tolerance of within 1e-12 is set
 by how many decimal places I've stored in the lookup table. The FLOAT precision
 must match within 1e-6 of these stored values.
+
+test_MWA_analytic.c
+***********************************
+.. TODO:: stick the maths of what the analytic beam does here (it is involved).
+
+This calls ``primary_beam_cuda::test_calculate_MWA_analytic_beam``, which calls
+``primary_beam_cuda::calculate_MWA_analytic_beam``, which calculates an
+analytic version of the MWA primary beam, based on ideal dipoles. This code calculates
+the primary beam response of the MWA using methods from ``RTS``. The analytic
+beam is purely real.
+
+This test runs with an off-zenith pointing, with a grid of 201 by 201 of az/za
+or two time steps, and two frequencies (150 and 200MHz). The az/za coords for both
+time steps are identical, but test whether the time/frequency ordering of the
+outputs are correct. The beam responses are tested to be within an absolute
+tolerance of 1e-6 from expectations for the FLOAT compiled code, and 1e-8 for the
+DOUBLE compiled code (the responses are only stored to 1e-8 precision for testing
+to save space on disk).
+
+If you want to look at your outputs, you can run::
+
+  $ python plot_MWA_analytic.py
+
+will will plot the real components of beam responses of both the MWA analytic
+beam (``jones_MWA_analy_gains_nside201_t00_f150.000MHz.png``):
+
+.. image:: jones_MWA_analy_gains_nside201_t00_f150.000MHz.png
+  :width: 800
+
+The testing here also runs ``comp_MWA_analytic_to_FEE.c``, which runs the
+MWA FEE beam code for the same sky directions. This comparison is also plotted
+as (``jones_MWA_analy_gains_nside201_t00_f150.000MHz.png``):
+
+.. image:: jones_MWA_FEE_gains_nside201_t00_f150.000MHz.png
+  :width: 800
+
+which gives us a sanity check that both beams point in the same direction for
+the same input az/za coords, and that they have similar structures on the sky,
+albeit they are negative of one another.
+
+When we combine the gains and leakages to create linear Stokes, we see that
+we get similar beams. First of all, here is the RTS MWA analytic ``linear_pol_MWA_analy_gains_nside201_t00_f150.000MHz.png``:
+
+.. image:: linear_pol_MWA_analy_gains_nside201_t00_f150.000MHz.png
+  :width: 800
+
+Comparing that the MWA FEE beam ``linear_pol_MWA_FEE_gains_nside201_t00_f150.000MHz.png``:
+
+.. image:: linear_pol_MWA_FEE_gains_nside201_t00_f150.000MHz.png
+  :width: 800
+
+we see that all linear polarisations have the same signs and simliar structures.
+
+The plotting script plots both frequencies and time steps for the analytic
+beam, letting you visually check that the outputs are ordered as expected.

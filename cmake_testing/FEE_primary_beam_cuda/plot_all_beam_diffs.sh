@@ -13,9 +13,9 @@ python compare_to_hyperdrive.py
 ##from hyperdrive to
 mkdir -p beam_plots
 
-for tag in "zenith" #"offzen1" "offzen2"
+for tag in "zenith" "offzen1" "offzen2"
 do
-  for freq in "100" #"150" "200"
+  for freq in "100" "150" "200"
   do
 
     echo "Doing ${tag} for FLOAT precision"

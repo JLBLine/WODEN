@@ -64,8 +64,7 @@ Nearly all of these simulations use the MWA phase 1 array layout, with a maximum
 
 Absolute Accuracy
 ^^^^^^^^^^^^^^^^^^^^^^^^
-There is no imaging here, but runs an end-to-end simulation with a set of array layouts and sky models that should yield exact visibilities. The exact method is described in the JOSS paper.
-The scripts run here are the exact scripts I used to create the plot in the JOSS paper.
+There is no imaging here, but runs an end-to-end simulation with a set of array layouts and sky models that should yield exact visibilities. The exact method is described in the JOSS paper (https://joss.theoj.org/papers/10.21105/joss.03676). The scripts run here are the exact scripts I used to create the plot in the JOSS paper.
 
 .. todo:: Link the JOSS paper here once published
 
@@ -116,12 +115,13 @@ The CLEAN isn't fantastic here as I've intentionally simulated a small amount of
 Different Beam Models
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-This should end up with a larger grid of a mix of components, with 4 different beam types (None, Gaussian, EDA2 (analytic dipole), and MWA FEE)::
+This should end up with a larger grid of a mix of components, with all primary beam types::
 
   $ cd WODEN/test_installation/different_beam_models/images
   $ ls *image.fits
-     multi-comp_grid_EDA2-image.fits      multi-comp_grid_MWA_FEE-image.fits
-     multi-comp_grid_Gaussian-image.fits  multi-comp_grid_None-image.fits
+     multi-comp_grid_EDA2-image.fits       multi-comp_grid_MWA_FEE-image.fits
+     multi-comp_grid_Gaussian-image.fits   multi-comp_grid_MWA_FEE_interp-image.fits
+     multi-comp_grid_MWA_analy-image.fits  multi-comp_grid_None-image.fits
 
 The images with no beam, the Gaussian beam, and MWA FEE beam should look like this:
 
@@ -129,6 +129,11 @@ The images with no beam, the Gaussian beam, and MWA FEE beam should look like th
    :width: 600pt
 
 In the sky model, the top half are point sources, bottom left are shapelets, and bottom right are Gaussians. Again, limited data, so the CLEAN has some residuals. But we've successfully run a simulation with all three component types. We should also see different results for the Gaussian and MWA FEE beam plots, which we do, as we've used different primary beams. In particular I've made the Gaussian small enough of the sky to chop off the top left corner. The MWA FEE beam has a larger foot print.
+
+The three different MWA beam models (coarse frequency FEE, frequency interpolated FEE, analytic), should yield similar looking images, which they do:
+
+.. image:: different_MWA_beam_plots.png
+   :width: 600pt
 
 For the EDA2 image, I've called the EDA2 array layout to override the settings in the metafits. The EDA2 has very short baselines, maximum of around 30 metres. If you compare the MWA phase 1 psf and the EDA psf we should be able to see the difference:
 

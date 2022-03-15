@@ -191,6 +191,8 @@ The following tests run with the following optional arguments:
 
  - ``test_write_gaussian_beam``: checks that extra arguments that control the Gaussian primary beam are written correctly
  - ``test_write_MWA_FEE_beam``: checks that extra arguments that control the MWA FEE beam are written correctly
+ - ``test_write_MWA_FEE_beam_interp``: checks that extra arguments that control the interpolated MWA FEE beam are written correctly
+ - ``test_write_MWA_analy_beam``: checks that extra arguments that control analytic MWA beam are written correctly
  - ``test_write_EDA2_beam``: checks that extra arguments that control the EDA2 beam are written correctly
  - ``test_write_no_precession``: checks that the option to turn off precession is added when asked for
 
@@ -269,6 +271,8 @@ with the expected outcomes:
  - ``test_EDA2_args_work``: Check the correct arguments are selected for an EDA2 beam simulation
  - ``test_GaussBeam_args_work``: Check that Gaussian beam related arguments work as expected. Iteratively check that if arguments with defaults are not given (e.g. ``--gauss_ra_point``) that they are set to their defaults, and if they *are* supplied, that they match the given value.
  - ``test_MWAFEEBeam_args_work``: Checks that the MWA FEE primary beam is handled by ``ra.check_args`` correctly. The function should error out if certain paths to the hdf5 file that holds the spherical harmonic information is missing, and if the delays have been specified incorrectly. Check that things work when the correct arguments are given.
+ - ``test_MWAFEEBeamInterp_args_work``: Same as ``test_MWAFEEBeam_args_work``, but for the interpolated FEE beam.
+ - ``test_MWAAnalyBeam_args_work``: Checks for the analytic MWA beam. Same as ``test_MWAFEEBeam_args_work``, but only checking the delays are set correctly, as no need for an hdf5 file for this model
 
 
 test_read_uvfits_into_pyuvdata.py

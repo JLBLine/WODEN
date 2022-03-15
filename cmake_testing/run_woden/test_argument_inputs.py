@@ -275,28 +275,29 @@ class Test(unittest.TestCase):
         self.assertEqual(64.0, args.gauss_beam_FWHM)
         self.assertEqual(291e+6, args.gauss_beam_ref_freq)
 
-    def test_MWAFEEBeam_args_work(self):
-        """Check that the MWA FEE primary beam is handled `ra.check_args`
-        correctly. The function should error out if certain paths to the
-        hdf5 file that holds the spherical harmonic information is missing,
-        and if the delays have been specified incorrectly"""
+    def _check_MWA_FEE_generic(self, beam_name, beam_env_var):
+        """Run the tests common to `test_MWAFEEBeam_args_work` and
+        `test_MWAFEEBeamInterp_args_work`. The function should error out
+        if certain paths to the hdf5 file that holds the spherical harmonic
+        information is missing, and if the delays have been specified
+        incorrectly"""
 
         ##We want to test that the argument fails if the environment key
         ##MWA_FEE_HDF5 is not set. Here we check if it is set and delete it
         ##if so
         try:
-            del os.environ['MWA_FEE_HDF5']
+            del os.environ[beam_env_var]
         except KeyError:
             pass
 
         ##Trying to run an MWA_FEE simulation with no metafits, no 'MWA_FEE_HDF5'
         ##or --hdf5_beam_path should fail
         self.make_minimum_required_args_without_metafits()
-        self.inputs.append('--primary_beam=MWA_FEE')
+        self.inputs.append(f'--primary_beam={beam_name}')
 
         ##Check the primary_beam has been selected and that `rw.check_args` fails
         args = self.assert_check_args_errors()
-        self.assertEqual('MWA_FEE', args.primary_beam)
+        self.assertEqual(beam_name, args.primary_beam)
 
         ##Set the path to the hdf5 file. Just point it at a text file.
         ##TODO - have `check_args` actually test reading the hdf5 file. At the
@@ -316,16 +317,69 @@ class Test(unittest.TestCase):
         ##Reset the arguments try to run using a metafits file, but still
         ##have no path to the hdf5 file. Should fail
         self.make_minimum_required_args_without_metafits()
-        self.inputs.append('--primary_beam=MWA_FEE')
+        self.inputs.append(f'--primary_beam={beam_name}')
         self.inputs.append("--metafits_filename={:s}/1202815152_metafits_ppds.fits".format(code_dir))
         args = self.assert_check_args_errors()
 
         ##This time, set the environment variable to the hdf5 file. Should
-        ##pass
-        os.environ['MWA_FEE_HDF5'] = '{:s}/example_array_layout.txt'.format(code_dir)
+        ##pass (just use a file we know exists somewhere)
+        os.environ[beam_env_var] = '{:s}/example_array_layout.txt'.format(code_dir)
         args = self.run_parser_and_check_args()
         ##Assert the delays were read in correctly
         self.assertEqual("[6, 4, 2, 0, 8, 6, 4, 2, 10, 8, 6, 4, 12, 10, 8, 6]", args.MWA_FEE_delays)
+
+        ##Setting the delays manually should override the delays in the
+        ##metafits
+        self.inputs.append('--MWA_FEE_delays=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]')
+        args = self.run_parser_and_check_args()
+        ##Check the command line delays are there instead of metafits
+        self.assertEqual("[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]", args.MWA_FEE_delays)
+
+    def test_MWAFEEBeam_args_work(self):
+        """Check that the MWA FEE primary beam is handled `ra.check_args`
+        correctly. The function should error out if certain paths to the
+        hdf5 file that holds the spherical harmonic information is missing,
+        and if the delays have been specified incorrectly"""
+
+        self._check_MWA_FEE_generic('MWA_FEE', 'MWA_FEE_HDF5')
+
+
+    def test_MWAFEEBeamInterp_args_work(self):
+        """Check that the interpolated MWA FEE primary beam is handled `ra.check_args`
+        correctly. The function should error out if certain paths to the
+        hdf5 file that holds the spherical harmonic information is missing,
+        and if the delays have been specified incorrectly"""
+
+        self._check_MWA_FEE_generic('MWA_FEE_interp', 'MWA_FEE_HDF5_INTERP')
+
+
+    def test_MWAAnalyBeam_args_work(self):
+        """Check `ra.check_args` works correctly for the analytic MWA beam.
+        Should fail if the delays have been specified incorrectly"""
+
+        ##Trying to run an MWA_FEE simulation with no metafits, no 'MWA_FEE_HDF5'
+        ##or --hdf5_beam_path should fail
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append(f'--primary_beam=MWA_analy')
+
+        ##Check the primary_beam has been selected and that `rw.check_args` fails
+        args = self.assert_check_args_errors()
+        self.assertEqual('MWA_analy', args.primary_beam)
+
+        ##now set the delays to something that should produce a failure
+        self.inputs.append('--MWA_FEE_delays=oijasdoiasjd')
+        self.assert_check_args_errors()
+
+        ##Set the delays to something that should work
+        self.inputs.append('--MWA_FEE_delays=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]')
+        self.run_parser_and_check_args()
+
+        ##Reset the arguments try to run using delays from a metafits file.
+        ##Should pass
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append(f'--primary_beam=MWA_analy')
+        self.inputs.append("--metafits_filename={:s}/1202815152_metafits_ppds.fits".format(code_dir))
+        self.run_parser_and_check_args()
 
         ##Setting the delays manually should override the delays in the
         ##metafits

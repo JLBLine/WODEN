@@ -19,6 +19,7 @@
 #include "visibility_set.h"
 #include "array_layout.h"
 
+
 //Main CUDA executable to link in
 extern void calculate_visibilities(array_layout_t * array_layout,
   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
@@ -121,15 +122,24 @@ int main(int argc, char **argv) {
     //We need the zenith beam to get the normalisation
     beam_settings->FEE_beam_zenith = malloc(sizeof(RTS_MWA_FEE_beam_t));
 
+    //Setup the visibility container
+    visibility_set_t *visibility_set = setup_visibility_set(woden_settings->num_visis);
+
+    //Fill in the time/freq/baseline settings in `visiblity_set` needed by
+    //calculate_visibilities
+    fill_timefreq_visibility_set(visibility_set, woden_settings,
+                                 base_band_freq, lsts);
+
     //The intial setup of the FEE beam is done on the CPU, so call it here
     if (woden_settings->beamtype == FEE_BEAM){
       double base_middle_freq = base_band_freq + (woden_settings->coarse_band_width/2.0);
-    //
+
       printf("Middle freq is %.8e \n",base_middle_freq );
-    //
-      user_precision_t user_precision_t_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                                       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    //
+
+      user_precision_t user_precision_t_zenith_delays[16] = {0.0, 0.0, 0.0,
+                                         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                         0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
       printf("Setting up the zenith FEE beam...");
       status = RTS_MWAFEEInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings->FEE_beam_zenith, user_precision_t_zenith_delays);
       printf(" done.\n");
@@ -140,14 +150,17 @@ int main(int argc, char **argv) {
       printf(" done.\n");
 
     }
+    else if (woden_settings->beamtype == FEE_BEAM_INTERP){
 
-    //Setup the visibility container
-    visibility_set_t *visibility_set = setup_visibility_set(woden_settings->num_visis);
+      // printf("Setting up the FEE beams on CPU...");
+      //This sets up an `RTS_MWA_FEE_beam_t` for each frequency to be
+      //simulated in this coarse channel
+      status = multifreq_RTS_MWAFEEInit(beam_settings,  woden_settings,
+                               visibility_set->channel_frequencies);
 
-    //Fill in the time/freq/baseline settings in `visiblity_set` needed by
-    //calculate_visibilities
-    fill_timefreq_visibility_set(visibility_set, woden_settings,
-                                 base_band_freq, lsts);
+      // printf(" done.\n");
+
+    }
 
     //Launch the CUDA code
     calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
@@ -172,7 +185,20 @@ int main(int argc, char **argv) {
       RTS_freeHDFBeam(beam_settings->FEE_beam);
       RTS_freeHDFBeam(beam_settings->FEE_beam_zenith);
     }
+    //If multiple MWA_FEE beams, loop through and free
+    else if (woden_settings->beamtype == FEE_BEAM_INTERP) {
+      for (int freq_ind = 0; freq_ind < beam_settings->num_MWAFEE; freq_ind++) {
+
+      RTS_MWA_FEE_beam_t *FEE_beam = &beam_settings->FEE_beams[freq_ind];
+      RTS_MWA_FEE_beam_t *FEE_beam_zenith = &beam_settings->FEE_beam_zeniths[freq_ind];
+
+      RTS_freeHDFBeam(FEE_beam);
+      RTS_freeHDFBeam(FEE_beam_zenith);
+
+      }
+    }
 
   }//band loop
+  free(woden_settings);
   printf("WODEN is done\n");
 }//main

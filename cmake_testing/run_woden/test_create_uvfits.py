@@ -96,10 +96,20 @@ class Test(unittest.TestCase):
             annnames = np.array(['00001', '00002', '00003', '00004', '00005',
                                  '00006', '00007', '00008', '00009', '00010'])
 
-            ##This is a weirdo empty array type that seems to hang around in a
-            ##uvfits file
-            nothing_array = np.array([], dtype='|V8')
-            nothing_array.shape = (0,)
+            ##ant_table.data['ORBPARM'] is a weirdo empty array type that seems
+            ##to hang around in a uvfits file
+            ##At some point, the behaviour of astropy changes drastically so
+            ##this file gets read in as a totally different data type and shape
+            ##So based on what mood astropy is in, create an array to test against
+            ##SIIIIIIIIIIIIIIIIIGH
+
+            if ant_table.data['ORBPARM'].dtype == "float64":
+                nothing_array = np.array([], dtype='float64')
+                nothing_array.shape = (0,0)
+
+            else:
+                nothing_array = np.array([], dtype='|V8')
+                nothing_array.shape = (0,)
 
             ##Test that a bunch of named columns in the antenna table are correct
             self.assertTrue(np.array_equal(annnames, ant_table.data['ANNAME']))

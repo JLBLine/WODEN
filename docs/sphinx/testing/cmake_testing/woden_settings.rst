@@ -53,6 +53,10 @@ eventualities.
      - The GAUSSIAN primary beam is selected, using default values for the FWHM and reference frequency
    * - run_woden_MWAFEE.json
      - The MWA_FEE primary beam is selected, and associated delays and path to hdf5 file are read in correctly
+   * - run_woden_MWAFEE_interp.json
+     - The frequency interpolated MWA_FEE primary beam is selected, and associated delays and path to hdf5 file are read in correctly
+   * - run_woden_MWA_analy.json
+     - The analytic MWA_primary beam is selected, and associated delays are read in correctly
    * - run_woden_MWAFEE_baddelay.json
      - Contains a bad set of MWA FEE delays and should throw an error
    * - run_woden_MWAFEE_nopath.json

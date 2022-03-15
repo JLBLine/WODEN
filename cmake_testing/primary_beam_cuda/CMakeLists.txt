@@ -6,7 +6,8 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
 
   add_library(primary_beam_cudaCUDA_${PRECISION} SHARED
               "${CMAKE_SOURCE_DIR}/src/primary_beam_cuda.cu"
-              "${CMAKE_SOURCE_DIR}/src/fundamental_coords.cu")
+              "${CMAKE_SOURCE_DIR}/src/fundamental_coords.cu"
+              "${CMAKE_SOURCE_DIR}/src/FEE_primary_beam_cuda.cu")
 
   target_compile_options(primary_beam_cudaCUDA_${PRECISION} PRIVATE ${CUDA_FLAGS})
 
@@ -29,7 +30,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
 
 
 
-  ##Test analytic beam functions
+  ##Test analytic dipole beam functions
   add_executable(test_analytic_dipole_beam_${PRECISION}_app
       test_analytic_dipole_beam.c
   )
@@ -40,5 +41,33 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_compile_options(test_analytic_dipole_beam_${PRECISION}_app PRIVATE ${C_FLAGS})
   add_test(CUDA_test_analytic_dipole_beam_${PRECISION} test_analytic_dipole_beam_${PRECISION}_app)
+
+
+
+  ##Test analytic MWA beam functions
+  add_executable(test_MWA_analytic_${PRECISION}_app
+      test_MWA_analytic.c
+  )
+  target_link_libraries(test_MWA_analytic_${PRECISION}_app
+      Unity
+      primary_beam_cudaCUDA_${PRECISION}
+      ${CC_LINKLIBS}
+  )
+  target_compile_options(test_MWA_analytic_${PRECISION}_app PRIVATE ${C_FLAGS})
+  add_test(CUDA_test_MWA_analytic_${PRECISION} test_MWA_analytic_${PRECISION}_app)
+
+
+  ##Test analytic MWA beam functions
+  add_executable(comp_MWA_analytic_to_FEE_${PRECISION}_app
+      comp_MWA_analytic_to_FEE.c
+      ${CMAKE_SOURCE_DIR}/src/FEE_primary_beam.c
+  )
+  target_link_libraries(comp_MWA_analytic_to_FEE_${PRECISION}_app
+      Unity
+      primary_beam_cudaCUDA_${PRECISION}
+      ${CC_LINKLIBS}
+  )
+  target_compile_options(comp_MWA_analytic_to_FEE_${PRECISION}_app PRIVATE ${C_FLAGS})
+  add_test(CUDA_comp_MWA_analytic_to_FEE_${PRECISION} comp_MWA_analytic_to_FEE_${PRECISION}_app)
 
 endforeach()

@@ -47,8 +47,9 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
   user_precision_complex_t *primay_beam_J10 = malloc(num_freqs*num_times*num_components*sizeof(user_precision_complex_t));
   user_precision_complex_t *primay_beam_J11 = malloc(num_freqs*num_times*num_components*sizeof(user_precision_complex_t));
 
+  //All models apart from NO_BEAM should have gains set other than 1.0
   int count = 0;
-  if (beamtype == FEE_BEAM || beamtype == ANALY_DIPOLE || beamtype == GAUSS_BEAM) {
+  if (beamtype != NO_BEAM) {
     for (int visi = 0; visi < num_components*num_times*num_freqs; visi++) {
       primay_beam_J00[visi] = count + I*0.0;
       primay_beam_J11[visi] = count + I*0.0;
@@ -56,9 +57,9 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
     }
   }
 
-  //Only FEE_BEAM has cross-pols
+  //Only MWA beams have cross-pols
   count = 0;
-  if (beamtype == FEE_BEAM) {
+  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY) {
     for (int visi = 0; visi < num_components*num_times*num_freqs; visi++) {
       primay_beam_J01[visi] = count + I*0.0;
       primay_beam_J10[visi] = count + I*0.0;
@@ -93,6 +94,7 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
                              14.00, 3.00, 3.00, 3.00, 7.00, 7.00, 7.00,
                              11.00, 11.00, 11.00, 15.00, 15.00, 15.00 };
 
+  //These models are real only, and have no leakage terms
   if (beamtype == ANALY_DIPOLE || beamtype == GAUSS_BEAM) {
     for (int output = 0; output < num_visis*num_components; output++) {
 
@@ -116,7 +118,7 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
 
     }
   }
-  else if (beamtype == FEE_BEAM) {
+  else if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY) {
     for (int output = 0; output < num_visis*num_components; output++) {
 
       TEST_ASSERT_EQUAL_FLOAT(expected_order[output], creal(recover_g1x[output]));
@@ -139,6 +141,7 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
 
     }
   }
+  //Should only be here if NO_BEAM, which just has gains of 1.0
   else {
     for (int output = 0; output < num_visis*num_components; output++) {
       TEST_ASSERT_EQUAL_FLOAT(1.0, creal(recover_g1x[output]));
@@ -206,6 +209,21 @@ void test_kern_get_beam_gains_NoBeam(void) {
   test_kern_get_beam_gains_ChooseBeams(NO_BEAM);
 }
 
+/*
+This test checks the correct behaviour when simuating with beamtype=FEE_BEAM_INTERP
+*/
+void test_kern_get_beam_gains_FEEBeamInterp(void) {
+  test_kern_get_beam_gains_ChooseBeams(FEE_BEAM_INTERP);
+}
+
+/*
+This test checks the correct behaviour when simuating with beamtype=MWA_ANALY
+*/
+void test_kern_get_beam_gains_MWAAnaly(void) {
+  test_kern_get_beam_gains_ChooseBeams(MWA_ANALY);
+}
+
+
 //Run the test with unity
 int main(void)
 {
@@ -214,6 +232,8 @@ int main(void)
     RUN_TEST(test_kern_get_beam_gains_AnalyDipoleBeam);
     RUN_TEST(test_kern_get_beam_gains_GaussBeam);
     RUN_TEST(test_kern_get_beam_gains_NoBeam);
+    RUN_TEST(test_kern_get_beam_gains_FEEBeamInterp);
+    RUN_TEST(test_kern_get_beam_gains_MWAAnaly);
 
 
     return UNITY_END();

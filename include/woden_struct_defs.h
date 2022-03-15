@@ -12,6 +12,10 @@ typedef enum {NO_BEAM, /*!< Do not use a primary beam in the simulation */
               GAUSS_BEAM, /*!< Use a analytic Gaussian primary beam */
               FEE_BEAM, /*!< Use the RTS MWA FEE primary beam code */
               ANALY_DIPOLE, /*!< Use an analytic MWA dipole primary beam */
+              FEE_BEAM_INTERP, /*!< Use the RTS MWA FEE primary beam at all
+              frequencies. Should be using an hdf5 file that has been frequency
+              interpolated*/
+              MWA_ANALY, /*!< Use an analytic MWA tile primary beam */
               }e_beamtype;
 
 /*!
@@ -100,6 +104,9 @@ typedef struct _RTS_MWA_FEE_beam {
   double **N; /*!< Second order of spherical harmonics */
   int nmax; /*!< Maximum order of spherical harmonic */
   int nMN; /*!< Total number of 1st and 2nd order harmnoic combinations */
+  int nMN0; /*!< Total number of 1st and 2nd order harmnoic combinations for the 0 index dipoles */
+  int nMN1; /*!< Total number of 1st and 2nd order harmnoic combinations for the 1 index dipoles */
+
   user_precision_complex_t norm_fac[MAX_POLS]; /*!< Zenith normalisation values */
 
   // BP 2019: All the Spherical Harmonic Beam data are double
@@ -146,6 +153,15 @@ typedef struct _beam_settings_t {
     RTS_MWA_FEE_beam_t *FEE_beam; /*!< Initialised MWA FEE beam model for desired pointing */
     RTS_MWA_FEE_beam_t *FEE_beam_zenith; /*!< Initialised MWA FEE beam model
     for zenith pointing, used for normalisation of the desired pointing */
+
+    RTS_MWA_FEE_beam_t *FEE_beams; /*!< Initialised MWA FEE beam models for desired pointing */
+    RTS_MWA_FEE_beam_t *FEE_beam_zeniths; /*!< Initialised MWA FEE beam models
+    for zenith pointing, used for normalisation of the desired pointing */
+
+    user_precision_t *MWAFEE_freqs; /*!< The frequencies of the initialised MWAFEE beams
+    in FEE_beams */
+
+    int num_MWAFEE; /*!< Number of MWAFEE beam instances to cover all desired frequencies */
 
 } beam_settings_t;
 

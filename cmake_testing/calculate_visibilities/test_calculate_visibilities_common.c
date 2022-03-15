@@ -450,40 +450,35 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
       status = RTS_MWAFEEInit(mwa_fee_hdf5, base_middle_freq,
                               beam_settings->FEE_beam, zenith_delays);
       printf("STATUS %d\n",status );
-      //
-      printf("Calling CUDA\n");
-      calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
-                             woden_settings, visibility_set, sbf);
-      printf("CUDA has finished\n");
-
-      // for (int visi = 0; visi < woden_settings->num_visis; visi++) {
-      //   printf("%.4f %.4f %.4f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
-      //           visibility_set->us_metres[visi],
-      //           visibility_set->vs_metres[visi],
-      //           visibility_set->ws_metres[visi],
-      //           visibility_set->sum_visi_XX_real[visi],
-      //           visibility_set->sum_visi_XX_imag[visi],
-      //           visibility_set->sum_visi_XY_real[visi],
-      //           visibility_set->sum_visi_XY_imag[visi],
-      //           visibility_set->sum_visi_YX_real[visi],
-      //           visibility_set->sum_visi_YX_imag[visi],
-      //           visibility_set->sum_visi_YY_real[visi],
-      //           visibility_set->sum_visi_YY_imag[visi]);
-      // }
-
-      RTS_freeHDFBeam(beam_settings->FEE_beam);
-      RTS_freeHDFBeam(beam_settings->FEE_beam_zenith);
-
-      // free(beam_settings->FEE_beam);
-      // free(beam_settings->FEE_beam_zenith);
 
     } else {
       printf("MWA_FEE_HDF5 not found - not running test_RTS_FEE_beam test");
     }
-  } else {//CUDA code that we're testing
-    calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
-                         woden_settings, visibility_set, sbf);
   }
+  else if (beam_settings->beamtype == FEE_BEAM_INTERP) {
+    char* mwa_fee_hdf5 = getenv("MWA_FEE_HDF5_INTERP");
+
+    if (mwa_fee_hdf5) {
+      printf("MWA_FEE_HDF5_INTERP: %s\n", mwa_fee_hdf5 );
+
+      woden_settings->hdf5_beam_path = mwa_fee_hdf5;
+
+      beam_settings->num_MWAFEE = NUM_FREQS;
+
+      int status;
+      status = multifreq_RTS_MWAFEEInit(beam_settings,  woden_settings,
+                               visibility_set->channel_frequencies);
+      printf("STATUS %d\n", status);
+
+    } else {
+      printf("MWA_FEE_HDF5 not found - not running test_RTS_FEE_beam test");
+    }
+  }
+
+  printf("Calling CUDA\n");
+  calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
+                         woden_settings, visibility_set, sbf);
+  printf("CUDA has finished\n");
 
   //Be free my pretties!
   if (cropped_sky_models->num_shapelets > 0) {

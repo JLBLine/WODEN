@@ -46,22 +46,29 @@ void test_fill_primary_beam_settings(woden_settings_t *woden_settings) {
   beam_settings_t *beam_settings = fill_primary_beam_settings(woden_settings,
                                                               src, lsts);
 
-  //If running a Gaussian Beam simulation
-  if (woden_settings->beamtype == GAUSS_BEAM) {
-    TEST_ASSERT_EQUAL_INT(GAUSS_BEAM, beam_settings->beamtype );
+  //Both the Gaussian Beam or analytic MWA Beam need the HA/Dec coords for
+  //all directions, so test both of those here
+  if (woden_settings->beamtype == GAUSS_BEAM || woden_settings->beamtype == MWA_ANALY) {
 
-    //Check major settings are copied across / calculated
-    TEST_ASSERT_EQUAL_FLOAT(woden_settings->gauss_beam_FWHM * DD2R,
-                            beam_settings->beam_FWHM_rad );
-    TEST_ASSERT_EQUAL_DOUBLE(woden_settings->gauss_beam_ref_freq,
-                             beam_settings->beam_ref_freq );
+    //Only GAUSS_BEAM should have these things set
+    if (woden_settings->beamtype == GAUSS_BEAM) {
+      TEST_ASSERT_EQUAL_INT(GAUSS_BEAM, beam_settings->beamtype );
 
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, sin(woden_settings->gauss_dec_point),
-                            beam_settings->gauss_sdec );
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, cos(woden_settings->gauss_dec_point),
-                            beam_settings->gauss_cdec );
-    TEST_ASSERT_EQUAL_DOUBLE(woden_settings->lst_base - woden_settings->gauss_ra_point,
-                            beam_settings->gauss_ha );
+      //Check major settings are copied across / calculated
+      TEST_ASSERT_EQUAL_FLOAT(woden_settings->gauss_beam_FWHM * DD2R,
+                              beam_settings->beam_FWHM_rad );
+      TEST_ASSERT_EQUAL_DOUBLE(woden_settings->gauss_beam_ref_freq,
+                               beam_settings->beam_ref_freq );
+
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, sin(woden_settings->gauss_dec_point),
+                              beam_settings->gauss_sdec );
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, cos(woden_settings->gauss_dec_point),
+                              beam_settings->gauss_cdec );
+      TEST_ASSERT_EQUAL_DOUBLE(woden_settings->lst_base - woden_settings->gauss_ra_point,
+                              beam_settings->gauss_ha );
+    } else {
+      TEST_ASSERT_EQUAL_INT(MWA_ANALY, beam_settings->beamtype );
+    }
 
     //Test the hour angle / decs are calculated correctly
     //Loop over all time and point components and calculate ha
@@ -85,9 +92,9 @@ void test_fill_primary_beam_settings(woden_settings_t *woden_settings) {
                                 src->shape_gaussbeam_has[step]);
       }
     }
-  } else if (woden_settings->beamtype == FEE_BEAM) {
-    // printf("HERE %d %d\n",woden_settings->beamtype, beam_settings->beamtype );
-    TEST_ASSERT_EQUAL_INT(FEE_BEAM, beam_settings->beamtype);
+  }
+  //Both the FEE beams need the parallactic angles, so check both here
+  else if (woden_settings->beamtype == FEE_BEAM || woden_settings->beamtype == FEE_BEAM_INTERP ) {
 
     for (int ang = 0; ang < 9; ang++) {
       TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_point_sin_para[ang],
@@ -170,6 +177,29 @@ void test_fill_primary_beam_settingsNoBeam(void) {
 
 }
 
+/*
+Test `fill_primary_beam_settings` when `beamtype = FEE_BEAM_INTERP`
+*/
+void test_fill_primary_beam_settingsMWAFEEInterpBeam(void) {
+
+  woden_settings_t *woden_settings = make_woden_settings();
+  woden_settings->beamtype = FEE_BEAM_INTERP;
+
+  test_fill_primary_beam_settings(woden_settings);
+
+}
+
+/*
+Test `fill_primary_beam_settings` when `beamtype = MWA_ANALY`
+*/
+void test_fill_primary_beam_settingsMWAAnalyBeam(void) {
+
+  woden_settings_t *woden_settings = make_woden_settings();
+  woden_settings->beamtype = MWA_ANALY;
+
+  test_fill_primary_beam_settings(woden_settings);
+
+}
 
 
 //Run test using unity
@@ -181,6 +211,8 @@ int main(void)
     RUN_TEST(test_fill_primary_beam_settingsMWAFEEBeam);
     RUN_TEST(test_fill_primary_beam_settingsEDA2Beam);
     RUN_TEST(test_fill_primary_beam_settingsNoBeam);
+    RUN_TEST(test_fill_primary_beam_settingsMWAFEEInterpBeam);
+    RUN_TEST(test_fill_primary_beam_settingsMWAAnalyBeam);
 
     return UNITY_END();
 }

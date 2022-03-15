@@ -2,6 +2,7 @@ include_directories("${CMAKE_SOURCE_DIR}/cmake_testing/FEE_primary_beam_cuda")
 
 ## Create tests for both float and double precision
 foreach(PRECISION IN LISTS FLOAT DOUBLE)
+# foreach(PRECISION IN LISTS DOUBLE)
 
   ##Set the flags depending on the precision
   DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
@@ -16,7 +17,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   set_property(TARGET FEE_primary_beam_cudaCUDA_${PRECISION} PROPERTY CUDA_ARCHITECTURES OFF)
 
 
-  # ##Test the point source visibility kernel
+  ##Test the single frequency MWA FEE beam code
   add_executable(test_RTS_FEE_beam_${PRECISION}_app
       test_RTS_FEE_beam.c
       ${CMAKE_SOURCE_DIR}/src/FEE_primary_beam.c
@@ -28,5 +29,57 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_compile_options(test_RTS_FEE_beam_${PRECISION}_app PRIVATE ${C_FLAGS})
   add_test(CUDA_test_RTS_FEE_beam_${PRECISION} test_RTS_FEE_beam_${PRECISION}_app)
+
+  ## Test the multi-freq normalisation code
+  add_executable(test_multifreq_get_MWAFEE_normalisation_${PRECISION}_app
+      test_multifreq_get_MWAFEE_normalisation.c
+      ${CMAKE_SOURCE_DIR}/src/FEE_primary_beam.c
+  )
+  target_link_libraries(test_multifreq_get_MWAFEE_normalisation_${PRECISION}_app
+      Unity
+      FEE_primary_beam_cudaCUDA_${PRECISION}
+      ${CC_LINKLIBS}
+  )
+  target_compile_options(test_multifreq_get_MWAFEE_normalisation_${PRECISION}_app PRIVATE ${C_FLAGS})
+  add_test(CUDA_test_multifreq_get_MWAFEE_normalisation_${PRECISION} test_multifreq_get_MWAFEE_normalisation_${PRECISION}_app)
+
+  ## Test the multi-freq gain mapping code
+  add_executable(test_map_FEE_beam_gains_multi_freq_${PRECISION}_app
+      test_map_FEE_beam_gains_multi_freq.c
+      ${CMAKE_SOURCE_DIR}/src/FEE_primary_beam.c
+  )
+  target_link_libraries(test_map_FEE_beam_gains_multi_freq_${PRECISION}_app
+      Unity
+      FEE_primary_beam_cudaCUDA_${PRECISION}
+      ${CC_LINKLIBS}
+  )
+  target_compile_options(test_map_FEE_beam_gains_multi_freq_${PRECISION}_app PRIVATE ${C_FLAGS})
+  add_test(CUDA_test_map_FEE_beam_gains_multi_freq_${PRECISION} test_map_FEE_beam_gains_multi_freq_${PRECISION}_app)
+
+  #Test the multi-freq beam calculation code (without mapping to final arrays)
+  add_executable(test_multifreq_calc_CUDA_FEE_beam_${PRECISION}_app
+      test_multifreq_calc_CUDA_FEE_beam.c
+      ${CMAKE_SOURCE_DIR}/src/FEE_primary_beam.c
+  )
+  target_link_libraries(test_multifreq_calc_CUDA_FEE_beam_${PRECISION}_app
+      Unity
+      FEE_primary_beam_cudaCUDA_${PRECISION}
+      ${CC_LINKLIBS}
+  )
+  target_compile_options(test_multifreq_calc_CUDA_FEE_beam_${PRECISION}_app PRIVATE ${C_FLAGS})
+  add_test(CUDA_test_multifreq_calc_CUDA_FEE_beam_${PRECISION} test_multifreq_calc_CUDA_FEE_beam_${PRECISION}_app)
+
+  ##Test the start-to-finish multifrequency MWA FEE beam code
+  add_executable(test_run_and_map_multifreq_calc_CUDA_FEE_beam_${PRECISION}_app
+      test_run_and_map_multifreq_calc_CUDA_FEE_beam.c
+      ${CMAKE_SOURCE_DIR}/src/FEE_primary_beam.c
+  )
+  target_link_libraries(test_run_and_map_multifreq_calc_CUDA_FEE_beam_${PRECISION}_app
+      Unity
+      FEE_primary_beam_cudaCUDA_${PRECISION}
+      ${CC_LINKLIBS}
+  )
+  target_compile_options(test_run_and_map_multifreq_calc_CUDA_FEE_beam_${PRECISION}_app PRIVATE ${C_FLAGS})
+  add_test(CUDA_test_run_and_map_multifreq_calc_CUDA_FEE_beam_${PRECISION} test_run_and_map_multifreq_calc_CUDA_FEE_beam_${PRECISION}_app)
 
 endforeach()

@@ -7,18 +7,14 @@
 
 #pragma once
 
-// #ifndef CUDACOMPLEX_H
-// #define CUDACOMPLEX_H
-
 #include "woden_precision_defs.h"
-
 
 #ifdef DOUBLE_PRECISION
 /*! If -DDOUBLE_PRECISION flag is added at compilation,
 then cuUserComplex is set to cuDoubleComplex */
 typedef cuDoubleComplex cuUserComplex;
 #else
-/*! If -DDOUBLE_PRECISION flag is NOTE added at compilation,
+/*! If -DDOUBLE_PRECISION flag is NOT added at compilation,
 then cuUserComplex is set to cuFloatComplex */
 typedef cuFloatComplex cuUserComplex;
 #endif
