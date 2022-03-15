@@ -157,6 +157,7 @@ void test_calculate_visibilities_MWAFEEBeam(int n_points, int n_gauss, int n_sha
   free(beam_settings);
   free_visi_set_inputs(visibility_set);
   free_visi_set_outputs(visibility_set);
+  free(woden_settings);
 
 }
 

@@ -26,8 +26,8 @@ are launched by calculate_visibilities::calculate_visibilities`
 //Just two LSTs to check things change with time
 double lsts[] = {0.0, M_PI / 4};
 
-double azs[] = {0.0, 4.528359553989764};
-double zas[] = {0.0, 0.6978088917603547};
+user_precision_t azs[] = {0.0, 4.528359553989764};
+user_precision_t zas[] = {0.0, 0.6978088917603547};
 
 double para_angs[] = {0.0, 1.7548257531898224};
 
@@ -102,8 +102,8 @@ source_catalogue_t * make_cropped_sky_models(double ra0, double dec0,
 
           cropped_sky_models->catsources[cats_ind].point_azs[step] = azs[time];
           cropped_sky_models->catsources[cats_ind].point_zas[step] = zas[time];
-          cropped_sky_models->catsources[cats_ind].sin_point_para_angs[step] = sin(para_angs[time]);
-          cropped_sky_models->catsources[cats_ind].cos_point_para_angs[step] = cos(para_angs[time]);
+          cropped_sky_models->catsources[cats_ind].sin_point_para_angs[step] = (user_precision_t)sin(para_angs[time]);
+          cropped_sky_models->catsources[cats_ind].cos_point_para_angs[step] = (user_precision_t)cos(para_angs[time]);
         }
 
 
@@ -156,8 +156,8 @@ source_catalogue_t * make_cropped_sky_models(double ra0, double dec0,
 
           cropped_sky_models->catsources[cats_ind].gauss_azs[step] = azs[time];
           cropped_sky_models->catsources[cats_ind].gauss_zas[step] = zas[time];
-          cropped_sky_models->catsources[cats_ind].sin_gauss_para_angs[step] = sin(para_angs[time]);
-          cropped_sky_models->catsources[cats_ind].cos_gauss_para_angs[step] = cos(para_angs[time]);
+          cropped_sky_models->catsources[cats_ind].sin_gauss_para_angs[step] = (user_precision_t)sin(para_angs[time]);
+          cropped_sky_models->catsources[cats_ind].cos_gauss_para_angs[step] = (user_precision_t)cos(para_angs[time]);
         }
       }
     }
@@ -219,8 +219,8 @@ source_catalogue_t * make_cropped_sky_models(double ra0, double dec0,
 
           cropped_sky_models->catsources[cats_ind].shape_azs[step] = azs[time];
           cropped_sky_models->catsources[cats_ind].shape_zas[step] = zas[time];
-          cropped_sky_models->catsources[cats_ind].sin_shape_para_angs[step] = sin(para_angs[time]);
-          cropped_sky_models->catsources[cats_ind].cos_shape_para_angs[step] = cos(para_angs[time]);
+          cropped_sky_models->catsources[cats_ind].sin_shape_para_angs[step] = (user_precision_t)sin(para_angs[time]);
+          cropped_sky_models->catsources[cats_ind].cos_shape_para_angs[step] = (user_precision_t)cos(para_angs[time]);
         }
       }
     }
