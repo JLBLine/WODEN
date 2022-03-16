@@ -63,7 +63,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_compile_options(test_horizon_test_${PRECISION}_app PRIVATE ${C_FLAGS})
   add_test(C_test_horizon_test_${PRECISION} test_horizon_test_${PRECISION}_app)
-
+  
   ##Test the horizon cropping function creates sky models correctly
   add_executable(test_crop_sky_model_${PRECISION}_app
       test_crop_sky_model.c
