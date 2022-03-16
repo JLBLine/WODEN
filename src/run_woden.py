@@ -7,12 +7,10 @@ from astropy.io import fits
 from astropy.time import Time, TimeDelta
 from astropy.coordinates import EarthLocation
 from astropy import units as u
-
 from erfa import gd2gc
-
 import numpy as np
 from struct import unpack
-from subprocess import call, check_output
+import subprocess
 import os
 import warnings
 import sys
@@ -26,6 +24,9 @@ MWA_HEIGHT = 377.0
 VELC = 299792458.0
 SOLAR2SIDEREAL = 1.00274
 
+##version of release, a fall back if this isn't in a git repo
+VERSION = "1.2.0"
+
 def command(cmd):
     """
     Runs the command string `cmd` using `subprocess.call`
@@ -35,7 +36,7 @@ def command(cmd):
     cmd : string
          The command to run on the command line
     """
-    call(cmd,shell=True)
+    subprocess.call(cmd,shell=True)
     # print(cmd)
 
 def calc_jdcal(date):
@@ -1327,21 +1328,28 @@ def check_args(args):
 
     return args
 
-if __name__ == "__main__":
+def get_code_version(woden_exe):
+    """
+    Checks the environment variables and absolute path of `run_woden.py` to
+    find out where the script lives on the current machine. If the code
+    resides within a git repo, query to the git repo to find out the current
+    commit tag. If not a git repo (i.e. a release version) uses the stored
+    VERSION string to at least supply a version.
 
-    ##If we're at readthe docs, we don't need to know where woden exe lives
-    read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
+    Parameters
+    ----------
+    woden_exe : string
+        The name of the woden executable to be used. Either 'woden_float' or
+        'woden_double'
 
-    ##Grab the parser and parse some args
-    parser = get_parser()
-    args = parser.parse_args()
-
-    args = check_args(args)
-
-    if args.precision == 'float':
-        woden_exe = "woden_float"
-    elif args.precision == 'double':
-        woden_exe = "woden_double"
+    Returns
+    -------
+    gitlabel : string
+        Either the git commit, release version, or a note saying unknown (the
+        version could not be found)
+    WODEN_DIR : string
+        The directory in which `woden_exe` lives in
+    """
 
     WODEN_DIR = 'unset'
 
@@ -1368,11 +1376,41 @@ if __name__ == "__main__":
     fileloc = os.path.realpath(__file__)
     cwd = os.getcwd()
     os.chdir(('/').join(fileloc.split('/')[:-1]))
-    gitlabel = check_output(["git", "describe", "--always"],universal_newlines=True).strip()
+
+    try:
+        gitlabel = subprocess.check_output(["git", "describe", "--always"],
+                                       stderr=subprocess.STDOUT,
+                                       universal_newlines=True).strip()
+
+    except subprocess.CalledProcessError as err:
+        gitlabel = f"Release {VERSION}"
+
+
     ##Get back to where we were before
     os.chdir(cwd)
 
-    print("You are using WODEN commit %s" %gitlabel)
+    print(f"You are using WODEN commit: {gitlabel}")
+
+    return gitlabel, WODEN_DIR
+
+if __name__ == "__main__":
+
+    ##If we're at readthe docs, we don't need to know where woden exe lives
+    read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
+
+    ##Grab the parser and parse some args
+    parser = get_parser()
+    args = parser.parse_args()
+
+    args = check_args(args)
+
+    if args.precision == 'float':
+        woden_exe = "woden_float"
+    elif args.precision == 'double':
+        woden_exe = "woden_double"
+
+    ##Find out what git/release version we are using, and where the code lives
+    gitlabel, WODEN_DIR = get_code_version(woden_exe)
 
     lst_deg, gst0_deg, degpdy, ut1utc = get_uvfits_date_and_position_constants(latitude=args.latitude, longitude=args.longitude,
                         height=args.array_height, date=args.date)
@@ -1393,10 +1431,6 @@ if __name__ == "__main__":
     if args.dry_run:
         pass
     else:
-        # if args.precision == 'float':
-        #
-        # else:
-        #     command('%s/woden_double %s' %(WODEN_DIR,json_name))
 
         command(f'{WODEN_DIR}/{woden_exe} {json_name}')
 
