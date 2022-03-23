@@ -16,6 +16,7 @@ are launched by calculate_visibilities::calculate_visibilities`
 #include <complex.h>
 
 #include "test_calculate_visibilities_common.h"
+#include <mwa_hyperbeam.h>
 
 // //External CUDA code we're linking in
 // extern void calculate_visibilities(array_layout_t *array_layout,
@@ -435,43 +436,30 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
     if (mwa_fee_hdf5) {
       printf("MWA_FEE_HDF5: %s\n", mwa_fee_hdf5 );
 
-      beam_settings->FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
-      // // //We need the zenith beam to get the normalisation
-      beam_settings->FEE_beam_zenith = malloc(sizeof(RTS_MWA_FEE_beam_t));
-      // //
-      double base_middle_freq = BASE_BAND_FREQ + (woden_settings->coarse_band_width/2.0);
-      //
-      // // printf("Middle freq %.1f\n",base_middle_freq / 1e6 );
-      //
-      int status;
-      status = RTS_MWAFEEInit(mwa_fee_hdf5, base_middle_freq,
-                             beam_settings->FEE_beam_zenith, zenith_delays);
-
-      status = RTS_MWAFEEInit(mwa_fee_hdf5, base_middle_freq,
-                              beam_settings->FEE_beam, zenith_delays);
-      printf("STATUS %d\n",status );
+      int status =  new_fee_beam(mwa_fee_hdf5, &beam_settings->fee_beam,
+                                 beam_settings->hyper_error_str);
+      if (status != 0) {
+        printf("hyperbeam error %d %s\n", status, beam_settings->hyper_error_str );
+      }
 
     } else {
-      printf("MWA_FEE_HDF5 not found - not running test_RTS_FEE_beam test");
+      printf("MWA_FEE_HDF5 not found - not running test_hyperbeam test");
     }
   }
   else if (beam_settings->beamtype == FEE_BEAM_INTERP) {
     char* mwa_fee_hdf5 = getenv("MWA_FEE_HDF5_INTERP");
 
     if (mwa_fee_hdf5) {
-      printf("MWA_FEE_HDF5_INTERP: %s\n", mwa_fee_hdf5 );
+      printf("MWA_FEE_HDF5: %s\n", mwa_fee_hdf5 );
 
-      woden_settings->hdf5_beam_path = mwa_fee_hdf5;
-
-      beam_settings->num_MWAFEE = NUM_FREQS;
-
-      int status;
-      status = multifreq_RTS_MWAFEEInit(beam_settings,  woden_settings,
-                               visibility_set->channel_frequencies);
-      printf("STATUS %d\n", status);
+      int status =  new_fee_beam(mwa_fee_hdf5, &beam_settings->fee_beam,
+                                 beam_settings->hyper_error_str);
+      if (status != 0) {
+        printf("hyperbeam error %d %s\n", status, beam_settings->hyper_error_str );
+      }
 
     } else {
-      printf("MWA_FEE_HDF5 not found - not running test_RTS_FEE_beam test");
+      printf("MWA_FEE_HDF5 not found - not running test_hyperbeam test");
     }
   }
 

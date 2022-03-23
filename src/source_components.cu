@@ -278,60 +278,40 @@ void source_component_common(int num_components,
 
   }// end if beam == GAUSS
 
-  else if (beam_settings->beamtype == FEE_BEAM) {
+  else if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP) {
 
-    //Rotate FEE beam by parallactic angle
-    int rotation = 1;
-    //Normalise FEE beam to zenith
-    int scaling = 1;
+    int num_azza = woden_settings->num_time_steps*num_components;
 
-    printf("\tDoing MWA FEE Beam\n");
+    double *double_azs = (double*)malloc(num_azza*sizeof(double));
+    double *double_zas = (double*)malloc(num_azza*sizeof(double));
 
-    calc_CUDA_FEE_beam(azs, zas, sin_para_angs, cos_para_angs,
-           num_components, woden_settings->num_time_steps, beam_settings->FEE_beam,
-           rotation, scaling);
-
-    threads.x = 16;
-    threads.y = 16;
-    grid.x = (int)ceil( ((float)num_components) / ((float)threads.x) );
-    grid.y = (int)ceil( (float)woden_settings->num_time_steps / (float)threads.y );
-
-
-    cudaErrorCheckKernel("kern_map_FEE_beam_gains",
-              kern_map_FEE_beam_gains, grid, threads,
-              (cuUserComplex *)beam_settings->FEE_beam->d_FEE_beam_gain_matrices,
-              d_primay_beam_J00, d_primay_beam_J01,
-              d_primay_beam_J10, d_primay_beam_J11,
-              woden_settings->num_freqs, num_components,
-              woden_settings->num_visis, woden_settings->num_baselines,
-              woden_settings->num_time_steps);
-
-    //Free up some GPU memory
-    cudaErrorCheckCall( cudaFree( beam_settings->FEE_beam->d_FEE_beam_gain_matrices) );
-
-  }
-
-  else if (beam_settings->beamtype == FEE_BEAM_INTERP) {
-
-    //Rotate FEE beam by parallactic angle
-    int rotation = 1;
-    //Normalise FEE beam to zenith
-    int scaling = 1;
-
-    printf("\tDoing freq interpolated MWA FEE Beam\n");
-
-    run_and_map_multifreq_calc_CUDA_FEE_beam(beam_settings,
-            azs, zas, sin_para_angs, cos_para_angs,
-            num_components, woden_settings->num_freqs, woden_settings->num_time_steps,
-            rotation, scaling,
-            d_primay_beam_J00, d_primay_beam_J01,
-            d_primay_beam_J10, d_primay_beam_J11);
-
-
-    for (int freq_ind = 0; freq_ind < beam_settings->num_MWAFEE; freq_ind++) {
-      RTS_MWA_FEE_beam_t *FEE_beam = &beam_settings->FEE_beams[freq_ind];
-      cudaErrorCheckCall( cudaFree(FEE_beam->d_FEE_beam_gain_matrices) );
+    for (int i = 0; i < num_azza; i++) {
+      double_azs[i] = (double)azs[i];
+      double_zas[i] = (double)zas[i];
     }
+
+    if (beam_settings->beamtype == FEE_BEAM_INTERP) {
+      printf("\tDoing the hyperbeam (interpolated)\n");
+    } else {
+      printf("\tDoing the hyperbeam\n");
+    }
+
+
+    uint8_t parallactic = 1;
+    // int num_freqs = 3;
+    run_hyperbeam_cuda(num_components,
+           woden_settings->num_time_steps, woden_settings->num_freqs,
+           parallactic,
+           beam_settings->cuda_fee_beam,
+           double_azs, double_zas,
+           d_primay_beam_J00,
+           d_primay_beam_J01,
+           d_primay_beam_J10,
+           d_primay_beam_J11);
+
+    free(double_azs);
+    free(double_zas);
+
   }
 
   else if (beam_settings->beamtype == ANALY_DIPOLE) {

@@ -2,6 +2,7 @@
 .. _polarised_source_and_FEE_beam.ipynb which lives here: https://github.com/JLBLine/polarisation_tests_for_FEE
 .. _Tingay et al. 2013: https://doi.org/10.1017/pasa.2012.007
 .. _Wayth et al. 2017: https://doi.org/10.1017/pasa.2017.27
+.. _mwa_hyperbeam: https://github.com/MWATelescope/mwa_hyperbeam
 
 Primary Beams
 ================
@@ -22,9 +23,9 @@ MWA Fully Embedded Element
 
 The Murchison Widefield Array (MWA, `Tingay et al. 2013`_) has 16 bow-tie dipoles arranged in a 4 by 4 grid as receiving elements, yielding a grating-lobe style primary beam.
 
-``WODEN`` incudes a GPU-implementation of the MWA Fully Embedded Element (FEE) Beam pattern (`Sokolowski et al. 2017`_), which to date is the most accurate model of the MWA primary beam. This model is defined in a spherical harmonic coordinate system, which is polarisation-locked to instrumental azimuth / elevation coordinates. ``WODEN`` however uses Stokes parameters to define it's visibilities, and so a rotation of the beam about parallactic angle (as calculated using ``erfa``) is applied to align the FEE beam to move it into the Stokes frame.
+``WODEN`` uses the `mwa_hyperbeam`_ implementation of the MWA Fully Embedded Element (FEE) Beam pattern (`Sokolowski et al. 2017`_), which to date is the most accurate model of the MWA primary beam. This model is defined in a spherical harmonic coordinate system, which is polarisation-locked to instrumental azimuth / elevation coordinates. ``WODEN`` however uses Stokes parameters to define it's visibilities, so employs the ``hyperbeam`` option to rotate the beam about parallactic angle (as calculated using ``erfa``) to align it into the Stokes frame.
 
-Due to convention issues with whether 'X' means East-West or North-South, and whether azimuth starts towards North and increase towards East, we also find is necessary to reorder outputs and apply a sign flip to two of the outputs of the MWA FEE code. For an *exhaustive* investigation into why this is necessary to obtain the expected Stokes parameters, see `polarised_source_and_FEE_beam.ipynb which lives here`_
+Due to convention issues with whether 'X' means East-West or North-South, and whether azimuth starts towards North and increase towards East, the rotation inside ``hyperbeam`` also applies a reordering of polarisations. For an *exhaustive* investigation into why this is necessary to obtain the expected Stokes parameters, see `polarised_source_and_FEE_beam.ipynb which lives here`_
 
 I can define the Jones matrix of the primary beam as:
 
@@ -36,14 +37,14 @@ I can define the Jones matrix of the primary beam as:
     D_{y} & g_{y} \\
     \end{bmatrix}.
 
-Here, the subscript :math:`x` means a polarisation angle of :math:`0^\circ` and :math:`y` an angle of :math:`90^\circ`, :math:`g` means a gain term, and :math:`D` means a leakage term (so :math:`x` means North-South and :math:`y` is East-West). Under this definition, a typical zenith-pointing looks like this:
+Here, the subscript :math:`x` means a polarisation angle of :math:`0^\circ` and :math:`y` an angle of :math:`90^\circ`, :math:`g` means a gain term, and :math:`D` means a leakage term (so :math:`x` means North-South and :math:`y` is East-West). Under this definition, a typical zenith-pointing looks like this (after rotation):
 
-.. image:: MWAFEE_jones.png
+.. image:: hyperbeam_jones.png
   :width: 400pt
 
-These plots are all sky, with northward at the top. If we assume the sky is totally Stokes I, this will yield linear polarisations (where 'XX' is North-South and 'YY' is East-West) like this:
+These plots are down to a zenith angle of about 20 deg, with northward at the top. If we assume the sky is totally Stokes I, this will yield linear polarisations (where 'XX' is North-South and 'YY' is East-West) like this:
 
-.. image:: MWAFEE_instrumental_pols.png
+.. image:: hyperbeam_linear_pols.png
   :width: 400pt
 
 The MWA beam is electronically steered, which can be defined via integer delays and supplied to the MWA FEE beam. ``run_woden.py`` can read these directly from an MWA metafits file, or can be directly supplied using the ``--MWA_FEE_delays`` argument.
@@ -51,7 +52,6 @@ The MWA beam is electronically steered, which can be defined via integer delays 
 
 Coarse resolution model ``--primary_beam=MWA_FEE``
 ***********************************************************
-
 
 The frequency resolution of the default MWA FEE model, which is stored in the file ``mwa_full_embedded_element_pattern.h5``, is 1.28 MHz. If you need a smooth frequency
 response, this might not be the best option for you, as you'll end up with something like
@@ -66,10 +66,13 @@ Interpolated resolution model ``--primary_beam=MWA_FEE_interp``
 ******************************************************************
 Recently, Daniel Ung interpolated the spherical harmonic coefficients of the MWA FEE model, to
 produce a new ``hdf5`` file, ``MWA_embedded_element_pattern_rev2_interp_167_197MHz.h5``.
-This new file has an 80 kHz resolution, so when we reproduce the plot above, we see:
+This new file has an 80 kHz resolution, so if we look at a far smaller frequency range,
+and choose an interesting direction on the sky:
 
-.. image:: MWAFEE_beam_vs_freq_interp.svg
+.. image:: hyperbeam_vs_freq.svg
   :width: 400pt
+
+we see that the frequency behaviour of the beam is well described and smooth.
 
 .. warning:: However, this model is only interpolated between 167 and 197 MHz. Anything below 167 MHz will give the 167 MHz response, and similarly for above 197 MHz.
 

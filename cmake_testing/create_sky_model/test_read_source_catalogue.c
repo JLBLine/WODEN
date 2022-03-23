@@ -26,20 +26,20 @@ void check_single_source_numbers(source_catalogue_t *raw_srccat,
   // printf("%d %d %d %d %d %d %d %d\n",source_index,
   //                                 raw_srccat->num_sources,
   //                                 raw_srccat->num_shapelets,
-  //                                 raw_srccat->sources[source_index].n_comps,
-  //                                 raw_srccat->sources[source_index].n_points,
-  //                                 raw_srccat->sources[source_index].n_gauss,
-  //                                 raw_srccat->sources[source_index].n_shapes,
-  //                                 raw_srccat->sources[source_index].n_shape_components );
+  //                                 raw_srccat->catsources[source_index].n_comps,
+  //                                 raw_srccat->catsources[source_index].n_points,
+  //                                 raw_srccat->catsources[source_index].n_gauss,
+  //                                 raw_srccat->catsources[source_index].n_shapes,
+  //                                 raw_srccat->catsources[source_index].n_shape_coeffs );
   //
   TEST_ASSERT_EQUAL_INT(num_sources, raw_srccat->num_sources);
   TEST_ASSERT_EQUAL_INT(num_shapelets, raw_srccat->num_shapelets);
-  TEST_ASSERT_EQUAL_INT(n_comps, raw_srccat->sources[source_index].n_comps);
+  TEST_ASSERT_EQUAL_INT(n_comps, raw_srccat->catsources[source_index].n_comps);
 
-  TEST_ASSERT_EQUAL_INT(n_points, raw_srccat->sources[source_index].n_points);
-  TEST_ASSERT_EQUAL_INT(n_gauss, raw_srccat->sources[source_index].n_gauss);
-  TEST_ASSERT_EQUAL_INT(n_shapes, raw_srccat->sources[source_index].n_shapes);
-  TEST_ASSERT_EQUAL_INT(n_shape_coeffs, raw_srccat->sources[source_index].n_shape_coeffs);
+  TEST_ASSERT_EQUAL_INT(n_points, raw_srccat->catsources[source_index].n_points);
+  TEST_ASSERT_EQUAL_INT(n_gauss, raw_srccat->catsources[source_index].n_gauss);
+  TEST_ASSERT_EQUAL_INT(n_shapes, raw_srccat->catsources[source_index].n_shapes);
+  TEST_ASSERT_EQUAL_INT(n_shape_coeffs, raw_srccat->catsources[source_index].n_shape_coeffs);
 }
 
 /*
@@ -47,15 +47,15 @@ Checks that the POINT values for the COMPONENT at the given index are correct
 Assumes the catalogue being read in is one of the specific sky models made
 for testing in the WODEN/cmake_testing/read_and_write dir
 */
-void check_single_component_point(source_t source, int comp_index) {
-  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 15*1.0*DD2R, source.point_components.ras[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(1e-15, -30.0*DD2R, source.point_components.decs[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 150e+6, source.point_components.ref_freqs[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, 1.0, source.point_components.ref_stokesI[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, source.point_components.ref_stokesQ[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, source.point_components.ref_stokesU[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, source.point_components.ref_stokesV[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, -0.8, source.point_components.SIs[comp_index]);
+void check_single_component_point(catsource_t catsource, int comp_index) {
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 15*1.0*DD2R, catsource.point_ras[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, -30.0*DD2R, catsource.point_decs[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 150e+6, catsource.point_ref_freqs[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 1.0, catsource.point_ref_stokesI[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, catsource.point_ref_stokesQ[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, catsource.point_ref_stokesU[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, catsource.point_ref_stokesV[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, -0.8, catsource.point_SIs[comp_index]);
 }
 
 /*
@@ -63,20 +63,20 @@ Checks that the GAUSSIAN values for the COMPONENT at the given index are correct
 Assumes the catalogue being read in is one of the specific sky models made
 for testing in the WODEN/cmake_testing/read_and_write dir
 */
-void check_single_component_gauss(source_t source, int comp_index) {
-  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 15*2.0*DD2R, source.gauss_components.ras[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(1e-15, -30.0*DD2R, source.gauss_components.decs[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 150e+6, source.gauss_components.ref_freqs[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, 2.0, source.gauss_components.ref_stokesI[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, source.gauss_components.ref_stokesQ[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, source.gauss_components.ref_stokesU[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, source.gauss_components.ref_stokesV[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, -0.8, source.gauss_components.SIs[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, -10.0*DD2R, source.gauss_components.pas[comp_index]);
+void check_single_component_gauss(catsource_t catsource, int comp_index) {
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 15*2.0*DD2R, catsource.gauss_ras[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, -30.0*DD2R, catsource.gauss_decs[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 150e+6, catsource.gauss_ref_freqs[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 2.0, catsource.gauss_ref_stokesI[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, catsource.gauss_ref_stokesQ[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, catsource.gauss_ref_stokesU[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, catsource.gauss_ref_stokesV[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, -0.8, catsource.gauss_SIs[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, -10.0*DD2R, catsource.gauss_pas[comp_index]);
   TEST_ASSERT_DOUBLE_WITHIN(TOL, (3.0/60.0)*DD2R,
-                          source.gauss_components.majors[comp_index]);
+                          catsource.gauss_majors[comp_index]);
   TEST_ASSERT_DOUBLE_WITHIN(TOL, (6.0/60.0)*DD2R,
-                          source.gauss_components.minors[comp_index]);
+                          catsource.gauss_minors[comp_index]);
 }
 
 /*
@@ -84,18 +84,18 @@ Checks that the SHAPELET values for the COMPONENT at the given index are correct
 Assumes the catalogue being read in is one of the specific sky models made
 for testing in the WODEN/cmake_testing/read_and_write dir
 */
-void check_single_component_shapelet(source_t source, int comp_index) {
-  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 15*3.0*DD2R, source.shape_components.ras[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 20.0*DD2R, source.shape_components.decs[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 70e+6, source.shape_components.ref_freqs[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, 3.0, source.shape_components.ref_stokesI[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, source.shape_components.ref_stokesQ[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, source.shape_components.ref_stokesU[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, source.shape_components.ref_stokesV[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, -0.8, source.shape_components.SIs[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, 56.0*DD2R, source.shape_components.pas[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, (7.0/60.0)*DD2R, source.shape_components.majors[comp_index]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, (5.0/60.0)*DD2R, source.shape_components.minors[comp_index]);
+void check_single_component_shapelet(catsource_t catsource, int comp_index) {
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 15*3.0*DD2R, catsource.shape_ras[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 20.0*DD2R, catsource.shape_decs[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 70e+6, catsource.shape_ref_freqs[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 3.0, catsource.shape_ref_stokesI[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, catsource.shape_ref_stokesQ[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, catsource.shape_ref_stokesU[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, catsource.shape_ref_stokesV[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, -0.8, catsource.shape_SIs[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 56.0*DD2R, catsource.shape_pas[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, (7.0/60.0)*DD2R, catsource.shape_majors[comp_index]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, (5.0/60.0)*DD2R, catsource.shape_minors[comp_index]);
 
   double expected_n1s[] = {0.0, 14.0, 41.0, 37.0};
   double expected_n2s[] = {0.0, 2.0, -15.0, 7.0};
@@ -104,13 +104,13 @@ void check_single_component_shapelet(source_t source, int comp_index) {
 
   for (int param_index = 0; param_index < 4; param_index++) {
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_n1s[param_index],
-                      source.shape_components.n1s[4*comp_index + param_index]);
+                      catsource.shape_n1s[4*comp_index + param_index]);
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_n2s[param_index],
-                      source.shape_components.n2s[4*comp_index + param_index]);
+                      catsource.shape_n2s[4*comp_index + param_index]);
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_coeffs[param_index],
-                      source.shape_components.shape_coeffs[4*comp_index + param_index]);
+                      catsource.shape_coeffs[4*comp_index + param_index]);
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_param_indexes[param_index],
-                      source.shape_components.param_indexes[4*comp_index + param_index]);
+                      catsource.shape_param_indexes[4*comp_index + param_index]);
   }
 }
 
@@ -135,17 +135,17 @@ void test_read_source_catalogue_SinglePoint(char *srclist)
   int n_points = 1;
   int n_gauss = 0;
   int n_shapes = 0;
-  int n_shape_components = 0;
+  int n_shape_coeffs = 0;
 
   //Check these values
   check_single_source_numbers(raw_srccat,
                               num_sources,  num_shapelets,  n_comps,
                               n_points,  n_gauss,  n_shapes,
-                              n_shape_components, 0);
+                              n_shape_coeffs, 0);
   //
   // //Check the POINT specific values in the first COMPONENT
   // //of the first SOURCE are correct
-  check_single_component_point(raw_srccat->sources[0], 0);
+  check_single_component_point(raw_srccat->catsources[0], 0);
 }
 
 void test_read_source_catalogue_SinglePointGood(void) {
@@ -181,17 +181,17 @@ void test_read_source_catalogue_SingleGaussian(void)
   int n_points = 0;
   int n_gauss = 1;
   int n_shapes = 0;
-  int n_shape_components = 0;
+  int n_shape_coeffs = 0;
 
   //Check these values
   check_single_source_numbers(raw_srccat,
                               num_sources,  num_shapelets,  n_comps,
                               n_points,  n_gauss,  n_shapes,
-                              n_shape_components, 0);
+                              n_shape_coeffs, 0);
 
   // Check that the GAUSSIAN specific values in the first COMPONENT
   //of the first SOURCE are correct
-  check_single_component_gauss(raw_srccat->sources[0], 0);
+  check_single_component_gauss(raw_srccat->catsources[0], 0);
 
 }
 
@@ -215,17 +215,17 @@ void test_read_source_catalogue_SingleShapelet(void)
   int n_points = 0;
   int n_gauss = 0;
   int n_shapes = 1;
-  int n_shape_components = 4;
+  int n_shape_coeffs = 4;
 
   //Check these values
   check_single_source_numbers(raw_srccat,
                               num_sources,  num_shapelets,  n_comps,
                               n_points,  n_gauss,  n_shapes,
-                              n_shape_components, 0);
+                              n_shape_coeffs, 0);
 
   // Check that the SHAPELET specific values in the first COMPONENT
   //of the first SOURCE are correct
-  check_single_component_shapelet(raw_srccat->sources[0], 0);
+  check_single_component_shapelet(raw_srccat->catsources[0], 0);
 
 
 }
@@ -253,27 +253,27 @@ void test_read_source_catalogue_ThreeSources(void) {
   int n_points[] = {1, 0, 0};
   int n_gauss[] = {0, 1, 0};
   int n_shapes[] = {0, 0, 1};
-  int n_shape_components[] = {0, 0, 4};
+  int n_shape_coeffs[] = {0, 0, 4};
 
   for (int source_index = 0; source_index < num_sources; source_index++) {
     check_single_source_numbers(raw_srccat,
                                 num_sources,  num_shapelets,
                                 n_comps[source_index], n_points[source_index],
                                 n_gauss[source_index],  n_shapes[source_index],
-                                n_shape_components[source_index], source_index);
+                                n_shape_coeffs[source_index], source_index);
   }
 
   // Check that the POINT specific values in the first COMPONENT
   //of the first SOURCE are correct
-  check_single_component_point(raw_srccat->sources[0], 0);
+  check_single_component_point(raw_srccat->catsources[0], 0);
 
   // Check that the GAUSSIAN specific values in the first COMPONENT
   //of the second SOURCE are correct
-  check_single_component_gauss(raw_srccat->sources[1], 0);
+  check_single_component_gauss(raw_srccat->catsources[1], 0);
 
   // Check that the SHAPELET specific values in the first COMPONENT
   //of the third SOURCE are correct
-  check_single_component_shapelet(raw_srccat->sources[2], 0);
+  check_single_component_shapelet(raw_srccat->catsources[2], 0);
 
 }
 
@@ -294,7 +294,7 @@ void test_read_source_catalogue_ThreeComponents(void) {
   int n_points = 1;
   int n_gauss = 1;
   int n_shapes = 1;
-  int n_shape_components = 4;
+  int n_shape_coeffs = 4;
 
   int source_index = 0;
 
@@ -302,19 +302,19 @@ void test_read_source_catalogue_ThreeComponents(void) {
                               num_sources,  num_shapelets,
                               n_comps, n_points,
                               n_gauss,  n_shapes,
-                              n_shape_components, source_index);
+                              n_shape_coeffs, source_index);
 
   // Check that the POINT specific values in the first COMPONENT
   //of the first SOURCE are correct
-  check_single_component_point(raw_srccat->sources[0], 0);
+  check_single_component_point(raw_srccat->catsources[0], 0);
 
   // Check that the GAUSSIAN specific values in the first COMPONENT
   //of the first SOURCE are correct
-  check_single_component_gauss(raw_srccat->sources[0], 0);
+  check_single_component_gauss(raw_srccat->catsources[0], 0);
 
   // Check that the SHAPELET specific values in the first COMPONENT
   //of the first SOURCE are correct
-  check_single_component_shapelet(raw_srccat->sources[0], 0);
+  check_single_component_shapelet(raw_srccat->catsources[0], 0);
 
 }
 
@@ -337,41 +337,48 @@ void test_read_source_catalogue_MultiSourceComponents(void) {
   int n_points[] = {1, 0, 0, 1, 2};
   int n_gauss[] = {0, 1, 0, 1, 2};
   int n_shapes[] = {0, 0, 1, 1, 2};
-  int n_shape_components[] = {0, 0, 4, 4, 8};
+  int n_shape_coeffs[] = {0, 0, 4, 4, 8};
 
   for (int source_index = 0; source_index < num_sources; source_index++) {
     check_single_source_numbers(raw_srccat,
                                 num_sources,  num_shapelets,
                                 n_comps[source_index], n_points[source_index],
                                 n_gauss[source_index],  n_shapes[source_index],
-                                n_shape_components[source_index], source_index);
+                                n_shape_coeffs[source_index], source_index);
   }
 
   //Check that the POINT components are located where expected
   //Index of array if the SOURCE index. Second number is the COMPONENT in that
   //particular SOURCE
-  check_single_component_point(raw_srccat->sources[0], 0);
-  check_single_component_point(raw_srccat->sources[3], 0);
-  check_single_component_point(raw_srccat->sources[4], 0);
-  check_single_component_point(raw_srccat->sources[4], 1);
+  check_single_component_point(raw_srccat->catsources[0], 0);
+  check_single_component_point(raw_srccat->catsources[3], 0);
+  check_single_component_point(raw_srccat->catsources[4], 0);
+  check_single_component_point(raw_srccat->catsources[4], 1);
   //
   //Check that the GAUSSIAN components are located where expected
   //Index of array if the SOURCE index. Second number is the COMPONENT in that
   //particular SOURCE
-  check_single_component_gauss(raw_srccat->sources[1], 0);
-  check_single_component_gauss(raw_srccat->sources[3], 0);
-  check_single_component_gauss(raw_srccat->sources[4], 0);
-  check_single_component_gauss(raw_srccat->sources[4], 1);
+  check_single_component_gauss(raw_srccat->catsources[1], 0);
+  check_single_component_gauss(raw_srccat->catsources[3], 0);
+  check_single_component_gauss(raw_srccat->catsources[4], 0);
+  check_single_component_gauss(raw_srccat->catsources[4], 1);
   //
   //Check that the SHAPELET components are located where expected
   //Index of array if the SOURCE index. Second number is the COMPONENT in that
   //particular SOURCE
-  check_single_component_shapelet(raw_srccat->sources[2], 0);
-  check_single_component_shapelet(raw_srccat->sources[3], 0);
-  check_single_component_shapelet(raw_srccat->sources[4], 0);
-  check_single_component_shapelet(raw_srccat->sources[4], 1);
+  check_single_component_shapelet(raw_srccat->catsources[2], 0);
+  check_single_component_shapelet(raw_srccat->catsources[3], 0);
+  check_single_component_shapelet(raw_srccat->catsources[4], 0);
+  check_single_component_shapelet(raw_srccat->catsources[4], 1);
 
 }
+
+
+
+
+
+
+
 
 /*
 Test whether a single point source is read in correctly when the SED is
@@ -395,24 +402,24 @@ void test_read_source_catalogue_Linear(void)
   int n_points = 1;
   int n_gauss = 0;
   int n_shapes = 0;
-  int n_shape_components = 0;
+  int n_shape_coeffs = 0;
 
   //Check these values
   check_single_source_numbers(raw_srccat,
                               num_sources,  num_shapelets,  n_comps,
                               n_points,  n_gauss,  n_shapes,
-                              n_shape_components, 0);
+                              n_shape_coeffs, 0);
 
-  // source_t source = raw_srccat->sources[0];
+  // catsource_t catsource = raw_srccat->catsources[0];
 
-  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 15*17.0*DD2R, raw_srccat->sources[0].point_components.ras[0]);
-  TEST_ASSERT_DOUBLE_WITHIN(1e-15, -23.4545756877980*DD2R, raw_srccat->sources[0].point_components.decs[0]);
-  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 1748492837, raw_srccat->sources[0].point_components.ref_freqs[0]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, 1.0, raw_srccat->sources[0].point_components.ref_stokesI[0]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, 2.0, raw_srccat->sources[0].point_components.ref_stokesQ[0]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, 3.0, raw_srccat->sources[0].point_components.ref_stokesU[0]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, 4.0, raw_srccat->sources[0].point_components.ref_stokesV[0]);
-  TEST_ASSERT_DOUBLE_WITHIN(TOL, -0.198236, raw_srccat->sources[0].point_components.SIs[0]);
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 15*17.0*DD2R, raw_srccat->catsources[0].point_ras[0]);
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, -23.4545756877980*DD2R, raw_srccat->catsources[0].point_decs[0]);
+  TEST_ASSERT_DOUBLE_WITHIN(1e-15, 1748492837, raw_srccat->catsources[0].point_ref_freqs[0]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 1.0, raw_srccat->catsources[0].point_ref_stokesI[0]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 2.0, raw_srccat->catsources[0].point_ref_stokesQ[0]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 3.0, raw_srccat->catsources[0].point_ref_stokesU[0]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, 4.0, raw_srccat->catsources[0].point_ref_stokesV[0]);
+  TEST_ASSERT_DOUBLE_WITHIN(TOL, -0.198236, raw_srccat->catsources[0].point_SIs[0]);
 }
 
 void test_read_source_catalogue_MissingFile(void) {

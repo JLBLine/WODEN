@@ -1,6 +1,7 @@
 
 ## Create tests for both float and double precision
 foreach(PRECISION IN LISTS FLOAT DOUBLE)
+# foreach(PRECISION IN LISTS DOUBLE)
   ##Set the flags depending on the precision
   DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
 
@@ -57,6 +58,33 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   add_test(CUDA_test_MWA_analytic_${PRECISION} test_MWA_analytic_${PRECISION}_app)
 
 
+  #Test hyperbeam with the coarse hdf5 file
+  add_executable(test_run_hyperbeam_${PRECISION}_app
+      test_run_hyperbeam.c
+  )
+  target_link_libraries(test_run_hyperbeam_${PRECISION}_app
+      Unity
+      primary_beam_cudaCUDA_${PRECISION}
+      ${CC_LINKLIBS}
+      # "-L/usr/local/mwa_hyperbeam -lmwa_hyperbeam"
+  )
+  target_compile_options(test_run_hyperbeam_${PRECISION}_app PRIVATE ${C_FLAGS})
+  add_test(CUDA_test_run_hyperbeam_${PRECISION} test_run_hyperbeam_${PRECISION}_app)
+
+
+  #Test hyperbeam with the interpolated beam
+  add_executable(test_run_hyperbeam_interp_${PRECISION}_app
+      test_run_hyperbeam_interp.c
+  )
+  target_link_libraries(test_run_hyperbeam_interp_${PRECISION}_app
+      Unity
+      primary_beam_cudaCUDA_${PRECISION}
+      ${CC_LINKLIBS}
+      # "-L/usr/local/mwa_hyperbeam -lmwa_hyperbeam"
+  )
+  target_compile_options(test_run_hyperbeam_interp_${PRECISION}_app PRIVATE ${C_FLAGS})
+  add_test(CUDA_test_run_hyperbeam_interp_${PRECISION} test_run_hyperbeam_interp_${PRECISION}_app)
+
   ##Test analytic MWA beam functions
   add_executable(comp_MWA_analytic_to_FEE_${PRECISION}_app
       comp_MWA_analytic_to_FEE.c
@@ -69,5 +97,6 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_compile_options(comp_MWA_analytic_to_FEE_${PRECISION}_app PRIVATE ${C_FLAGS})
   add_test(CUDA_comp_MWA_analytic_to_FEE_${PRECISION} comp_MWA_analytic_to_FEE_${PRECISION}_app)
+
 
 endforeach()

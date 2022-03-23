@@ -6,8 +6,8 @@
 
 #include "constants.h"
 #include "FEE_primary_beam.h"
-#include "MWA_analy_expected_nside201.h"
-#include "azza_radec_nside201.h"
+#include "MWA_analy_expected_nside101.h"
+#include "azza_radec_nside101.h"
 
 #define FREQ 150000000
 
@@ -30,10 +30,10 @@ extern void test_RTS_calculate_MWA_analytic_beam(int num_components,
   double TOL = 1e-6;
 #endif
 
-void test_MWA_analytic_beam_nside201() {
+void test_MWA_analytic_beam_nside101() {
 
 
-  int nside = 201;
+  int nside = 101;
 
   int num_times = 2;
   int num_freqs = 2;
@@ -52,11 +52,11 @@ void test_MWA_analytic_beam_nside201() {
   for (int coord = 0; coord < num_components; coord++) {
     for (int time = 0; time < num_times; time++) {
 
-      beam_has[coord*num_times + time] = nside201_has[coord];
-      beam_decs[coord*num_times + time] = nside201_decs[coord];
+      beam_has[coord*num_times + time] = nside101_has[coord];
+      beam_decs[coord*num_times + time] = nside101_decs[coord];
 
-      all_azs[coord*num_times + time] = nside201_azs[coord];
-      all_zas[coord*num_times + time] = nside201_zas[coord];
+      all_azs[coord*num_times + time] = nside101_azs[coord];
+      all_zas[coord*num_times + time] = nside101_zas[coord];
     }
   }
 
@@ -69,8 +69,7 @@ void test_MWA_analytic_beam_nside201() {
   // user_precision_t delays[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                     // 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
-  user_precision_t delays[] = {6, 4, 2, 0, 8, 6, 4, 2,
-                               10, 8, 6, 4, 12, 10, 8, 6};
+  user_precision_t delays[] = {0, 2, 4, 8, 2, 4, 8, 12, 4, 8, 12, 16, 8, 12, 16, 20};
   //Run the CUDA code
   test_RTS_calculate_MWA_analytic_beam(num_components,
        num_times, num_freqs,
@@ -111,6 +110,14 @@ void test_MWA_analytic_beam_nside201() {
   for (int ind = 0; ind < num_beam_values; ind++) {
 
     TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(gxs[ind]), gx_re_expec[ind]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(Dxs[ind]), Dx_re_expec[ind]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(Dys[ind]), Dy_re_expec[ind]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(gys[ind]), gy_re_expec[ind]);
+
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cimag(gxs[ind]), 0.0);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cimag(Dxs[ind]), 0.0);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cimag(Dys[ind]), 0.0);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cimag(gys[ind]), 0.0);
   }
 
   fflush(output_text);
@@ -160,8 +167,7 @@ void test_single_azza() {
   // user_precision_t delays[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                     // 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
-  user_precision_t delays[] = {6, 4, 2, 0, 8, 6, 4, 2,
-                               10, 8, 6, 4, 12, 10, 8, 6};
+  user_precision_t delays[] = {0, 2, 4, 8, 2, 4, 8, 12, 4, 8, 12, 16, 8, 12, 16, 20};
   //Run the CUDA code
   test_RTS_calculate_MWA_analytic_beam(num_components,
        num_times, num_freqs,
@@ -186,7 +192,7 @@ void test_single_azza() {
 int main(void)
 {
     UNITY_BEGIN();
-    RUN_TEST(test_MWA_analytic_beam_nside201);
+    RUN_TEST(test_MWA_analytic_beam_nside101);
     // RUN_TEST(test_single_azza);
 
     return UNITY_END();

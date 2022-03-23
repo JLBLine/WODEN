@@ -33,9 +33,11 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
   int point_ind=0, gauss_ind=0, shape_ind=0;
   int coeff_ind=0;
 
+  //So we know how many s_coeffs we have put into S1_coeffs for each source
+
   //Array that will end up being as long as the number of sources,
-  //containing source_t structs
-  source_t *srcs=NULL;
+  //containing catsource_t structs
+  catsource_t *srcs=NULL;
 
   //Total number of SHAPELET COMPONENTs in the entire source catalogue
   //Start it off at zero
@@ -100,7 +102,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
       /* found a new source. make more room, get the details */
       src_found=1;
       n_src++;
-      srcs = realloc(srcs,sizeof(source_t)*n_src);
+      srcs = realloc(srcs,sizeof(catsource_t)*n_src);
       if (srcs == NULL) {
         printf("read_source_catalogue error: no realloc for cat\n");
         // return NULL;
@@ -142,46 +144,46 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
 
       //Now we know the number of sources, do some mallocing
       //Pointsource params
-      srcs[n_src-1].point_components.ras = malloc( srcs[n_src-1].n_points * sizeof(double) );
-      srcs[n_src-1].point_components.decs = malloc( srcs[n_src-1].n_points * sizeof(double) );
-      srcs[n_src-1].point_components.SIs = malloc( srcs[n_src-1].n_points * sizeof(user_precision_t) );
-      srcs[n_src-1].point_components.ref_stokesI = malloc( srcs[n_src-1].n_points * sizeof(user_precision_t) );
-      srcs[n_src-1].point_components.ref_stokesQ = malloc( srcs[n_src-1].n_points * sizeof(user_precision_t) );
-      srcs[n_src-1].point_components.ref_stokesU = malloc( srcs[n_src-1].n_points * sizeof(user_precision_t) );
-      srcs[n_src-1].point_components.ref_stokesV = malloc( srcs[n_src-1].n_points * sizeof(user_precision_t) );
-      srcs[n_src-1].point_components.ref_freqs = malloc( srcs[n_src-1].n_points * sizeof(double) );
+      srcs[n_src-1].point_ras = malloc( srcs[n_src-1].n_points * sizeof(double) );
+      srcs[n_src-1].point_decs = malloc( srcs[n_src-1].n_points * sizeof(double) );
+      srcs[n_src-1].point_SIs = malloc( srcs[n_src-1].n_points * sizeof(user_precision_t) );
+      srcs[n_src-1].point_ref_stokesI = malloc( srcs[n_src-1].n_points * sizeof(user_precision_t) );
+      srcs[n_src-1].point_ref_stokesQ = malloc( srcs[n_src-1].n_points * sizeof(user_precision_t) );
+      srcs[n_src-1].point_ref_stokesU = malloc( srcs[n_src-1].n_points * sizeof(user_precision_t) );
+      srcs[n_src-1].point_ref_stokesV = malloc( srcs[n_src-1].n_points * sizeof(user_precision_t) );
+      srcs[n_src-1].point_ref_freqs = malloc( srcs[n_src-1].n_points * sizeof(double) );
 
       //Gaussian params
-      srcs[n_src-1].gauss_components.ras = malloc( srcs[n_src-1].n_gauss * sizeof(double) );
-      srcs[n_src-1].gauss_components.decs = malloc( srcs[n_src-1].n_gauss * sizeof(double) );
-      srcs[n_src-1].gauss_components.SIs = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
-      srcs[n_src-1].gauss_components.ref_stokesI = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
-      srcs[n_src-1].gauss_components.ref_stokesQ = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
-      srcs[n_src-1].gauss_components.ref_stokesU = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
-      srcs[n_src-1].gauss_components.ref_stokesV = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
-      srcs[n_src-1].gauss_components.ref_freqs = malloc( srcs[n_src-1].n_gauss * sizeof(double) );
-      srcs[n_src-1].gauss_components.majors = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
-      srcs[n_src-1].gauss_components.minors = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
-      srcs[n_src-1].gauss_components.pas = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
+      srcs[n_src-1].gauss_ras = malloc( srcs[n_src-1].n_gauss * sizeof(double) );
+      srcs[n_src-1].gauss_decs = malloc( srcs[n_src-1].n_gauss * sizeof(double) );
+      srcs[n_src-1].gauss_SIs = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
+      srcs[n_src-1].gauss_ref_stokesI = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
+      srcs[n_src-1].gauss_ref_stokesQ = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
+      srcs[n_src-1].gauss_ref_stokesU = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
+      srcs[n_src-1].gauss_ref_stokesV = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
+      srcs[n_src-1].gauss_ref_freqs = malloc( srcs[n_src-1].n_gauss * sizeof(double) );
+      srcs[n_src-1].gauss_majors = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
+      srcs[n_src-1].gauss_minors = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
+      srcs[n_src-1].gauss_pas = malloc( srcs[n_src-1].n_gauss * sizeof(user_precision_t) );
       //Shapelet params
-      srcs[n_src-1].shape_components.ras = malloc( srcs[n_src-1].n_shapes * sizeof(double) );
-      srcs[n_src-1].shape_components.decs = malloc( srcs[n_src-1].n_shapes * sizeof(double) );
-      srcs[n_src-1].shape_components.ref_stokesI = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
-      srcs[n_src-1].shape_components.SIs = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
-      srcs[n_src-1].shape_components.ref_stokesQ = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
-      srcs[n_src-1].shape_components.ref_stokesU = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
-      srcs[n_src-1].shape_components.ref_stokesV = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
-      srcs[n_src-1].shape_components.ref_freqs = malloc( srcs[n_src-1].n_shapes * sizeof(double) );
-      srcs[n_src-1].shape_components.majors = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
-      srcs[n_src-1].shape_components.minors = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
-      srcs[n_src-1].shape_components.pas = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
+      srcs[n_src-1].shape_ras = malloc( srcs[n_src-1].n_shapes * sizeof(double) );
+      srcs[n_src-1].shape_decs = malloc( srcs[n_src-1].n_shapes * sizeof(double) );
+      srcs[n_src-1].shape_ref_stokesI = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
+      srcs[n_src-1].shape_SIs = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
+      srcs[n_src-1].shape_ref_stokesQ = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
+      srcs[n_src-1].shape_ref_stokesU = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
+      srcs[n_src-1].shape_ref_stokesV = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
+      srcs[n_src-1].shape_ref_freqs = malloc( srcs[n_src-1].n_shapes * sizeof(double) );
+      srcs[n_src-1].shape_majors = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
+      srcs[n_src-1].shape_minors = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
+      srcs[n_src-1].shape_pas = malloc( srcs[n_src-1].n_shapes * sizeof(user_precision_t) );
       //Need bigger arrays to hold the coeffs - make a shape_param_indexes
       //array so we can map each n1.n2,coeff to the corresponding pa,major,minor
       //when we have multiple shapelet models within a source
-      srcs[n_src-1].shape_components.n1s = malloc( srcs[n_src-1].n_shape_coeffs * sizeof(user_precision_t) );
-      srcs[n_src-1].shape_components.n2s = malloc( srcs[n_src-1].n_shape_coeffs * sizeof(user_precision_t) );
-      srcs[n_src-1].shape_components.shape_coeffs = malloc( srcs[n_src-1].n_shape_coeffs * sizeof(user_precision_t) );
-      srcs[n_src-1].shape_components.param_indexes = malloc( srcs[n_src-1].n_shape_coeffs * sizeof(user_precision_t) );
+      srcs[n_src-1].shape_n1s = malloc( srcs[n_src-1].n_shape_coeffs * sizeof(user_precision_t) );
+      srcs[n_src-1].shape_n2s = malloc( srcs[n_src-1].n_shape_coeffs * sizeof(user_precision_t) );
+      srcs[n_src-1].shape_coeffs = malloc( srcs[n_src-1].n_shape_coeffs * sizeof(user_precision_t) );
+      srcs[n_src-1].shape_param_indexes = malloc( srcs[n_src-1].n_shape_coeffs * sizeof(user_precision_t) );
 
     }
 
@@ -206,22 +208,22 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
         case POINT:
           point_ind++;
           /* convert to radian */
-          srcs[n_src-1].point_components.ras[point_ind-1] = ra * DH2R;
-          srcs[n_src-1].point_components.decs[point_ind-1] = dec * DD2R;
+          srcs[n_src-1].point_ras[point_ind-1] = ra * DH2R;
+          srcs[n_src-1].point_decs[point_ind-1] = dec * DD2R;
           // LOGV( LOG_LOW, "New source component: <%s> component %d, ra: %8.5f hrs, dec: %+9.5f deg\n",
           //       cat[n_src-1].components[n_comps-1].ra*DR2H, cat[n_src-1].components[n_comps-1].dec*DR2D );
         break;
 
         case GAUSSIAN:
           gauss_ind++;
-          srcs[n_src-1].gauss_components.ras[gauss_ind-1] = ra * DH2R;
-          srcs[n_src-1].gauss_components.decs[gauss_ind-1] = dec * DD2R;
+          srcs[n_src-1].gauss_ras[gauss_ind-1] = ra * DH2R;
+          srcs[n_src-1].gauss_decs[gauss_ind-1] = dec * DD2R;
         break;
 
         case SHAPELET:
           shape_ind++;
-          srcs[n_src-1].shape_components.ras[shape_ind-1] = ra * DH2R;
-          srcs[n_src-1].shape_components.decs[shape_ind-1] = dec * DD2R;
+          srcs[n_src-1].shape_ras[shape_ind-1] = ra * DH2R;
+          srcs[n_src-1].shape_decs[shape_ind-1] = dec * DD2R;
         break;
 
         default:
@@ -250,32 +252,32 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
       switch (type_key) {
         case POINT:
 
-          srcs[n_src-1].point_components.ref_freqs[point_ind-1] = freq;
-          srcs[n_src-1].point_components.ref_stokesI[point_ind-1] = flux_I;
-          srcs[n_src-1].point_components.ref_stokesQ[point_ind-1] = flux_Q;
-          srcs[n_src-1].point_components.ref_stokesU[point_ind-1] = flux_U;
-          srcs[n_src-1].point_components.ref_stokesV[point_ind-1] = flux_V;
-          srcs[n_src-1].point_components.SIs[point_ind-1] = DEFAULT_SI;
+          srcs[n_src-1].point_ref_freqs[point_ind-1] = freq;
+          srcs[n_src-1].point_ref_stokesI[point_ind-1] = flux_I;
+          srcs[n_src-1].point_ref_stokesQ[point_ind-1] = flux_Q;
+          srcs[n_src-1].point_ref_stokesU[point_ind-1] = flux_U;
+          srcs[n_src-1].point_ref_stokesV[point_ind-1] = flux_V;
+          srcs[n_src-1].point_SIs[point_ind-1] = DEFAULT_SI;
           // LOGV( LOG_LOW, "New source component: <%s> component %d, ra: %8.5f hrs, dec: %+9.5f deg\n",
           //       cat[n_src-1].components[n_comps-1].ra*DR2H, cat[n_src-1].components[n_comps-1].dec*DR2D );
         break;
 
         case GAUSSIAN:
-          srcs[n_src-1].gauss_components.ref_freqs[gauss_ind-1] = freq;
-          srcs[n_src-1].gauss_components.ref_stokesI[gauss_ind-1] = flux_I;
-          srcs[n_src-1].gauss_components.ref_stokesQ[gauss_ind-1] = flux_Q;
-          srcs[n_src-1].gauss_components.ref_stokesU[gauss_ind-1] = flux_U;
-          srcs[n_src-1].gauss_components.ref_stokesV[gauss_ind-1] = flux_V;
-          srcs[n_src-1].gauss_components.SIs[gauss_ind-1] = DEFAULT_SI;
+          srcs[n_src-1].gauss_ref_freqs[gauss_ind-1] = freq;
+          srcs[n_src-1].gauss_ref_stokesI[gauss_ind-1] = flux_I;
+          srcs[n_src-1].gauss_ref_stokesQ[gauss_ind-1] = flux_Q;
+          srcs[n_src-1].gauss_ref_stokesU[gauss_ind-1] = flux_U;
+          srcs[n_src-1].gauss_ref_stokesV[gauss_ind-1] = flux_V;
+          srcs[n_src-1].gauss_SIs[gauss_ind-1] = DEFAULT_SI;
         break;
 
         case SHAPELET:
-          srcs[n_src-1].shape_components.ref_freqs[shape_ind-1] = freq;
-          srcs[n_src-1].shape_components.ref_stokesI[shape_ind-1] = flux_I;
-          srcs[n_src-1].shape_components.ref_stokesQ[shape_ind-1] = flux_Q;
-          srcs[n_src-1].shape_components.ref_stokesU[shape_ind-1] = flux_U;
-          srcs[n_src-1].shape_components.ref_stokesV[shape_ind-1] = flux_V;
-          srcs[n_src-1].shape_components.SIs[shape_ind-1] = DEFAULT_SI;
+          srcs[n_src-1].shape_ref_freqs[shape_ind-1] = freq;
+          srcs[n_src-1].shape_ref_stokesI[shape_ind-1] = flux_I;
+          srcs[n_src-1].shape_ref_stokesQ[shape_ind-1] = flux_Q;
+          srcs[n_src-1].shape_ref_stokesU[shape_ind-1] = flux_U;
+          srcs[n_src-1].shape_ref_stokesV[shape_ind-1] = flux_V;
+          srcs[n_src-1].shape_SIs[shape_ind-1] = DEFAULT_SI;
         break;
 
       default:
@@ -305,30 +307,30 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
       switch (type_key) {
         case POINT:
 
-          srcs[n_src-1].point_components.ref_freqs[point_ind-1] = freq;
-          srcs[n_src-1].point_components.ref_stokesI[point_ind-1] = flux_I;
-          srcs[n_src-1].point_components.ref_stokesQ[point_ind-1] = flux_Q;
-          srcs[n_src-1].point_components.ref_stokesU[point_ind-1] = flux_U;
-          srcs[n_src-1].point_components.ref_stokesV[point_ind-1] = flux_V;
-          srcs[n_src-1].point_components.SIs[point_ind-1] = SI;
+          srcs[n_src-1].point_ref_freqs[point_ind-1] = freq;
+          srcs[n_src-1].point_ref_stokesI[point_ind-1] = flux_I;
+          srcs[n_src-1].point_ref_stokesQ[point_ind-1] = flux_Q;
+          srcs[n_src-1].point_ref_stokesU[point_ind-1] = flux_U;
+          srcs[n_src-1].point_ref_stokesV[point_ind-1] = flux_V;
+          srcs[n_src-1].point_SIs[point_ind-1] = SI;
         break;
 
         case GAUSSIAN:
-          srcs[n_src-1].gauss_components.ref_freqs[gauss_ind-1] = freq;
-          srcs[n_src-1].gauss_components.ref_stokesI[gauss_ind-1] = flux_I;
-          srcs[n_src-1].gauss_components.ref_stokesQ[gauss_ind-1] = flux_Q;
-          srcs[n_src-1].gauss_components.ref_stokesU[gauss_ind-1] = flux_U;
-          srcs[n_src-1].gauss_components.ref_stokesV[gauss_ind-1] = flux_V;
-          srcs[n_src-1].gauss_components.SIs[gauss_ind-1] = SI;
+          srcs[n_src-1].gauss_ref_freqs[gauss_ind-1] = freq;
+          srcs[n_src-1].gauss_ref_stokesI[gauss_ind-1] = flux_I;
+          srcs[n_src-1].gauss_ref_stokesQ[gauss_ind-1] = flux_Q;
+          srcs[n_src-1].gauss_ref_stokesU[gauss_ind-1] = flux_U;
+          srcs[n_src-1].gauss_ref_stokesV[gauss_ind-1] = flux_V;
+          srcs[n_src-1].gauss_SIs[gauss_ind-1] = SI;
         break;
 
         case SHAPELET:
-          srcs[n_src-1].shape_components.ref_freqs[shape_ind-1] = freq;
-          srcs[n_src-1].shape_components.ref_stokesI[shape_ind-1] = flux_I;
-          srcs[n_src-1].shape_components.ref_stokesQ[shape_ind-1] = flux_Q;
-          srcs[n_src-1].shape_components.ref_stokesU[shape_ind-1] = flux_U;
-          srcs[n_src-1].shape_components.ref_stokesV[shape_ind-1] = flux_V;
-          srcs[n_src-1].shape_components.SIs[shape_ind-1] = SI;
+          srcs[n_src-1].shape_ref_freqs[shape_ind-1] = freq;
+          srcs[n_src-1].shape_ref_stokesI[shape_ind-1] = flux_I;
+          srcs[n_src-1].shape_ref_stokesQ[shape_ind-1] = flux_Q;
+          srcs[n_src-1].shape_ref_stokesU[shape_ind-1] = flux_U;
+          srcs[n_src-1].shape_ref_stokesV[shape_ind-1] = flux_V;
+          srcs[n_src-1].shape_SIs[shape_ind-1] = SI;
         break;
 
       default:
@@ -355,15 +357,15 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
 
       switch (type_key) {
         case GAUSSIAN:
-          srcs[n_src-1].gauss_components.pas[gauss_ind-1] =  coeff1 * DD2R;
-          srcs[n_src-1].gauss_components.majors[gauss_ind-1] = coeff2 * (DD2R / 60.0);
-          srcs[n_src-1].gauss_components.minors[gauss_ind-1] = coeff3 * (DD2R / 60.0);
+          srcs[n_src-1].gauss_pas[gauss_ind-1] =  coeff1 * DD2R;
+          srcs[n_src-1].gauss_majors[gauss_ind-1] = coeff2 * (DD2R / 60.0);
+          srcs[n_src-1].gauss_minors[gauss_ind-1] = coeff3 * (DD2R / 60.0);
         break;
 
         case SHAPELET:
-          srcs[n_src-1].shape_components.pas[shape_ind-1] =  coeff1 * DD2R;
-          srcs[n_src-1].shape_components.majors[shape_ind-1] = coeff2 * (DD2R / 60.0);
-          srcs[n_src-1].shape_components.minors[shape_ind-1] = coeff3 * (DD2R / 60.0);
+          srcs[n_src-1].shape_pas[shape_ind-1] =  coeff1 * DD2R;
+          srcs[n_src-1].shape_majors[shape_ind-1] = coeff2 * (DD2R / 60.0);
+          srcs[n_src-1].shape_minors[shape_ind-1] = coeff3 * (DD2R / 60.0);
         break;
 
       default:
@@ -387,10 +389,10 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
 
       switch (type_key) {
         case SHAPELET:
-          srcs[n_src-1].shape_components.n1s[coeff_ind] = coeff1;
-          srcs[n_src-1].shape_components.n2s[coeff_ind] = coeff2;
-          srcs[n_src-1].shape_components.shape_coeffs[coeff_ind] = coeff3;
-          srcs[n_src-1].shape_components.param_indexes[coeff_ind] = shape_ind - 1;
+          srcs[n_src-1].shape_n1s[coeff_ind] = coeff1;
+          srcs[n_src-1].shape_n2s[coeff_ind] = coeff2;
+          srcs[n_src-1].shape_coeffs[coeff_ind] = coeff3;
+          srcs[n_src-1].shape_param_indexes[coeff_ind] = shape_ind - 1;
         break;
 
       default:
@@ -408,7 +410,7 @@ int read_source_catalogue(const char *filename, source_catalogue_t *srccat) {
   }//while fgets(line,BUFSIZ,fp) != NULL)
 
   /* set pointers and counts in the final catalogue object */
-  srccat->sources = srcs;
+  srccat->catsources = srcs;
   srccat->num_sources = n_src;
 
   return 0;
@@ -463,7 +465,7 @@ void horizon_test(double za, e_sky_crop sky_crop_type,
       //non-zero. If so, we need to add the number of coeffs to the total
       //to go into the cropped source
       if (num_shape_coeff_component > 0) {
-        for (int param_index = 0; param_index < num_shape_coeff_component; param_index++) {
+        for (size_t param_index = 0; param_index < num_shape_coeff_component; param_index++) {
           if ( (int)shape_param_indexes[param_index] == shape ){
             * num_shape_coeff_retained += 1;
           }
@@ -480,11 +482,11 @@ void horizon_test(double za, e_sky_crop sky_crop_type,
 /*********************************
 // Crop a sky model contained in a source_catalogue_t struct (raw_srccat) and
 // crop out all sources below the horizon (at the beginning of the observation).
-// Return a new single source_t (cropped_srccat) that contains the full
+// Return a new single catsource_t (cropped_srccat) that contains the full
 // cropped sky model
 // First part of the function calculates az/za for the initial time step, and
 // counts how many components / sources are to be saved
-// Second part mallocs a big enough source_t struct to contain all cropped
+// Second part mallocs a big enough catsource_t struct to contain all cropped
 // components, and copies all relevant data across from raw_srccat
 
 // Possible TODO update the sky model for every time step to account for sources that
@@ -493,22 +495,22 @@ void horizon_test(double za, e_sky_crop sky_crop_type,
 **********************************/
 
 
-source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
+catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
               double latitude, int num_time_steps, e_sky_crop sky_crop_type){
 
-  for (int src = 0; src < raw_srccat->num_sources; src++){
+  for (size_t src = 0; src < raw_srccat->num_sources; src++){
 
     //Initialise containers for azimuth and zenith angles, used in cropping
     //later on
 
-    raw_srccat->sources[src].point_components.azs = malloc( raw_srccat->sources[src].n_points * sizeof(user_precision_t) );
-    raw_srccat->sources[src].point_components.zas = malloc( raw_srccat->sources[src].n_points * sizeof(user_precision_t) );
+    raw_srccat->catsources[src].point_azs = malloc( raw_srccat->catsources[src].n_points * sizeof(double) );
+    raw_srccat->catsources[src].point_zas = malloc( raw_srccat->catsources[src].n_points * sizeof(double) );
 
-    raw_srccat->sources[src].gauss_components.azs = malloc( raw_srccat->sources[src].n_gauss * sizeof(user_precision_t) );
-    raw_srccat->sources[src].gauss_components.zas = malloc( raw_srccat->sources[src].n_gauss * sizeof(user_precision_t) );
+    raw_srccat->catsources[src].gauss_azs = malloc( raw_srccat->catsources[src].n_gauss * sizeof(double) );
+    raw_srccat->catsources[src].gauss_zas = malloc( raw_srccat->catsources[src].n_gauss * sizeof(double) );
 
-    raw_srccat->sources[src].shape_components.azs = malloc( raw_srccat->sources[src].n_shapes * sizeof(user_precision_t) );
-    raw_srccat->sources[src].shape_components.zas = malloc( raw_srccat->sources[src].n_shapes * sizeof(user_precision_t) );
+    raw_srccat->catsources[src].shape_azs = malloc( raw_srccat->catsources[src].n_shapes * sizeof(double) );
+    raw_srccat->catsources[src].shape_zas = malloc( raw_srccat->catsources[src].n_shapes * sizeof(double) );
 
   }
 
@@ -528,60 +530,60 @@ source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
   e_horizon all_comps_above_horizon;
 
   //Begin checking az/za loop here - for each SOURCE
-  for (int src = 0; src < raw_srccat->num_sources; src++){
+  for (size_t src = 0; src < raw_srccat->num_sources; src++){
     all_comps_above_horizon = ABOVE;
 
     //Begin point source component loop
-    for (int point = 0; point < raw_srccat->sources[src].n_points; point++) {
+    for (size_t point = 0; point < raw_srccat->catsources[src].n_points; point++) {
       //Calculate az/za for all point components
-      convert_radec2azza(raw_srccat->sources[src].point_components.ras[point],
-                         raw_srccat->sources[src].point_components.decs[point],
+      convert_radec2azza(raw_srccat->catsources[src].point_ras[point],
+                         raw_srccat->catsources[src].point_decs[point],
                          lsts[0], latitude, &az, &za);
 
-      raw_srccat->sources[src].point_components.azs[point] = (user_precision_t)az;
-      raw_srccat->sources[src].point_components.zas[point] = (user_precision_t)za;
+      raw_srccat->catsources[src].point_azs[point] = az;
+      raw_srccat->catsources[src].point_zas[point] = za;
       //Check if components are above the horizon, and count how many
       //components survive / flag a source if a component is below the horizon
       //Last three arguments only used for shapelets so pass 0
       horizon_test(za, sky_crop_type, &all_comps_above_horizon,
                   &num_point_comp_retained, &num_shape_coeff_retained,
-                  0, raw_srccat->sources[src].shape_components.param_indexes, 0);
+                  0, raw_srccat->catsources[src].shape_param_indexes, 0);
 
     }//End point source component loop
 
     //Begin gauss source component loop
-    for (int gauss = 0; gauss < raw_srccat->sources[src].n_gauss; gauss++) {
+    for (size_t gauss = 0; gauss < raw_srccat->catsources[src].n_gauss; gauss++) {
         //Calculate az/za for all gauss components
-      convert_radec2azza(raw_srccat->sources[src].gauss_components.ras[gauss],
-                         raw_srccat->sources[src].gauss_components.decs[gauss],
+      convert_radec2azza(raw_srccat->catsources[src].gauss_ras[gauss],
+                         raw_srccat->catsources[src].gauss_decs[gauss],
                          lsts[0], latitude, &az, &za);
-      raw_srccat->sources[src].gauss_components.azs[gauss] = (user_precision_t)az;
-      raw_srccat->sources[src].gauss_components.zas[gauss] = (user_precision_t)za;
+      raw_srccat->catsources[src].gauss_azs[gauss] = az;
+      raw_srccat->catsources[src].gauss_zas[gauss] = za;
       //Check if components are above the horizon, and count how many
       //components survive / flag a source if a component is below the horizon
       //Last three arguments only used for shapelets so pass 0
       horizon_test(za, sky_crop_type, &all_comps_above_horizon,
                   &num_gauss_comp_retained, &num_shape_coeff_retained,
-                  0, raw_srccat->sources[src].shape_components.param_indexes, 0);
+                  0, raw_srccat->catsources[src].shape_param_indexes, 0);
 
     }//End gauss source component loop
 
     //Begin shape source component loop
-    for (int shape = 0; shape < raw_srccat->sources[src].n_shapes; shape++) {
+    for (size_t shape = 0; shape < raw_srccat->catsources[src].n_shapes; shape++) {
       //Calculate az/za for all gauss components
-      convert_radec2azza(raw_srccat->sources[src].shape_components.ras[shape],
-                         raw_srccat->sources[src].shape_components.decs[shape],
+      convert_radec2azza(raw_srccat->catsources[src].shape_ras[shape],
+                         raw_srccat->catsources[src].shape_decs[shape],
                          lsts[0], latitude, &az, &za);
-      raw_srccat->sources[src].shape_components.azs[shape] = (user_precision_t)az;
-      raw_srccat->sources[src].shape_components.zas[shape] = (user_precision_t)za;
+      raw_srccat->catsources[src].shape_azs[shape] = az;
+      raw_srccat->catsources[src].shape_zas[shape] = za;
       //Check if components are above the horizon, and count how many
       //components survive / flag a source if a component is below the horizon
       //Use last three arguments to correctly identify which shapelet coeffs
       //belong to which shapelet component so we can malloc them correctly later
       horizon_test(za, sky_crop_type, &all_comps_above_horizon,
                   &num_shape_comp_retained, &num_shape_coeff_retained,
-                  raw_srccat->sources[src].n_shape_coeffs,
-                  raw_srccat->sources[src].shape_components.param_indexes, shape);
+                  raw_srccat->catsources[src].n_shape_coeffs,
+                  raw_srccat->catsources[src].shape_param_indexes, shape);
 
     }//End shape source component loop
 
@@ -592,10 +594,10 @@ source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
     if (sky_crop_type == CROP_SOURCES) {
       if (all_comps_above_horizon == ABOVE) {
         num_sources_retained ++;
-        num_point_comp_retained += raw_srccat->sources[src].n_points;
-        num_gauss_comp_retained += raw_srccat->sources[src].n_gauss;
-        num_shape_comp_retained += raw_srccat->sources[src].n_shapes;
-        num_shape_coeff_retained += raw_srccat->sources[src].n_shape_coeffs;
+        num_point_comp_retained += raw_srccat->catsources[src].n_points;
+        num_gauss_comp_retained += raw_srccat->catsources[src].n_gauss;
+        num_shape_comp_retained += raw_srccat->catsources[src].n_shapes;
+        num_shape_coeff_retained += raw_srccat->catsources[src].n_shape_coeffs;
         cropped_src_indexes = realloc(cropped_src_indexes,sizeof(int)*num_sources_retained);
         cropped_src_indexes[num_sources_retained - 1] = src;
       }//end if all_comps_above_horizon == ABOVE
@@ -603,9 +605,9 @@ source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
 
   }//Finish checking az/za loop here
 
-  //Make an empty source_t and malloc using the numbers gather above
-  source_t *cropped_src=NULL;
-  cropped_src = malloc(sizeof(source_t));
+  //Make an empty catsource_t and malloc using the numbers gather above
+  catsource_t *cropped_src=NULL;
+  cropped_src = malloc(sizeof(catsource_t));
 
   cropped_src->n_points = num_point_comp_retained;
   cropped_src->n_gauss = num_gauss_comp_retained;
@@ -613,50 +615,50 @@ source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
   cropped_src->n_comps = num_point_comp_retained + num_gauss_comp_retained + num_shape_comp_retained;
   cropped_src->n_shape_coeffs = num_shape_coeff_retained;
 
-  cropped_src->point_components.ras = malloc( num_point_comp_retained * sizeof(double) );
-  cropped_src->point_components.decs = malloc( num_point_comp_retained * sizeof(double) );
-  cropped_src->point_components.ref_stokesI = malloc( num_point_comp_retained * sizeof(user_precision_t) );
-  cropped_src->point_components.ref_stokesQ = malloc( num_point_comp_retained * sizeof(user_precision_t) );
-  cropped_src->point_components.ref_stokesU = malloc( num_point_comp_retained * sizeof(user_precision_t) );
-  cropped_src->point_components.ref_stokesV = malloc( num_point_comp_retained * sizeof(user_precision_t) );
-  cropped_src->point_components.ref_freqs = malloc( num_point_comp_retained * sizeof(double) );
-  cropped_src->point_components.SIs = malloc( num_point_comp_retained * sizeof(user_precision_t) );
+  cropped_src->point_ras = malloc( num_point_comp_retained * sizeof(double) );
+  cropped_src->point_decs = malloc( num_point_comp_retained * sizeof(double) );
+  cropped_src->point_ref_stokesI = malloc( num_point_comp_retained * sizeof(user_precision_t) );
+  cropped_src->point_ref_stokesQ = malloc( num_point_comp_retained * sizeof(user_precision_t) );
+  cropped_src->point_ref_stokesU = malloc( num_point_comp_retained * sizeof(user_precision_t) );
+  cropped_src->point_ref_stokesV = malloc( num_point_comp_retained * sizeof(user_precision_t) );
+  cropped_src->point_ref_freqs = malloc( num_point_comp_retained * sizeof(double) );
+  cropped_src->point_SIs = malloc( num_point_comp_retained * sizeof(user_precision_t) );
 
-  cropped_src->point_components.azs = malloc( num_point_comp_retained * num_time_steps * sizeof(user_precision_t) );
-  cropped_src->point_components.zas = malloc( num_point_comp_retained * num_time_steps * sizeof(user_precision_t) );
+  cropped_src->point_azs = malloc( num_point_comp_retained * num_time_steps * sizeof(user_precision_t) );
+  cropped_src->point_zas = malloc( num_point_comp_retained * num_time_steps * sizeof(user_precision_t) );
 
-  cropped_src->gauss_components.ras = malloc( num_gauss_comp_retained * sizeof(double) );
-  cropped_src->gauss_components.decs = malloc( num_gauss_comp_retained * sizeof(double) );
-  cropped_src->gauss_components.ref_stokesI = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
-  cropped_src->gauss_components.ref_stokesQ = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
-  cropped_src->gauss_components.ref_stokesU = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
-  cropped_src->gauss_components.ref_stokesV = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
-  cropped_src->gauss_components.ref_freqs = malloc( num_gauss_comp_retained * sizeof(double) );
-  cropped_src->gauss_components.SIs = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
-  cropped_src->gauss_components.majors = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
-  cropped_src->gauss_components.minors = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
-  cropped_src->gauss_components.pas = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
-  cropped_src->gauss_components.azs = malloc( num_gauss_comp_retained * num_time_steps * sizeof(user_precision_t) );
-  cropped_src->gauss_components.zas = malloc( num_gauss_comp_retained * num_time_steps * sizeof(user_precision_t) );
+  cropped_src->gauss_ras = malloc( num_gauss_comp_retained * sizeof(double) );
+  cropped_src->gauss_decs = malloc( num_gauss_comp_retained * sizeof(double) );
+  cropped_src->gauss_ref_stokesI = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
+  cropped_src->gauss_ref_stokesQ = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
+  cropped_src->gauss_ref_stokesU = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
+  cropped_src->gauss_ref_stokesV = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
+  cropped_src->gauss_ref_freqs = malloc( num_gauss_comp_retained * sizeof(double) );
+  cropped_src->gauss_SIs = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
+  cropped_src->gauss_majors = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
+  cropped_src->gauss_minors = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
+  cropped_src->gauss_pas = malloc( num_gauss_comp_retained * sizeof(user_precision_t) );
+  cropped_src->gauss_azs = malloc( num_gauss_comp_retained * num_time_steps * sizeof(user_precision_t) );
+  cropped_src->gauss_zas = malloc( num_gauss_comp_retained * num_time_steps * sizeof(user_precision_t) );
 
-  cropped_src->shape_components.ras = malloc( num_shape_comp_retained * sizeof(double) );
-  cropped_src->shape_components.decs = malloc( num_shape_comp_retained * sizeof(double) );
-  cropped_src->shape_components.ref_stokesI = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
-  cropped_src->shape_components.ref_stokesQ = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
-  cropped_src->shape_components.ref_stokesU = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
-  cropped_src->shape_components.ref_stokesV = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
-  cropped_src->shape_components.SIs = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
-  cropped_src->shape_components.ref_freqs = malloc( num_shape_comp_retained * sizeof(double) );
-  cropped_src->shape_components.majors = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
-  cropped_src->shape_components.minors = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
-  cropped_src->shape_components.pas = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
+  cropped_src->shape_ras = malloc( num_shape_comp_retained * sizeof(double) );
+  cropped_src->shape_decs = malloc( num_shape_comp_retained * sizeof(double) );
+  cropped_src->shape_ref_stokesI = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
+  cropped_src->shape_ref_stokesQ = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
+  cropped_src->shape_ref_stokesU = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
+  cropped_src->shape_ref_stokesV = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
+  cropped_src->shape_SIs = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
+  cropped_src->shape_ref_freqs = malloc( num_shape_comp_retained * sizeof(double) );
+  cropped_src->shape_majors = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
+  cropped_src->shape_minors = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
+  cropped_src->shape_pas = malloc( num_shape_comp_retained * sizeof(user_precision_t) );
 
-  cropped_src->shape_components.n1s = malloc( num_shape_coeff_retained * sizeof(user_precision_t) );
-  cropped_src->shape_components.n2s = malloc( num_shape_coeff_retained * sizeof(user_precision_t) );
-  cropped_src->shape_components.shape_coeffs = malloc( num_shape_coeff_retained * sizeof(user_precision_t) );
-  cropped_src->shape_components.param_indexes = malloc( num_shape_coeff_retained * sizeof(user_precision_t) );
-  cropped_src->shape_components.azs = malloc( num_shape_comp_retained * num_time_steps * sizeof(user_precision_t) );
-  cropped_src->shape_components.zas = malloc( num_shape_comp_retained * num_time_steps * sizeof(user_precision_t) );
+  cropped_src->shape_n1s = malloc( num_shape_coeff_retained * sizeof(user_precision_t) );
+  cropped_src->shape_n2s = malloc( num_shape_coeff_retained * sizeof(user_precision_t) );
+  cropped_src->shape_coeffs = malloc( num_shape_coeff_retained * sizeof(user_precision_t) );
+  cropped_src->shape_param_indexes = malloc( num_shape_coeff_retained * sizeof(user_precision_t) );
+  cropped_src->shape_azs = malloc( num_shape_comp_retained * num_time_steps * sizeof(user_precision_t) );
+  cropped_src->shape_zas = malloc( num_shape_comp_retained * num_time_steps * sizeof(user_precision_t) );
 
   //Now add information into cropped_src
   if (sky_crop_type == CROP_SOURCES) {
@@ -673,27 +675,28 @@ source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
 
     //Loop over all the retained source indexes, and add all component
     //information into cropped_src
-    for (int retained = 0; retained < num_sources_retained; retained++) {
+    for (size_t retained = 0; retained < num_sources_retained; retained++) {
       int src = cropped_src_indexes[retained];
 
       //Loop over point components
-      for (int point = 0; point < raw_srccat->sources[src].n_points; point++){
-        cropped_src->point_components.ras[point_crop_component_index] = raw_srccat->sources[src].point_components.ras[point];
-        cropped_src->point_components.decs[point_crop_component_index] = raw_srccat->sources[src].point_components.decs[point];
-        cropped_src->point_components.ref_stokesI[point_crop_component_index] = raw_srccat->sources[src].point_components.ref_stokesI[point];
-        cropped_src->point_components.ref_stokesQ[point_crop_component_index] = raw_srccat->sources[src].point_components.ref_stokesQ[point];
-        cropped_src->point_components.ref_stokesU[point_crop_component_index] = raw_srccat->sources[src].point_components.ref_stokesU[point];
-        cropped_src->point_components.ref_stokesV[point_crop_component_index] = raw_srccat->sources[src].point_components.ref_stokesV[point];
-        cropped_src->point_components.ref_freqs[point_crop_component_index] = raw_srccat->sources[src].point_components.ref_freqs[point];
-        cropped_src->point_components.SIs[point_crop_component_index] = raw_srccat->sources[src].point_components.SIs[point];
+      for (size_t point = 0; point < raw_srccat->catsources[src].n_points; point++){
+        cropped_src->point_ras[point_crop_component_index] = raw_srccat->catsources[src].point_ras[point];
+        cropped_src->point_decs[point_crop_component_index] = raw_srccat->catsources[src].point_decs[point];
+        cropped_src->point_ref_stokesI[point_crop_component_index] = raw_srccat->catsources[src].point_ref_stokesI[point];
+        cropped_src->point_ref_stokesQ[point_crop_component_index] = raw_srccat->catsources[src].point_ref_stokesQ[point];
+        cropped_src->point_ref_stokesU[point_crop_component_index] = raw_srccat->catsources[src].point_ref_stokesU[point];
+        cropped_src->point_ref_stokesV[point_crop_component_index] = raw_srccat->catsources[src].point_ref_stokesV[point];
+        cropped_src->point_ref_freqs[point_crop_component_index] = raw_srccat->catsources[src].point_ref_freqs[point];
+        cropped_src->point_SIs[point_crop_component_index] = raw_srccat->catsources[src].point_SIs[point];
 
         //Calculate az/za values for each point for all time steps
         for (int time_step = 0; time_step < num_time_steps; time_step++) {
-          convert_radec2azza(raw_srccat->sources[src].point_components.ras[point],
-                             raw_srccat->sources[src].point_components.decs[point],
+          convert_radec2azza(raw_srccat->catsources[src].point_ras[point],
+                             raw_srccat->catsources[src].point_decs[point],
                              lsts[time_step], latitude, &az, &za);
-          cropped_src->point_components.azs[point_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
-          cropped_src->point_components.zas[point_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
+          cropped_src->point_azs[point_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
+          cropped_src->point_zas[point_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
+          // printf("AZ ZA %.7f %.7f\n",(user_precision_t)az,(user_precision_t)za );
         }
 
         point_crop_component_index ++;
@@ -701,27 +704,27 @@ source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
       }//End point component loop
 
       //Loop over gauss components
-      for (int gauss = 0; gauss < raw_srccat->sources[src].n_gauss; gauss++){
-        cropped_src->gauss_components.ras[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.ras[gauss];
-        cropped_src->gauss_components.decs[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.decs[gauss];
-        cropped_src->gauss_components.ref_stokesI[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.ref_stokesI[gauss];
-        cropped_src->gauss_components.ref_stokesQ[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.ref_stokesQ[gauss];
-        cropped_src->gauss_components.ref_stokesU[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.ref_stokesU[gauss];
-        cropped_src->gauss_components.ref_stokesV[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.ref_stokesV[gauss];
-        cropped_src->gauss_components.ref_freqs[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.ref_freqs[gauss];
-        cropped_src->gauss_components.SIs[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.SIs[gauss];
+      for (int gauss = 0; gauss < raw_srccat->catsources[src].n_gauss; gauss++){
+        cropped_src->gauss_ras[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ras[gauss];
+        cropped_src->gauss_decs[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_decs[gauss];
+        cropped_src->gauss_ref_stokesI[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_stokesI[gauss];
+        cropped_src->gauss_ref_stokesQ[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_stokesQ[gauss];
+        cropped_src->gauss_ref_stokesU[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_stokesU[gauss];
+        cropped_src->gauss_ref_stokesV[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_stokesV[gauss];
+        cropped_src->gauss_ref_freqs[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_freqs[gauss];
+        cropped_src->gauss_SIs[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_SIs[gauss];
 
-        cropped_src->gauss_components.majors[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.majors[gauss];
-        cropped_src->gauss_components.minors[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.minors[gauss];
-        cropped_src->gauss_components.pas[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.pas[gauss];
+        cropped_src->gauss_majors[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_majors[gauss];
+        cropped_src->gauss_minors[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_minors[gauss];
+        cropped_src->gauss_pas[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_pas[gauss];
 
         //Calculate az/za values for each gauss for all time steps
         for (int time_step = 0; time_step < num_time_steps; time_step++) {
-          convert_radec2azza(raw_srccat->sources[src].gauss_components.ras[gauss],
-                             raw_srccat->sources[src].gauss_components.decs[gauss],
+          convert_radec2azza(raw_srccat->catsources[src].gauss_ras[gauss],
+                             raw_srccat->catsources[src].gauss_decs[gauss],
                              lsts[time_step], latitude, &az, &za);
-          cropped_src->gauss_components.azs[gauss_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
-          cropped_src->gauss_components.zas[gauss_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
+          cropped_src->gauss_azs[gauss_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
+          cropped_src->gauss_zas[gauss_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
         }
 
         gauss_crop_component_index ++;
@@ -729,51 +732,51 @@ source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
       }//End gauss component loop
       //
       //Loop over shapelet components
-      for (int shape = 0; shape < raw_srccat->sources[src].n_shapes; shape++){
-        cropped_src->shape_components.ras[shape_crop_component_index] = raw_srccat->sources[src].shape_components.ras[shape];
-        cropped_src->shape_components.decs[shape_crop_component_index] = raw_srccat->sources[src].shape_components.decs[shape];
+      for (int shape = 0; shape < raw_srccat->catsources[src].n_shapes; shape++){
+        cropped_src->shape_ras[shape_crop_component_index] = raw_srccat->catsources[src].shape_ras[shape];
+        cropped_src->shape_decs[shape_crop_component_index] = raw_srccat->catsources[src].shape_decs[shape];
 
-        cropped_src->shape_components.ref_stokesI[shape_crop_component_index] = raw_srccat->sources[src].shape_components.ref_stokesI[shape];
-        cropped_src->shape_components.ref_stokesQ[shape_crop_component_index] = raw_srccat->sources[src].shape_components.ref_stokesQ[shape];
-        cropped_src->shape_components.ref_stokesU[shape_crop_component_index] = raw_srccat->sources[src].shape_components.ref_stokesU[shape];
-        cropped_src->shape_components.ref_stokesV[shape_crop_component_index] = raw_srccat->sources[src].shape_components.ref_stokesV[shape];
-        cropped_src->shape_components.ref_freqs[shape_crop_component_index] = raw_srccat->sources[src].shape_components.ref_freqs[shape];
-        cropped_src->shape_components.SIs[shape_crop_component_index] = raw_srccat->sources[src].shape_components.SIs[shape];
+        cropped_src->shape_ref_stokesI[shape_crop_component_index] = raw_srccat->catsources[src].shape_ref_stokesI[shape];
+        cropped_src->shape_ref_stokesQ[shape_crop_component_index] = raw_srccat->catsources[src].shape_ref_stokesQ[shape];
+        cropped_src->shape_ref_stokesU[shape_crop_component_index] = raw_srccat->catsources[src].shape_ref_stokesU[shape];
+        cropped_src->shape_ref_stokesV[shape_crop_component_index] = raw_srccat->catsources[src].shape_ref_stokesV[shape];
+        cropped_src->shape_ref_freqs[shape_crop_component_index] = raw_srccat->catsources[src].shape_ref_freqs[shape];
+        cropped_src->shape_SIs[shape_crop_component_index] = raw_srccat->catsources[src].shape_SIs[shape];
 
-        cropped_src->shape_components.majors[shape_crop_component_index] = raw_srccat->sources[src].shape_components.majors[shape];
-        cropped_src->shape_components.minors[shape_crop_component_index] = raw_srccat->sources[src].shape_components.minors[shape];
-        cropped_src->shape_components.pas[shape_crop_component_index] = raw_srccat->sources[src].shape_components.pas[shape];
+        cropped_src->shape_majors[shape_crop_component_index] = raw_srccat->catsources[src].shape_majors[shape];
+        cropped_src->shape_minors[shape_crop_component_index] = raw_srccat->catsources[src].shape_minors[shape];
+        cropped_src->shape_pas[shape_crop_component_index] = raw_srccat->catsources[src].shape_pas[shape];
 
         //Calculate az/za values for each shapelet component for all time steps
         for (int time_step = 0; time_step < num_time_steps; time_step++) {
-          convert_radec2azza(raw_srccat->sources[src].shape_components.ras[shape],
-                             raw_srccat->sources[src].shape_components.decs[shape],
+          convert_radec2azza(raw_srccat->catsources[src].shape_ras[shape],
+                             raw_srccat->catsources[src].shape_decs[shape],
                              lsts[time_step], latitude, &az, &za);
-          cropped_src->shape_components.azs[shape_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
-          cropped_src->shape_components.zas[shape_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
+          cropped_src->shape_azs[shape_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
+          cropped_src->shape_zas[shape_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
         }
 
         if ((int)shape == 0) {
           // Loop over the coefficients for this shapelet source
           // Only do it once as all shapelet component coeffs, n1s, n2s for one
-          // source are in 1D arrays in raw_srccat->sources[src]. As each
+          // source are in 1D arrays in raw_srccat->catsources[src]. As each
           // shapelet component can have any number of coeffs, n1s, n2s, we
           // relate the coeffs, n1s, n2s, to shapelet ra, dec, etc via the
-          // cropped_src->shape_components.param_indexes array. So need to pull that
-          // information out from raw_srccat->sources[src].shape_components.param_indexes
+          // cropped_src->shape_param_indexes array. So need to pull that
+          // information out from raw_srccat->catsources[src].shape_param_indexes
           // and keep track of how many shapelet coeff components are in
           // the new cropped_src using shape_coeff_component_index
           // Do all this work now as the 1D array goes nicely into a GPU kernel
-          for (int coeff_ind = 0; coeff_ind < raw_srccat->sources[src].n_shape_coeffs; coeff_ind++) {
-            cropped_src->shape_components.shape_coeffs[shape_coeff_component_index] = raw_srccat->sources[src].shape_components.shape_coeffs[coeff_ind];
-            cropped_src->shape_components.n1s[shape_coeff_component_index] = raw_srccat->sources[src].shape_components.n1s[coeff_ind];
-            cropped_src->shape_components.n2s[shape_coeff_component_index] = raw_srccat->sources[src].shape_components.n2s[coeff_ind];
+          for (int coeff_ind = 0; coeff_ind < raw_srccat->catsources[src].n_shape_coeffs; coeff_ind++) {
+            cropped_src->shape_coeffs[shape_coeff_component_index] = raw_srccat->catsources[src].shape_coeffs[coeff_ind];
+            cropped_src->shape_n1s[shape_coeff_component_index] = raw_srccat->catsources[src].shape_n1s[coeff_ind];
+            cropped_src->shape_n2s[shape_coeff_component_index] = raw_srccat->catsources[src].shape_n2s[coeff_ind];
 
             //We do the loop of shapelet coeffs, n1s, n2s only once per source, so we may well get ahead of the
             //shape_crop_component_index. So use to shape_param_index to account for that
-            int shape_param_index = raw_srccat->sources[src].shape_components.param_indexes[coeff_ind] + shape_crop_component_index;
+            int shape_param_index = raw_srccat->catsources[src].shape_param_indexes[coeff_ind] + shape_crop_component_index;
 
-            cropped_src->shape_components.param_indexes[shape_coeff_component_index] = shape_param_index;
+            cropped_src->shape_param_indexes[shape_coeff_component_index] = shape_param_index;
             shape_coeff_component_index += 1;
           }//end coeff,n1,n2 loop for all shapelet components in this source
         }//end if shape == 0
@@ -798,26 +801,26 @@ source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
     for (int src = 0; src < raw_srccat->num_sources; src++){
 
       //Begin point component loop
-      for (int point = 0; point < raw_srccat->sources[src].n_points; point++){
+      for (int point = 0; point < raw_srccat->catsources[src].n_points; point++){
         //Check if point component above horizon
-        if (raw_srccat->sources[src].point_components.zas[point] < M_PI / 2.0){
-          cropped_src->point_components.ras[point_crop_component_index] = raw_srccat->sources[src].point_components.ras[point];
-          cropped_src->point_components.decs[point_crop_component_index] = raw_srccat->sources[src].point_components.decs[point];
-          cropped_src->point_components.ref_stokesI[point_crop_component_index] = raw_srccat->sources[src].point_components.ref_stokesI[point];
-          cropped_src->point_components.ref_stokesQ[point_crop_component_index] = raw_srccat->sources[src].point_components.ref_stokesQ[point];
-          cropped_src->point_components.ref_stokesU[point_crop_component_index] = raw_srccat->sources[src].point_components.ref_stokesU[point];
-          cropped_src->point_components.ref_stokesV[point_crop_component_index] = raw_srccat->sources[src].point_components.ref_stokesV[point];
-          cropped_src->point_components.ref_freqs[point_crop_component_index] = raw_srccat->sources[src].point_components.ref_freqs[point];
-          cropped_src->point_components.SIs[point_crop_component_index] = raw_srccat->sources[src].point_components.SIs[point];
+        if (raw_srccat->catsources[src].point_zas[point] < M_PI / 2.0){
+          cropped_src->point_ras[point_crop_component_index] = raw_srccat->catsources[src].point_ras[point];
+          cropped_src->point_decs[point_crop_component_index] = raw_srccat->catsources[src].point_decs[point];
+          cropped_src->point_ref_stokesI[point_crop_component_index] = raw_srccat->catsources[src].point_ref_stokesI[point];
+          cropped_src->point_ref_stokesQ[point_crop_component_index] = raw_srccat->catsources[src].point_ref_stokesQ[point];
+          cropped_src->point_ref_stokesU[point_crop_component_index] = raw_srccat->catsources[src].point_ref_stokesU[point];
+          cropped_src->point_ref_stokesV[point_crop_component_index] = raw_srccat->catsources[src].point_ref_stokesV[point];
+          cropped_src->point_ref_freqs[point_crop_component_index] = raw_srccat->catsources[src].point_ref_freqs[point];
+          cropped_src->point_SIs[point_crop_component_index] = raw_srccat->catsources[src].point_SIs[point];
 
           //Calculate az/za values for each point for all time steps
           for (int time_step = 0; time_step < num_time_steps; time_step++) {
-            convert_radec2azza(raw_srccat->sources[src].point_components.ras[point],
-                               raw_srccat->sources[src].point_components.decs[point],
+            convert_radec2azza(raw_srccat->catsources[src].point_ras[point],
+                               raw_srccat->catsources[src].point_decs[point],
                                lsts[time_step], latitude, &az, &za);
-            cropped_src->point_components.azs[point_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
-            cropped_src->point_components.zas[point_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
-            // printf("AZ ZA %d %.7f %.7f\n",point_crop_component_index*num_time_steps + time_step,(float)az,(float)za );
+            cropped_src->point_azs[point_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
+            cropped_src->point_zas[point_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
+            // printf("AZ ZA %d %.7f %.7f\n",point_crop_component_index*num_time_steps + time_step,(user_precision_t)az,(user_precision_t)za );
           }//End az/za calculation loop
 
           point_crop_component_index ++;
@@ -826,29 +829,29 @@ source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
 
 
       //Begin gauss component loop
-      for (int gauss = 0; gauss < raw_srccat->sources[src].n_gauss; gauss++){
+      for (int gauss = 0; gauss < raw_srccat->catsources[src].n_gauss; gauss++){
         //Check if gauss component above horizon
-        if (raw_srccat->sources[src].gauss_components.zas[gauss] < M_PI / 2.0){
-          cropped_src->gauss_components.ras[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.ras[gauss];
-          cropped_src->gauss_components.decs[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.decs[gauss];
-          cropped_src->gauss_components.ref_stokesI[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.ref_stokesI[gauss];
-          cropped_src->gauss_components.ref_stokesQ[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.ref_stokesQ[gauss];
-          cropped_src->gauss_components.ref_stokesU[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.ref_stokesU[gauss];
-          cropped_src->gauss_components.ref_stokesV[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.ref_stokesV[gauss];
-          cropped_src->gauss_components.ref_freqs[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.ref_freqs[gauss];
-          cropped_src->gauss_components.SIs[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.SIs[gauss];
+        if (raw_srccat->catsources[src].gauss_zas[gauss] < M_PI / 2.0){
+          cropped_src->gauss_ras[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ras[gauss];
+          cropped_src->gauss_decs[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_decs[gauss];
+          cropped_src->gauss_ref_stokesI[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_stokesI[gauss];
+          cropped_src->gauss_ref_stokesQ[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_stokesQ[gauss];
+          cropped_src->gauss_ref_stokesU[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_stokesU[gauss];
+          cropped_src->gauss_ref_stokesV[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_stokesV[gauss];
+          cropped_src->gauss_ref_freqs[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_ref_freqs[gauss];
+          cropped_src->gauss_SIs[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_SIs[gauss];
 
-          cropped_src->gauss_components.majors[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.majors[gauss];
-          cropped_src->gauss_components.minors[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.minors[gauss];
-          cropped_src->gauss_components.pas[gauss_crop_component_index] = raw_srccat->sources[src].gauss_components.pas[gauss];
+          cropped_src->gauss_majors[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_majors[gauss];
+          cropped_src->gauss_minors[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_minors[gauss];
+          cropped_src->gauss_pas[gauss_crop_component_index] = raw_srccat->catsources[src].gauss_pas[gauss];
 
           //Calculate az/za values for each gauss for all time steps
           for (int time_step = 0; time_step < num_time_steps; time_step++) {
-            convert_radec2azza(raw_srccat->sources[src].gauss_components.ras[gauss],
-                               raw_srccat->sources[src].gauss_components.decs[gauss],
+            convert_radec2azza(raw_srccat->catsources[src].gauss_ras[gauss],
+                               raw_srccat->catsources[src].gauss_decs[gauss],
                                lsts[time_step], latitude, &az, &za);
-            cropped_src->gauss_components.azs[gauss_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
-            cropped_src->gauss_components.zas[gauss_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
+            cropped_src->gauss_azs[gauss_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
+            cropped_src->gauss_zas[gauss_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
           }//End az/za calculation loop
 
           gauss_crop_component_index ++;
@@ -856,44 +859,44 @@ source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
       }//End gauss component loop
 
       //Loop over shapelet components
-      for (int shape = 0; shape < raw_srccat->sources[src].n_shapes; shape++){
+      for (int shape = 0; shape < raw_srccat->catsources[src].n_shapes; shape++){
 
-        if (raw_srccat->sources[src].shape_components.zas[shape] < M_PI / 2.0){
-          cropped_src->shape_components.ras[shape_crop_component_index] = raw_srccat->sources[src].shape_components.ras[shape];
-          cropped_src->shape_components.decs[shape_crop_component_index] = raw_srccat->sources[src].shape_components.decs[shape];
-          cropped_src->shape_components.ref_stokesI[shape_crop_component_index] = raw_srccat->sources[src].shape_components.ref_stokesI[shape];
-          cropped_src->shape_components.ref_stokesQ[shape_crop_component_index] = raw_srccat->sources[src].shape_components.ref_stokesQ[shape];
-          cropped_src->shape_components.ref_stokesU[shape_crop_component_index] = raw_srccat->sources[src].shape_components.ref_stokesU[shape];
-          cropped_src->shape_components.ref_stokesV[shape_crop_component_index] = raw_srccat->sources[src].shape_components.ref_stokesV[shape];
-          cropped_src->shape_components.ref_freqs[shape_crop_component_index] = raw_srccat->sources[src].shape_components.ref_freqs[shape];
-          cropped_src->shape_components.SIs[shape_crop_component_index] = raw_srccat->sources[src].shape_components.SIs[shape];
+        if (raw_srccat->catsources[src].shape_zas[shape] < M_PI / 2.0){
+          cropped_src->shape_ras[shape_crop_component_index] = raw_srccat->catsources[src].shape_ras[shape];
+          cropped_src->shape_decs[shape_crop_component_index] = raw_srccat->catsources[src].shape_decs[shape];
+          cropped_src->shape_ref_stokesI[shape_crop_component_index] = raw_srccat->catsources[src].shape_ref_stokesI[shape];
+          cropped_src->shape_ref_stokesQ[shape_crop_component_index] = raw_srccat->catsources[src].shape_ref_stokesQ[shape];
+          cropped_src->shape_ref_stokesU[shape_crop_component_index] = raw_srccat->catsources[src].shape_ref_stokesU[shape];
+          cropped_src->shape_ref_stokesV[shape_crop_component_index] = raw_srccat->catsources[src].shape_ref_stokesV[shape];
+          cropped_src->shape_ref_freqs[shape_crop_component_index] = raw_srccat->catsources[src].shape_ref_freqs[shape];
+          cropped_src->shape_SIs[shape_crop_component_index] = raw_srccat->catsources[src].shape_SIs[shape];
 
-          cropped_src->shape_components.majors[shape_crop_component_index] = raw_srccat->sources[src].shape_components.majors[shape];
-          cropped_src->shape_components.minors[shape_crop_component_index] = raw_srccat->sources[src].shape_components.minors[shape];
-          cropped_src->shape_components.pas[shape_crop_component_index] = raw_srccat->sources[src].shape_components.pas[shape];
+          cropped_src->shape_majors[shape_crop_component_index] = raw_srccat->catsources[src].shape_majors[shape];
+          cropped_src->shape_minors[shape_crop_component_index] = raw_srccat->catsources[src].shape_minors[shape];
+          cropped_src->shape_pas[shape_crop_component_index] = raw_srccat->catsources[src].shape_pas[shape];
 
           //Calculate az/za values for each shape for all time steps
           for (int time_step = 0; time_step < num_time_steps; time_step++) {
-            convert_radec2azza(raw_srccat->sources[src].shape_components.ras[shape],
-                               raw_srccat->sources[src].shape_components.decs[shape],
+            convert_radec2azza(raw_srccat->catsources[src].shape_ras[shape],
+                               raw_srccat->catsources[src].shape_decs[shape],
                                lsts[time_step], latitude, &az, &za);
-            cropped_src->shape_components.azs[shape_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
-            cropped_src->shape_components.zas[shape_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
+            cropped_src->shape_azs[shape_crop_component_index*num_time_steps + time_step] = (user_precision_t)az;
+            cropped_src->shape_zas[shape_crop_component_index*num_time_steps + time_step] = (user_precision_t)za;
           }//End az/za calculation loop
 
           //Loop through all shapelet coeffs,n1s,n2s for this source; these 1D arrays
           //can contain information from multiple shapelet components.
-          //raw_srccat->sources[src].shape_components.param_indexes is used to match
+          //raw_srccat->catsources[src].shape_param_indexes is used to match
           //the coeff,n1,n2 to each component, so check those indexes and grab
           //information if correct.
           // Do all this work now as the 1D array goes nicely into a GPU kernel
-          for (int coeff_ind = 0; coeff_ind < raw_srccat->sources[src].n_shape_coeffs; coeff_ind++) {
+          for (int coeff_ind = 0; coeff_ind < raw_srccat->catsources[src].n_shape_coeffs; coeff_ind++) {
             //Check if we are on the cofrect component
-            if ( (int)raw_srccat->sources[src].shape_components.param_indexes[coeff_ind] == shape ){
-              cropped_src->shape_components.shape_coeffs[shape_coeff_component_index] = raw_srccat->sources[src].shape_components.shape_coeffs[coeff_ind];
-              cropped_src->shape_components.n1s[shape_coeff_component_index] = raw_srccat->sources[src].shape_components.n1s[coeff_ind];
-              cropped_src->shape_components.n2s[shape_coeff_component_index] = raw_srccat->sources[src].shape_components.n2s[coeff_ind];
-              cropped_src->shape_components.param_indexes[shape_coeff_component_index] = shape_crop_component_index;
+            if ( (int)raw_srccat->catsources[src].shape_param_indexes[coeff_ind] == shape ){
+              cropped_src->shape_coeffs[shape_coeff_component_index] = raw_srccat->catsources[src].shape_coeffs[coeff_ind];
+              cropped_src->shape_n1s[shape_coeff_component_index] = raw_srccat->catsources[src].shape_n1s[coeff_ind];
+              cropped_src->shape_n2s[shape_coeff_component_index] = raw_srccat->catsources[src].shape_n2s[coeff_ind];
+              cropped_src->shape_param_indexes[shape_coeff_component_index] = shape_crop_component_index;
 
               shape_coeff_component_index += 1;
 
@@ -904,6 +907,10 @@ source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
       }//End shapelet component loop
     }//End raw_srccat source loop
   }//End if sky_crop_type == CROP_COMPONENTS
+
+  // cropped_src->num_point_primarybeam_values = cropped_src->n_points * woden_settings->num_time_steps * woden_settings->num_freqs;
+  // cropped_src->num_gauss_primarybeam_values = cropped_src->n_gauss * woden_settings->num_time_steps * woden_settings->num_freqs;
+  // cropped_src->num_shape_primarybeam_values = cropped_src->n_shapes * woden_settings->num_time_steps * woden_settings->num_freqs;
 
   return cropped_src;
 

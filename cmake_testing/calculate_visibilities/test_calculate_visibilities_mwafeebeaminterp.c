@@ -96,6 +96,10 @@ void test_calculate_visibilities_MWAFEEBeamInterp(int n_points, int n_gauss, int
   woden_settings_t *woden_settings = make_woden_settings(RA0, MWA_LAT_RAD);
   woden_settings->beamtype = FEE_BEAM_INTERP;
 
+  for (int i = 0; i < 16; i++) {
+    woden_settings->FEE_ideal_delays[i] = 0.0;
+  }
+
   beam_settings_t *beam_settings = malloc(sizeof(beam_settings_t));
   beam_settings->beamtype = FEE_BEAM_INTERP;
 
@@ -150,16 +154,7 @@ void test_calculate_visibilities_MWAFEEBeamInterp(int n_points, int n_gauss, int
                                   gain2yx_re, gain2yx_im,
                                   gain2yy_re, gain2yy_im);
 
-  for (int freq_ind = 0; freq_ind < beam_settings->num_MWAFEE; freq_ind++) {
-
-    RTS_MWA_FEE_beam_t *FEE_beam = &beam_settings->FEE_beams[freq_ind];
-    RTS_MWA_FEE_beam_t *FEE_beam_zenith = &beam_settings->FEE_beam_zeniths[freq_ind];
-
-    RTS_freeHDFBeam(FEE_beam);
-    RTS_freeHDFBeam(FEE_beam_zenith);
-
-  }
-
+  free_fee_beam(beam_settings->fee_beam);
   free(beam_settings);
   free(woden_settings);
   free_visi_set_inputs(visibility_set);

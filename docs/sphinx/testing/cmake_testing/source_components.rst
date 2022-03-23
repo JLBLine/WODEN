@@ -692,10 +692,10 @@ described in :ref:`test_gaussian_beam.c`.
      - 1e-6
      - 1e-7
    * - FEE_BEAM
-     - 3e-2
+     - 1e-7
      - 1e-7
    * - FEE_BEAM_INTERP
-     - 3e-2
+     - 1e-7
      - 1e-7
    * - MWA_ANALY
      - 1e-7

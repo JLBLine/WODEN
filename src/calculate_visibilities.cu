@@ -120,28 +120,43 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                         cudaMemcpyHostToDevice ));
   }
 
-  if (beam_settings->beamtype == FEE_BEAM){
+  if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP){
 
-    //Only needs to be done once per frequency as zenith never moves, so do
-    //this outside the sky model chunk loop
-    printf("Getting FEE beam normalisation...");
-    get_HDFBeam_normalisation(beam_settings->FEE_beam_zenith, beam_settings->FEE_beam);
-    //Free the zenith pointing as done with it now
-    free_FEE_primary_beam_from_GPU(beam_settings->FEE_beam_zenith);
-    printf(" done.\n");
+    //Convert some WODEN precision stuff into hyperbeam precision stuff
+    uint32_t *freqs_hz = (uint32_t*)malloc(woden_settings->num_freqs*sizeof(uint32_t));
 
-    printf("Copying the FEE beam across to the GPU...");
-    copy_FEE_primary_beam_to_GPU(beam_settings->FEE_beam);
-    printf(" done.\n");
-  }
-  //If there are multiple MWA FEE beams in `beam_settings`, send them off
-  //to get their normalisations calculated
-  else if (beam_settings->beamtype == FEE_BEAM_INTERP){
-    //Send them to GPU and calculate normalisations
+    for (int freq_ind = 0; freq_ind < woden_settings->num_freqs; freq_ind++) {
+        freqs_hz[freq_ind] = (uint32_t)visibility_set->channel_frequencies[freq_ind];
+        // freqs_hz[freq_ind] = (uint32_t)beam_settings->base_middle_freq;
+    }
 
-    printf("Getting FEE beam normalisations and sending to GPU...");
-    multifreq_get_MWAFEE_normalisation(beam_settings);
-    printf(" done.\n");
+    beam_settings->hyper_delays = (uint32_t*)malloc(16*sizeof(uint32_t));
+
+    for (int delay = 0; delay < 16; delay++) {
+      beam_settings->hyper_delays[delay] = (uint32_t)woden_settings->FEE_ideal_delays[delay];
+    }
+
+    double amps[16] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+
+    // uint32_t num_freqs_hyper = ();
+    uint32_t num_tiles = 1;
+    uint32_t num_amps = 16;
+    uint8_t norm_to_zenith = 1;
+
+    int32_t status = new_cuda_fee_beam(beam_settings->fee_beam,
+                            freqs_hz,
+                            beam_settings->hyper_delays,
+                            amps,
+                            woden_settings->num_freqs,
+                            num_tiles,
+                            num_amps,
+                            norm_to_zenith,
+                            &beam_settings->cuda_fee_beam,
+                            beam_settings->hyper_error_str);
+
+    if (status != 0) {
+      printf("hyperbeam error %d %s\n", status, beam_settings->hyper_error_str );
+    }
   }
 
   //Iterate through all sky model chunks, calculated visibilities are
@@ -851,16 +866,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     cudaErrorCheckCall( cudaFree( d_sbf ) );
   }
 
-  if (woden_settings->beamtype == FEE_BEAM) {
-    free_FEE_primary_beam_from_GPU(beam_settings->FEE_beam);
-  }
-  //If multiple MWA FEE beams, free them from the GPU
-  else if (woden_settings->beamtype == FEE_BEAM_INTERP) {
-    for (int freq_ind = 0; freq_ind < beam_settings->num_MWAFEE; freq_ind++) {
-
-    RTS_MWA_FEE_beam_t *FEE_beam = &beam_settings->FEE_beams[freq_ind];
-    free_FEE_primary_beam_from_GPU(FEE_beam);
-    }
+  if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP) {
+    free_cuda_fee_beam(beam_settings->cuda_fee_beam);
+    free(beam_settings->hyper_delays);
   }
 
   cudaErrorCheckCall( cudaFree(d_sum_visi_XX_imag) );
