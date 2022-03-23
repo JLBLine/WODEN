@@ -133,41 +133,48 @@ void test_hyperbeam_interp(int freq_int,
     double TOL = 1e-7;
   #endif
 
-
+  //Because I'm using ctest to make some outputs for plotting, only do the ctest
+  //for things I'm actually trying to test (I'm running some of the same
+  //frequencies through the coarse beam model here to plot the difference)
 
   //   //Check answers are as expected
   int beam_ind, expec_ind;
   //
-  for (int freq = 0; freq < num_freqs; freq++) {
-    for (int comp = 0; comp < NUM_COMPS; comp++) {
 
-        // printf("%.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
-        //          creal(primay_beam_J00[beam_ind]), cimag(primay_beam_J00[beam_ind]),
-        //          creal(primay_beam_J01[beam_ind]), cimag(primay_beam_J01[beam_ind]),
-        //          creal(primay_beam_J10[beam_ind]), cimag(primay_beam_J10[beam_ind]),
-        //          creal(primay_beam_J11[beam_ind]), cimag(primay_beam_J11[beam_ind]));
+  if (freq_int != 4) {
 
-        beam_ind = NUM_COMPS*freq + comp;
-        //All pols and reals/imags are stored in one expected array so index
-        //accordingly
-        expec_ind = 2*MAX_POLS*beam_ind;
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_values[expec_ind+0],
-                                  creal(primay_beam_J00[beam_ind]));
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_values[expec_ind+1],
-                                  cimag(primay_beam_J00[beam_ind]));
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_values[expec_ind+2],
-                                  creal(primay_beam_J01[beam_ind]));
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_values[expec_ind+3],
-                                  cimag(primay_beam_J01[beam_ind]));
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_values[expec_ind+4],
-                                  creal(primay_beam_J10[beam_ind]));
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_values[expec_ind+5],
-                                  cimag(primay_beam_J10[beam_ind]));
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_values[expec_ind+6],
-                                  creal(primay_beam_J11[beam_ind]));
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_values[expec_ind+7],
-                                  cimag(primay_beam_J11[beam_ind]));
+    for (int freq = 0; freq < num_freqs; freq++) {
+      for (int comp = 0; comp < NUM_COMPS; comp++) {
+
+          // printf("%.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
+          //          creal(primay_beam_J00[beam_ind]), cimag(primay_beam_J00[beam_ind]),
+          //          creal(primay_beam_J01[beam_ind]), cimag(primay_beam_J01[beam_ind]),
+          //          creal(primay_beam_J10[beam_ind]), cimag(primay_beam_J10[beam_ind]),
+          //          creal(primay_beam_J11[beam_ind]), cimag(primay_beam_J11[beam_ind]));
+
+          beam_ind = NUM_COMPS*freq + comp;
+          //All pols and reals/imags are stored in one expected array so index
+          //accordingly
+          expec_ind = 2*MAX_POLS*beam_ind;
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_values[expec_ind+0],
+                                    creal(primay_beam_J00[beam_ind]));
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_values[expec_ind+1],
+                                    cimag(primay_beam_J00[beam_ind]));
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_values[expec_ind+2],
+                                    creal(primay_beam_J01[beam_ind]));
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_values[expec_ind+3],
+                                    cimag(primay_beam_J01[beam_ind]));
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_values[expec_ind+4],
+                                    creal(primay_beam_J10[beam_ind]));
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_values[expec_ind+5],
+                                    cimag(primay_beam_J10[beam_ind]));
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_values[expec_ind+6],
+                                    creal(primay_beam_J11[beam_ind]));
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_values[expec_ind+7],
+                                    cimag(primay_beam_J11[beam_ind]));
+      }
     }
+
   }
 
   FILE *output_text;
@@ -234,6 +241,33 @@ void check_for_env_and_run_finetest(int freq_int, int delay_int,
   }
 }
 
+/*
+Check whether the environment variable for the FEE hdf5 beam exists, don't run
+the test if it's missing
+*/
+void check_for_env_and_run_coarsetest(int freq_int, int delay_int,
+                  user_precision_t *delays, double base_low_freq,
+                  double freq_res, int num_freqs,
+                  double *expected_values) {
+
+  char* mwa_fee_hdf5 = getenv("MWA_FEE_HDF5");
+  woden_settings_t *woden_settings = malloc(sizeof(woden_settings_t));
+
+  if (mwa_fee_hdf5) {
+    printf("MWA_FEE_HDF5: %s\n", mwa_fee_hdf5 );
+
+    woden_settings->hdf5_beam_path = mwa_fee_hdf5;
+
+    test_hyperbeam_interp(freq_int, delay_int,
+                      delays, base_low_freq,
+                      freq_res, num_freqs, woden_settings,
+                      expected_values);
+  }
+  else {
+    printf("MWA_FEE_HDF5 not found - not running test_RTS_FEE_beam test");
+  }
+}
+
 void test_delays1_freqs1(){
   check_for_env_and_run_finetest(1, 1, delays1, FREQ1, FREQ_RES1, NUM_FREQS1,
                                  hyper_f1d1);
@@ -249,6 +283,11 @@ void test_delays3_freqs3(){
                                  hyper_f3d3);
 }
 
+void test_delays4_freqs4(){
+  check_for_env_and_run_coarsetest(4, 4, delays1, FREQ1, FREQ_RES1, NUM_FREQS1,
+                                 hyper_f3d3);
+}
+
 //Run test using unity
 int main(void)
 {
@@ -257,6 +296,7 @@ int main(void)
     RUN_TEST(test_delays1_freqs1);
     RUN_TEST(test_delays2_freqs2);
     RUN_TEST(test_delays3_freqs3);
+    RUN_TEST(test_delays4_freqs4);
 
     return UNITY_END();
 }

@@ -11,7 +11,6 @@
 #include "cudacheck.h"
 #include "woden_struct_defs.h"
 #include "primary_beam_cuda.h"
-#include "FEE_primary_beam_cuda.h"
 #include "woden_precision_defs.h"
 
 __device__ void extrap_stokes(user_precision_t *d_allsteps_wavelengths,

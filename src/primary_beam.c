@@ -1,5 +1,4 @@
 #include "primary_beam.h"
-#include "FEE_primary_beam.h"
 #include <erfa.h>
 #include <complex.h>
 

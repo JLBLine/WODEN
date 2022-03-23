@@ -1,6 +1,7 @@
 #pragma once
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include "constants.h"
 #include "woden_precision_defs.h"
 #include <mwa_hyperbeam.h>
@@ -96,50 +97,6 @@ typedef struct _catsource_t {
 } catsource_t;
 
 /*!
-A struct to contain values for the MWA Fully Embbedded Element primary beam
-*/
-typedef struct _RTS_MWA_FEE_beam {
-  double _Complex **Q1; /*!< Beam modes used for Spherical Harmonic model */
-  double _Complex **Q2; /*!< Beam modes used for Spherical Harmonic model */
-  double **M; /*!< First order of spherical harmonics */
-  double **N; /*!< Second order of spherical harmonics */
-  int nmax; /*!< Maximum order of spherical harmonic */
-  int nMN; /*!< Total number of 1st and 2nd order harmnoic combinations */
-  int nMN0; /*!< Total number of 1st and 2nd order harmnoic combinations for the 0 index dipoles */
-  int nMN1; /*!< Total number of 1st and 2nd order harmnoic combinations for the 1 index dipoles */
-
-  user_precision_complex_t norm_fac[MAX_POLS]; /*!< Zenith normalisation values */
-
-  // BP 2019: All the Spherical Harmonic Beam data are double
-  // so we will use them on the GPUs as well or there will be all kinds
-  // of issues with copying
-
-  user_precision_complex_t *d_Q1; /*!< Device copy of Q1 */
-  user_precision_complex_t *d_Q2; /*!< Device copy of Q2 */
-  user_precision_t *d_M; /*!< Device copy of M */
-  user_precision_t *d_N; /*!< Device copy of N */
-
-  user_precision_complex_t *emn_P; /*!< complex field values for phi polarisations
-  separated by spherical harmonic ordering */
-  user_precision_complex_t *emn_T; /*!< complex field values for theta polarisations
-  separated by spherical harmonic ordering */
-
-  user_precision_complex_t *d_emn_T_sum; /*!< complex field values for theta polarisations
-  summed over spherical harmonics*/
-  user_precision_complex_t *d_emn_P_sum; /*!< complex field values for phi polarisations
-  summed over spherical harmonics*/
-
-  user_precision_complex_t *rts_P1; /*!< calculated legendre polynomial values */
-  user_precision_complex_t *rts_P_sin; /*!< calculated legendre polynomial / sin(theta) values*/
-
-  user_precision_t *m_range; /*!< range of possible M spherical harmonic orders */
-
-  user_precision_complex_t *d_FEE_beam_gain_matrices; /*!< output complex gains for all
-  polarisation and dipole orientation combinations on the device*/
-
-} RTS_MWA_FEE_beam_t;
-
-/*!
 A struct to contain settings pertaining to the primary beam
 */
 typedef struct _beam_settings_t {
@@ -150,14 +107,6 @@ typedef struct _beam_settings_t {
     user_precision_t beam_FWHM_rad; /*!< FWHM of requested Gaussian primary beam, at reference frequnecy */
     double beam_ref_freq; /*!< Reference frequency for the given FWHM of Gaussian primary beam */
     int beamtype; /*!< What type of primary beam to simulate - see `e_beamtype` */
-
-    RTS_MWA_FEE_beam_t *FEE_beam; /*!< Initialised MWA FEE beam model for desired pointing */
-    RTS_MWA_FEE_beam_t *FEE_beam_zenith; /*!< Initialised MWA FEE beam model
-    for zenith pointing, used for normalisation of the desired pointing */
-
-    RTS_MWA_FEE_beam_t *FEE_beams; /*!< Initialised MWA FEE beam models for desired pointing */
-    RTS_MWA_FEE_beam_t *FEE_beam_zeniths; /*!< Initialised MWA FEE beam models
-    for zenith pointing, used for normalisation of the desired pointing */
 
     user_precision_t *MWAFEE_freqs; /*!< The frequencies of the initialised MWAFEE beams
     in FEE_beams */

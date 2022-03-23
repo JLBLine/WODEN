@@ -17,25 +17,6 @@ extern void test_source_component_common(int num_components,
            woden_settings_t *woden_settings,
            beam_settings_t *beam_settings);
 
-extern void get_HDFBeam_normalisation(RTS_MWA_FEE_beam_t *FEE_beam_zenith,
-                RTS_MWA_FEE_beam_t *FEE_beam);
-
-extern void free_FEE_primary_beam_from_GPU(RTS_MWA_FEE_beam_t *primary_beam);
-
-extern void copy_FEE_primary_beam_to_GPU(RTS_MWA_FEE_beam_t *FEE_beam);
-
-//MWA FEE interp CUDA code
-extern void multifreq_get_MWAFEE_normalisation(beam_settings_t *beam_settings);
-
-extern void test_run_and_map_multifreq_calc_CUDA_FEE_beam(beam_settings_t *beam_settings,
-    user_precision_t *azs, user_precision_t *zas, double latitude,
-    user_precision_complex_t *primay_beam_J00,
-    user_precision_complex_t *primay_beam_J01,
-    user_precision_complex_t *primay_beam_J10,
-    user_precision_complex_t *primay_beam_J11,
-    int num_freqs, int NUM_COMPS, int num_times,
-    int rotation, int scaling);
-
 double TOL;
 
 /*
@@ -144,7 +125,6 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     }
   }
 
-  beam_settings->FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
   //If FEE_BEAM, call the C code to interrogate the hdf5 file and set beam
   //things up
   if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP) {

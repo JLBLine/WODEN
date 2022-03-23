@@ -13,7 +13,6 @@
 #include "constants.h"
 #include "source_components.h"
 #include "primary_beam_cuda.h"
-#include "FEE_primary_beam_cuda.h"
 #include "cudacheck.h"
 #include "visibility_set.h"
 

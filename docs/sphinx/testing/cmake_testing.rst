@@ -127,7 +127,6 @@ The sections below give an outline of the tests performed in each directory.
    cmake_testing/array_layout
    cmake_testing/chunk_sky_model
    cmake_testing/create_sky_model
-   cmake_testing/FEE_primary_beam
    cmake_testing/primary_beam
    cmake_testing/shapelet_basis
    cmake_testing/visibility_set
@@ -139,7 +138,6 @@ The sections below give an outline of the tests performed in each directory.
    :maxdepth: 1
 
    cmake_testing/calculate_visibilities
-   cmake_testing/FEE_primary_beam_cuda
    cmake_testing/fundamental_coords
    cmake_testing/primary_beam_cuda
    cmake_testing/source_components

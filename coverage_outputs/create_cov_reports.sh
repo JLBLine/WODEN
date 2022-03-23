@@ -5,7 +5,6 @@ rm coverage.xml *.gcov
 gcov ../build/cmake_testing/array_layout/CMakeFiles/array_layout_float.dir/__/__/src/array_layout.c.gcda \
     ../build/cmake_testing/chunk_sky_model/CMakeFiles/chunk_sky_model_float.dir/__/__/src/chunk_sky_model.c.gcda \
     ../build/cmake_testing/create_sky_model/CMakeFiles/create_sky_model_float.dir/__/__/src/create_sky_model.c.gcda \
-    ../build/cmake_testing/FEE_primary_beam/CMakeFiles/FEE_primary_beam_float.dir/__/__/src/FEE_primary_beam.c.gcda \
     ../build/cmake_testing/primary_beam/CMakeFiles/primary_beam_float.dir/__/__/src/primary_beam.c.gcda \
     ../build/cmake_testing/visibility_set/CMakeFiles/visibility_set_float.dir/__/__/src/visibility_set.c.gcda \
     ../build/cmake_testing/woden_settings/CMakeFiles/woden_settings_float.dir/__/__/src/woden_settings.c.gcda \

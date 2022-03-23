@@ -14,7 +14,6 @@
 #include "chunk_sky_model.h"
 #include "print_help.h"
 #include "primary_beam.h"
-#include "FEE_primary_beam.h"
 #include "woden_settings.h"
 #include "visibility_set.h"
 #include "array_layout.h"

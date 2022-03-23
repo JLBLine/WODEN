@@ -15,6 +15,7 @@ Dependencies
 - **ERFA** - https://github.com/liberfa/erfa/releases
 - **HDF5** - https://www.hdfgroup.org/downloads/hdf5/
 - **PAL** - https://github.com/Starlink/pal/releases
+- **mwa_hyperbeam** - https://github.com/MWATelescope/mwa_hyperbeam
 - **python >= 3.6**
 
 How to install dependencies
@@ -63,6 +64,18 @@ linux-like systems.
   $ sudo make install
 
   Doing it this way installs things in normal locations, making life easier during linking.
++ **mwa_hyperbeam** - https://github.com/MWATelescope/mwa_hyperbeam - ``mwa_hyperbeam`` is the go-to package for calculating the MWA Fully Embedded Element (FEE) primary beam model. At the time of writing (23/03/2022), we'll have to install and compile from source to get the CUDA code that we want to link to. We should be able to install release versions in the future. For now, you'll first need to install ``rust``, the language the library is written in. I followed the installation guide at https://www.rust-lang.org/tools/install, which for me on Ubuntu just means running::
+
+  $ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+  Once that's installed, I ran the following commands (you can choose where to install it, I'm just putting where I happended to do it this time round)::
+
+  $ cd /home/jline/software
+  $ git clone https://github.com/MWATelescope/mwa_hyperbeam.git
+  $ cd mwa_hyperbeam
+  $ cargo build --release --features=cuda,cuda-static
+
+  That's it! I'll show you how to link to it later when we install ``WODEN``. If you don't want to have to tell ``CMake`` where to look for the libraries, you'll need to link/copy ``libmwa_hyperbeam.so`` somewhere your compiler can see, as well as ``mwa_hyperbeam.h``.
 + **python >= 3.6** - the best way to run ``WODEN`` is through the script ``run_woden.py``, which has a number of package dependencies. One of these is ``pyerfa``, which uses f-strings during installation, so you have to use a python version >= 3.6. Sorry. The requirements can be found in ``WODEN/docs/sphinx/sphinx/requirements_testing.txt``, which you can install via something like::
 
   $ pip3 install -r requirements_testing.txt
@@ -103,7 +116,14 @@ et voila, your code is compiled. If this worked, and you're happy to install ``W
 
 Machine specifics
 ######################
-``cmake`` is pretty good at trying to find all the necessary libraries, but every machine is unique, so often you'll need to point ``cmake`` in the correct direction. To that end, I've include 4 keywords: ``JSONC_ROOT``, ``ERFA_ROOT``, ``HDF5_ROOT``, ``PAL_ROOT`` that you can pass to ``cmake``. When passing an option to ``cmake``, you add ``-D`` to the front. For example, on ``OzStar``, I used the command::
+It's almost a guarantee ``cmake`` won't be able to find ``mwa_hyperbeam``, so you'll have to point it to where things are installed. You can use two keywords in the following way to achieve that::
+
+  $ cmake .. -DHBEAM_INC=/home/jline/software/mwa_hyperbeam/include \
+             -DHBEAM_LIB=/home/jline/software/mwa_hyperbeam/target/release/libmwa_hyperbeam.so
+
+Obviously you'll need to point to where you have installed things. If *you* have a library with my name in the path I'd be concerned, so edit it as appropriate.
+
+``cmake`` is pretty good at trying to find all the necessary libraries, but every machine is unique, so often you'll need to point ``cmake`` in the correct direction. To that end, I've included a further 4 keywords: ``JSONC_ROOT``, ``ERFA_ROOT``, ``HDF5_ROOT``, ``PAL_ROOT`` that you can pass to ``cmake``. When passing an option to ``cmake``, you add ``-D`` to the front. For example, on ``OzStar``, I used the command::
 
   $ cmake ..  -DJSONC_ROOT=/fred/oz048/jline/software/json-c/install/
 

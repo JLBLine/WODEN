@@ -7,7 +7,6 @@
 #include "constants.h"
 #include "woden_struct_defs.h"
 #include "woden_precision_defs.h"
-#include "FEE_primary_beam.h"
 
 /*******************************************************************************
 Here are a bunch of predefined arrays to be used

@@ -5,7 +5,7 @@
 #include <erfa.h>
 
 #include "constants.h"
-#include "FEE_primary_beam.h"
+#include "woden_struct_defs.h"
 #include "MWA_analy_expected_nside101.h"
 #include "azza_radec_nside101.h"
 

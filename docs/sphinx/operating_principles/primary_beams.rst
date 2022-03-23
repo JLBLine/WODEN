@@ -55,21 +55,19 @@ Coarse resolution model ``--primary_beam=MWA_FEE``
 
 The frequency resolution of the default MWA FEE model, which is stored in the file ``mwa_full_embedded_element_pattern.h5``, is 1.28 MHz. If you need a smooth frequency
 response, this might not be the best option for you, as you'll end up with something like
-this plot, which shows the linear Stokes towards an arbitrary direction as a function of frequency:
+this plot, which shows the linear Stokes towards an interesting direction as a function of frequency (very low gain but should have a curved response):
 
-.. image:: MWAFEE_beam_vs_freq.svg
+.. image:: hyperbeam_vs_freq.svg
   :width: 400pt
-
-In fact, when running using ``--primary_beam=MWA_FEE``, I only calculate the beam response once per coarse band. If you set your ``--coarse_band_width`` to greater than 1.28 MHz you'll make this effect even worse.
 
 Interpolated resolution model ``--primary_beam=MWA_FEE_interp``
 ******************************************************************
 Recently, Daniel Ung interpolated the spherical harmonic coefficients of the MWA FEE model, to
 produce a new ``hdf5`` file, ``MWA_embedded_element_pattern_rev2_interp_167_197MHz.h5``.
-This new file has an 80 kHz resolution, so if we look at a far smaller frequency range,
-and choose an interesting direction on the sky:
+This new file has an 80 kHz resolution, so if look at the frequency behaviour in the same direction
+as the coarse model shown above:
 
-.. image:: hyperbeam_vs_freq.svg
+.. image:: hyperbeam_vs_freq_interp.svg
   :width: 400pt
 
 we see that the frequency behaviour of the beam is well described and smooth.

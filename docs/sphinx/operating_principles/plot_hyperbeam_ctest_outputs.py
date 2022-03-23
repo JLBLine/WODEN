@@ -172,5 +172,49 @@ ax.set_xlabel('Frequency (MHz)')
 ax.set_ylabel('Beam gain')
 
 plt.tight_layout()
+fig.savefig('hyperbeam_vs_freq_interp.svg',bbox_inches='tight')
+plt.close()
+
+
+
+###LAZY LAZY COPY PASTE BOY
+gx_re, gx_im, Dx_re, Dx_im, Dy_re, Dy_im, gy_re, gy_im, freqs = np.loadtxt(f"../../../build/cmake_testing/primary_beam_cuda/hyperbeam_interp_delays4_freqs4.txt",unpack=True)
+
+
+coord_ind = 2
+NUM_COORDS = 5
+# freqs2 = np.arange(167e+6, 167e+6 + 12*1.28e+6, 1.28e+6)
+# freqs = np.arange(190e+6, 190e+6 + 12*320e+3, 320e+3)
+
+freqs = np.arange(167e+6, 167e+6 + 32*80e+3, 80e+3)
+
+coord_slice = np.arange(coord_ind, len(freqs)*NUM_COORDS, NUM_COORDS)
+
+
+
+gx = gx_re[coord_slice] + 1j*gx_im[coord_slice]
+Dx = Dx_re[coord_slice] + 1j*Dx_im[coord_slice]
+Dy = Dy_re[coord_slice] + 1j*Dy_im[coord_slice]
+gy = gy_re[coord_slice] + 1j*gy_im[coord_slice]
+
+gx_conj = np.conjugate(gx)
+Dx_conj = np.conjugate(Dx)
+Dy_conj = np.conjugate(Dy)
+gy_conj = np.conjugate(gy)
+
+XX = (gx*gx_conj + Dx*Dx_conj)
+YY = (Dy*Dy_conj + gy*gy_conj)
+
+fig, ax = plt.subplots(1,1, figsize=(5,4))
+
+ax.plot(freqs / 1e6, np.real(XX), '-o', mfc='none', label='XX (real)')
+ax.plot(freqs / 1e6, np.real(YY), '-o', mfc='none', label='YY (real)')
+
+ax.legend()
+
+ax.set_xlabel('Frequency (MHz)')
+ax.set_ylabel('Beam gain')
+
+plt.tight_layout()
 fig.savefig('hyperbeam_vs_freq.svg',bbox_inches='tight')
 plt.close()

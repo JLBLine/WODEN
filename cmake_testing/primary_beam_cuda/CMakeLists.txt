@@ -7,8 +7,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
 
   add_library(primary_beam_cudaCUDA_${PRECISION} SHARED
               "${CMAKE_SOURCE_DIR}/src/primary_beam_cuda.cu"
-              "${CMAKE_SOURCE_DIR}/src/fundamental_coords.cu"
-              "${CMAKE_SOURCE_DIR}/src/FEE_primary_beam_cuda.cu")
+              "${CMAKE_SOURCE_DIR}/src/fundamental_coords.cu")
 
   target_compile_options(primary_beam_cudaCUDA_${PRECISION} PRIVATE ${CUDA_FLAGS})
 
@@ -84,19 +83,5 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_compile_options(test_run_hyperbeam_interp_${PRECISION}_app PRIVATE ${C_FLAGS})
   add_test(CUDA_test_run_hyperbeam_interp_${PRECISION} test_run_hyperbeam_interp_${PRECISION}_app)
-
-  ##Test analytic MWA beam functions
-  add_executable(comp_MWA_analytic_to_FEE_${PRECISION}_app
-      comp_MWA_analytic_to_FEE.c
-      ${CMAKE_SOURCE_DIR}/src/FEE_primary_beam.c
-  )
-  target_link_libraries(comp_MWA_analytic_to_FEE_${PRECISION}_app
-      Unity
-      primary_beam_cudaCUDA_${PRECISION}
-      ${CC_LINKLIBS}
-  )
-  target_compile_options(comp_MWA_analytic_to_FEE_${PRECISION}_app PRIVATE ${C_FLAGS})
-  add_test(CUDA_comp_MWA_analytic_to_FEE_${PRECISION} comp_MWA_analytic_to_FEE_${PRECISION}_app)
-
 
 endforeach()
