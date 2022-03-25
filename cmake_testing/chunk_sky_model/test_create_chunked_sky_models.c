@@ -27,7 +27,7 @@ void test_create_chunked_sky_models(int chunking_size,
                                     int num_baselines, int num_freqs) {
 
   //Make the sky model given the input params
-  catsource_t *cropped_src = make_sky_model(num_points, num_gauss, num_shapes,
+  source_t *cropped_src = make_sky_model(num_points, num_gauss, num_shapes,
                                             num_coeff_per_shape, num_time_steps);
 
   //Set some dummy baseline, frequency simulation settings
@@ -64,14 +64,14 @@ void test_create_chunked_sky_models(int chunking_size,
                               num_time_steps,
                               &point_accum, &gauss_accum,
                               cropped_src,
-                              &cropped_sky_models->catsources[chunk_ind]);
+                              &cropped_sky_models->sources[chunk_ind]);
   }
 
   for (int chunk_ind = num_comps_to_chunk; chunk_ind < num_comp_chunks + num_coeff_chunks; chunk_ind++) {
 
     check_shapelet_chunking(chunk_ind, coeffs_per_chunk, num_time_steps,
                             num_coeff_per_shape, cropped_src,
-                            &cropped_sky_models->catsources[chunk_ind]);
+                            &cropped_sky_models->sources[chunk_ind]);
 
   } //END iteration over all chunks
   // free_sky_model(cropped_sky_models);

@@ -1,8 +1,26 @@
+#pragma once
 #include "calculate_visibilities.h"
 /*! \file
   Device methods to extrapolate flux densities, assign and apply primary beam
   gains, and visibility responses for different sky model COMPONENT types.
 */
+
+/*!
+A struct to contain primary beam values for a give COMPONENT
+*/
+typedef struct _d_beam_gains_t {
+
+  cuUserComplex *d_gxs = NULL; /*!< Device copy of North-South Beam gain values
+  for all directions, frequencies, and times for these COMPONENTS*/
+  cuUserComplex *d_Dxs = NULL; /*!< Device copy of North-South Beam leakage values
+  for all directions, frequencies, and times for these COMPONENTS*/
+  cuUserComplex *d_Dys = NULL; /*!< Device copy of East-West Beam leakage values
+  for all directions, frequencies, and times for these COMPONENTS*/
+  cuUserComplex *d_gys = NULL; /*!< Device copy of East-West Beam gain values
+  for all directions, frequencies, and times for these COMPONENTS*/
+
+} d_beam_gains_t;
+
 
 /**
 @brief Assuming a simple power-law SED of \f$ S \propto \nu^\alpha \f$,
@@ -283,16 +301,25 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
 and SHAPELET component types, calculating the \f$l,m,n\f$ coordinates and
 primary beam values.
 
-@details Uses `kern_calc_lmn` to calculate \f$l,m,n\f$. Uses either
-`primary_beam_cuda.calculate_gaussian_beam`,
-`FEE_primary_beam_cuda.calc_CUDA_FEE_beam`, or
-`primary_beam_cuda.calculate_analytic_dipole_beam` to calculate the primary
-beam.
+@details `components` should be a populated `components_t` struct, with
+appropriate fields filled depending on whether the COMPONENTS are POINT,
+GAUSSIAN, or SHAPELET (set by `comptype`).
+
+
+This function uses `fundamental_coords::kern_calc_lmn` to calculate \f$l,m,n\f$, and stores the ouputs
+in the `components_t` struct `d_components`. Uses the `d_beam_gains_t` struct
+`d_component_beam_gains` to store the calculated primary beam responses. Each
+gain and leakage will have
+`num_components*woden_settings->num_time_steps*woden_settings->num_freqs`
+elements of memory allocated in the process.
+
+If the primary beam requested (set via beam_settings->beamtype ) is either
+GAUSS_BEAM or MWA_ANALY, both `components->beam_has` and `components->beam_decs`
+need to be set.
 
 Device arrays `d_primay_beam_J*` are used to store primary beam outputs, and
 should have
-`num_components*woden_settings->num_time_steps*woden_settings->num_freqs`
-elements memory allocated. \f$l,m,n\f$ coordinate arrays `d_ls`, `d_ms`,`d_ns`
+ \f$l,m,n\f$ coordinate arrays `d_ls`, `d_ms`,`d_ns`
 should have `num_components` elements. `sin_para_angs` and `cos_para_angs` are
 sine and cosine of the parallactic angle, and only needed if
 `beam_settings.beamtype == FEE_BEAM`. They should be
@@ -301,136 +328,37 @@ are hour angles and declinations of components at all time steps, and only used
 when `beam_settings.beamtype == GAUSS_BEAM`. They should be also be
 `num_components*woden_settings->num_time_steps`.
 
-@param[in] num_components Number of COMPONENTs
-@param[in] *d_primay_beam_J00 Pointer towards array of primary beam J[0,0]
-(north-south gain) to be populated
-@param[in] *d_primay_beam_J01 Pointer towards array of primary beam J[0,1]
-(north-south leakage) to be populated
-@param[in] *d_primay_beam_J10 Pointer towards array of primary beam J[1,0]
-(east-west gain) to be populated
-@param[in] *d_primay_beam_J11 Pointer towards array of primary beam J[1,1]
-(east-west leakage) to be populated
-@param[in] d_freqs Frequencies used in the simulation
-@param[in,out] d_ls Pointer to array to store l coords in
-@param[in,out] d_ms Pointer to array to store m coords in
-@param[in,out] d_ns Pointer to array to store d coords in
-@param[in] d_ras Array of Right Ascensions of COPMONENTs (radians)
-@param[in] d_decs Array of Declinations of COPMONENTs (radians)
-@param[in] azs Azimuth angles for all time steps for all COMPONENTs (radians)
-@param[in] zas Zenith Angles for all time steps for all COMPONENTs
-@param[in] sin_para_angs Sine of parallactic angle for all time steps for all
-COMPONENTs
-@param[in] cos_para_angs Sine of parallactic angle for all time steps for all
-COMPONENTs
-@param[in] beam_has Hour angles for all time steps for all COMPONENTs (radians)
-@param[in] beam_decs Declinations for all time steps for all COMPONENTs (radians)
-@param[in] woden_settings A populated `woden_settings_t` struct
-@param[in] beam_settings A populated `beam_settings_t` struct
+@param[in] num_components Number of copmponents stored in `components`
+@param[in] num_shape_coeffs Total number of shapelet coefficients in `components`
+@param[in] components A populated `components_t` struct as filled by `create_sky_model::crop_sky_model` or `chunk_sky_model::create_chunked_sky_models`
+@param[in] d_freqs Frequencies to calculate beam responses to (stored on the device)
+@param[in] woden_settings Populated `woden_settings_t` struct
+@param[in] beam_settings Populated `beam_settings_t` struct
+@param[in] comptype Either POINT, GAUSSIAN, SHAPELET
+@param[in,out] d_components Pointer to `components_t` struct in which to malloc and store results on the device in
+@param[in,out] d_component_beam_gains Pointer to `d_beam_gains_t` struct in which to malloc and store results on the device in
 
 */
-void source_component_common(int num_components,
-           cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
-           cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
-           double *d_freqs, double *d_ls, double *d_ms, double *d_ns,
-           double *d_ras, double *d_decs, user_precision_t *azs, user_precision_t *zas,
-           user_precision_t *sin_para_angs, user_precision_t *cos_para_angs,
-           double *beam_has, double *beam_decs,
-           woden_settings_t *woden_settings,
-           beam_settings_t *beam_settings);
+extern "C" void source_component_common(int num_components,
+           int num_shape_coeffs, components_t *components,
+           double *d_freqs, woden_settings_t *woden_settings,
+           beam_settings_t *beam_settings, e_component_type comptype,
+           components_t *d_components, d_beam_gains_t *d_component_beam_gains);
 
 /**
-@brief Kernel to calculate the visibility response to a number `num_point` of
-POINT COMPONENTs, and sum the outputs to `d_sum_visi_*_real`,
+@brief Kernel to calculate the visibility response to a number `num_components`
+of either POINT or GAUSSIAN COMPONENTs, and sum the outputs to `d_sum_visi_*_real`,
 `d_sum_visi_*_imag`.
 
 @details Uses the functions `extrap_stokes`, `calc_measurement_equation`,
 `update_sum_visis` as detailed above to calculate the visibilities. Sets off
-a thread for each visibility to be calculate, with each thread looping over
+a thread for each visibility to be calculated, with each thread looping over
 all COMPONENTs. This seems to keep the memory access low enough to be faster
-than having a second dimension over COMPONENT.
+than having a second dimension over COMPONENT. Specify if you want POINT or
+GAUSSIAN using `comptype`.
 
-When called with `dim3 grid, threads`, kernel should be called with `grid.x`
-defined, where:
- - grid.x * threads.x >= `num_visi`
-
-@param[in] *d_point_freqs Frequencies in the simulation (Hz)
-@param[in] *d_point_stokesI Array of reference Stokes I flux densities for all
-POINTs (Jy)
-@param[in] *d_point_stokesQ Array of reference Stokes Q flux densities for all
-POINTs (Jy)
-@param[in] *d_point_stokesU Array of reference Stokes U flux densities for all
-POINTs (Jy)
-@param[in] *d_point_stokesV Array of reference Stokes V flux densities for all
-POINTs (Jy)
-@param[in] d_point_SIs Array of spectral indicies for all POINTs
-@param[in] *d_us Visibility coord \f$u\f$ for every baseline, frequency, and time
-step in the simulation (wavelengths)
-@param[in] *d_vs Visibility coord \f$v\f$ for every baseline, frequency, and time
-step in the simulation (wavelengths)
-@param[in] *d_ws Visibility coord \f$w\f$ for every baseline, frequency, and time
-step in the simulation (wavelengths)
-@param[in,out] *d_sum_visi_XX_real Pointer to array to sum real XX visibility
-into
-@param[in,out] *d_sum_visi_XX_imag Pointer to array to sum imaginary XX
-visibility into
-@param[in,out] *d_sum_visi_XY_real Pointer to array to sum real XY visibility
-into
-@param[in,out] *d_sum_visi_XY_imag Pointer to array to sum imaginary XY
-visibility into
-@param[in,out] *d_sum_visi_YX_real Pointer to array to sum real YX visibility
-into
-@param[in,out] *d_sum_visi_YX_imag Pointer to array to sum imaginary YX
-visibility into
-@param[in,out] *d_sum_visi_YY_real Pointer to array to sum real YY visibility
-into
-@param[in,out] *d_sum_visi_YY_imag Pointer to array to sum imaginary YY
-visibility into
-@param[in] *d_allsteps_wavelengths Wavelength for every baseline, frequency, and
-time step in the simulation
-@param[in] *d_ls \f$l\f$ sky coord for all time steps for all POINTs
-@param[in] *d_ms \f$m\f$ sky coord for all time steps for all POINTs
-@param[in] *d_ns \f$n\f$ sky coord for all time steps for all POINTs
-@param[in] num_points Number of POINTs
-@param[in] num_baselines Number of baselines for one time, one frequency step
-@param[in] num_freqs Number of frequencies in simulation
-@param[in] num_visis Overall number of visibilities (baselines*freqs*times) in
-simulation
-@param[in] num_times Number of time steps in simulation
-@param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
-@param[in] *d_primay_beam_J00 Array of primary beam J[0,0]
-(north-south gain)
-@param[in] *d_primay_beam_J01 Array of primary beam J[0,1]
-(north-south leakage)
-@param[in] *d_primay_beam_J10 Array of primary beam J[1,0]
-(east-west leakage)
-@param[in] *d_primay_beam_J11 Array of primary beam J[1,1]
-(east-west gain)
-*/
-__global__ void kern_calc_visi_point(double *d_point_freqs,
-           user_precision_t *d_point_stokesI, user_precision_t *d_point_stokesQ,
-           user_precision_t *d_point_stokesU, user_precision_t *d_point_stokesV,
-           user_precision_t *d_point_SIs,
-           user_precision_t *d_us, user_precision_t *d_vs, user_precision_t *d_ws,
-           user_precision_t *d_sum_visi_XX_real, user_precision_t *d_sum_visi_XX_imag,
-           user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
-           user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
-           user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
-           user_precision_t *d_allsteps_wavelengths,
-           double *d_ls, double *d_ms, double *d_ns,
-           int num_points, int num_baselines, int num_freqs, int num_visis,
-           int num_times, int beamtype,
-           cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
-           cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11);
-
-/**
-@brief Kernel to calculate the visibility response to a number `num_gauss` of
-GAUSS COMPONENTs, and sum the outputs to `d_sum_visi_*_real`,
-`d_sum_visi_*_imag`.
-
-@details Uses the functions `extrap_stokes`, `calc_measurement_equation`,
-`update_sum_visis` as detailed above to calculate the visibilities. Furthermore
-calculates the visibility envelope \f$\mathrm{V}_{\mathrm{env}}\f$ to convert
-the basic visibility into a GAUSSIAN:
+The code is almost exactly the same for POINT or GAUSSIANs, except when
+running with a Gaussian, a visiblity envelope is calculated as
 
 \f{eqnarray*}{
 \mathrm{V}_{\mathrm{env}}&=& \exp\left( -\frac{\pi^2}{4\ln(2)} \left( k_x^2\theta_{\mathrm{maj}}^2 + k_y^2\theta_{\mathrm{min}}^2\right) \right) \\
@@ -439,26 +367,15 @@ k_y &=& -\sin(\phi_{PAj})v + \cos(\phi_{PAj})u
 \f}
 
 where \f$ \theta_{\mathrm{maj}}, \theta_{\mathrm{min}}, \phi_{PA} \f$ are the
-major axis, minor axis, and position angle.
-
-Sets off a thread for each visibility to be calculate, with each thread
-looping over all COMPONENTs. This seems to keep the memory access low enough
-to be faster than having a second dimension over COMPONENT.
+major axis, minor axis, and position angle. The visiblity equation is multipled
+by this envelope to modify from a POINT source into a GAUSSIAN
 
 When called with `dim3 grid, threads`, kernel should be called with `grid.x`
 defined, where:
  - grid.x * threads.x >= `num_visi`
 
-@param[in] *d_gauss_freqs Frequencies in the simulation (Hz)
-@param[in] *d_gauss_stokesI Array of reference Stokes I flux densities for all
-GAUSSIANs (Jy)
-@param[in] *d_gauss_stokesQ Array of reference Stokes Q flux densities for all
-GAUSSIANs (Jy)
-@param[in] *d_gauss_stokesU Array of reference Stokes U flux densities for all
-GAUSSIANs (Jy)
-@param[in] *d_gauss_stokesV Array of reference Stokes V flux densities for all
-GAUSSIANs (Jy)
-@param[in] d_gauss_SIs Array of spectral indicies for all GAUSSIANs
+@param[in] d_components d_components Pointer to a populated `components_t` struct as filled by `source_components::source_component_common`
+@param[in] d_component_beam_gains Pointer to a populated `d_beam_gains_t` struct as filled by `source_components::source_component_common`
 @param[in] *d_us Visibility coord \f$u\f$ for every baseline, frequency, and time
 step in the simulation (wavelengths)
 @param[in] *d_vs Visibility coord \f$v\f$ for every baseline, frequency, and time
@@ -483,45 +400,25 @@ into
 visibility into
 @param[in] *d_allsteps_wavelengths Wavelength for every baseline, frequency, and
 time step in the simulation
-@param[in] *d_ls \f$l\f$ sky coord for all time steps for all GAUSSIANs
-@param[in] *d_ms \f$m\f$ sky coord for all time steps for all GAUSSIANs
-@param[in] *d_ns \f$n\f$ sky coord for all time steps for all GAUSSIANs
-@param[in] *d_gauss_pas Position angles for all GAUSSIANs (radians)
-@param[in] *d_gauss_majors Major axis for all GAUSSIANs (FWHM, radians)
-@param[in] *d_gauss_minors Minor axis for all GAUSSIANs (FWHM, radians)
-@param[in] num_gauss Number of GAUSSIANs components
+@param[in] num_components Either number of POINT of GAUSSIANS components
 @param[in] num_baselines Number of baselines for one time, one frequency step
 @param[in] num_freqs Number of frequencies in simulation
 @param[in] num_visis Overall number of visibilities (baselines*freqs*times) in
 simulation
 @param[in] num_times Number of time steps in simulation
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
-@param[in] *d_primay_beam_J00 Array of primary beam J[0,0]
-(north-south gain)
-@param[in] *d_primay_beam_J01 Array of primary beam J[0,1]
-(north-south leakage)
-@param[in] *d_primay_beam_J10 Array of primary beam J[1,0]
-(east-west leakage)
-@param[in] *d_primay_beam_J11 Array of primary beam J[1,1]
-(east-west gain)
+@param[in] comptype Component type, either POINT or GAUSSIAN
 */
-__global__ void kern_calc_visi_gaussian(double *d_gauss_freqs,
-           user_precision_t *d_gauss_stokesI, user_precision_t *d_gauss_stokesQ,
-           user_precision_t *d_gauss_stokesU, user_precision_t *d_gauss_stokesV,
-           user_precision_t *d_gauss_SIs,
+__global__ void kern_calc_visi_point_or_gauss(components_t d_components,
+           d_beam_gains_t d_component_beam_gains,
            user_precision_t *d_us, user_precision_t *d_vs, user_precision_t *d_ws,
            user_precision_t *d_sum_visi_XX_real, user_precision_t *d_sum_visi_XX_imag,
            user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
            user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
            user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
-           user_precision_t *d_allsteps_wavelengths,
-           double *d_ls, double *d_ms, double *d_ns,
-           user_precision_t *d_gauss_pas, user_precision_t *d_gauss_majors,
-           user_precision_t *d_gauss_minors,
-           int num_gauss, int num_baselines, int num_freqs, int num_visis,
-           int num_times, int beamtype,
-           cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
-           cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11);
+           user_precision_t *d_allsteps_wavelengths, int num_components,
+           int num_baselines, int num_freqs, int num_visis,
+           int num_times, e_beamtype beamtype, e_component_type comptype);
 
 /**
 @brief Kernel to calculate the visibility response to a number `num_shapes` of
@@ -544,15 +441,15 @@ table, of order \f$ n_k,n_l \f$ and scaled by the major and minor axis,
 \f$C_{n_k,n_l}\f$ is a scaling coefficient, and \f$ u_{\mathrm{comp}},
 v_{\mathrm{comp}} \f$ are visibility coordinates with the SHAPELET ra,dec as the
 phase centre. These should have been calculated using
-`fundamental_coords.kern_calc_uvw_shapelet`.
+`fundamental_coords::kern_calc_uvw_shapelet`.
 
-This kernel differs from `kern_calc_visi_point` and `kern_calc_visi_gaussian`
+This kernel differs from `kern_calc_visi_point_or_gauss`
 in that each SHAPELET component is built up from multiple shapelet basis
 functions, and so the kernel (and sometimes the sky model) is split over the
 shapelet basis functions, meaning multiple basis function calculations will
-use the same COMPONENT \f$l,m,n\f$. The array `d_shape_param_indexes` is
-used to match the basis function information `d_shape_n1s`, `d_shape_n2s`,
-`d_shape_coeffs` to the COPMONENT information (e.g. `d_shape_ls`).
+use the same COMPONENT \f$l,m,n\f$. The array `d_components.param_indexes` is
+used to match the basis function information `d_components.n1s`, `d_components.n2s`,
+`d_components.shape_coeffs` to the COPMONENT information (e.g. `d_components.ls`).
 
 Sets off a thread for each visibility to be calculate, with each thread
 looping over all cofficients. This seems to keep the memory access low enough
@@ -565,23 +462,14 @@ When called with `dim3 grid, threads`, kernel should be called with `grid.x`
 defined, where:
  - grid.x * threads.x >= `num_visi`
 
-@param[in] *d_shape_freqs Frequencies in the simulation (Hz)
-@param[in] *d_shape_stokesI Array of reference Stokes I flux densities for all
-SHAPELETs (Jy)
-@param[in] *d_shape_stokesQ Array of reference Stokes Q flux densities for all
-SHAPELETs (Jy)
-@param[in] *d_shape_stokesU Array of reference Stokes U flux densities for all
-SHAPELETs (Jy)
-@param[in] *d_shape_stokesV Array of reference Stokes V flux densities for all
-SHAPELETs (Jy)
-@param[in] d_shape_SIs Array of spectral indicies for all SHAPELETs
+@param[in] d_components d_components Pointer to a populated `components_t` struct as filled by `source_components::source_component_common`
+@param[in] d_component_beam_gains Pointer to a populated `d_beam_gains_t` struct as filled by `source_components::source_component_common`
 @param[in] *d_us Visibility coord \f$u\f$ for every baseline, frequency, and time
 step in the simulation (wavelengths)
 @param[in] *d_vs Visibility coord \f$v\f$ for every baseline, frequency, and time
 step in the simulation (wavelengths)
 @param[in] *d_ws Visibility coord \f$w\f$ for every baseline, frequency, and time
 step in the simulation (wavelengths)
-
 @param[in] *d_allsteps_wavelengths Wavelength for every baseline, frequency,
 and time step in the simulation
 @param[in] *d_u_shapes Array of \f$ u_{\mathrm{comp}} \f$ for every baseline,
@@ -590,7 +478,6 @@ frequency, and time step in the simulation (wavelengths)
 frequency, and time step in the simulation (wavelengths)
 @param[in] *d_w_shapes Array of \f$ w_{\mathrm{comp}} \f$ for every baseline,
 frequency, and time step in the simulation (wavelengths)
-
 @param[in,out] *d_sum_visi_XX_real Pointer to array to sum real XX visibility
 into
 @param[in,out] *d_sum_visi_XX_imag Pointer to array to sum imaginary XX
@@ -608,22 +495,6 @@ into
 @param[in,out] *d_sum_visi_YY_imag Pointer to array to sum imaginary YY
 visibility into
 time step in the simulation
-
-@param[in] *d_shape_pas Position angles for all SHAPELETs (radians)
-@param[in] *d_shape_majors \f$\beta_1 \f$ scaling (major axis) for all SHAPELETs
-(radians)
-@param[in] *d_shape_minors \f$\beta_2 \f$ scaling (minor axis for all SHAPELETs
-(radians)
-
-@param[in] *d_shape_n1s Array of first order of 2D shapelet basis function
-@param[in] *d_shape_n2s Array of second order of 2D shapelet basis function
-@param[in] *d_shape_coeffs Array of scaling coefficients for basis functions
-@param[in] *d_shape_param_indexes Array of index mapping basis functions to
-COMPONENT parameters
-
-@param[in] *d_ls \f$l\f$ sky coord for all time steps for all SHAPELETs
-@param[in] *d_ms \f$m\f$ sky coord for all time steps for all SHAPELETs
-@param[in] *d_ns \f$n\f$ sky coord for all time steps for all SHAPELETs
 @param[in] *d_sbf Shapelet basis function lookup table
 @param[in] num_shapes Number of SHAPELETs components
 @param[in] num_baselines Number of baselines for one time, one frequency step
@@ -633,19 +504,9 @@ simulation
 @param[in] num_coeffs Number of shapelet basis functions and coefficents
 @param[in] num_times Number of time steps in simulation
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
-@param[in] *d_primay_beam_J00 Array of primary beam J[0,0]
-(north-south gain)
-@param[in] *d_primay_beam_J01 Array of primary beam J[0,1]
-(north-south leakage)
-@param[in] *d_primay_beam_J10 Array of primary beam J[1,0]
-(east-west leakage)
-@param[in] *d_primay_beam_J11 Array of primary beam J[1,1]
-(east-west gain)
 */
-__global__ void kern_calc_visi_shapelets(double *d_shape_freqs,
-      user_precision_t *d_shape_stokesI, user_precision_t *d_shape_stokesQ,
-      user_precision_t *d_shape_stokesU, user_precision_t *d_shape_stokesV,
-      user_precision_t *d_shape_SIs,
+__global__ void kern_calc_visi_shapelets(components_t d_components,
+      d_beam_gains_t d_component_beam_gains,
       user_precision_t *d_us, user_precision_t *d_vs, user_precision_t *d_ws,
       user_precision_t *d_allsteps_wavelengths,
       user_precision_t *d_u_shapes, user_precision_t *d_v_shapes,
@@ -654,13 +515,6 @@ __global__ void kern_calc_visi_shapelets(double *d_shape_freqs,
       user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
       user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
       user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
-      user_precision_t *d_shape_pas, user_precision_t *d_shape_majors,
-      user_precision_t *d_shape_minors,
-      user_precision_t *d_shape_n1s, user_precision_t *d_shape_n2s,
-      user_precision_t *d_shape_coeffs, user_precision_t *d_shape_param_indexes,
-      double *d_ls, double *d_ms, double *d_ns,
       user_precision_t *d_sbf,
       int num_shapes, int num_baselines, int num_freqs, int num_visis,
-      const int num_coeffs, int num_times, int beamtype,
-      cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
-      cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11);
+      const int num_coeffs, int num_times, e_beamtype beamtype);

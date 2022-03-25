@@ -8,14 +8,13 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 
 //External CUDA code we're linking in
 extern void test_source_component_common(int num_components,
-           user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J01,
-           user_precision_complex_t *primay_beam_J10, user_precision_complex_t *primay_beam_J11,
-           double *freqs, double *ls, double *ms, double *ns,
-           double *ras, double *decs, user_precision_t *azs, user_precision_t *zas,
-           user_precision_t *sin_para_angs, user_precision_t *cos_para_angs,
-           double *beam_has, double *beam_decs,
-           woden_settings_t *woden_settings,
-           beam_settings_t *beam_settings);
+           int num_shape_coeffs, components_t components,
+           components_t d_components,
+           double *freqs, woden_settings_t *woden_settings,
+           beam_settings_t *beam_settings,
+           user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
+           user_precision_complex_t *Dys, user_precision_complex_t *gys,
+           double *ls, double *ms, double *ns);
 
 double TOL;
 
@@ -35,19 +34,34 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
   int num_beam_values = num_times*num_freqs*num_components;
 
-  double ra0 = 0.0*DD2R;
-  double dec0 = 0.0*DD2R;
+  user_precision_t *zeroes = calloc(num_components, sizeof(user_precision_t));
 
-  double *decs = malloc(num_components*sizeof(double));
-  double *zeroes = calloc(num_components, sizeof(double));
+  user_precision_t *ref_stokesI = malloc(num_components*sizeof(user_precision_t));
+  user_precision_t *ref_stokesQ = malloc(num_components*sizeof(user_precision_t));
+  user_precision_t *ref_stokesU = malloc(num_components*sizeof(user_precision_t));
+  user_precision_t *ref_stokesV = malloc(num_components*sizeof(user_precision_t));
+  user_precision_t *SIs = malloc(num_components*sizeof(user_precision_t));
+
+  ref_stokesQ = zeroes;
+  ref_stokesU = zeroes;
+  ref_stokesV = zeroes;
+  SIs = zeroes;
 
   //Keep RA between 0 and 2*pi here but enter RAs that should return
   //negative l values
   double ras[9] = {(3*M_PI)/2, (5*M_PI)/3, (7*M_PI)/4, (11*M_PI)/6,
                    0.0, M_PI/6, M_PI/4, M_PI/3, M_PI/2};
 
+  double ra0 = 0.0*DD2R;
+  double dec0 = 0.0*DD2R;
+
+  double *decs = malloc(num_components*sizeof(double));
+  double *ref_freqs = malloc(num_components*sizeof(double));
+
   for (int i = 0; i < num_components; i++) {
     decs[i] = dec0;
+    ref_freqs[i] = 150e+6;
+    ref_stokesI[i] = 1.0;
   }
 
   //Get the settings into a woden_settings_t struct
@@ -57,6 +71,9 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   woden_settings->ra0 = ra0;
   woden_settings->sdec0 = sin(dec0);
   woden_settings->cdec0 = cos(dec0);
+  woden_settings->latitude = MWA_LAT_RAD;
+
+  woden_settings->beamtype = beamtype;
 
   beam_settings_t *beam_settings = malloc(sizeof(beam_settings_t));
   beam_settings->beamtype = beamtype;
@@ -192,16 +209,39 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   double *ms = malloc(num_components*sizeof(double));
   double *ns = malloc(num_components*sizeof(double));
 
+  //Set up the components with our values
+  components_t components;
+  components_t d_components;
+
+  components.ras = ras;
+  components.decs = decs;
+  components.azs = azs;
+  components.zas = zas;
+  components.sin_para_angs = sin_para_angs;
+  components.cos_para_angs = cos_para_angs;
+  components.beam_has = beam_has;
+  components.beam_decs = beam_decs;
+  components.ref_freqs = ref_freqs;
+  components.ref_stokesI = ref_stokesI;
+  components.ref_stokesQ = ref_stokesQ;
+  components.ref_stokesU = ref_stokesU;
+  components.ref_stokesV = ref_stokesV;
+  components.SIs = SIs;
+
+
+  components.num_primarybeam_values = num_components*woden_settings->num_freqs*woden_settings->num_time_steps;
+
+  //not testing for shapelets here
+  int num_shape_coeffs = 0;
+
   //Run the CUDA code
-  test_source_component_common(num_components,
-             primay_beam_J00, primay_beam_J01,
-             primay_beam_J10, primay_beam_J11,
-             freqs, ls, ms, ns,
-             ras, decs, azs, zas,
-             sin_para_angs, cos_para_angs,
-             beam_has, beam_decs,
-             woden_settings,
-             beam_settings);
+  test_source_component_common(num_components, num_shape_coeffs,
+           components, d_components,
+           freqs, woden_settings,
+           beam_settings,
+           primay_beam_J00, primay_beam_J01,
+           primay_beam_J10, primay_beam_J11,
+           ls, ms, ns);
 
   double l_expected[9] = {-1.0, -sqrt(3)/2.0, -sqrt(2)/2.0, -0.5,
                           0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0, 1.0};
@@ -213,6 +253,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   TOL = 1e-15;
 
   for (int i = 0; i < num_components; i++) {
+    // printf("%.6e %.6e\n",l_expected[i], ls[i] );
     TEST_ASSERT_DOUBLE_WITHIN(TOL, l_expected[i], ls[i]);
     TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, ms[i]);
     TEST_ASSERT_DOUBLE_WITHIN(TOL, n_expected[i], ns[i]);

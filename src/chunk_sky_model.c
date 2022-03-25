@@ -6,168 +6,98 @@
 //POINTs in a chunk, PG both POINT and GAUSSIAN, G just GAUSSIAN
 enum component_case {P=0, PG, G};
 
-void null_point_comps(catsource_t *temp_cropped_src){
-  temp_cropped_src->point_ras = NULL;
-  temp_cropped_src->point_decs = NULL;
-  temp_cropped_src->point_ref_stokesI = NULL;
-  temp_cropped_src->point_ref_stokesQ = NULL;
-  temp_cropped_src->point_ref_stokesU = NULL;
-  temp_cropped_src->point_ref_stokesV = NULL;
-  temp_cropped_src->point_ref_freqs = NULL;
-  temp_cropped_src->point_SIs = NULL;
-  temp_cropped_src->point_azs = NULL;
-  temp_cropped_src->point_zas = NULL;
-  temp_cropped_src->cos_point_para_angs = NULL;
-  temp_cropped_src->sin_point_para_angs = NULL;
-  temp_cropped_src->point_gaussbeam_has = NULL;
-  temp_cropped_src->point_gaussbeam_decs = NULL;
+void null_components(source_t *src, e_component_type component_type) {
 
-  temp_cropped_src->n_points = 0;
-  temp_cropped_src->num_point_primarybeam_values = 0;
+  components_t *components;
+
+  if (component_type == POINT) {
+    components = &src->point_components;
+    src->n_points = 0;
+  }
+  else if (component_type == GAUSSIAN){
+    components = &src->gauss_components;
+    src->n_gauss = 0;
+  }
+  else if (component_type == SHAPELET){
+    components = &src->shape_components;
+    src->n_shapes = 0;
+    src->n_shape_coeffs = 0;
+  } else {
+    //Shouldn't ever get here unless something that isn't a COMPONENT type
+    //is entered
+    return;
+  }
+
+  components->ras = NULL;
+  components->decs = NULL;
+  components->ref_stokesI = NULL;
+  components->ref_stokesQ = NULL;
+  components->ref_stokesU = NULL;
+  components->ref_stokesV = NULL;
+  components->ref_freqs = NULL;
+  components->SIs = NULL;
+  components->shape_coeffs = NULL;
+  components->n1s = NULL;
+  components->n2s = NULL;
+  components->majors = NULL;
+  components->minors = NULL;
+  components->pas = NULL;
+  components->param_indexes = NULL;
+  components->azs = NULL;
+  components->zas = NULL;
+  components->sin_para_angs = NULL;
+  components->cos_para_angs = NULL;
+  components->beam_has = NULL;
+  components->beam_decs = NULL;
+  components->num_primarybeam_values = 0;
+
 
 }
 
-void null_gauss_comps(catsource_t *temp_cropped_src){
-  temp_cropped_src->gauss_ras = NULL;
-  temp_cropped_src->gauss_decs = NULL;
-  temp_cropped_src->gauss_ref_stokesI = NULL;
-  temp_cropped_src->gauss_ref_stokesQ = NULL;
-  temp_cropped_src->gauss_ref_stokesU = NULL;
-  temp_cropped_src->gauss_ref_stokesV = NULL;
-  temp_cropped_src->gauss_ref_freqs = NULL;
-  temp_cropped_src->gauss_SIs = NULL;
-  temp_cropped_src->gauss_majors = NULL;
-  temp_cropped_src->gauss_minors = NULL;
-  temp_cropped_src->gauss_pas = NULL;
-  temp_cropped_src->gauss_azs = NULL;
-  temp_cropped_src->gauss_zas = NULL;
-  temp_cropped_src->cos_gauss_para_angs = NULL;
-  temp_cropped_src->sin_gauss_para_angs = NULL;
-  temp_cropped_src->gauss_gaussbeam_has = NULL;
-  temp_cropped_src->gauss_gaussbeam_decs = NULL;
-
-  temp_cropped_src->n_gauss = 0;
-  temp_cropped_src->num_gauss_primarybeam_values = 0;
-
-}
-
-void null_shapelet_comps(catsource_t *temp_cropped_src){
-  temp_cropped_src->shape_ras = NULL;
-  temp_cropped_src->shape_decs = NULL;
-  temp_cropped_src->shape_ref_stokesI = NULL;
-  temp_cropped_src->shape_ref_stokesQ = NULL;
-  temp_cropped_src->shape_ref_stokesU = NULL;
-  temp_cropped_src->shape_ref_stokesV = NULL;
-  temp_cropped_src->shape_ref_freqs = NULL;
-  temp_cropped_src->shape_SIs = NULL;
-  temp_cropped_src->shape_majors = NULL;
-  temp_cropped_src->shape_minors = NULL;
-  temp_cropped_src->shape_pas = NULL;
-  temp_cropped_src->shape_n1s = NULL;
-  temp_cropped_src->shape_n2s = NULL;
-  temp_cropped_src->shape_coeffs = NULL;
-  temp_cropped_src->shape_param_indexes = NULL;
-  temp_cropped_src->shape_azs = NULL;
-  temp_cropped_src->shape_zas= NULL;
-  temp_cropped_src->cos_shape_para_angs = NULL;
-  temp_cropped_src->sin_shape_para_angs = NULL;
-  temp_cropped_src->shape_gaussbeam_has = NULL;
-  temp_cropped_src->shape_gaussbeam_decs = NULL;
-
-  temp_cropped_src->n_shapes = 0;
-  temp_cropped_src->n_shape_coeffs = 0;
-  temp_cropped_src->num_shape_primarybeam_values = 0;
-
-}
-
-void increment_point(catsource_t *temp_cropped_src, catsource_t *cropped_src,
-                     int * point_iter, int num_time_steps){
-  //increment the required pointers to point at the beginning of the next chunk
-  temp_cropped_src->point_ras = cropped_src->point_ras + * point_iter;
-  temp_cropped_src->point_decs = cropped_src->point_decs + * point_iter;
-  temp_cropped_src->point_ref_stokesI = cropped_src->point_ref_stokesI + * point_iter;
-  temp_cropped_src->point_ref_stokesQ = cropped_src->point_ref_stokesQ + * point_iter;
-  temp_cropped_src->point_ref_stokesU = cropped_src->point_ref_stokesU + * point_iter;
-  temp_cropped_src->point_ref_stokesV = cropped_src->point_ref_stokesV + * point_iter;
-  temp_cropped_src->point_ref_freqs = cropped_src->point_ref_freqs + * point_iter;
-  temp_cropped_src->point_SIs = cropped_src->point_SIs + * point_iter;
-
-  temp_cropped_src->point_azs = cropped_src->point_azs + (num_time_steps * * point_iter);
-  temp_cropped_src->point_zas = cropped_src->point_zas + (num_time_steps * * point_iter);
-  temp_cropped_src->sin_point_para_angs = cropped_src->sin_point_para_angs + (num_time_steps * * point_iter);
-  temp_cropped_src->cos_point_para_angs = cropped_src->cos_point_para_angs + (num_time_steps * * point_iter);
-  temp_cropped_src->point_gaussbeam_has = cropped_src->point_gaussbeam_has + (num_time_steps * * point_iter);
-  temp_cropped_src->point_gaussbeam_decs = cropped_src->point_gaussbeam_decs + (num_time_steps * * point_iter);
-
-}
-
-void increment_gauss(catsource_t *temp_cropped_src, catsource_t *cropped_src,
-                     int * gauss_iter, int num_time_steps){
-
-  //increment the required pointers to point at the beginning of the next chunk
-  temp_cropped_src->gauss_ras = cropped_src->gauss_ras + * gauss_iter;
-  temp_cropped_src->gauss_decs = cropped_src->gauss_decs + * gauss_iter;
-  temp_cropped_src->gauss_ref_stokesI = cropped_src->gauss_ref_stokesI + * gauss_iter;
-  temp_cropped_src->gauss_ref_stokesQ = cropped_src->gauss_ref_stokesQ + * gauss_iter;
-  temp_cropped_src->gauss_ref_stokesU = cropped_src->gauss_ref_stokesU + * gauss_iter;
-  temp_cropped_src->gauss_ref_stokesV = cropped_src->gauss_ref_stokesV + * gauss_iter;
-  temp_cropped_src->gauss_ref_freqs = cropped_src->gauss_ref_freqs + * gauss_iter;
-  temp_cropped_src->gauss_SIs = cropped_src->gauss_SIs + * gauss_iter;
-  temp_cropped_src->gauss_majors = cropped_src->gauss_majors + * gauss_iter;
-  temp_cropped_src->gauss_minors = cropped_src->gauss_minors + * gauss_iter;
-  temp_cropped_src->gauss_pas = cropped_src->gauss_pas + * gauss_iter;
-
-  temp_cropped_src->gauss_azs = cropped_src->gauss_azs + (num_time_steps * * gauss_iter);
-  temp_cropped_src->gauss_zas = cropped_src->gauss_zas + (num_time_steps * * gauss_iter);
-  temp_cropped_src->sin_gauss_para_angs = cropped_src->sin_gauss_para_angs + (num_time_steps * * gauss_iter);
-  temp_cropped_src->cos_gauss_para_angs = cropped_src->cos_gauss_para_angs + (num_time_steps * * gauss_iter);
-  temp_cropped_src->gauss_gaussbeam_has = cropped_src->gauss_gaussbeam_has + (num_time_steps * * gauss_iter);
-  temp_cropped_src->gauss_gaussbeam_decs = cropped_src->gauss_gaussbeam_decs + (num_time_steps * * gauss_iter);
-
-}
-
-
-void increment_shapelet(catsource_t *temp_cropped_src, catsource_t *cropped_src,
-                        int * shape_iter, int num_time_steps){
+void increment_pointgauss(source_t *temp_cropped_src, source_t *cropped_src,
+                          e_component_type component_type,
+                          int * iter, int num_time_steps){
   //increment the required pointers to point at the beginning of the next chunk
 
-  //for shapelets, we chunk over coeffs, not components, so need all the
-  //ras,azs, minors, etc each time, just iterate the coeffs, n1s, n2s
-  //do this because there should be many coeffs per components, and not
-  //many components, due to the nature of shapelets
-  temp_cropped_src->n_shapes = cropped_src->n_shapes;
+  components_t *temp_components;
+  components_t *components;
+  if (component_type == POINT) {
+    temp_components = &temp_cropped_src->point_components;
+    components = &cropped_src->point_components;
+  }
+  else if (component_type == GAUSSIAN){
+    temp_components = &temp_cropped_src->gauss_components;
+    components = &cropped_src->gauss_components;
 
-  temp_cropped_src->shape_ras = cropped_src->shape_ras;
-  temp_cropped_src->shape_decs = cropped_src->shape_decs;
-  temp_cropped_src->shape_ref_stokesI = cropped_src->shape_ref_stokesI;
-  temp_cropped_src->shape_ref_stokesQ = cropped_src->shape_ref_stokesQ;
-  temp_cropped_src->shape_ref_stokesU = cropped_src->shape_ref_stokesU;
-  temp_cropped_src->shape_ref_stokesV = cropped_src->shape_ref_stokesV;
-  temp_cropped_src->shape_ref_freqs = cropped_src->shape_ref_freqs;
-  temp_cropped_src->shape_SIs = cropped_src->shape_SIs;
+    //These are GAUSSIAN only params
+    temp_components->majors = components->majors + * iter;
+    temp_components->minors = components->minors + * iter;
+    temp_components->pas = components->pas + * iter;
+  }
+  else {
+    return;
+  }
 
-  temp_cropped_src->shape_majors = cropped_src->shape_majors;
-  temp_cropped_src->shape_minors = cropped_src->shape_minors;
-  temp_cropped_src->shape_pas = cropped_src->shape_pas;
+  temp_components->ras = components->ras + * iter;
+  temp_components->decs = components->decs + * iter;
+  temp_components->ref_stokesI = components->ref_stokesI + * iter;
+  temp_components->ref_stokesQ = components->ref_stokesQ + * iter;
+  temp_components->ref_stokesU = components->ref_stokesU + * iter;
+  temp_components->ref_stokesV = components->ref_stokesV + * iter;
+  temp_components->ref_freqs = components->ref_freqs + * iter;
+  temp_components->SIs = components->SIs + * iter;
 
-  temp_cropped_src->shape_coeffs = cropped_src->shape_coeffs + * shape_iter;
-  temp_cropped_src->shape_n1s = cropped_src->shape_n1s + * shape_iter;
-  temp_cropped_src->shape_n2s = cropped_src->shape_n2s + * shape_iter;
-  temp_cropped_src->shape_param_indexes = cropped_src->shape_param_indexes + * shape_iter;
+  temp_components->azs = components->azs + (num_time_steps * * iter);
+  temp_components->zas = components->zas + (num_time_steps * * iter);
+  temp_components->sin_para_angs = components->sin_para_angs + (num_time_steps * * iter);
+  temp_components->cos_para_angs = components->cos_para_angs + (num_time_steps * * iter);
+  temp_components->beam_has = components->beam_has + (num_time_steps * * iter);
+  temp_components->beam_decs = components->beam_decs + (num_time_steps * * iter);
 
-  //only chunk over coeffs, so we need all the az / za for every chunk,
-  //so we don't iterate the pointer here
-
-  temp_cropped_src->shape_azs = cropped_src->shape_azs;
-  temp_cropped_src->shape_zas = cropped_src->shape_zas;
-  temp_cropped_src->sin_shape_para_angs = cropped_src->sin_shape_para_angs;
-  temp_cropped_src->cos_shape_para_angs = cropped_src->cos_shape_para_angs;
-  temp_cropped_src->shape_gaussbeam_has = cropped_src->shape_gaussbeam_has;
-  temp_cropped_src->shape_gaussbeam_decs = cropped_src->shape_gaussbeam_decs;
 }
 
-void fill_chunk_src_with_pointgauss(catsource_t *temp_cropped_src,
-     catsource_t *cropped_src, int chunk_ind, int comps_per_chunk,
+void fill_chunk_src_with_pointgauss(source_t *temp_cropped_src,
+     source_t *cropped_src, int chunk_ind, int comps_per_chunk,
      woden_settings_t *woden_settings) {
 
   //Splitting POINTs and GAUSSIANS into lovely chunks that our GPU can chew
@@ -242,7 +172,6 @@ void fill_chunk_src_with_pointgauss(catsource_t *temp_cropped_src,
     }
   }
 
-
   //FINISH work out what component type and how many of each component
   //types we need to shove into the temp_cropped_src
 
@@ -252,36 +181,78 @@ void fill_chunk_src_with_pointgauss(catsource_t *temp_cropped_src,
   //If just simulating POINT in this chunk
   if (comp_case == P) {
     //Null out the gauss and shapelet arrays in temp_cropped_src
-    null_gauss_comps(temp_cropped_src);
-    null_shapelet_comps(temp_cropped_src);
+    null_components(temp_cropped_src, GAUSSIAN);
+    null_components(temp_cropped_src, SHAPELET);
     //Increment the pointers to the correct indexes
-    increment_point(temp_cropped_src, cropped_src,
+    increment_pointgauss(temp_cropped_src, cropped_src, POINT,
                     &point_iter, woden_settings->num_time_steps);
   }
   else if (comp_case == PG) {
-    null_shapelet_comps(temp_cropped_src);
-    increment_point(temp_cropped_src, cropped_src,
+    null_components(temp_cropped_src, SHAPELET);
+    increment_pointgauss(temp_cropped_src, cropped_src, POINT,
                     &point_iter, woden_settings->num_time_steps);
 
-    increment_gauss(temp_cropped_src, cropped_src,
+    increment_pointgauss(temp_cropped_src, cropped_src, GAUSSIAN,
                     &gauss_iter, woden_settings->num_time_steps);
   }
   else if (comp_case == G) {
-    null_point_comps(temp_cropped_src);
-    null_shapelet_comps(temp_cropped_src);
-    increment_gauss(temp_cropped_src, cropped_src,
+    null_components(temp_cropped_src, POINT);
+    null_components(temp_cropped_src, SHAPELET);
+    increment_pointgauss(temp_cropped_src, cropped_src, GAUSSIAN,
                     &gauss_iter, woden_settings->num_time_steps);
   }
   else {
     printf("Chunking failed to group POINT,GAUSSIAN components sensibly. Something terrible has happened\n");
   }
 
-  temp_cropped_src->num_point_primarybeam_values = temp_cropped_src->n_points*woden_settings->num_freqs*woden_settings->num_time_steps;
-  temp_cropped_src->num_gauss_primarybeam_values = temp_cropped_src->n_gauss*woden_settings->num_freqs*woden_settings->num_time_steps;
+  temp_cropped_src->point_components.num_primarybeam_values = temp_cropped_src->n_points*woden_settings->num_freqs*woden_settings->num_time_steps;
+  temp_cropped_src->gauss_components.num_primarybeam_values = temp_cropped_src->n_gauss*woden_settings->num_freqs*woden_settings->num_time_steps;
 }
 
-void fill_chunk_src_with_shapelets(catsource_t *temp_cropped_src,
-     catsource_t *cropped_src, int chunk_ind, int coeffs_per_chunk,
+
+
+void increment_shapelet(source_t *temp_cropped_src, source_t *cropped_src,
+                        int * shape_iter, int num_time_steps){
+  //increment the required pointers to point at the beginning of the next chunk
+
+  //for shapelets, we chunk over coeffs, not components, so need all the
+  //ras,azs, minors, etc each time, just iterate the coeffs, n1s, n2s
+  //do this because there should be many coeffs per components, and not
+  //many components, due to the nature of shapelets
+  temp_cropped_src->n_shapes = cropped_src->n_shapes;
+
+  temp_cropped_src->shape_components.ras = cropped_src->shape_components.ras;
+  temp_cropped_src->shape_components.decs = cropped_src->shape_components.decs;
+  temp_cropped_src->shape_components.ref_stokesI = cropped_src->shape_components.ref_stokesI;
+  temp_cropped_src->shape_components.ref_stokesQ = cropped_src->shape_components.ref_stokesQ;
+  temp_cropped_src->shape_components.ref_stokesU = cropped_src->shape_components.ref_stokesU;
+  temp_cropped_src->shape_components.ref_stokesV = cropped_src->shape_components.ref_stokesV;
+  temp_cropped_src->shape_components.ref_freqs = cropped_src->shape_components.ref_freqs;
+  temp_cropped_src->shape_components.SIs = cropped_src->shape_components.SIs;
+
+  temp_cropped_src->shape_components.majors = cropped_src->shape_components.majors;
+  temp_cropped_src->shape_components.minors = cropped_src->shape_components.minors;
+  temp_cropped_src->shape_components.pas = cropped_src->shape_components.pas;
+
+  temp_cropped_src->shape_components.shape_coeffs = cropped_src->shape_components.shape_coeffs + * shape_iter;
+  temp_cropped_src->shape_components.n1s = cropped_src->shape_components.n1s + * shape_iter;
+  temp_cropped_src->shape_components.n2s = cropped_src->shape_components.n2s + * shape_iter;
+  temp_cropped_src->shape_components.param_indexes = cropped_src->shape_components.param_indexes + * shape_iter;
+
+  //only chunk over coeffs, so we need all the az / za for every chunk,
+  //so we don't iterate the pointer here
+  temp_cropped_src->shape_components.azs = cropped_src->shape_components.azs;
+  temp_cropped_src->shape_components.zas = cropped_src->shape_components.zas;
+  temp_cropped_src->shape_components.sin_para_angs = cropped_src->shape_components.sin_para_angs;
+  temp_cropped_src->shape_components.cos_para_angs = cropped_src->shape_components.cos_para_angs;
+  temp_cropped_src->shape_components.beam_has = cropped_src->shape_components.beam_has;
+  temp_cropped_src->shape_components.beam_decs = cropped_src->shape_components.beam_decs;
+}
+
+
+
+void fill_chunk_src_with_shapelets(source_t *temp_cropped_src,
+     source_t *cropped_src, int chunk_ind, int coeffs_per_chunk,
      woden_settings_t *woden_settings) {
 
   //Upper indexes of components covered in this chunk
@@ -300,15 +271,15 @@ void fill_chunk_src_with_shapelets(catsource_t *temp_cropped_src,
     temp_cropped_src->n_shape_coeffs = cropped_src->n_shape_coeffs % coeffs_per_chunk;
   }
 
-  null_point_comps(temp_cropped_src);
-  null_gauss_comps(temp_cropped_src);
+  null_components(temp_cropped_src, POINT);
+  null_components(temp_cropped_src, GAUSSIAN);
   increment_shapelet(temp_cropped_src, cropped_src,
                     &shape_iter, woden_settings->num_time_steps);
-  temp_cropped_src->num_shape_primarybeam_values = temp_cropped_src->n_shapes*woden_settings->num_freqs*woden_settings->num_time_steps;
+  temp_cropped_src->shape_components.num_primarybeam_values = temp_cropped_src->n_shapes*woden_settings->num_freqs*woden_settings->num_time_steps;
 }
 
 
-source_catalogue_t * create_chunked_sky_models(catsource_t *cropped_src,
+source_catalogue_t * create_chunked_sky_models(source_t *cropped_src,
                                                woden_settings_t *woden_settings) {
 
   //Ok, so we split POINT and GAUSSIANs up by whole COMPONENT into the chunked
@@ -348,9 +319,9 @@ source_catalogue_t * create_chunked_sky_models(catsource_t *cropped_src,
 
   chunked_sky_models->num_sources = num_chunks;
   chunked_sky_models->num_shapelets = 0;
-  chunked_sky_models->catsources = malloc(num_chunks*sizeof(catsource_t));
+  chunked_sky_models->sources = malloc(num_chunks*sizeof(source_t));
 
-  catsource_t *temp_cropped_src = malloc(sizeof(catsource_t));
+  source_t *temp_cropped_src = malloc(sizeof(source_t));
 
   printf("Number of chunks required is %d\n", num_chunks);
   printf("Chunking sky model.. ");
@@ -360,7 +331,7 @@ source_catalogue_t * create_chunked_sky_models(catsource_t *cropped_src,
     fill_chunk_src_with_pointgauss(temp_cropped_src, cropped_src, comp_chunk,
                                comps_per_chunk, woden_settings);
 
-    chunked_sky_models->catsources[comp_chunk] = *temp_cropped_src;
+    chunked_sky_models->sources[comp_chunk] = *temp_cropped_src;
 
   }
 
@@ -373,7 +344,7 @@ source_catalogue_t * create_chunked_sky_models(catsource_t *cropped_src,
     //so we know if we need to setup shapelet basis functions in GPU memory
     //or not
     chunked_sky_models->num_shapelets += temp_cropped_src->n_shapes;
-    chunked_sky_models->catsources[num_comp_chunks + coeff_chunk] = *temp_cropped_src;
+    chunked_sky_models->sources[num_comp_chunks + coeff_chunk] = *temp_cropped_src;
 
   }
 

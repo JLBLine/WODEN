@@ -6,10 +6,11 @@
 #include "woden_precision_defs.h"
 #include <mwa_hyperbeam.h>
 
-enum component_type {POINT=0, /*!< Point source type component */
+typedef enum {POINT=0, /*!< Point source type component */
                      GAUSSIAN, /*!< Gaussian type component */
                      SHAPELET, /*!< Shapelet type component */
-                     };
+                   }e_component_type;
+
 typedef enum {NO_BEAM, /*!< Do not use a primary beam in the simulation */
               GAUSS_BEAM, /*!< Use a analytic Gaussian primary beam */
               FEE_BEAM, /*!< Use the RTS MWA FEE primary beam code */
@@ -21,9 +22,75 @@ typedef enum {NO_BEAM, /*!< Do not use a primary beam in the simulation */
               }e_beamtype;
 
 /*!
-A struct to contain sky model values for a single catalogue SOURCE
+A struct to contain COMPONENT information for either multiple POINT, GAUSSIAN,
+or SHAPELET COMPONENTs. Three of these are included in `source_t` to specify
+all COMPONENTs for a single source. This allows common values like RA,Dec,Flux
+etc information to be stored the same way for different COMPONENT types
 */
-typedef struct _catsource_t {
+typedef struct _components_t {
+
+  //Instrinsic to COMPONENT values
+  double *ras; /*!< COMPONENT right ascensions (radians) */
+  double *decs; /*!< COMPONENT declinations (radians) */
+  double *ref_freqs; /*!< COMPONENT Flux density reference frequencies (Hz) */
+  user_precision_t *ref_stokesI; /*!< COMPONENT Stokes I reference flux density (Jy) */
+  user_precision_t *ref_stokesQ; /*!< COMPONENT Stokes Q reference flux density (Jy) */
+  user_precision_t *ref_stokesU; /*!< COMPONENT Stokes U reference flux density (Jy) */
+  user_precision_t *ref_stokesV; /*!< COMPONENT Stokes V reference flux density (Jy) */
+  user_precision_t *SIs; /*!<  COMPONENT spectral indexes */
+  user_precision_t *shape_coeffs; /*!< Scaling coefficients for SHAPELET basis functions */
+  user_precision_t *n1s; /*!< 1st basis function order for SHAPELET basis functions */
+  user_precision_t *n2s; /*!< 2nd basis function order for SHAPELET basis functions */
+  user_precision_t *majors; /*!< GAUSSIAN/SHAPELET major axis (beta1, radians) */
+  user_precision_t *minors; /*!< GAUSSIAN/SHAPELET minor axis (beta2, radians) */
+  user_precision_t *pas; /*!< GAUSSIAN/SHAPELET position angles (radians) */
+  user_precision_t *param_indexes; /*!< An index value to match each coeff, n1, and n2
+  to the correct ra, dec, major, minor, pa for a SHAPELET */
+
+  //Specific to observation settings for these COMPONENTs
+  user_precision_t *azs; /*!< SHAPELET source azimuth angles for all time steps */
+  user_precision_t *zas; /*!< SHAPELET source zenith angles for all time steps */
+  user_precision_t *sin_para_angs; /*!< Sine of parallatic angle for all COMPONENT az,za */
+  user_precision_t *cos_para_angs; /*!< Cosine of parallatic angle for all COMPONENT az,za */
+  double *beam_has; /*!< Hour angle of COMPONENTs for all time steps, used for
+   beam calculations */
+  double *beam_decs; /*!< Declinations of COMPONENTs for all time steps, used for
+   beam calculations */
+  int num_primarybeam_values; /*!< Number of beam calculations needed for
+  COMPONENTs */
+  //float *angular_seps; /*!< Angular separation of each COMPONENTS from
+  //zenith, for all time steps. Used in MWA analytic beam  */
+
+  /*
+  These beam values are two dimensional, in anticipation of one day having
+  different primary beams for different tiles. At the moment everything is
+  the same for each tile, so only have length one for first dimension
+  */
+  user_precision_complex_t **gxs; /*!< North-South Beam gain values for all directions,
+  frequencies, and times for these COMPONENTS*/
+  user_precision_complex_t **Dxs; /*!< North-South Beam leakage values for all directions,
+  frequencies, and times for these COMPONENTS*/
+  user_precision_complex_t **Dys; /*!< East-West Beam leakage values for all directions,
+  frequencies, and times for these COMPONENTS*/
+  user_precision_complex_t **gys; /*!< East-West Beam gain values for all directions,
+  frequencies, and times for these COMPONENTS*/
+
+  //Leave off the d_ from these device values, as the components_t struct
+  //itself will have the d_ label if doing things on the GPU
+  double *ls; /*!< Device memory l cosine direction coords for these COMPONENTs*/
+  double *ms; /*!< Device memory m cosine direction coords for these COMPONENTs*/
+  double *ns; /*!< Device memory n cosine direction coords for these COMPONENTs*/
+
+  int HELP;
+
+} components_t;
+
+
+
+/*!
+A struct to contain sky model values for a single SOURCE
+*/
+typedef struct _source_t {
   //General source info
   char name[32]; /*!< Source name */
   int n_comps; /*!< Total number of COMPONENTs in source  */
@@ -32,69 +99,33 @@ typedef struct _catsource_t {
   int n_shapes; /*!< Number of SHAPELET source COMPONENTs */
   int n_shape_coeffs; /*!< Total number of SHAPELET coefficients */
 
-  //Pointsource params
-  double *point_ras; /*!< POINT source right ascensions (radians) */
-  double *point_decs; /*!< POINT source declinations (radians) */
-  double *point_ref_freqs; /*!< POINT source Flux density reference frequencies (Hz) */
-  user_precision_t *point_ref_stokesI; /*!< POINT source Stokes I reference flux density (Jy) */
-  user_precision_t *point_ref_stokesQ; /*!< POINT source Stokes Q reference flux density (Jy) */
-  user_precision_t *point_ref_stokesU; /*!< POINT source Stokes U reference flux density (Jy) */
-  user_precision_t *point_ref_stokesV; /*!< POINT source Stokes V reference flux density (Jy) */
-  user_precision_t *point_SIs; /*!<  POINT source spectral indexes */
-  user_precision_t *point_azs; /*!< POINT source azimuth angles for all time steps */
-  user_precision_t *point_zas; /*!< POINT source zenith angles for all time steps */
-  user_precision_t *sin_point_para_angs; /*!< Sine of parallatic angle for all POINT source az,za */
-  user_precision_t *cos_point_para_angs; /*!< Cosine of parallatic angle for all POINT source az,za */
-  double *point_gaussbeam_has; /*!< Hour angle of POINT components used for Gaussian beam calculations */
-  double *point_gaussbeam_decs; /*!< Declinations of POINT components used for Gaussian beam calculations */
-  int num_point_primarybeam_values; /*!< Number of beam calculations needed for POINT components */
+  components_t point_components; /*!< `components_t` holding component
+  information for all POINT COMPONENTs in this SOURCE.*/
+  components_t gauss_components; /*!< `components_t` holding component
+  information for all GAUSSIAN COMPONENTs in this SOURCE.*/
+  components_t shape_components; /*!< `components_t` holding component
+  information for all SHAPELET COMPONENTs in this SOURCE.*/
 
-  //Gaussian params
-  double *gauss_ras; /*!< GAUSSIAN source right ascensions (radians) */
-  double *gauss_decs; /*!< GAUSSIAN source declinations (radians) */
-  double *gauss_ref_freqs; /*!< GAUSSIAN source Flux density reference frequencies (Hz) */
-  user_precision_t *gauss_ref_stokesI; /*!< GAUSSIAN source Stokes I reference flux density (Jy) */
-  user_precision_t *gauss_ref_stokesQ; /*!< GAUSSIAN source Stokes Q reference flux density (Jy) */
-  user_precision_t *gauss_ref_stokesU; /*!< GAUSSIAN source Stokes U reference flux density (Jy) */
-  user_precision_t *gauss_ref_stokesV; /*!< GAUSSIAN source Stokes V reference flux density (Jy) */
-  user_precision_t *gauss_SIs; /*!<  GAUSSIAN source spectral indexes */
-  user_precision_t *gauss_majors; /*!< GAUSSIAN major axis (FWHM, radians) */
-  user_precision_t *gauss_minors; /*!< GAUSSIAN minor axis (FWHM, radians) */
-  user_precision_t *gauss_pas; /*!< GAUSSIAN position angles (radians) */
-  user_precision_t *gauss_azs; /*!< GAUSSIAN source azimuth angles for all time steps */
-  user_precision_t *gauss_zas; /*!< GAUSSIAN source zenith angles for all time steps */
-  user_precision_t *sin_gauss_para_angs; /*!< Sine of parallatic angle for all GAUSSIAN source az,za */
-  user_precision_t *cos_gauss_para_angs; /*!< Cosine of parallatic angle for all GAUSSIAN source az,za */
-  double *gauss_gaussbeam_has; /*!< Hour angle of GAUSSIAN components used for Gaussian beam calculations */
-  double *gauss_gaussbeam_decs; /*!< Declinations of GAUSSIAN components used for Gaussian beam calculations */
-  int num_gauss_primarybeam_values; /*!< Number of beam calculations needed for GAUSSIAN components */
+  //Device versions
+  components_t d_point_components; /*!< `components_t` holding component
+  information for all POINT COMPONENTs in this SOURCE.*/
+  components_t d_gauss_components; /*!< `components_t` holding component
+  information for all GAUSSIAN COMPONENTs in this SOURCE.*/
+  components_t d_shape_components; /*!< `components_t` holding component
+  information for all SHAPELET COMPONENTs in this SOURCE.*/
 
-  //Shapelet params
-  double *shape_ras; /*!< SHAPELET source right ascensions (radians) */
-  double *shape_decs; /*!< SHAPELET source declinations (radians) */
-  double *shape_ref_freqs; /*!< SHAPELET source Flux density reference frequencies (Hz) */
-  user_precision_t *shape_ref_stokesI; /*!< SHAPELET source Stokes I reference flux density (Jy) */
-  user_precision_t *shape_ref_stokesQ; /*!< SHAPELET source Stokes Q reference flux density (Jy) */
-  user_precision_t *shape_ref_stokesU; /*!< SHAPELET source Stokes U reference flux density (Jy) */
-  user_precision_t *shape_ref_stokesV; /*!< SHAPELET source Stokes V reference flux density (Jy) */
-  user_precision_t *shape_SIs; /*!<  SHAPELET source spectral indexes */
-  user_precision_t *shape_coeffs; /*!< Scaling coefficients for SHAPELET basis functions */
-  user_precision_t *shape_n1s; /*!< 1st basis function order for SHAPELET basis functions */
-  user_precision_t *shape_n2s; /*!< 2nd basis function order for SHAPELET basis functions */
-  user_precision_t *shape_majors; /*!< SHAPELET major axis (beta1, radians) */
-  user_precision_t *shape_minors; /*!< SHAPELET minor axis (beta2, radians) */
-  user_precision_t *shape_pas; /*!< SHAPELET position angles (radians) */
-  user_precision_t *shape_param_indexes; /*!< An index value to match each coeff, n1, and n2
-  to the correct ra, dec, major, minor, pa for a SHAPELET */
-  user_precision_t *shape_azs; /*!< SHAPELET source azimuth angles for all time steps */
-  user_precision_t *shape_zas; /*!< SHAPELET source zenith angles for all time steps */
-  user_precision_t *sin_shape_para_angs; /*!< Sine of parallatic angle for all SHAPELET source az,za */
-  user_precision_t *cos_shape_para_angs; /*!< Cosine of parallatic angle for all SHAPELET source az,za */
-  double *shape_gaussbeam_has; /*!< Hour angle of SHAPELET components used for Gaussian beam calculations */
-  double *shape_gaussbeam_decs; /*!< Declinations of SHAPELET components used for Gaussian beam calculations */
-  int num_shape_primarybeam_values; /*!< Number of beam calculations needed for SHAPELET components */
+} source_t;
 
-} catsource_t;
+/*!
+A struct to contain multiple `source_t` type sky models and `beam_settings_t`
+primary beam settings, to be iterated over by `calculate_visibilities`
+*/
+typedef struct _source_catalogue_t {
+    int num_sources; /*!< Number of SOURCES in this `source_catalogue_t`*/
+    int num_shapelets; /*!< Total number of SHAPELET components in this `source_catalogue_t` */
+    source_t *sources; /*!< Multiple sky models to simulate */
+    // beam_settings_t *beam_settings; /*!< Primary beam settings corresponding to `sources` */
+} source_catalogue_t;
 
 /*!
 A struct to contain settings pertaining to the primary beam
@@ -106,7 +137,7 @@ typedef struct _beam_settings_t {
 
     user_precision_t beam_FWHM_rad; /*!< FWHM of requested Gaussian primary beam, at reference frequnecy */
     double beam_ref_freq; /*!< Reference frequency for the given FWHM of Gaussian primary beam */
-    int beamtype; /*!< What type of primary beam to simulate - see `e_beamtype` */
+    e_beamtype beamtype; /*!< What type of primary beam to simulate - see `e_beamtype` */
 
     user_precision_t *MWAFEE_freqs; /*!< The frequencies of the initialised MWAFEE beams
     in FEE_beams */
@@ -127,17 +158,6 @@ typedef struct _beam_settings_t {
 
 
 } beam_settings_t;
-
-/*!
-A struct to contain multiple `catsource_t` type sky models and `beam_settings_t`
-primary beam settings, to be iterated over by `calculate_visibilities`
-*/
-typedef struct _source_catalogue_t {
-    int num_sources; /*!< Number of SOURCES in this `source_catalogue_t`*/
-    int num_shapelets; /*!< Total number of SHAPELET components in this `source_catalogue_t` */
-    catsource_t *catsources; /*!< Multiple sky models to simulate */
-    // beam_settings_t *beam_settings; /*!< Primary beam settings corresponding to `catsources` */
-} source_catalogue_t;
 
 /**
 Struct to contain simulation parameters and visibility outputs

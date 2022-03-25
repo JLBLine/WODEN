@@ -89,8 +89,7 @@ int main(int argc, char **argv) {
   //Crop emission below the horizon, and collapse all SOURCES from raw_srccat
   //into one single SOURCE
   printf("Horizon cropping sky model and calculating az/za for all components\nfor observation\n");
-  // catsource_t *cropped_src;
-  catsource_t *cropped_src = crop_sky_model(raw_srccat, lsts, woden_settings->latitude,
+  source_t *cropped_src = crop_sky_model(raw_srccat, lsts, woden_settings->latitude,
                                woden_settings->num_time_steps, woden_settings->sky_crop_type);
 
   printf("Finished cropping and calculating az/za\n");

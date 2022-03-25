@@ -27,7 +27,7 @@ void test_fill_chunk_src_with_shapelets(int chunking_size,
   //Not testing POINT/GAUSS, set these to zero
   int num_points = 0;
   int num_gauss = 0;
-  catsource_t *cropped_src = make_sky_model(num_points, num_gauss, num_shapes,
+  source_t *cropped_src = make_sky_model(num_points, num_gauss, num_shapes,
                                             num_coeff_per_shape, num_time_steps);
 
   //Set some dummy baseline, frequency simulation settings
@@ -46,7 +46,7 @@ void test_fill_chunk_src_with_shapelets(int chunking_size,
   // printf("Is num_visis*num_coeffs %d < num_visis*coeffs_per_chunk*num_chunks %d\n",
          // num_visis*num_coeffs_to_chunk, num_visis*coeffs_per_chunk*num_chunks);
 
-  catsource_t *temp_cropped_src = malloc(sizeof(catsource_t));
+  source_t *temp_cropped_src = malloc(sizeof(source_t));
   woden_settings_t *woden_settings = malloc(sizeof(woden_settings_t));
   woden_settings->num_freqs = num_freqs;
   woden_settings->num_time_steps = num_time_steps;

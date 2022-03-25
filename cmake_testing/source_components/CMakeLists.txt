@@ -3,7 +3,7 @@ include_directories("${CMAKE_SOURCE_DIR}/cmake_testing/source_components")
 
 ## Create tests for both float and double precision
 foreach(PRECISION IN LISTS FLOAT DOUBLE)
-# foreach(PRECISION IN LISTS DOUBLE)
+# foreach(PRECISION IN LISTS FLOAT)
   ##Set the flags depending on the precision
   DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
 
@@ -76,6 +76,8 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   add_test(CUDA_test_get_beam_gains_${PRECISION}
            test_get_beam_gains_${PRECISION}_app)
 
+
+
   ##Test the common calls between all component types return expected values
   add_executable(test_source_component_common_${PRECISION}_app
       test_source_component_common.c
@@ -90,7 +92,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   add_test(CUDA_test_source_component_common_${PRECISION}
            test_source_component_common_${PRECISION}_app)
 
-  #Test the point source visibility kernel
+  ##Test the point source visibility kernel
   add_executable(test_kern_calc_visi_point_${PRECISION}_app
       test_kern_calc_visi_point.c
       test_kern_calc_visi_common.c

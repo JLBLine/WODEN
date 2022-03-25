@@ -14,8 +14,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
               "${CMAKE_SOURCE_DIR}/src/calculate_visibilities.cu"
               "${CMAKE_SOURCE_DIR}/src/source_components.cu"
               "${CMAKE_SOURCE_DIR}/src/fundamental_coords.cu"
-              "${CMAKE_SOURCE_DIR}/src/primary_beam_cuda.cu"
-              "${CMAKE_SOURCE_DIR}/src/FEE_primary_beam_cuda.cu")
+              "${CMAKE_SOURCE_DIR}/src/primary_beam_cuda.cu")
 
   target_compile_options(calculate_visibilitiesCUDA_${PRECISION} PRIVATE ${CUDA_FLAGS})
 
@@ -26,7 +25,6 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
 
   ##Quite a large number of C depenecies here so stick em in a library
   add_library(calculate_visibilities_Cdepends_${PRECISION} SHARED
-              ${CMAKE_SOURCE_DIR}/src/FEE_primary_beam.c
               ${CMAKE_SOURCE_DIR}/src/visibility_set.c
               ${CMAKE_SOURCE_DIR}/src/woden_settings.c
               ${CMAKE_SOURCE_DIR}/src/shapelet_basis.c)
