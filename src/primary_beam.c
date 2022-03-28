@@ -1,63 +1,9 @@
 #include "primary_beam.h"
-#include "FEE_primary_beam.h"
-#include <erfa.h>
 #include <complex.h>
-
-void calc_para_angle(catsource_t *cropped_src, double *lsts,
-                     double latitude, int num_time_steps){
-
-  //At the moment, we calculate one beam value in frequency for MWA FEE as the resolution
-  //is 1.28MHz. We should interpolate this in the future (might be memory hungry)
-  //So only need to malloc enough para angles to cover time, and not freq
-  cropped_src->sin_point_para_angs = malloc( cropped_src->n_points * num_time_steps * sizeof(user_precision_t) );
-  cropped_src->cos_point_para_angs = malloc( cropped_src->n_points * num_time_steps * sizeof(user_precision_t) );
-  cropped_src->sin_gauss_para_angs = malloc( cropped_src->n_gauss * num_time_steps * sizeof(user_precision_t) );
-  cropped_src->cos_gauss_para_angs = malloc( cropped_src->n_gauss * num_time_steps * sizeof(user_precision_t) );
-  cropped_src->sin_shape_para_angs = malloc( cropped_src->n_shapes * num_time_steps * sizeof(user_precision_t) );
-  cropped_src->cos_shape_para_angs = malloc( cropped_src->n_shapes * num_time_steps * sizeof(user_precision_t) );
-
-  for (int point = 0; point < cropped_src->n_points; point++) {
-
-    double para_angle;
-    for ( int time_step = 0; time_step < num_time_steps; time_step++ ) {
-
-      double ha = lsts[time_step] - cropped_src->point_ras[point];
-      para_angle = eraHd2pa(ha, cropped_src->point_decs[point], latitude);
-
-      cropped_src->sin_point_para_angs[point*num_time_steps + time_step] = sin(para_angle + M_PI/2.0);
-      cropped_src->cos_point_para_angs[point*num_time_steps + time_step] = cos(para_angle + M_PI/2.0);
-
-    }
-  }//END point component loop
-
-  for (int gauss = 0; gauss < cropped_src->n_gauss; gauss++) {
-
-    double para_angle;
-    for ( int time_step = 0; time_step < num_time_steps; time_step++ ) {
-
-      double ha = lsts[time_step] - cropped_src->gauss_ras[gauss];
-      para_angle = eraHd2pa(ha, cropped_src->gauss_decs[gauss], latitude);
-
-      cropped_src->sin_gauss_para_angs[gauss*num_time_steps + time_step] = sin(para_angle + M_PI/2.0);
-      cropped_src->cos_gauss_para_angs[gauss*num_time_steps + time_step] = cos(para_angle + M_PI/2.0);
-    }
-  }//END gauss component loop
-
-  for (int shape = 0; shape < cropped_src->n_shapes; shape++) {
-    double para_angle;
-    for ( int time_step = 0; time_step < num_time_steps; time_step++ ) {
-
-      double ha = lsts[time_step] - cropped_src->shape_ras[shape];
-      para_angle = eraHd2pa(ha, cropped_src->shape_decs[shape], latitude);
-
-      cropped_src->sin_shape_para_angs[shape*num_time_steps + time_step] = sin(para_angle + M_PI/2.0);
-      cropped_src->cos_shape_para_angs[shape*num_time_steps + time_step] = cos(para_angle + M_PI/2.0);
-    }
-  }//END shape component loop
-}
+#include <math.h>
 
 beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
-                            catsource_t *cropped_src, double *lsts) {
+                            source_t *cropped_src, double *lsts) {
 
 
   //Setup primary beam settings for observation
@@ -69,13 +15,11 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
   // beam_settings->num_gauss_primarybeam_values = cropped_src->n_gauss * woden_settings->num_time_steps * woden_settings->num_freqs;
   // beam_settings->num_shape_primarybeam_values = cropped_src->n_shapes * woden_settings->num_time_steps * woden_settings->num_freqs;
 
-  //TODO when we overhaul the `catsource_t` struct, we'll have a totally
-  //different function to calculate the beam has/decs. For now, we'll just
-  //use the old-school ones labelled with Gaussian beam for both the
-  //gaussian and MWA analytic beams
+  //Both GAUSS_BEAM and MWA_ANALY need hour angles and declinations for
+  //beam calculations so set them up here
   if (woden_settings->beamtype == GAUSS_BEAM || woden_settings->beamtype == MWA_ANALY) {
     if (woden_settings->beamtype == GAUSS_BEAM){
-
+      //Extra settings that just GAUSS_BEAM needs
       beam_settings->beamtype = GAUSS_BEAM;
 
       //Angles used in calculating beam centred l,m,ns
@@ -98,27 +42,25 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
       printf("Setting up analytic MWA primary beam settings\n");
     }
 
-
-
     //Store all ha (which change with lst) that the beam needs to be calculated at.
-    cropped_src->point_gaussbeam_has = malloc(woden_settings->num_time_steps * cropped_src->n_points * sizeof(double));
-    cropped_src->point_gaussbeam_decs = malloc(woden_settings->num_time_steps * cropped_src->n_points * sizeof(double));
+    cropped_src->point_components.beam_has = malloc(woden_settings->num_time_steps * cropped_src->n_points * sizeof(double));
+    cropped_src->point_components.beam_decs = malloc(woden_settings->num_time_steps * cropped_src->n_points * sizeof(double));
 
-    cropped_src->gauss_gaussbeam_has = malloc(woden_settings->num_time_steps * cropped_src->n_gauss * sizeof(double));
-    cropped_src->gauss_gaussbeam_decs = malloc(woden_settings->num_time_steps * cropped_src->n_gauss * sizeof(double));
+    cropped_src->gauss_components.beam_has = malloc(woden_settings->num_time_steps * cropped_src->n_gauss * sizeof(double));
+    cropped_src->gauss_components.beam_decs = malloc(woden_settings->num_time_steps * cropped_src->n_gauss * sizeof(double));
 
-    cropped_src->shape_gaussbeam_has = malloc(woden_settings->num_time_steps * cropped_src->n_shapes * sizeof(double));
-    cropped_src->shape_gaussbeam_decs = malloc(woden_settings->num_time_steps * cropped_src->n_shapes * sizeof(double));
+    cropped_src->shape_components.beam_has = malloc(woden_settings->num_time_steps * cropped_src->n_shapes * sizeof(double));
+    cropped_src->shape_components.beam_decs = malloc(woden_settings->num_time_steps * cropped_src->n_shapes * sizeof(double));
 
     //Loop over all time and point components and calculate ha
     for (int component = 0; component < cropped_src->n_points; component++) {
       for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
         int step = component*woden_settings->num_time_steps + time_step;
-        cropped_src->point_gaussbeam_has[step] = lsts[time_step] - cropped_src->point_ras[component];
-        cropped_src->point_gaussbeam_decs[step] = cropped_src->point_decs[component];
-        // printf("THIS THING %.6f %.6f %.8f\n",cropped_src->point_ras[component],
-        //                                      cropped_src->point_decs[component], MWA_LAT_RAD );
-        // printf("%.8f %.8f\n",cropped_src->point_gaussbeam_has[step],cropped_src->point_gaussbeam_decs[step] );
+        cropped_src->point_components.beam_has[step] = lsts[time_step] - cropped_src->point_components.ras[component];
+        cropped_src->point_components.beam_decs[step] = cropped_src->point_components.decs[component];
+        // printf("THIS THING %.6f %.6f %.8f\n",cropped_src->point_components.ras[component],
+        //                                      cropped_src->point_components.decs[component], MWA_LAT_RAD );
+        // printf("%.8f %.8f\n",cropped_src->point_components.beam_has[step],cropped_src->point_components.beam_decs[step] );
       }
     }//point loop
 
@@ -126,8 +68,8 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
     for (int component = 0; component < cropped_src->n_gauss; component++) {
       for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
         int step = component*woden_settings->num_time_steps + time_step;
-        cropped_src->gauss_gaussbeam_has[step] = lsts[time_step] - cropped_src->gauss_ras[component];
-        cropped_src->gauss_gaussbeam_decs[step] = cropped_src->gauss_decs[component];
+        cropped_src->gauss_components.beam_has[step] = lsts[time_step] - cropped_src->gauss_components.ras[component];
+        cropped_src->gauss_components.beam_decs[step] = cropped_src->gauss_components.decs[component];
       }
     }//gausscomp loop
 
@@ -135,8 +77,8 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
     for (int component = 0; component < cropped_src->n_shapes; component++) {
       for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
         int step = component*woden_settings->num_time_steps + time_step;
-        cropped_src->shape_gaussbeam_has[step] = lsts[time_step] - cropped_src->shape_ras[component];
-        cropped_src->shape_gaussbeam_decs[step] = cropped_src->shape_decs[component];
+        cropped_src->shape_components.beam_has[step] = lsts[time_step] - cropped_src->shape_components.ras[component];
+        cropped_src->shape_components.beam_decs[step] = cropped_src->shape_components.decs[component];
       }
     }//shape loop
 
@@ -144,18 +86,10 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
 
   else if (woden_settings->beamtype == FEE_BEAM) {
     beam_settings->beamtype = FEE_BEAM;
-
-    //Need to rotate the FEE model which is stored in theta/phi pols by the
-    //parallactic angle to obtain XX/YY
-    calc_para_angle(cropped_src, lsts, (double)woden_settings->latitude, woden_settings->num_time_steps);
   }
 
   else if (woden_settings->beamtype == FEE_BEAM_INTERP) {
     beam_settings->beamtype = FEE_BEAM_INTERP;
-
-    //Need to rotate the FEE model which is stored in theta/phi pols by the
-    //parallactic angle to obtain XX/YY
-    calc_para_angle(cropped_src, lsts, (double)woden_settings->latitude, woden_settings->num_time_steps);
   }
 
   else if (woden_settings->beamtype == ANALY_DIPOLE) {

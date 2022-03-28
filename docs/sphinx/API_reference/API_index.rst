@@ -58,7 +58,6 @@ or ``double _Complex``.
   C_code/chunk_sky_model
   C_code/constants
   C_code/create_sky_model
-  C_code/FEE_primary_beam
   C_code/primary_beam
   C_code/print_help
   C_code/shapelet_basis
@@ -95,7 +94,6 @@ meaning that ``cuUserComplex`` in the API either means ``cuFloatComplex`` or
   CUDA_code/calculate_visibilities
   CUDA_code/cudacheck
   CUDA_code/cudacomplex
-  CUDA_code/FEE_primary_beam_cuda
   CUDA_code/fundamental_coords
   CUDA_code/primary_beam_cuda
   CUDA_code/source_components

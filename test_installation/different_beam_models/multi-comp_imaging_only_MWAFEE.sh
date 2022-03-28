@@ -36,6 +36,7 @@ do
       -no-update-model-required \
       ./data/multi-comp_grid_${beam}_band*.ms
 
+
 done
 
 rm casa*.log

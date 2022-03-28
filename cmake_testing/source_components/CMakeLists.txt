@@ -3,14 +3,14 @@ include_directories("${CMAKE_SOURCE_DIR}/cmake_testing/source_components")
 
 ## Create tests for both float and double precision
 foreach(PRECISION IN LISTS FLOAT DOUBLE)
+# foreach(PRECISION IN LISTS FLOAT)
   ##Set the flags depending on the precision
   DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
 
   add_library(source_componentsCUDA_${PRECISION} SHARED
               "${CMAKE_SOURCE_DIR}/src/source_components.cu"
               "${CMAKE_SOURCE_DIR}/src/fundamental_coords.cu"
-              "${CMAKE_SOURCE_DIR}/src/primary_beam_cuda.cu"
-              "${CMAKE_SOURCE_DIR}/src/FEE_primary_beam_cuda.cu")
+              "${CMAKE_SOURCE_DIR}/src/primary_beam_cuda.cu")
 
   target_compile_options(source_componentsCUDA_${PRECISION} PRIVATE ${CUDA_FLAGS})
   # ## For CMake versions > 3.18, the arch flag settings are handled by
@@ -76,10 +76,11 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   add_test(CUDA_test_get_beam_gains_${PRECISION}
            test_get_beam_gains_${PRECISION}_app)
 
+
+
   ##Test the common calls between all component types return expected values
   add_executable(test_source_component_common_${PRECISION}_app
       test_source_component_common.c
-      ${CMAKE_SOURCE_DIR}/src/FEE_primary_beam.c
   )
   target_link_libraries(test_source_component_common_${PRECISION}_app
       Unity
@@ -96,7 +97,6 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
       test_kern_calc_visi_point.c
       test_kern_calc_visi_common.c
       ${CMAKE_SOURCE_DIR}/src/shapelet_basis.c
-      ${CMAKE_SOURCE_DIR}/src/FEE_primary_beam.c
   )
   target_link_libraries(test_kern_calc_visi_point_${PRECISION}_app
       Unity
@@ -113,7 +113,6 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
       test_kern_calc_visi_gauss.c
       test_kern_calc_visi_common.c
       ${CMAKE_SOURCE_DIR}/src/shapelet_basis.c
-      ${CMAKE_SOURCE_DIR}/src/FEE_primary_beam.c
   )
   target_link_libraries(test_kern_calc_visi_gauss_${PRECISION}_app
       Unity
@@ -130,7 +129,6 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
       test_kern_calc_visi_shape.c
       test_kern_calc_visi_common.c
       ${CMAKE_SOURCE_DIR}/src/shapelet_basis.c
-      ${CMAKE_SOURCE_DIR}/src/FEE_primary_beam.c
   )
   target_link_libraries(test_kern_calc_visi_shape_${PRECISION}_app
       Unity

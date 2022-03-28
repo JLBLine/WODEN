@@ -51,6 +51,10 @@ cmake_testing/FEE_primary_beam_cuda/hyperbeam*
 cmake_testing/FEE_primary_beam_cuda/MWA_FEE_multifreq_gains*
 cmake_testing/FEE_primary_beam_cuda/*.png
 
+cmake_testing/primary_beam_cuda/__pycache__
+cmake_testing/primary_beam_cuda/hyperbeam*
+cmake_testing/primary_beam_cuda/old_delete
+
 cmake_testing/source_components/plots
 cmake_testing/source_components/*.png
 
@@ -58,6 +62,7 @@ cmake_testing/primary_beam_cuda/*.png
 cmake_testing/primary_beam_cuda/plots
 
 *importuvfits.last
+*.log
 
 test_installation/absolute_accuracy/array_layouts
 test_installation/absolute_accuracy/sky_models

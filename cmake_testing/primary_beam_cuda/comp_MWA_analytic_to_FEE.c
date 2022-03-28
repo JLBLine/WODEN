@@ -6,9 +6,9 @@
 
 #include "constants.h"
 #include "FEE_primary_beam.h"
-#include "azza_radec_nside201.h"
+#include "azza_radec_nside101.h"
 
-#define FREQ 150000000
+#define FREQ 200000000
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
@@ -23,14 +23,14 @@ extern void test_RTS_CUDA_FEE_beam(int num_components,
 
 #define UNITY_INCLUDE_FLOAT
 
-void test_MWA_FEE_beam_nside201() {
+void test_MWA_FEE_beam_nside101() {
 
   char* mwa_fee_hdf5 = getenv("MWA_FEE_HDF5");
 
   if (mwa_fee_hdf5) {
     printf("MWA_FEE_HDF5: %s\n", mwa_fee_hdf5 );
 
-    int nside = 201;
+    int nside = 101;
 
     //just say the sky hasn't moved with time for this test
     int num_times = 1;
@@ -45,8 +45,7 @@ void test_MWA_FEE_beam_nside201() {
     user_precision_t delays_zen[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
-    user_precision_t delays[] = {6, 4, 2, 0, 8, 6, 4, 2,
-                      10, 8, 6, 4, 12, 10, 8, 6};
+    user_precision_t delays[] = {0, 2, 4, 8, 2, 4, 8, 12, 4, 8, 12, 16, 8, 12, 16, 20};
 
     // user_precision_t delays[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                       // 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
@@ -73,7 +72,7 @@ void test_MWA_FEE_beam_nside201() {
     printf(" done.\n");
 
     test_RTS_CUDA_FEE_beam(num_azza,
-               nside201_azs, nside201_zas, MWA_LAT_RAD,
+               nside101_azs, nside101_zas, MWA_LAT_RAD,
                FEE_beam_zenith,
                FEE_beam,
                rotation, scaling,
@@ -93,7 +92,7 @@ void test_MWA_FEE_beam_nside201() {
       int beam_ind = 4*comp;
 
       fprintf(output_text,"%.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.1f\n",
-       nside201_azs[comp], nside201_zas[comp],
+       nside101_azs[comp], nside101_zas[comp],
        creal(FEE_beam_gains[beam_ind + 0]), cimag(FEE_beam_gains[beam_ind + 0]),
        creal(FEE_beam_gains[beam_ind + 1]), cimag(FEE_beam_gains[beam_ind + 1]),
        creal(FEE_beam_gains[beam_ind + 2]), cimag(FEE_beam_gains[beam_ind + 2]),
@@ -101,7 +100,7 @@ void test_MWA_FEE_beam_nside201() {
        freq );
 
       // fprintf(output_text,"%.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.1f\n",
-      //  nside201_azs[comp], nside201_zas[comp],
+      //  nside101_azs[comp], nside101_zas[comp],
       //  cimag(FEE_beam_gains[beam_ind + 0]), creal(FEE_beam_gains[beam_ind + 0]),
       //  cimag(FEE_beam_gains[beam_ind + 1]), creal(FEE_beam_gains[beam_ind + 1]),
       //  cimag(FEE_beam_gains[beam_ind + 2]), creal(FEE_beam_gains[beam_ind + 2]),
@@ -214,7 +213,7 @@ int main(void)
 {
     UNITY_BEGIN();
 
-    RUN_TEST(test_MWA_FEE_beam_nside201);
+    RUN_TEST(test_MWA_FEE_beam_nside101);
     // RUN_TEST(test_MWA_FEE_beam_single_azza);
 
     return UNITY_END();

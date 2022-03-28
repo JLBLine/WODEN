@@ -153,7 +153,7 @@ sky model parameters
 @param[in] num_time_steps Number of time steps for the simulation
 @param[in] sky_crop_type `e_sky_crop` for SOURCE or COMPONENT cropping
 
-@returns `cropped_src`, a `catsource_t` sky model with only SOURCE/COMPONENTS
+@returns `cropped_src`, a `source_t` sky model with only SOURCE/COMPONENTS
 above the horizon for simulation
 
 @todo Consider cropping sources iteratively for each time step. If the user runs
@@ -162,5 +162,5 @@ however require far more `erfa` az,za calculations, so for simulations with
 millions of sources, more practical to just tell the user to run multiple
 shorter simulations.
 */
-catsource_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
+source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
               double latitude, int num_time_steps, e_sky_crop sky_crop_type);

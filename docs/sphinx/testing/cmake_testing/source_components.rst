@@ -692,10 +692,10 @@ described in :ref:`test_gaussian_beam.c`.
      - 1e-6
      - 1e-7
    * - FEE_BEAM
-     - 3e-2
+     - 1e-7
      - 1e-7
    * - FEE_BEAM_INTERP
-     - 3e-2
+     - 1e-7
      - 1e-7
    * - MWA_ANALY
      - 1e-7
@@ -703,8 +703,9 @@ described in :ref:`test_gaussian_beam.c`.
 
 test_kern_calc_visi_point.c
 ************************************
-This calls ``source_components::test_kern_calc_visi_point``, which
-calls ``source_components::kern_calc_visi_point``. This kernel calculates
+This calls ``source_components::test_kern_calc_visi_all``, which in turn
+calls ``source_components::kern_calc_visi_point_or_gauss`` (in this case
+being used for POINT components). This kernel calculates
 the visibility response for POINT COMPONENTs for a number of sky directions, for
 all time and frequency steps, and all baselines.
 
@@ -733,10 +734,10 @@ are called. Each test calls ``kern_calc_visi_point``, which should calculate
 the measurement equation for all baselines, time steps, frequency steps, and COMPONENTs.
 It should also sum over COMPONENTs to get the resultant visibility for each
 baseline, time, and freq. To test the outputs, I have created equivalent ``C``
-functions at 64 bit precisions in ``test_kern_calc_visi_common.c`` to calculate
+functions at 64 bit precision in ``test_kern_calc_visi_common.c`` to calculate
 the measurement equation for the given inputs. For all visibilities, for the FLOAT version
 I assert the ``CUDA`` code output must match the ``C`` code output to
-within an fractional tolerance of 1e-5 to the ``C`` value, for both the real and
+within an fractional tolerance of 7e-5 to the ``C`` value, for both the real and
 imaginary parts. For the DOUBLE code, the fractional tolerance is 1e-13. I've
 switched to fractional tolerance here as the range of magnitudes covered by
 these visibilities means a small absolute tolernace will fail a large magnitude
@@ -744,8 +745,9 @@ visibility when it reports a value that is correct to 1e-11%.
 
 test_kern_calc_visi_gauss.c
 ************************************
-This calls ``source_components::test_kern_calc_visi_gauss``, which
-calls ``source_components::kern_calc_visi_gauss``. This kernel calculates
+This calls ``source_components::test_kern_calc_visi_all``, which in turn
+calls ``source_components::kern_calc_visi_point_or_gauss`` (in this case
+being used for GAUSSIAN components). This kernel calculates
 the visibility response for GAUSSIAN COMPONENTs for a number of sky directions, for
 all time and frequency steps, and all baselines.
 
@@ -753,14 +755,14 @@ This runs all tests as described by :ref:`test_kern_calc_visi_point.c`, plus a
 fourth set of tests that varies the position angle, major, and minor axis of the
 input GAUSSIAN components, for a total of 24 tests. Again, I have ``C`` code to
 test the ``CUDA`` code against. I assert the ``CUDA`` code output must match the
-``C`` code output to within an fractional tolerance of 1e-5 to the ``C`` value,
+``C`` code output to within an fractional tolerance of 7e-5 to the ``C`` value,
 for both the real and imaginary parts. For the DOUBLE code, the fractional
 tolerance is 1e-13.
 
 test_kern_calc_visi_shape.c
 ************************************
-This calls ``source_components::test_kern_calc_visi_gauss``, which
-calls ``source_components::kern_calc_visi_gauss``. This kernel calculates
+This calls ``source_components::test_kern_calc_visi_all``, which
+calls ``source_components::kern_calc_visi_shape``. This kernel calculates
 the visibility response for GAUSSIAN COMPONENTs for a number of sky directions, for
 all time and frequency steps, and all baselines.
 
@@ -771,9 +773,9 @@ to test the ``CUDA`` code against.
 
 The final 5th test really pushes the FLOAT code hard, as the range of magnitudes
 of the visibilities is large. As a result, FLOAT code is tested to to within a
-fractional tolerance of 1e-2 to the ``C`` values (which happens mostly when
-the expected value is around 1e-5 Jy, so a fractional offset of 1e-2 is an
-absolute offset of 1e-7 Jy), for both the real and imaginary parts.
+fractional tolerance of 5e-3 to the ``C`` values (which happens mostly when
+the expected value is around 1e-5 Jy, so a fractional offset of 5e-3 is an
+absolute offset of 5e-8 Jy), for both the real and imaginary parts.
 For the DOUBLE code, the fractional tolerance is 1e-12.
 
 test_update_sum_visis.c

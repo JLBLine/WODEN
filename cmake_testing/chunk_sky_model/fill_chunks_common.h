@@ -20,7 +20,7 @@ void make_repeat_array(user_precision_t *repeat_array, int num_value, int num_re
 
 
 /*
-Make the polpulated catsource_t struct. For each COMPONENT type, assign the
+Make the polpulated source_t struct. For each COMPONENT type, assign the
 index value of the COMPONENT to each array, and have a set number of coeffs,
 n1s, and n2s per SHAPELET source. Should make it easy to test whether chunking
 has worked sensibly
@@ -28,12 +28,12 @@ has worked sensibly
 Values associated with beams (para_angs, gaussbeam, zas, azs) are for every
 time step, so give them a longer index array
 */
-catsource_t * make_sky_model(int num_points, int num_gauss,
+source_t * make_sky_model(int num_points, int num_gauss,
                              int num_shapes, int num_coeff_per_shape,
                              int num_time_steps);
 
 //Frees the created sky model
-void free_sky_model(catsource_t *cropped_src);
+void free_sky_model(source_t *cropped_src);
 
 /*
 Check the point/gaussian chunking has worked for a particular chunk
@@ -41,8 +41,8 @@ Check the point/gaussian chunking has worked for a particular chunk
 void check_pointgauss_chunking(int chunk_ind, int comps_per_chunk,
                              int num_time_steps,
                              int * point_accum, int * gauss_accum,
-                             catsource_t *cropped_src,
-                             catsource_t *temp_cropped_src);
+                             source_t *cropped_src,
+                             source_t *temp_cropped_src);
 
 /*
 Check the shapelet chunking has worked for a particular chunk
@@ -50,5 +50,5 @@ Check the shapelet chunking has worked for a particular chunk
 void check_shapelet_chunking(int chunk_ind, int coeffs_per_chunk,
                              int num_time_steps,
                              int num_coeff_per_shape,
-                             catsource_t *cropped_src,
-                             catsource_t *temp_cropped_src);
+                             source_t *cropped_src,
+                             source_t *temp_cropped_src);

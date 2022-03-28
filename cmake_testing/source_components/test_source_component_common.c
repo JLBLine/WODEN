@@ -1,4 +1,5 @@
 #include "test_source_component_common.h"
+#include <mwa_hyperbeam.h>
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
@@ -7,33 +8,13 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 
 //External CUDA code we're linking in
 extern void test_source_component_common(int num_components,
-           user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J01,
-           user_precision_complex_t *primay_beam_J10, user_precision_complex_t *primay_beam_J11,
-           double *freqs, double *ls, double *ms, double *ns,
-           double *ras, double *decs, user_precision_t *azs, user_precision_t *zas,
-           user_precision_t *sin_para_angs, user_precision_t *cos_para_angs,
-           double *beam_has, double *beam_decs,
-           woden_settings_t *woden_settings,
-           beam_settings_t *beam_settings);
-
-extern void get_HDFBeam_normalisation(RTS_MWA_FEE_beam_t *FEE_beam_zenith,
-                RTS_MWA_FEE_beam_t *FEE_beam);
-
-extern void free_FEE_primary_beam_from_GPU(RTS_MWA_FEE_beam_t *primary_beam);
-
-extern void copy_FEE_primary_beam_to_GPU(RTS_MWA_FEE_beam_t *FEE_beam);
-
-//MWA FEE interp CUDA code
-extern void multifreq_get_MWAFEE_normalisation(beam_settings_t *beam_settings);
-
-extern void test_run_and_map_multifreq_calc_CUDA_FEE_beam(beam_settings_t *beam_settings,
-    user_precision_t *azs, user_precision_t *zas, double latitude,
-    user_precision_complex_t *primay_beam_J00,
-    user_precision_complex_t *primay_beam_J01,
-    user_precision_complex_t *primay_beam_J10,
-    user_precision_complex_t *primay_beam_J11,
-    int num_freqs, int NUM_COMPS, int num_times,
-    int rotation, int scaling);
+           int num_shape_coeffs, components_t components,
+           components_t d_components,
+           double *freqs, woden_settings_t *woden_settings,
+           beam_settings_t *beam_settings,
+           user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
+           user_precision_complex_t *Dys, user_precision_complex_t *gys,
+           double *ls, double *ms, double *ns);
 
 double TOL;
 
@@ -53,19 +34,34 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
   int num_beam_values = num_times*num_freqs*num_components;
 
-  double ra0 = 0.0*DD2R;
-  double dec0 = 0.0*DD2R;
+  user_precision_t *zeroes = calloc(num_components, sizeof(user_precision_t));
 
-  double *decs = malloc(num_components*sizeof(double));
-  double *zeroes = calloc(num_components, sizeof(double));
+  user_precision_t *ref_stokesI = malloc(num_components*sizeof(user_precision_t));
+  user_precision_t *ref_stokesQ = malloc(num_components*sizeof(user_precision_t));
+  user_precision_t *ref_stokesU = malloc(num_components*sizeof(user_precision_t));
+  user_precision_t *ref_stokesV = malloc(num_components*sizeof(user_precision_t));
+  user_precision_t *SIs = malloc(num_components*sizeof(user_precision_t));
+
+  ref_stokesQ = zeroes;
+  ref_stokesU = zeroes;
+  ref_stokesV = zeroes;
+  SIs = zeroes;
 
   //Keep RA between 0 and 2*pi here but enter RAs that should return
   //negative l values
   double ras[9] = {(3*M_PI)/2, (5*M_PI)/3, (7*M_PI)/4, (11*M_PI)/6,
                    0.0, M_PI/6, M_PI/4, M_PI/3, M_PI/2};
 
+  double ra0 = 0.0*DD2R;
+  double dec0 = 0.0*DD2R;
+
+  double *decs = malloc(num_components*sizeof(double));
+  double *ref_freqs = malloc(num_components*sizeof(double));
+
   for (int i = 0; i < num_components; i++) {
     decs[i] = dec0;
+    ref_freqs[i] = 150e+6;
+    ref_stokesI[i] = 1.0;
   }
 
   //Get the settings into a woden_settings_t struct
@@ -75,47 +71,12 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   woden_settings->ra0 = ra0;
   woden_settings->sdec0 = sin(dec0);
   woden_settings->cdec0 = cos(dec0);
+  woden_settings->latitude = MWA_LAT_RAD;
+
+  woden_settings->beamtype = beamtype;
 
   beam_settings_t *beam_settings = malloc(sizeof(beam_settings_t));
   beam_settings->beamtype = beamtype;
-
-  /*********************************************************************
-  Code used to generate the az / za and parallactic angles is below
-  Stick into permanent arrays so test doesn't rely on erfa.
-  **********************************************************************
-
-  user_precision_t *zas = malloc(num_components*num_times*sizeof(user_precision_t));
-  user_precision_t *azs = malloc(num_components*num_times*sizeof(user_precision_t));
-  user_precision_t *sin_para_angs = malloc(num_components*num_times*sizeof(user_precision_t));
-  user_precision_t *cos_para_angs = malloc(num_components*num_times*sizeof(user_precision_t));
-
-  //Let's say the sources are stationary on the sky to keep the maths in the
-  //test to a minimum
-  double erfa_az, el, ha, para_angle;
-  double lst = 0.0;
-  double latitude = 0.0;
-
-  for (int component = 0; component < num_components; component++) {
-    for (int time_ind = 0; time_ind < num_times; time_ind++) {
-
-      double ha = lst - ras[component];
-
-      eraHd2ae(ha, (double)decs[component], latitude, &erfa_az, &el );
-
-      azs[component*num_times + time_ind] = (user_precision_t)erfa_az;
-      zas[component*num_times + time_ind] = M_PI / 2. - (user_precision_t)el;
-
-      para_angle = eraHd2pa(ha, (double)decs[component], latitude);
-
-      sin_para_angs[component*num_times + time_ind] = (user_precision_t)sin(para_angle);
-      cos_para_angs[component*num_times + time_ind] = (user_precision_t)cos(para_angle);
-
-      printf("%d %.8f %.8f %.8f %.8f\n",component*num_times + time_ind,
-                                 (user_precision_t)erfa_az, M_PI / 2. - (user_precision_t)el,
-                                 (user_precision_t)sin(para_angle), (user_precision_t)cos(para_angle));
-    }
-  }
-  */
 
   double freqs[] = {100e+6, 200e+6};
 
@@ -123,7 +84,8 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   double *beam_decs = malloc(num_components*num_times*sizeof(double));
 
   //Make ha/dec coords if using the Gaussian beam
-  if (beamtype == GAUSS_BEAM) {
+  //Need ha/decs for the analytic MWA beam as well
+  if (beamtype == GAUSS_BEAM || beamtype == MWA_ANALY) {
     //Stick the Gaussian beam pointed at zenith
     //We're testing at latitude=zero
     beam_settings->gauss_ha = 0.0;
@@ -142,52 +104,53 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     }
   }
 
-  beam_settings->FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
   //If FEE_BEAM, call the C code to interrogate the hdf5 file and set beam
   //things up
-  if (beamtype == FEE_BEAM) {
+  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP) {
 
-    //Get a zenith pointing beam for normalisation purposes
-    RTS_MWA_FEE_beam_t *FEE_beam_zenith = malloc(sizeof(RTS_MWA_FEE_beam_t));
+    int32_t status =  new_fee_beam(mwa_fee_hdf5, &beam_settings->fee_beam,
+                               beam_settings->hyper_error_str);
 
-    double base_middle_freq = 150e+6;
-//
-    user_precision_t user_precision_t_zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                                     0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    //
-    printf("\n\tSetting up the zenith FEE beam...");
-    RTS_MWAFEEInit(mwa_fee_hdf5, base_middle_freq, FEE_beam_zenith, user_precision_t_zenith_delays);
-    printf(" done.\n");
+    TEST_ASSERT_EQUAL(status, 0);
 
-    printf("\tSetting up the FEE beam...");
-    RTS_MWAFEEInit(mwa_fee_hdf5, base_middle_freq, beam_settings->FEE_beam, user_precision_t_zenith_delays);
-    printf(" done.\n");
+    uint32_t num_freqs_hyper;
+    uint32_t *freqs_hz;
+    if (beamtype == FEE_BEAM) {
+      freqs_hz = malloc(sizeof(uint32_t));
+      freqs_hz[0] = 150e+6;
+      num_freqs_hyper = 1;
+    } else {
+      freqs_hz = malloc(sizeof(uint32_t));
+      freqs_hz[0] = 100e+6;
+      freqs_hz[1] = 200e+6;
+      num_freqs_hyper = 2;
 
-    printf("\tGetting FEE beam normalisation...");
-    get_HDFBeam_normalisation(FEE_beam_zenith, beam_settings->FEE_beam);
-    //Free the zenith pointing as done with it now
-    free_FEE_primary_beam_from_GPU(FEE_beam_zenith);
-    printf(" done.\n");
+    }
 
-    printf("\tCopying the FEE beam across to the GPU...");
-    copy_FEE_primary_beam_to_GPU(beam_settings->FEE_beam);
-    printf(" done.\n");
+    beam_settings->hyper_delays = (uint32_t*)malloc(16*sizeof(uint32_t));
 
-  }
+    for (int delay = 0; delay < 16; delay++) {
+      beam_settings->hyper_delays[delay] = 0;
+    }
 
-  else if (beamtype == FEE_BEAM_INTERP) {
+    double amps[16] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 
-    woden_settings->base_low_freq = 100e+6;
-    woden_settings->num_freqs = 2;
-    woden_settings->hdf5_beam_path = mwa_fee_hdf5;
+    uint32_t num_tiles = 1;
+    uint32_t num_amps = 16;
+    uint8_t norm_to_zenith = 1;
 
+    status = new_cuda_fee_beam(beam_settings->fee_beam,
+                            freqs_hz,
+                            beam_settings->hyper_delays,
+                            amps,
+                            num_freqs_hyper,
+                            num_tiles,
+                            num_amps,
+                            norm_to_zenith,
+                            &beam_settings->cuda_fee_beam,
+                            beam_settings->hyper_error_str);
 
-
-    //Setup up the MWA FEE beams on the CPU
-    multifreq_RTS_MWAFEEInit(beam_settings,  woden_settings, freqs);
-
-    //Send them to GPU and calculate normalisations
-    multifreq_get_MWAFEE_normalisation(beam_settings);
+    TEST_ASSERT_EQUAL(status, 0);
 
   }
 
@@ -208,16 +171,37 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   double *ms = malloc(num_components*sizeof(double));
   double *ns = malloc(num_components*sizeof(double));
 
+  //Set up the components with our values
+  components_t components;
+  components_t d_components;
+
+  components.ras = ras;
+  components.decs = decs;
+  components.azs = azs;
+  components.zas = zas;
+  components.beam_has = beam_has;
+  components.beam_decs = beam_decs;
+  components.ref_freqs = ref_freqs;
+  components.ref_stokesI = ref_stokesI;
+  components.ref_stokesQ = ref_stokesQ;
+  components.ref_stokesU = ref_stokesU;
+  components.ref_stokesV = ref_stokesV;
+  components.SIs = SIs;
+
+
+  components.num_primarybeam_values = num_components*woden_settings->num_freqs*woden_settings->num_time_steps;
+
+  //not testing for shapelets here
+  int num_shape_coeffs = 0;
+
   //Run the CUDA code
-  test_source_component_common(num_components,
-             primay_beam_J00, primay_beam_J01,
-             primay_beam_J10, primay_beam_J11,
-             freqs, ls, ms, ns,
-             ras, decs, azs, zas,
-             sin_para_angs, cos_para_angs,
-             beam_has, beam_decs,
-             woden_settings,
-             beam_settings);
+  test_source_component_common(num_components, num_shape_coeffs,
+           components, d_components,
+           freqs, woden_settings,
+           beam_settings,
+           primay_beam_J00, primay_beam_J01,
+           primay_beam_J10, primay_beam_J11,
+           ls, ms, ns);
 
   double l_expected[9] = {-1.0, -sqrt(3)/2.0, -sqrt(2)/2.0, -0.5,
                           0.0, 0.5, sqrt(2)/2.0, sqrt(3)/2.0, 1.0};
@@ -229,6 +213,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   TOL = 1e-15;
 
   for (int i = 0; i < num_components; i++) {
+    // printf("%.6e %.6e\n",l_expected[i], ls[i] );
     TEST_ASSERT_DOUBLE_WITHIN(TOL, l_expected[i], ls[i]);
     TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, ms[i]);
     TEST_ASSERT_DOUBLE_WITHIN(TOL, n_expected[i], ns[i]);
@@ -306,10 +291,16 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     #ifdef DOUBLE_PRECISION
       TOL = 1e-7;
     #else
-      TOL = 3e-2;
+      TOL = 1e-7;
     #endif
 
     for (int output = 0; output < num_beam_values; output++) {
+      // printf("%.8f %.8f %.8f %.8f %.8f %.8f %.8f %.8f\n", creal(primay_beam_J00[output]), cimag(primay_beam_J00[output]),
+      //         creal(primay_beam_J01[output]), cimag(primay_beam_J01[output]),
+      //         creal(primay_beam_J10[output]), cimag(primay_beam_J10[output]),
+      //         creal(primay_beam_J11[output]), cimag(primay_beam_J11[output]) );
+
+
       TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J00_re[output], creal(primay_beam_J00[output]));
       TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J00_im[output], cimag(primay_beam_J00[output]));
       TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J01_re[output], creal(primay_beam_J01[output]));
@@ -320,16 +311,28 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
       TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J11_im[output], cimag(primay_beam_J11[output]));
     }
 
+    free_fee_beam(beam_settings->fee_beam);
+    free_cuda_fee_beam(beam_settings->cuda_fee_beam);
+
   }
   else if (beamtype == FEE_BEAM_INTERP) {
 
     #ifdef DOUBLE_PRECISION
       TOL = 1e-7;
     #else
-      TOL = 3e-2;
+      TOL = 1e-7;
     #endif
 
+
+
     for (int output = 0; output < num_beam_values; output++) {
+
+      // printf("%.8f %.8f %.8f %.8f %.8f %.8f %.8f %.8f\n", creal(primay_beam_J00[output]), cimag(primay_beam_J00[output]),
+      //         creal(primay_beam_J01[output]), cimag(primay_beam_J01[output]),
+      //         creal(primay_beam_J10[output]), cimag(primay_beam_J10[output]),
+      //         creal(primay_beam_J11[output]), cimag(primay_beam_J11[output]) );
+
+
       TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J00_re[output], creal(primay_beam_J00[output]));
       TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J00_im[output], cimag(primay_beam_J00[output]));
       TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J01_re[output], creal(primay_beam_J01[output]));
@@ -340,15 +343,8 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
       TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J11_im[output], cimag(primay_beam_J11[output]));
     }
 
-    for (int freq_ind = 0; freq_ind < beam_settings->num_MWAFEE; freq_ind++) {
-
-      RTS_MWA_FEE_beam_t *FEE_beam = &beam_settings->FEE_beams[freq_ind];
-      RTS_MWA_FEE_beam_t *FEE_beam_zenith = &beam_settings->FEE_beam_zeniths[freq_ind];
-
-      RTS_freeHDFBeam(FEE_beam);
-      RTS_freeHDFBeam(FEE_beam_zenith);
-
-    }
+    free_fee_beam(beam_settings->fee_beam);
+    free_cuda_fee_beam(beam_settings->cuda_fee_beam);
   }
   else if (beamtype == MWA_ANALY) {
 

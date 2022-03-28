@@ -9,9 +9,6 @@
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
-#define UNITY_INCLUDE_FLOAT
-
-
 /*
 `create_sky_model:horizon_test` is designed to be used by
 `create_sky_model:crop_sky_model`.

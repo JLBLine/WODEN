@@ -14,7 +14,6 @@
 #include "chunk_sky_model.h"
 #include "print_help.h"
 #include "primary_beam.h"
-#include "FEE_primary_beam.h"
 #include "woden_settings.h"
 #include "visibility_set.h"
 #include "array_layout.h"
@@ -90,8 +89,7 @@ int main(int argc, char **argv) {
   //Crop emission below the horizon, and collapse all SOURCES from raw_srccat
   //into one single SOURCE
   printf("Horizon cropping sky model and calculating az/za for all components\nfor observation\n");
-  // catsource_t *cropped_src;
-  catsource_t *cropped_src = crop_sky_model(raw_srccat, lsts, woden_settings->latitude,
+  source_t *cropped_src = crop_sky_model(raw_srccat, lsts, woden_settings->latitude,
                                woden_settings->num_time_steps, woden_settings->sky_crop_type);
 
   printf("Finished cropping and calculating az/za\n");
@@ -118,9 +116,9 @@ int main(int argc, char **argv) {
 
     woden_settings->base_band_freq = base_band_freq;
 
-    beam_settings->FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
-    //We need the zenith beam to get the normalisation
-    beam_settings->FEE_beam_zenith = malloc(sizeof(RTS_MWA_FEE_beam_t));
+    // beam_settings->FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
+    // //We need the zenith beam to get the normalisation
+    // beam_settings->FEE_beam_zenith = malloc(sizeof(RTS_MWA_FEE_beam_t));
 
     //Setup the visibility container
     visibility_set_t *visibility_set = setup_visibility_set(woden_settings->num_visis);
@@ -131,35 +129,18 @@ int main(int argc, char **argv) {
                                  base_band_freq, lsts);
 
     //The intial setup of the FEE beam is done on the CPU, so call it here
-    if (woden_settings->beamtype == FEE_BEAM){
+    if (woden_settings->beamtype == FEE_BEAM || woden_settings->beamtype == FEE_BEAM_INTERP){
       double base_middle_freq = base_band_freq + (woden_settings->coarse_band_width/2.0);
+      beam_settings->base_middle_freq = base_middle_freq;
 
       printf("Middle freq is %.8e \n",base_middle_freq );
 
-      user_precision_t user_precision_t_zenith_delays[16] = {0.0, 0.0, 0.0,
-                                         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                                         0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+      status =  new_fee_beam(woden_settings->hdf5_beam_path, &beam_settings->fee_beam,
+                             beam_settings->hyper_error_str);
 
-      printf("Setting up the zenith FEE beam...");
-      status = RTS_MWAFEEInit(woden_settings->hdf5_beam_path, base_middle_freq, beam_settings->FEE_beam_zenith, user_precision_t_zenith_delays);
-      printf(" done.\n");
-
-      printf("Setting up the FEE beam...");
-      status = RTS_MWAFEEInit(woden_settings->hdf5_beam_path, base_middle_freq,
-            beam_settings->FEE_beam, woden_settings->FEE_ideal_delays);
-      printf(" done.\n");
-
-    }
-    else if (woden_settings->beamtype == FEE_BEAM_INTERP){
-
-      // printf("Setting up the FEE beams on CPU...");
-      //This sets up an `RTS_MWA_FEE_beam_t` for each frequency to be
-      //simulated in this coarse channel
-      status = multifreq_RTS_MWAFEEInit(beam_settings,  woden_settings,
-                               visibility_set->channel_frequencies);
-
-      // printf(" done.\n");
-
+      if (status != 0) {
+        printf("hyperbeam error %d %s\n", status, beam_settings->hyper_error_str );
+      }
     }
 
     //Launch the CUDA code
@@ -181,21 +162,11 @@ int main(int argc, char **argv) {
     free( visibility_set );
 
     //Release the CPU MWA FEE beam if required
-    if (woden_settings->beamtype == FEE_BEAM){
-      RTS_freeHDFBeam(beam_settings->FEE_beam);
-      RTS_freeHDFBeam(beam_settings->FEE_beam_zenith);
-    }
-    //If multiple MWA_FEE beams, loop through and free
-    else if (woden_settings->beamtype == FEE_BEAM_INTERP) {
-      for (int freq_ind = 0; freq_ind < beam_settings->num_MWAFEE; freq_ind++) {
+    if (woden_settings->beamtype == FEE_BEAM || woden_settings->beamtype == FEE_BEAM_INTERP){
+      // RTS_freeHDFBeam(beam_settings->FEE_beam);
+      // RTS_freeHDFBeam(beam_settings->FEE_beam_zenith);
 
-      RTS_MWA_FEE_beam_t *FEE_beam = &beam_settings->FEE_beams[freq_ind];
-      RTS_MWA_FEE_beam_t *FEE_beam_zenith = &beam_settings->FEE_beam_zeniths[freq_ind];
-
-      RTS_freeHDFBeam(FEE_beam);
-      RTS_freeHDFBeam(FEE_beam_zenith);
-
-      }
+      free_fee_beam(beam_settings->fee_beam);
     }
 
   }//band loop

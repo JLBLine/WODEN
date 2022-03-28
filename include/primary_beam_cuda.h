@@ -350,3 +350,50 @@ extern "C" void calculate_RTS_MWA_analytic_beam(int num_components,
      double *beam_has, double *beam_decs, double *d_freqs,
      cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
      cuUserComplex *d_Dys, cuUserComplex *d_gys);
+
+
+
+
+
+
+
+
+/**
+@brief Calculate the FEE MWA primary beam model to a set of sky directions
+`azs` and `zas` for a given initialised `mwa_hyperbeam` device beam object
+`*cuda_fee_beam`.
+
+@details Calls `mwa_hyperbeam::calc_jones_cuda_device` to calculate the beam
+responses on the device. This function requires an initialised
+`struct FEEBeamCUDA *cuda_fee_beam` object (initialised using
+`mwa_hyperbeam::new_cuda_fee_beam`), which in turn needs a
+`struct FEEBeam *fee_beam` (initialised using `mwa_hyperbeam::new_fee_beam`).
+Running these functions gathers the spherical harmnoic coefficients for the
+requested frequencies, as well as the delays to point the beam. If these aren't
+setup correctly, this will fall flat on it's face.
+
+Once the beam repsonses have been calculated, split them up into the `WODEN`
+d_primay_beam_J* arrays using the kernel `primary_beam_cuda::kern_map_hyperbeam_gains`.
+
+@param[in] num_components Number of COMPONENTS the beam is calculated for
+@param[in] num_time_steps Number of time steps being calculated
+@param[in] num_freqs Number of frequencies being calculated
+@param[in] parallactic Whether to rotate by parallactic angle or not
+@param[in] *cuda_fee_beam An initialised `mwa_hyperbeam` `struct FEEBeamCUDA`
+@param[in] *azs Array of Azimuth angles to calculate the beam towards (radians)
+@param[in] *zas Array of Zenith Angles to calculate the beam towards (radiany)
+@param[in,out] *d_primay_beam_J00 The gains for the north-south beam
+@param[in,out] *d_primay_beam_J01 The leakages for the north-south beam
+@param[in,out] *d_primay_beam_J10 The leakages for the east-west beam
+@param[in,out] *d_primay_beam_J11 The gains for the east-west beam
+
+*/
+extern "C" void run_hyperbeam_cuda(int num_components,
+           int num_time_steps, int num_freqs,
+           uint8_t parallactic,
+           struct FEEBeamCUDA *cuda_fee_beam,
+           double *azs, double *zas,
+           cuUserComplex *d_primay_beam_J00,
+           cuUserComplex *d_primay_beam_J01,
+           cuUserComplex *d_primay_beam_J10,
+           cuUserComplex *d_primay_beam_J11);

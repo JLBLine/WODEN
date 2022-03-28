@@ -28,7 +28,7 @@ void test_fill_chunk_src_with_pointgauss(int chunking_size,
   //Not testing SHAPELETs, set these to zero
   int num_shapes = 0;
   int num_coeff_per_shape = 0;
-  catsource_t *cropped_src = make_sky_model(num_points, num_gauss, num_shapes,
+  source_t *cropped_src = make_sky_model(num_points, num_gauss, num_shapes,
                                             num_coeff_per_shape, num_time_steps);
 
   //Set some dummy baseline, frequency simulation settings
@@ -38,7 +38,7 @@ void test_fill_chunk_src_with_pointgauss(int chunking_size,
   woden_settings->num_freqs = num_freqs;
   woden_settings->num_time_steps = num_time_steps;
 
-  // //
+  //
   int num_comps_to_chunk = cropped_src->n_points + cropped_src->n_gauss;
   int comps_per_chunk = (int)floorf((float)chunking_size / (float)(num_baselines * num_freqs * num_time_steps));
   int num_chunks = (int)ceilf((float)num_comps_to_chunk / (float)comps_per_chunk);
@@ -50,7 +50,7 @@ void test_fill_chunk_src_with_pointgauss(int chunking_size,
   // printf("Is num_visis*num_comps %d < num_visis*comps_per_chunk*num_chunks %d\n",
   //        num_visis*num_comps_to_chunk, num_visis*comps_per_chunk*num_chunks);
 
-  catsource_t *temp_cropped_src = malloc(sizeof(catsource_t));
+  source_t *temp_cropped_src = malloc(sizeof(source_t));
   //
   //Counters to see how far many point/gauss have already been assigned
   //to previous chunks

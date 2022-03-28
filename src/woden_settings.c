@@ -92,10 +92,6 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
   json_object_object_get_ex(parsed_json, "use_EDA2_beam", &EDA2_beam);
   json_object_object_get_ex(parsed_json, "no_precession", &no_precession);
   json_object_object_get_ex(parsed_json, "use_MWA_analy_beam", &MWA_analy);
-  //
-  //
-  //Boolean whether to use gaussian primary beam
-  // int lat_true = json_object_get_boolean(latitude);
 
   //See whether latitude has been set or not
   int lat_true = json_object_get_type(latitude);

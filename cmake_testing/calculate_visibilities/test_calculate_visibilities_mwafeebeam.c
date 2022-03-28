@@ -41,9 +41,10 @@ void test_comp_phase_centre_allgains(visibility_set_t *visibility_set,
   //on u,v,w. So need a different tolerance here
   //The accuracy we get depends on whether we are float or double
   #ifdef DOUBLE_PRECISION
-    double TOL = 1e-7;
+    double TOL = 1e-9;
   #else
-    double TOL = 4e-3;
+    double TOL = 1e-5;
+
   #endif
 
   for (int visi = 0; visi < NUM_VISI; visi++) {
@@ -95,6 +96,10 @@ void test_calculate_visibilities_MWAFEEBeam(int n_points, int n_gauss, int n_sha
 
   woden_settings_t *woden_settings = make_woden_settings(RA0, MWA_LAT_RAD);
   woden_settings->beamtype = FEE_BEAM;
+
+  for (int i = 0; i < 16; i++) {
+    woden_settings->FEE_ideal_delays[i] = 0.0;
+  }
 
   beam_settings_t *beam_settings = malloc(sizeof(beam_settings_t));
   beam_settings->beamtype = FEE_BEAM;
@@ -151,8 +156,8 @@ void test_calculate_visibilities_MWAFEEBeam(int n_points, int n_gauss, int n_sha
                                   gain2yx_re, gain2yx_im,
                                   gain2yy_re, gain2yy_im);
 
-  RTS_freeHDFBeam(beam_settings->FEE_beam);
-  RTS_freeHDFBeam(beam_settings->FEE_beam_zenith);
+
+  free_fee_beam(beam_settings->fee_beam);
 
   free(beam_settings);
   free_visi_set_inputs(visibility_set);
@@ -271,23 +276,34 @@ void test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeAll(void) {
 int main(void)
 {
     UNITY_BEGIN();
-    //Test with a single SOURCE, single COMPONENT
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SinglePoint);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleGauss);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleShape);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleAll);
 
-    //Test with three SOURCEs, single COPMONENT
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SinglePoint);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleGauss);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleShape);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleAll);
+    char* mwa_fee_hdf5 = getenv("MWA_FEE_HDF5");
 
-    //Test with three SOURCEs, three COPMONENTs
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreePoint);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeMWAFEE);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeShape);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeAll);
+    if (mwa_fee_hdf5) {
+      printf("MWA_FEE_HDF5: %s\n", mwa_fee_hdf5 );
+
+        //Test with a single SOURCE, single COMPONENT
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SinglePoint);
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleGauss);
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleShape);
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleAll);
+
+        //Test with three SOURCEs, single COPMONENT
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SinglePoint);
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleGauss);
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleShape);
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleAll);
+
+        //Test with three SOURCEs, three COPMONENTs
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreePoint);
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeMWAFEE);
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeShape);
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeAll);
+
+    }
+    else {
+      printf("MWA_FEE_HDF5 not found - not running test_calculate_visibilities_MWAFEEBeam tests");
+    }
 
     return UNITY_END();
 }

@@ -4,6 +4,7 @@
 #include <complex.h>
 #include <math.h>
 #include <erfa.h>
+#include <mwa_hyperbeam.h>
 #include "cudacomplex.h"
 #include "constants.h"
 #include "fundamental_coords.h"
@@ -671,5 +672,197 @@ extern "C" void test_calculate_gaussian_beam(int num_components, int num_time_st
   cudaErrorCheckCall( cudaFree(d_freqs ) );
   cudaErrorCheckCall( cudaFree(d_primay_beam_J00 ) );
   cudaErrorCheckCall( cudaFree(d_primay_beam_J11 ) );
+
+}
+
+// we have 4 dimensions to loop over here:
+//  - component
+//  - freqs
+//  - times
+//  - tiles (at some point in future)
+//
+// it's likely that time will usually be the smallest, so I'm going to
+// loop over that. Time will tell whether that's a good idea or not
+__global__ void kern_map_hyperbeam_gains(int num_components,
+           int num_times, int num_freqs, int iTime, int num_unique_fee_freqs,
+           double *d_jones, const int *d_tile_map, const int *d_freq_map,
+           cuUserComplex *d_primay_beam_J00,
+           cuUserComplex *d_primay_beam_J01,
+           cuUserComplex *d_primay_beam_J10,
+           cuUserComplex *d_primay_beam_J11) {
+
+  //All baselines at all freqs and all times
+  int iComponent = threadIdx.x + (blockDim.x*blockIdx.x);
+
+  //The tile to map - currently unused but hopefully in the future tis possible
+  int iTile = threadIdx.y + (blockDim.y*blockIdx.y);
+
+  //freq step
+  int iFreq = threadIdx.z + (blockDim.z*blockIdx.z);
+
+  if(iComponent < num_components && iTime < num_times && iFreq < num_freqs ) {
+
+    cuUserComplex d_beam_J00;
+    cuUserComplex d_beam_J01;
+    cuUserComplex d_beam_J10;
+    cuUserComplex d_beam_J11;
+
+    // For *this tile* and *this frequency*, access the de-duplicated beam
+    // response.
+    int i_row = d_tile_map[iTile];
+    int i_col = d_freq_map[iFreq];
+
+    int num_directions = num_times * num_components;
+
+    int current_ind = ((num_directions * num_unique_fee_freqs * i_row) + num_directions * i_col) + iComponent*num_times + iTime;
+
+    //Get an index to split into the WODEN style containers
+    int new_ind = num_freqs*iTime*num_components + (num_components*iFreq) + iComponent;
+
+    d_beam_J00.x = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 0];
+    d_beam_J00.y = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 1];
+    d_beam_J01.x = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 2];
+    d_beam_J01.y = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 3];
+    d_beam_J10.x = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 4];
+    d_beam_J10.y = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 5];
+    d_beam_J11.x = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 6];
+    d_beam_J11.y = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 7];
+
+    d_primay_beam_J00[new_ind] = d_beam_J00;
+    d_primay_beam_J01[new_ind] = d_beam_J01;
+    d_primay_beam_J10[new_ind] = d_beam_J10;
+    d_primay_beam_J11[new_ind] = d_beam_J11;
+
+  }
+}
+
+extern "C" void run_hyperbeam_cuda(int num_components,
+           int num_time_steps, int num_freqs,
+           uint8_t parallactic,
+           struct FEEBeamCUDA *cuda_fee_beam,
+           double *azs, double *zas,
+           cuUserComplex *d_primay_beam_J00,
+           cuUserComplex *d_primay_beam_J01,
+           cuUserComplex *d_primay_beam_J10,
+           cuUserComplex *d_primay_beam_J11){
+
+
+  int num_azza = num_components * num_time_steps;
+  int num_beam_values = num_azza * num_freqs;
+
+  double *d_jones = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&(d_jones),
+                      2*MAX_POLS*num_beam_values*sizeof(double)) );
+
+  //Call hyperbeam and feed it a character array to return an error string
+  //if something goes wrong
+  int32_t status;
+  char error_str[100];
+  status = calc_jones_cuda_device(cuda_fee_beam,
+                  (uint32_t)num_azza,
+                  azs, zas,
+                  parallactic,
+                  &(d_jones),
+                  error_str);
+
+  //
+  if (status != 0) {
+    printf("hyperbeam error %d %s\n",status,error_str );
+  }
+
+  dim3 grid, threads;
+
+  //For now, only using one beam
+  grid.y = threads.y = 1;
+  //In the future, different tiles can have different beams, so something like
+  // threads.x = 32;
+  // threads.y = 2;
+  // grid.x = (int)ceil( (float)num_tiles / (float)threads.y );
+
+
+  threads.x = 64;
+  threads.z = 2;
+
+  grid.x = (int)ceil( (float)num_components / (float)threads.x );
+  grid.z = (int)ceil( (float)num_freqs / (float)threads.z );
+
+
+  int num_unique_fee_freqs = get_num_unique_fee_freqs(cuda_fee_beam);
+  const int *d_tile_map = get_tile_map(cuda_fee_beam);
+  const int *d_freq_map = get_freq_map(cuda_fee_beam);
+
+  for (int iTime = 0; iTime < num_time_steps; iTime++) {
+
+    cudaErrorCheckKernel("kern_map_hyperbeam_gains",
+                          kern_map_hyperbeam_gains, grid, threads,
+                          num_components, num_time_steps, num_freqs,
+                          iTime, num_unique_fee_freqs,
+                          d_jones, d_tile_map, d_freq_map,
+                          d_primay_beam_J00,
+                          d_primay_beam_J01,
+                          d_primay_beam_J10,
+                          d_primay_beam_J11);
+  }
+
+  cudaErrorCheckCall( cudaFree(d_jones) );
+
+}
+
+extern "C" void test_run_hyperbeam_cuda(int num_components,
+           int num_time_steps, int num_freqs,
+           uint8_t parallatic,
+           struct FEEBeamCUDA *cuda_fee_beam,
+           double *azs, double *zas,
+           user_precision_complex_t *primay_beam_J00,
+           user_precision_complex_t *primay_beam_J01,
+           user_precision_complex_t *primay_beam_J10,
+           user_precision_complex_t *primay_beam_J11){
+  uint32_t num_azza = num_components * num_time_steps;
+  int num_beam_values = num_azza * num_freqs;
+
+  user_precision_complex_t *d_primay_beam_J00 = NULL;
+  user_precision_complex_t *d_primay_beam_J01 = NULL;
+  user_precision_complex_t *d_primay_beam_J10 = NULL;
+  user_precision_complex_t *d_primay_beam_J11 = NULL;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J00,
+                      num_beam_values*sizeof(user_precision_complex_t)) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01,
+                      num_beam_values*sizeof(user_precision_complex_t)) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J10,
+                      num_beam_values*sizeof(user_precision_complex_t)) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J11,
+                      num_beam_values*sizeof(user_precision_complex_t)) );
+
+  run_hyperbeam_cuda(num_components,
+             num_time_steps, num_freqs,
+             parallatic,
+             cuda_fee_beam,
+             azs, zas,
+             (cuUserComplex *)d_primay_beam_J00,
+             (cuUserComplex *)d_primay_beam_J01,
+             (cuUserComplex *)d_primay_beam_J10,
+             (cuUserComplex *)d_primay_beam_J11);
+
+  cudaErrorCheckCall( cudaMemcpy( primay_beam_J00, d_primay_beam_J00,
+                      num_beam_values*sizeof(user_precision_complex_t),
+                      cudaMemcpyDeviceToHost) );
+
+  cudaErrorCheckCall( cudaMemcpy( primay_beam_J01, d_primay_beam_J01,
+                      num_beam_values*sizeof(user_precision_complex_t),
+                      cudaMemcpyDeviceToHost) );
+
+  cudaErrorCheckCall( cudaMemcpy( primay_beam_J10, d_primay_beam_J10,
+                      num_beam_values*sizeof(user_precision_complex_t),
+                      cudaMemcpyDeviceToHost) );
+
+  cudaErrorCheckCall( cudaMemcpy( primay_beam_J11, d_primay_beam_J11,
+                      num_beam_values*sizeof(user_precision_complex_t),
+                      cudaMemcpyDeviceToHost) );
+
+  cudaErrorCheckCall( cudaFree(d_primay_beam_J00) );
+  cudaErrorCheckCall( cudaFree(d_primay_beam_J01) );
+  cudaErrorCheckCall( cudaFree(d_primay_beam_J10) );
+  cudaErrorCheckCall( cudaFree(d_primay_beam_J11) );
 
 }

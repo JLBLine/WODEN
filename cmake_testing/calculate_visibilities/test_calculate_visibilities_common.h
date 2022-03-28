@@ -7,7 +7,6 @@
 
 #include "constants.h"
 #include "woden_struct_defs.h"
-#include "FEE_primary_beam.h"
 #include "shapelet_basis.h"
 #include "woden_settings.h"
 #include "visibility_set.h"
@@ -29,16 +28,6 @@ extern void calculate_visibilities(array_layout_t *array_layout,
   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
   user_precision_t *sbf);
-
-extern void get_HDFBeam_normalisation(RTS_MWA_FEE_beam_t *FEE_beam_zenith,
-                RTS_MWA_FEE_beam_t *FEE_beam);
-
-extern void free_FEE_primary_beam_from_GPU(RTS_MWA_FEE_beam_t *primary_beam);
-
-extern void copy_FEE_primary_beam_to_GPU(RTS_MWA_FEE_beam_t *FEE_beam);
-
-//MWA FEE interp CUDA code
-extern void multifreq_get_MWAFEE_normalisation(beam_settings_t *beam_settings);
 
 source_catalogue_t * make_cropped_sky_models(double ra0, double dec0,
                                              int n_points, int n_gauss,

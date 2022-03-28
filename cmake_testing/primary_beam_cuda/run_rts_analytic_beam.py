@@ -10,6 +10,7 @@ coords = np.load('az-za_coords.npz')
 
 azs = coords['az_arr']
 zas = coords['za_arr']
+nside = coords['nside']
 
 # print(azs)
 
@@ -27,7 +28,7 @@ for ind, az, za in zip(range(len(azs)), azs, zas):
 
     print(f"Doing coord {ind} of {len(azs)}")
 
-    returned_text = check_output(f"rts_mwa_beam $MWA_FEE_HDF5 {az:.8f} {za:.8f} 150e+6 0", shell=True, universal_newlines=True)
+    returned_text = check_output(f"./rts_mwa_beam $MWA_FEE_HDF5 {az:.8f} {za:.8f} 200e+6 0", shell=True, universal_newlines=True)
     # print(returned_text)
 
     lines = returned_text.split('\n')
@@ -57,4 +58,4 @@ save_array[:,6] = Dy_res
 save_array[:,8] = gy_res
 save_array[:,10] = 150e+6
 
-np.savetxt("RTS_analytic_beam_gains_azza40401.txt", save_array)
+np.savetxt(f"RTS_analytic_beam_gains_azza{nside*nside}.txt", save_array)

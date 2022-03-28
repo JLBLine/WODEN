@@ -44,126 +44,126 @@ source_catalogue_t * create_input_srccat(int point, int gauss, int shape){
 
   //Allocate two catsources (two SOURCEs)
   raw_srccat->num_sources = 2;
-  raw_srccat->catsources = malloc(2*sizeof(catsource_t));
+  raw_srccat->sources = malloc(2*sizeof(source_t));
 
   //set the COMPONENT counters to zero for both SOURCEs
 
   for (int src = 0; src < 2; src++) {
-    raw_srccat->catsources[src].n_comps = 0;
-    raw_srccat->catsources[src].n_points= 0;
-    raw_srccat->catsources[src].n_gauss = 0;
-    raw_srccat->catsources[src].n_shapes = 0;
-    raw_srccat->catsources[src].n_shape_coeffs = 0;
+    raw_srccat->sources[src].n_comps = 0;
+    raw_srccat->sources[src].n_points= 0;
+    raw_srccat->sources[src].n_gauss = 0;
+    raw_srccat->sources[src].n_shapes = 0;
+    raw_srccat->sources[src].n_shape_coeffs = 0;
   }
 
   if (point) {
     //Assign the first SOURCE some POINT COMPONENTs
-    raw_srccat->catsources[0].point_ras = point0_ras;
-    raw_srccat->catsources[0].point_decs = point0_decs;
-    raw_srccat->catsources[0].point_ref_freqs = point0_ref_freqs;
-    raw_srccat->catsources[0].point_ref_stokesI = point0_ref_stokesI;
-    raw_srccat->catsources[0].point_ref_stokesQ = point0_ref_stokesQ;
-    raw_srccat->catsources[0].point_ref_stokesU = point0_ref_stokesU;
-    raw_srccat->catsources[0].point_ref_stokesV = point0_ref_stokesV;
-    raw_srccat->catsources[0].point_SIs = point0_SIs;
+    raw_srccat->sources[0].point_components.ras = point0_ras;
+    raw_srccat->sources[0].point_components.decs = point0_decs;
+    raw_srccat->sources[0].point_components.ref_freqs = point0_ref_freqs;
+    raw_srccat->sources[0].point_components.ref_stokesI = point0_ref_stokesI;
+    raw_srccat->sources[0].point_components.ref_stokesQ = point0_ref_stokesQ;
+    raw_srccat->sources[0].point_components.ref_stokesU = point0_ref_stokesU;
+    raw_srccat->sources[0].point_components.ref_stokesV = point0_ref_stokesV;
+    raw_srccat->sources[0].point_components.SIs = point0_SIs;
 
-    raw_srccat->catsources[0].n_comps += 3;
-    raw_srccat->catsources[0].n_points += 3;
+    raw_srccat->sources[0].n_comps += 3;
+    raw_srccat->sources[0].n_points += 3;
 
     //Assign the second SOURCE some POINT COMPONENTs
-    raw_srccat->catsources[1].point_ras = point1_ras;
-    raw_srccat->catsources[1].point_decs = point1_decs;
-    raw_srccat->catsources[1].point_ref_freqs = point1_ref_freqs;
-    raw_srccat->catsources[1].point_ref_stokesI = point1_ref_stokesI;
-    raw_srccat->catsources[1].point_ref_stokesQ = point1_ref_stokesQ;
-    raw_srccat->catsources[1].point_ref_stokesU = point1_ref_stokesU;
-    raw_srccat->catsources[1].point_ref_stokesV = point1_ref_stokesV;
-    raw_srccat->catsources[1].point_SIs = point1_SIs;
+    raw_srccat->sources[1].point_components.ras = point1_ras;
+    raw_srccat->sources[1].point_components.decs = point1_decs;
+    raw_srccat->sources[1].point_components.ref_freqs = point1_ref_freqs;
+    raw_srccat->sources[1].point_components.ref_stokesI = point1_ref_stokesI;
+    raw_srccat->sources[1].point_components.ref_stokesQ = point1_ref_stokesQ;
+    raw_srccat->sources[1].point_components.ref_stokesU = point1_ref_stokesU;
+    raw_srccat->sources[1].point_components.ref_stokesV = point1_ref_stokesV;
+    raw_srccat->sources[1].point_components.SIs = point1_SIs;
 
-    raw_srccat->catsources[1].n_comps += 3;
-    raw_srccat->catsources[1].n_points += 3;
+    raw_srccat->sources[1].n_comps += 3;
+    raw_srccat->sources[1].n_points += 3;
 
   }
 
   if (gauss) {
     //Assign the first SOURCE some GAUSSIAN COMPONENTs
-    raw_srccat->catsources[0].gauss_ras = gauss0_ras;
-    raw_srccat->catsources[0].gauss_decs = gauss0_decs;
-    raw_srccat->catsources[0].gauss_ref_freqs = gauss0_ref_freqs;
-    raw_srccat->catsources[0].gauss_ref_stokesI = gauss0_ref_stokesI;
-    raw_srccat->catsources[0].gauss_ref_stokesQ = gauss0_ref_stokesQ;
-    raw_srccat->catsources[0].gauss_ref_stokesU = gauss0_ref_stokesU;
-    raw_srccat->catsources[0].gauss_ref_stokesV = gauss0_ref_stokesV;
-    raw_srccat->catsources[0].gauss_SIs = gauss0_SIs;
-    raw_srccat->catsources[0].gauss_majors = gauss0_majors;
-    raw_srccat->catsources[0].gauss_minors = gauss0_minors;
-    raw_srccat->catsources[0].gauss_pas = gauss0_pas;
+    raw_srccat->sources[0].gauss_components.ras = gauss0_ras;
+    raw_srccat->sources[0].gauss_components.decs = gauss0_decs;
+    raw_srccat->sources[0].gauss_components.ref_freqs = gauss0_ref_freqs;
+    raw_srccat->sources[0].gauss_components.ref_stokesI = gauss0_ref_stokesI;
+    raw_srccat->sources[0].gauss_components.ref_stokesQ = gauss0_ref_stokesQ;
+    raw_srccat->sources[0].gauss_components.ref_stokesU = gauss0_ref_stokesU;
+    raw_srccat->sources[0].gauss_components.ref_stokesV = gauss0_ref_stokesV;
+    raw_srccat->sources[0].gauss_components.SIs = gauss0_SIs;
+    raw_srccat->sources[0].gauss_components.majors = gauss0_majors;
+    raw_srccat->sources[0].gauss_components.minors = gauss0_minors;
+    raw_srccat->sources[0].gauss_components.pas = gauss0_pas;
 
-    raw_srccat->catsources[0].n_comps += 3;
-    raw_srccat->catsources[0].n_gauss += 3;
+    raw_srccat->sources[0].n_comps += 3;
+    raw_srccat->sources[0].n_gauss += 3;
 
     //Assign the second SOURCE some GAUSSIAN COMPONENTs
-    raw_srccat->catsources[1].gauss_ras = gauss1_ras;
-    raw_srccat->catsources[1].gauss_decs = gauss1_decs;
-    raw_srccat->catsources[1].gauss_ref_freqs = gauss1_ref_freqs;
-    raw_srccat->catsources[1].gauss_ref_stokesI = gauss1_ref_stokesI;
-    raw_srccat->catsources[1].gauss_ref_stokesQ = gauss1_ref_stokesQ;
-    raw_srccat->catsources[1].gauss_ref_stokesU = gauss1_ref_stokesU;
-    raw_srccat->catsources[1].gauss_ref_stokesV = gauss1_ref_stokesV;
-    raw_srccat->catsources[1].gauss_SIs = gauss1_SIs;
-    raw_srccat->catsources[1].gauss_majors = gauss1_majors;
-    raw_srccat->catsources[1].gauss_minors = gauss1_minors;
-    raw_srccat->catsources[1].gauss_pas = gauss1_pas;
+    raw_srccat->sources[1].gauss_components.ras = gauss1_ras;
+    raw_srccat->sources[1].gauss_components.decs = gauss1_decs;
+    raw_srccat->sources[1].gauss_components.ref_freqs = gauss1_ref_freqs;
+    raw_srccat->sources[1].gauss_components.ref_stokesI = gauss1_ref_stokesI;
+    raw_srccat->sources[1].gauss_components.ref_stokesQ = gauss1_ref_stokesQ;
+    raw_srccat->sources[1].gauss_components.ref_stokesU = gauss1_ref_stokesU;
+    raw_srccat->sources[1].gauss_components.ref_stokesV = gauss1_ref_stokesV;
+    raw_srccat->sources[1].gauss_components.SIs = gauss1_SIs;
+    raw_srccat->sources[1].gauss_components.majors = gauss1_majors;
+    raw_srccat->sources[1].gauss_components.minors = gauss1_minors;
+    raw_srccat->sources[1].gauss_components.pas = gauss1_pas;
 
-    raw_srccat->catsources[1].n_comps += 3;
-    raw_srccat->catsources[1].n_gauss += 3;
+    raw_srccat->sources[1].n_comps += 3;
+    raw_srccat->sources[1].n_gauss += 3;
 
   }
 
   if (shape) {
     //Assign the first SOURCE some shapeIAN COMPONENTs
-    raw_srccat->catsources[0].shape_ras = shape0_ras;
-    raw_srccat->catsources[0].shape_decs = shape0_decs;
-    raw_srccat->catsources[0].shape_ref_freqs = shape0_ref_freqs;
-    raw_srccat->catsources[0].shape_ref_stokesI = shape0_ref_stokesI;
-    raw_srccat->catsources[0].shape_ref_stokesQ = shape0_ref_stokesQ;
-    raw_srccat->catsources[0].shape_ref_stokesU = shape0_ref_stokesU;
-    raw_srccat->catsources[0].shape_ref_stokesV = shape0_ref_stokesV;
-    raw_srccat->catsources[0].shape_SIs = shape0_SIs;
-    raw_srccat->catsources[0].shape_majors = shape0_majors;
-    raw_srccat->catsources[0].shape_minors = shape0_minors;
-    raw_srccat->catsources[0].shape_pas = shape0_pas;
-    raw_srccat->catsources[0].shape_coeffs = shape0_coeffs;
-    raw_srccat->catsources[0].shape_n1s = shape0_n1s;
-    raw_srccat->catsources[0].shape_n2s = shape0_n2s;
-    raw_srccat->catsources[0].shape_param_indexes = shape0_param_indexes;
+    raw_srccat->sources[0].shape_components.ras = shape0_ras;
+    raw_srccat->sources[0].shape_components.decs = shape0_decs;
+    raw_srccat->sources[0].shape_components.ref_freqs = shape0_ref_freqs;
+    raw_srccat->sources[0].shape_components.ref_stokesI = shape0_ref_stokesI;
+    raw_srccat->sources[0].shape_components.ref_stokesQ = shape0_ref_stokesQ;
+    raw_srccat->sources[0].shape_components.ref_stokesU = shape0_ref_stokesU;
+    raw_srccat->sources[0].shape_components.ref_stokesV = shape0_ref_stokesV;
+    raw_srccat->sources[0].shape_components.SIs = shape0_SIs;
+    raw_srccat->sources[0].shape_components.majors = shape0_majors;
+    raw_srccat->sources[0].shape_components.minors = shape0_minors;
+    raw_srccat->sources[0].shape_components.pas = shape0_pas;
+    raw_srccat->sources[0].shape_components.shape_coeffs = shape0_coeffs;
+    raw_srccat->sources[0].shape_components.n1s = shape0_n1s;
+    raw_srccat->sources[0].shape_components.n2s = shape0_n2s;
+    raw_srccat->sources[0].shape_components.param_indexes = shape0_param_indexes;
 
-    raw_srccat->catsources[0].n_comps += 3;
+    raw_srccat->sources[0].n_comps += 3;
     raw_srccat->num_shapelets += 3;
-    raw_srccat->catsources[0].n_shapes += 3;
-    raw_srccat->catsources[0].n_shape_coeffs += 10;
+    raw_srccat->sources[0].n_shapes += 3;
+    raw_srccat->sources[0].n_shape_coeffs += 10;
 
     //Assign the second SOURCE some shapeIAN COMPONENTs
-    raw_srccat->catsources[1].shape_ras = shape1_ras;
-    raw_srccat->catsources[1].shape_decs = shape1_decs;
-    raw_srccat->catsources[1].shape_ref_freqs = shape1_ref_freqs;
-    raw_srccat->catsources[1].shape_ref_stokesI = shape1_ref_stokesI;
-    raw_srccat->catsources[1].shape_ref_stokesQ = shape1_ref_stokesQ;
-    raw_srccat->catsources[1].shape_ref_stokesU = shape1_ref_stokesU;
-    raw_srccat->catsources[1].shape_ref_stokesV = shape1_ref_stokesV;
-    raw_srccat->catsources[1].shape_SIs = shape1_SIs;
-    raw_srccat->catsources[1].shape_majors = shape1_majors;
-    raw_srccat->catsources[1].shape_minors = shape1_minors;
-    raw_srccat->catsources[1].shape_pas = shape1_pas;
-    raw_srccat->catsources[1].shape_coeffs = shape1_coeffs;
-    raw_srccat->catsources[1].shape_n1s = shape1_n1s;
-    raw_srccat->catsources[1].shape_n2s = shape1_n2s;
-    raw_srccat->catsources[1].shape_param_indexes = shape1_param_indexes;
+    raw_srccat->sources[1].shape_components.ras = shape1_ras;
+    raw_srccat->sources[1].shape_components.decs = shape1_decs;
+    raw_srccat->sources[1].shape_components.ref_freqs = shape1_ref_freqs;
+    raw_srccat->sources[1].shape_components.ref_stokesI = shape1_ref_stokesI;
+    raw_srccat->sources[1].shape_components.ref_stokesQ = shape1_ref_stokesQ;
+    raw_srccat->sources[1].shape_components.ref_stokesU = shape1_ref_stokesU;
+    raw_srccat->sources[1].shape_components.ref_stokesV = shape1_ref_stokesV;
+    raw_srccat->sources[1].shape_components.SIs = shape1_SIs;
+    raw_srccat->sources[1].shape_components.majors = shape1_majors;
+    raw_srccat->sources[1].shape_components.minors = shape1_minors;
+    raw_srccat->sources[1].shape_components.pas = shape1_pas;
+    raw_srccat->sources[1].shape_components.shape_coeffs = shape1_coeffs;
+    raw_srccat->sources[1].shape_components.n1s = shape1_n1s;
+    raw_srccat->sources[1].shape_components.n2s = shape1_n2s;
+    raw_srccat->sources[1].shape_components.param_indexes = shape1_param_indexes;
 
-    raw_srccat->catsources[1].n_comps += 3;
+    raw_srccat->sources[1].n_comps += 3;
     raw_srccat->num_shapelets += 3;
-    raw_srccat->catsources[1].n_shapes += 3;
-    raw_srccat->catsources[1].n_shape_coeffs += 7;
+    raw_srccat->sources[1].n_shapes += 3;
+    raw_srccat->sources[1].n_shape_coeffs += 7;
 
   }
 
@@ -176,7 +176,7 @@ depends on whether I've injected POINT, GAUSSIAN, or SHAPELETS into the sky,
 whether I'm cropping by SOURCE or COMPONENT, and what the LST is
 */
 
-void check_num_components_after_crop(double lst_base, catsource_t *cropped_src,
+void check_num_components_after_crop(double lst_base, source_t *cropped_src,
                                     e_sky_crop sky_crop_type,
                                     int point, int gauss, int shape) {
 
@@ -253,12 +253,12 @@ void test_azza_coords(double lst_base, int num_comps,
 Checks the POINT source values match expected for given LST, when cropping
 by SOURCE or by COMPONENT
 */
-void check_point_values_after_crop(double lst_base, catsource_t *cropped_src,
+void check_point_values_after_crop(double lst_base, source_t *cropped_src,
                                     e_sky_crop sky_crop_type) {
 
   //Test if the az/za coords have been calculated correctly
   test_azza_coords(lst_base, cropped_src->n_points,
-                          cropped_src->point_azs, cropped_src->point_zas);
+                          cropped_src->point_components.azs, cropped_src->point_components.zas);
 
   //For LST0, all COMPONENTs of the first POINT SOURCE
   //(as defined in test_crop_sky_model.h) should have been retained.
@@ -267,18 +267,18 @@ void check_point_values_after_crop(double lst_base, catsource_t *cropped_src,
   //If cropping by COMPONENT, there should be a 4th component
   if (lst_base == LST0) {
 
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point0_ras, cropped_src->point_ras, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point0_decs, cropped_src->point_decs, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point0_ref_freqs, cropped_src->point_ref_freqs, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point0_ras, cropped_src->point_components.ras, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point0_decs, cropped_src->point_components.decs, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point0_ref_freqs, cropped_src->point_components.ref_freqs, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_ref_stokesI,
-                                  cropped_src->point_ref_stokesI, 3);
+                                  cropped_src->point_components.ref_stokesI, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_ref_stokesQ,
-                                  cropped_src->point_ref_stokesQ, 3);
+                                  cropped_src->point_components.ref_stokesQ, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_ref_stokesU,
-                                  cropped_src->point_ref_stokesU, 3);
+                                  cropped_src->point_components.ref_stokesU, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_ref_stokesV,
-                                  cropped_src->point_ref_stokesV, 3);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_SIs, cropped_src->point_SIs, 3);
+                                  cropped_src->point_components.ref_stokesV, 3);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_SIs, cropped_src->point_components.SIs, 3);
 
     if (sky_crop_type == CROP_SOURCES) {
       TEST_ASSERT_EQUAL_INT(3, cropped_src->n_points);
@@ -286,18 +286,18 @@ void check_point_values_after_crop(double lst_base, catsource_t *cropped_src,
     } else if (sky_crop_type == CROP_COMPONENTS) {
       TEST_ASSERT_EQUAL_INT(4, cropped_src->n_points);
       //test that 4th COMPONENT is equal to the first of point1
-      TEST_ASSERT_EQUAL_DOUBLE(point1_ras[0], cropped_src->point_ras[3]);
-      TEST_ASSERT_EQUAL_DOUBLE(point1_decs[0], cropped_src->point_decs[3]);
-      TEST_ASSERT_EQUAL_DOUBLE(point1_ref_freqs[0], cropped_src->point_ref_freqs[3]);
+      TEST_ASSERT_EQUAL_DOUBLE(point1_ras[0], cropped_src->point_components.ras[3]);
+      TEST_ASSERT_EQUAL_DOUBLE(point1_decs[0], cropped_src->point_components.decs[3]);
+      TEST_ASSERT_EQUAL_DOUBLE(point1_ref_freqs[0], cropped_src->point_components.ref_freqs[3]);
       TEST_ASSERT_EQUAL_FLOAT(point1_ref_stokesI[0],
-                             cropped_src->point_ref_stokesI[3]);
+                             cropped_src->point_components.ref_stokesI[3]);
       TEST_ASSERT_EQUAL_FLOAT(point1_ref_stokesQ[0],
-                             cropped_src->point_ref_stokesQ[3]);
+                             cropped_src->point_components.ref_stokesQ[3]);
       TEST_ASSERT_EQUAL_FLOAT(point1_ref_stokesU[0],
-                             cropped_src->point_ref_stokesU[3]);
+                             cropped_src->point_components.ref_stokesU[3]);
       TEST_ASSERT_EQUAL_FLOAT(point1_ref_stokesV[0],
-                             cropped_src->point_ref_stokesV[3]);
-      TEST_ASSERT_EQUAL_FLOAT(point1_SIs[0], cropped_src->point_SIs[3]);
+                             cropped_src->point_components.ref_stokesV[3]);
+      TEST_ASSERT_EQUAL_FLOAT(point1_SIs[0], cropped_src->point_components.SIs[3]);
 
     }
   }
@@ -305,50 +305,50 @@ void check_point_values_after_crop(double lst_base, catsource_t *cropped_src,
     TEST_ASSERT_EQUAL_INT(6, cropped_src->n_points);
 
     //First three COMPONENTs should match point0
-    // TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_ras, cropped_src->point_ras, 3);
-    // TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_decs, cropped_src->point_decs, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point0_ras, cropped_src->point_ras, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point0_decs, cropped_src->point_decs, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point0_ref_freqs, cropped_src->point_ref_freqs, 3);
+    // TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_ras, cropped_src->point_components.ras, 3);
+    // TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_decs, cropped_src->point_components.decs, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point0_ras, cropped_src->point_components.ras, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point0_decs, cropped_src->point_components.decs, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point0_ref_freqs, cropped_src->point_components.ref_freqs, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_ref_stokesI,
-                                  cropped_src->point_ref_stokesI, 3);
+                                  cropped_src->point_components.ref_stokesI, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_ref_stokesQ,
-                                  cropped_src->point_ref_stokesQ, 3);
+                                  cropped_src->point_components.ref_stokesQ, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_ref_stokesU,
-                                  cropped_src->point_ref_stokesU, 3);
+                                  cropped_src->point_components.ref_stokesU, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_ref_stokesV,
-                                  cropped_src->point_ref_stokesV, 3);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_SIs, cropped_src->point_SIs, 3);
+                                  cropped_src->point_components.ref_stokesV, 3);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(point0_SIs, cropped_src->point_components.SIs, 3);
 
     //Last three COMPONENTs should match point1
     //Gooooooooooo pointer arithmatic
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point1_ras, cropped_src->point_ras + 3, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point1_decs, cropped_src->point_decs + 3, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point1_ref_freqs, cropped_src->point_ref_freqs + 3, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point1_ras, cropped_src->point_components.ras + 3, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point1_decs, cropped_src->point_components.decs + 3, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point1_ref_freqs, cropped_src->point_components.ref_freqs + 3, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(point1_ref_stokesI,
-                                  cropped_src->point_ref_stokesI + 3, 3);
+                                  cropped_src->point_components.ref_stokesI + 3, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(point1_ref_stokesQ,
-                                  cropped_src->point_ref_stokesQ + 3, 3);
+                                  cropped_src->point_components.ref_stokesQ + 3, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(point1_ref_stokesU,
-                                  cropped_src->point_ref_stokesU + 3, 3);
+                                  cropped_src->point_components.ref_stokesU + 3, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(point1_ref_stokesV,
-                                  cropped_src->point_ref_stokesV + 3, 3);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(point1_SIs, cropped_src->point_SIs + 3, 3);
+                                  cropped_src->point_components.ref_stokesV + 3, 3);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(point1_SIs, cropped_src->point_components.SIs + 3, 3);
 
   } else if (lst_base == LST2) { //first source should have been cropped, second retained
     TEST_ASSERT_EQUAL_INT(3, cropped_src->n_points);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point1_ras, cropped_src->point_ras, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point1_decs, cropped_src->point_decs, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point1_ref_freqs, cropped_src->point_ref_freqs, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point1_ras, cropped_src->point_components.ras, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point1_decs, cropped_src->point_components.decs, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(point1_ref_freqs, cropped_src->point_components.ref_freqs, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(point1_ref_stokesI,
-                                  cropped_src->point_ref_stokesI, 3);
+                                  cropped_src->point_components.ref_stokesI, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(point1_ref_stokesQ,
-                                  cropped_src->point_ref_stokesQ, 3);
+                                  cropped_src->point_components.ref_stokesQ, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(point1_ref_stokesU,
-                                  cropped_src->point_ref_stokesU, 3);
+                                  cropped_src->point_components.ref_stokesU, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(point1_ref_stokesV,
-                                  cropped_src->point_ref_stokesV, 3);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(point1_SIs, cropped_src->point_SIs, 3);
+                                  cropped_src->point_components.ref_stokesV, 3);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(point1_SIs, cropped_src->point_components.SIs, 3);
 
   } else if (lst_base == LST3) { //both should be flagged
     TEST_ASSERT_EQUAL_INT(0, cropped_src->n_points);
@@ -372,7 +372,7 @@ void test_crop_sky_model_Point(double lst_base, e_sky_crop sky_crop_type) {
   source_catalogue_t *raw_srccat = create_input_srccat(point, gauss, shape);
 
   //Call the function being tested
-  catsource_t *cropped_src;
+  source_t *cropped_src;
   cropped_src =  crop_sky_model(raw_srccat, lsts, (double)MWA_LAT_RAD,
                                 num_time_steps, sky_crop_type);
 
@@ -426,11 +426,11 @@ void test_crop_sky_model_PointCropComponentLST3(void) {
 Checks the GAUSSIAN source values match expected for given LST, when cropping
 by SOURCE or by COMPONENT
 */
-void check_gauss_values_after_crop(double lst_base, catsource_t *cropped_src,
+void check_gauss_values_after_crop(double lst_base, source_t *cropped_src,
                                     e_sky_crop sky_crop_type) {
   //Test if the az/za coords have been calculated correctly
   test_azza_coords(lst_base, cropped_src->n_gauss,
-                          cropped_src->gauss_azs, cropped_src->gauss_zas);
+                          cropped_src->gauss_components.azs, cropped_src->gauss_components.zas);
 
 
   //For LST0, all COMPONENTs of the first GAUSSIAN SOURCE
@@ -439,18 +439,18 @@ void check_gauss_values_after_crop(double lst_base, catsource_t *cropped_src,
   //if cropping by SOURCE there should only be three COMPONENTs retained.
   //If cropping by COMPONENT, there should be a 4th component
   if (lst_base == LST0) {
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss0_ras, cropped_src->gauss_ras, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss0_decs, cropped_src->gauss_decs, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss0_ref_freqs, cropped_src->gauss_ref_freqs, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss0_ras, cropped_src->gauss_components.ras, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss0_decs, cropped_src->gauss_components.decs, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss0_ref_freqs, cropped_src->gauss_components.ref_freqs, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss0_ref_stokesI,
-                                  cropped_src->gauss_ref_stokesI, 3);
+                                  cropped_src->gauss_components.ref_stokesI, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss0_ref_stokesQ,
-                                  cropped_src->gauss_ref_stokesQ, 3);
+                                  cropped_src->gauss_components.ref_stokesQ, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss0_ref_stokesU,
-                                  cropped_src->gauss_ref_stokesU, 3);
+                                  cropped_src->gauss_components.ref_stokesU, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss0_ref_stokesV,
-                                  cropped_src->gauss_ref_stokesV, 3);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss0_SIs, cropped_src->gauss_SIs, 3);
+                                  cropped_src->gauss_components.ref_stokesV, 3);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss0_SIs, cropped_src->gauss_components.SIs, 3);
 
     if (sky_crop_type == CROP_SOURCES) {
       TEST_ASSERT_EQUAL_INT(3, cropped_src->n_gauss);
@@ -458,68 +458,68 @@ void check_gauss_values_after_crop(double lst_base, catsource_t *cropped_src,
     } else if (sky_crop_type == CROP_COMPONENTS) {
       TEST_ASSERT_EQUAL_INT(4, cropped_src->n_gauss);
       //test that 4th COMPONENT is equal to the first of gauss1
-      TEST_ASSERT_EQUAL_DOUBLE(gauss1_ras[0], cropped_src->gauss_ras[3]);
-      TEST_ASSERT_EQUAL_DOUBLE(gauss1_decs[0], cropped_src->gauss_decs[3]);
-      TEST_ASSERT_EQUAL_DOUBLE(gauss1_ref_freqs[0], cropped_src->gauss_ref_freqs[3]);
+      TEST_ASSERT_EQUAL_DOUBLE(gauss1_ras[0], cropped_src->gauss_components.ras[3]);
+      TEST_ASSERT_EQUAL_DOUBLE(gauss1_decs[0], cropped_src->gauss_components.decs[3]);
+      TEST_ASSERT_EQUAL_DOUBLE(gauss1_ref_freqs[0], cropped_src->gauss_components.ref_freqs[3]);
       TEST_ASSERT_EQUAL_FLOAT(gauss1_ref_stokesI[0],
-                              cropped_src->gauss_ref_stokesI[3]);
+                              cropped_src->gauss_components.ref_stokesI[3]);
       TEST_ASSERT_EQUAL_FLOAT(gauss1_ref_stokesQ[0],
-                              cropped_src->gauss_ref_stokesQ[3]);
+                              cropped_src->gauss_components.ref_stokesQ[3]);
       TEST_ASSERT_EQUAL_FLOAT(gauss1_ref_stokesU[0],
-                              cropped_src->gauss_ref_stokesU[3]);
+                              cropped_src->gauss_components.ref_stokesU[3]);
       TEST_ASSERT_EQUAL_FLOAT(gauss1_ref_stokesV[0],
-                              cropped_src->gauss_ref_stokesV[3]);
-      TEST_ASSERT_EQUAL_FLOAT(gauss1_SIs[0], cropped_src->gauss_SIs[3]);
+                              cropped_src->gauss_components.ref_stokesV[3]);
+      TEST_ASSERT_EQUAL_FLOAT(gauss1_SIs[0], cropped_src->gauss_components.SIs[3]);
     }
   }
   else if (lst_base == LST1) { //For this LST, both SOURCEs should be retained
     TEST_ASSERT_EQUAL_INT(6, cropped_src->n_gauss);
 
     //First three COMPONENTs should match gauss0
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss0_ras, cropped_src->gauss_ras, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss0_decs, cropped_src->gauss_decs, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss0_ref_freqs, cropped_src->gauss_ref_freqs, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss0_ras, cropped_src->gauss_components.ras, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss0_decs, cropped_src->gauss_components.decs, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss0_ref_freqs, cropped_src->gauss_components.ref_freqs, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss0_ref_stokesI,
-                                  cropped_src->gauss_ref_stokesI, 3);
+                                  cropped_src->gauss_components.ref_stokesI, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss0_ref_stokesQ,
-                                  cropped_src->gauss_ref_stokesQ, 3);
+                                  cropped_src->gauss_components.ref_stokesQ, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss0_ref_stokesU,
-                                  cropped_src->gauss_ref_stokesU, 3);
+                                  cropped_src->gauss_components.ref_stokesU, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss0_ref_stokesV,
-                                  cropped_src->gauss_ref_stokesV, 3);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss0_SIs, cropped_src->gauss_SIs, 3);
+                                  cropped_src->gauss_components.ref_stokesV, 3);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss0_SIs, cropped_src->gauss_components.SIs, 3);
 
     //Last three COMPONENTs should match gauss1
     //Gooooooooooo gausser arithmatic
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss1_ras, cropped_src->gauss_ras + 3, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss1_decs, cropped_src->gauss_decs + 3, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss1_ras, cropped_src->gauss_components.ras + 3, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss1_decs, cropped_src->gauss_components.decs + 3, 3);
     TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss1_ref_freqs,
-                                  cropped_src->gauss_ref_freqs + 3, 3);
+                                  cropped_src->gauss_components.ref_freqs + 3, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss1_ref_stokesI,
-                                  cropped_src->gauss_ref_stokesI + 3, 3);
+                                  cropped_src->gauss_components.ref_stokesI + 3, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss1_ref_stokesQ,
-                                  cropped_src->gauss_ref_stokesQ + 3, 3);
+                                  cropped_src->gauss_components.ref_stokesQ + 3, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss1_ref_stokesU,
-                                  cropped_src->gauss_ref_stokesU + 3, 3);
+                                  cropped_src->gauss_components.ref_stokesU + 3, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss1_ref_stokesV,
-                                  cropped_src->gauss_ref_stokesV + 3, 3);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss1_SIs, cropped_src->gauss_SIs + 3, 3);
+                                  cropped_src->gauss_components.ref_stokesV + 3, 3);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss1_SIs, cropped_src->gauss_components.SIs + 3, 3);
 
   } else if (lst_base == LST2) { //first source should have been cropped, second retained
     TEST_ASSERT_EQUAL_INT(3, cropped_src->n_gauss);
 
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss1_ras, cropped_src->gauss_ras, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss1_decs, cropped_src->gauss_decs, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss1_ref_freqs, cropped_src->gauss_ref_freqs, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss1_ras, cropped_src->gauss_components.ras, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss1_decs, cropped_src->gauss_components.decs, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(gauss1_ref_freqs, cropped_src->gauss_components.ref_freqs, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss1_ref_stokesI,
-                                  cropped_src->gauss_ref_stokesI, 3);
+                                  cropped_src->gauss_components.ref_stokesI, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss1_ref_stokesQ,
-                                  cropped_src->gauss_ref_stokesQ, 3);
+                                  cropped_src->gauss_components.ref_stokesQ, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss1_ref_stokesU,
-                                  cropped_src->gauss_ref_stokesU, 3);
+                                  cropped_src->gauss_components.ref_stokesU, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss1_ref_stokesV,
-                                  cropped_src->gauss_ref_stokesV, 3);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss1_SIs, cropped_src->gauss_SIs, 3);
+                                  cropped_src->gauss_components.ref_stokesV, 3);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(gauss1_SIs, cropped_src->gauss_components.SIs, 3);
 
   } else if (lst_base == LST3) { //both should be flagged
     TEST_ASSERT_EQUAL_INT(0, cropped_src->n_gauss);
@@ -543,7 +543,7 @@ void test_crop_sky_model_Gauss(double lst_base, e_sky_crop sky_crop_type) {
   source_catalogue_t *raw_srccat = create_input_srccat(point, gauss, shape);
 
   //Call the function being tested
-  catsource_t *cropped_src;
+  source_t *cropped_src;
   cropped_src =  crop_sky_model(raw_srccat, lsts, MWA_LAT_RAD,
                                 num_time_steps, sky_crop_type);
 
@@ -596,12 +596,12 @@ void test_crop_sky_model_GaussCropComponentLST3(void) {
 Checks the SHAPELET source values match expected for given LST, when cropping
 by SOURCE or by COMPONENT
 */
-void check_shape_values_after_crop(double lst_base, catsource_t *cropped_src,
+void check_shape_values_after_crop(double lst_base, source_t *cropped_src,
                                     e_sky_crop sky_crop_type) {
 
   //Test if the az/za coords have been calculated correctly
   test_azza_coords(lst_base, cropped_src->n_shapes,
-                          cropped_src->shape_azs, cropped_src->shape_zas);
+                          cropped_src->shape_components.azs, cropped_src->shape_components.zas);
 
   //For LST0, all COMPONENTs of the first SHAPELET SOURCE
   //(as defined in test_crop_sky_model.h) should have been retained.
@@ -609,23 +609,23 @@ void check_shape_values_after_crop(double lst_base, catsource_t *cropped_src,
   //if cropping by SOURCE there should only be three COMPONENTs retained.
   //If cropping by COMPONENT, there should be a 4th component
   if (lst_base == LST0) {
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape0_ras, cropped_src->shape_ras, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape0_decs, cropped_src->shape_decs, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape0_ref_freqs, cropped_src->shape_ref_freqs, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape0_ras, cropped_src->shape_components.ras, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape0_decs, cropped_src->shape_components.decs, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape0_ref_freqs, cropped_src->shape_components.ref_freqs, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_ref_stokesI,
-                                  cropped_src->shape_ref_stokesI, 3);
+                                  cropped_src->shape_components.ref_stokesI, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_ref_stokesQ,
-                                  cropped_src->shape_ref_stokesQ, 3);
+                                  cropped_src->shape_components.ref_stokesQ, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_ref_stokesU,
-                                  cropped_src->shape_ref_stokesU, 3);
+                                  cropped_src->shape_components.ref_stokesU, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_ref_stokesV,
-                                  cropped_src->shape_ref_stokesV, 3);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_SIs, cropped_src->shape_SIs, 3);
+                                  cropped_src->shape_components.ref_stokesV, 3);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_SIs, cropped_src->shape_components.SIs, 3);
 
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_coeffs, cropped_src->shape_coeffs, 10);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_n1s, cropped_src->shape_n1s, 10);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_n2s, cropped_src->shape_n2s, 10);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_param_indexes, cropped_src->shape_param_indexes, 10);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_coeffs, cropped_src->shape_components.shape_coeffs, 10);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_n1s, cropped_src->shape_components.n1s, 10);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_n2s, cropped_src->shape_components.n2s, 10);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_param_indexes, cropped_src->shape_components.param_indexes, 10);
 
     if (sky_crop_type == CROP_SOURCES) {
       TEST_ASSERT_EQUAL_INT(3, cropped_src->n_shapes);
@@ -635,23 +635,23 @@ void check_shape_values_after_crop(double lst_base, catsource_t *cropped_src,
       TEST_ASSERT_EQUAL_INT(4, cropped_src->n_shapes);
       TEST_ASSERT_EQUAL_INT(14, cropped_src->n_shape_coeffs);
       //test that 4th COMPONENT is equal to the first of shape1
-      TEST_ASSERT_EQUAL_DOUBLE(shape1_ras[0], cropped_src->shape_ras[3]);
-      TEST_ASSERT_EQUAL_DOUBLE(shape1_decs[0], cropped_src->shape_decs[3]);
-      TEST_ASSERT_EQUAL_DOUBLE(shape1_ref_freqs[0], cropped_src->shape_ref_freqs[3]);
-      TEST_ASSERT_EQUAL_FLOAT(shape1_ref_stokesI[0], cropped_src->shape_ref_stokesI[3]);
-      TEST_ASSERT_EQUAL_FLOAT(shape1_ref_stokesQ[0], cropped_src->shape_ref_stokesQ[3]);
-      TEST_ASSERT_EQUAL_FLOAT(shape1_ref_stokesU[0], cropped_src->shape_ref_stokesU[3]);
-      TEST_ASSERT_EQUAL_FLOAT(shape1_ref_stokesV[0], cropped_src->shape_ref_stokesV[3]);
-      TEST_ASSERT_EQUAL_FLOAT(shape1_SIs[0], cropped_src->shape_SIs[3]);
+      TEST_ASSERT_EQUAL_DOUBLE(shape1_ras[0], cropped_src->shape_components.ras[3]);
+      TEST_ASSERT_EQUAL_DOUBLE(shape1_decs[0], cropped_src->shape_components.decs[3]);
+      TEST_ASSERT_EQUAL_DOUBLE(shape1_ref_freqs[0], cropped_src->shape_components.ref_freqs[3]);
+      TEST_ASSERT_EQUAL_FLOAT(shape1_ref_stokesI[0], cropped_src->shape_components.ref_stokesI[3]);
+      TEST_ASSERT_EQUAL_FLOAT(shape1_ref_stokesQ[0], cropped_src->shape_components.ref_stokesQ[3]);
+      TEST_ASSERT_EQUAL_FLOAT(shape1_ref_stokesU[0], cropped_src->shape_components.ref_stokesU[3]);
+      TEST_ASSERT_EQUAL_FLOAT(shape1_ref_stokesV[0], cropped_src->shape_components.ref_stokesV[3]);
+      TEST_ASSERT_EQUAL_FLOAT(shape1_SIs[0], cropped_src->shape_components.SIs[3]);
 
       //The last 4 coeffs, n1s, n2s should match the first 4 of shape1
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_coeffs, cropped_src->shape_coeffs + 10, 4);
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_n1s, cropped_src->shape_n1s + 10, 4);
-      TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_n2s, cropped_src->shape_n2s + 10, 4);
+      TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_coeffs, cropped_src->shape_components.shape_coeffs + 10, 4);
+      TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_n1s, cropped_src->shape_components.n1s + 10, 4);
+      TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_n2s, cropped_src->shape_components.n2s + 10, 4);
       //There is now a 4th component, so the param indexes should be 3
       user_precision_t expec_param_indexes1[] = {3, 3, 3, 3};
       TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_param_indexes1,
-                                    cropped_src->shape_param_indexes + 10, 4);
+                                    cropped_src->shape_components.param_indexes + 10, 4);
 
 
     }
@@ -661,50 +661,50 @@ void check_shape_values_after_crop(double lst_base, catsource_t *cropped_src,
     TEST_ASSERT_EQUAL_INT(17, cropped_src->n_shape_coeffs);
 
     //First three COMPONENTs should match shape0
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape0_ras, cropped_src->shape_ras, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape0_decs, cropped_src->shape_decs, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape0_ref_freqs, cropped_src->shape_ref_freqs, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape0_ras, cropped_src->shape_components.ras, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape0_decs, cropped_src->shape_components.decs, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape0_ref_freqs, cropped_src->shape_components.ref_freqs, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_ref_stokesI,
-                                  cropped_src->shape_ref_stokesI, 3);
+                                  cropped_src->shape_components.ref_stokesI, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_ref_stokesQ,
-                                  cropped_src->shape_ref_stokesQ, 3);
+                                  cropped_src->shape_components.ref_stokesQ, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_ref_stokesU,
-                                  cropped_src->shape_ref_stokesU, 3);
+                                  cropped_src->shape_components.ref_stokesU, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_ref_stokesV,
-                                  cropped_src->shape_ref_stokesV, 3);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_SIs, cropped_src->shape_SIs, 3);
+                                  cropped_src->shape_components.ref_stokesV, 3);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_SIs, cropped_src->shape_components.SIs, 3);
 
     //Last three COMPONENTs should match shape1
     //Gooooooooooo shapeer arithmatic
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape1_ras, cropped_src->shape_ras + 3, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape1_decs, cropped_src->shape_decs + 3, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape1_ras, cropped_src->shape_components.ras + 3, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape1_decs, cropped_src->shape_components.decs + 3, 3);
     TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape1_ref_freqs,
-                                  cropped_src->shape_ref_freqs + 3, 3);
+                                  cropped_src->shape_components.ref_freqs + 3, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_ref_stokesI,
-                                  cropped_src->shape_ref_stokesI + 3, 3);
+                                  cropped_src->shape_components.ref_stokesI + 3, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_ref_stokesQ,
-                                  cropped_src->shape_ref_stokesQ + 3, 3);
+                                  cropped_src->shape_components.ref_stokesQ + 3, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_ref_stokesU,
-                                  cropped_src->shape_ref_stokesU + 3, 3);
+                                  cropped_src->shape_components.ref_stokesU + 3, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_ref_stokesV,
-                                  cropped_src->shape_ref_stokesV + 3, 3);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_SIs, cropped_src->shape_SIs + 3, 3);
+                                  cropped_src->shape_components.ref_stokesV + 3, 3);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_SIs, cropped_src->shape_components.SIs + 3, 3);
 
     //There were 10 n1, n2, coeffs from the first SOURCE
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_coeffs, cropped_src->shape_coeffs, 10);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_n1s, cropped_src->shape_n1s, 10);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_n2s, cropped_src->shape_n2s, 10);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_param_indexes, cropped_src->shape_param_indexes, 10);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_coeffs, cropped_src->shape_components.shape_coeffs, 10);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_n1s, cropped_src->shape_components.n1s, 10);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_n2s, cropped_src->shape_components.n2s, 10);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape0_param_indexes, cropped_src->shape_components.param_indexes, 10);
 
     //There are 7 n1, n2, coeffs from the second SOURCE
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_coeffs, cropped_src->shape_coeffs + 10, 7);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_n1s, cropped_src->shape_n1s + 10, 7);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_n2s, cropped_src->shape_n2s + 10, 7);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_coeffs, cropped_src->shape_components.shape_coeffs + 10, 7);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_n1s, cropped_src->shape_components.n1s + 10, 7);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_n2s, cropped_src->shape_components.n2s + 10, 7);
 
     //The indexes are additive coeffs from second SOURCE are higher than shape1
     user_precision_t expec_param_indexes2[] = {3, 3, 3, 3, 4, 5, 5};
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_param_indexes2,
-                                  cropped_src->shape_param_indexes + 10, 7);
+                                  cropped_src->shape_components.param_indexes + 10, 7);
 
     //There are
 
@@ -712,25 +712,25 @@ void check_shape_values_after_crop(double lst_base, catsource_t *cropped_src,
     TEST_ASSERT_EQUAL_INT(3, cropped_src->n_shapes);
     TEST_ASSERT_EQUAL_INT(7, cropped_src->n_shape_coeffs);
 
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape1_ras, cropped_src->shape_ras, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape1_decs, cropped_src->shape_decs, 3);
-    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape1_ref_freqs, cropped_src->shape_ref_freqs, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape1_ras, cropped_src->shape_components.ras, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape1_decs, cropped_src->shape_components.decs, 3);
+    TEST_ASSERT_EQUAL_DOUBLE_ARRAY(shape1_ref_freqs, cropped_src->shape_components.ref_freqs, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_ref_stokesI,
-                                  cropped_src->shape_ref_stokesI, 3);
+                                  cropped_src->shape_components.ref_stokesI, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_ref_stokesQ,
-                                  cropped_src->shape_ref_stokesQ, 3);
+                                  cropped_src->shape_components.ref_stokesQ, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_ref_stokesU,
-                                  cropped_src->shape_ref_stokesU, 3);
+                                  cropped_src->shape_components.ref_stokesU, 3);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_ref_stokesV,
-                                  cropped_src->shape_ref_stokesV, 3);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_SIs, cropped_src->shape_SIs, 3);
+                                  cropped_src->shape_components.ref_stokesV, 3);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_SIs, cropped_src->shape_components.SIs, 3);
 
     //There were 7 n1, n2, coeffs from the second SOURCE
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_coeffs, cropped_src->shape_coeffs, 7);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_n1s, cropped_src->shape_n1s, 7);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_n2s, cropped_src->shape_n2s, 7);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_coeffs, cropped_src->shape_components.shape_coeffs, 7);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_n1s, cropped_src->shape_components.n1s, 7);
+    TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_n2s, cropped_src->shape_components.n2s, 7);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(shape1_param_indexes,
-                                  cropped_src->shape_param_indexes, 7);
+                                  cropped_src->shape_components.param_indexes, 7);
 
   } else if (lst_base == LST3) { //both should be flagged
     TEST_ASSERT_EQUAL_INT(0, cropped_src->n_shapes);
@@ -755,7 +755,7 @@ void test_crop_sky_model_Shape(double lst_base, e_sky_crop sky_crop_type) {
   source_catalogue_t *raw_srccat = create_input_srccat(point, gauss, shape);
 
   //Call the function being tested
-  catsource_t *cropped_src;
+  source_t *cropped_src;
   cropped_src = crop_sky_model(raw_srccat, lsts, (double)MWA_LAT_RAD,
                                 num_time_steps, sky_crop_type);
 
@@ -821,7 +821,7 @@ void test_crop_sky_model_AllTypes(double lst_base, e_sky_crop sky_crop_type) {
   source_catalogue_t *raw_srccat = create_input_srccat(point, gauss, shape);
 
   //Call the function being tested
-  catsource_t *cropped_src;
+  source_t *cropped_src;
   cropped_src = crop_sky_model(raw_srccat, lsts, (double)MWA_LAT_RAD,
                                 num_time_steps, sky_crop_type);
 
