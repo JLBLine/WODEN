@@ -110,8 +110,6 @@ source_t * make_sky_model(int num_points, int num_gauss,
 
   cropped_src->point_components.azs = repeat_point_array;
   cropped_src->point_components.zas = repeat_point_array;
-  cropped_src->point_components.cos_para_angs = repeat_point_array;
-  cropped_src->point_components.sin_para_angs = repeat_point_array;
   cropped_src->point_components.beam_has = repeat_point_array_double;
   cropped_src->point_components.beam_decs = repeat_point_array_double;
 
@@ -142,8 +140,6 @@ source_t * make_sky_model(int num_points, int num_gauss,
   cropped_src->gauss_components.pas = index_gauss_array;
   cropped_src->gauss_components.azs = repeat_gauss_array;
   cropped_src->gauss_components.zas = repeat_gauss_array;
-  cropped_src->gauss_components.cos_para_angs = repeat_gauss_array;
-  cropped_src->gauss_components.sin_para_angs = repeat_gauss_array;
   cropped_src->gauss_components.beam_has = repeat_gauss_array_double;
   cropped_src->gauss_components.beam_decs = repeat_gauss_array_double;
 
@@ -172,8 +168,6 @@ source_t * make_sky_model(int num_points, int num_gauss,
   cropped_src->shape_components.pas = index_shape_array;
   cropped_src->shape_components.azs = repeat_shape_array;
   cropped_src->shape_components.zas = repeat_shape_array;
-  cropped_src->shape_components.cos_para_angs = repeat_shape_array;
-  cropped_src->shape_components.sin_para_angs = repeat_shape_array;
   cropped_src->shape_components.beam_has = repeat_shape_array_double;
   cropped_src->shape_components.beam_decs = repeat_shape_array_double;
 
@@ -307,10 +301,6 @@ void check_pointgauss_chunking(int chunk_ind, int comps_per_chunk,
                     temp_cropped_src->point_components.azs, expected_n_points*num_time_steps);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_point_array,
                     temp_cropped_src->point_components.zas, expected_n_points*num_time_steps);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_point_array,
-          temp_cropped_src->point_components.cos_para_angs, expected_n_points*num_time_steps);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_point_array,
-          temp_cropped_src->point_components.sin_para_angs, expected_n_points*num_time_steps);
 
     TEST_ASSERT_EQUAL_DOUBLE_ARRAY(expec_repeat_point_array_double,
          temp_cropped_src->point_components.beam_has, expected_n_points*num_time_steps);
@@ -371,10 +361,6 @@ void check_pointgauss_chunking(int chunk_ind, int comps_per_chunk,
                     temp_cropped_src->gauss_components.azs, expected_n_gauss*num_time_steps);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_gauss_array,
                     temp_cropped_src->gauss_components.zas, expected_n_gauss*num_time_steps);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_gauss_array,
-          temp_cropped_src->gauss_components.cos_para_angs, expected_n_gauss*num_time_steps);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(expec_repeat_gauss_array,
-          temp_cropped_src->gauss_components.sin_para_angs, expected_n_gauss*num_time_steps);
     TEST_ASSERT_EQUAL_DOUBLE_ARRAY(expec_repeat_gauss_array_double,
          temp_cropped_src->gauss_components.beam_has, expected_n_gauss*num_time_steps);
     TEST_ASSERT_EQUAL_DOUBLE_ARRAY(expec_repeat_gauss_array_double,
@@ -448,10 +434,6 @@ void check_shapelet_chunking(int chunk_ind, int coeffs_per_chunk,
                     temp_cropped_src->shape_components.azs, cropped_src->n_shapes*num_time_steps);
     TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_components.zas,
                     temp_cropped_src->shape_components.zas, cropped_src->n_shapes*num_time_steps);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_components.cos_para_angs,
-          temp_cropped_src->shape_components.cos_para_angs, cropped_src->n_shapes*num_time_steps);
-    TEST_ASSERT_EQUAL_FLOAT_ARRAY(cropped_src->shape_components.sin_para_angs,
-          temp_cropped_src->shape_components.sin_para_angs, cropped_src->n_shapes*num_time_steps);
     TEST_ASSERT_EQUAL_DOUBLE_ARRAY(cropped_src->shape_components.beam_has,
           temp_cropped_src->shape_components.beam_has, cropped_src->n_shapes*num_time_steps);
     TEST_ASSERT_EQUAL_DOUBLE_ARRAY(cropped_src->shape_components.beam_decs,

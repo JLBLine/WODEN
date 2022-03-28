@@ -78,44 +78,6 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   beam_settings_t *beam_settings = malloc(sizeof(beam_settings_t));
   beam_settings->beamtype = beamtype;
 
-  /*********************************************************************
-  Code used to generate the az / za and parallactic angles is below
-  Stick into permanent arrays so test doesn't rely on erfa.
-  **********************************************************************
-
-  user_precision_t *zas = malloc(num_components*num_times*sizeof(user_precision_t));
-  user_precision_t *azs = malloc(num_components*num_times*sizeof(user_precision_t));
-  user_precision_t *sin_para_angs = malloc(num_components*num_times*sizeof(user_precision_t));
-  user_precision_t *cos_para_angs = malloc(num_components*num_times*sizeof(user_precision_t));
-
-  //Let's say the sources are stationary on the sky to keep the maths in the
-  //test to a minimum
-  double erfa_az, el, ha, para_angle;
-  double lst = 0.0;
-  double latitude = 0.0;
-
-  for (int component = 0; component < num_components; component++) {
-    for (int time_ind = 0; time_ind < num_times; time_ind++) {
-
-      double ha = lst - ras[component];
-
-      eraHd2ae(ha, (double)decs[component], latitude, &erfa_az, &el );
-
-      azs[component*num_times + time_ind] = (user_precision_t)erfa_az;
-      zas[component*num_times + time_ind] = M_PI / 2. - (user_precision_t)el;
-
-      para_angle = eraHd2pa(ha, (double)decs[component], latitude);
-
-      sin_para_angs[component*num_times + time_ind] = (user_precision_t)sin(para_angle);
-      cos_para_angs[component*num_times + time_ind] = (user_precision_t)cos(para_angle);
-
-      printf("%d %.8f %.8f %.8f %.8f\n",component*num_times + time_ind,
-                                 (user_precision_t)erfa_az, M_PI / 2. - (user_precision_t)el,
-                                 (user_precision_t)sin(para_angle), (user_precision_t)cos(para_angle));
-    }
-  }
-  */
-
   double freqs[] = {100e+6, 200e+6};
 
   double *beam_has = malloc(num_components*num_times*sizeof(double));
@@ -217,8 +179,6 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   components.decs = decs;
   components.azs = azs;
   components.zas = zas;
-  components.sin_para_angs = sin_para_angs;
-  components.cos_para_angs = cos_para_angs;
   components.beam_has = beam_has;
   components.beam_decs = beam_decs;
   components.ref_freqs = ref_freqs;

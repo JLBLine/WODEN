@@ -45,8 +45,6 @@ void null_components(source_t *src, e_component_type component_type) {
   components->param_indexes = NULL;
   components->azs = NULL;
   components->zas = NULL;
-  components->sin_para_angs = NULL;
-  components->cos_para_angs = NULL;
   components->beam_has = NULL;
   components->beam_decs = NULL;
   components->num_primarybeam_values = 0;
@@ -89,8 +87,6 @@ void increment_pointgauss(source_t *temp_cropped_src, source_t *cropped_src,
 
   temp_components->azs = components->azs + (num_time_steps * * iter);
   temp_components->zas = components->zas + (num_time_steps * * iter);
-  temp_components->sin_para_angs = components->sin_para_angs + (num_time_steps * * iter);
-  temp_components->cos_para_angs = components->cos_para_angs + (num_time_steps * * iter);
   temp_components->beam_has = components->beam_has + (num_time_steps * * iter);
   temp_components->beam_decs = components->beam_decs + (num_time_steps * * iter);
 
@@ -243,8 +239,6 @@ void increment_shapelet(source_t *temp_cropped_src, source_t *cropped_src,
   //so we don't iterate the pointer here
   temp_cropped_src->shape_components.azs = cropped_src->shape_components.azs;
   temp_cropped_src->shape_components.zas = cropped_src->shape_components.zas;
-  temp_cropped_src->shape_components.sin_para_angs = cropped_src->shape_components.sin_para_angs;
-  temp_cropped_src->shape_components.cos_para_angs = cropped_src->shape_components.cos_para_angs;
   temp_cropped_src->shape_components.beam_has = cropped_src->shape_components.beam_has;
   temp_cropped_src->shape_components.beam_decs = cropped_src->shape_components.beam_decs;
 }

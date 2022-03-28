@@ -518,3 +518,39 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       user_precision_t *d_sbf,
       int num_shapes, int num_baselines, int num_freqs, int num_visis,
       const int num_coeffs, int num_times, e_beamtype beamtype);
+
+
+
+
+
+/**
+@brief Frees device memory associated with `d_components`, depending on
+what type of COMPONENT you are freeing
+
+@details Frees the device memory set by `source_components::source_component_common`. Different COMPONENT types
+use different parameters so need to know `comptype` to free the correct
+memory locations
+
+@param[in,out] d_components A `components_t` with device memory to be
+freed
+@param[in] comptype Which type of COMPONENT, either POINT, GAUSSIAN, or
+ SHAPELET
+
+*/
+extern "C" void free_d_components(components_t d_components,
+                                  e_component_type comptype);
+
+
+/**
+@brief Frees the device memory on `d_beam_gains`, given the type of
+primary beam `beamtype`.
+
+@details Only certain primary beam models have leakage terms, so need
+to know the `beamtype` to free the correct locations.
+
+@param[in,out] d_beam_gains A `d_beam_gains_t` with device memory to be
+freed
+@param[in] comptype An `e_beamtype` describing the primary beam type
+
+*/
+extern "C" void free_beam_gains(d_beam_gains_t d_beam_gains, e_beamtype beamtype);

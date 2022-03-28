@@ -5,7 +5,7 @@ mkdir -p data
 for beam in "MWA_FEE" "MWA_FEE_interp"
 do
 
-run_woden.py \
+time run_woden.py \
    --ra0=60.0 --dec0=-40.0 \
    --num_freq_channels=10 --num_time_steps=10 \
    --freq_res=80e+3 --time_res=8.0 \

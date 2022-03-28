@@ -773,9 +773,9 @@ to test the ``CUDA`` code against.
 
 The final 5th test really pushes the FLOAT code hard, as the range of magnitudes
 of the visibilities is large. As a result, FLOAT code is tested to to within a
-fractional tolerance of 1e-2 to the ``C`` values (which happens mostly when
-the expected value is around 1e-5 Jy, so a fractional offset of 1e-2 is an
-absolute offset of 1e-7 Jy), for both the real and imaginary parts.
+fractional tolerance of 5e-3 to the ``C`` values (which happens mostly when
+the expected value is around 1e-5 Jy, so a fractional offset of 5e-3 is an
+absolute offset of 5e-8 Jy), for both the real and imaginary parts.
 For the DOUBLE code, the fractional tolerance is 1e-12.
 
 test_update_sum_visis.c

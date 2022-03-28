@@ -50,8 +50,6 @@ typedef struct _components_t {
   //Specific to observation settings for these COMPONENTs
   user_precision_t *azs; /*!< SHAPELET source azimuth angles for all time steps */
   user_precision_t *zas; /*!< SHAPELET source zenith angles for all time steps */
-  user_precision_t *sin_para_angs; /*!< Sine of parallatic angle for all COMPONENT az,za */
-  user_precision_t *cos_para_angs; /*!< Cosine of parallatic angle for all COMPONENT az,za */
   double *beam_has; /*!< Hour angle of COMPONENTs for all time steps, used for
    beam calculations */
   double *beam_decs; /*!< Declinations of COMPONENTs for all time steps, used for

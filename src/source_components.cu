@@ -604,8 +604,6 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
 
       visi_shape = visi_shape*V_envelop;
 
-      // printf("V_envelop %.5f %.5f\n",V_envelop.x, V_envelop.y );
-
       update_sum_visis(iBaseline, iComponent, num_freqs,
              num_baselines, num_shapes, num_times, beamtype,
              d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
@@ -616,6 +614,14 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
              d_sum_visi_XY_real, d_sum_visi_XY_imag,
              d_sum_visi_YX_real, d_sum_visi_YX_imag,
              d_sum_visi_YY_real, d_sum_visi_YY_imag);
+
+      // if (iBaseline == 0) {
+      //   printf("iComp, pa, major, minor, n1, n2, coeff %d %.5f %.5f %.5f %d %d %.5f\n",
+      //           iComponent, pa, d_components.majors[iComponent], d_components.minors[iComponent],
+      //           (int)d_components.n1s[iCoeff],(int)d_components.n2s[iCoeff], f_hat );
+      //   printf("V_envelop %.5f %.5f\n",V_envelop.x, V_envelop.y );
+      //   printf("u_value, v_value %.5f %.5f\n",u_value, v_value );
+      // }
     }
   }
 }
@@ -656,7 +662,7 @@ extern "C" void free_beam_gains(d_beam_gains_t d_beam_gains, e_beamtype beamtype
   cudaErrorCheckCall( cudaFree( d_beam_gains.d_gxs) );
   cudaErrorCheckCall( cudaFree( d_beam_gains.d_gys) );
 
-  if (beamtype == FEE_BEAM){
+  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY){
     cudaErrorCheckCall( cudaFree( d_beam_gains.d_Dxs ) );
     cudaErrorCheckCall( cudaFree( d_beam_gains.d_Dys ) );
   }

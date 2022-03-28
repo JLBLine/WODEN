@@ -44,8 +44,6 @@ source_t * make_sky_model(void) {
   src->point_components.SIs = one_array;
   src->point_components.azs = one_array;
   src->point_components.zas = one_array;
-  src->point_components.cos_para_angs = one_array;
-  src->point_components.sin_para_angs = one_array;
   src->point_components.beam_has = one_array_double;
   src->point_components.beam_decs = one_array_double;
 
@@ -62,8 +60,6 @@ source_t * make_sky_model(void) {
   src->gauss_components.pas = one_array;
   src->gauss_components.azs = one_array;
   src->gauss_components.zas = one_array;
-  src->gauss_components.cos_para_angs = one_array;
-  src->gauss_components.sin_para_angs = one_array;
   src->gauss_components.beam_has = one_array_double;
   src->gauss_components.beam_decs = one_array_double;
 
@@ -80,8 +76,6 @@ source_t * make_sky_model(void) {
   src->shape_components.pas = one_array;
   src->shape_components.azs = one_array;
   src->shape_components.zas = one_array;
-  src->shape_components.cos_para_angs = one_array;
-  src->shape_components.sin_para_angs = one_array;
   src->shape_components.beam_has = one_array_double;
   src->shape_components.beam_decs = one_array_double;
   src->shape_components.shape_coeffs = one_array;
@@ -111,8 +105,6 @@ void assert_point_retained(source_t *src) {
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->point_components.SIs, 1);
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->point_components.azs, 1);
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->point_components.zas, 1);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->point_components.cos_para_angs, 1);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->point_components.sin_para_angs, 1);
   TEST_ASSERT_EQUAL_DOUBLE_ARRAY( one_array_double, src->point_components.beam_has, 1);
   TEST_ASSERT_EQUAL_DOUBLE_ARRAY( one_array_double, src->point_components.beam_decs, 1);
 }
@@ -138,8 +130,6 @@ void assert_gauss_retained(source_t *src) {
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_components.pas, 1);
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_components.azs, 1);
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_components.zas, 1);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_components.cos_para_angs, 1);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->gauss_components.sin_para_angs, 1);
   TEST_ASSERT_EQUAL_DOUBLE_ARRAY( one_array_double, src->gauss_components.beam_has, 1);
   TEST_ASSERT_EQUAL_DOUBLE_ARRAY( one_array_double, src->gauss_components.beam_decs, 1);
 }
@@ -165,8 +155,6 @@ void assert_shape_retained(source_t *src) {
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_components.pas, 1);
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_components.azs, 1);
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_components.zas, 1);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_components.cos_para_angs, 1);
-  TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_components.sin_para_angs, 1);
   TEST_ASSERT_EQUAL_DOUBLE_ARRAY( one_array_double, src->shape_components.beam_has, 1);
   TEST_ASSERT_EQUAL_DOUBLE_ARRAY( one_array_double, src->shape_components.beam_decs, 1);
   TEST_ASSERT_EQUAL_FLOAT_ARRAY( one_array, src->shape_components.shape_coeffs, 1);
@@ -198,8 +186,6 @@ void test_null_point_comps_DoesTheNull(void) {
   TEST_ASSERT_NULL(src->point_components.SIs);
   TEST_ASSERT_NULL(src->point_components.azs);
   TEST_ASSERT_NULL(src->point_components.zas);
-  TEST_ASSERT_NULL(src->point_components.cos_para_angs);
-  TEST_ASSERT_NULL(src->point_components.sin_para_angs);
   TEST_ASSERT_NULL(src->point_components.beam_has);
   TEST_ASSERT_NULL(src->point_components.beam_decs);
 
@@ -235,8 +221,6 @@ void test_null_gauss_comps_DoesTheNull(void) {
   TEST_ASSERT_NULL(src->gauss_components.pas);
   TEST_ASSERT_NULL(src->gauss_components.azs);
   TEST_ASSERT_NULL(src->gauss_components.zas);
-  TEST_ASSERT_NULL(src->gauss_components.cos_para_angs);
-  TEST_ASSERT_NULL(src->gauss_components.sin_para_angs);
   TEST_ASSERT_NULL(src->gauss_components.beam_has);
   TEST_ASSERT_NULL(src->gauss_components.beam_decs);
 
@@ -274,8 +258,6 @@ void test_null_shape_comps_DoesTheNull(void) {
   TEST_ASSERT_NULL(src->shape_components.pas);
   TEST_ASSERT_NULL(src->shape_components.azs);
   TEST_ASSERT_NULL(src->shape_components.zas);
-  TEST_ASSERT_NULL(src->shape_components.cos_para_angs);
-  TEST_ASSERT_NULL(src->shape_components.sin_para_angs);
   TEST_ASSERT_NULL(src->shape_components.beam_has);
   TEST_ASSERT_NULL(src->shape_components.beam_decs);
   TEST_ASSERT_NULL(src->shape_components.shape_coeffs);
