@@ -27,6 +27,7 @@ Read the comprehensive [installation guide on readthedocs](https://woden.readthe
 - HDF5 - https://www.hdfgroup.org/downloads/hdf5/
 - PAL - https://github.com/Starlink/pal/releases
 - python >= 3.6
+- mwa_hyperbeam - https://github.com/MWATelescope/mwa_hyperbeam (`WODEN` version 1.3.0 onwards)
 
 Once you have those, installation is done via `CMake`. Ideally, this will be enough:
 ```bash
