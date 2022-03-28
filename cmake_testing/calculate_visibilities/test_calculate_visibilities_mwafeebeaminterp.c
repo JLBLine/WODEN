@@ -271,23 +271,33 @@ void test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_ThreeAll(void) {
 int main(void)
 {
     UNITY_BEGIN();
-    //Test with a single SOURCE, single COMPONENT
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_OneSource_SinglePoint);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_OneSource_SingleGauss);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_OneSource_SingleShape);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_OneSource_SingleAll);
 
-    //Test with three SOURCEs, single COPMONENT
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_SinglePoint);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_SingleGauss);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_SingleShape);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_SingleAll);
+    char* mwa_fee_hdf5 = getenv("MWA_FEE_HDF5_INTERP");
 
-    //Test with three SOURCEs, three COPMONENTs
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_ThreePoint);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_ThreeGauss);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_ThreeShape);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_ThreeAll);
+    if (mwa_fee_hdf5) {
+      printf("MWA_FEE_HDF5_INTERP: %s\n", mwa_fee_hdf5 );
+
+          //Test with a single SOURCE, single COMPONENT
+          RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_OneSource_SinglePoint);
+          RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_OneSource_SingleGauss);
+          RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_OneSource_SingleShape);
+          RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_OneSource_SingleAll);
+
+          //Test with three SOURCEs, single COPMONENT
+          RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_SinglePoint);
+          RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_SingleGauss);
+          RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_SingleShape);
+          RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_SingleAll);
+
+          //Test with three SOURCEs, three COPMONENTs
+          RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_ThreePoint);
+          RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_ThreeGauss);
+          RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_ThreeShape);
+          RUN_TEST(test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_ThreeAll);
+    }
+    else {
+      printf("MWA_FEE_HDF5_INTERP not found - not running test_calculate_visibilities_MWAFEEBeamInterp tests");
+    }
 
     return UNITY_END();
 }

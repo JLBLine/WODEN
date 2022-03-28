@@ -276,23 +276,34 @@ void test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeAll(void) {
 int main(void)
 {
     UNITY_BEGIN();
-    //Test with a single SOURCE, single COMPONENT
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SinglePoint);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleGauss);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleShape);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleAll);
 
-    //Test with three SOURCEs, single COPMONENT
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SinglePoint);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleGauss);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleShape);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleAll);
+    char* mwa_fee_hdf5 = getenv("MWA_FEE_HDF5");
 
-    //Test with three SOURCEs, three COPMONENTs
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreePoint);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeMWAFEE);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeShape);
-    RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeAll);
+    if (mwa_fee_hdf5) {
+      printf("MWA_FEE_HDF5: %s\n", mwa_fee_hdf5 );
+
+        //Test with a single SOURCE, single COMPONENT
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SinglePoint);
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleGauss);
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleShape);
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleAll);
+
+        //Test with three SOURCEs, single COPMONENT
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SinglePoint);
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleGauss);
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleShape);
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleAll);
+
+        //Test with three SOURCEs, three COPMONENTs
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreePoint);
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeMWAFEE);
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeShape);
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeAll);
+
+    }
+    else {
+      printf("MWA_FEE_HDF5 not found - not running test_calculate_visibilities_MWAFEEBeam tests");
+    }
 
     return UNITY_END();
 }
