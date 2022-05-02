@@ -1,0 +1,31 @@
+singleshapelet_curve:
+  - ra: 45.0
+    dec: 20.0
+    comp_type:
+      shapelet:
+        maj: 420.
+        min: 300.
+        pa: 56.
+        coeffs:
+          - n1: 0
+            n2: 0
+            value: 0.48255952
+          - n1: 14
+            n2: 2
+            value: -0.18494293
+          - n1: 41
+            n2: -15
+            value: -0.08973978
+          - n1: 37
+            n2: 7
+            value: -0.22137849
+    flux_type:
+      curved_power_law:
+        q: 0.3245
+        si: -0.8
+        fd:
+          freq: 70000000.0
+          i: 3.0
+          q: 0.0
+          u: 0.0
+          v: 0.0

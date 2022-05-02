@@ -3,7 +3,7 @@ include_directories("${CMAKE_SOURCE_DIR}/cmake_testing/source_components")
 
 ## Create tests for both float and double precision
 foreach(PRECISION IN LISTS FLOAT DOUBLE)
-# foreach(PRECISION IN LISTS FLOAT)
+# foreach(PRECISION IN LISTS DOUBLE)
   ##Set the flags depending on the precision
   DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
 
@@ -25,6 +25,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   ##Test flux extrapolation
   add_executable(test_extrap_stokes_${PRECISION}_app
       test_extrap_stokes.c
+      common_testing_functions.c
   )
   target_link_libraries(test_extrap_stokes_${PRECISION}_app
       Unity
@@ -77,10 +78,10 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
            test_get_beam_gains_${PRECISION}_app)
 
 
-
   ##Test the common calls between all component types return expected values
   add_executable(test_source_component_common_${PRECISION}_app
       test_source_component_common.c
+      common_testing_functions.c
   )
   target_link_libraries(test_source_component_common_${PRECISION}_app
       Unity
@@ -96,7 +97,12 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   add_executable(test_kern_calc_visi_point_${PRECISION}_app
       test_kern_calc_visi_point.c
       test_kern_calc_visi_common.c
+      common_testing_functions.c
       ${CMAKE_SOURCE_DIR}/src/shapelet_basis.c
+      ${CMAKE_SOURCE_DIR}/src/chunk_sky_model.c
+      ${CMAKE_SOURCE_DIR}/src/create_sky_model.c
+      ${CMAKE_SOURCE_DIR}/src/read_text_skymodel.c
+      ${CMAKE_SOURCE_DIR}/src/read_yaml_skymodel.c
   )
   target_link_libraries(test_kern_calc_visi_point_${PRECISION}_app
       Unity
@@ -112,6 +118,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   add_executable(test_kern_calc_visi_gauss_${PRECISION}_app
       test_kern_calc_visi_gauss.c
       test_kern_calc_visi_common.c
+      common_testing_functions.c
       ${CMAKE_SOURCE_DIR}/src/shapelet_basis.c
   )
   target_link_libraries(test_kern_calc_visi_gauss_${PRECISION}_app
@@ -128,6 +135,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   add_executable(test_kern_calc_visi_shape_${PRECISION}_app
       test_kern_calc_visi_shape.c
       test_kern_calc_visi_common.c
+      common_testing_functions.c
       ${CMAKE_SOURCE_DIR}/src/shapelet_basis.c
   )
   target_link_libraries(test_kern_calc_visi_shape_${PRECISION}_app

@@ -52,3 +52,29 @@ in a full sky model and created an array of chunked sky models. This test
 runs the same testing for both functions above with a sky model containing
 various combinations of POINT, GAUSSIAN, and SHAPELET COMPONENTs, as well
 as different chunking sizes and time settings.
+
+
+``test_remap_source_for_gpu.c``
+***********************************************
+At some point, we have to take all the information in the chunked sky models
+and copy it across to the GPU, where we do all the heavy lifting. As there
+can be millions of COMPONENTs (if simulating a full sky healpix projection for
+example), we likely won't be able to copy across all information to the GPU.
+``chunk_sky_model::remap_source_for_gpu`` takes a ``source_t`` struct as spat
+out by ``chunk_sky_model::create_chunked_sky_models``, and does any necessary
+memory allocation and mapping of information, such that the new remapped
+``source_t`` can just be straight copied across into GPU memory. This way, we
+can loop over many chunked sky models, grab how much memory we need at the
+time, and then free it once we're done. If we did this remapping before
+iterating over chunks, we double the necessary host memory (or have to creatively
+free the full-sky model memory, which I cba to do.)
+
+This test loops over many chunked sources by first running
+``chunk_sky_model::create_chunked_sky_models`` on the same set of sky models
+as tested in ``test_create_chunked_sky_models.c``. It the runs
+``chunk_sky_model::remap_source_for_gpu`` for each chunk, checks that the
+outputs are as expected (I've basically set all the ra,dec etc etc in the
+original full sky models to indexes or arrays, to make testing expected outcomes
+straight forward). After each remapping, ``chunk_sky_model::free_remapped_source_for_gpu``
+is called to free up memory which is assigned in each loop, so we also test this
+freeing function at the same time.

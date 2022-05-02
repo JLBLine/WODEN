@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.10)
 include(CheckLanguage)
 check_language(CUDA)
 
-project(woden VERSION 1.2 LANGUAGES CUDA CXX C)
+project(woden VERSION 1.4 LANGUAGES CUDA CXX C)
 
 ##Gotta find CUDA and get it to find libraries
 find_package(CUDA)
@@ -117,12 +117,24 @@ if(HBEAM_LIB)
   message(STATUS "HBEAM library path: ${HBEAM_LIB}")
 endif()
 
+##try to find YAML
+set(HINTS_YAML_INC "/usr/local/include/;${YAML_ROOT}/;")
+set(HINTS_YAML_LIB "/usr/local/lib/;${YAML_ROOT}")
+
+find_path(YAML_INC yaml.h HINTS ${HINTS_YAML_INC})
+find_library(YAML_LIB yaml HINTS ${HINTS_YAML_LIB} REQUIRED)
+if(YAML_LIB)
+  message(STATUS "YAML include path: ${YAML_INC}")
+  message(STATUS "YAML library path: ${YAML_LIB}")
+endif()
+
+
 ##Set the linkers for the C code
-set(CC_LINKLIBS "-lm -pthread ${JSONC_LIB} ${ERFA_LIB} ${HDF5_LIB} ${PAL_LIB} ${HBEAM_LIB}") #
+set(CC_LINKLIBS "-lm -pthread ${JSONC_LIB} ${ERFA_LIB} ${HDF5_LIB} ${PAL_LIB} ${HBEAM_LIB} ${YAML_LIB}") #
 
 ##All the WODEN header dirs are in include dir
 include_directories("${CMAKE_SOURCE_DIR}/include" ${JSONC_INC}
-                    ${ERFA_INC} ${HDF5_INC} ${PAL_INC} ${HBEAM_INC})
+${ERFA_INC} ${HDF5_INC} ${PAL_INC} ${HBEAM_INC} ${YAML_INC})
 
 ##Choose whether we are created the main executable, or making the unit tests
 set(TARGET_GROUP production CACHE STRING "Group to build")
@@ -175,6 +187,113 @@ if(TARGET_GROUP STREQUAL production)
     target_link_libraries(woden_double PUBLIC wodenC_double
                           wodenCUDA_double ${CC_LINKLIBS})
     target_compile_options(woden_double PRIVATE -O3 -Wall -DDOUBLE_PRECISION)
+
+    ##Macro to search for a filename in the `src` dir and make a symlink
+    ##into the build dir
+    macro(make_python_symlink filename)
+    find_path(THISPY ${filename} HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
+    if(THISPY)
+      message(STATUS "${filename} path: ${THISPY}")
+    endif()
+    set(path_filename "${THISPY}/${filename}")
+    ADD_CUSTOM_TARGET(${filename} ALL
+                      COMMAND ${CMAKE_COMMAND} -E create_symlink ${path_filename} ${filename})
+    endmacro(make_python_symlink)
+
+    make_python_symlink("run_woden.py")
+    make_python_symlink("uv2ms.py")
+    make_python_symlink("convert_WSClean_list_to_WODEN.py")
+
+    ##Want to run a python command everytime we make the code, in case paths
+    ##have changed. CMake doesn't seem to want to run a command unless the
+    ##output is missing. So make a custom target including a file '__header.h'
+    ##that will never exist, to trick CMake into running the command below
+    ##everytime
+    add_custom_target(
+        write_init_WODEN ALL
+        DEPENDS
+            ${CMAKE_CURRENT_BINARY_DIR}/__header.h
+            init_WODEN.sh
+    )
+    ##Find python so we can run a python script
+    include(FindPythonInterp)
+    ##Run the command that will create / edit the init_WODEN.sh script. Make
+    ##__header.h a dependency so it will always run
+    add_custom_command(
+            OUTPUT
+                ${CMAKE_CURRENT_BINARY_DIR}/__header.h
+                init_WODEN.sh
+            COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/src/update_init_WODEN.py
+    )
+
+    ###===========INSTALLATION OPTIONS==========================================
+    ##Setup a generic installation location thingy
+    include(GNUInstallDirs)
+
+    ##Copy python scripts into bin directory
+    macro(install_symlink filename)
+    find_path(THISPY ${filename} HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
+    install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${THISPY}/${filename} ${CMAKE_INSTALL_FULL_BINDIR}/${filename})")
+    # install(CODE "message(\"-- Created symlink: ${THISPY}/${filename} -> ${CMAKE_INSTALL_BINDIR}/${filename}\")")
+    endmacro(install_symlink)
+
+    install_symlink("run_woden.py")
+    install_symlink("uv2ms.py")
+    install_symlink("convert_WSClean_list_to_WODEN.py")
+
+    install(TARGETS woden_float woden_double
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+    install(TARGETS wodenCUDA_float wodenC_float wodenCUDA_double wodenC_double
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+
+
+##If debugging build
+elseif(TARGET_GROUP STREQUAL debug)
+    ##Do it for the float code first--------------------------------------------
+    ##Generate library from the C
+    add_library(wodenC_float SHARED ${CSOURCES})
+    ##Compile C code with all warnings and optimise
+    target_compile_options(wodenC_float PRIVATE -O3 -g -Wall)
+
+    ##Generate library for the CUDA code
+    add_library(wodenCUDA_float SHARED ${CUDASOURCES})
+    ##Compile CUDA code with all warnings
+    target_compile_options(wodenCUDA_float PRIVATE -G --compiler-options -g)
+    ## For CMake versions > 3.18, the arch flag settings are handled by
+    ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
+    ## replace the CUDA_FLAG lines above with something like
+    set_property(TARGET wodenCUDA_float PROPERTY CUDA_ARCHITECTURES OFF)
+
+    ##make the final WODEN executable, linking the libraries
+    add_executable(woden_float src/woden.c)
+    target_link_libraries(woden_float PUBLIC wodenC_float
+                          wodenCUDA_float ${CC_LINKLIBS})
+    target_compile_options(woden_float PRIVATE -O3 -g -Wall)
+
+    ##Now do it for double by adding compilation switch-------------------------
+    ##Generate library from the C
+    add_library(wodenC_double SHARED ${CSOURCES})
+    ##Compile C code with all warnings and optimise
+    target_compile_options(wodenC_double PRIVATE -O3 -g -Wall -DDOUBLE_PRECISION)
+
+    ##Generate library for the CUDA code
+    add_library(wodenCUDA_double SHARED ${CUDASOURCES})
+    ##Compile CUDA code with all warnings
+    target_compile_options(wodenCUDA_double PRIVATE -DDOUBLE_PRECISION
+                                                       -G --compiler-options -g)
+    ## For CMake versions > 3.18, the arch flag settings are handled by
+    ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
+    ## replace the CUDA_FLAG lines above with something like
+    set_property(TARGET wodenCUDA_double PROPERTY CUDA_ARCHITECTURES OFF)
+
+    ##Make the double precision version
+    ##make the final WODEN executable, linking the libraries
+    add_executable(woden_double src/woden.c)
+    target_link_libraries(woden_double PUBLIC wodenC_double
+                          wodenCUDA_double ${CC_LINKLIBS})
+    target_compile_options(woden_double PRIVATE -O3 -g -Wall -DDOUBLE_PRECISION)
 
     ##Macro to search for a filename in the `src` dir and make a symlink
     ##into the build dir

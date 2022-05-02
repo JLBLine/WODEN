@@ -559,63 +559,51 @@ the FLOAT code, and 1e-15 for the DOUBLE code.
 
 test_extrap_stokes.c
 ************************************
-This calls ``source_components::test_kern_extrap_stokes``, which
-calls ``source_components::kern_extrap_stokes``, which handles extrapolating
-a reference flux density to a number of frequencies, given a spectral index.
+This calls ``source_components::test_extrap_stokes_all_models``, which
+calls ``source_components::extrapolate_Stokes``, which handles extrapolating
+a the flux density of component to a given set of frequencies. This covers
+all types of flux behaviours (currently POWER_LAW, CURVED_POWER_LAW,
+and LIST types).
 
-Five test cases are used, with the following parameters:
+Six components of each type of flux behaviour are tested, each with randomly
+assigned values (these values are generated using the script
+``WODEN/cmake_testing/source_components/write_test_extrap_stokes_header.py``).
+For the LIST flux types, each list has a random number of entries, as well
+as each list entry begin given a random flux.
+The values are copied into a ``source_t`` struct, passed through the ``CUDA``
+code, and extrapolated to 25 frequencies between 50 and 300 MHz. The outputs
+are tested against equivalent ``C`` functions in double precision. The
+``woden_double`` code is tested to an absolute precision of 1e-12 Jy, with the
+``woden_float`` a 1e-4 Jy precision (note some of the extrapolated fluxes
+are of order 1e3).
 
-.. list-table::
-   :widths: 25 25 25 25 25 25
-   :header-rows: 1
+To visualise the results, run ``WODEN/cmake_testing/source_components/test_extrap_stokes.py``,
+which will produce the following plots. The plots only show the Stokes I outputs,
+but all Stokes values are tested against the ``C`` test code.
 
-   * - Reference Freq (MHz)
-     - Spectral Index
-     - Stokes *I*
-     - Stokes *Q*
-     - Stokes *U*
-     - Stokes *V*
-   * - 50
-     - 0.0
-     - 1.0
-     - 0.0
-     - 0.0
-     - 0.0
-   * - 100
-     - -0.8
-     - 1.0
-     - 0.0
-     - 0.0
-     - 0.0
-   * - 150
-     - 0.5
-     - 1.0
-     - 1.0
-     - 0.0
-     - 0.0
-   * - 200
-     - -0.5
-     - 1.0
-     - 0.0
-     - 1.0
-     - 0.0
-   * - 250
-     - 1.0
-     - 1.0
-     - 0.0
-     - 0.0
-     - 1.0
+For the POWER_LAW type components:
 
-Each of these test cases is extrapolated to 50, 100, 150, 200, 250 MHz. The
-``CUDA`` outputs are testing as being equal to
+.. image:: test_extrap_power_laws.png
+  :width: 800
 
-.. math::
+For the CURVED_POWER_LAW type components (where I have set the curve of the peak
+to be within 100 to 200 MHz so they should all curve in these plots):
 
-   S_{\mathrm{extrap}} = S_{\mathrm{ref}} \left( \frac{\nu_{\mathrm{ref}}}{\nu_{\mathrm{extrap}}} \right)^{\alpha}
+.. image:: test_extrap_curve_power_laws.png
+  :width: 800
 
-as calculated in 64 bit precision in ``C`` code in ``test_extrap_stokes.c``.
-The FLOAT complied code must match the ``C`` estimate to within an absolute
-tolerance of 1e-7, and a tolerance of 1e-15 for the DOUBLE compiled code.
+Finally, for the LIST type components. Note here, the black line is the information
+contained in the sky model, the little orange crosses are a ``python``
+implementation of the linear interpolation between points to double check
+everything, and the cyan squares are what is output by the ``CUDA`` code:
+
+.. image:: test_extrap_list_laws.png
+  :width: 800
+
+.. this is commented out
+..   .. math::
+
+      S_{\mathrm{extrap}} = S_{\mathrm{ref}} \left( \frac{\nu_{\mathrm{ref}}}{\nu_{\mathrm{extrap}}} \right)^{\alpha}
 
 test_get_beam_gains.c
 ************************************
@@ -701,6 +689,13 @@ described in :ref:`test_gaussian_beam.c`.
      - 1e-7
      - 1e-12
 
+Of the nine components tested, 3 are given POWER_LAW, 3 are CURVED_POWER_LAW, and
+3 are LIST flux styles. Similarly to ``test_extrap_stokes.c``, each component
+is given a random set of parameters, and compared to a C version of the functions
+to extrapolate the Stokes parameters. The ``woden_double`` code is tested to
+an absolute precision of 1e-12 Jy, with the ``woden_float`` a 1e-4 Jy precision
+(note some of the extrapolated fluxes are of order 1e3).
+
 test_kern_calc_visi_point.c
 ************************************
 This calls ``source_components::test_kern_calc_visi_all``, which in turn
@@ -726,7 +721,7 @@ two time steps to make sure the resultant visibilities end up in the right order
 Overall, I run three groups of tests here:
 
  - Keeping the beam gains and flux densities constant at 1.0
- - Varying the flux densities with frequency and keeping the beam gains constant at 1.0. When varying the flux, I set the Stokes I flux of each component to it's index + 1, so we end up with a range of fluxes between 1 and 25. I set the spectral index to -0.8.
+ - Varying the flux densities with frequency and keeping the beam gains constant at 1.0. I set all components to just be Stokes I, as the other polarisations are tested elsewhere. There are 10 POWER_LAW, 10 CURVED_POWER_LAW, and 5 LIST type components, each with randomly generated values. Equivalent C code is used to calculate the expected fluxes
  - Varying the beam gains with frequency and keeping the flux densities constant at 1.0. As the beam can vary with time, frequency, and direction on sky, I assign each beam gain a different value. As *num_freqs*num_times*num_components* = 375, I set the real of all beam gains to :math:`\frac{1}{375}(B_{\mathrm{ind}} + 1)`, where :math:`B_{\mathrm{ind}}` is the beam value index. This way we get a unique value between 0 and 1 for all beam gains, allowing us to test time/frequency is handled correctly by the function under test
 
 Each set of tests is run for all six primary beam types, so a total of 18 tests
@@ -757,7 +752,7 @@ input GAUSSIAN components, for a total of 24 tests. Again, I have ``C`` code to
 test the ``CUDA`` code against. I assert the ``CUDA`` code output must match the
 ``C`` code output to within an fractional tolerance of 7e-5 to the ``C`` value,
 for both the real and imaginary parts. For the DOUBLE code, the fractional
-tolerance is 1e-13.
+tolerance is 1e-12.
 
 test_kern_calc_visi_shape.c
 ************************************

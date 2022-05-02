@@ -2,7 +2,7 @@
 
 mkdir -p data
 
-for beam in "MWA_analy" "None" "Gaussian"
+for beam in "None" "MWA_analy" "Gaussian"
 do
 
   run_woden.py \

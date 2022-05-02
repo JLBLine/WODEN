@@ -339,11 +339,11 @@ when `beam_settings.beamtype == GAUSS_BEAM`. They should be also be
 @param[in,out] d_component_beam_gains Pointer to `d_beam_gains_t` struct in which to malloc and store results on the device in
 
 */
-extern "C" void source_component_common(int num_components,
-           int num_shape_coeffs, components_t *components,
-           double *d_freqs, woden_settings_t *woden_settings,
-           beam_settings_t *beam_settings, e_component_type comptype,
-           components_t *d_components, d_beam_gains_t *d_component_beam_gains);
+extern "C" void source_component_common(woden_settings_t *woden_settings,
+           beam_settings_t *beam_settings, double *d_freqs,
+           source_t *chunked_source, source_t *d_chunked_source,
+           d_beam_gains_t *d_component_beam_gains,
+           e_component_type comptype);
 
 /**
 @brief Kernel to calculate the visibility response to a number `num_components`
@@ -416,8 +416,7 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
            user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
            user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
-           user_precision_t *d_allsteps_wavelengths, int num_components,
-           int num_baselines, int num_freqs, int num_visis,
+           int num_components, int num_baselines, int num_freqs, int num_visis,
            int num_times, e_beamtype beamtype, e_component_type comptype);
 
 /**
@@ -537,7 +536,7 @@ freed
  SHAPELET
 
 */
-extern "C" void free_d_components(components_t d_components,
+extern "C" void free_d_components(source_t *d_chunked_source,
                                   e_component_type comptype);
 
 
@@ -550,7 +549,33 @@ to know the `beamtype` to free the correct locations.
 
 @param[in,out] d_beam_gains A `d_beam_gains_t` with device memory to be
 freed
-@param[in] comptype An `e_beamtype` describing the primary beam type
+@param[in] beamtype An `e_beamtype` describing the primary beam type
 
 */
 extern "C" void free_beam_gains(d_beam_gains_t d_beam_gains, e_beamtype beamtype);
+
+
+/**
+@brief Copies a populated `source_t` from host to device.
+
+@details Depending on what is in chunked_source (e.g. POINT, GAUSSIAN, SHAPELET,
+POWER_LAW, CURVED_POWER_LAW, LIST) type information, only what needs to be
+copied across to the GPU is (no empty pointers arrays are copied across)
+
+@param[in,out] *chunked_source A populated `source_t` struct
+*/
+source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
+
+/**
+@brief Free device memory of extrapolated Stokes arrays from `d_components`
+
+@details It does this:
+
+   cudaErrorCheckCall( cudaFree( d_components->extrap_stokesI ) );
+   cudaErrorCheckCall( cudaFree( d_components->extrap_stokesQ ) );
+   cudaErrorCheckCall( cudaFree( d_components->extrap_stokesU ) );
+   cudaErrorCheckCall( cudaFree( d_components->extrap_stokesV ) );
+
+@param[in,out] *d_components A populated `components_t` struct
+*/
+void free_extrapolated_flux_arrays(components_t *d_components);

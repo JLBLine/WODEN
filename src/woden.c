@@ -79,10 +79,10 @@ int main(int argc, char **argv) {
 
   //Read in the source catalogue
   source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );
-  status = read_source_catalogue(woden_settings->cat_filename, raw_srccat);
+  status = read_skymodel(woden_settings->cat_filename, raw_srccat);
 
   if (status == 1) {
-    printf("read_source_catalogue failed. Exiting now\n");
+    printf("read_skymodel failed. Exiting now\n");
     exit(1);
   }
 

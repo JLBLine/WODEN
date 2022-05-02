@@ -22,6 +22,7 @@ sky model containing specific COMPONENT types.
 
 void test_fill_chunk_src_with_pointgauss(int chunking_size,
                                          int num_points, int num_gauss,
+                                         int num_list_values,
                                          int num_time_steps,
                                          int num_baselines, int num_freqs) {
 
@@ -29,48 +30,60 @@ void test_fill_chunk_src_with_pointgauss(int chunking_size,
   int num_shapes = 0;
   int num_coeff_per_shape = 0;
   source_t *cropped_src = make_sky_model(num_points, num_gauss, num_shapes,
-                                            num_coeff_per_shape, num_time_steps);
-
-  //Set some dummy baseline, frequency simulation settings
-  int num_visis = num_baselines * num_freqs * num_time_steps;
+                                        num_coeff_per_shape, num_list_values,
+                                        num_time_steps);
 
   woden_settings_t *woden_settings = malloc(sizeof(woden_settings_t));
   woden_settings->num_freqs = num_freqs;
   woden_settings->num_time_steps = num_time_steps;
 
-  //
-  int num_comps_to_chunk = cropped_src->n_points + cropped_src->n_gauss;
   int comps_per_chunk = (int)floorf((float)chunking_size / (float)(num_baselines * num_freqs * num_time_steps));
-  int num_chunks = (int)ceilf((float)num_comps_to_chunk / (float)comps_per_chunk);
-  //
-  printf("Num visis %d\n",num_visis );
-  printf("Chunking size %d\n",chunking_size );
-  printf("Comps per chunk %d\n", comps_per_chunk );
-  printf("Num chunks %d\n", num_chunks );
-  // printf("Is num_visis*num_comps %d < num_visis*comps_per_chunk*num_chunks %d\n",
-  //        num_visis*num_comps_to_chunk, num_visis*comps_per_chunk*num_chunks);
+
+  int num_point_chunks = (int)ceilf((float)(NUM_FLUX_TYPES*num_points) / (float)comps_per_chunk);
+  int num_gauss_chunks = (int)ceilf((float)(NUM_FLUX_TYPES*num_gauss) / (float)comps_per_chunk);
 
   source_t *temp_cropped_src = malloc(sizeof(source_t));
   //
   //Counters to see how far many point/gauss have already been assigned
   //to previous chunks
-  int point_accum = 0;
-  int gauss_accum = 0;
+  int point_comp_accum = 0;
+  int point_power_accum = 0;
+  int point_curve_accum = 0;
+  int point_list_accum = 0;
 
-  for (int chunk_ind = 0; chunk_ind < num_chunks; chunk_ind++) {
+  for (int chunk_ind = 0; chunk_ind < num_point_chunks; chunk_ind++) {
 
     fill_chunk_src_with_pointgauss(temp_cropped_src, cropped_src, chunk_ind,
-                                   comps_per_chunk, woden_settings);
+                                   comps_per_chunk, woden_settings, POINT);
 
-    //Check outputs are as expected
-    check_pointgauss_chunking(chunk_ind, comps_per_chunk,
-                              num_time_steps,
-                              &point_accum, &gauss_accum,
+    check_pointgauss_chunking(chunk_ind, comps_per_chunk, num_point_chunks,
+                              num_list_values,
+                              &point_comp_accum, &point_power_accum,
+                              &point_curve_accum, &point_list_accum,
+                              POINT,
                               cropped_src,
                               temp_cropped_src);
+  }
 
-  } //END iteration over all chunks
-  free_sky_model(cropped_src);
+  int gauss_comp_accum = 0;
+  int gauss_power_accum = 0;
+  int gauss_curve_accum = 0;
+  int gauss_list_accum = 0;
+  for (int chunk_ind = 0; chunk_ind < num_gauss_chunks; chunk_ind++) {
+
+    fill_chunk_src_with_pointgauss(temp_cropped_src, cropped_src, chunk_ind,
+                                   comps_per_chunk, woden_settings, GAUSSIAN);
+
+    check_pointgauss_chunking(chunk_ind, comps_per_chunk, num_point_chunks,
+                              num_list_values,
+                              &gauss_comp_accum, &gauss_power_accum,
+                              &gauss_curve_accum, &gauss_list_accum,
+                              GAUSSIAN,
+                              cropped_src,
+                              temp_cropped_src);
+  }
+
+  // free_sky_model(cropped_src);
 }
 
 
@@ -82,7 +95,9 @@ void test_fill_chunk_src_with_pointgauss_Point100_Gauss000_Chunk1000_Time004(voi
   int num_baselines = 5;
   int num_freqs = 2;
 
+  int num_list_values = 2;
   test_fill_chunk_src_with_pointgauss(chunking_size, num_points, num_gauss,
+                                      num_list_values,
                                       num_time_steps, num_baselines, num_freqs);
 }
 
@@ -94,8 +109,10 @@ void test_fill_chunk_src_with_pointgauss_Point000_Gauss100_Chunk1000_Time004(voi
   int num_baselines = 5;
   int num_freqs = 2;
 
+  int num_list_values = 3;
   test_fill_chunk_src_with_pointgauss(chunking_size, num_points, num_gauss,
-                                        num_time_steps, num_baselines, num_freqs);
+                                      num_list_values,
+                                      num_time_steps, num_baselines, num_freqs);
 }
 
 void test_fill_chunk_src_with_pointgauss_Point100_Gauss100_Chunk1000_Time004(void){
@@ -106,8 +123,10 @@ void test_fill_chunk_src_with_pointgauss_Point100_Gauss100_Chunk1000_Time004(voi
   int num_baselines = 5;
   int num_freqs = 2;
 
+  int num_list_values = 4;
   test_fill_chunk_src_with_pointgauss(chunking_size, num_points, num_gauss,
-                                        num_time_steps, num_baselines, num_freqs);
+                                      num_list_values,
+                                      num_time_steps, num_baselines, num_freqs);
 }
 
 void test_fill_chunk_src_with_pointgauss_Point100_Gauss000_Chunk1000_Time003(void){
@@ -118,8 +137,10 @@ void test_fill_chunk_src_with_pointgauss_Point100_Gauss000_Chunk1000_Time003(voi
   int num_baselines = 5;
   int num_freqs = 2;
 
+  int num_list_values = 5;
   test_fill_chunk_src_with_pointgauss(chunking_size, num_points, num_gauss,
-                                        num_time_steps, num_baselines, num_freqs);
+                                      num_list_values,
+                                      num_time_steps, num_baselines, num_freqs);
 }
 
 void test_fill_chunk_src_with_pointgauss_Point000_Gauss100_Chunk1000_Time003(void){
@@ -130,8 +151,10 @@ void test_fill_chunk_src_with_pointgauss_Point000_Gauss100_Chunk1000_Time003(voi
   int num_baselines = 5;
   int num_freqs = 2;
 
+  int num_list_values = 6;
   test_fill_chunk_src_with_pointgauss(chunking_size, num_points, num_gauss,
-                                        num_time_steps, num_baselines, num_freqs);
+                                      num_list_values,
+                                      num_time_steps, num_baselines, num_freqs);
 }
 
 void test_fill_chunk_src_with_pointgauss_Point100_Gauss100_Chunk1000_Time003(void){
@@ -142,8 +165,10 @@ void test_fill_chunk_src_with_pointgauss_Point100_Gauss100_Chunk1000_Time003(voi
   int num_baselines = 5;
   int num_freqs = 2;
 
+  int num_list_values = 5;
   test_fill_chunk_src_with_pointgauss(chunking_size, num_points, num_gauss,
-                                        num_time_steps, num_baselines, num_freqs);
+                                      num_list_values,
+                                      num_time_steps, num_baselines, num_freqs);
 }
 
 void test_fill_chunk_src_with_pointgauss_Point100_Gauss000_Chunk0173_Time005(void){
@@ -154,8 +179,10 @@ void test_fill_chunk_src_with_pointgauss_Point100_Gauss000_Chunk0173_Time005(voi
   int num_baselines = 5;
   int num_freqs = 2;
 
+  int num_list_values = 4;
   test_fill_chunk_src_with_pointgauss(chunking_size, num_points, num_gauss,
-                                        num_time_steps, num_baselines, num_freqs);
+                                      num_list_values,
+                                      num_time_steps, num_baselines, num_freqs);
 }
 
 void test_fill_chunk_src_with_pointgauss_Point000_Gauss100_Chunk0173_Time005(void){
@@ -166,8 +193,10 @@ void test_fill_chunk_src_with_pointgauss_Point000_Gauss100_Chunk0173_Time005(voi
   int num_baselines = 5;
   int num_freqs = 2;
 
+  int num_list_values = 3;
   test_fill_chunk_src_with_pointgauss(chunking_size, num_points, num_gauss,
-                                        num_time_steps, num_baselines, num_freqs);
+                                      num_list_values,
+                                      num_time_steps, num_baselines, num_freqs);
 }
 
 void test_fill_chunk_src_with_pointgauss_Point100_Gauss100_Chunk0173_Time005(void){
@@ -178,8 +207,10 @@ void test_fill_chunk_src_with_pointgauss_Point100_Gauss100_Chunk0173_Time005(voi
   int num_baselines = 5;
   int num_freqs = 2;
 
+  int num_list_values = 2;
   test_fill_chunk_src_with_pointgauss(chunking_size, num_points, num_gauss,
-                                        num_time_steps, num_baselines, num_freqs);
+                                      num_list_values,
+                                      num_time_steps, num_baselines, num_freqs);
 }
 
 void test_fill_chunk_src_with_pointgauss_Point10743_Gauss00000_Chunk4345_Time012(void){
@@ -190,8 +221,10 @@ void test_fill_chunk_src_with_pointgauss_Point10743_Gauss00000_Chunk4345_Time012
   int num_baselines = 5;
   int num_freqs = 2;
 
+  int num_list_values = 16;
   test_fill_chunk_src_with_pointgauss(chunking_size, num_points, num_gauss,
-                                        num_time_steps, num_baselines, num_freqs);
+                                      num_list_values,
+                                      num_time_steps, num_baselines, num_freqs);
 }
 
 void test_fill_chunk_src_with_pointgauss_Point00000_Gauss16789_Chunk4345_Time012(void){
@@ -202,8 +235,10 @@ void test_fill_chunk_src_with_pointgauss_Point00000_Gauss16789_Chunk4345_Time012
   int num_baselines = 5;
   int num_freqs = 2;
 
+  int num_list_values = 20;
   test_fill_chunk_src_with_pointgauss(chunking_size, num_points, num_gauss,
-                                        num_time_steps, num_baselines, num_freqs);
+                                      num_list_values,
+                                      num_time_steps, num_baselines, num_freqs);
 }
 
 void test_fill_chunk_src_with_pointgauss_Point10743_Gauss16789_Chunk4345_Time012(void){
@@ -214,8 +249,10 @@ void test_fill_chunk_src_with_pointgauss_Point10743_Gauss16789_Chunk4345_Time012
   int num_baselines = 5;
   int num_freqs = 2;
 
+  int num_list_values = 10;
   test_fill_chunk_src_with_pointgauss(chunking_size, num_points, num_gauss,
-                                        num_time_steps, num_baselines, num_freqs);
+                                      num_list_values,
+                                      num_time_steps, num_baselines, num_freqs);
 }
 
 //
@@ -227,7 +264,9 @@ void test_fill_chunk_src_with_pointgauss_Point4544_Gauss1736_Chunk1e8_Time014(vo
   int num_baselines = 8128;
   int num_freqs = 16;
 
+  int num_list_values = 12;
   test_fill_chunk_src_with_pointgauss(chunking_size, num_points, num_gauss,
+                                      num_list_values,
                                       num_time_steps, num_baselines, num_freqs);
 }
 

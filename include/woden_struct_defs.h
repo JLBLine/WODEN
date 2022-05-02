@@ -6,10 +6,11 @@
 #include "woden_precision_defs.h"
 #include <mwa_hyperbeam.h>
 
+//Different
 typedef enum {POINT=0, /*!< Point source type component */
-                     GAUSSIAN, /*!< Gaussian type component */
-                     SHAPELET, /*!< Shapelet type component */
-                   }e_component_type;
+              GAUSSIAN, /*!< Gaussian type component */
+              SHAPELET, /*!< Shapelet type component */
+              }e_component_type;
 
 typedef enum {NO_BEAM, /*!< Do not use a primary beam in the simulation */
               GAUSS_BEAM, /*!< Use a analytic Gaussian primary beam */
@@ -20,6 +21,11 @@ typedef enum {NO_BEAM, /*!< Do not use a primary beam in the simulation */
               interpolated*/
               MWA_ANALY, /*!< Use an analytic MWA tile primary beam */
               }e_beamtype;
+
+typedef enum {POWER_LAW=0, /*!< Power law flux model */
+              CURVED_POWER_LAW, /*!< Curved power law flux model  */
+              LIST, /*!< List of fluxes and freqs model */
+              }e_flux_type;
 
 /*!
 A struct to contain COMPONENT information for either multiple POINT, GAUSSIAN,
@@ -32,12 +38,46 @@ typedef struct _components_t {
   //Instrinsic to COMPONENT values
   double *ras; /*!< COMPONENT right ascensions (radians) */
   double *decs; /*!< COMPONENT declinations (radians) */
-  double *ref_freqs; /*!< COMPONENT Flux density reference frequencies (Hz) */
-  user_precision_t *ref_stokesI; /*!< COMPONENT Stokes I reference flux density (Jy) */
-  user_precision_t *ref_stokesQ; /*!< COMPONENT Stokes Q reference flux density (Jy) */
-  user_precision_t *ref_stokesU; /*!< COMPONENT Stokes U reference flux density (Jy) */
-  user_precision_t *ref_stokesV; /*!< COMPONENT Stokes V reference flux density (Jy) */
-  user_precision_t *SIs; /*!<  COMPONENT spectral indexes */
+
+  //power law params
+  double *power_ref_freqs; /*!< COMPONENT Flux density reference frequencies (Hz) */
+  user_precision_t *power_ref_stokesI; /*!< COMPONENT Stokes I reference flux density (Jy) */
+  user_precision_t *power_ref_stokesQ; /*!< COMPONENT Stokes Q reference flux density (Jy) */
+  user_precision_t *power_ref_stokesU; /*!< COMPONENT Stokes U reference flux density (Jy) */
+  user_precision_t *power_ref_stokesV; /*!< COMPONENT Stokes V reference flux density (Jy) */
+  user_precision_t *power_SIs; /*!<  COMPONENT spectral indexes */
+
+  // curved power law params
+  double *curve_ref_freqs; /*!< COMPONENT Flux density reference frequencies (Hz) */
+  user_precision_t *curve_ref_stokesI; /*!< COMPONENT Stokes I reference flux density (Jy) */
+  user_precision_t *curve_ref_stokesQ; /*!< COMPONENT Stokes Q reference flux density (Jy) */
+  user_precision_t *curve_ref_stokesU; /*!< COMPONENT Stokes U reference flux density (Jy) */
+  user_precision_t *curve_ref_stokesV; /*!< COMPONENT Stokes V reference flux density (Jy) */
+  user_precision_t *curve_SIs; /*!<  COMPONENT spectral indexes */
+  user_precision_t *curve_qs; /*!<  COMPONENT curvature */
+
+  int *power_comp_inds; /*!< The indexes of all power-law models w.r.t ra,dec */
+  int *curve_comp_inds; /*!< The indexes of all curved power-law models w.r.t ra,dec */
+  int *list_comp_inds; /*!< The indexes of all list models w.r.t ra,dec */
+
+  //list flux params
+  double *list_freqs; /*!< COMPONENT Flux density references frequencies (Hz) */
+  user_precision_t *list_stokesI; /*!< COMPONENT Stokes I list flux density (Jy) */
+  user_precision_t *list_stokesQ; /*!< COMPONENT Stokes Q list flux density (Jy) */
+  user_precision_t *list_stokesU; /*!< COMPONENT Stokes U list flux density (Jy) */
+  user_precision_t *list_stokesV; /*!< COMPONENT Stokes V list flux density (Jy) */
+  int *num_list_values; /*!< How many freq/flux values are in each COMPONENT list*/
+  int *list_start_indexes; /*!< How many freq/flux values are in each COMPONENT list*/
+
+  int total_num_flux_entires; /*!< The total number of freq/flux values are in all lists combined*/
+
+  //something to store extrapolated output fluxes in
+  user_precision_t *extrap_stokesI; /*!< extrapolated COMPONENT Stokes I flux densities (Jy) */
+  user_precision_t *extrap_stokesQ; /*!< extrapolated COMPONENT Stokes I flux densities (Jy) */
+  user_precision_t *extrap_stokesU; /*!< extrapolated COMPONENT Stokes I flux densities (Jy) */
+  user_precision_t *extrap_stokesV; /*!< extrapolated COMPONENT Stokes I flux densities (Jy) */
+
+  //SHAPELET / GAUSSIAN params
   user_precision_t *shape_coeffs; /*!< Scaling coefficients for SHAPELET basis functions */
   user_precision_t *n1s; /*!< 1st basis function order for SHAPELET basis functions */
   user_precision_t *n2s; /*!< 2nd basis function order for SHAPELET basis functions */
@@ -79,8 +119,6 @@ typedef struct _components_t {
   double *ms; /*!< Device memory m cosine direction coords for these COMPONENTs*/
   double *ns; /*!< Device memory n cosine direction coords for these COMPONENTs*/
 
-  int HELP;
-
 } components_t;
 
 
@@ -92,9 +130,21 @@ typedef struct _source_t {
   //General source info
   char name[32]; /*!< Source name */
   int n_comps; /*!< Total number of COMPONENTs in source  */
+
   int n_points; /*!< Number of POINT source COMPONENTs  */
+  int n_point_lists; /*!< Number of POINTs with LIST type flux */
+  int n_point_powers; /*!< Number of POINTs with POWER_LAW type flux */
+  int n_point_curves; /*!< Number of POINTs with CURVED_POWER_LAW type flux */
+
   int n_gauss; /*!< Number of GAUSSIAN source COMPONENTs */
+  int n_gauss_lists; /*!< Number of GAUSSIANs with LIST type flux */
+  int n_gauss_powers; /*!< Number of GAUSSIANs with POWER_LAW type flux */
+  int n_gauss_curves; /*!< Number of GAUSSIANs with CURVED_POWER_LAW type flux */
+
   int n_shapes; /*!< Number of SHAPELET source COMPONENTs */
+  int n_shape_lists; /*!< Number of SHAPELETs with LIST type flux */
+  int n_shape_powers; /*!< Number of SHAPELETs with POWER_LAW type flux */
+  int n_shape_curves; /*!< Number of SHAPELETs with CURVED_POWER_LAW type flux */
   int n_shape_coeffs; /*!< Total number of SHAPELET coefficients */
 
   components_t point_components; /*!< `components_t` holding component
@@ -145,14 +195,10 @@ typedef struct _beam_settings_t {
     struct FEEBeamCUDA *cuda_fee_beam; /*!< Single initialised hyperbeam device model for desired pointing */
     struct FEEBeam *fee_beam; /*!< Single initialised hyperbeam host model for desired pointing */
 
-    // //Used when running at interpolated frequency resolution
-    // struct FEEBeamCUDA *cuda_fee_beams; /*!< Array of initialised hyperbeam device model for desired pointing */
-    // struct FEEBeam *fee_beams; /*!< Array of initialised hyperbeam host model for desired pointing */
+    char hyper_error_str[100]; /*!< Char array to hold error messages out of hyperbeam */
 
-    char hyper_error_str[100];
-
-    double base_middle_freq;
-    uint32_t *hyper_delays;
+    double base_middle_freq; /*!< The frequency at the middle of the base coarse band */
+    uint32_t *hyper_delays; /*!< MWA FEE delays in a format that hyperbeam likes */
 
 
 } beam_settings_t;

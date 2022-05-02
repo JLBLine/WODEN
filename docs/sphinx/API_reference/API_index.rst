@@ -60,6 +60,8 @@ or ``double _Complex``.
   C_code/create_sky_model
   C_code/primary_beam
   C_code/print_help
+  C_code/read_text_skymodel
+  C_code/read_yaml_skymodel
   C_code/shapelet_basis
   C_code/visibility_set
   C_code/woden_precision_defs

@@ -1,0 +1,17 @@
+singlegauss_power:
+  - ra: 30.0
+    dec: -30.0
+    comp_type:
+      gaussian:
+        maj: 180.
+        min: 360.
+        pa: -10.
+    flux_type:
+      power_law:
+        si: -0.8
+        fd:
+          freq: 150000000.0
+          i: 2.0
+          q: 0.0
+          u: 0.0
+          v: 0.0

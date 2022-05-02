@@ -69,3 +69,7 @@ test_installation/absolute_accuracy/sky_models
 test_installation/absolute_accuracy/uvfits
 
 *ipynb_checkpoints/
+
+*__pycache__/
+*.ms
+

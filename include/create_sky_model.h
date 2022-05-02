@@ -1,65 +1,16 @@
 /*! \file
-  Methods to read in and crop a WODEN style sky model to everything above
-  the horizon.
+  Methods to read in and crop a sky model to everything above the horizon.
 
   @author J.L.B. Line
 */
+#pragma once
 #include "woden_struct_defs.h"
+#include "read_text_skymodel.h"
+#include "read_yaml_skymodel.h"
 
 //Somthing WEIRD is up with the way I'm using the documentation package
 //'breathe', so having to include the definition value in the documentation
 //string to get values to appear (sigh)
-
-/**"SOURCE" - Line beginning / containing SOURCE information (includes number of COMPONENTS) */
-#define SRC_KEY         "SOURCE"
-/**"ENDSOURCE" - Line ending SOURCE information */
-#define SRC_END         "ENDSOURCE"
-/**"COMPONENT" - Line beginning / containing COMPONENT information */
-#define COMP_KEY        "COMPONENT"
-/**"ENDCOMPONENT" - Line ending COMPONENT information */
-#define COMP_END        "ENDCOMPONENT"
-/**"FREQ" (Deprecated) - Lines contains FREQ information */
-#define FREQ_KEY        "FREQ"
-/**"LINEAR" - Line contains simple exponential SED information */
-#define LINEAR_KEY      "LINEAR"
-/**"POINT" - Line contains POINT RA, Dec information */
-#define POINT_KEY       "POINT"
-/**"GAUSSIAN" - Line contains GAUSSIAN RA, Dec information */
-#define GAUSSIAN_KEY    "GAUSSIAN"
-/**"GPARAMS" - Line contains GAUSSIAN major, minor, PA information */
-#define GPARAMS_KEY     "GPARAMS"
-/**"SHAPELET" - Line containing SHAPELET RA, Dec information */
-#define SHAPELET_KEY    "SHAPELET"
-/**"SPARAMS" - Line contains SHAPELET beta1 (major), beta2 (minor), PA information  */
-#define SPARAMS_KEY     "SPARAMS"
-/**"SCOEFF" - Line contains SHAPELET basis numbers n1, n2m coefficient information */
-#define SCOEFF_KEY      "SCOEFF"
-
-/**
- @brief Takes a path to WODEN-style sky model and populates a
- `source_catalogue_t` struct with the contents of `filename`.
-
- @details The WODEN sourcelist at `filename` should contain a number of
- sources, with the basic structure:
-
-            SOURCE source_name P 1 G 0 S 0 0
-            COMPONENT POINT 4.0 -27.0
-            LINEAR 1.8e+08 10.0 0 0 0 -0.8
-            ENDCOMPONENT
-            ENDSOURCE
-
-For a more detailed explanation of the sky model, please see the
-documentation at @todo Link the online documentation when there is a link.
-
-Note that `srccat` should be memory intialised, so declare with something
-like `source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );`
-before feeding into this function.
-
-@param[in] *srccat Struct to contain sky model information.
-@param[in] *filename Path to a WODEN-style sky model
-@return Integer where 0 if read was successful, 1 if failed
- */
-int read_source_catalogue(const char *filename, source_catalogue_t *srccat);
 
 /**
 enum to describe if we are cropping the sky model by entire SOURCEs, or by
@@ -75,6 +26,62 @@ enum to describe if a SOURCE/COMPONENT is above or below the horizon
 typedef enum {BELOW, ///< above the horizon
               ABOVE, ///< below the horizon
               }e_horizon;
+
+/**
+@brief Given an input char array `str`, check if the string ends with a given
+sequence in `suffix`. Good for checking if a filename ends in '.txt' etc.
+
+@details Copied straight up from:
+https://stackoverflow.com/questions/744766/how-to-compare-ends-of-strings-in-c
+
+@param[in] str String to be tested
+@param[in] suffix String to test whether the end of `str` matches or not
+
+@returns 1 if `str` ends in `suffix`, 0 otherwise
+*/
+int EndsWith(const char *str, const char *suffix);
+
+/**
+@brief Checks whether the string in `str` ends in ".txt"
+
+@details Calls create_sky_model::EndsWith
+
+@param[in] str String to be tested
+
+@returns 1 if `str` ends in `suffix`, 0 otherwise
+*/
+int EndsWithTxt(const char *str);
+
+/**
+@brief Checks whether the string in `str` ends in ".yaml"
+
+@details Calls create_sky_model::EndsWith
+
+@param[in] str String to be tested
+
+@returns 1 if `str` ends in `suffix`, 0 otherwise
+*/
+int EndsWithYaml(const char *str);
+
+/**
+@brief Reads in the skymodel file located at path `srclist` and populates
+`raw_srccat` with the results
+
+@details Checks whether the file ends in '.txt' or `.yaml`. If a text file
+assumes the file is a WODEN-style format. If '.yaml', assumes file is a
+`hyperdrive` style sky model. If `srclist` ends in neither `.txt` or `.yaml`,
+returns a 1 and doesn't attempt to read in the file.
+
+Calls either `read_text_skymodel::read_text_skymodel` or
+`read_yaml_skymodel::read_yaml_skymodel` as appropriate.
+
+@param[in] srclist Path to sky model to be read in
+@param[in] *raw_srccat Pointer to a `source_catalogue_t` struct to hold outputs
+
+@returns 0 if sky model read in successfully, 1 if else
+*/
+int read_skymodel(const char *srclist, source_catalogue_t *raw_srccat);
+
 
 /**
 @brief Convert Right Ascension, Declination into Azimuth and Zenith Angle
@@ -95,47 +102,32 @@ void convert_radec2azza(double ra, double dec, double lst, double latitude,
 
 
 /**
-@brief Checks if a zenith angle for a COMPONENT is above the horizon, and
-returns the correct indexes of COMPONENTS to retain if so
+@brief Calculates the az/za for all ra,dec stored in `components->ra`,
+`components->dec` for the first lst in `lsts`. If a single COMPONENT is
+below the horizon, update `all_comps_above_horizon` to BELOW, so we know
+to crop this SOURCE when sky_crop_type == SOURCE.
 
-@details Depending on what type of sky cropping we are doing (see
-`crop_sky_model` function below) as specified by `sky_crop_type`. If cropping
-by SOURCE, and COMPONENT below horizon, sets `all_comps_above_horizon = BELOW`.
-If cropping by COMPONENT, and above horizon, update the number of
-retained COMPONENTs `num_comp_retained`
+@details Calculated az/za are stored in `components->az`, `components->za`.
 
-If the component is a SHAPELET, we also have to update `num_shape_coeff_retained`
-this is how many shapelet coefficients are retained, as one SHAPELET COMPONENT
-(with one az,za) can have multiple shapelet coefficients. The array of ints
-`shape_param_indexes` maps the shapelet coefficients to each SHAPELET COMPONENT,
-so the function uses the int `shape` to check which coefficients match this
-particular COMPONENT by looping through `shape_param_indexes`.
-
-@param[in] za Zenith Angle (radians)
-@param[in] sky_crop_type `e_sky_crop` for SOURCE or COMPONENT cropping
+@param[in] sky_crop_type `e_sky_crop` either SOURCE or COMPONENT, sets how we are cropping the sky
+@param[in] *components Pointer to a populated `components_t`, containing information to calculate az/za for
+@param[in] num_comps Number of components in `components`
+@param[in] lsts All LSTs to be used in simulation
+@param[in] latitude latitude of array to use in az/za calculation
 @param[in,out] *all_comps_above_horizon Pointer to `e_horizon` type for whether
 all COMPONENTs of the SOURCE this COMPONENT belongs to are above the horizon
-@param[in,out] *num_comp_retained Number of COMPONENTs retained for this SOURCE
-@param[in,out] *num_shape_coeff_retained Number of SHAPELET coefficients
-retained for this SOURCE
-@param[in] num_shape_coeff_component The total number of shapelet coefficients
-in this SOURCE
-@param[in] *shape_param_indexes Map of which shapelet coefficients match this
-SHAPELET COMPONENT
-@param[in] shape Index of this SHAPELET COMPONENT within this SOURCE
 */
-void horizon_test(double za, e_sky_crop sky_crop_type,
-     e_horizon * all_comps_above_horizon, int * num_comp_retained,
-     int * num_shape_coeff_retained, int num_shape_coeff_component,
-     user_precision_t *shape_param_indexes, int shape);
+void horizon_test(e_sky_crop sky_crop_type, components_t * components,
+     int num_comps, double *lsts, double latitude,
+     e_horizon * all_comps_above_horizon);
 
 /**
-@brief Takes the WODEN sky model `raw_srccat`, and crops either all SOURCEs or
+@brief Takes sky model `raw_srccat`, and crops either all SOURCEs or
 COMPONENTs that are below the horizon (at the initial time step),
 returning the cropped sky model. Also calculates $az,za$ for all time steps
 for the retained COMPONENTs.
 
-@details A WODEN sky model can be made of multiple SOURCEs, each of which can
+@details The sky model can be made of multiple SOURCEs, each of which can
 have any number of COMPONENTS. We can either crop an entire SOURCE if below
 horizon, or retain all COMPONENTs that are above the horizon. Say if you put
 an all-sky diffuse map into one SOURCE, you should crop by COMPONENT, as some
@@ -143,8 +135,9 @@ part of the SOURCE will always be below the horizon.
 
 A complicating factor to the cropping is that each SHAPELET COMPONENT has any
 number of associated shapelet coefficients, which must be mapped correctly in
-the output cropped sky model `cropped_src`. The function `horizon_test` is
-used to do this mapping.
+the output cropped sky model `cropped_src`. Furthermore, LIST style flux
+density catalogue entries can have any length, so logic must be done when cropping
+to grab the correct information from the correct parts of certain arrays.
 
 @param[in] *raw_srccat Pointer to a populated `source_catalogue_t` struct of all input
 sky model parameters
@@ -164,3 +157,31 @@ shorter simulations.
 */
 source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
               double latitude, int num_time_steps, e_sky_crop sky_crop_type);
+
+
+/**
+@brief Given a pointer to a `source_t` struct, set all the int used
+for counting to zero, and arrays for storing sky model to NULL.
+
+@details This gets the model ready to have a number of `realloc`s performed
+to store however much information is in the sky model
+
+@param[in] *source Pointer to `source_t` struct
+
+*/
+void source_zero_counters_and_null_components(source_t *source);
+
+
+/**
+@brief Given a pointer to a `components` struct, set all arrays for
+storing sky model to NULL.
+
+@details
+
+@param[in] *components Pointer to `components_t` struct
+
+*/
+void null_component_sky_model_arrays(components_t * components);
+
+
+// void free_source_catalogue(source_catalogue_t *source_catalogue);

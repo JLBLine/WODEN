@@ -777,7 +777,7 @@ extern "C" void run_hyperbeam_cuda(int num_components,
   //In the future, different tiles can have different beams, so something like
   // threads.x = 32;
   // threads.y = 2;
-  // grid.x = (int)ceil( (float)num_tiles / (float)threads.y );
+  // grid.y = (int)ceil( (float)num_tiles / (float)threads.y );
 
 
   threads.x = 64;

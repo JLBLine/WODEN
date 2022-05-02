@@ -13,23 +13,25 @@
 #include "primary_beam_cuda.h"
 #include "woden_precision_defs.h"
 
+#include "chunk_sky_model.h"
+
 __device__ void extrap_stokes(user_precision_t *d_allsteps_wavelengths,
-           double *d_ref_freqs,
-           user_precision_t *d_ref_stokesI, user_precision_t *d_ref_stokesQ,
-           user_precision_t *d_ref_stokesU, user_precision_t *d_ref_stokesV,
-           user_precision_t *d_SIs, int iComponent, int iBaseline,
+           double *d_power_ref_freqs,
+           user_precision_t *d_power_ref_stokesI, user_precision_t *d_power_ref_stokesQ,
+           user_precision_t *d_power_ref_stokesU, user_precision_t *d_power_ref_stokesV,
+           user_precision_t *d_power_SIs, int iComponent, int iBaseline,
            user_precision_t * flux_I, user_precision_t * flux_Q,
            user_precision_t * flux_U, user_precision_t * flux_V){
 
   double d_freq = VELC / d_allsteps_wavelengths[iBaseline];
-  double d_ref_freq = d_ref_freqs[iComponent];
+  double d_ref_freq = d_power_ref_freqs[iComponent];
 
-  user_precision_t flux_ratio = pow(d_freq / d_ref_freq, d_SIs[iComponent]);
+  user_precision_t flux_ratio = pow(d_freq / d_ref_freq, d_power_SIs[iComponent]);
 
-  * flux_I = d_ref_stokesI[iComponent] * flux_ratio;
-  * flux_Q = d_ref_stokesQ[iComponent] * flux_ratio;
-  * flux_U = d_ref_stokesU[iComponent] * flux_ratio;
-  * flux_V = d_ref_stokesV[iComponent] * flux_ratio;
+  * flux_I = d_power_ref_stokesI[iComponent] * flux_ratio;
+  * flux_Q = d_power_ref_stokesQ[iComponent] * flux_ratio;
+  * flux_U = d_power_ref_stokesU[iComponent] * flux_ratio;
+  * flux_V = d_power_ref_stokesV[iComponent] * flux_ratio;
 
 }
 
@@ -223,97 +225,431 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
     d_sum_visi_YY_real[iBaseline] += visi_YY.x;
     d_sum_visi_YY_imag[iBaseline] += visi_YY.y;
 
+
+
 }
 
-extern "C" void source_component_common(int num_components,
-           int num_shape_coeffs, components_t *components,
-           double *d_freqs, woden_settings_t *woden_settings,
-           beam_settings_t *beam_settings, e_component_type comptype,
-           components_t *d_components, d_beam_gains_t *d_component_beam_gains){
+//Allocate space for the extrapolated Stokes parameters
+void malloc_extrapolated_flux_arrays(components_t *d_components, int num_comps,
+                                     int num_freqs){
+  // printf("DEFO MALLOCing FLUX ARRAYS\n");
+  d_components->extrap_stokesI = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesI,
+                                   num_comps*num_freqs*sizeof(double) ));
+  d_components->extrap_stokesQ = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesQ,
+                                   num_comps*num_freqs*sizeof(double) ));
+  d_components->extrap_stokesU = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesU,
+                                   num_comps*num_freqs*sizeof(double) ));
+  d_components->extrap_stokesV = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesV,
+                                   num_comps*num_freqs*sizeof(double) ));
+}
 
-  // //Copy across many things from host to Device
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->ras,
-                      num_components*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_components->ras, components->ras,
-                      num_components*sizeof(double), cudaMemcpyHostToDevice ) );
+__device__ void extrap_stokes_power_law(components_t d_components,
+           double *d_extrap_freqs, int iFluxComp, int iFreq,
+           user_precision_t * flux_I, user_precision_t * flux_Q,
+           user_precision_t * flux_U, user_precision_t * flux_V){
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->decs,
-                      num_components*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_components->decs, components->decs,
-                      num_components*sizeof(double), cudaMemcpyHostToDevice ) );
+  double d_freq = d_extrap_freqs[iFreq];
+  double d_ref_freq = d_components.power_ref_freqs[iFluxComp];
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->ref_freqs,
-                      num_components*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_components->ref_freqs, components->ref_freqs,
-                      num_components*sizeof(double), cudaMemcpyHostToDevice ) );
+  user_precision_t flux_ratio = pow(d_freq / d_ref_freq, d_components.power_SIs[iFluxComp]);
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->ref_stokesI,
-                      num_components*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_components->ref_stokesI, components->ref_stokesI,
-                      num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+  * flux_I = d_components.power_ref_stokesI[iFluxComp] * flux_ratio;
+  * flux_Q = d_components.power_ref_stokesQ[iFluxComp] * flux_ratio;
+  * flux_U = d_components.power_ref_stokesU[iFluxComp] * flux_ratio;
+  * flux_V = d_components.power_ref_stokesV[iFluxComp] * flux_ratio;
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->ref_stokesQ,
-                      num_components*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_components->ref_stokesQ, components->ref_stokesQ,
-                      num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+}
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->ref_stokesU,
-                      num_components*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_components->ref_stokesU, components->ref_stokesU,
-                      num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+__global__ void kern_extrap_power_laws(int num_extrap_freqs, double *d_extrap_freqs,
+                                       int num_comps, components_t d_components) {
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->ref_stokesV,
-                      num_components*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_components->ref_stokesV, components->ref_stokesV,
-                      num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+  // Start by computing which baseline we're going to do
+  const int iFluxComp = threadIdx.x + (blockDim.x*blockIdx.x);
+  const int iFreq = threadIdx.y + (blockDim.y*blockIdx.y);
+  // if(iBaseline < num_visis && iComponent < num_points) {
+  if(iFluxComp < num_comps && iFreq < num_extrap_freqs) {
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->SIs,
-                      num_components*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_components->SIs, components->SIs,
-                      num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+    user_precision_t flux_I;
+    user_precision_t flux_Q;
+    user_precision_t flux_U;
+    user_precision_t flux_V;
 
-  if (comptype == GAUSSIAN || comptype == SHAPELET ) {
-    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->pas,
-                        num_components*sizeof(user_precision_t) ) );
-    cudaErrorCheckCall( cudaMemcpy( d_components->pas, components->pas,
-                        num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+    extrap_stokes_power_law(d_components, d_extrap_freqs,
+                 iFluxComp, iFreq,
+                 &flux_I, &flux_Q, &flux_U, &flux_V);
 
-    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->majors,
-                        num_components*sizeof(user_precision_t) ) );
-    cudaErrorCheckCall( cudaMemcpy( d_components->majors, components->majors,
-                        num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+    int iComponent = d_components.power_comp_inds[iFluxComp];
+    int extrap_ind = num_extrap_freqs*iComponent + iFreq;
 
-    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->minors,
-                        num_components*sizeof(user_precision_t) ) );
-    cudaErrorCheckCall( cudaMemcpy( d_components->minors, components->minors,
-                        num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+
+    d_components.extrap_stokesI[extrap_ind] = flux_I;
+    d_components.extrap_stokesQ[extrap_ind] = flux_Q;
+    d_components.extrap_stokesU[extrap_ind] = flux_U;
+    d_components.extrap_stokesV[extrap_ind] = flux_V;
+
+    // printf("kern_POWER %d %.1f %.1f %.1f %.1f\n",extrap_ind,
+    //                               d_components.extrap_stokesI[extrap_ind],
+    //                               d_components.extrap_stokesQ[extrap_ind],
+    //                               d_components.extrap_stokesU[extrap_ind],
+    //                               d_components.extrap_stokesV[extrap_ind] );
+
+  }
+}
+
+__device__ void extrap_stokes_curved_power_law(components_t d_components,
+           double *d_extrap_freqs, int iFluxComp, int iFreq,
+           user_precision_t * flux_I, user_precision_t * flux_Q,
+           user_precision_t * flux_U, user_precision_t * flux_V){
+
+  double d_freq = d_extrap_freqs[iFreq];
+  double d_ref_freq = d_components.curve_ref_freqs[iFluxComp];
+
+  user_precision_t si_ratio = pow(d_freq / d_ref_freq, d_components.curve_SIs[iFluxComp]);
+
+  double logfreq = log(d_freq);
+  double logfreq_ref = log(d_ref_freq);
+
+  double q = (double)d_components.curve_qs[iFluxComp];
+
+  double exp_extrap = exp(q*logfreq*logfreq);
+  double exp_ref = exp(q*logfreq_ref*logfreq_ref);
+
+  user_precision_t flux_ratio = si_ratio * (exp_extrap / exp_ref);
+
+  * flux_I = d_components.curve_ref_stokesI[iFluxComp] * flux_ratio;
+  * flux_Q = d_components.curve_ref_stokesQ[iFluxComp] * flux_ratio;
+  * flux_U = d_components.curve_ref_stokesU[iFluxComp] * flux_ratio;
+  * flux_V = d_components.curve_ref_stokesV[iFluxComp] * flux_ratio;
+
+}
+
+__global__ void kern_extrap_curved_power_laws(int num_extrap_freqs, double *d_extrap_freqs,
+                                              int num_comps, components_t d_components) {
+
+  // Start by computing which baseline we're going to do
+  const int iFluxComp = threadIdx.x + (blockDim.x*blockIdx.x);
+  const int iFreq = threadIdx.y + (blockDim.y*blockIdx.y);
+
+  if(iFluxComp < num_comps && iFreq < num_extrap_freqs) {
+
+    user_precision_t flux_I;
+    user_precision_t flux_Q;
+    user_precision_t flux_U;
+    user_precision_t flux_V;
+
+    extrap_stokes_curved_power_law(d_components, d_extrap_freqs,
+                 iFluxComp, iFreq,
+                 &flux_I, &flux_Q, &flux_U, &flux_V);
+
+    int iComponent = d_components.curve_comp_inds[iFluxComp];
+    int extrap_ind = num_extrap_freqs*iComponent + iFreq;
+
+    d_components.extrap_stokesI[extrap_ind] = flux_I;
+    d_components.extrap_stokesQ[extrap_ind] = flux_Q;
+    d_components.extrap_stokesU[extrap_ind] = flux_U;
+    d_components.extrap_stokesV[extrap_ind] = flux_V;
+
+    // printf("kern_CURVE %d %.1f %.1f %.1f %.1f\n",extrap_ind,
+    //                           d_components.extrap_stokesI[extrap_ind],
+    //                           d_components.extrap_stokesQ[extrap_ind],
+    //                           d_components.extrap_stokesU[extrap_ind],
+    //                           d_components.extrap_stokesV[extrap_ind] );
+
+  }
+}
+
+__device__ user_precision_t calc_gradient_extrap_list(user_precision_t *list_fluxes,
+          double *list_freqs, double desired_freq, int low_ind_1, int low_ind_2) {
+
+  user_precision_t gradient = (list_fluxes[low_ind_2] - list_fluxes[low_ind_1]) / (list_freqs[low_ind_2] - list_freqs[low_ind_1]);
+  user_precision_t extrap_flux = list_fluxes[low_ind_1] + gradient*(desired_freq - list_freqs[low_ind_1]);
+
+  if (list_fluxes[low_ind_2] != 0 && list_fluxes[low_ind_1] != 0) {
+    // printf("------------------------------------------------------\n");
+    // printf("low freq, flux %.3e %.3f\n", list_freqs[low_ind_1], list_fluxes[low_ind_1]);
+    // printf("high freq, flux %.3e %.3f\n", list_freqs[low_ind_2], list_fluxes[low_ind_2]);
+
+    // printf("gradient, extrap_flux %.3e %.4f\n", gradient, extrap_flux);
+    // printf("bottom bit %.3f %.3e\n",list_fluxes[low_ind_1],
+    //                         desired_freq - list_freqs[low_ind_1]);
+
+    // printf("%.3e %.3e %.3e\n",list_freqs[low_ind_1], desired_freq, list_freqs[low_ind_2] );
   }
 
-  if (comptype == SHAPELET) {
-    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->shape_coeffs,
-                        num_shape_coeffs*sizeof(user_precision_t) ) );
-    cudaErrorCheckCall( cudaMemcpy( d_components->shape_coeffs, components->shape_coeffs,
-                        num_shape_coeffs*sizeof(user_precision_t),
-                        cudaMemcpyHostToDevice ) );
 
-    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->n1s,
-                        num_shape_coeffs*sizeof(user_precision_t) ) );
-    cudaErrorCheckCall( cudaMemcpy( d_components->n1s, components->n1s,
-                        num_shape_coeffs*sizeof(user_precision_t),
-                        cudaMemcpyHostToDevice ) );
 
-    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->n2s,
-                        num_shape_coeffs*sizeof(user_precision_t) ) );
-    cudaErrorCheckCall( cudaMemcpy( d_components->n2s, components->n2s,
-                        num_shape_coeffs*sizeof(user_precision_t),
-                        cudaMemcpyHostToDevice ) );
+  return extrap_flux;
+}
 
-    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->param_indexes,
-                        num_shape_coeffs*sizeof(user_precision_t) ) );
-    cudaErrorCheckCall( cudaMemcpy( d_components->param_indexes, components->param_indexes,
-                        num_shape_coeffs*sizeof(user_precision_t),
-                        cudaMemcpyHostToDevice ) );
+__device__ void extrap_stokes_list_flux(components_t d_components,
+           double *d_extrap_freqs, int iFluxComp, int iFreq,
+           user_precision_t * flux_I, user_precision_t * flux_Q,
+           user_precision_t * flux_U, user_precision_t * flux_V){
+
+  int num_list_values = d_components.num_list_values[iFluxComp];
+  int list_start_ind = d_components.list_start_indexes[iFluxComp];
+
+  double d_extrap_freq = d_extrap_freqs[iFreq];
+
+  int low_ind_1 = -1;
+  int low_ind_2 = -1;
+
+  double low_val_1 = 1e16;
+  double low_val_2 = 1e16;
+
+  double ref_freq;
+  double abs_diff_freq;
+
+  if (num_list_values == 1) {
+    * flux_I = d_components.list_stokesI[list_start_ind];
+    * flux_Q = d_components.list_stokesQ[list_start_ind];
+    * flux_U = d_components.list_stokesU[list_start_ind];
+    * flux_V = d_components.list_stokesV[list_start_ind];
+    return;
   }
+
+  //First loop finds the absolute closest frequency
+  for (int i = 0; i < num_list_values; i++) {
+    ref_freq = d_components.list_freqs[list_start_ind + i];
+    abs_diff_freq = abs(ref_freq - d_extrap_freq);
+
+    if (abs_diff_freq < low_val_1) {
+      low_val_1 = abs_diff_freq;
+      low_ind_1 = i;
+    }
+  }
+
+  //Depending on the closest frequency, we either want to search above or
+  //below the target frequency to find points either side of the target freq
+
+  //We happen to need the reference frequency; just return the refs
+  if (d_components.list_freqs[list_start_ind + low_ind_1] == d_extrap_freq) {
+    // if (iFluxComp == 5 && iFreq == 13){
+      // printf("We are heeeeere iFreq %d\n", iFreq);
+    // }
+    * flux_I = d_components.list_stokesI[list_start_ind + low_ind_1];
+    * flux_Q = d_components.list_stokesQ[list_start_ind + low_ind_1];
+    * flux_U = d_components.list_stokesU[list_start_ind + low_ind_1];
+    * flux_V = d_components.list_stokesV[list_start_ind + low_ind_1];
+  }
+  else {
+    //We need to search lower than this index
+    if (d_components.list_freqs[list_start_ind + low_ind_1] > d_extrap_freq){
+      //We are extrapolating to a frequency that is lower than all list entries
+      //so just stick low_ind_2 to one above low_ind_1
+      if (low_ind_1 == 0) {
+        low_ind_2 = 1;
+      }
+      //Otherwise, need to actually look for closest freq
+      else {
+        for (int i = 0; i < low_ind_1; i++) {
+          ref_freq = d_components.list_freqs[list_start_ind + i];
+          abs_diff_freq = abs(ref_freq - d_extrap_freq);
+
+          if (abs_diff_freq < low_val_2) {
+            low_val_2 = abs_diff_freq;
+            low_ind_2 = i;
+          }
+        }
+      }
+    }
+    //We need to search higher than this index
+    else {
+      //We are extrapolating to a frequency that is higher than all list entries
+      //so just stick low_ind_2 to one below low_ind_1
+      if (low_ind_1 == num_list_values - 1) {
+        low_ind_2 = low_ind_1 - 1;
+      }
+      //Otherwise, need to actually look for closest freq
+      else {
+        for (int i = low_ind_1 + 1; i < num_list_values; i++) {
+
+          ref_freq = d_components.list_freqs[list_start_ind + i];
+          abs_diff_freq = abs(ref_freq - d_extrap_freq);
+
+          if (abs_diff_freq < low_val_2) {
+            low_val_2 = abs_diff_freq;
+            low_ind_2 = i;
+          }
+        }
+      }
+    }
+    // printf("low_ind_1, low_ind_2 %d %d \n",low_ind_1, low_ind_2);
+
+    // if (low_ind_1 == low_ind_2){
+    //     low_ind_2 = num_list_values - 1;
+    //     low_ind_1 = num_list_values - 2;
+    // }
+
+    * flux_I = calc_gradient_extrap_list(d_components.list_stokesI,
+              d_components.list_freqs, d_extrap_freq,
+              list_start_ind + low_ind_1, list_start_ind + low_ind_2);
+    * flux_Q = calc_gradient_extrap_list(d_components.list_stokesQ,
+              d_components.list_freqs, d_extrap_freq,
+              list_start_ind + low_ind_1, list_start_ind + low_ind_2);
+    * flux_U = calc_gradient_extrap_list(d_components.list_stokesU,
+              d_components.list_freqs, d_extrap_freq,
+              list_start_ind + low_ind_1, list_start_ind + low_ind_2);
+    * flux_V = calc_gradient_extrap_list(d_components.list_stokesV,
+              d_components.list_freqs, d_extrap_freq,
+              list_start_ind + low_ind_1, list_start_ind + low_ind_2);
+
+    if (low_ind_2 == -1){
+      printf("wrong range %.3e %.3e iFreq %d %.3e low %d %.3e\n", d_components.list_freqs[list_start_ind],
+      d_components.list_freqs[list_start_ind + num_list_values-1],
+      iFreq, d_extrap_freq,
+      low_ind_1, d_components.list_freqs[list_start_ind + low_ind_1]);
+      printf("The flooxes %.3e %.3e %.3e %.3e\n",* flux_I, * flux_Q, * flux_U, * flux_V );
+    }
+  }
+}
+
+
+__global__ void kern_extrap_list_fluxes(int num_extrap_freqs, double *d_extrap_freqs,
+                                        int num_comps, components_t d_components) {
+
+  // Start by computing which baseline we're going to do
+  const int iFluxComp = threadIdx.x + (blockDim.x*blockIdx.x);
+  const int iFreq = threadIdx.y + (blockDim.y*blockIdx.y);
+  // if(iBaseline < num_visis && iComponent < num_points) {
+  if(iFluxComp < num_comps && iFreq < num_extrap_freqs) {
+
+    user_precision_t flux_I;
+    user_precision_t flux_Q;
+    user_precision_t flux_U;
+    user_precision_t flux_V;
+
+    extrap_stokes_list_flux(d_components, d_extrap_freqs,
+                 iFluxComp, iFreq,
+                 &flux_I, &flux_Q, &flux_U, &flux_V);
+
+    int iComponent = d_components.list_comp_inds[iFluxComp];
+    int extrap_ind = num_extrap_freqs*iComponent + iFreq;
+
+    d_components.extrap_stokesI[extrap_ind] = flux_I;
+    d_components.extrap_stokesQ[extrap_ind] = flux_Q;
+    d_components.extrap_stokesU[extrap_ind] = flux_U;
+    d_components.extrap_stokesV[extrap_ind] = flux_V;
+
+    // printf("kern_LIST %d %.1f %.1f %.1f %.1f\n",extrap_ind,
+    //                           d_components.extrap_stokesI[extrap_ind],
+    //                           d_components.extrap_stokesQ[extrap_ind],
+    //                           d_components.extrap_stokesU[extrap_ind],
+    //                           d_components.extrap_stokesV[extrap_ind] );
+
+  }
+}
+
+
+extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
+                                   double *d_extrap_freqs, int num_extrap_freqs,
+                                   e_component_type comptype){
+
+  components_t d_components;
+  // int n_comps = 0;
+  int n_powers = 0;
+  int n_curves = 0;
+  int n_lists = 0;
+
+  //Choose the right components to extrapolate for
+  if (comptype == POINT) {
+    d_components = d_chunked_source->point_components;
+    // n_comps = d_chunked_source->n_points;
+    n_powers = d_chunked_source->n_point_powers;
+    n_curves = d_chunked_source->n_point_curves;
+    n_lists = d_chunked_source->n_point_lists;
+  }
+  else if (comptype == GAUSSIAN) {
+    d_components = d_chunked_source->gauss_components;
+    // n_comps = d_chunked_source->n_gauss;
+    n_powers = d_chunked_source->n_gauss_powers;
+    n_curves = d_chunked_source->n_gauss_curves;
+    n_lists = d_chunked_source->n_gauss_lists;
+  } else if (comptype == SHAPELET) {
+    d_components = d_chunked_source->shape_components;
+    // n_comps = d_chunked_source->n_shapes;
+    n_powers = d_chunked_source->n_shape_powers;
+    n_curves = d_chunked_source->n_shape_curves;
+    n_lists = d_chunked_source->n_shape_lists;
+  }
+
+  //For some reason, can't do this inside this function - something about
+  //memory context or something? If done inside, when trying to access the
+  //memory outside this function, get illegal memory issues. Memory
+  //management sucks.
+  // malloc_extrapolated_flux_arrays(&d_components, n_comps, num_extrap_freqs);
+
+  dim3 grid, threads;
+
+  threads.x = 16;
+  threads.y = 16;
+
+  //First up, do the POWER_LAW types
+  grid.y = (int)ceilf( (float)num_extrap_freqs / (float)threads.y );
+
+  if (n_powers > 0) {
+    grid.x = (int)ceilf( (float)n_powers / (float)threads.x );
+    cudaErrorCheckKernel("kern_extrap_power_laws",
+                          kern_extrap_power_laws, grid, threads,
+                          num_extrap_freqs, d_extrap_freqs,
+                          n_powers, d_components);
+  }
+  //Next up, do the CURVED_POWER_LAW types
+  if (n_curves > 0) {
+    grid.x = (int)ceilf( (float)n_curves / (float)threads.x );
+
+    cudaErrorCheckKernel("kern_extrap_curved_power_laws",
+                          kern_extrap_curved_power_laws, grid, threads,
+                          num_extrap_freqs, d_extrap_freqs,
+                          n_curves, d_components);
+  }
+
+  //Finally, do any list flux peeps
+  //Next up, do the CURVED_POWER_LAW types
+  if (n_lists > 0) {
+    grid.x = (int)ceilf( (float)n_lists / (float)threads.x );
+
+    cudaErrorCheckKernel("kern_extrap_list_fluxes",
+                          kern_extrap_list_fluxes, grid, threads,
+                          num_extrap_freqs, d_extrap_freqs,
+                          n_lists, d_components);
+  }
+}
+
+extern "C" void source_component_common(woden_settings_t *woden_settings,
+           beam_settings_t *beam_settings, double *d_freqs,
+           source_t *chunked_source, source_t *d_chunked_source,
+           d_beam_gains_t *d_component_beam_gains,
+           e_component_type comptype){
+
+  int num_components = 0;
+  components_t *components = NULL;
+  components_t *d_components = NULL;
+
+  if (comptype == POINT) {
+    num_components = d_chunked_source->n_points;
+    components = &chunked_source->point_components;
+    d_components = &d_chunked_source->point_components;
+  } else if (comptype == GAUSSIAN) {
+    num_components = d_chunked_source->n_gauss;
+    components = &chunked_source->gauss_components;
+    d_components = &d_chunked_source->gauss_components;
+  } else if (comptype == SHAPELET) {
+    num_components = d_chunked_source->n_shapes;
+    components = &chunked_source->shape_components;
+    d_components = &d_chunked_source->shape_components;
+  }
+
+  //Will need this later
+  malloc_extrapolated_flux_arrays(d_components, num_components,
+                                  woden_settings->num_freqs);
+
+  extrapolate_Stokes(d_chunked_source, d_freqs, woden_settings->num_freqs,
+                     comptype);
 
   //Only the MWA beams currently yields cross pol values, so only malloc what
   //we need here
@@ -321,14 +657,14 @@ extern "C" void source_component_common(int num_components,
   //if we have different beams for different tiles
   if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == MWA_ANALY || beam_settings->beamtype == FEE_BEAM_INTERP) {
     cudaErrorCheckCall( cudaMalloc( (void**)&d_component_beam_gains->d_Dxs,
-                    components->num_primarybeam_values*sizeof(cuUserComplex) ));
+                    d_components->num_primarybeam_values*sizeof(cuUserComplex) ));
     cudaErrorCheckCall( cudaMalloc( (void**)&d_component_beam_gains->d_Dys,
-                    components->num_primarybeam_values*sizeof(cuUserComplex) ));
+                    d_components->num_primarybeam_values*sizeof(cuUserComplex) ));
   }
   cudaErrorCheckCall( cudaMalloc( (void**)&d_component_beam_gains->d_gxs,
-                    components->num_primarybeam_values*sizeof(cuUserComplex) ));
+                    d_components->num_primarybeam_values*sizeof(cuUserComplex) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_component_beam_gains->d_gys,
-                    components->num_primarybeam_values*sizeof(cuUserComplex) ));
+                    d_components->num_primarybeam_values*sizeof(cuUserComplex) ));
   //
   cudaErrorCheckCall( cudaMalloc( (void**)&d_components->ls,
                                                num_components*sizeof(double) ) );
@@ -448,8 +784,7 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
            user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
            user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
-           user_precision_t *d_allsteps_wavelengths, int num_components,
-           int num_baselines, int num_freqs, int num_visis,
+           int num_components, int num_baselines, int num_freqs, int num_visis,
            int num_times, e_beamtype beamtype, e_component_type comptype) {
 
   // Start by computing which baseline we're going to do
@@ -466,13 +801,19 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
 
     user_precision_t pa, sinpa, cospa, u, v, x, y, invsig_x, invsig_y;
 
-    for (size_t iComponent = 0; iComponent < num_components; iComponent++) {
+    //Find out what time and freq index this baseline corresponds to
+    int time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
+    int freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
 
-      extrap_stokes(d_allsteps_wavelengths, d_components.ref_freqs,
-                   d_components.ref_stokesI, d_components.ref_stokesQ,
-                   d_components.ref_stokesU, d_components.ref_stokesV,
-                   d_components.SIs, iComponent, iBaseline,
-                   &flux_I, &flux_Q, &flux_U, &flux_V);
+    for (int iComponent = 0; iComponent < num_components; iComponent++) {
+
+
+      int extrap_ind = num_freqs*iComponent + freq_ind;
+
+      flux_I = d_components.extrap_stokesI[extrap_ind];
+      flux_Q = d_components.extrap_stokesQ[extrap_ind];
+      flux_U = d_components.extrap_stokesU[extrap_ind];
+      flux_V = d_components.extrap_stokesV[extrap_ind];
 
       visi_comp = calc_measurement_equation(d_us, d_vs, d_ws,
                              d_components.ls, d_components.ms, d_components.ns,
@@ -536,15 +877,23 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
     user_precision_t shape_flux_V;
     cuUserComplex visi_shape;
 
+    //Find out what time and freq index this baseline corresponds to
+    int time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
+
+    int freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+
     for (int iCoeff = 0; iCoeff < num_coeffs; iCoeff++) {
 
+      //We have multiple coefficients per SHAPELET component - reference
+      //them via this array. We chunk over coeffs so might have any
+      //number of components here
       int iComponent = d_components.param_indexes[iCoeff];
+      int extrap_ind = num_freqs*iComponent + freq_ind;
 
-      extrap_stokes(d_allsteps_wavelengths,  d_components.ref_freqs,
-                   d_components.ref_stokesI, d_components.ref_stokesQ,
-                   d_components.ref_stokesU, d_components.ref_stokesV,
-                   d_components.SIs, iComponent, iBaseline,
-                   &shape_flux_I, &shape_flux_Q, &shape_flux_U, &shape_flux_V);
+      shape_flux_I = d_components.extrap_stokesI[extrap_ind];
+      shape_flux_Q = d_components.extrap_stokesQ[extrap_ind];
+      shape_flux_U = d_components.extrap_stokesU[extrap_ind];
+      shape_flux_V = d_components.extrap_stokesV[extrap_ind];
 
       visi_shape = calc_measurement_equation(d_us, d_vs, d_ws,
                             d_components.ls, d_components.ms, d_components.ns,
@@ -626,22 +975,359 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
   }
 }
 
+//Copy the sky model info from a set of components from the CPU to the GPU
+void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source,
+                            e_component_type comptype) {
+
+  components_t *components;
+  components_t *d_components;
+  int num_comps = 0, num_shape_coeffs = 0;
+  int num_powers = 0, num_curves = 0, num_lists = 0;
+
+  if (comptype == POINT) {
+    components = &chunked_source->point_components;
+    d_components = &d_chunked_source->point_components;
+
+    num_comps = chunked_source->n_points;
+    num_shape_coeffs = 0;
+    num_powers = chunked_source->n_point_powers;
+    num_curves = chunked_source->n_point_curves;
+    num_lists = chunked_source->n_point_lists;
+
+  }
+  else if (comptype == GAUSSIAN) {
+    components = &chunked_source->gauss_components;
+    d_components = &d_chunked_source->gauss_components;
+
+    num_comps = chunked_source->n_gauss;
+    num_shape_coeffs = 0;
+    num_powers = chunked_source->n_gauss_powers;
+    num_curves = chunked_source->n_gauss_curves;
+    num_lists = chunked_source->n_gauss_lists;
+
+  }
+  else if (comptype == SHAPELET) {
+    components = &chunked_source->shape_components;
+    d_components = &d_chunked_source->shape_components;
+
+    num_comps = chunked_source->n_shapes;
+    num_shape_coeffs = chunked_source->n_shape_coeffs;
+    num_powers = chunked_source->n_shape_powers;
+    num_curves = chunked_source->n_shape_curves;
+    num_lists = chunked_source->n_shape_lists;
+
+  }
+
+  // printf("INSIDE MALLOC %d %d %d %d %d\n", num_comps, num_shape_coeffs, num_powers,
+  //                           num_curves, num_lists );
+
+  //Common attributes between all flux types and components types
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->ras,
+                      num_comps*sizeof(double) ) );
+  cudaErrorCheckCall( cudaMemcpy( d_components->ras, components->ras,
+                      num_comps*sizeof(double), cudaMemcpyHostToDevice ) );
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->decs,
+                      num_comps*sizeof(double) ) );
+  cudaErrorCheckCall( cudaMemcpy( d_components->decs, components->decs,
+                      num_comps*sizeof(double), cudaMemcpyHostToDevice ) );
+
+  d_components->num_primarybeam_values = components->num_primarybeam_values;
+
+  //GAUSSIAN and SHAPELET only attributes
+  if (comptype == GAUSSIAN || comptype == SHAPELET ) {
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->pas,
+                        num_comps*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->pas, components->pas,
+                        num_comps*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->majors,
+                        num_comps*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->majors, components->majors,
+                        num_comps*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->minors,
+                        num_comps*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->minors, components->minors,
+                        num_comps*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+  }
+
+  //SHAPELET only attributes
+  if (comptype == SHAPELET) {
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->shape_coeffs,
+                        num_shape_coeffs*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->shape_coeffs, components->shape_coeffs,
+                        num_shape_coeffs*sizeof(user_precision_t),
+                        cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->n1s,
+                        num_shape_coeffs*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->n1s, components->n1s,
+                        num_shape_coeffs*sizeof(user_precision_t),
+                        cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->n2s,
+                        num_shape_coeffs*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->n2s, components->n2s,
+                        num_shape_coeffs*sizeof(user_precision_t),
+                        cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->param_indexes,
+                        num_shape_coeffs*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->param_indexes, components->param_indexes,
+                        num_shape_coeffs*sizeof(user_precision_t),
+                        cudaMemcpyHostToDevice ) );
+  }
+
+  //POWER_LAW flux things
+  if (num_powers > 0) {
+    // printf("MALLOC BEHBEH num_powers %d\n",num_powers );
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->power_comp_inds,
+                        num_powers*sizeof(int) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->power_comp_inds, components->power_comp_inds,
+                        num_powers*sizeof(int), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->power_ref_freqs,
+                        num_powers*sizeof(double) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->power_ref_freqs, components->power_ref_freqs,
+                        num_powers*sizeof(double), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->power_ref_stokesI,
+                        num_powers*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->power_ref_stokesI, components->power_ref_stokesI,
+                        num_powers*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->power_ref_stokesQ,
+                        num_powers*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->power_ref_stokesQ, components->power_ref_stokesQ,
+                        num_powers*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->power_ref_stokesU,
+                        num_powers*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->power_ref_stokesU, components->power_ref_stokesU,
+                        num_powers*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->power_ref_stokesV,
+                        num_powers*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->power_ref_stokesV, components->power_ref_stokesV,
+                        num_powers*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->power_SIs,
+                        num_powers*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->power_SIs, components->power_SIs,
+                        num_powers*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+  }
+
+  //CURVED_POWER_LAW things
+  if (num_curves > 0) {
+    // printf("MALLOC BEHBEH num_curves %d\n",num_curves );
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->curve_comp_inds,
+                        num_curves*sizeof(int) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->curve_comp_inds, components->curve_comp_inds,
+                        num_curves*sizeof(int), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->curve_ref_freqs,
+                        num_curves*sizeof(double) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->curve_ref_freqs, components->curve_ref_freqs,
+                        num_curves*sizeof(double), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->curve_ref_stokesI,
+                        num_curves*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->curve_ref_stokesI, components->curve_ref_stokesI,
+                        num_curves*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->curve_ref_stokesQ,
+                        num_curves*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->curve_ref_stokesQ, components->curve_ref_stokesQ,
+                        num_curves*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->curve_ref_stokesU,
+                        num_curves*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->curve_ref_stokesU, components->curve_ref_stokesU,
+                        num_curves*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->curve_ref_stokesV,
+                        num_curves*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->curve_ref_stokesV, components->curve_ref_stokesV,
+                        num_curves*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->curve_SIs,
+                        num_curves*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->curve_SIs, components->curve_SIs,
+                        num_curves*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->curve_qs,
+                        num_curves*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->curve_qs, components->curve_qs,
+                        num_curves*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+  }
+
+  //LIST things
+  if (num_lists > 0) {
+    int num_list_values = components->total_num_flux_entires;
+
+    // printf("MALLOC TIME WITH THE LISTS YES? %d\n", num_list_values);
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->list_comp_inds,
+                        num_lists*sizeof(int) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->list_comp_inds,
+                        components->list_comp_inds,
+                        num_lists*sizeof(int), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->num_list_values,
+                        num_lists*sizeof(int) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->num_list_values,
+                        components->num_list_values,
+                        num_lists*sizeof(int), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->list_start_indexes,
+                        num_lists*sizeof(int) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->list_start_indexes,
+                        components->list_start_indexes,
+                        num_lists*sizeof(int), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->list_freqs,
+                        num_list_values*sizeof(double) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->list_freqs, components->list_freqs,
+                        num_list_values*sizeof(double), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->list_stokesI,
+                        num_list_values*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->list_stokesI, components->list_stokesI,
+                        num_list_values*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->list_stokesQ,
+                        num_list_values*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->list_stokesQ, components->list_stokesQ,
+                        num_list_values*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->list_stokesU,
+                        num_list_values*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->list_stokesU, components->list_stokesU,
+                        num_list_values*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->list_stokesV,
+                        num_list_values*sizeof(user_precision_t) ) );
+    cudaErrorCheckCall( cudaMemcpy( d_components->list_stokesV, components->list_stokesV,
+                        num_list_values*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+
+  }
+}
+
+source_t * copy_chunked_source_to_GPU(source_t *chunked_source){
+
+  source_t *d_chunked_source = (source_t*)malloc(sizeof(source_t));
+
+  if (chunked_source->n_points > 0) {
+    copy_components_to_GPU(chunked_source, d_chunked_source, POINT);
+  }
+  if (chunked_source->n_gauss > 0) {
+    copy_components_to_GPU(chunked_source, d_chunked_source, GAUSSIAN);
+  }
+  if (chunked_source->n_shapes > 0) {
+    // printf("HAVE COPIED SHAPELET TINGS\n");
+    copy_components_to_GPU(chunked_source, d_chunked_source, SHAPELET);
+  }
+
+  //copy across the component counters
+
+  d_chunked_source->n_points = chunked_source->n_points;
+  d_chunked_source->n_point_lists = chunked_source->n_point_lists;
+  d_chunked_source->n_point_powers = chunked_source->n_point_powers;
+  d_chunked_source->n_point_curves = chunked_source->n_point_curves;
+
+  d_chunked_source->n_gauss = chunked_source->n_gauss;
+  d_chunked_source->n_gauss_lists = chunked_source->n_gauss_lists;
+  d_chunked_source->n_gauss_powers = chunked_source->n_gauss_powers;
+  d_chunked_source->n_gauss_curves = chunked_source->n_gauss_curves;
+
+  d_chunked_source->n_shapes = chunked_source->n_shapes;
+  d_chunked_source->n_shape_lists = chunked_source->n_shape_lists;
+  d_chunked_source->n_shape_powers = chunked_source->n_shape_powers;
+  d_chunked_source->n_shape_curves = chunked_source->n_shape_curves;
+  d_chunked_source->n_shape_coeffs = chunked_source->n_shape_coeffs;
+
+  return d_chunked_source;
+}
+
+void free_extrapolated_flux_arrays(components_t *d_components){
+  cudaErrorCheckCall( cudaFree( d_components->extrap_stokesI ) );
+  cudaErrorCheckCall( cudaFree( d_components->extrap_stokesQ ) );
+  cudaErrorCheckCall( cudaFree( d_components->extrap_stokesU ) );
+  cudaErrorCheckCall( cudaFree( d_components->extrap_stokesV ) );
+}
 
 
-extern "C" void free_d_components(components_t d_components,
+
+extern "C" void free_d_components(source_t *d_chunked_source,
                                   e_component_type comptype){
+  components_t d_components;
+  int n_powers = 0;
+  int n_curves = 0;
+  int n_lists = 0;
 
-  cudaErrorCheckCall( cudaFree( d_components.ns) );
-  cudaErrorCheckCall( cudaFree( d_components.ms) );
-  cudaErrorCheckCall( cudaFree( d_components.ls) );
-  cudaErrorCheckCall( cudaFree( d_components.ref_freqs ) );
-  cudaErrorCheckCall( cudaFree( d_components.ref_stokesI ) );
-  cudaErrorCheckCall( cudaFree( d_components.ref_stokesQ ) );
-  cudaErrorCheckCall( cudaFree( d_components.ref_stokesU ) );
-  cudaErrorCheckCall( cudaFree( d_components.ref_stokesV ) );
-  cudaErrorCheckCall( cudaFree( d_components.SIs ) );
+  if (comptype == POINT) {
+    d_components = d_chunked_source->point_components;
+    n_powers = d_chunked_source->n_point_powers;
+    n_curves = d_chunked_source->n_point_curves;
+    n_lists = d_chunked_source->n_point_lists;
+  }
+  else if (comptype == GAUSSIAN) {
+    d_components = d_chunked_source->gauss_components;
+    n_powers = d_chunked_source->n_gauss_powers;
+    n_curves = d_chunked_source->n_gauss_curves;
+    n_lists = d_chunked_source->n_gauss_lists;
+  }
+  else {
+    d_components = d_chunked_source->shape_components;
+    n_powers = d_chunked_source->n_shape_powers;
+    n_curves = d_chunked_source->n_shape_curves;
+    n_lists = d_chunked_source->n_shape_lists;
+  }
+
+  // printf("Freeing this %d %d %d\n",n_powers,n_curves,n_lists );
+
   cudaErrorCheckCall( cudaFree( d_components.decs) );
   cudaErrorCheckCall( cudaFree( d_components.ras) );
+
+  cudaErrorCheckCall( cudaFree( d_components.ls) );
+  cudaErrorCheckCall( cudaFree( d_components.ms) );
+  cudaErrorCheckCall( cudaFree( d_components.ns) );
+
+
+  // printf("Did the common to all arrays\n");
+
+  //The az,za,beam_has,beam_decs are handled by other functions
+
+  if (n_powers > 0) {
+    cudaErrorCheckCall( cudaFree( d_components.power_ref_freqs ) );
+    cudaErrorCheckCall( cudaFree( d_components.power_ref_stokesI ) );
+    cudaErrorCheckCall( cudaFree( d_components.power_ref_stokesQ ) );
+    cudaErrorCheckCall( cudaFree( d_components.power_ref_stokesU ) );
+    cudaErrorCheckCall( cudaFree( d_components.power_ref_stokesV ) );
+    cudaErrorCheckCall( cudaFree( d_components.power_SIs ) );
+    cudaErrorCheckCall( cudaFree( d_components.power_comp_inds ) );
+  }
+
+  if (n_curves > 0) {
+    cudaErrorCheckCall( cudaFree( d_components.curve_ref_freqs ) );
+    cudaErrorCheckCall( cudaFree( d_components.curve_ref_stokesI ) );
+    cudaErrorCheckCall( cudaFree( d_components.curve_ref_stokesQ ) );
+    cudaErrorCheckCall( cudaFree( d_components.curve_ref_stokesU ) );
+    cudaErrorCheckCall( cudaFree( d_components.curve_ref_stokesV ) );
+    cudaErrorCheckCall( cudaFree( d_components.curve_SIs ) );
+    cudaErrorCheckCall( cudaFree( d_components.curve_qs ) );
+    cudaErrorCheckCall( cudaFree( d_components.curve_comp_inds ) );
+  }
+  if (n_lists > 0) {
+    cudaErrorCheckCall( cudaFree( d_components.list_comp_inds ) );
+    cudaErrorCheckCall( cudaFree( d_components.list_freqs ) );
+    cudaErrorCheckCall( cudaFree( d_components.list_stokesI ) );
+    cudaErrorCheckCall( cudaFree( d_components.list_stokesQ ) );
+    cudaErrorCheckCall( cudaFree( d_components.list_stokesU ) );
+    cudaErrorCheckCall( cudaFree( d_components.list_stokesV ) );
+    cudaErrorCheckCall( cudaFree( d_components.num_list_values ) );
+    cudaErrorCheckCall( cudaFree( d_components.list_start_indexes ) );
+  }
 
   if (comptype == GAUSSIAN || comptype == SHAPELET) {
     cudaErrorCheckCall( cudaFree( d_components.pas ) );
@@ -655,6 +1341,7 @@ extern "C" void free_d_components(components_t d_components,
     cudaErrorCheckCall( cudaFree( d_components.n2s ) );
     cudaErrorCheckCall( cudaFree( d_components.param_indexes ) );
   }
+  // printf("DID all the freeing somehow??\n");
 }
 
 extern "C" void free_beam_gains(d_beam_gains_t d_beam_gains, e_beamtype beamtype){
@@ -669,145 +1356,48 @@ extern "C" void free_beam_gains(d_beam_gains_t d_beam_gains, e_beamtype beamtype
 
 }
 
-
 /*******************************************************************************
                  Functions below to be used in unit tests
 *******************************************************************************/
 
-__global__ void kern_extrap_stokes(int num_extrap_freqs, int num_components,
-           user_precision_t *d_extrap_wavelengths, double *d_ref_freqs,
-           user_precision_t *d_SIs,
-           user_precision_t *d_ref_stokesI, user_precision_t *d_ref_stokesQ,
-           user_precision_t *d_ref_stokesU, user_precision_t *d_ref_stokesV,
-           user_precision_t *d_flux_I, user_precision_t *d_flux_Q,
-           user_precision_t *d_flux_U, user_precision_t *d_flux_V ) {
+extern "C" void test_extrap_stokes_all_models(source_t *chunked_source,
+           int num_extrap_freqs, double *extrap_freqs,
+           user_precision_t *extrap_flux_I, user_precision_t *extrap_flux_Q,
+           user_precision_t *extrap_flux_U, user_precision_t *extrap_flux_V){
 
-  // Start by computing which baseline we're going to do
-  const int iComponent = threadIdx.x + (blockDim.x*blockIdx.x);
-  const int iFreq = threadIdx.y + (blockDim.y*blockIdx.y);
-  // if(iBaseline < num_visis && iComponent < num_points) {
-  if(iComponent < num_components && iFreq < num_extrap_freqs) {
 
-    user_precision_t flux_I;
-    user_precision_t flux_Q;
-    user_precision_t flux_U;
-    user_precision_t flux_V;
+  source_t *d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
 
-    extrap_stokes(d_extrap_wavelengths, d_ref_freqs,
-                 d_ref_stokesI, d_ref_stokesQ,
-                 d_ref_stokesU, d_ref_stokesV,
-                 d_SIs, iComponent, iFreq,
-                 &flux_I, &flux_Q, &flux_U, &flux_V);
+  double *d_extrap_freqs = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_extrap_freqs,
+                                   num_extrap_freqs*sizeof(double) ));
+  cudaErrorCheckCall( cudaMemcpy(d_extrap_freqs, extrap_freqs,
+             num_extrap_freqs*sizeof(double), cudaMemcpyHostToDevice ));
 
-    int extrap_ind = num_components*iComponent + iFreq;
+  malloc_extrapolated_flux_arrays(&d_chunked_source->point_components,
+                                  d_chunked_source->n_points,
+                                  num_extrap_freqs);
 
-    d_flux_I[extrap_ind] = flux_I;
-    d_flux_Q[extrap_ind] = flux_Q;
-    d_flux_U[extrap_ind] = flux_U;
-    d_flux_V[extrap_ind] = flux_V;
+  extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_extrap_freqs, POINT);
 
-  }
-}
 
-extern "C" void test_kern_extrap_stokes(int num_extrap_freqs, int num_components,
-           user_precision_t *extrap_wavelengths, double *ref_freqs,
-           user_precision_t *SIs,
-           user_precision_t *ref_stokesI, user_precision_t *ref_stokesQ,
-           user_precision_t *ref_stokesU, user_precision_t *ref_stokesV,
-           user_precision_t *flux_I, user_precision_t *flux_Q,
-           user_precision_t *flux_U, user_precision_t *flux_V){
+  components_t d_components = d_chunked_source->point_components;
 
-  user_precision_t *d_extrap_wavelengths = NULL;
-  double *d_ref_freqs = NULL;
-  user_precision_t *d_SIs = NULL;
-  user_precision_t *d_ref_stokesI = NULL;
-  user_precision_t *d_ref_stokesQ = NULL;
-  user_precision_t *d_ref_stokesU = NULL;
-  user_precision_t *d_ref_stokesV = NULL;
-  user_precision_t *d_flux_I = NULL;
-  user_precision_t *d_flux_Q = NULL;
-  user_precision_t *d_flux_U = NULL;
-  user_precision_t *d_flux_V = NULL;
-
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_extrap_wavelengths,
-                                   num_extrap_freqs*sizeof(user_precision_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_ref_freqs,
-                                     num_components*sizeof(double) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_SIs,
-                                     num_components*sizeof(user_precision_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_ref_stokesI,
-                                     num_components*sizeof(user_precision_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_ref_stokesQ,
-                                     num_components*sizeof(user_precision_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_ref_stokesU,
-                                     num_components*sizeof(user_precision_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_ref_stokesV,
-                                     num_components*sizeof(user_precision_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_I,
-                    num_components*num_extrap_freqs*sizeof(user_precision_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_Q,
-                    num_components*num_extrap_freqs*sizeof(user_precision_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_U,
-                    num_components*num_extrap_freqs*sizeof(user_precision_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_flux_V,
-                    num_components*num_extrap_freqs*sizeof(user_precision_t) ));
-
-  cudaErrorCheckCall( cudaMemcpy(d_extrap_wavelengths, extrap_wavelengths,
-           num_extrap_freqs*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
-
-  cudaErrorCheckCall( cudaMemcpy(d_ref_stokesI, ref_stokesI,
-             num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_ref_stokesQ, ref_stokesQ,
-             num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_ref_stokesU, ref_stokesU,
-             num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_ref_stokesV, ref_stokesV,
-             num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_ref_freqs, ref_freqs,
-             num_components*sizeof(double), cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_SIs, SIs,
-             num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
-
-  dim3 grid, threads;
-
-  threads.x = 16;
-  threads.y = 16;
-  grid.x = (int)ceilf( (float)num_components / (float)threads.x );
-  grid.y = (int)ceilf( (float)num_extrap_freqs / (float)threads.y );
-
-  cudaErrorCheckKernel("kern_extrap_stokes",
-                        kern_extrap_stokes, grid, threads,
-                        num_extrap_freqs, num_components,
-                        d_extrap_wavelengths, d_ref_freqs, d_SIs,
-                        d_ref_stokesI, d_ref_stokesQ,
-                        d_ref_stokesU, d_ref_stokesV,
-                        d_flux_I, d_flux_Q,
-                        d_flux_U, d_flux_V);
-
-  cudaErrorCheckCall( cudaMemcpy(flux_I, d_flux_I,
-                      num_components*num_extrap_freqs*sizeof(user_precision_t),
+  cudaErrorCheckCall( cudaMemcpy(extrap_flux_I, d_components.extrap_stokesI,
+            d_chunked_source->n_points*num_extrap_freqs*sizeof(user_precision_t),
                                                       cudaMemcpyDeviceToHost ));
-  cudaErrorCheckCall( cudaMemcpy(flux_Q, d_flux_Q,
-                      num_components*num_extrap_freqs*sizeof(user_precision_t),
+  cudaErrorCheckCall( cudaMemcpy(extrap_flux_Q, d_components.extrap_stokesQ,
+            d_chunked_source->n_points*num_extrap_freqs*sizeof(user_precision_t),
                                                       cudaMemcpyDeviceToHost ));
-  cudaErrorCheckCall( cudaMemcpy(flux_U, d_flux_U,
-                      num_components*num_extrap_freqs*sizeof(user_precision_t),
+  cudaErrorCheckCall( cudaMemcpy(extrap_flux_U, d_components.extrap_stokesU,
+            d_chunked_source->n_points*num_extrap_freqs*sizeof(user_precision_t),
                                                       cudaMemcpyDeviceToHost ));
-  cudaErrorCheckCall( cudaMemcpy(flux_V, d_flux_V,
-                      num_components*num_extrap_freqs*sizeof(user_precision_t),
+  cudaErrorCheckCall( cudaMemcpy(extrap_flux_V, d_components.extrap_stokesV,
+            d_chunked_source->n_points*num_extrap_freqs*sizeof(user_precision_t),
                                                       cudaMemcpyDeviceToHost ));
-
-  cudaErrorCheckCall( cudaFree( d_extrap_wavelengths ) );
-  cudaErrorCheckCall( cudaFree( d_ref_freqs ) );
-  cudaErrorCheckCall( cudaFree( d_SIs ) );
-  cudaErrorCheckCall( cudaFree( d_ref_stokesI ) );
-  cudaErrorCheckCall( cudaFree( d_ref_stokesQ ) );
-  cudaErrorCheckCall( cudaFree( d_ref_stokesU ) );
-  cudaErrorCheckCall( cudaFree( d_ref_stokesV ) );
-  cudaErrorCheckCall( cudaFree( d_flux_I ) );
-  cudaErrorCheckCall( cudaFree( d_flux_Q ) );
-  cudaErrorCheckCall( cudaFree( d_flux_U ) );
-  cudaErrorCheckCall( cudaFree( d_flux_V ) );
+  //
+  cudaErrorCheckCall( cudaFree( d_extrap_freqs ) );
+  free_extrapolated_flux_arrays(&d_chunked_source->point_components);
 }
 
 
@@ -1397,14 +1987,78 @@ extern "C" void test_kern_update_sum_visis(int num_freqs, int num_visis,
 }
 
 
-extern "C" void test_source_component_common(int num_components,
-           int num_shape_coeffs, components_t components,
-           components_t d_components,
+extern "C" void test_source_component_common(int num_of_each_flux_type,
+           components_t components,
            double *freqs, woden_settings_t *woden_settings,
            beam_settings_t *beam_settings,
            user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
            user_precision_complex_t *Dys, user_precision_complex_t *gys,
-           double *ls, double *ms, double *ns){
+           user_precision_t *extrap_flux_I, user_precision_t *extrap_flux_Q,
+           user_precision_t *extrap_flux_U, user_precision_t *extrap_flux_V,
+           double *ls, double *ms, double *ns,
+           e_component_type comptype){
+
+  source_t *chunked_source = (source_t *)malloc(sizeof(source_t));
+
+  //TODODOD have a if (comptype == POINT) etc here so we can use same
+  //componenets to test all POINT, GAUSSIAN, SHAPELET
+
+  int NUM_FLUX_TYPES = 3;
+
+  if (comptype == POINT) {
+    chunked_source->point_components = components;
+    chunked_source->n_points = NUM_FLUX_TYPES*num_of_each_flux_type;
+    chunked_source->n_point_powers = num_of_each_flux_type;
+    chunked_source->n_point_curves = num_of_each_flux_type;
+    chunked_source->n_point_lists = num_of_each_flux_type;
+
+    chunked_source->n_gauss = 0;
+    chunked_source->n_gauss_lists = 0;
+    chunked_source->n_gauss_powers = 0;
+    chunked_source->n_gauss_curves = 0;
+    chunked_source->n_shapes = 0;
+    chunked_source->n_shape_lists = 0;
+    chunked_source->n_shape_powers = 0;
+    chunked_source->n_shape_curves = 0;
+    chunked_source->n_shape_coeffs = 0;
+  }
+  else if (comptype == GAUSSIAN) {
+    chunked_source->gauss_components = components;
+    chunked_source->n_gauss = NUM_FLUX_TYPES*num_of_each_flux_type;
+    chunked_source->n_gauss_powers = num_of_each_flux_type;
+    chunked_source->n_gauss_curves = num_of_each_flux_type;
+    chunked_source->n_gauss_lists = num_of_each_flux_type;
+
+    chunked_source->n_points = 0;
+    chunked_source->n_point_lists = 0;
+    chunked_source->n_point_powers = 0;
+    chunked_source->n_point_curves = 0;
+    chunked_source->n_shapes = 0;
+    chunked_source->n_shape_lists = 0;
+    chunked_source->n_shape_powers = 0;
+    chunked_source->n_shape_curves = 0;
+    chunked_source->n_shape_coeffs = 0;
+  }
+  else if (comptype == SHAPELET) {
+    chunked_source->shape_components = components;
+    chunked_source->n_shapes = NUM_FLUX_TYPES*num_of_each_flux_type;
+    chunked_source->n_shape_powers = num_of_each_flux_type;
+    chunked_source->n_shape_curves = num_of_each_flux_type;
+    chunked_source->n_shape_lists = num_of_each_flux_type;
+    chunked_source->n_shape_coeffs = num_of_each_flux_type;
+
+    chunked_source->n_points = 0;
+    chunked_source->n_point_lists = 0;
+    chunked_source->n_point_powers = 0;
+    chunked_source->n_point_curves = 0;
+    chunked_source->n_gauss = 0;
+    chunked_source->n_gauss_lists = 0;
+    chunked_source->n_gauss_powers = 0;
+    chunked_source->n_gauss_curves = 0;
+
+  }
+
+  source_t *d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
 
   double *d_freqs = NULL;
   cudaErrorCheckCall( cudaMalloc( (void**)&d_freqs,
@@ -1412,14 +2066,12 @@ extern "C" void test_source_component_common(int num_components,
   cudaErrorCheckCall( cudaMemcpy( d_freqs, freqs,
              woden_settings->num_freqs*sizeof(double), cudaMemcpyHostToDevice) );
 
-
   d_beam_gains_t d_beam_gains;
 
-  source_component_common(num_components, num_shape_coeffs,
-             &components, d_freqs, woden_settings, beam_settings, POINT,
-             &d_components, &d_beam_gains);
+  source_component_common(woden_settings, beam_settings, d_freqs,
+       chunked_source, d_chunked_source, &d_beam_gains, comptype);
 
-  int num_beam_values = num_components*woden_settings->num_freqs*woden_settings->num_time_steps;
+  int num_beam_values = NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*woden_settings->num_time_steps;
 
   cudaErrorCheckCall( cudaMemcpy(gxs, (user_precision_complex_t*)d_beam_gains.d_gxs,
               num_beam_values*sizeof(cuUserComplex), cudaMemcpyDeviceToHost ));
@@ -1434,22 +2086,84 @@ extern "C" void test_source_component_common(int num_components,
                 num_beam_values*sizeof(cuUserComplex), cudaMemcpyDeviceToHost ));
   }
 
-  cudaErrorCheckCall( cudaMemcpy(ls, d_components.ls,
-                        num_components*sizeof(double), cudaMemcpyDeviceToHost ));
-  cudaErrorCheckCall( cudaMemcpy(ms, d_components.ms,
-                        num_components*sizeof(double), cudaMemcpyDeviceToHost ));
-  cudaErrorCheckCall( cudaMemcpy(ns, d_components.ns,
-                        num_components*sizeof(double), cudaMemcpyDeviceToHost ));
+  //Just a little shorthand so don't have to keep writing out as much in the
+  //memcpy below
 
-  free_d_components(d_components, POINT);
+  components_t d_components;
+
+  if (comptype == POINT) {
+    d_components = d_chunked_source->point_components;
+  }
+  else if (comptype == GAUSSIAN) {
+    d_components = d_chunked_source->gauss_components;
+  }
+  else {
+    d_components = d_chunked_source->shape_components;
+  }
+
+
+  cudaErrorCheckCall( cudaMemcpy(ls, d_components.ls,
+                            NUM_FLUX_TYPES*num_of_each_flux_type*sizeof(double),
+                            cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(ms, d_components.ms,
+                            NUM_FLUX_TYPES*num_of_each_flux_type*sizeof(double),
+                            cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(ns, d_components.ns,
+                            NUM_FLUX_TYPES*num_of_each_flux_type*sizeof(double),
+                            cudaMemcpyDeviceToHost ));
+
+  cudaErrorCheckCall( cudaMemcpy(extrap_flux_I, d_components.extrap_stokesI,
+  NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t),
+                                                      cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(extrap_flux_Q, d_components.extrap_stokesQ,
+  NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t),
+                                                      cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(extrap_flux_U, d_components.extrap_stokesU,
+  NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t),
+                                                      cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(extrap_flux_V, d_components.extrap_stokesV,
+  NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t),
+                                                      cudaMemcpyDeviceToHost ));
+
+  cudaErrorCheckCall( cudaFree( d_freqs ) );
+  free_extrapolated_flux_arrays(&d_components);
+  free_d_components(d_chunked_source, comptype);
   free_beam_gains(d_beam_gains, beam_settings->beamtype);
 }
 
-extern "C" void test_kern_calc_visi_all(int num_components,
+
+void malloc_lmn_arrays(source_t *d_chunked_source, components_t *components,
+                        int num_components, e_component_type comptype){
+  components_t *d_components;
+  if (comptype == POINT) {
+    d_components = &d_chunked_source->point_components;
+  } else if (comptype == GAUSSIAN) {
+    d_components = &d_chunked_source->gauss_components;
+  } else if (comptype == SHAPELET) {
+    d_components = &d_chunked_source->shape_components;
+  }
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->ls,
+                                          num_components*sizeof(double) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->ms,
+                                          num_components*sizeof(double) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->ns,
+                                          num_components*sizeof(double) ) );
+
+  cudaErrorCheckCall( cudaMemcpy(d_components->ls, components->ls, num_components*sizeof(double),
+                                           cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_components->ms, components->ms, num_components*sizeof(double),
+                                           cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_components->ns, components->ns, num_components*sizeof(double),
+                                           cudaMemcpyHostToDevice ));
+
+}
+
+extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
           int num_baselines, int num_shape_coeffs,
           int num_freqs, int num_visis, int num_times,
           e_beamtype beamtype, e_component_type comptype,
-          components_t components,
+          components_t components, double *extrap_freqs,
           user_precision_t *us, user_precision_t *vs, user_precision_t *ws,
           user_precision_t *u_shapes, user_precision_t *v_shapes, user_precision_t *w_shapes,
           user_precision_t *sum_visi_XX_real, user_precision_t *sum_visi_XX_imag,
@@ -1459,6 +2173,8 @@ extern "C" void test_kern_calc_visi_all(int num_components,
           user_precision_t *allsteps_wavelengths, user_precision_t *sbf,
           user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
           user_precision_complex_t *Dys, user_precision_complex_t *gys){
+
+  int num_components = n_powers + n_curves + n_lists;
 
   user_precision_t *d_us = NULL;
   user_precision_t *d_vs = NULL;
@@ -1479,53 +2195,103 @@ extern "C" void test_kern_calc_visi_all(int num_components,
   cudaErrorCheckCall( cudaMemcpy(d_allsteps_wavelengths, allsteps_wavelengths,
                              num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
 
-  //Something to store the device component types in
+  //Here are many things that would have been done by source_component_common
+  source_t *chunked_source = (source_t *)malloc(sizeof(source_t));
+
+  double *d_extrap_freqs = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_extrap_freqs,
+                                   num_freqs*sizeof(double) ));
+  cudaErrorCheckCall( cudaMemcpy(d_extrap_freqs, extrap_freqs,
+             num_freqs*sizeof(double), cudaMemcpyHostToDevice ));
+
+  source_t *d_chunked_source = NULL;
   components_t d_components;
 
-  //just malloc these here are the overall free-ing function later needs to free them
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components.ras,
-                                                num_components*sizeof(double) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components.decs,
-                                                num_components*sizeof(double) ));
+  if (comptype == POINT) {
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components.ref_stokesI,
-                                               num_components*sizeof(user_precision_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components.ref_stokesQ,
-                                               num_components*sizeof(user_precision_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components.ref_stokesU,
-                                               num_components*sizeof(user_precision_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components.ref_stokesV,
-                                               num_components*sizeof(user_precision_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components.SIs,
-                                               num_components*sizeof(user_precision_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components.ref_freqs,
-                                                num_components*sizeof(double) ));
+    chunked_source->point_components = components;
+    chunked_source->n_points = n_powers + n_curves + n_lists;
+    chunked_source->n_point_powers = n_powers;
+    chunked_source->n_point_curves = n_curves;
+    chunked_source->n_point_lists = n_lists;
 
-  cudaErrorCheckCall( cudaMemcpy(d_components.ref_stokesI, components.ref_stokesI,
-                             num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_components.ref_stokesQ, components.ref_stokesQ,
-                             num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_components.ref_stokesU, components.ref_stokesU,
-                             num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_components.ref_stokesV, components.ref_stokesV,
-                             num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_components.SIs, components.SIs,
-                             num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_components.ref_freqs, components.ref_freqs,
-                        num_components*sizeof(double), cudaMemcpyHostToDevice ));
+    chunked_source->n_gauss = 0;
+    chunked_source->n_gauss_lists = 0;
+    chunked_source->n_gauss_powers = 0;
+    chunked_source->n_gauss_curves = 0;
+    chunked_source->n_shapes = 0;
+    chunked_source->n_shape_lists = 0;
+    chunked_source->n_shape_powers = 0;
+    chunked_source->n_shape_curves = 0;
+    chunked_source->n_shape_coeffs = 0;
 
-  //This would be done by source_component_common
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components.ls, num_components*sizeof(double) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components.ms, num_components*sizeof(double) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components.ns, num_components*sizeof(double) ));
+    // source_t *remap_source = (source_t *)malloc(sizeof(source_t));
 
-  cudaErrorCheckCall( cudaMemcpy(d_components.ls, components.ls, num_components*sizeof(double),
-                                           cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_components.ms, components.ms, num_components*sizeof(double),
-                                           cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_components.ns, components.ns, num_components*sizeof(double),
-                                           cudaMemcpyHostToDevice ));
+    // remap_source_for_gpu(remap_source, chunked_source,
+                         // num_times, beamtype);
 
+    d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
+    malloc_lmn_arrays(d_chunked_source, &components, num_components, comptype);
+
+    malloc_extrapolated_flux_arrays(&d_chunked_source->point_components,
+                                    d_chunked_source->n_points,
+                                    num_freqs);
+    extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, POINT);
+    d_components = d_chunked_source->point_components;
+  }
+  else if (comptype == GAUSSIAN) {
+
+    chunked_source->gauss_components = components;
+    chunked_source->n_gauss = n_powers + n_curves + n_lists;
+    chunked_source->n_gauss_powers = n_powers;
+    chunked_source->n_gauss_curves = n_curves;
+    chunked_source->n_gauss_lists = n_lists;
+
+    chunked_source->n_points = 0;
+    chunked_source->n_point_lists = 0;
+    chunked_source->n_point_powers = 0;
+    chunked_source->n_point_curves = 0;
+    chunked_source->n_shapes = 0;
+    chunked_source->n_shape_lists = 0;
+    chunked_source->n_shape_powers = 0;
+    chunked_source->n_shape_curves = 0;
+    chunked_source->n_shape_coeffs = 0;
+
+    d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
+    malloc_lmn_arrays(d_chunked_source, &components, num_components, comptype);
+
+    malloc_extrapolated_flux_arrays(&d_chunked_source->gauss_components,
+                                    d_chunked_source->n_gauss,
+                                    num_freqs);
+    extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, GAUSSIAN);
+    d_components = d_chunked_source->gauss_components;
+  }
+  else if (comptype == SHAPELET) {
+    chunked_source->shape_components = components;
+    chunked_source->n_shapes = n_powers + n_curves + n_lists;
+    chunked_source->n_shape_powers = n_powers;
+    chunked_source->n_shape_curves = n_curves;
+    chunked_source->n_shape_lists = n_lists;
+    chunked_source->n_shape_coeffs = num_shape_coeffs;
+
+    chunked_source->n_points = 0;
+    chunked_source->n_point_lists = 0;
+    chunked_source->n_point_powers = 0;
+    chunked_source->n_point_curves = 0;
+    chunked_source->n_gauss = 0;
+    chunked_source->n_gauss_lists = 0;
+    chunked_source->n_gauss_powers = 0;
+    chunked_source->n_gauss_curves = 0;
+
+    d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
+    malloc_lmn_arrays(d_chunked_source, &components, num_components, comptype);
+
+    malloc_extrapolated_flux_arrays(&d_chunked_source->shape_components,
+                                    d_chunked_source->n_shapes,
+                                    num_freqs);
+    extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, SHAPELET);
+    d_components = d_chunked_source->shape_components;
+  }
 
   //Something to store the primary beam gains (all 4 pols) in
   d_beam_gains_t d_beam_gains;
@@ -1599,24 +2365,6 @@ extern "C" void test_kern_calc_visi_all(int num_components,
   threads.x = 128;
   grid.x = (int)ceil( (float)num_visis / (float)threads.x );
 
-  if (comptype == GAUSSIAN || comptype == SHAPELET ) {
-
-    //This would be done by source_component_common
-    cudaErrorCheckCall( cudaMalloc( (void**)&d_components.pas,
-                                                num_components*sizeof(user_precision_t) ));
-    cudaErrorCheckCall( cudaMalloc( (void**)&d_components.majors,
-                                                num_components*sizeof(user_precision_t) ));
-    cudaErrorCheckCall( cudaMalloc( (void**)&d_components.minors,
-                                                num_components*sizeof(user_precision_t) ));
-
-    cudaErrorCheckCall( cudaMemcpy(d_components.pas, components.pas,
-                       num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
-    cudaErrorCheckCall( cudaMemcpy(d_components.majors, components.majors,
-                       num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
-    cudaErrorCheckCall( cudaMemcpy(d_components.minors, components.minors,
-                       num_components*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
-  }
-
   //Shapelets need many many extra things
 
   user_precision_t *d_sbf=NULL;
@@ -1676,8 +2424,7 @@ extern "C" void test_kern_calc_visi_all(int num_components,
                   d_sum_visi_XY_real, d_sum_visi_XY_imag,
                   d_sum_visi_YX_real, d_sum_visi_YX_imag,
                   d_sum_visi_YY_real, d_sum_visi_YY_imag,
-                  d_allsteps_wavelengths, num_components,
-                  num_baselines, num_freqs, num_visis,
+                  num_components, num_baselines, num_freqs, num_visis,
                   num_times, beamtype, comptype);
   }
   else if (comptype == SHAPELET) {
@@ -1714,6 +2461,8 @@ extern "C" void test_kern_calc_visi_all(int num_components,
                              num_visis*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
 
 
+  free_d_components(d_chunked_source, comptype);
+
   cudaErrorCheckCall(  cudaFree( d_sum_visi_XX_real ) );
   cudaErrorCheckCall(  cudaFree( d_sum_visi_XX_imag ) );
   cudaErrorCheckCall(  cudaFree( d_sum_visi_XY_real ) );
@@ -1724,14 +2473,24 @@ extern "C" void test_kern_calc_visi_all(int num_components,
   cudaErrorCheckCall(  cudaFree( d_sum_visi_YY_imag ) );
   cudaErrorCheckCall(  cudaFree( d_allsteps_wavelengths ) );
 
-  free_d_components(d_components, comptype);
+
+
   free_beam_gains(d_beam_gains, beamtype);
 
   cudaErrorCheckCall(  cudaFree( d_us ) );
   cudaErrorCheckCall(  cudaFree( d_vs ) );
   cudaErrorCheckCall(  cudaFree( d_ws ) );
 
+  cudaErrorCheckCall( cudaFree( d_extrap_freqs ) );
+
+  if (comptype == POINT) {
+    free_extrapolated_flux_arrays(&d_chunked_source->point_components);
+  }
+  else if (comptype == GAUSSIAN) {
+    free_extrapolated_flux_arrays(&d_chunked_source->gauss_components);
+  }
   if (comptype == SHAPELET){
+    free_extrapolated_flux_arrays(&d_chunked_source->shape_components);
     cudaErrorCheckCall(  cudaFree( d_sbf) );
     cudaErrorCheckCall(  cudaFree( d_u_shapes) );
     cudaErrorCheckCall(  cudaFree( d_v_shapes) );

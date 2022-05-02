@@ -84,11 +84,17 @@ make sure ``calculate_visibilities`` is calling the appropriate functions:
      - 3
      - 27
 
-All sources are given an *RA,Dec* equal to the phase centre, a spectral index
-of zero, and a flux density of 0.3333333333333333 Jy. This way, the output visibilities
-(in the absence of a primary beam) should be fully real, and equal to the sum of the number of
+All sources are given an *RA,Dec* equal to the phase centre, and a Stokes I
+flux density of 0.3333333333333333 Jy. Each type of flux component (either
+POWER_LAW, CURVED_POWER_LAW, or LIST) are set up so they have a perfectly flat
+spectrum. This way, the output visibilities (in the absence of a primary beam)
+should be fully real, and equal to the sum of the number of
 COMPONENTs in the sky model multiplied by 0.3333333333333333. This numerical 1/3
 flux is a good test of the precision of the FLOAT and DOUBLE compiled codes.
+
+When the tests have a single COMPONENT per SOURCE, I use a POWER_LAW type flux
+behaviour. When there are three COMPONENTs, I use one of each of POWER_LAW,
+CURVED_POWER_LAW, and LIST types. 
 
 GAUSSIAN and SHAPELET components with any size cause a reduction of the real part
 of the visibility due to the extended size on the sky. For these tests, I've set

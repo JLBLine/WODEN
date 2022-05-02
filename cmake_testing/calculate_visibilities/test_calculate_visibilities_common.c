@@ -30,15 +30,127 @@ double lsts[] = {0.0, M_PI / 4};
 user_precision_t azs[] = {0.0, 4.528359553989764};
 user_precision_t zas[] = {0.0, 0.6978088917603547};
 
-//Different delays settings, which control the pointing of the MWA beam
+//Different delays settings, which control the comping of the MWA beam
 user_precision_t zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+
+void populate_components(components_t *comps, int n_comps,
+                         double ra0, double dec0){
+
+  comps->ras = malloc(n_comps*sizeof(double));
+  comps->decs = malloc(n_comps*sizeof(double));
+
+  comps->num_primarybeam_values = n_comps*NUM_FREQS*NUM_TIME_STEPS;
+  comps->beam_has = malloc(n_comps*NUM_TIME_STEPS*sizeof(double));
+  comps->beam_decs = malloc(n_comps*NUM_TIME_STEPS*sizeof(double));
+  comps->azs = malloc(n_comps*NUM_TIME_STEPS*sizeof(user_precision_t));
+  comps->zas = malloc(n_comps*NUM_TIME_STEPS*sizeof(user_precision_t));
+
+  comps->majors = malloc(n_comps*sizeof(user_precision_t));
+  comps->minors = malloc(n_comps*sizeof(user_precision_t));
+  comps->pas = malloc(n_comps*sizeof(user_precision_t));
+
+  comps->shape_coeffs = malloc(n_comps*sizeof(user_precision_t));
+  comps->n1s = malloc(n_comps*sizeof(user_precision_t));
+  comps->n2s = malloc(n_comps*sizeof(user_precision_t));
+  comps->param_indexes = malloc(n_comps*sizeof(user_precision_t));
+
+
+  //No matter what, always have one POWER_LAW source
+  comps->power_ref_freqs = malloc(sizeof(double));
+  comps->power_ref_stokesI = malloc(sizeof(user_precision_t));
+  comps->power_ref_stokesQ = malloc(sizeof(user_precision_t));
+  comps->power_ref_stokesU = malloc(sizeof(user_precision_t));
+  comps->power_ref_stokesV = malloc(sizeof(user_precision_t));
+  comps->power_SIs = malloc(sizeof(user_precision_t));
+  comps->power_comp_inds = malloc(sizeof(int));
+
+  comps->power_ref_freqs[0] = 150e+6;
+  comps->power_ref_stokesI[0] = STOKESI;
+  comps->power_ref_stokesQ[0] = 0.0;
+  comps->power_ref_stokesU[0] = 0.0;
+  comps->power_ref_stokesV[0] = 0.0;
+  comps->power_SIs[0] = 0.0;
+  comps->power_comp_inds[0] = 0;
+
+  if (n_comps > 1) {
+    comps->curve_ref_freqs = malloc(sizeof(double));
+    comps->curve_ref_stokesI = malloc(sizeof(user_precision_t));
+    comps->curve_ref_stokesQ = malloc(sizeof(user_precision_t));
+    comps->curve_ref_stokesU = malloc(sizeof(user_precision_t));
+    comps->curve_ref_stokesV = malloc(sizeof(user_precision_t));
+    comps->curve_SIs = malloc(sizeof(user_precision_t));
+    comps->curve_qs = malloc(sizeof(user_precision_t));
+    comps->curve_comp_inds = malloc(sizeof(int));
+
+    comps->curve_ref_freqs[0] = 150e+6;
+    comps->curve_ref_stokesI[0] = STOKESI;
+    comps->curve_ref_stokesQ[0] = 0.0;
+    comps->curve_ref_stokesU[0] = 0.0;
+    comps->curve_ref_stokesV[0] = 0.0;
+    comps->curve_SIs[0] = 0.0;
+    comps->curve_qs[0] = 0.0;
+    comps->curve_comp_inds[0] = 1;
+
+    comps->list_freqs = malloc(2*sizeof(double));
+    comps->list_stokesI = malloc(2*sizeof(user_precision_t));
+    comps->list_stokesQ = malloc(2*sizeof(user_precision_t));
+    comps->list_stokesU = malloc(2*sizeof(user_precision_t));
+    comps->list_stokesV = malloc(2*sizeof(user_precision_t));
+    comps->list_comp_inds = malloc(sizeof(int));
+    comps->num_list_values = malloc(sizeof(int));
+    comps->list_start_indexes = malloc(sizeof(int));
+    comps->total_num_flux_entires = 2;
+
+    comps->list_freqs[0] = 150e+6;
+    comps->list_stokesI[0] = STOKESI;
+    comps->list_stokesQ[0] = 0.0;
+    comps->list_stokesU[0] = 0.0;
+    comps->list_stokesV[0] = 0.0;
+
+    comps->list_freqs[1] = 170e+6;
+    comps->list_stokesI[1] = STOKESI;
+    comps->list_stokesQ[1] = 0.0;
+    comps->list_stokesU[1] = 0.0;
+    comps->list_stokesV[1] = 0.0;
+
+    comps->list_comp_inds[0] = 2;
+    comps->num_list_values[0] = 2;
+    comps->list_start_indexes[0] = 0;
+
+  }
+
+  for (int comp = 0; comp < n_comps; comp++) {
+    comps->ras[comp] = ra0;
+    comps->decs[comp] = dec0;
+
+    comps->majors[comp] = 1e-10;
+    comps->minors[comp] = 1e-10;
+    comps->pas[comp] = 0;
+
+    comps->shape_coeffs[comp] = 1.0;
+    comps->n1s[comp] = 0.0;
+    comps->n2s[comp] = 0.0;
+    comps->param_indexes[comp] = 0.0;
+
+    for (int time = 0; time < NUM_TIME_STEPS; time++) {
+      int step = comp*NUM_TIME_STEPS + time;
+      comps->beam_has[step] = lsts[time] - RA0;
+      comps->beam_decs[step] = MWA_LAT_RAD;
+
+      comps->azs[step] = azs[time];
+      comps->zas[step] = zas[time];
+    }
+  }
+
+}
 
 
 /*
 Create a number of SOURCEs and input into a sky model catalogue `source_catalogue_t`
 struct. For each SOURCE, populate with as many COMPONENTs as requested of
-whatever combination of POINT, GAUSSIAN, and SHAPELET types
+whatever combination of comp, GAUSSIAN, and SHAPELET types
 Keep everything to just Stokes I 1 Jy, and stick the source at phase centre
 
 We'll stick with just one shapelet coeff per shapelet compoenent as there
@@ -57,163 +169,99 @@ source_catalogue_t * make_cropped_sky_models(double ra0, double dec0,
   cropped_sky_models->sources = malloc(num_sources*sizeof(source_t));
 
   for (int cats_ind = 0; cats_ind < num_sources; cats_ind++) {
-    cropped_sky_models->sources[cats_ind].n_comps = n_comps;
     cropped_sky_models->sources[cats_ind].n_points = n_points;
     cropped_sky_models->sources[cats_ind].n_gauss = n_gauss;
     cropped_sky_models->sources[cats_ind].n_shapes = n_shapes;
     cropped_sky_models->sources[cats_ind].n_shape_coeffs = n_shapes;
 
+    cropped_sky_models->sources[cats_ind].n_point_powers = 0;
+    cropped_sky_models->sources[cats_ind].n_point_curves = 0;
+    cropped_sky_models->sources[cats_ind].n_point_lists = 0;
+    cropped_sky_models->sources[cats_ind].n_gauss_powers = 0;
+    cropped_sky_models->sources[cats_ind].n_gauss_curves = 0;
+    cropped_sky_models->sources[cats_ind].n_gauss_lists = 0;
+    cropped_sky_models->sources[cats_ind].n_shape_powers = 0;
+    cropped_sky_models->sources[cats_ind].n_shape_curves = 0;
+    cropped_sky_models->sources[cats_ind].n_shape_lists = 0;
+
     if (n_points > 0) {
-      cropped_sky_models->sources[cats_ind].point_components.num_primarybeam_values = n_points*NUM_FREQS*NUM_TIME_STEPS;
-      cropped_sky_models->sources[cats_ind].point_components.ref_stokesI = malloc(n_points*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].point_components.ref_stokesQ = malloc(n_points*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].point_components.ref_stokesU = malloc(n_points*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].point_components.ref_stokesV = malloc(n_points*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].point_components.SIs = malloc(n_points*sizeof(user_precision_t));
-
-      cropped_sky_models->sources[cats_ind].point_components.ras = malloc(n_points*sizeof(double));
-      cropped_sky_models->sources[cats_ind].point_components.decs = malloc(n_points*sizeof(double));
-      cropped_sky_models->sources[cats_ind].point_components.ref_freqs = malloc(n_points*sizeof(double));
-
-      cropped_sky_models->sources[cats_ind].point_components.beam_has = malloc(n_points*NUM_TIME_STEPS*sizeof(double));
-      cropped_sky_models->sources[cats_ind].point_components.beam_decs = malloc(n_points*NUM_TIME_STEPS*sizeof(double));
-
-      cropped_sky_models->sources[cats_ind].point_components.azs = malloc(n_points*NUM_TIME_STEPS*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].point_components.zas = malloc(n_points*NUM_TIME_STEPS*sizeof(user_precision_t));
-
-      for (int point = 0; point < n_points; point++) {
-        cropped_sky_models->sources[cats_ind].point_components.ras[point] = ra0;
-        cropped_sky_models->sources[cats_ind].point_components.decs[point] = dec0;
-        cropped_sky_models->sources[cats_ind].point_components.ref_freqs[point] = 150e+6;
-
-        cropped_sky_models->sources[cats_ind].point_components.ref_stokesI[point] = STOKESI;
-        cropped_sky_models->sources[cats_ind].point_components.ref_stokesQ[point] = 0.0;
-        cropped_sky_models->sources[cats_ind].point_components.ref_stokesU[point] = 0.0;
-        cropped_sky_models->sources[cats_ind].point_components.ref_stokesV[point] = 0.0;
-        cropped_sky_models->sources[cats_ind].point_components.SIs[point] = 0.0;
-
-        for (int time = 0; time < NUM_TIME_STEPS; time++) {
-          int step = point*NUM_TIME_STEPS + time;
-          cropped_sky_models->sources[cats_ind].point_components.beam_has[step] = lsts[time] - RA0;
-          cropped_sky_models->sources[cats_ind].point_components.beam_decs[step] = MWA_LAT_RAD;
-
-          cropped_sky_models->sources[cats_ind].point_components.azs[step] = azs[time];
-          cropped_sky_models->sources[cats_ind].point_components.zas[step] = zas[time];
-        }
-
-
+      populate_components(&cropped_sky_models->sources[cats_ind].point_components,
+                          n_points, ra0, dec0);
+      cropped_sky_models->sources[cats_ind].n_point_powers = 1;
+      if (n_points > 1) {
+        cropped_sky_models->sources[cats_ind].n_point_curves = 1;
+        cropped_sky_models->sources[cats_ind].n_point_lists = 1;
       }
     }
 
     if (n_gauss > 0) {
-      cropped_sky_models->sources[cats_ind].gauss_components.num_primarybeam_values = n_gauss*NUM_FREQS*NUM_TIME_STEPS;
-      cropped_sky_models->sources[cats_ind].gauss_components.ref_stokesI = malloc(n_gauss*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].gauss_components.ref_stokesQ = malloc(n_gauss*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].gauss_components.ref_stokesU = malloc(n_gauss*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].gauss_components.ref_stokesV = malloc(n_gauss*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].gauss_components.SIs = malloc(n_gauss*sizeof(user_precision_t));
-
-      cropped_sky_models->sources[cats_ind].gauss_components.ras = malloc(n_gauss*sizeof(double));
-      cropped_sky_models->sources[cats_ind].gauss_components.decs = malloc(n_gauss*sizeof(double));
-      cropped_sky_models->sources[cats_ind].gauss_components.ref_freqs = malloc(n_gauss*sizeof(double));
-
-      cropped_sky_models->sources[cats_ind].gauss_components.majors = malloc(n_gauss*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].gauss_components.minors = malloc(n_gauss*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].gauss_components.pas = malloc(n_gauss*sizeof(user_precision_t));
-
-      cropped_sky_models->sources[cats_ind].gauss_components.beam_has = malloc(n_gauss*NUM_TIME_STEPS*sizeof(double));
-      cropped_sky_models->sources[cats_ind].gauss_components.beam_decs = malloc(n_gauss*NUM_TIME_STEPS*sizeof(double));
-
-      cropped_sky_models->sources[cats_ind].gauss_components.azs = malloc(n_gauss*NUM_TIME_STEPS*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].gauss_components.zas = malloc(n_gauss*NUM_TIME_STEPS*sizeof(user_precision_t));
-
-      for (int gauss = 0; gauss < n_gauss; gauss++) {
-        cropped_sky_models->sources[cats_ind].gauss_components.ras[gauss] = ra0;
-        cropped_sky_models->sources[cats_ind].gauss_components.decs[gauss] = dec0;
-        cropped_sky_models->sources[cats_ind].gauss_components.ref_freqs[gauss] = 150e+6;
-
-        cropped_sky_models->sources[cats_ind].gauss_components.ref_stokesI[gauss] = STOKESI;
-        cropped_sky_models->sources[cats_ind].gauss_components.ref_stokesQ[gauss] = 0.0;
-        cropped_sky_models->sources[cats_ind].gauss_components.ref_stokesU[gauss] = 0.0;
-        cropped_sky_models->sources[cats_ind].gauss_components.ref_stokesV[gauss] = 0.0;
-        cropped_sky_models->sources[cats_ind].gauss_components.SIs[gauss] = 0.0;
-
-        cropped_sky_models->sources[cats_ind].gauss_components.majors[gauss] = 1e-10;
-        cropped_sky_models->sources[cats_ind].gauss_components.minors[gauss] = 1e-10;
-        cropped_sky_models->sources[cats_ind].gauss_components.pas[gauss] = 0;
-
-        for (int time = 0; time < NUM_TIME_STEPS; time++) {
-          int step = gauss*NUM_TIME_STEPS + time;
-          cropped_sky_models->sources[cats_ind].gauss_components.beam_has[step] = lsts[time] - RA0;
-          cropped_sky_models->sources[cats_ind].gauss_components.beam_decs[step] = MWA_LAT_RAD;
-
-          cropped_sky_models->sources[cats_ind].gauss_components.azs[step] = azs[time];
-          cropped_sky_models->sources[cats_ind].gauss_components.zas[step] = zas[time];
-        }
+      populate_components(&cropped_sky_models->sources[cats_ind].gauss_components,
+                          n_gauss, ra0, dec0);
+      cropped_sky_models->sources[cats_ind].n_gauss_powers = 1;
+      if (n_gauss > 1) {
+        cropped_sky_models->sources[cats_ind].n_gauss_curves = 1;
+        cropped_sky_models->sources[cats_ind].n_gauss_lists = 1;
       }
     }
 
     if (n_shapes > 0) {
-      cropped_sky_models->sources[cats_ind].shape_components.num_primarybeam_values = n_shapes*NUM_FREQS*NUM_TIME_STEPS;
-      cropped_sky_models->sources[cats_ind].shape_components.ref_stokesI = malloc(n_shapes*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].shape_components.ref_stokesQ = malloc(n_shapes*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].shape_components.ref_stokesU = malloc(n_shapes*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].shape_components.ref_stokesV = malloc(n_shapes*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].shape_components.SIs = malloc(n_shapes*sizeof(user_precision_t));
-
-      cropped_sky_models->sources[cats_ind].shape_components.ras = malloc(n_shapes*sizeof(double));
-      cropped_sky_models->sources[cats_ind].shape_components.decs = malloc(n_shapes*sizeof(double));
-      cropped_sky_models->sources[cats_ind].shape_components.ref_freqs = malloc(n_shapes*sizeof(double));
-
-      cropped_sky_models->sources[cats_ind].shape_components.majors = malloc(n_shapes*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].shape_components.minors = malloc(n_shapes*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].shape_components.pas = malloc(n_shapes*sizeof(user_precision_t));
-
-      cropped_sky_models->sources[cats_ind].shape_components.shape_coeffs = malloc(n_shapes*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].shape_components.n1s = malloc(n_shapes*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].shape_components.n2s = malloc(n_shapes*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].shape_components.param_indexes = malloc(n_shapes*sizeof(user_precision_t));
-
-      cropped_sky_models->sources[cats_ind].shape_components.beam_has = malloc(n_shapes*NUM_TIME_STEPS*sizeof(double));
-      cropped_sky_models->sources[cats_ind].shape_components.beam_decs = malloc(n_shapes*NUM_TIME_STEPS*sizeof(double));
-
-      cropped_sky_models->sources[cats_ind].shape_components.azs = malloc(n_shapes*NUM_TIME_STEPS*sizeof(user_precision_t));
-      cropped_sky_models->sources[cats_ind].shape_components.zas = malloc(n_shapes*NUM_TIME_STEPS*sizeof(user_precision_t));
-
-      for (int shape = 0; shape < n_shapes; shape++) {
-        cropped_sky_models->sources[cats_ind].shape_components.ras[shape] = ra0;
-        cropped_sky_models->sources[cats_ind].shape_components.decs[shape] = dec0;
-        cropped_sky_models->sources[cats_ind].shape_components.ref_freqs[shape] = 150e+6;
-
-        cropped_sky_models->sources[cats_ind].shape_components.ref_stokesI[shape] = STOKESI;
-        cropped_sky_models->sources[cats_ind].shape_components.ref_stokesQ[shape] = 0.0;
-        cropped_sky_models->sources[cats_ind].shape_components.ref_stokesU[shape] = 0.0;
-        cropped_sky_models->sources[cats_ind].shape_components.ref_stokesV[shape] = 0.0;
-        cropped_sky_models->sources[cats_ind].shape_components.SIs[shape] = 0.0;
-
-        cropped_sky_models->sources[cats_ind].shape_components.majors[shape] = 1e-10;
-        cropped_sky_models->sources[cats_ind].shape_components.minors[shape] = 1e-10;
-        cropped_sky_models->sources[cats_ind].shape_components.pas[shape] = 0;
-
-        //These settings basically make this shapelet a GAUSSIAN
-        cropped_sky_models->sources[cats_ind].shape_components.shape_coeffs[shape] = 1.0;
-        cropped_sky_models->sources[cats_ind].shape_components.n1s[shape] = 0.0;
-        cropped_sky_models->sources[cats_ind].shape_components.n2s[shape] = 0.0;
-        cropped_sky_models->sources[cats_ind].shape_components.param_indexes[shape] = 0.0;
-
-        for (int time = 0; time < NUM_TIME_STEPS; time++) {
-          int step = shape*NUM_TIME_STEPS + time;
-          cropped_sky_models->sources[cats_ind].shape_components.beam_has[step] = lsts[time] - RA0;
-          cropped_sky_models->sources[cats_ind].shape_components.beam_decs[step] = MWA_LAT_RAD;
-
-          cropped_sky_models->sources[cats_ind].shape_components.azs[step] = azs[time];
-          cropped_sky_models->sources[cats_ind].shape_components.zas[step] = zas[time];
-        }
+      populate_components(&cropped_sky_models->sources[cats_ind].shape_components,
+                          n_shapes, ra0, dec0);
+      cropped_sky_models->sources[cats_ind].n_shape_powers = 1;
+      if (n_shapes > 1) {
+        cropped_sky_models->sources[cats_ind].n_shape_curves = 1;
+        cropped_sky_models->sources[cats_ind].n_shape_lists = 1;
       }
     }
-
   }
   return cropped_sky_models;
+}
+
+void free_components(components_t comps, int num_comps) {
+  free(comps.ras);
+  free(comps.decs);
+
+  free(comps.beam_has);
+  free(comps.beam_decs);
+  free(comps.azs);
+  free(comps.zas);
+
+  free(comps.majors);
+  free(comps.minors);
+  free(comps.pas);
+
+  free(comps.shape_coeffs);
+  free(comps.n1s);
+  free(comps.n2s);
+  free(comps.param_indexes);
+
+  free(comps.power_ref_freqs);
+  free(comps.power_ref_stokesI);
+  free(comps.power_ref_stokesQ);
+  free(comps.power_ref_stokesU);
+  free(comps.power_ref_stokesV);
+  free(comps.power_SIs);
+  free(comps.power_comp_inds);
+
+  if (num_comps > 1) {
+    free(comps.curve_ref_freqs);
+    free(comps.curve_ref_stokesI);
+    free(comps.curve_ref_stokesQ);
+    free(comps.curve_ref_stokesU);
+    free(comps.curve_ref_stokesV);
+    free(comps.curve_SIs);
+    free(comps.curve_qs);
+    free(comps.curve_comp_inds);
+
+    free(comps.list_freqs);
+    free(comps.list_stokesI);
+    free(comps.list_stokesQ);
+    free(comps.list_stokesU);
+    free(comps.list_stokesV);
+    free(comps.list_comp_inds);
+    free(comps.num_list_values);
+    free(comps.list_start_indexes);
+  }
 }
 
 /*
@@ -228,72 +276,18 @@ void free_sky_model(source_catalogue_t *cropped_sky_models) {
     int n_shapes = cropped_sky_models->sources[cats_ind].n_shapes;
 
     if (n_points > 0) {
-      free(cropped_sky_models->sources[cats_ind].point_components.ref_stokesI);
-      free(cropped_sky_models->sources[cats_ind].point_components.ref_stokesQ);
-      free(cropped_sky_models->sources[cats_ind].point_components.ref_stokesU);
-      free(cropped_sky_models->sources[cats_ind].point_components.ref_stokesV);
-      free(cropped_sky_models->sources[cats_ind].point_components.SIs);
-
-      free(cropped_sky_models->sources[cats_ind].point_components.ras);
-      free(cropped_sky_models->sources[cats_ind].point_components.decs);
-      free(cropped_sky_models->sources[cats_ind].point_components.ref_freqs);
-
-      free(cropped_sky_models->sources[cats_ind].point_components.beam_has);
-      free(cropped_sky_models->sources[cats_ind].point_components.beam_decs);
-
-      free(cropped_sky_models->sources[cats_ind].point_components.azs);
-      free(cropped_sky_models->sources[cats_ind].point_components.zas);
+      free_components(cropped_sky_models->sources[cats_ind].point_components,
+                      n_points);
     }
-
     if (n_gauss > 0) {
-      free(cropped_sky_models->sources[cats_ind].gauss_components.ref_stokesI);
-      free(cropped_sky_models->sources[cats_ind].gauss_components.ref_stokesQ);
-      free(cropped_sky_models->sources[cats_ind].gauss_components.ref_stokesU);
-      free(cropped_sky_models->sources[cats_ind].gauss_components.ref_stokesV);
-      free(cropped_sky_models->sources[cats_ind].gauss_components.SIs);
-
-      free(cropped_sky_models->sources[cats_ind].gauss_components.ras);
-      free(cropped_sky_models->sources[cats_ind].gauss_components.decs);
-      free(cropped_sky_models->sources[cats_ind].gauss_components.ref_freqs);
-
-      free(cropped_sky_models->sources[cats_ind].gauss_components.majors);
-      free(cropped_sky_models->sources[cats_ind].gauss_components.minors);
-      free(cropped_sky_models->sources[cats_ind].gauss_components.pas);
-
-      free(cropped_sky_models->sources[cats_ind].gauss_components.beam_has);
-      free(cropped_sky_models->sources[cats_ind].gauss_components.beam_decs);
-
-      free(cropped_sky_models->sources[cats_ind].gauss_components.azs);
-      free(cropped_sky_models->sources[cats_ind].gauss_components.zas);
+      free_components(cropped_sky_models->sources[cats_ind].gauss_components,
+                      n_gauss);
     }
-
     if (n_shapes > 0) {
-      free(cropped_sky_models->sources[cats_ind].shape_components.ref_stokesI);
-      free(cropped_sky_models->sources[cats_ind].shape_components.ref_stokesQ);
-      free(cropped_sky_models->sources[cats_ind].shape_components.ref_stokesU);
-      free(cropped_sky_models->sources[cats_ind].shape_components.ref_stokesV);
-      free(cropped_sky_models->sources[cats_ind].shape_components.SIs);
-
-      free(cropped_sky_models->sources[cats_ind].shape_components.ras);
-      free(cropped_sky_models->sources[cats_ind].shape_components.decs);
-      free(cropped_sky_models->sources[cats_ind].shape_components.ref_freqs);
-
-      free(cropped_sky_models->sources[cats_ind].shape_components.majors);
-      free(cropped_sky_models->sources[cats_ind].shape_components.minors);
-      free(cropped_sky_models->sources[cats_ind].shape_components.pas);
-
-      free(cropped_sky_models->sources[cats_ind].shape_components.shape_coeffs);
-      free(cropped_sky_models->sources[cats_ind].shape_components.n1s);
-      free(cropped_sky_models->sources[cats_ind].shape_components.n2s);
-      free(cropped_sky_models->sources[cats_ind].shape_components.param_indexes);
-
-      free(cropped_sky_models->sources[cats_ind].shape_components.beam_has);
-      free(cropped_sky_models->sources[cats_ind].shape_components.beam_decs);
-
-      free(cropped_sky_models->sources[cats_ind].shape_components.azs);
-      free(cropped_sky_models->sources[cats_ind].shape_components.zas);
-
+      free_components(cropped_sky_models->sources[cats_ind].shape_components,
+                      n_shapes);
     }
+
   }
   free(cropped_sky_models->sources);
   free(cropped_sky_models);
