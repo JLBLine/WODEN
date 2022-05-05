@@ -77,6 +77,11 @@ Separation of MWA dipoles (meters) */
 #define MWA_DIPOLE_SEP 1.1
 
 
-/*! 1000000 \n
+/*! 10000 \n
 Initially make enough room to fit 1000000 components in a source*/
 #define INITIAL_NUM_COMPONENTS 10000
+
+
+/*! 100 \n
+Initially make enough room to fit 100 flux entries in a list*/
+#define INITIAL_NUM_FLUXES 100

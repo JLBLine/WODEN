@@ -45,11 +45,14 @@ int add_component_information(components_t *components, int num_srcs,
           user_precision_t maj, user_precision_t min,
           track_comp_malloc_t *track_comp_malloc){
 
-
+  // printf("On component %d\n",comp_ind );
 
   if (comp_ind + 1 > track_comp_malloc->n_comps) {
 
+    // printf("Before realloc comp %d\n", track_comp_malloc->n_comps);
+
     update_realloc_num(&track_comp_malloc->n_comps);
+    // printf("After realloc comp %d\n", track_comp_malloc->n_comps);
 
     components->ras = realloc(components->ras,
                                      sizeof(double)*track_comp_malloc->n_comps);
@@ -220,6 +223,9 @@ void add_list_flux_component_info(components_t *components, int num_list_entries
 
     update_realloc_num(&track_comp_malloc->n_lists);
 
+    // printf("Reallocing a set of list, now have on component %d\n",
+    //        track_comp_malloc->n_lists);
+
     components->num_list_values = realloc(components->num_list_values,
                                         track_comp_malloc->n_lists*sizeof(int));
     components->list_start_indexes = realloc(components->list_start_indexes,
@@ -243,6 +249,8 @@ void add_list_flux_component_info(components_t *components, int num_list_entries
   int new_size = low_list_index + num_list_entries;
 
   if (new_size > track_comp_malloc->n_list_values){
+
+    // printf("Reallocing a the big-ass list array, now %d\n", track_comp_malloc->n_list_values);
 
     update_realloc_num(&track_comp_malloc->n_list_values);
 
@@ -466,11 +474,12 @@ int read_yaml_skymodel(const char *yaml_path, source_catalogue_t *srccat)
   srccat->num_shapelets = 0;
 
   //Arrays to keep LIST style information in
-  double *list_freqs_1D = NULL;
-  user_precision_t *list_stokesI_1D = NULL;
-  user_precision_t *list_stokesQ_1D = NULL;
-  user_precision_t *list_stokesU_1D = NULL;
-  user_precision_t *list_stokesV_1D = NULL;
+  double *list_freqs_1D = malloc(sizeof(double)*INITIAL_NUM_FLUXES);
+  user_precision_t *list_stokesI_1D = malloc(sizeof(user_precision_t)*INITIAL_NUM_FLUXES);
+  user_precision_t *list_stokesQ_1D = malloc(sizeof(user_precision_t)*INITIAL_NUM_FLUXES);
+  user_precision_t *list_stokesU_1D = malloc(sizeof(user_precision_t)*INITIAL_NUM_FLUXES);
+  user_precision_t *list_stokesV_1D = malloc(sizeof(user_precision_t)*INITIAL_NUM_FLUXES);
+  int num_list_malloc = INITIAL_NUM_FLUXES;
 
 
   track_comp_malloc_t *track_point_malloc = initialise_track_comp_malloc();
@@ -696,11 +705,17 @@ int read_yaml_skymodel(const char *yaml_path, source_catalogue_t *srccat)
       }
       else if (list_key == 1){
 
-        list_freqs_1D = realloc(list_freqs_1D, (num_list_entries+1)*sizeof(double));
-        list_stokesI_1D = realloc(list_stokesI_1D, (num_list_entries+1)*sizeof(user_precision_t));
-        list_stokesQ_1D = realloc(list_stokesQ_1D, (num_list_entries+1)*sizeof(user_precision_t));
-        list_stokesU_1D = realloc(list_stokesU_1D, (num_list_entries+1)*sizeof(user_precision_t));
-        list_stokesV_1D = realloc(list_stokesV_1D, (num_list_entries+1)*sizeof(user_precision_t));
+        if (num_list_entries + 1 > num_list_malloc){
+
+          num_list_malloc *= 2;
+
+          list_freqs_1D = realloc(list_freqs_1D, num_list_malloc*sizeof(double));
+          list_stokesI_1D = realloc(list_stokesI_1D, num_list_malloc*sizeof(user_precision_t));
+          list_stokesQ_1D = realloc(list_stokesQ_1D, num_list_malloc*sizeof(user_precision_t));
+          list_stokesU_1D = realloc(list_stokesU_1D, num_list_malloc*sizeof(user_precision_t));
+          list_stokesV_1D = realloc(list_stokesV_1D, num_list_malloc*sizeof(user_precision_t));
+
+        }
 
         list_freqs_1D[num_list_entries] = freq;
         list_stokesI_1D[num_list_entries] = flux_I;
@@ -856,18 +871,18 @@ int read_yaml_skymodel(const char *yaml_path, source_catalogue_t *srccat)
           }
           //Reset for the next LIST flux type component
           num_list_entries = 0;
-          free(list_freqs_1D);
-          free(list_stokesI_1D);
-          free(list_stokesQ_1D);
-          free(list_stokesU_1D);
-          free(list_stokesV_1D);
+          // free(list_freqs_1D);
+          // free(list_stokesI_1D);
+          // free(list_stokesQ_1D);
+          // free(list_stokesU_1D);
+          // free(list_stokesV_1D);
           //realloc doesn't like it if I don't add a NULL in here. Good to make
           //sure we free and NULL so we don't copy old flux into new components
-          list_freqs_1D = NULL;
-          list_stokesI_1D = NULL;
-          list_stokesQ_1D = NULL;
-          list_stokesU_1D = NULL;
-          list_stokesV_1D = NULL;
+          // list_freqs_1D = NULL;
+          // list_stokesI_1D = NULL;
+          // list_stokesQ_1D = NULL;
+          // list_stokesU_1D = NULL;
+          // list_stokesV_1D = NULL;
         }
 
         else if (fluxtype == POWER_LAW) {
@@ -900,27 +915,6 @@ int read_yaml_skymodel(const char *yaml_path, source_catalogue_t *srccat)
         maj = NAN, min = NAN, pa = NAN;
         n2 = NAN, n1 = NAN, shape_coeff_val = NAN;
         curve_q = NAN;
-
-        track_point_malloc->n_comps = 0;
-        track_point_malloc->n_powers = 0;
-        track_point_malloc->n_curves = 0;
-        track_point_malloc->n_lists = 0;
-        track_point_malloc->n_shape_coeffs = 0;
-        track_point_malloc->n_list_values = 0;
-
-        track_gauss_malloc->n_comps = 0;
-        track_gauss_malloc->n_powers = 0;
-        track_gauss_malloc->n_curves = 0;
-        track_gauss_malloc->n_lists = 0;
-        track_gauss_malloc->n_shape_coeffs = 0;
-        track_gauss_malloc->n_list_values = 0;
-
-        track_shape_malloc->n_comps = 0;
-        track_shape_malloc->n_powers = 0;
-        track_shape_malloc->n_curves = 0;
-        track_shape_malloc->n_lists = 0;
-        track_shape_malloc->n_shape_coeffs = 0;
-        track_shape_malloc->n_list_values = 0;
 
       }
     break;
@@ -984,6 +978,27 @@ int read_yaml_skymodel(const char *yaml_path, source_catalogue_t *srccat)
                                               srcs[num_srcs - 1].n_shape_lists,
                                               srcs[num_srcs - 1].n_shape_coeffs,
                                               SHAPELET);
+        //Reset components malloc counters for next SOURCE
+        track_point_malloc->n_comps = 0;
+        track_point_malloc->n_powers = 0;
+        track_point_malloc->n_curves = 0;
+        track_point_malloc->n_lists = 0;
+        track_point_malloc->n_shape_coeffs = 0;
+        track_point_malloc->n_list_values = 0;
+
+        track_gauss_malloc->n_comps = 0;
+        track_gauss_malloc->n_powers = 0;
+        track_gauss_malloc->n_curves = 0;
+        track_gauss_malloc->n_lists = 0;
+        track_gauss_malloc->n_shape_coeffs = 0;
+        track_gauss_malloc->n_list_values = 0;
+
+        track_shape_malloc->n_comps = 0;
+        track_shape_malloc->n_powers = 0;
+        track_shape_malloc->n_curves = 0;
+        track_shape_malloc->n_lists = 0;
+        track_shape_malloc->n_shape_coeffs = 0;
+        track_shape_malloc->n_list_values = 0;
 
       }
 
@@ -1006,6 +1021,12 @@ int read_yaml_skymodel(const char *yaml_path, source_catalogue_t *srccat)
   //information
   srccat->num_sources = num_srcs;
   srccat->sources = srcs;
+
+  free(list_freqs_1D);
+  free(list_stokesI_1D);
+  free(list_stokesQ_1D);
+  free(list_stokesU_1D);
+  free(list_stokesV_1D);
 
   return 0;
 }
