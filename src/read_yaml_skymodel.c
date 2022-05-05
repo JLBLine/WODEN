@@ -24,6 +24,15 @@ void check_key(char *event_value, char *key_char, int * key_int) {
   }
 }
 
+void update_realloc_num(int * num_malloc){
+  if (* num_malloc == 0) {
+    * num_malloc = INITIAL_NUM_COMPONENTS;
+  }
+  else {
+    * num_malloc *= 2;
+  }
+}
+
 
 int add_component_information(components_t *components, int num_srcs,
           int comp_ind, int power_flux_ind, int curve_flux_ind,
@@ -33,13 +42,39 @@ int add_component_information(components_t *components, int num_srcs,
           user_precision_t flux_U, user_precision_t flux_V,
           user_precision_t curve_q,
           user_precision_t si, user_precision_t pa,
-          user_precision_t maj, user_precision_t min){
+          user_precision_t maj, user_precision_t min,
+          track_comp_malloc_t *track_comp_malloc){
 
-  components->ras = realloc(components->ras, sizeof(double)*(comp_ind + 1));
+
+
+  if (comp_ind + 1 > track_comp_malloc->n_comps) {
+
+    update_realloc_num(&track_comp_malloc->n_comps);
+
+    components->ras = realloc(components->ras,
+                                     sizeof(double)*track_comp_malloc->n_comps);
+    components->decs = realloc(components->decs,
+                                     sizeof(double)*track_comp_malloc->n_comps);
+
+    if (comptype == GAUSSIAN || comptype == SHAPELET) {
+
+      components->majors = realloc(components->majors,
+                           sizeof(user_precision_t)*track_comp_malloc->n_comps);
+      components->minors = realloc(components->minors,
+                           sizeof(user_precision_t)*track_comp_malloc->n_comps);
+      components->pas = realloc(components->pas,
+                           sizeof(user_precision_t)*track_comp_malloc->n_comps);
+    }
+  }
+
   components->ras[comp_ind] = ra*DD2R;
-
-  components->decs = realloc(components->decs, sizeof(double)*(comp_ind + 1));
   components->decs[comp_ind] = dec*DD2R;
+
+  if (comptype == GAUSSIAN || comptype == SHAPELET) {
+    components->majors[comp_ind] = maj * (DD2R / 3600.0);
+    components->minors[comp_ind] = min * (DD2R / 3600.0);
+    components->pas[comp_ind] = pa * DD2R;
+  }
 
   if (isnan(ra) != 0) {
     printf("Didn't find an RA, it's still NAN\n");
@@ -58,25 +93,33 @@ int add_component_information(components_t *components, int num_srcs,
     }
 
 
-    components->power_ref_freqs = realloc(components->power_ref_freqs, sizeof(double)*(power_flux_ind + 1));
+    if (power_flux_ind + 1 > track_comp_malloc->n_powers) {
+
+      update_realloc_num(&track_comp_malloc->n_powers);
+
+      components->power_ref_freqs = realloc(components->power_ref_freqs,
+                                     sizeof(double)*track_comp_malloc->n_powers);
+      components->power_ref_stokesI = realloc(components->power_ref_stokesI,
+                          sizeof(user_precision_t)*track_comp_malloc->n_powers);
+      components->power_ref_stokesQ = realloc(components->power_ref_stokesQ,
+                          sizeof(user_precision_t)*track_comp_malloc->n_powers);
+      components->power_ref_stokesU = realloc(components->power_ref_stokesU,
+                          sizeof(user_precision_t)*track_comp_malloc->n_powers);
+      components->power_ref_stokesV = realloc(components->power_ref_stokesV,
+                          sizeof(user_precision_t)*track_comp_malloc->n_powers);
+      components->power_SIs = realloc(components->power_SIs,
+                          sizeof(user_precision_t)*track_comp_malloc->n_powers);
+      components->power_comp_inds = realloc(components->power_comp_inds,
+                                       sizeof(int)*track_comp_malloc->n_powers);
+    }
+
     components->power_ref_freqs[power_flux_ind] = freq;
-
-
-    components->power_ref_stokesI = realloc(components->power_ref_stokesI,
-                                              sizeof(user_precision_t)*(power_flux_ind + 1));
-    components->power_ref_stokesQ = realloc(components->power_ref_stokesQ,
-                                              sizeof(user_precision_t)*(power_flux_ind + 1));
-    components->power_ref_stokesU = realloc(components->power_ref_stokesU,
-                                              sizeof(user_precision_t)*(power_flux_ind + 1));
-    components->power_ref_stokesV = realloc(components->power_ref_stokesV,
-                                              sizeof(user_precision_t)*(power_flux_ind + 1));
-    components->power_SIs = realloc(components->power_SIs, sizeof(user_precision_t)*(power_flux_ind + 1));
-
     components->power_ref_stokesI[power_flux_ind] = flux_I;
     components->power_ref_stokesQ[power_flux_ind] = flux_Q;
     components->power_ref_stokesU[power_flux_ind] = flux_U;
     components->power_ref_stokesV[power_flux_ind] = flux_V;
     components->power_SIs[power_flux_ind] = si;
+    components->power_comp_inds[power_flux_ind] = comp_ind;
 
   }
 
@@ -91,37 +134,37 @@ int add_component_information(components_t *components, int num_srcs,
       return 1;
     }
 
-    components->curve_ref_freqs = realloc(components->curve_ref_freqs, sizeof(double)*(curve_flux_ind + 1));
+    if (curve_flux_ind + 1 > track_comp_malloc->n_curves) {
+
+      update_realloc_num(&track_comp_malloc->n_curves);
+
+      components->curve_ref_freqs = realloc(components->curve_ref_freqs,
+                                   sizeof(double)*track_comp_malloc->n_curves);
+      components->curve_ref_stokesI = realloc(components->curve_ref_stokesI,
+                          sizeof(user_precision_t)*track_comp_malloc->n_curves);
+      components->curve_ref_stokesQ = realloc(components->curve_ref_stokesQ,
+                          sizeof(user_precision_t)*track_comp_malloc->n_curves);
+      components->curve_ref_stokesU = realloc(components->curve_ref_stokesU,
+                          sizeof(user_precision_t)*track_comp_malloc->n_curves);
+      components->curve_ref_stokesV = realloc(components->curve_ref_stokesV,
+                          sizeof(user_precision_t)*track_comp_malloc->n_curves);
+      components->curve_SIs = realloc(components->curve_SIs,
+                          sizeof(user_precision_t)*track_comp_malloc->n_curves);
+      components->curve_qs = realloc(components->curve_qs,
+                          sizeof(user_precision_t)*track_comp_malloc->n_curves);
+      components->curve_comp_inds = realloc(components->curve_comp_inds,
+                                       sizeof(int)*track_comp_malloc->n_curves);
+    }
+
     components->curve_ref_freqs[curve_flux_ind] = freq;
-
-    components->curve_ref_stokesI = realloc(components->curve_ref_stokesI,
-                                              sizeof(user_precision_t)*(curve_flux_ind + 1));
-    components->curve_ref_stokesQ = realloc(components->curve_ref_stokesQ,
-                                              sizeof(user_precision_t)*(curve_flux_ind + 1));
-    components->curve_ref_stokesU = realloc(components->curve_ref_stokesU,
-                                              sizeof(user_precision_t)*(curve_flux_ind + 1));
-    components->curve_ref_stokesV = realloc(components->curve_ref_stokesV,
-                                              sizeof(user_precision_t)*(curve_flux_ind + 1));
-    components->curve_SIs = realloc(components->curve_SIs, sizeof(user_precision_t)*(curve_flux_ind + 1));
-    components->curve_qs = realloc(components->curve_qs, sizeof(user_precision_t)*(curve_flux_ind + 1));
-
     components->curve_ref_stokesI[curve_flux_ind] = flux_I;
     components->curve_ref_stokesQ[curve_flux_ind] = flux_Q;
     components->curve_ref_stokesU[curve_flux_ind] = flux_U;
     components->curve_ref_stokesV[curve_flux_ind] = flux_V;
     components->curve_SIs[curve_flux_ind] = si;
     components->curve_qs[curve_flux_ind] = curve_q;
+    components->curve_comp_inds[curve_flux_ind] = comp_ind;
 
-  }
-
-  if (comptype == GAUSSIAN || comptype == SHAPELET) {
-    components->majors = realloc(components->majors, sizeof(user_precision_t)*(comp_ind + 1));
-    components->minors = realloc(components->minors, sizeof(user_precision_t)*(comp_ind + 1));
-    components->pas = realloc(components->pas, sizeof(user_precision_t)*(comp_ind + 1));
-
-    components->majors[comp_ind] = maj * (DD2R / 3600.0);
-    components->minors[comp_ind] = min * (DD2R / 3600.0);
-    components->pas[comp_ind] = pa * DD2R;
   }
 
   return 0;
@@ -164,18 +207,26 @@ void add_list_flux_component_info(components_t *components, int num_list_entries
                                  user_precision_t *list_stokesI_1D,
                                  user_precision_t *list_stokesQ_1D,
                                  user_precision_t *list_stokesU_1D,
-                                 user_precision_t *list_stokesV_1D){
-
-  int *index_array = malloc(num_list_entries*sizeof(int));
+                                 user_precision_t *list_stokesV_1D,
+                                 track_comp_malloc_t *track_comp_malloc){
 
   //sort the frequencies so they are in ascending order. This makes
   //exptrapolated frequencies easier down the line
+  int *index_array = malloc(num_list_entries*sizeof(int));
+
   bubbleSort_freqs_index_array(index_array, list_freqs_1D, num_list_entries);
 
-  components->num_list_values = realloc(components->num_list_values,
-                                                (comp_list_ind+1)*sizeof(int));
-  components->list_start_indexes = realloc(components->list_start_indexes,
-                                                (comp_list_ind+1)*sizeof(int));
+  if (comp_list_ind+1 > track_comp_malloc->n_lists) {
+
+    update_realloc_num(&track_comp_malloc->n_lists);
+
+    components->num_list_values = realloc(components->num_list_values,
+                                        track_comp_malloc->n_lists*sizeof(int));
+    components->list_start_indexes = realloc(components->list_start_indexes,
+                                        track_comp_malloc->n_lists*sizeof(int));
+    components->list_comp_inds = realloc(components->list_comp_inds,
+                                    track_comp_malloc->n_lists*sizeof(int));
+  }
 
   int low_list_index;
 
@@ -183,24 +234,29 @@ void add_list_flux_component_info(components_t *components, int num_list_entries
     low_list_index = 0;
   } else {
     low_list_index = components->list_start_indexes[comp_list_ind - 1] + components->num_list_values[comp_list_ind - 1];
-
   }
 
+  components->list_comp_inds[comp_list_ind] = comp_ind - 1;
   components->list_start_indexes[comp_list_ind] = low_list_index;
   components->num_list_values[comp_list_ind] = num_list_entries;
 
   int new_size = low_list_index + num_list_entries;
 
-  components->list_freqs = realloc(components->list_freqs,
-                                             new_size*sizeof(double));
-  components->list_stokesI = realloc(components->list_stokesI,
-                                             new_size*sizeof(user_precision_t));
-  components->list_stokesQ = realloc(components->list_stokesQ,
-                                             new_size*sizeof(user_precision_t));
-  components->list_stokesU = realloc(components->list_stokesU,
-                                             new_size*sizeof(user_precision_t));
-  components->list_stokesV = realloc(components->list_stokesV,
-                                             new_size*sizeof(user_precision_t));
+  if (new_size > track_comp_malloc->n_list_values){
+
+    update_realloc_num(&track_comp_malloc->n_list_values);
+
+    components->list_freqs = realloc(components->list_freqs,
+                       track_comp_malloc->n_list_values*sizeof(double));
+    components->list_stokesI = realloc(components->list_stokesI,
+                       track_comp_malloc->n_list_values*sizeof(user_precision_t));
+    components->list_stokesQ = realloc(components->list_stokesQ,
+                       track_comp_malloc->n_list_values*sizeof(user_precision_t));
+    components->list_stokesU = realloc(components->list_stokesU,
+                       track_comp_malloc->n_list_values*sizeof(user_precision_t));
+    components->list_stokesV = realloc(components->list_stokesV,
+                       track_comp_malloc->n_list_values*sizeof(user_precision_t));
+  }
 
   for (int i = 0; i < num_list_entries; i++) {
     components->list_freqs[low_list_index + i] = list_freqs_1D[i];
@@ -212,43 +268,106 @@ void add_list_flux_component_info(components_t *components, int num_list_entries
   free(index_array);
 }
 
+track_comp_malloc_t * initialise_track_comp_malloc(void){
 
-void realloc_flux_type_comp_ind(components_t *components, e_flux_type fluxtype,
-      int comp_ind, int n_powers, int n_curves, int n_lists){
+  track_comp_malloc_t *track_comp_malloc = malloc(sizeof(track_comp_malloc_t));
 
-  if (fluxtype == POWER_LAW) {
-    components->power_comp_inds = realloc(components->power_comp_inds,
-                                               (n_powers)*sizeof(int));
-    components->power_comp_inds[n_powers - 1] = comp_ind - 1;
-  } else if (fluxtype == CURVED_POWER_LAW) {
-    components->curve_comp_inds = realloc(components->curve_comp_inds,
-                                               (n_curves)*sizeof(int));
-    components->curve_comp_inds[n_curves - 1] = comp_ind - 1;
-  } else if (fluxtype == LIST) {
-    components->list_comp_inds = realloc(components->list_comp_inds,
-                                               (n_lists)*sizeof(int));
-    components->list_comp_inds[n_lists - 1] = comp_ind - 1;
-  }
+  track_comp_malloc->n_comps = 0;
+  track_comp_malloc->n_powers = 0;
+  track_comp_malloc->n_curves = 0;
+  track_comp_malloc->n_lists = 0;
+  track_comp_malloc->n_list_values = 0;
+  track_comp_malloc->n_shape_coeffs = 0;
+
+  return track_comp_malloc;
 }
 
-void add_flux_type_comp_ind(source_t *source, e_flux_type fluxtype,
-      e_component_type comptype,
-      int point_ind, int n_point_powers, int n_point_curves, int n_point_lists,
-      int gauss_ind, int n_gauss_powers, int n_gauss_curves, int n_gauss_lists,
-      int shape_ind, int n_shape_powers, int n_shape_curves, int n_shape_lists) {
+void realloc_component_to_min_size(components_t *comps, int num_powers,
+                                   int num_curves, int num_lists,
+                                   int num_shape_coeffs,
+                                   e_component_type comptype){
 
-  if (comptype == POINT) {
-    realloc_flux_type_comp_ind(&source->point_components, fluxtype,
-          point_ind, n_point_powers, n_point_curves, n_point_lists);
-  } else if (comptype == GAUSSIAN) {
-    realloc_flux_type_comp_ind(&source->gauss_components, fluxtype,
-          gauss_ind, n_gauss_powers, n_gauss_curves, n_gauss_lists);
-  } else if (comptype == SHAPELET) {
-    realloc_flux_type_comp_ind(&source->shape_components, fluxtype,
-          shape_ind, n_shape_powers, n_shape_curves, n_shape_lists);
+  int n_comps = num_powers +  num_curves + num_lists;
+
+  comps->ras = realloc(comps->ras, sizeof(double)*n_comps);
+  comps->decs = realloc(comps->decs, sizeof(double)*n_comps);
+
+  if (comptype == GAUSSIAN || comptype == SHAPELET){
+    comps->majors = realloc(comps->majors, sizeof(user_precision_t)*n_comps);
+    comps->minors = realloc(comps->minors, sizeof(user_precision_t)*n_comps);
+    comps->pas = realloc(comps->pas, sizeof(user_precision_t)*n_comps);
   }
-}
 
+  if (comptype == SHAPELET){
+    comps->shape_coeffs = realloc(comps->shape_coeffs,
+                                   num_shape_coeffs*sizeof(user_precision_t));
+    comps->n1s = realloc(comps->n1s,
+                                   num_shape_coeffs*sizeof(user_precision_t));
+    comps->n2s = realloc(comps->n2s,
+                                   num_shape_coeffs*sizeof(user_precision_t));
+    comps->param_indexes = realloc(comps->param_indexes,
+                                   num_shape_coeffs*sizeof(user_precision_t));
+  }
+
+  if (num_powers > 0){
+      comps->power_ref_freqs = realloc(comps->power_ref_freqs,
+                                          sizeof(double)*num_powers);
+      comps->power_ref_stokesI = realloc(comps->power_ref_stokesI,
+                                          sizeof(user_precision_t)*num_powers);
+      comps->power_ref_stokesQ = realloc(comps->power_ref_stokesQ,
+                                          sizeof(user_precision_t)*num_powers);
+      comps->power_ref_stokesU = realloc(comps->power_ref_stokesU,
+                                          sizeof(user_precision_t)*num_powers);
+      comps->power_ref_stokesV = realloc(comps->power_ref_stokesV,
+                                          sizeof(user_precision_t)*num_powers);
+      comps->power_SIs = realloc(comps->power_SIs,
+                                          sizeof(user_precision_t)*num_powers);
+      comps->power_comp_inds = realloc(comps->power_comp_inds,
+                                          sizeof(int)*num_powers);
+  }
+
+  if (num_curves > 0) {
+    comps->curve_ref_freqs = realloc(comps->curve_ref_freqs,
+                                          sizeof(double)*num_curves);
+    comps->curve_ref_stokesI = realloc(comps->curve_ref_stokesI,
+                                          sizeof(user_precision_t)*num_curves);
+    comps->curve_ref_stokesQ = realloc(comps->curve_ref_stokesQ,
+                                          sizeof(user_precision_t)*num_curves);
+    comps->curve_ref_stokesU = realloc(comps->curve_ref_stokesU,
+                                          sizeof(user_precision_t)*num_curves);
+    comps->curve_ref_stokesV = realloc(comps->curve_ref_stokesV,
+                                          sizeof(user_precision_t)*num_curves);
+    comps->curve_SIs = realloc(comps->curve_SIs,
+                                          sizeof(user_precision_t)*num_curves);
+    comps->curve_qs = realloc(comps->curve_qs,
+                                          sizeof(user_precision_t)*num_curves);
+    comps->curve_comp_inds = realloc(comps->curve_comp_inds,
+                                          sizeof(int)*num_curves);
+  }
+
+  if (num_lists > 0) {
+    comps->list_comp_inds = realloc(comps->list_comp_inds,
+      sizeof(int)*num_lists);
+    comps->num_list_values = realloc(comps->num_list_values,
+      sizeof(int)*num_lists);
+    comps->list_start_indexes = realloc(comps->list_start_indexes,
+      sizeof(int)*num_lists);
+
+    comps->total_num_flux_entires = comps->list_start_indexes[num_lists-1] + comps->num_list_values[num_lists-1];
+
+    comps->list_freqs = realloc(comps->list_freqs,
+                        sizeof(double)*comps->total_num_flux_entires);
+    comps->list_stokesI = realloc(comps->list_stokesI,
+                        sizeof(user_precision_t)*comps->total_num_flux_entires);
+    comps->list_stokesQ = realloc(comps->list_stokesQ,
+                        sizeof(user_precision_t)*comps->total_num_flux_entires);
+    comps->list_stokesU = realloc(comps->list_stokesU,
+                        sizeof(user_precision_t)*comps->total_num_flux_entires);
+    comps->list_stokesV = realloc(comps->list_stokesV,
+                        sizeof(user_precision_t)*comps->total_num_flux_entires);
+  }
+
+}
 
 
 int read_yaml_skymodel(const char *yaml_path, source_catalogue_t *srccat)
@@ -346,13 +465,17 @@ int read_yaml_skymodel(const char *yaml_path, source_catalogue_t *srccat)
 
   srccat->num_shapelets = 0;
 
-
+  //Arrays to keep LIST style information in
   double *list_freqs_1D = NULL;
   user_precision_t *list_stokesI_1D = NULL;
   user_precision_t *list_stokesQ_1D = NULL;
   user_precision_t *list_stokesU_1D = NULL;
   user_precision_t *list_stokesV_1D = NULL;
-  // int *list_component_map;
+
+
+  track_comp_malloc_t *track_point_malloc = initialise_track_comp_malloc();
+  track_comp_malloc_t *track_gauss_malloc = initialise_track_comp_malloc();
+  track_comp_malloc_t *track_shape_malloc = initialise_track_comp_malloc();
 
   //Loop through the whole yaml object, and keep going until
   //you find the end of the YAML stream
@@ -606,29 +729,28 @@ int read_yaml_skymodel(const char *yaml_path, source_catalogue_t *srccat)
 
         srcs[num_srcs - 1].n_shape_coeffs += 1;
 
-        srcs[num_srcs - 1].shape_components.n1s = realloc(srcs[num_srcs - 1].shape_components.n1s,
-                                     sizeof(user_precision_t)*srcs[num_srcs - 1].n_shape_coeffs);
-        srcs[num_srcs - 1].shape_components.n2s = realloc(srcs[num_srcs - 1].shape_components.n2s,
-                                     sizeof(user_precision_t)*srcs[num_srcs - 1].n_shape_coeffs);
-        srcs[num_srcs - 1].shape_components.shape_coeffs = realloc(srcs[num_srcs - 1].shape_components.shape_coeffs,
-                                     sizeof(user_precision_t)*srcs[num_srcs - 1].n_shape_coeffs);
-        srcs[num_srcs - 1].shape_components.param_indexes = realloc(srcs[num_srcs - 1].shape_components.param_indexes,
-                                     sizeof(user_precision_t)*srcs[num_srcs - 1].n_shape_coeffs);
+        if (srcs[num_srcs - 1].n_shape_coeffs > track_shape_malloc->n_shape_coeffs) {
 
-        // printf("%.1f %.1f %.4f %.1f\n",n1, n2, shape_coeff_val, shape_ind);
+          update_realloc_num(&track_shape_malloc->n_shape_coeffs);
+
+          srcs[num_srcs - 1].shape_components.n1s = realloc(srcs[num_srcs - 1].shape_components.n1s,
+                     sizeof(user_precision_t)*track_shape_malloc->n_shape_coeffs);
+          srcs[num_srcs - 1].shape_components.n2s = realloc(srcs[num_srcs - 1].shape_components.n2s,
+                     sizeof(user_precision_t)*track_shape_malloc->n_shape_coeffs);
+          srcs[num_srcs - 1].shape_components.shape_coeffs = realloc(srcs[num_srcs - 1].shape_components.shape_coeffs,
+                     sizeof(user_precision_t)*track_shape_malloc->n_shape_coeffs);
+          srcs[num_srcs - 1].shape_components.param_indexes = realloc(srcs[num_srcs - 1].shape_components.param_indexes,
+                     sizeof(user_precision_t)*track_shape_malloc->n_shape_coeffs);
+        }
 
         srcs[num_srcs - 1].shape_components.n1s[shape_coeff_ind] = n1;
         srcs[num_srcs - 1].shape_components.n2s[shape_coeff_ind] = n2;
         srcs[num_srcs - 1].shape_components.shape_coeffs[shape_coeff_ind] = shape_coeff_val;
         srcs[num_srcs - 1].shape_components.param_indexes[shape_coeff_ind] = shape_ind;
 
-        //
-
         n1 = NAN;
         n2 = NAN;
         shape_coeff_val = NAN;
-        // shape_ind = NAN;
-
         // printf("INSIDE READING\n %d %d\n",srcs[num_srcs-1].n_shape_coeffs, shape_coeff_ind);
         // printf("%.1e %.1e %.1e %d\n",n1, n2, shape_coeff_val,  shape_ind);
         // n_shape_coeffs_incremented = 0;
@@ -655,7 +777,8 @@ int read_yaml_skymodel(const char *yaml_path, source_catalogue_t *srccat)
           add_component_information(&srcs[num_srcs - 1].point_components, num_srcs,
             point_ind, srcs[num_srcs - 1].n_point_powers, srcs[num_srcs - 1].n_point_curves,
             ra, dec, freq, fluxtype, comptype,
-            flux_I, flux_Q, flux_U, flux_V, curve_q, si, pa, maj, min);
+            flux_I, flux_Q, flux_U, flux_V, curve_q, si, pa, maj, min,
+            track_point_malloc);
 
           point_ind += 1;
         }
@@ -665,7 +788,8 @@ int read_yaml_skymodel(const char *yaml_path, source_catalogue_t *srccat)
           add_component_information(&srcs[num_srcs - 1].gauss_components, num_srcs,
             gauss_ind, srcs[num_srcs - 1].n_gauss_powers, srcs[num_srcs - 1].n_gauss_curves,
             ra, dec, freq, fluxtype, comptype,
-            flux_I, flux_Q, flux_U, flux_V, curve_q, si, pa, maj, min);
+            flux_I, flux_Q, flux_U, flux_V, curve_q, si, pa, maj, min,
+            track_gauss_malloc);
 
           gauss_ind += 1;
         }
@@ -675,7 +799,8 @@ int read_yaml_skymodel(const char *yaml_path, source_catalogue_t *srccat)
           add_component_information(&srcs[num_srcs - 1].shape_components, num_srcs,
             shape_ind, srcs[num_srcs - 1].n_shape_powers, srcs[num_srcs - 1].n_shape_curves,
             ra, dec, freq, fluxtype, comptype,
-            flux_I, flux_Q, flux_U, flux_V, curve_q, si, pa, maj, min);
+            flux_I, flux_Q, flux_U, flux_V, curve_q, si, pa, maj, min,
+            track_shape_malloc);
 
           shape_ind += 1;
         } else{
@@ -693,7 +818,8 @@ int read_yaml_skymodel(const char *yaml_path, source_catalogue_t *srccat)
                                              list_stokesI_1D,
                                              list_stokesQ_1D,
                                              list_stokesU_1D,
-                                             list_stokesV_1D);
+                                             list_stokesV_1D,
+                                             track_point_malloc);
 
             srcs[num_srcs - 1].n_point_lists += 1;
             point_list_ind += 1;
@@ -708,7 +834,8 @@ int read_yaml_skymodel(const char *yaml_path, source_catalogue_t *srccat)
                                              list_stokesI_1D,
                                              list_stokesQ_1D,
                                              list_stokesU_1D,
-                                             list_stokesV_1D);
+                                             list_stokesV_1D,
+                                             track_gauss_malloc);
 
             srcs[num_srcs - 1].n_gauss_lists += 1;
             gauss_list_ind += 1;
@@ -721,7 +848,8 @@ int read_yaml_skymodel(const char *yaml_path, source_catalogue_t *srccat)
                                              list_stokesI_1D,
                                              list_stokesQ_1D,
                                              list_stokesU_1D,
-                                             list_stokesV_1D);
+                                             list_stokesV_1D,
+                                             track_shape_malloc);
 
             srcs[num_srcs - 1].n_shape_lists += 1;
             shape_list_ind += 1;
@@ -763,16 +891,6 @@ int read_yaml_skymodel(const char *yaml_path, source_catalogue_t *srccat)
 
         }
 
-        //This increments the power_comp_inds, curve_comp_inds, list_comp_inds
-        //arrays that match the flux type indexes to the RA,Dec etc info
-        add_flux_type_comp_ind(&srcs[num_srcs - 1], fluxtype, comptype,
-            point_ind, srcs[num_srcs - 1].n_point_powers,
-            srcs[num_srcs - 1].n_point_curves, srcs[num_srcs - 1].n_point_lists,
-            gauss_ind, srcs[num_srcs - 1].n_gauss_powers,
-            srcs[num_srcs - 1].n_gauss_curves, srcs[num_srcs - 1].n_gauss_lists,
-            shape_ind, srcs[num_srcs - 1].n_shape_powers,
-            srcs[num_srcs - 1].n_shape_curves, srcs[num_srcs - 1].n_shape_lists);
-
         //Once new component information has been added, reset a number of values
         comptype = -1;
         fluxtype = -1;
@@ -782,6 +900,27 @@ int read_yaml_skymodel(const char *yaml_path, source_catalogue_t *srccat)
         maj = NAN, min = NAN, pa = NAN;
         n2 = NAN, n1 = NAN, shape_coeff_val = NAN;
         curve_q = NAN;
+
+        track_point_malloc->n_comps = 0;
+        track_point_malloc->n_powers = 0;
+        track_point_malloc->n_curves = 0;
+        track_point_malloc->n_lists = 0;
+        track_point_malloc->n_shape_coeffs = 0;
+        track_point_malloc->n_list_values = 0;
+
+        track_gauss_malloc->n_comps = 0;
+        track_gauss_malloc->n_powers = 0;
+        track_gauss_malloc->n_curves = 0;
+        track_gauss_malloc->n_lists = 0;
+        track_gauss_malloc->n_shape_coeffs = 0;
+        track_gauss_malloc->n_list_values = 0;
+
+        track_shape_malloc->n_comps = 0;
+        track_shape_malloc->n_powers = 0;
+        track_shape_malloc->n_curves = 0;
+        track_shape_malloc->n_lists = 0;
+        track_shape_malloc->n_shape_coeffs = 0;
+        track_shape_malloc->n_list_values = 0;
 
       }
     break;
@@ -824,6 +963,27 @@ int read_yaml_skymodel(const char *yaml_path, source_catalogue_t *srccat)
         srccat->num_shapelets += srcs[num_srcs-1].n_shapes;
         // printf("THIS %d %d %d\n",srcs[num_srcs-1].n_points, srcs[num_srcs-1].n_gauss,  srcs[num_srcs - 1].n_shapes);
         srcs[num_srcs - 1].n_comps = srcs[num_srcs-1].n_points + srcs[num_srcs-1].n_gauss + srcs[num_srcs - 1].n_shapes;
+
+        realloc_component_to_min_size(&srcs[num_srcs - 1].point_components,
+                                              srcs[num_srcs - 1].n_point_powers,
+                                              srcs[num_srcs - 1].n_point_curves,
+                                              srcs[num_srcs - 1].n_point_lists,
+                                              srcs[num_srcs - 1].n_shape_coeffs,
+                                              POINT);
+
+        realloc_component_to_min_size(&srcs[num_srcs - 1].gauss_components,
+                                              srcs[num_srcs - 1].n_gauss_powers,
+                                              srcs[num_srcs - 1].n_gauss_curves,
+                                              srcs[num_srcs - 1].n_gauss_lists,
+                                              srcs[num_srcs - 1].n_shape_coeffs,
+                                              GAUSSIAN);
+
+        realloc_component_to_min_size(&srcs[num_srcs - 1].shape_components,
+                                              srcs[num_srcs - 1].n_shape_powers,
+                                              srcs[num_srcs - 1].n_shape_curves,
+                                              srcs[num_srcs - 1].n_shape_lists,
+                                              srcs[num_srcs - 1].n_shape_coeffs,
+                                              SHAPELET);
 
       }
 

@@ -14,6 +14,22 @@
 #include "constants.h"
 #include "woden_struct_defs.h"
 
+
+/*!
+A struct to contain how many elements we have malloc'd for each set of COMPONENTS
+*/
+typedef struct _track_comp_malloc_t {
+  int n_comps; /*!< How many components have been malloced for */
+  int n_powers; /*!< How many POWER_LAW have been malloced for */
+  int n_curves; /*!< How many CURVED_POWER_LAW have been malloced for */
+  int n_lists; /*!< How many LIST components have been malloced for */
+  int n_list_values; /*!< How many LIST flux values have been malloced for */
+  int n_shape_coeffs; /*!< How many SHAPELET coeffs have been malloced for */
+
+} track_comp_malloc_t;
+
+
+
 /**
  @brief Takes a path to `hyperdrive`-style sky model and populates a
  `source_catalogue_t` struct with the contents of `filename`.
