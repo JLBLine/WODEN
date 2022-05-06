@@ -736,6 +736,16 @@ __global__ void kern_map_hyperbeam_gains(int num_components,
   }
 }
 
+__global__ void fill_with_ones(int num_azza, double *d_jones) {
+
+  //All baselines at all freqs and all times
+  int iAzza = threadIdx.x + (blockDim.x*blockIdx.x);
+
+  if (iAzza < num_azza) {
+    d_jones[iAzza] = 1;
+  }
+}
+
 extern "C" void run_hyperbeam_cuda(int num_components,
            int num_time_steps, int num_freqs,
            uint8_t parallactic,
@@ -751,12 +761,12 @@ extern "C" void run_hyperbeam_cuda(int num_components,
   int num_beam_values = num_azza * num_freqs;
 
   double *d_jones = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&(d_jones),
-                      2*MAX_POLS*num_beam_values*sizeof(double)) );
+  // cudaErrorCheckCall( cudaMalloc( (void**)&(d_jones),
+  //                     2*MAX_POLS*num_beam_values*sizeof(double)) );
 
-  //Call hyperbeam and feed it a character array to return an error string
-  //if something goes wrong
-  int32_t status;
+  // Call hyperbeam and feed it a character array to return an error string
+  // if something goes wrong
+  int32_t status = 0;
   char error_str[100];
   status = calc_jones_cuda_device(cuda_fee_beam,
                   (uint32_t)num_azza,
@@ -765,12 +775,18 @@ extern "C" void run_hyperbeam_cuda(int num_components,
                   &(d_jones),
                   error_str);
 
-  //
   if (status != 0) {
     printf("hyperbeam error %d %s\n",status,error_str );
   }
 
   dim3 grid, threads;
+
+  // threads.x = 64;
+  // grid.x = (int)ceil( (float)num_azza / (float)threads.x );
+  //
+  // cudaErrorCheckKernel("fill_with_ones",
+  //                       fill_with_ones, grid, threads,
+  //                       num_azza, d_jones);
 
   //For now, only using one beam
   grid.y = threads.y = 1;
@@ -778,7 +794,6 @@ extern "C" void run_hyperbeam_cuda(int num_components,
   // threads.x = 32;
   // threads.y = 2;
   // grid.y = (int)ceil( (float)num_tiles / (float)threads.y );
-
 
   threads.x = 64;
   threads.z = 2;
