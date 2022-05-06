@@ -28,6 +28,15 @@ typedef struct _track_comp_malloc_t {
 
 } track_comp_malloc_t;
 
+/**
+@brief Mallocs and sets a pointer to a `track_comp_malloc_t` with all values set to zero
+
+@details
+
+@return A pointer to a `track_comp_malloc_t` with all values set to zero
+ */
+track_comp_malloc_t * initialise_track_comp_malloc(void);
+
 
 
 /**
@@ -64,3 +73,16 @@ before feeding into this function.
 @return Integer where 0 if read was successful, 1 if failed
  */
 int read_yaml_skymodel(const char *yaml_path, source_catalogue_t *srccat);
+
+
+
+/**
+ @brief Update the number used to track the ammount of memory that has been
+ malloced for a particular
+
+ @details If the number is zero (nothing malloc'd yet) set the initial value
+ to INITIAL_NUM_COMPONENTS. If there is a value, double it.
+
+@param[in] *num_malloc Pointer to number
+ */
+void update_realloc_num(int * num_malloc);

@@ -109,19 +109,26 @@ void realloc_and_add_component(e_sky_crop croptype,
                                source_t *cropped_src,
                                source_t *original_src,
                                int orig_flux_ind,
-                               double *lsts, double latitude, int num_time_steps){
+                               double *lsts, double latitude, int num_time_steps,
+                               track_comp_malloc_t *track_point_malloc,
+                               track_comp_malloc_t *track_gauss_malloc,
+                               track_comp_malloc_t *track_shape_malloc){
 
   components_t *components_original = NULL;
   components_t *components_cropped = NULL;
+  track_comp_malloc_t *track_comp_malloc = NULL;
   if (comptype == POINT) {
     components_original = &original_src->point_components;
     components_cropped = &cropped_src->point_components;
+    track_comp_malloc = track_point_malloc;
   } else if (comptype == GAUSSIAN) {
     components_original = &original_src->gauss_components;
     components_cropped = &cropped_src->gauss_components;
+    track_comp_malloc = track_gauss_malloc;
   } else if (comptype == SHAPELET) {
     components_original = &original_src->shape_components;
     components_cropped = &cropped_src->shape_components;
+    track_comp_malloc = track_shape_malloc;
   }
 
 
@@ -183,22 +190,36 @@ void realloc_and_add_component(e_sky_crop croptype,
       crop_list_ind = -1;
     }
 
-    components_cropped->ras = realloc(components_cropped->ras,
-                                              sizeof(double)*(crop_comp_ind + 1));
-    components_cropped->ras[crop_comp_ind] = components_original->ras[orig_comp_ind];
+    //Realloc enough space for component wide attributes if needed
+    if (crop_comp_ind + 1 > track_comp_malloc->n_comps) {
 
-    components_cropped->decs = realloc(components_cropped->decs,
-                                              sizeof(double)*(crop_comp_ind + 1));
+      update_realloc_num(&track_comp_malloc->n_comps);
+
+      components_cropped->ras = realloc(components_cropped->ras,
+                                     sizeof(double)*track_comp_malloc->n_comps);
+      components_cropped->decs = realloc(components_cropped->decs,
+                                     sizeof(double)*track_comp_malloc->n_comps);
+
+      components_cropped->azs = realloc(components_cropped->azs,
+            sizeof(user_precision_t)*track_comp_malloc->n_comps*num_time_steps);
+      components_cropped->zas = realloc(components_cropped->zas,
+            sizeof(user_precision_t)*track_comp_malloc->n_comps*num_time_steps);
+
+      if (comptype == GAUSSIAN || comptype == SHAPELET) {
+        components_cropped->majors = realloc(components_cropped->majors,
+                          sizeof(user_precision_t)*track_comp_malloc->n_comps);
+        components_cropped->minors = realloc(components_cropped->minors,
+                          sizeof(user_precision_t)*track_comp_malloc->n_comps);
+        components_cropped->pas = realloc(components_cropped->pas,
+                          sizeof(user_precision_t)*track_comp_malloc->n_comps);
+      }
+    }
+
+    components_cropped->ras[crop_comp_ind] = components_original->ras[orig_comp_ind];
     components_cropped->decs[crop_comp_ind] = components_original->decs[orig_comp_ind];
 
     double az, za;
-    //Calculate az/za values for  all time steps
-    components_cropped->azs = realloc(components_cropped->azs,
-                      sizeof(user_precision_t)*(crop_comp_ind + 1)*num_time_steps);
-    components_cropped->zas = realloc(components_cropped->zas,
-                      sizeof(user_precision_t)*(crop_comp_ind + 1)*num_time_steps);
-
-
+    //Calculate azza for ALL time steps for this component
     for (int time_step = 0; time_step < num_time_steps; time_step++) {
       convert_radec2azza(components_cropped->ras[crop_comp_ind],
                          components_cropped->decs[crop_comp_ind],
@@ -207,25 +228,15 @@ void realloc_and_add_component(e_sky_crop croptype,
       components_cropped->zas[crop_comp_ind*num_time_steps + time_step] = (user_precision_t)za;
     }
 
-
     if (comptype == GAUSSIAN || comptype == SHAPELET) {
-      components_cropped->majors = realloc(components_cropped->majors,
-                                                sizeof(user_precision_t)*(crop_comp_ind + 1));
+
       components_cropped->majors[crop_comp_ind] = components_original->majors[orig_comp_ind];
-
-      components_cropped->minors = realloc(components_cropped->minors,
-                                                sizeof(user_precision_t)*(crop_comp_ind + 1));
       components_cropped->minors[crop_comp_ind] = components_original->minors[orig_comp_ind];
-
-      components_cropped->pas = realloc(components_cropped->pas,
-                                                sizeof(user_precision_t)*(crop_comp_ind + 1));
       components_cropped->pas[crop_comp_ind] = components_original->pas[orig_comp_ind];
 
     }
 
     if (comptype == SHAPELET) {
-
-      // printf("Start of new coeff loop %d================\n",orig_comp_ind );
 
       int cropped_coeff_ind = cropped_src->n_shape_coeffs;
 
@@ -239,17 +250,21 @@ void realloc_and_add_component(e_sky_crop croptype,
         //Check if we are on the cofrect component
         if ( (int)components_original->param_indexes[orig_coeff_ind] == orig_comp_ind ){
 
-          // printf("orig_coeff_ind, orig_comp_ind %d %d\n", orig_coeff_ind, orig_comp_ind );
+          //Realloc space for shapelet coeffs if needed
+          if (cropped_coeff_ind + 1 > track_shape_malloc->n_shape_coeffs) {
 
+            update_realloc_num(&track_shape_malloc->n_shape_coeffs);
 
-          components_cropped->shape_coeffs = realloc(components_cropped->shape_coeffs,
-                              (cropped_coeff_ind + 1)*sizeof(user_precision_t));
-          components_cropped->n1s = realloc(components_cropped->n1s,
-                              (cropped_coeff_ind + 1)*sizeof(user_precision_t));
-          components_cropped->n2s = realloc(components_cropped->n2s,
-                              (cropped_coeff_ind + 1)*sizeof(user_precision_t));
-          components_cropped->param_indexes = realloc(components_cropped->param_indexes,
-                              (cropped_coeff_ind + 1)*sizeof(user_precision_t));
+            components_cropped->shape_coeffs = realloc(components_cropped->shape_coeffs,
+                    track_shape_malloc->n_shape_coeffs*sizeof(user_precision_t));
+            components_cropped->n1s = realloc(components_cropped->n1s,
+                    track_shape_malloc->n_shape_coeffs*sizeof(user_precision_t));
+            components_cropped->n2s = realloc(components_cropped->n2s,
+                    track_shape_malloc->n_shape_coeffs*sizeof(user_precision_t));
+            components_cropped->param_indexes = realloc(components_cropped->param_indexes,
+                    track_shape_malloc->n_shape_coeffs*sizeof(user_precision_t));
+
+          }
 
           components_cropped->shape_coeffs[cropped_coeff_ind] = components_original->shape_coeffs[orig_coeff_ind];
           components_cropped->n1s[cropped_coeff_ind] = components_original->n1s[orig_coeff_ind];
@@ -265,25 +280,28 @@ void realloc_and_add_component(e_sky_crop croptype,
 
     }//end if (comptype == SHAPELET)
 
-
-
-
     if (fluxtype == POWER_LAW) {
-      components_cropped->power_comp_inds = realloc(components_cropped->power_comp_inds,
-                                                 (crop_power_ind + 1)*sizeof(int));
 
-      components_cropped->power_ref_freqs = realloc(components_cropped->power_ref_freqs,
-                                         (crop_power_ind + 1)*sizeof(double));
-      components_cropped->power_ref_stokesI = realloc(components_cropped->power_ref_stokesI,
-                                    (crop_power_ind + 1)*sizeof(user_precision_t));
-      components_cropped->power_ref_stokesQ = realloc(components_cropped->power_ref_stokesQ,
-                                    (crop_power_ind + 1)*sizeof(user_precision_t));
-      components_cropped->power_ref_stokesU = realloc(components_cropped->power_ref_stokesU,
-                                    (crop_power_ind + 1)*sizeof(user_precision_t));
-      components_cropped->power_ref_stokesV = realloc(components_cropped->power_ref_stokesV,
-                                    (crop_power_ind + 1)*sizeof(user_precision_t));
-      components_cropped->power_SIs = realloc(components_cropped->power_SIs,
-                                    (crop_power_ind + 1)*sizeof(user_precision_t));
+      if (crop_power_ind + 1 > track_comp_malloc->n_powers) {
+
+        update_realloc_num(&track_comp_malloc->n_powers);
+
+        components_cropped->power_comp_inds = realloc(components_cropped->power_comp_inds,
+                                       track_comp_malloc->n_powers*sizeof(int));
+
+        components_cropped->power_ref_freqs = realloc(components_cropped->power_ref_freqs,
+                               track_comp_malloc->n_powers*sizeof(double));
+        components_cropped->power_ref_stokesI = realloc(components_cropped->power_ref_stokesI,
+                          track_comp_malloc->n_powers*sizeof(user_precision_t));
+        components_cropped->power_ref_stokesQ = realloc(components_cropped->power_ref_stokesQ,
+                          track_comp_malloc->n_powers*sizeof(user_precision_t));
+        components_cropped->power_ref_stokesU = realloc(components_cropped->power_ref_stokesU,
+                          track_comp_malloc->n_powers*sizeof(user_precision_t));
+        components_cropped->power_ref_stokesV = realloc(components_cropped->power_ref_stokesV,
+                          track_comp_malloc->n_powers*sizeof(user_precision_t));
+        components_cropped->power_SIs = realloc(components_cropped->power_SIs,
+                          track_comp_malloc->n_powers*sizeof(user_precision_t));
+      }
 
       components_cropped->power_comp_inds[crop_power_ind] = crop_comp_ind;
       components_cropped->power_ref_freqs[crop_power_ind] = components_original->power_ref_freqs[orig_flux_ind];
@@ -295,23 +313,29 @@ void realloc_and_add_component(e_sky_crop croptype,
 
     }
     else if (fluxtype == CURVED_POWER_LAW) {
-      components_cropped->curve_comp_inds = realloc(components_cropped->curve_comp_inds,
-                                                 (crop_curve_ind + 1)*sizeof(int));
 
-      components_cropped->curve_ref_freqs = realloc(components_cropped->curve_ref_freqs,
-                                         (crop_curve_ind + 1)*sizeof(double));
-      components_cropped->curve_ref_stokesI = realloc(components_cropped->curve_ref_stokesI,
-                                    (crop_curve_ind + 1)*sizeof(user_precision_t));
-      components_cropped->curve_ref_stokesQ = realloc(components_cropped->curve_ref_stokesQ,
-                                    (crop_curve_ind + 1)*sizeof(user_precision_t));
-      components_cropped->curve_ref_stokesU = realloc(components_cropped->curve_ref_stokesU,
-                                    (crop_curve_ind + 1)*sizeof(user_precision_t));
-      components_cropped->curve_ref_stokesV = realloc(components_cropped->curve_ref_stokesV,
-                                    (crop_curve_ind + 1)*sizeof(user_precision_t));
-      components_cropped->curve_SIs = realloc(components_cropped->curve_SIs,
-                                    (crop_curve_ind + 1)*sizeof(user_precision_t));
-      components_cropped->curve_qs = realloc(components_cropped->curve_qs,
-                                    (crop_curve_ind + 1)*sizeof(user_precision_t));
+      if (crop_curve_ind + 1 > track_comp_malloc->n_curves) {
+
+        update_realloc_num(&track_comp_malloc->n_curves);
+
+        components_cropped->curve_comp_inds = realloc(components_cropped->curve_comp_inds,
+                                       track_comp_malloc->n_curves*sizeof(int));
+
+        components_cropped->curve_ref_freqs = realloc(components_cropped->curve_ref_freqs,
+                               track_comp_malloc->n_curves*sizeof(double));
+        components_cropped->curve_ref_stokesI = realloc(components_cropped->curve_ref_stokesI,
+                          track_comp_malloc->n_curves*sizeof(user_precision_t));
+        components_cropped->curve_ref_stokesQ = realloc(components_cropped->curve_ref_stokesQ,
+                          track_comp_malloc->n_curves*sizeof(user_precision_t));
+        components_cropped->curve_ref_stokesU = realloc(components_cropped->curve_ref_stokesU,
+                          track_comp_malloc->n_curves*sizeof(user_precision_t));
+        components_cropped->curve_ref_stokesV = realloc(components_cropped->curve_ref_stokesV,
+                          track_comp_malloc->n_curves*sizeof(user_precision_t));
+        components_cropped->curve_SIs = realloc(components_cropped->curve_SIs,
+                          track_comp_malloc->n_curves*sizeof(user_precision_t));
+        components_cropped->curve_qs = realloc(components_cropped->curve_qs,
+                          track_comp_malloc->n_curves*sizeof(user_precision_t));
+      }
 
       components_cropped->curve_comp_inds[crop_curve_ind] = crop_comp_ind;
       components_cropped->curve_ref_freqs[crop_curve_ind] = components_original->curve_ref_freqs[orig_flux_ind];
@@ -323,8 +347,20 @@ void realloc_and_add_component(e_sky_crop croptype,
       components_cropped->curve_qs[crop_curve_ind] = components_original->curve_qs[orig_flux_ind];
     }
     else if (fluxtype == LIST) {
-      components_cropped->list_comp_inds = realloc(components_cropped->list_comp_inds,
-                                                 (crop_list_ind + 1)*sizeof(int));
+
+      if (crop_list_ind + 1 > track_comp_malloc->n_lists) {
+
+        update_realloc_num(&track_comp_malloc->n_lists);
+
+
+        components_cropped->list_comp_inds = realloc(components_cropped->list_comp_inds,
+                                        track_comp_malloc->n_lists*sizeof(int));
+        components_cropped->num_list_values = realloc(components_cropped->num_list_values,
+                                        track_comp_malloc->n_lists*sizeof(int));
+        components_cropped->list_start_indexes = realloc(components_cropped->list_start_indexes,
+                                        track_comp_malloc->n_lists*sizeof(int));
+
+      }
 
       //How much we have to realloc is going to depend on this number
 
@@ -337,15 +373,6 @@ void realloc_and_add_component(e_sky_crop croptype,
         current_list_entries = components_cropped->num_list_values[crop_list_ind - 1] + components_cropped->list_start_indexes[crop_list_ind - 1];
       }
 
-      // printf("RIGHT HERE orig_flux_ind, crop_list_ind, current_list_entries %d %d %d\n",orig_flux_ind, crop_list_ind, current_list_entries);
-
-      components_cropped->list_comp_inds = realloc(components_cropped->list_comp_inds,
-                                                 (crop_list_ind + 1)*sizeof(int));
-      components_cropped->num_list_values = realloc(components_cropped->num_list_values,
-                                                 (crop_list_ind + 1)*sizeof(int));
-      components_cropped->list_start_indexes = realloc(components_cropped->list_start_indexes,
-                                                 (crop_list_ind + 1)*sizeof(int));
-
       components_cropped->list_comp_inds[crop_list_ind] = crop_comp_ind;
       components_cropped->num_list_values[crop_list_ind] = extra_list_entries;
       components_cropped->list_start_indexes[crop_list_ind] = current_list_entries;
@@ -353,23 +380,27 @@ void realloc_and_add_component(e_sky_crop croptype,
 
       int realloc_size = extra_list_entries + current_list_entries;
 
-      components_cropped->list_freqs = realloc(components_cropped->list_freqs,
-                                               realloc_size*sizeof(double));
-      components_cropped->list_stokesI = realloc(components_cropped->list_stokesI,
-                                         realloc_size*sizeof(user_precision_t));
-      components_cropped->list_stokesQ = realloc(components_cropped->list_stokesQ,
-                                         realloc_size*sizeof(user_precision_t));
-      components_cropped->list_stokesU = realloc(components_cropped->list_stokesU,
-                                         realloc_size*sizeof(user_precision_t));
-      components_cropped->list_stokesV = realloc(components_cropped->list_stokesV,
-                                         realloc_size*sizeof(user_precision_t));
+      if (realloc_size > track_comp_malloc->n_list_values){
+
+        // printf("Reallocing a the big-ass list array, now %d\n", track_comp_malloc->n_list_values);
+
+        update_realloc_num(&track_comp_malloc->n_list_values);
+
+        components_cropped->list_freqs = realloc(components_cropped->list_freqs,
+                           track_comp_malloc->n_list_values*sizeof(double));
+        components_cropped->list_stokesI = realloc(components_cropped->list_stokesI,
+                     track_comp_malloc->n_list_values*sizeof(user_precision_t));
+        components_cropped->list_stokesQ = realloc(components_cropped->list_stokesQ,
+                     track_comp_malloc->n_list_values*sizeof(user_precision_t));
+        components_cropped->list_stokesU = realloc(components_cropped->list_stokesU,
+                     track_comp_malloc->n_list_values*sizeof(user_precision_t));
+        components_cropped->list_stokesV = realloc(components_cropped->list_stokesV,
+                     track_comp_malloc->n_list_values*sizeof(user_precision_t));
+      }
 
       int orig_start_ind = components_original->list_start_indexes[orig_flux_ind];
 
       for (int list_increment = 0; list_increment < extra_list_entries; list_increment++) {
-
-        // printf("YUP %d %d %d %.3e\n",current_list_entries, list_increment, crop_list_ind,
-        //      components_original->list_freqs[orig_start_ind + list_increment] );
 
         components_cropped->list_freqs[current_list_entries + list_increment] = components_original->list_freqs[orig_start_ind + list_increment];
         components_cropped->list_stokesI[current_list_entries + list_increment] = components_original->list_stokesI[orig_start_ind + list_increment];
@@ -420,7 +451,10 @@ void realloc_and_add_component(e_sky_crop croptype,
 // if CROP_SOURCES
 void add_source_to_cropped_source(e_sky_crop croptype,
                                   source_t *cropped_src, source_t *original_src,
-                                  double *lsts, double latitude, int num_time_steps){
+                                  double *lsts, double latitude, int num_time_steps,
+                                  track_comp_malloc_t *track_point_malloc,
+                                  track_comp_malloc_t *track_gauss_malloc,
+                                  track_comp_malloc_t *track_shape_malloc){
   //For everything in the selected original source, add to the cropped source
 
   // int orig_comp_ind;
@@ -430,7 +464,9 @@ void add_source_to_cropped_source(e_sky_crop croptype,
     realloc_and_add_component(croptype, POINT, POWER_LAW,
                               cropped_src, original_src,
                               orig_power_ind,
-                              lsts, latitude, num_time_steps);
+                              lsts, latitude, num_time_steps,
+                              track_point_malloc, track_gauss_malloc,
+                              track_shape_malloc);
   } //end loop over POINT + POWER_LAW
 
   for (int orig_curve_ind = 0; orig_curve_ind < original_src->n_point_curves; orig_curve_ind++) {
@@ -438,7 +474,9 @@ void add_source_to_cropped_source(e_sky_crop croptype,
     realloc_and_add_component(croptype, POINT, CURVED_POWER_LAW,
                               cropped_src, original_src,
                               orig_curve_ind,
-                              lsts, latitude, num_time_steps);
+                              lsts, latitude, num_time_steps,
+                              track_point_malloc, track_gauss_malloc,
+                              track_shape_malloc);
   } //end loop over POINT + CURVED_POWER_LAW
 
   for (int orig_list_ind = 0; orig_list_ind < original_src->n_point_lists; orig_list_ind++) {
@@ -446,7 +484,9 @@ void add_source_to_cropped_source(e_sky_crop croptype,
     realloc_and_add_component(croptype, POINT, LIST,
                               cropped_src, original_src,
                               orig_list_ind,
-                              lsts, latitude, num_time_steps);
+                              lsts, latitude, num_time_steps,
+                              track_point_malloc, track_gauss_malloc,
+                              track_shape_malloc);
   } //end loop over POINT + LIST
 
   for (int orig_power_ind = 0; orig_power_ind < original_src->n_gauss_powers; orig_power_ind++) {
@@ -454,7 +494,9 @@ void add_source_to_cropped_source(e_sky_crop croptype,
     realloc_and_add_component(croptype, GAUSSIAN, POWER_LAW,
                               cropped_src, original_src,
                               orig_power_ind,
-                              lsts, latitude, num_time_steps);
+                              lsts, latitude, num_time_steps,
+                              track_point_malloc, track_gauss_malloc,
+                              track_shape_malloc);
   } //end loop over GAUSSIAN + POWER_LAW
 
   for (int orig_curve_ind = 0; orig_curve_ind < original_src->n_gauss_curves; orig_curve_ind++) {
@@ -462,7 +504,9 @@ void add_source_to_cropped_source(e_sky_crop croptype,
     realloc_and_add_component(croptype, GAUSSIAN, CURVED_POWER_LAW,
                               cropped_src, original_src,
                               orig_curve_ind,
-                              lsts, latitude, num_time_steps);
+                              lsts, latitude, num_time_steps,
+                              track_point_malloc, track_gauss_malloc,
+                              track_shape_malloc);
   } //end loop over GAUSSIAN + CURVED_POWER_LAW
 
   for (int orig_list_ind = 0; orig_list_ind < original_src->n_gauss_lists; orig_list_ind++) {
@@ -470,7 +514,9 @@ void add_source_to_cropped_source(e_sky_crop croptype,
     realloc_and_add_component(croptype, GAUSSIAN, LIST,
                               cropped_src, original_src,
                               orig_list_ind,
-                              lsts, latitude, num_time_steps);
+                              lsts, latitude, num_time_steps,
+                              track_point_malloc, track_gauss_malloc,
+                              track_shape_malloc);
   } //end loop over GAUSSIAN + LIST
 
   for (int orig_power_ind = 0; orig_power_ind < original_src->n_shape_powers; orig_power_ind++) {
@@ -478,7 +524,9 @@ void add_source_to_cropped_source(e_sky_crop croptype,
     realloc_and_add_component(croptype, SHAPELET, POWER_LAW,
                               cropped_src, original_src,
                               orig_power_ind,
-                              lsts, latitude, num_time_steps);
+                              lsts, latitude, num_time_steps,
+                              track_point_malloc, track_gauss_malloc,
+                              track_shape_malloc);
   } //end loop over SHAPELET + POWER_LAW
 
   for (int orig_curve_ind = 0; orig_curve_ind < original_src->n_shape_curves; orig_curve_ind++) {
@@ -486,7 +534,9 @@ void add_source_to_cropped_source(e_sky_crop croptype,
     realloc_and_add_component(croptype, SHAPELET, CURVED_POWER_LAW,
                               cropped_src, original_src,
                               orig_curve_ind,
-                              lsts, latitude, num_time_steps);
+                              lsts, latitude, num_time_steps,
+                              track_point_malloc, track_gauss_malloc,
+                              track_shape_malloc);
   } //end loop over SHAPELET + CURVED_POWER_LAW
 
   for (int orig_list_ind = 0; orig_list_ind < original_src->n_shape_lists; orig_list_ind++) {
@@ -494,7 +544,9 @@ void add_source_to_cropped_source(e_sky_crop croptype,
     realloc_and_add_component(croptype, SHAPELET, LIST,
                               cropped_src, original_src,
                               orig_list_ind,
-                              lsts, latitude, num_time_steps);
+                              lsts, latitude, num_time_steps,
+                              track_point_malloc, track_gauss_malloc,
+                              track_shape_malloc);
   } //end loop over SHAPELET + LIST
 
 
@@ -599,6 +651,10 @@ void source_zero_counters_and_null_components(source_t *source){
 source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
               double latitude, int num_time_steps, e_sky_crop sky_crop_type){
 
+  track_comp_malloc_t *track_point_malloc = initialise_track_comp_malloc();
+  track_comp_malloc_t *track_gauss_malloc = initialise_track_comp_malloc();
+  track_comp_malloc_t *track_shape_malloc = initialise_track_comp_malloc();
+
   for (int src = 0; src < raw_srccat->num_sources; src++){
 
     //Initialise containers for azimuth and zenith angles, used in cropping
@@ -656,7 +712,9 @@ source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
 
         add_source_to_cropped_source(sky_crop_type,
                                      cropped_src, &raw_srccat->sources[src],
-                                     lsts, latitude, num_time_steps);
+                                     lsts, latitude, num_time_steps,
+                                     track_point_malloc, track_gauss_malloc,
+                                     track_shape_malloc);
 
       }//end if all_comps_above_horizon == ABOVE
     }//end if sky_crop_type == CROP_SOURCES
@@ -664,7 +722,9 @@ source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
     else if (sky_crop_type == CROP_COMPONENTS) {
       add_source_to_cropped_source(sky_crop_type,
                                    cropped_src, &raw_srccat->sources[src],
-                                   lsts, latitude, num_time_steps);
+                                   lsts, latitude, num_time_steps,
+                                   track_point_malloc, track_gauss_malloc,
+                                   track_shape_malloc);
     }
 
   }//Finish checking az/za loop  and adding components to cropped src
@@ -688,6 +748,9 @@ source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
   printf("\t\t(Curved power laws %d)\n", cropped_src->n_shape_curves);
   printf("\t\t(List fluxes %d)\n",  cropped_src->n_shape_lists);
 
+  free(track_point_malloc);
+  free(track_gauss_malloc);
+  free(track_shape_malloc);
 
   return cropped_src;
 }

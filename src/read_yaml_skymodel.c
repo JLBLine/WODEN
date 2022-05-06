@@ -871,18 +871,6 @@ int read_yaml_skymodel(const char *yaml_path, source_catalogue_t *srccat)
           }
           //Reset for the next LIST flux type component
           num_list_entries = 0;
-          // free(list_freqs_1D);
-          // free(list_stokesI_1D);
-          // free(list_stokesQ_1D);
-          // free(list_stokesU_1D);
-          // free(list_stokesV_1D);
-          //realloc doesn't like it if I don't add a NULL in here. Good to make
-          //sure we free and NULL so we don't copy old flux into new components
-          // list_freqs_1D = NULL;
-          // list_stokesI_1D = NULL;
-          // list_stokesQ_1D = NULL;
-          // list_stokesU_1D = NULL;
-          // list_stokesV_1D = NULL;
         }
 
         else if (fluxtype == POWER_LAW) {
