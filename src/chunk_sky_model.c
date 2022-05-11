@@ -426,11 +426,17 @@ source_catalogue_t * create_chunked_sky_models(source_t *cropped_src,
   int num_freqs = woden_settings->num_freqs;
   int num_time_steps = woden_settings->num_time_steps;
 
-  int comps_per_chunk = (int)floorf((float)chunking_size / (float)(num_baselines * num_freqs * num_time_steps));
+  // int comps_per_chunk = (int)floorf((float)chunking_size / (float)(num_baselines * num_freqs * num_time_steps));
+
+  printf("\t ++ chunking_size, num_baselines, num_freqs, num_time_steps %ld %d %d %d\n", chunking_size, num_baselines, num_freqs, num_time_steps );
+
+  int comps_per_chunk = (int)floorf((float)(chunking_size / (num_baselines * num_freqs * num_time_steps)));
 
   if (comps_per_chunk < 1) {
     comps_per_chunk = 1;
   }
+
+  printf("\t ++ comps_per_chunk %d\n", comps_per_chunk);
 
   //How many chunks we need for the POINT/GAUSS, and the SHAPELETs
   int num_point_chunks = (int)ceilf((float)cropped_src->n_points / (float)comps_per_chunk);
