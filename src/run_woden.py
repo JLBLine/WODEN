@@ -641,7 +641,22 @@ def write_json(json_name=None, jd_date=None, lst=None, args=None):
         outfile.write('  "chunking_size": {:d},\n'.format(int(args.chunking_size)))
         outfile.write('  "jd_date": {:.16f},\n'.format(jd_date))
         outfile.write('  "LST": {:.16f},\n'.format(lst))
-        outfile.write('  "array_layout": "{:s}",\n'.format(args.array_layout_name))
+
+        ##sometimes some bands finish before others start on a super cluster,
+        ##and delete this array layout if generated from metafits. So append
+        ##a band number to prevent this from happening
+
+        if args.array_layout == 'from_the_metafits':
+
+            band_num = json_name.split('_')[-1].split('.')[0]
+            print("HERE", band_num)
+            # call()
+            band_array_layout = f"WODEN_array_layout_band{band_num}.txt"
+            command(f"cp WODEN_array_layout.txt {band_array_layout}")
+        else:
+            band_array_layout = args.array_layout_name
+
+        outfile.write('  "array_layout": "{:s}",\n'.format(band_array_layout))
         outfile.write('  "lowest_channel_freq": {:.10e},\n'.format(args.lowest_channel_freq))
         outfile.write('  "latitude": {:.16f},\n'.format(args.latitude))
         outfile.write('  "coarse_band_width": {:.10e},\n'.format(args.coarse_band_width))
@@ -1499,6 +1514,8 @@ if __name__ == "__main__":
                 pass
             else:
                 command("rm {:s}".format(filename))
+                if args.array_layout == 'from_the_metafits':
+                    command("rm WODEN_array_layout_band{:02d}.txt".format(band))
 
         ##Tidy up or not
         if args.no_tidy:
