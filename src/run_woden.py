@@ -1515,7 +1515,7 @@ if __name__ == "__main__":
             else:
                 command("rm {:s}".format(filename))
                 if args.array_layout == 'from_the_metafits':
-                    command("rm WODEN_array_layout_band{:02d}.txt".format(band))
+                    command("rm WODEN_array_layout_band{:d}.txt".format(band))
 
         ##Tidy up or not
         if args.no_tidy:
@@ -1524,5 +1524,5 @@ if __name__ == "__main__":
             command("rm {:s}".format(json_name))
             ##if we generated a text file containing the array layout
             ##from the metafits, delete it now
-            if args.array_layout == 'from_the_metafits':
-                command("rm {:s}".format("WODEN_array_layout.txt"))
+            # if args.array_layout == 'from_the_metafits':
+            #     command("rm {:s}".format("WODEN_array_layout.txt"))
