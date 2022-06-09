@@ -717,15 +717,23 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
 
   else if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP) {
 
-    int num_azza = woden_settings->num_time_steps*num_components;
+    double *double_azs = NULL;
+    double *double_zas = NULL;
 
-    double *double_azs = (double*)malloc(num_azza*sizeof(double));
-    double *double_zas = (double*)malloc(num_azza*sizeof(double));
+    #ifdef DOUBLE_PRECISION
+      double_azs = components->azs;
+      double_zas = components->zas;
+    #else
+      int num_azza = woden_settings->num_time_steps*num_components;
 
-    for (int i = 0; i < num_azza; i++) {
-      double_azs[i] = (double)components->azs[i];
-      double_zas[i] = (double)components->zas[i];
-    }
+      double_azs = (double*)malloc(num_azza*sizeof(double));
+      double_zas = (double*)malloc(num_azza*sizeof(double));
+
+      for (int i = 0; i < num_azza; i++) {
+        double_azs[i] = (double)components->azs[i];
+        double_zas[i] = (double)components->zas[i];
+      }
+    #endif
 
     if (beam_settings->beamtype == FEE_BEAM_INTERP) {
       printf("\tDoing the hyperbeam (interpolated)\n");
@@ -744,8 +752,15 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
            d_component_beam_gains->d_gxs, d_component_beam_gains->d_Dxs,
            d_component_beam_gains->d_Dys, d_component_beam_gains->d_gys);
 
-    free(double_azs);
-    free(double_zas);
+    #ifdef DOUBLE_PRECISION
+      ;
+    #else
+      free(double_azs);
+      free(double_zas);  
+    #endif
+
+
+
 
   }
 

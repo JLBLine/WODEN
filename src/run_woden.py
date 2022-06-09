@@ -25,7 +25,7 @@ VELC = 299792458.0
 SOLAR2SIDEREAL = 1.00274
 
 ##version of release, a fall back if this isn't in a git repo
-VERSION = "1.2.0"
+VERSION = "1.4.0"
 
 def command(cmd):
     """
@@ -812,6 +812,8 @@ def remove_phase_tracking(frequencies=None, wws_seconds=None,
 
     num_freqs = len(frequencies)
 
+    # print("FREQS", frequencies)
+
     for time_ind in np.arange(num_time_steps):
 
         these_wws_secs = wws_seconds[time_ind*num_baselines:(time_ind + 1)*num_baselines]
@@ -1514,8 +1516,8 @@ if __name__ == "__main__":
                 pass
             else:
                 command("rm {:s}".format(filename))
-                if args.array_layout == 'from_the_metafits':
-                    command("rm WODEN_array_layout_band{:d}.txt".format(band))
+                # if args.array_layout == 'from_the_metafits':
+                #     command("rm WODEN_array_layout_band{:d}.txt".format(band))
 
         ##Tidy up or not
         if args.no_tidy:
@@ -1525,4 +1527,5 @@ if __name__ == "__main__":
             ##if we generated a text file containing the array layout
             ##from the metafits, delete it now
             # if args.array_layout == 'from_the_metafits':
+            command("rm WODEN_array_layout_band{:s}.txt".format(json_band_str))
             #     command("rm {:s}".format("WODEN_array_layout.txt"))
