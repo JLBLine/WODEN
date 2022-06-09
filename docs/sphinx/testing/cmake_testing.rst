@@ -128,6 +128,8 @@ The sections below give an outline of the tests performed in each directory.
    cmake_testing/chunk_sky_model
    cmake_testing/create_sky_model
    cmake_testing/primary_beam
+   cmake_testing/read_text_skymodel
+   cmake_testing/read_yaml_skymodel
    cmake_testing/shapelet_basis
    cmake_testing/visibility_set
    cmake_testing/woden_settings

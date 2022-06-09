@@ -14,7 +14,10 @@
 #include "source_components.h"
 #include "primary_beam_cuda.h"
 #include "cudacheck.h"
+
+//Helpful C code we are also using
 #include "visibility_set.h"
+#include "chunk_sky_model.h"
 
 extern "C" void calculate_visibilities(array_layout_t *array_layout,
   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
@@ -163,8 +166,32 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   //added to chunk_visibility_set, and then summed onto visibility_set
   for (int chunk = 0; chunk < cropped_sky_models->num_sources; chunk++) {
 
-    source_t source;
-    source = cropped_sky_models->sources[chunk];
+    // printf("STARING A CHUNK NOW\n");
+
+    source_t *source = (source_t *)malloc(sizeof(source_t));
+    // source = NULL;
+
+    remap_source_for_gpu(source, &cropped_sky_models->sources[chunk],
+                         woden_settings->num_time_steps,
+                         beam_settings->beamtype);
+
+    // printf("\tsource->n_comps %d\n", source->n_comps);
+    // printf("\tsource->n_points %d\n", source->n_points);
+    // printf("\tsource->n_point_lists %d\n", source->n_point_lists);
+    // printf("\tsource->n_point_powers %d\n", source->n_point_powers);
+    // printf("\tsource->n_point_curves %d\n", source->n_point_curves);
+    // printf("\tsource->n_gauss %d\n", source->n_gauss);
+    // printf("\tsource->n_gauss_lists %d\n", source->n_gauss_lists);
+    // printf("\tsource->n_gauss_powers %d\n", source->n_gauss_powers);
+    // printf("\tsource->n_gauss_curves %d\n", source->n_gauss_curves);
+    // printf("\tsource->n_shapes %d\n", source->n_shapes);
+    // printf("\tsource->n_shape_lists %d\n", source->n_shape_lists);
+    // printf("\tsource->n_shape_powers %d\n", source->n_shape_powers);
+    // printf("\tsource->n_shape_curves %d\n", source->n_shape_curves);
+    // printf("\tsource->n_shape_coeffs %d\n", source->n_shape_coeffs);
+
+    source_t *d_chunked_source = copy_chunked_source_to_GPU(source);
+    // printf("Have copied across the chunk to the GPU\n");
 
     //Make sure the temp visis are 0 at the start of each chunk
     for (int visi = 0; visi < num_visis; visi++) {
@@ -182,9 +209,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     //printed output
     printf("Processing chunk %d\n", chunk);
     printf("\tNumber of components in chunk are: P %d G %d S_coeffs %d\n",
-              source.n_points,
-              source.n_gauss,
-              source.n_shape_coeffs );
+              source->n_points,
+              source->n_gauss,
+              source->n_shape_coeffs );
 
     //ensure d_sum_visi_XX_real are set entirely to zero by copying the host
     //array values, which have been set explictly to zero during chunking
@@ -230,9 +257,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
             d_allsteps_cha0s, d_allsteps_sha0s,
             num_visis, num_baselines);
 
-    int num_points = source.n_points;
-    int num_gauss = source.n_gauss;
-    int num_shapes = source.n_shapes;
+    int num_points = source->n_points;
+    int num_gauss = source->n_gauss;
+    int num_shapes = source->n_shapes;
 
     if (num_points > 0) {
       printf("\tDoing point components\n");
@@ -240,46 +267,46 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       //Something to store the primary beam gains (all 4 pols) in
       d_beam_gains_t d_point_beam_gains;
 
-      source_component_common(source.n_points, source.n_shape_coeffs,
-                              &source.point_components,
-                              d_freqs, woden_settings, beam_settings,
-                              POINT, &source.d_point_components,
-                              &d_point_beam_gains);
+      printf("\tExtrapolating fluxes and beams...\n");
+      source_component_common(woden_settings, beam_settings, d_freqs,
+                              source, d_chunked_source,
+                              &d_point_beam_gains, POINT);
+      printf("\tExtrapolating fluxes and beams done.\n");
 
       threads.x = 128;
       threads.y = 1;
       grid.x = (int)ceil( (float)num_visis / (float)threads.x );
       grid.y = 1;
 
+      printf("\tDoing visi kernel...\n");
       cudaErrorCheckKernel("kern_calc_visi_point_or_gauss",
                            kern_calc_visi_point_or_gauss, grid, threads,
-                           source.d_point_components, d_point_beam_gains,
+                           d_chunked_source->point_components, d_point_beam_gains,
                            d_us, d_vs, d_ws,
                            d_sum_visi_XX_real, d_sum_visi_XX_imag,
                            d_sum_visi_XY_real, d_sum_visi_XY_imag,
                            d_sum_visi_YX_real, d_sum_visi_YX_imag,
                            d_sum_visi_YY_real, d_sum_visi_YY_imag,
-                           d_allsteps_wavelengths, num_points,
-                           num_baselines, num_freqs, num_visis,
+                           num_points, num_baselines, num_freqs, num_visis,
                            num_time_steps, beam_settings->beamtype, POINT);
+      printf("\tVisi kernel done\n");
 
-      free_d_components(source.d_point_components, POINT);
+      free_d_components(d_chunked_source, POINT);
+      free_extrapolated_flux_arrays(&d_chunked_source->point_components);
       free_beam_gains(d_point_beam_gains, beam_settings->beamtype);
 
     }//if point sources
 
-        if (num_gauss > 0) {
+    if (num_gauss > 0) {
       printf("\tDoing gaussian components\n");
 
 
       //Something to store the primary beam gains (all 4 pols) in
       d_beam_gains_t d_gauss_beam_gains;
 
-      source_component_common(source.n_gauss, source.n_shape_coeffs,
-                                  &source.gauss_components,
-                                  d_freqs, woden_settings, beam_settings,
-                                  GAUSSIAN, &source.d_gauss_components,
-                                  &d_gauss_beam_gains);
+      source_component_common(woden_settings, beam_settings, d_freqs,
+                              source, d_chunked_source,
+                              &d_gauss_beam_gains, GAUSSIAN);
 
       threads.x = 128;
       threads.y = 1;
@@ -288,17 +315,17 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
       cudaErrorCheckKernel("kern_calc_visi_point_or_gauss",
                            kern_calc_visi_point_or_gauss, grid, threads,
-                           source.d_gauss_components, d_gauss_beam_gains,
+                           d_chunked_source->gauss_components, d_gauss_beam_gains,
                            d_us, d_vs, d_ws,
                            d_sum_visi_XX_real, d_sum_visi_XX_imag,
                            d_sum_visi_XY_real, d_sum_visi_XY_imag,
                            d_sum_visi_YX_real, d_sum_visi_YX_imag,
                            d_sum_visi_YY_real, d_sum_visi_YY_imag,
-                           d_allsteps_wavelengths, num_gauss,
-                           num_baselines, num_freqs, num_visis,
+                           num_gauss, num_baselines, num_freqs, num_visis,
                            num_time_steps, beam_settings->beamtype, GAUSSIAN);
 
-      free_d_components(source.d_gauss_components, GAUSSIAN);
+      free_d_components(d_chunked_source, GAUSSIAN);
+      free_extrapolated_flux_arrays(&d_chunked_source->gauss_components);
       free_beam_gains(d_gauss_beam_gains, beam_settings->beamtype);
 
     }//if gauss sources
@@ -327,11 +354,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       //Something to store the primary beam gains (all 4 pols) in
       d_beam_gains_t d_shape_beam_gains;
 
-      source_component_common(source.n_shapes, source.n_shape_coeffs,
-                                  &source.shape_components,
-                                  d_freqs, woden_settings, beam_settings,
-                                  SHAPELET, &source.d_shape_components,
-                                  &d_shape_beam_gains);
+      source_component_common(woden_settings, beam_settings, d_freqs,
+                              source, d_chunked_source,
+                              &d_shape_beam_gains, SHAPELET);
 
 
       if (num_shapes == 1) {
@@ -353,9 +378,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                             d_X_diff, d_Y_diff, d_Z_diff,
                             d_u_shapes, d_v_shapes, d_w_shapes,
                             d_allsteps_wavelengths, d_allsteps_lsts,
-                            source.d_shape_components.ras,
-                            source.d_shape_components.decs,
-                            num_baselines, num_visis, num_shapes);;
+                            d_chunked_source->shape_components.ras,
+                            d_chunked_source->shape_components.decs,
+                            num_baselines, num_visis, num_shapes);
 
       //Splitting over visibilities, but looping over shapelet coeffs inside
       //the kernel
@@ -368,7 +393,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
       cudaErrorCheckKernel("kern_calc_visi_shapelets",
             kern_calc_visi_shapelets, grid, threads,
-            source.d_shape_components, d_shape_beam_gains,
+            d_chunked_source->shape_components, d_shape_beam_gains,
             d_us, d_vs, d_ws,
             d_allsteps_wavelengths,
             d_u_shapes, d_v_shapes, d_w_shapes,
@@ -378,14 +403,17 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
             d_sum_visi_YY_real, d_sum_visi_YY_imag,
             d_sbf,
             num_shapes, num_baselines, num_freqs, num_visis,
-            source.n_shape_coeffs, num_time_steps, beam_settings->beamtype);
+            d_chunked_source->n_shape_coeffs, num_time_steps,
+            beam_settings->beamtype);
 
       cudaErrorCheckCall( cudaFree(d_w_shapes) );
       cudaErrorCheckCall( cudaFree(d_v_shapes) );
       cudaErrorCheckCall( cudaFree(d_u_shapes) );
       cudaErrorCheckCall( cudaFree(d_allsteps_lsts) );
 
-      free_d_components(source.d_shape_components, SHAPELET);
+      printf("Making it to this call here\n");
+      free_d_components(d_chunked_source, SHAPELET);
+      free_extrapolated_flux_arrays(&d_chunked_source->shape_components);
       free_beam_gains(d_shape_beam_gains, beam_settings->beamtype);
 
     }//if shapelet
@@ -460,6 +488,8 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
     }//visi loop
 
+  //free up the remapped chunked_source we made for copying things to GPU
+  free_remapped_source_for_gpu(source, beam_settings->beamtype);
   } //chunk loop
 
   //Free the chunk_visibility_set

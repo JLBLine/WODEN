@@ -1,0 +1,21 @@
+singlegauss_list:
+  - ra: 30.0
+    dec: -30.0
+    comp_type:
+      gaussian:
+        maj: 180.
+        min: 360.
+        pa: -10.
+    flux_type:
+      list:
+        - freq: 220000000.0
+          i: 10.0
+          q: 3.0
+          u: 4.0
+          v: -1.0
+        - freq: 100000000.0
+          i: 5.0
+          q: 3.0
+        - freq: 150000000.0
+          i: 4.0
+          u: -5.0

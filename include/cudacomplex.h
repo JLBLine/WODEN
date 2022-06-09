@@ -248,7 +248,7 @@ inline __device__ cuDoubleComplex U1polar( const double theta ) {
   return z;
 }
 
-//Make a CUDA complex to the precision set during compilation
+//! Make a CUDA complex to the precision set during compilation
 inline __device__ cuUserComplex make_cuUserComplex( user_precision_t real,
                                                     user_precision_t imag) {
 

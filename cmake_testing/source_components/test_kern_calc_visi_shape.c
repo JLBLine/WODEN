@@ -140,6 +140,9 @@ void test_kern_calc_visi_shape_VarylmnMultipleCoeff(int beamtype) {
   int num_visis = num_baselines*num_times*num_freqs;
 
   int num_components = 25;
+  int n_powers = num_components;
+  int n_curves = 0;
+  int n_lists = 0;
   int num_coeffs_per_component = 3;
 
   int num_coeffs = num_coeffs_per_component*num_components;
@@ -150,7 +153,8 @@ void test_kern_calc_visi_shape_VarylmnMultipleCoeff(int beamtype) {
   components_t components;
   //Allocate memory
   malloc_args_for_testing(args_ft, &components, num_baselines, num_times,
-                          num_freqs, num_components, num_coeffs, SHAPELET);
+                          num_freqs, num_components, n_powers, n_curves, n_lists,
+                          num_coeffs, SHAPELET);
 
   //Setup l,m args that span a decent chunk of sky
   create_lmn(components);
@@ -167,36 +171,23 @@ void test_kern_calc_visi_shape_VarylmnMultipleCoeff(int beamtype) {
 
   //Just stick Stokes I to 1.0, SI to zero, and reference freqs to 150MHz
   for (int comp = 0; comp < num_components; comp++) {
-    components.ref_stokesI[comp] = 1.0;
-    components.SIs[comp] = 0.0;
-    components.ref_freqs[comp] = 150e+6;
+    components.power_ref_stokesI[comp] = 1.0;
+    components.power_ref_stokesQ[comp] = 0.0;
+    components.power_ref_stokesU[comp] = 0.0;
+    components.power_ref_stokesV[comp] = 0.0;
+    components.power_SIs[comp] = 0.0;
+    components.power_ref_freqs[comp] = 150e+6;
+
+    //Set major,minor to 3 arcmins
     components.pas[comp] = 0.0;
     components.majors[comp] = 3.0*(DD2R / 60.0);
     components.minors[comp] = 3.0*(DD2R / 60.0);
+
+    components.power_comp_inds[comp] = comp;
   }
 
   //Make up some u,v,w values and scale by wavelength in correct order
-  int count = 0;
-  double freq_base = 150e+6;
-  double freq_inc = 25e+6;
-  user_precision_t wavelength;
-  double frequency;
-  for ( int time_step = 0; time_step < num_times; time_step++ ) {
-    for (int freq_step = 0; freq_step < num_freqs; freq_step++) {
-      frequency = freq_base + freq_step*freq_inc;
-      wavelength = VELC / frequency;
-      for (int baseline = 0; baseline < num_baselines; baseline++) {
-        args_ft->us[count] = ((baseline + 1)*100) / wavelength;
-        args_ft->vs[count] = ((baseline + 1)*100) / wavelength;
-        //ws are usually smaller than u,v
-        args_ft->ws[count] = ((baseline + 1)*10) / wavelength;
-
-        args_ft->allsteps_wavelengths[count] = wavelength;
-
-        count ++;
-      }
-    }
-  }
+  setup_uvw_and_freqs(args_ft, num_times, num_freqs, num_baselines);
 
   //Set the shapelet u,v,w same as the measurement equation one (this is not
   //true in reality but works fine for testing)
@@ -211,7 +202,7 @@ void test_kern_calc_visi_shape_VarylmnMultipleCoeff(int beamtype) {
 
   //Stick a number of coeffs in per component
   user_precision_t sign;
-  count = 0;
+  int count = 0;
   for (int comp = 0; comp < num_components; comp++) {
     for (int coeff = 0; coeff < num_coeffs_per_component; coeff++) {
 
@@ -230,10 +221,10 @@ void test_kern_calc_visi_shape_VarylmnMultipleCoeff(int beamtype) {
     }
   }
 
-  //Run the CUDA code
-  test_kern_calc_visi_all(num_components, num_baselines, num_coeffs,
+  test_kern_calc_visi_all(n_powers, n_curves, n_lists, num_baselines, num_coeffs,
           num_freqs, num_visis, num_times, beamtype, SHAPELET,
-          components, args_ft->us, args_ft->vs, args_ft->ws,
+          components, args_ft->extrap_freqs,
+          args_ft->us, args_ft->vs, args_ft->ws,
           args_ft->u_shapes, args_ft->v_shapes, args_ft->w_shapes,
           args_ft->sum_visi_XX_real, args_ft->sum_visi_XX_imag,
           args_ft->sum_visi_XY_real, args_ft->sum_visi_XY_imag,
@@ -242,9 +233,12 @@ void test_kern_calc_visi_shape_VarylmnMultipleCoeff(int beamtype) {
           args_ft->allsteps_wavelengths, args_ft->sbf,
           args_ft->primay_beam_J00, args_ft->primay_beam_J01,
           args_ft->primay_beam_J10, args_ft->primay_beam_J11);
-
-  test_visi_outputs(num_visis, num_components, num_baselines, num_freqs,
-                    beamtype, args_ft,components, SHAPELET);
+  //
+  // //Check all results are within 0.1% of expected value
+  // // double frac_tol = 1e-3;
+  test_visi_outputs(num_visis, n_powers, n_curves, n_lists,
+                    num_baselines, num_freqs, args_ft->extrap_freqs,
+                    beamtype, args_ft, components, SHAPELET);
 
   free_args_for_testing( args_ft, components, SHAPELET );
 }
@@ -288,10 +282,10 @@ int main(void)
     RUN_TEST(test_kern_calc_visi_shape_VarylmnFEEInterpBeam);
     RUN_TEST(test_kern_calc_visi_shape_VarylmnMWAAnaly);
 
+    RUN_TEST(test_kern_calc_visi_shape_VarylmnVaryFluxNoBeam);
     RUN_TEST(test_kern_calc_visi_shape_VarylmnVaryFluxFEEBeam);
     RUN_TEST(test_kern_calc_visi_shape_VarylmnVaryFluxGaussBeam);
     RUN_TEST(test_kern_calc_visi_shape_VarylmnVaryFluxAnalyBeam);
-    RUN_TEST(test_kern_calc_visi_shape_VarylmnVaryFluxNoBeam);
     RUN_TEST(test_kern_calc_visi_shape_VarylmnVaryFluxFEEInterpBeam);
     RUN_TEST(test_kern_calc_visi_shape_VarylmnVaryFluxMWAAnaly);
 

@@ -1,3 +1,4 @@
+#pragma once
 #include <math.h>
 #include <unity.h>
 #include <stdlib.h>
@@ -7,14 +8,15 @@
 #include "woden_struct_defs.h"
 #include "woden_precision_defs.h"
 #include "shapelet_basis.h"
+#include "common_testing_functions.h"
 
 //external CUDA code used for testng
 
-extern void test_kern_calc_visi_all(int num_components,
+extern void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
           int num_baselines, int num_shape_coeffs,
           int num_freqs, int num_visis, int num_times,
           e_beamtype beamtype, e_component_type comptype,
-          components_t components,
+          components_t components, double *extrap_freqs,
           user_precision_t *us, user_precision_t *vs, user_precision_t *ws,
           user_precision_t *u_shapes, user_precision_t *v_shapes, user_precision_t *w_shapes,
           user_precision_t *sum_visi_XX_real, user_precision_t *sum_visi_XX_imag,
@@ -55,6 +57,7 @@ typedef struct _args_for_testing_t {
   user_precision_t *vs;
   user_precision_t *ws;
   user_precision_t *allsteps_wavelengths;
+  double *extrap_freqs;
 
   //GAUSS/SHAPELET STUFF
   user_precision_t *pas;
@@ -87,6 +90,7 @@ void malloc_args_for_testing(args_for_testing_t *args_ft,
                              components_t *components,
                              int num_baselines,  int num_times,
                              int num_freqs, int num_components,
+                             int n_powers, int n_curves, int n_lists,
                              int num_coeffs,
                              e_component_type component_type);
 
@@ -103,16 +107,17 @@ void create_lmn(components_t components);
 Basic implementation of the measurement equation to get expected visibilities
 Loops over components, gets expected flux and beam gain and sum
 */
-void get_expected(int visi, int num_components, int num_baselines,
-                  int num_freqs, int beamtype,
+void get_expected(int visi, int num_powers, int num_curves, int num_lists,
+                  int num_baselines, int num_freqs, double *extrap_freqs,
+                  int beamtype,
                   args_for_testing_t *args_ft,
                   components_t components,
                   e_component_type component_type,
                   double * expec_re, double * expec_im);
 
 //Take input parameters and test whether GPU outputs match expectations
-void test_visi_outputs(int num_visis, int num_components,
-                       int num_baselines, int num_freqs,
+void test_visi_outputs(int num_visis, int num_powers, int num_curves, int num_lists,
+                       int num_baselines, int num_freqs, double *extrap_freqs,
                        e_beamtype beamtype,  args_for_testing_t *args_ft,
                        components_t components,
                        e_component_type component_type);
@@ -127,3 +132,6 @@ void test_kern_calc_visi_VarylmnVaryFlux(e_beamtype beamtype,
 
 void test_kern_calc_visi_VarylmnVaryPAMajMin(e_beamtype beamtype,
                                              e_component_type comptype);
+
+void setup_uvw_and_freqs(args_for_testing_t *args_ft, int num_times,
+                         int num_freqs, int num_baselines);

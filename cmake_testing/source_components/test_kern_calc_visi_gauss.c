@@ -13,7 +13,6 @@ void setUp (void) {} /* Is run before eVary test, put unit init calls here. */
 void tearDown (void) {} /* Is run after eVary test, put unit clean-up calls here. */
 
 
-
 /*
 These tests multiple directions on the sky, with constant fluxes and beam gains
 Different beamtypes test how the gains are mapped

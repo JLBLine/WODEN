@@ -20,7 +20,7 @@ horizon (`cropped_src`) and a chunking index, they return a portion of the
 sky model containing specific COMPONENT types.
 */
 
-void test_fill_chunk_src_with_shapelets(int chunking_size,
+void test_fill_chunk_src_with_shapelets(int chunking_size, int num_list_values,
                                          int num_shapes, int num_coeff_per_shape,
                                          int num_time_steps) {
 
@@ -28,7 +28,7 @@ void test_fill_chunk_src_with_shapelets(int chunking_size,
   int num_points = 0;
   int num_gauss = 0;
   source_t *cropped_src = make_sky_model(num_points, num_gauss, num_shapes,
-                                            num_coeff_per_shape, num_time_steps);
+                          num_coeff_per_shape, num_list_values, num_time_steps);
 
   //Set some dummy baseline, frequency simulation settings
   int num_baselines = 5;
@@ -73,8 +73,9 @@ void test_fill_chunk_src_with_shapelets_Shapelet010_Coeff10_Chunk1000_Time004(vo
   int num_coeff_per_shape = 10;
   int num_time_steps = 4;
 
-  test_fill_chunk_src_with_shapelets(chunking_size, num_shapes, num_coeff_per_shape,
-                                      num_time_steps);
+  int num_list_values = 3;
+  test_fill_chunk_src_with_shapelets(chunking_size, num_list_values, num_shapes,
+                                          num_coeff_per_shape, num_time_steps);
 }
 
 void test_fill_chunk_src_with_shapelets_Shapelet010_Coeff13_Chunk1000_Time004(void){
@@ -83,8 +84,9 @@ void test_fill_chunk_src_with_shapelets_Shapelet010_Coeff13_Chunk1000_Time004(vo
   int num_coeff_per_shape = 13;
   int num_time_steps = 4;
 
-  test_fill_chunk_src_with_shapelets(chunking_size, num_shapes, num_coeff_per_shape,
-                                      num_time_steps);
+  int num_list_values = 4;
+  test_fill_chunk_src_with_shapelets(chunking_size, num_list_values, num_shapes,
+                                          num_coeff_per_shape, num_time_steps);
 }
 
 void test_fill_chunk_src_with_shapelets_Shapelet193_Coeff1266_Chunk3913_Time007(void){
@@ -93,8 +95,9 @@ void test_fill_chunk_src_with_shapelets_Shapelet193_Coeff1266_Chunk3913_Time007(
   int num_coeff_per_shape = 1266;
   int num_time_steps = 7;
 
-  test_fill_chunk_src_with_shapelets(chunking_size, num_shapes, num_coeff_per_shape,
-                                      num_time_steps);
+  int num_list_values = 5;
+  test_fill_chunk_src_with_shapelets(chunking_size, num_list_values, num_shapes,
+                                          num_coeff_per_shape, num_time_steps);
 }
 
 //Run test using unity

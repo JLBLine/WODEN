@@ -5,22 +5,27 @@
 
 #include "constants.h"
 #include "woden_precision_defs.h"
+#include "woden_struct_defs.h"
+#include "test_extrap_stokes.h"
+
+#include "common_testing_functions.h"
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
 //External CUDA code we're linking in
-extern void test_kern_extrap_stokes(int num_extrap_freqs, int num_components,
-           user_precision_t *extrap_wavelengths, double *ref_freqs, user_precision_t *SIs,
-           user_precision_t *ref_stokesI, user_precision_t *ref_stokesQ,
-           user_precision_t *ref_stokesU, user_precision_t *ref_stokesV,
-           user_precision_t *flux_I, user_precision_t *flux_Q,
-           user_precision_t *flux_U, user_precision_t *flux_V);
+extern void test_extrap_stokes_all_models(source_t *chunked_source,
+           int num_extrap_freqs, double *extrap_freqs,
+           user_precision_t *extrap_flux_I, user_precision_t *extrap_flux_Q,
+           user_precision_t *extrap_flux_U, user_precision_t *extrap_flux_V);
+
+
+// void fill_components_info(components_t *comps)
 
 #ifdef DOUBLE_PRECISION
-  double TOL = 1e-15;
+  double TOL = 1e-12;
 #else
-  double TOL = 1e-7;
+  double TOL = 1e-4;
 #endif
 
 /*
@@ -28,72 +33,128 @@ Test that the linear SI flux extrapolation code works correctly
 */
 void test_kern_extrap_stokes_GivesCorrectValues(void) {
 
+  source_t *chunked_source = malloc(sizeof(source_t));
+
+  chunked_source->n_point_lists = num_lists;
+  chunked_source->n_point_powers = num_powers;
+  chunked_source->n_point_curves = num_curves;
+
+  chunked_source->n_points = num_lists + num_powers + num_curves;
+
+  components_t *comps = &chunked_source->point_components;
+
   //Set up some test condition inputs
-  int num_extrap_freqs = 5;
-  int num_components = 5;
+  // int num_extrap_freqs = 25;
+  int num_components = chunked_source->n_points;
 
-  user_precision_t extrap_wavelengths[5] = {VELC/50e+6, VELC/100e+6, VELC/150e+6,
-                                 VELC/200e+6, VELC/250e+6};
-  double ref_freqs[5] = {50e+6, 100e+6, 150e+6, 200e+6, 250e+6};
-  user_precision_t SIs[5] = {0.0, -0.8, 0.5, -0.5, 1.0};
+  comps->power_ref_freqs = ref_freqs;
+  comps->power_ref_stokesI = ref_stokesI;
+  comps->power_ref_stokesQ = ref_stokesQ;
+  comps->power_ref_stokesU = ref_stokesU;
+  comps->power_ref_stokesV = ref_stokesV;
+  comps->power_SIs = ref_power_SIs;
 
-  user_precision_t ref_stokesI[5] = {1.0, 1.0, 1.0, 1.0, 1.0};
-  user_precision_t ref_stokesQ[5] = {0.0, 0.0, 1.0, 0.0, 0.0};
-  user_precision_t ref_stokesU[5] = {0.0, 0.0, 0.0, 1.0, 0.0};
-  user_precision_t ref_stokesV[5] = {0.0, 0.0, 0.0, 0.0, 1.0};
+  comps->power_comp_inds = malloc(chunked_source->n_point_powers*sizeof(int));
+  for (int pow_ind = 0; pow_ind < chunked_source->n_point_powers; pow_ind++) {
+    comps->power_comp_inds[pow_ind] = pow_ind;
+  }
 
+  comps->curve_ref_freqs = ref_freqs;
+  comps->curve_ref_stokesI = ref_stokesI;
+  comps->curve_ref_stokesQ = ref_stokesQ;
+  comps->curve_ref_stokesU = ref_stokesU;
+  comps->curve_ref_stokesV = ref_stokesV;
+  comps->curve_SIs = ref_curve_SIs;
+  comps->curve_qs = ref_qs;
+
+  comps->curve_comp_inds = malloc(chunked_source->n_point_curves*sizeof(int));
+  for (int cur_ind = 0; cur_ind < chunked_source->n_point_curves; cur_ind++) {
+    comps->curve_comp_inds[cur_ind] = chunked_source->n_point_powers + cur_ind;
+  }
+
+
+  comps->list_freqs = list_freqs;
+  comps->list_stokesI = list_stokesI;
+  comps->list_stokesQ = list_stokesQ;
+  comps->list_stokesU = list_stokesU;
+  comps->list_stokesV = list_stokesV;
+  comps->num_list_values = num_list_values;
+  comps->list_start_indexes = list_start_indexes;
+
+  comps->list_comp_inds = malloc(chunked_source->n_point_lists*sizeof(int));
+  for (int list_ind = 0; list_ind < chunked_source->n_point_lists; list_ind++) {
+    comps->list_comp_inds[list_ind] = num_powers + num_curves + list_ind;
+  }
+
+  //This bit is normally done when remapping chunked sources before
+  //copying over to the GPU
+
+  //Sum up everything in num_list_values gives us how much we need to malloc
+    int total_num_flux_entires = 0;
+    for (int list_comp = 0; list_comp < num_lists; list_comp++) {
+      total_num_flux_entires += comps->num_list_values[list_comp];
+    }
+
+    comps->total_num_flux_entires = total_num_flux_entires;
+
+
+  //The generic function that copies sky models from CPU to GPU needs
+  //things in the ra, dec etc arrays to be malloced
+
+  comps->ras = malloc(chunked_source->n_points*sizeof(double));
+  comps->decs = malloc(chunked_source->n_points*sizeof(double));
+
+  //
   //Space for outputs
-  user_precision_t *flux_I = malloc(num_extrap_freqs*num_components*sizeof(user_precision_t));
-  user_precision_t *flux_Q = malloc(num_extrap_freqs*num_components*sizeof(user_precision_t));
-  user_precision_t *flux_U = malloc(num_extrap_freqs*num_components*sizeof(user_precision_t));
-  user_precision_t *flux_V = malloc(num_extrap_freqs*num_components*sizeof(user_precision_t));
-
-  //Run the CUDA code
-  test_kern_extrap_stokes(num_extrap_freqs, num_components,
-                           extrap_wavelengths, ref_freqs, SIs,
-                           ref_stokesI, ref_stokesQ,
-                           ref_stokesU, ref_stokesV,
-                           flux_I, flux_Q,
-                           flux_U, flux_V);
-
+  user_precision_t *extrap_flux_I = malloc(num_extrap_freqs*num_components*sizeof(user_precision_t));
+  user_precision_t *extrap_flux_Q = malloc(num_extrap_freqs*num_components*sizeof(user_precision_t));
+  user_precision_t *extrap_flux_U = malloc(num_extrap_freqs*num_components*sizeof(user_precision_t));
+  user_precision_t *extrap_flux_V = malloc(num_extrap_freqs*num_components*sizeof(user_precision_t));
+  //
+  // //Run the CUDA code
+  test_extrap_stokes_all_models(chunked_source,
+             num_extrap_freqs, extrap_freqs,
+             extrap_flux_I, extrap_flux_Q,
+             extrap_flux_U, extrap_flux_V);
+  //
   //Make some expected value arrays
   double *expec_flux_I = malloc(num_extrap_freqs*num_components*sizeof(double));
   double *expec_flux_Q = malloc(num_extrap_freqs*num_components*sizeof(double));
   double *expec_flux_U = malloc(num_extrap_freqs*num_components*sizeof(double));
   double *expec_flux_V = malloc(num_extrap_freqs*num_components*sizeof(double));
 
-  //Fill values with what should have been found
-  int ind = 0;
-  for (int comp = 0; comp < num_components; comp++) {
-    for (int extrap = 0; extrap < num_extrap_freqs; extrap++) {
+  CPU_extrapolate_fluxes_in_components(comps, num_powers, num_curves, num_lists,
+                        extrap_freqs, num_extrap_freqs,
+                        expec_flux_I, expec_flux_Q, expec_flux_U, expec_flux_V);
 
-      double extrap_freq = VELC / extrap_wavelengths[extrap];
-      double flux_ratio = pow(extrap_freq / ref_freqs[comp], SIs[comp]);
 
-      expec_flux_I[ind] = ref_stokesI[comp] * flux_ratio;
-      expec_flux_Q[ind] = ref_stokesQ[comp] * flux_ratio;
-      expec_flux_U[ind] = ref_stokesU[comp] * flux_ratio;
-      expec_flux_V[ind] = ref_stokesV[comp] * flux_ratio;
 
-      ind ++;
-    }
-  }
-
-  for (int i = 0; i < num_extrap_freqs*num_components; i++) {
+  for (int i = 0; i < num_extrap_freqs*(num_powers + num_curves + num_lists); i++) {
     //Check the two are within tolerace
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_I[i], flux_I[i]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_Q[i], flux_Q[i]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_U[i], flux_U[i]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_V[i], flux_V[i]);
+    // printf("%d %.3f %.3f\n",i, expec_flux_I[i], extrap_flux_I[i] );
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_I[i], extrap_flux_I[i]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_Q[i], extrap_flux_Q[i]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_U[i], extrap_flux_U[i]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_V[i], extrap_flux_V[i]);
+
   }
 
+  FILE *output_text;
 
+  output_text = fopen("test_extrap_stokes.txt","w");
+
+  for (int i = 0; i < num_extrap_freqs*(num_powers + num_curves + num_lists); i++) {
+
+    fprintf(output_text,"%.12f %.12f %.12f %.12f\n", extrap_flux_I[i],
+                          extrap_flux_Q[i], extrap_flux_U[i], extrap_flux_V[i]);
+
+  }
 
   //Be free my beauties
-  free(flux_I);
-  free(flux_Q);
-  free(flux_U);
-  free(flux_V);
+  free(extrap_flux_I);
+  free(extrap_flux_Q);
+  free(extrap_flux_U);
+  free(extrap_flux_V);
   free(expec_flux_I);
   free(expec_flux_Q);
   free(expec_flux_U);

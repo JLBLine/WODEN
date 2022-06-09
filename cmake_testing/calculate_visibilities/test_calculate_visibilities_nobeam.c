@@ -198,13 +198,13 @@ int main(void)
     RUN_TEST(test_calculate_visibilities_NoBeam_OneSource_SingleShape);
     RUN_TEST(test_calculate_visibilities_NoBeam_OneSource_SingleAll);
 
-    //Test with three SOURCEs, single COPMONENT
+    // //Test with three SOURCEs, single COPMONENT
     RUN_TEST(test_calculate_visibilities_NoBeam_ThreeSource_SinglePoint);
     RUN_TEST(test_calculate_visibilities_NoBeam_ThreeSource_SingleGauss);
     RUN_TEST(test_calculate_visibilities_NoBeam_ThreeSource_SingleShape);
     RUN_TEST(test_calculate_visibilities_NoBeam_ThreeSource_SingleAll);
 
-    //Test with three SOURCEs, three COPMONENTs
+    // //Test with three SOURCEs, three COPMONENTs
     RUN_TEST(test_calculate_visibilities_NoBeam_ThreeSource_ThreePoint);
     RUN_TEST(test_calculate_visibilities_NoBeam_ThreeSource_ThreeGauss);
     RUN_TEST(test_calculate_visibilities_NoBeam_ThreeSource_ThreeShape);
