@@ -758,7 +758,7 @@ extern "C" void run_hyperbeam_cuda(int num_components,
 
 
   int num_azza = num_components * num_time_steps;
-  int num_beam_values = num_azza * num_freqs;
+  // int num_beam_values = num_azza * num_freqs;
 
   double *d_jones = NULL;
   // cudaErrorCheckCall( cudaMalloc( (void**)&(d_jones),

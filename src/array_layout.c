@@ -67,6 +67,44 @@ void RTS_mat_transpose(double rmat1[3][3], double rmat2[3][3]) {
   }
 }
 
+
+
+void RTS_Precess_LST_Lat_to_J2000(double lst_current, double latitude_current,
+                              double mjd,
+                              double * lst_J2000, double * latitude_J2000){
+
+    double rmatpn[3][3];
+    double J2000_transformation[3][3];
+
+    //Calculate a rotation matrix that accounts for precession and nutation
+    //between the current modified julian date (mjd) and J2000
+    // palPrenut calls:
+    //  - palPrec( 2000.0, palEpj(mjd), rmatp ); // form precession matrix: v_mean(mjd epoch) = rmatp * v_mean(J2000)
+    //  - palNut( mjd, rmatn );                  // form nutation matrix: v_true(mjd epoch) = rmatn * v_mean(mjd epoch)
+    //  - palDmxm( rmatn, rmatp, rmatpn );       // Combine the matrices:  pn = n x p
+
+    palPrenut(2000.0, mjd, rmatpn);
+    RTS_mat_transpose( rmatpn, J2000_transformation );
+    /**
+    ****************************************************************************
+    * Change the various coordinates to the J2000 mean system
+    ****************************************************************************
+    * palDcs2c   - convert the apparent direction to direction cosines
+    * palDmxv    - perform the 3-d forward unitary transformation: v2 = tmatpn * v1
+    * palDcc2s   - convert cartesian coordinates back to spherical coordinates (i.e. zenith in the J2000 mean system).
+    * palDranrm  - normalize into range 0-2 pi.
+    */
+
+    double v1[3], v2[3];
+    // Change the coordinates of the initial zenith
+    palDcs2c(lst_current, latitude_current, v1);
+    palDmxv(J2000_transformation, v1, v2);
+    palDcc2s(v2, lst_J2000, latitude_J2000);
+    * lst_J2000 = palDranrm(* lst_J2000);
+}
+
+
+
 /**
 As said in the include file/help, this is an RTS function to rotate the array
 back to J2000. There are a number of lines commented out, which I don't think
@@ -102,23 +140,13 @@ void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
 
   //Hold some things for me please
   double X_epoch, Y_epoch, Z_epoch, X_prec, Y_prec, Z_prec;
-  double v1[3], v2[3], lst_J2000, latitude_J2000;
+  // double v1[3], v2[3], lst_J2000, latitude_J2000;
+  //
 
-  /**
-  ****************************************************************************
-  * Change the various coordinates to the J2000 mean system
-  ****************************************************************************
-  * palDcs2c   - convert the apparent direction to direction cosines
-  * palDmxv    - perform the 3-d forward unitary transformation: v2 = tmatpn * v1
-  * palDcc2s   - convert cartesian coordinates back to spherical coordinates (i.e. zenith in the J2000 mean system).
-  * palDranrm  - normalize into range 0-2 pi.
-  */
-
-  // Change the coordinates of the initial zenith
-  palDcs2c(lst_current, latitude_current, v1);
-  palDmxv(J2000_transformation, v1, v2);
-  palDcc2s(v2, &lst_J2000, &latitude_J2000);
-  lst_J2000 = palDranrm(lst_J2000);
+  //precess the current LST and latitude back to equivalent ones in the J2000 frame
+  double lst_J2000, latitude_J2000;
+  RTS_Precess_LST_Lat_to_J2000(lst_current, latitude_current, mjd,
+                           &lst_J2000, &latitude_J2000);
 
   //Change things to be in J2000
   woden_settings->lst_base = lst_J2000;

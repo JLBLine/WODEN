@@ -54,6 +54,7 @@ void check_setup_lsts_and_phase_centre_set1() {
   woden_settings->time_res = 1.0;
 
   woden_settings->lst_base = 0.0;
+  woden_settings->lst_obs_epoch_base = 0.0;
   woden_settings->ra0 = 0.0;
   woden_settings->dec0 = M_PI/2;
 
@@ -77,6 +78,7 @@ void check_setup_lsts_and_phase_centre_set2() {
   woden_settings->time_res = 1.0;
 
   woden_settings->lst_base = 1.2345;
+  woden_settings->lst_obs_epoch_base = 1.2345;
   woden_settings->ra0 = 0.0;
   woden_settings->dec0 = M_PI/2;
 
@@ -99,6 +101,7 @@ void check_setup_lsts_and_phase_centre_set3() {
   woden_settings->time_res = 1.0;
 
   woden_settings->lst_base = 1.2345;
+  woden_settings->lst_obs_epoch_base = 1.2345;
   woden_settings->ra0 = 0.0;
   woden_settings->dec0 = MWA_LAT_RAD;
 

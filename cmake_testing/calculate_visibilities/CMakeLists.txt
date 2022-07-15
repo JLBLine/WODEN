@@ -31,7 +31,8 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
               ${CMAKE_SOURCE_DIR}/src/chunk_sky_model.c
               ${CMAKE_SOURCE_DIR}/src/create_sky_model.c
               ${CMAKE_SOURCE_DIR}/src/read_text_skymodel.c
-            ${CMAKE_SOURCE_DIR}/src/read_yaml_skymodel.c)
+              ${CMAKE_SOURCE_DIR}/src/read_yaml_skymodel.c
+              ${CMAKE_SOURCE_DIR}/src/array_layout.c)
   target_compile_options(calculate_visibilities_Cdepends_${PRECISION} PRIVATE ${C_FLAGS})
 
   ##----------------------------------------------------------------------------

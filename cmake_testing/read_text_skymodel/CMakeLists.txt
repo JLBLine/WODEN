@@ -1,11 +1,12 @@
 ## Will be doing a bunch of sym linking to files for testing. Make sure we
 ##get the absolute path OK here
-find_path(SRCLIST_PATH "srclist_singlepoint.txt" HINTS "${CMAKE_CURRENT_LIST_DIR}")
+find_path(SRCLIST_PATH "srclist_singlepoint.txt" HINTS "${CMAKE_SOURCE_DIR}/cmake_testing/read_text_skymodel/")
 
 ##Make a bunch of symlinks to sky models for testing
 if(SRCLIST_PATH)
   message(STATUS "SRCLIST_PATH path: ${SRCLIST_PATH}")
 endif()
+
 #
 # ## Name a srclists used for testing
 set(S1 "srclist_singlepoint.txt")

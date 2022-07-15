@@ -28,6 +28,7 @@ class PretendArgs():
         self.time_res = 2.0
         self.freq_res = 40e+3
 
+        self.array_layout = 'WODEN_array_layout.txt'
         self.array_layout_name = 'WODEN_array_layout.txt'
         self.lowest_channel_freq = 160e+6
         self.latitude = -26.7

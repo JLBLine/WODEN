@@ -67,6 +67,27 @@ array_layout_t * calc_XYZ_diffs(woden_settings_t *woden_settings,
 void RTS_precXYZ(double rmat[3][3], double x, double y, double z, double lmst,
          double *xp, double *yp, double *zp, double lmst2000);
 
+
+/**
+@brief Moves a current lst, latitude of an array back to a location in J2000
+that makes the equivalent effect of precessing a J2000 sky to current epoch
+
+@details Give the current date (via modified julian date `mjd`), precess
+`lst_current`, `latitude_current` to the J2000 epoch. Outputs are stored in
+`lst_J2000`, `latitude_J2000`. All angles in radians.
+
+@param[in] lst_current Current LST (radians)
+@param[in] latitude_current Current latitude of the array (radians)
+@param[in] mjd Modified Julian date of the current date (days)
+@param[in,out] lst_J2000 The LST in the J2000 epoch (radians)
+@param[in,out] latitude_J2000 The latitude of the array in the J2000 epoch (radians)
+
+*/
+void RTS_Precess_LST_Lat_to_J2000(double lst_current, double latitude_current,
+                              double mjd,
+                              double * lst_J2000, double * latitude_J2000);
+
+
 /**
 @brief Performs calculations to rotate the array coordinates from the
 current date back to their positions in J2000

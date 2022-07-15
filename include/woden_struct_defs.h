@@ -247,6 +247,8 @@ Struct to contain user defined settings for simulation
 */
 typedef struct _woden_settings_t {
   double lst_base; /*!< Local sidereal time for first time step (radians) */
+  double lst_obs_epoch_base; /*!< Local sidereal time for first time step (radians)
+  for the observation epoch (e.g. in 2020 for a 2020 obs) */
   double ra0;  /*!< Right ascension of phase centre (radians)*/
   double dec0;  /*!< Declination of phase centre (radians)*/
   double sdec0;  /*!< Sine of Declination of phase centre (radians)*/
