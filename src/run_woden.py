@@ -112,16 +112,18 @@ def get_uvfits_date_and_position_constants(latitude=None,longitude=None,
     observing_location = EarthLocation(lat=latitude*u.deg, lon=longitude*u.deg, height=height)
     ##Setup time at that location
 
+    lst_type = 'mean'
+
     observing_time = Time(date, scale='utc', location=observing_location)
     ##Grab the LST
-    LST = observing_time.sidereal_time('apparent')
+    LST = observing_time.sidereal_time(lst_type)
     LST_deg = LST.value*15.0
 
     ##uvfits file needs to know the greenwich sidereal time at 0 hours
     ##on the date in question
     zero_date = date.split('T')[0] + "T00:00:00"
     zero_time = Time(zero_date, scale='utc', location=observing_location)
-    GST0 = zero_time.sidereal_time('apparent', 'greenwich')
+    GST0 = zero_time.sidereal_time(lst_type, 'greenwich')
     GST0_deg = GST0.value*15.0
 
     ##It also needs to know the rotational rate of the Earth on that day, in
@@ -129,7 +131,7 @@ def get_uvfits_date_and_position_constants(latitude=None,longitude=None,
     ##Do this by measuring the LST exactly a day later
 
     date_plus_one_day =  observing_time + TimeDelta(1*u.day)
-    LST_plusone = date_plus_one_day.sidereal_time('apparent')
+    LST_plusone = date_plus_one_day.sidereal_time(lst_type)
 
     LST_plusone_deg = LST_plusone.value*15.0
 
