@@ -14,9 +14,9 @@ phase centre, calculate `u,v,w` coordinates
 @details Performs Equation 4.1 from TMS
 <https://link.springer.com/book/10.1007/978-3-319-44431-4>. This `__device__`
 function is called by `kern_calc_uvw`, which calculates `u,v,w` for multiple
-time steps. Using the index `iBaseline` and `num_baselines`, this function
-does a modulus to index `d_X_diff`, `d_Y_diff`, `d_Z_diff` correctly, as
-these latter arrays do not change with time.
+time steps. Using the index `iBaseline`, `num_baselines`, `num_times`, `num_freqs`,
+this function does a modulus to index `d_X_diff`, `d_Y_diff`, `d_Z_diff` correctly,
+as the diff arrays do not change with frequency (but change with time).
 
 @param[in] d_X_diff Baseline length in the `X` direction (metres)
 @param[in] d_Y_diff Baseline length in the `Y` direction (metres)
@@ -27,6 +27,8 @@ these latter arrays do not change with time.
 @param[in] cha0 Cosine of the hour angle of the phase centre
 @param[in] iBaseline Index passed from `kern_calc_uvw`
 @param[in] num_baselines Number of baselines for a single time step
+@param[in] num_times Number of time steps
+@param[in] num_freqs Number of frequency steps
 @param[in,out] u Output `u` coord (metres)
 @param[in,out] v Output `v` coord (metres)
 @param[in,out] w Output `w` coord (metres)
@@ -35,7 +37,8 @@ __device__ void calc_uvw(double *d_X_diff, double *d_Y_diff,
                          double *d_Z_diff,
                          double sdec0, double cdec0,
                          double sha0, double cha0,
-                         int iBaseline, int num_baselines,
+                         int iBaseline, int num_baselines, int num_times,
+                         int num_freqs,
                          user_precision_t * u, user_precision_t * v,
                          user_precision_t * w);
 
@@ -44,15 +47,9 @@ __device__ void calc_uvw(double *d_X_diff, double *d_Y_diff,
 time steps and frequencies
 
 @details `d_X_diff`, `d_Y_diff`, `d_Z_diff` contain baseline lengths in local
-`X,Y,Z` coords, which do not change with time, and should be of length
-`num_baselines`. To keep indexing simple, the wavelengths in `d_wavelengths`
-and hour angles in `d_cha0s, d_sha0s` should contain values for all baselines,
-all frequencies, and all time steps. They should be entered in sets of baselines
-so a modules by `num_baselines` can index `d_X_diff`, `d_Y_diff`, `d_Z_diff`
-correctly.
-
-time steps,
-frequencies, and baselines to be calculated, and should have length `num_visis`.
+`X,Y,Z` coords, which can change with time (when precessed back to J2000),
+so should be of length `num_baselines`*`num_times`. To keep indexing simple, the wavelengths in `d_wavelengths` and hour angles in `d_cha0s, d_sha0s` should contain
+values for all baselines, all frequencies, and all time steps. .
 
 When called with `dim3 grid, threads`, kernel should be called with `grid.x`
  set, where:
@@ -77,6 +74,8 @@ baselines, frequencies, and time steps
 baselines, frequencies, and time steps
 @param[in] num_visis Total number of `u,v,w` coords to be calculated
 @param[in] num_baselines Number of baselines for a single time step
+@param[in] num_times Number of time steps
+@param[in] num_freqs Number of frequency steps
 */
 __global__ void kern_calc_uvw(double *d_X_diff, double *d_Y_diff,
            double *d_Z_diff, user_precision_t *d_u_metres,
@@ -84,7 +83,7 @@ __global__ void kern_calc_uvw(double *d_X_diff, double *d_Y_diff,
            user_precision_t *d_u, user_precision_t *d_v, user_precision_t *d_w, user_precision_t *d_wavelengths,
            double sdec0, double cdec0,
            double *d_cha0s, double *d_sha0s,
-           int num_visis, int num_baselines);
+           int num_visis, int num_baselines, int num_times, int num_freqs);
 
 
 /**
@@ -130,6 +129,8 @@ steps (metres)
 @param[in] num_baselines Number of baselines for a single time step
 @param[in] num_visis Total number of visibilities in the simulation
 (`number_baselines*num_freqs*num_times`)
+@param[in] num_times Number of time steps
+@param[in] num_freqs Number of frequency steps
 @param[in] num_shapes Number of SHAPELET COMPONENTs
 
 */
@@ -139,6 +140,7 @@ __global__ void kern_calc_uvw_shapelet(double *d_X_diff,
       user_precision_t *d_w_shapes, user_precision_t *d_wavelengths,
       double *d_lsts, double *d_ras, double *d_decs,
       const int num_baselines, const int num_visis,
+      const int num_times, const int num_freqs,
       const int num_shapes);
 
 /**

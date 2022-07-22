@@ -26,7 +26,14 @@ void test_RTS_PrecessXYZtoJ2000_GivesCorrectValues(void)
   //Set up where woden_settings correctly
   woden_settings->latitude = MWA_LAT_RAD;
   woden_settings->jd_date = 2457278.2010995;
-  woden_settings->lst_base = LST_BEFORE;
+  woden_settings->lst_obs_epoch_base = LST_BEFORE;
+  woden_settings->lst_base = LST_AFTER;
+  woden_settings->do_precession = 1;
+
+  woden_settings->num_time_steps = 2;
+  woden_settings->lsts = lsts;
+  woden_settings->time_res = 8;
+  woden_settings->mjds = mjds;
 
   //Set up array_layout with some precalculated values
   array_layout_t * array_layout = malloc(sizeof(array_layout_t));
@@ -43,16 +50,30 @@ void test_RTS_PrecessXYZtoJ2000_GivesCorrectValues(void)
 
   //Check rotations give correct answers
 
-  for (int i = 0; i < 8; i++) {
+  for (int i = 0; i < array_layout->num_tiles*woden_settings->num_time_steps; i++) {
     TEST_ASSERT_EQUAL_DOUBLE(expec_X_prec[i],
                              array_layout->ant_X[i]);
     TEST_ASSERT_EQUAL_DOUBLE(expec_Y_prec[i],
                              array_layout->ant_Y[i]);
     TEST_ASSERT_EQUAL_DOUBLE(expec_Z_prec[i],
                              array_layout->ant_Z[i]);
+
   }
 
-  TEST_ASSERT_EQUAL_DOUBLE(LST_AFTER, woden_settings->lst_base);
+
+  // for (int i = 0; i < array_layout->num_tiles*woden_settings->num_time_steps; i++) {
+  //   printf("%.12f\n", array_layout->ant_X[i]);
+  // }
+  // printf("----\n");
+  // for (int i = 0; i < array_layout->num_tiles*woden_settings->num_time_steps; i++) {
+  //   printf("%.12f\n", array_layout->ant_Y[i]);
+  // }
+  // printf("----\n");
+  // for (int i = 0; i < array_layout->num_tiles*woden_settings->num_time_steps; i++) {
+  //   printf("%.12f\n", array_layout->ant_Z[i]);
+  // }
+
+  // TEST_ASSERT_EQUAL_DOUBLE(LST_AFTER, woden_settings->lst_base);
 
 }
 

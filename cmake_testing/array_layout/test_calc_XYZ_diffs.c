@@ -25,8 +25,24 @@ void test_calc_XYZ_diffs_GivesCorrectValues(int do_precession)
   //Set up where woden_settings correctly
   woden_settings->array_layout_file_path="example_array_layout.txt";
   woden_settings->latitude = MWA_LAT_RAD;
-  woden_settings->jd_date = JD_DATE;
-  woden_settings->lst_base = LST_BEFORE;
+  woden_settings->latitude_obs_epoch_base = MWA_LAT_RAD;
+  woden_settings->jd_date = 2457278.2010995;
+  woden_settings->lst_obs_epoch_base = LST_BEFORE;
+
+  if (do_precession) {
+    woden_settings->lst_base = LST_AFTER;
+    woden_settings->latitude = MWA_LAT_RAD;
+  }
+  else{
+    woden_settings->lst_base = LST_BEFORE;
+  }
+
+  woden_settings->do_precession = do_precession;
+
+  woden_settings->num_time_steps = 2;
+  woden_settings->lsts = lsts;
+  woden_settings->time_res = 8;
+  woden_settings->mjds = mjds;
 
   //Call the function we are testing
   array_layout_t * array_layout;
@@ -64,7 +80,7 @@ void test_calc_XYZ_diffs_GivesCorrectValues(int do_precession)
   //and double precision compiled versions of the code
   if (do_precession == 0) {
 
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 16; i++) {
       TEST_ASSERT_EQUAL_DOUBLE(expec_X_noprec[i],
                                array_layout->ant_X[i]);
       TEST_ASSERT_EQUAL_DOUBLE(expec_Y_noprec[i],
@@ -73,7 +89,7 @@ void test_calc_XYZ_diffs_GivesCorrectValues(int do_precession)
                                array_layout->ant_Z[i]);
     }
 
-    for (int i = 0; i < 28; i++) {
+    for (int i = 0; i < 56; i++) {
       TEST_ASSERT_EQUAL_DOUBLE(expec_X_diffs_noprec[i],
                                array_layout->X_diff_metres[i]);
       TEST_ASSERT_EQUAL_DOUBLE(expec_Y_diffs_noprec[i],
@@ -83,10 +99,10 @@ void test_calc_XYZ_diffs_GivesCorrectValues(int do_precession)
     }
 
     // // printf("Precess lst %.7f\n",woden_settings->lst_base );
-    TEST_ASSERT_EQUAL_DOUBLE(LST_BEFORE, woden_settings->lst_base);
+    // TEST_ASSERT_EQUAL_DOUBLE(LST_BEFORE, woden_settings->lst_base);
 
   } else if (do_precession == 1) {
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 16; i++) {
       TEST_ASSERT_EQUAL_DOUBLE(expec_X_prec[i],
                               array_layout->ant_X[i]);
       TEST_ASSERT_EQUAL_DOUBLE(expec_Y_prec[i],
@@ -95,7 +111,7 @@ void test_calc_XYZ_diffs_GivesCorrectValues(int do_precession)
                               array_layout->ant_Z[i]);
     }
 
-    for (int i = 0; i < 28; i++) {
+    for (int i = 0; i < 56; i++) {
       TEST_ASSERT_EQUAL_DOUBLE(expec_X_diffs_prec[i],
                               array_layout->X_diff_metres[i]);
       TEST_ASSERT_EQUAL_DOUBLE(expec_Y_diffs_prec[i],
@@ -103,8 +119,7 @@ void test_calc_XYZ_diffs_GivesCorrectValues(int do_precession)
       TEST_ASSERT_EQUAL_DOUBLE(expec_Z_diffs_prec[i],
                               array_layout->Z_diff_metres[i]);
     }
-    // printf("Precess lst %.16f\n",woden_settings->lst_base );
-    TEST_ASSERT_EQUAL_DOUBLE(LST_AFTER, woden_settings->lst_base);
+
   }
 }
 

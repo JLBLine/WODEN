@@ -11,15 +11,23 @@ __device__ void calc_uvw(double *d_X_diff, double *d_Y_diff,
                          double *d_Z_diff,
                          double sdec0, double cdec0,
                          double sha0, double cha0,
-                         int iBaseline, int num_baselines,
+                         int iBaseline, int num_baselines, int num_times,
+                         int num_freqs,
                          user_precision_t * u, user_precision_t * v,
                          user_precision_t * w) {
 
   int mod_baseline = iBaseline - num_baselines*floorf((float)iBaseline / (float)num_baselines);
+  int time_ind = floorf(((float)iBaseline - (float)mod_baseline) / ((float)num_freqs*(float)num_baselines));
 
-  * u = (sha0*d_X_diff[mod_baseline]) + (cha0*d_Y_diff[mod_baseline]);
-  * v = -(sdec0*cha0*d_X_diff[mod_baseline]) + (sdec0*sha0*d_Y_diff[mod_baseline]) + (cdec0*d_Z_diff[mod_baseline]);
-  * w = (cdec0*cha0*d_X_diff[mod_baseline]) - (cdec0*sha0*d_Y_diff[mod_baseline]) + (sdec0*d_Z_diff[mod_baseline]);
+  int xyz_ind = time_ind*num_baselines + mod_baseline;
+
+  // printf("Inputs %d %d %d\n", num_baselines, num_times, num_freqs);
+  // printf("In here %d %d %d %d\n", iBaseline, mod_baseline, time_ind, xyz_ind);
+  // printf("part 1 %d\n",(int)((float)iBaseline - (float)mod_baseline) );
+
+  * u = (sha0*d_X_diff[xyz_ind]) + (cha0*d_Y_diff[xyz_ind]);
+  * v = -(sdec0*cha0*d_X_diff[xyz_ind]) + (sdec0*sha0*d_Y_diff[xyz_ind]) + (cdec0*d_Z_diff[xyz_ind]);
+  * w = (cdec0*cha0*d_X_diff[xyz_ind]) - (cdec0*sha0*d_Y_diff[xyz_ind]) + (sdec0*d_Z_diff[xyz_ind]);
 
 }
 
@@ -29,7 +37,7 @@ __global__ void kern_calc_uvw(double *d_X_diff, double *d_Y_diff,
            user_precision_t *d_u, user_precision_t *d_v, user_precision_t *d_w, user_precision_t *d_wavelengths,
            double sdec0, double cdec0,
            double *d_cha0s, double *d_sha0s,
-           int num_visis, int num_baselines){
+           int num_visis, int num_baselines, int num_times, int num_freqs){
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
 
@@ -41,7 +49,7 @@ __global__ void kern_calc_uvw(double *d_X_diff, double *d_Y_diff,
 
     calc_uvw(d_X_diff, d_Y_diff, d_Z_diff,
                sdec0, cdec0, d_sha0, d_cha0,
-               iBaseline, num_baselines,
+               iBaseline, num_baselines, num_times, num_freqs,
                &u, &v, &w);
 
     d_u_metres[iBaseline] = u;
@@ -63,6 +71,7 @@ __global__ void kern_calc_uvw_shapelet(double *d_X_diff,
       user_precision_t *d_w_shapes, user_precision_t *d_wavelengths,
       double *d_lsts, double *d_ras, double *d_decs,
       const int num_baselines, const int num_visis,
+      const int num_times, const int num_freqs,
       const int num_shapes) {
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
@@ -80,7 +89,7 @@ __global__ void kern_calc_uvw_shapelet(double *d_X_diff,
 
     calc_uvw(d_X_diff, d_Y_diff, d_Z_diff,
                d_sdec0, d_cdec0, d_sha0, d_cha0,
-               iBaseline, num_baselines,
+               iBaseline, num_baselines, num_times, num_freqs,
                &u_shape, &v_shape, &w_shape);
 
     d_u_shapes[num_visis*iComponent + iBaseline] = u_shape / d_wavelength;
@@ -196,24 +205,24 @@ extern "C" void test_kern_calc_uvw(double *X_diff,
    user_precision_t *us, user_precision_t *vs, user_precision_t *ws,
    user_precision_t *wavelengths,
    double dec0, double *cha0s, double *sha0s,
-   int num_visis, int num_baselines) {
+   int num_visis, int num_baselines, int num_times, int num_freqs) {
 
   double *d_X_diff = NULL;
   double *d_Y_diff = NULL;
   double *d_Z_diff = NULL;
 
   cudaErrorCheckCall( cudaMalloc( (void**)&d_X_diff,
-                                     num_baselines*sizeof(double) ) );
+                            num_times*num_baselines*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy( d_X_diff, X_diff,
-             num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
+    num_times*num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
   cudaErrorCheckCall( cudaMalloc( (void**)&d_Y_diff,
-                                     num_baselines*sizeof(double) ) );
+                            num_times*num_baselines*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy( d_Y_diff, Y_diff,
-             num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
+    num_times*num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
   cudaErrorCheckCall( cudaMalloc( (void**)&d_Z_diff,
-                                     num_baselines*sizeof(double) ) );
+                            num_times*num_baselines*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy( d_Z_diff, Z_diff,
-             num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
+    num_times*num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
 
   double *d_sha0s = NULL;
   double *d_cha0s = NULL;
@@ -257,7 +266,7 @@ extern "C" void test_kern_calc_uvw(double *X_diff,
           d_us, d_vs, d_ws, d_wavelengths,
           sin(dec0), cos(dec0),
           d_cha0s, d_sha0s,
-          num_visis, num_baselines);
+          num_visis, num_baselines, num_times, num_freqs);
 
   cudaErrorCheckCall( cudaMemcpy(us, d_us,
                    num_visis*sizeof(user_precision_t),cudaMemcpyDeviceToHost) );
@@ -295,24 +304,26 @@ extern "C" void test_kern_calc_uvw_shapelet(double *X_diff,
                      user_precision_t *u_shapes, user_precision_t *v_shapes,
                      user_precision_t *w_shapes, user_precision_t *wavelengths,
                      double *lsts, double *ras, double *decs,
-                     int num_baselines, int num_visis, int num_shapes) {
+                     int num_baselines, int num_visis,
+                     int num_times, int num_freqs,
+                     int num_shapes) {
 
   double *d_X_diff = NULL;
   double *d_Y_diff = NULL;
   double *d_Z_diff = NULL;
 
   cudaErrorCheckCall( cudaMalloc( (void**)&d_X_diff,
-                                     num_baselines*sizeof(double) ) );
+                                    num_times*num_baselines*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy( d_X_diff, X_diff,
-             num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
+            num_times*num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
   cudaErrorCheckCall( cudaMalloc( (void**)&d_Y_diff,
-                                     num_baselines*sizeof(double) ) );
+                                    num_times*num_baselines*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy( d_Y_diff, Y_diff,
-             num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
+            num_times*num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
   cudaErrorCheckCall( cudaMalloc( (void**)&d_Z_diff,
-                                     num_baselines*sizeof(double) ) );
+                                    num_times*num_baselines*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy( d_Z_diff, Z_diff,
-             num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
+            num_times*num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
 
   double *d_lsts = NULL;
   double *d_ras = NULL;
@@ -356,7 +367,8 @@ extern "C" void test_kern_calc_uvw_shapelet(double *X_diff,
           d_X_diff, d_Y_diff, d_Z_diff,
           d_u_shapes, d_v_shapes, d_w_shapes, d_wavelengths,
           d_lsts, d_ras, d_decs,
-          num_baselines, num_visis, num_shapes);
+          num_baselines, num_visis, num_times, num_freqs,
+          num_shapes);
 
   cudaErrorCheckCall( cudaMemcpy(u_shapes, d_u_shapes,
          num_shapes*num_visis*sizeof(user_precision_t),cudaMemcpyDeviceToHost) );

@@ -44,15 +44,18 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   double *d_Y_diff = NULL;
   double *d_Z_diff = NULL;
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_X_diff, num_baselines*sizeof(double) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_X_diff,
+                                 num_time_steps*num_baselines*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy( d_X_diff, array_layout->X_diff_metres,
-                      num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_Y_diff, num_baselines*sizeof(double) ) );
+        num_time_steps*num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_Y_diff,
+                                 num_time_steps*num_baselines*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy( d_Y_diff, array_layout->Y_diff_metres,
-                      num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_Z_diff, num_baselines*sizeof(double) ) );
+        num_time_steps*num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_Z_diff,
+                                 num_time_steps*num_baselines*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy( d_Z_diff, array_layout->Z_diff_metres,
-                      num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
+        num_time_steps*num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
 
   double *d_allsteps_sha0s = NULL;
   double *d_allsteps_cha0s = NULL;
@@ -255,7 +258,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
             woden_settings->sdec0,
             woden_settings->cdec0,
             d_allsteps_cha0s, d_allsteps_sha0s,
-            num_visis, num_baselines);
+            num_visis, num_baselines, num_time_steps, num_freqs);
 
     int num_points = source->n_points;
     int num_gauss = source->n_gauss;
@@ -380,7 +383,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                             d_allsteps_wavelengths, d_allsteps_lsts,
                             d_chunked_source->shape_components.ras,
                             d_chunked_source->shape_components.decs,
-                            num_baselines, num_visis, num_shapes);
+                            num_baselines, num_visis, num_time_steps, num_freqs, num_shapes);
 
       //Splitting over visibilities, but looping over shapelet coeffs inside
       //the kernel

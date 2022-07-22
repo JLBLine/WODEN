@@ -264,16 +264,16 @@ int main(void)
     RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_OneSource_SingleAll);
 
     //Test with three SOURCEs, single COPMONENT
-    RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_SinglePoint);
-    RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_SingleGauss);
-    RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_SingleShape);
-    RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_SingleAll);
+    // RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_SinglePoint);
+    // RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_SingleGauss);
+    // RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_SingleShape);
+    // RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_SingleAll);
 
     //Test with three SOURCEs, three COPMONENTs
-    RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_ThreePoint);
-    RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_ThreeMWAFEE);
-    RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_ThreeShape);
-    RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_ThreeAll);
+    // RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_ThreePoint);
+    // RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_ThreeMWAFEE);
+    // RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_ThreeShape);
+    // RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_ThreeAll);
 
     return UNITY_END();
 }

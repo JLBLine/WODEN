@@ -103,6 +103,7 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
   else {
     woden_settings->latitude = json_object_get_double(latitude)*DD2R;
   }
+  woden_settings->latitude_obs_epoch_base = woden_settings->latitude;
 
   //This will be modified to J2000 if we doing precession of the array
   woden_settings->lst_base = json_object_get_double(lst_base)*DD2R;
@@ -294,14 +295,13 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
 }
 double * setup_lsts_and_phase_centre(woden_settings_t *woden_settings){
   //Useful number to have
-  const int num_visis = woden_settings->num_baselines * woden_settings->num_time_steps * woden_settings->num_freqs;
-  woden_settings->num_visis = num_visis;
+  // const int num_visis = woden_settings->num_baselines * woden_settings->num_time_steps * woden_settings->num_freqs;
+  // woden_settings->num_visis = num_visis;
 
   //Phase centre details
   double sdec0,cdec0;
   sdec0 = sin(woden_settings->dec0); cdec0=cos(woden_settings->dec0);
 
-  printf("Setting initial LST to %.10fdeg\n",woden_settings->lst_base/DD2R );
   printf("Setting phase centre RA,DEC %.5fdeg %.5fdeg\n",woden_settings->ra0/DD2R, woden_settings->dec0/DD2R);
 
   //Used for calculating l,m,n for components
@@ -314,31 +314,60 @@ double * setup_lsts_and_phase_centre(woden_settings_t *woden_settings){
   double lst_current, lst_J2000, latitude_J2000, mjd_current;
   double mjd = woden_settings->jd_date - 2400000.5;
 
+  RTS_Precess_LST_Lat_to_J2000(woden_settings->lst_obs_epoch_base,
+                               woden_settings->latitude, mjd,
+                               &lst_J2000, &latitude_J2000);
+
+  // printf("Time front edge J2000 LST is %.10f rad\n", lst_J2000 );
+
+  if (woden_settings->do_precession){
+    woden_settings->mjds = malloc(woden_settings->num_time_steps*sizeof(double));
+  }
+
   for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
 
     //Add on the angle accrued by current time step to the base LST
     lst_current = woden_settings->lst_obs_epoch_base + time_step*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
 
     //Add half a time_res so we are sampling centre of each time step
-    lst_current += 0.5*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
+    // lst_current += 0.5*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
 
-    //Move the mjd to the time of the current step
-    //Want the LST at centre of time step so 0.5 adds half a time step extra
-    mjd_current = mjd + ((time_step + 0.5)*woden_settings->time_res)/(24.0*60.0*60.0);
+    if (woden_settings->do_precession){
+      //Move the mjd to the time of the current step
+      //Want the LST at centre of time step so 0.5 adds half a time step extra
+      mjd_current = mjd + ((time_step + 0.5)*woden_settings->time_res)/(24.0*60.0*60.0);
 
-    RTS_Precess_LST_Lat_to_J2000(lst_current, woden_settings->latitude, mjd_current,
-                                 &lst_J2000, &latitude_J2000);
+      woden_settings->mjds[time_step] = mjd_current;
 
-    lsts[time_step] = lst_J2000;
+      RTS_Precess_LST_Lat_to_J2000(lst_current, woden_settings->latitude_obs_epoch_base,
+                                   mjd_current,
+                                   &lst_J2000, &latitude_J2000);
 
-    //Add on the angle accrued by current time step to the base LST
-    double lst = woden_settings->lst_base + time_step*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
+      lsts[time_step] = lst_J2000;
 
-    //Add half a time_res so we are sampling centre of each time step
-    lst += 0.5*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
-
-    printf("COMPARE %.8f %.8f\n",lst, lst_J2000 );
-    // lsts[time_step] = lst;
+      if (time_step == 0) {
+        printf("Obs epoch initial LST was %.10f deg\n", lst_current/DD2R );
+        printf("Setting initial J2000 LST to %.10f deg\n", lst_J2000/DD2R );
+        printf("Setting initial mjd to %.10f\n",woden_settings->mjds[time_step] );
+        printf("After precession latitude of the array is %.10f\n", latitude_J2000/DD2R );
+        woden_settings->lst_base = lst_J2000;
+        woden_settings->latitude = latitude_J2000;
+      }
+    }
+    else {
+      lsts[time_step] = lst_current;
+      if (time_step == 0) {
+        printf("Obs epoch initial LST was %.10f deg\n", lst_current/DD2R );
+      }
+    }
+    // //Add on the angle accrued by current time step to the base LST
+    // double lst = woden_settings->lst_base + time_step*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
+    //
+    // //Add half a time_res so we are sampling centre of each time step
+    // lst += 0.5*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
+    //
+    // printf("COMPARE no prec %.8f old %.8f new %.8f\n", lst_current / DD2R, lst / DD2R, lst_J2000 / DD2R );
+    // // lsts[time_step] = lst;
   }
   return lsts;
 }

@@ -41,6 +41,11 @@ in the X,Y,Z frame. If `do_precession=1`, it will rotate the X,Y,Z to J2000
 the sky to the present day to account for precession. Assumes the sky model is
 in J2000 coords.
 
+As of v1.4.0, the precession rotation is done for every time step, meaning
+the X,Y,Z values are slightly different for all time steps. This means there
+are `woden_settings->num_time_steps` sets of baseline coordinates now
+stored in the returned `array_layout_t` struct.
+
 @param[in] *woden_settings Pointer to a `woden_settings_t` struct
 @param[in] do_precession Whether to precess back to J2000 or not (0 False, 1 True)
 @return A pointer to a populated `array_layout_t` struct
@@ -49,21 +54,21 @@ array_layout_t * calc_XYZ_diffs(woden_settings_t *woden_settings,
                                 int do_precession);
 
 /**
- * @brief Rotates the array coordinates in `x,y,z` from the current date to
- * the J2000 frame, returning the precessed coordinates in `xp,yp,zp`
+@brief Rotates the array coordinates in `x,y,z` from the current date to
+the J2000 frame, returning the precessed coordinates in `xp,yp,zp`
 
- * @details wtf you do
- *
- * @param[in] rmat A 3D rotation matrix
- * @param[in] x X coord of the antenna in the current epoch
- * @param[in] y Y coord of the antenna in the current epoch
- * @param[in] z Z coord of the antenna in the current epoch
- * @param[in] lmst Current local mean sidereal time (radians)
- * @param[in,out] xp X coord of the antenna in J2000 epoch
- * @param[in,out] yp Y coord of the antenna in J2000 epoch
- * @param[in,out] zp Z coord of the antenna in J2000 epoch
- * @param[in] lmst2000 J2000 local mean sidereal time (radians)
- */
+@details Many calls to PAL occur
+
+@param[in] rmat A 3D rotation matrix
+@param[in] x X coord of the antenna in the current epoch
+@param[in] y Y coord of the antenna in the current epoch
+@param[in] z Z coord of the antenna in the current epoch
+@param[in] lmst Current local mean sidereal time (radians)
+@param[in,out] xp X coord of the antenna in J2000 epoch
+@param[in,out] yp Y coord of the antenna in J2000 epoch
+@param[in,out] zp Z coord of the antenna in J2000 epoch
+@param[in] lmst2000 J2000 local mean sidereal time (radians)
+*/
 void RTS_precXYZ(double rmat[3][3], double x, double y, double z, double lmst,
          double *xp, double *yp, double *zp, double lmst2000);
 
@@ -102,6 +107,10 @@ Explicitly, these three arrays in `array_layout` are updated:
 `array_layout->ant_Y`,
 `array_layout->ant_Z`, along with `woden_settings->lst_base`, as moving the
 array effectively changes the LST. Many, many calls to `pal` are made.
+
+From v1.4.0, this rotation is now applied per time step. Needs to have
+`woden_settings->lsts` and `woden_settings->mjds` to be populated with
+time centroid values for this to work
 
 @param[in,out] *array_layout An `array_layout_t` struct containing the array
 layout
