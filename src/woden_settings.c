@@ -330,7 +330,7 @@ double * setup_lsts_and_phase_centre(woden_settings_t *woden_settings){
     lst_current = woden_settings->lst_obs_epoch_base + time_step*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
 
     //Add half a time_res so we are sampling centre of each time step
-    // lst_current += 0.5*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
+    lst_current += 0.5*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
 
     if (woden_settings->do_precession){
       //Move the mjd to the time of the current step

@@ -116,6 +116,20 @@ int add_component_information(components_t *components, int num_srcs,
                                        sizeof(int)*track_comp_malloc->n_powers);
     }
 
+    //If we have NaN fluxes, set them to zero
+    if (isnan(flux_I) != 0) {
+      flux_I = 0.0;
+    }
+    if (isnan(flux_Q) != 0) {
+      flux_Q = 0.0;
+    }
+    if (isnan(flux_U) != 0) {
+      flux_U = 0.0;
+    }
+    if (isnan(flux_V) != 0) {
+      flux_V = 0.0;
+    }
+
     components->power_ref_freqs[power_flux_ind] = freq;
     components->power_ref_stokesI[power_flux_ind] = flux_I;
     components->power_ref_stokesQ[power_flux_ind] = flux_Q;
@@ -157,6 +171,20 @@ int add_component_information(components_t *components, int num_srcs,
                           sizeof(user_precision_t)*track_comp_malloc->n_curves);
       components->curve_comp_inds = realloc(components->curve_comp_inds,
                                        sizeof(int)*track_comp_malloc->n_curves);
+    }
+
+    //If we have NaN fluxes, set them to zero
+    if (isnan(flux_I) != 0) {
+      flux_I = 0.0;
+    }
+    if (isnan(flux_Q) != 0) {
+      flux_Q = 0.0;
+    }
+    if (isnan(flux_U) != 0) {
+      flux_U = 0.0;
+    }
+    if (isnan(flux_V) != 0) {
+      flux_V = 0.0;
     }
 
     components->curve_ref_freqs[curve_flux_ind] = freq;
