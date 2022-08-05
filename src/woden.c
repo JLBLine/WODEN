@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
   //into one single SOURCE
   printf("Horizon cropping sky model and calculating az/za for all components\nfor observation\n");
   source_t *cropped_src = crop_sky_model(raw_srccat, woden_settings->lsts,
-                               woden_settings->latitude,
+                               woden_settings->latitudes,
                                woden_settings->num_time_steps, woden_settings->sky_crop_type);
 
   printf("Finished cropping and calculating az/za\n");

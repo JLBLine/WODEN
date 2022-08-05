@@ -324,6 +324,8 @@ double * setup_lsts_and_phase_centre(woden_settings_t *woden_settings){
     woden_settings->mjds = malloc(woden_settings->num_time_steps*sizeof(double));
   }
 
+  woden_settings->latitudes = malloc(woden_settings->num_time_steps*sizeof(double));
+
   for ( int time_step = 0; time_step < woden_settings->num_time_steps; time_step++ ) {
 
     //Add on the angle accrued by current time step to the base LST
@@ -344,30 +346,24 @@ double * setup_lsts_and_phase_centre(woden_settings_t *woden_settings){
                                    &lst_J2000, &latitude_J2000);
 
       lsts[time_step] = lst_J2000;
+      woden_settings->latitudes[time_step] = latitude_J2000;
 
       if (time_step == 0) {
         printf("Obs epoch initial LST was %.10f deg\n", lst_current/DD2R );
         printf("Setting initial J2000 LST to %.10f deg\n", lst_J2000/DD2R );
         printf("Setting initial mjd to %.10f\n",woden_settings->mjds[time_step] );
-        printf("After precession latitude of the array is %.10f\n", latitude_J2000/DD2R );
+        printf("After precession initial latitude of the array is %.10f\n", latitude_J2000/DD2R );
         woden_settings->lst_base = lst_J2000;
         woden_settings->latitude = latitude_J2000;
       }
     }
     else {
       lsts[time_step] = lst_current;
+      woden_settings->latitudes[time_step] = woden_settings->latitude_obs_epoch_base;
       if (time_step == 0) {
         printf("Obs epoch initial LST was %.10f deg\n", lst_current/DD2R );
       }
     }
-    // //Add on the angle accrued by current time step to the base LST
-    // double lst = woden_settings->lst_base + time_step*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
-    //
-    // //Add half a time_res so we are sampling centre of each time step
-    // lst += 0.5*woden_settings->time_res*SOLAR2SIDEREAL*DS2R;
-    //
-    // printf("COMPARE no prec %.8f old %.8f new %.8f\n", lst_current / DD2R, lst / DD2R, lst_J2000 / DD2R );
-    // // lsts[time_step] = lst;
   }
   return lsts;
 }

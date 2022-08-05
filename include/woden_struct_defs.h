@@ -283,7 +283,10 @@ typedef struct _woden_settings_t {
   double base_band_freq;  /*!< The lowest fine channel frequency in the current band being simulated*/
   int do_precession; /*!< Boolean of whether to apply precession to the
   array layout or not*/
-  double *lsts; /*!< Array to hold LSTs for all time centroids*/
+  double *lsts; /*!< Array to hold LSTs for all time centroids (these are
+    different when precession is happening)*/
+  double *latitudes; /*!< Array to hold latitudes for all time centroids (these
+    are different when precession is happening)*/
   double *mjds; /*!< Array to hold modified julian dates for all time centroids*/
 
 } woden_settings_t;

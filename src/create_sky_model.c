@@ -109,7 +109,7 @@ void realloc_and_add_component(e_sky_crop croptype,
                                source_t *cropped_src,
                                source_t *original_src,
                                int orig_flux_ind,
-                               double *lsts, double latitude, int num_time_steps,
+                               double *lsts, double *latitudes, int num_time_steps,
                                track_comp_malloc_t *track_point_malloc,
                                track_comp_malloc_t *track_gauss_malloc,
                                track_comp_malloc_t *track_shape_malloc){
@@ -223,7 +223,7 @@ void realloc_and_add_component(e_sky_crop croptype,
     for (int time_step = 0; time_step < num_time_steps; time_step++) {
       convert_radec2azza(components_cropped->ras[crop_comp_ind],
                          components_cropped->decs[crop_comp_ind],
-                         lsts[time_step], latitude, &az, &za);
+                         lsts[time_step], latitudes[time_step], &az, &za);
       components_cropped->azs[crop_comp_ind*num_time_steps + time_step] = (user_precision_t)az;
       components_cropped->zas[crop_comp_ind*num_time_steps + time_step] = (user_precision_t)za;
     }
@@ -451,7 +451,7 @@ void realloc_and_add_component(e_sky_crop croptype,
 // if CROP_SOURCES
 void add_source_to_cropped_source(e_sky_crop croptype,
                                   source_t *cropped_src, source_t *original_src,
-                                  double *lsts, double latitude, int num_time_steps,
+                                  double *lsts, double *latitudes, int num_time_steps,
                                   track_comp_malloc_t *track_point_malloc,
                                   track_comp_malloc_t *track_gauss_malloc,
                                   track_comp_malloc_t *track_shape_malloc){
@@ -464,7 +464,7 @@ void add_source_to_cropped_source(e_sky_crop croptype,
     realloc_and_add_component(croptype, POINT, POWER_LAW,
                               cropped_src, original_src,
                               orig_power_ind,
-                              lsts, latitude, num_time_steps,
+                              lsts, latitudes, num_time_steps,
                               track_point_malloc, track_gauss_malloc,
                               track_shape_malloc);
   } //end loop over POINT + POWER_LAW
@@ -474,7 +474,7 @@ void add_source_to_cropped_source(e_sky_crop croptype,
     realloc_and_add_component(croptype, POINT, CURVED_POWER_LAW,
                               cropped_src, original_src,
                               orig_curve_ind,
-                              lsts, latitude, num_time_steps,
+                              lsts, latitudes, num_time_steps,
                               track_point_malloc, track_gauss_malloc,
                               track_shape_malloc);
   } //end loop over POINT + CURVED_POWER_LAW
@@ -484,7 +484,7 @@ void add_source_to_cropped_source(e_sky_crop croptype,
     realloc_and_add_component(croptype, POINT, LIST,
                               cropped_src, original_src,
                               orig_list_ind,
-                              lsts, latitude, num_time_steps,
+                              lsts, latitudes, num_time_steps,
                               track_point_malloc, track_gauss_malloc,
                               track_shape_malloc);
   } //end loop over POINT + LIST
@@ -494,7 +494,7 @@ void add_source_to_cropped_source(e_sky_crop croptype,
     realloc_and_add_component(croptype, GAUSSIAN, POWER_LAW,
                               cropped_src, original_src,
                               orig_power_ind,
-                              lsts, latitude, num_time_steps,
+                              lsts, latitudes, num_time_steps,
                               track_point_malloc, track_gauss_malloc,
                               track_shape_malloc);
   } //end loop over GAUSSIAN + POWER_LAW
@@ -504,7 +504,7 @@ void add_source_to_cropped_source(e_sky_crop croptype,
     realloc_and_add_component(croptype, GAUSSIAN, CURVED_POWER_LAW,
                               cropped_src, original_src,
                               orig_curve_ind,
-                              lsts, latitude, num_time_steps,
+                              lsts, latitudes, num_time_steps,
                               track_point_malloc, track_gauss_malloc,
                               track_shape_malloc);
   } //end loop over GAUSSIAN + CURVED_POWER_LAW
@@ -514,7 +514,7 @@ void add_source_to_cropped_source(e_sky_crop croptype,
     realloc_and_add_component(croptype, GAUSSIAN, LIST,
                               cropped_src, original_src,
                               orig_list_ind,
-                              lsts, latitude, num_time_steps,
+                              lsts, latitudes, num_time_steps,
                               track_point_malloc, track_gauss_malloc,
                               track_shape_malloc);
   } //end loop over GAUSSIAN + LIST
@@ -524,7 +524,7 @@ void add_source_to_cropped_source(e_sky_crop croptype,
     realloc_and_add_component(croptype, SHAPELET, POWER_LAW,
                               cropped_src, original_src,
                               orig_power_ind,
-                              lsts, latitude, num_time_steps,
+                              lsts, latitudes, num_time_steps,
                               track_point_malloc, track_gauss_malloc,
                               track_shape_malloc);
   } //end loop over SHAPELET + POWER_LAW
@@ -534,7 +534,7 @@ void add_source_to_cropped_source(e_sky_crop croptype,
     realloc_and_add_component(croptype, SHAPELET, CURVED_POWER_LAW,
                               cropped_src, original_src,
                               orig_curve_ind,
-                              lsts, latitude, num_time_steps,
+                              lsts, latitudes, num_time_steps,
                               track_point_malloc, track_gauss_malloc,
                               track_shape_malloc);
   } //end loop over SHAPELET + CURVED_POWER_LAW
@@ -544,7 +544,7 @@ void add_source_to_cropped_source(e_sky_crop croptype,
     realloc_and_add_component(croptype, SHAPELET, LIST,
                               cropped_src, original_src,
                               orig_list_ind,
-                              lsts, latitude, num_time_steps,
+                              lsts, latitudes, num_time_steps,
                               track_point_malloc, track_gauss_malloc,
                               track_shape_malloc);
   } //end loop over SHAPELET + LIST
@@ -649,7 +649,7 @@ void source_zero_counters_and_null_components(source_t *source){
 
 **********************************/
 source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
-              double latitude, int num_time_steps, e_sky_crop sky_crop_type){
+              double *latitudes, int num_time_steps, e_sky_crop sky_crop_type){
 
   track_comp_malloc_t *track_point_malloc = initialise_track_comp_malloc();
   track_comp_malloc_t *track_gauss_malloc = initialise_track_comp_malloc();
@@ -688,17 +688,17 @@ source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
 
     //Loop over POINT components and do horizon check
     horizon_test(sky_crop_type, &raw_srccat->sources[src].point_components,
-                    raw_srccat->sources[src].n_points, lsts, latitude,
+                    raw_srccat->sources[src].n_points, lsts, latitudes[0],
                     &all_comps_above_horizon);
 
     //Loop over GAUSSIAN components and do horizon check
     horizon_test(sky_crop_type, &raw_srccat->sources[src].gauss_components,
-                    raw_srccat->sources[src].n_gauss, lsts, latitude,
+                    raw_srccat->sources[src].n_gauss, lsts, latitudes[0],
                     &all_comps_above_horizon);
 
     //Loop over SHAPELET components and do horizon check
     horizon_test(sky_crop_type, &raw_srccat->sources[src].shape_components,
-                    raw_srccat->sources[src].n_shapes, lsts, latitude,
+                    raw_srccat->sources[src].n_shapes, lsts, latitudes[0],
                     &all_comps_above_horizon);
 
     //After checking all components in a source, if cropping out sources,
@@ -712,7 +712,7 @@ source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
 
         add_source_to_cropped_source(sky_crop_type,
                                      cropped_src, &raw_srccat->sources[src],
-                                     lsts, latitude, num_time_steps,
+                                     lsts, latitudes, num_time_steps,
                                      track_point_malloc, track_gauss_malloc,
                                      track_shape_malloc);
 
@@ -722,7 +722,7 @@ source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
     else if (sky_crop_type == CROP_COMPONENTS) {
       add_source_to_cropped_source(sky_crop_type,
                                    cropped_src, &raw_srccat->sources[src],
-                                   lsts, latitude, num_time_steps,
+                                   lsts, latitudes, num_time_steps,
                                    track_point_malloc, track_gauss_malloc,
                                    track_shape_malloc);
     }

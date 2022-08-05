@@ -22,7 +22,7 @@ __device__ void calc_uvw(double *d_X_diff, double *d_Y_diff,
   int xyz_ind = time_ind*num_baselines + mod_baseline;
 
   // printf("Inputs %d %d %d\n", num_baselines, num_times, num_freqs);
-  // printf("In here %d %d %d %d\n", iBaseline, mod_baseline, time_ind, xyz_ind);
+  //
   // printf("part 1 %d\n",(int)((float)iBaseline - (float)mod_baseline) );
 
   * u = (sha0*d_X_diff[xyz_ind]) + (cha0*d_Y_diff[xyz_ind]);
