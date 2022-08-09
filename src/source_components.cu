@@ -365,25 +365,175 @@ __global__ void kern_extrap_curved_power_laws(int num_extrap_freqs, double *d_ex
 __device__ user_precision_t calc_gradient_extrap_list(user_precision_t *list_fluxes,
           double *list_freqs, double desired_freq, int low_ind_1, int low_ind_2) {
 
-  user_precision_t gradient = (list_fluxes[low_ind_2] - list_fluxes[low_ind_1]) / (list_freqs[low_ind_2] - list_freqs[low_ind_1]);
-  user_precision_t extrap_flux = list_fluxes[low_ind_1] + gradient*(desired_freq - list_freqs[low_ind_1]);
+  user_precision_t gradient;
+  user_precision_t extrap_flux;
 
-  if (list_fluxes[low_ind_2] != 0 && list_fluxes[low_ind_1] != 0) {
-    // printf("------------------------------------------------------\n");
-    // printf("low freq, flux %.3e %.3f\n", list_freqs[low_ind_1], list_fluxes[low_ind_1]);
-    // printf("high freq, flux %.3e %.3f\n", list_freqs[low_ind_2], list_fluxes[low_ind_2]);
-
-    // printf("gradient, extrap_flux %.3e %.4f\n", gradient, extrap_flux);
-    // printf("bottom bit %.3f %.3e\n",list_fluxes[low_ind_1],
-    //                         desired_freq - list_freqs[low_ind_1]);
-
-    // printf("%.3e %.3e %.3e\n",list_freqs[low_ind_1], desired_freq, list_freqs[low_ind_2] );
+  //If one is negative, do interpolation in linear space
+  if (list_fluxes[low_ind_1] <= 0 || list_fluxes[low_ind_2] <= 0) {
+    gradient = (list_fluxes[low_ind_2] - list_fluxes[low_ind_1]) / (list_freqs[low_ind_2] - list_freqs[low_ind_1]);
+    extrap_flux = list_fluxes[low_ind_1] + gradient*(desired_freq - list_freqs[low_ind_1]);
   }
 
+  else {
+
+    user_precision_t logflux1, logflux2, logfreq1, logfreq2, log_des_freq;
+
+    // printf("what a do %d %d %.3e %.3e %.3e %.3e %.3e\n",low_ind_1, low_ind_2,
+    // list_fluxes[low_ind_1],
+    // list_fluxes[low_ind_2], list_freqs[low_ind_1], list_freqs[low_ind_2], desired_freq );
+
+    logflux1 = log10(list_fluxes[low_ind_1]);
+    logflux2 = log10(list_fluxes[low_ind_2]);
+    logfreq1 = log10(list_freqs[low_ind_1]);
+    logfreq2 = log10(list_freqs[low_ind_2]);
+    log_des_freq = log10(desired_freq);
+
+    // printf("what a do %.3e %.3e %.3e %.3e %.3e\n",logflux1, logflux2, logfreq1, logfreq2, log_des_freq );
 
 
+    gradient = (logflux2 - logflux1) / (logfreq2 - logfreq1);
+    extrap_flux = logflux1 + gradient*(log_des_freq - logfreq1);
+
+    extrap_flux = pow(10, extrap_flux);
+
+  }
+
+  // if (list_fluxes[low_ind_2] != 0 && list_fluxes[low_ind_1] != 0) {
+  //   // printf("------------------------------------------------------\n");
+  //   // printf("low freq, flux %.3e %.3f\n", list_freqs[low_ind_1], list_fluxes[low_ind_1]);
+  //   // printf("high freq, flux %.3e %.3f\n", list_freqs[low_ind_2], list_fluxes[low_ind_2]);
+  //
+  //   // printf("gradient, extrap_flux %.3e %.4f\n", gradient, extrap_flux);
+  //   // printf("bottom bit %.3f %.3e\n",list_fluxes[low_ind_1],
+  //   //                         desired_freq - list_freqs[low_ind_1]);
+  //
+  //   // printf("%.3e %.3e %.3e\n",list_freqs[low_ind_1], desired_freq, list_freqs[low_ind_2] );
+  // }
   return extrap_flux;
 }
+
+// __device__ void extrap_stokes_list_flux(components_t d_components,
+//            double *d_extrap_freqs, int iFluxComp, int iFreq,
+//            user_precision_t * flux_I, user_precision_t * flux_Q,
+//            user_precision_t * flux_U, user_precision_t * flux_V){
+//
+//   int num_list_values = d_components.num_list_values[iFluxComp];
+//   int list_start_ind = d_components.list_start_indexes[iFluxComp];
+//
+//   double d_extrap_freq = d_extrap_freqs[iFreq];
+//
+//   int low_ind_1 = -1;
+//   int low_ind_2 = -1;
+//
+//   double low_val_1 = 1e16;
+//   double low_val_2 = 1e16;
+//
+//   double ref_freq;
+//   double abs_diff_freq;
+//
+//   if (num_list_values == 1) {
+//     * flux_I = d_components.list_stokesI[list_start_ind];
+//     * flux_Q = d_components.list_stokesQ[list_start_ind];
+//     * flux_U = d_components.list_stokesU[list_start_ind];
+//     * flux_V = d_components.list_stokesV[list_start_ind];
+//     return;
+//   }
+//
+//   //First loop finds the absolute closest frequency
+//   for (int i = 0; i < num_list_values; i++) {
+//     ref_freq = d_components.list_freqs[list_start_ind + i];
+//     abs_diff_freq = abs(ref_freq - d_extrap_freq);
+//
+//     if (abs_diff_freq < low_val_1) {
+//       low_val_1 = abs_diff_freq;
+//       low_ind_1 = i;
+//     }
+//   }
+//
+//   //Depending on the closest frequency, we either want to search above or
+//   //below the target frequency to find points either side of the target freq
+//
+//   //We happen to need the reference frequency; just return the refs
+//   if (d_components.list_freqs[list_start_ind + low_ind_1] == d_extrap_freq) {
+//     // if (iFluxComp == 5 && iFreq == 13){
+//       // printf("We are heeeeere iFreq %d\n", iFreq);
+//     // }
+//     * flux_I = d_components.list_stokesI[list_start_ind + low_ind_1];
+//     * flux_Q = d_components.list_stokesQ[list_start_ind + low_ind_1];
+//     * flux_U = d_components.list_stokesU[list_start_ind + low_ind_1];
+//     * flux_V = d_components.list_stokesV[list_start_ind + low_ind_1];
+//   }
+//   else {
+//     //We need to search lower than this index
+//     if (d_components.list_freqs[list_start_ind + low_ind_1] > d_extrap_freq){
+//       //We are extrapolating to a frequency that is lower than all list entries
+//       //so just stick low_ind_2 to one above low_ind_1
+//       if (low_ind_1 == 0) {
+//         low_ind_2 = 1;
+//       }
+//       //Otherwise, need to actually look for closest freq
+//       else {
+//         for (int i = 0; i < low_ind_1; i++) {
+//           ref_freq = d_components.list_freqs[list_start_ind + i];
+//           abs_diff_freq = abs(ref_freq - d_extrap_freq);
+//
+//           if (abs_diff_freq < low_val_2) {
+//             low_val_2 = abs_diff_freq;
+//             low_ind_2 = i;
+//           }
+//         }
+//       }
+//     }
+//     //We need to search higher than this index
+//     else {
+//       //We are extrapolating to a frequency that is higher than all list entries
+//       //so just stick low_ind_2 to one below low_ind_1
+//       if (low_ind_1 == num_list_values - 1) {
+//         low_ind_2 = low_ind_1 - 1;
+//       }
+//       //Otherwise, need to actually look for closest freq
+//       else {
+//         for (int i = low_ind_1 + 1; i < num_list_values; i++) {
+//
+//           ref_freq = d_components.list_freqs[list_start_ind + i];
+//           abs_diff_freq = abs(ref_freq - d_extrap_freq);
+//
+//           if (abs_diff_freq < low_val_2) {
+//             low_val_2 = abs_diff_freq;
+//             low_ind_2 = i;
+//           }
+//         }
+//       }
+//     }
+//     // printf("low_ind_1, low_ind_2 %d %d \n",low_ind_1, low_ind_2);
+//
+//     // if (low_ind_1 == low_ind_2){
+//     //     low_ind_2 = num_list_values - 1;
+//     //     low_ind_1 = num_list_values - 2;
+//     // }
+//
+//     * flux_I = calc_gradient_extrap_list(d_components.list_stokesI,
+//               d_components.list_freqs, d_extrap_freq,
+//               list_start_ind + low_ind_1, list_start_ind + low_ind_2);
+//     * flux_Q = calc_gradient_extrap_list(d_components.list_stokesQ,
+//               d_components.list_freqs, d_extrap_freq,
+//               list_start_ind + low_ind_1, list_start_ind + low_ind_2);
+//     * flux_U = calc_gradient_extrap_list(d_components.list_stokesU,
+//               d_components.list_freqs, d_extrap_freq,
+//               list_start_ind + low_ind_1, list_start_ind + low_ind_2);
+//     * flux_V = calc_gradient_extrap_list(d_components.list_stokesV,
+//               d_components.list_freqs, d_extrap_freq,
+//               list_start_ind + low_ind_1, list_start_ind + low_ind_2);
+//
+//     if (low_ind_2 == -1){
+//       printf("wrong range %.3e %.3e iFreq %d %.3e low %d %.3e\n", d_components.list_freqs[list_start_ind],
+//       d_components.list_freqs[list_start_ind + num_list_values-1],
+//       iFreq, d_extrap_freq,
+//       low_ind_1, d_components.list_freqs[list_start_ind + low_ind_1]);
+//       printf("The flooxes %.3e %.3e %.3e %.3e\n",* flux_I, * flux_Q, * flux_U, * flux_V );
+//     }
+//   }
+// }
 
 __device__ void extrap_stokes_list_flux(components_t d_components,
            double *d_extrap_freqs, int iFluxComp, int iFreq,
@@ -399,7 +549,7 @@ __device__ void extrap_stokes_list_flux(components_t d_components,
   int low_ind_2 = -1;
 
   double low_val_1 = 1e16;
-  double low_val_2 = 1e16;
+  // double low_val_2 = 1e16;
 
   double ref_freq;
   double abs_diff_freq;
@@ -435,76 +585,54 @@ __device__ void extrap_stokes_list_flux(components_t d_components,
     * flux_Q = d_components.list_stokesQ[list_start_ind + low_ind_1];
     * flux_U = d_components.list_stokesU[list_start_ind + low_ind_1];
     * flux_V = d_components.list_stokesV[list_start_ind + low_ind_1];
+    return;
   }
   else {
-    //We need to search lower than this index
-    if (d_components.list_freqs[list_start_ind + low_ind_1] > d_extrap_freq){
-      //We are extrapolating to a frequency that is lower than all list entries
-      //so just stick low_ind_2 to one above low_ind_1
-      if (low_ind_1 == 0) {
-        low_ind_2 = 1;
-      }
-      //Otherwise, need to actually look for closest freq
-      else {
-        for (int i = 0; i < low_ind_1; i++) {
-          ref_freq = d_components.list_freqs[list_start_ind + i];
-          abs_diff_freq = abs(ref_freq - d_extrap_freq);
-
-          if (abs_diff_freq < low_val_2) {
-            low_val_2 = abs_diff_freq;
-            low_ind_2 = i;
-          }
-        }
-      }
+    //The closest freq is the first index, so set the second index to the second
+    if (low_ind_1 == 0) {
+      low_ind_2 = 1;
     }
-    //We need to search higher than this index
+    //closest freq the highest list entry - set second index to one below
+    //(order of indexes doesn't matter, as the calculated gradient is pos/neg
+    //as needed)
+    else if (low_ind_1 == num_list_values - 1){
+      low_ind_2 = low_ind_1 - 1;
+    }
     else {
-      //We are extrapolating to a frequency that is higher than all list entries
-      //so just stick low_ind_2 to one below low_ind_1
-      if (low_ind_1 == num_list_values - 1) {
+      //closest freq is higher than desired - set second index to one below
+      //(order of indexes doesn't matter, as the calculated gradient is pos/neg
+      //as needed)
+      if (d_components.list_freqs[list_start_ind + low_ind_1] > d_extrap_freq){
         low_ind_2 = low_ind_1 - 1;
       }
-      //Otherwise, need to actually look for closest freq
       else {
-        for (int i = low_ind_1 + 1; i < num_list_values; i++) {
-
-          ref_freq = d_components.list_freqs[list_start_ind + i];
-          abs_diff_freq = abs(ref_freq - d_extrap_freq);
-
-          if (abs_diff_freq < low_val_2) {
-            low_val_2 = abs_diff_freq;
-            low_ind_2 = i;
-          }
-        }
+        low_ind_2 = low_ind_1 + 1;
       }
+        //We are extrapolating to a frequency that is lower than all list entries
+        //so just stick low_ind_2 to one above low_ind_1
     }
-    // printf("low_ind_1, low_ind_2 %d %d \n",low_ind_1, low_ind_2);
+  }
 
-    // if (low_ind_1 == low_ind_2){
-    //     low_ind_2 = num_list_values - 1;
-    //     low_ind_1 = num_list_values - 2;
-    // }
+  * flux_I = calc_gradient_extrap_list(d_components.list_stokesI,
+            d_components.list_freqs, d_extrap_freq,
+            list_start_ind + low_ind_1, list_start_ind + low_ind_2);
+  * flux_Q = calc_gradient_extrap_list(d_components.list_stokesQ,
+            d_components.list_freqs, d_extrap_freq,
+            list_start_ind + low_ind_1, list_start_ind + low_ind_2);
+  * flux_U = calc_gradient_extrap_list(d_components.list_stokesU,
+            d_components.list_freqs, d_extrap_freq,
+            list_start_ind + low_ind_1, list_start_ind + low_ind_2);
+  * flux_V = calc_gradient_extrap_list(d_components.list_stokesV,
+            d_components.list_freqs, d_extrap_freq,
+            list_start_ind + low_ind_1, list_start_ind + low_ind_2);
 
-    * flux_I = calc_gradient_extrap_list(d_components.list_stokesI,
-              d_components.list_freqs, d_extrap_freq,
-              list_start_ind + low_ind_1, list_start_ind + low_ind_2);
-    * flux_Q = calc_gradient_extrap_list(d_components.list_stokesQ,
-              d_components.list_freqs, d_extrap_freq,
-              list_start_ind + low_ind_1, list_start_ind + low_ind_2);
-    * flux_U = calc_gradient_extrap_list(d_components.list_stokesU,
-              d_components.list_freqs, d_extrap_freq,
-              list_start_ind + low_ind_1, list_start_ind + low_ind_2);
-    * flux_V = calc_gradient_extrap_list(d_components.list_stokesV,
-              d_components.list_freqs, d_extrap_freq,
-              list_start_ind + low_ind_1, list_start_ind + low_ind_2);
+  if (low_ind_2 == -1){
 
-    if (low_ind_2 == -1){
-      printf("wrong range %.3e %.3e iFreq %d %.3e low %d %.3e\n", d_components.list_freqs[list_start_ind],
-      d_components.list_freqs[list_start_ind + num_list_values-1],
-      iFreq, d_extrap_freq,
-      low_ind_1, d_components.list_freqs[list_start_ind + low_ind_1]);
-      printf("The flooxes %.3e %.3e %.3e %.3e\n",* flux_I, * flux_Q, * flux_U, * flux_V );
-    }
+    printf("wrong range %.3e %.3e iFreq %d %.3e low %d %.3e\n", d_components.list_freqs[list_start_ind],
+    d_components.list_freqs[list_start_ind + num_list_values-1],
+    iFreq, d_extrap_freq,
+    low_ind_1, d_components.list_freqs[list_start_ind + low_ind_1]);
+    printf("The flooxes %.3e %.3e %.3e %.3e\n",* flux_I, * flux_Q, * flux_U, * flux_V );
   }
 }
 
@@ -756,7 +884,7 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
       ;
     #else
       free(double_azs);
-      free(double_zas);  
+      free(double_zas);
     #endif
 
 
