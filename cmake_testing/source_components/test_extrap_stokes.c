@@ -23,9 +23,9 @@ extern void test_extrap_stokes_all_models(source_t *chunked_source,
 // void fill_components_info(components_t *comps)
 
 #ifdef DOUBLE_PRECISION
-  double TOL = 1e-12;
+  double TOL = 1e-11;
 #else
-  double TOL = 1e-4;
+  double TOL = 9e-4;
 #endif
 
 /*
