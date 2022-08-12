@@ -336,23 +336,20 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     if (num_shapes > 0) {
       printf("\tDoing shapelet components\n");
 
-      double *d_allsteps_lsts=NULL;
+      double *d_lsts=NULL;
       user_precision_t *d_u_shapes = NULL;
       user_precision_t *d_v_shapes = NULL;
-      user_precision_t *d_w_shapes = NULL;
 
-      cudaErrorCheckCall( cudaMalloc( (void**)&(d_allsteps_lsts),
-                                          num_visis*sizeof(double)) );
-      cudaErrorCheckCall( cudaMemcpy( d_allsteps_lsts, visibility_set->allsteps_lsts,
-                             num_visis*sizeof(double),
+      cudaErrorCheckCall( cudaMalloc( (void**)&(d_lsts),
+                                          woden_settings->num_time_steps*sizeof(double)) );
+      cudaErrorCheckCall( cudaMemcpy( d_lsts, woden_settings->lsts,
+                             woden_settings->num_time_steps*sizeof(double),
                              cudaMemcpyHostToDevice) );
 
       cudaErrorCheckCall( cudaMalloc( (void**)&d_u_shapes,
-                          num_shapes*num_visis*sizeof(user_precision_t)) );
+            num_shapes*num_baselines*num_time_steps*sizeof(user_precision_t)) );
       cudaErrorCheckCall( cudaMalloc( (void**)&d_v_shapes,
-                          num_shapes*num_visis*sizeof(user_precision_t)) );
-      cudaErrorCheckCall( cudaMalloc( (void**)&d_w_shapes,
-                          num_shapes*num_visis*sizeof(user_precision_t)) );
+            num_shapes*num_baselines*num_time_steps*sizeof(user_precision_t)) );
 
       //Something to store the primary beam gains (all 4 pols) in
       d_beam_gains_t d_shape_beam_gains;
@@ -371,19 +368,18 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       else {
         threads.x = 64;
         threads.y = 2;
-        grid.x = (int)ceil( (float)num_visis / (float)threads.x );
+        grid.x = (int)ceil( (float)(num_baselines*num_time_steps) / (float)threads.x );
         grid.y = (int)ceil( ((float)num_shapes) / ((float)threads.y) );
       }
 
       //Extra set of coords, centred on sky location of each shapelet source
-      cudaErrorCheckKernel("kern_calc_uvw_shapelet",
-                            kern_calc_uvw_shapelet, grid, threads,
+      cudaErrorCheckKernel("kern_calc_uv_shapelet",
+                            kern_calc_uv_shapelet, grid, threads,
                             d_X_diff, d_Y_diff, d_Z_diff,
-                            d_u_shapes, d_v_shapes, d_w_shapes,
-                            d_allsteps_wavelengths, d_allsteps_lsts,
+                            d_u_shapes, d_v_shapes, d_lsts,
                             d_chunked_source->shape_components.ras,
                             d_chunked_source->shape_components.decs,
-                            num_baselines, num_visis, num_time_steps, num_freqs, num_shapes);
+                            num_baselines, num_time_steps, num_shapes);
 
       //Splitting over visibilities, but looping over shapelet coeffs inside
       //the kernel
@@ -399,7 +395,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
             d_chunked_source->shape_components, d_shape_beam_gains,
             d_us, d_vs, d_ws,
             d_allsteps_wavelengths,
-            d_u_shapes, d_v_shapes, d_w_shapes,
+            d_u_shapes, d_v_shapes,
             d_sum_visi_XX_real, d_sum_visi_XX_imag,
             d_sum_visi_XY_real, d_sum_visi_XY_imag,
             d_sum_visi_YX_real, d_sum_visi_YX_imag,
@@ -409,10 +405,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
             d_chunked_source->n_shape_coeffs, num_time_steps,
             beam_settings->beamtype);
 
-      cudaErrorCheckCall( cudaFree(d_w_shapes) );
       cudaErrorCheckCall( cudaFree(d_v_shapes) );
       cudaErrorCheckCall( cudaFree(d_u_shapes) );
-      cudaErrorCheckCall( cudaFree(d_allsteps_lsts) );
+      cudaErrorCheckCall( cudaFree(d_lsts) );
 
       printf("Making it to this call here\n");
       free_d_components(d_chunked_source, SHAPELET);

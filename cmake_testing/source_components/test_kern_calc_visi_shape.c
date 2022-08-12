@@ -192,17 +192,22 @@ void test_kern_calc_visi_shape_VarylmnMultipleCoeff(int beamtype) {
   //Set the shapelet u,v,w same as the measurement equation one (this is not
   //true in reality but works fine for testing)
 
-  for (int comp = 0; comp < num_components; comp++) {
-    for (int visi = 0; visi < num_visis; visi++) {
-      args_ft->u_shapes[comp*num_visis + visi] = args_ft->us[visi];
-      args_ft->v_shapes[comp*num_visis + visi] = args_ft->vs[visi];
-      args_ft->w_shapes[comp*num_visis + visi] = args_ft->ws[visi];
+  int count = 0;
+
+  for (int comp_step = 0; comp_step < num_components; comp_step++) {
+    for ( int time_step = 0; time_step < num_times; time_step++ ) {
+      for (int baseline = 0; baseline < num_baselines; baseline++) {
+        args_ft->u_shapes[count] = ((baseline + 1)*10);
+        args_ft->v_shapes[count] = ((baseline + 1)*10);
+
+        count ++;
+      }
     }
   }
 
   //Stick a number of coeffs in per component
   user_precision_t sign;
-  int count = 0;
+  count = 0;
   for (int comp = 0; comp < num_components; comp++) {
     for (int coeff = 0; coeff < num_coeffs_per_component; coeff++) {
 
@@ -225,7 +230,7 @@ void test_kern_calc_visi_shape_VarylmnMultipleCoeff(int beamtype) {
           num_freqs, num_visis, num_times, beamtype, SHAPELET,
           components, args_ft->extrap_freqs,
           args_ft->us, args_ft->vs, args_ft->ws,
-          args_ft->u_shapes, args_ft->v_shapes, args_ft->w_shapes,
+          args_ft->u_shapes, args_ft->v_shapes,
           args_ft->sum_visi_XX_real, args_ft->sum_visi_XX_imag,
           args_ft->sum_visi_XY_real, args_ft->sum_visi_XY_imag,
           args_ft->sum_visi_YX_real, args_ft->sum_visi_YX_imag,

@@ -30,6 +30,7 @@ endforeach()
 
 ## Create tests for both float and double precision
 foreach(PRECISION IN LISTS FLOAT DOUBLE)
+# foreach(PRECISION IN LISTS DOUBLE)
 
   ##Set the flags depending on the precision
   DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS CUDA_FLAGS C_COVER_FLAGS)

@@ -573,8 +573,8 @@ as each list entry begin given a random flux.
 The values are copied into a ``source_t`` struct, passed through the ``CUDA``
 code, and extrapolated to 25 frequencies between 50 and 300 MHz. The outputs
 are tested against equivalent ``C`` functions in double precision. The
-``woden_double`` code is tested to an absolute precision of 1e-12 Jy, with the
-``woden_float`` a 1e-4 Jy precision (note some of the extrapolated fluxes
+``woden_double`` code is tested to an absolute precision of 1e-11 Jy, with the
+``woden_float`` a 9e-4 Jy precision (note some of the extrapolated fluxes
 are of order 1e3).
 
 To visualise the results, run ``WODEN/cmake_testing/source_components/test_extrap_stokes.py``,
@@ -595,7 +595,11 @@ to be within 100 to 200 MHz so they should all curve in these plots):
 Finally, for the LIST type components. Note here, the black line is the information
 contained in the sky model, the little orange crosses are a ``python``
 implementation of the linear interpolation between points to double check
-everything, and the cyan squares are what is output by the ``CUDA`` code:
+everything, and the cyan squares are what is output by the ``CUDA`` code.
+
+.. note::
+
+	Most SEDs are assumed to be close to a power-law, and so are linear in log space. The linear interpolation is therefore done in log space. However, for some complicated modelling, negative flux values are required. For these values, the interpolation is done in *linear* space. Hence in the plot below, where the fluxes dip into negative territory, the extrapolated fluxes not longer lie on the straight lines, as these are log-log plots.
 
 .. image:: test_extrap_list_laws.png
   :width: 800
@@ -758,7 +762,7 @@ test_kern_calc_visi_shape.c
 ************************************
 This calls ``source_components::test_kern_calc_visi_all``, which
 calls ``source_components::kern_calc_visi_shape``. This kernel calculates
-the visibility response for GAUSSIAN COMPONENTs for a number of sky directions, for
+the visibility response for SHAPELET COMPONENTs for a number of sky directions, for
 all time and frequency steps, and all baselines.
 
 This runs all tests as described by :ref:`test_kern_calc_visi_gauss.c`, plus a

@@ -310,6 +310,10 @@ woden_settings_t * make_woden_settings(double ra0, double dec0) {
     //with frequency - that way we can test for just one gain value per time
     woden_settings->frequency_resolution = 1e-6;
     woden_settings->latitude = MWA_LAT_RAD;
+    double latitudes[] = {MWA_LAT_RAD, MWA_LAT_RAD};
+    woden_settings->latitudes = latitudes;
+
+    woden_settings->lsts = lsts;
 
     return woden_settings;
 }

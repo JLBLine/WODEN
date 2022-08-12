@@ -56,7 +56,11 @@ where :math:`q` is a curvature term. This allows for peaked-type SEDs:
 
 Finally, the ``list`` model just takes a list of flux densities, and does a linear
 interpolation between them. This is useful for simulating things like the 21cm
-signal which should bounce around with frequency:
+signal which should bounce around with frequency.
+
+.. note::
+
+	Most SEDs are assumed to be close to a power-law, and so are linear in log space. The linear interpolation is therefore done in log space. However, for some complicated modelling, negative flux values are required. For these values, the interpolation is done in *linear* space. Hence in the plot below, where the fluxes dip into negative territory, the extrapolated fluxes not longer lie on the straight lines, as these are log-log plots. A 21cm list-style SED has been tested to return the expected power spectra, even with this slightly odd log/linear extrapolation combo when bouncing around zero.
 
 .. image:: test_extrap_list_laws.png
    :width: 400pt

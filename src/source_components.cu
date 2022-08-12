@@ -878,7 +878,6 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       user_precision_t *d_us, user_precision_t *d_vs, user_precision_t *d_ws,
       user_precision_t *d_allsteps_wavelengths,
       user_precision_t *d_u_shapes, user_precision_t *d_v_shapes,
-      user_precision_t *d_w_shapes,
       user_precision_t *d_sum_visi_XX_real, user_precision_t *d_sum_visi_XX_imag,
       user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
       user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
@@ -898,9 +897,10 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
     user_precision_t shape_flux_V;
     cuUserComplex visi_shape;
 
+    int mod_baseline = iBaseline - num_baselines*floorf((float)iBaseline / (float)num_baselines);
+
     //Find out what time and freq index this baseline corresponds to
     int time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
-
     int freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
 
     for (int iCoeff = 0; iCoeff < num_coeffs; iCoeff++) {
@@ -924,8 +924,10 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       user_precision_t sinpa = sin(pa);
       user_precision_t cospa = cos(pa);
 
-      user_precision_t u_shape = d_u_shapes[iComponent*num_visis + iBaseline];
-      user_precision_t v_shape = d_v_shapes[iComponent*num_visis + iBaseline];
+      int uv_stripe = num_baselines*num_times*iComponent + time_ind*num_baselines + mod_baseline;
+
+      user_precision_t u_shape = d_u_shapes[uv_stripe] / d_allsteps_wavelengths[iBaseline];
+      user_precision_t v_shape = d_v_shapes[uv_stripe] / d_allsteps_wavelengths[iBaseline];
 
       user_precision_t x = (cospa*v_shape + sinpa*u_shape); // major axis
       user_precision_t y = (-sinpa*v_shape + cospa*u_shape); // minor axis
@@ -2186,7 +2188,7 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
           e_beamtype beamtype, e_component_type comptype,
           components_t components, double *extrap_freqs,
           user_precision_t *us, user_precision_t *vs, user_precision_t *ws,
-          user_precision_t *u_shapes, user_precision_t *v_shapes, user_precision_t *w_shapes,
+          user_precision_t *u_shapes, user_precision_t *v_shapes,
           user_precision_t *sum_visi_XX_real, user_precision_t *sum_visi_XX_imag,
           user_precision_t *sum_visi_XY_real, user_precision_t *sum_visi_XY_imag,
           user_precision_t *sum_visi_YX_real, user_precision_t *sum_visi_YX_imag,
@@ -2245,11 +2247,6 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
     chunked_source->n_shape_powers = 0;
     chunked_source->n_shape_curves = 0;
     chunked_source->n_shape_coeffs = 0;
-
-    // source_t *remap_source = (source_t *)malloc(sizeof(source_t));
-
-    // remap_source_for_gpu(remap_source, chunked_source,
-                         // num_times, beamtype);
 
     d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
     malloc_lmn_arrays(d_chunked_source, &components, num_components, comptype);
@@ -2391,23 +2388,20 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
   user_precision_t *d_sbf=NULL;
   user_precision_t *d_u_shapes = NULL;
   user_precision_t *d_v_shapes = NULL;
-  user_precision_t *d_w_shapes = NULL;
 
   if (comptype == SHAPELET) {
 
     cudaErrorCheckCall( cudaMalloc( (void**)&d_u_shapes,
-                                     num_components*num_visis*sizeof(user_precision_t) ) );
+             num_components*num_baselines*num_times*sizeof(user_precision_t) ) );
     cudaErrorCheckCall( cudaMalloc( (void**)&d_v_shapes,
-                                     num_components*num_visis*sizeof(user_precision_t) ) );
-    cudaErrorCheckCall( cudaMalloc( (void**)&d_w_shapes,
-                                     num_components*num_visis*sizeof(user_precision_t) ) );
+             num_components*num_baselines*num_times*sizeof(user_precision_t) ) );
 
     cudaErrorCheckCall( cudaMemcpy(d_u_shapes, u_shapes,
-               num_components*num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
+                 num_components*num_baselines*num_times*sizeof(user_precision_t),
+                                                       cudaMemcpyHostToDevice ));
     cudaErrorCheckCall( cudaMemcpy(d_v_shapes, v_shapes,
-               num_components*num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
-    cudaErrorCheckCall( cudaMemcpy(d_w_shapes, w_shapes,
-               num_components*num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
+                 num_components*num_baselines*num_times*sizeof(user_precision_t),
+                                                       cudaMemcpyHostToDevice ));
 
     cudaErrorCheckCall( cudaMalloc( (void**)&d_components.shape_coeffs,
                                                 num_shape_coeffs*sizeof(user_precision_t) ));
@@ -2454,7 +2448,7 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
                   d_components, d_beam_gains,
                   d_us, d_vs, d_ws,
                   d_allsteps_wavelengths,
-                  d_u_shapes, d_v_shapes, d_w_shapes,
+                  d_u_shapes, d_v_shapes,
                   d_sum_visi_XX_real, d_sum_visi_XX_imag,
                   d_sum_visi_XY_real, d_sum_visi_XY_imag,
                   d_sum_visi_YX_real, d_sum_visi_YX_imag,
@@ -2515,6 +2509,5 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
     cudaErrorCheckCall(  cudaFree( d_sbf) );
     cudaErrorCheckCall(  cudaFree( d_u_shapes) );
     cudaErrorCheckCall(  cudaFree( d_v_shapes) );
-    cudaErrorCheckCall(  cudaFree( d_w_shapes) );
   }
 }

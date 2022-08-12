@@ -769,7 +769,6 @@ void remap_source_for_gpu(source_t *remapped_source, source_t *chunked_source,
   remapped_source->n_shape_curves = chunked_source->n_shape_curves;
   remapped_source->n_shape_coeffs = chunked_source->n_shape_coeffs;
 
-
 }
 
 /*

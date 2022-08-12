@@ -298,15 +298,18 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
 
 /**
 @brief Performs necessary calculations that are common to all POINT, GAUSSIAN,
-and SHAPELET component types, calculating the \f$l,m,n\f$ coordinates and
+and SHAPELET component types: calculating the \f$l,m,n\f$ coordinates;
+extrapolating flux densities to given frequencies; calculating
 primary beam values.
 
-@details `components` should be a populated `components_t` struct, with
-appropriate fields filled depending on whether the COMPONENTS are POINT,
-GAUSSIAN, or SHAPELET (set by `comptype`).
+@details *chunked_source should be a populated `source_t` struct as filled by
+`chunk_sky_model::create_chunked_sky_models`, and then remapped by
+`chunk_sky_model::remap_source_for_gpu`. The remapping has a memory cost,
+hence should be done iteratively over chunks (this is done inside
+`calculate_visibilities.cu`).
 
-
-This function uses `fundamental_coords::kern_calc_lmn` to calculate \f$l,m,n\f$, and stores the ouputs
+This function uses `fundamental_coords::kern_calc_lmn` to calculate
+\f$l,m,n\f$, and stores the ouputs
 in the `components_t` struct `d_components`. Uses the `d_beam_gains_t` struct
 `d_component_beam_gains` to store the calculated primary beam responses. Each
 gain and leakage will have
@@ -314,30 +317,22 @@ gain and leakage will have
 elements of memory allocated in the process.
 
 If the primary beam requested (set via beam_settings->beamtype ) is either
-GAUSS_BEAM or MWA_ANALY, both `components->beam_has` and `components->beam_decs`
+GAUSS_BEAM or MWA_ANALY, both `chunked_source->components->beam_has` and
+`chunked_source->components->beam_decs`
 need to be set.
 
-Device arrays `d_primay_beam_J*` are used to store primary beam outputs, and
-should have
- \f$l,m,n\f$ coordinate arrays `d_ls`, `d_ms`,`d_ns`
-should have `num_components` elements. `sin_para_angs` and `cos_para_angs` are
-sine and cosine of the parallactic angle, and only needed if
-`beam_settings.beamtype == FEE_BEAM`. They should be
-`num_components*woden_settings->num_time_steps` long. `beam_has`,`beam_decs`
-are hour angles and declinations of components at all time steps, and only used
-when `beam_settings.beamtype == GAUSS_BEAM`. They should be also be
-`num_components*woden_settings->num_time_steps`.
-
-@param[in] num_components Number of copmponents stored in `components`
-@param[in] num_shape_coeffs Total number of shapelet coefficients in `components`
-@param[in] components A populated `components_t` struct as filled by `create_sky_model::crop_sky_model` or `chunk_sky_model::create_chunked_sky_models`
-@param[in] d_freqs Frequencies to calculate beam responses to (stored on the device)
 @param[in] woden_settings Populated `woden_settings_t` struct
 @param[in] beam_settings Populated `beam_settings_t` struct
-@param[in] comptype Either POINT, GAUSSIAN, SHAPELET
-@param[in,out] d_components Pointer to `components_t` struct in which to malloc and store results on the device in
-@param[in,out] d_component_beam_gains Pointer to `d_beam_gains_t` struct in which to malloc and store results on the device in
-
+@param[in] d_freqs Frequencies to calculate beam responses to (stored on the device)
+@param[in] *chunked_source A populated `source_t` struct as filled by
+`chunk_sky_model::create_chunked_sky_models` and then remapped by
+`chunk_sky_model::remap_source_for_gpu`
+@param[in, out] *d_chunked_source A populated `source_t` struct with device memory
+as filled by `source_components::copy_chunked_source_to_GPU`
+@param[in,out] d_component_beam_gains Pointer to `d_beam_gains_t` struct in
+which to malloc and store results on the device in
+@param[in] comptype Either POINT, GAUSSIAN, SHAPELET - selects which set of
+COMPONENTS stored in `chunked_source` and `chunked_source` to work with
 */
 extern "C" void source_component_common(woden_settings_t *woden_settings,
            beam_settings_t *beam_settings, double *d_freqs,
@@ -398,8 +393,6 @@ visibility into
 into
 @param[in,out] *d_sum_visi_YY_imag Pointer to array to sum imaginary YY
 visibility into
-@param[in] *d_allsteps_wavelengths Wavelength for every baseline, frequency, and
-time step in the simulation
 @param[in] num_components Either number of POINT of GAUSSIANS components
 @param[in] num_baselines Number of baselines for one time, one frequency step
 @param[in] num_freqs Number of frequencies in simulation
@@ -450,6 +443,14 @@ use the same COMPONENT \f$l,m,n\f$. The array `d_components.param_indexes` is
 used to match the basis function information `d_components.n1s`, `d_components.n2s`,
 `d_components.shape_coeffs` to the COPMONENT information (e.g. `d_components.ls`).
 
+A further difference is that the shapelet \f$ u_{\mathrm{comp}},
+v_{\mathrm{comp}} \f$ used in the visibility envelope equation should
+be stored in metres only - for every baseline (fastest
+changing), every time step, and every SHAPELET component (slowest changing).
+They will be scaled by wavelength inside the kernel, as memory costs
+become prohibitive to store for every wavelength as well. The visibility \f$u,v,w\f$
+are stored for every baseline, wavelength, and time step.
+
 Sets off a thread for each visibility to be calculate, with each thread
 looping over all cofficients. This seems to keep the memory access low enough
 to be faster than having a second dimension over coefficient.
@@ -472,11 +473,9 @@ step in the simulation (wavelengths)
 @param[in] *d_allsteps_wavelengths Wavelength for every baseline, frequency,
 and time step in the simulation
 @param[in] *d_u_shapes Array of \f$ u_{\mathrm{comp}} \f$ for every baseline,
-frequency, and time step in the simulation (wavelengths)
+frequency, and SHAPELET component in the simulation (metres)
 @param[in] *d_v_shapes Array of \f$ v_{\mathrm{comp}} \f$ for every baseline,
-frequency, and time step in the simulation (wavelengths)
-@param[in] *d_w_shapes Array of \f$ w_{\mathrm{comp}} \f$ for every baseline,
-frequency, and time step in the simulation (wavelengths)
+frequency, and SHAPELET component in the simulation (metres)
 @param[in,out] *d_sum_visi_XX_real Pointer to array to sum real XX visibility
 into
 @param[in,out] *d_sum_visi_XX_imag Pointer to array to sum imaginary XX
@@ -509,7 +508,6 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       user_precision_t *d_us, user_precision_t *d_vs, user_precision_t *d_ws,
       user_precision_t *d_allsteps_wavelengths,
       user_precision_t *d_u_shapes, user_precision_t *d_v_shapes,
-      user_precision_t *d_w_shapes,
       user_precision_t *d_sum_visi_XX_real, user_precision_t *d_sum_visi_XX_imag,
       user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
       user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
@@ -523,14 +521,14 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
 
 
 /**
-@brief Frees device memory associated with `d_components`, depending on
+@brief Frees device memory associated with `d_chunked_source`, depending on
 what type of COMPONENT you are freeing
 
-@details Frees the device memory set by `source_components::source_component_common`. Different COMPONENT types
-use different parameters so need to know `comptype` to free the correct
-memory locations
+@details Either frees all device memory that will have been allocated from
+either `d_chunked_source->point_components`, `d_chunked_source->gauss_components`,
+or `d_chunked_source->shape_components`, depending on `comptype`.
 
-@param[in,out] d_components A `components_t` with device memory to be
+@param[in,out] *d_chunked_source A `source_t` with device memory to be
 freed
 @param[in] comptype Which type of COMPONENT, either POINT, GAUSSIAN, or
  SHAPELET

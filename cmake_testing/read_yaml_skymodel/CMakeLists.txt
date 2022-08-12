@@ -33,9 +33,11 @@ set(Y18 "srclist_mulitple_source-components.yaml")
 set(Y19 "srclist_badspell.yaml")
 set(Y20 "srclist_badcoeff.yaml")
 
+# set(Y21 "wtf.yaml")
+
 ## Loop through them and write a symlink so the testing executable can find them
 foreach(X IN LISTS Y1 Y2 Y3 Y4 Y5 Y6 Y7 Y8 Y9 Y10
-Y11 Y12 Y13 Y14 Y15 Y16 Y17 Y18 Y19 Y20 Y21)
+Y11 Y12 Y13 Y14 Y15 Y16 Y17 Y18 Y19 Y20)
     ADD_CUSTOM_TARGET(target_${X} ALL
         COMMAND ${CMAKE_COMMAND} -E create_symlink "${YAML_PATH}/${X}" "${X}")
 endforeach()
