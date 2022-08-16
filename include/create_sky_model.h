@@ -141,8 +141,9 @@ to grab the correct information from the correct parts of certain arrays.
 
 @param[in] *raw_srccat Pointer to a populated `source_catalogue_t` struct of all input
 sky model parameters
-@param[in] *lsts Array of local sidereal times for the simulation
-@param[in] latitude Latitude of the array (radians)
+@param[in] *lsts Array of local sidereal times for time centriods (radians)
+@param[in] *latitudes Latitude of the array for all time centriods (radians).
+These change with time when the array is precessed to J2000 for each time step
 @param[in] num_time_steps Number of time steps for the simulation
 @param[in] sky_crop_type `e_sky_crop` for SOURCE or COMPONENT cropping
 
@@ -156,7 +157,7 @@ millions of sources, more practical to just tell the user to run multiple
 shorter simulations.
 */
 source_t * crop_sky_model(source_catalogue_t *raw_srccat, double *lsts,
-              double latitude, int num_time_steps, e_sky_crop sky_crop_type);
+              double *latitudes, int num_time_steps, e_sky_crop sky_crop_type);
 
 
 /**

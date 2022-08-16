@@ -69,13 +69,14 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
+  //Setup all LSTs array for all time steps in this simulation
+  double *lsts = setup_lsts_and_phase_centre(woden_settings);
+  woden_settings->lsts = lsts;
+
   //Create the array layout in instrument-centric X,Y,Z using positions
   //Rotate back to J2000 if necessary
   array_layout_t * array_layout;
   array_layout = calc_XYZ_diffs(woden_settings, woden_settings->do_precession);
-
-  //Setup all LSTs array for all time steps in this simulation
-  double *lsts = setup_lsts_and_phase_centre(woden_settings);
 
   //Read in the source catalogue
   source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );
@@ -89,14 +90,16 @@ int main(int argc, char **argv) {
   //Crop emission below the horizon, and collapse all SOURCES from raw_srccat
   //into one single SOURCE
   printf("Horizon cropping sky model and calculating az/za for all components\nfor observation\n");
-  source_t *cropped_src = crop_sky_model(raw_srccat, lsts, woden_settings->latitude,
+  source_t *cropped_src = crop_sky_model(raw_srccat, woden_settings->lsts,
+                               woden_settings->latitudes,
                                woden_settings->num_time_steps, woden_settings->sky_crop_type);
 
   printf("Finished cropping and calculating az/za\n");
 
   //Setup some beam settings given user chose parameters
   beam_settings_t *beam_settings = fill_primary_beam_settings(woden_settings,
-                                                             cropped_src, lsts);
+                                                             cropped_src,
+                                                             woden_settings->lsts);
 
   // Chunk the sky models into smaller pieces that fit onto the GPU
   source_catalogue_t *cropped_sky_models = create_chunked_sky_models(cropped_src,
@@ -126,7 +129,7 @@ int main(int argc, char **argv) {
     //Fill in the time/freq/baseline settings in `visiblity_set` needed by
     //calculate_visibilities
     fill_timefreq_visibility_set(visibility_set, woden_settings,
-                                 base_band_freq, lsts);
+                                 base_band_freq, woden_settings->lsts);
 
     //The intial setup of the FEE beam is done on the CPU, so call it here
     if (woden_settings->beamtype == FEE_BEAM || woden_settings->beamtype == FEE_BEAM_INTERP){

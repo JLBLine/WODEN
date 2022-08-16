@@ -45,10 +45,10 @@ for ind, num_list_vals in enumerate(num_list_values):
 
     list_freqs[start_index:start_index+num_list_vals] = np.linspace(50e+6, 300e+6, num_list_vals)
 
-    list_stokesI[start_index:start_index+num_list_vals] = np.random.uniform(-5,10,num_list_vals)
-    list_stokesQ[start_index:start_index+num_list_vals] = np.random.uniform(-5,10,num_list_vals)
-    list_stokesU[start_index:start_index+num_list_vals] = np.random.uniform(-5,10,num_list_vals)
-    list_stokesV[start_index:start_index+num_list_vals] = np.random.uniform(-5,10,num_list_vals)
+    list_stokesI[start_index:start_index+num_list_vals] = np.random.uniform(-1,10,num_list_vals)
+    list_stokesQ[start_index:start_index+num_list_vals] = np.random.uniform(-1,10,num_list_vals)
+    list_stokesU[start_index:start_index+num_list_vals] = np.random.uniform(-1,10,num_list_vals)
+    list_stokesV[start_index:start_index+num_list_vals] = np.random.uniform(-1,10,num_list_vals)
 
     list_start_indexes[ind] = start_index
 

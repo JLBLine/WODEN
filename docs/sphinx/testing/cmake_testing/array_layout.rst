@@ -31,18 +31,16 @@ absolute tolerance of 1e-13.
 ``test_RTS_PrecessXYZtoJ2000.c``
 *********************************
 ``array_layout::RTS_PrecessXYZtoJ2000`` takes observation date ``X,Y,Z`` coords
-and precesses them back to J2000, and updates the LST accordingly.
-Test by giving a known set of *X,Y,Z* coordinates and julian date, and
-checks output precessed *X,Y,Z* and LST match the expected values stored in
-``test_RTS_XYZ_common.h``.
+and precesses them back to J2000 for all time steps in
+``woden_settings->lsts``. Test by giving a known set of *X,Y,Z* coordinates
+lsts and mjds, checks output precessed *X,Y,Z* s match the expected values
+stored in ``test_RTS_XYZ_common.h``. Test covers two time steps.
 
 ``test_calc_XYX_diffs.c``
 ****************************
 Tests the function ``array_layout::calc_XYZ_diffs``, which reads in an array
 text file in *e,n,h* coords and transforms to *X,Y,Z*, precesses the locations
 back to J2000 if requested, and then calculates the baseline length in *X,Y,Z*.
-It also rotates the latitude of the array back to J2000 and in doing so
-updates the LST.
 
 These tests simply provide a set of known input coords (read in from
 ``example_array_layout.txt``), runs ``array_layout::calc_XYZ_diffs`` for both

@@ -17,13 +17,12 @@ extern void test_kern_calc_uvw(double *X_diff, double *Y_diff, double *Z_diff,
    user_precision_t *us, user_precision_t *vs, user_precision_t *ws,
    user_precision_t *wavelengths,
    double dec0, double *cha0s, double *sha0s,
-   int num_visis, int num_baselines);
+   int num_visis, int num_baselines, int num_times, int num_freqs);
 
-extern void test_kern_calc_uvw_shapelet(double *X_diff, double *Y_diff, double *Z_diff,
+extern void test_kern_calc_uv_shapelet(double *X_diff, double *Y_diff, double *Z_diff,
                      user_precision_t *u_shapes, user_precision_t *v_shapes,
-                     user_precision_t *w_shapes, user_precision_t *wavelengths,
                      double *lsts, double *ras, double *decs,
-                     int num_baselines, int num_visis, int num_shapes);
+                     int num_baselines, int num_times, int num_shapes);
 
 
 double TOL = 1e-16;
@@ -37,11 +36,16 @@ void setup_uvw_params(int num_times, int num_baselines, int num_freqs,
                       user_precision_t freq_res, user_precision_t base_band_freq,
                       uvw_settings_t *uvw_settings) {
 
-  for (int i = 0; i < num_baselines; i++) {
-    uvw_settings->X_diff[i] = (i + 1)*1000.0;
-    uvw_settings->Y_diff[i] = (i + 1)*1000.0;
-    uvw_settings->Z_diff[i] = (i + 1)*1000.0;
+  for (int time_ind = 0; time_ind < num_times; time_ind++) {
+    for (int i = 0; i < num_baselines; i++) {
+      int time_off = time_ind*num_baselines;
+      uvw_settings->X_diff[time_off + i] = (i + 1)*1000.0;
+      uvw_settings->Y_diff[time_off + i] = (i + 1)*1000.0;
+      uvw_settings->Z_diff[time_off + i] = (i + 1)*1000.0;
+      // printf("index %d value %.1f\n", time_off + i, (i + 1)*1000.0);
+    }
   }
+
 
   double *lsts = malloc(num_times*sizeof(double));
 
@@ -90,9 +94,9 @@ uvw_settings_t * setup_uvw_settings(int num_baselines, int num_visis,
   uvw_settings_t * uvw_settings;
   uvw_settings = malloc( sizeof(uvw_settings_t) );
 
-  uvw_settings->X_diff = malloc(num_baselines*sizeof(double));
-  uvw_settings->Y_diff = malloc(num_baselines*sizeof(double));
-  uvw_settings->Z_diff = malloc(num_baselines*sizeof(double));
+  uvw_settings->X_diff = malloc(num_times*num_baselines*sizeof(double));
+  uvw_settings->Y_diff = malloc(num_times*num_baselines*sizeof(double));
+  uvw_settings->Z_diff = malloc(num_times*num_baselines*sizeof(double));
 
   uvw_settings->lsts = malloc(num_visis*sizeof(double));
   uvw_settings->wavelengths = malloc(num_visis*sizeof(user_precision_t));
@@ -206,7 +210,7 @@ void test_kern_calc_uvw_ScalesByWavelength(void){
            uvw_settings->u_metres, uvw_settings->v_metres, uvw_settings->w_metres,
            uvw_settings->us, uvw_settings->vs, uvw_settings->ws, uvw_settings->wavelengths,
            dec0, uvw_settings->cha0s, uvw_settings->sha0s,
-           num_visis, num_baselines);
+           num_visis, num_baselines, num_times, num_freqs);
 
     //Create expected values
     user_precision_t *u_metres_expec = malloc(num_visis*sizeof(user_precision_t));
@@ -224,9 +228,11 @@ void test_kern_calc_uvw_ScalesByWavelength(void){
       for (int freq_step = 0; freq_step < num_freqs; freq_step++) {
         for (int baseline = 0; baseline < num_baselines; baseline++) {
 
-          u_metres_expec[index] = uvw_settings->Y_diff[baseline];
-          v_metres_expec[index] = -sdec0*uvw_settings->X_diff[baseline] + cdec0*uvw_settings->Y_diff[baseline];
-          w_metres_expec[index] = cdec0*uvw_settings->X_diff[baseline] + sdec0*uvw_settings->Y_diff[baseline];
+          int time_off = time_step*num_baselines;
+
+          u_metres_expec[index] = uvw_settings->Y_diff[time_off + baseline];
+          v_metres_expec[index] = -sdec0*uvw_settings->X_diff[time_off + baseline] + cdec0*uvw_settings->Y_diff[time_off + baseline];
+          w_metres_expec[index] = cdec0*uvw_settings->X_diff[time_off + baseline] + sdec0*uvw_settings->Y_diff[time_off + baseline];
 
           us_expec[index] = u_metres_expec[index] / uvw_settings->wavelengths[index];
           vs_expec[index] = v_metres_expec[index] / uvw_settings->wavelengths[index];
@@ -286,7 +292,7 @@ void test_kern_calc_uvw_RotateWithTime(void){
            uvw_settings->u_metres, uvw_settings->v_metres, uvw_settings->w_metres,
            uvw_settings->us, uvw_settings->vs, uvw_settings->ws, uvw_settings->wavelengths,
            dec0, uvw_settings->cha0s, uvw_settings->sha0s,
-           num_visis, num_baselines);
+           num_visis, num_baselines, num_times, num_freqs);
 
     //Create expected values
     user_precision_t *u_metres_expec = malloc(num_visis*sizeof(user_precision_t));
@@ -302,9 +308,11 @@ void test_kern_calc_uvw_RotateWithTime(void){
       for (int freq_step = 0; freq_step < num_freqs; freq_step++) {
         for (int baseline = 0; baseline < num_baselines; baseline++) {
 
-          u_metres_expec[index] = uvw_settings->sha0s[index]*uvw_settings->X_diff[baseline] + uvw_settings->cha0s[index]*uvw_settings->Y_diff[baseline];
-          v_metres_expec[index] = uvw_settings->Z_diff[baseline];
-          w_metres_expec[index] = uvw_settings->cha0s[index]*uvw_settings->X_diff[baseline] - uvw_settings->sha0s[index]*uvw_settings->Y_diff[baseline];
+          int time_off = time_step*num_baselines;
+
+          u_metres_expec[index] = uvw_settings->sha0s[index]*uvw_settings->X_diff[time_off + baseline] + uvw_settings->cha0s[index]*uvw_settings->Y_diff[time_off + baseline];
+          v_metres_expec[index] = uvw_settings->Z_diff[time_off + baseline];
+          w_metres_expec[index] = uvw_settings->cha0s[index]*uvw_settings->X_diff[time_off + baseline] - uvw_settings->sha0s[index]*uvw_settings->Y_diff[time_off + baseline];
 
           us_expec[index] = u_metres_expec[index] / uvw_settings->wavelengths[index];
           vs_expec[index] = v_metres_expec[index] / uvw_settings->wavelengths[index];
@@ -329,7 +337,7 @@ Checks that u,v,w coords change with time as expected
 Make checking easier by setting dec phase centre dec0=0.0
 Also checks that results are scaled by wavelength correctly
 */
-void test_kern_calc_uvw_shapelet_RotateWithTimeScalesByWavelength(void){
+void test_kern_calc_uvw_shapelet_RotateWithTime(void){
 
     //Setup some observation settings
     double ra0 = 0.0*DD2R;
@@ -367,54 +375,50 @@ void test_kern_calc_uvw_shapelet_RotateWithTimeScalesByWavelength(void){
                     uvw_settings);
 
      //Run the CUDA code via fundamental_coords::test_kern_calc_uvw_shapelet
-    test_kern_calc_uvw_shapelet(uvw_settings->X_diff, uvw_settings->Y_diff, uvw_settings->Z_diff,
-           uvw_settings->us, uvw_settings->vs, uvw_settings->ws, uvw_settings->wavelengths,
+    test_kern_calc_uv_shapelet(uvw_settings->X_diff,
+           uvw_settings->Y_diff, uvw_settings->Z_diff,
+           uvw_settings->us, uvw_settings->vs,
            uvw_settings->lsts, ras, decs,
-           num_baselines, num_visis, num_components);
+           num_baselines, num_times, num_components);
 
     //Create expected values
-    user_precision_t *us_expec = malloc(num_components*num_visis*sizeof(user_precision_t));
-    user_precision_t *vs_expec = malloc(num_components*num_visis*sizeof(user_precision_t));
-    user_precision_t *ws_expec = malloc(num_components*num_visis*sizeof(user_precision_t));
-
+    user_precision_t *us_expec = malloc(num_components*num_baselines*num_times*sizeof(user_precision_t));
+    user_precision_t *vs_expec = malloc(num_components*num_baselines*num_times*sizeof(user_precision_t));
     //Variables to use when making expected values
-    user_precision_t u_metre, v_metre, w_metre;
+    user_precision_t u_metre, v_metre;
     double ha, sha, cha;
 
     int uvw_index = 0;
-    for ( int comp_step = 0; comp_step < num_times; comp_step++ ) {
-      int visi_index = 0;
+    for ( int comp_step = 0; comp_step < num_components; comp_step++ ) {
       for ( int time_step = 0; time_step < num_times; time_step++ ) {
         //For kern_calc_uvw_shapelet, calculating u,v,w centred on ra, dec of
         //each shapelet component. Calcualte ha using the shapelet ra
-        ha = uvw_settings->lsts[visi_index] - ras[comp_step];
+        ha = uvw_settings->lsts[time_step] - ras[comp_step];
         sha = sin(ha);
         cha = cos(ha);
 
-        for (int freq_step = 0; freq_step < num_freqs; freq_step++) {
-          for (int baseline = 0; baseline < num_baselines; baseline++) {
-            //Special case of expected u,v,w when u,v,w coord centre is at Dec = 0.0
-            u_metre = sha*uvw_settings->X_diff[baseline] + cha*uvw_settings->Y_diff[baseline];
-            v_metre = uvw_settings->Z_diff[baseline];
-            w_metre = cha*uvw_settings->X_diff[baseline] - sha*uvw_settings->Y_diff[baseline];
+        for (int baseline = 0; baseline < num_baselines; baseline++) {
+          //Special case of expected u,v,w when u,v,w coord centre is at Dec = 0.0
 
-            us_expec[uvw_index] = u_metre / uvw_settings->wavelengths[visi_index];
-            vs_expec[uvw_index] = v_metre / uvw_settings->wavelengths[visi_index];
-            ws_expec[uvw_index] = w_metre / uvw_settings->wavelengths[visi_index];
+          int time_off = time_step*num_baselines;
 
-            uvw_index += 1;
-            visi_index += 1;
+          u_metre = sha*uvw_settings->X_diff[time_off + baseline] + cha*uvw_settings->Y_diff[time_off + baseline];
+          v_metre = uvw_settings->Z_diff[time_off + baseline];
+          int stripe = comp_step*num_baselines*num_times + time_step*num_baselines;
 
-        }//baseline loop
-      }//freq loop
+          us_expec[stripe + baseline] = u_metre;
+          vs_expec[stripe + baseline] = v_metre;
+
+          uvw_index += 1;
+
+      }//baseline loop
     }//time loop
   }//component loop
 
-  for (int ind = 0; ind < num_visis*num_components; ind++) {
+  for (int ind = 0; ind < num_components*num_baselines*num_times; ind++) {
 
     TEST_ASSERT_DOUBLE_WITHIN(TOL, us_expec[ind], uvw_settings->us[ind]);
     TEST_ASSERT_DOUBLE_WITHIN(TOL, vs_expec[ind], uvw_settings->vs[ind]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, ws_expec[ind], uvw_settings->ws[ind]);
   }
 
   free_uvw_settings(uvw_settings);
@@ -427,7 +431,7 @@ int main(void)
 
     RUN_TEST(test_kern_calc_uvw_ScalesByWavelength);
     RUN_TEST(test_kern_calc_uvw_RotateWithTime);
-    RUN_TEST(test_kern_calc_uvw_shapelet_RotateWithTimeScalesByWavelength);
+    RUN_TEST(test_kern_calc_uvw_shapelet_RotateWithTime);
 
     return UNITY_END();
 }

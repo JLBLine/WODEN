@@ -239,7 +239,6 @@ __device__ void RTS_MWA_beam(user_precision_t az, user_precision_t za,
   double proj_n = sin(za)*cos(az);
   double proj_z = cos(za);
 
-
   int n_cols = 4;
   int n_rows = 4;
 
@@ -421,10 +420,10 @@ extern "C" void calculate_RTS_MWA_analytic_beam(int num_components,
 
   for (int i = 0; i < 4; i++) {
 
-      metre_delays[3-i] = delays[0+i*4];
-      metre_delays[7-i] = delays[1+i*4];
-      metre_delays[11-i] = delays[2+i*4];
-      metre_delays[15-i] = delays[3+i*4];
+      metre_delays[3-i] = (double)delays[0+i*4];
+      metre_delays[7-i] = (double)delays[1+i*4];
+      metre_delays[11-i] = (double)delays[2+i*4];
+      metre_delays[15-i] = (double)delays[3+i*4];
 
   }
 
@@ -758,7 +757,7 @@ extern "C" void run_hyperbeam_cuda(int num_components,
 
 
   int num_azza = num_components * num_time_steps;
-  int num_beam_values = num_azza * num_freqs;
+  // int num_beam_values = num_azza * num_freqs;
 
   double *d_jones = NULL;
   // cudaErrorCheckCall( cudaMalloc( (void**)&(d_jones),

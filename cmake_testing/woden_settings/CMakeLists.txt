@@ -30,11 +30,12 @@ endforeach()
 
 ## Create tests for both float and double precision
 foreach(PRECISION IN LISTS FLOAT DOUBLE)
+# foreach(PRECISION IN LISTS DOUBLE)
 
   ##Set the flags depending on the precision
   DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
 
-  add_library(woden_settings_${PRECISION} SHARED "${CMAKE_SOURCE_DIR}/src/woden_settings.c")
+  add_library(woden_settings_${PRECISION} SHARED "${CMAKE_SOURCE_DIR}/src/woden_settings.c" "${CMAKE_SOURCE_DIR}/src/array_layout.c")
   target_link_libraries(woden_settings_${PRECISION} gcov)
   target_compile_options(woden_settings_${PRECISION} PRIVATE ${C_COVER_FLAGS})
   ## Accumulate the coverage from the tests

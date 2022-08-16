@@ -39,6 +39,8 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   target_compile_options(test_read_source_catalogue_${PRECISION}_app PRIVATE ${C_FLAGS})
   add_test(C_test_read_source_catalogue_${PRECISION} test_read_source_catalogue_${PRECISION}_app)
 
+  ##Could put this test back in, but it only ever gets called by crop_sky_model
+  ##so it's pretty redundant
   # ##Test the horizon test function works
   # add_executable(test_horizon_test_${PRECISION}_app
   #     test_horizon_test.c

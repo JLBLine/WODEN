@@ -310,6 +310,10 @@ woden_settings_t * make_woden_settings(double ra0, double dec0) {
     //with frequency - that way we can test for just one gain value per time
     woden_settings->frequency_resolution = 1e-6;
     woden_settings->latitude = MWA_LAT_RAD;
+    double latitudes[] = {MWA_LAT_RAD, MWA_LAT_RAD};
+    woden_settings->latitudes = latitudes;
+
+    woden_settings->lsts = lsts;
 
     return woden_settings;
 }
@@ -384,15 +388,20 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
 
   array_layout_t *array_layout = malloc(sizeof(array_layout_t));
 
-  array_layout->X_diff_metres = malloc(NUM_BASELINES*sizeof(double));
-  array_layout->Y_diff_metres = malloc(NUM_BASELINES*sizeof(double));
-  array_layout->Z_diff_metres = malloc(NUM_BASELINES*sizeof(double));
+  array_layout->X_diff_metres = malloc(NUM_TIME_STEPS*NUM_BASELINES*sizeof(double));
+  array_layout->Y_diff_metres = malloc(NUM_TIME_STEPS*NUM_BASELINES*sizeof(double));
+  array_layout->Z_diff_metres = malloc(NUM_TIME_STEPS*NUM_BASELINES*sizeof(double));
 
-  for (int baseline = 0; baseline < NUM_BASELINES; baseline++) {
-    array_layout->X_diff_metres[baseline] = (baseline + 1) * 100;
-    array_layout->Y_diff_metres[baseline] = (baseline + 1) * 100;
-    array_layout->Z_diff_metres[baseline] = 0.0;
+  for (int time_ind = 0; time_ind < NUM_TIME_STEPS; time_ind++) {
+      for (int baseline = 0; baseline < NUM_BASELINES; baseline++) {
+        int time_off = time_ind*NUM_BASELINES;
+        array_layout->X_diff_metres[time_off + baseline] = (baseline + 1) * 100;
+        array_layout->Y_diff_metres[time_off + baseline] = (baseline + 1) * 100;
+        array_layout->Z_diff_metres[time_off + baseline] = 0.0;
+      }
   }
+
+
 
   user_precision_t *sbf = NULL;
   if (cropped_sky_models->num_shapelets > 0) {

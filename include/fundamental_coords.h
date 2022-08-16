@@ -14,9 +14,9 @@ phase centre, calculate `u,v,w` coordinates
 @details Performs Equation 4.1 from TMS
 <https://link.springer.com/book/10.1007/978-3-319-44431-4>. This `__device__`
 function is called by `kern_calc_uvw`, which calculates `u,v,w` for multiple
-time steps. Using the index `iBaseline` and `num_baselines`, this function
-does a modulus to index `d_X_diff`, `d_Y_diff`, `d_Z_diff` correctly, as
-these latter arrays do not change with time.
+time steps. Using the index `iBaseline`, `num_baselines`, `num_times`, `num_freqs`,
+this function does a modulus to index `d_X_diff`, `d_Y_diff`, `d_Z_diff` correctly,
+as the diff arrays do not change with frequency (but change with time).
 
 @param[in] d_X_diff Baseline length in the `X` direction (metres)
 @param[in] d_Y_diff Baseline length in the `Y` direction (metres)
@@ -27,6 +27,8 @@ these latter arrays do not change with time.
 @param[in] cha0 Cosine of the hour angle of the phase centre
 @param[in] iBaseline Index passed from `kern_calc_uvw`
 @param[in] num_baselines Number of baselines for a single time step
+@param[in] num_times Number of time steps
+@param[in] num_freqs Number of frequency steps
 @param[in,out] u Output `u` coord (metres)
 @param[in,out] v Output `v` coord (metres)
 @param[in,out] w Output `w` coord (metres)
@@ -35,7 +37,8 @@ __device__ void calc_uvw(double *d_X_diff, double *d_Y_diff,
                          double *d_Z_diff,
                          double sdec0, double cdec0,
                          double sha0, double cha0,
-                         int iBaseline, int num_baselines,
+                         int iBaseline, int num_baselines, int num_times,
+                         int num_freqs,
                          user_precision_t * u, user_precision_t * v,
                          user_precision_t * w);
 
@@ -44,15 +47,9 @@ __device__ void calc_uvw(double *d_X_diff, double *d_Y_diff,
 time steps and frequencies
 
 @details `d_X_diff`, `d_Y_diff`, `d_Z_diff` contain baseline lengths in local
-`X,Y,Z` coords, which do not change with time, and should be of length
-`num_baselines`. To keep indexing simple, the wavelengths in `d_wavelengths`
-and hour angles in `d_cha0s, d_sha0s` should contain values for all baselines,
-all frequencies, and all time steps. They should be entered in sets of baselines
-so a modules by `num_baselines` can index `d_X_diff`, `d_Y_diff`, `d_Z_diff`
-correctly.
-
-time steps,
-frequencies, and baselines to be calculated, and should have length `num_visis`.
+`X,Y,Z` coords, which can change with time (when precessed back to J2000),
+so should be of length `num_baselines`*`num_times`. To keep indexing simple, the wavelengths in `d_wavelengths` and hour angles in `d_cha0s, d_sha0s` should contain
+values for all baselines, all frequencies, and all time steps. .
 
 When called with `dim3 grid, threads`, kernel should be called with `grid.x`
  set, where:
@@ -77,6 +74,8 @@ baselines, frequencies, and time steps
 baselines, frequencies, and time steps
 @param[in] num_visis Total number of `u,v,w` coords to be calculated
 @param[in] num_baselines Number of baselines for a single time step
+@param[in] num_times Number of time steps
+@param[in] num_freqs Number of frequency steps
 */
 __global__ void kern_calc_uvw(double *d_X_diff, double *d_Y_diff,
            double *d_Z_diff, user_precision_t *d_u_metres,
@@ -84,62 +83,46 @@ __global__ void kern_calc_uvw(double *d_X_diff, double *d_Y_diff,
            user_precision_t *d_u, user_precision_t *d_v, user_precision_t *d_w, user_precision_t *d_wavelengths,
            double sdec0, double cdec0,
            double *d_cha0s, double *d_sha0s,
-           int num_visis, int num_baselines);
+           int num_visis, int num_baselines, int num_times, int num_freqs);
 
 
 /**
-@brief The SHAPELET visibility envelope calculation uses a `u,v,w` coordinate
+@brief The SHAPELET visibility envelope calculation uses a `u,v` coordinate
 system where the phase centre is set to the RA/Dec of that particular
-SHAPELET COMPONENT. This kernel calculates multiple \f$u,v,w\f$ coodinates
+SHAPELET COMPONENT. This kernel calculates multiple \f$u,v\f$ coodinates
 with varying phase centres to be used later by
 `source_components.kern_calc_visi_shapelets`.
 
-@details The output arrays `d_u_s_metres`, `d_v_s_metres`, `d_w_s_metres`
-contain coordinates for SHAPELET components, baselines, and time
-steps. The ordering of time and baseline is set by `d_lsts`, which
-should contain the local sidereal time for all times (slowest changing), all
-frequencies, and all baselines (fastest changing). Similarly, `d_wavelengths`
-should contain the wavelengths for all times (slowest changing), all
-frequencies, and all baselines (fastest changing). Both these arrays contain
-`num_visis` values.
-
-The outputs `d_u_shapes`, `d_v_shapes`, `d_w_shapes` contain
-`num_visis*num_shapes` values, and are ordered by COMPONENT (slowest changing),
-all times, all frequencies, and all baselines (fastest changing).
+@details The output arrays `d_u_shapes`, `d_v_shapes`,
+contain coordinates for all baselines (fastest changing), all times, and
+all SHAPELET components (slowest changing), in units of metres.
 
 When called with `dim3 grid, threads`, kernel should be called with both
 `grid.x` and `grid.y` set, where:
- - grid.x * threads.x >= `num_visis`
+ - grid.x * threads.x >= `num_baselines*num_times`
  - grid.y * threads.y >= `num_shapes`
 
 @param[in] d_X_diff Baseline lengths in the `X` direction (metres)
 @param[in] d_Y_diff Baseline lengths in the `Y` direction (metres)
 @param[in] d_Z_diff Baseline lengths in the `Z` direction (metres)
 @param[in,out] d_u_shapes Output `u` coords with various phase centres for
-SHAPELET components (wavelengths)
+SHAPELET components (metres)
 @param[in,out] d_v_shapes Output `v` coords with various phase centres for
-SHAPELET components (wavelengths)
-@param[in,out] d_w_shapes Output `w` coords with various phase centres for
-SHAPELET components (wavelengths)
-@param[in] d_wavelengths Wavelengths for all baselines, frequencies, and time
-steps (metres)
+SHAPELET components (metres)
 @param[in] d_lsts The local sidereal times of all time steps in simulation
 (radians)
 @param[in] d_ras Array of SHAPELET Right Ascensions (radians)
 @param[in] d_decs Array of SHAPELET Declinations (radians)
 @param[in] num_baselines Number of baselines for a single time step
-@param[in] num_visis Total number of visibilities in the simulation
-(`number_baselines*num_freqs*num_times`)
+@param[in] num_times Number of time steps
 @param[in] num_shapes Number of SHAPELET COMPONENTs
 
 */
-__global__ void kern_calc_uvw_shapelet(double *d_X_diff,
+__global__ void kern_calc_uv_shapelet(double *d_X_diff,
       double *d_Y_diff, double *d_Z_diff,
       user_precision_t *d_u_shapes, user_precision_t *d_v_shapes,
-      user_precision_t *d_w_shapes, user_precision_t *d_wavelengths,
       double *d_lsts, double *d_ras, double *d_decs,
-      const int num_baselines, const int num_visis,
-      const int num_shapes);
+      const int num_baselines, const int num_times, const int num_shapes);
 
 /**
 @brief Calculate interferometric \f$l,m,n\f$ image coords for a given RA,Dec

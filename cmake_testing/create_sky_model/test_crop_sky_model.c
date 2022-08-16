@@ -1151,9 +1151,13 @@ void test_crop_sky_model_Point(double lst_base, e_sky_crop sky_crop_type) {
   //Create the input sky catalogue
   source_catalogue_t *raw_srccat = create_input_srccat(point, gauss, shape);
 
+  //If we're precessing the array back to J2000, the latitude technically
+  //changes with time - let's just stick it equal yo the current MWA lat
+  double latitudes[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
+
   //Call the function being tested
   source_t *cropped_src;
-  cropped_src =  crop_sky_model(raw_srccat, lsts, (double)MWA_LAT_RAD,
+  cropped_src =  crop_sky_model(raw_srccat, lsts, latitudes,
                                 num_time_steps, sky_crop_type);
 
   check_component_values_after_crop(lst_base, cropped_src, POINT, sky_crop_type);
@@ -1214,9 +1218,13 @@ void test_crop_sky_model_Gauss(double lst_base, e_sky_crop sky_crop_type) {
   //Create the input sky catalogue
   source_catalogue_t *raw_srccat = create_input_srccat(point, gauss, shape);
 
+  //If we're precessing the array back to J2000, the latitude technically
+  //changes with time - let's just stick it equal yo the current MWA lat
+  double latitudes[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
+
   //Call the function being tested
   source_t *cropped_src;
-  cropped_src =  crop_sky_model(raw_srccat, lsts, MWA_LAT_RAD,
+  cropped_src =  crop_sky_model(raw_srccat, lsts, latitudes,
                                 num_time_steps, sky_crop_type);
 
   check_component_values_after_crop(lst_base, cropped_src, GAUSSIAN, sky_crop_type);
@@ -1281,9 +1289,13 @@ void test_crop_sky_model_Shape(double lst_base, e_sky_crop sky_crop_type) {
   //Create the input sky catalogue
   source_catalogue_t *raw_srccat = create_input_srccat(point, gauss, shape);
 
+  //If we're precessing the array back to J2000, the latitude technically
+  //changes with time - let's just stick it equal yo the current MWA lat
+  double latitudes[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
+
   //Call the function being tested
   source_t *cropped_src;
-  cropped_src = crop_sky_model(raw_srccat, lsts, (double)MWA_LAT_RAD,
+  cropped_src = crop_sky_model(raw_srccat, lsts, latitudes,
                                 num_time_steps, sky_crop_type);
 
   // check_shape_values_after_crop(lst_base, cropped_src, sky_crop_type);
@@ -1347,9 +1359,13 @@ void test_crop_sky_model_AllTypes(double lst_base, e_sky_crop sky_crop_type) {
   //Create the input sky catalogue
   source_catalogue_t *raw_srccat = create_input_srccat(point, gauss, shape);
 
+  //If we're precessing the array back to J2000, the latitude technically
+  //changes with time - let's just stick it equal yo the current MWA lat
+  double latitudes[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
+
   //Call the function being tested
   source_t *cropped_src;
-  cropped_src = crop_sky_model(raw_srccat, lsts, (double)MWA_LAT_RAD,
+  cropped_src = crop_sky_model(raw_srccat, lsts, latitudes,
                                 num_time_steps, sky_crop_type);
 
   // check_point_values_after_crop(lst_base, cropped_src, sky_crop_type);

@@ -29,37 +29,61 @@ def curved_power_law(extrap_freqs, ref_freq, SI, q, ref_stokesI, ref_stokesQ, re
     return extrap_stokesI, extrap_stokesQ, extrap_stokesU, extrap_stokesV
 
 
-def extrapolate_list_flux(list_freqs, list_fluxes, desired_freq) -> float:
-    extrap_flux = 0.0
+def extrapolate_list_flux(ref_freqs, ref_fluxes, desired_freq) -> float:
 
-    freq_diffs = list_freqs - desired_freq
+    ##Happen to be extrapolating to a reference frequency
+    if desired_freq in ref_freqs:
+        extrap_flux = ref_fluxes[np.where(ref_freqs == desired_freq)][0]
+    else:
 
-    low_ind_1 = 0
-    low_ind_2 = 0
+        freq_diffs = ref_freqs - desired_freq
 
-    low_val_1 = 1e16
-    low_val_2 = 1e16
+        low_ind_1 = -1.0
 
-    for ind in np.arange(len(list_freqs)):
-        abs_diff = abs(freq_diffs[ind])
+        low_val_1 = 1e16
+        # low_val_2 = 1e16
 
-        if abs_diff < low_val_1:
-            low_val_1 = abs_diff
-            low_ind_1 = ind
+        for ind in np.arange(len(ref_freqs)):
+            abs_diff = abs(freq_diffs[ind])
 
-    for ind in np.arange(len(list_freqs)):
-        abs_diff = abs(freq_diffs[ind])
+            if abs_diff < low_val_1:
+                low_val_1 = abs_diff
+                low_ind_1 = ind
 
-        if abs_diff < low_val_2 and ind != low_ind_1:
-            low_val_2 = abs_diff
-            low_ind_2 = ind
+        # print("initial", low_ind_1)
 
-    if low_ind_1 == low_ind_2:
-        low_ind_2 = len(list_fluxes) - 1
-        low_ind_1 = len(list_fluxes) - 2
+        ##Closest frequency is the lowest
+        if low_ind_1 == 0:
+            low_ind_2 = 1
+        ##Closest frequency is the highest
+        elif low_ind_1 == len(ref_freqs) - 1:
+            low_ind_2 = low_ind_1 - 1
+        ##otherwise, choose either above or below
+        else:
+            ##closest freq is higher than desired
+            if ref_freqs[low_ind_1] > desired_freq:
+                low_ind_2 = low_ind_1 - 1
+            else:
+                low_ind_2 = low_ind_1 + 1
 
-    gradient = (list_fluxes[low_ind_2] - list_fluxes[low_ind_1]) / (list_freqs[low_ind_2] - list_freqs[low_ind_1])
-    extrap_flux =  list_fluxes[low_ind_1] + gradient*(desired_freq - list_freqs[low_ind_1])
+        if ref_fluxes[low_ind_1] <= 0 or ref_fluxes[low_ind_2] <= 0:
+
+            gradient = (ref_fluxes[low_ind_2] - ref_fluxes[low_ind_1]) / (ref_freqs[low_ind_2] - ref_freqs[low_ind_1])
+            extrap_flux =  ref_fluxes[low_ind_1] + gradient*(desired_freq - ref_freqs[low_ind_1])
+
+        else:
+
+            flux1 = np.log10(ref_fluxes[low_ind_1])
+            flux2 = np.log10(ref_fluxes[low_ind_2])
+            freq1 = np.log10(ref_freqs[low_ind_1])
+            freq2 = np.log10(ref_freqs[low_ind_2])
+            desired_freq = np.log10(desired_freq)
+
+            gradient = (flux2 - flux1) / (freq2 - freq1)
+            extrap_flux =  flux1 + gradient*(desired_freq - freq1)
+
+            extrap_flux = 10**extrap_flux
+
 
     return extrap_flux
 
@@ -142,6 +166,9 @@ if __name__ == '__main__':
 
     for list_ind, num_list_vals in enumerate(num_list_values):
 
+        axs[list_ind].set_xscale('log')
+        axs[list_ind].set_yscale('symlog')
+
         start_index = list_start_indexes[list_ind]
 
         l_freqs = list_freqs[start_index:start_index+num_list_vals]
@@ -173,7 +200,7 @@ if __name__ == '__main__':
 
         axs[list_ind].set_xlabel("Freq (MHz)")
         axs[list_ind].set_ylabel("Flux density (Jy)")
-        axs[list_ind].legend(loc='upper left')
+    axs[0].legend(loc='upper left')
 
     fig.tight_layout()
     fig.savefig("test_extrap_list_laws.png", bbox_inches='tight')

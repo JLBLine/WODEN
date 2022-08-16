@@ -100,9 +100,9 @@ void malloc_args_for_testing(args_for_testing_t *args_ft,
 
   //
   if (component_type == SHAPELET) {
-    args_ft->u_shapes = malloc(num_components*num_visis*sizeof(user_precision_t));
-    args_ft->v_shapes = malloc(num_components*num_visis*sizeof(user_precision_t));
-    args_ft->w_shapes = malloc(num_components*num_visis*sizeof(user_precision_t));
+    args_ft->u_shapes = malloc(num_components*num_baselines*num_times*sizeof(user_precision_t));
+    args_ft->v_shapes = malloc(num_components*num_baselines*num_times*sizeof(user_precision_t));
+    args_ft->w_shapes = malloc(num_components*num_baselines*num_times*sizeof(user_precision_t));
     args_ft->num_coeffs = num_coeffs;
     args_ft->sbf = malloc( sbf_N * sbf_L * sizeof(user_precision_t) );
     args_ft->sbf = create_sbf(args_ft->sbf);
@@ -221,12 +221,27 @@ void setup_uvw_and_freqs(args_for_testing_t *args_ft, int num_times,
 double _Complex visi_env_shape(int comp, int visi, int coeff,
                               args_for_testing_t *args_ft,
                               components_t components  ) {
+
+
+  int num_baselines = args_ft->num_baselines;
+  int num_times = args_ft->num_times;
+  int num_freqs = args_ft->num_freqs;
+  // int num_visis = args_ft->num_visis;
+
+  int mod_baseline = visi - num_baselines*floorf((float)visi / (float)num_baselines);
+  int time_ind = (int)floorf( (float)visi / ((float)num_baselines * (float)num_freqs));
+  // int freq_ind = (int)floorf( ((float)visi - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+
+  user_precision_t wavelength = args_ft->allsteps_wavelengths[visi];
+
+  int uv_stripe = num_baselines*num_times*comp + time_ind*num_baselines + mod_baseline;
+
   double pa = (double)components.pas[comp];
   double sinpa = sin(pa);
   double cospa = cos(pa);
 
-  double u_shape = args_ft->u_shapes[comp*args_ft->num_visis + visi];
-  double v_shape = args_ft->v_shapes[comp*args_ft->num_visis + visi];
+  double u_shape = args_ft->u_shapes[uv_stripe] / wavelength;
+  double v_shape = args_ft->v_shapes[uv_stripe] / wavelength;
 
   double x = (cospa*v_shape + sinpa*u_shape); // major axis
   double y = (-sinpa*v_shape + cospa*u_shape); // minor axis
@@ -253,7 +268,7 @@ double _Complex visi_env_shape(int comp, int visi, int coeff,
 
   int xindex = (int)floor(xpos);
   int yindex = (int)floor(ypos);
-  //
+
   int n1 = (int)components.n1s[coeff];
   int n2 = (int)components.n2s[coeff];
 
@@ -538,11 +553,24 @@ void test_kern_calc_visi_Varylmn(e_beamtype beamtype, e_component_type comptype)
     //Set the shapelet u,v,w same as the measurement equation one (this is not
     //true in reality but works fine for testing)
 
-    for (int comp = 0; comp < num_components; comp++) {
-      for (int visi = 0; visi < num_visis; visi++) {
-        args_ft->u_shapes[comp*num_visis + visi] = args_ft->us[visi];
-        args_ft->v_shapes[comp*num_visis + visi] = args_ft->vs[visi];
-        args_ft->w_shapes[comp*num_visis + visi] = args_ft->ws[visi];
+    // for (int comp = 0; comp < num_components; comp++) {
+    //   for (int visi = 0; visi < num_visis; visi++) {
+    //     args_ft->u_shapes[comp*num_visis + visi] = args_ft->us[visi];
+    //     args_ft->v_shapes[comp*num_visis + visi] = args_ft->vs[visi];
+    //     args_ft->w_shapes[comp*num_visis + visi] = args_ft->ws[visi];
+    //   }
+    // }
+
+    int count = 0;
+
+    for (int comp_step = 0; comp_step < num_components; comp_step++) {
+      for ( int time_step = 0; time_step < num_times; time_step++ ) {
+        for (int baseline = 0; baseline < num_baselines; baseline++) {
+          args_ft->u_shapes[count] = ((baseline + 1)*10);
+          args_ft->v_shapes[count] = ((baseline + 1)*10);
+
+          count ++;
+        }
       }
     }
 
@@ -559,7 +587,7 @@ void test_kern_calc_visi_Varylmn(e_beamtype beamtype, e_component_type comptype)
           num_freqs, num_visis, num_times, beamtype, comptype,
           components, args_ft->extrap_freqs,
           args_ft->us, args_ft->vs, args_ft->ws,
-          args_ft->u_shapes, args_ft->v_shapes, args_ft->w_shapes,
+          args_ft->u_shapes, args_ft->v_shapes,
           args_ft->sum_visi_XX_real, args_ft->sum_visi_XX_imag,
           args_ft->sum_visi_XY_real, args_ft->sum_visi_XY_imag,
           args_ft->sum_visi_YX_real, args_ft->sum_visi_YX_imag,
@@ -671,11 +699,16 @@ void test_kern_calc_visi_VarylmnVaryFlux(e_beamtype beamtype,
   //Set the shapelet u,v,w same as the measurement equation one (this is not
   //true in reality but works fine for testing)
 
-    for (int comp = 0; comp < num_components; comp++) {
-      for (int visi = 0; visi < num_visis; visi++) {
-        args_ft->u_shapes[comp*num_visis + visi] = args_ft->us[visi];
-        args_ft->v_shapes[comp*num_visis + visi] = args_ft->vs[visi];
-        args_ft->w_shapes[comp*num_visis + visi] = args_ft->ws[visi];
+    int count = 0;
+
+    for (int comp_step = 0; comp_step < num_components; comp_step++) {
+      for ( int time_step = 0; time_step < num_times; time_step++ ) {
+        for (int baseline = 0; baseline < num_baselines; baseline++) {
+          args_ft->u_shapes[count] = ((baseline + 1)*10);
+          args_ft->v_shapes[count] = ((baseline + 1)*10);
+
+          count ++;
+        }
       }
     }
 
@@ -693,7 +726,7 @@ void test_kern_calc_visi_VarylmnVaryFlux(e_beamtype beamtype,
           num_freqs, num_visis, num_times, beamtype, comptype,
           components, args_ft->extrap_freqs,
           args_ft->us, args_ft->vs, args_ft->ws,
-          args_ft->u_shapes, args_ft->v_shapes, args_ft->w_shapes,
+          args_ft->u_shapes, args_ft->v_shapes,
           args_ft->sum_visi_XX_real, args_ft->sum_visi_XX_imag,
           args_ft->sum_visi_XY_real, args_ft->sum_visi_XY_imag,
           args_ft->sum_visi_YX_real, args_ft->sum_visi_YX_imag,
@@ -780,11 +813,16 @@ void test_kern_calc_visi_VarylmnVaryBeam(e_beamtype beamtype,
     //Set the shapelet u,v,w same as the measurement equation one (this is not
     //true in reality but works fine for testing)
 
-    for (int comp = 0; comp < num_components; comp++) {
-      for (int visi = 0; visi < num_visis; visi++) {
-        args_ft->u_shapes[comp*num_visis + visi] = args_ft->us[visi];
-        args_ft->v_shapes[comp*num_visis + visi] = args_ft->vs[visi];
-        args_ft->w_shapes[comp*num_visis + visi] = args_ft->ws[visi];
+    int count = 0;
+
+    for (int comp_step = 0; comp_step < num_components; comp_step++) {
+      for ( int time_step = 0; time_step < num_times; time_step++ ) {
+        for (int baseline = 0; baseline < num_baselines; baseline++) {
+          args_ft->u_shapes[count] = ((baseline + 1)*10);
+          args_ft->v_shapes[count] = ((baseline + 1)*10);
+
+          count ++;
+        }
       }
     }
 
@@ -802,7 +840,7 @@ void test_kern_calc_visi_VarylmnVaryBeam(e_beamtype beamtype,
           num_freqs, num_visis, num_times, beamtype, comptype,
           components, args_ft->extrap_freqs,
           args_ft->us, args_ft->vs, args_ft->ws,
-          args_ft->u_shapes, args_ft->v_shapes, args_ft->w_shapes,
+          args_ft->u_shapes, args_ft->v_shapes,
           args_ft->sum_visi_XX_real, args_ft->sum_visi_XX_imag,
           args_ft->sum_visi_XY_real, args_ft->sum_visi_XY_imag,
           args_ft->sum_visi_YX_real, args_ft->sum_visi_YX_imag,
@@ -884,11 +922,16 @@ void test_kern_calc_visi_VarylmnVaryPAMajMin(e_beamtype beamtype,
     //Set the shapelet u,v,w same as the measurement equation one (this is not
     //true in reality but works fine for testing)
 
-    for (int comp = 0; comp < num_components; comp++) {
-      for (int visi = 0; visi < num_visis; visi++) {
-        args_ft->u_shapes[comp*num_visis + visi] = args_ft->us[visi];
-        args_ft->v_shapes[comp*num_visis + visi] = args_ft->vs[visi];
-        args_ft->w_shapes[comp*num_visis + visi] = args_ft->ws[visi];
+    int count = 0;
+
+    for (int comp_step = 0; comp_step < num_components; comp_step++) {
+      for ( int time_step = 0; time_step < num_times; time_step++ ) {
+        for (int baseline = 0; baseline < num_baselines; baseline++) {
+          args_ft->u_shapes[count] = ((baseline + 1)*10);
+          args_ft->v_shapes[count] = ((baseline + 1)*10);
+
+          count ++;
+        }
       }
     }
 
@@ -906,7 +949,7 @@ void test_kern_calc_visi_VarylmnVaryPAMajMin(e_beamtype beamtype,
           num_freqs, num_visis, num_times, beamtype, comptype,
           components, args_ft->extrap_freqs,
           args_ft->us, args_ft->vs, args_ft->ws,
-          args_ft->u_shapes, args_ft->v_shapes, args_ft->w_shapes,
+          args_ft->u_shapes, args_ft->v_shapes,
           args_ft->sum_visi_XX_real, args_ft->sum_visi_XX_imag,
           args_ft->sum_visi_XY_real, args_ft->sum_visi_XY_imag,
           args_ft->sum_visi_YX_real, args_ft->sum_visi_YX_imag,

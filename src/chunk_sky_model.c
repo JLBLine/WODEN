@@ -428,7 +428,7 @@ source_catalogue_t * create_chunked_sky_models(source_t *cropped_src,
 
   // int comps_per_chunk = (int)floorf((float)chunking_size / (float)(num_baselines * num_freqs * num_time_steps));
 
-  printf("\t ++ chunking_size, num_baselines, num_freqs, num_time_steps %ld %d %d %d\n", chunking_size, num_baselines, num_freqs, num_time_steps );
+  // printf("\t ++ chunking_size, num_baselines, num_freqs, num_time_steps %ld %d %d %d\n", chunking_size, num_baselines, num_freqs, num_time_steps );
 
   int comps_per_chunk = (int)floorf((float)(chunking_size / (num_baselines * num_freqs * num_time_steps)));
 
@@ -436,7 +436,7 @@ source_catalogue_t * create_chunked_sky_models(source_t *cropped_src,
     comps_per_chunk = 1;
   }
 
-  printf("\t ++ comps_per_chunk %d\n", comps_per_chunk);
+  // printf("\t ++ comps_per_chunk %d\n", comps_per_chunk);
 
   //How many chunks we need for the POINT/GAUSS, and the SHAPELETs
   int num_point_chunks = (int)ceilf((float)cropped_src->n_points / (float)comps_per_chunk);
@@ -768,7 +768,6 @@ void remap_source_for_gpu(source_t *remapped_source, source_t *chunked_source,
   remapped_source->n_shape_powers = chunked_source->n_shape_powers;
   remapped_source->n_shape_curves = chunked_source->n_shape_curves;
   remapped_source->n_shape_coeffs = chunked_source->n_shape_coeffs;
-
 
 }
 

@@ -247,6 +247,8 @@ Struct to contain user defined settings for simulation
 */
 typedef struct _woden_settings_t {
   double lst_base; /*!< Local sidereal time for first time step (radians) */
+  double lst_obs_epoch_base; /*!< Local sidereal time for first time step (radians)
+  for the observation epoch (e.g. in 2020 for a 2020 obs) */
   double ra0;  /*!< Right ascension of phase centre (radians)*/
   double dec0;  /*!< Declination of phase centre (radians)*/
   double sdec0;  /*!< Sine of Declination of phase centre (radians)*/
@@ -271,6 +273,7 @@ typedef struct _woden_settings_t {
   bool array_layout_file;  /*!< Do we have a path to the array layout or not */
   const char* array_layout_file_path;  /*!< Path to file containing E,N,H coords of array layout */
   double latitude;  /*!< Latitude of the array to simulate (radians) */
+  double latitude_obs_epoch_base;   /*!< Latitude of the array at the observation epoch (radians) */
   user_precision_t longitude;  /*!< Longitude of the array to simulate (radians) */
   user_precision_t FEE_ideal_delays[16]; /*!< Delay values specifying the pointing for the MWA FEE beam model */
   user_precision_t coarse_band_width;  /*!< Frequency bandwidth of a single coarse band (Hz)*/
@@ -280,6 +283,11 @@ typedef struct _woden_settings_t {
   double base_band_freq;  /*!< The lowest fine channel frequency in the current band being simulated*/
   int do_precession; /*!< Boolean of whether to apply precession to the
   array layout or not*/
+  double *lsts; /*!< Array to hold LSTs for all time centroids (these are
+    different when precession is happening)*/
+  double *latitudes; /*!< Array to hold latitudes for all time centroids (these
+    are different when precession is happening)*/
+  double *mjds; /*!< Array to hold modified julian dates for all time centroids*/
 
 } woden_settings_t;
 

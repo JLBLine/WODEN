@@ -113,17 +113,21 @@ test_uvw_coords.c
 *********************************
 This runs both ``fundamental_coords::test_kern_calc_uvw`` as well as
 ``fundamental_coords::test_kern_calc_uvw_shapelet``, which in turn test
-``fundamental_coords::kern_calc_uvw`,
+``fundamental_coords::kern_calc_uvw``,
 ``fundamental_coords::kern_calc_uvw_shapelet`` respectively.
 
-Both kernels calculate *u,v,w* coords (in wavelenths) in slightly different circumstances.
+Both kernels calculate *u,v,w* coords in slightly different circumstances.
 ``kern_calc_uvw`` calculates *u,v,w* coords towards a specified *RA,Dec* phase centre,
 for a given set of baseline lengths :math:`X_{\mathrm{diff}}, Y_{\mathrm{diff}}, Z_{\mathrm{diff}}`,
 for a number of LSTs and frequencies (meaning *u,v,w* change with time and frequency).
-``kern_calc_uvw_shapelet`` does the above for a number of *u,v,w* coordinate systems,
-each centred on a different SHAPELET component.
 
-Both kernels are tested for scaling by wavelength, and changing by time. To generate
+``kern_calc_uvw_shapelet`` calculates a number of *u,v* coordinate systems,
+each centred on a different SHAPELET component, and does *not* scale by wavelength;
+everything remains in metres. This is to save on memory, at the cost of
+having to divide by wavelength inside kernels at later times.
+
+Both kernels are tested for scaling as changing by time, and
+``fundamental_coords::kern_calc_uvw`` is tested to change with wavelength. To generate
 analytically predictable outcomes, the phase centre is again set to
 *RA*:math:`_{\textrm{phase}}`, *Dec*:math:`_{\textrm{phase}}` = :math:`0^\circ, 0^\circ`.
 Under these conditions, the following is true:

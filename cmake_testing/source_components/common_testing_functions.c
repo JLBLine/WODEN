@@ -4,8 +4,35 @@
 double calc_gradient_extrap_list(user_precision_t *list_fluxes,
           double *list_freqs, double desired_freq, int low_ind_1, int low_ind_2) {
 
-  double gradient = (list_fluxes[low_ind_2] - list_fluxes[low_ind_1]) / (list_freqs[low_ind_2] - list_freqs[low_ind_1]);
-  double extrap_flux = list_fluxes[low_ind_1] + gradient*(desired_freq - list_freqs[low_ind_1]);
+  double gradient;
+  double extrap_flux;
+
+  //If one is negative, do interpolation in linear space
+  if (list_fluxes[low_ind_1] <= 0 || list_fluxes[low_ind_2] <= 0) {
+    gradient = (list_fluxes[low_ind_2] - list_fluxes[low_ind_1]) / (list_freqs[low_ind_2] - list_freqs[low_ind_1]);
+    extrap_flux = list_fluxes[low_ind_1] + gradient*(desired_freq - list_freqs[low_ind_1]);
+  }
+
+  else {
+
+    double logflux1, logflux2, logfreq1, logfreq2, log_des_freq;
+
+    // printf("what a do %d %d %.3e %.3e %.3e %.3e %.3e\n",low_ind_1, low_ind_2,
+    // list_fluxes[low_ind_1],
+    // list_fluxes[low_ind_2], list_freqs[low_ind_1], list_freqs[low_ind_2], desired_freq );
+
+    logflux1 = log10((double)list_fluxes[low_ind_1]);
+    logflux2 = log10((double)list_fluxes[low_ind_2]);
+    logfreq1 = log10(list_freqs[low_ind_1]);
+    logfreq2 = log10(list_freqs[low_ind_2]);
+    log_des_freq = log10(desired_freq);
+
+    gradient = (logflux2 - logflux1) / (logfreq2 - logfreq1);
+    extrap_flux = logflux1 + gradient*(log_des_freq - logfreq1);
+
+    extrap_flux = pow(10, extrap_flux);
+
+  }
 
   return extrap_flux;
 }
@@ -24,15 +51,24 @@ void extrap_stokes_list_flux(components_t *components,
 
   double extrap_freq = extrap_freqs[iFreq];
 
-  int low_ind_1 = 0;
-  int low_ind_2 = 0;
+  int low_ind_1 = -1;
+  int low_ind_2 = -1;
 
   double low_val_1 = 1e16;
-  double low_val_2 = 1e16;
+  // double low_val_2 = 1e16;
 
   double ref_freq;
   double abs_diff_freq;
 
+  if (num_list_values == 1) {
+    * flux_I = components->list_stokesI[list_start_ind];
+    * flux_Q = components->list_stokesQ[list_start_ind];
+    * flux_U = components->list_stokesU[list_start_ind];
+    * flux_V = components->list_stokesV[list_start_ind];
+    return;
+  }
+
+  //First loop finds the absolute closest frequency
   for (int i = 0; i < num_list_values; i++) {
     ref_freq = components->list_freqs[list_start_ind + i];
     abs_diff_freq = abs(ref_freq - extrap_freq);
@@ -43,19 +79,44 @@ void extrap_stokes_list_flux(components_t *components,
     }
   }
 
-  for (int i = 0; i < num_list_values; i++) {
-    ref_freq = components->list_freqs[list_start_ind + i];
-    abs_diff_freq = abs(ref_freq - extrap_freq);
+  //Depending on the closest frequency, we either want to search above or
+  //below the target frequency to find points either side of the target freq
 
-    if (abs_diff_freq < low_val_2 && i != low_ind_1) {
-      low_val_2 = abs_diff_freq;
-      low_ind_2 = i;
-    }
+  //We happen to need the reference frequency; just return the refs
+  if (components->list_freqs[list_start_ind + low_ind_1] == extrap_freq) {
+    // if (iFluxComp == 5 && iFreq == 13){
+      // printf("We are heeeeere iFreq %d\n", iFreq);
+    // }
+    * flux_I = components->list_stokesI[list_start_ind + low_ind_1];
+    * flux_Q = components->list_stokesQ[list_start_ind + low_ind_1];
+    * flux_U = components->list_stokesU[list_start_ind + low_ind_1];
+    * flux_V = components->list_stokesV[list_start_ind + low_ind_1];
+    return;
   }
-
-  if (low_ind_1 == low_ind_2){
-      low_ind_2 = num_list_values - 1;
-      low_ind_1 = num_list_values - 2;
+  else {
+    //The closest freq is the first index, so set the second index to the second
+    if (low_ind_1 == 0) {
+      low_ind_2 = 1;
+    }
+    //closest freq the highest list entry - set second index to one below
+    //(order of indexes doesn't matter, as the calculated gradient is pos/neg
+    //as needed)
+    else if (low_ind_1 == num_list_values - 1){
+      low_ind_2 = low_ind_1 - 1;
+    }
+    else {
+      //closest freq is higher than desired - set second index to one below
+      //(order of indexes doesn't matter, as the calculated gradient is pos/neg
+      //as needed)
+      if (components->list_freqs[list_start_ind + low_ind_1] > extrap_freq){
+        low_ind_2 = low_ind_1 - 1;
+      }
+      else {
+        low_ind_2 = low_ind_1 + 1;
+      }
+        //We are extrapolating to a frequency that is lower than all list entries
+        //so just stick low_ind_2 to one above low_ind_1
+    }
   }
 
   * flux_I = calc_gradient_extrap_list(components->list_stokesI,

@@ -96,6 +96,10 @@ void test_calculate_visibilities_MWAAnalyBeam(int n_points, int n_gauss, int n_s
   woden_settings_t *woden_settings = make_woden_settings(RA0, MWA_LAT_RAD);
   woden_settings->beamtype = MWA_ANALY;
 
+  for (int i = 0; i < 16; i++) {
+    woden_settings->FEE_ideal_delays[i] = 0.0;
+  }
+
   beam_settings_t *beam_settings = malloc(sizeof(beam_settings_t));
   beam_settings->beamtype = MWA_ANALY;
 
@@ -258,6 +262,7 @@ int main(void)
 {
     UNITY_BEGIN();
     //Test with a single SOURCE, single COMPONENT
+
     RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_OneSource_SinglePoint);
     RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_OneSource_SingleGauss);
     RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_OneSource_SingleShape);

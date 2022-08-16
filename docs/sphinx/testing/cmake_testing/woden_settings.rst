@@ -68,13 +68,21 @@ eventualities.
 
 ``test_setup_lsts_and_phase_centre.c``
 *****************************************
-Tests ``woden_settings::setup_lsts_and_phase_centre`` which uses the input
+Tests ``woden_settings::setup_lsts_and_phase_centre`` uses the input
 simulation parameters to calculate the sine and cosine of the declination of
-the phase centre, and the LST at the centre of every time integration. Runs
-three tests, two with :math:`\mathrm{Dec}_{\mathrm{phase}} = \pi/2`, where one has a
+the phase centre, the LST for the centre of each time step. If applying
+precession, the LST values are precessed from the observation epoch back to J2000,
+and the modified julian date is also calculated (used later by ``array_layout::calc_XYZ_diffs``
+to precess the array back to J2000).
+
+
+Runs three tests, two with :math:`\mathrm{Dec}_{\mathrm{phase}} = \pi/2`, where one has a
 zero initial LST, another with non-zero initial LST, and third test with
 :math:`\mathrm{Dec}_{\mathrm{phase}}` set to the latitude of the MWA and a
-non-zero initial LST. All tests have multiple time steps, and are tested against
-equivalent calculations made in ``C`` with 64 bit precision. The FLOAT code
-outputs are tested with an absolute tolerance of 1e-7 and the DOUBLE a tolerance
+non-zero initial LST. All tests are run with both precession turned on and off.
+All tests have multiple time steps, and are tested against
+equivalent calculations made in ``C`` with 64 bit precision. The precessed
+LST values are tested against set values, rather than link up PAL to the testing
+code. The FLOAT code outputs are tested with an absolute tolerance of 1e-7
+and the DOUBLE a tolerance
 of 1e-15.
