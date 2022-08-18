@@ -26,66 +26,6 @@ extern void calculate_visibilities(array_layout_t *array_layout,
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
-void test_comp_phase_centre_allgains(visibility_set_t *visibility_set,
-                                     double gain1xx_re, double gain1xx_im,
-                                     double gain1xy_re, double gain1xy_im,
-                                     double gain1yx_re, double gain1yx_im,
-                                     double gain1yy_re, double gain1yy_im,
-                                     double gain2xx_re, double gain2xx_im,
-                                     double gain2xy_re, double gain2xy_im,
-                                     double gain2yx_re, double gain2yx_im,
-                                     double gain2yy_re, double gain2yy_im) {
-
-  //Small user_precision_t errors in the measurement equation mean that when at phase
-  //centre, altough imaginary should be zero, you get fluctuations dependent
-  //on u,v,w. So need a different tolerance here
-  //The accuracy we get depends on whether we are float or double
-  #ifdef DOUBLE_PRECISION
-    double TOL = 1e-9;
-  #else
-    double TOL = 1e-6;
-  #endif
-
-  for (int visi = 0; visi < NUM_VISI; visi++) {
-    if (visi < NUM_VISI / 2) {
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain1xx_re,
-                                        visibility_set->sum_visi_XX_real[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain1xx_im,
-                                        visibility_set->sum_visi_XX_imag[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain1xy_re,
-                                        visibility_set->sum_visi_XY_real[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain1xy_im,
-                                        visibility_set->sum_visi_XY_imag[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain1yx_re,
-                                        visibility_set->sum_visi_YX_real[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain1yx_im,
-                                        visibility_set->sum_visi_YX_imag[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain1yy_re,
-                                        visibility_set->sum_visi_YY_real[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain1yy_im,
-                                        visibility_set->sum_visi_YY_imag[visi]);
-    }
-    else {
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain2xx_re,
-                                        visibility_set->sum_visi_XX_real[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain2xx_im,
-                                        visibility_set->sum_visi_XX_imag[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain2xy_re,
-                                        visibility_set->sum_visi_XY_real[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain2xy_im,
-                                        visibility_set->sum_visi_XY_imag[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain2yx_re,
-                                        visibility_set->sum_visi_YX_real[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain2yx_im,
-                                        visibility_set->sum_visi_YX_imag[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain2yy_re,
-                                        visibility_set->sum_visi_YY_real[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, gain2yy_im,
-                                        visibility_set->sum_visi_YY_imag[visi]);
-    }
-  }
-}
-
 void test_calculate_visibilities_MWAAnalyBeam(int n_points, int n_gauss, int n_shapes,
                                            int num_sources) {
 
@@ -134,6 +74,12 @@ void test_calculate_visibilities_MWAAnalyBeam(int n_points, int n_gauss, int n_s
   double gain2yx_re = -0.000526843713 * multiplier;
   double gain2yy_re = 0.004262796131* multiplier;
 
+  #ifdef DOUBLE_PRECISION
+    double TOL = 1e-9;
+  #else
+    double TOL = 1e-6;
+  #endif
+
   double img = 0.0;
   test_comp_phase_centre_allgains(visibility_set,
                                   gain1xx_re, img,
@@ -143,11 +89,41 @@ void test_calculate_visibilities_MWAAnalyBeam(int n_points, int n_gauss, int n_s
                                   gain2xx_re, img,
                                   gain2xy_re, img,
                                   gain2yx_re, img,
-                                  gain2yy_re, img);
+                                  gain2yy_re, img,
+                                  woden_settings, TOL);
 
-  free(beam_settings);
+
   free_visi_set_inputs(visibility_set);
   free_visi_set_outputs(visibility_set);
+
+  woden_settings->do_autos = 1;
+  woden_settings->num_autos = NUM_CROSS;
+  woden_settings->num_visis = woden_settings->num_cross + woden_settings->num_autos;
+
+  cropped_sky_models = make_cropped_sky_models(RA0, MWA_LAT_RAD,
+                                                    n_points, n_gauss, n_shapes,
+                                                    num_sources);
+
+  printf("We have this many visis %d %d %d\n",woden_settings->num_visis,woden_settings->num_autos,woden_settings->num_cross );
+  visibility_set = test_calculate_visibilities(cropped_sky_models,
+                                          beam_settings, woden_settings, RA0, MWA_LAT_RAD,
+                                          beam_settings->beamtype);
+
+
+  test_comp_phase_centre_allgains(visibility_set,
+                                  gain1xx_re, img,
+                                  gain1xy_re, img,
+                                  gain1yx_re, img,
+                                  gain1yy_re, img,
+                                  gain2xx_re, img,
+                                  gain2xy_re, img,
+                                  gain2yx_re, img,
+                                  gain2yy_re, img,
+                                  woden_settings, TOL);
+
+  free_visi_set_inputs(visibility_set);
+  free_visi_set_outputs(visibility_set);
+  free(beam_settings);
   free(woden_settings);
 }
 

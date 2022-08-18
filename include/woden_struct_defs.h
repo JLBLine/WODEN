@@ -73,9 +73,9 @@ typedef struct _components_t {
 
   //something to store extrapolated output fluxes in
   user_precision_t *extrap_stokesI; /*!< extrapolated COMPONENT Stokes I flux densities (Jy) */
-  user_precision_t *extrap_stokesQ; /*!< extrapolated COMPONENT Stokes I flux densities (Jy) */
-  user_precision_t *extrap_stokesU; /*!< extrapolated COMPONENT Stokes I flux densities (Jy) */
-  user_precision_t *extrap_stokesV; /*!< extrapolated COMPONENT Stokes I flux densities (Jy) */
+  user_precision_t *extrap_stokesQ; /*!< extrapolated COMPONENT Stokes Q flux densities (Jy) */
+  user_precision_t *extrap_stokesU; /*!< extrapolated COMPONENT Stokes U flux densities (Jy) */
+  user_precision_t *extrap_stokesV; /*!< extrapolated COMPONENT Stokes V flux densities (Jy) */
 
   //SHAPELET / GAUSSIAN params
   user_precision_t *shape_coeffs; /*!< Scaling coefficients for SHAPELET basis functions */
@@ -104,13 +104,13 @@ typedef struct _components_t {
   different primary beams for different tiles. At the moment everything is
   the same for each tile, so only have length one for first dimension
   */
-  user_precision_complex_t **gxs; /*!< North-South Beam gain values for all directions,
+  user_precision_complex_t *gxs; /*!< North-South Beam gain values for all directions,
   frequencies, and times for these COMPONENTS*/
-  user_precision_complex_t **Dxs; /*!< North-South Beam leakage values for all directions,
+  user_precision_complex_t *Dxs; /*!< North-South Beam leakage values for all directions,
   frequencies, and times for these COMPONENTS*/
-  user_precision_complex_t **Dys; /*!< East-West Beam leakage values for all directions,
+  user_precision_complex_t *Dys; /*!< East-West Beam leakage values for all directions,
   frequencies, and times for these COMPONENTS*/
-  user_precision_complex_t **gys; /*!< East-West Beam gain values for all directions,
+  user_precision_complex_t *gys; /*!< East-West Beam gain values for all directions,
   frequencies, and times for these COMPONENTS*/
 
   //Leave off the d_ from these device values, as the components_t struct
@@ -254,6 +254,8 @@ typedef struct _woden_settings_t {
   double sdec0;  /*!< Sine of Declination of phase centre (radians)*/
   double cdec0;  /*!< Cosine of Declination of phase centre (radians)*/
   int num_baselines;  /*!< Number of baselines this array layout has */
+  int num_ants;  /*!< Number of antennas this array layout has (MWA calls this
+  number of tiles) */
   int num_freqs;  /*!< Number of frequencies per coarse band*/
   double frequency_resolution;  /*!< Frequency resolution of a fine channel (Hz)*/
   double base_low_freq;  /*!< The lowest fine channel frequency of band 1*/
@@ -279,7 +281,10 @@ typedef struct _woden_settings_t {
   user_precision_t coarse_band_width;  /*!< Frequency bandwidth of a single coarse band (Hz)*/
   double gauss_ra_point;  /*!< The initial Right Ascension to point the Gaussian beam at (radians)*/
   double gauss_dec_point;  /*!< The initial Declination to point the Gaussian beam at (radians)*/
-  int num_visis;  /*!< Total number of visiblities to simulate, so freqs*times*baselines */
+  int num_cross;  /*!< Total number of cross-correlations to simulate, so freqs*times*baselines */
+  int num_autos;  /*!< Total number of auto-correlations to simulate, so freqs*times*baselines */
+  int num_visis;  /*!< Total number of visibilities to simulate, so num_cross + num_autos */
+
   double base_band_freq;  /*!< The lowest fine channel frequency in the current band being simulated*/
   int do_precession; /*!< Boolean of whether to apply precession to the
   array layout or not*/
@@ -288,6 +293,7 @@ typedef struct _woden_settings_t {
   double *latitudes; /*!< Array to hold latitudes for all time centroids (these
     are different when precession is happening)*/
   double *mjds; /*!< Array to hold modified julian dates for all time centroids*/
+  int do_autos; /*!< Boolean of whether to simulate autos or not (0 False, 1 True)*/
 
 } woden_settings_t;
 

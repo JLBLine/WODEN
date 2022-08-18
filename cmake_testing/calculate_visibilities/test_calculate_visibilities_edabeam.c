@@ -46,19 +46,28 @@ void test_calculate_visibilities_EDA2Beam(int n_points, int n_gauss, int n_shape
   double gain2yy = 0.3825515398230647 * (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
   //
   test_comp_phase_centre_twogains(visibility_set, gain1xx, gain1yy,
-                                  gain2xx, gain2yy);
+                                  gain2xx, gain2yy, woden_settings);
 
-  // for (size_t visi = 0; visi < NUM_VISI; visi++) {
-  //   printf("%.7f %.1f %.1f %.1f %.1f %.1f %.7f %.1f\n",
-  //           visibility_set->sum_visi_XX_real[visi],
-  //           visibility_set->sum_visi_XX_imag[visi],
-  //           visibility_set->sum_visi_XY_real[visi],
-  //           visibility_set->sum_visi_XY_imag[visi],
-  //           visibility_set->sum_visi_YX_real[visi],
-  //           visibility_set->sum_visi_YX_imag[visi],
-  //           visibility_set->sum_visi_YY_real[visi],
-  //           visibility_set->sum_visi_YY_imag[visi]);
-  // }
+  free_visi_set_inputs(visibility_set);
+  free_visi_set_outputs(visibility_set);
+
+  woden_settings->do_autos = 1;
+  woden_settings->num_autos = NUM_CROSS;
+  woden_settings->num_visis = woden_settings->num_cross + woden_settings->num_autos;
+
+  cropped_sky_models = make_cropped_sky_models(RA0, MWA_LAT_RAD,
+                                                    n_points, n_gauss, n_shapes,
+                                                    num_sources);
+
+  printf("We have this many visis %d %d %d\n",woden_settings->num_visis,woden_settings->num_autos,woden_settings->num_cross );
+  visibility_set = test_calculate_visibilities(cropped_sky_models,
+                                          beam_settings, woden_settings, RA0, MWA_LAT_RAD,
+                                          beam_settings->beamtype);
+  test_comp_phase_centre_twogains(visibility_set, gain1xx, gain1yy,
+                                  gain2xx, gain2yy, woden_settings);
+
+  free_visi_set_inputs(visibility_set);
+  free_visi_set_outputs(visibility_set);
 
 }
 

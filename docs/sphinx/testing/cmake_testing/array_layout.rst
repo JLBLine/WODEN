@@ -46,3 +46,17 @@ These tests simply provide a set of known input coords (read in from
 ``example_array_layout.txt``), runs ``array_layout::calc_XYZ_diffs`` for both
 the precession and no precession cases, and check the output values match the
 expected values stored in ``test_RTS_XYZ_common.h``.
+
+``calc_XYZ_diffs`` also sets the basic values of::
+
+   woden_settings->num_visis
+   woden_settings->num_ants
+   woden_settings->num_baselines
+   woden_settings->num_cross
+   woden_settings->num_autos
+
+which are used at various times during the rest of the simulation. The
+value of ``num_autos`` depends on whether the user has elicited to calculate
+auto-correlations, so should be 0 if ``woden_settings->do_autos`` if False,
+and correctly set if True. The numbers above are tested in both the False
+and True cases.

@@ -21,9 +21,10 @@ set(J9 "example_array_layout.txt")
 set(J10 "run_woden_noprecession.json")
 set(J11 "run_woden_MWA_analy.json")
 set(J12 "run_woden_MWAFEE_interp.json")
+set(J12 "run_woden_doautos.json")
 
 ## Loop through them and write a symlink so the testing executable can find them
-foreach(X IN LISTS J1 J2 J3 J4 J5 J6 J7 J8 J9 J10 J11 J12)
+foreach(X IN LISTS J1 J2 J3 J4 J5 J6 J7 J8 J9 J10 J11 J12 J13)
     ADD_CUSTOM_TARGET(targetthis_${X} ALL
         COMMAND ${CMAKE_COMMAND} -E create_symlink "${JSON_PATH}/${X}" "${X}")
 endforeach()

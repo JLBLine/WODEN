@@ -52,19 +52,31 @@ void test_calculate_visibilities_GaussBeam(int n_points, int n_gauss, int n_shap
   double gain1 = 0.9702956182744840 * (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
   double gain2 = 0.3359480937784178 * (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
 
-  test_comp_phase_centre_twogains(visibility_set, gain1, gain1, gain2, gain2);
+  test_comp_phase_centre_twogains(visibility_set, gain1, gain1, gain2, gain2,
+                                                                woden_settings);
 
-  // for (size_t visi = 0; visi < NUM_VISI; visi++) {
-  //   printf("%.6f %.1f %.1f %.1f %.1f %.1f %.6f %.1f\n",
-  //           visibility_set->sum_visi_XX_real[visi],
-  //           visibility_set->sum_visi_XX_imag[visi],
-  //           visibility_set->sum_visi_XY_real[visi],
-  //           visibility_set->sum_visi_XY_imag[visi],
-  //           visibility_set->sum_visi_YX_real[visi],
-  //           visibility_set->sum_visi_YX_imag[visi],
-  //           visibility_set->sum_visi_YY_real[visi],
-  //           visibility_set->sum_visi_YY_imag[visi]);
-  // }
+  free_visi_set_inputs(visibility_set);
+  free_visi_set_outputs(visibility_set);
+
+  woden_settings->do_autos = 1;
+  woden_settings->num_autos = NUM_CROSS;
+  woden_settings->num_visis = woden_settings->num_cross + woden_settings->num_autos;
+
+  cropped_sky_models = make_cropped_sky_models(RA0, MWA_LAT_RAD,
+                                                    n_points, n_gauss, n_shapes,
+                                                    num_sources);
+
+  printf("We have this many visis %d %d %d\n",woden_settings->num_visis,woden_settings->num_autos,woden_settings->num_cross );
+  visibility_set = test_calculate_visibilities(cropped_sky_models,
+                                          beam_settings, woden_settings, RA0, MWA_LAT_RAD,
+                                          beam_settings->beamtype);
+  test_comp_phase_centre_twogains(visibility_set, gain1, gain1, gain2, gain2,
+                                                                woden_settings);
+
+  free_visi_set_inputs(visibility_set);
+  free_visi_set_outputs(visibility_set);
+
+
 
 }
 

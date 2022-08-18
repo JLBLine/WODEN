@@ -46,7 +46,8 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
   struct json_object *array_layout_file_path;
   struct json_object *no_precession;
   struct json_object *MWA_analy;
-  //
+  struct json_object *do_autos_bool;
+
   /* open file */
   if ((fp=fopen(filename,"r"))==NULL) {
     printf("read_json_settings: failed to open json file:\n\t %s \n", filename);
@@ -91,8 +92,10 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
   json_object_object_get_ex(parsed_json, "hdf5_beam_path", &hdf5_beam_path);
 
   json_object_object_get_ex(parsed_json, "use_EDA2_beam", &EDA2_beam);
-  json_object_object_get_ex(parsed_json, "no_precession", &no_precession);
   json_object_object_get_ex(parsed_json, "use_MWA_analy_beam", &MWA_analy);
+
+  json_object_object_get_ex(parsed_json, "no_precession", &no_precession);
+  json_object_object_get_ex(parsed_json, "do_autos", &do_autos_bool);
 
   //See whether latitude has been set or not
   int lat_true = json_object_get_type(latitude);
@@ -243,6 +246,15 @@ int read_json_settings(const char *filename,  woden_settings_t *woden_settings){
     woden_settings->do_precession = 0;
   } else {
     woden_settings->do_precession = 1;
+  }
+
+  //Boolean whether to calculate auto-correlations or not
+  int do_autos = json_object_get_boolean(do_autos_bool);
+
+  if (do_autos) {
+    woden_settings->do_autos = 1;
+  } else {
+    woden_settings->do_autos = 0;
   }
 
   woden_settings->chunking_size = json_object_get_int64(chunking_size);

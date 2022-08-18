@@ -92,9 +92,13 @@ should be fully real, and equal to the sum of the number of
 COMPONENTs in the sky model multiplied by 0.3333333333333333. This numerical 1/3
 flux is a good test of the precision of the FLOAT and DOUBLE compiled codes.
 
+.. note::
+
+	Given all sources are at phase centre, this means the cross-correlations and the auto-correlations should have exactly the same values. So in all tests described below, ``calculate_visibilities`` is run with both ``woden_settings->do_autos`` set to 0 and to 1. If the autos are calculated, the number of output visibilities should double (as I only simulate three baselines from three antennas here). The latter half are where the autos are set, and are tested to be equal to the expected values for the crosses.
+
 When the tests have a single COMPONENT per SOURCE, I use a POWER_LAW type flux
 behaviour. When there are three COMPONENTs, I use one of each of POWER_LAW,
-CURVED_POWER_LAW, and LIST types. 
+CURVED_POWER_LAW, and LIST types.
 
 GAUSSIAN and SHAPELET components with any size cause a reduction of the real part
 of the visibility due to the extended size on the sky. For these tests, I've set
