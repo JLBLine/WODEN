@@ -496,16 +496,27 @@ def enh2xyz(east, north, height, latitude=MWA_LAT*D2R):
     return X,Y,Z
 
 def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_steps=None,
-              precision=None):
+              precision=None, do_autos=False, num_ants=0):
     """
     Read the WODEN binary output and shove into a numpy arrays, ready to be put
-    into a uvfits file. Data in WODEN binaries is ordered by baseline (fastest
+    into a uvfits file. By default, WODEN only outputs cross-correlations.
+    In this case, the output binary is ordered by baseline (fastest
     changing), frequency, and time (slowest changing). Visibility coords and
     data are read in, with the visi data output into an array of
     `shape=(num_time_steps*num_baselines,1,1,num_freq_channels,4,3))`, which is
     appropriate for a uvfits file. Needs to know whether WODEN was run with
     'float' (32 bit) or 'double' (64 bit) precision to read in the data
     correctly.
+
+    If WODEN was run with `do_autos=True`, then auto correlations are
+    also in the output binary. These are stored AFTER the cross-correlations,
+    and orders by antenna (fastest changing), frequency, and time (slowest changing).
+    In this case the data are output into an array of
+    `shape=(num_time_steps*(num_baselines+num_ants),1,1,num_freq_channels,4,3))`,
+    where we say a baseline is only defined between to different antennas.
+    The visibilities are output to match the BASELINE array, which orders
+    the autos and crosses via antenna pairs as (1,1), (1,2), (1,3) .. (2,2),
+    (2,3) etc etc meaning the autos and crosses are mixed.
 
     Parameters
     ----------
@@ -519,19 +530,27 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
         Number of time steps in the binary file
     precision : string
         Precision WODEN was run with - either 'float' or 'double'
+    do_autos : Boolean
+        if True, data has auto-correlations in
+    do_autos : int
+        Number of antennas in the array
 
     Returns
     -------
     uus : float array
-        The :math:`u` coordinates (seconds)
+        The :math:`u` coordinates (seconds). These are zero for auto-correlations.
     vvs : float array
-        The :math:`v` coordinates (seconds)
+        The :math:`v` coordinates (seconds). These are zero for auto-correlations.
     wws : float array
-        The :math:`w` coordinates (seconds)
+        The :math:`w` coordinates (seconds). These are zero for auto-correlations.
     v_container : float array
         Visibility data with
         `shape=(num_time_steps*num_baselines,1,1,num_freq_channels,4,3))`
     """
+
+    ##If not doing autos, ensure this number is zero
+    if do_autos == False:
+        num_ants = 0
 
     with open(filename,'rb') as f:
         read_data = f.read()
@@ -543,13 +562,14 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
     elif precision == 'double':
         data = np.frombuffer(read_data,dtype=np.float64)
 
-    n_data = num_time_steps * num_baselines
+    n_data = num_time_steps * (num_baselines + num_ants)
     v_container = np.zeros((n_data,1,1,num_freq_channels,4,3))
     uus = np.zeros(n_data)
     vvs = np.zeros(n_data)
     wws = np.zeros(n_data)
 
-    num_visi = num_time_steps * num_freq_channels * num_baselines
+    num_visi = num_time_steps * num_freq_channels * (num_baselines + num_ants)
+    num_cross = num_time_steps * num_freq_channels * num_baselines
 
     u_base = 0
     v_base = num_visi
@@ -562,8 +582,28 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
     im_YX_base = 8*num_visi
     re_YY_base = 9*num_visi
     im_YY_base = 10*num_visi
-
     num_cols = 11
+
+    ##If doing auto-correlations, need some mapping arrays so we can
+    ##shove the correct data into the correct spots
+    if do_autos:
+        cross_map = []
+        auto_map = []
+
+        visi_map = 0
+        for b1 in np.arange(num_ants):
+            for b2 in np.arange(b1,num_ants):
+                if b1 == b2:
+                    auto_map.append(visi_map)
+                else:
+                    cross_map.append(visi_map)
+                visi_map += 1
+
+        cross_map = np.array(cross_map, dtype=int)
+        auto_map = np.array(auto_map, dtype=int)
+
+    ##We only care about the u,v,w for the cross-correlations, so fill
+    ##them only
     for time_ind in np.arange(num_time_steps):
 
         time_step = num_baselines * time_ind * num_freq_channels
@@ -571,10 +611,23 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
         v_ind = v_base + time_step
         w_ind = w_base + time_step
 
-        uus[time_ind*num_baselines:(time_ind + 1)*num_baselines] = data[u_ind:u_ind+num_baselines] / VELC
-        vvs[time_ind*num_baselines:(time_ind + 1)*num_baselines] = data[v_ind:v_ind+num_baselines] / VELC
-        wws[time_ind*num_baselines:(time_ind + 1)*num_baselines] = data[w_ind:w_ind+num_baselines] / VELC
+        if do_autos:
+            time_base = int(time_ind*(num_baselines + num_ants))
+            this_cross_map = cross_map + time_base
 
+            uus[this_cross_map] = data[u_ind:u_ind+num_baselines] / VELC
+            vvs[this_cross_map] = data[v_ind:v_ind+num_baselines] / VELC
+            wws[this_cross_map] = data[w_ind:w_ind+num_baselines] / VELC
+
+        else:
+
+            uus[time_ind*num_baselines:(time_ind + 1)*num_baselines] = data[u_ind:u_ind+num_baselines] / VELC
+            vvs[time_ind*num_baselines:(time_ind + 1)*num_baselines] = data[v_ind:v_ind+num_baselines] / VELC
+            wws[time_ind*num_baselines:(time_ind + 1)*num_baselines] = data[w_ind:w_ind+num_baselines] / VELC
+
+
+
+    for time_ind in np.arange(num_time_steps):
         for freq_ind in np.arange(num_freq_channels):
 
             freq_step = num_baselines * (time_ind * num_freq_channels + freq_ind)
@@ -588,21 +641,77 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
             real_YX_ind = re_YX_base + freq_step
             imag_YX_ind = im_YX_base + freq_step
 
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,0,0] = data[real_XX_ind:real_XX_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,0,1] = data[imag_XX_ind:imag_XX_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,1,0] = data[real_YY_ind:real_YY_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,1,1] = data[imag_YY_ind:imag_YY_ind+num_baselines]
+            cross_XX_re = data[real_XX_ind:real_XX_ind+num_baselines]
+            cross_XX_im = data[imag_XX_ind:imag_XX_ind+num_baselines]
+            cross_YY_re = data[real_YY_ind:real_YY_ind+num_baselines]
+            cross_YY_im = data[imag_YY_ind:imag_YY_ind+num_baselines]
+            cross_XY_re = data[real_XY_ind:real_XY_ind+num_baselines]
+            cross_XY_im = data[imag_XY_ind:imag_XY_ind+num_baselines]
+            cross_YX_re = data[real_YX_ind:real_YX_ind+num_baselines]
+            cross_YX_im = data[imag_YX_ind:imag_YX_ind+num_baselines]
 
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,2,0] = data[real_XY_ind:real_XY_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,2,1] = data[imag_XY_ind:imag_XY_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,3,0] = data[real_YX_ind:real_YX_ind+num_baselines]
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,3,1] = data[imag_YX_ind:imag_YX_ind+num_baselines]
+            ##If doing auto-correlations, load up the autos and do some fancy
+            ##mapping
+            if do_autos:
 
-            ##Set the weight for everything to one
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,0,2] = np.ones(num_baselines)
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,1,2] = np.ones(num_baselines)
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,2,2] = np.ones(num_baselines)
-            v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,3,2] = np.ones(num_baselines)
+                time_base = int(time_ind*(num_baselines + num_ants))
+                this_cross_map = cross_map + time_base
+                # print(this_cross_map)
+                # print(cross_XX_re)
+
+                v_container[this_cross_map,0,0,freq_ind,0,0] = cross_XX_re
+                v_container[this_cross_map,0,0,freq_ind,0,1] = cross_XX_im
+                v_container[this_cross_map,0,0,freq_ind,1,0] = cross_YY_re
+                v_container[this_cross_map,0,0,freq_ind,1,1] = cross_YY_im
+                v_container[this_cross_map,0,0,freq_ind,2,0] = cross_XY_re
+                v_container[this_cross_map,0,0,freq_ind,2,1] = cross_XY_im
+                v_container[this_cross_map,0,0,freq_ind,3,0] = cross_YX_re
+                v_container[this_cross_map,0,0,freq_ind,3,1] = cross_YX_im
+
+                freq_step = num_ants * (time_ind * num_freq_channels + freq_ind)
+
+                real_XX_ind = re_XX_base + num_cross + freq_step
+                imag_XX_ind = im_XX_base + num_cross + freq_step
+                real_YY_ind = re_YY_base + num_cross + freq_step
+                imag_YY_ind = im_YY_base + num_cross + freq_step
+                real_XY_ind = re_XY_base + num_cross + freq_step
+                imag_XY_ind = im_XY_base + num_cross + freq_step
+                real_YX_ind = re_YX_base + num_cross + freq_step
+                imag_YX_ind = im_YX_base + num_cross + freq_step
+
+                auto_XX_re = data[real_XX_ind:real_XX_ind+num_ants]
+                auto_XX_im = data[imag_XX_ind:imag_XX_ind+num_ants]
+                auto_YY_re = data[real_YY_ind:real_YY_ind+num_ants]
+                auto_YY_im = data[imag_YY_ind:imag_YY_ind+num_ants]
+                auto_XY_re = data[real_XY_ind:real_XY_ind+num_ants]
+                auto_XY_im = data[imag_XY_ind:imag_XY_ind+num_ants]
+                auto_YX_re = data[real_YX_ind:real_YX_ind+num_ants]
+                auto_YX_im = data[imag_YX_ind:imag_YX_ind+num_ants]
+
+                this_auto_map = auto_map + time_base
+
+                v_container[this_auto_map,0,0,freq_ind,0,0] = auto_XX_re
+                v_container[this_auto_map,0,0,freq_ind,0,1] = auto_XX_im
+                v_container[this_auto_map,0,0,freq_ind,1,0] = auto_YY_re
+                v_container[this_auto_map,0,0,freq_ind,1,1] = auto_YY_im
+                v_container[this_auto_map,0,0,freq_ind,2,0] = auto_XY_re
+                v_container[this_auto_map,0,0,freq_ind,2,1] = auto_XY_im
+                v_container[this_auto_map,0,0,freq_ind,3,0] = auto_YX_re
+                v_container[this_auto_map,0,0,freq_ind,3,1] = auto_YX_im
+
+            ##Otherwise, everything is a cross-correlation so just bung em in
+            else:
+                v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,0,0] = cross_XX_re
+                v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,0,1] = cross_XX_im
+                v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,1,0] = cross_YY_re
+                v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,1,1] = cross_YY_im
+                v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,2,0] = cross_XY_re
+                v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,2,1] = cross_XY_im
+                v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,3,0] = cross_YX_re
+                v_container[time_ind*num_baselines:(time_ind + 1)*num_baselines,0,0,freq_ind,3,1] = cross_YX_im
+
+    ##Set the weights for everything to one
+    v_container[:,0,0,:,:,2] = 1.0
 
     return uus, vvs, wws, v_container
 
@@ -691,6 +800,9 @@ def write_json(json_name=None, jd_date=None, lst=None, args=None):
         elif args.primary_beam == 'EDA2':
             outfile.write('  "use_EDA2_beam": "True",\n')
 
+        if args.do_autos:
+            outfile.write('  "do_autos": "True",\n')
+
         if len(args.band_nums) == 1:
             band_str = '[%d]' %args.band_nums[0]
         else:
@@ -699,16 +811,18 @@ def write_json(json_name=None, jd_date=None, lst=None, args=None):
             for band in args.band_nums[1:-1]:
                 band_str += ',%d' %band
             band_str += ',%d]' %args.band_nums[-1]
-
         outfile.write('  "band_nums": %s\n' %band_str)
         outfile.write('}\n')
 
-
-def make_baseline_date_arrays(num_antennas, date, num_time_steps, time_res):
+def make_baseline_date_arrays(num_antennas, date, num_time_steps, time_res,
+                              do_autos=False):
     """Makes the BASELINE and DATE arrays needed in the uvfits file
     The BASELINE array encode which two antennas formed the baseline
     The DATE array contains the fractional jd date, that is added to the
-    header value PZERO5, to specify the time each visibility was recorded at
+    header value PZERO5, to specify the time each visibility was recorded at.
+
+    In WODEN, by default, only cross-correlations are simulated. To include
+    auto-correlations in the BASELINE array, use `do_autos=True`.
 
     Parameters
     -----------
@@ -720,6 +834,8 @@ def make_baseline_date_arrays(num_antennas, date, num_time_steps, time_res):
             Number of time steps in the data
         time_res : float
             Integration time of the data (seconds)
+        time_res : Boolean
+            Whether to include auto-correlations (same antenna to antenna)
 
     Returns
     -------
@@ -730,14 +846,26 @@ def make_baseline_date_arrays(num_antennas, date, num_time_steps, time_res):
     """
 
     num_baselines = int(((num_antennas - 1)*num_antennas) / 2)
+
+    if do_autos:
+        num_baselines += num_antennas
+
     template_baselines = np.empty(num_baselines)
+    print(num_baselines)
 
     ##Loop over all antenna combinations and encode the baseline pair
     baseline_ind = 0
-    for b1 in np.arange(num_antennas - 1):
-        for b2 in np.arange(b1+1,num_antennas):
-            template_baselines[baseline_ind] = RTS_encode_baseline(b1+1, b2+1)
-            baseline_ind += 1
+
+    if do_autos:
+        for b1 in np.arange(num_antennas):
+            for b2 in np.arange(b1,num_antennas):
+                template_baselines[baseline_ind] = RTS_encode_baseline(b1+1, b2+1)
+                baseline_ind += 1
+    else:
+        for b1 in np.arange(num_antennas - 1):
+            for b2 in np.arange(b1+1,num_antennas):
+                template_baselines[baseline_ind] = RTS_encode_baseline(b1+1, b2+1)
+                baseline_ind += 1
 
     ##Calculate the Julian date, which get's split up into the header (int_jd)
     ##and DATE array (float_jd)
@@ -955,6 +1083,7 @@ def get_parser():
             "\t - none (Don't use a primary beam at all)\n"
             "Defaults to --primary_beam=none")
 
+
     tel_group.add_argument('--gauss_beam_FWHM', default=False,
         help='The FWHM of the Gaussian beam in deg - WODEN defaults to using'
              ' 20 deg if this is not set')
@@ -1001,6 +1130,9 @@ def get_parser():
              'source will be flagged. If --sky_crop_components is included '
              'WODEN will include any COMPONENT above the horizon, regardless '
              'of which SOURCE it belongs to.')
+    input_group.add_argument('--do_autos', default=False, action='store_true',
+        help='By default, WODEN only calculates cross-correlations. Add this'
+             ' flag to include auto-correlations.')
 
     sim_group = parser.add_argument_group('SIMULATOR OPTIONS')
     sim_group.add_argument('--precision', default='double',
@@ -1474,7 +1606,9 @@ if __name__ == "__main__":
             uus,vvs,wws,v_container = load_data(filename=filename,num_baselines=num_baselines,
                                                 num_freq_channels=args.num_freq_channels,
                                                 num_time_steps=args.num_time_steps,
-                                                precision=args.precision)
+                                                precision=args.precision,
+                                                do_autos=args.do_autos,
+                                                num_ants=args.num_antennas)
 
 
             if args.remove_phase_tracking:
@@ -1493,7 +1627,8 @@ if __name__ == "__main__":
                           array_height=args.array_height)
 
             baselines_array, date_array = make_baseline_date_arrays(args.num_antennas,
-                                          args.date, args.num_time_steps, args.time_res)
+                                          args.date, args.num_time_steps, args.time_res,
+                                          do_autos=args.do_autos)
 
             create_uvfits(v_container=v_container, freq_cent=central_freq_chan_value,
                           ra_point=args.ra0, dec_point=args.dec0,
