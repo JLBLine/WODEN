@@ -13,3 +13,9 @@ sky model compatible with ``WODEN``.
    :filename: ../../src/convert_WSClean_list_to_WODEN.py
    :func: get_parser
    :prog: convert_WSClean_list_to_WODEN.py
+
+.. *Function documentation*
+.. ------------------------
+..
+.. .. automodule:: convert_WSClean_list_to_WODEN
+..    :members:
