@@ -15,7 +15,8 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 Check that the values in the json that aren't beam specific are read in
 correctly
 */
-void check_observation_params(woden_settings_t *woden_settings) {
+void check_observation_params(woden_settings_t *woden_settings,
+                              int expec_precess, int expec_autos) {
 
   TEST_ASSERT_EQUAL_DOUBLE(-26.70331944*DD2R,woden_settings->latitude);
   TEST_ASSERT_EQUAL_DOUBLE(0.44312771*DD2R, woden_settings->lst_base);
@@ -40,6 +41,22 @@ void check_observation_params(woden_settings_t *woden_settings) {
 
   TEST_ASSERT_EQUAL_INT(CROP_COMPONENTS, woden_settings->sky_crop_type);
 
+  if (expec_precess) {
+    //Check precession beam specific value - should be switched off now
+    TEST_ASSERT_EQUAL_INT(1, woden_settings->do_precession);
+  } else {
+    //Check precession beam specific value - should be switched off now
+    TEST_ASSERT_EQUAL_INT(0, woden_settings->do_precession);
+  }
+
+  if (expec_autos) {
+    //Check precession beam specific value - should be switched off now
+    TEST_ASSERT_EQUAL_INT(1, woden_settings->do_autos);
+  } else {
+    //Check precession beam specific value - should be switched off now
+    TEST_ASSERT_EQUAL_INT(0, woden_settings->do_autos);
+  }
+
 }
 
 /*
@@ -56,9 +73,9 @@ void test_read_json_settings_MWAFEE(void) {
   TEST_ASSERT_EQUAL_INT(0, status);
 
   //Check generic observation params have been read in correctly
-  check_observation_params(woden_settings);
-  //Check precession is switched on (default)
-  TEST_ASSERT_EQUAL_INT(1, woden_settings->do_precession);
+  int expec_precess = 1;
+  int expec_autos = 0;
+  check_observation_params(woden_settings, expec_precess, expec_autos);
 
   //Check MWA FEE beam specific values
   user_precision_t expect_delays[] = {0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3};
@@ -79,13 +96,13 @@ void test_read_json_settings_GaussBeam(char *json_path, int default_gauss) {
   //Read in the settings from the controlling json file
   woden_settings_t *woden_settings = malloc( sizeof(woden_settings_t) );
   status = read_json_settings(json_path, woden_settings);
-  //Check precession is switched on (default)
-  TEST_ASSERT_EQUAL_INT(1, woden_settings->do_precession);
 
   TEST_ASSERT_EQUAL_INT(0, status);
 
   //Check generic observation params have been read in correctly
-  check_observation_params(woden_settings);
+  int expec_precess = 1;
+  int expec_autos = 0;
+  check_observation_params(woden_settings, expec_precess, expec_autos);
 
   TEST_ASSERT_EQUAL_DOUBLE(56.13129905*DD2R, woden_settings->gauss_ra_point);
   TEST_ASSERT_EQUAL_DOUBLE(-39.47577940*DD2R, woden_settings->gauss_dec_point);
@@ -136,9 +153,9 @@ void test_read_json_settings_EDA2(void) {
   TEST_ASSERT_EQUAL_INT(0, status);
 
   //Check generic observation params have been read in correctly
-  check_observation_params(woden_settings);
-  //Check precession is switched on (default)
-  TEST_ASSERT_EQUAL_INT(1, woden_settings->do_precession);
+  int expec_precess = 1;
+  int expec_autos = 0;
+  check_observation_params(woden_settings, expec_precess, expec_autos);
 
   //Check EDA2 beam specific value
   TEST_ASSERT_EQUAL_INT(ANALY_DIPOLE, woden_settings->beamtype);
@@ -159,9 +176,9 @@ void test_read_json_settings_NoBeam(void) {
   TEST_ASSERT_EQUAL_INT(0, status);
 
   //Check generic observation params have been read in correctly
-  check_observation_params(woden_settings);
-  //Check precession is switched on (default)
-  TEST_ASSERT_EQUAL_INT(1, woden_settings->do_precession);
+  int expec_precess = 1;
+  int expec_autos = 0;
+  check_observation_params(woden_settings, expec_precess, expec_autos);
 
   //Check EDA2 beam specific value
   TEST_ASSERT_EQUAL_INT(NO_BEAM, woden_settings->beamtype);
@@ -216,7 +233,7 @@ void test_read_json_settings_MWAFEENoPath(void) {
 
 /*
 Read in a json settings file and check values are good
-Check that using no beam is selected
+Check that using no precession is selected
 */
 void test_read_json_settings_NoPrecession(void) {
 
@@ -228,10 +245,9 @@ void test_read_json_settings_NoPrecession(void) {
   TEST_ASSERT_EQUAL_INT(0, status);
 
   //Check generic observation params have been read in correctly
-  check_observation_params(woden_settings);
-
-  //Check precession beam specific value - should be switched off now
-  TEST_ASSERT_EQUAL_INT(0, woden_settings->do_precession);
+  int expec_precess = 0;
+  int expec_autos = 0;
+  check_observation_params(woden_settings, expec_precess, expec_autos);
 
 }
 
@@ -249,9 +265,9 @@ void test_read_json_settings_MWAanaly(void) {
   TEST_ASSERT_EQUAL_INT(0, status);
 
   //Check generic observation params have been read in correctly
-  check_observation_params(woden_settings);
-  //Check precession is switched on (default)
-  TEST_ASSERT_EQUAL_INT(1, woden_settings->do_precession);
+  int expec_precess = 1;
+  int expec_autos = 0;
+  check_observation_params(woden_settings, expec_precess, expec_autos);
 
   //Check MWA FEE beam specific values
   user_precision_t expect_delays[] = {0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3};
@@ -273,9 +289,9 @@ void test_read_json_settings_MWAFEE_interp(void) {
   TEST_ASSERT_EQUAL_INT(0, status);
 
   //Check generic observation params have been read in correctly
-  check_observation_params(woden_settings);
-  //Check precession is switched on (default)
-  TEST_ASSERT_EQUAL_INT(1, woden_settings->do_precession);
+  int expec_precess = 1;
+  int expec_autos = 0;
+  check_observation_params(woden_settings, expec_precess, expec_autos);
 
   //Check MWA FEE beam specific values
   user_precision_t expect_delays[] = {0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3};
@@ -286,6 +302,26 @@ void test_read_json_settings_MWAFEE_interp(void) {
                             woden_settings->hdf5_beam_path);
 }
 
+
+/*
+Read in a json settings file and check values are good
+Check that using no precession is selected
+*/
+void test_read_json_settings_DoAutos(void) {
+
+  int status=0;
+  //Read in the settings from the controlling json file
+  woden_settings_t *woden_settings = malloc( sizeof(woden_settings_t) );
+  status = read_json_settings("run_woden_doautos.json", woden_settings);
+
+  TEST_ASSERT_EQUAL_INT(0, status);
+
+  //Check generic observation params have been read in correctly
+  int expec_precess = 1;
+  int expec_autos = 1;
+  check_observation_params(woden_settings, expec_precess, expec_autos);
+
+}
 
 
 //Run test using unity
@@ -304,6 +340,7 @@ int main(void)
     RUN_TEST(test_read_json_settings_NoPrecession);
     RUN_TEST(test_read_json_settings_MWAanaly);
     RUN_TEST(test_read_json_settings_MWAFEE_interp);
+    RUN_TEST(test_read_json_settings_DoAutos);
 
     return UNITY_END();
 }

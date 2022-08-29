@@ -43,6 +43,8 @@ eventualities.
    :widths: 25 50
    :header-rows: 1
 
+   * - Test file
+     - Test case
    * - run_woden_nobeam.json
      - The NO_BEAM primary beam is selected
    * - run_woden_EDA2.json
@@ -65,6 +67,8 @@ eventualities.
      - Contains multiple primary beam selections so should throw an error
    * - run_woden_noprecession.json
      - Checks that precession is switched off if requested
+   * - run_woden_doautos.json
+     - Checks that auto-correlations are set to be calculated if requested
 
 ``test_setup_lsts_and_phase_centre.c``
 *****************************************

@@ -321,6 +321,9 @@ GAUSS_BEAM or MWA_ANALY, both `chunked_source->components->beam_has` and
 `chunked_source->components->beam_decs`
 need to be set.
 
+If `woden_settings->do_autos` is True, will use `source_components::kern_calc_autos`
+to calculate all the auto-correlations, and stores them in `d_visibility_set`.
+
 @param[in] woden_settings Populated `woden_settings_t` struct
 @param[in] beam_settings Populated `beam_settings_t` struct
 @param[in] d_freqs Frequencies to calculate beam responses to (stored on the device)
@@ -333,12 +336,16 @@ as filled by `source_components::copy_chunked_source_to_GPU`
 which to malloc and store results on the device in
 @param[in] comptype Either POINT, GAUSSIAN, SHAPELET - selects which set of
 COMPONENTS stored in `chunked_source` and `chunked_source` to work with
+@param[in] d_visibility_set If `woden_settings->do_autos` is True, use this to store auto
+correlations in. Needs to have device memory allocated. Otherwise, `d_visibility_set`
+is unused, so can just be an empty pointer
 */
 extern "C" void source_component_common(woden_settings_t *woden_settings,
            beam_settings_t *beam_settings, double *d_freqs,
            source_t *chunked_source, source_t *d_chunked_source,
            d_beam_gains_t *d_component_beam_gains,
-           e_component_type comptype);
+           e_component_type comptype,
+           visibility_set_t *d_visibility_set);
 
 /**
 @brief Kernel to calculate the visibility response to a number `num_components`
@@ -396,7 +403,7 @@ visibility into
 @param[in] num_components Either number of POINT of GAUSSIANS components
 @param[in] num_baselines Number of baselines for one time, one frequency step
 @param[in] num_freqs Number of frequencies in simulation
-@param[in] num_visis Overall number of visibilities (baselines*freqs*times) in
+@param[in] num_cross Overall number of cross-correlations  (baselines*freqs*times) in
 simulation
 @param[in] num_times Number of time steps in simulation
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
@@ -409,7 +416,7 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
            user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
            user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
-           int num_components, int num_baselines, int num_freqs, int num_visis,
+           int num_components, int num_baselines, int num_freqs, int num_cross,
            int num_times, e_beamtype beamtype, e_component_type comptype);
 
 /**
@@ -497,7 +504,7 @@ time step in the simulation
 @param[in] num_shapes Number of SHAPELETs components
 @param[in] num_baselines Number of baselines for one time, one frequency step
 @param[in] num_freqs Number of frequencies in simulation
-@param[in] num_visis Overall number of visibilities (baselines*freqs*times) in
+@param[in] num_cross Overall number of cross-correlations (baselines*freqs*times) in
 simulation
 @param[in] num_coeffs Number of shapelet basis functions and coefficents
 @param[in] num_times Number of time steps in simulation
@@ -513,7 +520,7 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
       user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
       user_precision_t *d_sbf,
-      int num_shapes, int num_baselines, int num_freqs, int num_visis,
+      int num_shapes, int num_baselines, int num_freqs, int num_cross,
       const int num_coeffs, int num_times, e_beamtype beamtype);
 
 
@@ -577,3 +584,64 @@ source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
 @param[in,out] *d_components A populated `components_t` struct
 */
 void free_extrapolated_flux_arrays(components_t *d_components);
+
+
+
+
+
+/**
+@brief Calculate the auto-correlations for all antennas given the fluxes
+already calculated in `d_components` and beam gains in `d_component_beam_gains`.
+Stores the outputs at the end of `d_sum_visi*`, after the cross-correlations.
+
+@details Currently, the primary beam for all antennas (or what the MWA calls
+tiles) are identical. So `d_component_beam_gains` should have gains for
+one primary beam. This function then just does the dot product of the
+component fluxes and beam gains to produce linear stokes polarisation
+auto-correlations.
+
+When called with `dim3 grid, threads`, kernel should be called with `grid.x`
+and grid.y defined, where:
+ - grid.x * threads.x >= `num_freqs*num_times`
+ - grid.y * threads.y >= `num_ants`
+
+@param[in] d_components d_components Pointer to a populated `components_t` struct as filled by `source_components::source_component_common`
+@param[in] d_component_beam_gains Pointer to a populated `d_beam_gains_t` struct as filled by `source_components::source_component_common`
+@param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
+@param[in] num_components Number of components in `d_components`
+@param[in] num_baselines Number of baselines for one time, one frequency step
+@param[in] num_freqs Number of frequncies in the simulation
+@param[in] num_times Number of times in the simulation
+@param[in] num_ants Number of antennas in the array
+@param[in,out] *d_sum_visi_XX_real Pointer to array to sum real XX visibility
+into
+@param[in,out] *d_sum_visi_XX_imag Pointer to array to sum imaginary XX
+visibility into
+@param[in,out] *d_sum_visi_XY_real Pointer to array to sum real XY visibility
+into
+@param[in,out] *d_sum_visi_XY_imag Pointer to array to sum imaginary XY
+visibility into
+@param[in,out] *d_sum_visi_YX_real Pointer to array to sum real YX visibility
+into
+@param[in,out] *d_sum_visi_YX_imag Pointer to array to sum imaginary YX
+visibility into
+@param[in,out] *d_sum_visi_YY_real Pointer to array to sum real YY visibility
+into
+@param[in,out] *d_sum_visi_YY_imag Pointer to array to sum imaginary YY
+visibility into
+time step in the simulation
+
+*/
+__global__ void kern_calc_autos(components_t d_components,
+                                d_beam_gains_t d_component_beam_gains,
+                                int beamtype,
+                                int num_components, int num_baselines,
+                                int num_freqs, int num_times, int num_ants,
+                                user_precision_t *d_sum_visi_XX_real,
+                                user_precision_t *d_sum_visi_XX_imag,
+                                user_precision_t *d_sum_visi_XY_real,
+                                user_precision_t *d_sum_visi_XY_imag,
+                                user_precision_t *d_sum_visi_YX_real,
+                                user_precision_t *d_sum_visi_YX_imag,
+                                user_precision_t *d_sum_visi_YY_real,
+                                user_precision_t *d_sum_visi_YY_imag);

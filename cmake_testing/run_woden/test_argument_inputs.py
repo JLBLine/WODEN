@@ -389,6 +389,25 @@ class Test(unittest.TestCase):
         self.assertEqual("[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]", args.MWA_FEE_delays)
 
 
+    def test_do_autos_work(self):
+        """Check that with a minimal set of arguments, the parser defaults to
+        no asking for autocorrelations, and check that this changes when
+        requested"""
+
+        ##Make minimum arguements, run parser, check do_autos == False
+        self.make_minimum_required_args_without_metafits()
+        args = self.run_parser_and_check_args()
+        self.assertEqual(False, args.do_autos)
+
+        ##Append the --do_autos flag, and check do_autos == True
+        self.inputs.append('--do_autos')
+        args = self.run_parser_and_check_args()
+        self.assertEqual(True, args.do_autos)
+
+
+
+
+
 ##Run the test
 if __name__ == '__main__':
     unittest.main()

@@ -140,8 +140,8 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
   int time_ind = 0;
   int freq_ind = 0;
 
-  time_ind = (int)floorf( (user_precision_t)iBaseline / ((user_precision_t)num_baselines * (user_precision_t)num_freqs));
-  freq_ind = (int)floorf( ((user_precision_t)iBaseline - ((user_precision_t)time_ind*(user_precision_t)num_baselines * (user_precision_t)num_freqs)) / (user_precision_t)num_baselines);
+  time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
+  freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
   beam_ind = num_freqs*time_ind*num_components + (num_components*freq_ind) + iComponent;
 
     //Set gains to one if no beam
@@ -270,7 +270,6 @@ __global__ void kern_extrap_power_laws(int num_extrap_freqs, double *d_extrap_fr
   // Start by computing which baseline we're going to do
   const int iFluxComp = threadIdx.x + (blockDim.x*blockIdx.x);
   const int iFreq = threadIdx.y + (blockDim.y*blockIdx.y);
-  // if(iBaseline < num_visis && iComponent < num_points) {
   if(iFluxComp < num_comps && iFreq < num_extrap_freqs) {
 
     user_precision_t flux_I;
@@ -521,7 +520,6 @@ __global__ void kern_extrap_list_fluxes(int num_extrap_freqs, double *d_extrap_f
   // Start by computing which baseline we're going to do
   const int iFluxComp = threadIdx.x + (blockDim.x*blockIdx.x);
   const int iFreq = threadIdx.y + (blockDim.y*blockIdx.y);
-  // if(iBaseline < num_visis && iComponent < num_points) {
   if(iFluxComp < num_comps && iFreq < num_extrap_freqs) {
 
     user_precision_t flux_I;
@@ -630,7 +628,8 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
            beam_settings_t *beam_settings, double *d_freqs,
            source_t *chunked_source, source_t *d_chunked_source,
            d_beam_gains_t *d_component_beam_gains,
-           e_component_type comptype){
+           e_component_type comptype,
+           visibility_set_t *d_visibility_set){
 
   int num_components = 0;
   components_t *components = NULL;
@@ -764,10 +763,6 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
       free(double_azs);
       free(double_zas);
     #endif
-
-
-
-
   }
 
   else if (beam_settings->beamtype == ANALY_DIPOLE) {
@@ -795,6 +790,39 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
          d_component_beam_gains->d_Dys, d_component_beam_gains->d_gys);
   }
 
+  //Now we've calculated the beams, we can calculate the auto-correlations,
+  //if so required
+
+  if (woden_settings->do_autos){
+
+    int num_freqs = woden_settings->num_freqs;
+    int num_times = woden_settings->num_time_steps;
+    int num_ants = woden_settings->num_ants;
+    int num_baselines = woden_settings->num_baselines;
+
+    threads.x = 64;
+    threads.y = 2;
+    threads.z = 1;
+    grid.x = (int)ceil( (float)(num_freqs*num_times) / (float)threads.x );
+    grid.y = (int)ceil( (float)(num_ants) / (float)threads.y );
+    grid.z = 1;
+
+    cudaErrorCheckKernel("kern_calc_autos",
+                  kern_calc_autos, grid, threads,
+                  *d_components, *d_component_beam_gains,
+                  beam_settings->beamtype,
+                  num_components, num_baselines,
+                  num_freqs, num_times, num_ants,
+                  d_visibility_set->sum_visi_XX_real,
+                  d_visibility_set->sum_visi_XX_imag,
+                  d_visibility_set->sum_visi_XY_real,
+                  d_visibility_set->sum_visi_XY_imag,
+                  d_visibility_set->sum_visi_YX_real,
+                  d_visibility_set->sum_visi_YX_imag,
+                  d_visibility_set->sum_visi_YY_real,
+                  d_visibility_set->sum_visi_YY_imag);
+  }
+
 } //END source_component_common
 
 
@@ -805,12 +833,12 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
            user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
            user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
-           int num_components, int num_baselines, int num_freqs, int num_visis,
+           int num_components, int num_baselines, int num_freqs, int num_cross,
            int num_times, e_beamtype beamtype, e_component_type comptype) {
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
-  if(iBaseline < num_visis) {
+  if(iBaseline < num_cross) {
 
     user_precision_t flux_I;
     user_precision_t flux_Q;
@@ -883,13 +911,13 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
       user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
       user_precision_t *d_sbf,
-      int num_shapes, int num_baselines, int num_freqs, int num_visis,
+      int num_shapes, int num_baselines, int num_freqs, int num_cross,
       const int num_coeffs, int num_times, e_beamtype beamtype) {
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
 
-  if (iBaseline < num_visis) {
+  if (iBaseline < num_cross) {
 
     user_precision_t shape_flux_I;
     user_precision_t shape_flux_Q;
@@ -1379,6 +1407,100 @@ extern "C" void free_beam_gains(d_beam_gains_t d_beam_gains, e_beamtype beamtype
 
 }
 
+//Calculate auto-correlations
+__global__ void kern_calc_autos(components_t d_components,
+                                d_beam_gains_t d_component_beam_gains,
+                                int beamtype,
+                                int num_components, int num_baselines,
+                                int num_freqs, int num_times, int num_ants,
+                                user_precision_t *d_sum_visi_XX_real,
+                                user_precision_t *d_sum_visi_XX_imag,
+                                user_precision_t *d_sum_visi_XY_real,
+                                user_precision_t *d_sum_visi_XY_imag,
+                                user_precision_t *d_sum_visi_YX_real,
+                                user_precision_t *d_sum_visi_YX_imag,
+                                user_precision_t *d_sum_visi_YY_real,
+                                user_precision_t *d_sum_visi_YY_imag) {
+
+  // Start by computing which baseline we're going to do
+  const int iTimeFreq = threadIdx.x + (blockDim.x*blockIdx.x);
+  const int iAnt = threadIdx.y + (blockDim.y*blockIdx.y);
+
+  //One day we might have different primary beams for each tile,
+  //then we'll have to use iAuto to reference different primary
+  //beams - at the mo we get grab the same primary beam for all antennas
+  // const int iAuto = threadIdx.z + (blockDim.z*blockIdx.z);
+  if(iAnt < num_ants && iTimeFreq < num_times*num_freqs) {
+
+    int time_ind = (int)floorf( (float)iTimeFreq / (float)num_freqs);
+    int freq_ind = iTimeFreq - time_ind*num_freqs;
+
+    //Just set up iBaseline to be the first cross-pol of the correct time
+    //and frequency step, and then we can use `get_beam_gains` to get the
+    //correct beam gain
+    int iBaseline = num_baselines*num_freqs*time_ind + num_baselines*freq_ind;
+
+
+    int num_visis = num_baselines*num_freqs*num_times;
+    int iAuto = num_visis + num_ants*num_freqs*time_ind + num_ants*freq_ind + iAnt;
+
+    cuUserComplex auto_XX, auto_XY, auto_YX, auto_YY;
+    cuUserComplex g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y;
+
+    // printf("INSIDE iTimeFreq iAnt time_ind, freq_ind, iAnt, iAuto %d %d %d %d %d %d\n",
+    //                iTimeFreq, iAnt, time_ind, freq_ind, iAnt, iAuto - num_visis );
+
+    for (int iComponent = 0; iComponent < num_components; iComponent++) {
+
+      get_beam_gains(iBaseline, iComponent, num_freqs,
+               num_baselines, num_components, num_times, beamtype,
+               d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
+               d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
+               &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
+
+               // printf("%.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
+               //         g1x.x, D1x.x, D1y.x, g1y.x, g2x.x, D2x.x, D2y.x, g2y.x );
+
+      cuUserComplex visi_component;
+      visi_component = make_cuUserComplex(1.0, 0.0);
+
+      int extrap_ind = num_freqs*iComponent + freq_ind;
+
+      user_precision_t flux_I = d_components.extrap_stokesI[extrap_ind];
+      user_precision_t flux_Q = d_components.extrap_stokesQ[extrap_ind];
+      user_precision_t flux_U = d_components.extrap_stokesU[extrap_ind];
+      user_precision_t flux_V = d_components.extrap_stokesV[extrap_ind];
+
+      // printf("INSIDE time_ind, freq_ind, iComponent, iAuto, flux_I %d %d %d %d %.1f\n",
+      //                time_ind, freq_ind, iComponent, iAuto - num_visis, flux_I );
+
+      apply_beam_gains(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
+                      flux_I, flux_Q, flux_U, flux_V,
+                      visi_component,
+                      &auto_XX, &auto_XY, &auto_YX, &auto_YY);
+
+      d_sum_visi_XX_real[iAuto] += auto_XX.x;
+      d_sum_visi_XX_imag[iAuto] += auto_XX.y;
+
+      d_sum_visi_XY_real[iAuto] += auto_XY.x;
+      d_sum_visi_XY_imag[iAuto] += auto_XY.y;
+
+      d_sum_visi_YX_real[iAuto] += auto_YX.x;
+      d_sum_visi_YX_imag[iAuto] += auto_YX.y;
+
+      d_sum_visi_YY_real[iAuto] += auto_YY.x;
+      d_sum_visi_YY_imag[iAuto] += auto_YY.y;
+
+    }
+  }
+}
+
+
+
+
+
+
+
 /*******************************************************************************
                  Functions below to be used in unit tests
 *******************************************************************************/
@@ -1516,8 +1638,6 @@ __global__ void kern_apply_beam_gains(int num_gains, cuUserComplex *d_g1xs,
           cuUserComplex *d_visi_YXs, cuUserComplex *d_visi_YYs) {
 
   const int iGain = threadIdx.x + (blockDim.x*blockIdx.x);
-  // const int iComponent = threadIdx.y + (blockDim.y*blockIdx.y);
-  // if(iBaseline < num_visis && iComponent < num_points) {
   if (iGain < num_gains) {
 
     cuUserComplex visi_XX;
@@ -1691,7 +1811,7 @@ extern "C" void test_kern_apply_beam_gains(int num_gains, user_precision_complex
 }
 
 __global__ void kern_get_beam_gains(int num_components, int num_baselines,
-           int num_freqs, int num_visis, int num_times, int beamtype,
+           int num_freqs, int num_cross, int num_times, int beamtype,
            cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
            cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
            cuUserComplex *d_recov_g1x, cuUserComplex *d_recov_D1x,
@@ -1701,9 +1821,7 @@ __global__ void kern_get_beam_gains(int num_components, int num_baselines,
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
-  // const int iComponent = threadIdx.y + (blockDim.y*blockIdx.y);
-  // if(iBaseline < num_visis && iComponent < num_points) {
-  if(iBaseline < num_visis) {
+  if(iBaseline < num_cross) {
 
     for (int iComponent = 0; iComponent < num_components; iComponent++) {
 
@@ -1722,7 +1840,7 @@ __global__ void kern_get_beam_gains(int num_components, int num_baselines,
                  d_primay_beam_J10, d_primay_beam_J11,
                  &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
 
-      int out_ind = num_visis*iComponent + iBaseline;
+      int out_ind = num_cross*iComponent + iBaseline;
 
       d_recov_g1x[out_ind] = g1x;
       d_recov_D1x[out_ind] = D1x;
@@ -1737,7 +1855,7 @@ __global__ void kern_get_beam_gains(int num_components, int num_baselines,
   }
 }
 
-extern "C" void test_kern_get_beam_gains(int num_freqs, int num_visis,
+extern "C" void test_kern_get_beam_gains(int num_freqs, int num_cross,
           int num_baselines, int num_components, int num_times, int beamtype,
           user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J01,
           user_precision_complex_t *primay_beam_J10, user_precision_complex_t *primay_beam_J11,
@@ -1760,14 +1878,14 @@ extern "C" void test_kern_get_beam_gains(int num_freqs, int num_visis,
   user_precision_complex_t *d_primay_beam_J10 = NULL;
   user_precision_complex_t *d_primay_beam_J11 = NULL;
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_recover_g1x, num_components*num_visis*sizeof(user_precision_complex_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_recover_D1x, num_components*num_visis*sizeof(user_precision_complex_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_recover_D1y, num_components*num_visis*sizeof(user_precision_complex_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_recover_g1y, num_components*num_visis*sizeof(user_precision_complex_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_recover_g2x, num_components*num_visis*sizeof(user_precision_complex_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_recover_D2x, num_components*num_visis*sizeof(user_precision_complex_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_recover_D2y, num_components*num_visis*sizeof(user_precision_complex_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_recover_g2y, num_components*num_visis*sizeof(user_precision_complex_t) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_recover_g1x, num_components*num_cross*sizeof(user_precision_complex_t) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_recover_D1x, num_components*num_cross*sizeof(user_precision_complex_t) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_recover_D1y, num_components*num_cross*sizeof(user_precision_complex_t) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_recover_g1y, num_components*num_cross*sizeof(user_precision_complex_t) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_recover_g2x, num_components*num_cross*sizeof(user_precision_complex_t) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_recover_D2x, num_components*num_cross*sizeof(user_precision_complex_t) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_recover_D2y, num_components*num_cross*sizeof(user_precision_complex_t) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_recover_g2y, num_components*num_cross*sizeof(user_precision_complex_t) ));
 
   cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J00, num_freqs*num_times*num_components*sizeof(user_precision_complex_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01, num_freqs*num_times*num_components*sizeof(user_precision_complex_t) ));
@@ -1782,12 +1900,12 @@ extern "C" void test_kern_get_beam_gains(int num_freqs, int num_visis,
   dim3 grid, threads;
 
   threads.x = 128;
-  grid.x = (int)ceil( (user_precision_t)num_visis / (user_precision_t)threads.x );
+  grid.x = (int)ceil( (user_precision_t)num_cross / (user_precision_t)threads.x );
 
   cudaErrorCheckKernel("kern_get_beam_gains",
                       kern_get_beam_gains, grid, threads,
                       num_components, num_baselines,
-                      num_freqs, num_visis, num_times, beamtype,
+                      num_freqs, num_cross, num_times, beamtype,
                       (cuUserComplex *)d_primay_beam_J00,
                       (cuUserComplex *)d_primay_beam_J01,
                       (cuUserComplex *)d_primay_beam_J10,
@@ -1797,14 +1915,14 @@ extern "C" void test_kern_get_beam_gains(int num_freqs, int num_visis,
                       (cuUserComplex *)d_recover_g2x, (cuUserComplex *)d_recover_D2x,
                       (cuUserComplex *)d_recover_D2y, (cuUserComplex *)d_recover_g2y );
 
-  cudaErrorCheckCall( cudaMemcpy(recover_g1x, d_recover_g1x, num_components*num_visis*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost ));
-  cudaErrorCheckCall( cudaMemcpy(recover_D1x, d_recover_D1x, num_components*num_visis*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost ));
-  cudaErrorCheckCall( cudaMemcpy(recover_D1y, d_recover_D1y, num_components*num_visis*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost ));
-  cudaErrorCheckCall( cudaMemcpy(recover_g1y, d_recover_g1y, num_components*num_visis*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost ));
-  cudaErrorCheckCall( cudaMemcpy(recover_g2x, d_recover_g2x, num_components*num_visis*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost ));
-  cudaErrorCheckCall( cudaMemcpy(recover_D2x, d_recover_D2x, num_components*num_visis*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost ));
-  cudaErrorCheckCall( cudaMemcpy(recover_D2y, d_recover_D2y, num_components*num_visis*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost ));
-  cudaErrorCheckCall( cudaMemcpy(recover_g2y, d_recover_g2y, num_components*num_visis*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(recover_g1x, d_recover_g1x, num_components*num_cross*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(recover_D1x, d_recover_D1x, num_components*num_cross*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(recover_D1y, d_recover_D1y, num_components*num_cross*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(recover_g1y, d_recover_g1y, num_components*num_cross*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(recover_g2x, d_recover_g2x, num_components*num_cross*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(recover_D2x, d_recover_D2x, num_components*num_cross*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(recover_D2y, d_recover_D2y, num_components*num_cross*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(recover_g2y, d_recover_g2y, num_components*num_cross*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost ));
 
   cudaErrorCheckCall( cudaFree( d_recover_g1x ) );
   cudaErrorCheckCall( cudaFree( d_recover_D1x ) );
@@ -1863,7 +1981,7 @@ __global__ void kern_update_sum_visis(int num_freqs,
   }
 }
 
-extern "C" void test_kern_update_sum_visis(int num_freqs, int num_visis,
+extern "C" void test_kern_update_sum_visis(int num_freqs, int num_cross,
           int num_baselines, int num_components, int num_times, int beamtype,
           user_precision_complex_t *primay_beam_J00,
           user_precision_complex_t *primay_beam_J01,
@@ -1892,7 +2010,7 @@ extern "C" void test_kern_update_sum_visis(int num_freqs, int num_visis,
   cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J11,
                     num_components*num_times*num_freqs*sizeof(user_precision_complex_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_visi_components,
-                    num_visis*sizeof(user_precision_complex_t) ));
+                    num_cross*sizeof(user_precision_complex_t) ));
 
   cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J00, primay_beam_J00,
             num_components*num_times*num_freqs*sizeof(user_precision_complex_t),
@@ -1907,7 +2025,7 @@ extern "C" void test_kern_update_sum_visis(int num_freqs, int num_visis,
             num_components*num_times*num_freqs*sizeof(user_precision_complex_t),
             cudaMemcpyHostToDevice ));
   cudaErrorCheckCall( cudaMemcpy(d_visi_components, visi_components,
-                                     num_visis*sizeof(user_precision_complex_t),
+                                     num_cross*sizeof(user_precision_complex_t),
                                      cudaMemcpyHostToDevice ));
 
   user_precision_t *d_flux_I = NULL;
@@ -1939,26 +2057,26 @@ extern "C" void test_kern_update_sum_visis(int num_freqs, int num_visis,
   user_precision_t *d_sum_visi_YY_imag = NULL;
 
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XX_real,
-                                          num_visis*sizeof(user_precision_t) ));
+                                          num_cross*sizeof(user_precision_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XY_real,
-                                          num_visis*sizeof(user_precision_t) ));
+                                          num_cross*sizeof(user_precision_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YX_real,
-                                          num_visis*sizeof(user_precision_t) ));
+                                          num_cross*sizeof(user_precision_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YY_real,
-                                          num_visis*sizeof(user_precision_t) ));
+                                          num_cross*sizeof(user_precision_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XX_imag,
-                                          num_visis*sizeof(user_precision_t) ));
+                                          num_cross*sizeof(user_precision_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XY_imag,
-                                          num_visis*sizeof(user_precision_t) ));
+                                          num_cross*sizeof(user_precision_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YX_imag,
-                                          num_visis*sizeof(user_precision_t) ));
+                                          num_cross*sizeof(user_precision_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YY_imag,
-                                          num_visis*sizeof(user_precision_t) ));
+                                          num_cross*sizeof(user_precision_t) ));
 
   dim3 grid, threads;
 
   threads.x = 128;
-  grid.x = (int)ceil( (user_precision_t)num_visis / (user_precision_t)threads.x );
+  grid.x = (int)ceil( (user_precision_t)num_cross / (user_precision_t)threads.x );
 
   cudaErrorCheckKernel("kern_update_sum_visis",
                       kern_update_sum_visis, grid, threads,
@@ -1973,21 +2091,21 @@ extern "C" void test_kern_update_sum_visis(int num_freqs, int num_visis,
                       d_sum_visi_YY_real, d_sum_visi_YY_imag );
 
   cudaErrorCheckCall( cudaMemcpy(sum_visi_XX_real, d_sum_visi_XX_real,
-                  num_visis*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
+                  num_cross*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
   cudaErrorCheckCall( cudaMemcpy(sum_visi_XY_real, d_sum_visi_XY_real,
-                  num_visis*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
+                  num_cross*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
   cudaErrorCheckCall( cudaMemcpy(sum_visi_YX_real, d_sum_visi_YX_real,
-                  num_visis*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
+                  num_cross*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
   cudaErrorCheckCall( cudaMemcpy(sum_visi_YY_real, d_sum_visi_YY_real,
-                  num_visis*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
+                  num_cross*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
   cudaErrorCheckCall( cudaMemcpy(sum_visi_XX_imag, d_sum_visi_XX_imag,
-                  num_visis*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
+                  num_cross*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
   cudaErrorCheckCall( cudaMemcpy(sum_visi_XY_imag, d_sum_visi_XY_imag,
-                  num_visis*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
+                  num_cross*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
   cudaErrorCheckCall( cudaMemcpy(sum_visi_YX_imag, d_sum_visi_YX_imag,
-                  num_visis*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
+                  num_cross*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
   cudaErrorCheckCall( cudaMemcpy(sum_visi_YY_imag, d_sum_visi_YY_imag,
-                  num_visis*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
+                  num_cross*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
 
   cudaErrorCheckCall( cudaFree( d_primay_beam_J00 ) );
   cudaErrorCheckCall( cudaFree( d_primay_beam_J01 ) );
@@ -2090,9 +2208,12 @@ extern "C" void test_source_component_common(int num_of_each_flux_type,
              woden_settings->num_freqs*sizeof(double), cudaMemcpyHostToDevice) );
 
   d_beam_gains_t d_beam_gains;
+  visibility_set_t *d_visibility_set = NULL;
+  woden_settings->do_autos = 0;
 
   source_component_common(woden_settings, beam_settings, d_freqs,
-       chunked_source, d_chunked_source, &d_beam_gains, comptype);
+       chunked_source, d_chunked_source, &d_beam_gains, comptype,
+       d_visibility_set);
 
   int num_beam_values = NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*woden_settings->num_time_steps;
 
@@ -2184,7 +2305,7 @@ void malloc_lmn_arrays(source_t *d_chunked_source, components_t *components,
 
 extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
           int num_baselines, int num_shape_coeffs,
-          int num_freqs, int num_visis, int num_times,
+          int num_freqs, int num_cross, int num_times,
           e_beamtype beamtype, e_component_type comptype,
           components_t components, double *extrap_freqs,
           user_precision_t *us, user_precision_t *vs, user_precision_t *ws,
@@ -2204,19 +2325,19 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
   user_precision_t *d_ws = NULL;
   user_precision_t *d_allsteps_wavelengths = NULL;
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_us, num_visis*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_vs, num_visis*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_ws, num_visis*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_allsteps_wavelengths, num_visis*sizeof(user_precision_t) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_us, num_cross*sizeof(user_precision_t) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_vs, num_cross*sizeof(user_precision_t) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_ws, num_cross*sizeof(user_precision_t) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_allsteps_wavelengths, num_cross*sizeof(user_precision_t) ) );
 
   cudaErrorCheckCall( cudaMemcpy(d_us, us,
-                             num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
+                             num_cross*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
   cudaErrorCheckCall( cudaMemcpy(d_vs, vs,
-                             num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
+                             num_cross*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
   cudaErrorCheckCall( cudaMemcpy(d_ws, ws,
-                             num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
+                             num_cross*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
   cudaErrorCheckCall( cudaMemcpy(d_allsteps_wavelengths, allsteps_wavelengths,
-                             num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
+                             num_cross*sizeof(user_precision_t), cudaMemcpyHostToDevice ));
 
   //Here are many things that would have been done by source_component_common
   source_t *chunked_source = (source_t *)malloc(sizeof(source_t));
@@ -2343,45 +2464,45 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
   user_precision_t *d_sum_visi_YY_imag = NULL;
 
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XX_real,
-                                          num_visis*sizeof(user_precision_t) ));
+                                          num_cross*sizeof(user_precision_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XY_real,
-                                          num_visis*sizeof(user_precision_t) ));
+                                          num_cross*sizeof(user_precision_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YX_real,
-                                          num_visis*sizeof(user_precision_t) ));
+                                          num_cross*sizeof(user_precision_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YY_real,
-                                          num_visis*sizeof(user_precision_t) ));
+                                          num_cross*sizeof(user_precision_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XX_imag,
-                                          num_visis*sizeof(user_precision_t) ));
+                                          num_cross*sizeof(user_precision_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XY_imag,
-                                          num_visis*sizeof(user_precision_t) ));
+                                          num_cross*sizeof(user_precision_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YX_imag,
-                                          num_visis*sizeof(user_precision_t) ));
+                                          num_cross*sizeof(user_precision_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YY_imag,
-                                          num_visis*sizeof(user_precision_t) ));
+                                          num_cross*sizeof(user_precision_t) ));
 
   //Make sure the visis start at zero by copying across host versions, which
   //should be set to zero already
   cudaErrorCheckCall( cudaMemcpy( d_sum_visi_XX_real, sum_visi_XX_real,
-    num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+    num_cross*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
   cudaErrorCheckCall( cudaMemcpy( d_sum_visi_XY_real, sum_visi_XY_real,
-    num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+    num_cross*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
   cudaErrorCheckCall( cudaMemcpy( d_sum_visi_YX_real, sum_visi_YX_real,
-    num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+    num_cross*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
   cudaErrorCheckCall( cudaMemcpy( d_sum_visi_YY_real, sum_visi_YY_real,
-    num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+    num_cross*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
   cudaErrorCheckCall( cudaMemcpy( d_sum_visi_XX_imag, sum_visi_XX_imag,
-    num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+    num_cross*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
   cudaErrorCheckCall( cudaMemcpy( d_sum_visi_XY_imag, sum_visi_XY_imag,
-    num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+    num_cross*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
   cudaErrorCheckCall( cudaMemcpy( d_sum_visi_YX_imag, sum_visi_YX_imag,
-    num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+    num_cross*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
   cudaErrorCheckCall( cudaMemcpy( d_sum_visi_YY_imag, sum_visi_YY_imag,
-    num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+    num_cross*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
 
   dim3 grid, threads;
 
   threads.x = 128;
-  grid.x = (int)ceil( (float)num_visis / (float)threads.x );
+  grid.x = (int)ceil( (float)num_cross / (float)threads.x );
 
   //Shapelets need many many extra things
 
@@ -2439,7 +2560,7 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
                   d_sum_visi_XY_real, d_sum_visi_XY_imag,
                   d_sum_visi_YX_real, d_sum_visi_YX_imag,
                   d_sum_visi_YY_real, d_sum_visi_YY_imag,
-                  num_components, num_baselines, num_freqs, num_visis,
+                  num_components, num_baselines, num_freqs, num_cross,
                   num_times, beamtype, comptype);
   }
   else if (comptype == SHAPELET) {
@@ -2454,26 +2575,26 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
                   d_sum_visi_YX_real, d_sum_visi_YX_imag,
                   d_sum_visi_YY_real, d_sum_visi_YY_imag,
                   d_sbf,  num_components,
-                  num_baselines, num_freqs, num_visis,
+                  num_baselines, num_freqs, num_cross,
                   num_shape_coeffs, num_times, beamtype);
   }
 
   cudaErrorCheckCall( cudaMemcpy(sum_visi_XX_real, d_sum_visi_XX_real,
-                             num_visis*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
+                             num_cross*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
   cudaErrorCheckCall( cudaMemcpy(sum_visi_XY_real, d_sum_visi_XY_real,
-                             num_visis*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
+                             num_cross*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
   cudaErrorCheckCall( cudaMemcpy(sum_visi_YX_real, d_sum_visi_YX_real,
-                             num_visis*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
+                             num_cross*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
   cudaErrorCheckCall( cudaMemcpy(sum_visi_YY_real, d_sum_visi_YY_real,
-                             num_visis*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
+                             num_cross*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
   cudaErrorCheckCall( cudaMemcpy(sum_visi_XX_imag, d_sum_visi_XX_imag,
-                             num_visis*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
+                             num_cross*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
   cudaErrorCheckCall( cudaMemcpy(sum_visi_XY_imag, d_sum_visi_XY_imag,
-                             num_visis*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
+                             num_cross*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
   cudaErrorCheckCall( cudaMemcpy(sum_visi_YX_imag, d_sum_visi_YX_imag,
-                             num_visis*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
+                             num_cross*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
   cudaErrorCheckCall( cudaMemcpy(sum_visi_YY_imag, d_sum_visi_YY_imag,
-                             num_visis*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
+                             num_cross*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
 
 
   free_d_components(d_chunked_source, comptype);
@@ -2510,4 +2631,187 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
     cudaErrorCheckCall(  cudaFree( d_u_shapes) );
     cudaErrorCheckCall(  cudaFree( d_v_shapes) );
   }
+}
+
+
+extern "C" void test_kern_calc_autos(components_t *components, int beamtype,
+                                     int num_components, int num_baselines,
+                                     int num_freqs, int num_times, int num_ants,
+                                     visibility_set_t *visibility_set){
+
+  ////malloc on device and copy extrapolated fluxes
+  int num_pb_values = num_freqs*num_times*num_components;
+
+  int num_autos = num_ants*num_freqs*num_times;
+  int num_cross = num_baselines*num_freqs*num_times;
+  int num_visis = num_cross + num_autos;
+
+  components_t *d_components = (components_t* )malloc(sizeof(components_t));
+  // components_t d_components;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesI,
+              num_components*num_freqs*sizeof(user_precision_t) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesQ,
+              num_components*num_freqs*sizeof(user_precision_t) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesU,
+              num_components*num_freqs*sizeof(user_precision_t) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesV,
+              num_components*num_freqs*sizeof(user_precision_t) ));
+
+
+  cudaErrorCheckCall( cudaMemcpy(d_components->extrap_stokesI,
+         components->extrap_stokesI, num_components*num_freqs*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy(d_components->extrap_stokesQ,
+         components->extrap_stokesQ, num_components*num_freqs*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy(d_components->extrap_stokesU,
+         components->extrap_stokesU, num_components*num_freqs*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy(d_components->extrap_stokesV,
+         components->extrap_stokesV, num_components*num_freqs*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+  //
+  // //malloc on device and copy beam values
+  //
+  d_beam_gains_t *d_component_beam_gains = (d_beam_gains_t* )malloc(sizeof(d_beam_gains_t));
+  // d_beam_gains_t d_component_beam_gains;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_component_beam_gains->d_gxs,
+                                        num_pb_values*sizeof(cuUserComplex) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_component_beam_gains->d_Dxs,
+                                        num_pb_values*sizeof(cuUserComplex) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_component_beam_gains->d_Dys,
+                                        num_pb_values*sizeof(cuUserComplex) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_component_beam_gains->d_gys,
+                                        num_pb_values*sizeof(cuUserComplex) ));
+
+  cudaErrorCheckCall( cudaMemcpy(d_component_beam_gains->d_gxs,
+          (cuUserComplex* )components->gxs, num_pb_values*sizeof(cuUserComplex),
+                                                     cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy(d_component_beam_gains->d_Dxs,
+          (cuUserComplex* )components->Dxs, num_pb_values*sizeof(cuUserComplex),
+                                                     cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy(d_component_beam_gains->d_Dys,
+          (cuUserComplex* )components->Dys, num_pb_values*sizeof(cuUserComplex),
+                                                     cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy(d_component_beam_gains->d_gys,
+          (cuUserComplex* )components->gys, num_pb_values*sizeof(cuUserComplex),
+                                                     cudaMemcpyHostToDevice ) );
+
+  user_precision_t *d_sum_visi_XX_real;
+  user_precision_t *d_sum_visi_XX_imag;
+  user_precision_t *d_sum_visi_XY_real;
+  user_precision_t *d_sum_visi_XY_imag;
+  user_precision_t *d_sum_visi_YX_real;
+  user_precision_t *d_sum_visi_YX_imag;
+  user_precision_t *d_sum_visi_YY_real;
+  user_precision_t *d_sum_visi_YY_imag;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XX_real,
+                      num_visis*sizeof(user_precision_t) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XX_imag,
+                      num_visis*sizeof(user_precision_t) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XY_real,
+                      num_visis*sizeof(user_precision_t) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_XY_imag,
+                      num_visis*sizeof(user_precision_t) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YX_real,
+                      num_visis*sizeof(user_precision_t) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YX_imag,
+                      num_visis*sizeof(user_precision_t) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YY_real,
+                      num_visis*sizeof(user_precision_t) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_sum_visi_YY_imag,
+                      num_visis*sizeof(user_precision_t) ) );
+
+
+  //ensure d_sum_visi_XX_real are set entirely to zero by copying the host
+  //array values, which have been set explictly to zero during chunking
+  cudaErrorCheckCall( cudaMemcpy(d_sum_visi_XX_real,
+             visibility_set->sum_visi_XX_real,
+             num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy(d_sum_visi_XX_imag,
+             visibility_set->sum_visi_XX_imag,
+             num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy(d_sum_visi_XY_real,
+             visibility_set->sum_visi_XY_real,
+             num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy(d_sum_visi_XY_imag,
+             visibility_set->sum_visi_XY_imag,
+             num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy(d_sum_visi_YX_real,
+             visibility_set->sum_visi_YX_real,
+             num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy(d_sum_visi_YX_imag,
+             visibility_set->sum_visi_YX_imag,
+             num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy(d_sum_visi_YY_real,
+             visibility_set->sum_visi_YY_real,
+             num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+  cudaErrorCheckCall( cudaMemcpy(d_sum_visi_YY_imag,
+             visibility_set->sum_visi_YY_imag,
+             num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+
+  dim3 grid, threads;
+
+  threads.x = 64;
+  threads.y = 2;
+  threads.z = 1;
+  grid.x = (int)ceil( (float)(num_freqs*num_times) / (float)threads.x );
+  grid.y = (int)ceil( (float)(num_ants) / (float)threads.y );
+  grid.z = 1;
+
+  cudaErrorCheckKernel("kern_calc_autos",
+                kern_calc_autos, grid, threads,
+                *d_components, *d_component_beam_gains,
+                beamtype, num_components, num_baselines,
+                num_freqs, num_times, num_ants,
+                d_sum_visi_XX_real, d_sum_visi_XX_imag,
+                d_sum_visi_XY_real, d_sum_visi_XY_imag,
+                d_sum_visi_YX_real, d_sum_visi_YX_imag,
+                d_sum_visi_YY_real, d_sum_visi_YY_imag);
+
+  //Copy outputs onto host so we can check our answers
+  cudaErrorCheckCall( cudaMemcpy(visibility_set->sum_visi_XX_real,
+                         d_sum_visi_XX_real, num_visis*sizeof(user_precision_t),
+                                                     cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(visibility_set->sum_visi_XY_real,
+                         d_sum_visi_XY_real, num_visis*sizeof(user_precision_t),
+                                                     cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(visibility_set->sum_visi_YX_real,
+                         d_sum_visi_YX_real, num_visis*sizeof(user_precision_t),
+                                                     cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(visibility_set->sum_visi_YY_real,
+                         d_sum_visi_YY_real, num_visis*sizeof(user_precision_t),
+                                                     cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(visibility_set->sum_visi_XX_imag,
+                         d_sum_visi_XX_imag, num_visis*sizeof(user_precision_t),
+                                                     cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(visibility_set->sum_visi_XY_imag,
+                         d_sum_visi_XY_imag, num_visis*sizeof(user_precision_t),
+                                                     cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(visibility_set->sum_visi_YX_imag,
+                         d_sum_visi_YX_imag, num_visis*sizeof(user_precision_t),
+                                                     cudaMemcpyDeviceToHost ));
+  cudaErrorCheckCall( cudaMemcpy(visibility_set->sum_visi_YY_imag,
+                         d_sum_visi_YY_imag, num_visis*sizeof(user_precision_t),
+                                                     cudaMemcpyDeviceToHost ));
+
+
+  cudaErrorCheckCall(  cudaFree( d_components->extrap_stokesI ) );
+  cudaErrorCheckCall(  cudaFree( d_components->extrap_stokesQ ) );
+  cudaErrorCheckCall(  cudaFree( d_components->extrap_stokesU ) );
+  cudaErrorCheckCall(  cudaFree( d_components->extrap_stokesV ) );
+  cudaErrorCheckCall(  cudaFree( d_component_beam_gains->d_gxs ) );
+  cudaErrorCheckCall(  cudaFree( d_component_beam_gains->d_Dxs ) );
+  cudaErrorCheckCall(  cudaFree( d_component_beam_gains->d_Dys ) );
+  cudaErrorCheckCall(  cudaFree( d_component_beam_gains->d_gys ) );
+
+
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_XX_real ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_XX_imag ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_XY_real ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_XY_imag ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_YX_real ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_YX_imag ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_YY_real ) );
+  cudaErrorCheckCall(  cudaFree( d_sum_visi_YY_imag ) );
+
+
 }

@@ -20,8 +20,10 @@ can be reproduced on the command line using ``script.py --help``.
   :maxdepth: 1
 
   python_code/run_woden
-  python_code/convert_WSClean_list_to_WODEN
+  python_code/add_woden_uvfits
+  python_code/concat_woden_uvfits
   python_code/uv2ms
+  python_code/convert_WSClean_list_to_WODEN
 
 ``C`` code
 ----------------------

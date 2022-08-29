@@ -23,17 +23,21 @@ are launched by calculate_visibilities::calculate_visibilities`
   double TOL = 1e-6;
 #endif
 
+void setUp (void) {} /* Is run before every test, put unit init calls here. */
+void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
+
 /*
 For a numbre of COMPONENTs at phase centre, with no beam model
 should just have a single gain in the XX and YY
 real visis
 */
-void test_comp_phase_centre_nobeam(visibility_set_t *visibility_set, double gain) {
+void test_comp_phase_centre_nobeam(visibility_set_t *visibility_set, double gain,
+                                   woden_settings_t *woden_settings) {
 
-  //We're testing all COMPONENT types with this function, where the values of
-  //the real vary slightly for baseline (I've set the major/minor to be small
-  //enough to be close to 1.0 but not quite)
-  for (size_t visi = 0; visi < NUM_VISI; visi++) {
+  int num_cross = woden_settings->num_cross;
+
+  //First up check that the cross-correlations are as expected
+  for (int visi = 0; visi < num_cross; visi++) {
   //   printf("%.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
   //           visibility_set->sum_visi_XX_real[visi],
   //           visibility_set->sum_visi_XX_imag[visi],
@@ -55,10 +59,32 @@ void test_comp_phase_centre_nobeam(visibility_set_t *visibility_set, double gain
     TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, visibility_set->sum_visi_YY_imag[visi]);
     TEST_ASSERT_DOUBLE_WITHIN(TOL, gain, visibility_set->sum_visi_YY_real[visi]);
   }
+
+  //Next, if there are auto-correlations, check they are correct
+  //For the no beam case with sources all at phase centre they are the same
+  //as the cross-correlations
+  for (int visi = 0; visi < woden_settings->num_autos; visi++) {
+
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, gain,
+                             visibility_set->sum_visi_XX_real[num_cross+visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                             visibility_set->sum_visi_XX_imag[num_cross+visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                             visibility_set->sum_visi_XY_real[num_cross+visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                             visibility_set->sum_visi_XY_imag[num_cross+visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                             visibility_set->sum_visi_YX_real[num_cross+visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                             visibility_set->sum_visi_YX_imag[num_cross+visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                             visibility_set->sum_visi_YY_imag[num_cross+visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, gain,
+                             visibility_set->sum_visi_YY_real[num_cross+visi]);
+  }
 }
 
-void setUp (void) {} /* Is run before every test, put unit init calls here. */
-void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
+
 
 // #define UNITY_INCLUDE_FLOAT
 
@@ -75,12 +101,38 @@ void test_calculate_visibilities_NoBeam(int n_points, int n_gauss, int n_shapes,
   woden_settings_t *woden_settings = make_woden_settings(RA0, MWA_LAT_RAD);
   woden_settings->beamtype = NO_BEAM;
 
+  // woden_settings->do_autos = 1;
+  // woden_settings->num_autos = NUM_CROSS;
+  // woden_settings->num_visis = woden_settings->num_cross + woden_settings->num_autos;
+
+  printf("We have this many visis %d %d %d\n",woden_settings->num_visis,woden_settings->num_autos,woden_settings->num_cross );
+
   visibility_set_t *visibility_set = test_calculate_visibilities(cropped_sky_models,
                                           beam_settings, woden_settings, RA0, MWA_LAT_RAD,
                                           beam_settings->beamtype);
 
   double gain = (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
-  test_comp_phase_centre_nobeam(visibility_set, gain);
+  test_comp_phase_centre_nobeam(visibility_set, gain, woden_settings);
+
+  free_visi_set_inputs(visibility_set);
+  free_visi_set_outputs(visibility_set);
+
+  woden_settings->do_autos = 1;
+  woden_settings->num_autos = NUM_CROSS;
+  woden_settings->num_visis = woden_settings->num_cross + woden_settings->num_autos;
+
+  cropped_sky_models = make_cropped_sky_models(RA0, MWA_LAT_RAD,
+                                                    n_points, n_gauss, n_shapes,
+                                                    num_sources);
+
+  printf("We have this many visis %d %d %d\n",woden_settings->num_visis,woden_settings->num_autos,woden_settings->num_cross );
+  visibility_set = test_calculate_visibilities(cropped_sky_models,
+                                          beam_settings, woden_settings, RA0, MWA_LAT_RAD,
+                                          beam_settings->beamtype);
+  test_comp_phase_centre_nobeam(visibility_set, gain, woden_settings);
+
+  free_visi_set_inputs(visibility_set);
+  free_visi_set_outputs(visibility_set);
 
 }
 

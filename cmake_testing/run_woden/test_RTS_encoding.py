@@ -27,10 +27,14 @@ class Test(unittest.TestCase):
         self.b1_4 = 1
         self.b2_4 = 2
 
+        self.b1_5 = 1
+        self.b2_5 = 1
+
         self.code1 = 58270
         self.code2 = 19440
         self.code3 = 31645
         self.code4 = 258
+        self.code5 = 257
 
     def test_RTS_encode_baseline(self):
         """Tests the `rw.RTS_encode_baseline` function, which should produce
@@ -45,6 +49,7 @@ class Test(unittest.TestCase):
         self.assertEqual(self.code2, rw.RTS_encode_baseline(self.b1_2, self.b2_2))
         self.assertEqual(self.code3, rw.RTS_encode_baseline(self.b1_3, self.b2_3))
         self.assertEqual(self.code4, rw.RTS_encode_baseline(self.b1_4, self.b2_4))
+        self.assertEqual(self.code5, rw.RTS_encode_baseline(self.b1_5, self.b2_5))
 
     def test_RTS_decode_baseline(self):
         """Tests the `rw.RTS_decode_baseline` function, which should split a
@@ -59,6 +64,7 @@ class Test(unittest.TestCase):
         b1_2, b2_2 = rw.RTS_decode_baseline(self.code2)
         b1_3, b2_3 = rw.RTS_decode_baseline(self.code3)
         b1_4, b2_4 = rw.RTS_decode_baseline(self.code4)
+        b1_5, b2_5 = rw.RTS_decode_baseline(self.code5)
 
         ##Test they match expectations
         self.assertEqual(b1_1, self.b1_1)
@@ -69,6 +75,9 @@ class Test(unittest.TestCase):
         self.assertEqual(b2_2, self.b2_2)
         self.assertEqual(b2_3, self.b2_3)
         self.assertEqual(b2_4, self.b2_4)
+
+        self.assertEqual(b1_5, self.b1_5)
+        self.assertEqual(b2_5, self.b2_5)
 
 ##Run the test
 if __name__ == '__main__':

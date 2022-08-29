@@ -106,72 +106,6 @@ void RTS_Precess_LST_Lat_to_J2000(double lst_current, double latitude_current,
     //                                                           * lst_J2000 );
 }
 
-
-
-// /**
-// As said in the include file/help, this is an RTS function to rotate the array
-// back to J2000. There are a number of lines commented out, which I don't think
-// I need, but am leaving here in case I do one day
-// */
-// void RTS_PrecessXYZtoJ2000( array_layout_t *array_layout,
-//                             woden_settings_t *woden_settings) {
-//
-//   //The LST and latitude at the current observation time
-//   double lst_current = (double)woden_settings->lst_base;
-//   double latitude_current = woden_settings->latitude;
-//
-//   int n_tile = array_layout->num_tiles;
-//
-//   double rmatpn[3][3];
-//   double mjd = woden_settings->jd_date - 2400000.5;
-//   double J2000_transformation[3][3];
-//
-//   //Calculate a rotation matrix that accounts for precession and nutation
-//   //between the current modified julian date (mjd) and J2000
-//   // palPrenut calls:
-//   //  - palPrec( 2000.0, palEpj(mjd), rmatp ); // form precession matrix: v_mean(mjd epoch) = rmatp * v_mean(J2000)
-//   //  - palNut( mjd, rmatn );                  // form nutation matrix: v_true(mjd epoch) = rmatn * v_mean(mjd epoch)
-//   //  - palDmxm( rmatn, rmatp, rmatpn );       // Combine the matrices:  pn = n x p
-//
-//   palPrenut(2000.0, mjd, rmatpn);
-//   RTS_mat_transpose( rmatpn, J2000_transformation );
-//
-//   // printf("Rotation matrix\n");
-//   // printf("[%.8f %.8f %.8f\n",J2000_transformation[0][0],J2000_transformation[0][1], J2000_transformation[0][2] );
-//   // printf("[%.8f %.8f %.8f\n",J2000_transformation[1][0],J2000_transformation[1][1], J2000_transformation[1][2] );
-//   // printf("[%.8f %.8f %.8f]\n",J2000_transformation[2][0],J2000_transformation[2][1], J2000_transformation[2][2] );
-//
-//   //Hold some things for me please
-//   double X_epoch, Y_epoch, Z_epoch, X_prec, Y_prec, Z_prec;
-//   // double v1[3], v2[3], lst_J2000, latitude_J2000;
-//   //
-//
-//   //precess the current LST and latitude back to equivalent ones in the J2000 frame
-//   double lst_J2000, latitude_J2000;
-//   RTS_Precess_LST_Lat_to_J2000(lst_current, latitude_current, mjd,
-//                            &lst_J2000, &latitude_J2000);
-//
-//   //Change things to be in J2000
-//   woden_settings->lst_base = lst_J2000;
-//   woden_settings->latitude = latitude_J2000;
-//
-//   for (int st=0; st < n_tile; st++ ) {
-//
-//     // Calculate antennas positions in the J2000 frame
-//     X_epoch = array_layout->ant_X[st];
-//     Y_epoch = array_layout->ant_Y[st];
-//     Z_epoch = array_layout->ant_Z[st];
-//     RTS_precXYZ( J2000_transformation, X_epoch, Y_epoch, Z_epoch, lst_current, &X_prec, &Y_prec, &Z_prec, lst_J2000 );
-//
-//     // Update stored coordinates
-//     array_layout->ant_X[st] = X_prec;
-//     array_layout->ant_Y[st] = Y_prec;
-//     array_layout->ant_Z[st] = Z_prec;
-//   }
-// } // RTS_PrecessXYZtoJ2000
-
-
-
 /**
 As said in the include file/help, this is an RTS function to rotate the array
 back to J2000. There are a number of lines commented out, which I don't think
@@ -306,6 +240,7 @@ array_layout_t * calc_XYZ_diffs(woden_settings_t *woden_settings,
   }
 
   array_layout->num_tiles = num_tiles;
+  woden_settings->num_ants = num_tiles;
 
   //malloc some arrays for holding array coords
 
@@ -313,8 +248,21 @@ array_layout_t * calc_XYZ_diffs(woden_settings_t *woden_settings,
   array_layout->num_baselines = (array_layout->num_tiles*(array_layout->num_tiles-1)) / 2;
   woden_settings->num_baselines = array_layout->num_baselines;
 
-  const int num_visis = woden_settings->num_baselines * woden_settings->num_time_steps * woden_settings->num_freqs;
-  woden_settings->num_visis = num_visis;
+  const int num_cross = woden_settings->num_baselines * woden_settings->num_time_steps * woden_settings->num_freqs;
+
+  woden_settings->num_cross = num_cross;
+
+  int num_autos;
+  //If user asked for auto-correlations, set this number to total autos to work out
+  //Otherwise stick it to zero
+  if (woden_settings->do_autos){
+    num_autos = woden_settings->num_ants * woden_settings->num_time_steps * woden_settings->num_freqs;
+  } else {
+    num_autos = 0;
+  }
+
+  woden_settings->num_autos = num_autos;
+  woden_settings->num_visis = num_cross + num_autos;
 
   array_layout->ant_X = malloc( woden_settings->num_time_steps * array_layout->num_tiles * sizeof(double) );
   array_layout->ant_Y = malloc( woden_settings->num_time_steps * array_layout->num_tiles * sizeof(double) );

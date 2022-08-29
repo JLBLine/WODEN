@@ -60,4 +60,7 @@ void print_cmdline_help() {
   printf("\t+ no_precession=True: By default, the array layout is precessed back\n");
       printf("\t\tto a J2000 frame to match the sky model. Add this to switch off\n");
       printf("\t\tthis precession \n");
+
+  printf("\t+ do_autos=True: By default, only cross-correlations are calculated\n");
+      printf("\t\tAdd this to include auto-correlations\n");
 }

@@ -799,3 +799,24 @@ three sets of tests consist of:
 Each set of tests is run for all primary beam types, for a total of 18 tests.
 The different beam models have different expected values depending on whether
 they include leakage terms or not.
+
+test_kern_calc_autos.c
+************************************
+This calls ``source_components::test_kern_calc_autos``, which in turn calls
+``source_components::kern_calc_autos``. This kernel gathers pre-calculated
+primary beam values, and Stokes flux densities, and performs a dot-product
+to calculate the auto-correlations of all antennas, for all time steps.
+
+This test runs by creating a Stokes I sky model of 4 components, extrapolated
+to three frequencies and two time steps. Complex beam gains are generated for all
+directions, times, and frequencies. The auto-correlation calculation is then
+performed by ``C`` code, which the outputs of the GPU code are tested against.
+
+As some primary beam models are real only, and only some have leakage, the
+function is tested for all beam model types separately, with the expected
+outcomes calculated accordingly.
+
+The ``woden_double`` code is tested to an absolute precision of 1e-12 Jy,
+with the ``woden_float`` a 1e-2 Jy precision as compared to the ``C`` code
+(note some of the resultant fluxes are >10,000 Jy, hence the large absolute
+error. You should probably just always use the double precision version).

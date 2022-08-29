@@ -73,3 +73,7 @@ test_installation/absolute_accuracy/uvfits
 *__pycache__/
 *.ms
 
+examples/MWA_EoR0
+test_installation/curved_power_law
+test_installation/list_fluxes
+

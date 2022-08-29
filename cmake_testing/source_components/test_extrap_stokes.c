@@ -127,8 +127,6 @@ void test_kern_extrap_stokes_GivesCorrectValues(void) {
                         extrap_freqs, num_extrap_freqs,
                         expec_flux_I, expec_flux_Q, expec_flux_U, expec_flux_V);
 
-
-
   for (int i = 0; i < num_extrap_freqs*(num_powers + num_curves + num_lists); i++) {
     //Check the two are within tolerace
     // printf("%d %.3f %.3f\n",i, expec_flux_I[i], extrap_flux_I[i] );

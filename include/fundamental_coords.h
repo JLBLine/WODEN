@@ -72,7 +72,7 @@ steps (metres)
 baselines, frequencies, and time steps
 @param[in] d_sha0s Sine of the hour angle of the phase centre for all
 baselines, frequencies, and time steps
-@param[in] num_visis Total number of `u,v,w` coords to be calculated
+@param[in] num_cross Total number of `u,v,w` coords to be calculated (number of cross correlations)
 @param[in] num_baselines Number of baselines for a single time step
 @param[in] num_times Number of time steps
 @param[in] num_freqs Number of frequency steps
@@ -83,7 +83,7 @@ __global__ void kern_calc_uvw(double *d_X_diff, double *d_Y_diff,
            user_precision_t *d_u, user_precision_t *d_v, user_precision_t *d_w, user_precision_t *d_wavelengths,
            double sdec0, double cdec0,
            double *d_cha0s, double *d_sha0s,
-           int num_visis, int num_baselines, int num_times, int num_freqs);
+           int num_cross, int num_baselines, int num_times, int num_freqs);
 
 
 /**

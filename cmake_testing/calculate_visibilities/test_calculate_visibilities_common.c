@@ -304,7 +304,10 @@ woden_settings_t * make_woden_settings(double ra0, double dec0) {
     woden_settings->num_baselines = NUM_BASELINES;
     woden_settings->num_freqs = NUM_FREQS;
     woden_settings->num_time_steps = NUM_TIME_STEPS;
-    woden_settings->num_visis = NUM_BASELINES * NUM_FREQS * NUM_TIME_STEPS;
+    woden_settings->num_ants = NUM_ANTS;
+    woden_settings->num_autos = 0;
+    woden_settings->num_cross = NUM_CROSS;
+    woden_settings->num_visis = woden_settings->num_cross;
     woden_settings->coarse_band_width = 1.28e+6;
     //Make the fine channel width insanely small so beam changes little
     //with frequency - that way we can test for just one gain value per time
@@ -315,6 +318,8 @@ woden_settings_t * make_woden_settings(double ra0, double dec0) {
 
     woden_settings->lsts = lsts;
 
+    woden_settings->do_autos = 0;
+
     return woden_settings;
 }
 
@@ -324,12 +329,13 @@ the uvw should be a simple reduced product between phase centre and lsts.
 Create some expected u,v,w arrays and compare to what we've found
 */
 void test_uvw(visibility_set_t *visibility_set,  double *lsts,
-              double ra0, double dec0) {
+              double ra0, double dec0,
+              woden_settings_t *woden_settings) {
 
-  int num_visis = NUM_BASELINES * NUM_FREQS * NUM_TIME_STEPS;
-  double *expec_u = malloc(num_visis * sizeof(double));
-  double *expec_v = malloc(num_visis * sizeof(double));
-  double *expec_w = malloc(num_visis * sizeof(double));
+  // int num_visis = NUM_VISI;
+  double *expec_u = malloc(NUM_CROSS * sizeof(double));
+  double *expec_v = malloc(NUM_CROSS * sizeof(double));
+  double *expec_w = malloc(NUM_CROSS * sizeof(double));
 
   int index = 0;
   double xy_length;
@@ -354,7 +360,7 @@ void test_uvw(visibility_set_t *visibility_set,  double *lsts,
     double TOL = 1e-5;
   #endif
 
-  for (int visi = 0; visi < num_visis; visi++) {
+  for (int visi = 0; visi < woden_settings->num_cross; visi++) {
     // printf("%.1f %.1f %.1f %.1f %.1f %.1f\n",
     //         visibility_set->us_metres[visi], expec_u[visi],
     //         visibility_set->vs_metres[visi], expec_v[visi],
@@ -367,6 +373,22 @@ void test_uvw(visibility_set_t *visibility_set,  double *lsts,
                               visibility_set->ws_metres[visi]);
 
   }
+
+  int num_autos = woden_settings->num_autos;
+
+  //This should only be hit if we have asked for autos
+  //All of these should just be zero, as there is no baseline length for an
+  //auto correlation
+  for (int visi = 0; visi < num_autos; visi++) {
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                              visibility_set->us_metres[num_autos + visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                              visibility_set->vs_metres[num_autos + visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                              visibility_set->ws_metres[num_autos + visi]);
+
+  }
+
 
   free(expec_u);
   free(expec_v);
@@ -408,6 +430,8 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
     sbf = malloc( sbf_N * sbf_L * sizeof(user_precision_t) );
     sbf = create_sbf(sbf);
   }
+
+  printf("SIZE OF THING %d\n",woden_settings->num_visis );
 
   visibility_set_t *visibility_set = setup_visibility_set(woden_settings->num_visis);
 
@@ -463,7 +487,7 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
   free(array_layout->Z_diff_metres);
   // free(array_layout);
 
-  test_uvw(visibility_set, lsts, ra0, dec0);
+  test_uvw(visibility_set, lsts, ra0, dec0, woden_settings);
 
   return visibility_set;
 
@@ -475,18 +499,21 @@ Can just test whether the XX/YY real values match expected
 */
 void test_comp_phase_centre_twogains(visibility_set_t *visibility_set,
                                      double gain1xx, double gain1yy,
-                                     double gain2xx, double gain2yy) {
+                                     double gain2xx, double gain2yy,
+                                     woden_settings_t *woden_settings) {
 
-  double *expec_gainsxx = malloc(NUM_VISI*sizeof(double));
-  double *expec_gainsyy = malloc(NUM_VISI*sizeof(double));
+  int num_cross = woden_settings->num_cross;
+
+  double *expec_gainsxx = malloc(num_cross*sizeof(double));
+  double *expec_gainsyy = malloc(num_cross*sizeof(double));
 
   double gainsxx[] = {gain1xx, gain2xx};
   double gainsyy[] = {gain1yy, gain2yy};
 
   for (int time = 0; time < NUM_TIME_STEPS; time++) {
-    for (int visi = 0; visi < NUM_VISI/2; visi++) {
-      expec_gainsxx[time*(NUM_VISI/2) + visi] = gainsxx[time];
-      expec_gainsyy[time*(NUM_VISI/2) + visi] = gainsyy[time];
+    for (int visi = 0; visi < num_cross/2; visi++) {
+      expec_gainsxx[time*(num_cross/2) + visi] = gainsxx[time];
+      expec_gainsyy[time*(num_cross/2) + visi] = gainsyy[time];
     }
 
   }
@@ -500,7 +527,7 @@ void test_comp_phase_centre_twogains(visibility_set_t *visibility_set,
   //We're testing all COMPONENT types with this function, where the values of
   //the real vary slightly for baseline (I've set the major/minor to be small
   //enough to be close to 1.0 but not quite)
-  for (int visi = 0; visi < NUM_VISI; visi++) {
+  for (int visi = 0; visi < num_cross; visi++) {
   //   printf("%.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
   //           visibility_set->sum_visi_XX_real[visi],
   //           visibility_set->sum_visi_XX_imag[visi],
@@ -511,7 +538,7 @@ void test_comp_phase_centre_twogains(visibility_set_t *visibility_set,
   //           visibility_set->sum_visi_YY_imag[visi],
   //           visibility_set->sum_visi_YY_real[visi] );
 
-    // printf("Expec GAIN %.16f %.16f\n", expec_gainsxx[visi]
+    // printf("Expec GAIN %.16f %.16f\n", expec_gainsxx[visi],
     //                             visibility_set->sum_visi_XX_real[visi] );
 
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_gainsxx[visi],
@@ -532,6 +559,134 @@ void test_comp_phase_centre_twogains(visibility_set_t *visibility_set,
                               visibility_set->sum_visi_YY_imag[visi]);
 
   }
+
+  for (int visi = 0; visi < woden_settings->num_autos; visi++) {
+    // printf("%.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
+            // visibility_set->sum_visi_XX_real[num_cross + visi],
+            // visibility_set->sum_visi_XX_imag[num_cross + visi],
+            // visibility_set->sum_visi_XY_real[num_cross + visi],
+            // visibility_set->sum_visi_XY_imag[num_cross + visi],
+            // visibility_set->sum_visi_YX_real[num_cross + visi],
+            // visibility_set->sum_visi_YX_imag[num_cross + visi],
+            // visibility_set->sum_visi_YY_imag[num_cross + visi],
+            // visibility_set->sum_visi_YY_real[num_cross + visi] );
+
+    // printf("Expec GAIN %.16f %.16f\n", expec_gainsxx[visi],
+    //                             visibility_set->sum_visi_XX_real[visi] );
+
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_gainsxx[visi],
+                              visibility_set->sum_visi_XX_real[num_cross + visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                              visibility_set->sum_visi_XX_imag[num_cross + visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                              visibility_set->sum_visi_XY_real[num_cross + visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                              visibility_set->sum_visi_XY_imag[num_cross + visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                              visibility_set->sum_visi_YX_real[num_cross + visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                              visibility_set->sum_visi_YX_imag[num_cross + visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_gainsyy[visi],
+                              visibility_set->sum_visi_YY_real[num_cross + visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+                              visibility_set->sum_visi_YY_imag[num_cross + visi]);
+
+  }
+
   free(expec_gainsxx);
   free(expec_gainsyy);
+}
+
+
+void test_comp_phase_centre_allgains(visibility_set_t *visibility_set,
+                                     double gain1xx_re, double gain1xx_im,
+                                     double gain1xy_re, double gain1xy_im,
+                                     double gain1yx_re, double gain1yx_im,
+                                     double gain1yy_re, double gain1yy_im,
+                                     double gain2xx_re, double gain2xx_im,
+                                     double gain2xy_re, double gain2xy_im,
+                                     double gain2yx_re, double gain2yx_im,
+                                     double gain2yy_re, double gain2yy_im,
+                                     woden_settings_t *woden_settings,
+                                     double tol) {
+
+  int num_cross = woden_settings->num_cross;
+
+  for (int visi = 0; visi < num_cross; visi++) {
+    if (visi < num_cross / 2) {
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1xx_re,
+                                        visibility_set->sum_visi_XX_real[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1xx_im,
+                                        visibility_set->sum_visi_XX_imag[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1xy_re,
+                                        visibility_set->sum_visi_XY_real[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1xy_im,
+                                        visibility_set->sum_visi_XY_imag[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1yx_re,
+                                        visibility_set->sum_visi_YX_real[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1yx_im,
+                                        visibility_set->sum_visi_YX_imag[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1yy_re,
+                                        visibility_set->sum_visi_YY_real[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1yy_im,
+                                        visibility_set->sum_visi_YY_imag[visi]);
+    }
+    else {
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2xx_re,
+                                        visibility_set->sum_visi_XX_real[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2xx_im,
+                                        visibility_set->sum_visi_XX_imag[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2xy_re,
+                                        visibility_set->sum_visi_XY_real[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2xy_im,
+                                        visibility_set->sum_visi_XY_imag[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2yx_re,
+                                        visibility_set->sum_visi_YX_real[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2yx_im,
+                                        visibility_set->sum_visi_YX_imag[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2yy_re,
+                                        visibility_set->sum_visi_YY_real[visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2yy_im,
+                                        visibility_set->sum_visi_YY_imag[visi]);
+    }
+  }
+
+  for (int visi = 0; visi < woden_settings->num_autos; visi++) {
+    if (visi < num_cross / 2) {
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1xx_re,
+                            visibility_set->sum_visi_XX_real[num_cross + visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1xx_im,
+                            visibility_set->sum_visi_XX_imag[num_cross + visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1xy_re,
+                            visibility_set->sum_visi_XY_real[num_cross + visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1xy_im,
+                            visibility_set->sum_visi_XY_imag[num_cross + visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1yx_re,
+                            visibility_set->sum_visi_YX_real[num_cross + visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1yx_im,
+                            visibility_set->sum_visi_YX_imag[num_cross + visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1yy_re,
+                            visibility_set->sum_visi_YY_real[num_cross + visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1yy_im,
+                            visibility_set->sum_visi_YY_imag[num_cross + visi]);
+    }
+    else {
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2xx_re,
+                            visibility_set->sum_visi_XX_real[num_cross + visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2xx_im,
+                            visibility_set->sum_visi_XX_imag[num_cross + visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2xy_re,
+                            visibility_set->sum_visi_XY_real[num_cross + visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2xy_im,
+                            visibility_set->sum_visi_XY_imag[num_cross + visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2yx_re,
+                            visibility_set->sum_visi_YX_real[num_cross + visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2yx_im,
+                            visibility_set->sum_visi_YX_imag[num_cross + visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2yy_re,
+                            visibility_set->sum_visi_YY_real[num_cross + visi]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2yy_im,
+                            visibility_set->sum_visi_YY_imag[num_cross + visi]);
+    }
+  }
 }

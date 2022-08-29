@@ -201,6 +201,8 @@ if(TARGET_GROUP STREQUAL production)
     endmacro(make_python_symlink)
 
     make_python_symlink("run_woden.py")
+    make_python_symlink("add_woden_uvfits.py")
+    make_python_symlink("concat_woden_uvfits.py")
     make_python_symlink("uv2ms.py")
     make_python_symlink("convert_WSClean_list_to_WODEN.py")
 
@@ -238,6 +240,8 @@ if(TARGET_GROUP STREQUAL production)
     endmacro(install_symlink)
 
     install_symlink("run_woden.py")
+    install_symlink("add_woden_uvfits.py")
+    install_symlink("concat_woden_uvfits.py")
     install_symlink("uv2ms.py")
     install_symlink("convert_WSClean_list_to_WODEN.py")
 

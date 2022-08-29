@@ -37,11 +37,11 @@ __global__ void kern_calc_uvw(double *d_X_diff, double *d_Y_diff,
            user_precision_t *d_u, user_precision_t *d_v, user_precision_t *d_w, user_precision_t *d_wavelengths,
            double sdec0, double cdec0,
            double *d_cha0s, double *d_sha0s,
-           int num_visis, int num_baselines, int num_times, int num_freqs){
+           int num_cross, int num_baselines, int num_times, int num_freqs){
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
 
-  if (iBaseline < num_visis){
+  if (iBaseline < num_cross){
     user_precision_t u, v, w;
 
     double d_sha0 = d_sha0s[iBaseline];
@@ -204,7 +204,7 @@ extern "C" void test_kern_calc_uvw(double *X_diff,
    user_precision_t *us, user_precision_t *vs, user_precision_t *ws,
    user_precision_t *wavelengths,
    double dec0, double *cha0s, double *sha0s,
-   int num_visis, int num_baselines, int num_times, int num_freqs) {
+   int num_cross, int num_baselines, int num_times, int num_freqs) {
 
   double *d_X_diff = NULL;
   double *d_Y_diff = NULL;
@@ -227,17 +227,17 @@ extern "C" void test_kern_calc_uvw(double *X_diff,
   double *d_cha0s = NULL;
   user_precision_t *d_wavelengths = NULL;
   cudaErrorCheckCall( cudaMalloc( (void**)&d_sha0s,
-                                         num_visis*sizeof(double) ) );
+                                         num_cross*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy( d_sha0s, sha0s,
-                 num_visis*sizeof(double), cudaMemcpyHostToDevice ) );
+                 num_cross*sizeof(double), cudaMemcpyHostToDevice ) );
   cudaErrorCheckCall( cudaMalloc( (void**)&d_cha0s,
-                                         num_visis*sizeof(double) ) );
+                                         num_cross*sizeof(double) ) );
   cudaErrorCheckCall( cudaMemcpy( d_cha0s, cha0s,
-                 num_visis*sizeof(double), cudaMemcpyHostToDevice ) );
+                 num_cross*sizeof(double), cudaMemcpyHostToDevice ) );
   cudaErrorCheckCall( cudaMalloc( (void**)&d_wavelengths,
-                                         num_visis*sizeof(user_precision_t) ) );
+                                         num_cross*sizeof(user_precision_t) ) );
   cudaErrorCheckCall( cudaMemcpy( d_wavelengths, wavelengths,
-                 num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+                 num_cross*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
 
   user_precision_t *d_u_metres = NULL;
   user_precision_t *d_v_metres = NULL;
@@ -246,17 +246,17 @@ extern "C" void test_kern_calc_uvw(double *X_diff,
   user_precision_t *d_vs = NULL;
   user_precision_t *d_ws = NULL;
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_u_metres, num_visis*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_v_metres, num_visis*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_w_metres, num_visis*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_us, num_visis*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_vs, num_visis*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_ws, num_visis*sizeof(user_precision_t) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_u_metres, num_cross*sizeof(user_precision_t) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_v_metres, num_cross*sizeof(user_precision_t) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_w_metres, num_cross*sizeof(user_precision_t) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_us, num_cross*sizeof(user_precision_t) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_vs, num_cross*sizeof(user_precision_t) ) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_ws, num_cross*sizeof(user_precision_t) ) );
 
   dim3 grid, threads;
 
   threads.x = 128;
-  grid.x = (int)ceil( (float)num_visis / (float)threads.x );
+  grid.x = (int)ceil( (float)num_cross / (float)threads.x );
 
   cudaErrorCheckKernel("kern_calc_uvw",
           kern_calc_uvw, grid, threads,
@@ -265,21 +265,21 @@ extern "C" void test_kern_calc_uvw(double *X_diff,
           d_us, d_vs, d_ws, d_wavelengths,
           sin(dec0), cos(dec0),
           d_cha0s, d_sha0s,
-          num_visis, num_baselines, num_times, num_freqs);
+          num_cross, num_baselines, num_times, num_freqs);
 
   cudaErrorCheckCall( cudaMemcpy(us, d_us,
-                   num_visis*sizeof(user_precision_t),cudaMemcpyDeviceToHost) );
+                   num_cross*sizeof(user_precision_t),cudaMemcpyDeviceToHost) );
   cudaErrorCheckCall( cudaMemcpy(vs, d_vs,
-                   num_visis*sizeof(user_precision_t),cudaMemcpyDeviceToHost) );
+                   num_cross*sizeof(user_precision_t),cudaMemcpyDeviceToHost) );
   cudaErrorCheckCall( cudaMemcpy(ws, d_ws,
-                   num_visis*sizeof(user_precision_t),cudaMemcpyDeviceToHost) );
+                   num_cross*sizeof(user_precision_t),cudaMemcpyDeviceToHost) );
 
   cudaErrorCheckCall( cudaMemcpy(u_metres, d_u_metres,
-                   num_visis*sizeof(user_precision_t),cudaMemcpyDeviceToHost) );
+                   num_cross*sizeof(user_precision_t),cudaMemcpyDeviceToHost) );
   cudaErrorCheckCall( cudaMemcpy(v_metres, d_v_metres,
-                   num_visis*sizeof(user_precision_t),cudaMemcpyDeviceToHost) );
+                   num_cross*sizeof(user_precision_t),cudaMemcpyDeviceToHost) );
   cudaErrorCheckCall( cudaMemcpy(w_metres, d_w_metres,
-                   num_visis*sizeof(user_precision_t),cudaMemcpyDeviceToHost) );
+                   num_cross*sizeof(user_precision_t),cudaMemcpyDeviceToHost) );
 
   cudaErrorCheckCall( cudaFree(d_us) );
   cudaErrorCheckCall( cudaFree(d_vs) );

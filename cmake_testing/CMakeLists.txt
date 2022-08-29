@@ -44,11 +44,13 @@ add_subdirectory(shapelet_basis)
 add_subdirectory(woden_settings)
 
 
-##Test CUDA code
+###Test CUDA code
 add_subdirectory(calculate_visibilities)
 add_subdirectory(fundamental_coords)
 add_subdirectory(primary_beam_cuda)
 add_subdirectory(source_components)
 
-###Test python code
+####Test python code
 add_subdirectory(run_woden)
+add_subdirectory(add_woden_uvfits)
+add_subdirectory(concat_woden_uvfits)
