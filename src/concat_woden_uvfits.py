@@ -146,6 +146,14 @@ def concat_uvfits(uvfits_prepend, bands, output_name, reverse_pols=False):
         uvhdu.header['ALT'] = orig_hdu[0].header['ALT']
         uvhdu.header['INSTRUME'] = orig_hdu[0].header['INSTRUME']
 
+        ##Before WODEN version 1.4.0, this header value wasn't
+        ##used, so try and copy but don't crash if it isn't a key
+        try:
+            uvhdu.header['IAUORDER'] = orig_hdu[0].header['IAUORDER']
+        
+        except KeyError:
+            pass
+
         ## Create hdulist and write out file
         hdulist = fits.HDUList(hdus=[uvhdu, orig_hdu[1]])
         hdulist.writeto(output_name, overwrite=True)
