@@ -10,9 +10,9 @@
 //Give all the component types the same sets of RA/DEC so we
 //can predict their cropping behaviours the same way
 double comp0_ras[] = {0.0, DD2R, 2*DD2R, 0.0, DD2R, 2*DD2R, 0.0, DD2R, 2*DD2R};
-double comp0_decs[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD,
-                        MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD,
-                        MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
+double comp0_decs[] = {-0.46606083776035967, -0.46606083776035967, -0.46606083776035967,
+                        -0.46606083776035967, -0.46606083776035967, -0.46606083776035967,
+                        -0.46606083776035967, -0.46606083776035967, -0.46606083776035967};
 
 double comp1_ras[] = {106*DD2R, 108*DD2R, 110*DD2R,
                        106*DD2R, 108*DD2R, 110*DD2R,

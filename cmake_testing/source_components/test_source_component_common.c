@@ -33,25 +33,12 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   //Set up some test condition inputs
   int num_times = 3;
   int num_freqs = 2;
-  // int num_components = 9;
-  // int num_baselines = 5;
 
   int num_components = num_powers + num_curves + num_lists;
 
   int num_beam_values = num_times*num_freqs*num_components;
 
   user_precision_t *zeroes = calloc(num_components, sizeof(user_precision_t));
-
-  // user_precision_t *power_ref_stokesI = malloc(num_components*sizeof(user_precision_t));
-  // user_precision_t *power_ref_stokesQ = malloc(num_components*sizeof(user_precision_t));
-  // user_precision_t *power_ref_stokesU = malloc(num_components*sizeof(user_precision_t));
-  // user_precision_t *power_ref_stokesV = malloc(num_components*sizeof(user_precision_t));
-  // user_precision_t *power_SIs = malloc(num_components*sizeof(user_precision_t));
-  //
-  // power_ref_stokesQ = zeroes;
-  // power_ref_stokesU = zeroes;
-  // power_ref_stokesV = zeroes;
-  // power_SIs = zeroes;
 
   //Keep RA between 0 and 2*pi here but enter RAs that should return
   //negative l values
@@ -73,7 +60,14 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   woden_settings->ra0 = ra0;
   woden_settings->sdec0 = sin(dec0);
   woden_settings->cdec0 = cos(dec0);
-  woden_settings->latitude = MWA_LAT_RAD;
+  woden_settings->latitude = -0.46606083776035967;
+
+  woden_settings->latitudes = malloc(num_times*sizeof(double));
+  for (int i = 0; i < num_times; i++)
+  {
+    woden_settings->latitudes[i] = -0.46606083776035967;
+  }
+  
 
   woden_settings->beamtype = beamtype;
 
@@ -110,8 +104,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   //things up
   if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP) {
 
-    int32_t status =  new_fee_beam(mwa_fee_hdf5, &beam_settings->fee_beam,
-                               beam_settings->hyper_error_str);
+    int32_t status =  new_fee_beam(mwa_fee_hdf5, &beam_settings->fee_beam);
 
     TEST_ASSERT_EQUAL(status, 0);
 
@@ -149,8 +142,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
                                num_tiles,
                                num_amps,
                                norm_to_zenith,
-                               &beam_settings->cuda_fee_beam,
-                               beam_settings->hyper_error_str);
+                               &beam_settings->cuda_fee_beam);
 
     TEST_ASSERT_EQUAL(status, 0);
 
@@ -390,6 +382,9 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
       //         creal(primay_beam_J10[output]), cimag(primay_beam_J10[output]),
       //         creal(primay_beam_J11[output]), cimag(primay_beam_J11[output]) );
 
+      // printf("%.8f %.8f \n", creal(primay_beam_J00[output]),
+      //                        fee_expec_interp_J00_re[output]  );
+
 
       TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J00_re[output], creal(primay_beam_J00[output]));
       TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J00_im[output], cimag(primay_beam_J00[output]));
@@ -491,6 +486,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   free(power_comp_inds);
   free(curve_comp_inds);
   free(list_comp_inds);
+  free(woden_settings->latitudes);
 
 }
 

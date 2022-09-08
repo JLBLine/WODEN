@@ -7,11 +7,9 @@
 #include "constants.h"
 #include "woden_struct_defs.h"
 #include "test_run_hyperbeam.h"
-// #include "test_RTS_FEE_beam.h"
-#include <mwa_hyperbeam.h>
-#include "azza_radec_nside101.h"
-
-// #define ROTATION 0
+#include "hyperbeam_error.h"
+// #include <mwa_hyperbeam.h>
+#include "azza_radec_nside051.h"
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
@@ -22,6 +20,7 @@ extern void test_run_hyperbeam_cuda(int num_components,
            uint8_t parallatic,
            struct FEEBeamCUDA *cuda_fee_beam,
            double *azs, double *zas,
+           double *latitudes,
            user_precision_complex_t *primay_beam_J00,
            user_precision_complex_t *primay_beam_J01,
            user_precision_complex_t *primay_beam_J10,
@@ -43,7 +42,7 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
                                          double *expected,
                                          char *outname, int rotate) {
 
-  int nside = 101;
+  int nside = 51;
 
   int num_times = 2;
 
@@ -56,20 +55,21 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
   for (int coord = 0; coord < num_components; coord++) {
     for (int time = 0; time < num_times; time++) {
 
-      azs[coord*num_times + time] = nside101_azs[coord];
-      zas[coord*num_times + time] = nside101_zas[coord];
+      azs[coord*num_times + time] = nside051_azs[coord];
+      zas[coord*num_times + time] = nside051_zas[coord];
     }
   }
 
   struct FEEBeam *fee_beam;
-  char error_str[100];
+  // char error_str[100];
 
   int32_t status = 0;
+  //
+  // status =  new_fee_beam(mwa_fee_hdf5, &fee_beam, error_str);
 
-  status =  new_fee_beam(mwa_fee_hdf5, &fee_beam, error_str);
-
+  status = new_fee_beam(mwa_fee_hdf5, &fee_beam);
   if (status != 0) {
-    printf("hyperbeam error %d %s\n",status,error_str );
+    handle_hyperbeam_error(__FILE__, __LINE__, "new_fee_beam");
   }
 
   uint32_t *hyper_delays = malloc(16*sizeof(uint32_t));
@@ -94,18 +94,17 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
   struct FEEBeamCUDA *cuda_fee_beam;
 
   status = new_cuda_fee_beam(fee_beam,
-                          freqs_hz,
-                          hyper_delays,
-                          amps,
-                          num_freqs,
-                          num_tiles,
-                          num_amps,
-                          norm_to_zenith,
-                          &cuda_fee_beam,
-                          error_str);
+                             freqs_hz,
+                             hyper_delays,
+                             amps,
+                             num_freqs,
+                             num_tiles,
+                             num_amps,
+                             norm_to_zenith,
+                             &cuda_fee_beam);
 
   if (status != 0) {
-    printf("hyperbeam error %d %s\n",status,error_str );
+    handle_hyperbeam_error(__FILE__, __LINE__, "new_cuda_fee_beam");
   }
 
   user_precision_complex_t *primay_beam_J00 = malloc(num_beam_values*sizeof(user_precision_complex_t));
@@ -116,13 +115,13 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
 
   uint8_t parallatic = (uint8_t)rotate;
 
-  // printf("ROTATES %d %d\n", parallatic, rotate );
-
+  double latitudes[] = {-0.4660608448386394, -0.498};
   test_run_hyperbeam_cuda(num_components,
              num_times, num_freqs,
              parallatic,
              cuda_fee_beam,
              azs, zas,
+             latitudes,
              primay_beam_J00,
              primay_beam_J01,
              primay_beam_J10,
@@ -130,12 +129,6 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
 
   free_cuda_fee_beam(cuda_fee_beam);
   free_fee_beam(fee_beam);
-  // free(jones);
-  // #ifdef DOUBLE_PRECISION
-  //   double TOL = 1e-6;
-  // #else
-  //   double
-  // #endif
 
   double TOL = 1e-6;
 
@@ -153,23 +146,6 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
   //   //   printf("%d %.5f %.12f %.16f %.16f\n",comp, azs[comp], zas[comp], expected[2*MAX_POLS*comp+0], creal(primay_beam_J00[comp]) );
   //   // }
   //
-  //   TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*MAX_POLS*comp+0],
-  //                             creal(primay_beam_J00[comp]) );
-  //   TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*MAX_POLS*comp+1],
-  //                             cimag(primay_beam_J00[comp]) );
-  //   TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*MAX_POLS*comp+2],
-  //                             creal(primay_beam_J01[comp]) );
-  //   TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*MAX_POLS*comp+3],
-  //                             cimag(primay_beam_J01[comp]) );
-  //   TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*MAX_POLS*comp+4],
-  //                             creal(primay_beam_J10[comp]) );
-  //   TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*MAX_POLS*comp+5],
-  //                             cimag(primay_beam_J10[comp]) );
-  //   TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*MAX_POLS*comp+6],
-  //                             creal(primay_beam_J11[comp]) );
-  //   TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*MAX_POLS*comp+7],
-  //                             cimag(primay_beam_J11[comp]) );
-  // }
 
   for (int time = 0; time < num_times; time ++) {
     for (int freq = 0; freq < num_freqs; freq ++) {
@@ -177,29 +153,28 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
 
         int beam_ind = num_freqs*time*num_components + num_components*freq + comp;
 
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*MAX_POLS*comp+0],
+        int expected_base = 2*MAX_POLS*comp + 2*MAX_POLS*time*num_components;
+
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+0],
                                   creal(primay_beam_J00[beam_ind]) );
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*MAX_POLS*comp+1],
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+1],
                                   cimag(primay_beam_J00[beam_ind]) );
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*MAX_POLS*comp+2],
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+2],
                                   creal(primay_beam_J01[beam_ind]) );
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*MAX_POLS*comp+3],
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+3],
                                   cimag(primay_beam_J01[beam_ind]) );
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*MAX_POLS*comp+4],
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+4],
                                   creal(primay_beam_J10[beam_ind]) );
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*MAX_POLS*comp+5],
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+5],
                                   cimag(primay_beam_J10[beam_ind]) );
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*MAX_POLS*comp+6],
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+6],
                                   creal(primay_beam_J11[beam_ind]) );
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[2*MAX_POLS*comp+7],
+        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+7],
                                   cimag(primay_beam_J11[beam_ind]) );
 
       }
     }
   }
-
-  // printf("There were %d diffs bigger than\n",num_big_diffs );
-
 
   FILE *beam_values_out;
   char buff[0x100];
@@ -280,11 +255,11 @@ void check_for_env_and_run_test(double freq, user_precision_t *delays,
 
     int rotate;
 
-    // // // Without rotation by parallactic angle
+    // Without rotation by parallactic angle
     rotate = 0;
     test_hyperbeam_VaryFreqVaryPointing(freq, delays, mwa_fee_hdf5, expected, outname, rotate);
 
-    //With rotation by parallactic angle
+    // //With rotation by parallactic angle
     rotate = 1;
     test_hyperbeam_VaryFreqVaryPointing(freq, delays, mwa_fee_hdf5, expected_rot, outname, rotate);
   }
@@ -349,16 +324,16 @@ int main(void)
     UNITY_BEGIN();
 
     RUN_TEST(test_hyperbeam_100MHz_zenith);
-    RUN_TEST(test_hyperbeam_150MHz_zenith);
-    RUN_TEST(test_hyperbeam_200MHz_zenith);
-
-    RUN_TEST(test_hyperbeam_100MHz_off_zenith1);
-    RUN_TEST(test_hyperbeam_150MHz_off_zenith1);
-    RUN_TEST(test_hyperbeam_200MHz_off_zenith1);
-
-    RUN_TEST(test_hyperbeam_100MHz_off_zenith2);
-    RUN_TEST(test_hyperbeam_150MHz_off_zenith2);
-    RUN_TEST(test_hyperbeam_200MHz_off_zenith2);
+    // RUN_TEST(test_hyperbeam_150MHz_zenith);
+    // RUN_TEST(test_hyperbeam_200MHz_zenith);
+    
+    // RUN_TEST(test_hyperbeam_100MHz_off_zenith1);
+    // RUN_TEST(test_hyperbeam_150MHz_off_zenith1);
+    // RUN_TEST(test_hyperbeam_200MHz_off_zenith1);
+    
+    // RUN_TEST(test_hyperbeam_100MHz_off_zenith2);
+    // RUN_TEST(test_hyperbeam_150MHz_off_zenith2);
+    // RUN_TEST(test_hyperbeam_200MHz_off_zenith2);
 
     return UNITY_END();
 }

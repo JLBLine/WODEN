@@ -137,7 +137,6 @@ void free_visi_set_inputs(visibility_set_t *visibility_set);
 void free_visi_set_outputs(visibility_set_t *visibility_set);
 
 
-
 #ifdef __cplusplus
 }
 #endif

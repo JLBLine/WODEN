@@ -29,7 +29,7 @@ def check_uvfits_freq_order(uvfits_prepend, num_bands):
     return freq_order
 
 
-def concat_uvfits(uvfits_prepend, bands, output_name):
+def concat_uvfits(uvfits_prepend, bands, output_name, reverse_pols=False):
     """For band in `band_nums`, make a list of uvfits files with name
     `{uvfits_prepend}_band{band}.uvfits`. Then concanenate them by frequency,
     assuming that the set of uvfits are contiguous in frequency. Save output
@@ -55,14 +55,29 @@ def concat_uvfits(uvfits_prepend, bands, output_name):
         all_data = np.empty((data1.shape[0], data1.shape[1], data1.shape[2],
                              num_bands*num_chans, data1.shape[4], data1.shape[5]))
 
-        all_data[:,:,:,0:num_chans, :, :] = data1
+        ##If swapping XX and YY (which really means swapping E-W with N-S)
+        if reverse_pols:
+            all_data[:,:,:,0:num_chans, 0, :] = data1[:,:,:,:,1,:]
+            all_data[:,:,:,0:num_chans, 1, :] = data1[:,:,:,:,0,:]
+            all_data[:,:,:,0:num_chans, 2, :] = data1[:,:,:,:,3,:]
+            all_data[:,:,:,0:num_chans, 3, :] = data1[:,:,:,:,2,:]
+        else:
+            all_data[:,:,:,0:num_chans, :, :] = data1
 
         for band in bands[1:]:
             with fits.open(f"{uvfits_prepend}{band:02d}.uvfits") as this_hdu:
                 this_data = this_hdu[0].data.data
-
                 base_channel = num_chans*(band - 1)
-                all_data[:,:,:,base_channel:base_channel+num_chans,:,:] = this_data
+                ##If swapping XX and YY (which really means swapping E-W with N-S)
+                if reverse_pols:
+                    all_data[:,:,:,base_channel:base_channel+num_chans,0,:] = this_data[:,:,:,:,1,:]
+                    all_data[:,:,:,base_channel:base_channel+num_chans,1,:] = this_data[:,:,:,:,0,:]
+                    all_data[:,:,:,base_channel:base_channel+num_chans,2,:] = this_data[:,:,:,:,3,:]
+                    all_data[:,:,:,base_channel:base_channel+num_chans,3,:] = this_data[:,:,:,:,2,:]
+                else:
+
+                
+                    all_data[:,:,:,base_channel:base_channel+num_chans,:,:] = this_data
 
         uvparnames = ['UU','VV','WW','DATE','BASELINE']
 
@@ -159,6 +174,8 @@ def get_parser():
         help=r'Prepend for the uvfits files e.g. ./data/uvdump_')
     parser.add_argument('--output_name', default="concanenated.uvfits",
         help='Name for output concatenated uvfits file, default: concanenated.uvfits')
+    parser.add_argument('--swap_pols', default=False, action='store_true',
+        help='Reverse the order of polarisations')
 
     return parser
 
@@ -175,7 +192,8 @@ def main():
 
     bands = bands[freq_order]
 
-    concat_uvfits(args.uvfits_prepend, bands, args.output_name)
+    concat_uvfits(args.uvfits_prepend, bands, args.output_name,
+                  args.swap_pols)
 
 if __name__ == '__main__':
 

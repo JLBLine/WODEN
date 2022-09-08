@@ -209,7 +209,7 @@ class Test(unittest.TestCase):
         self.assertEqual(128, args.num_freq_channels)
         self.assertEqual(range(1, 25), args.band_nums)
 
-        self.assertEqual(-26.7033194444 ,args.latitude)
+        self.assertEqual(-26.703319405555554 ,args.latitude)
         self.assertEqual(1280000.0 ,args.coarse_band_width)
 
         self.assertEqual(54.75681779724241, args.gauss_ra_point)

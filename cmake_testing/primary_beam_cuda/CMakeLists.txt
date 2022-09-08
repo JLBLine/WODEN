@@ -27,9 +27,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_compile_options(test_gaussian_beam_${PRECISION}_app PRIVATE ${C_FLAGS})
   add_test(CUDA_test_gaussian_beam_${PRECISION} test_gaussian_beam_${PRECISION}_app)
-
-
-
+  
+  
+  
   ##Test analytic dipole beam functions
   add_executable(test_analytic_dipole_beam_${PRECISION}_app
       test_analytic_dipole_beam.c
@@ -41,9 +41,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_compile_options(test_analytic_dipole_beam_${PRECISION}_app PRIVATE ${C_FLAGS})
   add_test(CUDA_test_analytic_dipole_beam_${PRECISION} test_analytic_dipole_beam_${PRECISION}_app)
-
-
-
+  
+  
+  
   ##Test analytic MWA beam functions
   add_executable(test_MWA_analytic_${PRECISION}_app
       test_MWA_analytic.c

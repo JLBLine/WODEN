@@ -16,7 +16,7 @@ are launched by calculate_visibilities::calculate_visibilities`
 #include <complex.h>
 
 #include "test_calculate_visibilities_common.h"
-#include <mwa_hyperbeam.h>
+#include "hyperbeam_error.h"
 
 // //External CUDA code we're linking in
 // extern void calculate_visibilities(array_layout_t *array_layout,
@@ -137,7 +137,7 @@ void populate_components(components_t *comps, int n_comps,
     for (int time = 0; time < NUM_TIME_STEPS; time++) {
       int step = comp*NUM_TIME_STEPS + time;
       comps->beam_has[step] = lsts[time] - RA0;
-      comps->beam_decs[step] = MWA_LAT_RAD;
+      comps->beam_decs[step] = -0.46606083776035967;
 
       comps->azs[step] = azs[time];
       comps->zas[step] = zas[time];
@@ -312,8 +312,8 @@ woden_settings_t * make_woden_settings(double ra0, double dec0) {
     //Make the fine channel width insanely small so beam changes little
     //with frequency - that way we can test for just one gain value per time
     woden_settings->frequency_resolution = 1e-6;
-    woden_settings->latitude = MWA_LAT_RAD;
-    double latitudes[] = {MWA_LAT_RAD, MWA_LAT_RAD};
+    woden_settings->latitude = -0.46606083776035967;
+    double latitudes[] = {-0.46606083776035967, -0.46606083776035967};
     woden_settings->latitudes = latitudes;
 
     woden_settings->lsts = lsts;
@@ -346,8 +346,8 @@ void test_uvw(visibility_set_t *visibility_set,  double *lsts,
       for (int baseline = 0; baseline < NUM_BASELINES; baseline++) {
         xy_length = (baseline + 1) * 100;
         expec_u[index] = (cos(ha0) + sin(ha0))*xy_length;
-        expec_v[index] = xy_length * sin(MWA_LAT_RAD)*(-cos(ha0) + sin(ha0));
-        expec_w[index] = xy_length * cos(MWA_LAT_RAD)*(cos(ha0) - sin(ha0));
+        expec_v[index] = xy_length * sin(-0.46606083776035967)*(-cos(ha0) + sin(ha0));
+        expec_w[index] = xy_length * cos(-0.46606083776035967)*(cos(ha0) - sin(ha0));
 
         index ++;
       }
@@ -444,12 +444,10 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
     if (mwa_fee_hdf5) {
       printf("MWA_FEE_HDF5: %s\n", mwa_fee_hdf5 );
 
-      int status =  new_fee_beam(mwa_fee_hdf5, &beam_settings->fee_beam,
-                                 beam_settings->hyper_error_str);
+      int status =  new_fee_beam(mwa_fee_hdf5, &beam_settings->fee_beam);
       if (status != 0) {
-        printf("hyperbeam error %d %s\n", status, beam_settings->hyper_error_str );
+        handle_hyperbeam_error(__FILE__, __LINE__, "new_fee_beam");
       }
-
     } else {
       printf("MWA_FEE_HDF5 not found - not running test_hyperbeam test");
     }
@@ -460,10 +458,9 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
     if (mwa_fee_hdf5) {
       printf("MWA_FEE_HDF5: %s\n", mwa_fee_hdf5 );
 
-      int status =  new_fee_beam(mwa_fee_hdf5, &beam_settings->fee_beam,
-                                 beam_settings->hyper_error_str);
+      int status =  new_fee_beam(mwa_fee_hdf5, &beam_settings->fee_beam);
       if (status != 0) {
-        printf("hyperbeam error %d %s\n", status, beam_settings->hyper_error_str );
+        handle_hyperbeam_error(__FILE__, __LINE__, "new_fee_beam");
       }
 
     } else {

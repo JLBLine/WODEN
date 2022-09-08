@@ -92,7 +92,8 @@ as well as the linear Stokes polarisations (e.g.
 test_run_hyperbeam.c
 ***********************************
 This calls ``primary_beam_cuda::test_run_hyperbeam_cuda``, which calls
-``primary_beam_cuda::run_hyperbeam_cuda``, which is a wrapper around `mwa_hyperbeam`_ to calculate the MWA FEE beam.
+``primary_beam_cuda::run_hyperbeam_cuda``, which is a wrapper around
+`mwa_hyperbeam`_ to calculate the MWA FEE beam.
 
 The MWA beam pointing direction on the sky is controlled by a set of 16 delays.
 In these tests, three different delays settings are tested at 50MHz, 150MHz, and
@@ -113,23 +114,30 @@ All delay and frequency combinations are run with both parallactic angle rotatio
 applied and not. Both the FLOAT and DOUBLE codes are checked to match the ``Python``
 version of ``mwa_hyperbeam`` to a tolerance of 1e-6 (only one library is linked
 from ``mwa_hyperbeam`` so the accuracy is the same). Again, running
-``run_header_setup_and_plots.ipynb`` will produce plot. First, an example
-zenith pointing in Stokes linear (``linear_pol_hyperbeam_rot_zenith_gains_nside101_t00_f200.000MHz.png``):
+``run_header_setup_and_plots.ipynb`` will produce plots.
 
+When applying parallactic angle rotation, and latitude is required, which
+can change with time (happens when precessing the array back to J2000 for
+every time step). To check things are working, two time steps with different
+latitudes are called. To accomodate all these variables, a smaller number of
+directions on the sky are used to save space / computation.
 
-.. image:: linear_pol_hyperbeam_rot_zenith_gains_nside101_t00_f200.000MHz.png
+First, an example zenith pointing in Stokes linear
+(``linear_pol_hyperbeam_rot_zenith_gains_nside51_t00_f200.000MHz.png``):
+
+.. image:: linear_pol_hyperbeam_rot_zenith_gains_nside51_t00_f200.000MHz.png
   :width: 800
 
-and the equivalent plots to the pointing used above in ``test_MWA_analytic.c``
-for comparison:
+and the equivalent ``hyperbeam`` outputs to the pointing used above in
+``test_MWA_analytic.c`` for comparison:
 
-.. image:: jones_hyperbeam_rot_offzen2_gains_nside101_t00_f200.000MHz.png
+.. image:: jones_hyperbeam_rot_offzen2_gains_nside51_t00_f200.000MHz.png
   :width: 800
 
 as well as the linear Stokes polarisations (e.g.
 ``linear_pol_MWA_analy_gains_nside101_t00_f200.000MHz.png``):
 
-.. image:: linear_pol_hyperbeam_rot_offzen2_gains_nside101_t00_f200.000MHz.png
+.. image:: linear_pol_hyperbeam_rot_offzen2_gains_nside51_t00_f200.000MHz.png
   :width: 800
 
 which shows qualitatively the Stokes polarisation responses off zenith

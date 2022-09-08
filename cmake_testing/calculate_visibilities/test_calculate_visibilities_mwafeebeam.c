@@ -29,11 +29,11 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 void test_calculate_visibilities_MWAFEEBeam(int n_points, int n_gauss, int n_shapes,
                                            int num_sources) {
 
-  source_catalogue_t *cropped_sky_models = make_cropped_sky_models(RA0, MWA_LAT_RAD,
+  source_catalogue_t *cropped_sky_models = make_cropped_sky_models(RA0, -0.46606083776035967,
                                                     n_points, n_gauss, n_shapes,
                                                     num_sources);
 
-  woden_settings_t *woden_settings = make_woden_settings(RA0, MWA_LAT_RAD);
+  woden_settings_t *woden_settings = make_woden_settings(RA0, -0.46606083776035967);
   woden_settings->beamtype = FEE_BEAM;
 
   for (int i = 0; i < 16; i++) {
@@ -44,7 +44,7 @@ void test_calculate_visibilities_MWAFEEBeam(int n_points, int n_gauss, int n_sha
   beam_settings->beamtype = FEE_BEAM;
 
   visibility_set_t *visibility_set = test_calculate_visibilities(cropped_sky_models,
-                                          beam_settings, woden_settings, RA0, MWA_LAT_RAD,
+                                          beam_settings, woden_settings, RA0, -0.46606083776035967,
                                           beam_settings->beamtype);
 
   double multiplier = (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
@@ -98,13 +98,13 @@ void test_calculate_visibilities_MWAFEEBeam(int n_points, int n_gauss, int n_sha
   woden_settings->num_autos = NUM_CROSS;
   woden_settings->num_visis = woden_settings->num_cross + woden_settings->num_autos;
 
-  cropped_sky_models = make_cropped_sky_models(RA0, MWA_LAT_RAD,
+  cropped_sky_models = make_cropped_sky_models(RA0, -0.46606083776035967,
                                                     n_points, n_gauss, n_shapes,
                                                     num_sources);
 
   printf("We have this many visis %d %d %d\n",woden_settings->num_visis,woden_settings->num_autos,woden_settings->num_cross );
   visibility_set = test_calculate_visibilities(cropped_sky_models,
-                                          beam_settings, woden_settings, RA0, MWA_LAT_RAD,
+                                          beam_settings, woden_settings, RA0, -0.46606083776035967,
                                           beam_settings->beamtype);
   test_comp_phase_centre_allgains(visibility_set,
                                   gain1xx_re, gain1xx_im,

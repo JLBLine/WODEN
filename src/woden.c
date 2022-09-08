@@ -17,7 +17,7 @@
 #include "woden_settings.h"
 #include "visibility_set.h"
 #include "array_layout.h"
-
+#include "hyperbeam_error.h"
 
 //Main CUDA executable to link in
 extern void calculate_visibilities(array_layout_t * array_layout,
@@ -119,10 +119,6 @@ int main(int argc, char **argv) {
 
     woden_settings->base_band_freq = base_band_freq;
 
-    // beam_settings->FEE_beam = malloc(sizeof(RTS_MWA_FEE_beam_t));
-    // //We need the zenith beam to get the normalisation
-    // beam_settings->FEE_beam_zenith = malloc(sizeof(RTS_MWA_FEE_beam_t));
-
     //Setup the visibility container
     visibility_set_t *visibility_set = setup_visibility_set(woden_settings->num_visis);
 
@@ -138,11 +134,15 @@ int main(int argc, char **argv) {
 
       printf("Middle freq is %.8e \n",base_middle_freq );
 
-      status =  new_fee_beam(woden_settings->hdf5_beam_path, &beam_settings->fee_beam,
-                             beam_settings->hyper_error_str);
-
+      // status =  new_fee_beam(woden_settings->hdf5_beam_path, &beam_settings->fee_beam,
+      //                        beam_settings->hyper_error_str);
+      // if (status != 0) {
+      //   printf("hyperbeam error %d %s\n", status, beam_settings->hyper_error_str );
+      // }
+      status = new_fee_beam(woden_settings->hdf5_beam_path,
+                            &beam_settings->fee_beam);
       if (status != 0) {
-        printf("hyperbeam error %d %s\n", status, beam_settings->hyper_error_str );
+        handle_hyperbeam_error(__FILE__, __LINE__, "new_fee_beam");
       }
     }
 

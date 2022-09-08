@@ -24,7 +24,7 @@ void test_RTS_PrecessXYZtoJ2000_GivesCorrectValues(void)
 
   woden_settings_t *woden_settings = malloc(sizeof(woden_settings_t));
   //Set up where woden_settings correctly
-  woden_settings->latitude = MWA_LAT_RAD;
+  woden_settings->latitude = -0.46606083776035967;
   woden_settings->jd_date = 2457278.2010995;
   woden_settings->lst_obs_epoch_base = LST_BEFORE;
   woden_settings->lst_base = LST_AFTER;

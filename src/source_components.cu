@@ -722,28 +722,45 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
 
   else if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP) {
 
-    double *double_azs = NULL;
-    double *double_zas = NULL;
-
-    #ifdef DOUBLE_PRECISION
-      double_azs = components->azs;
-      double_zas = components->zas;
-    #else
-      int num_azza = woden_settings->num_time_steps*num_components;
-
-      double_azs = (double*)malloc(num_azza*sizeof(double));
-      double_zas = (double*)malloc(num_azza*sizeof(double));
-
-      for (int i = 0; i < num_azza; i++) {
-        double_azs[i] = (double)components->azs[i];
-        double_zas[i] = (double)components->zas[i];
-      }
-    #endif
-
+    // double *reordered_azs = NULL;
+    // double *reordered_zas = NULL;
+    //
+    // #ifdef DOUBLE_PRECISION
+    //   double_azs = components->azs;
+    //   double_zas = components->zas;
+    // #else
+    //   int num_azza = woden_settings->num_time_steps*num_components;
+    //
+    //   double_azs = (double*)malloc(num_azza*sizeof(double));
+    //   double_zas = (double*)malloc(num_azza*sizeof(double));
+    //
+    //   for (int i = 0; i < num_azza; i++) {
+    //     double_azs[i] = (double)components->azs[i];
+    //     double_zas[i] = (double)components->zas[i];
+    //   }
+    // #endif
+    //
     if (beam_settings->beamtype == FEE_BEAM_INTERP) {
       printf("\tDoing the hyperbeam (interpolated)\n");
     } else {
       printf("\tDoing the hyperbeam\n");
+    }
+
+    //Have to reorder the az/za from comp ind, time ind to time ind, comp ind
+    //before feeding into mwa_hyperbeam
+    int num_azza = woden_settings->num_time_steps*num_components;
+    double *reordered_azs = (double *)malloc(num_azza*sizeof(double));
+    double *reordered_zas = (double *)malloc(num_azza*sizeof(double));
+
+    int stripe_new, stripe_old;
+
+    for (int time_ind = 0; time_ind < woden_settings->num_time_steps; time_ind++) {
+      for (int comp_ind = 0; comp_ind < num_components; comp_ind++) {
+        stripe_new = time_ind*num_components + comp_ind;
+        stripe_old = comp_ind*woden_settings->num_time_steps + time_ind;
+        reordered_azs[stripe_new] = (double)components->azs[stripe_old];
+        reordered_zas[stripe_new] = (double)components->zas[stripe_old];
+      }
     }
 
 
@@ -753,16 +770,13 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
            woden_settings->num_time_steps, woden_settings->num_freqs,
            parallactic,
            beam_settings->cuda_fee_beam,
-           double_azs, double_zas,
+           reordered_azs, reordered_zas,
+           woden_settings->latitudes,
            d_component_beam_gains->d_gxs, d_component_beam_gains->d_Dxs,
            d_component_beam_gains->d_Dys, d_component_beam_gains->d_gys);
 
-    #ifdef DOUBLE_PRECISION
-      ;
-    #else
-      free(double_azs);
-      free(double_zas);
-    #endif
+    free(reordered_azs);
+    free(reordered_zas);
   }
 
   else if (beam_settings->beamtype == ANALY_DIPOLE) {
