@@ -20,7 +20,8 @@ class PretendArgs():
         self.cat_filename = 'srclist_of_dreams.txt'
         self.chunking_size = 1e+10
         self.coarse_band_width = 1.28e+6
-        self.sky_crop_components = False
+        self.sky_crop_components = True
+        self.sky_crop_sources = False
         self.primary_beam = "none"
 
         self.num_freq_channels = 16

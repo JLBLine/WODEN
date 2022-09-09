@@ -1153,7 +1153,7 @@ void test_crop_sky_model_Point(double lst_base, e_sky_crop sky_crop_type) {
 
   //If we're precessing the array back to J2000, the latitude technically
   //changes with time - let's just stick it equal yo the current MWA lat
-  double latitudes[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
+  double latitudes[] = {-0.46606083776035967, -0.46606083776035967, -0.46606083776035967};
 
   //Call the function being tested
   source_t *cropped_src;
@@ -1220,7 +1220,7 @@ void test_crop_sky_model_Gauss(double lst_base, e_sky_crop sky_crop_type) {
 
   //If we're precessing the array back to J2000, the latitude technically
   //changes with time - let's just stick it equal yo the current MWA lat
-  double latitudes[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
+  double latitudes[] = {-0.46606083776035967, -0.46606083776035967, -0.46606083776035967};
 
   //Call the function being tested
   source_t *cropped_src;
@@ -1291,7 +1291,7 @@ void test_crop_sky_model_Shape(double lst_base, e_sky_crop sky_crop_type) {
 
   //If we're precessing the array back to J2000, the latitude technically
   //changes with time - let's just stick it equal yo the current MWA lat
-  double latitudes[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
+  double latitudes[] = {-0.46606083776035967, -0.46606083776035967, -0.46606083776035967};
 
   //Call the function being tested
   source_t *cropped_src;
@@ -1361,7 +1361,7 @@ void test_crop_sky_model_AllTypes(double lst_base, e_sky_crop sky_crop_type) {
 
   //If we're precessing the array back to J2000, the latitude technically
   //changes with time - let's just stick it equal yo the current MWA lat
-  double latitudes[] = {MWA_LAT_RAD, MWA_LAT_RAD, MWA_LAT_RAD};
+  double latitudes[] = {-0.46606083776035967, -0.46606083776035967, -0.46606083776035967};
 
   //Call the function being tested
   source_t *cropped_src;

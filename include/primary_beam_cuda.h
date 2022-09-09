@@ -3,9 +3,11 @@
   responses. Currently, the analytic dipole is fixed to being an MWA dipole.
   Both models assume there is no leakage and beams are purely real.
 */
-
+#pragma once
 #include "woden_precision_defs.h"
+#include <mwa_hyperbeam.h>
 #include "cudacomplex.h"
+#include "hyperbeam_error.h"
 
 /**
 @brief Calculate a two dimensional Gaussian
@@ -361,7 +363,10 @@ extern "C" void calculate_RTS_MWA_analytic_beam(int num_components,
 /**
 @brief Calculate the FEE MWA primary beam model to a set of sky directions
 `azs` and `zas` for a given initialised `mwa_hyperbeam` device beam object
-`*cuda_fee_beam`.
+`*cuda_fee_beam`. NOTE that the azs, zas need to increment by component
+(fastest changing), then time (slowest changing). This is the OPPOSITE
+of what happens for all other functions, but is needed for pointer arithmatic
+that must be done to feed things into `mwa_hyperbeam` efficiently. Soz boz.
 
 @details Calls `mwa_hyperbeam::calc_jones_cuda_device` to calculate the beam
 responses on the device. This function requires an initialised
@@ -381,7 +386,9 @@ d_primay_beam_J* arrays using the kernel `primary_beam_cuda::kern_map_hyperbeam_
 @param[in] parallactic Whether to rotate by parallactic angle or not
 @param[in] *cuda_fee_beam An initialised `mwa_hyperbeam` `struct FEEBeamCUDA`
 @param[in] *azs Array of Azimuth angles to calculate the beam towards (radians)
-@param[in] *zas Array of Zenith Angles to calculate the beam towards (radiany)
+@param[in] *zas Array of Zenith Angles to calculate the beam towards (radians)
+@param[in] *latitudes The latitude of the array for each time step (radians); this
+can be NULL is parallactic = 0
 @param[in,out] *d_primay_beam_J00 The gains for the north-south beam
 @param[in,out] *d_primay_beam_J01 The leakages for the north-south beam
 @param[in,out] *d_primay_beam_J10 The leakages for the east-west beam
@@ -393,6 +400,7 @@ extern "C" void run_hyperbeam_cuda(int num_components,
            uint8_t parallactic,
            struct FEEBeamCUDA *cuda_fee_beam,
            double *azs, double *zas,
+           double *latitudes,
            cuUserComplex *d_primay_beam_J00,
            cuUserComplex *d_primay_beam_J01,
            cuUserComplex *d_primay_beam_J10,

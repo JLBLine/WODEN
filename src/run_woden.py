@@ -3,6 +3,7 @@
 the GPU WODEN code. Author: J.L.B. Line
 """
 from __future__ import print_function
+from copy import deepcopy
 from astropy.io import fits
 from astropy.time import Time, TimeDelta
 from astropy.coordinates import EarthLocation
@@ -18,9 +19,9 @@ import sys
 ##Constants
 R2D = 180.0 / np.pi
 D2R = np.pi / 180.0
-MWA_LAT = -26.7033194444
-MWA_LONG = 116.670813889
-MWA_HEIGHT = 377.0
+MWA_LAT = -26.703319405555554
+MWA_LONG = 116.67081523611111
+MWA_HEIGHT = 377.827
 VELC = 299792458.0
 SOLAR2SIDEREAL = 1.00274
 
@@ -307,7 +308,8 @@ def create_uvfits(v_container=None,freq_cent=None,
                   longitude=None, latitude=None, array_height=None,
                   telescope_name=None,
                   baselines_array=None, date_array=None,
-                  int_jd=None, hdu_ant=None, gitlabel=False):
+                  int_jd=None, hdu_ant=None, gitlabel=False,
+                  IAU_order=False):
     """
     Takes visibility data read in from WODEN binary files, predefined
     BASELINE and DATE arrays and an antenna table, and writes them out
@@ -315,6 +317,9 @@ def create_uvfits(v_container=None,freq_cent=None,
     create the final uvfits file. Uses `GroupData`_ and `GroupsHDU`_ to create
     the data table, and then combines with the antenna table in a uvfits
     via `HDUList`_.
+
+    Will only work for data as ordered as coming out of the WODEN C/CUDA code
+    (where XX = NS). See `--IAU_order` for more explanation.
 
     .. _GroupData: https://docs.astropy.org/en/stable/io/fits/api/hdus.html?highlight=GroupsHDU#groupdata
     .. _GroupsHDU: https://docs.astropy.org/en/stable/io/fits/api/hdus.html?highlight=GroupsHDU#groupshdu
@@ -325,8 +330,7 @@ def create_uvfits(v_container=None,freq_cent=None,
     v_container : float array
         Data container for the visibility data. Should have
         `shape = (num_time_steps*num_baselines, 1, 1, num_freq_channels, 4, 3)`
-        and should contain instrumental linear polarisation visibilities.
-        The axes should change as:
+        and should contain instrumental linear polarisation visibilities. The axes should change as:
 
         - 1st axis: ordered by baseline (fastest changing) and then time step
           (slowest changing).
@@ -363,9 +367,14 @@ def create_uvfits(v_container=None,freq_cent=None,
     gitlabel : string
         Optional string to add as 'GITLABEL' in the header. Used by WODEN to
         add the git commit of the code for this run
+    IAU_order : Boolean
+        By default, the visibilities out of the CUDA/C code have 
+        XX = North-South, which is the the IAU ordering. Turns out most people
+        want `uvfits` with XX = East-West. So when I`AU_order == True`, do
+        not reorder the input data, and add a header value of `IAUORDER` = True.
+        If `IAU_order == False`, then the XX is flipped to be East-West by
+        reordering the data in 
     """
-
-    ##TODO replace all of this with an interface with pyuvdata
 
     if not uu.shape[0]==vv.shape[0]==ww.shape[0]==baselines_array.shape[0]==date_array.shape[0]==v_container.shape[0]:
         sys.exit("run_woden.create_uvfits: The first dimension of the arrays:\n"
@@ -381,13 +390,28 @@ def create_uvfits(v_container=None,freq_cent=None,
         antenna1_array[antind] = ant1
         antenna2_array[antind] = ant2
 
-    ##stick a bunch of ones in why not
+    ##stick a bunch of ones in why not, keeps pyuvdata happy
     subarray = np.ones(len(baselines_array))
 
     uvparnames = ['UU','VV','WW','DATE','BASELINE', 'ANTENNA1', 'ANTENNA2', 'SUBARRAY']
     parvals = [uu,vv,ww,date_array,baselines_array, antenna1_array, antenna2_array, subarray]
 
-    # Optional INTTIM length of time data were integrated over (seconds)
+    ##Data out of WODEN C/CUDA code is in IAU pol order, so do nothing
+    if IAU_order:
+        pass
+
+    ##Swap polarisations from NS-NS, EW-EW, NS-EW, EW-NS
+    ##                   to   EW-EW, NS-NS, EW-NS, NS-EW
+    else:
+        old_data = deepcopy(v_container)
+
+        v_container[:, :, :, :, 0, :] = old_data[:, :, :, :, 1, :]
+        v_container[:, :, :, :, 1, :] = old_data[:, :, :, :, 0, :]
+        v_container[:, :, :, :, 2, :] = old_data[:, :, :, :, 3, :]
+        v_container[:, :, :, :, 3, :] = old_data[:, :, :, :, 2, :]
+
+        ##Get rid of old array, no longer needed
+        del old_data
 
     uvhdu = fits.GroupData(v_container,parnames=uvparnames,pardata=parvals,bitpix=-32)
     uvhdu = fits.GroupsHDU(uvhdu)
@@ -456,6 +480,11 @@ def create_uvfits(v_container=None,freq_cent=None,
 
     ##Add in the gitlabel so we know what version generated the file
     if gitlabel: uvhdu.header['GITLABEL'] = gitlabel
+
+    if IAU_order:
+        uvhdu.header['IAUORDER'] = True
+    else:
+        uvhdu.header['IAUORDER'] = False
 
     ## Create hdulist and write out file
     hdulist = fits.HDUList(hdus=[uvhdu,hdu_ant])
@@ -624,8 +653,6 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
             uus[time_ind*num_baselines:(time_ind + 1)*num_baselines] = data[u_ind:u_ind+num_baselines] / VELC
             vvs[time_ind*num_baselines:(time_ind + 1)*num_baselines] = data[v_ind:v_ind+num_baselines] / VELC
             wws[time_ind*num_baselines:(time_ind + 1)*num_baselines] = data[w_ind:w_ind+num_baselines] / VELC
-
-
 
     for time_ind in np.arange(num_time_steps):
         for freq_ind in np.arange(num_freq_channels):
@@ -1112,8 +1139,16 @@ def get_parser():
     tel_group.add_argument('--telescope_name', default='MWA',
         help='Name of telescope written out to the uvfits file, defaults to MWA')
 
-
     input_group = parser.add_argument_group('INPUT/OUTPUT OPTIONS')
+    input_group.add_argument('--IAU_order', default=False,
+        help='NEW IN WODEN versions >= 1.4.0. By default, the XX pol is now '
+             'from the East-West aligned dipoles. Add --IAU_order to define '
+             'the XX pol as North-South. Background: '
+             'the first polaristaion output in the uvfits is '
+             'called "XX". The IAU defines "XX" as aligned to North-South, '
+             'however typically it is assumed that "XX" in a uvfits is from '
+             'the East-West dipoles. Le sigh. For WODEN versions < 1.4.0, '
+             'XX was always the N-S dipoles. ')
     input_group.add_argument('--cat_filename', required=True,
         help='Path to WODEN style sky model')
     input_group.add_argument('--metafits_filename',default=False,
@@ -1123,13 +1158,14 @@ def get_parser():
     input_group.add_argument('--output_uvfits_prepend',default='output',
         help='Prepend name for uvfits - will append band%%02d.uvfits %%band_num '
              'at the end. Defaults to "output".')
-    input_group.add_argument('--sky_crop_components', default=False, action='store_true',
+    input_group.add_argument('--sky_crop_components', default=True, action='store_true',
+        help='This option is deprecated, but held here for compatibility.')
+    input_group.add_argument('--sky_crop_sources', default=False, action='store_true',
         help='WODEN will crop out sky model information that is below the '
-             'horizon for the given LST. By default, for each SOURCE in the '
-             'sky model, if any COMPONENT is below the horizon, the entire '
-             'source will be flagged. If --sky_crop_components is included '
+             'horizon for the given LST. By default, '
              'WODEN will include any COMPONENT above the horizon, regardless '
-             'of which SOURCE it belongs to.')
+             'of which SOURCE it belongs to. If --sky_crop_source is included '
+             'for each SOURCE in the sky model, if any COMPONENT is below the ' 'horizon, the entire source will be flagged')
     input_group.add_argument('--do_autos', default=False, action='store_true',
         help='By default, WODEN only calculates cross-correlations. Add this'
              ' flag to include auto-correlations.')
@@ -1471,6 +1507,10 @@ def check_args(args):
 
     ##Either read the array layout from a file or use what was in the metafits
     select_correct_enh(args)
+
+    ##If user asks to crop by source, change cropping by component to False
+    if args.sky_crop_sources:
+        args.sky_crop_components = False
 
     return args
 

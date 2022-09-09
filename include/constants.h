@@ -31,12 +31,12 @@ Default Spectral Index */
 #define DEFAULT_SI -0.8
 
 //MWA defaults------------------------------------------------------------------
-/*! -26.703319 \n
+/*! -26.703319405555554 \n
 Latitude of the MWA (degrees) */
-#define MWA_LAT -26.703319
-/*! -26.703319*DD2R \n
+#define MWA_LAT -26.703319405555554
+/*! -0.4660608448386394 \n
 Latitude of the MWA (radians) */
-#define MWA_LAT_RAD -0.46606083776035967
+#define MWA_LAT_RAD -0.4660608448386394
 
 //shapelet related conversion---------------------------------------------------
 /*! 7.11941466249375271693034 \n

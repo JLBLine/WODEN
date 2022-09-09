@@ -24,14 +24,14 @@ void test_calc_XYZ_diffs_GivesCorrectValues(int do_precession, int do_autos)
   woden_settings_t *woden_settings = malloc(sizeof(woden_settings_t));
   //Set up where woden_settings correctly
   woden_settings->array_layout_file_path="example_array_layout.txt";
-  woden_settings->latitude = MWA_LAT_RAD;
-  woden_settings->latitude_obs_epoch_base = MWA_LAT_RAD;
+  woden_settings->latitude = -0.46606083776035967;
+  woden_settings->latitude_obs_epoch_base = -0.46606083776035967;
   woden_settings->jd_date = 2457278.2010995;
   woden_settings->lst_obs_epoch_base = LST_BEFORE;
 
   if (do_precession) {
     woden_settings->lst_base = LST_AFTER;
-    woden_settings->latitude = MWA_LAT_RAD;
+    woden_settings->latitude = -0.46606083776035967;
   }
   else{
     woden_settings->lst_base = LST_BEFORE;

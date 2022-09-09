@@ -58,9 +58,6 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
         int step = component*woden_settings->num_time_steps + time_step;
         cropped_src->point_components.beam_has[step] = lsts[time_step] - cropped_src->point_components.ras[component];
         cropped_src->point_components.beam_decs[step] = cropped_src->point_components.decs[component];
-        // printf("THIS THING %.6f %.6f %.8f\n",cropped_src->point_components.ras[component],
-        //                                      cropped_src->point_components.decs[component], MWA_LAT_RAD );
-        // printf("%.8f %.8f\n",cropped_src->point_components.beam_has[step],cropped_src->point_components.beam_decs[step] );
       }
     }//point loop
 

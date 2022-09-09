@@ -209,7 +209,7 @@ class Test(unittest.TestCase):
         self.assertEqual(128, args.num_freq_channels)
         self.assertEqual(range(1, 25), args.band_nums)
 
-        self.assertEqual(-26.7033194444 ,args.latitude)
+        self.assertEqual(-26.703319405555554 ,args.latitude)
         self.assertEqual(1280000.0 ,args.coarse_band_width)
 
         self.assertEqual(54.75681779724241, args.gauss_ra_point)
@@ -403,6 +403,21 @@ class Test(unittest.TestCase):
         self.inputs.append('--do_autos')
         args = self.run_parser_and_check_args()
         self.assertEqual(True, args.do_autos)
+
+    def test_sky_cropping_works(self):
+        """Check that with a minimal set of arguments, the parser defaults to
+        crop by sky component, and check that this changes when
+        requested via --sky_crop_sources"""
+
+        ##Make minimum arguements, run parser, check do_autos == False
+        self.make_minimum_required_args_without_metafits()
+        args = self.run_parser_and_check_args()
+        self.assertEqual(True, args.sky_crop_components)
+
+        ##Append the --do_autos flag, and check do_autos == True
+        self.inputs.append('--sky_crop_sources')
+        args = self.run_parser_and_check_args()
+        self.assertEqual(False, args.sky_crop_components)
 
 
 

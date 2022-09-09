@@ -14,6 +14,7 @@
 #include "source_components.h"
 #include "primary_beam_cuda.h"
 #include "cudacheck.h"
+#include "hyperbeam_error.h"
 
 //Helpful C code we are also using
 #include "visibility_set.h"
@@ -164,11 +165,14 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                             num_tiles,
                             num_amps,
                             norm_to_zenith,
-                            &beam_settings->cuda_fee_beam,
-                            beam_settings->hyper_error_str);
+                            &beam_settings->cuda_fee_beam);
+    //
+    // if (status != 0) {
+    //   printf("hyperbeam error %d %s\n", status, beam_settings->hyper_error_str );
+    // }
 
     if (status != 0) {
-      printf("hyperbeam error %d %s\n", status, beam_settings->hyper_error_str );
+      handle_hyperbeam_error(__FILE__, __LINE__, "new_cuda_fee_beam");
     }
   }
 

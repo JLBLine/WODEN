@@ -6,10 +6,7 @@
 
 #include "constants.h"
 #include "woden_struct_defs.h"
-// #include "test_run_hyperbeam.h"
-// #include "test_RTS_FEE_beam.h"
-#include <mwa_hyperbeam.h>
-// #include "azza_radec_nside101.h"
+#include "hyperbeam_error.h"
 #include "test_run_hyperbeam_interp.h"
 #include "test_interp_hyper_expected.h"
 
@@ -24,6 +21,7 @@ extern void test_run_hyperbeam_cuda(int num_components,
            uint8_t parallatic,
            struct FEEBeamCUDA *cuda_fee_beam,
            double *azs, double *zas,
+           double *latitudes,
            user_precision_complex_t *primay_beam_J00,
            user_precision_complex_t *primay_beam_J01,
            user_precision_complex_t *primay_beam_J10,
@@ -51,14 +49,12 @@ void test_hyperbeam_interp(int freq_int,
   woden_settings->num_freqs = num_freqs;
 
   struct FEEBeam *fee_beam;
-  char error_str[100];
 
   int32_t status = 0;
 
-  status =  new_fee_beam(woden_settings->hdf5_beam_path, &fee_beam, error_str);
-
+  status =  new_fee_beam(woden_settings->hdf5_beam_path, &fee_beam);
   if (status != 0) {
-    printf("hyperbeam error %d %s\n",status,error_str );
+    handle_hyperbeam_error(__FILE__, __LINE__, "new_fee_beam");
   }
 
   uint32_t *hyper_delays = malloc(16*sizeof(uint32_t));
@@ -82,7 +78,6 @@ void test_hyperbeam_interp(int freq_int,
   uint32_t *freqs_hz = (uint32_t*)malloc(woden_settings->num_freqs*sizeof(uint32_t));
 
   for (int find = 0; find < woden_settings->num_freqs; find++) {
-      // freqs_hz[freq_ind] = (uint32_t)visibility_set->channel_frequencies[freq_ind];
       freqs_hz[find] = (uint32_t)(base_low_freq + find*freq_res);
 
   }
@@ -97,11 +92,10 @@ void test_hyperbeam_interp(int freq_int,
                           num_tiles,
                           num_amps,
                           norm_to_zenith,
-                          &cuda_fee_beam,
-                          error_str);
+                          &cuda_fee_beam);
 
   if (status != 0) {
-    printf("hyperbeam error %d %s\n",status,error_str );
+    handle_hyperbeam_error(__FILE__, __LINE__, "new_cuda_fee_beam");
   }
 
   user_precision_complex_t *primay_beam_J00 = malloc(num_beam_values*sizeof(user_precision_complex_t));
@@ -111,6 +105,7 @@ void test_hyperbeam_interp(int freq_int,
 
 
   uint8_t parallatic = 1;
+  double latitudes[] = {-0.4660608448386394};
 
   // printf("ROTATES %d %d\n", parallatic, rotate );
 
@@ -119,6 +114,7 @@ void test_hyperbeam_interp(int freq_int,
              parallatic,
              cuda_fee_beam,
              azs, zas,
+             latitudes,
              primay_beam_J00,
              primay_beam_J01,
              primay_beam_J10,
@@ -126,7 +122,6 @@ void test_hyperbeam_interp(int freq_int,
 
   free_cuda_fee_beam(cuda_fee_beam);
   free_fee_beam(fee_beam);
-  // free(jones);
   #ifdef DOUBLE_PRECISION
     double TOL = 1e-10;
   #else

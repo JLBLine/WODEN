@@ -206,7 +206,8 @@ class Test(unittest.TestCase):
     @mock.patch('argparse.ArgumentParser.parse_args',
                 return_value=argparse.Namespace(num_bands=4,
                             uvfits_prepend="unittest_example1_band",
-                            output_name="concatenated_uvfuts.uvfits"))
+                            output_name="concatenated_uvfuts.uvfits",
+                            swap_pols=False))
 
     def test_concat_four_uvfits(self, mock_args):
         """Checks that concatenating four uvfits files that have `band{band}.uvfits`
@@ -239,24 +240,36 @@ class Test(unittest.TestCase):
                               expec_data,
                               self.num_freq_channels*4)
 
-        #
-        # self.check_uvfits_contents("combined_uvfits_band01.uvfits")
-        # self.check_uvfits_contents("combined_uvfits_band02.uvfits")
-
-
+    ##TODO haven't actually setup the code to check the dimensions but
+    ##this is the kind of test you would run to check that behaviour if we do
+    ##if in the le future
+    # ##Setup some fake command line things for the following test
+    # @mock.patch('argparse.ArgumentParser.parse_args',
+    #             return_value=argparse.Namespace(num_bands=2,
+    #                         uvfits_prepend="unittest_example1_band",
+    #                         output_name="concatenated_uvfuts.uvfits",
+    #                         swap_pols=False))
     # def test_mismatch_data_fails(self, mock_args):
     #     """Check everything fails when the dimensions of data in uvfits1
     #     and uvfits2 do not match"""
-    #
+    
+    # #     self.make_dummy_intputs()
+    # #     self.output_uvfits_name = "unittest_diff_dimension.uvfits"
+    # #     self.create_uvfits_outputs(num_freqs=2)
+
+    #     ##Some input test params
     #     self.make_dummy_intputs()
-    #     self.output_uvfits_name = "unittest_diff_dimension.uvfits"
-    #     self.create_uvfits_outputs(num_freqs=2)
-    #
+    #     self.create_uvfits_outputs()
+
+    #     band = 2
+    #     self.output_uvfits_name = f"unittest_example1_band{band:02d}.uvfits"
+    #     self.create_uvfits_outputs(visi_values=band, num_freqs=2)
+    
     #     ##Contain things when they go wrong
     #     with self.assertRaises(SystemExit) as cm:
     #         ##This call to main should die
-    #         awu.main()
-    #
+    #         cwu.main()
+    
     #     expec_fail_string = "Shape of the data in the uvfits are not the same. Data "\
     #          "might have different number of times steps, frequencies, "\
     #          "or baselines."

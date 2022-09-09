@@ -80,8 +80,8 @@ void check_setup_lsts_and_phase_centre_set1() {
   woden_settings->num_time_steps = 3;
   woden_settings->num_freqs = 2;
   woden_settings->time_res = 1.0;
-  woden_settings->latitude = MWA_LAT_RAD;
-  woden_settings->latitude_obs_epoch_base = MWA_LAT_RAD;
+  woden_settings->latitude = -0.46606083776035967;
+  woden_settings->latitude_obs_epoch_base = -0.46606083776035967;
 
   woden_settings->lst_base = 0.0;
   woden_settings->lst_obs_epoch_base = 0.0;
@@ -110,8 +110,8 @@ void check_setup_lsts_and_phase_centre_set2() {
   woden_settings->num_time_steps = 8;
   woden_settings->num_freqs = 2;
   woden_settings->time_res = 1.0;
-  woden_settings->latitude = MWA_LAT_RAD;
-  woden_settings->latitude_obs_epoch_base = MWA_LAT_RAD;
+  woden_settings->latitude = -0.46606083776035967;
+  woden_settings->latitude_obs_epoch_base = -0.46606083776035967;
 
   woden_settings->lst_base = 1.2345;
   woden_settings->lst_obs_epoch_base = 1.2345;
@@ -141,13 +141,13 @@ void check_setup_lsts_and_phase_centre_set3() {
   woden_settings->num_time_steps = 8;
   woden_settings->num_freqs = 2;
   woden_settings->time_res = 1.0;
-  woden_settings->latitude = MWA_LAT_RAD;
-  woden_settings->latitude_obs_epoch_base = MWA_LAT_RAD;
+  woden_settings->latitude = -0.46606083776035967;
+  woden_settings->latitude_obs_epoch_base = -0.46606083776035967;
 
   woden_settings->lst_base = 1.2345;
   woden_settings->lst_obs_epoch_base = 1.2345;
   woden_settings->ra0 = 0.0;
-  woden_settings->dec0 = MWA_LAT_RAD;
+  woden_settings->dec0 = -0.46606083776035967;
   woden_settings->jd_date = 2457278.201145833;
 
   double expec_prec_lsts[8] = { 1.2317545128009186, 1.2318274511154514,
