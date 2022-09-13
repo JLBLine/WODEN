@@ -47,6 +47,9 @@ def concat_uvfits(uvfits_prepend, bands, output_name, reverse_pols=False):
         ww = hdu[0].data['WW']
         date_array = hdu[0].data['DATE'] - hdu[0].header['PZERO4']
         baselines_array = hdu[0].data['BASELINE']
+        ant1_array = hdu[0].data['ANTENNA1']
+        ant2_array = hdu[0].data['ANTENNA2']
+        subs_array = hdu[0].data['SUBARRAY']
 
         ant_hdu = hdu[1]
 
@@ -79,9 +82,11 @@ def concat_uvfits(uvfits_prepend, bands, output_name, reverse_pols=False):
                 
                     all_data[:,:,:,base_channel:base_channel+num_chans,:,:] = this_data
 
-        uvparnames = ['UU','VV','WW','DATE','BASELINE']
+        uvparnames = ['UU','VV','WW','DATE','BASELINE', 'ANTENNA1', 'ANTENNA2', 'SUBARRAY']
 
-        parvals = [uu, vv, ww, date_array, baselines_array]
+        parvals = [uu, vv, ww, date_array, baselines_array, ant1_array,
+                   ant2_array, subs_array]
+
         ##This sets up the new size uvfits
         uvhdu = fits.GroupData(all_data, parnames=uvparnames, pardata=parvals, bitpix=-32)
         uvhdu = fits.GroupsHDU(uvhdu)
