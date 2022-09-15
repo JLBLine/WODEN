@@ -205,6 +205,7 @@ if(TARGET_GROUP STREQUAL production)
     make_python_symlink("concat_woden_uvfits.py")
     make_python_symlink("uv2ms.py")
     make_python_symlink("convert_WSClean_list_to_WODEN.py")
+    make_python_symlink("add_instrumental_effects_woden.py")
 
     ##Want to run a python command everytime we make the code, in case paths
     ##have changed. CMake doesn't seem to want to run a command unless the
