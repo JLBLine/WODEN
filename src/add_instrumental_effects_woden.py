@@ -3,7 +3,7 @@ from astropy.io import fits
 import numpy as np
 from sys import exit
 from astropy.time import Time
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 def RTS_decode_baseline(blcode):
     """The ancient aips/miriad extended way of decoding a baseline. Takes
