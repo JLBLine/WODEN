@@ -28,10 +28,13 @@ coverage run --source=run_woden -a ../cmake_testing/run_woden/test_remove_phase_
 coverage run --source=run_woden -a ../cmake_testing/run_woden/test_RTS_encoding.py
 coverage run --source=run_woden -a ../cmake_testing/run_woden/test_write_json.py
 
+coverage run --source=add_woden_uvfits -a ../cmake_testing/add_woden_uvfits/test_add_woden_uvfits.py
+
+coverage run --source=concat_woden_uvfits -a ../cmake_testing/concat_woden_uvfits/test_concat_woden_uvfits.py
+
 ##convert output to something that codecov accepts
 coverage xml
 
 ##delete things that were written out by running tests
-rm WODEN_array_layout.txt unittest_example.uvfits test_write_gaussian_beam.json \
-    test_write_minimum_json.json test_write_mwafee_beam.json example.txt \
-    test_load_data.dat test_write_np_precess.json
+rm WODEN_array_layout.txt *.uvfits *.json \
+    example.txt test_load_data.dat

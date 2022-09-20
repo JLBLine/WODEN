@@ -76,35 +76,35 @@ def RTS_decode_baseline(blcode):
 #
 #     """
 
-def make_antenna_gains(num_antennas, num_freqs, gain_err=0.05, phase_err=10,
-                       freq_dep_gains=False):
-    """Make some gain errors
+def make_single_polarsiation_jones_element(num_antennas, num_freqs, 
+        amp_err=0.05, phase_err=10, freq_dep_jones_entry=False):
+    """Make some jones matrix errors
     
-    Returns a (num_antennas, num_freqs) shape complex array
+    Returns a (num_antennas, num_freqs, 2, 2) shape complex array
 
     """
 
-    ##If making gains with a frequency dependence, do this
-    if freq_dep_gains:
+    ##If making jones_entry with a frequency dependence, do this
+    if freq_dep_jones_entry:
 
         ##First up, make the real scalar gain error - one per antenna
-        gains = 1 + np.random.uniform(-gain_err, gain_err, (num_antennas, num_freqs))
+        jones_entry = 1 + np.random.uniform(-amp_err, amp_err, (num_antennas, num_freqs))
         
         ##Make things complex
-        gains = gains + 1j*np.zeros((num_antennas, num_freqs))
+        jones_entry = jones_entry + 1j*np.zeros((num_antennas, num_freqs))
 
     ##If making a single flat gain per antenna, do this
     else:
 
         ##First up, make the real scalar gain error - one per antenna
-        gains = 1 + np.random.uniform(-gain_err, gain_err, num_antennas)
+        jones_entry = 1 + np.random.uniform(-amp_err, amp_err, num_antennas)
         
         ##Make things complex
-        gains = gains + 1j*np.zeros(num_antennas)
+        jones_entry = jones_entry + 1j*np.zeros(num_antennas)
 
         ##Make a frequency axis
-        gains = np.repeat(gains, num_freqs)
-        gains.shape = (num_antennas, num_freqs)
+        jones_entry = np.repeat(jones_entry, num_freqs)
+        jones_entry.shape = (num_antennas, num_freqs)
 
     for ant in range(num_antennas):
 
@@ -112,35 +112,107 @@ def make_antenna_gains(num_antennas, num_freqs, gain_err=0.05, phase_err=10,
 
         phase_grad = np.linspace(-phase, phase, num_freqs)
 
-        gains[ant] = gains[ant]*np.exp(1j*phase_grad)
+        jones_entry[ant] = jones_entry[ant]*np.exp(1j*phase_grad)
 
     ##First gain is reference gain
-    gains[0] = 1.0 + 0.0j
+    jones_entry[0] = 1.0 + 0.0j
 
 
     ##TODO - write these out to a `hyperdrive` style gain FITS?
-    np.savetxt("applied_gains.txt", np.real(gains), fmt='%.2f')
+    # np.savetxt("applied_jones_entry.txt", jones_entry, fmt='%.10e')
 
-    return gains
+    return jones_entry
 
-def apply_gain_errors(num_antennas, visibilities, gains, b1s, b2s, 
-                      frequency_dependent=False):
+
+def make_antenna_jones_matrices(num_antennas, num_freqs, 
+        gain_amp_err=0.05, gain_phase_err=10, freq_dep_gains=False,
+        leakage_amp_err=0.05, leakage_phase_err=10, freq_dep_leakages=False,
+        equal_gains=False, equal_leakages=True, zero_leakage=True):
+    
+    
+    antenna_jones_matrices = np.zeros((num_antennas, num_freqs, 2, 2),
+                                      dtype=complex)
+    
+    if equal_gains:
+    
+        gx = make_single_polarsiation_jones_element(num_antennas, num_freqs, 
+                amp_err=gain_amp_err, phase_err=gain_phase_err,
+                freq_dep_jones_entry=freq_dep_gains)
+        gy = gx
+        
+    else:
+        gx = make_single_polarsiation_jones_element(num_antennas, num_freqs, 
+                amp_err=gain_amp_err, phase_err=gain_phase_err,
+                freq_dep_jones_entry=freq_dep_gains)
+        gy = make_single_polarsiation_jones_element(num_antennas, num_freqs, 
+                amp_err=gain_amp_err, phase_err=gain_phase_err,
+                freq_dep_jones_entry=freq_dep_gains)
+        
+    antenna_jones_matrices[:, :, 0, 0] = gx
+    antenna_jones_matrices[:, :, 1, 1] = gy
+    # antenna_jones_matrices[:, :, 0, 0] = complex(1, 0)
+    # antenna_jones_matrices[:, :, 1, 1] = complex(1, 0)
+    
+        
+    if zero_leakage:
+        Dx = Dy = np.zeros(num_antennas)
+    else:
+        if equal_leakages:
+            Dx = make_single_polarsiation_jones_element(num_antennas,
+                                    num_freqs, amp_err=leakage_amp_err,
+                                    phase_err=leakage_phase_err,
+                                    freq_dep_jones_entry=freq_dep_gains)
+            Dy = Dx
+        else:
+            Dx = make_single_polarsiation_jones_element(num_antennas,
+                                    num_freqs, amp_err=leakage_amp_err,
+                                    phase_err=leakage_phase_err,
+                                    freq_dep_jones_entry=freq_dep_gains)
+            Dy = make_single_polarsiation_jones_element(num_antennas,
+                                    num_freqs, amp_err=leakage_amp_err,
+                                    phase_err=leakage_phase_err,
+                                    freq_dep_jones_entry=freq_dep_gains)
+        antenna_jones_matrices[:, :, 0, 1] = Dx        
+        antenna_jones_matrices[:, :, 1, 0] = Dy
+        
+        
+    antenna_jones_matrices
+    
+    np.savez_compressed("gains_applied_woden.npz",
+                        gx=gx, Dx=Dx, Dy=Dy, gy=gy,
+                        antenna_jones_matrices=antenna_jones_matrices)
+        
+    
+    return antenna_jones_matrices
+
+def apply_antenna_jones_matrices(num_antennas, visibilities,
+                                 antenna_jones_matrices, b1s, b2s, 
+                                 frequency_dependent=False):
 
     # print(visibilities.shape)
     # print(len(b1s))
     # print(len(gains))
 
-    gains_b1s = gains[b1s]
-    gains_b2s = gains[b2s]
+    jones_b1s = antenna_jones_matrices[b1s]
+    jones_b2s = antenna_jones_matrices[b2s]
+    
+    print(jones_b1s.shape)
 
-    # print(gains_b1s)
-
-    visibilities = gains_b1s[:, :, np.newaxis]*visibilities*np.conjugate(gains_b2s[:, :, np.newaxis])
-
-    # visibilities = gains_b1s[:, np.newaxis, np.newaxis]*visibilities*np.conjugate(gains_b2s[:, np.newaxis, np.newaxis])
-
-    # print(np.real(visibilities[:8128, 10, 0]))
-
+    reshape_visi = np.empty((visibilities.shape[0], visibilities.shape[1],
+                             2, 2), dtype=complex)
+    
+    reshape_visi[:, :, 0, 0] = visibilities[:, :, 0]
+    reshape_visi[:, :, 1, 1] = visibilities[:, :, 1]
+    reshape_visi[:, :, 0, 1] = visibilities[:, :, 2]
+    reshape_visi[:, :, 1, 0] = visibilities[:, :, 3]
+    
+    reshape_visi = np.matmul(np.matmul(jones_b1s, reshape_visi), np.conjugate((jones_b2s)))
+    
+    visibilities[:, :, 0] = reshape_visi[:, :, 0, 0]
+    visibilities[:, :, 1] = reshape_visi[:, :, 1, 1]
+    visibilities[:, :, 2] = reshape_visi[:, :, 0, 1]
+    visibilities[:, :, 3] = reshape_visi[:, :, 1, 0]
+    
     return visibilities
 
 def visibility_noise_stddev(freq_vec, time_res, freq_res,
@@ -360,13 +432,13 @@ def add_all_errors_single_uvfits(args):
     print("NUM ANTENNAS",num_antennas)
     if args.antenna_gain_error or args.antenna_phase_error:
         print("Adding antenna gains... ")
-        gains = make_antenna_gains(num_antennas, num_freqs,
-                                   gain_err=args.antenna_gain_error,
-                                   phase_err=args.antenna_phase_error,
+        antenna_jones_matrices = make_antenna_jones_matrices(num_antennas, num_freqs,
+                                   gain_amp_err=args.antenna_gain_error,
+                                   gain_phase_err=args.antenna_phase_error,
                                    freq_dep_gains=args.antenna_gain_error_freq_random)
 
-        visibilities = apply_gain_errors(num_antennas, visibilities, 
-                                        gains, b1s, b2s)
+        visibilities = apply_antenna_jones_matrices(num_antennas,
+                            visibilities, antenna_jones_matrices, b1s, b2s)
         print("Finished adding antenna gains.")
 
     if args.add_visi_noise:
