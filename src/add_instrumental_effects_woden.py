@@ -150,8 +150,6 @@ def make_antenna_jones_matrices(num_antennas, num_freqs,
         
     antenna_jones_matrices[:, :, 0, 0] = gx
     antenna_jones_matrices[:, :, 1, 1] = gy
-    # antenna_jones_matrices[:, :, 0, 0] = complex(1, 0)
-    # antenna_jones_matrices[:, :, 1, 1] = complex(1, 0)
     
         
     if zero_leakage:
@@ -189,15 +187,9 @@ def apply_antenna_jones_matrices(num_antennas, visibilities,
                                  antenna_jones_matrices, b1s, b2s, 
                                  frequency_dependent=False):
 
-    # print(visibilities.shape)
-    # print(len(b1s))
-    # print(len(gains))
-
     jones_b1s = antenna_jones_matrices[b1s]
     jones_b2s = antenna_jones_matrices[b2s]
     
-    print(jones_b1s.shape)
-
     reshape_visi = np.empty((visibilities.shape[0], visibilities.shape[1],
                              2, 2), dtype=complex)
     
@@ -272,7 +264,7 @@ def add_visi_noise(visibilities, all_freqs, freq_res, time_res):
 
         ##I think noise on real and imag are uncorrelated??
         ##The noise is calculated for complex values so divide by root two
-        ##when calcing real or imag
+        ##when calcing real or imag??
         real_noise = np.random.normal(0, stddev, (num_visi, num_pols))
         imag_noise = np.random.normal(0, stddev, (num_visi, num_pols))
 
@@ -300,13 +292,13 @@ def get_parser():
 
     parser = argparse.ArgumentParser(description="Do daa ")
 
-    band_group = parser.add_argument_group('ADDING EFFECTS TO COARSE BAND UVFITS')
-    band_group.add_argument('--uvfits_prepend', default=False,
-        help='Prepend for a set of uvfits files e.g. ./data/filename_band')
-    band_group.add_argument('--num_bands', default=24, type=int,
-        help='How many pairs of files to combine - default is 24')
-    band_group.add_argument('--output_name_prepend', default="instrumental_band",
-        help='Name for start of output uvfits file, default: instrumental_band')
+    # band_group = parser.add_argument_group('ADDING EFFECTS TO COARSE BAND UVFITS')
+    # band_group.add_argument('--uvfits_prepend', default=False,
+    #     help='Prepend for a set of uvfits files e.g. ./data/filename_band')
+    # band_group.add_argument('--num_bands', default=24, type=int,
+    #     help='How many pairs of files to combine - default is 24')
+    # band_group.add_argument('--output_name_prepend', default="instrumental_band",
+    #     help='Name for start of output uvfits file, default: instrumental_band')
 
     sing_group = parser.add_argument_group('ADDING EFFECTS TO SINGLE UVFITS')
     sing_group.add_argument('--uvfits', default=False,
@@ -338,7 +330,19 @@ def get_parser():
         help='Add visibility noise via the radiometer equation. '
              'Defaults to MWA-like parameters for reciever '
              'temperature and effective tile area')
-
+    
+    eff_group.add_argument('--visi_noise_int_time',
+        default=False, type=float,
+        help='Use a different integration time (seconds) to what is actually in the '
+             'data to calculate the noise, e.g. even if you data is at 2s '
+             'resolution, --visi_noise_int_time=60 will add the noise for a '
+             'one minute integration.')
+    eff_group.add_argument('--visi_noise_freq_reso',
+        default=False, type=float,
+        help='Use a different frequency channel width (Hz) to what is actually in the '
+             'data to calculate the noise, e.g. even if you data is at 40kHz '
+             'resolution, --visi_noise_freq_reso=1e+6 will add the noise for a '
+             'channel width of 1MHz instead.')
 
 
     return parser
@@ -443,10 +447,25 @@ def add_all_errors_single_uvfits(args):
 
     if args.add_visi_noise:
         print("Adding visibility noise... ")
+        if args.visi_noise_int_time:
+            print(f"--visi_noise_int_time was set to {args.visi_noise_int_time:.1e} "
+                  "seconds, using instead of time resolution inside uvfits")
+            
+            visi_noise_int_time = args.visi_noise_int_time
+        else:
+            visi_noise_int_time = time_res
+            
+        if args.visi_noise_freq_reso:
+            print(f"--visi_noise_freq_reso was set to {args.visi_noise_freq_reso:.3e} "
+                  "Hz, using instead of freq resolution inside uvfits")
+            
+            visi_noise_freq_reso = args.visi_noise_freq_reso
+        else:
+            visi_noise_freq_reso = freq_res
+        
         visibilities = add_visi_noise(visibilities, all_freqs, 
-                                      freq_res, time_res)
+                                      visi_noise_freq_reso, visi_noise_int_time)
         print("Finished adding visibility noise")
-
 
     with fits.open(args.uvfits) as hdu:
         ##Leave the weights alone
