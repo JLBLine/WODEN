@@ -486,7 +486,7 @@ def main():
 
 
 if __name__ == '__main__':
-    np.random.seed(87234)
+    # np.random.seed(87234)
     main()
 
     # with fits.open('error_added_test.uvfits') as hdu:
