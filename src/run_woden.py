@@ -201,7 +201,7 @@ def RTS_decode_baseline(blcode):
 
 def make_antenna_table(XYZ_array=None, telescope_name=None,num_antennas=None,
                        freq_cent=None, date=None, gst0_deg=None, degpdy=None,
-                       ut1utc=None, longitude=None, latitude=None, array_height=None):
+                       ut1utc=None, longitude=None, latitude=None, array_height=None, ant_names=False):
     """Write an antenna table for a uvfits file. This is the first table in
     the uvfits file that encodes antenna positions, with some header keywords.
     Uses `astropy.io.fits.BinTableHDU`_ to create the table.
@@ -242,12 +242,14 @@ def make_antenna_table(XYZ_array=None, telescope_name=None,num_antennas=None,
     """
 
     ##Make some values for certain columns
-    annnames = np.array(["%05d" %ant for ant in range(1,num_antennas+1)])
+    if type(ant_names) == bool:
+    
+        ant_names = np.array(["%05d" %ant for ant in range(1,num_antennas+1)])
     xlabels = np.array(['X']*num_antennas)
     ylabels = np.array(['Y']*num_antennas)
 
     ##Make a number of FITS columns to create the antenna table from
-    col1 = fits.Column(array=annnames,name='ANNAME',format='8A')
+    col1 = fits.Column(array=ant_names,name='ANNAME',format='8A')
     col2 = fits.Column(array=XYZ_array,name='STABXYZ',format='3D')
     ##col3 makes an empty array, and the format states skip reading this column
     ##Just replicating the example uvfits I've been using
@@ -683,8 +685,6 @@ def load_data(filename=None,num_baselines=None,num_freq_channels=None,num_time_s
 
                 time_base = int(time_ind*(num_baselines + num_ants))
                 this_cross_map = cross_map + time_base
-                # print(this_cross_map)
-                # print(cross_XX_re)
 
                 v_container[this_cross_map,0,0,freq_ind,0,0] = cross_XX_re
                 v_container[this_cross_map,0,0,freq_ind,0,1] = cross_XX_im
@@ -878,7 +878,6 @@ def make_baseline_date_arrays(num_antennas, date, num_time_steps, time_res,
         num_baselines += num_antennas
 
     template_baselines = np.empty(num_baselines)
-    print(num_baselines)
 
     ##Loop over all antenna combinations and encode the baseline pair
     baseline_ind = 0
@@ -1271,6 +1270,7 @@ def select_correct_enh(args):
         args.east = args.east[selection]
         args.north = args.north[selection]
         args.height = args.height[selection]
+        args.ant_names = args.ant_names[selection]
 
         array_layout = np.zeros((args.num_antennas,3))
 
@@ -1289,6 +1289,8 @@ def select_correct_enh(args):
             args.east = array_layout[:,0]
             args.north = array_layout[:,1]
             args.height = array_layout[:,2]
+            
+            args.ant_names = np.array(["%05d" %ant for ant in range(1,args.num_antennas + 1)])
 
         except:
             exit("Could not read array layout file:\n"
@@ -1392,9 +1394,19 @@ def check_args(args):
             date = f[0].header['DATE-OBS']
 
             ##Get the east, north, height antenna positions from the metafits
-            args.east = f[1].data['East']
-            args.north = f[1].data['North']
-            args.height = f[1].data['Height']
+            ##Need to order the antennas via the Tile
+            ##column to be consistent with hyperdrive
+            antenna_order = np.argsort(f[1].data['Tile'])
+
+            east = f[1].data['East'][antenna_order]
+            north = f[1].data['North'][antenna_order]
+            height = f[1].data['Height'][antenna_order]
+            tilenames = f[1].data['Tilename'][antenna_order]
+            
+            args.east = east
+            args.north = north
+            args.height = height
+            args.ant_names = tilenames
 
             ##Use this to signal that reading in array layout from metafits
             ##was successful
@@ -1664,7 +1676,8 @@ if __name__ == "__main__":
                           num_antennas=args.num_antennas, freq_cent=central_freq_chan_value,
                           date=args.date, gst0_deg=gst0_deg, degpdy=degpdy,
                           ut1utc=ut1utc, longitude=args.longitude, latitude=args.latitude,
-                          array_height=args.array_height)
+                          array_height=args.array_height,
+                          ant_names=args.ant_names)
 
             baselines_array, date_array = make_baseline_date_arrays(args.num_antennas,
                                           args.date, args.num_time_steps, args.time_res,
