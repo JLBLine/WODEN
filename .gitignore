@@ -77,3 +77,4 @@ examples/MWA_EoR0
 test_installation/curved_power_law
 test_installation/list_fluxes
 
+.vscode

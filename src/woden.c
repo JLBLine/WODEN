@@ -25,7 +25,7 @@ extern void calculate_visibilities(array_layout_t * array_layout,
   woden_settings_t *woden_settings,  visibility_set_t *visibility_set,
   user_precision_t *sbf);
 
-int main(int argc, char **argv) {
+int run_woden(char *json_name, visibility_set_t *visibility_set) {
 
   #ifdef DOUBLE_PRECISION
   printf("WODEN is using DOUBLE precision\n");
@@ -33,25 +33,25 @@ int main(int argc, char **argv) {
   printf("WODEN is using FLOAT precision\n");
   #endif
 
-  //If not enough arguments, print help
-  if (argc < 2) {
-    print_cmdline_help();
-    exit(1);
-  }
+  // //If not enough arguments, print help
+  // if (argc < 2) {
+  //   print_cmdline_help();
+  //   exit(1);
+  // }
 
-  //If --help is passed, print help
-  if (strcmp("--help", argv[1]) == 0) {
-    print_cmdline_help();
-    exit(1);
+  // //If --help is passed, print help
+  // if (strcmp("--help", argv[1]) == 0) {
+  //   print_cmdline_help();
+  //   exit(1);
 
-  }
+  // }
 
-  //If -h is passed, print help
-  if (strcmp("-h", argv[1]) == 0) {
-    print_cmdline_help();
-    exit(1);
+  // //If -h is passed, print help
+  // if (strcmp("-h", argv[1]) == 0) {
+  //   print_cmdline_help();
+  //   exit(1);
 
-  }
+  // }
 
   //Is everything OK integer
   int status=0;
@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
 
   //Read in the settings from the controlling json file
   woden_settings_t *woden_settings = malloc( sizeof(woden_settings_t) );
-  status = read_json_settings(argv[1], woden_settings);
+  status = read_json_settings(json_name, woden_settings);
 
   if (status == 1) {
     printf("read_json_settings failed. Exiting now\n");
@@ -120,7 +120,7 @@ int main(int argc, char **argv) {
     woden_settings->base_band_freq = base_band_freq;
 
     //Setup the visibility container
-    visibility_set_t *visibility_set = setup_visibility_set(woden_settings->num_visis);
+    // visibility_set_t *visibility_set = setup_visibility_set(woden_settings->num_visis);
 
     //Fill in the time/freq/baseline settings in `visiblity_set` needed by
     //calculate_visibilities
@@ -153,7 +153,7 @@ int main(int argc, char **argv) {
     printf("GPU calls for band %d finished\n",band_num );
 
     //Write out binary file for python code to read and convert to uvfits
-    write_visi_set_binary(visibility_set, band_num, woden_settings->num_visis);
+    // write_visi_set_binary(visibility_set, band_num, woden_settings->num_visis);
 
     //Writes out a text file with u,v,w XX_re, XX_im. Useful for bug hunting
     //in desperation
@@ -161,8 +161,8 @@ int main(int argc, char **argv) {
 
     //Free up that memory
     free_visi_set_inputs(visibility_set);
-    free_visi_set_outputs(visibility_set);
-    free( visibility_set );
+    // free_visi_set_outputs(visibility_set);
+    // free( visibility_set );
 
     //Release the CPU MWA FEE beam if required
     if (woden_settings->beamtype == FEE_BEAM || woden_settings->beamtype == FEE_BEAM_INTERP){
@@ -175,4 +175,6 @@ int main(int argc, char **argv) {
   }//band loop
   free(woden_settings);
   printf("WODEN is done\n");
+
+  return 0;
 }//main
