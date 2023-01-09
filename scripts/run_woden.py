@@ -4,6 +4,13 @@ the GPU WODEN code. Author: J.L.B. Line
 """
 from wodenpy.woden_lib import *
 from wodenpy.wodenpy_setup.run_setup import *
+from wodenpy.use_libwoden.use_libwoden import *
+from wodenpy.use_libwoden.visibility_set import *
+from wodenpy.observational.calc_obs import *
+from wodenpy.uvfits.wodenpy_uvfits import *
+from wodenpy.array_layout.create_array_layout import *
+from wodenpy.phase_rotate.remove_phase_track import *
+from wodenpy.use_libwoden.woden_settings import *
 
 ##Constants
 R2D = 180.0 / np.pi
@@ -35,9 +42,9 @@ def main():
 
     ##Write json file
     json_band_str =  '-'.join(map(str, args.band_nums))
-    json_name = 'run_woden_{:s}.json'.format(json_band_str)
+    # json_name = 'run_woden_{:s}.json'.format(json_band_str)
 
-    write_json(json_name=json_name, jd_date=jd_date, lst=lst_deg, args=args)
+    # write_json(json_name=json_name, jd_date=jd_date, lst=lst_deg, args=args)
 
     ##Check the uvfits prepend to make sure we end in .uvfits
     output_uvfits_prepend = args.output_uvfits_prepend
@@ -62,11 +69,15 @@ def main():
 
         ##This essentially does a malloc so we can shove this straight into
         ##the C library I think
-        visibility_set = setup_visi_set(num_visis)
+        visibility_set = setup_visi_set(num_visis, args.precision)
+        
+        ##populates a ctype equivalent of woden_settings struct to pass
+        ##to the C library
+        woden_settings = create_woden_settings(args, jd_date, lst_deg)
         
         ##This calls the WODEN main function, and populates visibility set
         ##with the outputs that we want
-        run_woden(json_name.encode('utf-8'), visibility_set)
+        run_woden(woden_settings, visibility_set)
 
         # command(f'{WODEN_DIR}/{woden_lib} {json_name}')
 
@@ -92,7 +103,7 @@ def main():
             central_freq_chan_value = band_low_freq + central_freq_chan*args.freq_res
 
 
-            uus,vvs,wws,v_container = load_data(visibility_set=visibility_set,
+            uus,vvs,wws,v_container = load_visibility_set(visibility_set=visibility_set,
                                                 num_baselines=num_baselines,
                                                 num_freq_channels=args.num_freq_channels,
                                                 num_time_steps=args.num_time_steps,
@@ -138,7 +149,7 @@ def main():
         if args.no_tidy:
             pass
         else:
-            command("rm {:s}".format(json_name))
+            # command("rm {:s}".format(json_name))
             ##if we generated a text file containing the array layout
             ##from the metafits, delete it now
             # if args.array_layout == 'from_the_metafits':

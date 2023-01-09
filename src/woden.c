@@ -25,33 +25,13 @@ extern void calculate_visibilities(array_layout_t * array_layout,
   woden_settings_t *woden_settings,  visibility_set_t *visibility_set,
   user_precision_t *sbf);
 
-int run_woden(char *json_name, visibility_set_t *visibility_set) {
+int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set) {
 
   #ifdef DOUBLE_PRECISION
   printf("WODEN is using DOUBLE precision\n");
   #else
   printf("WODEN is using FLOAT precision\n");
   #endif
-
-  // //If not enough arguments, print help
-  // if (argc < 2) {
-  //   print_cmdline_help();
-  //   exit(1);
-  // }
-
-  // //If --help is passed, print help
-  // if (strcmp("--help", argv[1]) == 0) {
-  //   print_cmdline_help();
-  //   exit(1);
-
-  // }
-
-  // //If -h is passed, print help
-  // if (strcmp("-h", argv[1]) == 0) {
-  //   print_cmdline_help();
-  //   exit(1);
-
-  // }
 
   //Is everything OK integer
   int status=0;
@@ -60,14 +40,14 @@ int run_woden(char *json_name, visibility_set_t *visibility_set) {
   user_precision_t *sbf = malloc( sbf_N * sbf_L * sizeof(user_precision_t) );
   sbf = create_sbf(sbf);
 
-  //Read in the settings from the controlling json file
-  woden_settings_t *woden_settings = malloc( sizeof(woden_settings_t) );
-  status = read_json_settings(json_name, woden_settings);
+  // //Read in the settings from the controlling json file
+  // woden_settings_t *woden_settings = malloc( sizeof(woden_settings_t) );
+  // status = read_json_settings(json_name, woden_settings);
 
-  if (status == 1) {
-    printf("read_json_settings failed. Exiting now\n");
-    exit(1);
-  }
+  // if (status == 1) {
+  //   printf("read_json_settings failed. Exiting now\n");
+  //   exit(1);
+  // }
 
   //Setup all LSTs array for all time steps in this simulation
   double *lsts = setup_lsts_and_phase_centre(woden_settings);
@@ -111,16 +91,13 @@ int run_woden(char *json_name, visibility_set_t *visibility_set) {
   //User can change these settings using run_woden.py / in the json
   //Loop through each coarse frequency band, run the simulation and dump to
   //a binary file
-  for (size_t band = 0; band < woden_settings->num_bands; band++) {
+  for (int band = 0; band < woden_settings->num_bands; band++) {
     //Set the lower frequency edge for this coarse band
     int band_num = woden_settings->band_nums[band];
     double base_band_freq = ((band_num - 1)*woden_settings->coarse_band_width) + woden_settings->base_low_freq;
     printf("Simulating band %02d with bottom freq %.8e\n",band_num,base_band_freq);
 
     woden_settings->base_band_freq = base_band_freq;
-
-    //Setup the visibility container
-    // visibility_set_t *visibility_set = setup_visibility_set(woden_settings->num_visis);
 
     //Fill in the time/freq/baseline settings in `visiblity_set` needed by
     //calculate_visibilities
@@ -134,11 +111,6 @@ int run_woden(char *json_name, visibility_set_t *visibility_set) {
 
       printf("Middle freq is %.8e \n",base_middle_freq );
 
-      // status =  new_fee_beam(woden_settings->hdf5_beam_path, &beam_settings->fee_beam,
-      //                        beam_settings->hyper_error_str);
-      // if (status != 0) {
-      //   printf("hyperbeam error %d %s\n", status, beam_settings->hyper_error_str );
-      // }
       status = new_fee_beam(woden_settings->hdf5_beam_path,
                             &beam_settings->fee_beam);
       if (status != 0) {
@@ -173,7 +145,7 @@ int run_woden(char *json_name, visibility_set_t *visibility_set) {
     }
 
   }//band loop
-  free(woden_settings);
+  // free(woden_settings);
   printf("WODEN is done\n");
 
   return 0;

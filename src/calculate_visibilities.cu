@@ -88,19 +88,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   cudaErrorCheckCall( cudaMalloc( (void**)&d_vs, num_visis*sizeof(user_precision_t) ) );
   cudaErrorCheckCall( cudaMalloc( (void**)&d_ws, num_visis*sizeof(user_precision_t) ) );
 
-
-  // visibility_set_t
-
   visibility_set_t *d_visibility_set =  (visibility_set_t* )malloc(sizeof(visibility_set_t));
-
-  // user_precision_t *d_sum_visi_XX_real;
-  // user_precision_t *d_sum_visi_XX_imag;
-  // user_precision_t *d_sum_visi_XY_real;
-  // user_precision_t *d_sum_visi_XY_imag;
-  // user_precision_t *d_sum_visi_YX_real;
-  // user_precision_t *d_sum_visi_YX_imag;
-  // user_precision_t *d_sum_visi_YY_real;
-  // user_precision_t *d_sum_visi_YY_imag;
 
   cudaErrorCheckCall( cudaMalloc( (void**)&d_visibility_set->sum_visi_XX_real,
                       num_visis*sizeof(user_precision_t) ) );

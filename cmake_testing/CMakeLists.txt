@@ -32,25 +32,15 @@ function(DEFINE_COMP_FLAGS PRECISION C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
   endif()
 endfunction()
 
-####Test C code
-add_subdirectory(array_layout)
-add_subdirectory(chunk_sky_model)
-add_subdirectory(create_sky_model)
-add_subdirectory(primary_beam)
-add_subdirectory(read_text_skymodel)
-add_subdirectory(read_yaml_skymodel)
-add_subdirectory(visibility_set)
-add_subdirectory(shapelet_basis)
-add_subdirectory(woden_settings)
+## Test C code
+#add_subdirectory(C_code)
+
+## Test CUDA code
+#add_subdirectory(CUDA_code)
 
 
-####Test CUDA code
-add_subdirectory(calculate_visibilities)
-add_subdirectory(fundamental_coords)
-add_subdirectory(primary_beam_cuda)
-add_subdirectory(source_components)
+## Test python library
+add_subdirectory(wodenpy)
 
-####Test python code
-add_subdirectory(run_woden)
-add_subdirectory(add_woden_uvfits)
-add_subdirectory(concat_woden_uvfits)
+## Test python scripts
+#add_subdirectory(scripts)

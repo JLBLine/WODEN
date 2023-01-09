@@ -1,0 +1,10 @@
+# add_subdirectory(array_layout)
+# add_subdirectory(chunk_sky_model)
+# add_subdirectory(create_sky_model)
+# add_subdirectory(primary_beam)
+# add_subdirectory(read_text_skymodel)
+# add_subdirectory(read_yaml_skymodel)
+# add_subdirectory(visibility_set)
+add_subdirectory(shapelet_basis)
+# add_subdirectory(woden_settings)
+

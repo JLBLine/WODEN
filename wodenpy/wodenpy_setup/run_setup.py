@@ -103,10 +103,10 @@ def get_parser():
             "Defaults to --primary_beam=none")
 
 
-    tel_group.add_argument('--gauss_beam_FWHM', default=False,
+    tel_group.add_argument('--gauss_beam_FWHM', default=20, type=float,
         help='The FWHM of the Gaussian beam in deg - WODEN defaults to using'
              ' 20 deg if this is not set')
-    tel_group.add_argument('--gauss_beam_ref_freq', default=False,
+    tel_group.add_argument('--gauss_beam_ref_freq', default=150e+6, type=float,
         help='The frequency at which the gauss beam FWHM is set at. If not set,'
              ' WODEN will default to 150MHz.')
     tel_group.add_argument('--gauss_ra_point', default=False,
@@ -172,9 +172,9 @@ def get_parser():
     sim_group.add_argument('--no_tidy', default=False, action='store_true',
         help='Defaults to deleting output binary files from woden and json '
              'files. Add this flag to not delete those files')
-    sim_group.add_argument('--chunking_size', type=float, default=False,
+    sim_group.add_argument('--chunking_size', type=float, default=1e10,
         help='The chunk size to break up the point sources into for processing '
-             '- defaults to 0 (use default chunking in WODEN)')
+             '- defaults to 1e10')
     sim_group.add_argument('--dry_run', default=False, action='store_true',
         help='Add this to NOT call the WODEN executable - this will just write '
              'out the .json file and do nothing else')
