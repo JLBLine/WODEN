@@ -14,9 +14,9 @@ typedef enum {POINT=0, /*!< Point source type component */
 
 typedef enum {NO_BEAM, /*!< Do not use a primary beam in the simulation */
               GAUSS_BEAM, /*!< Use a analytic Gaussian primary beam */
-              FEE_BEAM, /*!< Use the RTS MWA FEE primary beam code */
+              FEE_BEAM, /*!< Use the MWA FEE primary beam code */
               ANALY_DIPOLE, /*!< Use an analytic MWA dipole primary beam */
-              FEE_BEAM_INTERP, /*!< Use the RTS MWA FEE primary beam at all
+              FEE_BEAM_INTERP, /*!< Use the MWA FEE primary beam at all
               frequencies. Should be using an hdf5 file that has been frequency
               interpolated*/
               MWA_ANALY, /*!< Use an analytic MWA tile primary beam */
@@ -278,7 +278,7 @@ typedef struct _woden_settings_t {
   double latitude_obs_epoch_base;   /*!< Latitude of the array at the observation epoch (radians) */
   user_precision_t longitude;  /*!< Longitude of the array to simulate (radians) */
   user_precision_t FEE_ideal_delays[16]; /*!< Delay values specifying the pointing for the MWA FEE beam model */
-  user_precision_t coarse_band_width;  /*!< Frequency bandwidth of a single coarse band (Hz)*/
+  double coarse_band_width;  /*!< Frequency bandwidth of a single coarse band (Hz)*/
   double gauss_ra_point;  /*!< The initial Right Ascension to point the Gaussian beam at (radians)*/
   double gauss_dec_point;  /*!< The initial Declination to point the Gaussian beam at (radians)*/
   int num_cross;  /*!< Total number of cross-correlations to simulate, so freqs*times*baselines */

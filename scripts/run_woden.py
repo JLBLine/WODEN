@@ -42,9 +42,6 @@ def main():
 
     ##Write json file
     json_band_str =  '-'.join(map(str, args.band_nums))
-    # json_name = 'run_woden_{:s}.json'.format(json_band_str)
-
-    # write_json(json_name=json_name, jd_date=jd_date, lst=lst_deg, args=args)
 
     ##Check the uvfits prepend to make sure we end in .uvfits
     output_uvfits_prepend = args.output_uvfits_prepend
@@ -52,7 +49,6 @@ def main():
 
     if args.dry_run:
         ##User only wants to check whether the arguments would have worked or not
-        ##TODO stick all the arguments that would have been set into the log?
         pass
     else:
         ##Depending on what precision was selected by the user, load in the
@@ -142,19 +138,19 @@ def main():
                           hdu_ant=hdu_ant, gitlabel=gitlabel,
                           longitude=args.longitude, latitude=args.latitude,
                           array_height=args.array_height,
-                          telescope_name=args.telescope_name,)
+                          telescope_name=args.telescope_name)
 
 
-        ##Tidy up or not
-        if args.no_tidy:
-            pass
-        else:
-            # command("rm {:s}".format(json_name))
-            ##if we generated a text file containing the array layout
-            ##from the metafits, delete it now
-            # if args.array_layout == 'from_the_metafits':
-            command("rm WODEN_array_layout_band{:s}.txt".format(json_band_str))
-            #     command("rm {:s}".format("WODEN_array_layout.txt"))
+        # ##Tidy up or not
+        # if args.no_tidy:
+        #     pass
+        # else:
+        #     command("rm {:s}".format(json_name))
+        #     #if we generated a text file containing the array layout
+        #     #from the metafits, delete it now
+        #     if args.array_layout == 'from_the_metafits':
+        #     command("rm WODEN_array_layout_band{:s}.txt".format(json_band_str))
+        #         command("rm {:s}".format("WODEN_array_layout.txt"))
 
     
 

@@ -518,6 +518,8 @@ def check_args(args):
 
     return args
 
+
+
 def get_code_version():
     """
     Returns either the git hash if installed via a git repo, or the __version__
@@ -539,4 +541,3 @@ def get_code_version():
     print(f"You are using WODEN commit: {version}")
 
     return version
-

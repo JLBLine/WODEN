@@ -1,6 +1,15 @@
 import ctypes 
-# import importlib_resources
-from wodenpy.woden_lib import *
+import sys
+##If we are performing a ctest, this check means we use the code we are
+##testing and NOT what has been pip or conda installed
+try:
+    testdir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
+    sys.path.append('{:s}/../../../wodenpy'.format(testdir))
+    from woden_lib import *
+    
+except KeyError:
+    from wodenpy.woden_lib import *
+
 import numpy as np
 import argparse
 
