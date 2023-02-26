@@ -9,9 +9,11 @@ try:
     sys.path.append('{:s}/../../../wodenpy'.format(testdir))
     
     from skymodel.woden_skymodel import Component_Type_Counter
+    from skymodel.chunk_sky_model import Skymodel_Chunk_Map
     
 except KeyError:
     from wodenpy.skymodel.woden_skymodel import Component_Type_Counter
+    from wodenpy.skymodel.chunk_sky_model import Skymodel_Chunk_Map
 
 
 import erfa
@@ -95,6 +97,34 @@ def read_yaml_radec_count_components(yaml_path : str):
     comp_counter.total_components()
         
     return comp_counter
+
+
+def read_yaml_skymodel_chunks(yaml_path : str,
+                              chunked_skymodel_maps : list,
+                              chunk_indexes = False,
+                              precision = "double"):
+
+    if chunk_indexes:
+        pass
+    else:
+        chunk_indexes = range(len(cchunked_skymodel_maps))
+
+    populated_skymodel_chunks = []
+
+    for chunk_ind in chunk_indexes:
+        skymodel_chunk = setup_source(chunked_skymodel_maps[chunk_ind], precision)
+
+        populated_skymodel_chunks.append(skymodel_chunk)
+
+    ##TODO
+    ## - find some kind of map (fucking again??) of all the components to
+    ##   read in, and which chunk they belong to
+    ## - find lowest filenumber from all the selected sky chunks
+    ## - find what component number that corresponds to, so we can count
+    ##   from that number onward
+    ## - then we iterate over all lines in the file, grabbing components
+    ##   that we want, and shoving them into the correct skymodel_chunk
+
 
 # def read_yaml_all_info(yaml_path : str,
 #                        comp_counter : Component_Type_Counter,

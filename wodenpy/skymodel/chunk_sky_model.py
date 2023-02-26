@@ -500,21 +500,21 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
 
     ##TODO maybe more efficient to set an array and shove in
     ##elements rather than appending?
-    chunked_skymodel_counters = []
+    chunked_skymodel_maps = []
     
     ##Go through the point sources and add chunked maps
     for chunk_ind in range(num_point_chunks):
         chunk_map = map_chunk_pointgauss(comp_counter, chunk_ind,
                                          comps_per_chunk,
                                          point_source = True)
-        chunked_skymodel_counters.append(chunk_map)
+        chunked_skymodel_maps.append(chunk_map)
     
     ##Go through the gaussian sources and add chunked maps
     for chunk_ind in range(num_gauss_chunks):
         chunk_map = map_chunk_pointgauss(comp_counter, chunk_ind,
                                          comps_per_chunk,
                                          gaussian_source = True)
-        chunked_skymodel_counters.append(chunk_map)
+        chunked_skymodel_maps.append(chunk_map)
         
     ##need some extra mapping arrays to be able to grab the SHAPELET component
     ##that matches each basis function
@@ -525,8 +525,8 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
                                         shape_basis_to_orig_index_map,
                                         shape_basis_to_comp_type_map,
                                         chunk_ind, comps_per_chunk)
-        chunked_skymodel_counters.append(chunk_map)
+        chunked_skymodel_maps.append(chunk_map)
         
-    print(f"After chunking there are {len(chunked_skymodel_counters)} chunks")
+    print(f"After chunking there are {len(chunked_skymodel_maps)} chunks")
         
-    return chunked_skymodel_counters
+    return chunked_skymodel_maps
