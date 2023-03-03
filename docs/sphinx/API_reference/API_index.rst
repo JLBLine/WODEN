@@ -16,6 +16,17 @@ can be reproduced on the command line using ``script.py --help``.
 ``python`` code
 -----------------
 
+``wodenpy``
+
+.. toctree::
+  :maxdepth: 1
+  
+  python_code/wodenpy/use_libwoden
+  python_code/wodenpy/skymodel
+
+Scripts
+++++++++++
+
 .. toctree::
   :maxdepth: 1
 

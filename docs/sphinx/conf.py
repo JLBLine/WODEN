@@ -15,6 +15,10 @@ import sys
 import subprocess
 
 sys.path.insert(0, os.path.abspath('../../src/'))
+sys.path.insert(0, os.path.abspath('../../wodenpy/'))
+sys.path.insert(0, os.path.abspath('../../wodenpy/skymodel'))
+sys.path.insert(0, os.path.abspath('../../wodenpy/use_libwoden'))
+sys.path.insert(0, os.path.abspath('../../scripts/'))
 
 read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 

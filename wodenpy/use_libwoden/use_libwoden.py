@@ -2,8 +2,23 @@ import ctypes
 import importlib_resources
 import wodenpy
 import numpy as np
-from wodenpy.use_libwoden.visibility_set import *
-from wodenpy.use_libwoden.woden_settings import *
+import sys
+import os
+
+##If we are performing a ctest, this check means we use the code we are
+##testing and NOT what has been pip or conda installed
+try:
+    testdir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
+    sys.path.append('{:s}/../../../wodenpy/use_libwoden'.format(testdir))
+    
+    # from use_libwoden.visibility_set import *
+    # from use_libwoden.woden_settings import *
+    from visibility_set import *
+    from woden_settings import *
+    
+except KeyError:
+    from wodenpy.use_libwoden.visibility_set import *
+    from wodenpy.use_libwoden.woden_settings import *
 
 VELC = 299792458.0
 

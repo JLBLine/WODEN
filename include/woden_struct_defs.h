@@ -96,13 +96,9 @@ typedef struct _components_t {
    beam calculations */
   int num_primarybeam_values; /*!< Number of beam calculations needed for
   COMPONENTs */
-  //float *angular_seps; /*!< Angular separation of each COMPONENTS from
-  //zenith, for all time steps. Used in MWA analytic beam  */
 
   /*
-  These beam values are two dimensional, in anticipation of one day having
-  different primary beams for different tiles. At the moment everything is
-  the same for each tile, so only have length one for first dimension
+  Things to hold beam gain values
   */
   user_precision_complex_t *gxs; /*!< North-South Beam gain values for all directions,
   frequencies, and times for these COMPONENTS*/

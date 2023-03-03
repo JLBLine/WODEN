@@ -10,7 +10,7 @@ sky model compatible with ``WODEN``.
 -------------------------------
 
 .. argparse::
-   :filename: ../../src/convert_WSClean_list_to_WODEN.py
+   :filename: ../../scripts/convert_WSClean_list_to_WODEN.py
    :func: get_parser
    :prog: convert_WSClean_list_to_WODEN.py
 

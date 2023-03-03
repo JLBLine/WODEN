@@ -10,7 +10,7 @@ arguments are supplied. I suggest you only run ``WODEN`` through this script.
 -------------------------------
 
 .. argparse::
-   :filename: ../../src/run_woden.py
+   :filename: ../../scripts/run_woden.py
    :func: get_parser
    :prog: run_woden.py
 

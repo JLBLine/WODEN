@@ -15,7 +15,7 @@ settings, and just add the foregrounds on top as visibilities are additive.
 -------------------------------
 
 .. argparse::
-   :filename: ../../src/add_woden_uvfits.py
+   :filename: ../../scripts/add_woden_uvfits.py
    :func: get_parser
    :prog: add_woden_uvfits.py
 

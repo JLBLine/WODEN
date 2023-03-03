@@ -9,7 +9,7 @@ Helper script to convert ``uvfits`` files to ``measurement sets`` using ``casa``
 -------------------------------
 
 .. argparse::
-   :filename: ../../src/uv2ms.py
+   :filename: ../../scripts/uv2ms.py
    :func: get_parser
    :prog: uv2ms.py
 

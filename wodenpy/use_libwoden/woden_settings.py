@@ -1,14 +1,16 @@
 import ctypes 
 import sys
+import os
+import subprocess
 ##If we are performing a ctest, this check means we use the code we are
 ##testing and NOT what has been pip or conda installed
-try:
-    testdir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
-    sys.path.append('{:s}/../../../wodenpy'.format(testdir))
-    from woden_lib import *
+# try:
+#     testdir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
+#     sys.path.append('{:s}/../../../wodenpy'.format(testdir))
+#     from woden_lib import *
     
-except KeyError:
-    from wodenpy.woden_lib import *
+# except KeyError:
+#     from wodenpy.woden_lib import *
 
 import numpy as np
 import argparse
@@ -16,6 +18,17 @@ import argparse
 from ctypes import c_double, c_float, c_int, POINTER, c_ulong, c_char, create_string_buffer, c_uint, c_long, c_uint64
 
 D2R = np.pi/180.0
+
+def command(cmd):
+    """
+    Runs the command string `cmd` using `subprocess.call`
+
+    Parameters
+    ----------
+    cmd : string
+         The command to run on the command line
+    """
+    subprocess.call(cmd,shell=True)
 
 class Woden_Settings_Double(ctypes.Structure):
     """A class structured equivalently to a `visi_set` struct, used by 

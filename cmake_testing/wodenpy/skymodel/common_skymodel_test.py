@@ -4,7 +4,9 @@ import unittest
 import numpy as np
 
 ##This is where our code lives
-code_dir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
+# code_dir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
+
+code_dir = os.getcwd()
 
 ##Append the location of run_woden.py to the sys.path to import it
 path.append('{:s}/../../../wodenpy/skymodel'.format(code_dir))
@@ -22,10 +24,16 @@ D2R = np.pi/180.0
 ##for now, WODEN has three flux types: power law, curved power law, and list
 NUM_FLUX_TYPES = 3
 
+##limits for "all sky" sky model
+LOW_DEC = -90.0*D2R
+HIGH_DEC = 30.0*D2R
+
+MWA_LATITUDE = -26.7*D2R
+
 def fill_comp_counter(num_points : int, num_gauss : int,
                       num_shapes : int, num_coeff_per_shape : int,
                       num_list_values : int, num_time_steps : int) -> Component_Type_Counter:
-    """Fill up a Component_Type_Counter based on give numbers. Fill
+    """Fill up a Component_Type_Counter based on given numbers. Fill
     all flux model types for each given point, gaussian, and shapelet models,
     e.g. if you set num_points = 5, you get 5 power law points, 5 curved points,
     5 list point types.
@@ -444,3 +452,291 @@ class BaseChunkTest(unittest.TestCase):
         
         expec_lowest_file_num = np.nanmin([min_power, min_curve, min_list])
         self.assertEqual(expec_lowest_file_num, components.lowest_file_num)
+        
+        
+class classname(object):
+    """
+    something to hold expect nums of things for a test sky model
+    """
+    
+    def __init__(self, deg_between_comps : float,
+                       num_coeff_per_shape : int,
+                       num_list_values : int,
+                       comps_per_source : int):
+        """
+        count le things
+        """
+        self.num_comps
+
+# def get_expec_nums_full_test_skymodel(deg_between_comps : float):
+    
+    
+    
+#     return
+
+def add_power_law(outfile, value):
+    """add power law infor for a component"""
+    outfile.write(f"    flux_type:\n")
+    outfile.write(f"      power_law:\n")
+    outfile.write(f"        si: {float(value)}\n")
+    outfile.write(f"        fd:\n")
+    outfile.write(f"          freq: {float(value)}\n")
+    outfile.write(f"          i: {float(value)}\n")
+    outfile.write(f"          q: {float(value)}\n")
+    outfile.write(f"          u: {float(value)}\n")
+    outfile.write(f"          v: {float(value)}\n")
+    
+def add_curved_power_law(outfile, value):
+    """add curved power law infor for a component"""
+    outfile.write(f"    flux_type:\n")
+    outfile.write(f"      curved_power_law:\n")
+    outfile.write(f"        si: {float(value)}\n")
+    outfile.write(f"        fd:\n")
+    outfile.write(f"          freq: {float(value)}\n")
+    outfile.write(f"          i: {float(value)}\n")
+    outfile.write(f"          q: {float(value)}\n")
+    outfile.write(f"          u: {float(value)}\n")
+    outfile.write(f"          v: {float(value)}\n")
+    outfile.write(f"        q: {float(value)}\n")
+    
+def add_list_flux(outfile, flux_index, num_list_values):
+    """add curved power law infor for a component"""
+    outfile.write(f"    flux_type:\n")
+    outfile.write(f"      list:\n")
+    
+    for flux in range(num_list_values):
+        outfile.write(f"         - freq: {float(flux_index)}\n")
+        outfile.write(f"           i: {float(flux_index)}\n")
+        outfile.write(f"           q: {float(flux_index)}\n")
+        outfile.write(f"           u: {float(flux_index)}\n")
+        outfile.write(f"           v: {float(flux_index)}\n")
+        
+        flux_index += 1
+        
+    return flux_index
+    
+
+def add_point(outfile, ra : float, dec: float,
+              point_index : int, gauss_index : int, shape_index : int,
+              comp_type : CompTypes,
+              flux_index : int, num_list_values : int,
+              source_index : int, comps_per_source : int):
+    
+    comp_index = point_index + gauss_index + shape_index
+    if comp_index % comps_per_source == 0:
+        new_source = True
+    else:
+        new_source = False
+    
+    if new_source:
+        outfile.write(f"source{source_index:08d}\n")
+        
+    outfile.write(f"  - ra: {ra/D2R:.5f}\n")
+    outfile.write(f"    dec: {dec/D2R:.5f}\n")
+    outfile.write(f"    comp_type: point\n")
+    
+    if comp_type == CompTypes.POINT_POWER:
+        add_power_law(outfile, point_index)
+        
+    elif comp_type == CompTypes.POINT_CURVE:
+        add_curved_power_law(outfile, point_index)
+        
+    elif comp_type == CompTypes.POINT_LIST:
+        flux_index = add_list_flux(outfile, flux_index, num_list_values)
+        
+    if new_source: source_index += 1
+    point_index += 1
+        
+    return source_index, point_index, flux_index
+
+def add_gauss(outfile, ra : float, dec: float,
+                    point_index : int, gauss_index : int, shape_index : int,
+                    comp_type : CompTypes,
+                    flux_index : int, num_list_values : int,
+                    source_index : int, comps_per_source : int):
+    
+    comp_index = point_index + gauss_index + shape_index
+    if comp_index % comps_per_source == 0:
+        new_source = True
+    else:
+        new_source = False
+    
+    if new_source:
+        outfile.write(f"source{source_index:08d}\n")
+        
+    outfile.write(f"  - ra: {ra/D2R:.5f}\n")
+    outfile.write(f"    dec: {dec/D2R:.5f}\n")
+    outfile.write(f"    comp_type:\n")
+    outfile.write(f"      gaussian:\n")
+    outfile.write(f"        maj: {gauss_index}.\n")
+    outfile.write(f"        min: {gauss_index}.\n")
+    outfile.write(f"        pa: {gauss_index}.\n")
+    
+    if comp_type == CompTypes.GAUSS_POWER:
+        add_power_law(outfile, gauss_index)
+        
+    elif comp_type == CompTypes.GAUSS_CURVE:
+        add_curved_power_law(outfile, gauss_index)
+        
+    elif comp_type == CompTypes.GAUSS_LIST:
+        flux_index = add_list_flux(outfile, flux_index, num_list_values)
+        
+    if new_source: source_index += 1
+    gauss_index += 1
+        
+    return source_index, gauss_index, flux_index
+    
+
+def add_shapelet(outfile, ra : float, dec: float,
+                    point_index : int, gauss_index : int, shape_index : int,
+                    comp_type : CompTypes,
+                    flux_index : int, num_list_values : int,
+                    source_index : int, comps_per_source : int,
+                    num_coeff_per_shape : int, basis_index : int):
+    
+    comp_index = point_index + gauss_index + shape_index
+    if comp_index % comps_per_source == 0:
+        new_source = True
+    else:
+        new_source = False
+    
+    if new_source:
+        outfile.write(f"source{source_index:08d}\n")
+        
+    outfile.write(f"  - ra: {ra/D2R:.5f}\n")
+    outfile.write(f"    dec: {dec/D2R:.5f}\n")
+    outfile.write(f"    comp_type:\n")
+    outfile.write(f"      shapelet:\n")
+    outfile.write(f"        maj: {shape_index}.\n")
+    outfile.write(f"        min: {shape_index}.\n")
+    outfile.write(f"        pa: {shape_index}.\n")
+    outfile.write(f"        coeffs:\n")
+    
+    for basis in range(basis_index, basis_index + num_coeff_per_shape):
+    
+        outfile.write(f"          - n1: {basis}\n")
+        outfile.write(f"            n2: {basis}\n")
+        outfile.write(f"            value: {basis}\n")
+    
+    basis_index += num_coeff_per_shape
+    
+    if comp_type == CompTypes.SHAPE_POWER:
+        add_power_law(outfile, shape_index)
+        
+    elif comp_type == CompTypes.SHAPE_CURVE:
+        add_curved_power_law(outfile, shape_index)
+        
+    elif comp_type == CompTypes.SHAPE_LIST:
+        flux_index = add_list_flux(outfile, flux_index, num_list_values)
+        
+    
+        
+    if new_source: source_index += 1
+    shape_index += 1
+        
+    return source_index, shape_index, flux_index, basis_index
+
+
+def write_full_test_skymodel(deg_between_comps : float,
+                             num_coeff_per_shape : int,
+                             num_list_values : int,
+                             comps_per_source : int):
+    """Write a sky model covering the whole sky"""
+    # POINT_POWER
+    # POINT_CURVE
+    # POINT_LIST
+    # GAUSS_POWER
+    # GAUSS_CURVE
+    # GAUSS_LIST
+    # SHAPE_POWER
+    # SHAPE_CURVE
+    # SHAPE_LIST
+    
+    ra_range = np.arange(0, 360.0*D2R, deg_between_comps*D2R)
+    dec_range = np.arange(LOW_DEC, HIGH_DEC, deg_between_comps*D2R)
+    
+    ra_range, dec_range = np.meshgrid(ra_range, dec_range)
+    ra_range, dec_range = ra_range.flatten(), dec_range.flatten()
+    
+    source_index = 0
+    
+    point_index = 0
+    gauss_index = 0
+    shape_index = 0
+    
+    flux_index = 0
+    basis_index = 0
+    
+    new_source = False
+    
+    point = False
+    gaussian = False
+    shapelet = False
+    
+    point = True
+    shapelet = True
+    gaussian = True
+    
+    with open("test_full_skymodel.yaml", 'w') as outfile:
+        
+        for ra, dec in zip(ra_range, dec_range):
+            
+            if point:
+                source_index, point_index, flux_index = add_point(outfile, ra, dec,
+                                                point_index, gauss_index, shape_index,
+                                                CompTypes.POINT_POWER,
+                                                flux_index, num_list_values,
+                                                source_index, comps_per_source)
+                
+                source_index, point_index, flux_index = add_point(outfile, ra, dec,
+                                                point_index, gauss_index, shape_index,
+                                                CompTypes.POINT_CURVE,
+                                                flux_index, num_list_values,
+                                                source_index, comps_per_source)
+                
+                source_index, point_index, flux_index = add_point(outfile, ra, dec,
+                                                point_index, gauss_index, shape_index,
+                                                CompTypes.POINT_LIST,
+                                                flux_index, num_list_values,
+                                                source_index, comps_per_source)
+                
+            if gaussian:
+                source_index, gauss_index, flux_index = add_gauss(outfile, ra, dec,
+                                                gauss_index, gauss_index, shape_index,
+                                                CompTypes.GAUSS_POWER,
+                                                flux_index, num_list_values,
+                                                source_index, comps_per_source)
+                
+                source_index, gauss_index, flux_index = add_gauss(outfile, ra, dec,
+                                                gauss_index, gauss_index, shape_index,
+                                                CompTypes.GAUSS_CURVE,
+                                                flux_index, num_list_values,
+                                                source_index, comps_per_source)
+                
+                source_index, gauss_index, flux_index = add_gauss(outfile, ra, dec,
+                                                gauss_index, gauss_index, shape_index,
+                                                CompTypes.GAUSS_LIST,
+                                                flux_index, num_list_values,
+                                                source_index, comps_per_source)
+           
+            if shapelet: 
+                source_index, shape_index, flux_index, basis_index = add_shapelet(outfile, ra, dec,
+                                                point_index, gauss_index, shape_index,
+                                                CompTypes.SHAPE_POWER,
+                                                flux_index, num_list_values,
+                                                source_index, comps_per_source,
+                                                num_coeff_per_shape, basis_index)
+                
+                source_index, shape_index, flux_index, basis_index = add_shapelet(outfile, ra, dec,
+                                                point_index, gauss_index, shape_index,
+                                                CompTypes.SHAPE_CURVE,
+                                                flux_index, num_list_values,
+                                                source_index, comps_per_source,
+                                                num_coeff_per_shape, basis_index)
+                
+                source_index, shape_index, flux_index, basis_index = add_shapelet(outfile, ra, dec,
+                                                point_index, gauss_index, shape_index,
+                                                CompTypes.SHAPE_LIST,
+                                                flux_index, num_list_values,
+                                                source_index, comps_per_source,
+                                                num_coeff_per_shape, basis_index)

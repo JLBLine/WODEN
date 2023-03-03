@@ -13,7 +13,7 @@ single uvfits file. Essential to input ``WODEN`` simulations into ``hyperdrive``
 -------------------------------
 
 .. argparse::
-   :filename: ../../src/concat_woden_uvfits.py
+   :filename: ../../scripts/concat_woden_uvfits.py
    :func: get_parser
    :prog: concat_woden_uvfits.py
 
