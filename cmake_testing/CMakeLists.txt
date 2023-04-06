@@ -33,7 +33,7 @@ function(DEFINE_COMP_FLAGS PRECISION C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
 endfunction()
 
 ## Test C code
-#add_subdirectory(C_code)
+# add_subdirectory(C_code)
 
 ## Test CUDA code
 #add_subdirectory(CUDA_code)

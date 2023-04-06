@@ -194,10 +194,6 @@ if(TARGET_GROUP STREQUAL production)
 ##If debugging build
 elseif(TARGET_GROUP STREQUAL debug)
     ##Do it for the float code first--------------------------------------------
-    ##Generate library from the C
-    add_library(wodenC_float SHARED ${CSOURCES})
-    ##Compile C code with all warnings and optimise
-    target_compile_options(wodenC_float PRIVATE -O3 -g -Wall)
 
     ##Generate library for the CUDA code
     add_library(wodenCUDA_float SHARED ${CUDASOURCES})
@@ -208,18 +204,12 @@ elseif(TARGET_GROUP STREQUAL debug)
     ## replace the CUDA_FLAG lines above with something like
     set_property(TARGET wodenCUDA_float PROPERTY CUDA_ARCHITECTURES OFF)
 
-    ##make the final WODEN executable, linking the libraries
-    add_executable(woden_float src/woden.c)
-    target_link_libraries(woden_float PUBLIC wodenC_float
-                          wodenCUDA_float ${CC_LINKLIBS})
-    target_compile_options(woden_float PRIVATE -O3 -g -Wall)
+    ##Add the total WODEN library, linking in the CUDA code
+    add_library(woden_float SHARED src/woden.c ${CSOURCES})
+    target_link_libraries(woden_float PUBLIC wodenCUDA_float ${CC_LINKLIBS})
+    target_compile_options(woden_float PRIVATE -O3 -Wall)
 
-    ##Now do it for double by adding compilation switch-------------------------
-    ##Generate library from the C
-    add_library(wodenC_double SHARED ${CSOURCES})
-    ##Compile C code with all warnings and optimise
-    target_compile_options(wodenC_double PRIVATE -O3 -g -Wall -DDOUBLE_PRECISION)
-
+    ##Do it for the double code now---------------------------------------------
     ##Generate library for the CUDA code
     add_library(wodenCUDA_double SHARED ${CUDASOURCES})
     ##Compile CUDA code with all warnings
@@ -230,78 +220,16 @@ elseif(TARGET_GROUP STREQUAL debug)
     ## replace the CUDA_FLAG lines above with something like
     set_property(TARGET wodenCUDA_double PROPERTY CUDA_ARCHITECTURES OFF)
 
-    ##Make the double precision version
-    ##make the final WODEN executable, linking the libraries
-    add_executable(woden_double src/woden.c)
-    target_link_libraries(woden_double PUBLIC wodenC_double
-                          wodenCUDA_double ${CC_LINKLIBS})
+    ##Add the total WODEN library, linking in the CUDA code
+    add_library(woden_double SHARED src/woden.c ${CSOURCES})
+    target_link_libraries(woden_double PUBLIC wodenCUDA_double ${CC_LINKLIBS})
     target_compile_options(woden_double PRIVATE -O3 -g -Wall -DDOUBLE_PRECISION)
 
-
-    ADD_CUSTOM_TARGET(${filename} ALL
-                      COMMAND ${CMAKE_COMMAND} -E create_symlink ${path_filename} ${filename})
-
-    # ##Macro to search for a filename in the `src` dir and make a symlink
-    # ##into the build dir
-    # macro(make_python_symlink filename)
-    # find_path(THISPY ${filename} HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
-    # if(THISPY)
-    #   message(STATUS "${filename} path: ${THISPY}")
-    # endif()
-    # set(path_filename "${THISPY}/${filename}")
-    # ADD_CUSTOM_TARGET(${filename} ALL
-    #                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${path_filename} ${filename})
-    # endmacro(make_python_symlink)
-
-    # make_python_symlink("run_woden.py")
-    # make_python_symlink("uv2ms.py")
-    # make_python_symlink("convert_WSClean_list_to_WODEN.py")
-
-    # ##Want to run a python command everytime we make the code, in case paths
-    # ##have changed. CMake doesn't seem to want to run a command unless the
-    # ##output is missing. So make a custom target including a file '__header.h'
-    # ##that will never exist, to trick CMake into running the command below
-    # ##everytime
-    # add_custom_target(
-    #     write_init_WODEN ALL
-    #     DEPENDS
-    #         ${CMAKE_CURRENT_BINARY_DIR}/__header.h
-    #         init_WODEN.sh
-    # )
-    # ##Find python so we can run a python script
-    # include(FindPythonInterp)
-    # ##Run the command that will create / edit the init_WODEN.sh script. Make
-    # ##__header.h a dependency so it will always run
-    # add_custom_command(
-    #         OUTPUT
-    #             ${CMAKE_CURRENT_BINARY_DIR}/__header.h
-    #             init_WODEN.sh
-    #         COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/src/update_init_WODEN.py
-    # )
-
-    # ###===========INSTALLATION OPTIONS==========================================
-    # ##Setup a generic installation location thingy
-    # include(GNUInstallDirs)
-
-    # ##Copy python scripts into bin directory
-    # macro(install_symlink filename)
-    # find_path(THISPY ${filename} HINTS "${CMAKE_CURRENT_LIST_DIR}/src/")
-    # install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${THISPY}/${filename} ${CMAKE_INSTALL_FULL_BINDIR}/${filename})")
-    # # install(CODE "message(\"-- Created symlink: ${THISPY}/${filename} -> ${CMAKE_INSTALL_BINDIR}/${filename}\")")
-    # endmacro(install_symlink)
-
-    # install_symlink("run_woden.py")
-    # install_symlink("uv2ms.py")
-    # install_symlink("convert_WSClean_list_to_WODEN.py")
-
-    # install(TARGETS woden_float woden_double
-    # RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-
-    # install(TARGETS wodenCUDA_float wodenC_float wodenCUDA_double wodenC_double
-    # LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
-
-    ###===========INSTALLATION OPTIONS==========================================
-
+    ##Copy things into the wodenpy dir, which means everything is found when
+    ##you do a pip install
+    add_custom_command(TARGET woden_double POST_BUILD
+                  COMMAND ${CMAKE_COMMAND} -E copy "libwoden_double.so"
+                  "${CMAKE_CURRENT_LIST_DIR}/wodenpy/libwoden_double.so")
 
 ##If making test code
 elseif(TARGET_GROUP STREQUAL test)

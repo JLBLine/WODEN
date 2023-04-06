@@ -90,16 +90,6 @@ __device__ void apply_beam_gains(cuUserComplex g1x, cuUserComplex D1x,
   cuUserComplex this_YX;
   cuUserComplex this_YY;
 
-  // this_XX = (g1x*g2x_conj + D1x*D2x_conj);
-  // this_XY = (g1x*D2y_conj + D1x*g2y_conj);
-  // this_YX = (D1y*g2x_conj + g1y*D2x_conj);
-  // this_YY = (D1y*D2y_conj + g1y*g2y_conj);
-  //
-  // printf("XX %.16f %.16f\n",this_XX.x, this_XX.y );
-  // printf("XY %.16f %.16f\n",this_XY.x, this_XY.y );
-  // printf("YX %.16f %.16f\n",this_YX.x, this_YX.y );
-  // printf("YY %.16f %.16f\n",this_YY.x, this_YY.y );
-
   this_XX = (g1x*g2x_conj + D1x*D2x_conj)*visi_I;
   this_XX += (g1x*g2x_conj - D1x*D2x_conj)*visi_Q;
   this_XX += (g1x*D2x_conj + D1x*g2x_conj)*visi_U;
@@ -232,7 +222,6 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
 //Allocate space for the extrapolated Stokes parameters
 void malloc_extrapolated_flux_arrays(components_t *d_components, int num_comps,
                                      int num_freqs){
-  // printf("DEFO MALLOCing FLUX ARRAYS\n");
   d_components->extrap_stokesI = NULL;
   cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesI,
                                    num_comps*num_freqs*sizeof(double) ));
@@ -290,12 +279,6 @@ __global__ void kern_extrap_power_laws(int num_extrap_freqs, double *d_extrap_fr
     d_components.extrap_stokesU[extrap_ind] = flux_U;
     d_components.extrap_stokesV[extrap_ind] = flux_V;
 
-    // printf("kern_POWER %d %.1f %.1f %.1f %.1f\n",extrap_ind,
-    //                               d_components.extrap_stokesI[extrap_ind],
-    //                               d_components.extrap_stokesQ[extrap_ind],
-    //                               d_components.extrap_stokesU[extrap_ind],
-    //                               d_components.extrap_stokesV[extrap_ind] );
-
   }
 }
 
@@ -352,12 +335,6 @@ __global__ void kern_extrap_curved_power_laws(int num_extrap_freqs, double *d_ex
     d_components.extrap_stokesU[extrap_ind] = flux_U;
     d_components.extrap_stokesV[extrap_ind] = flux_V;
 
-    // printf("kern_CURVE %d %.1f %.1f %.1f %.1f\n",extrap_ind,
-    //                           d_components.extrap_stokesI[extrap_ind],
-    //                           d_components.extrap_stokesQ[extrap_ind],
-    //                           d_components.extrap_stokesU[extrap_ind],
-    //                           d_components.extrap_stokesV[extrap_ind] );
-
   }
 }
 
@@ -377,18 +354,11 @@ __device__ user_precision_t calc_gradient_extrap_list(user_precision_t *list_flu
 
     user_precision_t logflux1, logflux2, logfreq1, logfreq2, log_des_freq;
 
-    // printf("what a do %d %d %.3e %.3e %.3e %.3e %.3e\n",low_ind_1, low_ind_2,
-    // list_fluxes[low_ind_1],
-    // list_fluxes[low_ind_2], list_freqs[low_ind_1], list_freqs[low_ind_2], desired_freq );
-
     logflux1 = log10(list_fluxes[low_ind_1]);
     logflux2 = log10(list_fluxes[low_ind_2]);
     logfreq1 = log10(list_freqs[low_ind_1]);
     logfreq2 = log10(list_freqs[low_ind_2]);
     log_des_freq = log10(desired_freq);
-
-    // printf("what a do %.3e %.3e %.3e %.3e %.3e\n",logflux1, logflux2, logfreq1, logfreq2, log_des_freq );
-
 
     gradient = (logflux2 - logflux1) / (logfreq2 - logfreq1);
     extrap_flux = logflux1 + gradient*(log_des_freq - logfreq1);
@@ -396,18 +366,6 @@ __device__ user_precision_t calc_gradient_extrap_list(user_precision_t *list_flu
     extrap_flux = pow(10, extrap_flux);
 
   }
-
-  // if (list_fluxes[low_ind_2] != 0 && list_fluxes[low_ind_1] != 0) {
-  //   // printf("------------------------------------------------------\n");
-  //   // printf("low freq, flux %.3e %.3f\n", list_freqs[low_ind_1], list_fluxes[low_ind_1]);
-  //   // printf("high freq, flux %.3e %.3f\n", list_freqs[low_ind_2], list_fluxes[low_ind_2]);
-  //
-  //   // printf("gradient, extrap_flux %.3e %.4f\n", gradient, extrap_flux);
-  //   // printf("bottom bit %.3f %.3e\n",list_fluxes[low_ind_1],
-  //   //                         desired_freq - list_freqs[low_ind_1]);
-  //
-  //   // printf("%.3e %.3e %.3e\n",list_freqs[low_ind_1], desired_freq, list_freqs[low_ind_2] );
-  // }
   return extrap_flux;
 }
 
@@ -455,9 +413,6 @@ __device__ void extrap_stokes_list_flux(components_t d_components,
 
   //We happen to need the reference frequency; just return the refs
   if (d_components.list_freqs[list_start_ind + low_ind_1] == d_extrap_freq) {
-    // if (iFluxComp == 5 && iFreq == 13){
-      // printf("We are heeeeere iFreq %d\n", iFreq);
-    // }
     * flux_I = d_components.list_stokesI[list_start_ind + low_ind_1];
     * flux_Q = d_components.list_stokesQ[list_start_ind + low_ind_1];
     * flux_U = d_components.list_stokesU[list_start_ind + low_ind_1];
@@ -538,12 +493,6 @@ __global__ void kern_extrap_list_fluxes(int num_extrap_freqs, double *d_extrap_f
     d_components.extrap_stokesQ[extrap_ind] = flux_Q;
     d_components.extrap_stokesU[extrap_ind] = flux_U;
     d_components.extrap_stokesV[extrap_ind] = flux_V;
-
-    // printf("kern_LIST %d %.1f %.1f %.1f %.1f\n",extrap_ind,
-    //                           d_components.extrap_stokesI[extrap_ind],
-    //                           d_components.extrap_stokesQ[extrap_ind],
-    //                           d_components.extrap_stokesU[extrap_ind],
-    //                           d_components.extrap_stokesV[extrap_ind] );
 
   }
 }
@@ -722,24 +671,6 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
 
   else if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP) {
 
-    // double *reordered_azs = NULL;
-    // double *reordered_zas = NULL;
-    //
-    // #ifdef DOUBLE_PRECISION
-    //   double_azs = components->azs;
-    //   double_zas = components->zas;
-    // #else
-    //   int num_azza = woden_settings->num_time_steps*num_components;
-    //
-    //   double_azs = (double*)malloc(num_azza*sizeof(double));
-    //   double_zas = (double*)malloc(num_azza*sizeof(double));
-    //
-    //   for (int i = 0; i < num_azza; i++) {
-    //     double_azs[i] = (double)components->azs[i];
-    //     double_zas[i] = (double)components->zas[i];
-    //   }
-    // #endif
-    //
     if (beam_settings->beamtype == FEE_BEAM_INTERP) {
       printf("\tDoing the hyperbeam (interpolated)\n");
     } else {
@@ -1029,13 +960,6 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
              d_sum_visi_YX_real, d_sum_visi_YX_imag,
              d_sum_visi_YY_real, d_sum_visi_YY_imag);
 
-      // if (iBaseline == 0) {
-      //   printf("iComp, pa, major, minor, n1, n2, coeff %d %.5f %.5f %.5f %d %d %.5f\n",
-      //           iComponent, pa, d_components.majors[iComponent], d_components.minors[iComponent],
-      //           (int)d_components.n1s[iCoeff],(int)d_components.n2s[iCoeff], f_hat );
-      //   printf("V_envelop %.5f %.5f\n",V_envelop.x, V_envelop.y );
-      //   printf("u_value, v_value %.5f %.5f\n",u_value, v_value );
-      // }
     }
   }
 }
@@ -1082,9 +1006,6 @@ void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source
     num_lists = chunked_source->n_shape_lists;
 
   }
-
-  // printf("INSIDE MALLOC %d %d %d %d %d\n", num_comps, num_shape_coeffs, num_powers,
-  //                           num_curves, num_lists );
 
   //Common attributes between all flux types and components types
   cudaErrorCheckCall( cudaMalloc( (void**)&d_components->ras,
@@ -1146,7 +1067,6 @@ void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source
 
   //POWER_LAW flux things
   if (num_powers > 0) {
-    // printf("MALLOC BEHBEH num_powers %d\n",num_powers );
     cudaErrorCheckCall( cudaMalloc( (void**)&d_components->power_comp_inds,
                         num_powers*sizeof(int) ) );
     cudaErrorCheckCall( cudaMemcpy( d_components->power_comp_inds, components->power_comp_inds,
@@ -1185,7 +1105,6 @@ void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source
 
   //CURVED_POWER_LAW things
   if (num_curves > 0) {
-    // printf("MALLOC BEHBEH num_curves %d\n",num_curves );
     cudaErrorCheckCall( cudaMalloc( (void**)&d_components->curve_comp_inds,
                         num_curves*sizeof(int) ) );
     cudaErrorCheckCall( cudaMemcpy( d_components->curve_comp_inds, components->curve_comp_inds,
@@ -1231,7 +1150,6 @@ void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source
   if (num_lists > 0) {
     int num_list_values = components->total_num_flux_entires;
 
-    // printf("MALLOC TIME WITH THE LISTS YES? %d\n", num_list_values);
     cudaErrorCheckCall( cudaMalloc( (void**)&d_components->list_comp_inds,
                         num_lists*sizeof(int) ) );
     cudaErrorCheckCall( cudaMemcpy( d_components->list_comp_inds,
@@ -1289,7 +1207,6 @@ source_t * copy_chunked_source_to_GPU(source_t *chunked_source){
     copy_components_to_GPU(chunked_source, d_chunked_source, GAUSSIAN);
   }
   if (chunked_source->n_shapes > 0) {
-    // printf("HAVE COPIED SHAPELET TINGS\n");
     copy_components_to_GPU(chunked_source, d_chunked_source, SHAPELET);
   }
 
@@ -1349,17 +1266,12 @@ extern "C" void free_d_components(source_t *d_chunked_source,
     n_lists = d_chunked_source->n_shape_lists;
   }
 
-  // printf("Freeing this %d %d %d\n",n_powers,n_curves,n_lists );
-
   cudaErrorCheckCall( cudaFree( d_components.decs) );
   cudaErrorCheckCall( cudaFree( d_components.ras) );
 
   cudaErrorCheckCall( cudaFree( d_components.ls) );
   cudaErrorCheckCall( cudaFree( d_components.ms) );
   cudaErrorCheckCall( cudaFree( d_components.ns) );
-
-
-  // printf("Did the common to all arrays\n");
 
   //The az,za,beam_has,beam_decs are handled by other functions
 
@@ -1406,7 +1318,6 @@ extern "C" void free_d_components(source_t *d_chunked_source,
     cudaErrorCheckCall( cudaFree( d_components.n2s ) );
     cudaErrorCheckCall( cudaFree( d_components.param_indexes ) );
   }
-  // printf("DID all the freeing somehow??\n");
 }
 
 extern "C" void free_beam_gains(d_beam_gains_t d_beam_gains, e_beamtype beamtype){
@@ -1461,9 +1372,6 @@ __global__ void kern_calc_autos(components_t d_components,
     cuUserComplex auto_XX, auto_XY, auto_YX, auto_YY;
     cuUserComplex g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y;
 
-    // printf("INSIDE iTimeFreq iAnt time_ind, freq_ind, iAnt, iAuto %d %d %d %d %d %d\n",
-    //                iTimeFreq, iAnt, time_ind, freq_ind, iAnt, iAuto - num_visis );
-
     for (int iComponent = 0; iComponent < num_components; iComponent++) {
 
       get_beam_gains(iBaseline, iComponent, num_freqs,
@@ -1471,9 +1379,6 @@ __global__ void kern_calc_autos(components_t d_components,
                d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
                d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
                &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
-
-               // printf("%.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
-               //         g1x.x, D1x.x, D1y.x, g1y.x, g2x.x, D2x.x, D2y.x, g2y.x );
 
       cuUserComplex visi_component;
       visi_component = make_cuUserComplex(1.0, 0.0);
@@ -1484,9 +1389,6 @@ __global__ void kern_calc_autos(components_t d_components,
       user_precision_t flux_Q = d_components.extrap_stokesQ[extrap_ind];
       user_precision_t flux_U = d_components.extrap_stokesU[extrap_ind];
       user_precision_t flux_V = d_components.extrap_stokesV[extrap_ind];
-
-      // printf("INSIDE time_ind, freq_ind, iComponent, iAuto, flux_I %d %d %d %d %.1f\n",
-      //                time_ind, freq_ind, iComponent, iAuto - num_visis, flux_I );
 
       apply_beam_gains(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
                       flux_I, flux_Q, flux_U, flux_V,

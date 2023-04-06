@@ -14,11 +14,13 @@ try:
     from woden_skymodel import Component_Type_Counter, Component_Info, CompTypes
     from chunk_sky_model import Skymodel_Chunk_Map
     from skymodel_structs import setup_chunked_source, setup_source_catalogue, Source_Catalogue_Float, Source_Catalogue_Double, add_info_to_source_catalogue
+    from beam_settings import BeamTypes
     
 except KeyError:
     from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, Component_Info, CompTypes
     from wodenpy.skymodel.chunk_sky_model import Skymodel_Chunk_Map
     from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, setup_source_catalogue, Source_Catalogue_Float, Source_Catalogue_Double, add_info_to_source_catalogue
+    from wodenpy.use_libwoden.beam_settings import BeamTypes
 
 
 import erfa
@@ -48,11 +50,8 @@ def read_yaml_radec_count_components(yaml_path : str):
                 
                 if line[0] != ' ':
                     current_source += 1
-                    # print("HAH", current_source)
                     source_name = line[:-1]
                     comp_counter.new_source()
-                    # print("WHY", comp_counter.comp_index,
-                    #              comp_counter.source_index)
                 
                 elif 'ra:' in line:
                     ##If this is the first component, no need to reset
@@ -60,6 +59,7 @@ def read_yaml_radec_count_components(yaml_path : str):
                     if first_component:
                         first_component = False
                     else:
+                        
                         ##ra should be the first thing in a component, so we need
                         ##to append all the previously found values and reset the
                         ##counters
@@ -108,10 +108,12 @@ def read_yaml_radec_count_components(yaml_path : str):
     return comp_counter
 
 
-
+# @profile
 def read_yaml_skymodel_chunks(yaml_path : str,
                               chunked_skymodel_maps : list,
-                              num_freqs, num_time_steps,
+                              num_freqs : int, num_time_steps : int,
+                              beamtype : int,
+                              lsts : np.ndarray, latitude : float,
                               precision = "double") -> Union[Source_Catalogue_Float, Source_Catalogue_Double]:
     
     ##want to know how many shapelets are in all the chunks (used later
@@ -130,7 +132,7 @@ def read_yaml_skymodel_chunks(yaml_path : str,
     ##struct, and "malloc" the right amount of arrays to store required infor
     for chunk_ind, chunk_map in enumerate(chunked_skymodel_maps):
         chunked_source = setup_chunked_source(chunk_map, num_freqs, num_time_steps,
-                                                precision=precision)
+                                              beamtype, precision=precision)
         
         # chunked_sources.append(chunked_source)
         source_catalogue.sources[chunk_ind] = chunked_source
@@ -152,7 +154,6 @@ def read_yaml_skymodel_chunks(yaml_path : str,
     
     low_ind = 0
     for chunk_ind, chunk_map in enumerate(chunked_skymodel_maps):
-        # print("orig_index_map", chunk_ind, chunk_map.all_orig_inds )
         
         all_chunk_comp_indexes[low_ind:low_ind+len(chunk_map.all_orig_inds)] = chunk_map.all_orig_inds
         
@@ -161,9 +162,6 @@ def read_yaml_skymodel_chunks(yaml_path : str,
         low_ind += chunk_map.n_points + chunk_map.n_gauss + chunk_map.n_shape_coeffs
         
         lowest_file_numbers.append(chunk_map.lowest_file_number)
-        
-    # print("all_chunk_comp_indexes", all_chunk_comp_indexes)
-    # print("map_comp_to_chunk", map_comp_to_chunk)
         
     ##as we iterate through, as soon as we find a component, we add one to
     ##the component index. So start counter one below the
@@ -197,25 +195,19 @@ def read_yaml_skymodel_chunks(yaml_path : str,
                         current_source += 1
                         source_name = line[:-1]
                         # comp_counter.new_source()
-                        # print("WHY", comp_counter.comp_index,
-                        #              comp_counter.source_index)
                     
                     elif 'ra:' in line:
                         
                         ##ra is the first bit of information
                         if comp_info and use_component:
                             
-                            empty_fluxes = comp_info.finalise_comp()
-                            
-                            if len(empty_fluxes) > 0:
-                                print(f"WARNING: {len(empty_fluxes)} components in source '{source_name}' have no flux values. Setting to zero")
-                            
+                            comp_info.source_name = source_name
                             collected_comps = add_info_to_source_catalogue(chunked_skymodel_maps,
                                      source_catalogue, comp_ind, comp_info,
                                      map_comp_to_chunk, all_chunk_comp_indexes,
+                                     beamtype, lsts, latitude,
                                      collected_comps)
-                        
-                        
+                            
                         ##ra is the first thing in the component, so we know we've
                         ##got a new component
                         comp_ind += 1
@@ -317,73 +309,17 @@ def read_yaml_skymodel_chunks(yaml_path : str,
         ##from the previous component. So for the very last component, need
         ##to check if we need to add the information, and add if needed
         if use_component:
+            comp_info.source_name = source_name
             collected_comps = add_info_to_source_catalogue(chunked_skymodel_maps,
                                      source_catalogue, comp_ind, comp_info,
                                      map_comp_to_chunk, all_chunk_comp_indexes,
+                                     beamtype, lsts, latitude,
                                      collected_comps)
 
-    # print(collected_comps, num_comps_all_chunks)
-    
-    
     ##TODO some kind of consistency check between the chunk_maps and the
     ##sources in the catalogue - make sure we read in the correct information
     
-    return source_catalogue
-
-
-# def read_yaml_all_info(yaml_path : str,
-#                        comp_counter : Component_Type_Counter,
-#                        include_flags : np.array, 
-#                        full_catalogue = False,
-#                        chunk_size = 1e+9):
-#     """Read all the information and dump into chunk ctype classes """
-
-#     ##Read the whole thing including sources below the horizon
-#     if full_catalogue:
-#         include_flags = np.ones(comp_counter.total_comps)
-        
-#     with open(yaml_path) as file, open('outlines.txt', 'w') as outfile:
-#     # lines = file.read().split('\n')
+    # for i in range(2):
+    #     print("wtf", source_catalogue.sources[i].point_components.total_num_flux_entires)
     
-#         current_source = 0
-        
-#         ##These are all things we have to count to be able to malloc correct
-#         ##amount of memory down the line
-
-#         for line in file:
-#             if line != '---\n' and '#' not in line and line != ''  and line != ' ' and line != '\n':
-                
-#                 if line[0] != ' ':
-#                     # print(current_source)
-#                     outfile.write(line[:-2] + '\n')
-#                     comp_counter.source_names.append(line[:-2])
-#                     current_source += 1
-                
-#                 elif 'ra:' in line:
-
-#                     ##ra should be the first thing in a component, so we need
-#                     ##to append all the previously found values and reset the
-#                     ##counters
-#                     comp_counter.add_component_reset_counters()
-
-#                     comp_counter.comp_ras.append(float(line.split()[-1]))
-#                     comp_counter.source_indexes.append(current_source)
-
-#                 elif 'dec:' in line:
-#                     comp_counter.comp_decs.append(float(line.split()[-1]))
-
-#                 elif 'comp_type: point' in line:
-#                     comp_counter.point = 1
-#                 elif 'gaussian:' in line:
-#                     comp_counter.gaussian = 1
-#                 elif 'shapelet:' in line:
-#                     comp_counter.shapelet = 1
-
-#                 elif 'n1:' in line:
-
-#                     comp_counter.num_shape_basis += 1
-
-#                 elif 'freq:' in line:
-#                     comp_counter.count_list_flux()
-        
-
+    return source_catalogue

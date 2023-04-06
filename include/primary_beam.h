@@ -30,4 +30,4 @@ somehow
 
 */
 beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
-                            source_t *cropped_src, double *lsts);
+                                             double *lsts);

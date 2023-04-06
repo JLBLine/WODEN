@@ -241,11 +241,18 @@ class Component_Type_Counter():
         
         self.num_sources = len(np.unique(self.source_indexes))
         
+        if not type(self.orig_comp_indexes) == np.ndarray:
+            self.orig_comp_indexes = np.arange(len(self.comp_types), dtype=int)
+            
         ##Count point source related things
         ##Grab the indexes of all the point source types. Used later when
         self.point_power_inds = np.where(self.comp_types == CompTypes.POINT_POWER.value)[0]
         self.point_curve_inds = np.where(self.comp_types == CompTypes.POINT_CURVE.value)[0]
         self.point_list_inds = np.where(self.comp_types == CompTypes.POINT_LIST.value)[0]
+        
+        self.orig_point_power_inds = self.orig_comp_indexes[self.point_power_inds]
+        self.orig_point_curve_inds = self.orig_comp_indexes[self.point_curve_inds]
+        self.orig_point_list_inds = self.orig_comp_indexes[self.point_list_inds]
         
         self.num_point_flux_powers = len(self.point_power_inds)
         self.num_point_flux_curves = len(self.point_curve_inds)
@@ -258,6 +265,10 @@ class Component_Type_Counter():
         self.gauss_curve_inds = np.where(self.comp_types == CompTypes.GAUSS_CURVE.value)[0]
         self.gauss_list_inds = np.where(self.comp_types == CompTypes.GAUSS_LIST.value)[0]
         
+        self.orig_gauss_power_inds = self.orig_comp_indexes[self.gauss_power_inds]
+        self.orig_gauss_curve_inds = self.orig_comp_indexes[self.gauss_curve_inds]
+        self.orig_gauss_list_inds = self.orig_comp_indexes[self.gauss_list_inds]
+        
         self.num_gauss_flux_powers = len(self.gauss_power_inds)
         self.num_gauss_flux_curves = len(self.gauss_curve_inds)
         self.num_gauss_flux_lists = len(self.gauss_list_inds)
@@ -268,6 +279,10 @@ class Component_Type_Counter():
         self.shape_power_inds = np.where(self.comp_types == CompTypes.SHAPE_POWER.value)[0]
         self.shape_curve_inds = np.where(self.comp_types == CompTypes.SHAPE_CURVE.value)[0]
         self.shape_list_inds = np.where(self.comp_types == CompTypes.SHAPE_LIST.value)[0]
+        
+        self.orig_shape_power_inds = self.orig_comp_indexes[self.shape_power_inds]
+        self.orig_shape_curve_inds = self.orig_comp_indexes[self.shape_curve_inds]
+        self.orig_shape_list_inds = self.orig_comp_indexes[self.shape_list_inds]
         
         self.num_shape_flux_powers = len(self.shape_power_inds)
         self.num_shape_flux_curves = len(self.shape_curve_inds)
@@ -353,7 +368,6 @@ def crop_below_horizon(lst : float, latitude : float,
     comp_counter.num_shape_coeffs = comp_counter.num_shape_coeffs[comp_counter.orig_comp_indexes]
     comp_counter.file_line_nums = comp_counter.file_line_nums[comp_counter.orig_comp_indexes]
 
-
     ##re-total everything now we have changed the sizes
     comp_counter.total_components()
 
@@ -415,6 +429,9 @@ class Component_Info(object):
         
         #used to count shapelet basis functions
         self.num_shape_basis = 0
+        
+        ##parent source name; useful for debugging
+        self.source_name = ''
     
     
     ##bunch of methods to get information is determining component
@@ -480,7 +497,7 @@ class Component_Info(object):
         
         
     def add_ref_freq(self, freq : float):
-        """Setup another frequencu entry, and add a corresponding
+        """Setup another frequency entry, and add a corresponding
         empty Stokes flux vector"""
         self.num_fluxes += 1
         self.freqs.append(freq)
@@ -542,11 +559,6 @@ class Component_Info(object):
         self.num_fluxes = len(self.fluxes)
         self.fluxes = np.array(self.fluxes)
         
-        # print("Do me here", )
-        
-        # if self.ra == 0.0 and self.dec/D2R == -90.0:
-        #     print("YO",self.fluxes, self.comp_type)
-        
         empty_fluxes = []
         for flux_ind in range(self.num_fluxes):
             if np.all(np.isnan(self.fluxes[flux_ind])):
@@ -554,5 +566,5 @@ class Component_Info(object):
                 
         ##set missing fluxes to zero
         self.fluxes[np.isnan(self.fluxes)] = 0.0
-                
+        
         return empty_fluxes

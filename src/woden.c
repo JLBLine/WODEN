@@ -20,12 +20,13 @@
 #include "hyperbeam_error.h"
 
 //Main CUDA executable to link in
-extern void calculate_visibilities(array_layout_t * array_layout,
+extern void calculate_visibilities(array_layout_t *array_layout,
   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
-  woden_settings_t *woden_settings,  visibility_set_t *visibility_set,
+  woden_settings_t *woden_settings, visibility_set_t *visibility_set,
   user_precision_t *sbf);
 
-int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set) {
+int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set,
+             source_catalogue_t *something_broken) {
 
   #ifdef DOUBLE_PRECISION
   printf("WODEN is using DOUBLE precision\n");
@@ -40,51 +41,19 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
   user_precision_t *sbf = malloc( sbf_N * sbf_L * sizeof(user_precision_t) );
   sbf = create_sbf(sbf);
 
-  // //Read in the settings from the controlling json file
-  // woden_settings_t *woden_settings = malloc( sizeof(woden_settings_t) );
-  // status = read_json_settings(json_name, woden_settings);
-
-  // if (status == 1) {
-  //   printf("read_json_settings failed. Exiting now\n");
-  //   exit(1);
-  // }
-
   //Setup all LSTs array for all time steps in this simulation
   double *lsts = setup_lsts_and_phase_centre(woden_settings);
   woden_settings->lsts = lsts;
 
   //Create the array layout in instrument-centric X,Y,Z using positions
   //Rotate back to J2000 if necessary
+  //TODO make this full pythonic
   array_layout_t * array_layout;
   array_layout = calc_XYZ_diffs(woden_settings, woden_settings->do_precession);
 
-  //Read in the source catalogue
-  source_catalogue_t *raw_srccat = malloc( sizeof(source_catalogue_t) );
-  status = read_skymodel(woden_settings->cat_filename, raw_srccat);
-
-  if (status == 1) {
-    printf("read_skymodel failed. Exiting now\n");
-    exit(1);
-  }
-
-  //Crop emission below the horizon, and collapse all SOURCES from raw_srccat
-  //into one single SOURCE
-  printf("Horizon cropping sky model and calculating az/za for all components\nfor observation\n");
-  source_t *cropped_src = crop_sky_model(raw_srccat, woden_settings->lsts,
-                               woden_settings->latitudes,
-                               woden_settings->num_time_steps, woden_settings->sky_crop_type);
-
-  printf("Finished cropping and calculating az/za\n");
-
   //Setup some beam settings given user chose parameters
   beam_settings_t *beam_settings = fill_primary_beam_settings(woden_settings,
-                                                             cropped_src,
-                                                             woden_settings->lsts);
-
-  // Chunk the sky models into smaller pieces that fit onto the GPU
-  source_catalogue_t *cropped_sky_models = create_chunked_sky_models(cropped_src,
-                                                                     woden_settings);
-
+                                                              woden_settings->lsts);
 
   //MWA correlator data is split into 24 'coarse' bands of 1.28MHz bandwidth,
   //which is typically split into 10, 20, or 40kHz fine channels
@@ -119,28 +88,25 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
     }
 
     //Launch the CUDA code
-    calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
+    calculate_visibilities(array_layout, something_broken, beam_settings,
                   woden_settings, visibility_set, sbf);
 
     printf("GPU calls for band %d finished\n",band_num );
 
-    //Write out binary file for python code to read and convert to uvfits
-    // write_visi_set_binary(visibility_set, band_num, woden_settings->num_visis);
+    // //Write out binary file for python code to read and convert to uvfits
+    // // write_visi_set_binary(visibility_set, band_num, woden_settings->num_visis);
 
-    //Writes out a text file with u,v,w XX_re, XX_im. Useful for bug hunting
-    //in desperation
-    // write_visi_set_text(visibility_set, band_num, woden_settings);
+    // //Writes out a text file with u,v,w XX_re, XX_im. Useful for bug hunting
+    // //in desperation
+    // // write_visi_set_text(visibility_set, band_num, woden_settings);
 
-    //Free up that memory
-    free_visi_set_inputs(visibility_set);
-    // free_visi_set_outputs(visibility_set);
-    // free( visibility_set );
+    // //Free up that memory
+    // free_visi_set_inputs(visibility_set);
+    // // free_visi_set_outputs(visibility_set);
+    // // free( visibility_set );
 
     //Release the CPU MWA FEE beam if required
     if (woden_settings->beamtype == FEE_BEAM || woden_settings->beamtype == FEE_BEAM_INTERP){
-      // RTS_freeHDFBeam(beam_settings->FEE_beam);
-      // RTS_freeHDFBeam(beam_settings->FEE_beam_zenith);
-
       free_fee_beam(beam_settings->fee_beam);
     }
 

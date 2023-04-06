@@ -79,6 +79,8 @@ def setup_visi_set(num_visis : int, precision='double') -> ctypes.Structure:
         visibility_set = Visi_Set_Double()
         num_visi_array = ctypes.c_double*num_visis
         
+    # visibility_set = visibility_set()
+        
     visibility_set.us_metres = num_visi_array()
     visibility_set.vs_metres = num_visi_array()
     visibility_set.ws_metres = num_visi_array()

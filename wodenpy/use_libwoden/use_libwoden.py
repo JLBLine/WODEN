@@ -15,10 +15,12 @@ try:
     # from use_libwoden.woden_settings import *
     from visibility_set import *
     from woden_settings import *
+    from skymodel_structs import * 
     
 except KeyError:
     from wodenpy.use_libwoden.visibility_set import *
     from wodenpy.use_libwoden.woden_settings import *
+    from wodenpy.use_libwoden.skymodel_structs import *
 
 VELC = 299792458.0
 
@@ -26,6 +28,8 @@ def load_in_woden_library(precision='double'):
     """Load in the WODEN C and CUDA code"""
 
     woden_lib = importlib_resources.files(wodenpy).joinpath(f"libwoden_{precision}.so")
+    
+    print("LOADING IN", woden_lib)
 
     ## Read in the C library
     libwoden = ctypes.cdll.LoadLibrary(woden_lib)
@@ -37,9 +41,11 @@ def load_in_woden_library(precision='double'):
     
     if precision == 'float':
         run_woden.argtypes = [ctypes.POINTER(Woden_Settings_Float),
-                              ctypes.POINTER(Visi_Set_Float)]
+                              ctypes.POINTER(Visi_Set_Float),
+                              ctypes.POINTER(Source_Catalogue_Float)]
     else:
         run_woden.argtypes = [ctypes.POINTER(Woden_Settings_Double),
-                              ctypes.POINTER(Visi_Set_Double)]
-
+                              ctypes.POINTER(Visi_Set_Double),
+                              ctypes.POINTER(Source_Catalogue_Double)]
+        
     return run_woden

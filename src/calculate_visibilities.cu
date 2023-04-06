@@ -154,10 +154,6 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                             num_amps,
                             norm_to_zenith,
                             &beam_settings->cuda_fee_beam);
-    //
-    // if (status != 0) {
-    //   printf("hyperbeam error %d %s\n", status, beam_settings->hyper_error_str );
-    // }
 
     if (status != 0) {
       handle_hyperbeam_error(__FILE__, __LINE__, "new_cuda_fee_beam");
@@ -168,14 +164,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   //added to chunk_visibility_set, and then summed onto visibility_set
   for (int chunk = 0; chunk < cropped_sky_models->num_sources; chunk++) {
 
-    // printf("STARING A CHUNK NOW\n");
+    // source_t *source = (source_t *)malloc(sizeof(source_t));
 
-    source_t *source = (source_t *)malloc(sizeof(source_t));
-    // source = NULL;
-
-    remap_source_for_gpu(source, &cropped_sky_models->sources[chunk],
-                         woden_settings->num_time_steps,
-                         beam_settings->beamtype);
+    source_t *source = &cropped_sky_models->sources[chunk];
 
     // printf("\tsource->n_comps %d\n", source->n_comps);
     // printf("\tsource->n_points %d\n", source->n_points);
@@ -192,8 +183,10 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     // printf("\tsource->n_shape_curves %d\n", source->n_shape_curves);
     // printf("\tsource->n_shape_coeffs %d\n", source->n_shape_coeffs);
 
+    printf("About to copy the chunked source to the GPU\n");
+
     source_t *d_chunked_source = copy_chunked_source_to_GPU(source);
-    // printf("Have copied across the chunk to the GPU\n");
+    printf("Have copied across the chunk to the GPU\n");
 
     //Make sure the temp visis are 0 at the start of each chunk
     for (int visi = 0; visi < num_visis; visi++) {
@@ -500,8 +493,6 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
     }//visi loop
 
-  //free up the remapped chunked_source we made for copying things to GPU
-  free_remapped_source_for_gpu(source, beam_settings->beamtype);
   } //chunk loop
 
   //Free the chunk_visibility_set

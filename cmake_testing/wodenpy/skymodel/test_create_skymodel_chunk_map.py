@@ -92,7 +92,6 @@ class Test(BaseChunkTest):
                                             comp_counter, chunk_map,
                                             expec_counter)
             
-            
         for coeff_ind in range(num_coeff_chunks):
             
             chunk_map = chunked_skymodel_counters[num_point_chunks + num_gauss_chunks + coeff_ind]

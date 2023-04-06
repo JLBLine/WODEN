@@ -149,6 +149,7 @@ class Skymodel_Chunk_Map(object):
         
         
         if self.n_shapes > 0:
+            
             lowest_file_lines.append(self.shape_components.lowest_file_num)
             low_ind = self.n_points + self.n_gauss
             if self.n_shape_powers > 0:
@@ -306,7 +307,7 @@ def find_lowest_file_line(cropped_comp_counter : Component_Type_Counter,
         min_list = np.nanmin(cropped_comp_counter.file_line_nums[cropped_list_inds])
     else:
         min_list = np.nan
-    
+        
     lowest_file_num = int(np.nanmin([min_power, min_curve, min_list]))
     
     return lowest_file_num
@@ -326,9 +327,12 @@ def fill_chunk_component(comp_type : CompTypes,
                                        n_point_lists = num_chunk_list)
         
         components = chunk_map.point_components
-        power_inds = cropped_comp_counter.point_power_inds
-        curve_inds = cropped_comp_counter.point_curve_inds
-        list_inds = cropped_comp_counter.point_list_inds
+        # power_inds = cropped_comp_counter.point_power_inds
+        # curve_inds = cropped_comp_counter.point_curve_inds
+        # list_inds = cropped_comp_counter.point_list_inds
+        power_inds = cropped_comp_counter.orig_point_power_inds
+        curve_inds = cropped_comp_counter.orig_point_curve_inds
+        list_inds = cropped_comp_counter.orig_point_list_inds
         
         cropped_power_inds = np.where(cropped_comp_counter.comp_types == CompTypes.POINT_POWER.value)[0]
         cropped_curve_inds = np.where(cropped_comp_counter.comp_types == CompTypes.POINT_CURVE.value)[0]
@@ -341,17 +345,17 @@ def fill_chunk_component(comp_type : CompTypes,
                                        n_gauss_lists = num_chunk_list)
         
         components = chunk_map.gauss_components
-        power_inds = cropped_comp_counter.gauss_power_inds
-        curve_inds = cropped_comp_counter.gauss_curve_inds
-        list_inds = cropped_comp_counter.gauss_list_inds
+        # power_inds = cropped_comp_counter.gauss_power_inds
+        # curve_inds = cropped_comp_counter.gauss_curve_inds
+        # list_inds = cropped_comp_counter.gauss_list_inds
+        power_inds = cropped_comp_counter.orig_gauss_power_inds
+        curve_inds = cropped_comp_counter.orig_gauss_curve_inds
+        list_inds = cropped_comp_counter.orig_gauss_list_inds
         
         cropped_power_inds = np.where(cropped_comp_counter.comp_types == CompTypes.GAUSS_POWER.value)[0]
         cropped_curve_inds = np.where(cropped_comp_counter.comp_types == CompTypes.GAUSS_CURVE.value)[0]
         cropped_list_inds = np.where(cropped_comp_counter.comp_types == CompTypes.GAUSS_LIST.value)[0]
         
-        
-    # print(len(list_inds), len(cropped_list_inds))
-    # print('=====================================')
         
     components.power_orig_inds = power_inds[power_iter:power_iter+num_chunk_power]
     components.curve_orig_inds = curve_inds[curve_iter:curve_iter+num_chunk_curve]
@@ -362,10 +366,6 @@ def fill_chunk_component(comp_type : CompTypes,
     cropped_list_inds = cropped_list_inds[list_iter:list_iter+num_chunk_list]
     
     components.total_num_flux_entires = np.sum(cropped_comp_counter.num_list_fluxes[cropped_list_inds])
-    
-    # print(components.power_orig_inds,components.curve_orig_inds, components.list_orig_inds)
-    # print(cropped_power_inds, cropped_curve_inds, cropped_list_inds)
-    
     
     ##We don't have to start reading the information for this chunk until
     ##this line of the 
@@ -400,7 +400,6 @@ def map_chunk_pointgauss(cropped_comp_counter : Component_Type_Counter,
               "but both are set to True")
         return 1
     else:
-        # print("Fucking eh we're over here")
     
         ##Splitting POINTs and GAUSSIANS into lovely chunks that our GPU can chew
         ##First we have to ascertain where in the chunking we are, and which type
@@ -458,8 +457,6 @@ def map_chunk_pointgauss(cropped_comp_counter : Component_Type_Counter,
                                              curve_iter, num_chunk_curve,
                                              list_iter, num_chunk_list)
     
-        # print(chunk_map.point_components.lowest_file_num)
-        
         chunk_map.make_all_orig_inds_array()
 
         return chunk_map
@@ -477,26 +474,26 @@ def create_shape_basis_maps(cropped_comp_counter : Component_Type_Counter):
     coeff_iter = 0
     
     ##Go through power law flux indexes first, then curved, then list
-    for comp_ind in cropped_comp_counter.shape_power_inds:
+    for comp_ind, orig_comp_ind in zip(cropped_comp_counter.shape_power_inds, cropped_comp_counter.orig_shape_power_inds):
         
         num_basis = cropped_comp_counter.num_shape_coeffs[comp_ind]
-        shape_basis_to_orig_comp_index_map[coeff_iter:coeff_iter+num_basis] = comp_ind
+        shape_basis_to_orig_comp_index_map[coeff_iter:coeff_iter+num_basis] = orig_comp_ind
         shape_basis_to_comp_type_map[coeff_iter:coeff_iter+num_basis] = CompTypes.SHAPE_POWER.value
         shape_basis_param_index[coeff_iter:coeff_iter+num_basis] = np.arange(num_basis)
         coeff_iter += num_basis
         
-    for comp_ind in cropped_comp_counter.shape_curve_inds:
+    for comp_ind, orig_comp_ind in zip(cropped_comp_counter.shape_curve_inds, cropped_comp_counter.orig_shape_curve_inds):
         
         num_basis = cropped_comp_counter.num_shape_coeffs[comp_ind]
-        shape_basis_to_orig_comp_index_map[coeff_iter:coeff_iter+num_basis] = comp_ind
+        shape_basis_to_orig_comp_index_map[coeff_iter:coeff_iter+num_basis] = orig_comp_ind
         shape_basis_to_comp_type_map[coeff_iter:coeff_iter+num_basis] = CompTypes.SHAPE_CURVE.value
         shape_basis_param_index[coeff_iter:coeff_iter+num_basis] = np.arange(num_basis)
         coeff_iter += num_basis
         
-    for comp_ind in cropped_comp_counter.shape_list_inds:
+    for comp_ind, orig_comp_ind in zip(cropped_comp_counter.shape_list_inds, cropped_comp_counter.orig_shape_list_inds):
         
         num_basis = cropped_comp_counter.num_shape_coeffs[comp_ind]
-        shape_basis_to_orig_comp_index_map[coeff_iter:coeff_iter+num_basis] = comp_ind
+        shape_basis_to_orig_comp_index_map[coeff_iter:coeff_iter+num_basis] = orig_comp_ind
         shape_basis_to_comp_type_map[coeff_iter:coeff_iter+num_basis] = CompTypes.SHAPE_LIST.value
         shape_basis_param_index[coeff_iter:coeff_iter+num_basis] = np.arange(num_basis)
         coeff_iter += num_basis
@@ -544,8 +541,6 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
     curve_shape_orig_inds = orig_index_chunk[orig_type_chunk == CompTypes.SHAPE_CURVE.value]
     list_shape_orig_inds = orig_index_chunk[orig_type_chunk == CompTypes.SHAPE_LIST.value]
     
-    # print("chunk power", power_shape_orig_inds)
-    
     power_shape_basis_inds = shape_basis_param_index_chunk[orig_type_chunk == CompTypes.SHAPE_POWER.value]
     curve_shape_basis_inds = shape_basis_param_index_chunk[orig_type_chunk == CompTypes.SHAPE_CURVE.value]
     list_shape_basis_inds = shape_basis_param_index_chunk[orig_type_chunk == CompTypes.SHAPE_LIST.value]
@@ -580,25 +575,28 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
     components.total_shape_coeffs = n_shape_coeffs
     
     
-    cropped_power_inds = np.where(cropped_comp_counter.comp_types == CompTypes.SHAPE_POWER.value)[0]
-    cropped_curve_inds = np.where(cropped_comp_counter.comp_types == CompTypes.SHAPE_CURVE.value)[0]
-    cropped_list_inds = np.where(cropped_comp_counter.comp_types == CompTypes.SHAPE_LIST.value)[0]
+    ##these are the indexes of each included component, within the cropped
+    ##sky model itself
     
-    # this_power_inds = np.argwhere(np.isin(cropped_power_inds, power_orig_inds)).ravel()
-    # this_curve_inds = np.argwhere(np.isin(cropped_curve_inds, curve_orig_inds)).ravel()
-    # this_list_inds = np.argwhere(np.isin(cropped_list_inds, list_orig_inds)).ravel()
-    
-    cropped_power_inds = cropped_power_inds[np.isin(cropped_power_inds, power_orig_inds)]
-    cropped_curve_inds = cropped_curve_inds[np.isin(cropped_curve_inds, curve_orig_inds)]
-    cropped_list_inds = cropped_list_inds[np.isin(cropped_list_inds, list_orig_inds)]
-    
-    # print(cropped_power_inds, cropped_curve_inds, cropped_list_inds)
+    cropped_power_inds = np.where(np.isin(cropped_comp_counter.orig_comp_indexes, power_orig_inds) == True)[0]
+    cropped_curve_inds = np.where(np.isin(cropped_comp_counter.orig_comp_indexes, curve_orig_inds) == True)[0]
+    cropped_list_inds = np.where(np.isin(cropped_comp_counter.orig_comp_indexes, list_orig_inds) == True)[0]
     
     ##if we have list type fluxes, count have many entries in total there are
     if num_chunk_list > 0:
         ##how many flux list entries in total are shared by these components
         
         components.total_num_flux_entires = np.sum(cropped_comp_counter.num_list_fluxes[cropped_list_inds])
+    
+    # print('--map_chunk_shapelets-----------------------')
+    # # print(cropped_comp_counter.comp_types)
+    # print(n_shape_coeffs, cropped_comp_counter.num_shape_flux_powers)
+    # print(power_orig_inds, curve_orig_inds, list_orig_inds)
+    # print('----------------------------------------')
+    
+    
+    
+    
     
     ##lowest line we want to read from the 
     components.lowest_file_num = find_lowest_file_line(cropped_comp_counter,
@@ -668,6 +666,10 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
                                         shape_basis_to_comp_type_map,
                                         shape_basis_param_index,
                                         chunk_ind, comps_per_chunk)
+        
+        # print("INTERNAL", chunk_map.n_shape_powers, chunk_map.n_shape_curves,
+        #       chunk_map.n_shape_lists)
+        
         chunked_skymodel_maps.append(chunk_map)
         
     print(f"After chunking there are {len(chunked_skymodel_maps)} chunks")

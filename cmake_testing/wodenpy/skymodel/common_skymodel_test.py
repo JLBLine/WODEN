@@ -564,8 +564,8 @@ def add_gauss(outfile, ra : float, dec: float,
     if new_source:
         outfile.write(f"source{source_index:08d}\n")
         
-    outfile.write(f"  - ra: {ra/D2R:.5f}\n")
-    outfile.write(f"    dec: {dec/D2R:.5f}\n")
+    outfile.write(f"  - ra: {ra/D2R:.12f}\n")
+    outfile.write(f"    dec: {dec/D2R:.12f}\n")
     outfile.write(f"    comp_type:\n")
     outfile.write(f"      gaussian:\n")
     outfile.write(f"        maj: {gauss_index}.\n")
@@ -603,8 +603,8 @@ def add_shapelet(outfile, ra : float, dec: float,
     if new_source:
         outfile.write(f"source{source_index:08d}\n")
         
-    outfile.write(f"  - ra: {ra/D2R:.5f}\n")
-    outfile.write(f"    dec: {dec/D2R:.5f}\n")
+    outfile.write(f"  - ra: {ra/D2R:.12f}\n")
+    outfile.write(f"    dec: {dec/D2R:.12f}\n")
     outfile.write(f"    comp_type:\n")
     outfile.write(f"      shapelet:\n")
     outfile.write(f"        maj: {shape_index}.\n")
@@ -655,8 +655,13 @@ def write_full_test_skymodel(deg_between_comps : float,
     ra_range = np.arange(0, 360.0*D2R, deg_between_comps*D2R)
     dec_range = np.arange(LOW_DEC, HIGH_DEC, deg_between_comps*D2R)
     
+    
+    
     ra_range, dec_range = np.meshgrid(ra_range, dec_range)
     ra_range, dec_range = ra_range.flatten(), dec_range.flatten()
+    
+    dec_range[np.abs(dec_range) < 1e-10] = 0.0
+    # print('SKY MODEL MAKING', len(ra_range))
     
     source_index = 0
     
@@ -740,3 +745,119 @@ def write_full_test_skymodel(deg_between_comps : float,
                                                 flux_index, num_list_values,
                                                 source_index, comps_per_source,
                                                 num_coeff_per_shape, basis_index)
+                
+    return ra_range, dec_range
+
+class Expected_Components(object):
+    
+    def __init__(self, comp_type : CompTypes, num_chunk_power = 0,
+                 num_chunk_curve = 0, num_chunk_list = 0,
+                 num_list_values = 0, comps_per_chunk = 0):
+        """
+        docstring
+        """
+        
+        num_comps = num_chunk_power + num_chunk_curve + num_chunk_list
+    
+        self.ras = np.empty(num_comps)
+        self.decs = np.empty(num_comps)
+        
+        self.power_ref_freqs = np.empty(num_chunk_power)
+        self.power_ref_stokesI = np.empty(num_chunk_power)
+        self.power_ref_stokesQ = np.empty(num_chunk_power)
+        self.power_ref_stokesU = np.empty(num_chunk_power)
+        self.power_ref_stokesV = np.empty(num_chunk_power)
+        self.power_SIs = np.empty(num_chunk_power)
+        self.power_comp_inds = np.empty(num_chunk_power)
+        
+        self.curve_ref_freqs = np.empty(num_chunk_curve)
+        self.curve_ref_stokesI = np.empty(num_chunk_curve)
+        self.curve_ref_stokesQ = np.empty(num_chunk_curve)
+        self.curve_ref_stokesU = np.empty(num_chunk_curve)
+        self.curve_ref_stokesV = np.empty(num_chunk_curve)
+        self.curve_SIs = np.empty(num_chunk_curve)
+        self.curve_qs = np.empty(num_chunk_curve)
+        self.curve_comp_inds = np.empty(num_chunk_curve)
+        
+        self.list_freqs = np.empty(num_list_values*num_chunk_list)
+        self.list_stokesI = np.empty(num_list_values*num_chunk_list)
+        self.list_stokesQ = np.empty(num_list_values*num_chunk_list)
+        self.list_stokesU = np.empty(num_list_values*num_chunk_list)
+        self.list_stokesV = np.empty(num_list_values*num_chunk_list)
+        self.num_list_values = np.empty(num_chunk_list)
+        self.list_start_indexes = np.empty(num_chunk_list)
+        self.list_comp_inds = np.empty(num_chunk_list)
+        
+        if comp_type == CompTypes.GAUSSIAN or comp_type == CompTypes.SHAPELET:
+            self.minors = np.empty(num_comps)
+            self.majors = np.empty(num_comps)
+            self.pas = np.empty(num_comps)
+        if comp_type == CompTypes.SHAPELET:
+            self.param_indexes = np.empty(comps_per_chunk)
+            self.n1s = np.empty(comps_per_chunk)
+            self.n2s = np.empty(comps_per_chunk)
+            self.shape_coeffs = np.empty(comps_per_chunk)
+
+class Expected_Sky_Chunk(object):
+    
+    def __init__(self):
+        """
+        laksjfdkljshadloasd
+        """
+        self.n_points = 0
+        self.n_point_lists = 0
+        self.n_point_powers = 0
+        self.n_point_curves = 0
+        self.n_gauss = 0
+        self.n_gauss_lists = 0
+        self.n_gauss_powers = 0
+        self.n_gauss_curves = 0
+        self.n_shapes = 0
+        self.n_shape_lists = 0
+        self.n_shape_powers = 0
+        self.n_shape_curves = 0
+        self.n_shape_coeffs = 0
+        self.n_comps = 0
+        
+        self.point_components = None
+        self.gauss_components = None
+        self.shape_components = None
+        
+    def init_point_components(self, num_chunk_power : int,
+                 num_chunk_curve : int, num_chunk_list : int,
+                 num_list_values : int, comps_per_chunk : int):
+        
+        self.n_point_powers = num_chunk_power
+        self.n_point_curves = num_chunk_curve
+        self.n_point_lists = num_chunk_list
+        self.n_points = num_chunk_power + num_chunk_curve + num_chunk_list
+        
+        self.point_components = Expected_Components(CompTypes.POINT,
+                                 num_chunk_power, num_chunk_curve, num_chunk_list,
+                                 num_list_values, comps_per_chunk)
+        
+    def init_gauss_components(self, num_chunk_power : int,
+                 num_chunk_curve : int, num_chunk_list : int,
+                 num_list_values : int, comps_per_chunk : int):
+        
+        self.gauss_components = Expected_Components(CompTypes.GAUSSIAN,
+                                 num_chunk_power, num_chunk_curve, num_chunk_list,
+                                 num_list_values, comps_per_chunk)
+        
+        self.n_gauss_powers = num_chunk_power
+        self.n_gauss_curves = num_chunk_curve
+        self.n_gauss_lists = num_chunk_list
+        self.n_gauss = num_chunk_power + num_chunk_curve + num_chunk_list
+        
+    def init_shape_components(self, num_chunk_power : int,
+                 num_chunk_curve : int, num_chunk_list : int,
+                 num_list_values : int, comps_per_chunk : int):
+        
+        self.shape_components = Expected_Components(CompTypes.SHAPELET,
+                                 num_chunk_power, num_chunk_curve, num_chunk_list,
+                                 num_list_values, comps_per_chunk)
+        
+        self.n_shape_powers = num_chunk_power
+        self.n_shape_curves = num_chunk_curve
+        self.n_shape_lists = num_chunk_list
+        self.n_shapes = num_chunk_power + num_chunk_curve + num_chunk_list

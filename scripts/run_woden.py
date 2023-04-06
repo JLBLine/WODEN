@@ -12,6 +12,12 @@ from wodenpy.array_layout.create_array_layout import *
 from wodenpy.phase_rotate.remove_phase_track import *
 from wodenpy.use_libwoden.woden_settings import *
 
+from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes, crop_below_horizon
+from wodenpy.skymodel.read_yaml_skymodel import read_yaml_radec_count_components, read_yaml_skymodel_chunks
+from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map
+
+from time import time
+
 ##Constants
 R2D = 180.0 / np.pi
 D2R = np.pi / 180.0
@@ -50,6 +56,7 @@ def main():
     if args.dry_run:
         ##User only wants to check whether the arguments would have worked or not
         pass
+        
     else:
         ##Depending on what precision was selected by the user, load in the
         ##C/CUDA library and return the `run_woden` function
@@ -71,9 +78,44 @@ def main():
         ##to the C library
         woden_settings = create_woden_settings(args, jd_date, lst_deg)
         
+        # ##read in and chunk the sky model=======================================
+        t_before = time()
+        comp_counter = read_yaml_radec_count_components(args.cat_filename)
+    
+        crop_by_component = True
+        if args.sky_crop_sources:
+            crop_by_component = False
+    
+        comp_counter = crop_below_horizon(lst_deg*D2R, args.latitude*D2R, comp_counter,
+                                            crop_by_component=crop_by_component)
+        
+        max_num_visibilities = 1e10
+        num_baselines = 8128
+        num_freqs = 16
+        num_time_steps = 14
+        
+        chunked_skymodel_maps = create_skymodel_chunk_map(comp_counter,
+                                            args.chunking_size, num_baselines,
+                                            args.num_freq_channels,
+                                            args.num_time_steps)
+        
+        
+        lsts = setup_lsts_and_phase_centre(woden_settings)
+        
+        chunked_sky_models = read_yaml_skymodel_chunks(args.cat_filename, chunked_skymodel_maps,
+                                                       args.num_freq_channels,
+                                                       args.num_time_steps,
+                                                       woden_settings.beamtype,
+                                                       lsts, args.latitude*D2R)
+        
+        t_after = time()
+        print(f"Creating and chunking skymodel took {(t_after - t_before)/60.0:.1f} mins")
+        
+        
         ##This calls the WODEN main function, and populates visibility set
         ##with the outputs that we want
-        run_woden(woden_settings, visibility_set)
+        
+        run_woden(woden_settings, visibility_set, chunked_sky_models)
 
         # command(f'{WODEN_DIR}/{woden_lib} {json_name}')
 
@@ -106,7 +148,6 @@ def main():
                                                 precision=args.precision,
                                                 do_autos=args.do_autos,
                                                 num_ants=args.num_antennas)
-
 
             if args.remove_phase_tracking:
                 frequencies = band_low_freq + np.arange(args.num_freq_channels)*args.freq_res
@@ -141,17 +182,16 @@ def main():
                           telescope_name=args.telescope_name)
 
 
-        # ##Tidy up or not
-        # if args.no_tidy:
-        #     pass
-        # else:
-        #     command("rm {:s}".format(json_name))
-        #     #if we generated a text file containing the array layout
-        #     #from the metafits, delete it now
-        #     if args.array_layout == 'from_the_metafits':
-        #     command("rm WODEN_array_layout_band{:s}.txt".format(json_band_str))
-        #         command("rm {:s}".format("WODEN_array_layout.txt"))
-
+    #    # ##Tidy up or not
+    #    # if args.no_tidy:
+    #    #     pass
+    #    # else:
+    #    #     command("rm {:s}".format(json_name))
+    #    #     #if we generated a text file containing the array layout
+    #    #     #from the metafits, delete it now
+    #    #     if args.array_layout == 'from_the_metafits':
+    #    #     command("rm WODEN_array_layout_band{:s}.txt".format(json_band_str))
+    #    #         command("rm {:s}".format("WODEN_array_layout.txt"))
     
 
 if __name__ == "__main__":

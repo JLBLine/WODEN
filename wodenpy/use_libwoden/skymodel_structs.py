@@ -5,6 +5,7 @@ from typing import Union
 from ctypes import POINTER, c_float, c_double, c_int, c_char
 import os
 import sys
+import erfa
 
 ##If we are performing a ctest, this check means we use the code we are
 ##testing and NOT what has been pip or conda installed
@@ -14,10 +15,12 @@ try:
     
     from skymodel.woden_skymodel import Component_Type_Counter, CompTypes, Component_Info
     from skymodel.chunk_sky_model import Skymodel_Chunk_Map
+    from beam_settings import BeamTypes
     
 except KeyError:
     from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes, Component_Info
     from wodenpy.skymodel.chunk_sky_model import Skymodel_Chunk_Map
+    from wodenpy.use_libwoden.beam_settings import BeamTypes
 
 
 Skymodel_Chunk_Map
@@ -106,6 +109,10 @@ class Components_Double(ctypes.Structure):
                 ("curve_ref_stokesV", POINTER(c_double)),
                 ("curve_SIs", POINTER(c_double)),
                 ("curve_qs", POINTER(c_double)),
+                ##indexes of types
+                ("power_comp_inds", POINTER(c_int)),
+                ("curve_comp_inds", POINTER(c_int)),
+                ("list_comp_inds", POINTER(c_int)),
                 ##list flux params
                 ("list_freqs", POINTER(c_double)),
                 ("list_stokesI", POINTER(c_double)),
@@ -115,23 +122,19 @@ class Components_Double(ctypes.Structure):
                 ("num_list_values", POINTER(c_int)),
                 ("list_start_indexes", POINTER(c_int)),
                 ("total_num_flux_entires", c_int),
-                ##indexes of types
-                ("power_comp_inds", POINTER(c_int)),
-                ("curve_comp_inds", POINTER(c_int)),
-                ("list_comp_inds", POINTER(c_int)),
                 ##something to store extrapolated output fluxes in
                 ("extrap_stokesI", POINTER(c_double)),
                 ("extrap_stokesQ", POINTER(c_double)),
                 ("extrap_stokesU", POINTER(c_double)),
                 ("extrap_stokesV", POINTER(c_double)),
-                ##SHAPELET / GAUSSIAN params
-                ("majors", POINTER(c_double)),
-                ("minors", POINTER(c_double)),
-                ("pas", POINTER(c_double)),
                 ##SHAPELET params
                 ("shape_coeffs", POINTER(c_double)),
                 ("n1s", POINTER(c_double)),
                 ("n2s", POINTER(c_double)),
+                ##SHAPELET / GAUSSIAN params
+                ("majors", POINTER(c_double)),
+                ("minors", POINTER(c_double)),
+                ("pas", POINTER(c_double)),
                 ("param_indexes", POINTER(c_double)),
                 ##Specific to observation settings for these COMPONENTs
                 ("azs", POINTER(c_double)),
@@ -158,7 +161,29 @@ class Source_Float(ctypes.Structure):
     the C and CUDA code in libwoden_float.so
     """
     
-    _fields_ = []
+    _fields_ = [
+        ('name', (c_char*32)),
+        ("n_comps", c_int),
+        ("n_points", c_int),
+        ("n_point_lists", c_int),
+        ("n_point_powers", c_int),
+        ("n_point_curves", c_int),
+        ("n_gauss", c_int),
+        ("n_gauss_lists", c_int),
+        ("n_gauss_powers", c_int),
+        ("n_gauss_curves", c_int),
+        ("n_shapes", c_int),
+        ("n_shape_lists", c_int),
+        ("n_shape_powers", c_int),
+        ("n_shape_curves", c_int),
+        ("n_shape_coeffs", c_int),
+        ("point_components", Components_Float),
+        ("gauss_components", Components_Float),
+        ("shape_components", Components_Float),
+        ("d_point_components", Components_Float),
+        ("d_gauss_components", Components_Float),
+        ("d_shape_components", Components_Float),
+    ]
     
 class Source_Double(ctypes.Structure):
     """A class structured equivalent to a `source_t` struct, used by 
@@ -236,10 +261,12 @@ def setup_source_catalogue(num_sources : int, num_shapelets : int,
     
     if precision == 'float':
         source_catalogue = Source_Catalogue_Float()
+        # source_catalogue = POINTER(Source_Catalogue_Float)
         source_array = num_sources*Source_Float
         
     else:
         source_catalogue = Source_Catalogue_Double()
+        # source_catalogue = POINTER(Source_Catalogue_Double)
         source_array = num_sources*Source_Double
         
     source_catalogue.sources = source_array()
@@ -252,17 +279,15 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
                      chunked_source : Union[Source_Float, Source_Double],
                      num_freqs : int,
                      num_times : int, comp_type : CompTypes,
+                     beamtype : int, 
                      c_user_precision : Union[c_float, c_double]):
     """choose which components and do the ctypes "malloc" thing
     """
     
     if comp_type == CompTypes.POINT:
         
+        n_comps = chunk_map.n_points
         components = chunked_source.point_components
-        
-        ##component type specific things
-        user_ncomps_arr = c_user_precision*chunk_map.n_points
-        double_ncomps_arr = c_double*chunk_map.n_points
         
         ##flux type specific things
         power_user_ncomps_arr = c_user_precision*chunk_map.n_point_powers
@@ -277,16 +302,12 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
         list_double_nflux_arr = c_double*chunk_map.point_components.total_num_flux_entires
         
         list_int_ncomps_arr = c_int*chunk_map.n_point_lists
-        
         n_lists = chunk_map.point_components.total_num_flux_entires
         
     elif comp_type == CompTypes.GAUSSIAN:
         
+        n_comps = chunk_map.n_gauss
         components = chunked_source.gauss_components
-        
-        ##component type specific things
-        user_ncomps_arr = c_user_precision*chunk_map.n_gauss
-        double_ncomps_arr = c_double*chunk_map.n_gauss
         
         ##flux type specific things
         power_user_ncomps_arr = c_user_precision*chunk_map.n_gauss_powers
@@ -305,11 +326,8 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
         
     elif comp_type == CompTypes.SHAPELET:
         
+        n_comps = chunk_map.n_shapes
         components = chunked_source.shape_components
-        
-        ##component type specific things
-        user_ncomps_arr = c_user_precision*chunk_map.n_shapes
-        double_ncomps_arr = c_double*chunk_map.n_shapes
         
         ##flux type specific things
         power_user_ncomps_arr = c_user_precision*chunk_map.n_shape_powers
@@ -326,8 +344,14 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
         list_int_ncomps_arr = c_int*chunk_map.n_shape_lists
         n_lists = chunk_map.shape_components.total_num_flux_entires
         
+    ##component type specific things
+    user_ncomps_arr = c_user_precision*n_comps
+    double_ncomps_arr = c_double*n_comps
+    num_primarybeam_values = n_comps*num_freqs*num_times
+        
     components.ras = double_ncomps_arr()
     components.decs = double_ncomps_arr()
+    components.num_primarybeam_values = num_primarybeam_values
     
     ##power-law flux things
     components.power_ref_freqs = power_user_ncomps_arr()
@@ -375,11 +399,25 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
         components.n2s = user_ncoeffs_arr()
         components.param_indexes = user_ncoeffs_arr()
         
+    ##----------------------------------------------------------------
+    ##now we make space for coordinates that are need for the primary beam
+    
+    if beamtype == BeamTypes.GAUSS_BEAM.value or beamtype == BeamTypes.MWA_ANALY.value:
+        hadec_arr = c_double*(n_comps*num_times)
+        components.beam_has = hadec_arr()
+        components.beam_decs = hadec_arr()
         
-    ##set the total numbers for the source
+    ##only the NO_BEAM and GAUSS_BEAM options don't need az,za coords
+    if beamtype == BeamTypes.GAUSS_BEAM.value or beamtype == BeamTypes.NO_BEAM.value:
+        pass
+    else:
+        azza_arr = c_user_precision*(n_comps*num_times)
+        components.azs = azza_arr()
+        components.zas = azza_arr()
+        
     
 def setup_chunked_source(chunk_map : Skymodel_Chunk_Map, num_freqs : int,
-                         num_times : int, 
+                         num_times : int, beamtype : int,
                          precision='double') -> ctypes.Structure:
     """Sets up a ctypes structure class to contain a chunked sky model.
     This class is compatible with the C/CUDA code, and will allocate the
@@ -414,15 +452,24 @@ def setup_chunked_source(chunk_map : Skymodel_Chunk_Map, num_freqs : int,
         
     if chunk_map.n_points > 0:
         setup_components(chunk_map, chunked_source, num_freqs, num_times,
-                         CompTypes.POINT, c_user_precision)
+                         CompTypes.POINT, beamtype, c_user_precision)
         
     if chunk_map.n_gauss > 0:
         setup_components(chunk_map, chunked_source, num_freqs, num_times,
-                         CompTypes.GAUSSIAN, c_user_precision)
+                         CompTypes.GAUSSIAN, beamtype, c_user_precision)
         
     if chunk_map.n_shapes > 0:
         setup_components(chunk_map, chunked_source, num_freqs, num_times,
-                         CompTypes.SHAPELET, c_user_precision)
+                         CompTypes.SHAPELET, beamtype, c_user_precision)
+    
+    # setup_components(chunk_map, chunked_source, num_freqs, num_times,
+    #                      CompTypes.POINT, c_user_precision)
+        
+    # setup_components(chunk_map, chunked_source, num_freqs, num_times,
+    #                      CompTypes.GAUSSIAN, c_user_precision)
+        
+    # setup_components(chunk_map, chunked_source, num_freqs, num_times,
+    #                      CompTypes.SHAPELET, c_user_precision)
     
     
     return chunked_source
@@ -433,11 +480,16 @@ def add_info_to_source_catalogue(chunked_skymodel_maps : list,
                                  orig_comp_ind : int, comp_info : Component_Info,
                                  map_comp_to_chunk : np.ndarray,
                                  all_chunk_comp_indexes : np.ndarray,
+                                 beamtype : int, lsts : np.ndarray,
+                                 latitude : float,
                                  collected_comps : int):
     
+    ##Finalise all the info inside `comp_info`, and warn in 
+    empty_fluxes = comp_info.finalise_comp()
+                            
+    if len(empty_fluxes) > 0:
+        print(f"WARNING: {len(empty_fluxes)} components in source '{comp_info.source_name}' have no flux values. Setting to zero")
     
-    # if comp_info.shapelet:
-    # print("add compo----------------------")
     
     chunk_indexes = np.unique(map_comp_to_chunk[np.where(all_chunk_comp_indexes == orig_comp_ind)]).astype(int)
     
@@ -449,17 +501,9 @@ def add_info_to_source_catalogue(chunked_skymodel_maps : list,
         chunk_map = chunked_skymodel_maps[chunk_ind]
         chunked_source = source_catalogue.sources[chunk_ind]
         
-        # print(chunk_ind, comp_info.ra, comp_info.dec)
-        # print(chunked_source.point_components.ras[0])
-        # print(comp_info.comp_type)
-        
-        
         ##TODO - gotta work out some way count the index of each component
         ##type to make sure we're adding the right things to
         # chunked_source.*_shapelet.param_indexes
-        
-        # print(chunk_map.n_points)
-        
         
         ##select the component type we need to populate
         if comp_info.point:
@@ -467,15 +511,24 @@ def add_info_to_source_catalogue(chunked_skymodel_maps : list,
             source_components = chunked_source.point_components
             map_components = chunk_map.point_components
             
+            n_powers = chunk_map.n_point_powers
+            n_curves = chunk_map.n_point_curves
+            
         elif comp_info.gaussian:
             
             source_components = chunked_source.gauss_components
             map_components = chunk_map.gauss_components
             
+            n_powers = chunk_map.n_gauss_powers
+            n_curves = chunk_map.n_gauss_curves
+            
         elif comp_info.shapelet:
             
             source_components = chunked_source.shape_components
             map_components = chunk_map.shape_components
+            
+            n_powers = chunk_map.n_shape_powers
+            n_curves = chunk_map.n_shape_curves
             
         ##always shove things into the source as power, curve, list
         ## - chunk_flux_type_index is the index to access with etc
@@ -483,6 +536,8 @@ def add_info_to_source_catalogue(chunked_skymodel_maps : list,
         ##   source_components.curve_ref_stokesQ
         ## - chunk_comp_index is the index to access within e.g
         ##   source_components.ras
+        
+        # print(np.isnan(comp_info.fluxes))
         
         if comp_info.flux_power:
             ##this is the index
@@ -501,7 +556,7 @@ def add_info_to_source_catalogue(chunked_skymodel_maps : list,
         if comp_info.flux_curve:
             ##this is the index
             chunk_flux_type_index = int(np.where(map_components.curve_orig_inds == orig_comp_ind)[0])
-            chunk_comp_index = chunk_map.n_point_powers + chunk_flux_type_index
+            chunk_comp_index = n_powers + chunk_flux_type_index
             
             source_components.curve_comp_inds[chunk_flux_type_index] = chunk_comp_index
             
@@ -516,22 +571,16 @@ def add_info_to_source_catalogue(chunked_skymodel_maps : list,
         if comp_info.flux_list:
             ##this is the index
             chunk_flux_type_index = int(np.where(map_components.list_orig_inds == orig_comp_ind)[0])
-            chunk_comp_index = chunk_map.n_point_powers + chunk_map.n_point_curves + chunk_flux_type_index
+            chunk_comp_index = n_powers + n_curves + chunk_flux_type_index
             
-            source_components.curve_comp_inds[chunk_flux_type_index] = chunk_comp_index
+            source_components.list_comp_inds[chunk_flux_type_index] = chunk_comp_index
             
             ##things get complicated with the flux list stuff
-            
-            # print("RIGHT HERE", )
-            # print(comp_info.fluxes)
             
             if chunk_flux_type_index == 0:
                 list_start_index = 0
             else:
                 list_start_index = np.sum(source_components.num_list_values[:chunk_flux_type_index + 1])
-                
-            # print(source_components.num_list_values)
-            # print(list_start_index)
                 
             for f_ind in range(comp_info.num_fluxes):
                 
@@ -544,13 +593,37 @@ def add_info_to_source_catalogue(chunked_skymodel_maps : list,
             source_components.num_list_values[chunk_flux_type_index] = comp_info.num_fluxes
             source_components.list_start_indexes[chunk_flux_type_index] = list_start_index
             
-        # print(orig_comp_ind, chunk_comp_index, chunk_ind, comp_info.comp_type)
-        
         ##everybody needs an ra/dec
         source_components.ras[chunk_comp_index] = comp_info.ra
         source_components.decs[chunk_comp_index] = comp_info.dec
         
-        # print('overall comp info', orig_comp_ind, chunk_comp_index, comp_info.ra, comp_info.dec)
+        num_time_steps = len(lsts)
+        
+        if beamtype == BeamTypes.GAUSS_BEAM.value or beamtype == BeamTypes.MWA_ANALY.value:
+            comp_has = lsts - comp_info.ra
+            
+            ##OK these ctype arrays cannot be sliced, so let's increment
+            ##over them at a snail's pace
+            for time_ind in range(num_time_steps):
+                hadec_low = chunk_comp_index*num_time_steps
+                source_components.beam_has[hadec_low + time_ind] = comp_has[time_ind]
+                source_components.beam_decs[hadec_low + time_ind] = comp_info.dec
+            
+        ##only the NO_BEAM and GAUSS_BEAM options don't need az,za coords
+        if beamtype == BeamTypes.GAUSS_BEAM.value or beamtype == BeamTypes.NO_BEAM.value:
+            pass
+        else:
+            ##Calculate lst, and then azimuth/elevation
+            comp_has = lsts - comp_info.ra
+            comp_azs, comp_els = erfa.hd2ae(comp_has, comp_info.dec,
+                                            latitude)
+            
+            ##OK these ctype arrays cannot be sliced, so let's increment
+            ##over them at a snail's pace
+            for time_ind in range(num_time_steps):
+                azza_low = chunk_comp_index*num_time_steps
+                source_components.azs[azza_low + time_ind] = comp_azs[time_ind]
+                source_components.zas[azza_low + time_ind] = np.pi/2 - comp_els[time_ind]
         
         ##only some people need major, minor, pas
         if comp_info.gaussian or comp_info.shapelet:
@@ -558,31 +631,16 @@ def add_info_to_source_catalogue(chunked_skymodel_maps : list,
             source_components.minors[chunk_comp_index] = comp_info.minor
             source_components.pas[chunk_comp_index] = comp_info.pa
             
-            # print('overall comp info', orig_comp_ind, chunk_comp_index, comp_info.minor*(3600.0 / D2R))
-            
         ##only shapelets need these other scary things
         if comp_info.shapelet:
-            ##TODO do the scary wtf coeffs mapping bullshit
-            pass
         
-            ##OK
-            
             if comp_info.flux_power:
-                # print('overall comp info', orig_comp_ind, chunk_comp_index, map_components.power_shape_orig_inds)
-                # print('   basis comp info', orig_comp_ind, chunk_comp_index, map_components.power_shape_basis_inds)
-                
                 coeff_indexes_to_add = map_components.power_shape_basis_inds[np.where(map_components.power_shape_orig_inds == orig_comp_ind)].astype(int)
                 
             elif comp_info.flux_curve:
-                # print('overall comp info', orig_comp_ind, chunk_comp_index, map_components.power_shape_orig_inds)
-                # print('   basis comp info', orig_comp_ind, chunk_comp_index, map_components.power_shape_basis_inds)
-                
                 coeff_indexes_to_add = map_components.curve_shape_basis_inds[np.where(map_components.curve_shape_orig_inds == orig_comp_ind)].astype(int)
                 
             elif comp_info.flux_list:
-                # print('overall comp info', orig_comp_ind, chunk_comp_index, map_components.power_shape_orig_inds)
-                # print('   basis comp info', orig_comp_ind, chunk_comp_index, map_components.power_shape_basis_inds)
-                
                 coeff_indexes_to_add = map_components.list_shape_basis_inds[np.where(map_components.list_shape_orig_inds == orig_comp_ind)].astype(int)
                 
             ##OK these ctype arrays cannot be sliced, so let's increment
@@ -591,8 +649,6 @@ def add_info_to_source_catalogue(chunked_skymodel_maps : list,
             low = chunk_map.current_shape_basis_index
             high = int(chunk_map.current_shape_basis_index + len(coeff_indexes_to_add))
             chunk_basis_indexes = range(low, high)
-            
-            # print("orig_index", orig_comp_ind, "chunk_ind", chunk_ind, "low, high", low, high, coeff_indexes_to_add)
             
             for chunk_basis_index, coeff_index in zip(chunk_basis_indexes, coeff_indexes_to_add):
             
@@ -603,7 +659,6 @@ def add_info_to_source_catalogue(chunked_skymodel_maps : list,
         
             chunk_map.current_shape_basis_index += len(coeff_indexes_to_add)
             
-        
         collected_comps += 1
     
     return collected_comps
@@ -611,7 +666,7 @@ def add_info_to_source_catalogue(chunked_skymodel_maps : list,
 class _Components_Python(object):
     """python equivalent to Components_Float or Components_Double"""
     
-    def __init__(self, components : Union[Source_Float, Source_Double],
+    def __init__(self, components : Union[Source_Double, Components_Double],
                        comp_type : CompTypes, n_powers : int,
                        n_curves : int, n_lists : int,
                        n_shape_coeffs = 0):
@@ -633,6 +688,7 @@ class _Components_Python(object):
         self.power_ref_stokesU = np.ctypeslib.as_array(components.power_ref_stokesU, shape=(n_powers, ))
         self.power_ref_stokesV = np.ctypeslib.as_array(components.power_ref_stokesV, shape=(n_powers, ))
         self.power_SIs = np.ctypeslib.as_array(components.power_SIs, shape=(n_powers, ))
+        self.power_comp_inds = np.ctypeslib.as_array(components.power_comp_inds, shape=(n_powers, ))
         
         self.curve_ref_freqs = np.ctypeslib.as_array(components.curve_ref_freqs, shape=(n_curves, ))
         self.curve_ref_stokesI = np.ctypeslib.as_array(components.curve_ref_stokesI, shape=(n_curves, ))
@@ -641,12 +697,21 @@ class _Components_Python(object):
         self.curve_ref_stokesV = np.ctypeslib.as_array(components.curve_ref_stokesV, shape=(n_curves, ))
         self.curve_SIs = np.ctypeslib.as_array(components.curve_SIs, shape=(n_curves, ))
         self.curve_qs = np.ctypeslib.as_array(components.curve_SIs, shape=(n_curves, ))
+        self.curve_comp_inds = np.ctypeslib.as_array(components.curve_comp_inds, shape=(n_curves, ))
         
         self.list_freqs = np.ctypeslib.as_array(components.list_freqs, shape=(total_num_flux_entires, ))
         self.list_stokesI = np.ctypeslib.as_array(components.list_stokesI, shape=(total_num_flux_entires, ))
         self.list_stokesQ = np.ctypeslib.as_array(components.list_stokesQ, shape=(total_num_flux_entires, ))
         self.list_stokesU = np.ctypeslib.as_array(components.list_stokesU, shape=(total_num_flux_entires, ))
         self.list_stokesV = np.ctypeslib.as_array(components.list_stokesV, shape=(total_num_flux_entires, ))
+        self.list_comp_inds = np.ctypeslib.as_array(components.list_comp_inds, shape=(n_lists, ))
+        
+        self.num_list_values = np.ctypeslib.as_array(components.num_list_values, shape=(n_lists, ))
+        self.list_start_indexes = np.ctypeslib.as_array(components.list_start_indexes, shape=(n_lists, ))
+        
+        
+        
+        
         
         if comp_type == CompTypes.GAUSSIAN or comp_type == CompTypes.SHAPELET:
             self.minors = np.ctypeslib.as_array(components.minors, shape=(n_comps, ))
