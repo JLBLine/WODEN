@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.10)
 include(CheckLanguage)
 check_language(CUDA)
 
-project(woden VERSION 1.4 LANGUAGES CUDA CXX C)
+project(woden VERSION 2.0 LANGUAGES CUDA CXX C)
 
 ##Gotta find CUDA and get it to find libraries
 find_package(CUDA)
@@ -59,30 +59,6 @@ file(GLOB CSOURCES "src/*.c")
 file(GLOB CUDASOURCES "src/*.cu")
 
 ##Find the following libraries
-
-
-set(HINTS_JSONC_LIB "${JSONC_ROOT}/lib;${JSONC_ROOT}/lib64;${JSONC_ROOT};/usr/local/lib/")
-set(HINTS_JSONC_INC "${JSONC_ROOT}/include;${JSONC_ROOT}/include/json-c;${JSONC_ROOT};/usr/include/json-c/;/usr/local/include/json-c/")
-
-find_path(JSONC_INC json.h HINTS ${HINTS_JSONC_INC})
-find_library(JSONC_LIB json-c HINTS ${HINTS_JSONC_LIB} REQUIRED)
-if(JSONC_LIB)
-  message(STATUS "JSONC includes path: ${JSONC_INC}")
-  message(STATUS "JSONC library path: ${JSONC_LIB}")
-endif()
-
-set(HINTS_ERFA_INC "/usr/local/include/;${ERFA_ROOT}/include/;${ERFA_ROOT}")
-set(HINTS_ERFA_LIB "/usr/local/lib/;${ERFA_ROOT}/src/.libs/;${ERFA_ROOT}.libs/;${ERFA_ROOT};${ERFA_ROOT}/lib/")
-
-
-find_path(ERFA_INC erfa.h HINTS ${HINTS_ERFA_INC})
-find_library(ERFA_LIB erfa HINTS ${HINTS_ERFA_LIB} REQUIRED)
-if(ERFA_LIB)
-  message(STATUS "ERFA includes path: ${ERFA_INC}")
-  message(STATUS "ERFA library path: ${ERFA_LIB}")
-endif()
-
-
 ##Try and find the hdf5 library
 set(HINTS_HDF5_INC "/usr/include/hdf5/serial/;${HDF5_ROOT}/include/")
 set(HINTS_HDF5_LIB "/usr/lib/x86_64-linux-gnu/hdf5/serial/;${HDF5_ROOT}/lib/")
@@ -93,18 +69,6 @@ if(HDF5_LIB)
   message(STATUS "HDF5 include path: ${HDF5_INC}")
   message(STATUS "HDF5 library path: ${HDF5_LIB}")
 endif()
-
-##Try and find the pal library
-set(HINTS_PAL_INC "${PAL_ROOT}/include/;/usr/local/include/star/")
-set(HINTS_PAL_LIB "/usr/local/lib/;${PAL_ROOT}/lib/")
-
-find_path(PAL_INC pal.h HINTS ${HINTS_PAL_INC})
-find_library(PAL_LIB pal HINTS ${HINTS_PAL_LIB} REQUIRED)
-if(PAL_LIB)
-  message(STATUS "PAL include path: ${PAL_INC}")
-  message(STATUS "PAL library path: ${PAL_LIB}")
-endif()
-
 
 ##Try and find the hyperbeam library
 set(HINTS_HBEAM_INC "/usr/local/include/;${HBEAM_ROOT}/;")
@@ -117,30 +81,14 @@ if(HBEAM_LIB)
   message(STATUS "HBEAM library path: ${HBEAM_LIB}")
 endif()
 
-##try to find YAML
-set(HINTS_YAML_INC "/usr/local/include/;${YAML_ROOT}/;")
-set(HINTS_YAML_LIB "/usr/local/lib/;${YAML_ROOT}")
-
-find_path(YAML_INC yaml.h HINTS ${HINTS_YAML_INC})
-find_library(YAML_LIB yaml HINTS ${HINTS_YAML_LIB} REQUIRED)
-if(YAML_LIB)
-  message(STATUS "YAML include path: ${YAML_INC}")
-  message(STATUS "YAML library path: ${YAML_LIB}")
-endif()
-
-
 ##Set the linkers for the C code
-set(CC_LINKLIBS "-lm -pthread ${JSONC_LIB} ${ERFA_LIB} ${HDF5_LIB} ${PAL_LIB} ${HBEAM_LIB} ${YAML_LIB}") #
+set(CC_LINKLIBS "-lm -pthread ${HDF5_LIB} ${HBEAM_LIB}") #
 
 ##All the WODEN header dirs are in include dir
-include_directories("${CMAKE_SOURCE_DIR}/include" ${JSONC_INC}
-${ERFA_INC} ${HDF5_INC} ${PAL_INC} ${HBEAM_INC} ${YAML_INC})
+include_directories("${CMAKE_SOURCE_DIR}/include" ${HBEAM_INC})
 
 ##Choose whether we are created the main executable, or making the unit tests
 set(TARGET_GROUP production CACHE STRING "Group to build")
-
-# SET(GCC_COVERAGE_COMPILE_FLAGS "-Wall")
-# add_definitions(${GCC_COVERAGE_COMPILE_FLAGS})
 
 ##If making production code
 if(TARGET_GROUP STREQUAL production)
@@ -233,13 +181,6 @@ elseif(TARGET_GROUP STREQUAL debug)
 
 ##If making test code
 elseif(TARGET_GROUP STREQUAL test)
-
-      # set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/externals/CMake-codecov/cmake" ${CMAKE_MODULE_PATH})
-      # find_package(codecov)
-
-      # if(codecov_FOUND)
-      #   message(STATUS "Found codecov")
-      # endif()
 
       include(CTest)
 

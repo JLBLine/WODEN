@@ -13,8 +13,6 @@
 #include "primary_beam_cuda.h"
 #include "woden_precision_defs.h"
 
-#include "chunk_sky_model.h"
-
 __device__ void extrap_stokes(user_precision_t *d_allsteps_wavelengths,
            double *d_power_ref_freqs,
            user_precision_t *d_power_ref_stokesI, user_precision_t *d_power_ref_stokesQ,

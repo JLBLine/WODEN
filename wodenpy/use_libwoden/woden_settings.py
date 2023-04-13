@@ -22,6 +22,7 @@ from ctypes import c_double, c_float, c_int, POINTER, c_ulong, c_char, create_st
 D2R = np.pi/180.0
 SOLAR2SIDEREAL = 1.00274
 DS2R  = 7.2722052166430399038487115353692196393452995355905e-5
+DD2R = 0.017453292519943295769236907684886127134428718885417
 
 def command(cmd):
     """
@@ -226,55 +227,37 @@ def create_woden_settings(args : argparse.Namespace,
     
     woden_settings.chunking_size = int(args.chunking_size)
     
-    ##TODO array layout will be used directly inside python code, no need to
-    ##write text file-----------------------------------------------------------
-    if args.array_layout == 'from_the_metafits':
-        json_band_str =  '-'.join(map(str, args.band_nums))
-        band_array_layout = f"WODEN_array_layout_band{json_band_str}.txt"
-        command(f"cp WODEN_array_layout.txt {band_array_layout}")
-    else:
-        band_array_layout = args.array_layout_name
-
-    woden_settings.array_layout_file = 1
-    woden_settings.array_layout_file_path = create_string_buffer(band_array_layout.encode('utf-8'))
-    ##--------------------------------------------------------------------------
-
     woden_settings.num_bands = len(args.band_nums)
     woden_settings.band_nums = (ctypes.c_int*woden_settings.num_bands)()
     
     for ind, band in enumerate(args.band_nums):
             woden_settings.band_nums[ind] = int(band)
     
-    # woden_settings.sdec0
-    # woden_settings.cdec0
-    # woden_settings.num_baselines
-    # woden_settings.num_ants
-    
-    # woden_settings.longitude
-    # 
-    # woden_settings.num_cross
-    # woden_settings.num_autos
-    # woden_settings.num_visis
-    # woden_settings.base_band_freq
-    # woden_settings.lsts
-    # woden_settings.latitudes
-    # woden_settings.mjds
-        
     return woden_settings
     
 def setup_lsts_and_phase_centre(woden_settings : Union[Woden_Settings_Float, Woden_Settings_Double]) -> np.ndarray:
-    
-    lsts = np.empty(woden_settings.num_time_steps)
-    latitudes = np.empty(woden_settings.num_time_steps)
-    
 
+    ##Used for calculating l,m,n for components
+    woden_settings.sdec0 = np.sin(woden_settings.dec0)
+    woden_settings.cdec0 = np.cos(woden_settings.dec0)
+
+    print("Setting phase centre RA,DEC {:.5f}deg {:.5f}deg".format(woden_settings.ra0/DD2R, woden_settings.dec0/DD2R))
+
+    
+    ##Calculate all lsts for this observation
+    ##Used in some python calcs later, and by the C code, so store a ctypes
+    ##array as well as a numpy one
+    lsts = np.empty(woden_settings.num_time_steps)
+
+    num_time_array = woden_settings.num_time_steps*c_double
+
+
+    woden_settings.lsts = num_time_array()
+    woden_settings.latitudes = num_time_array()
+    woden_settings.mjds = num_time_array()
+    
     mjd = woden_settings.jd_date - 2400000.5
 
-    lst_J2000, latitude_J2000 = RTS_Precess_LST_Lat_to_J2000(
-                                 woden_settings.lst_obs_epoch_base,
-                                 woden_settings.latitude,
-                                 mjd)
-    
     for time_step in range(woden_settings.num_time_steps):
         
         ##Add on the angle accrued by current time step to the base LST
@@ -284,12 +267,11 @@ def setup_lsts_and_phase_centre(woden_settings : Union[Woden_Settings_Float, Wod
         lst_current += 0.5*woden_settings.time_res*SOLAR2SIDEREAL*DS2R
 
         if (woden_settings.do_precession):
-            mjds = np.empty(woden_settings.num_time_steps)
+            #
             ##Move the mjd to the time of the current step
             ##Want the LST at centre of time step so 0.5 adds half a time step extra
             mjd_current = mjd + ((time_step + 0.5)*woden_settings.time_res)/(24.0*60.0*60.0)
-
-            mjds[time_step] = mjd_current
+            woden_settings.mjds[time_step] = mjd_current
             
             lst_J2000, latitude_J2000 = RTS_Precess_LST_Lat_to_J2000(
                                  lst_current,
@@ -297,12 +279,13 @@ def setup_lsts_and_phase_centre(woden_settings : Union[Woden_Settings_Float, Wod
                                  mjd_current)
 
             lsts[time_step] = lst_J2000
-            latitudes[time_step] = latitude_J2000
+            woden_settings.lsts[time_step] = lst_J2000
+            woden_settings.latitudes[time_step] = latitude_J2000
 
             if (time_step == 0):
                 print("Obs epoch initial LST was {:.10f} deg".format(lst_current/D2R) )
                 print("Setting initial J2000 LST to {:.10f} deg".format(lst_J2000/D2R) )
-                print("Setting initial mjd to {:.10f}".format(mjds[time_step]) )
+                print("Setting initial mjd to {:.10f}".format(woden_settings.mjds[time_step]) )
                 print("After precession initial latitude of the array is {:.10f} deg".format(latitude_J2000/D2R) )
                 woden_settings.lst_base = lst_J2000
                 woden_settings.latitude = latitude_J2000
@@ -310,7 +293,8 @@ def setup_lsts_and_phase_centre(woden_settings : Union[Woden_Settings_Float, Wod
         else:
             
             lsts[time_step] = lst_current
-            latitudes[time_step] = woden_settings.latitude_obs_epoch_base
+            woden_settings.lsts[time_step] = lst_current
+            woden_settings.latitudes[time_step] = woden_settings.latitude_obs_epoch_base
             if time_step == 0:
                 print("Obs epoch initial LST was {:.10f} deg\n".format(lst_current/D2R) )
             

@@ -2,28 +2,9 @@ import numpy as np
 import erfa
 import palpy
 
-# void RTS_mat_transpose(double rmat1[3][3], double rmat2[3][3]) {
 
-#   int i, j;
-#   for(i=0;i<3;++i) {
-#     for(j=0;j<3;++j) {
-#       rmat2[j][i] = rmat1[i][j];
-#     }
-#   }
-# }
-
-def RTS_mat_transpose(rmat1):
-
-    rmat2 = np.empty(rmat1.shape)
-
-    for i in range(3):
-        for j in range(3):
-            rmat2[j][i] = rmat1[i][j]
-  
-    return rmat2
-  
-def RTS_Precess_LST_Lat_to_J2000(lst_current, latitude_current,
-                                 mjd):
+def RTS_Precess_LST_Lat_to_J2000(lst_current : float, latitude_current : float,
+                                 mjd : float):
     
 
     # Calculate a rotation matrix that accounts for precession and nutation
@@ -34,7 +15,7 @@ def RTS_Precess_LST_Lat_to_J2000(lst_current, latitude_current,
     #   - palDmxm( rmatn, rmatp, rmatpn );       // Combine the matrices:  pn = n x p
     
     rmatpn = palpy.prenut(2000, mjd)
-    J2000_transformation = RTS_mat_transpose(rmatpn)
+    J2000_transformation = np.transpose(rmatpn)
     
     # /**
     # ****************************************************************************

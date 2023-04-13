@@ -18,7 +18,6 @@
 
 //Helpful C code we are also using
 #include "visibility_set.h"
-#include "chunk_sky_model.h"
 
 extern "C" void calculate_visibilities(array_layout_t *array_layout,
   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,

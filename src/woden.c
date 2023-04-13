@@ -2,21 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <erfa.h>
 #include <complex.h>
 
 #include "woden_precision_defs.h"
 #include "constants.h"
 #include "woden_struct_defs.h"
 
-#include "create_sky_model.h"
 #include "shapelet_basis.h"
-#include "chunk_sky_model.h"
-#include "print_help.h"
 #include "primary_beam.h"
-#include "woden_settings.h"
 #include "visibility_set.h"
-#include "array_layout.h"
 #include "hyperbeam_error.h"
 
 //Main CUDA executable to link in
@@ -26,7 +20,7 @@ extern void calculate_visibilities(array_layout_t *array_layout,
   user_precision_t *sbf);
 
 int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set,
-             source_catalogue_t *something_broken) {
+             source_catalogue_t *cropped_sky_models, array_layout_t * array_layout) {
 
   #ifdef DOUBLE_PRECISION
   printf("WODEN is using DOUBLE precision\n");
@@ -40,16 +34,6 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
   //Create the shapelet basis function array
   user_precision_t *sbf = malloc( sbf_N * sbf_L * sizeof(user_precision_t) );
   sbf = create_sbf(sbf);
-
-  //Setup all LSTs array for all time steps in this simulation
-  double *lsts = setup_lsts_and_phase_centre(woden_settings);
-  woden_settings->lsts = lsts;
-
-  //Create the array layout in instrument-centric X,Y,Z using positions
-  //Rotate back to J2000 if necessary
-  //TODO make this full pythonic
-  array_layout_t * array_layout;
-  array_layout = calc_XYZ_diffs(woden_settings, woden_settings->do_precession);
 
   //Setup some beam settings given user chose parameters
   beam_settings_t *beam_settings = fill_primary_beam_settings(woden_settings,
@@ -88,22 +72,10 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
     }
 
     //Launch the CUDA code
-    calculate_visibilities(array_layout, something_broken, beam_settings,
+    calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
                   woden_settings, visibility_set, sbf);
 
     printf("GPU calls for band %d finished\n",band_num );
-
-    // //Write out binary file for python code to read and convert to uvfits
-    // // write_visi_set_binary(visibility_set, band_num, woden_settings->num_visis);
-
-    // //Writes out a text file with u,v,w XX_re, XX_im. Useful for bug hunting
-    // //in desperation
-    // // write_visi_set_text(visibility_set, band_num, woden_settings);
-
-    // //Free up that memory
-    // free_visi_set_inputs(visibility_set);
-    // // free_visi_set_outputs(visibility_set);
-    // // free( visibility_set );
 
     //Release the CPU MWA FEE beam if required
     if (woden_settings->beamtype == FEE_BEAM || woden_settings->beamtype == FEE_BEAM_INTERP){

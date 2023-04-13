@@ -264,16 +264,6 @@ def select_correct_enh(args):
         args.north = args.north[selection]
         args.height = args.height[selection]
         args.ant_names = args.ant_names[selection]
-
-        array_layout = np.zeros((args.num_antennas,3))
-
-        array_layout[:,0] = args.east
-        array_layout[:,1] = args.north
-        array_layout[:,2] = args.height
-
-        args.array_layout_name = 'WODEN_array_layout.txt'
-
-        np.savetxt(args.array_layout_name, array_layout)
     else:
         try:
             array_layout = np.loadtxt(args.array_layout)
@@ -289,7 +279,6 @@ def select_correct_enh(args):
             exit("Could not read array layout file:\n"
                  "\t{:s}\nExiting before woe beings".format(args.array_layout))
 
-        args.array_layout_name = args.array_layout
 
 def check_args(args):
     """Check that the combination of arguments parsed will work with the

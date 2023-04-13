@@ -13,14 +13,16 @@ try:
     
     # from use_libwoden.visibility_set import *
     # from use_libwoden.woden_settings import *
-    from visibility_set import *
-    from woden_settings import *
-    from skymodel_structs import * 
+    from visibility_set import Visi_Set_Float, Visi_Set_Double
+    from woden_settings import Woden_Settings_Float, Woden_Settings_Double
+    from skymodel_structs import Source_Catalogue_Float, Source_Catalogue_Double
+    from array_layout_struct import Array_Layout
     
 except KeyError:
-    from wodenpy.use_libwoden.visibility_set import *
-    from wodenpy.use_libwoden.woden_settings import *
-    from wodenpy.use_libwoden.skymodel_structs import *
+    from wodenpy.use_libwoden.visibility_set import Visi_Set_Float, Visi_Set_Double
+    from wodenpy.use_libwoden.woden_settings import Woden_Settings_Float, Woden_Settings_Double
+    from wodenpy.use_libwoden.skymodel_structs import Source_Catalogue_Float, Source_Catalogue_Double
+    from wodenpy.use_libwoden.array_layout_struct import Array_Layout
 
 VELC = 299792458.0
 
@@ -42,10 +44,12 @@ def load_in_woden_library(precision='double'):
     if precision == 'float':
         run_woden.argtypes = [ctypes.POINTER(Woden_Settings_Float),
                               ctypes.POINTER(Visi_Set_Float),
-                              ctypes.POINTER(Source_Catalogue_Float)]
+                              ctypes.POINTER(Source_Catalogue_Float),
+                              ctypes.POINTER(Array_Layout)]
     else:
         run_woden.argtypes = [ctypes.POINTER(Woden_Settings_Double),
                               ctypes.POINTER(Visi_Set_Double),
-                              ctypes.POINTER(Source_Catalogue_Double)]
+                              ctypes.POINTER(Source_Catalogue_Double),
+                              ctypes.POINTER(Array_Layout)]
         
     return run_woden
