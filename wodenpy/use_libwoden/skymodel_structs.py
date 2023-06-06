@@ -381,6 +381,8 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
     components.list_start_indexes = list_int_ncomps_arr()
     components.total_num_flux_entires = n_lists
     
+    # print("WE BE ASSIGNED THIS NUM", components.total_num_flux_entires)
+    
     ##indexes of types
     components.power_comp_inds = power_int_ncomps_arr()
     components.curve_comp_inds = curve_int_ncomps_arr()
@@ -461,16 +463,6 @@ def setup_chunked_source(chunk_map : Skymodel_Chunk_Map, num_freqs : int,
     if chunk_map.n_shapes > 0:
         setup_components(chunk_map, chunked_source, num_freqs, num_times,
                          CompTypes.SHAPELET, beamtype, c_user_precision)
-    
-    # setup_components(chunk_map, chunked_source, num_freqs, num_times,
-    #                      CompTypes.POINT, c_user_precision)
-        
-    # setup_components(chunk_map, chunked_source, num_freqs, num_times,
-    #                      CompTypes.GAUSSIAN, c_user_precision)
-        
-    # setup_components(chunk_map, chunked_source, num_freqs, num_times,
-    #                      CompTypes.SHAPELET, c_user_precision)
-    
     
     return chunked_source
 
@@ -573,16 +565,22 @@ def add_info_to_source_catalogue(chunked_skymodel_maps : list,
             chunk_flux_type_index = int(np.where(map_components.list_orig_inds == orig_comp_ind)[0])
             chunk_comp_index = n_powers + n_curves + chunk_flux_type_index
             
-            source_components.list_comp_inds[chunk_flux_type_index] = chunk_comp_index
+            source_components.list_comp_inds[chunk_flux_type_index] = int(chunk_comp_index)
             
             ##things get complicated with the flux list stuff
             
             if chunk_flux_type_index == 0:
                 list_start_index = 0
             else:
-                list_start_index = np.sum(source_components.num_list_values[:chunk_flux_type_index + 1])
+                # print("HERE GO", source_components.num_list_values[:chunk_flux_type_index])
+
+                list_start_index = int(np.sum(source_components.num_list_values[:chunk_flux_type_index]))
                 
+            # print("WHY", comp_info.num_fluxes, list_start_index, chunk_flux_type_index)
+
             for f_ind in range(comp_info.num_fluxes):
+
+                # print(list_start_index, f_ind, type(list_start_index), type(f_ind))
                 
                 source_components.list_freqs[list_start_index + f_ind] = comp_info.freqs[f_ind]
                 source_components.list_stokesI[list_start_index + f_ind] = comp_info.fluxes[f_ind][0]
@@ -590,8 +588,13 @@ def add_info_to_source_catalogue(chunked_skymodel_maps : list,
                 source_components.list_stokesU[list_start_index + f_ind] = comp_info.fluxes[f_ind][2]
                 source_components.list_stokesV[list_start_index + f_ind] = comp_info.fluxes[f_ind][3]
 
-            source_components.num_list_values[chunk_flux_type_index] = comp_info.num_fluxes
-            source_components.list_start_indexes[chunk_flux_type_index] = list_start_index
+            # print(list_start_index, chunk_flux_type_index, comp_info.num_fluxes)
+            source_components.num_list_values[chunk_flux_type_index] = int(comp_info.num_fluxes)
+            source_components.list_start_indexes[chunk_flux_type_index] = int(list_start_index)
+            
+            # print(chunk_flux_type_index,
+            #       source_components.num_list_values[chunk_flux_type_index],
+            #       source_components.list_start_indexes[chunk_flux_type_index])
             
         ##everybody needs an ra/dec
         source_components.ras[chunk_comp_index] = comp_info.ra
@@ -663,10 +666,11 @@ def add_info_to_source_catalogue(chunked_skymodel_maps : list,
     
     return collected_comps
 
+
 class _Components_Python(object):
     """python equivalent to Components_Float or Components_Double"""
     
-    def __init__(self, components : Union[Source_Double, Components_Double],
+    def __init__(self, components : Union[Components_Float, Components_Double],
                        comp_type : CompTypes, n_powers : int,
                        n_curves : int, n_lists : int,
                        n_shape_coeffs = 0):
@@ -677,7 +681,7 @@ class _Components_Python(object):
         
         n_comps = n_powers + n_curves + n_lists
         
-        total_num_flux_entires = components.total_num_flux_entires
+        total_num_flux_entires = int(components.total_num_flux_entires)
         
         self.ras = np.ctypeslib.as_array(components.ras, shape=(n_comps, ))
         self.decs = np.ctypeslib.as_array(components.decs, shape=(n_comps, ))
@@ -699,19 +703,38 @@ class _Components_Python(object):
         self.curve_qs = np.ctypeslib.as_array(components.curve_SIs, shape=(n_curves, ))
         self.curve_comp_inds = np.ctypeslib.as_array(components.curve_comp_inds, shape=(n_curves, ))
         
-        self.list_freqs = np.ctypeslib.as_array(components.list_freqs, shape=(total_num_flux_entires, ))
-        self.list_stokesI = np.ctypeslib.as_array(components.list_stokesI, shape=(total_num_flux_entires, ))
-        self.list_stokesQ = np.ctypeslib.as_array(components.list_stokesQ, shape=(total_num_flux_entires, ))
-        self.list_stokesU = np.ctypeslib.as_array(components.list_stokesU, shape=(total_num_flux_entires, ))
-        self.list_stokesV = np.ctypeslib.as_array(components.list_stokesV, shape=(total_num_flux_entires, ))
-        self.list_comp_inds = np.ctypeslib.as_array(components.list_comp_inds, shape=(n_lists, ))
+        # self.list_freqs = np.ctypeslib.as_array(components.list_freqs, shape=(total_num_flux_entires, ))
+        # self.list_stokesI = np.ctypeslib.as_array(components.list_stokesI, shape=(total_num_flux_entires, ))
+        # self.list_stokesQ = np.ctypeslib.as_array(components.list_stokesQ, shape=(total_num_flux_entires, ))
+        # self.list_stokesU = np.ctypeslib.as_array(components.list_stokesU, shape=(total_num_flux_entires, ))
+        # self.list_stokesV = np.ctypeslib.as_array(components.list_stokesV, shape=(total_num_flux_entires, ))
+        # self.list_comp_inds = np.ctypeslib.as_array(components.list_comp_inds, shape=(n_lists, ))
         
-        self.num_list_values = np.ctypeslib.as_array(components.num_list_values, shape=(n_lists, ))
+        self.list_freqs = np.empty(total_num_flux_entires, dtype=float)
+        self.list_stokesI = np.empty(total_num_flux_entires, dtype=float)
+        self.list_stokesQ = np.empty(total_num_flux_entires, dtype=float)
+        self.list_stokesU = np.empty(total_num_flux_entires, dtype=float)
+        self.list_stokesV = np.empty(total_num_flux_entires, dtype=float)
+        
+        for ind in range(total_num_flux_entires):
+        
+            self.list_freqs[ind] = components.list_freqs[ind]
+            self.list_stokesI[ind] = components.list_stokesI[ind]
+            self.list_stokesQ[ind] = components.list_stokesQ[ind]
+            self.list_stokesU[ind] = components.list_stokesU[ind]
+            self.list_stokesV[ind] = components.list_stokesV[ind]
+        
+        self.list_comp_inds = np.empty(n_lists, dtype=int)
+        self.num_list_values = np.empty(n_lists, dtype=int)
+        self.list_start_indexes = np.empty(n_lists, dtype=int)
+        
+        for ind in range(n_lists):
+            self.num_list_values[ind] = components.num_list_values[ind]
+            self.list_start_indexes[ind] = components.list_start_indexes[ind]
+            self.list_comp_inds[ind] = components.list_comp_inds[ind]
+        
+        self.num_list_values = np.ctypeslib.as_array(components.num_list_values, shape=(int(n_lists), ))
         self.list_start_indexes = np.ctypeslib.as_array(components.list_start_indexes, shape=(n_lists, ))
-        
-        
-        
-        
         
         if comp_type == CompTypes.GAUSSIAN or comp_type == CompTypes.SHAPELET:
             self.minors = np.ctypeslib.as_array(components.minors, shape=(n_comps, ))
@@ -736,6 +759,8 @@ class _Ctype_Source_Into_Python(object):
         """
         docstring
         """
+        
+        print(source.n_point_lists)
         
         self.n_points = source.n_points
         self.n_point_lists = source.n_point_lists

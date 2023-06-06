@@ -466,14 +466,14 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       //the u,v,w coords
       if (chunk == 0) {
         //ensure temp visi's are 0.0
-        visibility_set->sum_visi_XX_real[visi] = 0;
-        visibility_set->sum_visi_XX_imag[visi] = 0;
-        visibility_set->sum_visi_XY_real[visi] = 0;
-        visibility_set->sum_visi_XY_imag[visi] = 0;
-        visibility_set->sum_visi_YX_real[visi] = 0;
-        visibility_set->sum_visi_YX_imag[visi] = 0;
-        visibility_set->sum_visi_YY_real[visi] = 0;
-        visibility_set->sum_visi_YY_imag[visi] = 0;
+        // visibility_set->sum_visi_XX_real[visi] = 0;
+        // visibility_set->sum_visi_XX_imag[visi] = 0;
+        // visibility_set->sum_visi_XY_real[visi] = 0;
+        // visibility_set->sum_visi_XY_imag[visi] = 0;
+        // visibility_set->sum_visi_YX_real[visi] = 0;
+        // visibility_set->sum_visi_YX_imag[visi] = 0;
+        // visibility_set->sum_visi_YY_real[visi] = 0;
+        // visibility_set->sum_visi_YY_imag[visi] = 0;
 
         visibility_set->us_metres[visi] = chunk_visibility_set->us_metres[visi];
         visibility_set->vs_metres[visi] = chunk_visibility_set->vs_metres[visi];
