@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Wrapper script to generate json input files for, and to run,
-the GPU WODEN code. Author: J.L.B. Line
+"""Wrapper script to run the GPU WODEN code. Author: J.L.B. Line
 """
 import numpy as np
 import sys
 import os
 from time import time
 from multiprocessing import Pool
+import argparse
+from queue import Queue
+from threading import Thread
 
 ##If we are performing a ctest, this check means we use the code we are
 ##testing and NOT what has been pip or conda installed
@@ -24,6 +26,7 @@ try:
     from skymodel.chunk_sky_model import create_skymodel_chunk_map
     from array_layout.create_array_layout import calc_XYZ_diffs, enh2xyz
     from uvfits.wodenpy_uvfits import make_antenna_table, make_baseline_date_arrays, create_uvfits
+    from phase_rotate.remove_phase_track import remove_phase_tracking
 
 except KeyError:
 
@@ -38,6 +41,7 @@ except KeyError:
     from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map
     from wodenpy.array_layout.create_array_layout import calc_XYZ_diffs, enh2xyz
     from wodenpy.uvfits.wodenpy_uvfits import make_antenna_table, make_baseline_date_arrays, create_uvfits
+    from wodenpy.phase_rotate.remove_phase_track import remove_phase_tracking
 
 ##Constants
 R2D = 180.0 / np.pi
@@ -47,7 +51,53 @@ MWA_LONG = 116.67081523611111
 MWA_HEIGHT = 377.827
 VELC = 299792458.0
 SOLAR2SIDEREAL = 1.00274
+
+
+def woden_thread(the_queue, run_woden, woden_settings, visibility_set, array_layout):
+    while True:
+        source_catalogue = the_queue.get(block=True)
+        
+        if source_catalogue is None:
+            return
+        
+        run_woden(woden_settings, visibility_set, source_catalogue, array_layout)
+        
+def read_skymodel_thread(the_queue, chunked_skymodel_maps: list,
+                                    max_num_chunks : int,
+                                    lsts : np.ndarray,
+                                    args : argparse.Namespace,
+                                    beamtype : int):
     
+    for lower_chunk_iter in range(0, len(chunked_skymodel_maps), max_num_chunks):
+        
+        chunk_map_subset = chunked_skymodel_maps[lower_chunk_iter:lower_chunk_iter+max_num_chunks]
+        
+        print(f"Reading chunks skymodel chunks {lower_chunk_iter}:{lower_chunk_iter+max_num_chunks}")
+        t_before = time()
+    
+        chunked_sky_models = read_yaml_skymodel_chunks_noctype(args.cat_filename, chunk_map_subset,
+                                                        args.num_freq_channels,
+                                                        args.num_time_steps,
+                                                        beamtype,
+                                                        lsts, args.latitude*D2R)
+        
+        source_catalogue = convert_source_catalogue_to_ctypes(chunked_sky_models,
+                                chunk_map_subset,
+                                args.num_freq_channels,
+                                args.num_time_steps,
+                                beamtype,
+                                precision=args.precision)
+        the_queue.put(source_catalogue, block=True)
+        
+        t_after = time()
+        print(f"Reading chunks {lower_chunk_iter}:{lower_chunk_iter+max_num_chunks} took {(t_after - t_before)/60.0:.1f} mins")
+        # print(f"Skymodel chunks {lower_chunk_iter}:{lower_chunk_iter+max_num_chunks} have been read in")
+
+    ##finally, stick a None into the_queue, this means `c_thead` knows to
+    ##stop
+    the_queue.put(None)
+
+
 def main():
     """Run the things you fool"""
 
@@ -80,7 +130,7 @@ def main():
         ##C/CUDA library and return the `run_woden` function
 
         run_woden = load_in_woden_library(args.precision)
-
+        
         num_baselines = int(((args.num_antennas - 1)*args.num_antennas) / 2)
 
         if args.do_autos:
@@ -121,164 +171,37 @@ def main():
                                             args.num_freq_channels,
                                             args.num_time_steps)
         
-        ##super loop time - here we iterative
         
-        lower_chunk_iter = 0
+        ###---------------------------------------------------------------------
+        ### heavy lifting area - here we setup running the sky model reading
+        ### and running GPU code at the same time. Means we can limit the
+        ### absolute amount of RAM used, and save time doing IO at the same
+        ### time as compute
+        
+        ##TODO this needs to be calculated from actual avaible RAM
         max_num_chunks = 50
         
-        ##very first thing to do; read in the first set of sky model chunks
-        ##into memory. In the loop below, we'll send this first set of chunks
-        ##through to thge GPU, whilst simultaneously reading in the next set
-        ##of chunks. Means the GPU is spinning while we are reading. 
-        chunk_map_subset = chunked_skymodel_maps[:max_num_chunks]
+        ##setup a queue system to run out GPU code at the same time as the
+        ##model reading
+        the_queue = Queue(maxsize=1)
         
-        print(f"Reading in initial {max_num_chunks} model chunks")
+        t1 = Thread(target = read_skymodel_thread,
+                    args =(the_queue, chunked_skymodel_maps,
+                                    max_num_chunks, lsts, args,
+                                    woden_settings.beamtype), daemon=True)
         
-        t_before = time()
-
+        t2 = Thread(target = woden_thread, args =(the_queue, run_woden,
+                                                  woden_settings, visibility_set,
+                                                  array_layout), daemon=True)
         
-        chunked_sky_models = read_yaml_skymodel_chunks_noctype(args.cat_filename, chunk_map_subset,
-                                                        args.num_freq_channels,
-                                                        args.num_time_steps,
-                                                        woden_settings.beamtype,
-                                                        lsts, args.latitude*D2R)
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
         
-        t_after = time()
-        print(f"Reading first set of chunks was {(t_after - t_before)/60.0:.1f} mins")
+        ### we've now calculated all the visibilities
+        ###---------------------------------------------------------------------
         
-        ##You can't make ctype structures using starmap, because you have
-        ##to pickle the results. Bad times. So convert our chunked sky
-        ##models into a ctype for the next loop
-        source_catalogue = convert_source_catalogue_to_ctypes(chunked_sky_models,
-                                chunk_map_subset,
-                                args.num_freq_channels,
-                                args.num_time_steps,
-                                woden_settings.beamtype,
-                                precision=args.precision)
-        
-        
-        
-        # run_woden(woden_settings, visibility_set, source_catalogue, array_layout)
-        
-        # print('before loop', type(woden_settings))
-        
-        # for lower_chunk_iter in range(max_num_chunks, len(chunked_skymodel_maps), max_num_chunks):
-            
-        #     print(f"Running GPU on chunks {lower_chunk_iter - max_num_chunks} to {lower_chunk_iter}")
-        #     print(f"Reading in chunks {lower_chunk_iter} to {lower_chunk_iter+max_num_chunks}")
-        #     pool1 = Pool(1)
-        #     pool2 = Pool(1)
-            
-        #     # print(type(chunked_sky_models))
-            
-        #     gpu_args = ((woden_settings, visibility_set, source_catalogue, array_layout),)
-            
-        #     print('inside loop', type(woden_settings))
-            
-        #     ##This calls the WODEN C/CUDA main function, and populates visibility set
-        #     ##with the outputs that we want
-        #     pool1.starmap_async(run_woden, gpu_args)
-            
-        #     ##At the same time, read in the next set of sky model chunks
-        #     ##Do this in parallel, so we are doing our IO at the same time as
-        #     ##our GPU calculations
-            
-        #     chunk_map_subset = chunked_skymodel_maps[lower_chunk_iter:lower_chunk_iter+max_num_chunks]
-            
-        #     read_args = ((args.cat_filename, chunk_map_subset,
-        #                  args.num_freq_channels, args.num_time_steps,
-        #                  woden_settings.beamtype, lsts, args.latitude*D2R),)
-            
-        #     chunked_sky_models = pool2.starmap(read_yaml_skymodel_chunks_noctype, read_args)[0]
-        #     # chunked_sky_models = chunked_sky_models.get()[0]
-            
-        #     # print(type(chunked_sky_models))
-            
-        #     ##make sure everything that is parallel has finished for the loop
-        #     pool1.close()
-        #     pool1.join()
-        #     pool2.close()
-        #     pool2.join()
-            
-        #     ##You can't make ctype structures using starmap, because you have
-        #     ##to pickle the results. Bad times. So convert our chunked sky
-        #     ##models into a ctype for the next loop
-            
-        #     source_catalogue = convert_source_catalogue_to_ctypes(chunked_sky_models,
-        #                         chunk_map_subset,
-        #                         args.num_freq_channels,
-        #                         args.num_time_steps,
-        #                         woden_settings.beamtype)
-        
-        for lower_chunk_iter in range(max_num_chunks, len(chunked_skymodel_maps), max_num_chunks):
-            
-            print(f"Running GPU on chunks {lower_chunk_iter - max_num_chunks} to {lower_chunk_iter}")
-            print(f"Reading in chunks {lower_chunk_iter} to {lower_chunk_iter+max_num_chunks}")
-            # pool1 = Pool(1)
-            # pool2 = Pool(1)
-            
-            # print(type(chunked_sky_models))
-            
-            # gpu_args = ((woden_settings, visibility_set, source_catalogue, array_layout),)
-            
-            # print('inside loop', type(woden_settings))
-            
-            ##This calls the WODEN C/CUDA main function, and populates visibility set
-            ##with the outputs that we want
-            # result = pool1.starmap_async(run_woden, gpu_args)
-            # result.get()
-            
-            run_woden(woden_settings, visibility_set, source_catalogue, array_layout)
-            
-            ##At the same time, read in the next set of sky model chunks
-            ##Do this in parallel, so we are doing our IO at the same time as
-            ##our GPU calculations
-            
-            chunk_map_subset = chunked_skymodel_maps[lower_chunk_iter:lower_chunk_iter+max_num_chunks]
-            
-            read_args = ((args.cat_filename, chunk_map_subset,
-                         args.num_freq_channels, args.num_time_steps,
-                         woden_settings.beamtype, lsts, args.latitude*D2R),)
-            
-            # chunked_sky_models = pool2.starmap_async(read_yaml_skymodel_chunks_noctype, read_args)
-            # chunked_sky_models = chunked_sky_models.get()[0]
-            
-            # print(type(chunked_sky_models))
-            
-            chunked_sky_models = read_yaml_skymodel_chunks_noctype(args.cat_filename, chunk_map_subset,
-                                                        args.num_freq_channels,
-                                                        args.num_time_steps,
-                                                        woden_settings.beamtype,
-                                                        lsts, args.latitude*D2R)
-            
-            ##make sure everything that is parallel has finished for the loop
-            # pool1.close()
-            # pool1.join()
-            # pool2.close()
-            # pool2.join()
-            
-            ##You can't make ctype structures using starmap, because you have
-            ##to pickle the results. Bad times. So convert our chunked sky
-            ##models into a ctype for the next loop
-            
-            source_catalogue = convert_source_catalogue_to_ctypes(chunked_sky_models,
-                                chunk_map_subset,
-                                args.num_freq_channels,
-                                args.num_time_steps,
-                                woden_settings.beamtype,
-                                precision=args.precision)
-        
-        # t_after = time()
-        # print(f"Creating and chunking skymodel took {(t_after - t_before)/60.0:.1f} mins")
-        
-        # print('after loop', type(woden_settings))
-        
-        print(f"Running GPU on chunks {lower_chunk_iter} to {lower_chunk_iter+max_num_chunks}")
-        
-        
-        ##Run the GPU code one last time, as we've finished reading in all
-        ##the sky model chunks
-        run_woden(woden_settings, visibility_set, source_catalogue, array_layout)
 
         ##I think we want to X,Y,Z to be in the current frame for writing
         ##out to the uvfits, so calculate again
