@@ -8,7 +8,7 @@
 #include "constants.h"
 #include "woden_struct_defs.h"
 
-#include "shapelet_basis.h"
+// #include "shapelet_basis.h"
 #include "primary_beam.h"
 #include "visibility_set.h"
 #include "hyperbeam_error.h"
@@ -20,7 +20,7 @@ extern void calculate_visibilities(array_layout_t *array_layout,
   user_precision_t *sbf);
 
 int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set,
-             source_catalogue_t *cropped_sky_models, array_layout_t * array_layout) {
+             source_catalogue_t *cropped_sky_models, array_layout_t * array_layout, user_precision_t *sbf) {
 
   #ifdef DOUBLE_PRECISION
   printf("WODEN is using DOUBLE precision\n");
@@ -31,9 +31,9 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
   //Is everything OK integer
   int status=0;
 
-  //Create the shapelet basis function array
-  user_precision_t *sbf = malloc( sbf_N * sbf_L * sizeof(user_precision_t) );
-  sbf = create_sbf(sbf);
+  // //Create the shapelet basis function array
+  // user_precision_t *sbf = malloc( sbf_N * sbf_L * sizeof(user_precision_t) );
+  // sbf = create_sbf(sbf);
 
   //Setup some beam settings given user chose parameters
   beam_settings_t *beam_settings = fill_primary_beam_settings(woden_settings,
@@ -83,8 +83,7 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
     }
 
   }//band loop
-  // free(woden_settings);
   printf("WODEN is done\n");
 
-  return 0;
+  return status;
 }//main

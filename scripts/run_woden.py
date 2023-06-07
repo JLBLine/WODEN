@@ -10,6 +10,9 @@ import argparse
 from queue import Queue
 from threading import Thread
 
+from ctypes import POINTER, c_double, c_float
+from scipy.special import factorial,eval_hermite
+
 ##If we are performing a ctest, this check means we use the code we are
 ##testing and NOT what has been pip or conda installed
 try:
@@ -52,15 +55,50 @@ MWA_HEIGHT = 377.827
 VELC = 299792458.0
 SOLAR2SIDEREAL = 1.00274
 
+sbf_N = 101
+sbf_L = 10001
+sbf_c = 5000
+sbf_dx = 0.01
 
-def woden_thread(the_queue, run_woden, woden_settings, visibility_set, array_layout):
+def calc_basis_func_1D(x, n, beta=1):
+    '''explicitly set beta=1'''
+    
+    norm = np.sqrt(1)*np.sqrt((2**n*factorial(n)))
+    hermite = eval_hermite(n, x)
+    gauss = np.exp(-0.5*((x*beta)**2))
+    
+    return (hermite*gauss) / norm
+
+def create_sbf(precision = "double", sbf_N = 101, sbf_c = 5000, sbf_dx = 0.01):
+    
+    x_range = np.arange(-sbf_c*sbf_dx, sbf_c*sbf_dx + sbf_dx, sbf_dx)
+    sbf_L = len(x_range)
+    
+    if precision == 'float':
+        sbf = (c_float*(sbf_L*sbf_N))()
+    else:
+        sbf = (c_double*(sbf_L*sbf_N))()
+    
+    for n in range(sbf_N):
+        low_ind = n*sbf_L
+        basis = calc_basis_func_1D(x_range, n)
+        
+        for basis_ind, sbf_ind in enumerate(range(low_ind, low_ind + sbf_L)):
+            sbf[sbf_ind] = basis[basis_ind]
+    
+    return sbf
+
+
+def woden_thread(the_queue, run_woden, woden_settings, visibility_set, array_layout,
+                 sbf):
     while True:
         source_catalogue = the_queue.get(block=True)
         
         if source_catalogue is None:
             return
         
-        run_woden(woden_settings, visibility_set, source_catalogue, array_layout)
+        run_woden(woden_settings, visibility_set, source_catalogue, array_layout,
+                  sbf)
         
 def read_skymodel_thread(the_queue, chunked_skymodel_maps: list,
                                     max_num_chunks : int,
@@ -172,6 +210,8 @@ def main():
                                             args.num_time_steps)
         
         
+        sbf = create_sbf(precision=args.precision)
+        
         ###---------------------------------------------------------------------
         ### heavy lifting area - here we setup running the sky model reading
         ### and running GPU code at the same time. Means we can limit the
@@ -192,7 +232,7 @@ def main():
         
         t2 = Thread(target = woden_thread, args =(the_queue, run_woden,
                                                   woden_settings, visibility_set,
-                                                  array_layout), daemon=True)
+                                                  array_layout, sbf), daemon=True)
         
         t1.start()
         t2.start()
