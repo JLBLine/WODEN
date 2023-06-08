@@ -45,11 +45,13 @@ def load_in_woden_library(precision='double'):
         run_woden.argtypes = [ctypes.POINTER(Woden_Settings_Float),
                               ctypes.POINTER(Visi_Set_Float),
                               ctypes.POINTER(Source_Catalogue_Float),
-                              ctypes.POINTER(Array_Layout)]
+                              ctypes.POINTER(Array_Layout),
+                              ctypes.POINTER(ctypes.c_float)]
     else:
         run_woden.argtypes = [ctypes.POINTER(Woden_Settings_Double),
                               ctypes.POINTER(Visi_Set_Double),
                               ctypes.POINTER(Source_Catalogue_Double),
-                              ctypes.POINTER(Array_Layout)]
+                              ctypes.POINTER(Array_Layout),
+                              ctypes.POINTER(ctypes.c_double)]
         
     return run_woden

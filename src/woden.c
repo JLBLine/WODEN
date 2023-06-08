@@ -31,9 +31,6 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
   //Is everything OK integer
   int status=0;
 
-  // //Create the shapelet basis function array
-  // user_precision_t *sbf = malloc( sbf_N * sbf_L * sizeof(user_precision_t) );
-  // sbf = create_sbf(sbf);
 
   //Setup some beam settings given user chose parameters
   beam_settings_t *beam_settings = fill_primary_beam_settings(woden_settings,
@@ -83,7 +80,7 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
     }
 
   }//band loop
-  printf("WODEN is done\n");
+  // printf("WODEN is done\n");
 
   return status;
 }//main

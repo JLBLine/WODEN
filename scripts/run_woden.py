@@ -9,9 +9,7 @@ from multiprocessing import Pool
 import argparse
 from queue import Queue
 from threading import Thread
-
 from ctypes import POINTER, c_double, c_float
-from scipy.special import factorial,eval_hermite
 
 ##If we are performing a ctest, this check means we use the code we are
 ##testing and NOT what has been pip or conda installed
@@ -30,6 +28,8 @@ try:
     from array_layout.create_array_layout import calc_XYZ_diffs, enh2xyz
     from uvfits.wodenpy_uvfits import make_antenna_table, make_baseline_date_arrays, create_uvfits
     from phase_rotate.remove_phase_track import remove_phase_tracking
+    
+    from use_libwoden.shapelets import create_sbf
 
 except KeyError:
 
@@ -45,6 +45,8 @@ except KeyError:
     from wodenpy.array_layout.create_array_layout import calc_XYZ_diffs, enh2xyz
     from wodenpy.uvfits.wodenpy_uvfits import make_antenna_table, make_baseline_date_arrays, create_uvfits
     from wodenpy.phase_rotate.remove_phase_track import remove_phase_tracking
+    
+    from wodenpy.use_libwoden.shapelets import create_sbf
 
 ##Constants
 R2D = 180.0 / np.pi
@@ -60,33 +62,33 @@ sbf_L = 10001
 sbf_c = 5000
 sbf_dx = 0.01
 
-def calc_basis_func_1D(x, n, beta=1):
-    '''explicitly set beta=1'''
+# def calc_basis_func_1D(x, n, beta=1):
+#     '''explicitly set beta=1'''
     
-    norm = np.sqrt(1)*np.sqrt((2**n*factorial(n)))
-    hermite = eval_hermite(n, x)
-    gauss = np.exp(-0.5*((x*beta)**2))
+#     norm = np.sqrt(1)*np.sqrt((2**n*factorial(n)))
+#     hermite = eval_hermite(n, x)
+#     gauss = np.exp(-0.5*((x*beta)**2))
     
-    return (hermite*gauss) / norm
+#     return (hermite*gauss) / norm
 
-def create_sbf(precision = "double", sbf_N = 101, sbf_c = 5000, sbf_dx = 0.01):
+# def create_sbf(precision = "double", sbf_N = 101, sbf_c = 5000, sbf_dx = 0.01):
     
-    x_range = np.arange(-sbf_c*sbf_dx, sbf_c*sbf_dx + sbf_dx, sbf_dx)
-    sbf_L = len(x_range)
+#     x_range = np.arange(-sbf_c*sbf_dx, sbf_c*sbf_dx + sbf_dx, sbf_dx)
+#     sbf_L = len(x_range)
     
-    if precision == 'float':
-        sbf = (c_float*(sbf_L*sbf_N))()
-    else:
-        sbf = (c_double*(sbf_L*sbf_N))()
+#     if precision == 'float':
+#         sbf = (c_float*(sbf_L*sbf_N))()
+#     else:
+#         sbf = (c_double*(sbf_L*sbf_N))()
     
-    for n in range(sbf_N):
-        low_ind = n*sbf_L
-        basis = calc_basis_func_1D(x_range, n)
+#     for n in range(sbf_N):
+#         low_ind = n*sbf_L
+#         basis = calc_basis_func_1D(x_range, n)
         
-        for basis_ind, sbf_ind in enumerate(range(low_ind, low_ind + sbf_L)):
-            sbf[sbf_ind] = basis[basis_ind]
+#         for basis_ind, sbf_ind in enumerate(range(low_ind, low_ind + sbf_L)):
+#             sbf[sbf_ind] = basis[basis_ind]
     
-    return sbf
+#     return sbf
 
 
 def woden_thread(the_queue, run_woden, woden_settings, visibility_set, array_layout,
