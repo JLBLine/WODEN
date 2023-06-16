@@ -29,7 +29,7 @@ def check_uvfits_freq_order(uvfits_prepend, num_bands):
     return freq_order
 
 
-def concat_uvfits(uvfits_prepend, bands, output_name, reverse_pols=False):
+def concat_uvfits(uvfits_prepend, bands, output_name, reverse_pols=False, half_power=False):
     """For band in `band_nums`, make a list of uvfits files with name
     `{uvfits_prepend}_band{band}.uvfits`. Then concanenate them by frequency,
     assuming that the set of uvfits are contiguous in frequency. Save output
@@ -39,7 +39,6 @@ def concat_uvfits(uvfits_prepend, bands, output_name, reverse_pols=False):
 
     with fits.open(f"{uvfits_prepend}{bands[0]:02d}.uvfits") as hdu:
         data1 = hdu[0].data.data
-        shape1 = data1.shape
         orig_hdu = hdu
 
         uu = hdu[0].data['UU']
@@ -51,8 +50,6 @@ def concat_uvfits(uvfits_prepend, bands, output_name, reverse_pols=False):
         ant2_array = hdu[0].data['ANTENNA2']
         subs_array = hdu[0].data['SUBARRAY']
 
-        ant_hdu = hdu[1]
-
         num_chans = data1.shape[3]
 
         all_data = np.empty((data1.shape[0], data1.shape[1], data1.shape[2],
@@ -60,12 +57,21 @@ def concat_uvfits(uvfits_prepend, bands, output_name, reverse_pols=False):
 
         ##If swapping XX and YY (which really means swapping E-W with N-S)
         if reverse_pols:
-            all_data[:,:,:,0:num_chans, 0, :] = data1[:,:,:,:,1,:]
-            all_data[:,:,:,0:num_chans, 1, :] = data1[:,:,:,:,0,:]
-            all_data[:,:,:,0:num_chans, 2, :] = data1[:,:,:,:,3,:]
-            all_data[:,:,:,0:num_chans, 3, :] = data1[:,:,:,:,2,:]
+            if half_power:
+                all_data[:,:,:,0:num_chans, 0, :] = data1[:,:,:,:,1,:] / 2
+                all_data[:,:,:,0:num_chans, 1, :] = data1[:,:,:,:,0,:] / 2
+                all_data[:,:,:,0:num_chans, 2, :] = data1[:,:,:,:,3,:] / 2
+                all_data[:,:,:,0:num_chans, 3, :] = data1[:,:,:,:,2,:] / 2
+            else:
+                all_data[:,:,:,0:num_chans, 0, :] = data1[:,:,:,:,1,:]
+                all_data[:,:,:,0:num_chans, 1, :] = data1[:,:,:,:,0,:]
+                all_data[:,:,:,0:num_chans, 2, :] = data1[:,:,:,:,3,:]
+                all_data[:,:,:,0:num_chans, 3, :] = data1[:,:,:,:,2,:]
         else:
-            all_data[:,:,:,0:num_chans, :, :] = data1
+            if half_power:
+                all_data[:,:,:,0:num_chans, :, :] = data1 / 2
+            else:
+                all_data[:,:,:,0:num_chans, :, :] = data1
 
         for band in bands[1:]:
             with fits.open(f"{uvfits_prepend}{band:02d}.uvfits") as this_hdu:
@@ -73,14 +79,21 @@ def concat_uvfits(uvfits_prepend, bands, output_name, reverse_pols=False):
                 base_channel = num_chans*(band - 1)
                 ##If swapping XX and YY (which really means swapping E-W with N-S)
                 if reverse_pols:
-                    all_data[:,:,:,base_channel:base_channel+num_chans,0,:] = this_data[:,:,:,:,1,:]
-                    all_data[:,:,:,base_channel:base_channel+num_chans,1,:] = this_data[:,:,:,:,0,:]
-                    all_data[:,:,:,base_channel:base_channel+num_chans,2,:] = this_data[:,:,:,:,3,:]
-                    all_data[:,:,:,base_channel:base_channel+num_chans,3,:] = this_data[:,:,:,:,2,:]
+                    if half_power:
+                        all_data[:,:,:,0:num_chans, 0, :] = this_data[:,:,:,:,1,:] / 2
+                        all_data[:,:,:,0:num_chans, 1, :] = this_data[:,:,:,:,0,:] / 2
+                        all_data[:,:,:,0:num_chans, 2, :] = this_data[:,:,:,:,3,:] / 2
+                        all_data[:,:,:,0:num_chans, 3, :] = this_data[:,:,:,:,2,:] / 2
+                    else:
+                        all_data[:,:,:,0:num_chans, 0, :] = this_data[:,:,:,:,1,:]
+                        all_data[:,:,:,0:num_chans, 1, :] = this_data[:,:,:,:,0,:]
+                        all_data[:,:,:,0:num_chans, 2, :] = this_data[:,:,:,:,3,:]
+                        all_data[:,:,:,0:num_chans, 3, :] = this_data[:,:,:,:,2,:]
                 else:
-
-                
-                    all_data[:,:,:,base_channel:base_channel+num_chans,:,:] = this_data
+                    if half_power:
+                        all_data[:,:,:,base_channel:base_channel+num_chans,:,:] = this_data / 2
+                    else:
+                        all_data[:,:,:,base_channel:base_channel+num_chans,:,:] = this_data
 
         uvparnames = ['UU','VV','WW','DATE','BASELINE', 'ANTENNA1', 'ANTENNA2', 'SUBARRAY']
 
@@ -189,6 +202,8 @@ def get_parser():
         help='Name for output concatenated uvfits file, default: concanenated.uvfits')
     parser.add_argument('--swap_pols', default=False, action='store_true',
         help='Reverse the order of polarisations')
+    parser.add_argument('--half_power', default=False, action='store_true',
+        help='Divide the visibilities by two; account for difference between FHD and hyperdrive conventions')
 
     return parser
 

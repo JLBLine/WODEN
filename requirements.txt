@@ -4,5 +4,4 @@ astropy
 numpy
 pyerfa
 palpy
-scipy
 importlib_resources
