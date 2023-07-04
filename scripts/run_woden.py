@@ -11,42 +11,20 @@ from queue import Queue
 from threading import Thread
 from ctypes import POINTER, c_double, c_float
 
-##If we are performing a ctest, this check means we use the code we are
-##testing and NOT what has been pip or conda installed
-try:
-    testdir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
-    sys.path.append('{:s}/../../../wodenpy'.format(testdir))
-    
-    from use_libwoden.woden_settings import create_woden_settings, setup_lsts_and_phase_centre
-    from use_libwoden.visibility_set import setup_visi_set, load_visibility_set
-    from wodenpy_setup.run_setup import get_parser, check_args, get_code_version
-    from use_libwoden.use_libwoden import load_in_woden_library
-    from observational.calc_obs import get_uvfits_date_and_position_constants, calc_jdcal
-    from skymodel.woden_skymodel import Component_Type_Counter, CompTypes, crop_below_horizon
-    from skymodel.read_yaml_skymodel import read_yaml_radec_count_components, read_yaml_skymodel_chunks, convert_source_catalogue_to_ctypes, read_yaml_skymodel_chunks_noctype
-    from skymodel.chunk_sky_model import create_skymodel_chunk_map
-    from array_layout.create_array_layout import calc_XYZ_diffs, enh2xyz
-    from uvfits.wodenpy_uvfits import make_antenna_table, make_baseline_date_arrays, create_uvfits
-    from phase_rotate.remove_phase_track import remove_phase_tracking
-    
-    from use_libwoden.shapelets import create_sbf
+from wodenpy.use_libwoden.woden_settings import create_woden_settings, setup_lsts_and_phase_centre
+from wodenpy.use_libwoden.visibility_set import setup_visi_set, load_visibility_set
+from wodenpy.wodenpy_setup.run_setup import get_parser, check_args, get_code_version
+from wodenpy.use_libwoden.use_libwoden import load_in_woden_library
+from wodenpy.observational.calc_obs import get_uvfits_date_and_position_constants, calc_jdcal
+from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes, crop_below_horizon
+from wodenpy.skymodel.read_yaml_skymodel import read_yaml_radec_count_components, read_yaml_skymodel_chunks
+from wodenpy.skymodel.read_fits_skymodel import read_fits_radec_count_components, read_fits_skymodel_chunks
+from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map
+from wodenpy.array_layout.create_array_layout import calc_XYZ_diffs, enh2xyz
+from wodenpy.uvfits.wodenpy_uvfits import make_antenna_table, make_baseline_date_arrays, create_uvfits
+from wodenpy.phase_rotate.remove_phase_track import remove_phase_tracking
 
-except KeyError:
-
-
-    from wodenpy.use_libwoden.woden_settings import create_woden_settings, setup_lsts_and_phase_centre
-    from wodenpy.use_libwoden.visibility_set import setup_visi_set, load_visibility_set
-    from wodenpy.wodenpy_setup.run_setup import get_parser, check_args, get_code_version
-    from wodenpy.use_libwoden.use_libwoden import load_in_woden_library
-    from wodenpy.observational.calc_obs import get_uvfits_date_and_position_constants, calc_jdcal
-    from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes, crop_below_horizon
-    from wodenpy.skymodel.read_yaml_skymodel import read_yaml_radec_count_components, read_yaml_skymodel_chunks, convert_source_catalogue_to_ctypes, read_yaml_skymodel_chunks_noctype
-    from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map
-    from wodenpy.array_layout.create_array_layout import calc_XYZ_diffs, enh2xyz
-    from wodenpy.uvfits.wodenpy_uvfits import make_antenna_table, make_baseline_date_arrays, create_uvfits
-    from wodenpy.phase_rotate.remove_phase_track import remove_phase_tracking
-    
-    from wodenpy.use_libwoden.shapelets import create_sbf
+from wodenpy.use_libwoden.shapelets import create_sbf
 
 ##Constants
 R2D = 180.0 / np.pi
@@ -61,35 +39,6 @@ sbf_N = 101
 sbf_L = 10001
 sbf_c = 5000
 sbf_dx = 0.01
-
-# def calc_basis_func_1D(x, n, beta=1):
-#     '''explicitly set beta=1'''
-    
-#     norm = np.sqrt(1)*np.sqrt((2**n*factorial(n)))
-#     hermite = eval_hermite(n, x)
-#     gauss = np.exp(-0.5*((x*beta)**2))
-    
-#     return (hermite*gauss) / norm
-
-# def create_sbf(precision = "double", sbf_N = 101, sbf_c = 5000, sbf_dx = 0.01):
-    
-#     x_range = np.arange(-sbf_c*sbf_dx, sbf_c*sbf_dx + sbf_dx, sbf_dx)
-#     sbf_L = len(x_range)
-    
-#     if precision == 'float':
-#         sbf = (c_float*(sbf_L*sbf_N))()
-#     else:
-#         sbf = (c_double*(sbf_L*sbf_N))()
-    
-#     for n in range(sbf_N):
-#         low_ind = n*sbf_L
-#         basis = calc_basis_func_1D(x_range, n)
-        
-#         for basis_ind, sbf_ind in enumerate(range(low_ind, low_ind + sbf_L)):
-#             sbf[sbf_ind] = basis[basis_ind]
-    
-#     return sbf
-
 
 def woden_thread(the_queue, run_woden, woden_settings, visibility_set, array_layout,
                  sbf):
@@ -115,18 +64,22 @@ def read_skymodel_thread(the_queue, chunked_skymodel_maps: list,
         print(f"Reading chunks skymodel chunks {lower_chunk_iter}:{lower_chunk_iter+max_num_chunks}")
         t_before = time()
     
-        chunked_sky_models = read_yaml_skymodel_chunks_noctype(args.cat_filename, chunk_map_subset,
-                                                        args.num_freq_channels,
-                                                        args.num_time_steps,
-                                                        beamtype,
-                                                        lsts, args.latitude*D2R)
+        # source_catalogue = read_yaml_skymodel_chunks(args.cat_filename, chunk_map_subset,
+        #                                              args.num_freq_channels,
+        #                                              args.num_time_steps,
+        #                                              beamtype,
+        #                                              lsts, args.latitude*D2R,
+        #                                              precision=args.precision)
         
-        source_catalogue = convert_source_catalogue_to_ctypes(chunked_sky_models,
-                                chunk_map_subset,
-                                args.num_freq_channels,
-                                args.num_time_steps,
-                                beamtype,
-                                precision=args.precision)
+        ##TODO need some kind of function that knows what kind of skymodel
+        ##we have, and then to select correct functions based on that
+        source_catalogue = read_fits_skymodel_chunks(args.cat_filename, chunk_map_subset,
+                                                     args.num_freq_channels,
+                                                     args.num_time_steps,
+                                                     beamtype,
+                                                     lsts, args.latitude*D2R,
+                                                     precision=args.precision)
+        
         the_queue.put(source_catalogue, block=True)
         
         t_after = time()
@@ -195,7 +148,10 @@ def main():
         # ##read in and chunk the sky model=======================================
         print("Doing the initial reading/mapping of sky model into chunks")
         t_before = time()
-        comp_counter = read_yaml_radec_count_components(args.cat_filename)
+        # comp_counter = read_yaml_radec_count_components(args.cat_filename)
+        ##TODO need some kind of function that knows what kind of skymodel
+        ##we have, and then to select correct functions based on that
+        comp_counter = read_fits_radec_count_components(args.cat_filename)
         t_after = time()
         print(f"Mapping took {(t_after - t_before)/60.0:.1f} mins")
     
@@ -210,7 +166,6 @@ def main():
                                             args.chunking_size, woden_settings.num_baselines,
                                             args.num_freq_channels,
                                             args.num_time_steps)
-        
         
         sbf = create_sbf(precision=args.precision)
         

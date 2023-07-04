@@ -3,16 +3,7 @@ import sys
 import os
 import subprocess
 from typing import Union
-##If we are performing a ctest, this check means we use the code we are
-##testing and NOT what has been pip or conda installed
-try:
-    testdir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
-    sys.path.append('{:s}/../../../wodenpy'.format(testdir))
-    from array_layout.precession import RTS_Precess_LST_Lat_to_J2000
-    
-    
-except KeyError:
-    from wodenpy.array_layout.precession import RTS_Precess_LST_Lat_to_J2000
+from wodenpy.array_layout.precession import RTS_Precess_LST_Lat_to_J2000
 
 import numpy as np
 import argparse
@@ -154,10 +145,16 @@ def create_woden_settings(args : argparse.Namespace,
        Populated ctype struct that can be passed into the C/CUDA code
     """
     
+    # if args.precision == 'float':
+    #     woden_settings = ctypes.pointer(Woden_Settings_Float())
+    # else:
+    #     woden_settings = ctypes.pointer(Woden_Settings_Double())
+        
     if args.precision == 'float':
         woden_settings = Woden_Settings_Float()
     else:
         woden_settings = Woden_Settings_Double()
+        
         
     # woden_settings = woden_settings()
         
@@ -190,7 +187,7 @@ def create_woden_settings(args : argparse.Namespace,
     ##woden_settings equivalent
     if args.MWA_FEE_delays:
         delays = np.array(args.MWA_FEE_delays.strip('[]').split(','))
-                          
+        
         for ind, delay in enumerate(delays):
             woden_settings.FEE_ideal_delays[ind] = float(delay)
         

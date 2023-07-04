@@ -525,7 +525,11 @@ def get_code_version():
         version = git_dict['describe']
 
     else:
-        version = wodenpy.__version__
+        ##If doing testing with pip install -e, __version__ will not exists
+        try:
+            version = wodenpy.__version__
+        except AttributeError:
+            version = "No git describe nor __version__ avaible"
     
     print(f"You are using WODEN commit: {version}")
 

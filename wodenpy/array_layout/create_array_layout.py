@@ -16,17 +16,17 @@ VELC = 299792458.0
 SOLAR2SIDEREAL = 1.00274
 DS2R = 7.2722052166430399038487115353692196393452995355905e-5
 
-##If we are performing a ctest, this check means we use the code we are
-##testing and NOT what has been pip or conda installed
-try:
-    testdir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
-    sys.path.append('{:s}/../../../wodenpy/use_libwoden'.format(testdir))
-    from woden_settings import Woden_Settings_Float, Woden_Settings_Double
-    from array_layout_struct import Array_Layout, setup_array_layout
+# ##If we are performing a ctest, this check means we use the code we are
+# ##testing and NOT what has been pip or conda installed
+# try:
+#     testdir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
+#     sys.path.append('{:s}/../../../wodenpy/use_libwoden'.format(testdir))
+#     from woden_settings import Woden_Settings_Float, Woden_Settings_Double
+#     from array_layout_struct import Array_Layout, setup_array_layout
     
-except KeyError:
-    from wodenpy.use_libwoden.woden_settings import Woden_Settings_Float, Woden_Settings_Double
-    from wodenpy.use_libwoden.array_layout_struct import Array_Layout, setup_array_layout
+# except KeyError:
+from wodenpy.use_libwoden.woden_settings import Woden_Settings_Float, Woden_Settings_Double
+from wodenpy.use_libwoden.array_layout_struct import Array_Layout, setup_array_layout
 
 def enh2xyz(east, north, height, latitude):
     """

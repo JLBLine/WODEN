@@ -5,15 +5,7 @@ import os
 from typing import Union
 import argparse
 
-##If we are performing a ctest, this check means we use the code we are
-##testing and NOT what has been pip or conda installed
-try:
-    testdir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
-    sys.path.append('{:s}/../../../wodenpy/use_libwoden'.format(testdir))
-    from woden_settings import Woden_Settings_Float, Woden_Settings_Double
-    
-except KeyError:
-    from wodenpy.use_libwoden.woden_settings import Woden_Settings_Float, Woden_Settings_Double
+from wodenpy.use_libwoden.woden_settings import Woden_Settings_Float, Woden_Settings_Double
 
 VELC = 299792458.0
 

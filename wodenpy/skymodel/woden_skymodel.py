@@ -34,7 +34,7 @@ class Component_Type_Counter():
     including type (point, gaaussian, shapelet) and flux model (power law,
     curved power law, list). Contains methods to count properties of current
     source being read in, and then to add that component"""
-    def __init__(self):
+    def __init__(self, initial_size=100000):
         """Setup all the parameters and intialise them to 0"""
         
         
@@ -42,7 +42,7 @@ class Component_Type_Counter():
         ##malloc chunks of sky models. Start off with a certain size array
         ##and make things bigger when we need it - appending to lists is
         ##memory scary
-        self.array_size = 100000
+        self.array_size = initial_size
         # self.basis_array_size = 1000
         
         ##Use source_indexes, comp_types, and file_line_nums for tests against 

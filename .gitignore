@@ -91,3 +91,11 @@ cmake_testing/C_code/visibility_set
 cmake_testing/C_code/woden_settings
 
 wodenpy/libwoden*.so
+
+*.uvfits
+*images*
+*.tmp
+*.json
+
+# things that exist if you pip install -e
+wodenpy.egg-info

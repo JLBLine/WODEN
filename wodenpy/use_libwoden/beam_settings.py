@@ -7,18 +7,8 @@ import os
 import sys
 from enum import Enum, auto
 
-##If we are performing a ctest, this check means we use the code we are
-##testing and NOT what has been pip or conda installed
-try:
-    testdir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
-    sys.path.append('{:s}/../../../wodenpy'.format(testdir))
-    
-    from skymodel.woden_skymodel import Component_Type_Counter, CompTypes, Component_Info
-    from skymodel.chunk_sky_model import Skymodel_Chunk_Map
-    
-except KeyError:
-    from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes, Component_Info
-    from wodenpy.skymodel.chunk_sky_model import Skymodel_Chunk_Map
+from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes, Component_Info
+from wodenpy.skymodel.chunk_sky_model import Skymodel_Chunk_Map
 
 
 class BeamTypes(Enum):

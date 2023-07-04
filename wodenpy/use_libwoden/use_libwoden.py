@@ -5,24 +5,10 @@ import numpy as np
 import sys
 import os
 
-##If we are performing a ctest, this check means we use the code we are
-##testing and NOT what has been pip or conda installed
-try:
-    testdir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
-    sys.path.append('{:s}/../../../wodenpy/use_libwoden'.format(testdir))
-    
-    # from use_libwoden.visibility_set import *
-    # from use_libwoden.woden_settings import *
-    from visibility_set import Visi_Set_Float, Visi_Set_Double
-    from woden_settings import Woden_Settings_Float, Woden_Settings_Double
-    from skymodel_structs import Source_Catalogue_Float, Source_Catalogue_Double
-    from array_layout_struct import Array_Layout
-    
-except KeyError:
-    from wodenpy.use_libwoden.visibility_set import Visi_Set_Float, Visi_Set_Double
-    from wodenpy.use_libwoden.woden_settings import Woden_Settings_Float, Woden_Settings_Double
-    from wodenpy.use_libwoden.skymodel_structs import Source_Catalogue_Float, Source_Catalogue_Double
-    from wodenpy.use_libwoden.array_layout_struct import Array_Layout
+from wodenpy.use_libwoden.visibility_set import Visi_Set_Float, Visi_Set_Double
+from wodenpy.use_libwoden.woden_settings import Woden_Settings_Float, Woden_Settings_Double
+from wodenpy.use_libwoden.skymodel_structs import Source_Catalogue_Float, Source_Catalogue_Double
+from wodenpy.use_libwoden.array_layout_struct import Array_Layout
 
 VELC = 299792458.0
 

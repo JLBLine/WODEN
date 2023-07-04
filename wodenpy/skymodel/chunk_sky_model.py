@@ -4,16 +4,7 @@ import sys
 import os
 from enum import Enum
 
-##If we are performing a ctest, this check means we use the code we are
-##testing and NOT what has been pip or conda installed
-try:
-    testdir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
-    sys.path.append('{:s}/../../../wodenpy'.format(testdir))
-    
-    from skymodel.woden_skymodel import Component_Type_Counter, CompTypes
-    
-except KeyError:
-    from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes
+from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes
     
 NUM_FLUX_TYPES = 3
     
@@ -111,7 +102,7 @@ class Skymodel_Chunk_Map(object):
         array of original component indexes. Use this when reading in full
         information from the sky model"""
         
-        self.all_orig_inds = np.empty(self.n_points + self.n_gauss + self.n_shape_coeffs)
+        self.all_orig_inds = np.empty(self.n_points + self.n_gauss + self.n_shape_coeffs, dtype=int)
         
         lowest_file_lines = []
         
@@ -506,7 +497,8 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
                         shape_basis_to_orig_type_map : np.ndarray,
                         shape_basis_param_index : np.ndarray,
                         chunk_ind : int,
-                        coeffs_per_chunk : int):
+                        coeffs_per_chunk : int,
+                        text_file = False):
     
     ##Upper indexes of components covered in this chunk
     upper_coeff_ind = (chunk_ind + 1) * coeffs_per_chunk
@@ -596,14 +588,13 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
     
     
     
-    
-    
-    ##lowest line we want to read from the 
-    components.lowest_file_num = find_lowest_file_line(cropped_comp_counter,
-                                                       components,
-                                                       cropped_power_inds,
-                                                       cropped_curve_inds,
-                                                       cropped_list_inds)
+    if text_file:
+        ##lowest line we want to read from the 
+        components.lowest_file_num = find_lowest_file_line(cropped_comp_counter,
+                                                           components,
+                                                           cropped_power_inds,
+                                                           cropped_curve_inds,
+                                                           cropped_list_inds)
     
     chunk_map.make_all_orig_inds_array()
     
