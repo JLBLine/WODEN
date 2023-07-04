@@ -2,7 +2,6 @@ import numpy as np
 import sys
 import os
 from typing import Union
-from astropy.table import Table
 
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, Component_Info, CompTypes
 from wodenpy.skymodel.chunk_sky_model import Skymodel_Chunk_Map
@@ -11,6 +10,7 @@ from wodenpy.use_libwoden.beam_settings import BeamTypes
 
 from astropy.table import Table, Column
 import erfa
+from astropy.io import fits
 
 REF_FREQ = 200e+6
 
@@ -28,7 +28,7 @@ def read_fits_radec_count_components(fits_path : str):
     ##grabd all the relevant information out of the tables
     
     main_table = Table.read(fits_path, hdu=1)
-    shape_table = Table.read(fits_path, hdu=2)
+    
     
     ras = np.array(main_table['RA'], dtype=np.float64)
     decs = np.array(main_table['DEC'], dtype=np.float64)
@@ -36,7 +36,6 @@ def read_fits_radec_count_components(fits_path : str):
     flux_types = np.array(main_table['MOD_TYPE'], dtype=str)
     unq_source_ID = np.array(main_table['UNQ_SOURCE_ID'], dtype=str)
     comp_names = np.array(main_table['NAME'], dtype=str)
-    shape_comp_names = np.array(shape_table['NAME'], dtype=str)
     
     flux_col_names = []
     for key in main_table.columns:
@@ -86,13 +85,10 @@ def read_fits_radec_count_components(fits_path : str):
     comp_counter.comp_types[shape_curve] = CompTypes.SHAPE_CURVE.value
     comp_counter.comp_types[shape_list] = CompTypes.SHAPE_LIST.value
     
-    
     ##for the list flux types, we want to count how many freqs we have.
     ##need them to malloc the ctype sky model later on
     
     list_type_inds = np.where(flux_types == 'nan')[0]
-    
-    
     for flux_col in flux_col_names:
         
         ##OK, astropy.Table can turns things into masked arrays. Here we are
@@ -102,18 +98,31 @@ def read_fits_radec_count_components(fits_path : str):
         
         if type(main_table[flux_col]) == Column:
             present_fluxes = np.where(np.isnan(main_table[flux_col]) == False)[0]
-            comp_counter.num_list_fluxes[list_type_inds] += len(present_fluxes)
+            comp_counter.num_list_fluxes[list_type_inds] += 1
         else:
             present_fluxes = (~main_table[flux_col].mask).astype(int)
             comp_counter.num_list_fluxes[list_type_inds] += present_fluxes[list_type_inds]
+    
+    ##Count how many hdus there are; first table should always be the second hdu?
+    with fits.open(fits_path) as hdus:
+        num_hdus = len(hdus)
+    
+    if num_hdus > 2:
+        shape_table = Table.read(fits_path, hdu=2)
+        
 
+    
+        shape_comp_names = np.array(shape_table['NAME'], dtype=str)
         
-    ##now count up how many shapelet basis functions each component has
-    for comp_ind in np.where(comp_types == 'S')[0]:
-        comp_name = comp_names[comp_ind]
-        
-        basis_func_inds = np.where(shape_comp_names == comp_name)[0]
-        comp_counter.num_shape_coeffs[comp_ind] = len(basis_func_inds)
+        ##now count up how many shapelet basis functions each component has
+        for comp_ind in np.where(comp_types == 'S')[0]:
+            comp_name = comp_names[comp_ind]
+            
+            basis_func_inds = np.where(shape_comp_names == comp_name)[0]
+            comp_counter.num_shape_coeffs[comp_ind] = len(basis_func_inds)
+    else:
+        print("WARNING - couldn't find second table containing shapelet information, so not attempting to load any shapelets.")
+    
     
     comp_counter.total_components()
 
@@ -362,7 +371,12 @@ def read_fits_skymodel_chunks(fits_path : str,
     
     
     main_table = Table.read(fits_path, hdu=1)
-    shape_table = Table.read(fits_path, hdu=2)
+    
+    ##Only read in a shape table if there are shapelets
+    if chunk_map.n_shapes:
+        shape_table = Table.read(fits_path, hdu=2)
+    else:
+        shape_table = 'no_shape_table'
     
     ##for each chunk map, create a Source_Float or Source_Double ctype
     ##struct, and "malloc" the right amount of arrays to store required infor
