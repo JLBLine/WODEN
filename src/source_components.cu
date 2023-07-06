@@ -285,8 +285,8 @@ __device__ void extrap_stokes_curved_power_law(components_t d_components,
            user_precision_t * flux_I, user_precision_t * flux_Q,
            user_precision_t * flux_U, user_precision_t * flux_V){
 
-  double d_freq = d_extrap_freqs[iFreq];
-  double d_ref_freq = d_components.curve_ref_freqs[iFluxComp];
+  double d_freq = d_extrap_freqs[iFreq]/1e+6;
+  double d_ref_freq = d_components.curve_ref_freqs[iFluxComp]/1e+6;
 
   user_precision_t si_ratio = pow(d_freq / d_ref_freq, d_components.curve_SIs[iFluxComp]);
 
@@ -342,8 +342,13 @@ __device__ user_precision_t calc_gradient_extrap_list(user_precision_t *list_flu
   user_precision_t gradient;
   user_precision_t extrap_flux;
 
+  //If both zero, just stick to zero
+  if (list_fluxes[low_ind_1] == 0 && list_fluxes[low_ind_2] == 0) {
+   extrap_flux = 0.0;
+  }
+
   //If one is negative, do interpolation in linear space
-  if (list_fluxes[low_ind_1] <= 0 || list_fluxes[low_ind_2] <= 0) {
+  else if (list_fluxes[low_ind_1] <= 0 || list_fluxes[low_ind_2] <= 0) {
     gradient = (list_fluxes[low_ind_2] - list_fluxes[low_ind_1]) / (list_freqs[low_ind_2] - list_freqs[low_ind_1]);
     extrap_flux = list_fluxes[low_ind_1] + gradient*(desired_freq - list_freqs[low_ind_1]);
   }

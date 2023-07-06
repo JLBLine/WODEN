@@ -250,7 +250,7 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
         source_components.curve_ref_stokesU[cur_ind] = 0.0
         source_components.curve_ref_stokesV[cur_ind] = 0.0
         source_components.curve_SIs[cur_ind] = main_table['ALPHA_CPL'][old_comp_ind]
-        source_components.curve_qs[cur_ind] = main_table['ALPHA_CPL'][old_comp_ind]
+        source_components.curve_qs[cur_ind] = main_table['CURVE_CPL'][old_comp_ind]
         
         
     ##Get all the flux column names/freqs and put em in a list
@@ -396,11 +396,6 @@ def read_fits_skymodel_chunks(fits_path : str,
         # num_comps_all_chunks += chunk_map.n_points + chunk_map.n_gauss + chunk_map.n_shape_coeffs
         
         if chunk_map.n_points > 0:
-            # print(chunk_source.n_points)
-            # print(chunk_source.n_point_lists)
-            # print(chunk_source.n_point_powers)
-            # print(chunk_source.n_point_curves)
-            # print(chunk_source.n_comps)
             add_fits_info_to_source_catalogue(CompTypes.POINT,
                                       main_table, shape_table,
                                       chunk_source, chunk_map,
@@ -409,11 +404,6 @@ def read_fits_skymodel_chunks(fits_path : str,
                                       precision=precision)
             
         if chunk_map.n_gauss > 0:
-            # print(chunk_source.n_gauss)
-            # print(chunk_source.n_gauss_lists)
-            # print(chunk_source.n_gauss_powers)
-            # print(chunk_source.n_gauss_curves)
-            
             add_fits_info_to_source_catalogue(CompTypes.GAUSSIAN,
                                       main_table, shape_table,
                                       chunk_source, chunk_map,
@@ -422,11 +412,6 @@ def read_fits_skymodel_chunks(fits_path : str,
                                       precision=precision)
             
         if chunk_map.n_shapes > 0:
-            # print(chunk_source.n_shapes)
-            # print(chunk_source.n_shape_lists)
-            # print(chunk_source.n_shape_powers)
-            # print(chunk_source.n_shape_curves)
-            # print(chunk_source.n_shape_coeffs)
             add_fits_info_to_source_catalogue(CompTypes.SHAPELET,
                                       main_table, shape_table,
                                       chunk_source, chunk_map,
