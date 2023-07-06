@@ -19,11 +19,125 @@ D2R = np.pi / 180.0
 
 class Components_Float(ctypes.Structure):
     """A class structured equivalently to a `components_t` struct, used by 
-    the C and CUDA code in libwoden_double.so
+    the C and CUDA code in libwoden_float.so
+    
+    :ivar POINTER(double) ras: COMPONENT right ascensions (radians)
+    :cvar POINTER(double) decs: COMPONENT declinations (radians)
+    :cvar POINTER(double) power_ref_freqs: COMPONENT Flux density reference frequencies (Hz)
+    :cvar POINTER(user_precision_t) power_ref_stokesI: COMPONENT Stokes I reference flux density (Jy)
+    :cvar POINTER(user_precision_t) power_ref_stokesQ: COMPONENT Stokes Q reference flux density (Jy)
+    :cvar POINTER(user_precision_t) power_ref_stokesU: COMPONENT Stokes U reference flux density (Jy)
+    :cvar POINTER(user_precision_t) power_ref_stokesV: COMPONENT Stokes V reference flux density (Jy)
+    :cvar POINTER(user_precision_t) power_SIs:  COMPONENT spectral indexes
+    :cvar POINTER(double) curve_ref_freqs: COMPONENT Flux density reference frequencies (Hz)
+    :cvar POINTER(user_precision_t) curve_ref_stokesI: COMPONENT Stokes I reference flux density (Jy)
+    :cvar POINTER(user_precision_t) curve_ref_stokesQ: COMPONENT Stokes Q reference flux density (Jy)
+    :cvar POINTER(user_precision_t) curve_ref_stokesU: COMPONENT Stokes U reference flux density (Jy)
+    :cvar POINTER(user_precision_t) curve_ref_stokesV: COMPONENT Stokes V reference flux density (Jy)
+    :cvar POINTER(user_precision_t) curve_SIs:  COMPONENT spectral indexes
+    :cvar POINTER(user_precision_t) curve_qs:  COMPONENT curvature
+    :cvar POINTER(int) power_comp_inds: The indexes of all power-law models w.r.t ra,dec
+    :cvar POINTER(int) curve_comp_inds: The indexes of all curved power-law models w.r.t ra,dec
+    :cvar POINTER(int) list_comp_inds: The indexes of all list models w.r.t ra,dec
+    :cvar POINTER(double) list_freqs: COMPONENT Flux density references frequencies (Hz)
+    :cvar POINTER(user_precision_t) list_stokesI: COMPONENT Stokes I list flux density (Jy)
+    :cvar POINTER(user_precision_t) list_stokesQ: COMPONENT Stokes Q list flux density (Jy)
+    :cvar POINTER(user_precision_t) list_stokesU: COMPONENT Stokes U list flux density (Jy)
+    :cvar POINTER(user_precision_t) list_stokesV: COMPONENT Stokes V list flux density (Jy)
+    :cvar POINTER(int) num_list_values: How many freq/flux values are in each COMPONENT lis
+    :cvar POINTER(int) list_start_indexes: How many freq/flux values are in each COMPONENT lis
+    :cvar otal_num_flux_entires: The total number of freq/flux values are in all lists POINTER(int) combine
+    :cvar POINTER(user_precision_t) extrap_stokesI: extrapolated COMPONENT Stokes I flux densities (Jy)
+    :cvar POINTER(user_precision_t) extrap_stokesQ: extrapolated COMPONENT Stokes Q flux densities (Jy)
+    :cvar POINTER(user_precision_t) extrap_stokesU: extrapolated COMPONENT Stokes U flux densities (Jy)
+    :cvar POINTER(user_precision_t) extrap_stokesV: extrapolated COMPONENT Stokes V flux densities (Jy)
+    :cvar POINTER(user_precision_t) shape_coeffs: Scaling coefficients for SHAPELET basis functions
+    :cvar POINTER(user_precision_t) n1s: 1st basis function order for SHAPELET basis functions
+    :cvar POINTER(user_precision_t) n2s: 2nd basis function order for SHAPELET basis functions
+    :cvar POINTER(user_precision_t) majors: GAUSSIAN/SHAPELET major axis (beta1, radians)
+    :cvar POINTER(user_precision_t) minors: GAUSSIAN/SHAPELET minor axis (beta2, radians)
+    :cvar POINTER(user_precision_t) pas: GAUSSIAN/SHAPELET position angles (radians)
+    :cvar POINTER(user_precision_t) param_indexes: An index value to match each coeff, n1, and n2 to the correct ra, dec, major, minor, pa for a SHAPELET
+    :cvar POINTER(user_precision_t) azs: SHAPELET source azimuth angles for all time steps
+    :cvar POINTER(user_precision_t) zas: SHAPELET source zenith angles for all time steps
+    :cvar POINTER(double) beam_has: Hour angle of COMPONENTs for all time steps, used for beam calculations
+    :cvar POINTER(double) beam_decs: Declinations of COMPONENTs for all time steps, used for beam calculations
+    :cvar POINTER(int) num_primarybeam_values: Number of beam calculations needed for COMPONENTs
+    :cvar POINTER(user_precision_complex_t) gxs: North-South Beam gain values for all directions, frequencies, and times for these COMPONENT
+    :cvar POINTER(user_precision_complex_t) Dxs: North-South Beam leakage values for all directions, frequencies, and times for these COMPONENT
+    :cvar POINTER(user_precision_complex_t) Dys: East-West Beam leakage values for all directions, frequencies, and times  for these COMPONENT
+    :cvar POINTER(user_precision_complex_t) gys: East-West Beam gain values for all directions, frequencies, and times  for these COMPONENT
+    :cvar POINTER(double) ls: Device memory l cosine direction coords for these COMPONENTs
+    :cvar POINTER(double) ms: Device memory m cosine direction coords for these COMPONENTs
+    :cvar POINTER(double) ns: Device memory n cosine direction coords for these COMPONENTs
+    
     """
     
-    _fields_ = []
-
+    _fields_ = [## Instrinsic to COMPONENT values
+                ("ras", POINTER(c_double)),
+                ("decs", POINTER(c_double)),
+                ## power law params
+                ("power_ref_freqs", POINTER(c_double)),
+                ("power_ref_stokesI", POINTER(c_float)),
+                ("power_ref_stokesQ", POINTER(c_float)),
+                ("power_ref_stokesU", POINTER(c_float)),
+                ("power_ref_stokesV", POINTER(c_float)),
+                ("power_SIs", POINTER(c_float)),
+                ##curved power law params
+                ("curve_ref_freqs", POINTER(c_double)),
+                ("curve_ref_stokesI", POINTER(c_float)),
+                ("curve_ref_stokesQ", POINTER(c_float)),
+                ("curve_ref_stokesU", POINTER(c_float)),
+                ("curve_ref_stokesV", POINTER(c_float)),
+                ("curve_SIs", POINTER(c_float)),
+                ("curve_qs", POINTER(c_float)),
+                ##indexes of types
+                ("power_comp_inds", POINTER(c_int)),
+                ("curve_comp_inds", POINTER(c_int)),
+                ("list_comp_inds", POINTER(c_int)),
+                ##list flux params
+                ("list_freqs", POINTER(c_double)),
+                ("list_stokesI", POINTER(c_float)),
+                ("list_stokesQ", POINTER(c_float)),
+                ("list_stokesU", POINTER(c_float)),
+                ("list_stokesV", POINTER(c_float)),
+                ("num_list_values", POINTER(c_int)),
+                ("list_start_indexes", POINTER(c_int)),
+                ("total_num_flux_entires", c_int),
+                ##something to store extrapolated output fluxes in
+                ("extrap_stokesI", POINTER(c_float)),
+                ("extrap_stokesQ", POINTER(c_float)),
+                ("extrap_stokesU", POINTER(c_float)),
+                ("extrap_stokesV", POINTER(c_float)),
+                ##SHAPELET params
+                ("shape_coeffs", POINTER(c_float)),
+                ("n1s", POINTER(c_float)),
+                ("n2s", POINTER(c_float)),
+                ##SHAPELET / GAUSSIAN params
+                ("majors", POINTER(c_float)),
+                ("minors", POINTER(c_float)),
+                ("pas", POINTER(c_float)),
+                ("param_indexes", POINTER(c_float)),
+                ##Specific to observation settings for these COMPONENTs
+                ("azs", POINTER(c_float)),
+                ("zas", POINTER(c_float)),
+                ("beam_has", POINTER(c_double)),
+                ("beam_decs", POINTER(c_double)),
+                ("num_primarybeam_values", c_int),
+                ##things to hold the beam gain
+                ##these are _complex in the C struct; we are not allocating
+                ##memory on the python side, so I think we can just call them
+                ##a double here?
+                ("gxs", POINTER(c_float)),
+                ("Dxs", POINTER(c_float)),
+                ("Dys", POINTER(c_float)),
+                ("gys", POINTER(c_float)),
+                ##used to hold l,m,n coords on the GPU
+                ("ls", POINTER(c_double)),
+                ("ms", POINTER(c_double)),
+                ("ns", POINTER(c_double)),
+                ]
+    
 class Components_Double(ctypes.Structure):
     """A class structured equivalently to a `components_t` struct, used by 
     the C and CUDA code in libwoden_double.so
@@ -278,12 +392,16 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
         n_comps = chunk_map.n_points
         components = chunked_source.point_components
         
-        ##flux type specific things
+        ##flux type specific things - need arrays of certain lengths, in
+        ##in 'user' precision, int, and double
         power_user_ncomps_arr = c_user_precision*chunk_map.n_point_powers
         curve_user_ncomps_arr = c_user_precision*chunk_map.n_point_curves
         
         power_int_ncomps_arr = c_int*chunk_map.n_point_powers
         curve_int_ncomps_arr = c_int*chunk_map.n_point_curves
+        
+        power_double_ncomps_arr = c_double*chunk_map.n_point_powers
+        curve_double_ncomps_arr = c_double*chunk_map.n_point_curves
         
         ##the number of entires for list flux types isn't the number
         ##of components, are any component can have multiple list entries
@@ -305,6 +423,9 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
         power_int_ncomps_arr = c_int*chunk_map.n_gauss_powers
         curve_int_ncomps_arr = c_int*chunk_map.n_gauss_curves
         
+        power_double_ncomps_arr = c_double*chunk_map.n_gauss_powers
+        curve_double_ncomps_arr = c_double*chunk_map.n_gauss_curves
+        
         ##the number of entires for list flux types isn't the number
         ##of components, are any component can have multiple list entries
         list_user_nflux_arr = c_user_precision*chunk_map.gauss_components.total_num_flux_entires
@@ -325,6 +446,9 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
         power_int_ncomps_arr = c_int*chunk_map.n_shape_powers
         curve_int_ncomps_arr = c_int*chunk_map.n_shape_curves
         
+        power_double_ncomps_arr = c_double*chunk_map.n_shape_powers
+        curve_double_ncomps_arr = c_double*chunk_map.n_shape_curves
+        
         ##the number of entires for list flux types isn't the number
         ##of components, are any component can have multiple list entries
         list_user_nflux_arr = c_user_precision*chunk_map.shape_components.total_num_flux_entires
@@ -343,7 +467,7 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
     components.num_primarybeam_values = num_primarybeam_values
     
     ##power-law flux things
-    components.power_ref_freqs = power_user_ncomps_arr()
+    components.power_ref_freqs = power_double_ncomps_arr() ##this is always double
     components.power_ref_stokesI = power_user_ncomps_arr()
     components.power_ref_stokesQ = power_user_ncomps_arr()
     components.power_ref_stokesU = power_user_ncomps_arr()
@@ -351,7 +475,7 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
     components.power_SIs = power_user_ncomps_arr()
     
     ##curved power-law flux things
-    components.curve_ref_freqs = curve_user_ncomps_arr()
+    components.curve_ref_freqs = curve_double_ncomps_arr() ##this is always double
     components.curve_ref_stokesI = curve_user_ncomps_arr()
     components.curve_ref_stokesQ = curve_user_ncomps_arr()
     components.curve_ref_stokesU = curve_user_ncomps_arr()
