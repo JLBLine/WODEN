@@ -17,7 +17,7 @@ import read_yaml_skymodel
 # import wodenpy
 from woden_skymodel import Component_Type_Counter, CompTypes
 from chunk_sky_model import map_chunk_pointgauss, Skymodel_Chunk_Map
-from woden_lib import *
+# from woden_lib import *
 
 D2R = np.pi/180.0
 
@@ -256,7 +256,7 @@ class BaseChunkTest(unittest.TestCase):
         ##check specific numbers for POINT and grab generic numbers to check
         if comp_type == CompTypes.POINT:
             
-            self.assertEqual(expec_n_comps, chunk_map.n_point)
+            self.assertEqual(expec_n_comps, chunk_map.n_points)
             self.assertEqual(expec_n_powers, chunk_map.n_point_powers)
             self.assertEqual(expec_n_curves, chunk_map.n_point_curves)
             self.assertEqual(expec_n_lists, chunk_map.n_point_lists)

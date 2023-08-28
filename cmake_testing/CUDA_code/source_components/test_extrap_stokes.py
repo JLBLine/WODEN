@@ -18,13 +18,18 @@ def power_law(extrap_freqs, ref_freq, SI, ref_stokesI, ref_stokesQ, ref_stokesU,
 def curved_power_law(extrap_freqs, ref_freq, SI, q, ref_stokesI, ref_stokesQ, ref_stokesU, ref_stokesV):
 
     si_ratio = (extrap_freqs / ref_freq)**SI
+    
+    extrap_freq_use = extrap_freqs
+    ref_freq_use = ref_freq
 
-    exp_ratio = np.exp(q*np.log(extrap_freqs)**2) / np.exp(q*np.log(ref_freq)**2)
+    # exp_ratio = np.exp(q*np.log(extrap_freq_use)**2) / np.exp(q*np.log(ref_freq_use)**2)
+    
+    exp_bit = np.exp(q*np.log(extrap_freqs / ref_freq)**2)
 
-    extrap_stokesI = ref_stokesI*si_ratio*exp_ratio
-    extrap_stokesQ = ref_stokesQ*si_ratio*exp_ratio
-    extrap_stokesU = ref_stokesU*si_ratio*exp_ratio
-    extrap_stokesV = ref_stokesV*si_ratio*exp_ratio
+    extrap_stokesI = ref_stokesI*si_ratio*exp_bit
+    extrap_stokesQ = ref_stokesQ*si_ratio*exp_bit
+    extrap_stokesU = ref_stokesU*si_ratio*exp_bit
+    extrap_stokesV = ref_stokesV*si_ratio*exp_bit
 
     return extrap_stokesI, extrap_stokesQ, extrap_stokesU, extrap_stokesV
 
@@ -91,7 +96,7 @@ if __name__ == '__main__':
     ##read in the data output by ctest - obviously need to run ctest first!
 
 
-    ctest_data = np.loadtxt("../../build/cmake_testing/source_components/test_extrap_stokes.txt")
+    ctest_data = np.loadtxt("../../../build/cmake_testing/CUDA_code/source_components/test_extrap_stokes.txt")
 
     fig, axs = plt.subplots(3, 2, figsize=(8, 8))
 

@@ -14,7 +14,7 @@ D2R = np.pi / 180.0
 
 ##Vehicle for running tests
 class Test(unittest.TestCase):
-    def test_get_LST(self):
+    def test_enh2xyz(self):
         """Tests the `create_array_layout.enh2xyz` function, which should calculate the
         local X,Y,Z coord using the local east, north, height. Test using
         the cases where latitude is 0 and -30 deg, which have specific

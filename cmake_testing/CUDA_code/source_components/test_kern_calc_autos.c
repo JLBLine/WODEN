@@ -9,7 +9,7 @@ Tests that the kernel that calculates auto-correlations is doing it's job
 #include "constants.h"
 #include "woden_struct_defs.h"
 // #include "shapelet_basis.h"
-#include "woden_settings.h"
+// #include "woden_settings.h"
 #include "visibility_set.h"
 
 

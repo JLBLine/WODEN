@@ -15,7 +15,7 @@ path.append('{:s}/../../../wodenpy/skymodel'.format(code_dir))
 path.append('{:s}/../../../wodenpy'.format(code_dir))
 
 # ##Code we are testing
-import read_yaml_skymodel
+# import read_yaml_skymodel
 # import wodenpy
 from woden_skymodel import Component_Type_Counter, CompTypes
 from chunk_sky_model import map_chunk_pointgauss, Skymodel_Chunk_Map
@@ -45,6 +45,8 @@ class Test(BaseChunkTest):
         full_comp_counter = fill_comp_counter(num_points, num_gauss,
                                             num_shapes, num_coeff_per_shape,
                                             num_list_values, num_time_steps)
+        
+        full_comp_counter.total_components()
         
         comps_per_chunk = int(np.floor(max_num_visibilities / (num_baselines * num_freqs * num_time_steps)))
         

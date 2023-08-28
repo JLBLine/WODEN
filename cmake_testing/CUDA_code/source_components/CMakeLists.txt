@@ -22,7 +22,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   ##Now to add the tests in
   ##----------------------------------------------------------------------------
 
-  ##Test flux extrapolation
+  #Test flux extrapolation
   add_executable(test_extrap_stokes_${PRECISION}_app
       test_extrap_stokes.c
       common_testing_functions.c
@@ -99,10 +99,6 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
       test_kern_calc_visi_common.c
       common_testing_functions.c
       ${CMAKE_SOURCE_DIR}/src/shapelet_basis.c
-      ${CMAKE_SOURCE_DIR}/src/chunk_sky_model.c
-      ${CMAKE_SOURCE_DIR}/src/create_sky_model.c
-      ${CMAKE_SOURCE_DIR}/src/read_text_skymodel.c
-      ${CMAKE_SOURCE_DIR}/src/read_yaml_skymodel.c
   )
   target_link_libraries(test_kern_calc_visi_point_${PRECISION}_app
       Unity

@@ -264,34 +264,34 @@ class Test(unittest.TestCase):
 
         self.assertEqual('Gaussian', args.primary_beam)
 
-        ##Should be pointed at phase centre with False FWHM and ref freq
+        ##Should be pointed at phase centre with default 20.0 FWHM and ref freq 150e+6
         ##as none of these have been specified
         self.assertEqual(args.ra0, args.gauss_ra_point)
         self.assertEqual(args.dec0, args.gauss_dec_point)
-        self.assertFalse(args.gauss_beam_FWHM)
-        self.assertFalse(args.gauss_beam_ref_freq)
+        self.assertEqual(20.0, args.gauss_beam_FWHM)
+        self.assertEqual(150e+6, args.gauss_beam_ref_freq)
 
         ##Keep adding in optional arguments and checking they end up manifesting
         self.inputs.append('--gauss_ra_point=234.0')
         args = self.run_parser_and_check_args()
         self.assertEqual(234.0, args.gauss_ra_point)
         self.assertEqual(args.dec0, args.gauss_dec_point)
-        self.assertFalse(args.gauss_beam_FWHM)
-        self.assertFalse(args.gauss_beam_ref_freq)
+        self.assertEqual(20.0, args.gauss_beam_FWHM)
+        self.assertEqual(150e+6, args.gauss_beam_ref_freq)
 
         self.inputs.append('--gauss_dec_point=19.0')
         args = self.run_parser_and_check_args()
         self.assertEqual(234.0, args.gauss_ra_point)
         self.assertEqual(19.0, args.gauss_dec_point)
-        self.assertFalse(args.gauss_beam_FWHM)
-        self.assertFalse(args.gauss_beam_ref_freq)
+        self.assertEqual(20.0, args.gauss_beam_FWHM)
+        self.assertEqual(150e+6, args.gauss_beam_ref_freq)
 
         self.inputs.append('--gauss_beam_FWHM=64.0')
         args = self.run_parser_and_check_args()
         self.assertEqual(234.0, args.gauss_ra_point)
         self.assertEqual(19.0, args.gauss_dec_point)
         self.assertEqual(64.0, args.gauss_beam_FWHM)
-        self.assertFalse(args.gauss_beam_ref_freq)
+        self.assertEqual(150e+6, args.gauss_beam_ref_freq)
 
         self.inputs.append('--gauss_beam_ref_freq=291e+6')
         args = self.run_parser_and_check_args()

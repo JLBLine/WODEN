@@ -285,20 +285,17 @@ __device__ void extrap_stokes_curved_power_law(components_t d_components,
            user_precision_t * flux_I, user_precision_t * flux_Q,
            user_precision_t * flux_U, user_precision_t * flux_V){
 
-  double d_freq = d_extrap_freqs[iFreq]/1e+6;
-  double d_ref_freq = d_components.curve_ref_freqs[iFluxComp]/1e+6;
+  double d_freq = d_extrap_freqs[iFreq];
+  double d_ref_freq = d_components.curve_ref_freqs[iFluxComp];
 
   user_precision_t si_ratio = pow(d_freq / d_ref_freq, d_components.curve_SIs[iFluxComp]);
 
-  double logfreq = log(d_freq);
-  double logfreq_ref = log(d_ref_freq);
+  double log_freq_ratio = log(d_freq / d_ref_freq);
 
   double q = (double)d_components.curve_qs[iFluxComp];
+  double exp_bit = exp(q*log_freq_ratio*log_freq_ratio);
 
-  double exp_extrap = exp(q*logfreq*logfreq);
-  double exp_ref = exp(q*logfreq_ref*logfreq_ref);
-
-  user_precision_t flux_ratio = si_ratio * (exp_extrap / exp_ref);
+  user_precision_t flux_ratio = si_ratio * exp_bit;
 
   * flux_I = d_components.curve_ref_stokesI[iFluxComp] * flux_ratio;
   * flux_Q = d_components.curve_ref_stokesQ[iFluxComp] * flux_ratio;

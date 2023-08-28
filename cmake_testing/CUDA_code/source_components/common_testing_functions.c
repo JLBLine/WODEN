@@ -163,14 +163,15 @@ void extrap_stokes_curved_power_law(components_t *components,
   //                                 components->curve_qs[iCurveComp],
   //                                 components->curve_ref_stokesI[iCurveComp]);
 
+
   double extrap_freq = extrap_freqs[iFreq];
-  double si_ratio = pow(extrap_freq / components->curve_ref_freqs[iCurveComp],
+  double ref_freq = components->curve_ref_freqs[iCurveComp];
+
+  double si_ratio = pow(extrap_freq / ref_freq,
                                              components->curve_SIs[iCurveComp]);
+  double log_ratio = log(extrap_freq / ref_freq);
 
-  double exp_numer = exp((double)components->curve_qs[iCurveComp]*log(extrap_freq)*log(extrap_freq));
-  double exp_denom = exp((double)components->curve_qs[iCurveComp]*log(components->curve_ref_freqs[iCurveComp])*log(components->curve_ref_freqs[iCurveComp]));
-
-  double exp_ratio = exp_numer / exp_denom;
+  double exp_ratio = exp((double)components->curve_qs[iCurveComp]*log_ratio*log_ratio);
 
   // printf("%d %.4f %.4f %.4f\n",iCurveComp, si_ratio, exp_ratio );
 

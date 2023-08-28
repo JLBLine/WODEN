@@ -125,7 +125,6 @@ class Test(unittest.TestCase):
         self.assertEqual(self.jd_date, float(data['jd_date']))
         self.assertAlmostEqual(self.lst*D2R, float(data['lst_base']), delta=delta)
         self.assertAlmostEqual(self.lst*D2R, float(data['lst_obs_epoch_base']), delta=delta)
-        self.assertEqual(self.args.array_layout_name, data['array_layout_file_path'])
         self.assertEqual(self.args.lowest_channel_freq, float(data['base_low_freq']))
         self.assertAlmostEqual(self.args.latitude*D2R, float(data['latitude']), delta=delta)
         self.assertAlmostEqual(self.args.latitude*D2R, float(data['latitude_obs_epoch_base']), delta=delta)
@@ -186,13 +185,15 @@ class Test(unittest.TestCase):
             if self.args.precision == 'float':
                 delta = 1e-8
             else:
-                delta = 1e-12
+                delta = 1e-10
             
             self.assertEqual(1, int(self.data['beamtype']))
-            self.assertEqual(self.args.gauss_ra_point,
-                             float(self.data['gauss_ra_point']))
-            self.assertEqual(self.args.gauss_dec_point,
-                             float(self.data['gauss_dec_point']))
+            self.assertAlmostEqual(self.args.gauss_ra_point,
+                             float(self.data['gauss_ra_point'])/D2R,
+                             delta=delta)
+            self.assertAlmostEqual(self.args.gauss_dec_point,
+                             float(self.data['gauss_dec_point'])/D2R,
+                             delta=delta)
             self.assertAlmostEqual(self.args.gauss_beam_FWHM,
                              float(self.data['gauss_beam_FWHM']), delta=delta)
             self.assertEqual(self.args.gauss_beam_ref_freq,

@@ -603,7 +603,8 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
 
 def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
                               max_num_visibilities : int, num_baselines : int,
-                              num_freqs : int, num_time_steps : int) -> list:
+                              num_freqs : int, num_time_steps : int,
+                              text_file=False) -> list:
     """Given all the information in `comp_counter`, make a map of how to split
     the whole sky model up into managable chunks to fit in memory. The
     purpose of this function is to record what to 'malloc' in each
@@ -656,7 +657,8 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
                                         shape_basis_to_orig_comp_index_map,
                                         shape_basis_to_comp_type_map,
                                         shape_basis_param_index,
-                                        chunk_ind, comps_per_chunk)
+                                        chunk_ind, comps_per_chunk,
+                                        text_file = text_file)
         
         # print("INTERNAL", chunk_map.n_shape_powers, chunk_map.n_shape_curves,
         #       chunk_map.n_shape_lists)

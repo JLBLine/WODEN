@@ -19,12 +19,10 @@ ref_power_SIs = np.random.uniform(-1.5, 0.5, num_powers)
 
 ##=======CURVED_POWER_LAW=======================================================
 
-##want to have peaks between 100 and 200MHz so we can visually see things
-##in this test, so define curvature and peak freq, and calculate SI from that
-peak_freqs = np.random.uniform(100, 200, num_curves)*1e+6
-ref_qs = np.random.uniform(-2, 0.5, num_curves)
-ref_curve_SIs = -2*ref_qs*np.log(peak_freqs)
-
+##values pulled from model fits to LoBES data
+peak_freqs = np.full(num_curves, 200e+6)
+ref_qs = np.array([-97.84566905227955, -61.35088837660374, -50.261982794006705, -37.02511335038339, -27.508612676088035, -24.11959140550856])
+ref_curve_SIs = np.array([13.61573411778445, -11.865678289475948, -5.253601109072504, -13.02573431107171, -4.872129006896461, -6.74721494287138])
 
 ##=======LIST_STUFF=============================================================
 

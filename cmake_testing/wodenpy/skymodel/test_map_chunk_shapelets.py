@@ -52,6 +52,8 @@ class Test(BaseChunkTest):
                                             num_shapes, num_coeff_per_shape,
                                             num_list_values, num_time_steps)
         
+        full_comp_counter.total_components()
+        
         coeffs_per_chunk = int(np.floor(max_num_visibilities / (num_baselines * num_freqs * num_time_steps)))
         num_coeffs_to_chunk = full_comp_counter.total_shape_basis
         num_chunks = int(np.ceil(num_coeffs_to_chunk / coeffs_per_chunk))
@@ -60,13 +62,15 @@ class Test(BaseChunkTest):
         # ##to previous chunks
         # expec_counter = Expec_Counter()
         
-        shape_basis_to_orig_index_map, shape_basis_to_comp_type_map = create_shape_basis_maps(full_comp_counter)
+        shape_basis_to_orig_comp_index_map, shape_basis_to_comp_type_map, shape_basis_param_index = create_shape_basis_maps(full_comp_counter)
         
         for chunk_ind in range(num_chunks):
             chunk_map = map_chunk_shapelets(full_comp_counter,
-                                            shape_basis_to_orig_index_map,
-                                            shape_basis_to_comp_type_map,
-                                            chunk_ind, coeffs_per_chunk)
+                                        shape_basis_to_orig_comp_index_map,
+                                        shape_basis_to_comp_type_map,
+                                        shape_basis_param_index,
+                                        chunk_ind, coeffs_per_chunk,
+                                        text_file=True)
             
             self.check_shapelet_chunking(chunk_ind, num_coeff_per_shape,
                                          coeffs_per_chunk,

@@ -46,11 +46,14 @@ class Test(BaseChunkTest):
                                          num_shapes, num_coeff_per_shape,
                                          num_list_values, num_time_steps)
         
+        comp_counter.total_components()
+        
         
         ##Run the code we are testing!
         chunked_skymodel_counters = create_skymodel_chunk_map(comp_counter,
                                         max_num_visibilities, num_baselines,
-                                        num_freqs, num_time_steps)
+                                        num_freqs, num_time_steps,
+                                        text_file = True)
         
         comps_per_chunk = int(np.floor(max_num_visibilities / (num_baselines * num_freqs * num_time_steps)))
         
