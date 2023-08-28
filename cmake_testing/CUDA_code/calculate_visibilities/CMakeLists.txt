@@ -53,91 +53,91 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
 
 
 
-#  ##Test the main calculate_visibilities function using the gaussian primary beam
-#  add_executable(test_calculate_visibilities_gaussbeam_${PRECISION}_app
-#      test_calculate_visibilities_gaussbeam.c
-#      test_calculate_visibilities_common.c
-#  )
-#  target_link_libraries(test_calculate_visibilities_gaussbeam_${PRECISION}_app
-#      calculate_visibilities_Cdepends_${PRECISION}
-#      calculate_visibilitiesCUDA_${PRECISION}
-#      ${CC_LINKLIBS}
-#      Unity
-#  )
-#  target_compile_options(test_calculate_visibilities_gaussbeam_${PRECISION}_app
-#                                                          PRIVATE ${C_FLAGS})
-#  add_test(CUDA_test_calculate_visibilities_gaussbeam_${PRECISION}
-#           test_calculate_visibilities_gaussbeam_${PRECISION}_app)
+ ##Test the main calculate_visibilities function using the gaussian primary beam
+ add_executable(test_calculate_visibilities_gaussbeam_${PRECISION}_app
+     test_calculate_visibilities_gaussbeam.c
+     test_calculate_visibilities_common.c
+ )
+ target_link_libraries(test_calculate_visibilities_gaussbeam_${PRECISION}_app
+     calculate_visibilities_Cdepends_${PRECISION}
+     calculate_visibilitiesCUDA_${PRECISION}
+     ${CC_LINKLIBS}
+     Unity
+ )
+ target_compile_options(test_calculate_visibilities_gaussbeam_${PRECISION}_app
+                                                         PRIVATE ${C_FLAGS})
+ add_test(CUDA_test_calculate_visibilities_gaussbeam_${PRECISION}
+          test_calculate_visibilities_gaussbeam_${PRECISION}_app)
 
 
 
-#  ##Test the main calculate_visibilities function using the EDA2 primary beam
-#  add_executable(test_calculate_visibilities_edabeam_${PRECISION}_app
-#      test_calculate_visibilities_edabeam.c
-#      test_calculate_visibilities_common.c
-#  )
-#  target_link_libraries(test_calculate_visibilities_edabeam_${PRECISION}_app
-#      calculate_visibilities_Cdepends_${PRECISION}
-#      calculate_visibilitiesCUDA_${PRECISION}
-#      ${CC_LINKLIBS}
-#      Unity
-#  )
-#  target_compile_options(test_calculate_visibilities_edabeam_${PRECISION}_app
-#                                                          PRIVATE ${C_FLAGS})
-#  add_test(CUDA_test_calculate_visibilities_edabeam_${PRECISION}
-#           test_calculate_visibilities_edabeam_${PRECISION}_app)
+ ##Test the main calculate_visibilities function using the EDA2 primary beam
+ add_executable(test_calculate_visibilities_edabeam_${PRECISION}_app
+     test_calculate_visibilities_edabeam.c
+     test_calculate_visibilities_common.c
+ )
+ target_link_libraries(test_calculate_visibilities_edabeam_${PRECISION}_app
+     calculate_visibilities_Cdepends_${PRECISION}
+     calculate_visibilitiesCUDA_${PRECISION}
+     ${CC_LINKLIBS}
+     Unity
+ )
+ target_compile_options(test_calculate_visibilities_edabeam_${PRECISION}_app
+                                                         PRIVATE ${C_FLAGS})
+ add_test(CUDA_test_calculate_visibilities_edabeam_${PRECISION}
+          test_calculate_visibilities_edabeam_${PRECISION}_app)
 
 
 
-#  ##Test the main calculate_visibilities function using the mwa fee primary beam
-#  add_executable(test_calculate_visibilities_mwafeebeam_${PRECISION}_app
-#      test_calculate_visibilities_mwafeebeam.c
-#      test_calculate_visibilities_common.c
-#  )
-#  target_link_libraries(test_calculate_visibilities_mwafeebeam_${PRECISION}_app
-#      calculate_visibilities_Cdepends_${PRECISION}
-#      calculate_visibilitiesCUDA_${PRECISION}
-#      ${CC_LINKLIBS}
-#      Unity
-#  )
-#  target_compile_options(test_calculate_visibilities_mwafeebeam_${PRECISION}_app
-#                                                          PRIVATE ${C_FLAGS})
-#  add_test(CUDA_test_calculate_visibilities_mwafeebeam_${PRECISION}
-#           test_calculate_visibilities_mwafeebeam_${PRECISION}_app)
+ ##Test the main calculate_visibilities function using the mwa fee primary beam
+ add_executable(test_calculate_visibilities_mwafeebeam_${PRECISION}_app
+     test_calculate_visibilities_mwafeebeam.c
+     test_calculate_visibilities_common.c
+ )
+ target_link_libraries(test_calculate_visibilities_mwafeebeam_${PRECISION}_app
+     calculate_visibilities_Cdepends_${PRECISION}
+     calculate_visibilitiesCUDA_${PRECISION}
+     ${CC_LINKLIBS}
+     Unity
+ )
+ target_compile_options(test_calculate_visibilities_mwafeebeam_${PRECISION}_app
+                                                         PRIVATE ${C_FLAGS})
+ add_test(CUDA_test_calculate_visibilities_mwafeebeam_${PRECISION}
+          test_calculate_visibilities_mwafeebeam_${PRECISION}_app)
 
 
-#  # ##Test the main calculate_visibilities function using the mwa fee primary beam
-#  add_executable(test_calculate_visibilities_mwafeebeaminterp_${PRECISION}_app
-#      test_calculate_visibilities_mwafeebeaminterp.c
-#      test_calculate_visibilities_common.c
-#  )
-#  target_link_libraries(test_calculate_visibilities_mwafeebeaminterp_${PRECISION}_app
-#      calculate_visibilities_Cdepends_${PRECISION}
-#      calculate_visibilitiesCUDA_${PRECISION}
-#      ${CC_LINKLIBS}
-#      Unity
-#  )
-#  target_compile_options(test_calculate_visibilities_mwafeebeaminterp_${PRECISION}_app
-#                                                          PRIVATE ${C_FLAGS})
-#  add_test(CUDA_test_calculate_visibilities_mwafeebeaminterp_${PRECISION}
-#  test_calculate_visibilities_mwafeebeaminterp_${PRECISION}_app)
+ # ##Test the main calculate_visibilities function using the mwa fee primary beam
+ add_executable(test_calculate_visibilities_mwafeebeaminterp_${PRECISION}_app
+     test_calculate_visibilities_mwafeebeaminterp.c
+     test_calculate_visibilities_common.c
+ )
+ target_link_libraries(test_calculate_visibilities_mwafeebeaminterp_${PRECISION}_app
+     calculate_visibilities_Cdepends_${PRECISION}
+     calculate_visibilitiesCUDA_${PRECISION}
+     ${CC_LINKLIBS}
+     Unity
+ )
+ target_compile_options(test_calculate_visibilities_mwafeebeaminterp_${PRECISION}_app
+                                                         PRIVATE ${C_FLAGS})
+ add_test(CUDA_test_calculate_visibilities_mwafeebeaminterp_${PRECISION}
+ test_calculate_visibilities_mwafeebeaminterp_${PRECISION}_app)
 
 
-#  # ##Test the main calculate_visibilities function using the mwa anaytic beam
-#  add_executable(test_calculate_visibilities_mwaanalybeam_${PRECISION}_app
-#      test_calculate_visibilities_mwaanalybeam.c
-#      test_calculate_visibilities_common.c
-#  )
-#  target_link_libraries(test_calculate_visibilities_mwaanalybeam_${PRECISION}_app
-#      calculate_visibilities_Cdepends_${PRECISION}
-#      calculate_visibilitiesCUDA_${PRECISION}
-#      ${CC_LINKLIBS}
-#      Unity
-#  )
-#  target_compile_options(test_calculate_visibilities_mwaanalybeam_${PRECISION}_app
-#                                                          PRIVATE ${C_FLAGS})
-#  add_test(CUDA_test_calculate_visibilities_mwaanalybeam_${PRECISION}
-#  test_calculate_visibilities_mwaanalybeam_${PRECISION}_app)
+ # ##Test the main calculate_visibilities function using the mwa anaytic beam
+ add_executable(test_calculate_visibilities_mwaanalybeam_${PRECISION}_app
+     test_calculate_visibilities_mwaanalybeam.c
+     test_calculate_visibilities_common.c
+ )
+ target_link_libraries(test_calculate_visibilities_mwaanalybeam_${PRECISION}_app
+     calculate_visibilities_Cdepends_${PRECISION}
+     calculate_visibilitiesCUDA_${PRECISION}
+     ${CC_LINKLIBS}
+     Unity
+ )
+ target_compile_options(test_calculate_visibilities_mwaanalybeam_${PRECISION}_app
+                                                         PRIVATE ${C_FLAGS})
+ add_test(CUDA_test_calculate_visibilities_mwaanalybeam_${PRECISION}
+ test_calculate_visibilities_mwaanalybeam_${PRECISION}_app)
 
 endforeach()
 
