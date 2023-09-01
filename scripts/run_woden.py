@@ -52,7 +52,7 @@ def woden_thread(the_queue, run_woden, woden_settings, visibility_set, array_lay
         
 def read_skymodel_thread(the_queue, chunked_skymodel_maps: list,
                                     max_num_chunks : int,
-                                    lsts : np.ndarray,
+                                    lsts : np.ndarray, latitude : float,
                                     args : argparse.Namespace,
                                     beamtype : int):
     
@@ -63,20 +63,11 @@ def read_skymodel_thread(the_queue, chunked_skymodel_maps: list,
         print(f"Reading chunks skymodel chunks {lower_chunk_iter}:{lower_chunk_iter+max_num_chunks}")
         t_before = time()
     
-        # source_catalogue = read_yaml_skymodel_chunks(args.cat_filename, chunk_map_subset,
-        #                                              args.num_freq_channels,
-        #                                              args.num_time_steps,
-        #                                              beamtype,
-        #                                              lsts, args.latitude*D2R,
-        #                                              precision=args.precision)
-        
-        ##TODO need some kind of function that knows what kind of skymodel
-        ##we have, and then to select correct functions based on that
         source_catalogue = read_skymodel_chunks(args.cat_filename, chunk_map_subset,
                                                      args.num_freq_channels,
                                                      args.num_time_steps,
                                                      beamtype,
-                                                     lsts, args.latitude*D2R,
+                                                     lsts, latitude,
                                                      precision=args.precision)
         
         the_queue.put(source_catalogue, block=True)
@@ -143,7 +134,7 @@ def main():
 
         ##calculate the array layout
         array_layout = calc_XYZ_diffs(woden_settings, args)
-        
+
         # ##read in and chunk the sky model=======================================
         print("Doing the initial reading/mapping of sky model into chunks")
         t_before = time()
@@ -156,8 +147,10 @@ def main():
         if args.sky_crop_sources:
             crop_by_component = False
             
-        comp_counter = crop_below_horizon(lst_deg*D2R, args.latitude*D2R, comp_counter,
-                                            crop_by_component=crop_by_component)
+        comp_counter = crop_below_horizon(woden_settings.lsts[0],
+                                          woden_settings.latitude,
+                                          comp_counter,
+                                          crop_by_component=crop_by_component)
         
         chunked_skymodel_maps = create_skymodel_chunk_map(comp_counter,
                                             args.chunking_size, woden_settings.num_baselines,
@@ -181,7 +174,8 @@ def main():
         
         t1 = Thread(target = read_skymodel_thread,
                     args =(the_queue, chunked_skymodel_maps,
-                                    max_num_chunks, lsts, args,
+                                    max_num_chunks, lsts,
+                                    woden_settings.latitude, args,
                                     woden_settings.beamtype), daemon=True)
         
         t2 = Thread(target = woden_thread, args =(the_queue, run_woden,
