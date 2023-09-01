@@ -16,9 +16,8 @@ from wodenpy.use_libwoden.visibility_set import setup_visi_set, load_visibility_
 from wodenpy.wodenpy_setup.run_setup import get_parser, check_args, get_code_version
 from wodenpy.use_libwoden.use_libwoden import load_in_woden_library
 from wodenpy.observational.calc_obs import get_uvfits_date_and_position_constants, calc_jdcal
-from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes, crop_below_horizon
-from wodenpy.skymodel.read_yaml_skymodel import read_yaml_radec_count_components, read_yaml_skymodel_chunks
-from wodenpy.skymodel.read_fits_skymodel import read_fits_radec_count_components, read_fits_skymodel_chunks
+from wodenpy.skymodel.woden_skymodel import crop_below_horizon
+from wodenpy.skymodel.read_skymodel import read_skymodel_chunks, read_radec_count_components
 from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map
 from wodenpy.array_layout.create_array_layout import calc_XYZ_diffs, enh2xyz
 from wodenpy.uvfits.wodenpy_uvfits import make_antenna_table, make_baseline_date_arrays, create_uvfits
@@ -73,7 +72,7 @@ def read_skymodel_thread(the_queue, chunked_skymodel_maps: list,
         
         ##TODO need some kind of function that knows what kind of skymodel
         ##we have, and then to select correct functions based on that
-        source_catalogue = read_fits_skymodel_chunks(args.cat_filename, chunk_map_subset,
+        source_catalogue = read_skymodel_chunks(args.cat_filename, chunk_map_subset,
                                                      args.num_freq_channels,
                                                      args.num_time_steps,
                                                      beamtype,
@@ -148,10 +147,8 @@ def main():
         # ##read in and chunk the sky model=======================================
         print("Doing the initial reading/mapping of sky model into chunks")
         t_before = time()
-        # comp_counter = read_yaml_radec_count_components(args.cat_filename)
-        ##TODO need some kind of function that knows what kind of skymodel
-        ##we have, and then to select correct functions based on that
-        comp_counter = read_fits_radec_count_components(args.cat_filename)
+        
+        comp_counter = read_radec_count_components(args.cat_filename)
         t_after = time()
         print(f"Mapping took {(t_after - t_before)/60.0:.1f} mins")
     

@@ -865,15 +865,13 @@ class _Components_Python(object):
 
 class _Ctype_Source_Into_Python(object):
     """
-    
+    Class to convert a ctype Source model into a pythonic version
     """
     
     def __init__(self, source : Union[Source_Float, Source_Double]):
         """
         docstring
         """
-        
-        print(source.n_point_lists)
         
         self.n_points = source.n_points
         self.n_point_lists = source.n_point_lists
