@@ -38,7 +38,6 @@ add_subdirectory(C_code)
 ## Test CUDA code
 add_subdirectory(CUDA_code)
 
-
 ## Test python library
 add_subdirectory(wodenpy)
 

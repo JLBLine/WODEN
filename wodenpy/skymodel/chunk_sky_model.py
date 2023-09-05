@@ -660,9 +660,6 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
                                         chunk_ind, comps_per_chunk,
                                         text_file = text_file)
         
-        # print("INTERNAL", chunk_map.n_shape_powers, chunk_map.n_shape_curves,
-        #       chunk_map.n_shape_lists)
-        
         chunked_skymodel_maps.append(chunk_map)
         
     print(f"After chunking there are {len(chunked_skymodel_maps)} chunks")

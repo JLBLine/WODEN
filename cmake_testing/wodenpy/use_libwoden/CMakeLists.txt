@@ -35,3 +35,8 @@ add_test(python_test_setup_lsts_and_phase_centre ${PYTHON_EXECUTABLE}
          ${CMAKE_CURRENT_SOURCE_DIR}/test_setup_lsts_and_phase_centre.py)
 set_tests_properties(python_test_setup_lsts_and_phase_centre PROPERTIES
          ENVIRONMENT CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})
+
+add_test(python_test_create_sbf ${PYTHON_EXECUTABLE}
+         ${CMAKE_CURRENT_SOURCE_DIR}/test_create_sbf.py)
+set_tests_properties(python_test_create_sbf PROPERTIES
+         ENVIRONMENT CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})

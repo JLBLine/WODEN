@@ -79,17 +79,6 @@ test_installation/list_fluxes
 
 .vscode
 
-
-cmake_testing/C_code/array_layout
-cmake_testing/C_code/chunk_sky_model
-cmake_testing/C_code/CMakeLists.txt
-cmake_testing/C_code/create_sky_model
-cmake_testing/C_code/primary_beam
-cmake_testing/C_code/read_text_skymodel
-cmake_testing/C_code/read_yaml_skymodel
-cmake_testing/C_code/visibility_set
-cmake_testing/C_code/woden_settings
-
 wodenpy/libwoden*.so
 
 *.uvfits

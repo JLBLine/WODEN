@@ -263,13 +263,8 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
         components.decs[low_pow_chunk:high_pow_chunk] = expec_dec[low_pow_coord:high_pow_coord]
         
         # ##power law for FITS sky model is locked to a reference freq of 200MHz
-        # if fits_skymodel:
-            
         components.power_ref_freqs[:num_chunk_power] = 200e+6
             
-        # else:
-        #     components.power_ref_freqs[:num_chunk_power] = expec_pow_fluxes[low_pow_coord:high_pow_coord]
-        
         ##Actual FITS model is read in at 200MHz
         if fits_skymodel:
             components.power_ref_stokesI[:num_chunk_power] = expec_pow_fluxes[low_pow_coord:high_pow_coord]
@@ -281,10 +276,6 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
             components.power_ref_stokesI[:num_chunk_power] = expec_pow_fluxes[low_pow_coord:high_pow_coord]*(200e+6 / ref_freqs)**(expec_pow_fluxes[low_pow_coord:high_pow_coord]/100.0)
             components.power_SIs[:num_chunk_power] = expec_pow_fluxes[low_pow_coord:high_pow_coord]/100.0
         
-        # ref_freqs = 100e+6 + (expec_pow_fluxes[low_pow_coord:high_pow_coord] + 1)*1e+4
-        # print(expec_pow_fluxes[low_pow_coord:high_pow_coord]*(200e+6 / ref_freqs)**(expec_pow_fluxes[low_pow_coord:high_pow_coord]/100.0))
-        # print(components.power_ref_stokesI[:num_chunk_power])
-            
         components.power_ref_stokesQ[:num_chunk_power] = expec_pow_fluxes[low_pow_coord:high_pow_coord]
         components.power_ref_stokesU[:num_chunk_power] = expec_pow_fluxes[low_pow_coord:high_pow_coord]
         components.power_ref_stokesV[:num_chunk_power] = expec_pow_fluxes[low_pow_coord:high_pow_coord]
@@ -375,10 +366,7 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
         ##we have a different behaviour where we just have as many columns as
         ##`num_list_values`. Title the column by index, which is read in as MHz,
         ##so need to mulitply expected vaulues by 1e+6
-        # if fits_skymodel:
         components.list_freqs = np.tile(np.arange(num_list_values)*1e+6, num_chunk_list)
-        # else:
-            # components.list_freqs = expec_flux
             
         components.list_stokesI = expec_flux
         components.list_stokesQ = expec_flux
@@ -439,35 +427,15 @@ def populate_shapelet_chunk(expec_chunk : Expected_Sky_Chunk,
         components.pas[new_comp_ind] = orig_ind*D2R
         
         # ##these are the basis function values for this particular chunk
-        # ##things get ordered the way we expect with the FITS reader
-        # if fits_skymodel:
         components.n1s = chunk_basis_values
         components.n2s = chunk_basis_values
         components.shape_coeffs = chunk_basis_values
         components.param_indexes = chunk_basis_param_indexes
         # else:
             
-        #     ##HOWEVER in the yaml code that reads things in, it doesn't care
-        #     ##about the power,curve,list ordering because there is an
-        #     ##array to do that ordering (param_indexes). So these things
-        #     ##are read in as they appear in the srclist, meaning we
-        #     ##need to reorder our prediction by argsorting via the basis
-        #     ##values (as they increment with appearence.) ffffffuuuuuuuu
-            
-        #     reorder = np.argsort(chunk_basis_values)
-        #     components.n1s = chunk_basis_values[reorder]
-        #     components.n2s = chunk_basis_values[reorder]
-        #     components.shape_coeffs = chunk_basis_values[reorder]
-        #     components.param_indexes = chunk_basis_param_indexes[reorder]
-        
 
         ##This means we have a power law source
         if old_comp_ind < num_crop_comp:
-            # if fits_skymodel:
-            #     components.power_ref_freqs[power_comp_ind] = 200e+6
-            # else:
-            #     components.power_ref_freqs[power_comp_ind] = orig_ind
-            
             ##Actual FITS model is read in at 200MHz
             if fits_skymodel:
                 components.power_ref_stokesI[power_comp_ind] = orig_ind
