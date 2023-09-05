@@ -432,6 +432,10 @@ class Component_Info(object):
         
         ##parent source name; useful for debugging
         self.source_name = ''
+        
+        ##used when converting other skymodel formats into a FITS style
+        self.norm_comp_pl = np.nan
+        self.norm_comp_cpl = np.nan
     
     
     ##bunch of methods to get information is determining component

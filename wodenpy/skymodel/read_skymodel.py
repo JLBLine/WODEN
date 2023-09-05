@@ -9,7 +9,7 @@ import sys
 
 def read_radec_count_components(skymodel_path : str) -> Component_Type_Counter:
     
-    # ##Figure out if our skymodel is supported or not
+    ##Figure out if our skymodel is supported or not
     if skymodel_path[-5:] == '.fits':
         comp_counter = read_fits_radec_count_components(skymodel_path)
     

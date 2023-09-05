@@ -268,7 +268,5 @@ def main():
                           array_height=args.array_height,
                           telescope_name=args.telescope_name)
 
-
 if __name__ == "__main__":
     main()
-    

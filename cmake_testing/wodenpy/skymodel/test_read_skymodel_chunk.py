@@ -36,8 +36,6 @@ from test_read_FITS_skymodel_chunk import write_full_test_skymodel_fits
 from test_read_yaml_skymodel_chunk import write_full_test_skymodel_yaml
 
 D2R = np.pi/180.0
-# MWA_LATITUDE = -26.7*D2R
-
 MWA_LAT = -26.703319405555554*D2R
 
 ##for now, WODEN has three flux types: power law, curved power law, and list

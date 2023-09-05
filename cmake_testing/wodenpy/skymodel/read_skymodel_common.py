@@ -41,7 +41,7 @@ RTOL=1e-10
 
 def check_components(found_comps, expec_comps,
                      n_powers, n_curves, n_lists,
-                     rtol=RTOL,fits_skymodel=False):
+                     rtol=RTOL,fits_skymodel=True):
         
     # print(n_powers, n_curves, n_lists)
     # print("found", found_comps.ras)
@@ -56,6 +56,7 @@ def check_components(found_comps, expec_comps,
                                 rtol=rtol)
     
     if n_powers > 0:
+        
         npt.assert_allclose(found_comps.power_ref_freqs,
                                 expec_comps.power_ref_freqs, rtol=rtol)
         npt.assert_allclose(found_comps.power_ref_stokesI,
@@ -117,7 +118,7 @@ def check_components(found_comps, expec_comps,
 
 
 def check_all_sources(expected_chunks, source_catalogue,
-                      fits_skymodel=False):
+                      fits_skymodel=True):
     
     rtol = RTOL
 
@@ -201,18 +202,6 @@ def check_all_sources(expected_chunks, source_catalogue,
             npt.assert_allclose(found_comps.pas,
                                         expec_comps.pas, rtol=rtol)
             
-            # print("found ras", found_comps.ras/D2R)
-            # print("expec ras", expec_comps.ras/D2R)
-            
-            # print("found pas", found_comps.pas/D2R)
-            # print("expec pas", expec_comps.pas/D2R)
-            
-            # print("found n1s", found_comps.n1s)
-            # print("expec n1s", expec_comps.n1s)
-            
-            # print("found params indexes",found_comps.param_indexes)
-            # print("expec params indexes",expec_comps.param_indexes)
-            
             npt.assert_allclose(found_comps.n1s,
                                         expec_comps.n1s, rtol=rtol)
             npt.assert_allclose(found_comps.n2s,
@@ -232,7 +221,6 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
                             expec_pow_fluxes : np.ndarray,
                             expec_cur_fluxes : np.ndarray,
                             fits_skymodel = False) -> Expected_Sky_Chunk:
-    
     power_iter = 0
     curve_iter = 0
     list_iter = 0
@@ -267,7 +255,6 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
         
         
     if num_chunk_power:
-        
         low_pow_chunk = 0
         high_pow_chunk = num_chunk_power
         low_pow_coord = power_iter
@@ -275,19 +262,33 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
         components.ras[low_pow_chunk:high_pow_chunk] = expec_ra[low_pow_coord:high_pow_coord]
         components.decs[low_pow_chunk:high_pow_chunk] = expec_dec[low_pow_coord:high_pow_coord]
         
-        ##power law for FITS sky model is locked to a reference freq of 200MHz
+        # ##power law for FITS sky model is locked to a reference freq of 200MHz
+        # if fits_skymodel:
+            
+        components.power_ref_freqs[:num_chunk_power] = 200e+6
+            
+        # else:
+        #     components.power_ref_freqs[:num_chunk_power] = expec_pow_fluxes[low_pow_coord:high_pow_coord]
+        
+        ##Actual FITS model is read in at 200MHz
         if fits_skymodel:
-            components.power_ref_freqs[:num_chunk_power] = 200e+6
-            
+            components.power_ref_stokesI[:num_chunk_power] = expec_pow_fluxes[low_pow_coord:high_pow_coord]
+            components.power_SIs[:num_chunk_power] = expec_pow_fluxes[low_pow_coord:high_pow_coord]
+        ##Anything can be written a some other reference frequency, which
+        ##we should be extrapolating to 200MHz
         else:
-            components.power_ref_freqs[:num_chunk_power] = expec_pow_fluxes[low_pow_coord:high_pow_coord]
+            ref_freqs = 100e+6 + (expec_pow_fluxes[low_pow_coord:high_pow_coord] + 1)*1e+4
+            components.power_ref_stokesI[:num_chunk_power] = expec_pow_fluxes[low_pow_coord:high_pow_coord]*(200e+6 / ref_freqs)**(expec_pow_fluxes[low_pow_coord:high_pow_coord]/100.0)
+            components.power_SIs[:num_chunk_power] = expec_pow_fluxes[low_pow_coord:high_pow_coord]/100.0
+        
+        # ref_freqs = 100e+6 + (expec_pow_fluxes[low_pow_coord:high_pow_coord] + 1)*1e+4
+        # print(expec_pow_fluxes[low_pow_coord:high_pow_coord]*(200e+6 / ref_freqs)**(expec_pow_fluxes[low_pow_coord:high_pow_coord]/100.0))
+        # print(components.power_ref_stokesI[:num_chunk_power])
             
-            
-        components.power_ref_stokesI[:num_chunk_power] = expec_pow_fluxes[low_pow_coord:high_pow_coord]
         components.power_ref_stokesQ[:num_chunk_power] = expec_pow_fluxes[low_pow_coord:high_pow_coord]
         components.power_ref_stokesU[:num_chunk_power] = expec_pow_fluxes[low_pow_coord:high_pow_coord]
         components.power_ref_stokesV[:num_chunk_power] = expec_pow_fluxes[low_pow_coord:high_pow_coord]
-        components.power_SIs[:num_chunk_power] = expec_pow_fluxes[low_pow_coord:high_pow_coord]
+        
         
         components.power_comp_inds = np.arange(num_chunk_power)
         
@@ -307,15 +308,30 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
         
         ##curved power law for FITS sky model is locked to a reference freq of 200MHz
         if fits_skymodel:
-            components.curve_ref_freqs[:num_chunk_curve] = 200e+6
+            components.curve_ref_stokesI[:num_chunk_curve] = expec_cur_fluxes[low_cur_coord:high_cur_coord]
+            components.curve_SIs[:num_chunk_curve] = expec_cur_fluxes[low_cur_coord:high_cur_coord]
+            components.curve_qs[:num_chunk_curve] = expec_cur_fluxes[low_cur_coord:high_cur_coord]
         else:
-            components.curve_ref_freqs[:num_chunk_curve] = expec_cur_fluxes[low_cur_coord:high_cur_coord]
-        components.curve_ref_stokesI[:num_chunk_curve] = expec_cur_fluxes[low_cur_coord:high_cur_coord]
+            
+            ref_freqs = 100e+6 + (expec_cur_fluxes[low_cur_coord:high_cur_coord] + 1)*1e+4
+            sis =  expec_cur_fluxes[low_cur_coord:high_cur_coord] / 100.0
+            curve_qs =  expec_cur_fluxes[low_cur_coord:high_cur_coord] / 100.0
+            
+            
+            si_ratio = (200e+6 / ref_freqs)**sis
+            exp_bit = np.exp(curve_qs*np.log(200e+6 / ref_freqs)**2)
+            expec_Is = expec_cur_fluxes[low_cur_coord:high_cur_coord]*si_ratio*exp_bit
+            
+            components.curve_ref_stokesI[:num_chunk_curve] = expec_Is
+            components.curve_SIs[:num_chunk_curve] = sis
+            components.curve_qs[:num_chunk_curve] = curve_qs
+            
+        components.curve_ref_freqs[:num_chunk_curve] = 200e+6
         components.curve_ref_stokesQ[:num_chunk_curve] = expec_cur_fluxes[low_cur_coord:high_cur_coord]
         components.curve_ref_stokesU[:num_chunk_curve] = expec_cur_fluxes[low_cur_coord:high_cur_coord]
         components.curve_ref_stokesV[:num_chunk_curve] = expec_cur_fluxes[low_cur_coord:high_cur_coord]
-        components.curve_SIs[:num_chunk_curve] = expec_cur_fluxes[low_cur_coord:high_cur_coord]
-        components.curve_qs[:num_chunk_curve] = expec_cur_fluxes[low_cur_coord:high_cur_coord]
+        
+        
         
         components.curve_comp_inds = np.arange(num_chunk_curve) + num_chunk_power
         
@@ -359,10 +375,10 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
         ##we have a different behaviour where we just have as many columns as
         ##`num_list_values`. Title the column by index, which is read in as MHz,
         ##so need to mulitply expected vaulues by 1e+6
-        if fits_skymodel:
-            components.list_freqs = np.tile(np.arange(num_list_values)*1e+6, num_chunk_list)
-        else:
-            components.list_freqs = expec_flux
+        # if fits_skymodel:
+        components.list_freqs = np.tile(np.arange(num_list_values)*1e+6, num_chunk_list)
+        # else:
+            # components.list_freqs = expec_flux
             
         components.list_stokesI = expec_flux
         components.list_stokesQ = expec_flux
@@ -422,40 +438,52 @@ def populate_shapelet_chunk(expec_chunk : Expected_Sky_Chunk,
         components.minors[new_comp_ind] = orig_ind*(D2R/3600.0)
         components.pas[new_comp_ind] = orig_ind*D2R
         
-        ##these are the basis function values for this particular chunk
-        ##things get ordered the way we expect with the FITS reader
-        if fits_skymodel:
-            components.n1s = chunk_basis_values
-            components.n2s = chunk_basis_values
-            components.shape_coeffs = chunk_basis_values
-            components.param_indexes = chunk_basis_param_indexes
-        else:
+        # ##these are the basis function values for this particular chunk
+        # ##things get ordered the way we expect with the FITS reader
+        # if fits_skymodel:
+        components.n1s = chunk_basis_values
+        components.n2s = chunk_basis_values
+        components.shape_coeffs = chunk_basis_values
+        components.param_indexes = chunk_basis_param_indexes
+        # else:
             
-            ##HOWEVER in the yaml code that reads things in, it doesn't care
-            ##about the power,curve,list ordering because there is an
-            ##array to do that ordering (param_indexes). So these things
-            ##are read in as they appear in the srclist, meaning we
-            ##need to reorder our prediction by argsorting via the basis
-            ##values (as they increment with appearence.) ffffffuuuuuuuu
+        #     ##HOWEVER in the yaml code that reads things in, it doesn't care
+        #     ##about the power,curve,list ordering because there is an
+        #     ##array to do that ordering (param_indexes). So these things
+        #     ##are read in as they appear in the srclist, meaning we
+        #     ##need to reorder our prediction by argsorting via the basis
+        #     ##values (as they increment with appearence.) ffffffuuuuuuuu
             
-            reorder = np.argsort(chunk_basis_values)
-            components.n1s = chunk_basis_values[reorder]
-            components.n2s = chunk_basis_values[reorder]
-            components.shape_coeffs = chunk_basis_values[reorder]
-            components.param_indexes = chunk_basis_param_indexes[reorder]
+        #     reorder = np.argsort(chunk_basis_values)
+        #     components.n1s = chunk_basis_values[reorder]
+        #     components.n2s = chunk_basis_values[reorder]
+        #     components.shape_coeffs = chunk_basis_values[reorder]
+        #     components.param_indexes = chunk_basis_param_indexes[reorder]
         
 
         ##This means we have a power law source
         if old_comp_ind < num_crop_comp:
+            # if fits_skymodel:
+            #     components.power_ref_freqs[power_comp_ind] = 200e+6
+            # else:
+            #     components.power_ref_freqs[power_comp_ind] = orig_ind
+            
+            ##Actual FITS model is read in at 200MHz
             if fits_skymodel:
-                components.power_ref_freqs[power_comp_ind] = 200e+6
+                components.power_ref_stokesI[power_comp_ind] = orig_ind
+                components.power_SIs[power_comp_ind] = orig_ind
+            ##Anything can be written a some other reference frequency, which
+            ##we should be extrapolating to 200MHz
             else:
-                components.power_ref_freqs[power_comp_ind] = orig_ind
-            components.power_ref_stokesI[power_comp_ind] = orig_ind
+                ref_freq = 100e+6 + (orig_ind + 1)*1e+4
+                components.power_ref_stokesI[power_comp_ind] = orig_ind*(200e+6 / ref_freq)**(orig_ind/100.0)
+                components.power_SIs[power_comp_ind] = orig_ind / 100.0
+                
+                
+            components.power_ref_freqs[power_comp_ind] = 200e+6
             components.power_ref_stokesQ[power_comp_ind] = orig_ind
             components.power_ref_stokesU[power_comp_ind] = orig_ind
             components.power_ref_stokesV[power_comp_ind] = orig_ind
-            components.power_SIs[power_comp_ind] = orig_ind
             
             components.power_comp_inds[power_comp_ind] = new_comp_ind
             power_comp_ind += 1
@@ -463,15 +491,26 @@ def populate_shapelet_chunk(expec_chunk : Expected_Sky_Chunk,
         ##This means we have a curved power law source
         elif old_comp_ind < 2*num_crop_comp:
             if fits_skymodel:
-                components.curve_ref_freqs[curve_comp_ind] = 200e+6
+                components.curve_ref_stokesI[curve_comp_ind] = orig_ind
+                components.curve_SIs[curve_comp_ind] = orig_ind
+                components.curve_qs[curve_comp_ind] = orig_ind
             else:
-                components.curve_ref_freqs[curve_comp_ind] = orig_ind
-            components.curve_ref_stokesI[curve_comp_ind] = orig_ind
+                ref_freq = 100e+6 + (orig_ind + 1)*1e+4
+                si =  orig_ind / 100.0
+                curve_q =  orig_ind / 100.0
+                
+                si_ratio = (200e+6 / ref_freq)**si
+                exp_bit = np.exp(curve_q*np.log(200e+6 / ref_freq)**2)
+                expec_I = orig_ind*si_ratio*exp_bit
+                
+                components.curve_ref_stokesI[curve_comp_ind] = expec_I
+                components.curve_SIs[curve_comp_ind] = si
+                components.curve_qs[curve_comp_ind] = curve_q
+                
+            components.curve_ref_freqs[curve_comp_ind] = 200e+6    
             components.curve_ref_stokesQ[curve_comp_ind] = orig_ind
             components.curve_ref_stokesU[curve_comp_ind] = orig_ind
             components.curve_ref_stokesV[curve_comp_ind] = orig_ind
-            components.curve_SIs[curve_comp_ind] = orig_ind
-            components.curve_qs[curve_comp_ind] = orig_ind
             
             components.curve_comp_inds[curve_comp_ind] = new_comp_ind
             curve_comp_ind += 1
@@ -490,11 +529,7 @@ def populate_shapelet_chunk(expec_chunk : Expected_Sky_Chunk,
                 ##we have a different behaviour where we just have as many columns as
                 ##`num_list_values`. Title the column by index, which is read in as MHz,
                 ##so need to mulitply expected vaulues by 1e+6
-                if fits_skymodel:
-                    freq_value = flux_ind*1e+6
-                else:
-                    freq_value = flux_start + flux_ind
-                
+                freq_value = flux_ind*1e+6
                 list_ind = list_comp_ind*num_list_values
 
                 components.list_freqs[list_ind + flux_ind] = freq_value

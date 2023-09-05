@@ -56,9 +56,10 @@ def add_power_law_yaml(outfile, value):
     """add power law infor for a component"""
     outfile.write(f"    flux_type:\n")
     outfile.write(f"      power_law:\n")
-    outfile.write(f"        si: {float(value)}\n")
+    outfile.write(f"        si: {float(value)/100.0}\n")
     outfile.write(f"        fd:\n")
-    outfile.write(f"          freq: {float(value)}\n")
+    freq = 100e+6 + (value + 1)*1e+4
+    outfile.write(f"          freq: {freq:.1f}\n")
     outfile.write(f"          i: {float(value)}\n")
     outfile.write(f"          q: {float(value)}\n")
     outfile.write(f"          u: {float(value)}\n")
@@ -68,22 +69,24 @@ def add_curved_power_law_yaml(outfile, value):
     """add curved power law infor for a component"""
     outfile.write(f"    flux_type:\n")
     outfile.write(f"      curved_power_law:\n")
-    outfile.write(f"        si: {float(value)}\n")
+    outfile.write(f"        si: {float(value)/100.0}\n")
     outfile.write(f"        fd:\n")
-    outfile.write(f"          freq: {float(value)}\n")
+    freq = 100e+6 + (value + 1)*1e+4
+    outfile.write(f"          freq: {freq:.1f}\n")
     outfile.write(f"          i: {float(value)}\n")
     outfile.write(f"          q: {float(value)}\n")
     outfile.write(f"          u: {float(value)}\n")
     outfile.write(f"          v: {float(value)}\n")
-    outfile.write(f"        q: {float(value)}\n")
+    outfile.write(f"        q: {float(value)/100.0}\n")
     
 def add_list_flux_yaml(outfile, flux_index, num_list_values):
     """add curved power law infor for a component"""
     outfile.write(f"    flux_type:\n")
     outfile.write(f"      list:\n")
     
-    for flux in range(num_list_values):
-        outfile.write(f"         - freq: {float(flux_index)}\n")
+    for freq in np.arange(num_list_values)*1e+6:
+        # outfile.write(f"         - freq: {float(flux_index)}\n")
+        outfile.write(f"         - freq: {float(freq)}\n")
         outfile.write(f"           i: {float(flux_index)}\n")
         outfile.write(f"           q: {float(flux_index)}\n")
         outfile.write(f"           u: {float(flux_index)}\n")
