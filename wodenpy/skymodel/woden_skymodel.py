@@ -572,3 +572,67 @@ class Component_Info(object):
         self.fluxes[np.isnan(self.fluxes)] = 0.0
         
         return empty_fluxes
+    
+def calc_pl_norm_at_200MHz(component : Component_Info) -> Component_Info:
+    """The FITS style sky model references everything to 200MHz, so extrap
+    a power-law model reference flux to 200MHz, and set frequency to 200MHz
+
+    Parameters
+    ----------
+    component : Component_Info
+        _description_
+
+    Returns
+    -------
+    Component_Info
+        _description_
+    """
+
+    ##There are four stokes params, just extrap them all
+    for ref_flux_ind in range(4):
+
+        ref_flux = component.fluxes[0][ref_flux_ind]
+        ref_freq = component.freqs[0]
+
+        new_ref_flux = ref_flux*(200e+6 / ref_freq)**component.si
+        
+        component.fluxes[0][ref_flux_ind] = new_ref_flux
+
+    component.norm_comp_pl = component.fluxes[0][0]
+    component.freqs[0] = 200e+6
+
+    return component
+
+def calc_cpl_norm_at_200MHz(component : Component_Info) -> Component_Info:
+    """The FITS style sky model references everything to 200MHz, so extrap
+    a curved power-law model reference flux to 200MHz, and set frequency to 200MHz
+
+    Parameters
+    ----------
+    component : Component_Info
+        _description_
+
+    Returns
+    -------
+    Component_Info
+        _description_
+    """
+    
+    ##There are four stokes params, just extrap them all
+    for ref_flux_ind in range(4):
+        
+        ref_freq = component.freqs[0]
+        ref_flux = component.fluxes[0][ref_flux_ind]
+        
+        si_ratio = (200e+6 / ref_freq)**component.si
+        exp_bit = np.exp(component.curve_q*np.log(200e+6 / ref_freq)**2)
+
+        new_ref_flux = ref_flux*si_ratio*exp_bit
+        
+        component.fluxes[0][ref_flux_ind] = new_ref_flux
+        
+        
+    component.norm_comp_cpl = component.fluxes[0][0]
+    component.freqs[0] = 200e+6
+
+    return component

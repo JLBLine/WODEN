@@ -3,7 +3,7 @@ import sys
 import os
 from typing import Union
 
-from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, Component_Info, CompTypes
+from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, Component_Info, CompTypes, calc_pl_norm_at_200MHz, calc_cpl_norm_at_200MHz
 from wodenpy.skymodel.chunk_sky_model import Skymodel_Chunk_Map
 from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, setup_source_catalogue, Source_Catalogue_Float, Source_Catalogue_Double, add_info_to_source_catalogue, _Ctype_Source_Into_Python, Components_Float, Components_Double, Source_Float, Source_Double
 from wodenpy.skymodel.read_fits_skymodel import add_fits_info_to_source_catalogue
@@ -37,7 +37,7 @@ def read_yaml_radec_count_components(yaml_path : str):
             comp_counter.new_file_line()
             if line != '---\n' and '#' not in line and line != ''  and line != ' ' and line != '\n':
                 
-                if line[0] != ' ':
+                if line[0] != ' ' and line[0] != '-':
                     current_source += 1
                     source_name = line[:-1]
                     comp_counter.new_source()
@@ -95,72 +95,6 @@ def read_yaml_radec_count_components(yaml_path : str):
     comp_counter.total_components()
         
     return comp_counter
-
-
-def calc_pl_norm_at_200MHz(component : Component_Info) -> Component_Info:
-    """The FITS style sky model references everything to 200MHz, so extrap
-    a power-law model reference flux to 200MHz, and set frequency to 200MHz
-
-    Parameters
-    ----------
-    component : Component_Info
-        _description_
-
-    Returns
-    -------
-    Component_Info
-        _description_
-    """
-
-    ##There are four stokes params, just extrap them all
-    for ref_flux_ind in range(4):
-
-        ref_flux = component.fluxes[0][ref_flux_ind]
-        ref_freq = component.freqs[0]
-
-        new_ref_flux = ref_flux*(200e+6 / ref_freq)**component.si
-        
-        component.fluxes[0][ref_flux_ind] = new_ref_flux
-
-    component.norm_comp_pl = component.fluxes[0][0]
-    component.freqs[0] = 200e+6
-
-    return component
-
-def calc_cpl_norm_at_200MHz(component : Component_Info) -> Component_Info:
-    """The FITS style sky model references everything to 200MHz, so extrap
-    a curved power-law model reference flux to 200MHz, and set frequency to 200MHz
-
-    Parameters
-    ----------
-    component : Component_Info
-        _description_
-
-    Returns
-    -------
-    Component_Info
-        _description_
-    """
-    
-    ##There are four stokes params, just extrap them all
-    for ref_flux_ind in range(4):
-        
-        ref_freq = component.freqs[0]
-        ref_flux = component.fluxes[0][ref_flux_ind]
-        
-        si_ratio = (200e+6 / ref_freq)**component.si
-        exp_bit = np.exp(component.curve_q*np.log(200e+6 / ref_freq)**2)
-
-        new_ref_flux = ref_flux*si_ratio*exp_bit
-        
-        component.fluxes[0][ref_flux_ind] = new_ref_flux
-        
-        
-    component.norm_comp_cpl = component.fluxes[0][0]
-    component.freqs[0] = 200e+6
-
-    return component
-
 
 def read_full_yaml_into_fitstable(yaml_path : str):
     
