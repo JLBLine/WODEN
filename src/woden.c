@@ -19,7 +19,7 @@ extern void calculate_visibilities(array_layout_t *array_layout,
   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
   user_precision_t *sbf);
 
-int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set,
+int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_sets,
              source_catalogue_t *cropped_sky_models, array_layout_t * array_layout, user_precision_t *sbf) {
 
   #ifdef DOUBLE_PRECISION
@@ -51,8 +51,8 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
 
     //Fill in the time/freq/baseline settings in `visiblity_set` needed by
     //calculate_visibilities
-    fill_timefreq_visibility_set(visibility_set, woden_settings,
-                                 base_band_freq, woden_settings->lsts);
+    fill_timefreq_visibility_set(&visibility_sets[band], woden_settings,
+                                  base_band_freq, woden_settings->lsts);
 
     //The intial setup of the FEE beam is done on the CPU, so call it here
     if (woden_settings->beamtype == FEE_BEAM || woden_settings->beamtype == FEE_BEAM_INTERP){
@@ -70,7 +70,7 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
 
     //Launch the CUDA code
     calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
-                  woden_settings, visibility_set, sbf);
+                  woden_settings, &visibility_sets[band], sbf);
 
     printf("GPU calls for band %d finished\n",band_num );
 
@@ -80,7 +80,7 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
     }
 
   }//band loop
-  // printf("WODEN is done\n");
+  // // printf("WODEN is done\n");
 
   return status;
 }//main

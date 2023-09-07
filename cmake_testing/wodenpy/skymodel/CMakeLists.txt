@@ -35,3 +35,13 @@ add_test(python_test_read_FITS_skymodel_chunk ${PYTHON_EXECUTABLE}
          ${CMAKE_CURRENT_SOURCE_DIR}/test_read_FITS_skymodel_chunk.py)
 set_tests_properties(python_test_read_FITS_skymodel_chunk PROPERTIES
          ENVIRONMENT CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})
+
+add_test(python_test_read_text_skymodel_chunk ${PYTHON_EXECUTABLE}
+         ${CMAKE_CURRENT_SOURCE_DIR}/test_read_text_skymodel_chunk.py)
+set_tests_properties(python_test_read_text_skymodel_chunk PROPERTIES
+         ENVIRONMENT CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})
+
+add_test(python_test_read_skymodel_chunk ${PYTHON_EXECUTABLE}
+         ${CMAKE_CURRENT_SOURCE_DIR}/test_read_skymodel_chunk.py)
+set_tests_properties(python_test_read_skymodel_chunk PROPERTIES
+         ENVIRONMENT CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})

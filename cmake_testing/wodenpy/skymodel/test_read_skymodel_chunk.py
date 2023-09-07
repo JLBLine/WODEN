@@ -17,7 +17,7 @@ path.append('{:s}/../../../wodenpy/use_libwoden'.format(code_dir))
 path.append('{:s}/../../../wodenpy'.format(code_dir))
 
 # ##Code we are testing
-from read_skymodel import read_skymodel_chunks
+from read_skymodel import read_skymodel_chunks, read_radec_count_components
 import read_fits_skymodel
 import read_yaml_skymodel
 from woden_skymodel import Component_Type_Counter, CompTypes, crop_below_horizon
@@ -34,6 +34,7 @@ import woden_settings as ws
 
 from test_read_FITS_skymodel_chunk import write_full_test_skymodel_fits
 from test_read_yaml_skymodel_chunk import write_full_test_skymodel_yaml
+from test_read_text_skymodel_chunk import write_full_test_skymodel_text, make_expected_chunks_text
 
 D2R = np.pi/180.0
 MWA_LAT = -26.703319405555554*D2R
@@ -95,7 +96,7 @@ class Test(BaseChunkTest):
                              num_coeff_per_shape, num_list_values,
                              comps_per_source, comps_per_chunk,
                              fits_skymodel=True)
-        comp_counter = read_fits_skymodel.read_fits_radec_count_components(skymodel_filename)
+        comp_counter = read_radec_count_components(skymodel_filename)
         
         
         comp_counter = crop_below_horizon(lst, MWA_LAT,
@@ -154,7 +155,7 @@ class Test(BaseChunkTest):
                              num_coeff_per_shape, num_list_values,
                              comps_per_source, comps_per_chunk)
         
-        comp_counter = read_yaml_skymodel.read_yaml_radec_count_components(skymodel_filename)
+        comp_counter = read_radec_count_components(skymodel_filename)
         
         
         comp_counter = crop_below_horizon(lst, MWA_LAT,
@@ -175,10 +176,64 @@ class Test(BaseChunkTest):
                                                 beamtype, lsts, MWA_LAT)
         
         check_all_sources(expec_skymodel_chunks, source_catalogue)
-    
-    
 
+    def test_read_skymodel_chunks_with_text(self):
         
+        lst = 0.0
+    
+        woden_settings = ws.Woden_Settings_Double()
+        
+        woden_settings.time_res = 1.0
+        woden_settings.latitude = -0.46606083776035967
+        woden_settings.latitude_obs_epoch_base = -0.46606083776035967
+        
+        woden_settings.lst_base = 0.0
+        woden_settings.lst_obs_epoch_base = 0.0
+        
+        woden_settings.jd_date = 2457278.201145833
+        woden_settings.num_time_steps = num_time_steps
+        
+        woden_settings.do_precession = 1
+        lsts = ws.setup_lsts_and_phase_centre(woden_settings)
+        
+        
+        ##create a test FITS skymodel to read
+        ra_range, dec_range = write_full_test_skymodel_text(deg_between_comps,
+                                 num_coeff_per_shape,
+                                 comps_per_source)
+        
+        skymodel_filename = "test_full_skymodel.txt"
+        
+        ##come up with expected values
+        comps_per_chunk = int(np.floor(max_num_visibilities / (num_baselines * num_freqs * num_time_steps)))
+        
+        expec_skymodel_chunks = make_expected_chunks_text(ra_range,
+                                                          dec_range,
+                             num_coeff_per_shape, comps_per_source,
+                             comps_per_chunk)
+        
+        comp_counter = read_radec_count_components(skymodel_filename)
+        
+        
+        comp_counter = crop_below_horizon(lst, MWA_LAT,
+                                          comp_counter, 
+                                          crop_by_component=True)
+        
+        ##Create a chunking map
+        chunked_skymodel_maps = create_skymodel_chunk_map(comp_counter,
+                                        max_num_visibilities, num_baselines,
+                                        num_freqs, num_time_steps)
+        
+        
+        beamtype = BeamTypes.FEE_BEAM.value
+
+        source_catalogue = read_skymodel_chunks(skymodel_filename,
+                                                chunked_skymodel_maps,
+                                                num_freqs, num_time_steps,
+                                                beamtype, lsts, MWA_LAT)
+        
+        check_all_sources(expec_skymodel_chunks, source_catalogue)
+
 ##Run the test
 if __name__ == '__main__':
     unittest.main()

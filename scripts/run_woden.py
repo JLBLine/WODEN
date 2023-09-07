@@ -12,7 +12,7 @@ from threading import Thread
 from ctypes import POINTER, c_double, c_float
 
 from wodenpy.use_libwoden.woden_settings import create_woden_settings, setup_lsts_and_phase_centre
-from wodenpy.use_libwoden.visibility_set import setup_visi_set, load_visibility_set
+from wodenpy.use_libwoden.visibility_set import setup_visi_set_array, load_visibility_set
 from wodenpy.wodenpy_setup.run_setup import get_parser, check_args, get_code_version
 from wodenpy.use_libwoden.use_libwoden import load_in_woden_library
 from wodenpy.observational.calc_obs import get_uvfits_date_and_position_constants, calc_jdcal
@@ -22,7 +22,6 @@ from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map
 from wodenpy.array_layout.create_array_layout import calc_XYZ_diffs, enh2xyz
 from wodenpy.uvfits.wodenpy_uvfits import make_antenna_table, make_baseline_date_arrays, create_uvfits
 from wodenpy.phase_rotate.remove_phase_track import remove_phase_tracking
-
 from wodenpy.use_libwoden.shapelets import create_sbf
 
 ##Constants
@@ -121,10 +120,6 @@ def main():
         else:
             num_visis = args.num_time_steps*args.num_freq_channels*num_baselines
 
-        ##This essentially does a malloc so we can shove this straight into
-        ##the C library I think
-        visibility_set = setup_visi_set(num_visis, args.precision)
-        
         ##populates a ctype equivalent of woden_settings struct to pass
         ##to the C library
         woden_settings = create_woden_settings(args, jd_date, lst_deg)
@@ -157,8 +152,14 @@ def main():
                                             args.num_freq_channels,
                                             args.num_time_steps)
         
+        ##Create the shapelet basis functions
         sbf = create_sbf(precision=args.precision)
-        
+
+        ##Create an array of visibility_sets, which get fed into run_woden
+        ##and store the output visibilities
+        visi_set_array = setup_visi_set_array(len(args.band_nums), num_visis,
+                                              precision=args.precision)
+
         ###---------------------------------------------------------------------
         ### heavy lifting area - here we setup running the sky model reading
         ### and running GPU code at the same time. Means we can limit the
@@ -179,8 +180,8 @@ def main():
                                     woden_settings.beamtype), daemon=True)
         
         t2 = Thread(target = woden_thread, args =(the_queue, run_woden,
-                                                  woden_settings, visibility_set,
-                                                  array_layout, sbf), daemon=True)
+                                                woden_settings, visi_set_array,
+                                                array_layout, sbf), daemon=True)
         
         t1.start()
         t2.start()
@@ -190,7 +191,6 @@ def main():
         ### we've now calculated all the visibilities
         ###---------------------------------------------------------------------
         
-
         ##I think we want to X,Y,Z to be in the current frame for writing
         ##out to the uvfits, so calculate again
         X,Y,Z = enh2xyz(args.east, args.north, args.height, args.latitude*D2R)
@@ -212,17 +212,16 @@ def main():
         ##Useful number
         num_baselines = int(((args.num_antennas - 1)*args.num_antennas) / 2)
 
-        ##Loop over coarse frequency band
-        for band in args.band_nums:
-            print('Converting binary to uvfits band',band)
+        ##Loop over coarse frequency band and convert visibilities output
+        ##from woden.c into uvfits files
+        for band_ind, band in enumerate(args.band_nums):
 
             output_uvfits_name = output_uvfits_prepend + '_band%02d.uvfits' %band
 
             band_low_freq = args.lowest_channel_freq + (band - 1)*args.coarse_band_width
             central_freq_chan_value = band_low_freq + central_freq_chan*args.freq_res
 
-
-            uus,vvs,wws,v_container = load_visibility_set(visibility_set=visibility_set,
+            uus,vvs,wws,v_container = load_visibility_set(visibility_set=visi_set_array[band_ind],
                                                 num_baselines=num_baselines,
                                                 num_freq_channels=args.num_freq_channels,
                                                 num_time_steps=args.num_time_steps,

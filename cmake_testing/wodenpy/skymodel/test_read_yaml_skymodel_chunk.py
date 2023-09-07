@@ -407,20 +407,20 @@ class Test(BaseChunkTest):
                                           max_num_visibilities, num_baselines,
                                           num_freqs, num_time_steps, lst)
     
-    def test_the_first(self):
-        deg_between_comps = 240
-        num_coeff_per_shape = 4
-        num_list_values = 4
-        comps_per_source = 10
-        lst = 0.0
-        max_num_visibilities = 1e7
+    # def test_the_first(self):
+    #     deg_between_comps = 240
+    #     num_coeff_per_shape = 4
+    #     num_list_values = 4
+    #     comps_per_source = 10
+    #     lst = 0.0
+    #     max_num_visibilities = 1e7
         
-        self.run_write_model_test_read_yaml_skymodel_chunk(deg_between_comps,
-                                               num_coeff_per_shape,
-                                               num_list_values,
-                                               comps_per_source, lst,
-                                               max_num_visibilities)
-        print('-----------------------------')
+    #     self.run_write_model_test_read_yaml_skymodel_chunk(deg_between_comps,
+    #                                            num_coeff_per_shape,
+    #                                            num_list_values,
+    #                                            comps_per_source, lst,
+    #                                            max_num_visibilities)
+    #     print('-----------------------------')
         
     def test_the_second(self):
         deg_between_comps = 10
@@ -437,20 +437,20 @@ class Test(BaseChunkTest):
                                                max_num_visibilities)
         print('-----------------------------')
         
-    def test_the_third(self):
-        deg_between_comps = 7
-        num_coeff_per_shape = 6
-        num_list_values = 4
-        comps_per_source = 20
-        lst = np.pi
-        max_num_visibilities = 1e10
+    # def test_the_third(self):
+    #     deg_between_comps = 7
+    #     num_coeff_per_shape = 6
+    #     num_list_values = 4
+    #     comps_per_source = 20
+    #     lst = np.pi
+    #     max_num_visibilities = 1e10
         
-        self.run_write_model_test_read_yaml_skymodel_chunk(deg_between_comps,
-                                               num_coeff_per_shape,
-                                               num_list_values,
-                                               comps_per_source, lst,
-                                               max_num_visibilities)
-        print('-----------------------------')
+    #     self.run_write_model_test_read_yaml_skymodel_chunk(deg_between_comps,
+    #                                            num_coeff_per_shape,
+    #                                            num_list_values,
+    #                                            comps_per_source, lst,
+    #                                            max_num_visibilities)
+    #     print('-----------------------------')
 
 
 

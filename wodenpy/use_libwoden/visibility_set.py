@@ -95,6 +95,43 @@ def setup_visi_set(num_visis : int, precision='double') -> ctypes.Structure:
     
     return visibility_set
 
+
+def setup_visi_set_array(num_bands : int, num_visis : int,
+                         precision='double') -> ctypes.Structure:
+    """We feed an array of visibility_sets to woden.c, this
+    sets up the array and populates with empty visibility_sets of the correct precision
+
+    Parameters
+    ----------
+    num_visis : int
+        Number of visibilities to assign memory for
+    precision : str, optional
+        Precision to be used, either 'float' or 'double. Defaults to 'double'
+
+    Returns
+    -------
+    ctypes.Structure
+        An initialised array of `num_bands` times `wodenpy.use_libwoden.use_ctypes.Visi_Set_Float` or
+        `wodenpy.use_libwoden.use_ctypes.Visi_Set_Double` class,
+        compatible with libwoden_float.so or libwoden_double.so.
+    """
+
+    
+
+    if precision == 'float':
+    
+        visi_set_array = ctypes.POINTER(Visi_Set_Float)
+        visi_set_array = (num_bands*Visi_Set_Float)()
+        
+    else:
+        visi_set_array = ctypes.POINTER(Visi_Set_Double)
+        visi_set_array = (num_bands*Visi_Set_Double)()
+
+    for band in range(num_bands):
+        visi_set_array[band] = setup_visi_set(num_visis, precision=precision)
+
+    return visi_set_array
+
 def load_visibility_set(visibility_set=None,num_baselines=None,num_freq_channels=None,
               num_time_steps=None, precision=None, do_autos=False, num_ants=0):
     """

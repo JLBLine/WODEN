@@ -581,3 +581,19 @@ class Expected_Sky_Chunk(object):
         self.n_shape_curves = num_chunk_curve
         self.n_shape_lists = num_chunk_list
         self.n_shapes = num_chunk_power + num_chunk_curve + num_chunk_list
+        
+    def _print_things(self):
+        print("n_points", self.n_points)
+        print("n_point_lists", self.n_point_lists)
+        print("n_point_powers", self.n_point_powers)
+        print("n_point_curves", self.n_point_curves)
+        print("n_gauss", self.n_gauss)
+        print("n_gauss_lists", self.n_gauss_lists)
+        print("n_gauss_powers", self.n_gauss_powers)
+        print("n_gauss_curves", self.n_gauss_curves)
+        print("n_shapes", self.n_shapes)
+        print("n_shape_lists", self.n_shape_lists)
+        print("n_shape_powers", self.n_shape_powers)
+        print("n_shape_curves", self.n_shape_curves)
+        print("n_shape_coeffs", self.n_shape_coeffs)
+        print("n_comps", self.n_comps)
