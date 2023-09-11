@@ -638,7 +638,7 @@ def calc_cpl_norm_at_200MHz(component : Component_Info) -> Component_Info:
             if ref_flux_ind == 0:
                 logratio = np.log(ref_freq / 200e+6)
                 q = component.curve_q
-                new_si = (np.log(ref_flux) - np.log(new_ref_flux) - q*logratio**2) / logratio
+                new_si = (np.log(ref_flux / new_ref_flux) - q*logratio**2) / logratio
                 component.si = new_si
             
         component.norm_comp_cpl = component.fluxes[0][0]
