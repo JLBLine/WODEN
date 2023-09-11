@@ -1,7 +1,7 @@
 import numpy as np
 import erfa
 from enum import Enum, auto
-from typing import Union
+from typing import Union, Tuple
 import os
 
 D2R = np.pi / 180.0
@@ -580,12 +580,12 @@ def calc_pl_norm_at_200MHz(component : Component_Info) -> Component_Info:
     Parameters
     ----------
     component : Component_Info
-        _description_
+        A populated Component_Info instance with power law info
 
     Returns
     -------
     Component_Info
-        _description_
+        Updated component info with power law extrapolated to 200MHz
     """
 
     ##There are four stokes params, just extrap them all
@@ -610,29 +610,38 @@ def calc_cpl_norm_at_200MHz(component : Component_Info) -> Component_Info:
     Parameters
     ----------
     component : Component_Info
-        _description_
+        A populated Component_Info instance with curved power law info
 
     Returns
     -------
     Component_Info
-        _description_
+        Updated component info with curved power law extrapolated to 200MHz
     """
     
-    ##There are four stokes params, just extrap them all
-    for ref_flux_ind in range(4):
-        
-        ref_freq = component.freqs[0]
-        ref_flux = component.fluxes[0][ref_flux_ind]
-        
-        si_ratio = (200e+6 / ref_freq)**component.si
-        exp_bit = np.exp(component.curve_q*np.log(200e+6 / ref_freq)**2)
+    if component.freqs[0] == 200e+6:
+        component.norm_comp_cpl = component.fluxes[0][0]
 
-        new_ref_flux = ref_flux*si_ratio*exp_bit
-        
-        component.fluxes[0][ref_flux_ind] = new_ref_flux
-        
-        
-    component.norm_comp_cpl = component.fluxes[0][0]
-    component.freqs[0] = 200e+6
+    else:
+        ##There are four stokes params, just extrap them all
+        for ref_flux_ind in range(4):
+            ref_freq = component.freqs[0]
+            ref_flux = component.fluxes[0][ref_flux_ind]
+            
+            si_ratio = (200e+6 / ref_freq)**component.si
+            exp_bit = np.exp(component.curve_q*(np.log(200e+6 / ref_freq))**2)
+
+            new_ref_flux = ref_flux*si_ratio*exp_bit
+            component.fluxes[0][ref_flux_ind] = new_ref_flux
+            
+            ##TODO for now, only use the Stokes I flux to do the spectral index
+            ##extrapolation as everything is Stokes I
+            if ref_flux_ind == 0:
+                logratio = np.log(ref_freq / 200e+6)
+                q = component.curve_q
+                new_si = (np.log(ref_flux) - np.log(new_ref_flux) - q*logratio**2) / logratio
+                component.si = new_si
+            
+        component.norm_comp_cpl = component.fluxes[0][0]
+        component.freqs[0] = 200e+6
 
     return component
