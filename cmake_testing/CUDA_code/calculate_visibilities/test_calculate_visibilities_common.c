@@ -14,7 +14,6 @@ are launched by calculate_visibilities::calculate_visibilities`
 #include <unity.h>
 #include <stdlib.h>
 #include <complex.h>
-
 #include "test_calculate_visibilities_common.h"
 #include "hyperbeam_error.h"
 

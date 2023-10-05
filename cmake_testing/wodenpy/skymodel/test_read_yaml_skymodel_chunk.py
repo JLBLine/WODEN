@@ -375,7 +375,8 @@ class Test(BaseChunkTest):
                                               num_freqs, num_time_steps,
                                               beamtype, lsts, MWA_LAT)
         
-        check_all_sources(expected_chunks, source_catalogue)
+        check_all_sources(expected_chunks, source_catalogue,
+                          fits_skymodel=False)
         
     def run_write_model_test_read_yaml_skymodel_chunk(self, deg_between_comps : int,
                        num_coeff_per_shape : int, num_list_values : int,

@@ -813,7 +813,7 @@ class _Components_Python(object):
         self.curve_ref_stokesU = np.ctypeslib.as_array(components.curve_ref_stokesU, shape=(n_curves, ))
         self.curve_ref_stokesV = np.ctypeslib.as_array(components.curve_ref_stokesV, shape=(n_curves, ))
         self.curve_SIs = np.ctypeslib.as_array(components.curve_SIs, shape=(n_curves, ))
-        self.curve_qs = np.ctypeslib.as_array(components.curve_SIs, shape=(n_curves, ))
+        self.curve_qs = np.ctypeslib.as_array(components.curve_qs, shape=(n_curves, ))
         self.curve_comp_inds = np.ctypeslib.as_array(components.curve_comp_inds, shape=(n_curves, ))
         
         # self.list_freqs = np.ctypeslib.as_array(components.list_freqs, shape=(total_num_flux_entires, ))

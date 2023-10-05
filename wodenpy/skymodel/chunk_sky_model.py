@@ -499,6 +499,38 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
                         chunk_ind : int,
                         coeffs_per_chunk : int,
                         text_file = False):
+    """
+    Maps the shapelet components in a chunk of the sky model to their corresponding
+    indices in the original sky model. This function is used to create a mapping
+    between the shapelet components in the cropped sky model and their corresponding
+    components in the original sky model. This mapping is used to extract the correct
+    shapelet coefficients from the original sky model when creating a chunked sky model.
+
+    Parameters
+    -----------
+    cropped_comp_counter : Component_Type_Counter
+        A Component_Type_Counter object containing information about the components
+        in the cropped sky model.
+    shape_basis_to_orig_comp_index_map : np.ndarray
+        An array mapping the indices of the shapelet basis functions in the cropped
+        sky model to their corresponding indices in the original sky model.
+    shape_basis_to_orig_type_map : np.ndarray
+        An array mapping the indices of the shapelet basis functions in the cropped
+        sky model to their corresponding component types in the original sky model.
+    shape_basis_param_index : np.ndarray
+        An array containing the indices of the shapelet basis functions in the
+        original sky model.
+    chunk_ind : int
+        The index of the chunk being mapped.
+    coeffs_per_chunk : int
+        The number of shapelet coefficients in each chunk.
+    text_file : bool, optional
+        Whether or not to read the shapelet coefficients from a text file.
+
+    Returns
+    --------
+    None
+    """
     
     ##Upper indexes of components covered in this chunk
     upper_coeff_ind = (chunk_ind + 1) * coeffs_per_chunk
@@ -605,13 +637,45 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
                               max_num_visibilities : int, num_baselines : int,
                               num_freqs : int, num_time_steps : int,
                               text_file=False) -> list:
-    """Given all the information in `comp_counter`, make a map of how to split
-    the whole sky model up into managable chunks to fit in memory. The
+                              
+    """
+    Given all the information in `comp_counter`, make a map of how to split
+    the whole sky model up into manageable chunks to fit in memory. The
     purpose of this function is to record what to 'malloc' in each
     `Components_t` and `Source_t` ctype class before we lazy-load all the 
-    values into them directly from the skymodel
+    values into them directly from the skymodel.
+
+    Parameters
+    ----------
+    comp_counter: Component_Type_Counter 
+         object that contains information about the number of components of each type in the sky model.
+    max_num_visibilities: int
+        The maximum number of visibilities that can be loaded into memory at once.
+    num_baselines: int
+        The number of baselines in the observation.
+    num_freqs: int
+        The number of frequency channels in the observation.
+    num_time_steps: int
+        The number of time steps in the observation.
+    text_file: Boolean
+        A boolean flag indicating whether to we are reading in from text file
+        or not (default False)
+    
+
+    Returns
+    -------
+    list:
+        A list of dictionaries containing information about the chunked sky model.
     """
     
+
+    
+    # Given all the information in `comp_counter`, make a map of how to split
+    # the whole sky model up into managable chunks to fit in memory. The
+    # purpose of this function is to record what to 'malloc' in each
+    # `Components_t` and `Source_t` ctype class before we lazy-load all the 
+    # values into them directly from the skymodel
+        
     ##The number of components per chunk is set by how many visibilities
     ##we have
     comps_per_chunk = int(np.floor(max_num_visibilities / (num_baselines * num_freqs * num_time_steps)))

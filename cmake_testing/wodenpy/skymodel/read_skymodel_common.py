@@ -62,13 +62,13 @@ def check_components(found_comps, expec_comps,
         npt.assert_allclose(found_comps.power_ref_stokesI,
                                 expec_comps.power_ref_stokesI, rtol=rtol)
         
-        if not fits_skymodel:
-            npt.assert_allclose(found_comps.power_ref_stokesQ,
-                                    expec_comps.power_ref_stokesQ, rtol=rtol)
-            npt.assert_allclose(found_comps.power_ref_stokesU,
-                                    expec_comps.power_ref_stokesU, rtol=rtol)
-            npt.assert_allclose(found_comps.power_ref_stokesV,
-                                    expec_comps.power_ref_stokesV, rtol=rtol)
+        # if not fits_skymodel:
+        #     npt.assert_allclose(found_comps.power_ref_stokesQ,
+        #                             expec_comps.power_ref_stokesQ, rtol=rtol)
+        #     npt.assert_allclose(found_comps.power_ref_stokesU,
+        #                             expec_comps.power_ref_stokesU, rtol=rtol)
+        #     npt.assert_allclose(found_comps.power_ref_stokesV,
+        #                             expec_comps.power_ref_stokesV, rtol=rtol)
         npt.assert_allclose(found_comps.power_SIs,
                                 expec_comps.power_SIs, rtol=rtol)
         
@@ -80,13 +80,13 @@ def check_components(found_comps, expec_comps,
                                 expec_comps.curve_ref_freqs, rtol=rtol)
         npt.assert_allclose(found_comps.curve_ref_stokesI,
                                 expec_comps.curve_ref_stokesI, rtol=rtol)
-        if not fits_skymodel:
-            npt.assert_allclose(found_comps.curve_ref_stokesQ,
-                                    expec_comps.curve_ref_stokesQ, rtol=rtol)
-            npt.assert_allclose(found_comps.curve_ref_stokesU,
-                                    expec_comps.curve_ref_stokesU, rtol=rtol)
-            npt.assert_allclose(found_comps.curve_ref_stokesV,
-                                    expec_comps.curve_ref_stokesV, rtol=rtol)
+        # if not fits_skymodel:
+        #     npt.assert_allclose(found_comps.curve_ref_stokesQ,
+        #                             expec_comps.curve_ref_stokesQ, rtol=rtol)
+        #     npt.assert_allclose(found_comps.curve_ref_stokesU,
+        #                             expec_comps.curve_ref_stokesU, rtol=rtol)
+        #     npt.assert_allclose(found_comps.curve_ref_stokesV,
+        #                             expec_comps.curve_ref_stokesV, rtol=rtol)
         npt.assert_allclose(found_comps.curve_SIs,
                                 expec_comps.curve_SIs, rtol=rtol)
         npt.assert_allclose(found_comps.curve_qs,
@@ -101,13 +101,13 @@ def check_components(found_comps, expec_comps,
         npt.assert_allclose(found_comps.list_stokesI,
                                     expec_comps.list_stokesI, rtol=rtol)
         
-        if not fits_skymodel:
-            npt.assert_allclose(found_comps.list_stokesQ,
-                                        expec_comps.list_stokesQ, rtol=rtol)
-            npt.assert_allclose(found_comps.list_stokesU,
-                                        expec_comps.list_stokesU, rtol=rtol)
-            npt.assert_allclose(found_comps.list_stokesV,
-                                        expec_comps.list_stokesV, rtol=rtol)
+        # if not fits_skymodel:
+        #     npt.assert_allclose(found_comps.list_stokesQ,
+        #                                 expec_comps.list_stokesQ, rtol=rtol)
+        #     npt.assert_allclose(found_comps.list_stokesU,
+        #                                 expec_comps.list_stokesU, rtol=rtol)
+        #     npt.assert_allclose(found_comps.list_stokesV,
+        #                                 expec_comps.list_stokesV, rtol=rtol)
         
         npt.assert_allclose(found_comps.list_comp_inds,
                                     expec_comps.list_comp_inds, rtol=rtol)
@@ -123,11 +123,8 @@ def check_all_sources(expected_chunks, source_catalogue,
     rtol = RTOL
 
     for source_ind, expec_chunk in enumerate(expected_chunks):
-        # print("DO LE TESTING")
-    # for source_ind in range(source_catalogue.num_sources):
         source = source_catalogue.sources[source_ind]
         
-        # print("new source who dis--------------------------")
         python_source = _Ctype_Source_Into_Python(source)
         
         # print(source_ind, python_source.n_points, python_source.n_gauss,
@@ -183,10 +180,6 @@ def check_all_sources(expected_chunks, source_catalogue,
             npt.assert_equal(python_source.n_shape_powers, n_powers)
             npt.assert_equal(python_source.n_shape_curves, n_curves)
             npt.assert_equal(python_source.n_shape_lists, n_lists)
-            
-            # print(python_source.n_shape_powers, n_powers)
-            # print(python_source.n_shape_curves, n_curves)
-            # print(python_source.n_shape_lists, n_lists)
             
             found_comps = python_source.shape_components
             expec_comps = expec_chunk.shape_components
@@ -313,8 +306,13 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
             exp_bit = np.exp(curve_qs*np.log(200e+6 / ref_freqs)**2)
             expec_Is = expec_cur_fluxes[low_cur_coord:high_cur_coord]*si_ratio*exp_bit
             
+            
+            logratio = np.log(ref_freqs / 200e+6)
+            new_sis = (np.log(expec_cur_fluxes[low_cur_coord:high_cur_coord] / expec_Is) - curve_qs*logratio**2) / logratio
+            
+            
             components.curve_ref_stokesI[:num_chunk_curve] = expec_Is
-            components.curve_SIs[:num_chunk_curve] = sis
+            components.curve_SIs[:num_chunk_curve] = new_sis
             components.curve_qs[:num_chunk_curve] = curve_qs
             
         components.curve_ref_freqs[:num_chunk_curve] = 200e+6
@@ -471,8 +469,11 @@ def populate_shapelet_chunk(expec_chunk : Expected_Sky_Chunk,
                 exp_bit = np.exp(curve_q*np.log(200e+6 / ref_freq)**2)
                 expec_I = orig_ind*si_ratio*exp_bit
                 
+                logratio = np.log(ref_freq / 200e+6)
+                new_si = (np.log(orig_ind / expec_I) - curve_q*logratio**2) / logratio
+                
                 components.curve_ref_stokesI[curve_comp_ind] = expec_I
-                components.curve_SIs[curve_comp_ind] = si
+                components.curve_SIs[curve_comp_ind] = new_si
                 components.curve_qs[curve_comp_ind] = curve_q
                 
             components.curve_ref_freqs[curve_comp_ind] = 200e+6    

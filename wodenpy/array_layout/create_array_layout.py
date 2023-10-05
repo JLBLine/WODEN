@@ -5,6 +5,7 @@ from typing import Union
 import palpy
 from ctypes import Structure
 import argparse
+from typing import Tuple
 
 ##Constants
 R2D = 180.0 / np.pi
@@ -28,7 +29,7 @@ DS2R = 7.2722052166430399038487115353692196393452995355905e-5
 from wodenpy.use_libwoden.woden_settings import Woden_Settings_Float, Woden_Settings_Double
 from wodenpy.use_libwoden.array_layout_struct import Array_Layout, setup_array_layout
 
-def enh2xyz(east, north, height, latitude):
+def enh2xyz(east : float, north : float, height : float, latitude : float) -> Tuple[float, float, float]:
     """
     Takes local east, north, height coords for a given latitude (radians)
     and returns local X,Y,Z coords to put in the uvfits antenna table
@@ -63,7 +64,31 @@ def enh2xyz(east, north, height, latitude):
     return X,Y,Z
 
 def RTS_precXYZ(rmat : np.ndarray, x : float, y : float, z : float, lmst : float,
-                lmst2000 : float):
+                lmst2000 : float) -> Tuple[float, float, float]:
+    """RTS magic for precessing local X,Y,Z from the current time frame back to
+    J2000
+
+    Parameters
+    ----------
+    rmat : np.ndarray
+        2D rotation matrix as output by `palpy.prenut`
+    x : float
+        Local X coord of antenna (tile)
+    y : float
+        Local Y coord of antenna (tile)
+    z : float
+        Local X coord of antenna (tile)
+    lmst : float
+        LST of the array in the current frame
+    lmst2000 : float
+        LST of the array in the J2000 frame
+
+    Returns
+    -------
+    Tuple[float, float, float]
+        The precessed X,Y,Z coords
+    """
+
 
     sep = np.sin(lmst)
     cep = np.cos(lmst)
@@ -88,8 +113,25 @@ def RTS_precXYZ(rmat : np.ndarray, x : float, y : float, z : float, lmst : float
     return xp, yp, zp
 
 def RTS_PrecessXYZtoJ2000( array_layout : Array_Layout,
-        woden_settings : Union[Woden_Settings_Float, Woden_Settings_Double]):
-    
+        woden_settings : Union[Woden_Settings_Float, Woden_Settings_Double]) -> Array_Layout:
+    """Given the populated `array_layout` and settings in `woden_settings`, use
+    RTS functions to precess the array back to J2000, to account for the
+    skymodel being in J2000.
+
+    Parameters
+    ----------
+    array_layout : Array_Layout
+        Populated array layout in the simulation epoch
+    woden_settings : Union[Woden_Settings_Float, Woden_Settings_Double]
+        Populated settings, where the `woden_settings.lsts` should have been
+        precessed back to J2000 already.
+
+    Returns
+    -------
+    Array_Layout
+        The update array layout with `array_layout.ant_X`, `array_layout.ant_Y`,
+        and `array_layout.ant_Z` precessed back to J2000."""
+        
     ##Rotate the array positions for each time step - they have different
     ##mjd dates and current epoch lsts so yield different XYZ over time
     for time_step in range(woden_settings.num_time_steps):

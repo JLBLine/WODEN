@@ -8,11 +8,8 @@
 #include "constants.h"
 #include "woden_struct_defs.h"
 #include "shapelet_basis.h"
-#include "woden_settings.h"
 #include "visibility_set.h"
 #include "shapelet_basis.h"
-// #include "hdf5.h"
-// #include "hdf5_hl.h"
 
 #define NUM_ANTS 3
 #define NUM_BASELINES 3
