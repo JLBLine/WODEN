@@ -22,25 +22,25 @@ Ways to interact with the C/CUDA via ``ctypes``.
    :members:
 
 ``skymodel_structs``
---------------
+---------------------
 
 .. automodule:: skymodel_structs
    :members:
 
 ``use_libwoden``
---------------
+-----------------
 
 .. automodule:: use_libwoden
    :members:
 
 ``visibility_set``
---------------
+-------------------
 
 .. automodule:: visibility_set
    :members:
 
 ``woden_settings``
---------------
+-------------------
 
 .. automodule:: woden_settings
    :members:

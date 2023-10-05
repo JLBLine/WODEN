@@ -21,7 +21,7 @@ class Components_Float(ctypes.Structure):
     """A class structured equivalently to a `components_t` struct, used by 
     the C and CUDA code in libwoden_float.so
     
-    :ivar POINTER(double) ras: COMPONENT right ascensions (radians)
+    :cvar POINTER(double) ras: COMPONENT right ascensions (radians)
     :cvar POINTER(double) decs: COMPONENT declinations (radians)
     :cvar POINTER(double) power_ref_freqs: COMPONENT Flux density reference frequencies (Hz)
     :cvar POINTER(user_precision_t) power_ref_stokesI: COMPONENT Stokes I reference flux density (Jy)
@@ -260,8 +260,32 @@ class Components_Double(ctypes.Structure):
                 ]
     
 class Source_Float(ctypes.Structure):
+    
     """A class structured equivalent to a `source_t` struct, used by 
     the C and CUDA code in libwoden_float.so
+    
+    :cvar c_char*32 name: Source name
+    :cvar c_int n_comps: Total number of COMPONENTs in source 
+    :cvar c_int n_points: Number of POINT source COMPONENTs 
+    :cvar c_int n_point_lists: Number of POINTs with LIST type flux
+    :cvar c_int n_point_powers: Number of POINTs with POWER_LAW type flux
+    :cvar c_int n_point_curves: Number of POINTs with CURVED_POWER_LAW type flux
+    :cvar c_int n_gauss: Number of GAUSSIAN source COMPONENTs
+    :cvar c_int n_gauss_lists: Number of GAUSSIANs with LIST type flux
+    :cvar c_int n_gauss_powers: Number of GAUSSIANs with POWER_LAW type flux
+    :cvar c_int n_gauss_curves: Number of GAUSSIANs with CURVED_POWER_LAW type flux
+    :cvar c_int n_shapes: Number of SHAPELET source COMPONENTs
+    :cvar c_int n_shape_lists: Number of SHAPELETs with LIST type flux
+    :cvar c_int n_shape_powers: Number of SHAPELETs with POWER_LAW type flux
+    :cvar c_int n_shape_curves: Number of SHAPELETs with CURVED_POWER_LAW type flux
+    :cvar c_int n_shape_coeffs: Total number of SHAPELET coefficients
+    :cvar Components_Float point_components: `Components_Float` holding component information for all POINT COMPONENTs in this SOURCE
+    :cvar Components_Float gauss_components: `Components_Float` holding component information for all GAUSSIAN COMPONENTs in this SOURCE
+    :cvar Components_Float shape_components: `Components_Float` holding component information for all SHAPELET COMPONENTs in this SOURCE
+    :cvar Components_Float d_point_components: `Components_Float` holding component information on the device for all POINT COMPONENTs in this SOURCE
+    :cvar Components_Float d_gauss_components: `Components_Float` holding component information on the device for all GAUSSIAN COMPONENTs in this SOURCE
+    :cvar Components_Float d_shape_components: `Components_Float` holding component information on the device for all SHAPELET COMPONENTs in this SOURCE
+    
     """
     
     _fields_ = [
@@ -341,8 +365,18 @@ class Source_Double(ctypes.Structure):
     ]
     
 class Source_Catalogue_Float(ctypes.Structure):
-    """A class structured equivalent to a `source_t` struct, used by 
+    """
+    A class structured equivalent to a `source_t` struct, used by 
     the C and CUDA code in libwoden_float.so
+    
+    Attributes
+    -----------
+    num_sources : int
+        The number of sources in the catalogue
+    num_shapelets : int
+        The total number of shapelets components in the catalogue
+    sources : POINTER(Source_Float)
+        A pointer to an array of `Source_Float` objects representing the sources in the catalogue
     """
     
     _fields_ = [("num_sources", c_int),
@@ -350,8 +384,18 @@ class Source_Catalogue_Float(ctypes.Structure):
                 ("sources", POINTER(Source_Float))]
     
 class Source_Catalogue_Double(ctypes.Structure):
-    """A class structured equivalent to a `source_t` struct, used by 
-    the C and CUDA code in libwoden_float.so
+    """
+    A class structured equivalent to a `source_t` struct, used by 
+    the C and CUDA code in libwoden_double.so
+    
+    Attributes
+    -----------
+    num_sources : int
+        The number of sources in the catalogue
+    num_shapelets : int
+        The total number of shapelets components in the catalogue
+    sources : POINTER(Source_Double)
+        A pointer to an array of `Source_Double` objects representing the sources in the catalogue
     """
     
     _fields_ = [("num_sources", c_int),
@@ -361,15 +405,30 @@ class Source_Catalogue_Double(ctypes.Structure):
     
 def setup_source_catalogue(num_sources : int, num_shapelets : int,
                            precision = "double"):
+    """
+    Creates a source catalogue object with the specified number of sources and shapelets.
+    
+    Parameters
+    ------------
+    num_sources: int
+        The number of sources in the catalogue.
+    num_shapelets: int
+        The number of shapelets for each source.
+    precision: str
+        The precision of the source catalogue. Can be "float" or "double". Default is "double".
+    
+    Returns
+    ---------
+    source_catalogue : (Source_Catalogue_Float or Source_Catalogue_Double)
+        The initialised source_catalogue object.
+    """
     
     if precision == 'float':
         source_catalogue = Source_Catalogue_Float()
-        # source_catalogue = POINTER(Source_Catalogue_Float)
         source_array = num_sources*Source_Float
         
     else:
         source_catalogue = Source_Catalogue_Double()
-        # source_catalogue = POINTER(Source_Catalogue_Double)
         source_array = num_sources*Source_Double
         
     source_catalogue.sources = source_array()
@@ -384,7 +443,33 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
                      num_times : int, comp_type : CompTypes,
                      beamtype : int, 
                      c_user_precision : Union[c_float, c_double]):
-    """choose which components and do the ctypes "malloc" thing
+    """
+    Given the mapping information in `chunk_map`, initialise the necessary
+    components in `chunked_source` for the given `comp_type`, this being one
+    of
+     - chunked_source.point_components
+     - chunked_source.gaussion_components
+     - chunked_source.shape_components
+    This setup includes allocating memory.
+
+    Parameters
+    ------------
+    chunk_map: Skymodel_Chunk_Map
+        Object containing information about the chunk of the sky model.
+    chunked_source: Union
+       [Source_Float, Source_Double] object containing the chunked source information.
+    num_freqs: int
+        representing the number of frequencies.
+    num_times: int
+        representing the number of times.
+    comp_type: CompTypes
+        enum representing the type of component.
+    beamtype: int
+        representing the type of beam.
+    c_user_precision: Union
+       [c_float, c_double] representing the user precision.
+
+
     """
     
     if comp_type == CompTypes.POINT:
@@ -533,12 +618,30 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
     
 def setup_chunked_source(chunk_map : Skymodel_Chunk_Map, num_freqs : int,
                          num_times : int, beamtype : int,
-                         precision='double') -> ctypes.Structure:
-    """Sets up a ctypes structure class to contain a chunked sky model.
+                         precision='double') -> Union[Source_Float, Source_Double]:
+    """
+    Sets up a ctypes structure class to contain a chunked sky model.
     This class is compatible with the C/CUDA code, and will allocate the
     correct amount of memory, based on whether the precision is either
     'double' or 'float'.
-    
+
+    Parameters
+    ------------
+    chunk_map : Skymodel_Chunk_Map
+        Object containing information about the chunk of the sky model.
+    num_freqs : int
+        The number of frequency channels.
+    num_times : int
+        The number of time samples.
+    beamtype : int
+        The type of primary beam.
+    precision : str, optional
+        The precision to use. Can be either "float" or "double. Defaults to "double".
+
+    Returns
+    ---------
+      Source_Float or Source_Double
+          The ctypes structure class containing the chunked sky model.
     """
     
     if precision == 'float':
@@ -588,6 +691,35 @@ def add_info_to_source_catalogue(chunked_skymodel_maps : list,
                                  beamtype : int, lsts : np.ndarray,
                                  latitude : float,
                                  collected_comps : int):
+    """
+    Given the mapping information in `chunked_skymodel_maps`, insert the
+    gathered information from `comp_info` into the correct places in the
+    `source_catalogue`.
+
+    Parameters
+    ------------
+    chunked_skymodel_maps : list
+        A list of chunked skymodel maps.
+    source_catalogue : Union[Source_Catalogue_Float, Source_Catalogue_Double]
+        A source catalogue.
+    orig_comp_ind : int
+        The original component index in the sky model that was read in.
+    comp_info : Component_Info
+        Information about the component as a populated `Component_Info` object.
+    map_comp_to_chunk : np.ndarray
+        An array used to map the component to the intended chunk.
+    all_chunk_comp_indexes : np.ndarray
+        All chunk component indexes.
+    beamtype : int
+        The beam type.
+    lsts : np.ndarray
+        An array of LSTs.
+    latitude : float
+        The latitude.
+    collected_comps : int
+        The number of collected components.
+
+    """
     
     ##Finalise all the info inside `comp_info`, and warn in 
     empty_fluxes = comp_info.finalise_comp()

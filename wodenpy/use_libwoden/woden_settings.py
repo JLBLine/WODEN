@@ -208,7 +208,7 @@ class Woden_Settings_Float(ctypes.Structure):
                 ("do_autos", c_int)]
     
 def create_woden_settings(args : argparse.Namespace,
-                          jd_date : float, lst : float) -> ctypes.Structure:
+                          jd_date : float, lst : float) -> Union[Woden_Settings_Float, Woden_Settings_Double]:
     """Given the parsed and checked arguments in `args`, populate a
     `woden_settings` ctypes.Structure that can be passed into
     libwoden_float.so or libwoden_double.so, depending on the desired
@@ -226,7 +226,7 @@ def create_woden_settings(args : argparse.Namespace,
 
     Returns
     -------
-    woden_settings : ctypes.Structure
+    woden_settings : Woden_Settings_Float or Woden_Settings_Double
        Populated ctype struct that can be passed into the C/CUDA code
     """
     
@@ -318,6 +318,22 @@ def create_woden_settings(args : argparse.Namespace,
     return woden_settings
     
 def setup_lsts_and_phase_centre(woden_settings : Union[Woden_Settings_Float, Woden_Settings_Double]) -> np.ndarray:
+    """
+    Calculate the Local Sidereal Time (LST) for each time step of an observation,
+    and set the phase centre coordinates. If `woden_settings.do_precession == True`,
+    the returned LSTs are precessed back to J2000.
+
+    Parameters
+    ----------
+    woden_settings : (Union[Woden_Settings_Float, Woden_Settings_Double])
+        A populated Woden_Settings object containing the observation parameters.
+
+    Returns
+    -------
+    lsts : np.ndarray:
+        An array of LST values, one for each time step of the observation.
+
+    """
 
     ##Used for calculating l,m,n for components
     woden_settings.sdec0 = np.sin(woden_settings.dec0)
