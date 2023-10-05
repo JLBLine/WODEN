@@ -6,7 +6,6 @@
 #include "cudacomplex.h"
 #include "fundamental_coords.h"
 #include "constants.h"
-#include "shapelet_basis.h"
 #include "source_components.h"
 #include "cudacheck.h"
 #include "woden_struct_defs.h"

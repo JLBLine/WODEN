@@ -8,7 +8,6 @@
 #include "cudacomplex.h"
 
 #include "calculate_visibilities.h"
-#include "shapelet_basis.h"
 #include "fundamental_coords.h"
 #include "constants.h"
 #include "source_components.h"

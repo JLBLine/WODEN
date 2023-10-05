@@ -2,52 +2,87 @@ import ctypes
 import importlib_resources
 import wodenpy
 import numpy as np
+from ctypes import POINTER, c_double, c_float, c_int
 
 VELC = 299792458.0
 
 class Visi_Set_Double(ctypes.Structure):
     """A class structured equivalently to a `visi_set` struct, used by 
     the C and CUDA code in libwoden_double.so
+
+    :cvar POINTER(c_double) us_metres: Output $u$ for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_double) vs_metres: Output $v$ for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_double) ws_metres: Output $w$ for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_double) allsteps_sha0s: Sine of hour angle of phase centre for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_double) allsteps_cha0s: Cosine of hour angle of phase centre for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_double) allsteps_lsts: Local sidereal time for all time steps, frequency steps, and baselines (radians)
+    :cvar POINTER(c_double) allsteps_wavelengths: Wavelengths for all time steps, frequency steps, and baselines (metres)
+    :cvar POINTER(c_double) channel_frequencies: Frequencies for all frequency steps (Hz)
+    :cvar POINTER(c_double) sum_visi_XX_real: Real values for XX polarisation for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_double) sum_visi_XX_imag: Imaginary values for XX polarisation for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_double) sum_visi_XY_real: Real values for XY polarisation for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_double) sum_visi_XY_imag: Imaginary values for XY polarisation for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_double) sum_visi_YX_real: Real values for YX polarisation for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_double) sum_visi_YX_imag: Imaginary values for YX polarisation for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_double) sum_visi_YY_real: Real values for YY polarisation for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_double) sum_visi_YY_imag: Imaginary values for YY polarisation for all time steps, frequency steps, and baselines
     """
     
-    _fields_ = [("us_metres", ctypes.POINTER(ctypes.c_double)),
-                ("vs_metres", ctypes.POINTER(ctypes.c_double)),
-                ("ws_metres", ctypes.POINTER(ctypes.c_double)),
-                ("allsteps_sha0s", ctypes.POINTER(ctypes.c_double)),
-                ("allsteps_cha0s", ctypes.POINTER(ctypes.c_double)),
-                ("allsteps_lsts", ctypes.POINTER(ctypes.c_double)),
-                ("allsteps_wavelengths", ctypes.POINTER(ctypes.c_double)),
-                ("channel_frequencies", ctypes.POINTER(ctypes.c_double)),
-                ("sum_visi_XX_real", ctypes.POINTER(ctypes.c_double)),
-                ("sum_visi_XX_imag", ctypes.POINTER(ctypes.c_double)),
-                ("sum_visi_XY_real", ctypes.POINTER(ctypes.c_double)),
-                ("sum_visi_XY_imag", ctypes.POINTER(ctypes.c_double)),
-                ("sum_visi_YX_real", ctypes.POINTER(ctypes.c_double)),
-                ("sum_visi_YX_imag", ctypes.POINTER(ctypes.c_double)),
-                ("sum_visi_YY_real", ctypes.POINTER(ctypes.c_double)),
-                ("sum_visi_YY_imag", ctypes.POINTER(ctypes.c_double))]
+    _fields_ = [("us_metres", POINTER(c_double)),
+                ("vs_metres", POINTER(c_double)),
+                ("ws_metres", POINTER(c_double)),
+                ("allsteps_sha0s", POINTER(c_double)),
+                ("allsteps_cha0s", POINTER(c_double)),
+                ("allsteps_lsts", POINTER(c_double)),
+                ("allsteps_wavelengths", POINTER(c_double)),
+                ("channel_frequencies", POINTER(c_double)),
+                ("sum_visi_XX_real", POINTER(c_double)),
+                ("sum_visi_XX_imag", POINTER(c_double)),
+                ("sum_visi_XY_real", POINTER(c_double)),
+                ("sum_visi_XY_imag", POINTER(c_double)),
+                ("sum_visi_YX_real", POINTER(c_double)),
+                ("sum_visi_YX_imag", POINTER(c_double)),
+                ("sum_visi_YY_real", POINTER(c_double)),
+                ("sum_visi_YY_imag", POINTER(c_double))]
     
 class Visi_Set_Float(ctypes.Structure):
-    """A class structured equivalent to a `visi_set` struct, used by 
+    """A class structured equivalently to a `visi_set` struct, used by 
     the C and CUDA code in libwoden_float.so
+
+    :cvar POINTER(c_float) us_metres: Output $u$ for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_float) vs_metres: Output $v$ for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_float) ws_metres: Output $w$ for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_float) allsteps_sha0s: Sine of hour angle of phase centre for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_float) allsteps_cha0s: Cosine of hour angle of phase centre for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_float) allsteps_lsts: Local sidereal time for all time steps, frequency steps, and baselines (radians)
+    :cvar POINTER(c_float) allsteps_wavelengths: Wavelengths for all time steps, frequency steps, and baselines (metres)
+    :cvar POINTER(c_float) channel_frequencies: Frequencies for all frequency steps (Hz)
+    :cvar POINTER(c_float) sum_visi_XX_real: Real values for XX polarisation for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_float) sum_visi_XX_imag: Imaginary values for XX polarisation for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_float) sum_visi_XY_real: Real values for XY polarisation for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_float) sum_visi_XY_imag: Imaginary values for XY polarisation for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_float) sum_visi_YX_real: Real values for YX polarisation for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_float) sum_visi_YX_imag: Imaginary values for YX polarisation for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_float) sum_visi_YY_real: Real values for YY polarisation for all time steps, frequency steps, and baselines
+    :cvar POINTER(c_float) sum_visi_YY_imag: Imaginary values for YY polarisation for all time steps, frequency steps, and baselines
     """
     
-    _fields_ = [("us_metres", ctypes.POINTER(ctypes.c_float)),
-                ("vs_metres", ctypes.POINTER(ctypes.c_float)),
-                ("ws_metres", ctypes.POINTER(ctypes.c_float)),
-                ("allsteps_sha0s", ctypes.POINTER(ctypes.c_float)),
-                ("allsteps_cha0s", ctypes.POINTER(ctypes.c_float)),
-                ("allsteps_lsts", ctypes.POINTER(ctypes.c_float)),
-                ("allsteps_wavelengths", ctypes.POINTER(ctypes.c_float)),
-                ("channel_frequencies", ctypes.POINTER(ctypes.c_float)),
-                ("sum_visi_XX_real", ctypes.POINTER(ctypes.c_float)),
-                ("sum_visi_XX_imag", ctypes.POINTER(ctypes.c_float)),
-                ("sum_visi_XY_real", ctypes.POINTER(ctypes.c_float)),
-                ("sum_visi_XY_imag", ctypes.POINTER(ctypes.c_float)),
-                ("sum_visi_YX_real", ctypes.POINTER(ctypes.c_float)),
-                ("sum_visi_YX_imag", ctypes.POINTER(ctypes.c_float)),
-                ("sum_visi_YY_real", ctypes.POINTER(ctypes.c_float)),
-                ("sum_visi_YY_imag", ctypes.POINTER(ctypes.c_float))]
+    _fields_ = [("us_metres", POINTER(c_float)),
+                ("vs_metres", POINTER(c_float)),
+                ("ws_metres", POINTER(c_float)),
+                ("allsteps_sha0s", POINTER(c_float)),
+                ("allsteps_cha0s", POINTER(c_float)),
+                ("allsteps_lsts", POINTER(c_float)),
+                ("allsteps_wavelengths", POINTER(c_float)),
+                ("channel_frequencies", POINTER(c_float)),
+                ("sum_visi_XX_real", POINTER(c_float)),
+                ("sum_visi_XX_imag", POINTER(c_float)),
+                ("sum_visi_XY_real", POINTER(c_float)),
+                ("sum_visi_XY_imag", POINTER(c_float)),
+                ("sum_visi_YX_real", POINTER(c_float)),
+                ("sum_visi_YX_imag", POINTER(c_float)),
+                ("sum_visi_YY_real", POINTER(c_float)),
+                ("sum_visi_YY_imag", POINTER(c_float))]
     
 def setup_visi_set(num_visis : int, precision='double') -> ctypes.Structure:
     """Sets up a ctypes structure class to contain the visibility outputs.
@@ -73,11 +108,11 @@ def setup_visi_set(num_visis : int, precision='double') -> ctypes.Structure:
     if precision == 'float':
     
         visibility_set = Visi_Set_Float()
-        num_visi_array = ctypes.c_float*num_visis
+        num_visi_array = c_float*num_visis
         
     else:
         visibility_set = Visi_Set_Double()
-        num_visi_array = ctypes.c_double*num_visis
+        num_visi_array = c_double*num_visis
         
     # visibility_set = visibility_set()
         
@@ -120,11 +155,11 @@ def setup_visi_set_array(num_bands : int, num_visis : int,
 
     if precision == 'float':
     
-        visi_set_array = ctypes.POINTER(Visi_Set_Float)
+        visi_set_array = POINTER(Visi_Set_Float)
         visi_set_array = (num_bands*Visi_Set_Float)()
         
     else:
-        visi_set_array = ctypes.POINTER(Visi_Set_Double)
+        visi_set_array = POINTER(Visi_Set_Double)
         visi_set_array = (num_bands*Visi_Set_Double)()
 
     for band in range(num_bands):

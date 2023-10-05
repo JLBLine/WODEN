@@ -48,6 +48,18 @@ Latitude of the MWA (radians) */
 /*! 2.35482004503 \n
 Convert standard deviation to FWHM for a Gaussian */
 #define FWHM_FACTOR 2.35482004503
+/*! 101 \n
+Number of orders of basis functions (from 0 to 100 inclusive) */
+#define sbf_N 101
+/*! 10001 \n
+Number of samples of each order of the basis functions */
+#define sbf_L 10001
+/*! 5000 \n
+If shapelet basis function is B(x), this is the array index where x=0 */
+#define sbf_c 5000
+/*! 0.01 \n
+If shapelet basis function is B(x), this is the x sampling resolution */
+#define sbf_dx 0.01
 
 //max number of COMPONENTs to calculate simultaneously--------------------------
 /*! 260000 \n

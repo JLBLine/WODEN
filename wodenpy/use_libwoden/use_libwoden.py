@@ -13,7 +13,33 @@ from wodenpy.use_libwoden.array_layout_struct import Array_Layout
 VELC = 299792458.0
 
 def load_in_woden_library(precision='double'):
-    """Load in the WODEN C and CUDA code"""
+    """Load in the WODEN C and CUDA code via a dynamic library, with the
+    required `precision` (either load `libwoden_float.so` or `libwoden_double.so`)
+
+    Parameters
+    ----------
+    precision : str, optional
+        Choose to use "float" precision or "double". By default 'double'
+
+    Returns
+    -------
+    run_woden : _NamedFuncPointer
+        The C wrapper function `run_woden`, which runs the C/CUDA code.
+        This function takes the following args when `precision="double"`
+         - ctypes.POINTER(Woden_Settings_Double)
+         - ctypes.POINTER(Visi_Set_Double)
+         - ctypes.POINTER(Source_Catalogue_Double)
+         - ctypes.POINTER(Array_Layout)
+         - ctypes.POINTER(ctypes.c_double)
+        This function takes the following args when `precision="float"`
+         - ctypes.POINTER(Woden_Settings_Float)
+         - ctypes.POINTER(Visi_Set_Float)
+         - ctypes.POINTER(Source_Catalogue_Float)
+         - ctypes.POINTER(Array_Layout)
+         - ctypes.POINTER(ctypes.c_float)
+
+        
+    """
 
     woden_lib = importlib_resources.files(wodenpy).joinpath(f"libwoden_{precision}.so")
     
