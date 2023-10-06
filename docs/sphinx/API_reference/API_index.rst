@@ -22,8 +22,12 @@ can be reproduced on the command line using ``script.py --help``.
   :maxdepth: 1
   
   python_code/wodenpy/array_layout
+  python_code/wodenpy/observational
+  python_code/wodenpy/phase_rotate
   python_code/wodenpy/skymodel
   python_code/wodenpy/use_libwoden
+  python_code/wodenpy/uvfits
+  python_code/wodenpy/wodenpy_setup
   
 
 Scripts
