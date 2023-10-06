@@ -129,7 +129,7 @@ def RTS_PrecessXYZtoJ2000( array_layout : Array_Layout,
     Returns
     -------
     Array_Layout
-        The update array layout with `array_layout.ant_X`, `array_layout.ant_Y`,
+        The updated array layout with `array_layout.ant_X`, `array_layout.ant_Y`,
         and `array_layout.ant_Z` precessed back to J2000."""
         
     ##Rotate the array positions for each time step - they have different
@@ -170,8 +170,24 @@ def RTS_PrecessXYZtoJ2000( array_layout : Array_Layout,
 
 
 def calc_XYZ_diffs(woden_settings : Union[Woden_Settings_Float, Woden_Settings_Double],
-                   args : argparse.Namespace) -> Structure:
+                   args : argparse.Namespace) -> Array_Layout:
+    """
+    Populates an Array_Layout class with the instrument layout, given the command
+    line arguments. Calculates the differences in X, Y, and Z coordinates
+    between all pairs of antennas in the array.
 
+    Parameters
+    ----------
+    woden_settings: Woden_Settings_Float or Woden_Settings_Double
+        An populated Woden_Settings instance
+    args: argparse.Namespace
+        The command line arguments checked by `wodenpy.wodenpy_setup.check_args`
+
+    Returns
+    -------
+    array_layout
+    - An instance of the Structure class containing the X, Y, and Z differences between all pairs of antennas in the array at each time step.
+    """
     ##sets up the ctype array_layout struct equiv
     array_layout = setup_array_layout(woden_settings, args)
 

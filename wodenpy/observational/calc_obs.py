@@ -60,7 +60,7 @@ def get_uvfits_date_and_position_constants(latitude=None,longitude=None,
     height : float
         Height above sea level of location on Earth (m)
     date : string
-            UTC date/time (e.g. in format YYYY-MM-DDThh:mm:ss or similar)
+            UTC date/time (in format YYYY-MM-DDThh:mm:ss)
 
     Returns
     -------

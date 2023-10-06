@@ -1,11 +1,28 @@
 import numpy as np
 import erfa
 import palpy
+from typing import Tuple
 
 
 def RTS_Precess_LST_Lat_to_J2000(lst_current : float, latitude_current : float,
-                                 mjd : float):
-    
+                                 mjd : float) -> Tuple[float, float]:
+    """
+    Convert the current local sidereal time and latitude to the J2000 mean system.
+
+    Parameters
+    ------------
+    lst_current : float
+        The current local sidereal time in radians.
+    latitude_current : float
+        The current latitude in radians.
+    mjd : float
+        The current modified Julian date.
+
+    Returns
+    ------------
+    lst_J2000, latitude_J2000 : Tuple[float, float]
+        A tuple containing the local sidereal time and latitude in the J2000 mean system, both in radians.
+    """
 
     # Calculate a rotation matrix that accounts for precession and nutation
     # between the current modified julian date (mjd) and J2000
