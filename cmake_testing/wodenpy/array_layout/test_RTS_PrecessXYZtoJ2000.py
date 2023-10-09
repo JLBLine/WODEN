@@ -76,7 +76,7 @@ expec_Z_prec = np.array([98.629888069350, 178.965419626805, 334.283004207471,
 
 ##Vehicle for running tests
 class Test(unittest.TestCase):
-    def test_test_RTS_PrecessXYZtoJ2000(self):
+    def test_RTS_PrecessXYZtoJ2000(self):
         
         woden_settings = Woden_Settings_Double()
         ##Set up where woden_settings correctly
