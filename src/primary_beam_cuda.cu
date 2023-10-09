@@ -3,7 +3,6 @@
 #include <cuComplex.h>
 #include <complex.h>
 #include <math.h>
-#include <erfa.h>
 #include "constants.h"
 #include "fundamental_coords.h"
 #include "cudacheck.h"

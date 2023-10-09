@@ -119,20 +119,23 @@ function.
 
 The sections below give an outline of the tests performed in each directory.
 
+``wodenpy`` code tests:
+
+.. toctree::
+   :maxdepth: 1
+
+   cmake_testing/wodenpy/array_layout
+   cmake_testing/wodenpy/observational
+   cmake_testing/wodenpy/phase_rotate
+   cmake_testing/wodenpy/skymodel
+
 ``C`` code tests:
 
 .. toctree::
    :maxdepth: 1
 
-   cmake_testing/array_layout
-   cmake_testing/chunk_sky_model
-   cmake_testing/create_sky_model
    cmake_testing/primary_beam
-   cmake_testing/read_text_skymodel
-   cmake_testing/read_yaml_skymodel
-   cmake_testing/shapelet_basis
    cmake_testing/visibility_set
-   cmake_testing/woden_settings
 
 ``CUDA`` code tests:
 
@@ -144,7 +147,7 @@ The sections below give an outline of the tests performed in each directory.
    cmake_testing/primary_beam_cuda
    cmake_testing/source_components
 
-``python`` code tests:
+``script`` code tests:
 
 .. toctree::
    :maxdepth: 1

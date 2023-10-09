@@ -1,0 +1,7 @@
+sphinx_argparse
+breathe
+astropy
+numpy
+pyerfa
+palpy
+importlib_resources

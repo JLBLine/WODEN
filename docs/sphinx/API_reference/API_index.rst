@@ -16,14 +16,31 @@ can be reproduced on the command line using ``script.py --help``.
 ``python`` code
 -----------------
 
+``wodenpy``
+
+.. toctree::
+  :maxdepth: 1
+  
+  python_code/wodenpy/array_layout
+  python_code/wodenpy/observational
+  python_code/wodenpy/phase_rotate
+  python_code/wodenpy/skymodel
+  python_code/wodenpy/use_libwoden
+  python_code/wodenpy/uvfits
+  python_code/wodenpy/wodenpy_setup
+  
+
+Scripts
+++++++++++
+
 .. toctree::
   :maxdepth: 1
 
-  python_code/run_woden
-  python_code/add_woden_uvfits
-  python_code/concat_woden_uvfits
-  python_code/uv2ms
-  python_code/convert_WSClean_list_to_WODEN
+  python_code/scripts/run_woden
+  python_code/scripts/add_woden_uvfits
+  python_code/scripts/concat_woden_uvfits
+  python_code/scripts/uv2ms
+  python_code/scripts/convert_WSClean_list_to_WODEN
 
 ``C`` code
 ----------------------
@@ -56,18 +73,10 @@ or ``double _Complex``.
 .. toctree::
   :maxdepth: 1
 
-  C_code/array_layout
-  C_code/chunk_sky_model
   C_code/constants
-  C_code/create_sky_model
   C_code/primary_beam
-  C_code/print_help
-  C_code/read_text_skymodel
-  C_code/read_yaml_skymodel
-  C_code/shapelet_basis
   C_code/visibility_set
   C_code/woden_precision_defs
-  C_code/woden_settings
   C_code/woden_struct_defs
 
 ``CUDA`` code

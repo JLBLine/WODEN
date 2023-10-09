@@ -3,23 +3,7 @@
   constants definitions.
 */
 #include "woden_precision_defs.h"
-
-//Somthing WEIRD is up with the way I'm using the documentation package
-//'breathe', so having to include the definition value in the documentation
-//string to get values to appear (sigh)
-
-/*! 101 \n
-Number of orders of basis functions (from 0 to 100 inclusive) */
-#define sbf_N 101
-/*! 10001 \n
-Number of samples of each order of the basis functions */
-#define sbf_L 10001
-/*! 5000 \n
-If shapelet basis function is B(x), this is the array index where x=0 */
-#define sbf_c 5000
-/*! 0.01 \n
-If shapelet basis function is B(x), this is the x sampling resolution */
-#define sbf_dx 0.01
+#include "constants.h"
 
 /**
 @brief Create the 1D shapelet basis function look-up array `sbf`

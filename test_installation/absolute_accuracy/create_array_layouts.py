@@ -109,17 +109,15 @@ if __name__ == '__main__':
     date = "2020-01-01T12:00:00.0"
 
     #Lat/long of the array at the observation date
-    latitude = 0.1095073835963605*(np.pi/180.0)
-    longitude = 79.6423588359480874*(np.pi/180.0)
-
-    # print(f"LAT/LONG {latitude*(180.0/np.pi):.16f} {longitude*(180.0/np.pi):.16f}")
+    latitude = 0.10950738359636049*(np.pi/180.0)
+    longitude = 79.638150061479*(np.pi/180.0)
 
     ##Setup location
     observing_location = EarthLocation(lat=latitude*u.rad, lon=longitude*u.rad, height=0.0)
     ##Setup time at that locatoin
     observing_time = Time(date, scale='utc', location=observing_location)
     ##Grab the LST
-    LST = observing_time.sidereal_time('apparent')
+    LST = observing_time.sidereal_time('mean')
     LST_deg = LST.value*15.0
 
     ##This is the LST at the observing_time

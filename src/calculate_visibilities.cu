@@ -8,7 +8,6 @@
 #include "cudacomplex.h"
 
 #include "calculate_visibilities.h"
-#include "shapelet_basis.h"
 #include "fundamental_coords.h"
 #include "constants.h"
 #include "source_components.h"
@@ -18,7 +17,6 @@
 
 //Helpful C code we are also using
 #include "visibility_set.h"
-#include "chunk_sky_model.h"
 
 extern "C" void calculate_visibilities(array_layout_t *array_layout,
   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
@@ -88,19 +86,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   cudaErrorCheckCall( cudaMalloc( (void**)&d_vs, num_visis*sizeof(user_precision_t) ) );
   cudaErrorCheckCall( cudaMalloc( (void**)&d_ws, num_visis*sizeof(user_precision_t) ) );
 
-
-  // visibility_set_t
-
   visibility_set_t *d_visibility_set =  (visibility_set_t* )malloc(sizeof(visibility_set_t));
-
-  // user_precision_t *d_sum_visi_XX_real;
-  // user_precision_t *d_sum_visi_XX_imag;
-  // user_precision_t *d_sum_visi_XY_real;
-  // user_precision_t *d_sum_visi_XY_imag;
-  // user_precision_t *d_sum_visi_YX_real;
-  // user_precision_t *d_sum_visi_YX_imag;
-  // user_precision_t *d_sum_visi_YY_real;
-  // user_precision_t *d_sum_visi_YY_imag;
 
   cudaErrorCheckCall( cudaMalloc( (void**)&d_visibility_set->sum_visi_XX_real,
                       num_visis*sizeof(user_precision_t) ) );
@@ -166,10 +152,6 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                             num_amps,
                             norm_to_zenith,
                             &beam_settings->cuda_fee_beam);
-    //
-    // if (status != 0) {
-    //   printf("hyperbeam error %d %s\n", status, beam_settings->hyper_error_str );
-    // }
 
     if (status != 0) {
       handle_hyperbeam_error(__FILE__, __LINE__, "new_cuda_fee_beam");
@@ -180,14 +162,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   //added to chunk_visibility_set, and then summed onto visibility_set
   for (int chunk = 0; chunk < cropped_sky_models->num_sources; chunk++) {
 
-    // printf("STARING A CHUNK NOW\n");
+    // source_t *source = (source_t *)malloc(sizeof(source_t));
 
-    source_t *source = (source_t *)malloc(sizeof(source_t));
-    // source = NULL;
-
-    remap_source_for_gpu(source, &cropped_sky_models->sources[chunk],
-                         woden_settings->num_time_steps,
-                         beam_settings->beamtype);
+    source_t *source = &cropped_sky_models->sources[chunk];
 
     // printf("\tsource->n_comps %d\n", source->n_comps);
     // printf("\tsource->n_points %d\n", source->n_points);
@@ -204,8 +181,10 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     // printf("\tsource->n_shape_curves %d\n", source->n_shape_curves);
     // printf("\tsource->n_shape_coeffs %d\n", source->n_shape_coeffs);
 
+    printf("About to copy the chunked source to the GPU\n");
+
     source_t *d_chunked_source = copy_chunked_source_to_GPU(source);
-    // printf("Have copied across the chunk to the GPU\n");
+    printf("Have copied across the chunk to the GPU\n");
 
     //Make sure the temp visis are 0 at the start of each chunk
     for (int visi = 0; visi < num_visis; visi++) {
@@ -486,14 +465,14 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       //the u,v,w coords
       if (chunk == 0) {
         //ensure temp visi's are 0.0
-        visibility_set->sum_visi_XX_real[visi] = 0;
-        visibility_set->sum_visi_XX_imag[visi] = 0;
-        visibility_set->sum_visi_XY_real[visi] = 0;
-        visibility_set->sum_visi_XY_imag[visi] = 0;
-        visibility_set->sum_visi_YX_real[visi] = 0;
-        visibility_set->sum_visi_YX_imag[visi] = 0;
-        visibility_set->sum_visi_YY_real[visi] = 0;
-        visibility_set->sum_visi_YY_imag[visi] = 0;
+        // visibility_set->sum_visi_XX_real[visi] = 0;
+        // visibility_set->sum_visi_XX_imag[visi] = 0;
+        // visibility_set->sum_visi_XY_real[visi] = 0;
+        // visibility_set->sum_visi_XY_imag[visi] = 0;
+        // visibility_set->sum_visi_YX_real[visi] = 0;
+        // visibility_set->sum_visi_YX_imag[visi] = 0;
+        // visibility_set->sum_visi_YY_real[visi] = 0;
+        // visibility_set->sum_visi_YY_imag[visi] = 0;
 
         visibility_set->us_metres[visi] = chunk_visibility_set->us_metres[visi];
         visibility_set->vs_metres[visi] = chunk_visibility_set->vs_metres[visi];
@@ -512,8 +491,6 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
     }//visi loop
 
-  //free up the remapped chunked_source we made for copying things to GPU
-  free_remapped_source_for_gpu(source, beam_settings->beamtype);
   } //chunk loop
 
   //Free the chunk_visibility_set

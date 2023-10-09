@@ -22,6 +22,20 @@ visibility_set_t * setup_visibility_set(int num_visis) {
   visibility_set->sum_visi_YY_real = (user_precision_t *)malloc( num_visis * sizeof(user_precision_t) );
   visibility_set->sum_visi_YY_imag = (user_precision_t *)malloc( num_visis * sizeof(user_precision_t) );
 
+  //make sure things are zero upon initialisation
+  for (int i = 0; i < num_visis; i++)
+  {
+    visibility_set->sum_visi_XX_real[i] = 0;
+    visibility_set->sum_visi_XX_imag[i] = 0;
+    visibility_set->sum_visi_XY_real[i] = 0;
+    visibility_set->sum_visi_XY_imag[i] = 0;
+    visibility_set->sum_visi_YX_real[i] = 0;
+    visibility_set->sum_visi_YX_imag[i] = 0;
+    visibility_set->sum_visi_YY_real[i] = 0;
+    visibility_set->sum_visi_YY_imag[i] = 0;
+  }
+  
+
   return visibility_set;
 }
 

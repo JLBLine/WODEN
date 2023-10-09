@@ -15,6 +15,15 @@ import sys
 import subprocess
 
 sys.path.insert(0, os.path.abspath('../../src/'))
+sys.path.insert(0, os.path.abspath('../../wodenpy/'))
+sys.path.insert(0, os.path.abspath('../../wodenpy/array_layout'))
+sys.path.insert(0, os.path.abspath('../../wodenpy/observational'))
+sys.path.insert(0, os.path.abspath('../../wodenpy/phase_rotate'))
+sys.path.insert(0, os.path.abspath('../../wodenpy/skymodel'))
+sys.path.insert(0, os.path.abspath('../../wodenpy/use_libwoden'))
+sys.path.insert(0, os.path.abspath('../../wodenpy/uvfits'))
+sys.path.insert(0, os.path.abspath('../../wodenpy/wodenpy_setup'))
+sys.path.insert(0, os.path.abspath('../../scripts/'))
 
 read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 
@@ -42,11 +51,11 @@ if run_doxygen: subprocess.call('doxygen Doxyfile', shell=True)
 # -- Project information -----------------------------------------------------
 
 project = 'WODEN'
-copyright = '2022, J.L.B. Line'
+copyright = '2023, J.L.B. Line'
 author = 'J.L.B. Line'
 
 # The full version, including alpha/beta/rc tags
-release = '1.4'
+release = '2.0'
 
 # -- General configuration ---------------------------------------------------
 
@@ -61,6 +70,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinxarg.ext',
     'sphinx.ext.mathjax',
+    'sphinx_math_dollar',
     'sphinx.ext.napoleon',
     'sphinx.ext.coverage',
     'sphinx.ext.autosectionlabel',
