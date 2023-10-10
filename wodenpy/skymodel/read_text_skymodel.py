@@ -5,7 +5,7 @@ from typing import Union
 
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, Component_Info, CompTypes, calc_pl_norm_at_200MHz, calc_cpl_norm_at_200MHz
 from wodenpy.skymodel.chunk_sky_model import Skymodel_Chunk_Map
-from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, setup_source_catalogue, Source_Catalogue_Float, Source_Catalogue_Double, add_info_to_source_catalogue, _Ctype_Source_Into_Python, Components_Float, Components_Double, Source_Float, Source_Double
+from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, setup_source_catalogue, Source_Catalogue_Float, Source_Catalogue_Double, _Ctype_Source_Into_Python, Components_Float, Components_Double, Source_Float, Source_Double
 from wodenpy.skymodel.read_fits_skymodel import add_fits_info_to_source_catalogue
 
 from wodenpy.use_libwoden.beam_settings import BeamTypes

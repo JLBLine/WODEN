@@ -51,16 +51,3 @@ def RTS_Precess_LST_Lat_to_J2000(lst_current : float, latitude_current : float,
     lst_J2000 = palpy.dranrm(lst_J2000)
 
     return lst_J2000, latitude_J2000
-
-if __name__ == "__main__":
-    
-    mjd = 59945
-    
-    lst_current = 0.0
-    latitude_current = -30*(np.pi/180.0)
-    
-    lst_J2000, latitude_J2000 = RTS_Precess_LST_Lat_to_J2000(lst_current,
-                                                             latitude_current,
-                                                             mjd)
-    
-    print(lst_J2000, latitude_J2000)

@@ -531,48 +531,6 @@ class Component_Info(object):
         
         self.fluxes[self.num_fluxes - 1][3] = stokesV
         
-    def finalise_comp(self):
-        
-        if self.point:
-            if self.flux_power:
-                self.comp_type = CompTypes.POINT_POWER
-            elif self.flux_curve:
-                self.comp_type = CompTypes.POINT_CURVE
-            elif self.flux_list:
-                self.comp_type = CompTypes.POINT_LIST
-        elif self.gaussian:
-            if self.flux_power:
-                self.comp_type = CompTypes.GAUSS_POWER
-            elif self.flux_curve:
-                self.comp_type = CompTypes.GAUSS_CURVE
-            elif self.flux_list:
-                self.comp_type = CompTypes.GAUSS_LIST
-        if self.shapelet:
-            if self.flux_power:
-                self.comp_type = CompTypes.SHAPE_POWER
-            elif self.flux_curve:
-                self.comp_type = CompTypes.SHAPE_CURVE
-            elif self.flux_list:
-                self.comp_type = CompTypes.SHAPE_LIST
-                
-            self.n1s = np.array(self.n1s)
-            self.n2s = np.array(self.n2s)
-            self.coeffs = np.array(self.coeffs)
-        
-        
-        self.num_fluxes = len(self.fluxes)
-        self.fluxes = np.array(self.fluxes)
-        
-        empty_fluxes = []
-        for flux_ind in range(self.num_fluxes):
-            if np.all(np.isnan(self.fluxes[flux_ind])):
-                empty_fluxes.append(flux_ind)
-                
-        ##set missing fluxes to zero
-        self.fluxes[np.isnan(self.fluxes)] = 0.0
-        
-        return empty_fluxes
-    
 def calc_pl_norm_at_200MHz(component : Component_Info) -> Component_Info:
     """The FITS style sky model references everything to 200MHz, so extrap
     a power-law model reference flux to 200MHz, and set frequency to 200MHz
