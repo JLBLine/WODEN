@@ -3,4 +3,5 @@ breathe
 astropy
 numpy
 pyerfa
+palpy
 sphinx-math-dollar
