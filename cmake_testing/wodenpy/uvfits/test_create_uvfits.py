@@ -7,12 +7,7 @@ from copy import deepcopy
 
 np.random.seed(179)
 
-##Do some disgusting path finding exercise, there must be a better way
-##to do this
-fileloc = os.path.realpath(__file__)
-path.append('{:s}/../../../wodenpy/uvfits/'.format(('/').join(fileloc.split('/')[:-1])))
-
-import wodenpy_uvfits
+from wodenpy.uvfits import wodenpy_uvfits
 
 ##Vehicle for running tests
 class Test(unittest.TestCase):

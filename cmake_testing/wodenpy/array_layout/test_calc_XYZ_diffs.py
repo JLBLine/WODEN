@@ -5,22 +5,8 @@ import numpy as np
 from ctypes import c_double
 import argparse
 
-##Do some disgusting path finding exercise, there must be a better way
-##to do this
-# fileloc = os.path.realpath(__file__)
-# path.append('{:s}/../../../wodenpy/array_layout'.format(('/').join(fileloc.split('/')[:-1])))
-
-##This is where our code lives
-code_dir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
-
-##Append the location of run_woden.py to the sys.path to import it
-path.append('{:s}/../../../wodenpy/array_layout'.format(code_dir))
-path.append('{:s}/../../../wodenpy/use_libwoden'.format(code_dir))
-# path.append('{:s}/../../../wodenpy/'.format(code_dir))
-
-from woden_settings import Woden_Settings_Double
-# from array_layout_struct import setup_array_layout
-from create_array_layout import calc_XYZ_diffs
+from wodenpy.use_libwoden.woden_settings import Woden_Settings_Double
+from wodenpy.array_layout.create_array_layout import calc_XYZ_diffs
 
 D2R = np.pi / 180.0
 

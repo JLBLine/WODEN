@@ -4,17 +4,15 @@ import unittest
 import numpy as np
 import ctypes
 
-##This is where our code lives
-code_dir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
-
-##Append the location of run_woden.py to the sys.path to import it
-path.append('{:s}/../../../wodenpy/wodenpy_setup'.format(code_dir))
-path.append('{:s}/../../../wodenpy/use_libwoden'.format(code_dir))
-
 # ##Code we are testing
-import woden_settings as ws
-import run_setup
+import wodenpy.use_libwoden.woden_settings as ws
+from wodenpy.wodenpy_setup import run_setup
 # import woden_lib
+
+# code_dir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
+
+code_dir = os.path.realpath(__file__)
+code_dir = ('/').join(code_dir.split('/')[:-1])
 
 D2R = np.pi/180.0
 

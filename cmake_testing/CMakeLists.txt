@@ -42,4 +42,4 @@ add_subdirectory(CUDA_code)
 add_subdirectory(wodenpy)
 
 ## Test python scripts
-#add_subdirectory(scripts)
+add_subdirectory(scripts)

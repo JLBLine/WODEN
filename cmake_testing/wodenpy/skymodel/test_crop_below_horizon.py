@@ -11,18 +11,11 @@ import os
 import unittest
 import numpy as np
 
-##This is where our code lives
-code_dir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
-
-##Append the location of run_woden.py to the sys.path to import it
-path.append('{:s}/../../../wodenpy/skymodel'.format(code_dir))
-# path.append('{:s}/../../../wodenpy'.format(code_dir))
-
 # ##Code we are testing
-import read_yaml_skymodel
+from wodenpy.skymodel import read_yaml_skymodel
 # import wodenpy
-from woden_skymodel import Component_Type_Counter
-from woden_skymodel import crop_below_horizon
+from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, crop_below_horizon
+
 
 D2R = np.pi/180.0
 

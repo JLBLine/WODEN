@@ -12,7 +12,7 @@ np.random.seed(7687)
 fileloc = os.path.realpath(__file__)
 path.append('{:s}/../../../wodenpy/phase_rotate/'.format(('/').join(fileloc.split('/')[:-1])))
 
-import remove_phase_track
+from wodenpy.phase_rotate import remove_phase_track
 
 ##Constants
 D2R = np.pi / 180.0

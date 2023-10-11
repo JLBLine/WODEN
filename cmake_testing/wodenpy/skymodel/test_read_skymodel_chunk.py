@@ -8,29 +8,21 @@ import unittest
 import numpy as np
 import erfa
 
-##This is where our code lives
-code_dir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
-
-##Append the location of run_woden.py to the sys.path to import it
-path.append('{:s}/../../../wodenpy/skymodel'.format(code_dir))
-path.append('{:s}/../../../wodenpy/use_libwoden'.format(code_dir))
-path.append('{:s}/../../../wodenpy'.format(code_dir))
-
 # ##Code we are testing
-from read_skymodel import read_skymodel_chunks, read_radec_count_components
-import read_fits_skymodel
-import read_yaml_skymodel
-from woden_skymodel import Component_Type_Counter, CompTypes, crop_below_horizon
-from chunk_sky_model import create_skymodel_chunk_map, Skymodel_Chunk_Map, increment_flux_type_counters
-from beam_settings import BeamTypes
+from wodenpy.skymodel.read_skymodel import read_skymodel_chunks, read_radec_count_components
+from wodenpy.skymodel import read_fits_skymodel
+from wodenpy.skymodel import read_yaml_skymodel
+from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes, crop_below_horizon
+from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map, Skymodel_Chunk_Map, increment_flux_type_counters
+from wodenpy.use_libwoden.beam_settings import BeamTypes
 
-from skymodel_structs import setup_chunked_source, _Ctype_Source_Into_Python
+from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, _Ctype_Source_Into_Python
 
 from common_skymodel_test import fill_comp_counter, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components
 
 from read_skymodel_common import check_components, check_all_sources, populate_pointgauss_chunk, populate_shapelet_chunk, make_expected_chunks
 
-import woden_settings as ws
+import wodenpy.use_libwoden.woden_settings as ws
 
 from test_read_FITS_skymodel_chunk import write_full_test_skymodel_fits
 from test_read_yaml_skymodel_chunk import write_full_test_skymodel_yaml

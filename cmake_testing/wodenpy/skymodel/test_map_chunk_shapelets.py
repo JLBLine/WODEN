@@ -7,18 +7,8 @@ import os
 import unittest
 import numpy as np
 
-##This is where our code lives
-code_dir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
-
-##Append the location of run_woden.py to the sys.path to import it
-path.append('{:s}/../../../wodenpy/skymodel'.format(code_dir))
-path.append('{:s}/../../../wodenpy'.format(code_dir))
-
-# ##Code we are testing
-import read_yaml_skymodel
-# import wodenpy
-from woden_skymodel import Component_Type_Counter, CompTypes
-from chunk_sky_model import map_chunk_shapelets, Skymodel_Chunk_Map, create_shape_basis_maps
+from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes
+from wodenpy.skymodel.chunk_sky_model import map_chunk_shapelets, Skymodel_Chunk_Map, create_shape_basis_maps
 
 from common_skymodel_test import fill_comp_counter, Expec_Counter, BaseChunkTest
 
@@ -92,26 +82,26 @@ class Test(BaseChunkTest):
                                            num_time_steps, num_list_values)
         
         
-    # def test_Shapelet010_Coeff13_Chunk1000_Time004(self):
-    #     max_num_visibilities = 1000
-    #     num_shapes = 10
-    #     num_coeff_per_shape = 13
-    #     num_time_steps = 4
-    #     num_list_values = 4
-    #     self.run_test_map_chunk_shapelet(max_num_visibilities,
-    #                                        num_shapes, num_coeff_per_shape,
-    #                                        num_time_steps, num_list_values)
+    def test_Shapelet010_Coeff13_Chunk1000_Time004(self):
+        max_num_visibilities = 1000
+        num_shapes = 10
+        num_coeff_per_shape = 13
+        num_time_steps = 4
+        num_list_values = 4
+        self.run_test_map_chunk_shapelet(max_num_visibilities,
+                                           num_shapes, num_coeff_per_shape,
+                                           num_time_steps, num_list_values)
 
-    # def test_Shapelet193_Coeff1266_Chunk3913_Time007(self):
-    #     max_num_visibilities = 3913
-    #     num_shapes = 193
-    #     num_coeff_per_shape = 1266
-    #     num_time_steps = 7
+    def test_Shapelet193_Coeff1266_Chunk3913_Time007(self):
+        max_num_visibilities = 3913
+        num_shapes = 193
+        num_coeff_per_shape = 1266
+        num_time_steps = 7
 
-    #     num_list_values = 5
-    #     self.run_test_map_chunk_shapelet(max_num_visibilities,
-    #                                        num_shapes, num_coeff_per_shape,
-    #                                        num_time_steps, num_list_values)
+        num_list_values = 5
+        self.run_test_map_chunk_shapelet(max_num_visibilities,
+                                           num_shapes, num_coeff_per_shape,
+                                           num_time_steps, num_list_values)
         
 ##Run the test
 if __name__ == '__main__':

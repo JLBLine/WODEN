@@ -3,12 +3,7 @@ import os
 import unittest
 import numpy as np
 
-##Do some disgusting path finding exercise, there must be a better way
-##to do this
-fileloc = os.path.realpath(__file__)
-path.append('{:s}/../../../wodenpy/array_layout'.format(('/').join(fileloc.split('/')[:-1])))
-
-import create_array_layout
+from wodenpy.array_layout import create_array_layout
 
 D2R = np.pi / 180.0
 

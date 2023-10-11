@@ -5,15 +5,8 @@ import numpy as np
 import ctypes
 import numpy.testing as npt
 
-##This is where our code lives
-code_dir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
-
-##Append the location of run_woden.py to the sys.path to import it
-path.append('{:s}/../../../wodenpy/wodenpy_setup'.format(code_dir))
-path.append('{:s}/../../../wodenpy/use_libwoden'.format(code_dir))
-
-# ##Code we are testing
-from shapelets import create_sbf
+##Code we are testing
+from wodenpy.use_libwoden.shapelets import create_sbf
 
 ##Indexes to test in sbf
 test_indexes = np.array([5000, 15011, 25022, 35033, 45044, 55055,

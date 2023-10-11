@@ -6,17 +6,14 @@ from astropy.io import fits
 from unittest import mock
 import argparse
 
-##This is where our code lives
-code_dir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
-
-##Append the location of wodenpy to the sys.path to import from it
-path.append('{:s}/../../../wodenpy/uvfits'.format(code_dir))
+code_dir = os.path.realpath(__file__)
+code_dir = ('/').join(code_dir.split('/')[:-1])
 
 ##Append the location of add_woden_uvfits to the sys.path to import from it
 path.append('{:s}/../../../scripts'.format(code_dir))
 
 ##Code we are testing
-import wodenpy_uvfits
+from wodenpy.uvfits import wodenpy_uvfits
 import add_woden_uvfits as awu
 
 ##Vehicle for running tests

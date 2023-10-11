@@ -8,17 +8,13 @@ import unittest
 import numpy as np
 
 ##This is where our code lives
-code_dir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
-
-##Append the location of run_woden.py to the sys.path to import it
-path.append('{:s}/../../../wodenpy/skymodel'.format(code_dir))
-path.append('{:s}/../../../wodenpy'.format(code_dir))
+# code_dir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
 
 # ##Code we are testing
-import read_yaml_skymodel
+from wodenpy.skymodel import read_yaml_skymodel
 # import wodenpy
-from woden_skymodel import Component_Type_Counter, CompTypes
-from chunk_sky_model import create_skymodel_chunk_map, Skymodel_Chunk_Map
+from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes
+from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map, Skymodel_Chunk_Map
 
 from common_skymodel_test import fill_comp_counter, Expec_Counter, BaseChunkTest
 

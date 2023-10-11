@@ -3,14 +3,11 @@ import os
 import unittest
 import numpy as np
 
-##This is where our code lives
-code_dir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
-
-##Append the location of run_woden.py to the sys.path to import it
-path.append('{:s}/../../../wodenpy/wodenpy_setup'.format(code_dir))
+code_dir = os.path.realpath(__file__)
+code_dir = ('/').join(code_dir.split('/')[:-1])
 
 # ##Code we are testing
-import run_setup
+from wodenpy.wodenpy_setup import run_setup
 
 ##some expected values
 east = [-5.55600e+01, 1.77467e+02, -2.17100e+01, 9.18090e+01, 1.53700e+02,

@@ -5,3 +5,4 @@ numpy
 pyerfa
 palpy
 matplotlib
+sphinx-math-dollar
