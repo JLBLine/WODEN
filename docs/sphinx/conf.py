@@ -27,6 +27,9 @@ sys.path.insert(0, os.path.abspath('../../scripts/'))
 
 read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 
+if read_the_docs_build:
+    sys.path.insert(0, os.path.abspath('../../'))
+
 pwd = os.getcwd()
 os.chdir('../doxygen')
 print("pwd is {:s}".format(os.getcwd()))
