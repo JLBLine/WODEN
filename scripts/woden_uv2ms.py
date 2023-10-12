@@ -17,7 +17,7 @@ def make_ms(uvfits_file, no_delete=False):
         ##Get rid of '.uvfits' off the end of the file
         name = uvfits_file[:-7]
         ##Delete old measurement set if requested
-        if args.no_delete:
+        if no_delete:
             pass
         else:
             call("rm -r %s.ms" %name,shell=True)
@@ -45,7 +45,7 @@ def get_parser():
 
     """
     parser = argparse.ArgumentParser(description="Script to transform uvfits files"
-                    "into measurement sets. Should be run via `casa -c uv2ms.py`."
+                    "into measurement sets. "
                     "Uses same name of uvfits for the output measurement set")
 
     parser.add_argument('--single_uvfits', default=False,
@@ -69,7 +69,25 @@ def get_parser():
 
     return parser
 
-if __name__ == '__main__':
+def main():
+    """
+    Converts UVFITS files to Measurement Sets (MS) using WODEN.
+
+    Usage:
+    python woden_uv2ms.py --single_uvfits <filename> [--no_delete]
+    python woden_uv2ms.py --uvfits_prepend <filename_prefix> --band_nums <band_numbers> [--no_delete]
+
+    Arguments:
+    --single_uvfits <filename> : Convert a single UVFITS file to an MS.
+    --uvfits_prepend <filename_prefix> : Convert multiple UVFITS files to MSs, where <filename_prefix> is the prefix of the UVFITS files.
+    --band_nums <band_numbers> : Comma-separated list of band numbers to convert. Default is all bands (1-24).
+    --no_delete : Do not delete intermediate files.
+
+    Example usage:
+    python woden_uv2ms.py --single_uvfits example.uvfits
+    python woden_uv2ms.py --uvfits_prepend example_ --band_nums 1,3,5 --no_delete
+    """
+    
     ##Get command line arguments
     parser = get_parser()
     args = parser.parse_args()
@@ -87,9 +105,12 @@ if __name__ == '__main__':
             except:
                 message = ("ERROR - failed to convert --band_nums into a list of ints"
                            " correctly. You entered:\n"
-                           "    --band_nums={:s}\n"
+                           f"    --band_nums={args.band_nums}\n"
                            "Exiting now.")
                 exit(message)
 
         for band in args.band_nums:
             make_ms("{:s}{:02d}.uvfits".format(args.uvfits_prepend, band), no_delete=args.no_delete)
+
+if __name__ == '__main__':
+    main()

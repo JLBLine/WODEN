@@ -61,6 +61,7 @@ coverage run --source=concat_woden_uvfits -a ../cmake_testing/scripts/concat_wod
 coverage run --source=run_woden -a ../cmake_testing/scripts/run_woden/test_run_woden.py
 coverage run --source=wodenpy.use_libwoden.visibility_set -a ../cmake_testing/scripts/run_woden/test_run_woden.py
 coverage run --source=wodenpy.use_libwoden.use_libwoden -a ../cmake_testing/scripts/run_woden/test_run_woden.py
+coverage run --source=woden_uv2ms -a ../cmake_testing/scripts/woden_uv2ms/test_woden_uv2ms.py
 
 ##convert output to something that codecov accepts
 coverage xml
