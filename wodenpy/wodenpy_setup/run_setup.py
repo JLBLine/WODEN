@@ -472,7 +472,7 @@ def check_args(args):
         except:
             message = ("ERROR - failed to convert --band_nums into a list of ints"
                        " correctly. You entered:\n"
-                       "    --band_nums={:s}\n"
+                       f"    --band_nums={args.band_nums}\n"
                        "Exiting now.")
             exit(message)
 

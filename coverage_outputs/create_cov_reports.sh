@@ -58,7 +58,9 @@ coverage run --source=wodenpy.wodenpy_setup.run_setup -a ../cmake_testing/wodenp
 ##scripts
 coverage run --source=add_woden_uvfits -a ../cmake_testing/scripts/add_woden_uvfits/test_add_woden_uvfits.py
 coverage run --source=concat_woden_uvfits -a ../cmake_testing/scripts/concat_woden_uvfits/test_concat_woden_uvfits.py
-# coverage run --source=concat_woden_uvfits -a ../cmake_testing/concat_woden_uvfits/test_concat_woden_uvfits.py
+coverage run --source=run_woden -a ../cmake_testing/scripts/run_woden/test_run_woden.py
+coverage run --source=wodenpy.use_libwoden.visibility_set -a ../cmake_testing/scripts/run_woden/test_run_woden.py
+coverage run --source=wodenpy.use_libwoden.use_libwoden -a ../cmake_testing/scripts/run_woden/test_run_woden.py
 
 ##convert output to something that codecov accepts
 coverage xml

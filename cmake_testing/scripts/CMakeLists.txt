@@ -1,2 +1,3 @@
 add_subdirectory(add_woden_uvfits)
 add_subdirectory(concat_woden_uvfits)
+add_subdirectory(run_woden)

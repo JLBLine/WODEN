@@ -5,4 +5,4 @@
 
 test_concat_woden_uvfits.py
 ****************************
-This test writes out some example ``uvfits`` files with known contents, creates a mock of a command line argument object, and runs ``concat_woden_uvfits.main`` to create concatenated outputs. Simply we just make 4 uvfits files and stich em together.
+This test writes out some example ``uvfits`` files with known contents, creates a mock of a command line argument object, and runs ``concat_woden_uvfits.main`` to create concatenated outputs. Simply we just make 4 uvfits files and stich em together. There are two options of reverse the X and Y polarisations, and halving the power of the visibilities (for different Stokes conventions). So run the test 4 times to test all options.

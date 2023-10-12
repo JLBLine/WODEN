@@ -60,8 +60,13 @@ class Test(unittest.TestCase):
                       array_height=self.array_height)
 
         ##Create some dummy data inputs
-        v_container = np.ones((self.num_time_steps*self.num_baselines, 1, 1, self.num_freq_channels, 4, 3))*visi_values
-
+        v_container = np.ones((self.num_time_steps*self.num_baselines, 1, 1, self.num_freq_channels, 4, 3))
+        v_container[:,0,0,:,1,:] = 2.0
+        v_container[:,0,0,:,2,:] = 3.0
+        v_container[:,0,0,:,3,:] = 4.0
+        
+        v_container *= visi_values
+        
         uu = np.arange(self.num_baselines*self.num_time_steps)
         vv = np.arange(self.num_baselines*self.num_time_steps) + self.num_baselines
         ww = np.arange(self.num_baselines*self.num_time_steps) + 2*self.num_baselines
@@ -81,7 +86,8 @@ class Test(unittest.TestCase):
                   baselines_array=baselines_array, date_array=date_array,
                   hdu_ant=ant_table, telescope_name=self.telescope_name,
                   longitude=self.longitude, latitude=self.latitude,
-                  array_height=self.array_height)
+                  array_height=self.array_height,
+                  IAU_order=True)
 
         self.uu = uu
         self.vv = vv
@@ -155,6 +161,9 @@ class Test(unittest.TestCase):
             ##so need to subtract before comparison
             self.assertTrue(np.array_equal(self.date_array, data_table.data['DATE']) - data_table.header['PZERO4'])
 
+
+            print(expec_data[0,0,0,:,0,0], data_table.data.data[0,0,0,:,0,0])
+
             ##Check the actual visisbility values are correct
             self.assertTrue(np.allclose(expec_data, data_table.data.data))
 
@@ -207,9 +216,54 @@ class Test(unittest.TestCase):
                 return_value=argparse.Namespace(num_bands=4,
                             uvfits_prepend="unittest_example1_band",
                             output_name="concatenated_uvfuts.uvfits",
-                            swap_pols=False))
+                            swap_pols=False,
+                            half_power=False))
 
     def test_concat_four_uvfits(self, mock_args):
+        """Checks that concatenating four uvfits files that have `band{band}.uvfits`
+        at the end works, by creating four uvfits with known properties"""
+
+        ##Some input test params
+        self.make_dummy_intputs()
+        self.output_uvfits_name = f"unittest_example1_band01.uvfits"
+        self.create_uvfits_outputs()
+        
+        expec_data = np.ones((self.num_time_steps*self.num_baselines, 1, 1, self.num_freq_channels*4, 4, 3))
+        expec_data[:,:,:,:,1,:] = 2.0
+        expec_data[:,:,:,:,2,:] = 3.0
+        expec_data[:,:,:,:,3,:] = 4.0
+        
+        for band in range(2,5):
+            cent_freq = self.freq_cent
+
+            self.freq_cent += self.num_freq_channels*self.ch_width
+
+            self.output_uvfits_name = f"unittest_example1_band{band:02d}.uvfits"
+            self.create_uvfits_outputs(visi_values=band)
+
+            low = self.num_freq_channels*(band - 1)
+            high = self.num_freq_channels*band
+
+            expec_data[:, 0, 0, low:high, :, :] *= band
+
+        cwu.main()
+
+        ##Stick the frequencies settings to the first uvfits
+        self.freq_cent = 160e+6
+        self.check_uvfits_contents("concatenated_uvfuts.uvfits",
+                              expec_data,
+                              self.num_freq_channels*4)
+
+
+    ##Setup some fake command line things for the following test
+    @mock.patch('argparse.ArgumentParser.parse_args',
+                return_value=argparse.Namespace(num_bands=4,
+                            uvfits_prepend="unittest_example1_band",
+                            output_name="concatenated_uvfuts.uvfits",
+                            swap_pols=False,
+                            half_power=True))
+
+    def test_concat_four_uvfits_halfpower(self, mock_args):
         """Checks that concatenating four uvfits files that have `band{band}.uvfits`
         at the end works, by creating four uvfits with known properties"""
 
@@ -218,6 +272,11 @@ class Test(unittest.TestCase):
         self.create_uvfits_outputs()
 
         expec_data = np.ones((self.num_time_steps*self.num_baselines, 1, 1, self.num_freq_channels*4, 4, 3))
+        expec_data[:,:,:,:,1,:] = 2.0
+        expec_data[:,:,:,:,2,:] = 3.0
+        expec_data[:,:,:,:,3,:] = 4.0
+        
+        expec_data[:, 0, 0, :self.num_freq_channels, :, :2] /= 2
 
         for band in range(2,5):
             cent_freq = self.freq_cent
@@ -230,7 +289,8 @@ class Test(unittest.TestCase):
             low = self.num_freq_channels*(band - 1)
             high = self.num_freq_channels*band
 
-            expec_data[:, 0, 0, low:high, :, :] = band
+            expec_data[:, 0, 0, low:high, :, :2] *= band / 2.0
+            expec_data[:, 0, 0, low:high, :, 2] *= band
 
         cwu.main()
 
@@ -239,41 +299,93 @@ class Test(unittest.TestCase):
         self.check_uvfits_contents("concatenated_uvfuts.uvfits",
                               expec_data,
                               self.num_freq_channels*4)
+        
+    ##Setup some fake command line things for the following test
+    @mock.patch('argparse.ArgumentParser.parse_args',
+                return_value=argparse.Namespace(num_bands=4,
+                            uvfits_prepend="unittest_example1_band",
+                            output_name="concatenated_uvfuts.uvfits",
+                            swap_pols=True,
+                            half_power=True))
+        
+    def test_concat_four_uvfits_halfpower_polrev(self, mock_args):
+        """Checks that concatenating four uvfits files that have `band{band}.uvfits`
+        at the end works, by creating four uvfits with known properties"""
 
-    ##TODO haven't actually setup the code to check the dimensions but
-    ##this is the kind of test you would run to check that behaviour if we do
-    ##if in the le future
-    # ##Setup some fake command line things for the following test
-    # @mock.patch('argparse.ArgumentParser.parse_args',
-    #             return_value=argparse.Namespace(num_bands=2,
-    #                         uvfits_prepend="unittest_example1_band",
-    #                         output_name="concatenated_uvfuts.uvfits",
-    #                         swap_pols=False))
-    # def test_mismatch_data_fails(self, mock_args):
-    #     """Check everything fails when the dimensions of data in uvfits1
-    #     and uvfits2 do not match"""
-    
-    # #     self.make_dummy_intputs()
-    # #     self.output_uvfits_name = "unittest_diff_dimension.uvfits"
-    # #     self.create_uvfits_outputs(num_freqs=2)
+        ##Some input test params
+        self.make_dummy_intputs()
+        self.create_uvfits_outputs()
 
-    #     ##Some input test params
-    #     self.make_dummy_intputs()
-    #     self.create_uvfits_outputs()
+        expec_data = np.ones((self.num_time_steps*self.num_baselines, 1, 1, self.num_freq_channels*4, 4, 3))
+        expec_data[:,:,:,:,0,:] = 2.0
+        expec_data[:,:,:,:,3,:] = 3.0
+        expec_data[:,:,:,:,2,:] = 4.0
+        
+        expec_data[:, 0, 0, :self.num_freq_channels, :, :2] /= 2
 
-    #     band = 2
-    #     self.output_uvfits_name = f"unittest_example1_band{band:02d}.uvfits"
-    #     self.create_uvfits_outputs(visi_values=band, num_freqs=2)
-    
-    #     ##Contain things when they go wrong
-    #     with self.assertRaises(SystemExit) as cm:
-    #         ##This call to main should die
-    #         cwu.main()
-    
-    #     expec_fail_string = "Shape of the data in the uvfits are not the same. Data "\
-    #          "might have different number of times steps, frequencies, "\
-    #          "or baselines."
-    #     self.assertEqual(cm.exception.code, expec_fail_string)
+        for band in range(2,5):
+            cent_freq = self.freq_cent
+
+            self.freq_cent += self.num_freq_channels*self.ch_width
+
+            self.output_uvfits_name = f"unittest_example1_band{band:02d}.uvfits"
+            self.create_uvfits_outputs(visi_values=band)
+
+            low = self.num_freq_channels*(band - 1)
+            high = self.num_freq_channels*band
+
+            expec_data[:, 0, 0, low:high, :, :2] *= band / 2.0
+            expec_data[:, 0, 0, low:high, :, 2] *= band
+
+        cwu.main()
+
+        ##Stick the frequencies settings to the first uvfits
+        self.freq_cent = 160e+6
+        self.check_uvfits_contents("concatenated_uvfuts.uvfits",
+                              expec_data,
+                              self.num_freq_channels*4)
+        
+    ##Setup some fake command line things for the following test
+    @mock.patch('argparse.ArgumentParser.parse_args',
+                return_value=argparse.Namespace(num_bands=4,
+                            uvfits_prepend="unittest_example1_band",
+                            output_name="concatenated_uvfuts.uvfits",
+                            swap_pols=True,
+                            half_power=False))
+        
+    def test_concat_four_uvfits_polrev(self, mock_args):
+        """Checks that concatenating four uvfits files that have `band{band}.uvfits`
+        at the end works, by creating four uvfits with known properties"""
+
+        ##Some input test params
+        self.make_dummy_intputs()
+        self.create_uvfits_outputs()
+
+        expec_data = np.ones((self.num_time_steps*self.num_baselines, 1, 1, self.num_freq_channels*4, 4, 3))
+        expec_data[:,:,:,:,0,:] = 2.0
+        expec_data[:,:,:,:,3,:] = 3.0
+        expec_data[:,:,:,:,2,:] = 4.0
+        
+        for band in range(2,5):
+            cent_freq = self.freq_cent
+
+            self.freq_cent += self.num_freq_channels*self.ch_width
+
+            self.output_uvfits_name = f"unittest_example1_band{band:02d}.uvfits"
+            self.create_uvfits_outputs(visi_values=band)
+
+            low = self.num_freq_channels*(band - 1)
+            high = self.num_freq_channels*band
+
+            expec_data[:, 0, 0, low:high, :, :] *= band
+
+        cwu.main()
+
+        ##Stick the frequencies settings to the first uvfits
+        self.freq_cent = 160e+6
+        self.check_uvfits_contents("concatenated_uvfuts.uvfits",
+                              expec_data,
+                              self.num_freq_channels*4)
 
 ##Run the test
 if __name__ == '__main__':

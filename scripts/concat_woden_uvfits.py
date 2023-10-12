@@ -58,10 +58,15 @@ def concat_uvfits(uvfits_prepend, bands, output_name, reverse_pols=False, half_p
         ##If swapping XX and YY (which really means swapping E-W with N-S)
         if reverse_pols:
             if half_power:
-                all_data[:,:,:,0:num_chans, 0, :] = data1[:,:,:,:,1,:] / 2
-                all_data[:,:,:,0:num_chans, 1, :] = data1[:,:,:,:,0,:] / 2
-                all_data[:,:,:,0:num_chans, 2, :] = data1[:,:,:,:,3,:] / 2
-                all_data[:,:,:,0:num_chans, 3, :] = data1[:,:,:,:,2,:] / 2
+                all_data[:,:,:,0:num_chans, 0, :2] = data1[:,:,:,:,1,:2] / 2
+                all_data[:,:,:,0:num_chans, 1, :2] = data1[:,:,:,:,0,:2] / 2
+                all_data[:,:,:,0:num_chans, 2, :2] = data1[:,:,:,:,3,:2] / 2
+                all_data[:,:,:,0:num_chans, 3, :2] = data1[:,:,:,:,2,:2] / 2
+                ##don't half the weights otherwise you defeat the purpose
+                all_data[:,:,:,0:num_chans, 0, 2] = data1[:,:,:,:,1,2]
+                all_data[:,:,:,0:num_chans, 1, 2] = data1[:,:,:,:,0,2]
+                all_data[:,:,:,0:num_chans, 2, 2] = data1[:,:,:,:,3,2]
+                all_data[:,:,:,0:num_chans, 3, 2] = data1[:,:,:,:,2,2]
             else:
                 all_data[:,:,:,0:num_chans, 0, :] = data1[:,:,:,:,1,:]
                 all_data[:,:,:,0:num_chans, 1, :] = data1[:,:,:,:,0,:]
@@ -69,7 +74,9 @@ def concat_uvfits(uvfits_prepend, bands, output_name, reverse_pols=False, half_p
                 all_data[:,:,:,0:num_chans, 3, :] = data1[:,:,:,:,2,:]
         else:
             if half_power:
-                all_data[:,:,:,0:num_chans, :, :] = data1 / 2
+                all_data[:,:,:,0:num_chans, :, :2] = data1[:,:,:,:,:,:2] / 2
+                ##don't half the weights otherwise you defeat the purpose
+                all_data[:,:,:,0:num_chans, :, 2] = data1[:,:,:,:,:,2]
             else:
                 all_data[:,:,:,0:num_chans, :, :] = data1
 
@@ -80,18 +87,24 @@ def concat_uvfits(uvfits_prepend, bands, output_name, reverse_pols=False, half_p
                 ##If swapping XX and YY (which really means swapping E-W with N-S)
                 if reverse_pols:
                     if half_power:
-                        all_data[:,:,:,0:num_chans, 0, :] = this_data[:,:,:,:,1,:] / 2
-                        all_data[:,:,:,0:num_chans, 1, :] = this_data[:,:,:,:,0,:] / 2
-                        all_data[:,:,:,0:num_chans, 2, :] = this_data[:,:,:,:,3,:] / 2
-                        all_data[:,:,:,0:num_chans, 3, :] = this_data[:,:,:,:,2,:] / 2
+                        all_data[:,:,:,base_channel:base_channel+num_chans, 0, :2] = this_data[:,:,:,:,1,:2] / 2
+                        all_data[:,:,:,base_channel:base_channel+num_chans, 1, :2] = this_data[:,:,:,:,0,:2] / 2
+                        all_data[:,:,:,base_channel:base_channel+num_chans, 2, :2] = this_data[:,:,:,:,3,:2] / 2
+                        all_data[:,:,:,base_channel:base_channel+num_chans, 3, :2] = this_data[:,:,:,:,2,:2] / 2
+                        ##don't half the weights otherwise you defeat the purpose
+                        all_data[:,:,:,base_channel:base_channel+num_chans, 0, 2] = this_data[:,:,:,:,1,2]
+                        all_data[:,:,:,base_channel:base_channel+num_chans, 1, 2] = this_data[:,:,:,:,0,2]
+                        all_data[:,:,:,base_channel:base_channel+num_chans, 2, 2] = this_data[:,:,:,:,3,2]
+                        all_data[:,:,:,base_channel:base_channel+num_chans, 3, 2] = this_data[:,:,:,:,2,2]
                     else:
-                        all_data[:,:,:,0:num_chans, 0, :] = this_data[:,:,:,:,1,:]
-                        all_data[:,:,:,0:num_chans, 1, :] = this_data[:,:,:,:,0,:]
-                        all_data[:,:,:,0:num_chans, 2, :] = this_data[:,:,:,:,3,:]
-                        all_data[:,:,:,0:num_chans, 3, :] = this_data[:,:,:,:,2,:]
+                        all_data[:,:,:,base_channel:base_channel+num_chans, 0, :] = this_data[:,:,:,:,1,:]
+                        all_data[:,:,:,base_channel:base_channel+num_chans, 1, :] = this_data[:,:,:,:,0,:]
+                        all_data[:,:,:,base_channel:base_channel+num_chans, 2, :] = this_data[:,:,:,:,3,:]
+                        all_data[:,:,:,base_channel:base_channel+num_chans, 3, :] = this_data[:,:,:,:,2,:]
                 else:
                     if half_power:
-                        all_data[:,:,:,base_channel:base_channel+num_chans,:,:] = this_data / 2
+                        all_data[:,:,:,base_channel:base_channel+num_chans,:,:2] = this_data[:,:,:,:,:,:2] / 2
+                        all_data[:,:,:,base_channel:base_channel+num_chans,:,2] = this_data[:,:,:,:,:,2]
                     else:
                         all_data[:,:,:,base_channel:base_channel+num_chans,:,:] = this_data
 
@@ -213,7 +226,7 @@ def main():
 
     parser = get_parser()
     args = parser.parse_args()
-
+    
     freq_order = check_uvfits_freq_order(args.uvfits_prepend, args.num_bands)
 
     bands = np.arange(1, args.num_bands+1)
@@ -221,7 +234,7 @@ def main():
     bands = bands[freq_order]
 
     concat_uvfits(args.uvfits_prepend, bands, args.output_name,
-                  args.swap_pols)
+                  args.swap_pols, args.half_power)
 
 if __name__ == '__main__':
 
