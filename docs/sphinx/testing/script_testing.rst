@@ -8,8 +8,7 @@ This is a straight-forward way to check your installation is working; just run s
 Running the simulations
 ------------------------
 
-Once you've built ``WODEN``, and you have variables defined by calling ``WODEN/build/init_WODEN.sh``,
-navigate to ``WODEN/test_installation``. To run all the tests immediately, you'll need to have obtained the defined the environment variable ``MWA_FEE_HDF5`` (see :ref:`Post compilation (optional)` for instructions on how to define that). To run all scripted test (including MWA FEE simulations)::
+Once you've installed ``WODEN``, navigate to ``WODEN/test_installation``. To run all the tests immediately, you'll need to have obtained and defined the environment variable ``MWA_FEE_HDF5`` (see :ref:`Post compilation (optional)` for instructions on how to define that). To run all scripted test (including MWA FEE simulations)::
 
   $ cd WODEN/test_installation
   $ ./run_all_simulations.sh
@@ -32,12 +31,6 @@ Dependencies
 
 To image the tests, you'll need a way to convert the uvfits files to measurement sets, and then image them. Which means dependencies (again).
 
-+ **CASA** - https://casa.nrao.edu/casa_obtaining.shtml. Download an appropriate tarball (at the time 6.2 is the best version as it's ``python3``) and decompress it::
-
-  $ wget https://casa.nrao.edu/download/distro/casa/release/rhel/casa-6.2.0-124.tar.xz
-  $ tar -xvf casa-6.2.0-124.tar.xz
-
-  That's it, it doesn't need installation
 + **WSClean** - https://wsclean.readthedocs.io/en/latest/installation.html. Head to this link to find out how to install ``WSClean``. You can of course use any other CLEANing software you want, but ``WSClean`` is excellent.
 
 I'm assuming if you want to simulate interferometric data, you'll have some kind of FITS file imager already, but if not, ``DS9`` is a good place to start - https://sites.google.com/cfa.harvard.edu/saoimageds9.
@@ -45,11 +38,7 @@ I'm assuming if you want to simulate interferometric data, you'll have some kind
 Imaging scripts
 ^^^^^^^^^^^^^^^^
 
-To use the imaging scripts, you **must** set an environment variable ``CASA_DIR`` to point towards the ``casa/bin`` of where you installed your ``casa``. For example, I did this::
-
-  $ export CASA_DIR="/usr/local/casa-6.2.0-124/bin"
-
-This will enable the scripts to convert the uvfits files to measurement sets. Once that variable is set, you can either image all the test outputs with::
+Yyou can either image all the test outputs with::
 
   $ ./run_all_imaging.sh
 
@@ -64,9 +53,9 @@ Nearly all of these simulations use the MWA phase 1 array layout, with a maximum
 
 Absolute Accuracy
 ^^^^^^^^^^^^^^^^^^^^^^^^
-There is no imaging here, but runs an end-to-end simulation with a set of array layouts and sky models that should yield exact visibilities. The exact method is described in the JOSS paper (https://joss.theoj.org/papers/10.21105/joss.03676). The scripts run here are the exact scripts I used to create the plot in the JOSS paper.
+There is no imaging here, but runs an end-to-end simulation with a set of array layouts and sky models that should yield exact visibilities. The exact method is described in the JOSS paper (https://joss.theoj.org/papers/10.21105/joss.03676). The scripts run here are (nearly)* the exact scripts I used to create the plot in the JOSS paper.
 
-.. todo:: Link the JOSS paper here once published
+\* *The difference being that from WODEN version >= 2.0, all the array precession is handle by python code instead of C. We also switched from apparent to mean LST, and so the exact longitude/latitude inputs have slightly changed since the JOSS paper*
 
 Single Component Models
 ^^^^^^^^^^^^^^^^^^^^^^^^

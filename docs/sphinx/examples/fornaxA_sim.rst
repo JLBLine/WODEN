@@ -41,13 +41,7 @@ where ``${precision}`` is either "float" or "double" to choose the precision of 
 
 each of which will contain 16 frequency and 14 time steps. I've selected to use the ``MWA_FEE`` primary beam, which will use the MWA fully embedded element (FEE) primary beam pattern (using the delays specified in the ``metafits`` to point the beam). As described in :ref:`Post compilation (optional)`, you'll need to grab an hdf5 file and set an environment variable to point to it for this to work.
 
-The sky model is specified using ``--cat_filename``, where we have used ``convert_WSClean_list_to_WODEN.py`` to convert outputs from WSClean into a ``WODEN`` sky model via::
-
-  convert_WSClean_list_to_WODEN.py \
-    --file=msclean_output_from_WSClean-sources.txt \
-    --outname=srclist_msclean_fornaxA_phase1+2.txt
-
-The sky model contains 4544 point and 1736 Gaussian components. The "float" precision version took about 48 seconds on my card, with the "double" taking about 144 seconds. If you run the imaging, you should get something that looks like this:
+The sky model is specified using ``--cat_filename``, which contains 4544 point and 1736 Gaussian components, and was made from WSClean CLEAN components. The "float" precision version took about 48 seconds on my card, with the "double" taking about 144 seconds. If you run the imaging, you should get something that looks like this:
 
 .. image:: FornaxA_msclean-image.png
    :width: 400pt

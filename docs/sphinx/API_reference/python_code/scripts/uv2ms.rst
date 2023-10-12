@@ -1,7 +1,7 @@
-``uv2ms.py``
+``woden_uv2ms.py``
 =============
 
-Helper script to convert ``uvfits`` files to ``measurement sets`` using ``casa``.
+Helper script to convert ``uvfits`` files to ``measurement sets`` using ``pyuvdata``.
 
 .. _uv2ms command line running options:
 
@@ -9,12 +9,12 @@ Helper script to convert ``uvfits`` files to ``measurement sets`` using ``casa``
 -------------------------------
 
 .. argparse::
-   :filename: ../../scripts/uv2ms.py
+   :filename: ../../scripts/woden_uv2ms.py
    :func: get_parser
-   :prog: uv2ms.py
+   :prog: woden_uv2ms.py
 
 *Function documentation*
 ------------------------
 
-.. automodule:: uv2ms
+.. automodule:: woden_uv2ms
    :members:

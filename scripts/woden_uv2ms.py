@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Script to feed to casa to convert uvfits files to measurement sets.
-Run via `casa -c uv2ms.py --options`
+"""Script to use pyuvdata to convert uvfits files to measurement sets`
 """
 from subprocess import call
 import numpy as np
 import os
 import argparse
 import sys
+from pyuvdata import UVData
 
 def make_ms(uvfits_file, no_delete=False):
     """Takes a path to a uvfits file, checks it exists, and converts it to
@@ -22,8 +22,11 @@ def make_ms(uvfits_file, no_delete=False):
         else:
             call("rm -r %s.ms" %name,shell=True)
 
-        ##Do the conversion to measurement set
-        importuvfits(fitsfile=uvfits_file, vis="{:s}.ms".format(name))
+        UV = UVData()
+        UV.read(uvfits_file)
+        
+        UV.write_ms("{:s}.ms".format(name))
+        
     else:
         ##print warning that uvfits file doesn't exist
         print("Could not find the uvfits specified by the path: "
