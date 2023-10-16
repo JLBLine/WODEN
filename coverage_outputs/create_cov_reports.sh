@@ -37,7 +37,8 @@ coverage run --source=wodenpy.skymodel.woden_skymodel -a ../cmake_testing/wodenp
 coverage run --source=wodenpy.use_libwoden.beam_settings -a ../cmake_testing/wodenpy/skymodel/test_read_skymodel_chunk.py
 
 ##use_libwoden
-cp ../build/cmake_testing/wodenpy/use_libwoden/*.so .
+# cp ../build/cmake_testing/wodenpy/use_libwoden/*.so .
+export CMAKE_CURRENT_SOURCE_DIR=../cmake_testing/wodenpy/use_libwoden/
 coverage run --source=wodenpy.use_libwoden.shapelets -a ../cmake_testing/wodenpy/use_libwoden/test_create_sbf.py
 coverage run --source=wodenpy.wodenpy_setup.run_setup -a ../cmake_testing/wodenpy/use_libwoden/test_make_woden_settings.py
 coverage run --source=wodenpy.use_libwoden.woden_settings -a ../cmake_testing/wodenpy/use_libwoden/test_make_woden_settings.py

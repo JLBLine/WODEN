@@ -8,3 +8,4 @@ importlib_resources
 sphinx-math-dollar
 matplotlib
 pyuvdata
+python-casacore

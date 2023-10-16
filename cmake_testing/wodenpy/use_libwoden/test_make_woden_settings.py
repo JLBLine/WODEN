@@ -9,7 +9,8 @@ import wodenpy.use_libwoden.woden_settings as ws
 from wodenpy.wodenpy_setup import run_setup
 # import woden_lib
 
-# code_dir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
+##annoying path hack to find where the C library is
+test_dir = os.environ['CMAKE_CURRENT_SOURCE_DIR'] + "/../../../build/cmake_testing/wodenpy/use_libwoden/"
 
 code_dir = os.path.realpath(__file__)
 code_dir = ('/').join(code_dir.split('/')[:-1])
@@ -71,12 +72,12 @@ class Test(unittest.TestCase):
         structure and writes the content to a text file"""
         
         ## Read in the C library for float version
-        libwoden_float = ctypes.cdll.LoadLibrary(f"libread_woden_settings_float.so")
+        libwoden_float = ctypes.cdll.LoadLibrary(f"{test_dir}/libread_woden_settings_float.so")
         self.read_woden_settings_float = libwoden_float.read_woden_settings
         self.read_woden_settings_float.argtypes = [ctypes.POINTER(ws.Woden_Settings_Float)]
         
         ## Read in the C library for double version
-        libwoden_double = ctypes.cdll.LoadLibrary(f"libread_woden_settings_double.so")
+        libwoden_double = ctypes.cdll.LoadLibrary(f"{test_dir}/libread_woden_settings_double.so")
         self.read_woden_settings_double = libwoden_double.read_woden_settings
         self.read_woden_settings_double.argtypes = [ctypes.POINTER(ws.Woden_Settings_Double)]
 
