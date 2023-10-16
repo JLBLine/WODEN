@@ -80,12 +80,20 @@ def read_skymodel_thread(the_queue, chunked_skymodel_maps: list,
     the_queue.put(None)
 
 
-def main():
-    """Run the things you fool"""
+def main(argv=None):
+    """Runs the WODEN simulator, given command line inputs
+
+    Parameters
+    ----------
+    argv : _type_, optional
+        Will be parsed from the command line if run in main script. Can be
+        passed in explicitly for easy testing
+    """
+    
 
     ##Grab the parser and parse some args
     parser = get_parser()
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     ##Check that the input arguments make sense
     args = check_args(args)
