@@ -765,7 +765,7 @@ __global__ void fill_with_ones(int num_azza, double *d_jones) {
 extern "C" void run_hyperbeam_cuda(int num_components,
            int num_time_steps, int num_freqs,
            uint8_t parallactic,
-           struct FEEBeamCUDA *cuda_fee_beam,
+           struct FEEBeamGpu *cuda_fee_beam,
            double *azs, double *zas,
            double *latitudes,
            cuUserComplex *d_primay_beam_J00,
@@ -824,7 +824,7 @@ extern "C" void run_hyperbeam_cuda(int num_components,
       increment = time_ind*num_components;
       //You get real + imag for MAX_POLS polarisations hence the larger
       //increment on the d_jones array below
-      status = calc_jones_cuda_device(cuda_fee_beam,
+      status = calc_jones_gpu_device(cuda_fee_beam,
                       (uint32_t)num_components,
                       azs + increment, zas + increment,
                       &latitudes[time_ind],
@@ -850,7 +850,7 @@ extern "C" void run_hyperbeam_cuda(int num_components,
   }
   else {
     int iau_order = 0;
-    status = calc_jones_cuda_device(cuda_fee_beam,
+    status = calc_jones_gpu_device(cuda_fee_beam,
                     (uint32_t)num_azza,
                     azs, zas,
                     NULL,
@@ -878,7 +878,7 @@ extern "C" void run_hyperbeam_cuda(int num_components,
   }
 
   if (status != 0) {
-    const char *func_name = "calc_jones_cuda_device";
+    const char *func_name = "calc_jones_gpu_device";
     handle_hyperbeam_error(__FILE__, __LINE__, func_name);
   }
 
@@ -889,7 +889,7 @@ extern "C" void run_hyperbeam_cuda(int num_components,
 extern "C" void test_run_hyperbeam_cuda(int num_components,
            int num_time_steps, int num_freqs,
            uint8_t parallatic,
-           struct FEEBeamCUDA *cuda_fee_beam,
+           struct FEEBeamGpu *cuda_fee_beam,
            double *azs, double *zas,
            double *latitudes,
            user_precision_complex_t *primay_beam_J00,

@@ -188,7 +188,7 @@ typedef struct _beam_settings_t {
 
     int num_MWAFEE; /*!< Number of MWAFEE beam instances to cover all desired frequencies */
 
-    struct FEEBeamCUDA *cuda_fee_beam; /*!< Single initialised hyperbeam device model for desired pointing */
+    struct FEEBeamGpu *cuda_fee_beam; /*!< Single initialised hyperbeam device model for desired pointing */
     struct FEEBeam *fee_beam; /*!< Single initialised hyperbeam host model for desired pointing */
 
     char hyper_error_str[100]; /*!< Char array to hold error messages out of hyperbeam */

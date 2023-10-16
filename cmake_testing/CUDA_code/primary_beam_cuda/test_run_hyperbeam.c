@@ -18,7 +18,7 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 extern void test_run_hyperbeam_cuda(int num_components,
            int num_times, int num_freqs,
            uint8_t parallatic,
-           struct FEEBeamCUDA *cuda_fee_beam,
+           struct FEEBeamGpu *cuda_fee_beam,
            double *azs, double *zas,
            double *latitudes,
            user_precision_complex_t *primay_beam_J00,
@@ -91,9 +91,9 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
   uint32_t freqs_hz[3] = {freq - 40e+3, freq, freq + 40e+3};
   // uint32_t freqs_hz[1] = {freq};
 
-  struct FEEBeamCUDA *cuda_fee_beam;
+  struct FEEBeamGpu *cuda_fee_beam;
 
-  status = new_cuda_fee_beam(fee_beam,
+  status = new_gpu_fee_beam(fee_beam,
                              freqs_hz,
                              hyper_delays,
                              amps,
@@ -104,7 +104,7 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
                              &cuda_fee_beam);
 
   if (status != 0) {
-    handle_hyperbeam_error(__FILE__, __LINE__, "new_cuda_fee_beam");
+    handle_hyperbeam_error(__FILE__, __LINE__, "new_gpu_fee_beam");
   }
 
   user_precision_complex_t *primay_beam_J00 = malloc(num_beam_values*sizeof(user_precision_complex_t));
@@ -127,7 +127,7 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
              primay_beam_J10,
              primay_beam_J11);
 
-  free_cuda_fee_beam(cuda_fee_beam);
+  free_gpu_fee_beam(cuda_fee_beam);
   free_fee_beam(fee_beam);
 
   double TOL = 1e-6;

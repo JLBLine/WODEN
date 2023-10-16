@@ -191,10 +191,32 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
                d_primay_beam_J10, d_primay_beam_J11,
                &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
 
+    // if (iBaseline == 0 && iComponent == 0)
+    // {
+    //   printf("g1x %.12f %.12f D1x %.12f %.12f D1y  %.12f %.12f g1y  %.12f %.12f g2x  %.12f %.12f D2x  %.12f %.12f D2y  %.12f %.12f g2y  %.12f %.12f\n",g1x.x, g1x.y, D1x.x, D1x.y, D1y.x, D1y.y, g1y.x, g1y.y, g2x.x, g2x.y, D2x.x, D2x.y, D2y.x, D2y.y, g2y.x, g2y.y);
+      
+    // }
+    
+
     cuUserComplex visi_XX;
     cuUserComplex visi_XY;
     cuUserComplex visi_YX;
     cuUserComplex visi_YY;
+
+    // cuUserComplex visi_wot;
+    // visi_wot.x = 1.0;
+    // visi_wot.y = 0.0;
+
+    // apply_beam_gains(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
+    //                 1.0, 0.0, 0.0, 0.0,
+    //                 visi_wot, &visi_XX, &visi_XY, &visi_YX, &visi_YY);
+
+    // if (iBaseline == 10 && iComponent == 0)
+    // {
+    //   printf("visi_XX %.12f %.12f visi_XY %.12f %.12f visi_YX  %.12f %.12f visi_YY %.12f %.12f\n",
+    //   visi_XX.x, visi_XX.y, visi_XY.x, visi_XY.y, visi_YX.x, visi_YX.y, visi_YY.x, visi_YY.y);
+      
+    // }
 
     apply_beam_gains(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
                     flux_I, flux_Q, flux_U, flux_V,

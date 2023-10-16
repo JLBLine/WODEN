@@ -5,6 +5,13 @@ from subprocess import call
 import os
 import argparse
 
+from wodenpy.array_layout.precession import RTS_Precess_LST_Lat_to_J2000
+from astropy.time import Time, TimeDelta
+import numpy as np
+from astropy.coordinates import EarthLocation
+from astropy import units as u
+import scipy.optimize as opt
+
 DD2R = np.pi/180.0
 VELC  = 299792458.0
 
@@ -26,7 +33,62 @@ def read_uvfits_data(filename):
 
     return xx_re, xx_im, uu
 
-def make_command(ang_ind, num_mult, precision):
+def get_lat_lon(inputs, lat, lon):
+    """Every time they update astropy, the exact values of LST seems to change
+    This is worrying and annoying as hell. So here I come up with a way to 
+    optimise the lat, lon to get the LST I want. This is a bit of a hack, but
+    it works. """
+    
+    # lat, lon = inputs
+    
+    height = inputs
+    date = "2020-01-01T12:00:00.0"
+    
+    ##Setup location
+    observing_location = EarthLocation(lat=lat*u.deg, lon=lon*u.deg, height=height)
+    ##Setup time at that location
+
+    lst_type = 'mean'
+
+    observing_time = Time(date, scale='utc', location=observing_location)
+    ##Grab the LST
+    LST = observing_time.sidereal_time(lst_type)
+    LST_deg = LST.value*15.0
+    
+    lst_current = LST_deg*(np.pi/180.0)
+    latitude_current = lat*(np.pi/180.0)
+    
+    t = Time(date)
+    mjd = t.jd - 2400000.5
+
+    lst_J2000, latitude_J2000 = RTS_Precess_LST_Lat_to_J2000(lst_current, latitude_current,
+                                 mjd)
+    
+    return lst_J2000, latitude_J2000
+    
+def estimate_zero_lat_long():
+    """Every time they update astropy, the exact values of LST seems to change
+    This is worrying and annoying as hell. So here I come up with a way to 
+    optimise the lat, lon to get the LST I want. This is a bit of a hack, but
+    it works. """
+
+    intitial_guess = [0.1095073835963605, 79.6423588359480874]
+    
+    desried_lat_lon = [0.0, 0.0]
+    
+    height=0.0
+    date="2020-01-01T12:00:00.0"
+    
+    inputs = height
+    
+    popt, pcov = opt.curve_fit(get_lat_lon, inputs, desried_lat_lon, p0=intitial_guess)
+    
+    # print(popt[0])
+    # print(popt[1])
+    
+    return popt[0], popt[1]
+
+def make_command(ang_ind, num_mult, precision, latitude, longitude):
     """Create the WODEN command with the """
 
     ##This will NOT work for anyone else but Jack - needed it to make
@@ -41,7 +103,7 @@ def make_command(ang_ind, num_mult, precision):
     cmd += "--coarse_band_width=1 --freq_res=1 "
     cmd += "--num_time_steps=1 --time_res=1e-16 "
     cmd += "--ra0=0.0 --dec0=0.0 --date=2020-01-01T12:00:00.0 "
-    cmd += f"--latitude=0.10950738359636049 --longitude=79.638150061479 "
+    cmd += f"--latitude={latitude:.12f} --longitude={longitude:.12f} "
     cmd += f"--array_layout=array_layouts/array_layout_ang{ang_ind:02d}_n{num_mult:05d}.txt "
     cmd += "--primary_beam=none "
     cmd += f"--cat_filename=sky_models/srclist_ang{ang_ind:02d}.txt "
@@ -65,7 +127,7 @@ known_cosine_angles = [1.0, np.sqrt(3)/2, np.sqrt(2)/2, 0.5, 0.0, -0.5,
 num_mults = [1, 10, 100, 1000, 10000]
 # num_mults = [10000]
 
-def run_simulation(precision):
+def run_simulation(precision, latitude, longitude):
     """Runs the simulation to the given precision"""
 
     call("mkdir -p uvfits", shell=True)
@@ -81,15 +143,15 @@ def run_simulation(precision):
     # for ang_ind in range(10,11):
         for num_ind, num_mult in enumerate(num_mults):
 
-            cmd = make_command(ang_ind, num_mult, precision)
+            cmd = make_command(ang_ind, num_mult, precision, latitude, longitude)
 
             call(cmd, shell=True)
 
             uvfits_name = f"uvfits/single_point_ang{ang_ind:02d}_n{num_mult:05d}_{precision}_band01.uvfits"
 
             xx_re, xx_im, uu = read_uvfits_data(uvfits_name)
-
-            u_lengths.append(np.sqrt(3*uu**2))
+            
+            u_lengths.append(np.sqrt(3*uu[0]**2))
 
             expec_re = known_cosine_angles[ang_ind]
             expec_im = known_sine_angles[ang_ind]
@@ -109,7 +171,7 @@ def run_simulation(precision):
 
             # print(type(ang_ind*len(phi_simples) + num_ind))
 
-            all_data[ang_ind*len(num_mults) + num_ind, 0] = np.sqrt(3*uu**2)
+            all_data[ang_ind*len(num_mults) + num_ind, 0] = np.sqrt(3*uu[0]**2)
             all_data[ang_ind*len(num_mults) + num_ind, 1] = diff_re*100.0
             all_data[ang_ind*len(num_mults) + num_ind, 2] = diff_im*100.0
             all_data[ang_ind*len(num_mults) + num_ind, 3] = xx_re
@@ -190,9 +252,13 @@ if __name__ == '__main__':
     if args.only_plot:
         pass
     else:
+        
+        latitude, longitude = estimate_zero_lat_long()
+        
+        print(latitude, longitude)
 
-        run_simulation('float')
-        run_simulation('double')
+        run_simulation('float', latitude, longitude)
+        run_simulation('double', latitude, longitude)
 
         ##This next line won't work for you, I'm just leaving this here to show how I got the
         ##old fully float results, using an old version of master

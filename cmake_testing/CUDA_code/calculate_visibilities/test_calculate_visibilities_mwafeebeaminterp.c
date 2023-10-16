@@ -65,23 +65,24 @@ void test_calculate_visibilities_MWAFEEBeamInterp(int n_points, int n_gauss, int
   double multiplier = (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
 
   //These values are taken from the double precision version of the MWA FEE
-  //beam code
-  double gain1xx_re = 1.000000061109 * multiplier;
+  //beam code mwa_hyperbeam v0.6.0
+
+  double gain1xx_re = 1.000000061194 * multiplier;
   double gain1xx_im = 0.0 * multiplier;
-  double gain1xy_re = -0.000479380595 * multiplier;
-  double gain1xy_im = -0.000005223917 * multiplier;
-  double gain1yx_re = -0.000479380595 * multiplier;
-  double gain1yx_im = 0.000005223917 * multiplier;
-  double gain1yy_re = 1.000000062556 * multiplier;
+  double gain1xy_re = -0.000479483373 * multiplier;
+  double gain1xy_im = -0.000005186970 * multiplier;
+  double gain1yx_re = -0.000479483373 * multiplier;
+  double gain1yx_im = 0.000005186970 * multiplier;
+  double gain1yy_re = 1.000000062639 * multiplier;
   double gain1yy_im = 0.0 * multiplier;
 
-  double gain2xx_re = 0.040796295396 * multiplier;
+  double gain2xx_re = 0.040788894851 * multiplier;
   double gain2xx_im = 0.0 * multiplier;
-  double gain2xy_re = -0.002259936299 * multiplier;
-  double gain2xy_im = 0.000231286354 * multiplier;
-  double gain2yx_re = -0.002259936299 * multiplier;
-  double gain2yx_im = -0.000231286354 * multiplier;
-  double gain2yy_re = 0.020706076999 * multiplier;
+  double gain2xy_re = -0.002259324774 * multiplier;
+  double gain2xy_im = 0.000231387877 * multiplier;
+  double gain2yx_re = -0.002259324774 * multiplier;
+  double gain2yx_im = -0.000231387877 * multiplier;
+  double gain2yy_re = 0.020703061370 * multiplier;
   double gain2yy_im = 0.0 * multiplier;
 
   #ifdef DOUBLE_PRECISION

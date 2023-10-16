@@ -370,7 +370,7 @@ that must be done to feed things into `mwa_hyperbeam` efficiently. Soz boz.
 
 @details Calls `mwa_hyperbeam::calc_jones_cuda_device` to calculate the beam
 responses on the device. This function requires an initialised
-`struct FEEBeamCUDA *cuda_fee_beam` object (initialised using
+`struct FEEBeamGpu *cuda_fee_beam` object (initialised using
 `mwa_hyperbeam::new_cuda_fee_beam`), which in turn needs a
 `struct FEEBeam *fee_beam` (initialised using `mwa_hyperbeam::new_fee_beam`).
 Running these functions gathers the spherical harmnoic coefficients for the
@@ -384,7 +384,7 @@ d_primay_beam_J* arrays using the kernel `primary_beam_cuda::kern_map_hyperbeam_
 @param[in] num_time_steps Number of time steps being calculated
 @param[in] num_freqs Number of frequencies being calculated
 @param[in] parallactic Whether to rotate by parallactic angle or not
-@param[in] *cuda_fee_beam An initialised `mwa_hyperbeam` `struct FEEBeamCUDA`
+@param[in] *cuda_fee_beam An initialised `mwa_hyperbeam` `struct FEEBeamGpu`
 @param[in] *azs Array of Azimuth angles to calculate the beam towards (radians)
 @param[in] *zas Array of Zenith Angles to calculate the beam towards (radians)
 @param[in] *latitudes The latitude of the array for each time step (radians); this
@@ -398,7 +398,7 @@ can be NULL is parallactic = 0
 extern "C" void run_hyperbeam_cuda(int num_components,
            int num_time_steps, int num_freqs,
            uint8_t parallactic,
-           struct FEEBeamCUDA *cuda_fee_beam,
+           struct FEEBeamGpu *cuda_fee_beam,
            double *azs, double *zas,
            double *latitudes,
            cuUserComplex *d_primay_beam_J00,
