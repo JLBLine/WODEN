@@ -2,7 +2,6 @@
 #include <unity.h>
 #include <stdlib.h>
 #include <complex.h>
-#include <erfa.h>
 
 #include "constants.h"
 #include "woden_struct_defs.h"
