@@ -21,16 +21,11 @@ The tests use the following C library:
 
 * **Unity** - https://github.com/ThrowTheSwitch/Unity
 
-I installed ``unity`` via::
+You don't need to install Unity, just clone it somewhere::
 
   $ git clone https://github.com/ThrowTheSwitch/Unity.git
-  $ cd Unity
-  $ mkdir build && cd build
-  $ cmake ..
-  $ make -j 4
-  $ sudo make install
 
-That way, ``cmake`` can find ``unity``. However, you don't need to install Unity anywhere, as ``WODEN`` uses the ``C`` code directly. You just need to tell ``WODEN`` where Unity lives in your system (for example, you could download a release version e.g. version 2.5.2 - see example below for how to link without installation).
+You don't need to install Unity anywhere, as ``WODEN`` compiles the ``C`` code directly. You just need to tell ``WODEN`` where Unity lives in your system (for example, you could download a release version e.g. version 2.5.2 - see example below for how to link without installation).
 
 You'll also need to initiate the ``git submodule`` that runs code coverage. Simply navigate to the ``WODEN`` directory and run::
 
@@ -64,23 +59,22 @@ You should see something like the following if successful::
 
   $ ctest
   Test project /home/jline/software/WODEN/build
-         Start  1: C_test_RTS_ENH2XYZ_local_float
-    1/87 Test  #1: C_test_RTS_ENH2XYZ_local_float .......................   Passed    0.00 sec
-         Start  2: C_test_calc_XYZ_diffs_float
-    2/87 Test  #2: C_test_calc_XYZ_diffs_float ..........................   Passed    0.00 sec
-         Start  3: C_test_RTS_PrecessXYZtoJ2000_float
-    3/87 Test  #3: C_test_RTS_PrecessXYZtoJ2000_float ...................   Passed    0.00 sec
-         Start  4: C_test_RTS_ENH2XYZ_local_double
-    4/87 Test  #4: C_test_RTS_ENH2XYZ_local_double ......................   Passed    0.00 sec
-         Start  5: C_test_calc_XYZ_diffs_double
-    5/87 Test  #5: C_test_calc_XYZ_diffs_double .........................   Passed    0.00 sec
-         Start  6: C_test_RTS_PrecessXYZtoJ2000_double
-    6/87 Test  #6: C_test_RTS_PrecessXYZtoJ2000_double ..................   Passed    0.00 sec
-         Start  7: C_test_null_comps_float
-    7/87 Test  #7: C_test_null_comps_float ..............................   Passed    0.00 sec
-         Start  8: C_test_fill_chunk_src_with_pointgauss_float
-    8/87 Test  #8: C_test_fill_chunk_src_with_pointgauss_float ..........   Passed    0.03 sec
-         Start  9: C_test_fill_chunk_src_with_shapelets_float
+        Start  1: C_test_fill_primary_beam_settings_float
+   1/85 Test  #1: C_test_fill_primary_beam_settings_float ....................   Passed    0.00 sec
+        Start  2: C_test_fill_primary_beam_settings_double
+   2/85 Test  #2: C_test_fill_primary_beam_settings_double ...................   Passed    0.00 sec
+        Start  3: C_test_fill_timefreq_visibility_set_float
+   3/85 Test  #3: C_test_fill_timefreq_visibility_set_float ..................   Passed    0.00 sec
+        Start  4: C_test_malloc_and_free_float
+   4/85 Test  #4: C_test_malloc_and_free_float ...............................   Passed    0.00 sec
+        Start  5: C_test_write_visi_set_binary_float
+   5/85 Test  #5: C_test_write_visi_set_binary_float .........................   Passed    0.00 sec
+        Start  6: C_test_write_visi_set_text_float
+   6/85 Test  #6: C_test_write_visi_set_text_float ...........................   Passed    0.00 sec
+        Start  7: C_test_fill_timefreq_visibility_set_double
+   7/85 Test  #7: C_test_fill_timefreq_visibility_set_double .................   Passed    0.00 sec
+        Start  8: C_test_malloc_and_free_double
+   8/85 Test  #8: C_test_malloc_and_free_double ..............................   Passed    0.00 sec
    ...etc etc
 
 .. note:: To test MWA Fully Embedded Element beam code, you must have the environment variable::
@@ -97,11 +91,10 @@ What do the tests actually do?
 ---------------------------------
 
 The tests are all located in ``WODEN/cmake_testing``, and each directory within contains tests
-for a different file from ``WODEN/src``. Within each test directory, there are separate files for testing different functions, which include the function name. As an example, the directory ``WODEN/cmake_testing/array_layout`` contains tests for the file ``WODEN/src/array_layout.c``, and contains test files that test the following functions::
+for a different file from ``WODEN/src``. Within each test directory, there are separate files for testing different functions, which include the function name. As an example, the directory ``WODEN/cmake_testing/CUDA_code/fundamental_coords`` contains tests for the file ``WODEN/src/fundamental_coords.cu``, and contains test files that test the following functions::
 
-  cmake_testing/array_layout/test_calc_XYZ_diffs.c -> src/array_layout.c::calc_XYZ_diffs
-  cmake_testing/array_layout/test_RTS_ENH2XYZ_local.c -> src/array_layout.c::RTS_ENH2XYZ_local
-  cmake_testing/array_layout/test_RTS_PrecessXYZtoJ2000.c -> src/array_layout.c::RTS_PrecessXYZtoJ2000
+  cmake_testing/CUDA_code/fundamental_coords/test_lmn_coords.c -> src/fundamental_coords.cu::kern_calc_lmn
+  cmake_testing/CUDA_code/fundamental_coords/test_uvw_coords.c -> src/fundamental_coords.cu::kern_calc_uvw
 
 The ``C`` and ``CUDA`` functions are tested using the `Unity`_ library, which has useful functions like::
 
@@ -158,5 +151,6 @@ The sections below give an outline of the tests performed in each directory.
    cmake_testing/scripts/add_woden_uvfits
    cmake_testing/scripts/concat_woden_uvfits
    cmake_testing/scripts/run_woden
+   cmake_testing/scripts/woden_uv2ms
 
 .. note:: To be able to test ``CUDA`` functions that are designed to work solely in GPU memory, it's necessary to write wrapper functions that allocate GPU memory, pass the data into the ``CUDA`` code to be tested, and then copy the results back into host memory. I've kept these 'intermediate' test functions inside the ``*.cu`` files that contain the code being tested, as it's not straight forward / performance degrading to have them in separate files. On casual inspection it looks like there are many functions in the ``*.cu`` files I haven't written tests for, but the extra functions are there *because* of testing. Sigh.

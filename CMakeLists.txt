@@ -58,18 +58,6 @@ endif()
 file(GLOB CSOURCES "src/*.c")
 file(GLOB CUDASOURCES "src/*.cu")
 
-##Find the following libraries
-##Try and find the hdf5 library
-set(HINTS_HDF5_INC "/usr/include/hdf5/serial/;${HDF5_ROOT}/include/")
-set(HINTS_HDF5_LIB "/usr/lib/x86_64-linux-gnu/hdf5/serial/;${HDF5_ROOT}/lib/")
-
-find_path(HDF5_INC hdf5.h HINTS ${HINTS_HDF5_INC})
-find_library(HDF5_LIB hdf5 HINTS ${HINTS_HDF5_LIB} REQUIRED)
-if(HDF5_LIB)
-  message(STATUS "HDF5 include path: ${HDF5_INC}")
-  message(STATUS "HDF5 library path: ${HDF5_LIB}")
-endif()
-
 ##Try and find the hyperbeam library
 set(HINTS_HBEAM_INC "/usr/local/include/;${HBEAM_ROOT}/;")
 set(HINTS_HBEAM_LIB "/usr/local/lib/;${HBEAM_ROOT}")

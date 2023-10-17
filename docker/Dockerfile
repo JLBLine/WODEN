@@ -1,13 +1,7 @@
-# If you want to use CUDA for visibility subtraction (much faster!), you need
-# to adjust this number to the NVIDIA driver on the host system.
+#Base image including CUDA to write everything on to
+FROM nvidia/cuda:11.4.3-devel-ubuntu20.04
 
-
-#CUDA version
-ARG NVIDIA_VERSION=11.4.3
-FROM nvidia/cuda:${NVIDIA_VERSION}-devel-ubuntu20.04
-# ARG NVIDIA_VERSION=12.0.0
-# FROM nvidia/cuda:${NVIDIA_VERSION}-devel-ubuntu22.04
-
+##install the dependencies
 ENV DEBIAN_FRONTEND="noninteractive"
 RUN apt-get update -y && \
     apt-get -y install \
@@ -27,16 +21,6 @@ RUN apt-get update -y && \
             libhdf5-serial-dev \
             && apt-get clean all \
             && rm -rf /var/lib/apt/lists/*
-            # libcfitsio-dev \
-            # liberfa-dev \
-            # libstarlink-pal-dev \
-            # libgsl-dev \
-            # libfontconfig-dev \
-            # liblapack-dev \
-            # gfortran \
-            # 
-            # && apt-get clean all \
-            # && rm -rf /var/lib/apt/lists/*
 
 # Get Rust
 RUN mkdir -m755 /opt/rust /opt/cargo
@@ -74,12 +58,11 @@ RUN cd / && git clone https://github.com/ThrowTheSwitch/Unity.git \
 RUN cd /WODEN/build && cmake .. -DTARGET_GROUP=test -DUNITY_ROOT=/Unity \
     && make -j4
 
-##==============================================================================
-
+##copy the MWA primary beam files
 RUN cd / && mkdir MWA_beam_files && cd MWA_beam_files \
     && wget http://ws.mwatelescope.org/static/mwa_full_embedded_element_pattern.h5 \
     && wget http://ws.mwatelescope.org/static/MWA_embedded_element_pattern_rev2_interp_167_197MHz.h5
 
-
+##make some environment variables
 ENV MWA_FEE_HDF5=/MWA_beam_files/mwa_full_embedded_element_pattern.h5
 ENV MWA_FEE_HDF5_INTERP=/MWA_beam_files/MWA_embedded_element_pattern_rev2_interp_167_197MHz.h5

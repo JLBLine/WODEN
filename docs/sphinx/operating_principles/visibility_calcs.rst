@@ -9,7 +9,7 @@ Visibility Calculations
 
 This section assumes a basic understanding on radio interferometry, assuming you know what visibilities and baselines are, and are familiar with the :math:`u,v,w` and :math:`l,m,n` coordinate systems. I can recommend `Thompson, Moran, & Swenson 2017`_ if you are looking to learn / refresh these concepts. Some of this section is basically a copy/paste from `Line et al. 2020`_.
 
-.. note:: In `Line et al. 2020`_, I detailed that I was using the ``atomicAdd`` functionality in CUDA. This is no longer true, as I've found a loop inside my kernels is actually faster than being fully parallel and using ``atomicAdd``. The calculations being made have remained the same.
+.. note:: For ``WODEN`` version 2.0.0, the sky model reader has been locked to just reading in Stokes I information, while we wait for the ``FITS`` skymodel format. The maths below is still valid, but the sky model reader will only read in Stokes I information. See the :ref:`sky model formats` for more information.
 
 Measurement Equation and Point Sources
 ----------------------------------------

@@ -3,6 +3,8 @@
 .. _SHAMFI readthedocs: https://shamfi.readthedocs.io/en/latest/
 .. _Callingham et al. 2017: https://iopscience.iop.org/article/10.3847/1538-4357/836/2/174/pdf
 
+.. _sky model formats:
+
 Sky model formats
 ===========================
 Since version >= 1.4, there are two sky model formats that ``WODEN`` accepts; the
