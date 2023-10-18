@@ -2,15 +2,19 @@
 .. _Line et al. 2020: https://doi.org/10.1017/pasa.2020.18
 .. _SHAMFI readthedocs: https://shamfi.readthedocs.io/en/latest/
 .. _Callingham et al. 2017: https://iopscience.iop.org/article/10.3847/1538-4357/836/2/174/pdf
+.. _Lynch et al. 2021: https://doi.org/10.1017/pasa.2021.50
 
 .. _sky model formats:
 
 Sky model
 ===========================
-Since version >= 1.4, there are three sky model formats that ``WODEN`` accepts; the
+.. warning:: In version 2.0.0 (the current version) ``WODEN`` only reads Stokes I from the sky model, and ignores all Stokes QUV. This is because a) this makes things way faster as we can ignore QUV in call calculations b) the power-law and curved power-law extrapolations of QUV were unphysical and c) no one was using it anyway. I'm hoping in a future release to implement using a rotation measure to get linear polarisation going, and to get reading
+
+
+There are currently three sky model formats that ``WODEN`` accepts; the
 preferred ``FITS`` format, the ``hyperdrive yaml`` format, and the now deprecated native ``WODEN`` format.
 The ``FITS`` and ``yaml`` formats have greater functionality, as curved power law and
-list-style flux behaviours are included, beyond a simple power. The native
+list-style flux behaviours are included, beyond a simple power (but as said above, Stokes QUV are all ignored and only I is used). The native
 ``WODEN`` format only includes power-law behaviour, and will not be developed
 any further.
 
@@ -56,6 +60,84 @@ signal which should bounce around with frequency.
 Sky model formats
 ^^^^^^^^^^^^^^^^^^^^
 
+``LoBES`` FITS sky model format
+----------------------------------
+This sky model follows (and expands upon) the format of the LoBES catalogue `Lynch et al. 2021`_ and is the preferred format as it's the fastest and easiest to lazy load. There are three COMPONENT types: point source; Gaussian; shapelets. These are all the model types as defined in `Line et al. 2020`_ (including the mathematics of how each model is simulated). You can create any number of SOURCEs, each with any number of COMPONENTs, by using the `UNQ_SOURCE_ID` and `NAME` columns as detailed below. The sky model is a FITS file with at least one HDU with the following columns:
+
+
+
+.. list-table:: FITS HDU 0 columns
+   :header-rows: 1
+   :widths: 10 10 80
+   :stub-columns: 1
+
+   *  - Column Name
+      - Unit
+      - Description
+   *  - UNQ_SOURCE_ID
+      -
+      - Unique source ID. This is used to group COMPONENTs into SOURCEs. If you want to have multiple components in a single source, they must have the same ``UNQ_SOURCE_ID``.
+   *  - NAME
+      -
+      - This is a COMPONENT name, and should read as UNQ_SOURCE_ID_C`number` where \`number\` is a COMPONENT number. For example, if you have a SOURCE with UNQ_SOURCE_ID = FornaxA, and you have two components, you should have two rows with NAME = FornaxA_C000 and FornaxA_C001.
+   *  - RA
+      - deg
+      - Right Ascension (J2000)
+   *  - DEC
+      - deg
+      - Declination (J2000)
+   *  - COMP_TYPE
+      -
+      - Specifies if the component is a point source, Gaussian, or shapelet. Entered as either ``P``, ``G``, or ``S``.
+   *  - MAJOR_DC
+      - deg
+      - Major axis of Gaussian or shapelet model
+   *  - MINOR_DC
+      - deg
+      - Minor axis of Gaussian or shapelet model
+   *  - PA_DC
+      - deg
+      - Position angle of Gaussian or shapelet model
+   *  - MOD_TYPE
+      -
+      - The flux model of this component. Can be either ``pl`` (power-law), ``cpl`` (curved power-law), or ``nan`` (list of flux densities).
+   *  - NORM_COMP_PL
+      - Jy
+      - The reference flux for a power-law ``pl`` component model, *must be at the reference frequency 200MHz.*
+   *  - ALPHA_PL
+      -
+      - The spectral index for a power-law ``pl`` component model
+   *  - NORM_COMP_CPL
+      - Jy
+      - The reference flux for a curved power-law ``cpl`` component model, *must be at the reference frequency 200MHz.*
+   *  - ALPHA_CPL
+      -
+      - The spectral index for a curved power-law ``cpl`` component model, *must be at the reference frequency 200MHz.*
+   *  - CURVE_CPL
+      -
+      - The curvature `q` for a curved power-law ``cpl`` component model
+   *  - INT_FLX*frequency*
+      - Jy
+      - A reference Stokes I flux density, where *frequency* is the frequency in MHz. For a list type flux model, you can include as many INT_FLX*frequency* columns as necessary. For example, if you have three reference fluxes at 100, 150, and 200 MHz, you should have three columns INT_FLX100, INT_FLX150, and INT_FLX200.
+
+If you want to include SHAPELETS, you must include a second HDU that details the shapelet basis functions for each component, using the following columns:
+
+.. list-table:: FITS HDU 1 columns
+   :header-rows: 1
+   :widths: 10 80
+   :stub-columns: 1
+
+   *  - Column Name
+      - Description
+   *  - NAME
+      - The COMPONENT name exactly as appears in the first HDU ``NAME`` column. You can have multiple rows for each COMPONENT, each with a unique combination of ``N1``, ``N2``, and ``COEFF``, to include as many shapelet basis functions as necessary. ``WODEN`` will cross-reference the two HDUs to use these basis functions in conjunction with the position and flux model in the first HDU.
+   *  - N1
+      - The first shapelet order
+   *  - N2
+      - The second shapelet order
+   *  - COEFF
+      - The coefficient to multiply this basis function by
+
 ``hyperdrive`` sky model format
 ----------------------------------
 This is the sky model format as `defined for hyperdrive`_. I'll reproduce
@@ -74,7 +156,7 @@ with any number of COMPONENTs.
 Read on for how to detail each model in the ``hyperdrive`` format.
 
 Point sources and flux models
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 An example of a single SOURCE with a single point source COMPONENT is::
 
@@ -216,7 +298,7 @@ is read in from this sky model:
 Stokes parameter.
 
 Multiple SOURCEs and COMPONENTS
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To add multiple SOURCEs, simply repeat the process, e.g.:
 
@@ -282,7 +364,7 @@ also add comments without breaking the sky model:
           v: 0.0
 
 Gaussian sources
-^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 An example srclist containing a single gaussian::
 
@@ -316,7 +398,7 @@ denote Gaussian specific parameters. The FWHM major ``maj`` and minor ``min`` ax
 are given in arcseconds, with the position angle (East from North) given in degrees.
 
 Shapelet sources
-^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To generate shapelet models compatible with ``WODEN``, use ``SHAMFI`` to fit an
 image with the ``--woden_srclist`` option (again see `SHAMFI readthedocs`_.
@@ -382,7 +464,7 @@ the coefficients will be scaled such that the integrated Stokes I flux density o
 source will be 10 Jy at 150 MHz for this example.
 
 Putting it all together
-^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 An example skymodel with four sources, the first with all component types, the next three with a single component of each type,  would look something like this::
 
@@ -534,7 +616,7 @@ Currently, every source is given a simple power-law frequency behaviour as:
 where :math:`S` is the flux density at frequency :math:`\nu`, with a reference flux density :math:`S_0`, reference frequency :math:`\nu_0`, and spectral index  :math:`\alpha`.
 
 Point sources
-^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 An example of a single SOURCE with a single point source COMPONENT is::
 
@@ -598,7 +680,7 @@ noting that at the very top line, I have updated ``P 3`` to reflect there are no
 .. note:: ``WODEN`` crops everything below the horizon out of the sky model. It can do this one of two ways - either by ``COMPONENT`` or by ``SOURCE``. In the example above, we have three COMPONENT in one SOURCE. If you ask ``WODEN`` to crop by ``SOURCE``, if just one of the ``COMPONENTS`` is below the horizon, it'll crop the *entire* source.
 
 Gaussian sources
-^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 An example srclist containing a single gaussian::
 
@@ -616,7 +698,7 @@ where all lines have the same meaning as the point source, and the meaning of th
 which specifies the Gaussian parameters as ``GPARAMS pa(deg) major_axis(arcmin) minor_axis(arcmin)``. The major and minor axes are specified as FWHM. Note this line needs to sit in between the lines starting with ```COMPONENT GAUSSIAN`` and ```ENDCOMPONENT``.
 
 Shapelet sources
-^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To generate shapelet models compatible with WODEN, simply use ``SHAMFI`` to fit an image with the ``--woden_srclist`` option (again see `SHAMFI readthedocs`_. for more detail). This will ensure all normalisations are correct. An example sky model (made by hand so the normalisations *won't* be correct) is::
 
@@ -641,7 +723,7 @@ encode the order of the shapelet basis function (see `Line et al. 2020`_ for det
 This line will still assume a power-law frequency behaviour, with a reference flux of 10 Jy at 180 MHz, but use a default SI = -0.8.
 
 Putting it all together
-^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 An example skymodel with four sources, the first with all component types, the next three with a single component of each type,  would look something like this::
 
