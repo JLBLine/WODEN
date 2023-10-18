@@ -131,7 +131,7 @@ def main(argv=None):
         ##populates a ctype equivalent of woden_settings struct to pass
         ##to the C library
         woden_settings = create_woden_settings(args, jd_date, lst_deg)
-
+        
         ##fill the lst and mjds fields, precessing if necessary
         lsts = setup_lsts_and_phase_centre(woden_settings)
 
@@ -145,6 +145,11 @@ def main(argv=None):
         comp_counter = read_radec_count_components(args.cat_filename)
         t_after = time()
         print(f"Mapping took {(t_after - t_before)/60.0:.1f} mins")
+        
+        ##TODO - once we have RM sythensis working, we should check if there
+        ##is any polarisation information in `read_radec_count_components`
+        ##and set this accordingly. For now, we only do Stokes I
+        woden_settings.do_QUV = 0
     
         crop_by_component = True
         if args.sky_crop_sources:

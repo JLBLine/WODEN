@@ -71,6 +71,7 @@ class Woden_Settings_Double(ctypes.Structure):
     :cvar POINTER(c_double) latitudes:  Array to hold latitudes for all time centroids (these are different when precession is happening)
     :cvar POINTER(c_double) mjds:  Array to hold modified julian dates for all time centroids
     :cvar c_int do_autos:  Boolean of whether to simulate autos or not (0 False, 1 True)
+    :cvar c_int do_QUV:  Boolean of whether to use Stokes Q,U,V (0 False, 1 True)
     """
     
     _fields_ = [("lst_base", c_double),
@@ -113,7 +114,8 @@ class Woden_Settings_Double(ctypes.Structure):
                 ("lsts", POINTER(c_double)),
                 ("latitudes", POINTER(c_double)),
                 ("mjds", POINTER(c_double)),
-                ("do_autos", c_int)]
+                ("do_autos", c_int),
+                ("do_QUV", c_int)]
 
 ##TODO gotta be a way to set the float or double fields via some kind of
 ##variable instead of making two different classes
@@ -162,7 +164,7 @@ class Woden_Settings_Float(ctypes.Structure):
     :cvar POINTER(c_double) latitudes:  Array to hold latitudes for all time centroids (these are different when precession is happening)
     :cvar POINTER(c_double) mjds:  Array to hold modified julian dates for all time centroids
     :cvar c_int do_autos:  Boolean of whether to simulate autos or not (0 False, 1 True)
-    
+    :cvar c_int do_QUV:  Boolean of whether to use Stokes Q,U,V (0 False, 1 True)
     """
     
     _fields_ = [("lst_base", c_double),
@@ -205,7 +207,8 @@ class Woden_Settings_Float(ctypes.Structure):
                 ("lsts", POINTER(c_double)),
                 ("latitudes", POINTER(c_double)),
                 ("mjds", POINTER(c_double)),
-                ("do_autos", c_int)]
+                ("do_autos", c_int),
+                ("do_QUV", c_int)]
     
 def create_woden_settings(args : argparse.Namespace,
                           jd_date : float, lst : float) -> Union[Woden_Settings_Float, Woden_Settings_Double]:
@@ -230,18 +233,11 @@ def create_woden_settings(args : argparse.Namespace,
        Populated ctype struct that can be passed into the C/CUDA code
     """
     
-    # if args.precision == 'float':
-    #     woden_settings = ctypes.pointer(Woden_Settings_Float())
-    # else:
-    #     woden_settings = ctypes.pointer(Woden_Settings_Double())
-        
     if args.precision == 'float':
         woden_settings = Woden_Settings_Float()
     else:
         woden_settings = Woden_Settings_Double()
         
-        
-    # woden_settings = woden_settings()
         
     woden_settings.ra0 = args.ra0 * D2R
     woden_settings.dec0 = args.dec0 * D2R

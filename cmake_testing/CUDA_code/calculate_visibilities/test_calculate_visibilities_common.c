@@ -404,6 +404,8 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
                                  double ra0, double dec0,
                                  int beamtype) {
 
+  woden_settings->do_QUV = 0;
+
   double base_band_freq = BASE_BAND_FREQ;
   // user_precision_t base_band_freq = 120e+6;
 

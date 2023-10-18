@@ -5,30 +5,16 @@
 
 .. _sky model formats:
 
-Sky model formats
+Sky model
 ===========================
-Since version >= 1.4, there are two sky model formats that ``WODEN`` accepts; the
-preferred ``hyperdrive`` format, and the now deprecated native ``WODEN`` format.
-The ``hyperdrive`` format has greater functionality, as curved power law and
+Since version >= 1.4, there are three sky model formats that ``WODEN`` accepts; the
+preferred ``FITS`` format, the ``hyperdrive yaml`` format, and the now deprecated native ``WODEN`` format.
+The ``FITS`` and ``yaml`` formats have greater functionality, as curved power law and
 list-style flux behaviours are included, beyond a simple power. The native
 ``WODEN`` format only includes power-law behaviour, and will not be developed
 any further.
 
-As a bonus,  if you use ``hyperdrive`` to calibrate your data, you can use
-exactly the same catalogue to simulate and process your data.
-
-``hyperdrive`` sky model format
-----------------------------------
-This is the sky model format as `defined for hyperdrive`_. I'll reproduce
-some of the documentation to save clicking on the link, but all credit to
-Chris Jordan.
-
-There are three COMPONENT types: point source; Gaussian; shapelet. These are
-all the model types as defined in `Line et al. 2020`_ (including the mathematics
-of how each model is simulated). You can create any number of SOURCEs, each
-with any number of COMPONENTs.
-
-.. note:: ``WODEN`` crops out anything below the horizon for a given observation, with ``run_woden.py`` giving the option to either cropby SOURCE (default) or by COMPONENTs (``--sky_crop_components``). The difference is if any COMPONENT in a single SOURCE is below the horizon, when cropping by SOURCE, the whole SOURCE is thrown away, but when cropping by COMPONENT, only the COMPONENT is thrown away.
+The ``FITS`` format is by far the most efficient in terms of read speed and manipulation however, and so I _strongly_ suggest you suggest you use that format. Below, we'll define how the spectral information is used by ``WODEN``, and then specify the format for each sky model type.
 
 Spectral models
 ^^^^^^^^^^^^^^^^^^^^
@@ -37,7 +23,7 @@ There are three spectral model types: ``power_law``; ``curved_power_law``; ``lis
 The ``power_law`` model is a simple power law with:
 
 .. math::
-  S_i = S_0 \left( \frac{\nu_0}{\nu_i} \right)^\alpha
+  S_i = S_0 \left( \frac{\nu_i}{\nu_0} \right)^\alpha
 
 where :math:`S_i` is the flux density extrapolated to frequency :math:`\nu_i`, with a reference flux density :math:`S_0`, reference frequency :math:`\nu_0`, and spectral index  :math:`\alpha`.
 An example of these models (these plots are stolen from unit tests of ``WODEN``):
@@ -49,7 +35,7 @@ The ``curved_power_law`` model is defined in Equation 2 of `Callingham et al. 20
 implemented in ``WODEN`` as:
 
 .. math::
-  S_i = S_0 \left( \frac{\nu_0}{\nu_i} \right)^\alpha \frac{e^{q(\ln(\nu_0))^2}}{e^{q(\ln(\nu_i))^2}}
+  S_i = S_0 \left( \frac{\nu_0}{\nu_i} \right)^\alpha e^{q\ln(\frac{\nu_0}{\nu_i})^2}
 
 where :math:`q` is a curvature term. This allows for peaked-type SEDs:
 
@@ -66,6 +52,24 @@ signal which should bounce around with frequency.
 
 .. image:: test_extrap_list_laws.png
    :width: 400pt
+
+Sky model formats
+^^^^^^^^^^^^^^^^^^^^
+
+``hyperdrive`` sky model format
+----------------------------------
+This is the sky model format as `defined for hyperdrive`_. I'll reproduce
+some of the documentation to save clicking on the link, but all credit to
+Chris Jordan.
+
+There are three COMPONENT types: point source; Gaussian; shapelet. These are
+all the model types as defined in `Line et al. 2020`_ (including the mathematics
+of how each model is simulated). You can create any number of SOURCEs, each
+with any number of COMPONENTs.
+
+.. note:: ``WODEN`` crops out anything below the horizon for a given observation, with ``run_woden.py`` giving the option to either cropby SOURCE (default) or by COMPONENTs (``--sky_crop_components``). The difference is if any COMPONENT in a single SOURCE is below the horizon, when cropping by SOURCE, the whole SOURCE is thrown away, but when cropping by COMPONENT, only the COMPONENT is thrown away.
+
+
 
 Read on for how to detail each model in the ``hyperdrive`` format.
 
