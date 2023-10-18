@@ -21,46 +21,6 @@ typedef struct _d_beam_gains_t {
 
 } d_beam_gains_t;
 
-
-/**
-@brief Assuming a simple power-law SED of \f$ S \propto \nu^\alpha \f$,
-extrapolate Stokes flux density parameters at the requested allsteps_wavelengths
-
-@details The 4 arrays of reference flux densities (`d_ref_stokesI`,
-`d_ref_stokesQ`, `d_ref_stokesU`, `d_ref_stokesV`), reference frequencies
-`d_ref_freqs`, and spectral indexes `d_SIs` should all be the same length.
-`iComponent` indexes these 6 arrays. `iBaseline` indexes the array
-`d_allsteps_wavelengths`, containging the wavelengths to extrapolate the
-reference fluxes to. Returns the flux density values extrapolated to the
-selected wavelength and reference data (`flux_I`, `flux_Q`, `flux_U`, `flux_V`).
-
-@param[in] d_allsteps_wavelengths Wavelengths array to index with iBaseline (metres)
-@param[in] d_ref_freqs Component reference frequencies to index with iBaseline (Hz)
-@param[in] d_ref_stokesI Stokes I reference flux densities to reference with
-iComponent (Jy)
-@param[in] d_ref_stokesQ Stokes Q reference flux densities to reference with
-iComponent (Jy)
-@param[in] d_ref_stokesU Stokes U reference flux densities to reference with
-iComponent (Jy)
-@param[in] d_ref_stokesV Stokes V reference flux densities to reference with
-iComponent (Jy)
-@param[in] d_SIs Spectral indicies to index with iBaseline
-@param[in] iComponent Component index
-@param[in] iBaseline Baseline index
-@param[in,out] *flux_I Pointer to extrapolated Stokes I (Jy)
-@param[in,out] *flux_Q Pointer to extrapolated Stokes Q (Jy)
-@param[in,out] *flux_U Pointer to extrapolated Stokes U (Jy)
-@param[in,out] *flux_V Pointer to extrapolated Stokes V (Jy)
-
-*/
-__device__ void extrap_stokes(user_precision_t *d_allsteps_wavelengths,
-           double *d_ref_freqs,
-           user_precision_t *d_ref_stokesI, user_precision_t *d_ref_stokesQ,
-           user_precision_t *d_ref_stokesU, user_precision_t *d_ref_stokesV,
-           user_precision_t *d_SIs, int iComponent, int iBaseline,
-           user_precision_t * flux_I, user_precision_t * flux_Q,
-           user_precision_t * flux_U, user_precision_t * flux_V);
-
 /**
 @brief Calculate the complex exponential phase part of the visibility function
 from the given u,v,w and l,m,n coord arrays
@@ -171,12 +131,75 @@ component into a GAUSSIAN or SHAPELET component, and has been applied in
 @param[in,out] visi_YX Output YX instrumental visibility
 @param[in,out] visi_YY Output YY instrumental visibility
 */
-__device__ void apply_beam_gains(cuUserComplex g1x, cuUserComplex D1x,
+__device__ void apply_beam_gains_stokesIQUV(cuUserComplex g1x, cuUserComplex D1x,
           cuUserComplex D1y, cuUserComplex g1y,
           cuUserComplex g2x, cuUserComplex D2x,
           cuUserComplex D2y, cuUserComplex g2y,
           user_precision_t flux_I, user_precision_t flux_Q,
           user_precision_t flux_U, user_precision_t flux_V,
+          cuUserComplex visi_component,
+          cuUserComplex * visi_XX, cuUserComplex * visi_XY,
+          cuUserComplex * visi_YX, cuUserComplex * visi_YY);
+
+/**
+@brief Given primary beam gains and leakage terms for antenna 1
+`g1x, D1x, D1y, gy` and antenna 2 `g1x, D1x, D1y, gy`,the complex visibility
+phase across those two antennas `visi`, and the Stokes I parameter of a source,
+simulate the observed XX,XY,YX,YY instrumental cross-correlated visibilities,
+where 'x' means aligned north-south, 'y' means east-west.
+
+@details Performs the following calculations:
+
+\f{eqnarray*}{
+\mathrm{V}^{XX}_{12} = (g_{1x}g_{2x}^{\ast} + D_{1x}D_{2x}^{\ast})\mathrm{V}^{I}_{12}
+\f}
+
+\f{eqnarray*}{
+\mathrm{V}^{XY}_{12} =
+     (g_{1x}D_{2y}^{\ast} + D_{1x}g_{2y}^{\ast})\mathrm{V}^{I}_{12}
+\f}
+
+\f{eqnarray*}{
+\mathrm{V}^{YX}_{12} =
+     (D_{1y}g_{2x}^{\ast} + g_{1y}D_{2x}^{\ast})\mathrm{V}^{I}_{12}
+\f}
+
+\f{eqnarray*}{
+\mathrm{V}^{YY}_{12} =
+     (D_{1y}D_{2y}^{\ast} + g_{1y}g_{2y}^{\ast})\mathrm{V}^{I}_{12}
+\f}
+
+where \f${\ast}\f$ means complex conjugate, and
+
+\f{eqnarray*}{
+\mathrm{V}_{12} &=& \mathrm{V}_{\mathrm{env}}\exp \left( 2\pi i\left( u_{12}l + v_{12}m + w_{12}(n-1) \right) \right) \\
+\mathrm{V}^{I}_{12} &=& I(l,m) \mathrm{V}_{12}
+\f}
+
+where \f$ \mathrm{V}_{\mathrm{env}} \f$ is an visibility envelope that turns a
+component into a GAUSSIAN or SHAPELET component, and has been applied in
+`visi_component`.
+
+@param[in] g1x Beam gain antenna 1 in north-south
+@param[in] D1x Beam leakage antenna 1 from north-south
+@param[in] D1y Beam gain antenna 1 in east-west
+@param[in] g1y Beam leakage antenna 1 from east-west
+@param[in] g2x Beam gain antenna 2 in north-south
+@param[in] D2x Beam leakage antenna 2 from north-south
+@param[in] D2y Beam gain antenna 2 in east-west
+@param[in] g2y Beam leakage antenna 2 from east-west
+@param[in] flux_I Stokes I flux density (Jy)
+@param[in] visi_component Complex visibility across antennas 1 and 2
+@param[in,out] visi_XX Output XX instrumental visibility
+@param[in,out] visi_XY Output XY instrumental visibility
+@param[in,out] visi_YX Output YX instrumental visibility
+@param[in,out] visi_YY Output YY instrumental visibility
+*/
+__device__ void apply_beam_gains_stokesI(cuUserComplex g1x, cuUserComplex D1x,
+          cuUserComplex D1y, cuUserComplex g1y,
+          cuUserComplex g2x, cuUserComplex D2x,
+          cuUserComplex D2y, cuUserComplex g2y,
+          user_precision_t flux_I,
           cuUserComplex visi_component,
           cuUserComplex * visi_XX, cuUserComplex * visi_XY,
           cuUserComplex * visi_YX, cuUserComplex * visi_YY);
@@ -284,7 +307,7 @@ into
 @param[in,out] *d_sum_visi_YY_imag Pointer to array to sum imaginary YY
 visibility into
 */
-__device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
+__device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent, int num_freqs,
     int num_baselines, int num_components, int num_times, int beamtype,
     cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
     cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
@@ -295,6 +318,229 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
     user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
     user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
     user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag);
+
+/**
+@brief Given the visibility between two recieving elements for a COMPONENT
+`visi_component`, at the baseline/freq/time index given by `iBaseline` and
+COMPONENT index `iComponent`, apply the instrumental primary beam and
+COMPONENT Stokes I parameter to create instrumental XX,XY,YX,YY visibilities,
+and sum them into real and imaginary XX,XY,YX,YY visibilities arrays
+`d_sim_visi_*_real` and `d_sim_visi_*_imag`.
+
+@details Uses `get_beam_gains` and `apply_beam_gains` as described above to
+apply the gains - see descriptions for what should be the arguments to them.
+
+@param[in] iBaseline Index of which baseline, freq, and time we are on
+@param[in] iComponent COMPONENT index
+@param[in] num_freqs Number of frequencies in simulation
+@param[in] num_baselines Number of baselines for one time and one frequency step
+@param[in] num_components Number of COMPONENTs
+@param[in] num_times Number of times in simulation
+@param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
+@param[in] *d_primay_beam_J00 Pointer towards array of primary beam J[0,0]
+(north-south gain)
+@param[in] *d_primay_beam_J01 Pointer towards array of primary beam J[0,1]
+(north-south leakage)
+@param[in] *d_primay_beam_J10 Pointer towards array of primary beam J[1,0]
+(east-west gain)
+@param[in] *d_primay_beam_J11 Pointer towards array of primary beam J[1,1]
+(east-west leakage)
+@param[in] visi_component Complex visibility across antennas 1 and 2
+@param[in] flux_I Stokes I flux density (Jy)
+@param[in,out] *d_sum_visi_XX_real Pointer to array to sum real XX visibility
+into
+@param[in,out] *d_sum_visi_XX_imag Pointer to array to sum imaginary XX
+visibility into
+@param[in,out] *d_sum_visi_XY_real Pointer to array to sum real XY visibility
+into
+@param[in,out] *d_sum_visi_XY_imag Pointer to array to sum imaginary XY
+visibility into
+@param[in,out] *d_sum_visi_YX_real Pointer to array to sum real YX visibility
+into
+@param[in,out] *d_sum_visi_YX_imag Pointer to array to sum imaginary YX
+visibility into
+@param[in,out] *d_sum_visi_YY_real Pointer to array to sum real YY visibility
+into
+@param[in,out] *d_sum_visi_YY_imag Pointer to array to sum imaginary YY
+visibility into
+*/
+__device__ void update_sum_visis_stokesI(int iBaseline, int iComponent, int num_freqs,
+    int num_baselines, int num_components, int num_times, int beamtype,
+    cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
+    cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
+    cuUserComplex visi_component,
+    user_precision_t flux_I,
+    user_precision_t *d_sum_visi_XX_real, user_precision_t *d_sum_visi_XX_imag,
+    user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
+    user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
+    user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag);
+
+
+
+/**
+@brief Allocate device memory of extrapolated Stokes arrays int `d_components`
+
+@details It does this if do_QUV == 1:
+
+    d_components->extrap_stokesI = NULL;
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesI, num_comps*num_freqs*sizeof(double) ));
+    d_components->extrap_stokesQ = NULL;
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesQ, num_comps*num_freqs*sizeof(double) ));
+    d_components->extrap_stokesU = NULL;
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesU, num_comps*num_freqs*sizeof(double) ));
+    d_components->extrap_stokesV = NULL;
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesV, num_comps*num_freqs*sizeof(double) ));
+
+If do_QUV == 0, only allocate the StokesI array.
+
+@param[in,out] *d_components A populated `components_t` struct
+@param[in] num_comps Number of components
+@param[in] num_freqs Number of frequencies
+@param[in] do_QUV If True, free full Stokes IQUV, otherwise only Stokes I
+*/
+void malloc_extrapolated_flux_arrays(components_t *d_components, int num_comps,
+                                     int num_freqs, int do_QUV);
+
+
+/**
+@brief Assuming a simple power-law SED of \f$ S \propto \nu^\alpha \f$,
+extrapolate Stokes I flux density parameters to the requested frequencies
+
+@details Uses the reference freq `d_components.power_ref_freqs[iFluxComp]`,
+reference flux density `d_components.power_ref_fluxes[iFluxComp]`, and `spectral index d_components.power_SIs[iFluxComp]` to calculate the flux density flux_I at the requested frequency d_extrap_freqs[iFreq].
+
+@param[in] d_components d_components A populated `components_t` struct containing reference flux densities and frequencies for all components
+@param[in] d_extrap_freqs Pointer to array of frequencies to extrapolate to
+@param[in] iFluxComp Index of which component to extrapolate
+@param[in] iFreq Index of which frequency to extrapolate to
+@param[in,out] *flux_I Pointer to extrapolated Stokes I (Jy)
+*/
+__device__ void extrap_stokes_power_law_stokesI(components_t d_components,
+           double *d_extrap_freqs, int iFluxComp, int iFreq,
+           user_precision_t * flux_I);
+
+/**
+@brief Kernel to run `extrap_stokes_power_law_stokesI` for all components in `d_components`.
+
+@details Fills the array `d_components.extrap_stokesI` with the extrapolated Stokes I flux densities.
+
+@param[in] num_extrap_freqs The number of frequencies to extrapolate to.
+@param[in] d_extrap_freqs Pointer to an array of frequencies to extrapolate to on the device.
+@param[in] num_comps The number of components to extrapolate.
+@param[in,out] d_components The components to extrapolate on the device.
+*/
+__global__ void kern_extrap_power_laws_stokesI(int num_extrap_freqs, double *d_extrap_freqs,
+                                       int num_comps, components_t d_components);
+
+/**
+@brief Assuming a curved power-law SED of \f$ S \propto \nu^\alpha \exp(q \ln (\nu)^2 )  \f$,
+extrapolate Stokes I flux density parameters to the requested frequencies
+
+@details Uses the reference freq `d_components.power_ref_freqs[iFluxComp]`,
+reference flux density `d_components.power_ref_fluxes[iFluxComp]`, spectral index `d_components.curve_SIs[iFluxComp]`, and `q` param `d_components.curve_qs[iFluxComp]` to calculate the flux density flux_I at the requested frequency `d_extrap_freqs[iFreq]`.
+
+@param[in] d_components d_components A populated `components_t` struct containing reference flux densities and frequencies for all components
+@param[in] d_extrap_freqs Pointer to array of frequencies to extrapolate to
+@param[in] iFluxComp Index of which component to extrapolate
+@param[in] iFreq Index of which frequency to extrapolate to
+@param[in,out] *flux_I Pointer to extrapolated Stokes I (Jy)
+*/
+__device__ void extrap_stokes_curved_power_law_stokesI(components_t d_components,
+           double *d_extrap_freqs, int iFluxComp, int iFreq,
+           user_precision_t * flux_I);
+
+/**
+@brief Kernel to run `extrap_stokes_curved_power_law_stokesI` for all components in `d_components`.
+
+@details Fills the array `d_components.extrap_stokesI` with the extrapolated Stokes I flux densities.
+
+@param[in] num_extrap_freqs The number of frequencies to extrapolate to.
+@param[in] d_extrap_freqs Pointer to an array of frequencies to extrapolate to on the device.
+@param[in] num_comps The number of components to extrapolate.
+@param[in,out] d_components The components to extrapolate on the device.
+*/
+__global__ void kern_extrap_curved_power_laws_stokesI(int num_extrap_freqs, double *d_extrap_freqs,
+                                       int num_comps, components_t d_components);
+
+
+/**
+Assuming a list-type spectral model, extrapolates the Stokes IQUV flux for a given set component and frequency.
+
+@param[in] d_components The components to use for the extrapolation.
+@param[in] d_extrap_freqs The frequencies to use for the extrapolation.
+@param[in] iFluxComp The index of the flux component to use.
+@param[in] iFreq The index of the frequency to use.
+@param[in,out] flux_I The output array for the Stokes I flux.
+@param[in,out] flux_Q The output array for the Stokes Q flux.
+@param[in,out] flux_U The output array for the Stokes U flux.
+@param[in,out] flux_V The output array for the Stokes V flux.
+ */
+__device__ void extrap_stokes_list_flux_stokesIQUV(components_t d_components,
+           double *d_extrap_freqs, int iFluxComp, int iFreq,
+           user_precision_t * flux_I, user_precision_t * flux_Q,
+           user_precision_t * flux_U, user_precision_t * flux_V);
+
+/**
+@brief Kernel to run `extrap_stokes_list_flux_stokesIQUV` for all components in `d_components`.
+
+@details Fills the arrays `d_components.extrap_stokes*` with the extrapolated Stokes flux densities.
+
+@param[in] num_extrap_freqs The number of extrapolation frequencies.
+@param[in] d_extrap_freqs   Pointer to the array of extrapolation frequencies.
+@param[in] num_comps        The number of components.
+@param[in,out] d_components     The components to use for extrapolation.
+ */
+__global__ void kern_extrap_list_fluxes_stokesIQUV(int num_extrap_freqs, double *d_extrap_freqs,
+                                        int num_comps, components_t d_components);
+
+/**
+Assuming a list-type spectral model, extrapolates the Stokes I flux for a given component and
+frequency.
+
+@param[in] d_components The components to use for the extrapolation.
+@param[in] d_extrap_freqs The frequencies to use for the extrapolation.
+@param[in] iFluxComp The index of the flux component to store the result in.
+@param[in] iFreq The index of the frequency component to extrapolate.
+@param[in,out] flux_I The array to store the resulting flux value in.
+ */
+__device__ void extrap_stokes_list_flux_stokesI(components_t d_components,
+           double *d_extrap_freqs, int iFluxComp, int iFreq,
+           user_precision_t * flux_I);
+
+/**
+@brief Kernel to run `extrap_stokes_list_flux_stokesI` for all components in `d_components`.
+
+@details Fills the arrays `d_components.extrap_stokesI` with the extrapolated Stokes I flux densities.
+
+@param[in] num_extrap_freqs The number of extrapolation frequencies.
+@param[in] d_extrap_freqs   Pointer to the array of extrapolation frequencies.
+@param[in] num_comps        The number of components.
+@param[in,out] d_components     The components to use for extrapolation.
+ */
+__global__ void kern_extrap_list_fluxes_stokesI(int num_extrap_freqs, double *d_extrap_freqs,
+                                        int num_comps, components_t d_components);
+
+
+
+/**
+@brief Extrapolate the flux densities of certain spectral model type in a source to a set of frequencies.
+
+@details This function is a wrapper for the various extrapolation functions.
+It will extrapolate all spectral model types for a give component type as specified
+by `comptype`. It will extrapolate to all the frequencies specified in `d_extrap_freqs`,
+and store the results within `d_chunked_source`
+
+
+@param[in,out] d_chunked_source Pointer to the source data.
+@param[in] d_extrap_freqs Pointer to an array of frequencies to extrapolate to.
+@param[in] num_extrap_freqs Number of frequencies in the `d_extrap_freqs` array.
+@param[in] comptype The type of component to extrapolate (e.g. POINT, GAUSSIAN, SHAPELET).
+@param[in] do_QUV Whether to extrapolate Stokes QUV (do_QUV = 1) or to only do Stokes I.
+ */
+extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
+                                   double *d_extrap_freqs, int num_extrap_freqs,
+                                   e_component_type comptype,
+                                   int do_QUV);
 
 /**
 @brief Performs necessary calculations that are common to all POINT, GAUSSIAN,
@@ -323,6 +569,9 @@ need to be set.
 
 If `woden_settings->do_autos` is True, will use `source_components::kern_calc_autos`
 to calculate all the auto-correlations, and stores them in `d_visibility_set`.
+
+If `woden_settings->do_QUV` is True, will use the full Stokes IQUV model to calculate all the auto-correlations. If False, will only use Stokes I
+for the calculation (which is faster).
 
 @param[in] woden_settings Populated `woden_settings_t` struct
 @param[in] beam_settings Populated `beam_settings_t` struct
@@ -408,6 +657,7 @@ simulation
 @param[in] num_times Number of time steps in simulation
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
 @param[in] comptype Component type, either POINT or GAUSSIAN
+@param[in] do_QUV If True, calculate full Stokes IQUV, otherwise only Stokes I
 */
 __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            d_beam_gains_t d_component_beam_gains,
@@ -417,7 +667,8 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
            user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
            int num_components, int num_baselines, int num_freqs, int num_cross,
-           int num_times, e_beamtype beamtype, e_component_type comptype);
+           int num_times, e_beamtype beamtype, e_component_type comptype,
+           int do_QUV);
 
 /**
 @brief Kernel to calculate the visibility response to a number `num_shapes` of
@@ -509,6 +760,7 @@ simulation
 @param[in] num_coeffs Number of shapelet basis functions and coefficents
 @param[in] num_times Number of time steps in simulation
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
+@param[in] do_QUV If True, calculate full Stokes IQUV, otherwise only Stokes I
 */
 __global__ void kern_calc_visi_shapelets(components_t d_components,
       d_beam_gains_t d_component_beam_gains,
@@ -521,11 +773,32 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
       user_precision_t *d_sbf,
       int num_shapes, int num_baselines, int num_freqs, int num_cross,
-      const int num_coeffs, int num_times, e_beamtype beamtype);
+      const int num_coeffs, int num_times, e_beamtype beamtype,
+      int do_QUV);
 
+/**
+@brief Copies the specified type of source components from host memory to device memory.
 
+@details This function copies the specified type of source components from the host memory pointed to by 
+ `chunked_source` to the device memory pointed to by `d_chunked_source`, allocating the device
+ memory in the process The `comptype` parameter specifies the type of components to copy. 
+ 
+@param[in] chunked_source Pointer to the host memory containing the source components to copy.
+@param[in,out] d_chunked_source Pointer to the device memory where the source components will be copied.
+@param[in] comptype The type of source components to copy.
+ */
+void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source,
+                            e_component_type comptype);
 
-
+/**
+ * @brief Copies a chunked source to the GPU.
+ * 
+ * This function takes a chunked source and copies it to the GPU. The chunked source is represented by a pointer to a source_t struct.
+ * 
+ * @param chunked_source A pointer to the chunked source to be copied to the GPU.
+ * @return A pointer to the copied chunked source on the GPU.
+ */
+source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
 
 /**
 @brief Frees device memory associated with `d_chunked_source`, depending on
@@ -574,20 +847,19 @@ source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
 /**
 @brief Free device memory of extrapolated Stokes arrays from `d_components`
 
-@details It does this:
+@details It does this if do_QUV == 1:
 
    cudaErrorCheckCall( cudaFree( d_components->extrap_stokesI ) );
    cudaErrorCheckCall( cudaFree( d_components->extrap_stokesQ ) );
    cudaErrorCheckCall( cudaFree( d_components->extrap_stokesU ) );
    cudaErrorCheckCall( cudaFree( d_components->extrap_stokesV ) );
 
+If do_QUV == 0, only free the StokesI array.
+
 @param[in,out] *d_components A populated `components_t` struct
+@param[in] do_QUV If True, free full Stokes IQUV, otherwise only Stokes I
 */
-void free_extrapolated_flux_arrays(components_t *d_components);
-
-
-
-
+void free_extrapolated_flux_arrays(components_t *d_components, int do_QUV);
 
 /**
 @brief Calculate the auto-correlations for all antennas given the fluxes
@@ -630,6 +902,7 @@ into
 @param[in,out] *d_sum_visi_YY_imag Pointer to array to sum imaginary YY
 visibility into
 time step in the simulation
+@param[in] do_QUV If True, calculate full Stokes IQUV, otherwise only Stokes I
 
 */
 __global__ void kern_calc_autos(components_t d_components,
@@ -644,4 +917,5 @@ __global__ void kern_calc_autos(components_t d_components,
                                 user_precision_t *d_sum_visi_YX_real,
                                 user_precision_t *d_sum_visi_YX_imag,
                                 user_precision_t *d_sum_visi_YY_real,
-                                user_precision_t *d_sum_visi_YY_imag);
+                                user_precision_t *d_sum_visi_YY_imag,
+                                int do_QUV);

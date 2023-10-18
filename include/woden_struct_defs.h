@@ -290,6 +290,7 @@ typedef struct _woden_settings_t {
     are different when precession is happening)*/
   double *mjds; /*!< Array to hold modified julian dates for all time centroids*/
   int do_autos; /*!< Boolean of whether to simulate autos or not (0 False, 1 True)*/
+  int do_QUV; /*!< Boolean of whether to use Stokes Q,U,V*/
 
 } woden_settings_t;
 

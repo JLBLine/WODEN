@@ -12,26 +12,6 @@
 #include "primary_beam_cuda.h"
 #include "woden_precision_defs.h"
 
-__device__ void extrap_stokes(user_precision_t *d_allsteps_wavelengths,
-           double *d_power_ref_freqs,
-           user_precision_t *d_power_ref_stokesI, user_precision_t *d_power_ref_stokesQ,
-           user_precision_t *d_power_ref_stokesU, user_precision_t *d_power_ref_stokesV,
-           user_precision_t *d_power_SIs, int iComponent, int iBaseline,
-           user_precision_t * flux_I, user_precision_t * flux_Q,
-           user_precision_t * flux_U, user_precision_t * flux_V){
-
-  double d_freq = VELC / d_allsteps_wavelengths[iBaseline];
-  double d_ref_freq = d_power_ref_freqs[iComponent];
-
-  user_precision_t flux_ratio = pow(d_freq / d_ref_freq, d_power_SIs[iComponent]);
-
-  * flux_I = d_power_ref_stokesI[iComponent] * flux_ratio;
-  * flux_Q = d_power_ref_stokesQ[iComponent] * flux_ratio;
-  * flux_U = d_power_ref_stokesU[iComponent] * flux_ratio;
-  * flux_V = d_power_ref_stokesV[iComponent] * flux_ratio;
-
-}
-
 __device__  cuUserComplex calc_measurement_equation(user_precision_t *d_us,
            user_precision_t *d_vs, user_precision_t *d_ws,
            double *d_ls, double *d_ms, double *d_ns,
@@ -60,7 +40,7 @@ __device__  cuUserComplex calc_measurement_equation(user_precision_t *d_us,
   return visi;
 }
 
-__device__ void apply_beam_gains(cuUserComplex g1x, cuUserComplex D1x,
+__device__ void apply_beam_gains_stokesIQUV(cuUserComplex g1x, cuUserComplex D1x,
           cuUserComplex D1y, cuUserComplex g1y,
           cuUserComplex g2x, cuUserComplex D2x,
           cuUserComplex D2y, cuUserComplex g2y,
@@ -164,7 +144,42 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
   }
 } //end __device__ get_beam_gains
 
-__device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
+__device__ void apply_beam_gains_stokesI(cuUserComplex g1x, cuUserComplex D1x,
+          cuUserComplex D1y, cuUserComplex g1y,
+          cuUserComplex g2x, cuUserComplex D2x,
+          cuUserComplex D2y, cuUserComplex g2y,
+          user_precision_t flux_I,
+          cuUserComplex visi_component,
+          cuUserComplex * visi_XX, cuUserComplex * visi_XY,
+          cuUserComplex * visi_YX, cuUserComplex * visi_YY) {
+
+  //Conjugate the second beam gains
+  cuUserComplex g2x_conj = make_cuUserComplex(g2x.x,-g2x.y);
+  cuUserComplex D2x_conj = make_cuUserComplex(D2x.x,-D2x.y);
+  cuUserComplex D2y_conj = make_cuUserComplex(D2y.x,-D2y.y);
+  cuUserComplex g2y_conj = make_cuUserComplex(g2y.x,-g2y.y);
+
+  //Create the Stokes visibilities
+  cuUserComplex visi_I = make_cuUserComplex(flux_I, 0.0)*visi_component;
+
+  cuUserComplex this_XX;
+  cuUserComplex this_XY;
+  cuUserComplex this_YX;
+  cuUserComplex this_YY;
+
+  this_XX = (g1x*g2x_conj + D1x*D2x_conj)*visi_I;
+  this_XY = (g1x*D2y_conj + D1x*g2y_conj)*visi_I;
+  this_YX = (D1y*g2x_conj + g1y*D2x_conj)*visi_I;
+  this_YY = (D1y*D2y_conj + g1y*g2y_conj)*visi_I;
+
+  * visi_XX = this_XX;
+  * visi_XY = this_XY;
+  * visi_YX = this_YX;
+  * visi_YY = this_YY;
+
+}
+
+__device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent, int num_freqs,
     int num_baselines, int num_components, int num_times, int beamtype,
     cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
     cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
@@ -191,34 +206,12 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
                d_primay_beam_J10, d_primay_beam_J11,
                &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
 
-    // if (iBaseline == 0 && iComponent == 0)
-    // {
-    //   printf("g1x %.12f %.12f D1x %.12f %.12f D1y  %.12f %.12f g1y  %.12f %.12f g2x  %.12f %.12f D2x  %.12f %.12f D2y  %.12f %.12f g2y  %.12f %.12f\n",g1x.x, g1x.y, D1x.x, D1x.y, D1y.x, D1y.y, g1y.x, g1y.y, g2x.x, g2x.y, D2x.x, D2x.y, D2y.x, D2y.y, g2y.x, g2y.y);
-      
-    // }
-    
-
     cuUserComplex visi_XX;
     cuUserComplex visi_XY;
     cuUserComplex visi_YX;
     cuUserComplex visi_YY;
 
-    // cuUserComplex visi_wot;
-    // visi_wot.x = 1.0;
-    // visi_wot.y = 0.0;
-
-    // apply_beam_gains(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
-    //                 1.0, 0.0, 0.0, 0.0,
-    //                 visi_wot, &visi_XX, &visi_XY, &visi_YX, &visi_YY);
-
-    // if (iBaseline == 10 && iComponent == 0)
-    // {
-    //   printf("visi_XX %.12f %.12f visi_XY %.12f %.12f visi_YX  %.12f %.12f visi_YY %.12f %.12f\n",
-    //   visi_XX.x, visi_XX.y, visi_XY.x, visi_XY.y, visi_YX.x, visi_YX.y, visi_YY.x, visi_YY.y);
-      
-    // }
-
-    apply_beam_gains(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
+    apply_beam_gains_stokesIQUV(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
                     flux_I, flux_Q, flux_U, flux_V,
                     visi_component, &visi_XX, &visi_XY, &visi_YX, &visi_YY);
 
@@ -233,32 +226,83 @@ __device__ void update_sum_visis(int iBaseline, int iComponent, int num_freqs,
 
     d_sum_visi_YY_real[iBaseline] += visi_YY.x;
     d_sum_visi_YY_imag[iBaseline] += visi_YY.y;
+}
 
+__device__ void update_sum_visis_stokesI(int iBaseline, int iComponent, int num_freqs,
+    int num_baselines, int num_components, int num_times, int beamtype,
+    cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
+    cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
+    cuUserComplex visi_component,
+    user_precision_t flux_I,
+    user_precision_t *d_sum_visi_XX_real, user_precision_t *d_sum_visi_XX_imag,
+    user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
+    user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
+    user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag){
 
+    cuUserComplex g1x;
+    cuUserComplex D1x;
+    cuUserComplex D1y;
+    cuUserComplex g1y;
+    cuUserComplex g2x;
+    cuUserComplex D2x;
+    cuUserComplex D2y;
+    cuUserComplex g2y;
+
+    get_beam_gains(iBaseline, iComponent, num_freqs,
+               num_baselines, num_components, num_times, beamtype,
+               d_primay_beam_J00, d_primay_beam_J01,
+               d_primay_beam_J10, d_primay_beam_J11,
+               &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
+
+    cuUserComplex visi_XX;
+    cuUserComplex visi_XY;
+    cuUserComplex visi_YX;
+    cuUserComplex visi_YY;
+
+    apply_beam_gains_stokesI(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
+                    flux_I,
+                    visi_component, &visi_XX, &visi_XY, &visi_YX, &visi_YY);
+
+    d_sum_visi_XX_real[iBaseline] += visi_XX.x;
+    d_sum_visi_XX_imag[iBaseline] += visi_XX.y;
+
+    d_sum_visi_XY_real[iBaseline] += visi_XY.x;
+    d_sum_visi_XY_imag[iBaseline] += visi_XY.y;
+
+    d_sum_visi_YX_real[iBaseline] += visi_YX.x;
+    d_sum_visi_YX_imag[iBaseline] += visi_YX.y;
+
+    d_sum_visi_YY_real[iBaseline] += visi_YY.x;
+    d_sum_visi_YY_imag[iBaseline] += visi_YY.y;
 
 }
+
 
 //Allocate space for the extrapolated Stokes parameters
 void malloc_extrapolated_flux_arrays(components_t *d_components, int num_comps,
-                                     int num_freqs){
+                                     int num_freqs, int do_QUV){
   d_components->extrap_stokesI = NULL;
   cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesI,
                                    num_comps*num_freqs*sizeof(double) ));
-  d_components->extrap_stokesQ = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesQ,
-                                   num_comps*num_freqs*sizeof(double) ));
-  d_components->extrap_stokesU = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesU,
-                                   num_comps*num_freqs*sizeof(double) ));
-  d_components->extrap_stokesV = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesV,
-                                   num_comps*num_freqs*sizeof(double) ));
+
+  if (do_QUV == 1)
+  {
+      d_components->extrap_stokesQ = NULL;
+      cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesQ,
+                                      num_comps*num_freqs*sizeof(double) ));
+      d_components->extrap_stokesU = NULL;
+      cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesU,
+                                      num_comps*num_freqs*sizeof(double) ));
+      d_components->extrap_stokesV = NULL;
+      cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesV,
+                                      num_comps*num_freqs*sizeof(double) ));
+
+  }
 }
 
-__device__ void extrap_stokes_power_law(components_t d_components,
+__device__ void extrap_stokes_power_law_stokesI(components_t d_components,
            double *d_extrap_freqs, int iFluxComp, int iFreq,
-           user_precision_t * flux_I, user_precision_t * flux_Q,
-           user_precision_t * flux_U, user_precision_t * flux_V){
+           user_precision_t * flux_I){
 
   double d_freq = d_extrap_freqs[iFreq];
   double d_ref_freq = d_components.power_ref_freqs[iFluxComp];
@@ -266,13 +310,9 @@ __device__ void extrap_stokes_power_law(components_t d_components,
   user_precision_t flux_ratio = pow(d_freq / d_ref_freq, d_components.power_SIs[iFluxComp]);
 
   * flux_I = d_components.power_ref_stokesI[iFluxComp] * flux_ratio;
-  * flux_Q = d_components.power_ref_stokesQ[iFluxComp] * flux_ratio;
-  * flux_U = d_components.power_ref_stokesU[iFluxComp] * flux_ratio;
-  * flux_V = d_components.power_ref_stokesV[iFluxComp] * flux_ratio;
-
 }
 
-__global__ void kern_extrap_power_laws(int num_extrap_freqs, double *d_extrap_freqs,
+__global__ void kern_extrap_power_laws_stokesI(int num_extrap_freqs, double *d_extrap_freqs,
                                        int num_comps, components_t d_components) {
 
   // Start by computing which baseline we're going to do
@@ -281,30 +321,20 @@ __global__ void kern_extrap_power_laws(int num_extrap_freqs, double *d_extrap_fr
   if(iFluxComp < num_comps && iFreq < num_extrap_freqs) {
 
     user_precision_t flux_I;
-    user_precision_t flux_Q;
-    user_precision_t flux_U;
-    user_precision_t flux_V;
 
-    extrap_stokes_power_law(d_components, d_extrap_freqs,
-                 iFluxComp, iFreq,
-                 &flux_I, &flux_Q, &flux_U, &flux_V);
+    extrap_stokes_power_law_stokesI(d_components, d_extrap_freqs,
+                 iFluxComp, iFreq, &flux_I);
 
     int iComponent = d_components.power_comp_inds[iFluxComp];
     int extrap_ind = num_extrap_freqs*iComponent + iFreq;
 
-
     d_components.extrap_stokesI[extrap_ind] = flux_I;
-    d_components.extrap_stokesQ[extrap_ind] = flux_Q;
-    d_components.extrap_stokesU[extrap_ind] = flux_U;
-    d_components.extrap_stokesV[extrap_ind] = flux_V;
-
   }
 }
 
-__device__ void extrap_stokes_curved_power_law(components_t d_components,
+__device__ void extrap_stokes_curved_power_law_stokesI(components_t d_components,
            double *d_extrap_freqs, int iFluxComp, int iFreq,
-           user_precision_t * flux_I, user_precision_t * flux_Q,
-           user_precision_t * flux_U, user_precision_t * flux_V){
+           user_precision_t * flux_I){
 
   double d_freq = d_extrap_freqs[iFreq];
   double d_ref_freq = d_components.curve_ref_freqs[iFluxComp];
@@ -319,13 +349,9 @@ __device__ void extrap_stokes_curved_power_law(components_t d_components,
   user_precision_t flux_ratio = si_ratio * exp_bit;
 
   * flux_I = d_components.curve_ref_stokesI[iFluxComp] * flux_ratio;
-  * flux_Q = d_components.curve_ref_stokesQ[iFluxComp] * flux_ratio;
-  * flux_U = d_components.curve_ref_stokesU[iFluxComp] * flux_ratio;
-  * flux_V = d_components.curve_ref_stokesV[iFluxComp] * flux_ratio;
-
 }
 
-__global__ void kern_extrap_curved_power_laws(int num_extrap_freqs, double *d_extrap_freqs,
+__global__ void kern_extrap_curved_power_laws_stokesI(int num_extrap_freqs, double *d_extrap_freqs,
                                               int num_comps, components_t d_components) {
 
   // Start by computing which baseline we're going to do
@@ -335,21 +361,15 @@ __global__ void kern_extrap_curved_power_laws(int num_extrap_freqs, double *d_ex
   if(iFluxComp < num_comps && iFreq < num_extrap_freqs) {
 
     user_precision_t flux_I;
-    user_precision_t flux_Q;
-    user_precision_t flux_U;
-    user_precision_t flux_V;
 
-    extrap_stokes_curved_power_law(d_components, d_extrap_freqs,
+    extrap_stokes_curved_power_law_stokesI(d_components, d_extrap_freqs,
                  iFluxComp, iFreq,
-                 &flux_I, &flux_Q, &flux_U, &flux_V);
+                 &flux_I);
 
     int iComponent = d_components.curve_comp_inds[iFluxComp];
     int extrap_ind = num_extrap_freqs*iComponent + iFreq;
 
     d_components.extrap_stokesI[extrap_ind] = flux_I;
-    d_components.extrap_stokesQ[extrap_ind] = flux_Q;
-    d_components.extrap_stokesU[extrap_ind] = flux_U;
-    d_components.extrap_stokesV[extrap_ind] = flux_V;
 
   }
 }
@@ -391,7 +411,7 @@ __device__ user_precision_t calc_gradient_extrap_list(user_precision_t *list_flu
 }
 
 
-__device__ void extrap_stokes_list_flux(components_t d_components,
+__device__ void extrap_stokes_list_flux_stokesIQUV(components_t d_components,
            double *d_extrap_freqs, int iFluxComp, int iFreq,
            user_precision_t * flux_I, user_precision_t * flux_Q,
            user_precision_t * flux_U, user_precision_t * flux_V){
@@ -489,8 +509,89 @@ __device__ void extrap_stokes_list_flux(components_t d_components,
   }
 }
 
+__device__ void extrap_stokes_list_flux_stokesI(components_t d_components,
+           double *d_extrap_freqs, int iFluxComp, int iFreq,
+           user_precision_t * flux_I){
 
-__global__ void kern_extrap_list_fluxes(int num_extrap_freqs, double *d_extrap_freqs,
+  int num_list_values = d_components.num_list_values[iFluxComp];
+  int list_start_ind = d_components.list_start_indexes[iFluxComp];
+
+  double d_extrap_freq = d_extrap_freqs[iFreq];
+
+  int low_ind_1 = -1;
+  int low_ind_2 = -1;
+
+  double low_val_1 = 1e16;
+  // double low_val_2 = 1e16;
+
+  double ref_freq;
+  double abs_diff_freq;
+
+  if (num_list_values == 1) {
+    * flux_I = d_components.list_stokesI[list_start_ind];
+    return;
+  }
+
+  //First loop finds the absolute closest frequency
+  for (int i = 0; i < num_list_values; i++) {
+    ref_freq = d_components.list_freqs[list_start_ind + i];
+    abs_diff_freq = abs(ref_freq - d_extrap_freq);
+
+    if (abs_diff_freq < low_val_1) {
+      low_val_1 = abs_diff_freq;
+      low_ind_1 = i;
+    }
+  }
+
+  //Depending on the closest frequency, we either want to search above or
+  //below the target frequency to find points either side of the target freq
+
+  //We happen to need the reference frequency; just return the refs
+  if (d_components.list_freqs[list_start_ind + low_ind_1] == d_extrap_freq) {
+    * flux_I = d_components.list_stokesI[list_start_ind + low_ind_1];
+    return;
+  }
+  else {
+    //The closest freq is the first index, so set the second index to the second
+    if (low_ind_1 == 0) {
+      low_ind_2 = 1;
+    }
+    //closest freq the highest list entry - set second index to one below
+    //(order of indexes doesn't matter, as the calculated gradient is pos/neg
+    //as needed)
+    else if (low_ind_1 == num_list_values - 1){
+      low_ind_2 = low_ind_1 - 1;
+    }
+    else {
+      //closest freq is higher than desired - set second index to one below
+      //(order of indexes doesn't matter, as the calculated gradient is pos/neg
+      //as needed)
+      if (d_components.list_freqs[list_start_ind + low_ind_1] > d_extrap_freq){
+        low_ind_2 = low_ind_1 - 1;
+      }
+      else {
+        low_ind_2 = low_ind_1 + 1;
+      }
+        //We are extrapolating to a frequency that is lower than all list entries
+        //so just stick low_ind_2 to one above low_ind_1
+    }
+  }
+
+  * flux_I = calc_gradient_extrap_list(d_components.list_stokesI,
+            d_components.list_freqs, d_extrap_freq,
+            list_start_ind + low_ind_1, list_start_ind + low_ind_2);
+
+  if (low_ind_2 == -1){
+
+    printf("wrong range %.3e %.3e iFreq %d %.3e low %d %.3e\n", d_components.list_freqs[list_start_ind],
+    d_components.list_freqs[list_start_ind + num_list_values-1],
+    iFreq, d_extrap_freq,
+    low_ind_1, d_components.list_freqs[list_start_ind + low_ind_1]);
+    printf("The flooxes %.3e \n",* flux_I);
+  }
+}
+
+__global__ void kern_extrap_list_fluxes_stokesIQUV(int num_extrap_freqs, double *d_extrap_freqs,
                                         int num_comps, components_t d_components) {
 
   // Start by computing which baseline we're going to do
@@ -503,7 +604,7 @@ __global__ void kern_extrap_list_fluxes(int num_extrap_freqs, double *d_extrap_f
     user_precision_t flux_U;
     user_precision_t flux_V;
 
-    extrap_stokes_list_flux(d_components, d_extrap_freqs,
+    extrap_stokes_list_flux_stokesIQUV(d_components, d_extrap_freqs,
                  iFluxComp, iFreq,
                  &flux_I, &flux_Q, &flux_U, &flux_V);
 
@@ -518,10 +619,33 @@ __global__ void kern_extrap_list_fluxes(int num_extrap_freqs, double *d_extrap_f
   }
 }
 
+__global__ void kern_extrap_list_fluxes_stokesI(int num_extrap_freqs, double *d_extrap_freqs,
+                                        int num_comps, components_t d_components) {
+
+  // Start by computing which baseline we're going to do
+  const int iFluxComp = threadIdx.x + (blockDim.x*blockIdx.x);
+  const int iFreq = threadIdx.y + (blockDim.y*blockIdx.y);
+  if(iFluxComp < num_comps && iFreq < num_extrap_freqs) {
+
+    user_precision_t flux_I;
+
+    extrap_stokes_list_flux_stokesI(d_components, d_extrap_freqs,
+                 iFluxComp, iFreq,
+                 &flux_I);
+
+    int iComponent = d_components.list_comp_inds[iFluxComp];
+    int extrap_ind = num_extrap_freqs*iComponent + iFreq;
+
+    d_components.extrap_stokesI[extrap_ind] = flux_I;
+
+  }
+}
+
 
 extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
                                    double *d_extrap_freqs, int num_extrap_freqs,
-                                   e_component_type comptype){
+                                   e_component_type comptype,
+                                   int do_QUV){
 
   components_t d_components;
   // int n_comps = 0;
@@ -551,12 +675,6 @@ extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
     n_lists = d_chunked_source->n_shape_lists;
   }
 
-  //For some reason, can't do this inside this function - something about
-  //memory context or something? If done inside, when trying to access the
-  //memory outside this function, get illegal memory issues. Memory
-  //management sucks.
-  // malloc_extrapolated_flux_arrays(&d_components, n_comps, num_extrap_freqs);
-
   dim3 grid, threads;
 
   threads.x = 16;
@@ -567,30 +685,36 @@ extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
 
   if (n_powers > 0) {
     grid.x = (int)ceilf( (float)n_powers / (float)threads.x );
-    cudaErrorCheckKernel("kern_extrap_power_laws",
-                          kern_extrap_power_laws, grid, threads,
+    cudaErrorCheckKernel("kern_extrap_power_laws_stokesI",
+                          kern_extrap_power_laws_stokesI, grid, threads,
                           num_extrap_freqs, d_extrap_freqs,
                           n_powers, d_components);
   }
   //Next up, do the CURVED_POWER_LAW types
   if (n_curves > 0) {
     grid.x = (int)ceilf( (float)n_curves / (float)threads.x );
-
-    cudaErrorCheckKernel("kern_extrap_curved_power_laws",
-                          kern_extrap_curved_power_laws, grid, threads,
-                          num_extrap_freqs, d_extrap_freqs,
-                          n_curves, d_components);
+    cudaErrorCheckKernel("kern_extrap_curved_power_laws_stokesI",
+                      kern_extrap_curved_power_laws_stokesI, grid, threads,
+                      num_extrap_freqs, d_extrap_freqs,
+                      n_curves, d_components);
   }
 
   //Finally, do any list flux peeps
-  //Next up, do the CURVED_POWER_LAW types
   if (n_lists > 0) {
     grid.x = (int)ceilf( (float)n_lists / (float)threads.x );
-
-    cudaErrorCheckKernel("kern_extrap_list_fluxes",
-                          kern_extrap_list_fluxes, grid, threads,
+    if (do_QUV == 1) {
+      cudaErrorCheckKernel("kern_extrap_list_fluxes_stokesIQUV",
+                          kern_extrap_list_fluxes_stokesIQUV, grid, threads,
                           num_extrap_freqs, d_extrap_freqs,
                           n_lists, d_components);
+    }
+    else {
+      cudaErrorCheckKernel("kern_extrap_list_fluxes_stokesI",
+                          kern_extrap_list_fluxes_stokesI, grid, threads,
+                          num_extrap_freqs, d_extrap_freqs,
+                          n_lists, d_components);
+    }
+    
   }
 }
 
@@ -600,6 +724,8 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
            d_beam_gains_t *d_component_beam_gains,
            e_component_type comptype,
            visibility_set_t *d_visibility_set){
+
+  int do_QUV = woden_settings->do_QUV;
 
   int num_components = 0;
   components_t *components = NULL;
@@ -621,11 +747,11 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
 
   //Will need this later
   malloc_extrapolated_flux_arrays(d_components, num_components,
-                                  woden_settings->num_freqs);
+                                  woden_settings->num_freqs, do_QUV);
 
-  extrapolate_Stokes(d_chunked_source, d_freqs, woden_settings->num_freqs,
-                     comptype);
-
+  extrapolate_Stokes(d_chunked_source, d_freqs,
+                     woden_settings->num_freqs, comptype, do_QUV);
+  
   //Only the MWA beams currently yields cross pol values, so only malloc what
   //we need here
   //TODO in the future, this might need to be a loop over all primary beams,
@@ -717,7 +843,6 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
 
 
     uint8_t parallactic = 1;
-    // int num_freqs = 3;
     run_hyperbeam_cuda(num_components,
            woden_settings->num_time_steps, woden_settings->num_freqs,
            parallactic,
@@ -786,7 +911,8 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
                   d_visibility_set->sum_visi_YX_real,
                   d_visibility_set->sum_visi_YX_imag,
                   d_visibility_set->sum_visi_YY_real,
-                  d_visibility_set->sum_visi_YY_imag);
+                  d_visibility_set->sum_visi_YY_imag,
+                  do_QUV);
   }
 
 } //END source_component_common
@@ -800,7 +926,8 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
            user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
            int num_components, int num_baselines, int num_freqs, int num_cross,
-           int num_times, e_beamtype beamtype, e_component_type comptype) {
+           int num_times, e_beamtype beamtype, e_component_type comptype,
+           int do_QUV) {
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
@@ -826,9 +953,13 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
       int extrap_ind = num_freqs*iComponent + freq_ind;
 
       flux_I = d_components.extrap_stokesI[extrap_ind];
-      flux_Q = d_components.extrap_stokesQ[extrap_ind];
-      flux_U = d_components.extrap_stokesU[extrap_ind];
-      flux_V = d_components.extrap_stokesV[extrap_ind];
+      if (do_QUV == 1) {
+        flux_Q = d_components.extrap_stokesQ[extrap_ind];
+        flux_U = d_components.extrap_stokesU[extrap_ind];
+        flux_V = d_components.extrap_stokesV[extrap_ind];
+      }
+      
+
 
       visi_comp = calc_measurement_equation(d_us, d_vs, d_ws,
                              d_components.ls, d_components.ms, d_components.ns,
@@ -854,7 +985,9 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
         visi_comp = visi_comp*V_envelop;
       }
 
-      update_sum_visis(iBaseline, iComponent, num_freqs,
+      if (do_QUV == 1)
+      {
+        update_sum_visis_stokesIQUV(iBaseline, iComponent, num_freqs,
              num_baselines, num_components, num_times, beamtype,
              d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
              d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
@@ -863,6 +996,17 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
              d_sum_visi_XY_real, d_sum_visi_XY_imag,
              d_sum_visi_YX_real, d_sum_visi_YX_imag,
              d_sum_visi_YY_real, d_sum_visi_YY_imag);
+      } else {
+        update_sum_visis_stokesI(iBaseline, iComponent, num_freqs,
+             num_baselines, num_components, num_times, beamtype,
+             d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
+             d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
+             visi_comp, flux_I,
+             d_sum_visi_XX_real, d_sum_visi_XX_imag,
+             d_sum_visi_XY_real, d_sum_visi_XY_imag,
+             d_sum_visi_YX_real, d_sum_visi_YX_imag,
+             d_sum_visi_YY_real, d_sum_visi_YY_imag);
+      }
     }
   }
 }
@@ -878,7 +1022,8 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
       user_precision_t *d_sbf,
       int num_shapes, int num_baselines, int num_freqs, int num_cross,
-      const int num_coeffs, int num_times, e_beamtype beamtype) {
+      const int num_coeffs, int num_times, e_beamtype beamtype,
+      int do_QUV) {
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
@@ -906,9 +1051,12 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       int extrap_ind = num_freqs*iComponent + freq_ind;
 
       shape_flux_I = d_components.extrap_stokesI[extrap_ind];
-      shape_flux_Q = d_components.extrap_stokesQ[extrap_ind];
-      shape_flux_U = d_components.extrap_stokesU[extrap_ind];
-      shape_flux_V = d_components.extrap_stokesV[extrap_ind];
+
+      if (do_QUV == 1) {
+        shape_flux_Q = d_components.extrap_stokesQ[extrap_ind];
+        shape_flux_U = d_components.extrap_stokesU[extrap_ind];
+        shape_flux_V = d_components.extrap_stokesV[extrap_ind];
+      }
 
       visi_shape = calc_measurement_equation(d_us, d_vs, d_ws,
                             d_components.ls, d_components.ms, d_components.ns,
@@ -970,7 +1118,10 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
 
       visi_shape = visi_shape*V_envelop;
 
-      update_sum_visis(iBaseline, iComponent, num_freqs,
+
+
+      if (do_QUV == 1) {
+        update_sum_visis_stokesIQUV(iBaseline, iComponent, num_freqs,
              num_baselines, num_shapes, num_times, beamtype,
              d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
              d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
@@ -980,7 +1131,17 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
              d_sum_visi_XY_real, d_sum_visi_XY_imag,
              d_sum_visi_YX_real, d_sum_visi_YX_imag,
              d_sum_visi_YY_real, d_sum_visi_YY_imag);
-
+      } else {
+        update_sum_visis_stokesI(iBaseline, iComponent, num_freqs,
+             num_baselines, num_shapes, num_times, beamtype,
+             d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
+             d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
+             visi_shape, shape_flux_I,
+             d_sum_visi_XX_real, d_sum_visi_XX_imag,
+             d_sum_visi_XY_real, d_sum_visi_XY_imag,
+             d_sum_visi_YX_real, d_sum_visi_YX_imag,
+             d_sum_visi_YY_real, d_sum_visi_YY_imag);
+      }
     }
   }
 }
@@ -1252,11 +1413,14 @@ source_t * copy_chunked_source_to_GPU(source_t *chunked_source){
   return d_chunked_source;
 }
 
-void free_extrapolated_flux_arrays(components_t *d_components){
+void free_extrapolated_flux_arrays(components_t *d_components, int do_QUV){
   cudaErrorCheckCall( cudaFree( d_components->extrap_stokesI ) );
-  cudaErrorCheckCall( cudaFree( d_components->extrap_stokesQ ) );
-  cudaErrorCheckCall( cudaFree( d_components->extrap_stokesU ) );
-  cudaErrorCheckCall( cudaFree( d_components->extrap_stokesV ) );
+
+  if (do_QUV) {
+    cudaErrorCheckCall( cudaFree( d_components->extrap_stokesQ ) );
+    cudaErrorCheckCall( cudaFree( d_components->extrap_stokesU ) );
+    cudaErrorCheckCall( cudaFree( d_components->extrap_stokesV ) );
+  }
 }
 
 
@@ -1366,7 +1530,8 @@ __global__ void kern_calc_autos(components_t d_components,
                                 user_precision_t *d_sum_visi_YX_real,
                                 user_precision_t *d_sum_visi_YX_imag,
                                 user_precision_t *d_sum_visi_YY_real,
-                                user_precision_t *d_sum_visi_YY_imag) {
+                                user_precision_t *d_sum_visi_YY_imag,
+                                int do_QUV) {
 
   // Start by computing which baseline we're going to do
   const int iTimeFreq = threadIdx.x + (blockDim.x*blockIdx.x);
@@ -1385,7 +1550,6 @@ __global__ void kern_calc_autos(components_t d_components,
     //and frequency step, and then we can use `get_beam_gains` to get the
     //correct beam gain
     int iBaseline = num_baselines*num_freqs*time_ind + num_baselines*freq_ind;
-
 
     int num_visis = num_baselines*num_freqs*num_times;
     int iAuto = num_visis + num_ants*num_freqs*time_ind + num_ants*freq_ind + iAnt;
@@ -1407,15 +1571,23 @@ __global__ void kern_calc_autos(components_t d_components,
       int extrap_ind = num_freqs*iComponent + freq_ind;
 
       user_precision_t flux_I = d_components.extrap_stokesI[extrap_ind];
-      user_precision_t flux_Q = d_components.extrap_stokesQ[extrap_ind];
-      user_precision_t flux_U = d_components.extrap_stokesU[extrap_ind];
-      user_precision_t flux_V = d_components.extrap_stokesV[extrap_ind];
 
-      apply_beam_gains(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
-                      flux_I, flux_Q, flux_U, flux_V,
-                      visi_component,
-                      &auto_XX, &auto_XY, &auto_YX, &auto_YY);
+      if (do_QUV == 1) {
+        user_precision_t flux_Q = d_components.extrap_stokesQ[extrap_ind];
+        user_precision_t flux_U = d_components.extrap_stokesU[extrap_ind];
+        user_precision_t flux_V = d_components.extrap_stokesV[extrap_ind];
 
+        apply_beam_gains_stokesIQUV(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
+                                    flux_I, flux_Q, flux_U, flux_V,
+                                    visi_component,
+                                    &auto_XX, &auto_XY, &auto_YX, &auto_YY);
+
+      } else {
+        apply_beam_gains_stokesI(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
+                                 flux_I, visi_component,
+                                 &auto_XX, &auto_XY, &auto_YX, &auto_YY);
+      }
+      
       d_sum_visi_XX_real[iAuto] += auto_XX.x;
       d_sum_visi_XX_imag[iAuto] += auto_XX.y;
 
@@ -1432,12 +1604,6 @@ __global__ void kern_calc_autos(components_t d_components,
   }
 }
 
-
-
-
-
-
-
 /*******************************************************************************
                  Functions below to be used in unit tests
 *******************************************************************************/
@@ -1447,6 +1613,7 @@ extern "C" void test_extrap_stokes_all_models(source_t *chunked_source,
            user_precision_t *extrap_flux_I, user_precision_t *extrap_flux_Q,
            user_precision_t *extrap_flux_U, user_precision_t *extrap_flux_V){
 
+  int do_QUV = 1;
 
   source_t *d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
 
@@ -1458,9 +1625,9 @@ extern "C" void test_extrap_stokes_all_models(source_t *chunked_source,
 
   malloc_extrapolated_flux_arrays(&d_chunked_source->point_components,
                                   d_chunked_source->n_points,
-                                  num_extrap_freqs);
+                                  num_extrap_freqs, do_QUV);
 
-  extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_extrap_freqs, POINT);
+  extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_extrap_freqs, POINT, do_QUV);
 
 
   components_t d_components = d_chunked_source->point_components;
@@ -1479,7 +1646,7 @@ extern "C" void test_extrap_stokes_all_models(source_t *chunked_source,
                                                       cudaMemcpyDeviceToHost ));
   //
   cudaErrorCheckCall( cudaFree( d_extrap_freqs ) );
-  free_extrapolated_flux_arrays(&d_chunked_source->point_components);
+  free_extrapolated_flux_arrays(&d_chunked_source->point_components, do_QUV);
 }
 
 
@@ -1563,7 +1730,7 @@ extern "C" void test_kern_calc_measurement_equation(int num_components,
 
 }
 
-__global__ void kern_apply_beam_gains(int num_gains, cuUserComplex *d_g1xs,
+__global__ void kern_apply_beam_gains_stokesIQUV(int num_gains, cuUserComplex *d_g1xs,
           cuUserComplex *d_D1xs,
           cuUserComplex *d_D1ys, cuUserComplex *d_g1ys,
           cuUserComplex *d_g2xs, cuUserComplex *d_D2xs,
@@ -1582,7 +1749,7 @@ __global__ void kern_apply_beam_gains(int num_gains, cuUserComplex *d_g1xs,
     cuUserComplex visi_YX;
     cuUserComplex visi_YY;
 
-    apply_beam_gains(d_g1xs[iGain], d_D1xs[iGain],
+    apply_beam_gains_stokesIQUV(d_g1xs[iGain], d_D1xs[iGain],
              d_D1ys[iGain], d_g1ys[iGain],
              d_g2xs[iGain], d_D2xs[iGain],
              d_D2ys[iGain], d_g2ys[iGain],
@@ -1705,8 +1872,8 @@ extern "C" void test_kern_apply_beam_gains(int num_gains, user_precision_complex
   threads.x = 128;
   grid.x = (int)ceil( (user_precision_t)num_gains / (user_precision_t)threads.x );
 
-  cudaErrorCheckKernel("kern_apply_beam_gains",
-                      kern_apply_beam_gains, grid, threads,
+  cudaErrorCheckKernel("kern_apply_beam_gains_stokesIQUV",
+                      kern_apply_beam_gains_stokesIQUV, grid, threads,
                       num_gains,
                       (cuUserComplex *)d_g1xs, (cuUserComplex *)d_D1xs,
                       (cuUserComplex *)d_D1ys, (cuUserComplex *)d_g1ys,
@@ -1877,7 +2044,7 @@ extern "C" void test_kern_get_beam_gains(int num_freqs, int num_cross,
 
 }
 
-__global__ void kern_update_sum_visis(int num_freqs,
+__global__ void kern_update_sum_visis_stokesIQUV(int num_freqs,
      int num_baselines, int num_components, int num_times, int beamtype,
      cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
      cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
@@ -1902,7 +2069,7 @@ __global__ void kern_update_sum_visis(int num_freqs,
       //There is a flux for every frequnecy and component
       int flux_ind = num_components*freq_ind + iComponent;
 
-      update_sum_visis(iBaseline, iComponent, num_freqs,
+      update_sum_visis_stokesIQUV(iBaseline, iComponent, num_freqs,
              num_baselines, num_components, num_times, beamtype,
              d_primay_beam_J00, d_primay_beam_J01,
              d_primay_beam_J10, d_primay_beam_J11,
@@ -2015,8 +2182,8 @@ extern "C" void test_kern_update_sum_visis(int num_freqs, int num_cross,
   threads.x = 128;
   grid.x = (int)ceil( (user_precision_t)num_cross / (user_precision_t)threads.x );
 
-  cudaErrorCheckKernel("kern_update_sum_visis",
-                      kern_update_sum_visis, grid, threads,
+  cudaErrorCheckKernel("kern_update_sum_visis_stokesIQUV",
+                      kern_update_sum_visis_stokesIQUV, grid, threads,
                       num_freqs, num_baselines, num_components, num_times, beamtype,
                       (cuUserComplex *)d_primay_beam_J00, (cuUserComplex *)d_primay_beam_J01,
                       (cuUserComplex *)d_primay_beam_J10, (cuUserComplex *)d_primay_beam_J11,
@@ -2064,6 +2231,17 @@ extern "C" void test_kern_update_sum_visis(int num_freqs, int num_cross,
 
 }
 
+//just make things zero pls
+__global__ void kern_make_zeros(user_precision_t *array, int num_arr) {
+
+  const int iComp = threadIdx.x + (blockDim.x*blockIdx.x);
+
+  if (iComp < num_arr)
+  {
+    array[iComp] = 0.0;
+  }
+}
+
 
 extern "C" void test_source_component_common(int num_of_each_flux_type,
            components_t components,
@@ -2075,6 +2253,8 @@ extern "C" void test_source_component_common(int num_of_each_flux_type,
            user_precision_t *extrap_flux_U, user_precision_t *extrap_flux_V,
            double *ls, double *ms, double *ns,
            e_component_type comptype){
+
+  woden_settings->do_QUV = 1;
 
   source_t *chunked_source = (source_t *)malloc(sizeof(source_t));
 
@@ -2193,6 +2373,27 @@ extern "C" void test_source_component_common(int num_of_each_flux_type,
                             NUM_FLUX_TYPES*num_of_each_flux_type*sizeof(double),
                             cudaMemcpyDeviceToHost ));
 
+  //until we get RM synthesis working, do this for testing
+  //do this because I don't want to cut out all the memcpying below, laaazy
+  dim3 grid, threads;
+
+  int num_things = NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs;
+
+  threads.x = 128;
+  threads.y = 1;
+  grid.x = (int)ceil( (float)num_things / (float)threads.x );
+  grid.y = 1;
+
+  cudaErrorCheckKernel("kern_make_zeros",
+            kern_make_zeros, grid, threads,
+            d_components.extrap_stokesQ, num_things);
+  cudaErrorCheckKernel("kern_make_zeros",
+            kern_make_zeros, grid, threads,
+            d_components.extrap_stokesU, num_things);
+  cudaErrorCheckKernel("kern_make_zeros",
+            kern_make_zeros, grid, threads,
+            d_components.extrap_stokesV, num_things);
+
   cudaErrorCheckCall( cudaMemcpy(extrap_flux_I, d_components.extrap_stokesI,
   NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t),
                                                       cudaMemcpyDeviceToHost ));
@@ -2207,7 +2408,7 @@ extern "C" void test_source_component_common(int num_of_each_flux_type,
                                                       cudaMemcpyDeviceToHost ));
 
   cudaErrorCheckCall( cudaFree( d_freqs ) );
-  free_extrapolated_flux_arrays(&d_components);
+  free_extrapolated_flux_arrays(&d_components, woden_settings->do_QUV);
   free_d_components(d_chunked_source, comptype);
   free_beam_gains(d_beam_gains, beam_settings->beamtype);
 }
@@ -2255,6 +2456,8 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
           user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
           user_precision_complex_t *Dys, user_precision_complex_t *gys){
 
+  int do_QUV = 0;
+  
   int num_components = n_powers + n_curves + n_lists;
 
   user_precision_t *d_us = NULL;
@@ -2311,8 +2514,8 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
 
     malloc_extrapolated_flux_arrays(&d_chunked_source->point_components,
                                     d_chunked_source->n_points,
-                                    num_freqs);
-    extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, POINT);
+                                    num_freqs, do_QUV);
+    extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, POINT, do_QUV);
     d_components = d_chunked_source->point_components;
   }
   else if (comptype == GAUSSIAN) {
@@ -2338,8 +2541,8 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
 
     malloc_extrapolated_flux_arrays(&d_chunked_source->gauss_components,
                                     d_chunked_source->n_gauss,
-                                    num_freqs);
-    extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, GAUSSIAN);
+                                    num_freqs, do_QUV);
+    extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, GAUSSIAN, do_QUV);
     d_components = d_chunked_source->gauss_components;
   }
   else if (comptype == SHAPELET) {
@@ -2364,8 +2567,8 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
 
     malloc_extrapolated_flux_arrays(&d_chunked_source->shape_components,
                                     d_chunked_source->n_shapes,
-                                    num_freqs);
-    extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, SHAPELET);
+                                    num_freqs, do_QUV);
+    extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, SHAPELET, do_QUV);
     d_components = d_chunked_source->shape_components;
   }
 
@@ -2498,7 +2701,7 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
                   d_sum_visi_YX_real, d_sum_visi_YX_imag,
                   d_sum_visi_YY_real, d_sum_visi_YY_imag,
                   num_components, num_baselines, num_freqs, num_cross,
-                  num_times, beamtype, comptype);
+                  num_times, beamtype, comptype, do_QUV);
   }
   else if (comptype == SHAPELET) {
     cudaErrorCheckKernel("kern_calc_visi_shapelets",
@@ -2513,7 +2716,7 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
                   d_sum_visi_YY_real, d_sum_visi_YY_imag,
                   d_sbf,  num_components,
                   num_baselines, num_freqs, num_cross,
-                  num_shape_coeffs, num_times, beamtype);
+                  num_shape_coeffs, num_times, beamtype, do_QUV);
   }
 
   cudaErrorCheckCall( cudaMemcpy(sum_visi_XX_real, d_sum_visi_XX_real,
@@ -2557,13 +2760,13 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
   cudaErrorCheckCall( cudaFree( d_extrap_freqs ) );
 
   if (comptype == POINT) {
-    free_extrapolated_flux_arrays(&d_chunked_source->point_components);
+    free_extrapolated_flux_arrays(&d_chunked_source->point_components, do_QUV);
   }
   else if (comptype == GAUSSIAN) {
-    free_extrapolated_flux_arrays(&d_chunked_source->gauss_components);
+    free_extrapolated_flux_arrays(&d_chunked_source->gauss_components, do_QUV);
   }
   if (comptype == SHAPELET){
-    free_extrapolated_flux_arrays(&d_chunked_source->shape_components);
+    free_extrapolated_flux_arrays(&d_chunked_source->shape_components, do_QUV);
     cudaErrorCheckCall(  cudaFree( d_sbf) );
     cudaErrorCheckCall(  cudaFree( d_u_shapes) );
     cudaErrorCheckCall(  cudaFree( d_v_shapes) );
@@ -2694,6 +2897,8 @@ extern "C" void test_kern_calc_autos(components_t *components, int beamtype,
   grid.y = (int)ceil( (float)(num_ants) / (float)threads.y );
   grid.z = 1;
 
+  int do_QUV = 0;
+
   cudaErrorCheckKernel("kern_calc_autos",
                 kern_calc_autos, grid, threads,
                 *d_components, *d_component_beam_gains,
@@ -2702,7 +2907,8 @@ extern "C" void test_kern_calc_autos(components_t *components, int beamtype,
                 d_sum_visi_XX_real, d_sum_visi_XX_imag,
                 d_sum_visi_XY_real, d_sum_visi_XY_imag,
                 d_sum_visi_YX_real, d_sum_visi_YX_imag,
-                d_sum_visi_YY_real, d_sum_visi_YY_imag);
+                d_sum_visi_YY_real, d_sum_visi_YY_imag,
+                do_QUV);
 
   //Copy outputs onto host so we can check our answers
   cudaErrorCheckCall( cudaMemcpy(visibility_set->sum_visi_XX_real,
