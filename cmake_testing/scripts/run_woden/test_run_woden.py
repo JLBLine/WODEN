@@ -149,35 +149,6 @@ class Test(unittest.TestCase):
         
         self.expec_data = expec_data
 
-    # ##Setup some fake command line things for the following test
-    # ##annoyingly this means the default args set by argparse are not used
-    # @mock.patch('argparse.ArgumentParser.parse_args',
-    #             return_value=argparse.Namespace(band_nums="1",
-    #                         lowest_channel_freq=180e6,
-    #                         coarse_band_width=1.28e+6,
-    #                         freq_res=80e+3,
-    #                         num_freq_channels='obs',
-    #                         num_time_steps=1,
-    #                         time_res=1e-16,
-    #                         ra0=0.0, dec0=0.0,
-    #                         date = "2000-01-01T12:00:00", array_height=0.0,
-    #                         latitude=0.0, longitude=0.0,
-    #                         cat_filename=f"{code_dir}/simple_sky.txt",
-    #                         output_uvfits_prepend="test_run_woden",
-    #                         primary_beam='none',
-    #                         no_precession=True,
-    #                         array_layout=f"{code_dir}/simple_array.txt",
-    #                         precision='double',
-    #                         telescope_name='test',
-    #                         metafits_filename=False,
-    #                         MWA_FEE_delays=False,
-    #                         sky_crop_sources=False,
-    #                         sky_crop_components=True,
-    #                         dry_run=False,
-    #                         do_autos=False,
-    #                         chunking_size=1e+9,
-    #                         remove_phase_tracking=False))
-    
     def test_nobeam_phase_centre_double(self):
         """Checks that concatenating four uvfits files that have `band{band}.uvfits`
         at the end works, by creating four uvfits with known properties"""
@@ -195,128 +166,76 @@ class Test(unittest.TestCase):
         args.append("--dec0=0.0")
         args.append("--date=2000-01-01T12:00:00")
         args.append("--array_height=0.0")
-        # args.append(f"--latitude={self.latitude}")
         args.append(f"--longitude={self.longitude}")
         args.append(f"--latitude=0.0")
-        # args.append(f"--longitude=79.53789457709424")
         args.append(f"--cat_filename={code_dir}/simple_sky.txt")
         args.append("--output_uvfits_prepend=test_run_woden")
         args.append("--primary_beam=none")
         args.append(f"--array_layout={code_dir}/simple_array.txt")
         args.append("--telescope_name=test")
         args.append("--no_precession")
-        # args.append("--metafits_filename=False")
-        # args.append("--MWA_FEE_delays=False")
-        # args.append("--sky_crop_sources=False")
-        # args.append("--sky_crop_components=True")
-        # args.append("--dry_run=False")
-        # args.append("--do_autos=False")
-        # args.append("--chunking_size=1e+9")
-        # args.append("--remove_phase_tracking=False")
 
-        ##Some input test params
-        # self.make_dummy_intputs()
-        # self.create_uvfits_outputs()
+        rw.main(args)
         
-        # self.num_time_steps=1
-        # self.num_baselines=1
-        # self.num_freq_channels=16
-        
-        # rw.main(args)
-        
-        # self.check_uvfits_contents("test_run_woden_band01.uvfits")
+        self.check_uvfits_contents("test_run_woden_band01.uvfits")
 
-    # ##Setup some fake command line things for the following test
-    # ##annoyingly this means the default args set by argparse are not used
-    # @mock.patch('argparse.ArgumentParser.parse_args',
-    #             return_value=argparse.Namespace(band_nums="1",
-    #                         lowest_channel_freq=180e6,
-    #                         coarse_band_width=1.28e+6,
-    #                         freq_res=80e+3,
-    #                         num_freq_channels='obs',
-    #                         num_time_steps=1,
-    #                         time_res=1e-16,
-    #                         ra0=0.0, dec0=0.0,
-    #                         date = "2000-01-01T12:00:00",
-    #                         latitude=0.0, longitude=79.53789457709424, array_height=0.0,
-    #                         cat_filename=f"{code_dir}/simple_sky.txt",
-    #                         output_uvfits_prepend="test_run_woden",
-    #                         primary_beam='none',
-    #                         no_precession=True,
-    #                         array_layout=f"{code_dir}/simple_array.txt",
-    #                         precision='float',
-    #                         telescope_name='test',
-    #                         metafits_filename=False,
-    #                         MWA_FEE_delays=False,
-    #                         sky_crop_sources=False,
-    #                         sky_crop_components=True,
-    #                         dry_run=False,
-    #                         do_autos=False,
-    #                         chunking_size=1e+9,
-    #                         remove_phase_tracking=False))
+    def test_nobeam_phase_centre_float(self):
+        
+        self.expec_values()
+        
+        args = []
+        args.append("--band_nums=1")
+        args.append("--lowest_channel_freq=180e6")
+        args.append("--coarse_band_width=1.28e+6")
+        args.append("--freq_res=80e+3")
+        args.append("--num_time_steps=1")
+        args.append("--time_res=1e-16")
+        args.append("--ra0=0.0")
+        args.append("--dec0=0.0")
+        args.append("--date=2000-01-01T12:00:00")
+        args.append("--array_height=0.0")
+        args.append(f"--longitude={self.longitude}")
+        args.append(f"--latitude=0.0")
+        args.append(f"--cat_filename={code_dir}/simple_sky.txt")
+        args.append("--output_uvfits_prepend=test_run_woden")
+        args.append("--primary_beam=none")
+        args.append(f"--array_layout={code_dir}/simple_array.txt")
+        args.append("--telescope_name=test")
+        args.append("--no_precession")
+        args.append("--precision=float")
+
+        rw.main(args)
+        
+        self.check_uvfits_contents("test_run_woden_band01.uvfits")
     
-    # def test_nobeam_phase_centre_float(self, mock_args):
-    #     """Checks that concatenating four uvfits files that have `band{band}.uvfits`
-    #     at the end works, by creating four uvfits with known properties"""
+    def test_nobeam_phase_centre_float_autos(self):
 
-    #     ##Some input test params
-    #     # self.make_dummy_intputs()
-    #     # self.create_uvfits_outputs()
+        self.expec_values(autos=True)
         
-    #     # self.num_time_steps=1
-    #     # self.num_baselines=1
-    #     # self.num_freq_channels=16
-        
-    #     self.expec_values()
+        args = []
+        args.append("--band_nums=1")
+        args.append("--lowest_channel_freq=180e6")
+        args.append("--coarse_band_width=1.28e+6")
+        args.append("--freq_res=80e+3")
+        args.append("--num_time_steps=1")
+        args.append("--time_res=1e-16")
+        args.append("--ra0=0.0")
+        args.append("--dec0=0.0")
+        args.append("--date=2000-01-01T12:00:00")
+        args.append("--array_height=0.0")
+        args.append(f"--longitude={self.longitude}")
+        args.append(f"--latitude=0.0")
+        args.append(f"--cat_filename={code_dir}/simple_sky.txt")
+        args.append("--output_uvfits_prepend=test_run_woden")
+        args.append("--primary_beam=none")
+        args.append(f"--array_layout={code_dir}/simple_array.txt")
+        args.append("--telescope_name=test")
+        args.append("--no_precession")
+        args.append("--do_autos")
 
-    #     rw.main()
+        rw.main(args)
         
-    #     self.check_uvfits_contents("test_run_woden_band01.uvfits")
-        
-    # @mock.patch('argparse.ArgumentParser.parse_args',
-    #             return_value=argparse.Namespace(band_nums="1",
-    #                         lowest_channel_freq=180e6,
-    #                         coarse_band_width=1.28e+6,
-    #                         freq_res=80e+3,
-    #                         num_freq_channels='obs',
-    #                         num_time_steps=1,
-    #                         time_res=1e-16,
-    #                         ra0=0.0, dec0=0.0,
-    #                         date = "2000-01-01T12:00:00",
-    #                         latitude=0.0, longitude=79.53789457709424, array_height=0.0,
-    #                         cat_filename=f"{code_dir}/simple_sky.txt",
-    #                         output_uvfits_prepend="test_run_woden",
-    #                         primary_beam='none',
-    #                         no_precession=True,
-    #                         array_layout=f"{code_dir}/simple_array.txt",
-    #                         precision='float',
-    #                         telescope_name='test',
-    #                         metafits_filename=False,
-    #                         MWA_FEE_delays=False,
-    #                         sky_crop_sources=False,
-    #                         sky_crop_components=True,
-    #                         dry_run=False,
-    #                         do_autos=True,
-    #                         chunking_size=1e+9,
-    #                         remove_phase_tracking=False))
-    
-    # def test_nobeam_phase_centre_float_autos(self, mock_args):
-    #     """Checks that concatenating four uvfits files that have `band{band}.uvfits`
-    #     at the end works, by creating four uvfits with known properties"""
-
-    #     ##Some input test params
-    #     # self.make_dummy_intputs()
-    #     # self.create_uvfits_outputs()
-        
-    #     # self.num_time_steps=1
-    #     # self.num_baselines=1
-    #     # self.num_freq_channels=16
-        
-    #     self.expec_values(autos=True)
-
-    #     rw.main()
-        
-    #     self.check_uvfits_contents("test_run_woden_band01.uvfits")
+        self.check_uvfits_contents("test_run_woden_band01.uvfits")
         
 
 ##Run the test

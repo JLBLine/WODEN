@@ -1,5 +1,5 @@
 import numpy as np
-np.random.seed(4576)
+np.random.seed(34)
 
 num_powers = 6
 num_curves = 6
@@ -8,10 +8,10 @@ num_extrap_freqs = 25
 
 ##=======POWER_LAW==============================================================
 
-ref_stokesI = np.random.uniform(1e-3, 100.0, num_powers)
-ref_stokesQ = np.random.uniform(1e-3, 100.0, num_powers)
-ref_stokesU = np.random.uniform(1e-3, 100.0, num_powers)
-ref_stokesV = np.random.uniform(1e-3, 100.0, num_powers)
+ref_stokesI = np.random.uniform(1e-3, 10.0, num_powers)
+ref_stokesQ = np.random.uniform(1e-3, 10.0, num_powers)
+ref_stokesU = np.random.uniform(1e-3, 10.0, num_powers)
+ref_stokesV = np.random.uniform(1e-3, 10.0, num_powers)
 
 extrap_freqs = np.linspace(50e+6, 300e+6, num_extrap_freqs)
 ref_freqs = np.array([50e+6, 100e+6, 150e+6, 200e+6, 250e+6, 300e+6])
@@ -21,7 +21,7 @@ ref_power_SIs = np.random.uniform(-1.5, 0.5, num_powers)
 
 ##values pulled from model fits to LoBES data
 peak_freqs = np.full(num_curves, 200e+6)
-ref_qs = np.array([-1.1540648022374427,-1.2848486571584865,-8.442091275232713 ,-7.984679649768583 ,2.4366766327372646 ,2.439801523394266])
+ref_qs = np.array([-1.1540648022374427,-1.2848486571584865,-8.442091275232713 ,-7.984679649768583 ,1.4366766327372646 ,1.439801523394266])
 ref_curve_SIs = np.array([3.9805869816599606, 1.7473922337782646,-0.7152342578625103,-4.432750841164616,-0.910260545384106,-0.5190814949517933])
 
 ##=======LIST_STUFF=============================================================

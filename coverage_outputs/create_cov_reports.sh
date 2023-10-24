@@ -62,6 +62,7 @@ coverage run --source=run_woden -a ../cmake_testing/scripts/run_woden/test_run_w
 coverage run --source=wodenpy.use_libwoden.visibility_set -a ../cmake_testing/scripts/run_woden/test_run_woden.py
 coverage run --source=wodenpy.use_libwoden.use_libwoden -a ../cmake_testing/scripts/run_woden/test_run_woden.py
 coverage run --source=woden_uv2ms -a ../cmake_testing/scripts/woden_uv2ms/test_woden_uv2ms.py
+coverage run --source=add_instrumental_effects_woden -a ../cmake_testing/scripts/add_instrumental_effects_woden/test_add_instrumental_effects_woden.py
 
 ##convert output to something that codecov accepts
 coverage xml
