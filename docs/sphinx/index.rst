@@ -29,8 +29,8 @@ Documentation
    :maxdepth: 2
 
    installation/installation
-   testing/cmake_testing
-   testing/script_testing
+   testing/testing
+   scripts/scripts
    operating_principles/operating_principles
    examples/example_simulations
    API_reference/API_index

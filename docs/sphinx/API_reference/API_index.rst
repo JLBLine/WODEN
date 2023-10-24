@@ -30,18 +30,6 @@ can be reproduced on the command line using ``script.py --help``.
   python_code/wodenpy/wodenpy_setup
   
 
-Scripts
-++++++++++
-
-.. toctree::
-  :maxdepth: 1
-
-  python_code/scripts/run_woden
-  python_code/scripts/add_woden_uvfits
-  python_code/scripts/concat_woden_uvfits
-  python_code/scripts/uv2ms
-  python_code/scripts/convert_WSClean_list_to_WODEN
-
 ``C`` code
 ----------------------
 

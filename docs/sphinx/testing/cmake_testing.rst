@@ -148,6 +148,7 @@ The sections below give an outline of the tests performed in each directory.
 .. toctree::
    :maxdepth: 1
 
+   cmake_testing/scripts/add_instrumental_effects_woden
    cmake_testing/scripts/add_woden_uvfits
    cmake_testing/scripts/concat_woden_uvfits
    cmake_testing/scripts/run_woden

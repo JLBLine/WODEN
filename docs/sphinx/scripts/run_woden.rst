@@ -1,8 +1,7 @@
 ``run_woden.py``
 =================
 
-This is the main way to control the ``WODEN`` executable, and ensure good
-arguments are supplied. I suggest you only run ``WODEN`` through this script.
+This is the main ``WODEN`` executable. It takes command line arguments, creates and array layout, visibility containers, read sky models, and launches GPU code to calculate the visibilities. Finally, it writes the outputs to ``uvfits`` files.
 
 .. _run_woden command line running options:
 

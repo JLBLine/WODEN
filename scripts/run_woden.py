@@ -11,8 +11,8 @@ from queue import Queue
 from threading import Thread
 from ctypes import POINTER, c_double, c_float
 
-from wodenpy.use_libwoden.woden_settings import create_woden_settings, setup_lsts_and_phase_centre
-from wodenpy.use_libwoden.visibility_set import setup_visi_set_array, load_visibility_set
+from wodenpy.use_libwoden.woden_settings import create_woden_settings, setup_lsts_and_phase_centre, Woden_Settings_Float, Woden_Settings_Double
+from wodenpy.use_libwoden.visibility_set import setup_visi_set_array, load_visibility_set, Visi_Set_Float, Visi_Set_Double
 from wodenpy.wodenpy_setup.run_setup import get_parser, check_args, get_code_version
 from wodenpy.use_libwoden.use_libwoden import load_in_woden_library
 from wodenpy.observational.calc_obs import get_uvfits_date_and_position_constants, calc_jdcal
@@ -20,9 +20,11 @@ from wodenpy.skymodel.woden_skymodel import crop_below_horizon
 from wodenpy.skymodel.read_skymodel import read_skymodel_chunks, read_radec_count_components
 from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map
 from wodenpy.array_layout.create_array_layout import calc_XYZ_diffs, enh2xyz
+from wodenpy.use_libwoden.array_layout_struct import Array_Layout
 from wodenpy.uvfits.wodenpy_uvfits import make_antenna_table, make_baseline_date_arrays, create_uvfits
 from wodenpy.phase_rotate.remove_phase_track import remove_phase_tracking
 from wodenpy.use_libwoden.shapelets import create_sbf
+from typing import Union
 
 ##Constants
 R2D = 180.0 / np.pi
@@ -38,8 +40,27 @@ sbf_L = 10001
 sbf_c = 5000
 sbf_dx = 0.01
 
-def woden_thread(the_queue, run_woden, woden_settings, visibility_set, array_layout,
-                 sbf):
+def woden_thread(the_queue : Queue, run_woden, woden_settings : Union[Woden_Settings_Float, Woden_Settings_Double], visibility_set : Union[Visi_Set_Float, Visi_Set_Double], array_layout : Array_Layout,
+                 sbf : np.ndarray):
+    """
+    This function runs WODEN C/CUDA code on a separate thread, processing source catalogues from a queue until the queue is empty.
+    
+    Parameters
+    ----------
+    the_queue : Queue
+        A queue of source catalogues to be processed.
+    run_woden : _NamedFuncPointer
+        A pointer to the WODEN function to be run.
+    woden_settings : Union[Woden_Settings_Float, Woden_Settings_Double]
+        The WODEN settings to be used.
+    visibility_set : Union[Visi_Set_Float, Visi_Set_Double]
+        The visibility set to write outputs to.
+    array_layout : Array_Layout
+        The array layout to be used.
+    sbf : np.ndarray
+        The shapelet basis function array
+    """
+    
     while True:
         source_catalogue = the_queue.get(block=True)
         
@@ -49,11 +70,31 @@ def woden_thread(the_queue, run_woden, woden_settings, visibility_set, array_lay
         run_woden(woden_settings, visibility_set, source_catalogue, array_layout,
                   sbf)
         
-def read_skymodel_thread(the_queue, chunked_skymodel_maps: list,
+def read_skymodel_thread(the_queue : Queue, chunked_skymodel_maps: list,
                                     max_num_chunks : int,
                                     lsts : np.ndarray, latitude : float,
                                     args : argparse.Namespace,
                                     beamtype : int):
+    """
+    Reads a chunked skymodel map and puts the resulting source catalogue into a queue.
+    
+    Parameters
+    =============
+    the_queue : Queue
+        A queue to put the resulting source catalogue into.
+    chunked_skymodel_maps : list
+        A list of chunked skymodel maps to read.
+    max_num_chunks : int
+        The maximum number of chunks to read at once.
+    lsts : np.ndarray
+        An array of LST values.
+    latitude : float
+        The latitude of the observation.
+    args : argparse.Namespace
+        An argparse namespace containing command line arguments.
+    beamtype : int
+        The type of beam to use.
+    """
     
     for lower_chunk_iter in range(0, len(chunked_skymodel_maps), max_num_chunks):
         
@@ -81,7 +122,10 @@ def read_skymodel_thread(the_queue, chunked_skymodel_maps: list,
 
 
 def main(argv=None):
-    """Runs the WODEN simulator, given command line inputs
+    """Runs the WODEN simulator, given command line inputs. Does fancy things
+    like reading in the sky model and running the GPU code in parallel; the
+    sky model lazy load allows us to simulate sky models that cannot fit into
+    RAM.
 
     Parameters
     ----------

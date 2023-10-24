@@ -21,7 +21,7 @@ def get_parser():
     """
     import argparse
 
-    parser = argparse.ArgumentParser(description="Do daa ")
+    parser = argparse.ArgumentParser(description="Adds instrumental effects to a WODEN uvfits, given command line inputs")
 
     sing_group = parser.add_argument_group('INPUT/OUTPUT OPTIONS')
     sing_group.add_argument('--uvfits', default=False,
@@ -48,7 +48,7 @@ def get_parser():
         help='Use as  `--ant_leak_errs psi_err chi_err` (degrees). Adds an engineering '
              'tolerance error for linear dipole alignment (see TMS '
              'eqn A4.5) to add leakage terms to the antenna Jones matrix. '
-             'This leakage is based off two angles where `Dx = psi_err + 1j*chi_err` '
+             'This leakage is based off two angles where `Dx = psi_err - 1j*chi_err` '
              'and `Dy = -psi_err + 1j*chi_err`. '
              'A random angle between 0 and the given value will be added for each angle. ')
 
@@ -75,6 +75,48 @@ def get_parser():
 
     return parser
 
+class UVFITS(object):
+    """
+    A class for reading and storing data from UVFITS files.
+
+    Parameters:
+    -----------
+    filename : str
+        The path to the UVFITS file to be read.
+
+    Attributes:
+    -----------
+    visibilities : ndarray
+        The complex visibilities of the UVFITS file.
+    num_antennas : int
+        The number of antennas in the UVFITS file.
+    b1s : ndarray
+        The first antenna indices of the baselines in the UVFITS file.
+    b2s : ndarray
+        The second antenna indices of the baselines in the UVFITS file.
+    num_freqs : int
+        The number of frequency channels in the UVFITS file.
+    cent_freq : float
+        The central frequency of the UVFITS file.
+    cent_pix : float
+        The central pixel of the UVFITS file.
+    freq_res : float
+        The frequency resolution of the UVFITS file.
+    all_freqs : ndarray
+        The frequencies of all the channels in the UVFITS file.
+    num_ants : int
+        The number of antennas (tiles) in the UVFITS file.
+    num_visis : int
+        The total number of visibilities (for all time steps) in the UVFITS file.
+    num_cross : int
+        The number of cross-correlations in the UVFITS file.
+    num_autos : int
+        The number of auto-correlations in the UVFITS file.
+    has_autos : bool
+        Whether auto-correlations are present in the UVFITS file.
+    time_res : float
+        The time resolution of the UVFITS file.
+    """
 class UVFITS(object):
     def __init__(self, filename):
         with fits.open(filename) as hdu:
@@ -144,10 +186,24 @@ class UVFITS(object):
 
 def make_single_polarsiation_jones_gain(num_antennas, num_freqs, 
         amp_err=0.05, phase_err=10):
-    """Make some jones matrix errors
-    
-    Returns a (num_antennas, num_freqs) shape complex array
+    """
+    Generate a Jones gain matrix for a single polarisation, with random amplitude and phase errors.
 
+    Parameters
+    ----------
+    num_antennas : int
+        Number of antennas in the array.
+    num_freqs : int
+        Number of frequency channels.
+    amp_err : float, optional
+        Maximum amplitude error (as a fraction of the true gain) to apply to each antenna. Default is 0.05.
+    phase_err : float, optional
+        Maximum phase error (in degrees) to apply to each antenna. Default is 10.
+
+    Returns
+    -------
+    jones_entry : ndarray
+        Complex Jones gain matrix of shape (num_antennas, num_freqs), with the first row set to (1+0j).
     """
 
     ##First up, make the real scalar gain error - one per antenna
@@ -176,14 +232,30 @@ def make_single_polarsiation_jones_gain(num_antennas, num_freqs,
 
     return jones_entry
 
+import numpy as np
+
 def make_jones_leakage(num_antennas, num_freqs, leak_psi_err=0.0, leak_chi_err=0.0):
-    ###Following page 147 in TMS - assume small engineering errors on the
-    ##linear polaristion alignment of the dipoles, represented by psi_err
-    ##and chi_err. Then Dx and Dy and defined by equations A4.5, A4.6. Same
-    ##page it says that leakage terms are of comparible magnitude and of
-    ##opposite sign
-    ##best I can tell it's constant with frequency?? so just shove it constant
-    
+    """
+    Generate Jones leakage terms for a set of antennas and frequencies.
+
+    Parameters
+    -----------
+    num_antennas : int
+        Number of antennas.
+    num_freqs : int
+        Number of frequencies.
+    leak_psi_err : float, optional
+        Small engineering error on the linear polarization alignment of the dipoles, represented by psi_err.
+    leak_chi_err : float, optional
+        Small engineering error on the linear polarization alignment of the dipoles, represented by chi_err.
+
+    Returns
+    --------
+    Dx : numpy.ndarray
+        Jones leakage term for the x-polarization.
+    Dy : numpy.ndarray
+        Jones leakage term for the y-polarization.
+    """
     Dx = np.repeat(np.random.uniform(0, leak_psi_err, num_antennas), num_freqs) - 1j*np.repeat(np.random.uniform(0, leak_chi_err, num_antennas), num_freqs)
     Dx.shape = (num_antennas, num_freqs)
     
@@ -192,9 +264,31 @@ def make_jones_leakage(num_antennas, num_freqs, leak_psi_err=0.0, leak_chi_err=0
     
     return Dx, Dy
 
-def make_antenna_jones_matrices(num_antennas, num_freqs, 
-        gain_amp_err=1.0, gain_phase_err=0.0,
+def make_antenna_jones_matrices(num_antennas : int, num_freqs : int, 
+        gain_amp_err=0.0, gain_phase_err=0.0,
         leak_psi_err=0.0, leak_chi_err=0.0):
+    """_summary_
+
+    Parameters
+    ----------
+    num_antennas : int
+        Number of antennas.
+    num_freqs : int
+        Number of frequencies.
+    gain_amp_err : float, optional
+        Maximum amplitude error (as a fraction of the true gain) to apply to each antenna, by default 0.0
+    gain_phase_err : float, optional
+        Maximum phase error (in degrees) to apply to each antenna.
+    leak_psi_err : float, optional
+        Small engineering error on the linear polarization alignment of the dipoles, represented by psi_err, by default 0.0
+    leak_chi_err : float, optional
+        Small engineering error on the linear polarization alignment of the dipoles, represented by chi_err., by default 0.0
+
+    Returns
+    -------
+    antenna_jones_matrices : np.ndarray
+        Complex antenna jones matrices for all antennas, of shape (num_antennas, num_freqs, 2, 2)
+    """
     
     antenna_jones_matrices = np.zeros((num_antennas, num_freqs, 2, 2),
                                       dtype=complex)
@@ -222,15 +316,37 @@ def make_antenna_jones_matrices(num_antennas, num_freqs,
 
 def apply_antenna_jones_matrices(visibilities, antenna_jones_matrices,
                                  b1s, b2s):
+    """
+    Apply the antenna Jones matrices to the visibilities for a set of antenna
+    pairs defined by b1s, b2s
 
-    print("len(b1s)", len(b1s))
-    print("len(b2s)", len(b2s))
+    Parameters
+    ----------
+    visibilities : numpy.ndarray
+        The visibilities to which the Jones matrices will be applied. The
+        shape of the array should be (Nvis, Nfreqs, 4), where Nvis is the
+        number of visibilities, Nfreqs is the number of frequency channels, and
+        the last dimension contains the complex visibilities for all 4 instrumental
+        stokes polarisations.
+    antenna_jones_matrices : numpy.ndarray
+        The Jones matrices for each antenna in the array. The shape of the array
+        should be (Nants, Nfreqs, 2, 2), where Nants is the number of antennas and the
+        last two dimensions contain the complex Jones matrix for each antenna.
+    b1s : numpy.ndarray
+        The indices of the first antenna in each baseline.
+    b2s : numpy.ndarray
+        The indices of the second antenna in each baseline.
+
+    Returns
+    -------
+    numpy.ndarray
+        The visibilities with the Jones matrices applied. The shape of the array
+        is the same as the input `visibilities`.
+
+    """
 
     jones_b1s = antenna_jones_matrices[b1s]
     jones_b2s = antenna_jones_matrices[b2s]
-    
-    # print(jones_b1s[0, 0])
-    # print(jones_b2s[0, 0])
     
     reshape_visi = np.empty((visibilities.shape[0], visibilities.shape[1],
                              2, 2), dtype=complex)
@@ -240,12 +356,7 @@ def apply_antenna_jones_matrices(visibilities, antenna_jones_matrices,
     reshape_visi[:, :, 0, 1] = visibilities[:, :, 2]
     reshape_visi[:, :, 1, 0] = visibilities[:, :, 3]
     
-    # print(reshape_visi)
-    
     reshape_visi = np.matmul(np.matmul(jones_b1s, reshape_visi), np.conjugate((jones_b2s)))
-    
-    
-    # print(reshape_visi)
     
     visibilities[:, :, 0] = reshape_visi[:, :, 0, 0]
     visibilities[:, :, 1] = reshape_visi[:, :, 1, 1]
@@ -262,23 +373,24 @@ def visibility_noise_stddev(freq_vec, time_res, freq_res,
     values are given.
 
     See Equation 6.50 in TMS Third Edition for details of radiometer eq.
+    
     Parameters
-        ----------
-        freq_vec : numpy array, float
-            Vector of fine channels in Hz.
-        time_res : float
-            Observation time in seconds
-        freq_res : float
-            Fine channel width in Hz, default is 80kHz.
-        Trec : float
-            Reciever temperature in Kelvin.
-        Aeff : float
-            Effective MWA tile area, default is 20.35 for chan 136. Chan 136\n
-            is the default middle channel for high band obs.
-        Returns
-        -------
-            Vector of sigma values for each fine channel. These are used to generate\n
-            random Gaussian noise.
+    -----------
+    freq_vec : numpy array, float
+        Vector of fine channels in Hz.
+    time_res : float
+        Observation time in seconds
+    freq_res : float
+        Fine channel width in Hz, default is 80kHz.
+    Trec : float
+        Reciever temperature in Kelvin.
+    Aeff : float
+        Effective MWA tile area, default is 20.35 for chan 136. Chan 136
+        is the default middle channel for high band obs.
+    Returns
+    -------
+    sigma : numpy array, float
+        $\sigma$ values for each given frequency
     """
     # Boltzmans constant
     kb = 1380.648 #[Jy K^-1 m^2]
@@ -289,11 +401,26 @@ def visibility_noise_stddev(freq_vec, time_res, freq_res,
     # print(Tsky_vec)
 
     # Standard deviation term for the noise:
-    sigma_vec = (np.sqrt(2)*kb*(Tsky_vec + Trec)) / (Aeff*np.sqrt(freq_res*time_res)) #[Jy]
+    sigma = (np.sqrt(2)*kb*(Tsky_vec + Trec)) / (Aeff*np.sqrt(freq_res*time_res)) #[Jy]
 
-    return sigma_vec
+    return sigma
 
 def add_complex_ant_gains(args : Namespace, uvfits : UVFITS):
+    """
+    Add complex antenna gains to the UVFITS object.
+
+    Parameters
+    ------------
+    args : Namespace
+        Namespace object containing command line arguments.
+    uvfits : UVFITS
+        UVFITS object containing visibilities to which antenna gains will be added.
+
+    Returns
+    ---------
+    UVFITS:
+        UVFITS object with antenna gains added.
+    """
     
     antenna_jones_matrices = make_antenna_jones_matrices(uvfits.num_antennas,
                                    uvfits.num_freqs,
@@ -308,6 +435,23 @@ def add_complex_ant_gains(args : Namespace, uvfits : UVFITS):
     
     return uvfits
 
+def add_visi_noise(args : Namespace, uvfits : UVFITS):
+    """
+    Adds instrumental Gaussian noise to the cross-correlations of a UVFITS object,
+    given the input `args`. The noise is calculated using the radiometer equation.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Command-line arguments parsed by argparse.
+    uvfits : UVFITS
+        UVFITS object to which noise will be added.
+
+    Returns
+    -------
+    UVFITS
+        The input UVFITS object with noise added to its visibilities.
+    """
 def add_visi_noise(args : Namespace, uvfits : UVFITS):
     
     if args.visi_noise_int_time:
@@ -330,8 +474,6 @@ def add_visi_noise(args : Namespace, uvfits : UVFITS):
 
     print(f'First freq std dev {noise_stddev[0]:.2e}')
 
-    num_visi = uvfits.visibilities.shape[0]
-    
     ##Start by adding noise to the cross-correlations
     baseline_use = np.where(uvfits.b1s != uvfits.b2s)[0]
 
@@ -345,10 +487,6 @@ def add_visi_noise(args : Namespace, uvfits : UVFITS):
             ##when calcing real or imag??
             real_noise = np.random.normal(0, stddev, len(baseline_use))
             imag_noise = np.random.normal(0, stddev, len(baseline_use))
-
-            # if freq_ind == 0:
-            #     plt.hist(real_noise, histtype='step')
-            #     plt.show()
 
             uvfits.visibilities[baseline_use, freq_ind, pol_ind] += real_noise + 1j*imag_noise
     
