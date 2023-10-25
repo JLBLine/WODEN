@@ -18,9 +18,20 @@ D2R = np.pi/180.0
 
 # @profile
 def read_fits_radec_count_components(fits_path : str):
-    """Read just the  ra, dec, and count how many POINT/GAUSS/SHAPE and
-    POWER/CURVE/LIST entries there are"""
+    """
+    Reads a FITS file sky model. Reads just the ra, dec, and counts how many POINT/GAUSS/SHAPE and POWER/CURVE/LIST, consolidating the
+    information into a Component_Type_Counter object.
     
+    Parameters
+    -----------
+    fits_path : str
+        The path to the FITS file containing the sky model information.
+    
+    Returns
+    --------
+    comp_counter : Component_Type_Counter
+        A Component_Type_Counter object that counts the number of components of each type and their properties.
+    """
     if not os.path.isfile(fits_path):
         sys.exit(f"Cannot read sky model from {fits_path}. Please check your paths, exiting now.")
         
@@ -109,9 +120,6 @@ def read_fits_radec_count_components(fits_path : str):
     
     if num_hdus > 2:
         shape_table = Table.read(fits_path, hdu=2)
-        
-
-    
         shape_comp_names = np.array(shape_table['NAME'], dtype=str)
         
         ##now count up how many shapelet basis functions each component has
@@ -131,12 +139,35 @@ def read_fits_radec_count_components(fits_path : str):
 
 def add_fits_info_to_source_catalogue(comp_type : CompTypes,
                         main_table : Table, shape_table : Table,
-                        chunk_source : Skymodel_Chunk_Map,
-                        chunk_map : Union[Source_Float, Source_Double],
-                        num_freqs : int, num_time_steps : int,
-                        beamtype : int,
-                        lsts : np.ndarray, latitude : float,
-                        precision='double'):
+                        chunk_source : Union[Source_Float, Source_Double],
+                        chunk_map : Skymodel_Chunk_Map,
+                        beamtype : int, lsts : np.ndarray, latitude : float):
+    """Given the desired components as detailed in the `chunk_map`, add
+    the relevant information from the FITS file `main_table`, `shape_table` objects to the `chunk_source` object. As well as the skymodel information, this function adds either
+    az/za or ha/dec information, depending on the `beamtype`.
+
+    Parameters
+    ----------
+    comp_type : CompTypes
+        The type of component we are adding information for.
+    main_table : Table
+        The main Table (with RA,Dec etc) from the FITS file.
+    shape_table : Table
+        The shapelet Table from the FITS file.
+    chunk_source : Union[Source_Float, Source_Double]
+        The ctypes Source object to add information to.
+    chunk_map : Skymodel_Chunk_Map
+        The map object containing information about components for this chunk.
+    beamtype : int
+        The type of beam used (BeamTypes)
+    lsts : np.ndarray
+        LSTs for all time steps for this simulation.
+    latitude : float
+        Latitude of the array
+    """
+    
+    num_time_steps = len(lsts)
+
     
     if comp_type == CompTypes.POINT:
         
@@ -351,12 +382,44 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
 
 
 # @profile
-def read_fits_skymodel_chunks(fits_path : str,
+def read_fits_skymodel_chunks(main_table : Table, shape_table : Table,
                               chunked_skymodel_maps : list,
                               num_freqs : int, num_time_steps : int,
                               beamtype : int,
                               lsts : np.ndarray, latitude : float,
                               precision = "double") -> Union[Source_Catalogue_Float, Source_Catalogue_Double]:
+    """
+    Uses Tables read from a FITS file and returns a source catalogue
+    that can be used by C/CUDA code to calculate visibilities. Uses the
+    maps in `chunked_skymodel_maps` to determine which components to read in
+    and add to the `source_catalogue`
+
+    Parameters
+    ----------
+    main_table : Table
+        The main Table (with RA,Dec etc) from the FITS file.
+    shape_table : Table
+        The shapelet Table from the FITS file.
+    chunked_skymodel_maps : list
+        List of ChunkedSkyModelMap objects, each representing a chunk of the sky model.
+    num_freqs : int
+        Number of frequency channels in the sky model.
+    num_time_steps : int
+        Number of time steps in the sky model.
+    beamtype : int
+        Type of beam used in the sky model.
+    lsts : np.ndarray
+        Array of LST values for each time step in the sky model.
+    latitude : float
+        Latitude of the observation site.
+    precision : str, optional
+        Precision of the source catalogue (either "float" or "double"), by default "double".
+
+    Returns
+    -------
+    source_catalogue : Union[Source_Catalogue_Float, Source_Catalogue_Double]
+        A source catalogue that can be used by C/CUDA code to calculate visibilities.
+    """
     
     ##want to know how many shapelets are in all the chunks (used later
     # by "calculate_visiblities.cu")
@@ -369,15 +432,6 @@ def read_fits_skymodel_chunks(fits_path : str,
     source_catalogue = setup_source_catalogue(len(chunked_skymodel_maps), num_shapelets,
                                 precision = precision)
     
-    
-    main_table = Table.read(fits_path, hdu=1)
-    
-    ##Only read in a shape table if there are shapelets
-    if chunk_map.n_shapes:
-        shape_table = Table.read(fits_path, hdu=2)
-    else:
-        shape_table = 'no_shape_table'
-    
     ##for each chunk map, create a Source_Float or Source_Double ctype
     ##struct, and "malloc" the right amount of arrays to store required infor
     for chunk_ind, chunk_map in enumerate(chunked_skymodel_maps):
@@ -386,8 +440,6 @@ def read_fits_skymodel_chunks(fits_path : str,
                                                 beamtype, precision=precision)
         
         chunk_source = source_catalogue.sources[chunk_ind]
-        
-        # print('CHUNK IND', chunk_ind, "--------------------------")
         
         ##count up the total number of components across all chunks
         ##annoyingly, beacuse Jack sucks, we split shapelet us by basis 
@@ -399,25 +451,19 @@ def read_fits_skymodel_chunks(fits_path : str,
             add_fits_info_to_source_catalogue(CompTypes.POINT,
                                       main_table, shape_table,
                                       chunk_source, chunk_map,
-                                      num_freqs, num_time_steps,
-                                      beamtype, lsts, latitude,
-                                      precision=precision)
+                                      beamtype, lsts, latitude)
             
         if chunk_map.n_gauss > 0:
             add_fits_info_to_source_catalogue(CompTypes.GAUSSIAN,
                                       main_table, shape_table,
                                       chunk_source, chunk_map,
-                                      num_freqs, num_time_steps,
-                                      beamtype, lsts, latitude,
-                                      precision=precision)
+                                      beamtype, lsts, latitude)
             
         if chunk_map.n_shapes > 0:
             add_fits_info_to_source_catalogue(CompTypes.SHAPELET,
                                       main_table, shape_table,
                                       chunk_source, chunk_map,
-                                      num_freqs, num_time_steps,
-                                      beamtype, lsts, latitude,
-                                      precision=precision)
+                                      beamtype, lsts, latitude)
         
 
     ##TODO some kind of consistency check between the chunk_maps and the

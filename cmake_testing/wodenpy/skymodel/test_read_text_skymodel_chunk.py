@@ -10,7 +10,7 @@ import erfa
 
 # ##Code we are testing
 from wodenpy.skymodel import read_text_skymodel
-# import wodenpy
+from wodenpy.skymodel import read_skymodel
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes, crop_below_horizon
 from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map, Skymodel_Chunk_Map, increment_flux_type_counters
 from wodenpy.use_libwoden.beam_settings import BeamTypes
@@ -459,7 +459,7 @@ class Test(BaseChunkTest):
         
         beamtype = BeamTypes.FEE_BEAM.value
 
-        source_catalogue = read_text_skymodel.read_text_skymodel_chunks(
+        source_catalogue = read_skymodel.read_skymodel_chunks(
                                               skymodel_filename, chunked_skymodel_maps,
                                               num_freqs, num_time_steps,
                                               beamtype, lsts, MWA_LAT)

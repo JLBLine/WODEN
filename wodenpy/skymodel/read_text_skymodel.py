@@ -18,8 +18,8 @@ import erfa
 D2R = np.pi/180.0
 
 def read_text_radec_count_components(text_path : str):
-    """Read just the  ra, dec, and count how many POINT/GAUSS/SHAPE and
-    POWER/CURVE/LIST entries there are"""
+    """Read just the  ra, dec from the text sky model located at `text_path
+    and count how many POINT/GAUSS/SHAPE and POWER/CURVE/LIST entries there are"""
     
     if not os.path.isfile(text_path):
         sys.exit(f"Cannot read sky model from {text_path}. Please check your paths, exiting now.")
@@ -223,17 +223,10 @@ def read_full_text_into_fitstable(text_path : str):
     flux_types = np.array([component.flux_type for component in components])
     
     power_laws = np.where(flux_types == 'pl')[0]
-    # curve_laws = np.where(flux_types == 'cpl')[0]
-    # list_laws = np.where(flux_types == 'nan')[0]
-    
-    # print("Before fitting: num power, curved, list", len(power_laws), len(curve_laws), len(list_laws))
 
     for comp_ind, component in enumerate(components[power_laws]):
         component = calc_pl_norm_at_200MHz(component)
         
-    # for comp_ind, component in enumerate(components[curve_laws]):
-    #     component = calc_cpl_norm_at_200MHz(component)
-    
     ##for all components, what SOURCE do they belong to?
     comp_source_names = np.array([component.source_name for component in components])
     comp_names = np.array([component.comp_name for component in components])
@@ -320,73 +313,13 @@ def read_full_text_into_fitstable(text_path : str):
     shape_table = Table()
     shape_table.add_columns([s_names, s_n1s, s_n2s, s_coeffs])
 
-    hdu_list = fits.HDUList([
-        fits.PrimaryHDU(),
-        fits.table_to_hdu(main_table),
-        fits.table_to_hdu(shape_table),
-    ])
+    # hdu_list = fits.HDUList([
+    #     fits.PrimaryHDU(),
+    #     fits.table_to_hdu(main_table),
+    #     fits.table_to_hdu(shape_table),
+    # ])
     
     ##TODO - option to write out FITS version of input model?
     # hdu_list.writeto('converted_input.fits', overwrite=True)
     
     return main_table, shape_table
-
-def read_text_skymodel_chunks(text_path : str,
-                              chunked_skymodel_maps : list,
-                              num_freqs : int, num_time_steps : int,
-                              beamtype : int,
-                              lsts : np.ndarray, latitude : float,
-                              precision = "double") -> Union[Source_Catalogue_Float, Source_Catalogue_Double]:
-
-    ##want to know how many shapelets are in all the chunks (used later
-    # by "calculate_visiblities.cu")
-    num_shapelets = 0
-    for chunk_map in chunked_skymodel_maps:
-        num_shapelets += chunk_map.n_shapes
-        
-    ##setup the source catalogue, which is going to store all of the information
-    ##of each source and be fed straight into C/CUDA
-    source_catalogue = setup_source_catalogue(len(chunked_skymodel_maps), num_shapelets,
-                                precision = precision)
-    
-    
-    main_table, shape_table = read_full_text_into_fitstable(text_path)
-    
-    ##for each chunk map, create a Source_Float or Source_Double ctype
-    ##struct, and "malloc" the right amount of arrays to store required infor
-    for chunk_ind, chunk_map in enumerate(chunked_skymodel_maps):
-        source_catalogue.sources[chunk_ind] = setup_chunked_source(chunk_map,
-                                                num_freqs, num_time_steps,
-                                                beamtype, precision=precision)
-        
-        chunk_source = source_catalogue.sources[chunk_ind]
-        
-        if chunk_map.n_points > 0:
-            add_fits_info_to_source_catalogue(CompTypes.POINT,
-                                      main_table, shape_table,
-                                      chunk_source, chunk_map,
-                                      num_freqs, num_time_steps,
-                                      beamtype, lsts, latitude,
-                                      precision=precision)
-            
-        if chunk_map.n_gauss > 0:
-            add_fits_info_to_source_catalogue(CompTypes.GAUSSIAN,
-                                      main_table, shape_table,
-                                      chunk_source, chunk_map,
-                                      num_freqs, num_time_steps,
-                                      beamtype, lsts, latitude,
-                                      precision=precision)
-            
-        if chunk_map.n_shapes > 0:
-            add_fits_info_to_source_catalogue(CompTypes.SHAPELET,
-                                      main_table, shape_table,
-                                      chunk_source, chunk_map,
-                                      num_freqs, num_time_steps,
-                                      beamtype, lsts, latitude,
-                                      precision=precision)
-        
-
-    ##TODO some kind of consistency check between the chunk_maps and the
-    ##sources in the catalogue - make sure we read in the correct information
-    
-    return source_catalogue

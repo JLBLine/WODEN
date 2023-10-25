@@ -59,8 +59,7 @@ class Test(BaseChunkTest):
                                         shape_basis_to_orig_comp_index_map,
                                         shape_basis_to_comp_type_map,
                                         shape_basis_param_index,
-                                        chunk_ind, coeffs_per_chunk,
-                                        text_file=True)
+                                        chunk_ind, coeffs_per_chunk)
             
             self.check_shapelet_chunking(chunk_ind, num_coeff_per_shape,
                                          coeffs_per_chunk,

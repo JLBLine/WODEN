@@ -447,9 +447,12 @@ class Test(BaseChunkTest):
                                         num_freqs, num_time_steps)
         
         beamtype = BeamTypes.FEE_BEAM.value
+        
+        main_table = Table.read(skymodel_filename, hdu=1)
+        shape_table = Table.read(skymodel_filename, hdu=2)
 
         source_catalogue = read_fits_skymodel.read_fits_skymodel_chunks(
-                                              skymodel_filename, chunked_skymodel_maps,
+                                              main_table, shape_table, chunked_skymodel_maps,
                                               num_freqs, num_time_steps,
                                               beamtype, lsts, MWA_LAT)
         

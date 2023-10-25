@@ -9,8 +9,24 @@ from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes
 NUM_FLUX_TYPES = 3
     
 class Components_Map(object):
-    """Mapping information for a set of components, of either POINT,
-    GAUSSIAN or SHAPELET type"""
+    """
+    Mapping information for a set of components, of either POINT,
+    GAUSSIAN or SHAPELET type.
+    
+    
+    :cvar bool power_orig_inds: Relative indexes w.r.t all power-law components in the original sky model for power components.
+    :cvar bool curve_orig_inds: Relative indexes w.r.t all curved power-law components in the original sky model for curve components.
+    :cvar bool list_orig_inds: Relative indexes w.r.t all list-type components in the original sky model for list components.
+    :cvar bool power_shape_basis_inds: Index of a basis function entry relative to its component for power components.
+    :cvar bool curve_shape_basis_inds: Index of a basis function entry relative to its component for curve components.
+    :cvar bool list_shape_basis_inds: Index of a basis function entry relative to its component for list components.
+    :cvar float lowest_file_num: The line in the original sky model file that each component appears in. Ignore all lines before the smallest line number for all components in this chunk, makes reading faster.
+    :cvar int total_num_flux_entires: Number of flux list entries there are in total so we can allocate correct amount when reading in full information.
+    :cvar int total_shape_coeffs: Number of shapelet basis functions that are in total so we can allocate correct amount when reading in full information.
+    
+    """
+    ##Mapping information for a set of components, of either POINT,
+    ##GAUSSIAN or SHAPELET type
     
     def __init__(self):
         """
@@ -47,17 +63,55 @@ class Components_Map(object):
     
     
 class Skymodel_Chunk_Map(object):
-    """
-    Something to hold all the chunked information in a format that mirrors
-    `components_t` in the C code. Should make the logic of reading in chunks
-    of sky model in the ctypes class easier
-    """
+    """A class representing a chunk of a sky model, containing information about
+    the number of point, Gaussian, and shape components, as well as their
+    respective power-law, curved power-law, or list type flux info. This class
+    also provides methods for consolidating component and flux types into one
+    array of original component indexes, and for printing information
+    about the chunk.
     
+    :cvar int n_point_lists:
+        Number of POINT list-type components.
+    :cvar int n_point_powers:
+        Number of POINT power-law components.
+    :cvar int n_point_curves:
+        Number of POINT curved power-law components.
+    :cvar int n_gauss_lists:
+        Number of GAUSSIAN list-type components.
+    :cvar int n_gauss_powers:
+        Number of GAUSSIAN power-law components.
+    :cvar int n_gauss_curves:
+        Number of GAUSSIAN curved power-law components.
+    :cvar int n_shape_lists:
+        Number of SHAPELET list-type components.
+    :cvar int n_shape_powers:
+        Number of SHAPELET power-law components.
+    :cvar int n_shape_curves:
+        Number of SHAPELET curved power-law components.
+    :cvar int n_shape_coeffs:
+        Number of SHAPELET coefficients.
+    :cvar int n_points:
+        Number of POINT components
+    :cvar int n_gauss:
+        Number of GAUSSIAN components
+    :cvar int n_shapes:
+        Number of SHAPELET components
+    :cvar int n_comps:
+        Number of all components
+    :cvar Components_Map point_components:
+        Mapping object for POINT components.
+    :cvar Components_Map gauss_components:
+        Mapping object for GAUSSIAN components.
+    :cvar Components_Map shape_components:
+        Mapping object for SHAPELET components.
+    
+    """
+
     def __init__(self, n_point_powers = 0, n_point_curves = 0, n_point_lists = 0,
                        n_gauss_powers = 0, n_gauss_curves = 0, n_gauss_lists = 0,
                        n_shape_powers = 0, n_shape_curves = 0, n_shape_lists = 0,
                        n_shape_coeffs = 0):
-        """Setup everything with zeros as default, and total everything up"""
+        """Setup everything with zeros as default"""
         
         self.n_point_lists = n_point_lists
         self.n_point_powers = n_point_powers
@@ -78,8 +132,6 @@ class Skymodel_Chunk_Map(object):
         
         self.n_comps = self.n_points + self.n_gauss + self.n_shapes
         
-        self.n_shape_coeffs = n_shape_coeffs
-        
         ##Setup the POINT, GAUSS, and SHAPE classes
         ##TODO set these up regardless of size as empty things take up
         ##small RAM??
@@ -99,7 +151,7 @@ class Skymodel_Chunk_Map(object):
             
     def make_all_orig_inds_array(self):
         """Look through all component and flux types and consolidate into one
-        array of original component indexes. Use this when reading in full
+        array `self.all_orig_inds` of original component indexes. Use this when reading in full
         information from the sky model"""
         
         self.all_orig_inds = np.empty(self.n_points + self.n_gauss + self.n_shape_coeffs, dtype=int)
@@ -136,9 +188,6 @@ class Skymodel_Chunk_Map(object):
                 self.all_orig_inds[low_ind:low_ind+self.n_gauss_lists] = self.gauss_components.list_orig_inds
                 low_ind += self.n_gauss_lists
         
-        ##The component
-        
-        
         if self.n_shapes > 0:
             
             lowest_file_lines.append(self.shape_components.lowest_file_num)
@@ -162,7 +211,10 @@ class Skymodel_Chunk_Map(object):
         self.lowest_file_number = min(lowest_file_lines)
             
     def print_info(self):
-        
+        """
+        Prints information about the ChunkSkyModel object, including the number of points, Gaussians, and shapes,
+        as well as the number of powers, curves, lists, and coefficients associated with each type of object.
+        """
         
         print("n_points", self.n_points)
         print("\tn_point_powers", self.n_point_powers)
@@ -187,11 +239,44 @@ def increment_flux_type_counters(power_iter : int, curve_iter : int,
                                  num_power : int, num_curve : int, num_list : int,
                                  comps_per_chunk : int,
                                  lower_comp_ind : int, upper_comp_ind : int):
-    """Here, given the overall lower and upper index in a given type of components,
+    """
+    Here, given the overall lower and upper index in a given type of components,
     work out how many of each flux type we have and increment the counters as appropriate
 
-    Always order things as POWER_LAW, CURVED_POWER_LAW, LIST"""
+    Always order things as POWER_LAW, CURVED_POWER_LAW, LIST
     
+    Parameters
+    -----------
+    power_iter : int
+        The current iteration of the power law flux type.
+    curve_iter : int
+        The current iteration of the curved power law flux type.
+    list_iter : int
+        The current iteration of the list flux type.
+    num_chunk_power : int
+        The number of power law flux types in the current chunk.
+    num_chunk_curve : int
+        The number of curved power law flux types in the current chunk.
+    num_chunk_list : int
+        The number of list flux types in the current chunk.
+    num_power : int
+        The total number of power law flux types.
+    num_curve : int
+        The total number of curved power law flux types.
+    num_list : int
+        The total number of list flux types.
+    comps_per_chunk : int
+        The number of components per chunk.
+    lower_comp_ind : int
+        The lower index of the current chunk.
+    upper_comp_ind : int
+        The upper index of the current chunk.
+    
+    Returns
+    --------
+    Tuple of integers
+        The updated values of power_iter, curve_iter, list_iter, num_chunk_power, num_chunk_curve, num_chunk_list.
+    """
 
     remainder = 0
     lower_flux_ind = 0
@@ -279,37 +364,43 @@ def increment_flux_type_counters(power_iter : int, curve_iter : int,
 
     return power_iter, curve_iter, list_iter, num_chunk_power, num_chunk_curve, num_chunk_list
 
-def find_lowest_file_line(cropped_comp_counter : Component_Type_Counter,
-                          components : Components_Map,
-                          cropped_power_inds : np.ndarray, cropped_curve_inds : np.ndarray,
-                          cropped_list_inds : np.ndarray):
-    
-    if len(cropped_power_inds) > 0:
-        min_power = np.nanmin(cropped_comp_counter.file_line_nums[cropped_power_inds])
-    else:
-        min_power = np.nan
-        
-    if len(cropped_curve_inds) > 0:
-        min_curve = np.nanmin(cropped_comp_counter.file_line_nums[cropped_curve_inds])
-    else:
-        min_curve = np.nan
-    
-    if len(cropped_list_inds) > 0:
-        min_list = np.nanmin(cropped_comp_counter.file_line_nums[cropped_list_inds])
-    else:
-        min_list = np.nan
-        
-    lowest_file_num = int(np.nanmin([min_power, min_curve, min_list]))
-    
-    return lowest_file_num
-    
 def fill_chunk_component(comp_type : CompTypes,
                          cropped_comp_counter : Component_Type_Counter,
                          power_iter: int, num_chunk_power : int,
                          curve_iter: int, num_chunk_curve : int,
                          list_iter: int, num_chunk_list : int) -> Skymodel_Chunk_Map:
-    """Having worked out what numbers of which components we want in the
-    chunk, fill in the relevant fields inside a `Components_Map` inside a chunk"""
+    """
+    Fills in the relevant fields inside a `Skymodel_Chunk_Map` based on the given component type and
+    the number of components of each type that are required in the chunk.
+    The function returns a `Skymodel_Chunk_Map` in prepartion to read a number
+    of chunks from the skymodel
+    
+    Parameters
+    -------------
+    comp_type : CompTypes
+        The type of component to be filled in the chunk.
+    cropped_comp_counter : Component_Type_Counter
+        The counter object that contains the indices of the cropped components.
+    power_iter : int
+        The starting index of the power components in the cropped component counter.
+    num_chunk_power : int
+        The number of power components to be included in the chunk.
+    curve_iter : int
+        The starting index of the curve components in the cropped component counter.
+    num_chunk_curve : int
+        The number of curve components to be included in the chunk.
+    list_iter : int
+        The starting index of the list components in the cropped component counter.
+    num_chunk_list : int
+        The number of list components to be included in the chunk.
+
+    Returns
+    --------
+    chunk_map: Skymodel_Chunk_Map
+        A `Skymodel_Chunk_Map` object that contains the filled-in `Components_Map`.
+    """
+    
+    # 
     
     if comp_type == CompTypes.POINT:
     
@@ -318,9 +409,6 @@ def fill_chunk_component(comp_type : CompTypes,
                                        n_point_lists = num_chunk_list)
         
         components = chunk_map.point_components
-        # power_inds = cropped_comp_counter.point_power_inds
-        # curve_inds = cropped_comp_counter.point_curve_inds
-        # list_inds = cropped_comp_counter.point_list_inds
         power_inds = cropped_comp_counter.orig_point_power_inds
         curve_inds = cropped_comp_counter.orig_point_curve_inds
         list_inds = cropped_comp_counter.orig_point_list_inds
@@ -336,9 +424,6 @@ def fill_chunk_component(comp_type : CompTypes,
                                        n_gauss_lists = num_chunk_list)
         
         components = chunk_map.gauss_components
-        # power_inds = cropped_comp_counter.gauss_power_inds
-        # curve_inds = cropped_comp_counter.gauss_curve_inds
-        # list_inds = cropped_comp_counter.gauss_list_inds
         power_inds = cropped_comp_counter.orig_gauss_power_inds
         curve_inds = cropped_comp_counter.orig_gauss_curve_inds
         list_inds = cropped_comp_counter.orig_gauss_list_inds
@@ -358,14 +443,6 @@ def fill_chunk_component(comp_type : CompTypes,
     
     components.total_num_flux_entires = np.sum(cropped_comp_counter.num_list_fluxes[cropped_list_inds])
     
-    ##We don't have to start reading the information for this chunk until
-    ##this line of the 
-    components.lowest_file_num = find_lowest_file_line(cropped_comp_counter,
-                                                               components,
-                                                               cropped_power_inds,
-                                                               cropped_curve_inds,
-                                                               cropped_list_inds)
-    
     min_comp_inds = []
     if len(cropped_power_inds) > 0: min_comp_inds.append(components.power_orig_inds.min())
     if len(cropped_curve_inds) > 0: min_comp_inds.append(components.curve_orig_inds.min())
@@ -378,9 +455,29 @@ def fill_chunk_component(comp_type : CompTypes,
 def map_chunk_pointgauss(cropped_comp_counter : Component_Type_Counter,
                          chunk_ind : int, comps_per_chunk : int,
                          point_source = False, gaussian_source = False) -> Components_Map:
-    """For a given chunk index `chunk_ind`, work out how many of each
+    """
+    For a given chunk index `chunk_ind`, work out how many of each
     type of COMPONENT to fit in the chunk, and then map specifics across
-    to that one chunk"""
+    to that one chunk
+
+    Parameters
+    -----------
+    cropped_comp_counter : Component_Type_Counter
+        A cropped component counter object that contains information about the components to use in the chunk.
+    chunk_ind : int
+        The index of the chunk.
+    comps_per_chunk : int
+        The number of components per chunk.
+    point_source : bool
+        Whether to use point sources. Default is False.
+    gaussian_source : bool
+        Whether to use gaussian sources. Default is False.
+
+    Returns
+    ---------
+    chunk_map : Components_Map
+        A Components_Map object that contains mapping information about the components in the chunk.
+    """
     
     if not point_source and not gaussian_source:
         print("You must set either `point_source` or `gaussian_source` to True")
@@ -454,7 +551,26 @@ def map_chunk_pointgauss(cropped_comp_counter : Component_Type_Counter,
 
 
 def create_shape_basis_maps(cropped_comp_counter : Component_Type_Counter):
-
+    """
+    Creates maps that associate each shape basis function with its corresponding original component index, 
+    component type, and parameter index.
+    
+    Parameters:
+    -----------
+    cropped_comp_counter : Component_Type_Counter
+        An instance of the Component_Type_Counter class that contains information about the number of shape 
+        coefficients for each component type and the corresponding indices of the components in the original 
+        component list.
+        
+    Returns:
+    --------
+    shape_basis_to_orig_comp_index_map : numpy.ndarray
+        An array that maps each shape basis function to its corresponding original component index.
+    shape_basis_to_comp_type_map : numpy.ndarray
+        An array that maps each shape basis function to its corresponding component type.
+    shape_basis_param_index : numpy.ndarray
+        An array that maps each shape basis function to its corresponding parameter index within its component.
+    """
     
     shape_basis_to_orig_comp_index_map = np.empty(cropped_comp_counter.total_shape_basis)
     shape_basis_to_comp_type_map = np.empty(cropped_comp_counter.total_shape_basis)
@@ -497,8 +613,7 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
                         shape_basis_to_orig_type_map : np.ndarray,
                         shape_basis_param_index : np.ndarray,
                         chunk_ind : int,
-                        coeffs_per_chunk : int,
-                        text_file = False):
+                        coeffs_per_chunk : int):
     """
     Maps the shapelet components in a chunk of the sky model to their corresponding
     indices in the original sky model. This function is used to create a mapping
@@ -524,8 +639,6 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
         The index of the chunk being mapped.
     coeffs_per_chunk : int
         The number of shapelet coefficients in each chunk.
-    text_file : bool, optional
-        Whether or not to read the shapelet coefficients from a text file.
 
     Returns
     --------
@@ -541,7 +654,7 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
 
     ##If there are enough coeffs to fill the chunk?
     if (cropped_comp_counter.total_shape_basis >= upper_coeff_ind):
-        n_shape_coeffs = coeffs_per_chunk;
+        n_shape_coeffs = coeffs_per_chunk
         
     else:
         n_shape_coeffs = cropped_comp_counter.total_shape_basis % coeffs_per_chunk
@@ -552,8 +665,6 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
     orig_type_chunk = shape_basis_to_orig_type_map[lower_coeff_ind:upper_coeff_ind]
     
     shape_basis_param_index_chunk = shape_basis_param_index[lower_coeff_ind:upper_coeff_ind]
-    
-    ##TODO get this reordered based on component type??
     
     ##cop that for an annoyingly complicated piece of logic
     ##this selects the subset of original component indexes that we want
@@ -611,22 +722,6 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
         ##how many flux list entries in total are shared by these components
         
         components.total_num_flux_entires = np.sum(cropped_comp_counter.num_list_fluxes[cropped_list_inds])
-    
-    # print('--map_chunk_shapelets-----------------------')
-    # # print(cropped_comp_counter.comp_types)
-    # print(n_shape_coeffs, cropped_comp_counter.num_shape_flux_powers)
-    # print(power_orig_inds, curve_orig_inds, list_orig_inds)
-    # print('----------------------------------------')
-    
-    
-    
-    if text_file:
-        ##lowest line we want to read from the 
-        components.lowest_file_num = find_lowest_file_line(cropped_comp_counter,
-                                                           components,
-                                                           cropped_power_inds,
-                                                           cropped_curve_inds,
-                                                           cropped_list_inds)
     
     chunk_map.make_all_orig_inds_array()
     
@@ -721,8 +816,7 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
                                         shape_basis_to_orig_comp_index_map,
                                         shape_basis_to_comp_type_map,
                                         shape_basis_param_index,
-                                        chunk_ind, comps_per_chunk,
-                                        text_file = text_file)
+                                        chunk_ind, comps_per_chunk)
         
         chunked_skymodel_maps.append(chunk_map)
         
