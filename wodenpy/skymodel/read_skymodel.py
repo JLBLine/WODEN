@@ -12,6 +12,23 @@ from wodenpy.skymodel.read_yaml_skymodel import read_full_yaml_into_fitstable
 
 
 def read_radec_count_components(skymodel_path : str) -> Component_Type_Counter:
+    """
+    Reads basic info from a sky model. Checks whether the sky model is a .fits,
+    .yaml, or .txt file, and errors if not. Then calls the appropriate function
+    if so. Reads just the ra, dec, and counts how many POINT/GAUSS/SHAPE and
+    POWER/CURVE/LIST, consolidating the information into a
+    Component_Type_Counter object.
+    
+    Parameters
+    -----------
+    skymodel_path : str
+        The path to the sky model file.
+    
+    Returns
+    --------
+    comp_counter : Component_Type_Counter
+        A Component_Type_Counter object that counts the number of components of each type and their properties.
+    """
     
     ##Figure out if our skymodel is supported or not
     if skymodel_path[-5:] == '.fits':
@@ -36,6 +53,35 @@ def read_skymodel_chunks(skymodel_path : str, chunked_skymodel_maps : list,
                          beamtype : int,
                          lsts : np.ndarray, latitude : float,
                          precision = "double") -> Union[Source_Catalogue_Float, Source_Catalogue_Double]:
+    """Lazy loads chunks of a sky model at `skymodel_path` into a
+    Source_Catalogue object, as mapped by `chunked_skymodel_maps`. If the
+    sky model isn't already a FITS file, it is converted to one. The
+    resultant can be passed into C/CUDA code to calculate visibilities.
+
+    Parameters
+    ----------
+    skymodel_path : str
+        The path to the sky model file.
+    chunked_skymodel_maps : list
+        List of ChunkedSkyModelMap objects, each representing a chunk of the sky model.
+    num_freqs : int
+        Number of frequency channels in the sky model.
+    num_time_steps : int
+        Number of time steps in the sky model.
+    beamtype : int
+        Type of beam used in the sky model.
+    lsts : np.ndarray
+        Array of LST values for each time step in the sky model.
+    latitude : float
+        Latitude of the observation site.
+    precision : str, optional
+        Precision of the source catalogue (either "float" or "double"), by default "double".
+
+    Returns
+    -------
+    source_catalogue : Union[Source_Catalogue_Float, Source_Catalogue_Double]
+        A source catalogue that can be used by C/CUDA code to calculate visibilities.
+    """
     
     # ##Figure out if our skymodel is supported or not
     if skymodel_path[-5:] == '.fits':

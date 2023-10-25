@@ -17,23 +17,16 @@ Methods for reading and writing sky models.
 .. automodule:: read_fits_skymodel
    :members:
 
-``read_yaml_skymodel``
--------------------------
-
-.. automodule:: read_yaml_skymodel
-   :members:
-
 ``read_text_skymodel``
 -------------------------
 
 .. automodule:: read_text_skymodel
    :members:
 
-
-``woden_skymodel``
+``read_yaml_skymodel``
 -------------------------
 
-.. automodule:: woden_skymodel
+.. automodule:: read_yaml_skymodel
    :members:
 
 ``read_skymodel``
@@ -41,3 +34,10 @@ Methods for reading and writing sky models.
 
 .. automodule:: read_skymodel
    :members:
+
+``woden_skymodel``
+-------------------------
+
+.. automodule:: woden_skymodel
+   :members:
+

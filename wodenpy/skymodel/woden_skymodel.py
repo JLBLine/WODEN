@@ -6,19 +6,33 @@ import os
 
 D2R = np.pi / 180.0
 
+from enum import Enum, auto
+
 class CompTypes(Enum):
-    """That's right, C-style enum inside Python
+    """
+    That's right, C-style enum inside Python
     This Class let's us label the component/flux type combinations with a unique
     name, but as it's an enum each label only takes 8 bytes of memory, so we can
     stack loads of them into an array. We can also do numpy operations
-    on them like np.where"""
+    on them like np.where
     
-    ##broad difference between component type
+    :cvar auto() POINT: point source
+    :cvar auto() GAUSSIAN: gaussian source
+    :cvar auto() SHAPELET: shapelet source
+    :cvar auto() POINT_POWER: point source + power law
+    :cvar auto() POINT_CURVE: point source + curved power law
+    :cvar auto() POINT_LIST: point source + list type law
+    :cvar auto() GAUSS_POWER: gaussian source + power law
+    :cvar auto() GAUSS_CURVE: gaussian source + curved power law
+    :cvar auto() GAUSS_LIST: gaussian source + list type law
+    :cvar auto() SHAPE_POWER: shapelet source + power law
+    :cvar auto() SHAPE_CURVE: shapelet source + curved power law
+    :cvar auto() SHAPE_LIST: shapelet source + list type law
+    """
+    
     POINT = auto()
     GAUSSIAN = auto()
     SHAPELET = auto()
-    
-    ##finer difference component type + flux type
     POINT_POWER = auto()
     POINT_CURVE = auto()
     POINT_LIST = auto()
@@ -33,7 +47,15 @@ class Component_Type_Counter():
     """Holds counts for the various types of components in a source list,
     including type (point, gaaussian, shapelet) and flux model (power law,
     curved power law, list). Contains methods to count properties of current
-    source being read in, and then to add that component"""
+    source being read in, and then to add that component
+    
+    Does a large amount of book keeping on indexes of components within the
+    original sky model, so that we can pull out the correct information when
+    lazy loading chunks of sky model.
+    
+    This is used by `read_radec_count_components` and the functions within.
+    
+    """
     def __init__(self, initial_size=100000):
         """Setup all the parameters and intialise them to 0"""
         
@@ -297,7 +319,8 @@ class Component_Type_Counter():
         ##del self.comp_types
         
     def print_info(self):
-        
+        """Print out the totals of everything
+        """
         
         print("total_point_comps", self.total_point_comps)
         print("\tnum_point_flux_powers", self.num_point_flux_powers)
@@ -318,8 +341,44 @@ class Component_Type_Counter():
 # @profile
 def crop_below_horizon(lst : float, latitude : float,
                        comp_counter : Component_Type_Counter, 
-                       crop_by_component=True) -> np.ndarray:
-    """Crop anything below the horizon - just work out cropping flags"""
+                       crop_by_component=True) -> Component_Type_Counter:
+    """
+    Crop a `Component_Type_Counter` to only include components above the horizon,
+    given the local sidereal time and latitude of the array
+
+    Parameters
+    ----------
+    lst : float
+        The local sidereal time (in radians).
+    latitude : float
+        The array latitude (in radians).
+    comp_counter : Component_Type_Counter
+        An object containing information about the components in the sky model.
+    crop_by_component : bool, optional
+        If True, crop components individually. If False, crop sources as a whole.
+        Default is True.
+
+    Returns
+    -------
+    comp_counter : Component_Type_Counter
+        An updated version of the input `comp_counter` object, with only the
+        components above the horizon included.
+
+    Notes
+    -----
+    This function crops a sky model to only include components above the horizon.
+    It uses the input `lst` and `latitude` to calculate the azimuth and elevation
+    of each component in the sky model, and then includes only those components
+    with elevation greater than or equal to zero.
+
+    If `crop_by_component` is True, each component is cropped individually. If
+    False, sources are cropped as a whole. In the latter case, all components
+    belonging to a source are included if at least one of them is above the horizon.
+
+    The input `comp_counter` object is updated in place, and the updated object
+    is returned.
+
+    """
     
     ##Want numpy arrays to do maths with
     if type(comp_counter.comp_ras) == list:
@@ -380,8 +439,34 @@ def crop_below_horizon(lst : float, latitude : float,
 
 
 class Component_Info(object):
-    """Holds all the information for the current component when a sourcelist
-    is being read in"""
+    """
+    A class that stores information about a sky model component.
+
+    :cvar int comp_type: The type of component, given by values in CompTypes().
+    :cvar float ra: The right ascension of the component in radians.
+    :cvar float dec: The declination of the component in radians.
+    :cvar int point: Used to set the component type during reading.
+    :cvar int gaussian: Used to set the component type during reading.
+    :cvar int shapelet: Used to set the component type during reading.
+    :cvar int flux_power: Used to select flux type during reading.
+    :cvar int flux_curve: Used to select flux type during reading.
+    :cvar int flux_list: Used to select flux type during reading.
+    :cvar float major: The major axis of the component in radians.
+    :cvar float minor: The minor axis of the component in radians.
+    :cvar float pa: The position angle of the component in radians.
+    :cvar list n1s: A list of shapelet basis function n1 values.
+    :cvar list n2s: A list of shapelet basis function n2 values.
+    :cvar list coeffs: A list of shapelet basis function coefficients.
+    :cvar float si: The spectral index of the component.
+    :cvar float curve_q: The curvature of the component spectrum.
+    :cvar list freqs: A list of frequencies at which the flux is defined (Hz).
+    :cvar list fluxes: A list of Stokes vectors defining the flux (Jy).
+    :cvar int num_fluxes: The number of frequencies that have been added.
+    :cvar int num_shape_basis: The number of shapelet basis functions.
+    :cvar str source_name: The name of the parent source.
+    :cvar float norm_comp_pl: The reference flux of the power-law component at 200MHz (Jy)
+    :cvar float norm_comp_cpl: The reference flux of the curved power-law component at 200MHz (Jy)
+    """
     
     def __init__(self):
         """Setup all the parameters and intialise them to 0"""

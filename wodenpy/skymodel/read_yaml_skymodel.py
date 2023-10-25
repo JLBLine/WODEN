@@ -1,7 +1,7 @@
 import numpy as np
 import sys
 import os
-from typing import Union
+from typing import Union, Tuple
 
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, Component_Info, CompTypes, calc_pl_norm_at_200MHz, calc_cpl_norm_at_200MHz
 from wodenpy.skymodel.chunk_sky_model import Skymodel_Chunk_Map
@@ -18,8 +18,20 @@ import erfa
 D2R = np.pi/180.0
 
 def read_yaml_radec_count_components(yaml_path : str):
-    """Read just the  ra, dec, and count how many POINT/GAUSS/SHAPE and
-    POWER/CURVE/LIST entries there are"""
+    """
+    Reads a yaml file sky model. Reads just the ra, dec, and counts how many POINT/GAUSS/SHAPE and POWER/CURVE/LIST, consolidating the
+    information into a Component_Type_Counter object.
+    
+    Parameters
+    -----------
+    yaml_path : str
+        The path to the yaml file containing the sky model information.
+    
+    Returns
+    --------
+    comp_counter : Component_Type_Counter
+        A Component_Type_Counter object that counts the number of components of each type and their properties.
+    """
     
     if not os.path.isfile(yaml_path):
         sys.exit(f"Cannot read sky model from {yaml_path}. Please check your paths, exiting now.")
@@ -96,7 +108,21 @@ def read_yaml_radec_count_components(yaml_path : str):
         
     return comp_counter
 
-def read_full_yaml_into_fitstable(yaml_path : str):
+def read_full_yaml_into_fitstable(yaml_path : str) -> Tuple[Table, Table]:
+    """Read in a hyperdrive style yaml sky model and convert it into
+    the LoBES-style FITS sky model format. Can then be read in by
+    `read_fits_skymodel.read_fits_skymodel_chunks`.
+
+    Parameters
+    ----------
+    yaml_path : str
+        Path to the yaml sky model
+
+    Returns
+    -------
+    Tuple(Table, Table)
+        The `main_table` and `shape_table` to be used by during lazy loading
+    """
     
     main_table = False
     shape_table = False

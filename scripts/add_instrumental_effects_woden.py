@@ -267,7 +267,7 @@ def make_jones_leakage(num_antennas, num_freqs, leak_psi_err=0.0, leak_chi_err=0
 def make_antenna_jones_matrices(num_antennas : int, num_freqs : int, 
         gain_amp_err=0.0, gain_phase_err=0.0,
         leak_psi_err=0.0, leak_chi_err=0.0):
-    """_summary_
+    """Given input error parameters, create a set of instrumental Jones matrices for each antenna and frequency.
 
     Parameters
     ----------

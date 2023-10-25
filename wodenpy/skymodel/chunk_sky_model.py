@@ -762,14 +762,6 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
     list:
         A list of dictionaries containing information about the chunked sky model.
     """
-    
-
-    
-    # Given all the information in `comp_counter`, make a map of how to split
-    # the whole sky model up into managable chunks to fit in memory. The
-    # purpose of this function is to record what to 'malloc' in each
-    # `Components_t` and `Source_t` ctype class before we lazy-load all the 
-    # values into them directly from the skymodel
         
     ##The number of components per chunk is set by how many visibilities
     ##we have
