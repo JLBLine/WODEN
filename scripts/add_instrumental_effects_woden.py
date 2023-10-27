@@ -5,7 +5,9 @@ from sys import exit
 from astropy.time import Time
 from wodenpy.uvfits.wodenpy_uvfits import RTS_decode_baseline
 from argparse import Namespace
-
+from astropy.constants import c as speed_of_light
+from astropy.constants import k_B
+import os
 
 def get_parser():
     """
@@ -30,6 +32,36 @@ def get_parser():
         help='Name for output uvfits file, default: instrumental.uvfits')
     sing_group.add_argument('--numpy_seed', default=0, type=int,
         help='A specific np.random.seed to use for reproducibility. Otherwise numpy is left to seed itself.')
+    
+    noise_group = parser.add_argument_group('NOISE EFFECTS')
+    noise_group.add_argument('--add_visi_noise',
+        default=False, action='store_true',
+        help='Add visibility noise via the radiometer equation. '
+             'Defaults to MWA-like parameters for reciever '
+             'temperature and effective tile area')
+    
+    noise_group.add_argument('--visi_noise_int_time',
+        default=False, type=float,
+        help='Use a different integration time (seconds) to what is actually in the '
+             'data to calculate the noise, e.g. even if you data is at 2s '
+             'resolution, --visi_noise_int_time=60 will add the noise for a '
+             'one minute integration.')
+    noise_group.add_argument('--visi_noise_freq_reso',
+        default=False, type=float,
+        help='Use a different frequency channel width (Hz) to what is actually in the '
+             'data to calculate the noise, e.g. even if you data is at 40kHz '
+             'resolution, --visi_noise_freq_reso=1e+6 will add the noise for a '
+             'channel width of 1MHz instead.')
+    
+    reflec_group = parser.add_argument_group('CABLE REFLECTION GROUP')
+    reflec_group.add_argument('--cable_reflection_from_metafits', default=False,
+        help='Given a metafits file with cable length information, add in '
+             'cable reflections to the antenna gains. This will use the '
+             '--cable_reflection_coeff_amp to set the magnitude.')
+    
+    reflec_group.add_argument('--cable_reflection_coeff_amp', default=0.05,
+        type=float, help='Amplitude of the cable will be drawn from a uniform '
+            'distribution between 0 and this value. Default is 0.05.')
 
     gain_group = parser.add_argument_group('ANTENNA (tile) GAIN EFFECTS')
     gain_group.add_argument('--ant_gain_amp_error', default=0, type=float,
@@ -52,25 +84,7 @@ def get_parser():
              'and `Dy = -psi_err + 1j*chi_err`. '
              'A random angle between 0 and the given value will be added for each angle. ')
 
-    noise_group = parser.add_argument_group('NOISE EFFECTS')
-    noise_group.add_argument('--add_visi_noise',
-        default=False, action='store_true',
-        help='Add visibility noise via the radiometer equation. '
-             'Defaults to MWA-like parameters for reciever '
-             'temperature and effective tile area')
-    
-    noise_group.add_argument('--visi_noise_int_time',
-        default=False, type=float,
-        help='Use a different integration time (seconds) to what is actually in the '
-             'data to calculate the noise, e.g. even if you data is at 2s '
-             'resolution, --visi_noise_int_time=60 will add the noise for a '
-             'one minute integration.')
-    noise_group.add_argument('--visi_noise_freq_reso',
-        default=False, type=float,
-        help='Use a different frequency channel width (Hz) to what is actually in the '
-             'data to calculate the noise, e.g. even if you data is at 40kHz '
-             'resolution, --visi_noise_freq_reso=1e+6 will add the noise for a '
-             'channel width of 1MHz instead.')
+
 
 
     return parser
@@ -170,6 +184,8 @@ class UVFITS(object):
 
             time1 = Time(hdu[0].data['DATE'][num_visi_per_time], format='jd')
             time0 = Time(hdu[0].data['DATE'][0], format='jd')
+            
+            self.uus = hdu[0].data['UU']
 
         self.time_res = time1 - time0
         self.time_res = self.time_res.to_value('s')
@@ -183,6 +199,8 @@ class UVFITS(object):
         print(f"\tNum time steps: {num_times}")
         print(f"\tTime res: {self.time_res:.2f} s")
         print(f"\tFreq res: {self.freq_res:.5f} Hz")
+        
+        
 
 def make_single_polarsiation_jones_gain(num_antennas, num_freqs, 
         amp_err=0.05, phase_err=10):
@@ -231,8 +249,6 @@ def make_single_polarsiation_jones_gain(num_antennas, num_freqs,
     ##TODO - write these out to a `hyperdrive` style gain FITS?
 
     return jones_entry
-
-import numpy as np
 
 def make_jones_leakage(num_antennas, num_freqs, leak_psi_err=0.0, leak_chi_err=0.0):
     """
@@ -365,6 +381,104 @@ def apply_antenna_jones_matrices(visibilities, antenna_jones_matrices,
     
     return visibilities
 
+def get_cable_delay(length, velocity_factor=0.81):
+    """
+    Calculate the delay imparted by a cable of specific length and velocity factor.
+
+    Parameters
+    ----------
+    length : float
+        Length of the cable in meters.
+    velocity_factor : float
+        Velocity factor of the cable (0.81 from Beardsley et al. 2016)
+
+    Returns
+    -------
+    float
+        The delay of the cable in seconds.
+    """
+    return (2*length) / (speed_of_light.value * velocity_factor)
+
+def create_single_pol_reflections(freqs : np.ndarray,
+                                  cable_reflection_coeff_amp : float,
+                                  delays : np.ndarray):
+    
+    # reflection_coeffs = np.full(len(delays), cable_reflection_coeff_amp) + 1j*np.zeros(len(delays))
+    
+    reflection_coeffs = np.random.uniform(0, cable_reflection_coeff_amp, len(delays)) + 1j*np.zeros(len(delays))
+    
+    # reflection_coeffs = np.random.uniform(0, cable_reflection_coeff_amp, len(delays)) + 1j*np.random.uniform(0, cable_reflection_coeff_amp, len(delays))
+    
+    ftimesd = np.outer(delays, freqs)
+    reflections = reflection_coeffs[:, np.newaxis]*np.exp(-2j * np.pi * ftimesd)
+    
+    return reflections
+
+def add_cable_reflection(args : Namespace, uvfits : UVFITS):
+    
+    
+    if not os.path.isfile(args.cable_reflection_from_metafits):
+            exit('Could not open metafits specified by user as:\n'
+                 '\t--metafits_filename={:s}.\n'
+                 'Cannot get required observation settings, exiting now'.format(args.metafits_filename))
+
+    with fits.open(args.cable_reflection_from_metafits) as f:
+        antenna_order = np.argsort(f[1].data['Tile'])
+        
+        selection = np.arange(0,len(antenna_order),2)
+        ##this has both XX and YY pol, assume they have the same cable lengths
+        antenna_order = antenna_order[selection]
+        
+        ##the length causing reflections is in the flavour column
+        flavours = f[1].data['Flavors'][antenna_order]
+        cable_lengths = np.array([float(flavour.split('_')[1]) for flavour in flavours])
+        
+    delays = get_cable_delay(cable_lengths)
+    
+    reflections_xx = create_single_pol_reflections(uvfits.all_freqs,
+                                  args.cable_reflection_coeff_amp, delays)
+    
+    reflections_yy = create_single_pol_reflections(uvfits.all_freqs,
+                                  args.cable_reflection_coeff_amp, delays)
+    
+    return reflections_xx, reflections_yy
+
+def add_complex_ant_gains(args : Namespace, uvfits : UVFITS):
+    """
+    Add complex antenna gains to the UVFITS object.
+
+    Parameters
+    ------------
+    args : Namespace
+        Namespace object containing command line arguments.
+    uvfits : UVFITS
+        UVFITS object containing visibilities to which antenna gains will be added.
+
+    Returns
+    ---------
+    UVFITS:
+        UVFITS object with antenna gains added.
+    """
+    
+    antenna_jones_matrices = make_antenna_jones_matrices(uvfits.num_antennas,
+                                   uvfits.num_freqs,
+                                   gain_amp_err=args.ant_gain_amp_error,
+                                   gain_phase_err=args.ant_gain_phase_error,
+                                   leak_psi_err=args.ant_leak_errs[0]*np.pi/180.0,
+                                   leak_chi_err=args.ant_leak_errs[1]*np.pi/180.0)
+    
+    if args.cable_reflection_from_metafits:
+        reflections_xx, reflections_yy = add_cable_reflection(args, uvfits)
+        
+        antenna_jones_matrices[:, :, 0, 0] += reflections_xx
+        antenna_jones_matrices[:, :, 1, 1] += reflections_yy
+
+    uvfits.visibilities = apply_antenna_jones_matrices(uvfits.visibilities,
+                                                       antenna_jones_matrices,
+                                                       uvfits.b1s, uvfits.b2s)
+    
+    return uvfits
+
 def visibility_noise_stddev(freq_vec, time_res, freq_res,
                           Trec=50, Aeff=20.35):
     """
@@ -393,47 +507,22 @@ def visibility_noise_stddev(freq_vec, time_res, freq_res,
         $\sigma$ values for each given frequency
     """
     # Boltzmans constant
-    kb = 1380.648 #[Jy K^-1 m^2]
+    kb = k_B.value*1e+26 #[Jy K^-1 m^2]
     freq_temp_vec = freq_vec/1e+6 # [MHz]
     # calculate sky temperature.
-    Tsky_vec = 228*(freq_temp_vec/150)**(-2.53)
-
-    # print(Tsky_vec)
+    Tsky_vec = 230*(freq_temp_vec/150)**(-2.53)
+    
+    # Tsky_vec = np.ones(len(freq_vec))*230.0
 
     # Standard deviation term for the noise:
     sigma = (np.sqrt(2)*kb*(Tsky_vec + Trec)) / (Aeff*np.sqrt(freq_res*time_res)) #[Jy]
+    
+    print("Tsky_vec[0]", Tsky_vec[0] + Trec)
+    
+    # sigma = kb*(Tsky_vec + Trec) / (Aeff*np.sqrt(freq_res*time_res))
+    
 
     return sigma
-
-def add_complex_ant_gains(args : Namespace, uvfits : UVFITS):
-    """
-    Add complex antenna gains to the UVFITS object.
-
-    Parameters
-    ------------
-    args : Namespace
-        Namespace object containing command line arguments.
-    uvfits : UVFITS
-        UVFITS object containing visibilities to which antenna gains will be added.
-
-    Returns
-    ---------
-    UVFITS:
-        UVFITS object with antenna gains added.
-    """
-    
-    antenna_jones_matrices = make_antenna_jones_matrices(uvfits.num_antennas,
-                                   uvfits.num_freqs,
-                                   gain_amp_err=args.ant_gain_amp_error,
-                                   gain_phase_err=args.ant_gain_phase_error,
-                                   leak_psi_err=args.ant_leak_errs[0]*np.pi/180.0,
-                                   leak_chi_err=args.ant_leak_errs[1]*np.pi/180.0)
-
-    uvfits.visibilities = apply_antenna_jones_matrices(uvfits.visibilities,
-                                                       antenna_jones_matrices,
-                                                       uvfits.b1s, uvfits.b2s)
-    
-    return uvfits
 
 def add_visi_noise(args : Namespace, uvfits : UVFITS):
     """
@@ -491,7 +580,7 @@ def add_visi_noise(args : Namespace, uvfits : UVFITS):
             uvfits.visibilities[baseline_use, freq_ind, pol_ind] += real_noise + 1j*imag_noise
     
     return uvfits
-    
+
 def main(argv=None):
     """Adds instrumental effects to a WODEN uvfits, given command line inputs
 
@@ -517,7 +606,7 @@ def main(argv=None):
         uvfits = add_visi_noise(args, uvfits)
         print("Finished adding visibility noise")
     
-    if args.ant_gain_amp_error or args.ant_gain_phase_error or args.ant_leak_errs != [0,0]:
+    if args.ant_gain_amp_error or args.ant_gain_phase_error or args.ant_leak_errs != [0,0] or args.cable_reflection_from_metafits:
         print("Adding antenna gains... ")
         uvfits = add_complex_ant_gains(args, uvfits)
         print("Finished adding antenna gains.")
