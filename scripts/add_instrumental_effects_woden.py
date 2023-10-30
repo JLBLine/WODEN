@@ -568,8 +568,8 @@ def add_visi_noise(args : Namespace, uvfits : UVFITS):
 
     for freq_ind, stddev in enumerate(noise_stddev):
         
-        ##Only add noise to the XX and YY cross-correlations
-        for pol_ind in range(2):
+        ##Add noise to all the XX and YY cross-correlations
+        for pol_ind in range(4):
 
             ##I think noise on real and imag are uncorrelated??
             ##The noise is calculated for complex values so divide by root two
