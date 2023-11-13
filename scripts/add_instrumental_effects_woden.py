@@ -8,6 +8,7 @@ from argparse import Namespace
 from astropy.constants import c as speed_of_light
 from astropy.constants import k_B
 import os
+from typing import Tuple
 
 def get_parser():
     """
@@ -401,20 +402,49 @@ def get_cable_delay(length, velocity_factor=0.81):
 
 def create_single_pol_reflections(freqs : np.ndarray,
                                   cable_reflection_coeff_amp : float,
-                                  delays : np.ndarray):
+                                  delays : np.ndarray) -> np.ndarray:
+    """Calculate the reflections caused by a set of cables with a
+    given delays, assigns a random reflection coefficient amplitude
+    for the given frequency vector. Returns a 2D array of shape (len(delays), len(freqs)).
+
+    Parameters
+    ----------
+    freqs : np.ndarray
+        Frequencies to calculate the reflections at (Hz)
+    cable_reflection_coeff_amp : float
+        Maximum amplitude of the cable reflection coefficient.
+    delays : np.ndarray
+        Delays of the cable reflections (seconds)
+
+    Returns
+    -------
+    reflections : np.ndarray
+        A 2D array of reflections of shape (len(delays), len(freqs)) for
+        all delays and frequencies.
+    """
     
-    # reflection_coeffs = np.full(len(delays), cable_reflection_coeff_amp) + 1j*np.zeros(len(delays))
-    
-    reflection_coeffs = np.random.uniform(0, cable_reflection_coeff_amp, len(delays)) + 1j*np.zeros(len(delays))
-    
-    # reflection_coeffs = np.random.uniform(0, cable_reflection_coeff_amp, len(delays)) + 1j*np.random.uniform(0, cable_reflection_coeff_amp, len(delays))
+    reflection_coeffs = np.random.uniform(0, cable_reflection_coeff_amp, len(delays)) + 1j*np.random.uniform(0, cable_reflection_coeff_amp, len(delays))
     
     ftimesd = np.outer(delays, freqs)
     reflections = reflection_coeffs[:, np.newaxis]*np.exp(-2j * np.pi * ftimesd)
     
     return reflections
 
-def add_cable_reflection(args : Namespace, uvfits : UVFITS):
+def create_cable_reflections(args : Namespace, uvfits : UVFITS) -> Tuple[np.ndarray, np.ndarray]:
+    """Given the input arguments and a UVFITS object, create the cable reflections for the x and y pols.
+
+    Parameters
+    ----------
+    args : Namespace
+        Namespace object containing command line arguments.
+    uvfits : UVFITS
+        UVFITS object containing visibilities to which reflections will be added.
+
+    Returns
+    -------
+    reflections_x, reflections_y : np.ndarray, np.ndarray
+        2D arrays of reflections to add to the x and y pols, of shape (num_antennas, num_freqs).
+    """
     
     
     if not os.path.isfile(args.cable_reflection_from_metafits):
@@ -435,13 +465,13 @@ def add_cable_reflection(args : Namespace, uvfits : UVFITS):
         
     delays = get_cable_delay(cable_lengths)
     
-    reflections_xx = create_single_pol_reflections(uvfits.all_freqs,
+    reflections_x = create_single_pol_reflections(uvfits.all_freqs,
                                   args.cable_reflection_coeff_amp, delays)
     
-    reflections_yy = create_single_pol_reflections(uvfits.all_freqs,
+    reflections_y = create_single_pol_reflections(uvfits.all_freqs,
                                   args.cable_reflection_coeff_amp, delays)
     
-    return reflections_xx, reflections_yy
+    return reflections_x, reflections_y
 
 def add_complex_ant_gains(args : Namespace, uvfits : UVFITS):
     """
@@ -468,10 +498,10 @@ def add_complex_ant_gains(args : Namespace, uvfits : UVFITS):
                                    leak_chi_err=args.ant_leak_errs[1]*np.pi/180.0)
     
     if args.cable_reflection_from_metafits:
-        reflections_xx, reflections_yy = add_cable_reflection(args, uvfits)
+        reflections_x, reflections_y = create_cable_reflections(args, uvfits)
         
-        antenna_jones_matrices[:, :, 0, 0] += reflections_xx
-        antenna_jones_matrices[:, :, 1, 1] += reflections_yy
+        antenna_jones_matrices[:, :, 0, 0] += reflections_x
+        antenna_jones_matrices[:, :, 1, 1] += reflections_y
 
     uvfits.visibilities = apply_antenna_jones_matrices(uvfits.visibilities,
                                                        antenna_jones_matrices,
@@ -517,17 +547,13 @@ def visibility_noise_stddev(freq_vec, time_res, freq_res,
     # Standard deviation term for the noise:
     sigma = (np.sqrt(2)*kb*(Tsky_vec + Trec)) / (Aeff*np.sqrt(freq_res*time_res)) #[Jy]
     
-    print("Tsky_vec[0]", Tsky_vec[0] + Trec)
-    
-    # sigma = kb*(Tsky_vec + Trec) / (Aeff*np.sqrt(freq_res*time_res))
-    
-
     return sigma
 
 def add_visi_noise(args : Namespace, uvfits : UVFITS):
     """
-    Adds instrumental Gaussian noise to the cross-correlations of a UVFITS object,
+    Adds instrumental thermal noise to the visibilities of a UVFITS object,
     given the input `args`. The noise is calculated using the radiometer equation.
+    Everything is currently hardcoded to MWA values.
 
     Parameters
     ----------
@@ -541,8 +567,6 @@ def add_visi_noise(args : Namespace, uvfits : UVFITS):
     UVFITS
         The input UVFITS object with noise added to its visibilities.
     """
-def add_visi_noise(args : Namespace, uvfits : UVFITS):
-    
     if args.visi_noise_int_time:
         print(f"--visi_noise_int_time was set to {args.visi_noise_int_time:.1e} "
                   "seconds, using instead of time resolution inside uvfits")
@@ -563,21 +587,23 @@ def add_visi_noise(args : Namespace, uvfits : UVFITS):
 
     print(f'First freq std dev {noise_stddev[0]:.2e}')
 
-    ##Start by adding noise to the cross-correlations
-    baseline_use = np.where(uvfits.b1s != uvfits.b2s)[0]
+    baseline_cross = np.where(uvfits.b1s != uvfits.b2s)[0]
+    baseline_auto = np.where(uvfits.b1s == uvfits.b2s)[0]
 
     for freq_ind, stddev in enumerate(noise_stddev):
         
         ##Add noise to all the XX and YY cross-correlations
         for pol_ind in range(4):
 
-            ##I think noise on real and imag are uncorrelated??
-            ##The noise is calculated for complex values so divide by root two
-            ##when calcing real or imag??
-            real_noise = np.random.normal(0, stddev, len(baseline_use))
-            imag_noise = np.random.normal(0, stddev, len(baseline_use))
-
-            uvfits.visibilities[baseline_use, freq_ind, pol_ind] += real_noise + 1j*imag_noise
+            ##Add noise to the cross-correlations
+            real_noise = np.random.normal(0, stddev, len(baseline_cross))
+            imag_noise = np.random.normal(0, stddev, len(baseline_cross))
+            uvfits.visibilities[baseline_cross, freq_ind, pol_ind] += real_noise + 1j*imag_noise
+            
+            ##Add noise to the auto-correlations
+            real_noise = np.random.normal(0, np.sqrt(2)*stddev, len(baseline_auto))
+            imag_noise = np.random.normal(0, np.sqrt(2)*stddev, len(baseline_auto))
+            uvfits.visibilities[baseline_auto, freq_ind, pol_ind] += real_noise + 1j*imag_noise
     
     return uvfits
 
@@ -592,9 +618,6 @@ def main(argv=None):
     """
     parser = get_parser()
     args = parser.parse_args(argv)
-    
-    # from sys import argv
-    # print(argv)
     
     if args.numpy_seed:
         np.random.seed(args.numpy_seed)
