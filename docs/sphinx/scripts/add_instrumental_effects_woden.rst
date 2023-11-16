@@ -45,6 +45,14 @@ The noise is drawn randomly and added separately for the real and imaginary part
 
 According to Kraus "Radio Astronomy" 2nd Edition, the noise on the auto-correlations is given by $\sqrt{2}\sigma_{\mathrm{cross}}$. This noise is added in the same way as the crosses.
 
+A comparison of measured noise from calibrated MWA data and noise added by ``add_instrumental_effects_woden.py`` for the cross-correlations is shown below:
+
+.. image:: noise_from_uvfits.png
+   :align: center
+   :alt: Cable reflections
+
+These noise values were estimated by differencing odd and even time step visibilities on 8s,80kHz averaged data. The real data are from 2014 when there was a digital gain jump, hence the discontinuity at around 187 MHz. The edges and centre of every MWA coarse band have also been flagged as they have extra noise from the bandpass. The simulated data includes the entire LoBES catalogue plus GLEAM for surrounding areas, with a total of around 200,000 sources.
+
 Adding antenna (tile) gains and leakages
 -----------------------------------------
 Each receiving element (often called a tile for MWA, called an antenna hereon) in a dual polarisation interferometer can have a gain ($g_x, g_y$) and leakage ($D_x,D_y$) term for each polarisation. Each visibility is a correlation of two antennas. ``WODEN`` implements any antenna gains and leakages by multiplying the visibility between tiles 1 and 2 through the following operation:
@@ -78,6 +86,16 @@ $
 
 where $\Psi, \chi$ are alignment errors of the dipoles. This equation is really designed for single antennas, but in the MWA case, you could imagine that all the dipoles in a tile are aligned aligned perfectly to the mesh, and the mesh is slightly offset, so the alignment errors for all dipoles are the same. The parameters. $\Psi, \chi$ are set by the user via ``--ant_leak_errs`` so you can tune however much leakage you want.
 
+An example of calibration solutions obtained through ``hyperdrive`` when gains have been added by ``add_instrumental_effects_woden.py`` is shown below:
+
+.. image:: hyperdrive_solutions_gainerrs_21cm+compact_n10000_10000_amps.png
+   :align: center
+   :alt: Cable reflections
+
+.. image:: hyperdrive_solutions_gainerrs_21cm+compact_n10000_10000_phases.png
+   :align: center
+   :alt: Cable reflections
+
 Cable reflections
 ----------------------
 Mismatched impedance at the cable ends can cause internal reflections that setup standing waves, adding frequency-dependent ripples to the visibilities. We follow the formalism from `Beardsley et al (2016)`_ to define the cable reflection gain seen by antenna $i$ for polarisation $\mathrm{pol}$ as
@@ -93,6 +111,12 @@ $
 $
 
 where $l_i$ is the length of the cable connected to antenna $i$, and $c$ is the speed of light. The factor 0.81 comes from the velocity factor of the cable, which we again take from `Beardsley et al (2016)`_. The cable lengths are listed in the MWA `metafits` file, so `add_instrumental_effects_woden.py` reads them directly from there. The reflection coefficients are drawn from a uniform distribution between 0 and a maximum value set by ``--cable_reflection_coeff_amp``. Currently a random number assigned is to both the real and imaginary parts of $R_{0,i}$.
+
+Applying these reflections to a simulation of a 1 Jy point source at zenith (so visibilities all of $1 + 0i$) allows us to test the applied reflections by Fourier transforming visibilities and checking the input delays:
+
+.. image:: reflections_test.png
+   :align: center
+   :alt: Cable reflections
 
 *Command line running arguments*
 ---------------------------------
