@@ -18,6 +18,9 @@ from astropy.coordinates import EarthLocation
 from astropy import units as u
 import scipy.optimize as opt
 
+import importlib_resources
+import wodenpy
+
 code_dir = os.path.realpath(__file__)
 code_dir = ('/').join(code_dir.split('/')[:-1])
 
@@ -629,6 +632,51 @@ class Test(unittest.TestCase):
         args.append(f"--cable_reflection_coeff_amp=0.05")
         
         self.run_code_test_reflections(args, metafits)
+        
+    def test_add_bandpass(self):
+        """"""
+        
+        # np.random.seed(93208)
+        # self.create_uvfits_outputs(do_autos=True, num_ants=128, 
+        #                            num_freqs=384, ch_width=80e+3)
+        
+        # metafits = f"{code_dir}/1088285720_metafits.fits"
+        
+        # args = []
+        # args.append("--uvfits=unittest_example1_band01.uvfits")
+        # args.append(f"--cable_reflection_from_metafits={metafits}")
+        # args.append(f"--cable_reflection_coeff_amp=0.05")
+        
+        # self.run_code_test_reflections(args, metafits)
+        
+        import matplotlib.pyplot as plt
+        
+        
+        freq_res = 80e+3
+        
+        
+        fig, axs = plt.subplots(1, 1, figsize=(6, 6))
+        
+        bandpass = importlib_resources.files(wodenpy).joinpath("bandpass_1kHz.txt")
+        bandpass = np.loadtxt(bandpass)
+        
+        axs.plot(np.arange(5e+2, 1.28e+6, 1e+3)/1e+6, bandpass, 'k-', label='Jake Jones bandpass')
+        
+        for freq_res in [10e+3, 20e+3, 40e+3, 80e+3]:
+            freqs = np.arange(freq_res/2, 1.28e+6, freq_res) / 1e+6
+            single_bandpass, full_bandpass = aiew.calculate_bandpass(freq_res)
+            
+            axs.plot(freqs, single_bandpass, label=f'{freq_res/1e+3:.1f} kHz',
+                     linestyle='none', mfc='none', marker='o')
+            
+            
+        axs.set_xlabel('Frequency MHz')
+        axs.set_ylabel('Bandpass')
+            
+        axs.legend()
+        plt.tight_layout()
+        fig.savefig("bandpass_test.png", bbox_inches='tight')
+        plt.close()
         
 
 ##Run the test

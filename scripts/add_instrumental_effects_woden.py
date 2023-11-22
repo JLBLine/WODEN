@@ -9,6 +9,9 @@ from astropy.constants import c as speed_of_light
 from astropy.constants import k_B
 import os
 from typing import Tuple
+import importlib_resources
+import wodenpy
+from scipy.interpolate import CubicSpline
 
 def get_parser():
     """
@@ -606,6 +609,29 @@ def add_visi_noise(args : Namespace, uvfits : UVFITS):
             uvfits.visibilities[baseline_auto, freq_ind, pol_ind] += real_noise + 1j*imag_noise
     
     return uvfits
+
+def calculate_bandpass(freq_res : float, num_bands : int = 24):
+    
+    bandpass = importlib_resources.files(wodenpy).joinpath("bandpass_1kHz.txt")
+    bandpass = np.loadtxt(bandpass)
+    
+    cs = CubicSpline(np.arange(5e+2, 1.28e+6, 1e+3), bandpass)
+    
+    single_bandpass = cs(np.arange(freq_res/2, 1.28e+6, freq_res))
+    
+    full_bandpass = np.tile(single_bandpass, num_bands)
+    
+    return single_bandpass, full_bandpass
+
+
+def add_bandpass(args : Namespace, uvfits : UVFITS):
+    
+    print(uvfits.freq_res)
+    
+    single_bandpass, full_bandpass = calculate_bandpass(uvfits.freq_res)
+    
+    return
+
 
 def main(argv=None):
     """Adds instrumental effects to a WODEN uvfits, given command line inputs
