@@ -131,7 +131,6 @@ def read_fits_radec_count_components(fits_path : str):
     else:
         print("WARNING - couldn't find second table containing shapelet information, so not attempting to load any shapelets.")
     
-    
     comp_counter.total_components()
 
     return comp_counter

@@ -87,6 +87,11 @@ def get_parser():
              'This leakage is based off two angles where `Dx = psi_err - 1j*chi_err` '
              'and `Dy = -psi_err + 1j*chi_err`. '
              'A random angle between 0 and the given value will be added for each angle. ')
+    
+    gain_group = parser.add_argument_group('FLAGGING')
+    gain_group.add_argument('--add_fine_channel_flags', default=False, action='store_true',
+        help='Add the standard fine channel flags due to bandpass shape, e.g. '
+             'if data is 40kHz resolution, flag channels 0 1 16 30 31 in each coarse band.')
 
 
 
@@ -143,6 +148,8 @@ class UVFITS(object):
             visibilities = hdu[0].data.data[:,0,0,:,:,:2]
             self.visibilities = visibilities[:,:,:,0] + 1j*visibilities[:,:,:,1]
             
+            self.weights = hdu[0].data.data[:,0,0,:,:,-1]
+            
             self.num_antennas = int(hdu[1].header['NAXIS2'])
             b1s, b2s = [], []
 
@@ -185,6 +192,7 @@ class UVFITS(object):
                 self.has_autos = False
 
             num_times = int(self.num_visis / num_visi_per_time)
+            self.num_times = num_times
 
             time1 = Time(hdu[0].data['DATE'][num_visi_per_time], format='jd')
             time0 = Time(hdu[0].data['DATE'][0], format='jd')
@@ -452,8 +460,10 @@ def create_cable_reflections(args : Namespace, uvfits : UVFITS) -> Tuple[np.ndar
     
     if not os.path.isfile(args.cable_reflection_from_metafits):
             exit('Could not open metafits specified by user as:\n'
-                 '\t--metafits_filename={:s}.\n'
-                 'Cannot get required observation settings, exiting now'.format(args.metafits_filename))
+                 '\t--cable_reflection_from_metafits={:s}.\n'
+                 'Cannot get required observation settings, exiting now'.format(args.cable_reflection_from_metafits))
+
+    print("TRYING THIS", args.cable_reflection_from_metafits)
 
     with fits.open(args.cable_reflection_from_metafits) as f:
         antenna_order = np.argsort(f[1].data['Tile'])
@@ -632,6 +642,30 @@ def add_bandpass(args : Namespace, uvfits : UVFITS):
     
     return
 
+def add_fine_channel_flags(hdu,  args : Namespace, uvfits : UVFITS):
+    
+    
+    ##OK, always flag 80e+3 at edge and the central channels? As in,
+    ##if we have a 40kHz resolution, we want to flag 0 1 16 30 31 in each coarse band
+    
+    num_edges = int(80e+3 / uvfits.freq_res)
+    n_chan_per_coarse = int(1.28e+6 / uvfits.freq_res)
+    cent_flag = int(n_chan_per_coarse / 2)
+    
+    weights = np.ones(n_chan_per_coarse)
+    
+    weights[:num_edges] = 0
+    weights[cent_flag] = 0
+    weights[-num_edges:] = 0
+    
+    num_bands = int(uvfits.num_freqs / n_chan_per_coarse)
+    
+    all_weights = np.tile(weights, num_bands)
+    
+    hdu[0].data.data[:,0,0,:,:,2] *= all_weights[np.newaxis, :, np.newaxis]
+    
+    return hdu
+
 
 def main(argv=None):
     """Adds instrumental effects to a WODEN uvfits, given command line inputs
@@ -664,6 +698,12 @@ def main(argv=None):
         ##Leave the weights alone
         hdu[0].data.data[:,0,0,:,:,0] = np.real(uvfits.visibilities)
         hdu[0].data.data[:,0,0,:,:,1] = np.imag(uvfits.visibilities)
+        
+        if args.add_fine_channel_flags:
+            print("Adding fine channel flags... ")
+            hdu = add_fine_channel_flags(hdu, args, uvfits)
+            print("Finished adding fine channel flags.")
+        
 
         hdu.writeto(args.output_name, overwrite=True)
 

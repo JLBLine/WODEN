@@ -678,6 +678,58 @@ class Test(unittest.TestCase):
         fig.savefig("bandpass_test.png", bbox_inches='tight')
         plt.close()
         
+        
+    def test_add_fine_channel_flags(self):
+        """"""
+        
+        np.random.seed(398047)
+        # self.create_uvfits_outputs(do_autos=True, num_ants=128, 
+                                #    num_freqs=768, ch_width=40e+3)
+        self.create_uvfits_outputs(do_autos=True, num_ants=128, 
+                                   num_freqs=384, ch_width=80e+3)
+        
+        metafits = f"{code_dir}/1088285720_metafits.fits"
+        
+        args = []
+        args.append("--uvfits=unittest_example1_band01.uvfits")
+        args.append(f"--add_fine_channel_flags")
+        
+        ##Actually run the code!!
+        aiew.main(args)
+        
+        uvfits = aiew.UVFITS('unittest_example1_band01.uvfits')
+        ##aigh so this bit is copied and pasted from the function, works
+        ##out the flags we would want
+        num_edges = int(80e+3 / uvfits.freq_res)
+        n_chan_per_coarse = int(1.28e+6 / uvfits.freq_res)
+        cent_flag = int(n_chan_per_coarse / 2)
+            
+        weights = np.ones(n_chan_per_coarse)
+            
+        weights[:num_edges] = 0
+        weights[cent_flag] = 0
+        weights[-num_edges:] = 0
+            
+        num_bands = int(uvfits.num_freqs / n_chan_per_coarse)
+            
+        all_weights = np.tile(weights, num_bands)
+        
+        
+        ##read in the resuts
+        uvfits_inst = aiew.UVFITS('instrumental.uvfits')
+        
+        ##Check we haven't messed with the visibilities themselves
+        npt.assert_equal(uvfits.visibilities, uvfits_inst.visibilities)
+        
+        one_pol_weights = np.tile(all_weights, uvfits.num_visis)
+        
+        one_pol_weights.shape = (uvfits.num_visis, uvfits.num_freqs)  
+        
+        npt.assert_equal(uvfits_inst.weights[:,:,0], one_pol_weights)
+        npt.assert_equal(uvfits_inst.weights[:,:,1], one_pol_weights)
+        npt.assert_equal(uvfits_inst.weights[:,:,2], one_pol_weights)
+        npt.assert_equal(uvfits_inst.weights[:,:,3], one_pol_weights)
+        
 
 ##Run the test
 if __name__ == '__main__':
