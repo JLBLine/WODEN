@@ -211,7 +211,7 @@ def get_parser():
         help='How many files to concatenate')
     parser.add_argument('--uvfits_prepend', default=False,
         help=r'Prepend for the uvfits files e.g. ./data/uvdump_')
-    parser.add_argument('--output_name', default="concanenated.uvfits",
+    parser.add_argument('--output_name', default="concatenated.uvfits",
         help='Name for output concatenated uvfits file, default: concanenated.uvfits')
     parser.add_argument('--swap_pols', default=False, action='store_true',
         help='Reverse the order of polarisations')

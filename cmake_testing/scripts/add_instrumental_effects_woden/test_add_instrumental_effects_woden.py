@@ -18,6 +18,9 @@ from astropy.coordinates import EarthLocation
 from astropy import units as u
 import scipy.optimize as opt
 
+import importlib_resources
+import wodenpy
+
 code_dir = os.path.realpath(__file__)
 code_dir = ('/').join(code_dir.split('/')[:-1])
 
@@ -33,7 +36,7 @@ import numpy.testing as npt
 class Test(unittest.TestCase):
 
     def create_uvfits_outputs(self, num_freqs=3, do_autos=False,
-                              num_ants=10):
+                              num_ants=10, ch_width=40e3):
         """Tests the `wodenpy_uvfits.create_uvfits` function, which should take a whole
         heap of inputs and write out a uvits. Test by running funciton,
         reading in the created file and checking contents"""
@@ -49,7 +52,7 @@ class Test(unittest.TestCase):
         self.latitude = -26.7033194444
         self.array_height = 377.0
         self.central_freq_chan = 2
-        self.ch_width = 40e3
+        self.ch_width = ch_width
         self.ra_point = 0.0
         self.dec_point = -26.7
         
@@ -59,7 +62,6 @@ class Test(unittest.TestCase):
             self.num_baselines = int(((self.num_antennas - 1)*self.num_antennas) / 2)
             
         self.num_time_steps = 2
-        self.num_freq_channels = 3
         self.int_jd = 2458647.0
         self.gitlabel = 'as987has'
         self.XYZ_array = np.arange(self.num_antennas*3)
@@ -440,21 +442,34 @@ class Test(unittest.TestCase):
             freq_reso = uvfits.freq_res
         
         ##don't check auto correlations when testing cross-correlations
-        baseline_use = np.where(uvfits.b1s != uvfits.b2s)
+        baseline_cross = np.where(uvfits.b1s != uvfits.b2s)[0]
+        baseline_auto = np.where(uvfits.b1s == uvfits.b2s)[0]
         
         for find, freq in enumerate(uvfits.all_freqs):
             
             expec_std = aiew.visibility_noise_stddev(freq, int_time, freq_reso)
             
-            found_std_xx_re = np.std(np.real(uvfits.visibilities[baseline_use, find, 0]))
-            found_std_xx_im = np.std(np.imag(uvfits.visibilities[baseline_use, find, 0]))
-            found_std_yy_re = np.std(np.real(uvfits.visibilities[baseline_use, find, 1]))
-            found_std_yy_im = np.std(np.imag(uvfits.visibilities[baseline_use, find, 1]))
+            found_std_xx_re = np.std(np.real(uvfits.visibilities[baseline_cross, find, 0]))
+            found_std_xx_im = np.std(np.imag(uvfits.visibilities[baseline_cross, find, 0]))
+            found_std_yy_re = np.std(np.real(uvfits.visibilities[baseline_cross, find, 1]))
+            found_std_yy_im = np.std(np.imag(uvfits.visibilities[baseline_cross, find, 1]))
             
             npt.assert_allclose(found_std_xx_re, expec_std, rtol=0.05)
             npt.assert_allclose(found_std_xx_im, expec_std, rtol=0.05)
             npt.assert_allclose(found_std_yy_re, expec_std, rtol=0.05)
             npt.assert_allclose(found_std_yy_im, expec_std, rtol=0.05)
+            
+            if len(baseline_auto) > 0:
+            
+                found_std_xx_re = np.std(np.real(uvfits.visibilities[baseline_auto, find, 0]))
+                found_std_xx_im = np.std(np.imag(uvfits.visibilities[baseline_auto, find, 0]))
+                found_std_yy_re = np.std(np.real(uvfits.visibilities[baseline_auto, find, 1]))
+                found_std_yy_im = np.std(np.imag(uvfits.visibilities[baseline_auto, find, 1]))
+                
+                npt.assert_allclose(found_std_xx_re, np.sqrt(2)*expec_std, rtol=0.10)
+                npt.assert_allclose(found_std_xx_im, np.sqrt(2)*expec_std, rtol=0.10)
+                npt.assert_allclose(found_std_yy_re, np.sqrt(2)*expec_std, rtol=0.10)
+                npt.assert_allclose(found_std_yy_im, np.sqrt(2)*expec_std, rtol=0.10)
             
     def test_add_visi_noise(self):
         """"""
@@ -470,7 +485,7 @@ class Test(unittest.TestCase):
     def test_add_visi_noise_set_reso(self):
         """"""
         
-        self.create_uvfits_outputs(do_autos=False, num_ants=100)
+        self.create_uvfits_outputs(do_autos=True, num_ants=100)
         
         int_time = 1000*60*60.0
         freq_reso = 1e+6
@@ -481,6 +496,239 @@ class Test(unittest.TestCase):
         args.append(f"--visi_noise_freq_reso={freq_reso}")
         
         self.run_code_test_noise(args, int_time, freq_reso)
+        
+    def run_code_test_reflections(self, args, metafits):
+        
+        
+        ##Actually run the code!!
+        aiew.main(args)
+        ##read in the resuts
+        uvfits = aiew.UVFITS('instrumental.uvfits')
+        
+        with fits.open(metafits) as f:
+            antenna_order = np.argsort(f[1].data['Tile'])
+            
+            selection = np.arange(0,len(antenna_order),2)
+            ##this has both XX and YY pol, assume they have the same cable lengths
+            antenna_order = antenna_order[selection]
+            
+            ##the length causing reflections is in the flavour column
+            flavours = f[1].data['Flavors'][antenna_order]
+            cable_lengths = np.array([float(flavour.split('_')[1]) for flavour in flavours])
+        
+        meta_delays = aiew.get_cable_delay(cable_lengths)
+        
+        import matplotlib.pyplot as plt
+        fig, axs = plt.subplots(4, 2, figsize=(10, 6))
+        
+        autos = np.where(uvfits.b1s == uvfits.b2s)[0]
+        crosses = np.where(uvfits.b1s != uvfits.b2s)[0]
+        
+        delays = np.fft.fftshift(np.fft.fftfreq(len(uvfits.all_freqs), uvfits.freq_res))
+        
+        # cut_delays = np.where(delays > 0 )[0]
+        use = np.where(delays != 0)
+        delays = delays[use]
+        
+        # for ind, ant in enumerate([0, 2, 50, 100]):
+        
+        base_plot = 0
+        # for baseline in crosses[:8128]:
+        for baseline in range(8256):
+            
+            b1 = uvfits.b1s[baseline]
+            b2 = uvfits.b2s[baseline]
+            
+            delay1, delay2 = meta_delays[b1], meta_delays[b2]
+            
+            # print(b1, b2, delay1, delay2, delay1 + delay2, np.abs(delay2 - delay1))
+            
+            
+            
+            
+            fft_gain = np.fft.fftshift(np.fft.fft(uvfits.visibilities[baseline, :,  0]))
+            fft_gain = fft_gain[use]
+            
+            idx = np.argsort(np.abs(fft_gain))[::-1]
+            
+            
+            ##OK, so times the peak delay sits across two samples, so we don't
+            ##
+            from scipy.signal import find_peaks
+            idx, props = find_peaks(np.abs(fft_gain), distance=3)
+            # print(idx)
+            
+            idx1 = np.argsort(np.abs(fft_gain[idx]))[::-1][:2]
+            
+            found_delays = np.sort(np.abs(delays[idx[idx1]]))
+            
+            # found_delays = np.sort([np.abs(delays[idx[0]]), np.abs(delays[idx[1]])])
+            expec_delays = np.sort([delay1, delay2])
+            
+            
+            
+            try:
+                npt.assert_allclose(found_delays, expec_delays, rtol=0.05)
+            except:
+                # print(expec_delays, found_delays, delay2 - delay1)
+                print(expec_delays, found_delays)
+                print(delays[idx[idx1]], np.abs(fft_gain[idx[idx1]]))
+                
+                plt.plot(delays/1e-6, np.abs(fft_gain))
+                plt.savefig('ting.png')
+                plt.close()
+                exit()
+            
+            # print(delays[idx[1]]/1e-6)
+            # print()
+            
+            # auto = autos[ant]
+            # axs[ind, 0].plot(uvfits.all_freqs/1e+6, np.abs(uvfits.visibilities[auto, :,  0]))
+            # fft_gain = np.fft.fft(uvfits.visibilities[auto, :,  0])
+            
+            base_plots = [0, 2, 50, 100]
+            if baseline in base_plots:
+            
+            # if base_plot <= 3:
+                
+                base_plot = base_plots.index(baseline)
+            
+                axs[base_plot, 0].plot(uvfits.all_freqs/1e+6, np.real(uvfits.visibilities[baseline, :,  0]))
+                
+                # axs[ind, 1].plot(delays[cut_delays]/1e-6, np.real(fft_gain[cut_delays]))
+                axs[base_plot, 1].plot(delays/1e-6, np.abs(fft_gain), 'k')
+                
+                for ind, delay in enumerate(expec_delays):
+                    axs[base_plot, 1].axvline(delay/1e-6, color=f'C{ind:d}', label=f'Delay {delay/1e-6:.1f}', linestyle='--',alpha=0.5)
+                    axs[base_plot, 1].axvline(-delay/1e-6, color=f'C{ind:d}', linestyle='--',alpha=0.5)
+                    
+                axs[base_plot, 1].axvline(-delay/1e-6, color=f'C{ind:d}', linestyle='--',alpha=0.5)
+                    
+                axs[base_plot, 1].set_xlim(-5, 5)
+                axs[base_plot, 1].legend()
+                
+        axs[0,0].set_title('Real part visibility')
+        axs[0,1].set_title('FT visi along frequency')
+          
+        axs[3, 0].set_xlabel("Frequency MHz")
+        axs[3, 1].set_xlabel("Delay $\mu$s")
+            
+        plt.tight_layout()
+        fig.savefig("reflections_test.png", bbox_inches='tight')
+        plt.close()
+        
+    def test_add_cable_reflect(self):
+        """"""
+        
+        np.random.seed(93208)
+        self.create_uvfits_outputs(do_autos=True, num_ants=128, 
+                                   num_freqs=384, ch_width=80e+3)
+        
+        metafits = f"{code_dir}/1088285720_metafits.fits"
+        
+        args = []
+        args.append("--uvfits=unittest_example1_band01.uvfits")
+        args.append(f"--cable_reflection_from_metafits={metafits}")
+        args.append(f"--cable_reflection_coeff_amp=0.05")
+        
+        self.run_code_test_reflections(args, metafits)
+        
+    def test_add_bandpass(self):
+        """"""
+        
+        # np.random.seed(93208)
+        # self.create_uvfits_outputs(do_autos=True, num_ants=128, 
+        #                            num_freqs=384, ch_width=80e+3)
+        
+        # metafits = f"{code_dir}/1088285720_metafits.fits"
+        
+        # args = []
+        # args.append("--uvfits=unittest_example1_band01.uvfits")
+        # args.append(f"--cable_reflection_from_metafits={metafits}")
+        # args.append(f"--cable_reflection_coeff_amp=0.05")
+        
+        # self.run_code_test_reflections(args, metafits)
+        
+        import matplotlib.pyplot as plt
+        
+        
+        freq_res = 80e+3
+        
+        
+        fig, axs = plt.subplots(1, 1, figsize=(6, 6))
+        
+        bandpass = importlib_resources.files(wodenpy).joinpath("bandpass_1kHz.txt")
+        bandpass = np.loadtxt(bandpass)
+        
+        axs.plot(np.arange(5e+2, 1.28e+6, 1e+3)/1e+6, bandpass, 'k-', label='Jake Jones bandpass')
+        
+        for freq_res in [10e+3, 20e+3, 40e+3, 80e+3]:
+            freqs = np.arange(freq_res/2, 1.28e+6, freq_res) / 1e+6
+            single_bandpass, full_bandpass = aiew.calculate_bandpass(freq_res)
+            
+            axs.plot(freqs, single_bandpass, label=f'{freq_res/1e+3:.1f} kHz',
+                     linestyle='none', mfc='none', marker='o')
+            
+            
+        axs.set_xlabel('Frequency MHz')
+        axs.set_ylabel('Bandpass')
+            
+        axs.legend()
+        plt.tight_layout()
+        fig.savefig("bandpass_test.png", bbox_inches='tight')
+        plt.close()
+        
+        
+    def test_add_fine_channel_flags(self):
+        """"""
+        
+        np.random.seed(398047)
+        # self.create_uvfits_outputs(do_autos=True, num_ants=128, 
+                                #    num_freqs=768, ch_width=40e+3)
+        self.create_uvfits_outputs(do_autos=True, num_ants=128, 
+                                   num_freqs=384, ch_width=80e+3)
+        
+        metafits = f"{code_dir}/1088285720_metafits.fits"
+        
+        args = []
+        args.append("--uvfits=unittest_example1_band01.uvfits")
+        args.append(f"--add_fine_channel_flags")
+        
+        ##Actually run the code!!
+        aiew.main(args)
+        
+        uvfits = aiew.UVFITS('unittest_example1_band01.uvfits')
+        ##aigh so this bit is copied and pasted from the function, works
+        ##out the flags we would want
+        num_edges = int(80e+3 / uvfits.freq_res)
+        n_chan_per_coarse = int(1.28e+6 / uvfits.freq_res)
+        cent_flag = int(n_chan_per_coarse / 2)
+            
+        weights = np.ones(n_chan_per_coarse)
+            
+        weights[:num_edges] = 0
+        weights[cent_flag] = 0
+        weights[-num_edges:] = 0
+            
+        num_bands = int(uvfits.num_freqs / n_chan_per_coarse)
+            
+        all_weights = np.tile(weights, num_bands)
+        
+        
+        ##read in the resuts
+        uvfits_inst = aiew.UVFITS('instrumental.uvfits')
+        
+        ##Check we haven't messed with the visibilities themselves
+        npt.assert_equal(uvfits.visibilities, uvfits_inst.visibilities)
+        
+        one_pol_weights = np.tile(all_weights, uvfits.num_visis)
+        
+        one_pol_weights.shape = (uvfits.num_visis, uvfits.num_freqs)  
+        
+        npt.assert_equal(uvfits_inst.weights[:,:,0], one_pol_weights)
+        npt.assert_equal(uvfits_inst.weights[:,:,1], one_pol_weights)
+        npt.assert_equal(uvfits_inst.weights[:,:,2], one_pol_weights)
+        npt.assert_equal(uvfits_inst.weights[:,:,3], one_pol_weights)
         
 
 ##Run the test

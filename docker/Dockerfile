@@ -29,29 +29,25 @@ ENV RUST_VERSION=1.72
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain=$RUST_VERSION
 
 # hyperbeam used for MWA primary beam
-RUN git clone https://github.com/MWATelescope/mwa_hyperbeam.git \
-  && cd mwa_hyperbeam \
+RUN wget https://github.com/MWATelescope/mwa_hyperbeam/archive/refs/tags/v0.6.0.tar.gz \
+  && tar -xvf v0.6.0.tar.gz \
+  && cd mwa_hyperbeam-0.6.0 \
   && /opt/cargo/bin/cargo build --release --features=cuda,cuda-static \
   && cd /
 
-## git clone the WODEN library and complile the C/CUDA code
-RUN git clone https://github.com/JLBLine/WODEN.git \
+## clone the release verion of WODEN and complile the C/CUDA code
+RUN git clone -b v2.0.0 https://github.com/JLBLine/WODEN.git \
   && cd WODEN \
   && mkdir build && cd build \
-  && cmake .. -DHBEAM_INC=/mwa_hyperbeam/include/ \
-           -DHBEAM_LIB=/mwa_hyperbeam/target/release/libmwa_hyperbeam.so \
+  && cmake .. -DHBEAM_INC=/mwa_hyperbeam-0.6.0/include/ \
+           -DHBEAM_LIB=/mwa_hyperbeam-0.6.0/target/release/libmwa_hyperbeam.so \
   && make
   
 ##Now do the pip install
 RUN cd /WODEN && pip install -r requirements.txt && pip install .
 
 # unity - used for testing
-RUN cd / && git clone https://github.com/ThrowTheSwitch/Unity.git \
-  && cd Unity \
-  && mkdir build && cd build \
-  && cmake .. \
-  && make -j 4 \
-  && make install
+RUN cd / && git clone https://github.com/ThrowTheSwitch/Unity.git
 
 ##install the tests. no sense in running the tests of course because
 ##that is user GPU dependent. But we can install them.

@@ -39,7 +39,7 @@ The ``curved_power_law`` model is defined in Equation 2 of `Callingham et al. 20
 implemented in ``WODEN`` as:
 
 .. math::
-  S_i = S_0 \left( \frac{\nu_0}{\nu_i} \right)^\alpha e^{q\ln(\frac{\nu_0}{\nu_i})^2}
+  S_i = S_0 \left( \frac{\nu_i}{\nu_0} \right)^\alpha e^{q\ln(\frac{\nu_i}{\nu_0})^2}
 
 where :math:`q` is a curvature term. This allows for peaked-type SEDs:
 
