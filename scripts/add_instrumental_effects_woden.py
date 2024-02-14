@@ -34,8 +34,10 @@ def get_parser():
         help='Name of the uvfits file to add instrumental effects to e.g. filename.uvfits')
     sing_group.add_argument('--output_name', default="instrumental.uvfits",
         help='Name for output uvfits file, default: instrumental.uvfits')
-    sing_group.add_argument('--numpy_seed', default=0, type=int,
-        help='A specific np.random.seed to use for reproducibility. Otherwise numpy is left to seed itself.')
+    sing_group.add_argument('--noise_numpy_seed', default=0, type=int,
+        help='A specific np.random.seed to use for adding noise, for reproducibility. Otherwise numpy is left to seed itself.')
+    sing_group.add_argument('--inst_numpy_seed', default=0, type=int,
+        help='A specific np.random.seed to use for instrumenal effects (other than noise), for reproducibility. Otherwise numpy is left to seed itself.')
     
     noise_group = parser.add_argument_group('NOISE EFFECTS')
     noise_group.add_argument('--add_visi_noise',
@@ -235,7 +237,7 @@ def make_single_polarsiation_jones_gain(num_antennas, num_freqs,
     jones_entry : ndarray
         Complex Jones gain matrix of shape (num_antennas, num_freqs), with the first row set to (1+0j).
     """
-
+    
     ##First up, make the real scalar gain error - one per antenna
     jones_entry = 1.0 + np.random.uniform(-amp_err, amp_err, num_antennas)
     
@@ -679,17 +681,27 @@ def main(argv=None):
     parser = get_parser()
     args = parser.parse_args(argv)
     
-    if args.numpy_seed:
-        np.random.seed(args.numpy_seed)
-
     uvfits = UVFITS(args.uvfits)
     
     if args.add_visi_noise or args.visi_noise_int_time or args.visi_noise_freq_reso:
+        
+        if args.noise_numpy_seed:
+            np.random.seed(args.noise_numpy_seed)
+        else:
+            np.random.seed(np.random.randint(0, 1e+6))
+        
         print("Adding visibility noise... ")
         uvfits = add_visi_noise(args, uvfits)
         print("Finished adding visibility noise")
     
     if args.ant_gain_amp_error or args.ant_gain_phase_error or args.ant_leak_errs != [0,0] or args.cable_reflection_from_metafits:
+        
+        
+        if args.inst_numpy_seed:
+            np.random.seed(args.inst_numpy_seed)
+        else:
+            np.random.seed(np.random.randint(0, 1e+6))
+            
         print("Adding antenna gains... ")
         uvfits = add_complex_ant_gains(args, uvfits)
         print("Finished adding antenna gains.")
