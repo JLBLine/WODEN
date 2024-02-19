@@ -201,7 +201,7 @@ class Test(unittest.TestCase):
         seed = 983745
         
         args = []
-        args.append(f"--numpy_seed={seed}")
+        args.append(f"--inst_numpy_seed={seed}")
         args.append("--uvfits=unittest_example1_band01.uvfits")
         args.append(f"--ant_gain_amp_error={amp_err}")
         
@@ -238,7 +238,7 @@ class Test(unittest.TestCase):
         seed = 34987
         
         args = []
-        args.append(f"--numpy_seed={seed}")
+        args.append(f"--inst_numpy_seed={seed}")
         args.append("--uvfits=unittest_example1_band01.uvfits")
         args.append(f"--ant_gain_phase_error={phase_err}")
         
@@ -285,7 +285,7 @@ class Test(unittest.TestCase):
         seed = 3984
         
         args = []
-        args.append(f"--numpy_seed={seed}")
+        args.append(f"--inst_numpy_seed={seed}")
         args.append("--uvfits=unittest_example1_band01.uvfits")
         args.append(f"--ant_gain_phase_error={phase_err}")
         args.append(f"--ant_gain_amp_error={amp_err}")
@@ -332,7 +332,7 @@ class Test(unittest.TestCase):
         seed = 3984
         
         args = []
-        args.append(f"--numpy_seed={seed}")
+        args.append(f"--inst_numpy_seed={seed}")
         args.append("--uvfits=unittest_example1_band01.uvfits")
         args.append(f"--ant_gain_phase_error={phase_err}")
         args.append(f"--ant_gain_amp_error={amp_err}")
@@ -382,7 +382,7 @@ class Test(unittest.TestCase):
         chi_err = 0.05
         
         args = []
-        args.append(f"--numpy_seed={seed}")
+        args.append(f"--inst_numpy_seed={seed}")
         args.append("--uvfits=unittest_example1_band01.uvfits")
         args.append(f"--ant_gain_phase_error={phase_err}")
         args.append(f"--ant_gain_amp_error={amp_err}")
@@ -479,6 +479,8 @@ class Test(unittest.TestCase):
         args = []
         args.append("--uvfits=unittest_example1_band01.uvfits")
         args.append(f"--add_visi_noise")
+        args.append(f"--noise_numpy_seed=923487")
+        
         
         self.run_code_test_noise(args)
         
@@ -494,6 +496,7 @@ class Test(unittest.TestCase):
         args.append("--uvfits=unittest_example1_band01.uvfits")
         args.append(f"--visi_noise_int_time={int_time}")
         args.append(f"--visi_noise_freq_reso={freq_reso}")
+        args.append(f"--noise_numpy_seed=923487")
         
         self.run_code_test_noise(args, int_time, freq_reso)
         
@@ -629,7 +632,8 @@ class Test(unittest.TestCase):
         args = []
         args.append("--uvfits=unittest_example1_band01.uvfits")
         args.append(f"--cable_reflection_from_metafits={metafits}")
-        args.append(f"--cable_reflection_coeff_amp=0.05")
+        args.append(f"--cable_reflection_coeff_amp_min=0.002")
+        args.append(f"--cable_reflection_coeff_amp_max=0.01")
         
         self.run_code_test_reflections(args, metafits)
         

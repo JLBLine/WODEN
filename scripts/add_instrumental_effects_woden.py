@@ -63,11 +63,17 @@ def get_parser():
     reflec_group.add_argument('--cable_reflection_from_metafits', default=False,
         help='Given a metafits file with cable length information, add in '
              'cable reflections to the antenna gains. This will use the '
-             '--cable_reflection_coeff_amp to set the magnitude.')
+             '--cable_reflection_coeff_amp_min/cable_reflection_coeff_amp_max to set the magnitude.')
     
-    reflec_group.add_argument('--cable_reflection_coeff_amp', default=0.05,
+    reflec_group.add_argument('--cable_reflection_coeff_amp_min', default=0.002,
         type=float, help='Amplitude of the cable will be drawn from a uniform '
-            'distribution between 0 and this value. Default is 0.05.')
+            'distribution between `--cable_reflection_coeff_amp_min` and '
+            '`--cable_reflection_coeff_amp_max`. Default is 0.002. (based on FHD fits)')
+    
+    reflec_group.add_argument('--cable_reflection_coeff_amp_max', default=0.01,
+        type=float, help='Amplitude of the cable will be drawn from a uniform '
+            'distribution between `--cable_reflection_coeff_amp_min` and '
+            '`--cable_reflection_coeff_amp_max`. Default is 0.01. (based on FHD fits)')
 
     gain_group = parser.add_argument_group('ANTENNA (tile) GAIN EFFECTS')
     gain_group.add_argument('--ant_gain_amp_error', default=0, type=float,
@@ -414,7 +420,8 @@ def get_cable_delay(length, velocity_factor=0.81):
     return (2*length) / (speed_of_light.value * velocity_factor)
 
 def create_single_pol_reflections(freqs : np.ndarray,
-                                  cable_reflection_coeff_amp : float,
+                                  cable_reflection_coeff_amp_min : float,
+                                  cable_reflection_coeff_amp_max : float,
                                   delays : np.ndarray) -> np.ndarray:
     """Calculate the reflections caused by a set of cables with a
     given delays, assigns a random reflection coefficient amplitude
@@ -424,7 +431,9 @@ def create_single_pol_reflections(freqs : np.ndarray,
     ----------
     freqs : np.ndarray
         Frequencies to calculate the reflections at (Hz)
-    cable_reflection_coeff_amp : float
+    cable_reflection_coeff_amp_min : float
+        Minimum amplitude of the cable reflection coefficient.
+    cable_reflection_coeff_amp_max : float
         Maximum amplitude of the cable reflection coefficient.
     delays : np.ndarray
         Delays of the cable reflections (seconds)
@@ -436,7 +445,11 @@ def create_single_pol_reflections(freqs : np.ndarray,
         all delays and frequencies.
     """
     
-    reflection_coeffs = np.random.uniform(0, cable_reflection_coeff_amp, len(delays)) + 1j*np.random.uniform(0, cable_reflection_coeff_amp, len(delays))
+    reflection_coeffs = np.random.uniform(cable_reflection_coeff_amp_min, cable_reflection_coeff_amp_max, len(delays)) + 1j*np.zeros(len(delays))
+    
+    phases = np.random.uniform(0, np.pi, len(delays))
+    
+    reflection_coeffs *= np.exp(1j*phases)
     
     ftimesd = np.outer(delays, freqs)
     reflections = reflection_coeffs[:, np.newaxis]*np.exp(-2j * np.pi * ftimesd)
@@ -481,10 +494,14 @@ def create_cable_reflections(args : Namespace, uvfits : UVFITS) -> Tuple[np.ndar
     delays = get_cable_delay(cable_lengths)
     
     reflections_x = create_single_pol_reflections(uvfits.all_freqs,
-                                  args.cable_reflection_coeff_amp, delays)
+                                  args.cable_reflection_coeff_amp_min,
+                                  args.cable_reflection_coeff_amp_max,
+                                  delays)
     
     reflections_y = create_single_pol_reflections(uvfits.all_freqs,
-                                  args.cable_reflection_coeff_amp, delays)
+                                  args.cable_reflection_coeff_amp_min,
+                                  args.cable_reflection_coeff_amp_max,
+                                  delays)
     
     return reflections_x, reflections_y
 

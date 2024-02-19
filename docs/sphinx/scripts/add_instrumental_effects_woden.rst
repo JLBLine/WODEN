@@ -110,7 +110,9 @@ $
 \tau_i = \frac{2l_i}{0.81c},
 $
 
-where $l_i$ is the length of the cable connected to antenna $i$, and $c$ is the speed of light. The factor 0.81 comes from the velocity factor of the cable, which we again take from `Beardsley et al (2016)`_. The cable lengths are listed in the MWA `metafits` file, so `add_instrumental_effects_woden.py` reads them directly from there. The reflection coefficients are drawn from a uniform distribution between 0 and a maximum value set by ``--cable_reflection_coeff_amp``. Currently a random number assigned is to both the real and imaginary parts of $R_{0,i}$.
+where $l_i$ is the length of the cable connected to antenna $i$, and $c$ is the speed of light. The factor 0.81 comes from the velocity factor of the cable, which we again take from `Beardsley et al (2016)`_. The cable lengths are listed in the MWA `metafits` file, so `add_instrumental_effects_woden.py` reads them directly from there. The reflection coefficient amplitudes are drawn from a uniform distribution between ``--cable_reflection_coeff_amp_min=0.02`` and ``--cable_reflection_coeff_amp_max=0.01``. These default values are based one a set of fitted FHD cable reflection solutions, but can be changed by the user. A random phase offset between 0 and 180 degrees is added to the reflection coefficient. 
+
+.. warning:: Really, the reflection coefficient tied to the cable length, but I'm just chucking a random one on each tile for now. Still answers question of whether we can fit them with ``hyperdrive``, but ``FHD`` might average by cable type and then fit the reflections? Should the phase offset be the same for cable types?
 
 Applying these reflections to a simulation of a 1 Jy point source at zenith (so visibilities all of $1 + 0i$) allows us to test the applied reflections by Fourier transforming visibilities and checking the input delays:
 
