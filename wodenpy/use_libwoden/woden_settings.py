@@ -72,6 +72,7 @@ class Woden_Settings_Double(ctypes.Structure):
     :cvar POINTER(c_double) mjds:  Array to hold modified julian dates for all time centroids
     :cvar c_int do_autos:  Boolean of whether to simulate autos or not (0 False, 1 True)
     :cvar c_int do_QUV:  Boolean of whether to use Stokes Q,U,V (0 False, 1 True)
+    :cvar use_dipamps:  Boolean of whether to use dipole amplitudes, so have an individual beam per tile Q,U,V (0 False, 1 True)
     """
     
     _fields_ = [("lst_base", c_double),
@@ -115,7 +116,8 @@ class Woden_Settings_Double(ctypes.Structure):
                 ("latitudes", POINTER(c_double)),
                 ("mjds", POINTER(c_double)),
                 ("do_autos", c_int),
-                ("do_QUV", c_int)]
+                ("do_QUV", c_int),
+                ("use_dipamps", c_int)]
 
 ##TODO gotta be a way to set the float or double fields via some kind of
 ##variable instead of making two different classes
@@ -123,7 +125,7 @@ class Woden_Settings_Float(ctypes.Structure):
     """A class structured equivalently to a `visi_set` struct, used by 
     the C and CUDA code in libwoden_float.so
     
-        :cvar c_double lst_base:  Local sidereal time for first time step (radians)
+    :cvar c_double lst_base:  Local sidereal time for first time step (radians)
     :cvar c_double lst_obs_epoch_base:  Local sidereal time for first time step (radians) for the observation epoch (e.g. in 2020 for a 2020 obs)
     :cvar c_double ra0:  Right ascension of phase centre (radians)
     :cvar c_double dec0:  Declination of phase centre (radians)
@@ -165,6 +167,7 @@ class Woden_Settings_Float(ctypes.Structure):
     :cvar POINTER(c_double) mjds:  Array to hold modified julian dates for all time centroids
     :cvar c_int do_autos:  Boolean of whether to simulate autos or not (0 False, 1 True)
     :cvar c_int do_QUV:  Boolean of whether to use Stokes Q,U,V (0 False, 1 True)
+    :cvar use_dipamps:  Boolean of whether to use dipole amplitudes, so have an individual beam per tile Q,U,V (0 False, 1 True)
     """
     
     _fields_ = [("lst_base", c_double),
@@ -208,7 +211,8 @@ class Woden_Settings_Float(ctypes.Structure):
                 ("latitudes", POINTER(c_double)),
                 ("mjds", POINTER(c_double)),
                 ("do_autos", c_int),
-                ("do_QUV", c_int)]
+                ("do_QUV", c_int),
+                ("use_dipamps", c_int)]
     
 def create_woden_settings(args : argparse.Namespace,
                           jd_date : float, lst : float) -> Union[Woden_Settings_Float, Woden_Settings_Double]:

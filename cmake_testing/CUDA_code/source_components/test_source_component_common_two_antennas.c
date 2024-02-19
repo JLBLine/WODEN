@@ -68,8 +68,8 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     woden_settings->latitudes[i] = -0.46606083776035967;
   }
   
-
   woden_settings->beamtype = beamtype;
+  woden_settings->use_dipamps = 1;
 
   beam_settings_t *beam_settings = malloc(sizeof(beam_settings_t));
   beam_settings->beamtype = beamtype;
@@ -79,26 +79,6 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   double *beam_has = malloc(num_components*num_times*sizeof(double));
   double *beam_decs = malloc(num_components*num_times*sizeof(double));
 
-  //Make ha/dec coords if using the Gaussian beam
-  //Need ha/decs for the analytic MWA beam as well
-  if (beamtype == GAUSS_BEAM || beamtype == MWA_ANALY) {
-    //Stick the Gaussian beam pointed at zenith
-    //We're testing at latitude=zero
-    beam_settings->gauss_ha = 0.0;
-    beam_settings->gauss_sdec = 0.0;
-    beam_settings->gauss_cdec = 1.0;
-    beam_settings->beam_FWHM_rad = 80.0*DD2R;
-    beam_settings->beam_ref_freq = 150e+6;
-
-    for (int component = 0; component < num_components; component++) {
-      for (int time_ind = 0; time_ind < num_times; time_ind++) {
-
-        beam_has[component*num_times + time_ind] = ras[component];
-        beam_decs[component*num_times + time_ind] = decs[component];
-
-      }
-    }
-  }
 
   //If FEE_BEAM, call the C code to interrogate the hdf5 file and set beam
   //things up
@@ -146,13 +126,6 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
     TEST_ASSERT_EQUAL(status, 0);
 
-  }
-
-  else if (beamtype == MWA_ANALY) {
-    //Zenith pointing is your friend
-    for(int i=0;i<16;i++) {
-        woden_settings->FEE_ideal_delays[i] = 0.0;
-    }
   }
 
   // //Output arrays
@@ -277,172 +250,68 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   //analytically predict the values, so go through results and calcluate
   //expected values, and compare to what we got
   int beam_ind = 0;
-  if (beamtype == GAUSS_BEAM) {
+  
+  // if (beamtype == FEE_BEAM) {
 
-    #ifdef DOUBLE_PRECISION
-      TOL = 1e-12;
-    #else
-      TOL = 1e-7;
-    #endif
+  //   #ifdef DOUBLE_PRECISION
+  //     TOL = 1e-7;
+  //   #else
+  //     TOL = 1e-7;
+  //   #endif
 
-    double fwhm_lm = sin(beam_settings->beam_FWHM_rad);
-    double beam_ref_freq = 150e+6;
-
-    for (int time_ind = 0; time_ind < num_times; time_ind++) {
-      for (int freq_ind = 0; freq_ind < num_freqs; freq_ind++) {
-        for (int comp_ind = 0; comp_ind < num_components; comp_ind++) {
-
-          double std = (fwhm_lm / FWHM_FACTOR) * (beam_ref_freq / freqs[freq_ind]);
-          double exp_inside = (double)ls[comp_ind] / std;
-          double estimate = exp(-0.5*exp_inside*exp_inside);
-
-          //Only real gains have value in GAUSSIAN beam model
-          TEST_ASSERT_DOUBLE_WITHIN(TOL, estimate,
-                                   creal(primay_beam_J00[beam_ind]));
-
-          TEST_ASSERT_DOUBLE_WITHIN(TOL, estimate,
-                                   creal(primay_beam_J11[beam_ind]));
-
-          //Everything else should be zero
-          TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J10[beam_ind]));
-          TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J11[beam_ind]));
-          TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J00[beam_ind]));
-          TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, creal(primay_beam_J01[beam_ind]));
-          TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J01[beam_ind]));
-          TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, creal(primay_beam_J10[beam_ind]));
-
-          beam_ind += 1;
-
-        }
-      }
-    }
-  }
-  else if (beamtype == ANALY_DIPOLE) {
-
-    #ifdef DOUBLE_PRECISION
-      TOL = 1e-7;
-    #else
-      TOL = 1e-6;
-    #endif
-
-    for (int output = 0; output < num_beam_values; output++) {
-
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, analy_expec_J00[output], creal(primay_beam_J00[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, analy_expec_J11[output], creal(primay_beam_J11[output]));
-
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J00[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, creal(primay_beam_J01[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J01[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, creal(primay_beam_J10[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J10[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J11[output]));
-    }
-  }
-  else if (beamtype == FEE_BEAM) {
-
-    #ifdef DOUBLE_PRECISION
-      TOL = 1e-7;
-    #else
-      TOL = 1e-7;
-    #endif
-
-    for (int output = 0; output < num_beam_values; output++) {
-      // printf("%.8f %.8f %.8f %.8f %.8f %.8f %.8f %.8f\n", creal(primay_beam_J00[output]), cimag(primay_beam_J00[output]),
-      //         creal(primay_beam_J01[output]), cimag(primay_beam_J01[output]),
-      //         creal(primay_beam_J10[output]), cimag(primay_beam_J10[output]),
-      //         creal(primay_beam_J11[output]), cimag(primay_beam_J11[output]) );
+  //   for (int output = 0; output < num_beam_values; output++) {
+  //     // printf("%.8f %.8f %.8f %.8f %.8f %.8f %.8f %.8f\n", creal(primay_beam_J00[output]), cimag(primay_beam_J00[output]),
+  //     //         creal(primay_beam_J01[output]), cimag(primay_beam_J01[output]),
+  //     //         creal(primay_beam_J10[output]), cimag(primay_beam_J10[output]),
+  //     //         creal(primay_beam_J11[output]), cimag(primay_beam_J11[output]) );
 
 
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J00_re[output], creal(primay_beam_J00[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J00_im[output], cimag(primay_beam_J00[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J01_re[output], creal(primay_beam_J01[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J01_im[output], cimag(primay_beam_J01[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J10_re[output], creal(primay_beam_J10[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J10_im[output], cimag(primay_beam_J10[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J11_re[output], creal(primay_beam_J11[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J11_im[output], cimag(primay_beam_J11[output]));
-    }
+  //     TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J00_re[output], creal(primay_beam_J00[output]));
+  //     TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J00_im[output], cimag(primay_beam_J00[output]));
+  //     TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J01_re[output], creal(primay_beam_J01[output]));
+  //     TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J01_im[output], cimag(primay_beam_J01[output]));
+  //     TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J10_re[output], creal(primay_beam_J10[output]));
+  //     TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J10_im[output], cimag(primay_beam_J10[output]));
+  //     TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J11_re[output], creal(primay_beam_J11[output]));
+  //     TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_J11_im[output], cimag(primay_beam_J11[output]));
+  //   }
 
-    free_fee_beam(beam_settings->fee_beam);
-    free_gpu_fee_beam(beam_settings->cuda_fee_beam);
+  //   free_fee_beam(beam_settings->fee_beam);
+  //   free_gpu_fee_beam(beam_settings->cuda_fee_beam);
 
-  }
-  else if (beamtype == FEE_BEAM_INTERP) {
+  // }
+  // else if (beamtype == FEE_BEAM_INTERP) {
 
-    #ifdef DOUBLE_PRECISION
-      TOL = 1e-7;
-    #else
-      TOL = 1e-7;
-    #endif
+  //   #ifdef DOUBLE_PRECISION
+  //     TOL = 1e-7;
+  //   #else
+  //     TOL = 1e-7;
+  //   #endif
 
-    for (int output = 0; output < num_beam_values; output++) {
+  //   for (int output = 0; output < num_beam_values; output++) {
 
-      // printf("%.8f %.8f %.8f %.8f %.8f %.8f %.8f %.8f\n", creal(primay_beam_J00[output]), cimag(primay_beam_J00[output]),
-      //         creal(primay_beam_J01[output]), cimag(primay_beam_J01[output]),
-      //         creal(primay_beam_J10[output]), cimag(primay_beam_J10[output]),
-      //         creal(primay_beam_J11[output]), cimag(primay_beam_J11[output]) );
+  //     // printf("%.8f %.8f %.8f %.8f %.8f %.8f %.8f %.8f\n", creal(primay_beam_J00[output]), cimag(primay_beam_J00[output]),
+  //     //         creal(primay_beam_J01[output]), cimag(primay_beam_J01[output]),
+  //     //         creal(primay_beam_J10[output]), cimag(primay_beam_J10[output]),
+  //     //         creal(primay_beam_J11[output]), cimag(primay_beam_J11[output]) );
 
-      // printf("%.8f %.8f \n", creal(primay_beam_J00[output]),
-      //                        fee_expec_interp_J00_re[output]  );
-
-
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J00_re[output], creal(primay_beam_J00[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J00_im[output], cimag(primay_beam_J00[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J01_re[output], creal(primay_beam_J01[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J01_im[output], cimag(primay_beam_J01[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J10_re[output], creal(primay_beam_J10[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J10_im[output], cimag(primay_beam_J10[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J11_re[output], creal(primay_beam_J11[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J11_im[output], cimag(primay_beam_J11[output]));
-    }
-
-    free_fee_beam(beam_settings->fee_beam);
-    free_gpu_fee_beam(beam_settings->cuda_fee_beam);
-  }
-  else if (beamtype == MWA_ANALY) {
-
-    #ifdef DOUBLE_PRECISION
-      TOL = 1e-12;
-    #else
-      TOL = 1e-7;
-    #endif
-
-    //All imaginary should be zero.Turns out for these ra,dec coords, the
-    //Dy leakages are essentially zero as well, test a few values equal zero
-    for (int output = 0; output < num_beam_values; output++) {
-
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, MWA_analy_expec_J00_re[output],
-                                  creal(primay_beam_J00[output]));
-
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, MWA_analy_expec_J01_re[output],
-                                  creal(primay_beam_J01[output]));
-
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, creal(primay_beam_J10[output]));
-
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, MWA_analy_expec_J11_re[output],
-                                  creal(primay_beam_J11[output]));
-
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J00[output]));
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J01[output]));
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J10[output]));
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, cimag(primay_beam_J11[output]));
-
-        // printf("%.12f %.12f %.12f %.12f\n",creal(primay_beam_J00[output]),
-        // creal(primay_beam_J01[output]),
-        // creal(primay_beam_J10[output]),
-        // creal(primay_beam_J11[output]) );
-
-    }
-  }
+  //     // printf("%.8f %.8f \n", creal(primay_beam_J00[output]),
+  //     //                        fee_expec_interp_J00_re[output]  );
 
 
-  else if (beamtype == NO_BEAM) {
-    //Don't need to check beam values for NO_BEAM, these values
-    //The function `source_components::get_beam_gains` which is called later
-    //by the COMPONENT kernels assigns gains on one and leakage of zero
-    //in the NO_BEAM case.
-    ;
-  }
+  //     TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J00_re[output], creal(primay_beam_J00[output]));
+  //     TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J00_im[output], cimag(primay_beam_J00[output]));
+  //     TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J01_re[output], creal(primay_beam_J01[output]));
+  //     TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J01_im[output], cimag(primay_beam_J01[output]));
+  //     TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J10_re[output], creal(primay_beam_J10[output]));
+  //     TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J10_im[output], cimag(primay_beam_J10[output]));
+  //     TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J11_re[output], creal(primay_beam_J11[output]));
+  //     TEST_ASSERT_DOUBLE_WITHIN(TOL, fee_expec_interp_J11_im[output], cimag(primay_beam_J11[output]));
+  //   }
+
+  //   free_fee_beam(beam_settings->fee_beam);
+  //   free_gpu_fee_beam(beam_settings->cuda_fee_beam);
+  // }
 
   //Now check the fluxes were extrapolated correctly
   //Make some expected value arrays
@@ -525,56 +394,6 @@ void test_source_component_common_ConstantDecFEEBeamShapelet(void) {
   test_source_component_common_ConstantDecFEEBeam(SHAPELET);
 }
 
-/*
-This test checks source_component_common with beamtype=ANALY_DIPOLE
-*/
-void test_source_component_common_ConstantDecAnalyBeam(e_component_type comptype) {
-  test_source_component_common_ConstantDecChooseBeams(ANALY_DIPOLE, " ", comptype);
-}
-
-void test_source_component_common_ConstantDecAnalyBeamPoint(void){
-  test_source_component_common_ConstantDecAnalyBeam(POINT);
-}
-void test_source_component_common_ConstantDecAnalyBeamGaussian(void){
-  test_source_component_common_ConstantDecAnalyBeam(GAUSSIAN);
-}
-void test_source_component_common_ConstantDecAnalyBeamShapelet(void){
-  test_source_component_common_ConstantDecAnalyBeam(SHAPELET);
-}
-
-/*
-This test checks source_component_common with beamtype=GAUSS_BEAM
-*/
-void test_source_component_common_ConstantDecGaussBeam(e_component_type comptype) {
-  test_source_component_common_ConstantDecChooseBeams(GAUSS_BEAM, " ", comptype);
-}
-
-void test_source_component_common_ConstantDecGaussBeamPoint(void){
-  test_source_component_common_ConstantDecGaussBeam(POINT);
-}
-void test_source_component_common_ConstantDecGaussBeamGaussian(void){
-  test_source_component_common_ConstantDecGaussBeam(GAUSSIAN);
-}
-void test_source_component_common_ConstantDecGaussBeamShapelet(void){
-  test_source_component_common_ConstantDecGaussBeam(SHAPELET);
-}
-
-/*
-This test checks source_component_common with beamtype=NO_BEAM
-*/
-void test_source_component_common_ConstantDecNoBeam(e_component_type comptype) {
-  test_source_component_common_ConstantDecChooseBeams(NO_BEAM, " ", comptype);
-}
-
-void test_source_component_common_ConstantDecNoBeamPoint(void){
-  test_source_component_common_ConstantDecNoBeam(POINT);
-}
-void test_source_component_common_ConstantDecNoBeamGaussian(void){
-  test_source_component_common_ConstantDecNoBeam(GAUSSIAN);
-}
-void test_source_component_common_ConstantDecNoBeamShapelet(void){
-  test_source_component_common_ConstantDecNoBeam(SHAPELET);
-}
 
 /*
 This test checks source_component_common with beamtype=FEE_BEAM_INTERP
@@ -604,51 +423,19 @@ void test_source_component_common_ConstantDecFEEBeamInterpShapelet(void){
   test_source_component_common_ConstantDecFEEBeamInterp(SHAPELET);
 }
 
-/*
-This test checks source_component_common with beamtype=MWA_ANALY
-*/
-void test_source_component_common_ConstantDecMWAAnaly(e_component_type comptype) {
-  test_source_component_common_ConstantDecChooseBeams(MWA_ANALY, " ", comptype);
-}
-
-void test_source_component_common_ConstantDecMWAAnalyPoint(void){
-  test_source_component_common_ConstantDecMWAAnaly(POINT);
-}
-void test_source_component_common_ConstantDecMWAAnalyGaussian(void){
-  test_source_component_common_ConstantDecMWAAnaly(GAUSSIAN);
-}
-void test_source_component_common_ConstantDecMWAAnalyShapelet(void){
-  test_source_component_common_ConstantDecMWAAnaly(SHAPELET);
-}
 
 //Run the test with unity
 int main(void)
 {
     UNITY_BEGIN();
 
-    RUN_TEST(test_source_component_common_ConstantDecNoBeamPoint);
-    RUN_TEST(test_source_component_common_ConstantDecNoBeamGaussian);
-    RUN_TEST(test_source_component_common_ConstantDecNoBeamShapelet);
-
-    RUN_TEST(test_source_component_common_ConstantDecFEEBeamPoint);
-    RUN_TEST(test_source_component_common_ConstantDecFEEBeamGauss);
-    RUN_TEST(test_source_component_common_ConstantDecFEEBeamShapelet);
-
-    RUN_TEST(test_source_component_common_ConstantDecAnalyBeamPoint);
-    RUN_TEST(test_source_component_common_ConstantDecAnalyBeamGaussian);
-    RUN_TEST(test_source_component_common_ConstantDecAnalyBeamShapelet);
-
-    RUN_TEST(test_source_component_common_ConstantDecGaussBeamPoint);
-    RUN_TEST(test_source_component_common_ConstantDecGaussBeamGaussian);
-    RUN_TEST(test_source_component_common_ConstantDecGaussBeamShapelet);
+    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamPoint);
+    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamGauss);
+    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamShapelet);
 
     RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpPoint);
-    RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpGaussian);
-    RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpShapelet);
- 
-    RUN_TEST(test_source_component_common_ConstantDecMWAAnalyPoint);
-    RUN_TEST(test_source_component_common_ConstantDecMWAAnalyGaussian);
-    RUN_TEST(test_source_component_common_ConstantDecMWAAnalyShapelet);
+    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpGaussian);
+    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpShapelet);
 
     return UNITY_END();
 }

@@ -242,7 +242,7 @@ def create_uvfits(v_container=None,freq_cent=None,
     IAU_order : Boolean
         By default, the visibilities out of the CUDA/C code have 
         XX = North-South, which is the the IAU ordering. Turns out most people
-        want `uvfits` with XX = East-West. So when I`AU_order == True`, do
+        want `uvfits` with XX = East-West. So when `IAU_order == True`, do
         not reorder the input data, and add a header value of `IAUORDER` = True.
         If `IAU_order == False`, then the XX is flipped to be East-West by
         reordering the data in 
