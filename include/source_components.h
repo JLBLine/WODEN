@@ -6,7 +6,8 @@
 */
 
 /*!
-A struct to contain primary beam values for a give COMPONENT
+A struct to contain primary beam values for a give COMPONENT. `d_gxs,d_Dxs,d_Dys,d_gys`
+should be used when all antennas have the same primary beam, and `d_gxs_ants,d_Dxs_ants,d_Dys_ants,d_gys_ants` used when all primary beams are different.
 */
 typedef struct _d_beam_gains_t {
 
@@ -18,6 +19,15 @@ typedef struct _d_beam_gains_t {
   for all directions, frequencies, and times for these COMPONENTS*/
   cuUserComplex *d_gys = NULL; /*!< Device copy of East-West Beam gain values
   for all directions, frequencies, and times for these COMPONENTS*/
+
+  cuUserComplex *d_gxs_ants = NULL; /*!< Device copy of North-South Beam gain values
+  for all directions, frequencies, times, and antennas for these COMPONENTS*/
+  cuUserComplex *d_Dxs_ants = NULL; /*!< Device copy of North-South Beam leakage values
+  for all directions, frequencies, times, and antennas for these COMPONENTS*/
+  cuUserComplex *d_Dys_ants = NULL; /*!< Device copy of East-West Beam leakage values
+  for all directions, frequencies, times, and antennas for these COMPONENTS*/
+  cuUserComplex *d_gys_ants = NULL; /*!< Device copy of East-West Beam gain values
+  for all directions, frequencies, times, and antennas for these COMPONENTS*/
 
 } d_beam_gains_t;
 

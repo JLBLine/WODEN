@@ -109,6 +109,18 @@ typedef struct _components_t {
   user_precision_complex_t *gys; /*!< East-West Beam gain values for all directions,
   frequencies, and times for these COMPONENTS*/
 
+  /*
+  Things to hold beam gain values when you have different beams per antenna
+  */
+  user_precision_complex_t *gxs_ants; /*!< North-South Beam gain values for all directions,
+  frequencies, times, and antennas for these COMPONENTS*/
+  user_precision_complex_t *Dxs_ants; /*!< North-South Beam leakage values for all directions,
+  frequencies, times, and antennas for these COMPONENTS*/
+  user_precision_complex_t *Dys_ants; /*!< East-West Beam leakage values for all directions,
+  frequencies, times, and antennas for these COMPONENTS*/
+  user_precision_complex_t *gys_ants; /*!< East-West Beam gain values for all directions,
+  frequencies, times, and antennas for these COMPONENTS*/
+
   //Leave off the d_ from these device values, as the components_t struct
   //itself will have the d_ label if doing things on the GPU
   double *ls; /*!< Device memory l cosine direction coords for these COMPONENTs*/
@@ -291,6 +303,8 @@ typedef struct _woden_settings_t {
   double *mjds; /*!< Array to hold modified julian dates for all time centroids*/
   int do_autos; /*!< Boolean of whether to simulate autos or not (0 False, 1 True)*/
   int do_QUV; /*!< Boolean of whether to use Stokes Q,U,V*/
+
+  int use_dipamps; /*!< Boolean of whether to use dipole amplitudes, so have an individual beam per tile*/
 
 } woden_settings_t;
 

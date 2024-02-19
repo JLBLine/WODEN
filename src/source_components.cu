@@ -96,8 +96,8 @@ __device__ void apply_beam_gains_stokesIQUV(cuUserComplex g1x, cuUserComplex D1x
 
 __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
            int num_baselines, int num_components, int num_times, int beamtype,
-           cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
-           cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
+           cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
+           cuUserComplex *d_Dys, cuUserComplex *d_gys,
            cuUserComplex * g1x, cuUserComplex * D1x,
            cuUserComplex * D1y, cuUserComplex * g1y,
            cuUserComplex * g2x, cuUserComplex * D2x,
@@ -121,19 +121,19 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
 
   //Get gains if using a beam
   else {
-    * g1x = d_primay_beam_J00[beam_ind];
-    * g2x = d_primay_beam_J00[beam_ind];
-    * g1y = d_primay_beam_J11[beam_ind];
-    * g2y = d_primay_beam_J11[beam_ind];
+    * g1x = d_gxs[beam_ind];
+    * g2x = d_gxs[beam_ind];
+    * g1y = d_gys[beam_ind];
+    * g2y = d_gys[beam_ind];
 
   }
 
   //Only MWA models have leakge terms at the moment
   if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY) {
-    * D1x = d_primay_beam_J01[beam_ind];
-    * D2x = d_primay_beam_J01[beam_ind];
-    * D1y = d_primay_beam_J10[beam_ind];
-    * D2y = d_primay_beam_J10[beam_ind];
+    * D1x = d_Dxs[beam_ind];
+    * D2x = d_Dxs[beam_ind];
+    * D1y = d_Dys[beam_ind];
+    * D2y = d_Dys[beam_ind];
   }
   // Set leakage to zero if no leakage
   else {
@@ -143,6 +143,66 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
     * D2y = make_cuUserComplex(0.0, 0.0);
   }
 } //end __device__ get_beam_gains
+
+//TODO this needs to have an extra dimension over num_ants
+__device__ void get_beam_gains_two_antennas(int iBaseline, int iComponent, int num_freqs,
+           int num_baselines, int num_components, int num_times, int beamtype,
+           cuUserComplex *d_gxs_ants, cuUserComplex *d_Dxs_ants,
+           cuUserComplex *d_Dys_ants, cuUserComplex *d_gys_ants,
+           int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map,
+           cuUserComplex * g1x, cuUserComplex * D1x,
+           cuUserComplex * D1y, cuUserComplex * g1y,
+           cuUserComplex * g2x, cuUserComplex * D2x,
+           cuUserComplex * D2y, cuUserComplex * g2y){
+
+  int time_ind = 0;
+  int freq_ind = 0;
+
+  time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
+  freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+  // beam_ind = num_freqs*time_ind*num_components + (num_components*freq_ind) + iComponent;
+
+  int baseline_ind = iBaseline % num_baselines;
+
+  int ant1_ind = d_ant1_to_baseline_map[baseline_ind];
+  int ant2_ind = d_ant2_to_baseline_map[baseline_ind];
+
+  int beam1 = ant1_ind*num_freqs*num_components*num_times + num_freqs*time_ind*num_components + (num_components*freq_ind) + iComponent;
+
+  int beam2 = ant2_ind*num_freqs*num_components*num_times + num_freqs*time_ind*num_components + (num_components*freq_ind) + iComponent;
+
+    //Set gains to one if no beam
+  if (beamtype == NO_BEAM) {
+    * g1x = make_cuUserComplex(1.0, 0.0);
+    * g2x = make_cuUserComplex(1.0, 0.0);
+    * g1y = make_cuUserComplex(1.0, 0.0);
+    * g2y = make_cuUserComplex(1.0, 0.0);
+  }
+
+  //Get gains if using a beam
+  else {
+    * g1x = d_gxs_ants[beam1];
+    * g2x = d_gxs_ants[beam2];
+    * g1y = d_gys_ants[beam1];
+    * g2y = d_gys_ants[beam2];
+
+  }
+
+  //Only MWA models have leakge terms at the moment
+  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY) {
+    * D1x = d_Dxs_ants[beam1];
+    * D2x = d_Dxs_ants[beam2];
+    * D1y = d_Dys_ants[beam1];
+    * D2y = d_Dys_ants[beam2];
+  }
+  // Set leakage to zero if no leakage
+  else {
+    * D1x = make_cuUserComplex(0.0, 0.0);
+    * D2x = make_cuUserComplex(0.0, 0.0);
+    * D1y = make_cuUserComplex(0.0, 0.0);
+    * D2y = make_cuUserComplex(0.0, 0.0);
+  }
+} //end __device__ get_beam_gains_two_antennas
 
 __device__ void apply_beam_gains_stokesI(cuUserComplex g1x, cuUserComplex D1x,
           cuUserComplex D1y, cuUserComplex g1y,
@@ -181,8 +241,8 @@ __device__ void apply_beam_gains_stokesI(cuUserComplex g1x, cuUserComplex D1x,
 
 __device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent, int num_freqs,
     int num_baselines, int num_components, int num_times, int beamtype,
-    cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
-    cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
+    cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
+    cuUserComplex *d_Dys, cuUserComplex *d_gys,
     cuUserComplex visi_component,
     user_precision_t flux_I, user_precision_t flux_Q,
     user_precision_t flux_U, user_precision_t flux_V,
@@ -202,8 +262,8 @@ __device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent, int n
 
     get_beam_gains(iBaseline, iComponent, num_freqs,
                num_baselines, num_components, num_times, beamtype,
-               d_primay_beam_J00, d_primay_beam_J01,
-               d_primay_beam_J10, d_primay_beam_J11,
+               d_gxs, d_Dxs,
+               d_Dys, d_gys,
                &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
 
     cuUserComplex visi_XX;
@@ -230,8 +290,8 @@ __device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent, int n
 
 __device__ void update_sum_visis_stokesI(int iBaseline, int iComponent, int num_freqs,
     int num_baselines, int num_components, int num_times, int beamtype,
-    cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
-    cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
+    cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
+    cuUserComplex *d_Dys, cuUserComplex *d_gys,
     cuUserComplex visi_component,
     user_precision_t flux_I,
     user_precision_t *d_sum_visi_XX_real, user_precision_t *d_sum_visi_XX_imag,
@@ -250,8 +310,8 @@ __device__ void update_sum_visis_stokesI(int iBaseline, int iComponent, int num_
 
     get_beam_gains(iBaseline, iComponent, num_freqs,
                num_baselines, num_components, num_times, beamtype,
-               d_primay_beam_J00, d_primay_beam_J01,
-               d_primay_beam_J10, d_primay_beam_J11,
+               d_gxs, d_Dxs,
+               d_Dys, d_gys,
                &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
 
     cuUserComplex visi_XX;
@@ -1916,8 +1976,8 @@ extern "C" void test_kern_apply_beam_gains(int num_gains, user_precision_complex
 
 __global__ void kern_get_beam_gains(int num_components, int num_baselines,
            int num_freqs, int num_cross, int num_times, int beamtype,
-           cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
-           cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
+           cuUserComplex *d_g1xs, cuUserComplex *d_D1xs,
+           cuUserComplex *d_D1ys, cuUserComplex *d_g1ys,
            cuUserComplex *d_recov_g1x, cuUserComplex *d_recov_D1x,
            cuUserComplex *d_recov_D1y, cuUserComplex *d_recov_g1y,
            cuUserComplex *d_recov_g2x, cuUserComplex *d_recov_D2x,
@@ -1940,8 +2000,8 @@ __global__ void kern_get_beam_gains(int num_components, int num_baselines,
 
       get_beam_gains(iBaseline, iComponent, num_freqs,
                  num_baselines, num_components, num_times, beamtype,
-                 d_primay_beam_J00, d_primay_beam_J01,
-                 d_primay_beam_J10, d_primay_beam_J11,
+                 d_g1xs, d_D1xs,
+                 d_D1ys, d_g1ys,
                  &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
 
       int out_ind = num_cross*iComponent + iBaseline;
@@ -1977,10 +2037,10 @@ extern "C" void test_kern_get_beam_gains(int num_freqs, int num_cross,
   user_precision_complex_t *d_recover_D2y = NULL;
   user_precision_complex_t *d_recover_g2y = NULL;
 
-  user_precision_complex_t *d_primay_beam_J00 = NULL;
-  user_precision_complex_t *d_primay_beam_J01 = NULL;
-  user_precision_complex_t *d_primay_beam_J10 = NULL;
-  user_precision_complex_t *d_primay_beam_J11 = NULL;
+  user_precision_complex_t *d_g1xs = NULL;
+  user_precision_complex_t *d_D1xs = NULL;
+  user_precision_complex_t *d_D1ys = NULL;
+  user_precision_complex_t *d_g1ys = NULL;
 
   cudaErrorCheckCall( cudaMalloc( (void**)&d_recover_g1x, num_components*num_cross*sizeof(user_precision_complex_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_recover_D1x, num_components*num_cross*sizeof(user_precision_complex_t) ));
@@ -1991,15 +2051,15 @@ extern "C" void test_kern_get_beam_gains(int num_freqs, int num_cross,
   cudaErrorCheckCall( cudaMalloc( (void**)&d_recover_D2y, num_components*num_cross*sizeof(user_precision_complex_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_recover_g2y, num_components*num_cross*sizeof(user_precision_complex_t) ));
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J00, num_freqs*num_times*num_components*sizeof(user_precision_complex_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01, num_freqs*num_times*num_components*sizeof(user_precision_complex_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J10, num_freqs*num_times*num_components*sizeof(user_precision_complex_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J11, num_freqs*num_times*num_components*sizeof(user_precision_complex_t) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_g1xs, num_freqs*num_times*num_components*sizeof(user_precision_complex_t) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_D1xs, num_freqs*num_times*num_components*sizeof(user_precision_complex_t) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_D1ys, num_freqs*num_times*num_components*sizeof(user_precision_complex_t) ));
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_g1ys, num_freqs*num_times*num_components*sizeof(user_precision_complex_t) ));
 
-  cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J00, primay_beam_J00, num_freqs*num_times*num_components*sizeof(user_precision_complex_t), cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J01, primay_beam_J01, num_freqs*num_times*num_components*sizeof(user_precision_complex_t), cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J10, primay_beam_J10, num_freqs*num_times*num_components*sizeof(user_precision_complex_t), cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J11, primay_beam_J11, num_freqs*num_times*num_components*sizeof(user_precision_complex_t), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_g1xs, primay_beam_J00, num_freqs*num_times*num_components*sizeof(user_precision_complex_t), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_D1xs, primay_beam_J01, num_freqs*num_times*num_components*sizeof(user_precision_complex_t), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_D1ys, primay_beam_J10, num_freqs*num_times*num_components*sizeof(user_precision_complex_t), cudaMemcpyHostToDevice ));
+  cudaErrorCheckCall( cudaMemcpy(d_g1ys, primay_beam_J11, num_freqs*num_times*num_components*sizeof(user_precision_complex_t), cudaMemcpyHostToDevice ));
 
   dim3 grid, threads;
 
@@ -2010,10 +2070,10 @@ extern "C" void test_kern_get_beam_gains(int num_freqs, int num_cross,
                       kern_get_beam_gains, grid, threads,
                       num_components, num_baselines,
                       num_freqs, num_cross, num_times, beamtype,
-                      (cuUserComplex *)d_primay_beam_J00,
-                      (cuUserComplex *)d_primay_beam_J01,
-                      (cuUserComplex *)d_primay_beam_J10,
-                      (cuUserComplex *)d_primay_beam_J11,
+                      (cuUserComplex *)d_g1xs,
+                      (cuUserComplex *)d_D1xs,
+                      (cuUserComplex *)d_D1ys,
+                      (cuUserComplex *)d_g1ys,
                       (cuUserComplex *)d_recover_g1x, (cuUserComplex *)d_recover_D1x,
                       (cuUserComplex *)d_recover_D1y, (cuUserComplex *)d_recover_g1y,
                       (cuUserComplex *)d_recover_g2x, (cuUserComplex *)d_recover_D2x,
@@ -2037,17 +2097,17 @@ extern "C" void test_kern_get_beam_gains(int num_freqs, int num_cross,
   cudaErrorCheckCall( cudaFree( d_recover_D2y ) );
   cudaErrorCheckCall( cudaFree( d_recover_g2y ) );
 
-  cudaErrorCheckCall( cudaFree( d_primay_beam_J00 ) );
-  cudaErrorCheckCall( cudaFree( d_primay_beam_J01 ) );
-  cudaErrorCheckCall( cudaFree( d_primay_beam_J10 ) );
-  cudaErrorCheckCall( cudaFree( d_primay_beam_J11 ) );
+  cudaErrorCheckCall( cudaFree( d_g1xs ) );
+  cudaErrorCheckCall( cudaFree( d_D1xs ) );
+  cudaErrorCheckCall( cudaFree( d_D1ys ) );
+  cudaErrorCheckCall( cudaFree( d_g1ys ) );
 
 }
 
 __global__ void kern_update_sum_visis_stokesIQUV(int num_freqs,
      int num_baselines, int num_components, int num_times, int beamtype,
-     cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
-     cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
+     cuUserComplex *d_g1xs, cuUserComplex *d_D1xs,
+     cuUserComplex *d_D1ys, cuUserComplex *d_g1ys,
      cuUserComplex *d_visi_components,
      user_precision_t *d_flux_I, user_precision_t *d_flux_Q,
      user_precision_t *d_flux_U, user_precision_t *d_flux_V,
@@ -2071,8 +2131,8 @@ __global__ void kern_update_sum_visis_stokesIQUV(int num_freqs,
 
       update_sum_visis_stokesIQUV(iBaseline, iComponent, num_freqs,
              num_baselines, num_components, num_times, beamtype,
-             d_primay_beam_J00, d_primay_beam_J01,
-             d_primay_beam_J10, d_primay_beam_J11,
+             d_g1xs, d_D1xs,
+             d_D1ys, d_g1ys,
              d_visi_components[iBaseline],
              d_flux_I[flux_ind], d_flux_Q[flux_ind],
              d_flux_U[flux_ind], d_flux_V[flux_ind],
@@ -2099,33 +2159,33 @@ extern "C" void test_kern_update_sum_visis(int num_freqs, int num_cross,
           user_precision_t *sum_visi_YX_real, user_precision_t *sum_visi_YX_imag,
           user_precision_t *sum_visi_YY_real, user_precision_t *sum_visi_YY_imag){
 
-  user_precision_complex_t *d_primay_beam_J00 = NULL;
-  user_precision_complex_t *d_primay_beam_J01 = NULL;
-  user_precision_complex_t *d_primay_beam_J10 = NULL;
-  user_precision_complex_t *d_primay_beam_J11 = NULL;
+  user_precision_complex_t *d_g1xs = NULL;
+  user_precision_complex_t *d_D1xs = NULL;
+  user_precision_complex_t *d_D1ys = NULL;
+  user_precision_complex_t *d_g1ys = NULL;
   user_precision_complex_t *d_visi_components = NULL;
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J00,
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_g1xs,
                     num_components*num_times*num_freqs*sizeof(user_precision_complex_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J01,
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_D1xs,
                     num_components*num_times*num_freqs*sizeof(user_precision_complex_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J10,
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_D1ys,
                     num_components*num_times*num_freqs*sizeof(user_precision_complex_t) ));
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_primay_beam_J11,
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_g1ys,
                     num_components*num_times*num_freqs*sizeof(user_precision_complex_t) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_visi_components,
                     num_cross*sizeof(user_precision_complex_t) ));
 
-  cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J00, primay_beam_J00,
+  cudaErrorCheckCall( cudaMemcpy(d_g1xs, primay_beam_J00,
             num_components*num_times*num_freqs*sizeof(user_precision_complex_t),
             cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J01, primay_beam_J01,
+  cudaErrorCheckCall( cudaMemcpy(d_D1xs, primay_beam_J01,
             num_components*num_times*num_freqs*sizeof(user_precision_complex_t),
             cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J10, primay_beam_J10,
+  cudaErrorCheckCall( cudaMemcpy(d_D1ys, primay_beam_J10,
             num_components*num_times*num_freqs*sizeof(user_precision_complex_t),
             cudaMemcpyHostToDevice ));
-  cudaErrorCheckCall( cudaMemcpy(d_primay_beam_J11, primay_beam_J11,
+  cudaErrorCheckCall( cudaMemcpy(d_g1ys, primay_beam_J11,
             num_components*num_times*num_freqs*sizeof(user_precision_complex_t),
             cudaMemcpyHostToDevice ));
   cudaErrorCheckCall( cudaMemcpy(d_visi_components, visi_components,
@@ -2185,8 +2245,8 @@ extern "C" void test_kern_update_sum_visis(int num_freqs, int num_cross,
   cudaErrorCheckKernel("kern_update_sum_visis_stokesIQUV",
                       kern_update_sum_visis_stokesIQUV, grid, threads,
                       num_freqs, num_baselines, num_components, num_times, beamtype,
-                      (cuUserComplex *)d_primay_beam_J00, (cuUserComplex *)d_primay_beam_J01,
-                      (cuUserComplex *)d_primay_beam_J10, (cuUserComplex *)d_primay_beam_J11,
+                      (cuUserComplex *)d_g1xs, (cuUserComplex *)d_D1xs,
+                      (cuUserComplex *)d_D1ys, (cuUserComplex *)d_g1ys,
                       (cuUserComplex *)d_visi_components,
                       d_flux_I, d_flux_Q, d_flux_U, d_flux_V,
                       d_sum_visi_XX_real, d_sum_visi_XX_imag,
@@ -2211,10 +2271,10 @@ extern "C" void test_kern_update_sum_visis(int num_freqs, int num_cross,
   cudaErrorCheckCall( cudaMemcpy(sum_visi_YY_imag, d_sum_visi_YY_imag,
                   num_cross*sizeof(user_precision_t), cudaMemcpyDeviceToHost ));
 
-  cudaErrorCheckCall( cudaFree( d_primay_beam_J00 ) );
-  cudaErrorCheckCall( cudaFree( d_primay_beam_J01 ) );
-  cudaErrorCheckCall( cudaFree( d_primay_beam_J10 ) );
-  cudaErrorCheckCall( cudaFree( d_primay_beam_J11 ) );
+  cudaErrorCheckCall( cudaFree( d_g1xs ) );
+  cudaErrorCheckCall( cudaFree( d_D1xs ) );
+  cudaErrorCheckCall( cudaFree( d_D1ys ) );
+  cudaErrorCheckCall( cudaFree( d_g1ys ) );
   cudaErrorCheckCall( cudaFree( d_visi_components ) );
   cudaErrorCheckCall( cudaFree( d_flux_I ) );
   cudaErrorCheckCall( cudaFree( d_flux_Q ) );
