@@ -205,7 +205,7 @@ void test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreePoint(void) {
 
 }
 
-void test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeMWAFEE(void) {
+void test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeGauss(void) {
   int n_points = 0;
   int n_gauss = 3;
   int n_shapes = 0;
@@ -255,7 +255,7 @@ int main(void)
 
         //Test with three SOURCEs, three COPMONENTs
         RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreePoint);
-        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeMWAFEE);
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeGauss);
         RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeShape);
         RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeAll);
 
