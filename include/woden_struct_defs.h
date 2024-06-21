@@ -305,6 +305,7 @@ typedef struct _woden_settings_t {
   int do_QUV; /*!< Boolean of whether to use Stokes Q,U,V*/
 
   int use_dipamps; /*!< Boolean of whether to use dipole amplitudes, so have an individual beam per tile*/
+  double *mwa_dipole_amps; /*!< Bespoke MWA dipole amplitudes for each antenna(tile). Should be 2*num_ants*16 long*/
 
 } woden_settings_t;
 

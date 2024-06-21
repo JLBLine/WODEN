@@ -465,7 +465,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     //Check the two are within tolerace
     // printf("%d %.3f %.3f\n",i, expec_flux_I[i], extrap_flux_I[i] );
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_I[i], extrap_flux_I[i]);
-    //in the future this should be testable, for only doing Stokes I so
+    //TODO in the future this should be testable, for only doing Stokes I so
     //lock to zero
     // TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_Q[i], extrap_flux_Q[i]);
     // TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_U[i], extrap_flux_U[i]);

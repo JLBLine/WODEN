@@ -72,7 +72,8 @@ class Woden_Settings_Double(ctypes.Structure):
     :cvar POINTER(c_double) mjds:  Array to hold modified julian dates for all time centroids
     :cvar c_int do_autos:  Boolean of whether to simulate autos or not (0 False, 1 True)
     :cvar c_int do_QUV:  Boolean of whether to use Stokes Q,U,V (0 False, 1 True)
-    :cvar use_dipamps:  Boolean of whether to use dipole amplitudes, so have an individual beam per tile Q,U,V (0 False, 1 True)
+    :cvar c_int use_dipamps:  Boolean of whether to use dipole amplitudes, so have an individual beam per tile (0 False, 1 True)
+    :cvar POINTER(c_double) mwa_dipole_amps: Bespoke MWA dipole amplitudes for each antenna(tile). Should be 2*num_ants*16 long
     """
     
     _fields_ = [("lst_base", c_double),
@@ -117,7 +118,8 @@ class Woden_Settings_Double(ctypes.Structure):
                 ("mjds", POINTER(c_double)),
                 ("do_autos", c_int),
                 ("do_QUV", c_int),
-                ("use_dipamps", c_int)]
+                ("use_dipamps", c_int),
+                ("mwa_dipole_amps", POINTER(c_double))]
 
 ##TODO gotta be a way to set the float or double fields via some kind of
 ##variable instead of making two different classes
@@ -167,7 +169,8 @@ class Woden_Settings_Float(ctypes.Structure):
     :cvar POINTER(c_double) mjds:  Array to hold modified julian dates for all time centroids
     :cvar c_int do_autos:  Boolean of whether to simulate autos or not (0 False, 1 True)
     :cvar c_int do_QUV:  Boolean of whether to use Stokes Q,U,V (0 False, 1 True)
-    :cvar use_dipamps:  Boolean of whether to use dipole amplitudes, so have an individual beam per tile Q,U,V (0 False, 1 True)
+    :cvar c_int use_dipamps:  Boolean of whether to use dipole amplitudes, so have an individual beam per tile  (0 False, 1 True)
+    :cvar POINTER(c_double) mwa_dipole_amps: Bespoke MWA dipole amplitudes for each antenna(tile). Should be 2*num_ants*16 long
     """
     
     _fields_ = [("lst_base", c_double),
@@ -212,7 +215,8 @@ class Woden_Settings_Float(ctypes.Structure):
                 ("mjds", POINTER(c_double)),
                 ("do_autos", c_int),
                 ("do_QUV", c_int),
-                ("use_dipamps", c_int)]
+                ("use_dipamps", c_int),
+                ("mwa_dipole_amps", POINTER(c_double))]
     
 def create_woden_settings(args : argparse.Namespace,
                           jd_date : float, lst : float) -> Union[Woden_Settings_Float, Woden_Settings_Double]:
@@ -314,6 +318,17 @@ def create_woden_settings(args : argparse.Namespace,
     
     for ind, band in enumerate(args.band_nums):
             woden_settings.band_nums[ind] = int(band)
+    
+    ##Are we using dipole amplitudes?
+    woden_settings.use_dipamps = args.use_dipamps
+    
+    ##If so, populate the array
+    if args.use_dipamps:
+        ##Assign le-memory
+        woden_settings.mwa_dipole_amps = (ctypes.c_double*len(args.dipamps))()
+        ##again, this is ctypes, so we need to populate it with a loop
+        for ind, amplitude in enumerate(args.dipamps):
+                woden_settings.mwa_dipole_amps[ind] = amplitude
     
     return woden_settings
     
