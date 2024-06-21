@@ -36,11 +36,17 @@ def make_gitdict():
 
     """
 
-    git_dict = {
-        'describe': get_commandline_output(["git", "describe", "--always"]),
-        'date': get_commandline_output(["git", "log", "-1", "--format=%cd"]),
-        'branch': get_commandline_output(["git", "rev-parse", "--abbrev-ref", "HEAD"]),
-    }
+    ##Try and get a git version. If this is a release version, it might not
+    ##be in a git repo so try, otherwise return False
+    try:
+        git_dict = {
+            'describe': get_commandline_output(["git", "describe", "--always"]),
+            'date': get_commandline_output(["git", "log", "-1", "--format=%cd"]),
+            'branch': get_commandline_output(["git", "rev-parse", "--abbrev-ref", "HEAD"]),
+        }
+        
+    except:
+        git_dict = False
 
     return git_dict
 
