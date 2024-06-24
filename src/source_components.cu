@@ -144,7 +144,7 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
   }
 } //end __device__ get_beam_gains
 
-//TODO this needs to have an extra dimension over num_ants
+
 __device__ void get_beam_gains_two_antennas(int iBaseline, int iComponent, int num_freqs,
            int num_baselines, int num_components, int num_times, int beamtype,
            cuUserComplex *d_gxs_ants, cuUserComplex *d_Dxs_ants,

@@ -2,6 +2,7 @@ import numpy as np
 from ctypes import c_float, c_double
 from numpy.polynomial.hermite import Hermite
 from typing import Union
+import math
 
 def numpy_eval_hermite(n : int, x : Union[float, np.ndarray]) -> Union[float, np.ndarray]:
     """This function duplicates what scipy.special.eval_hermite does:
@@ -62,7 +63,7 @@ def calc_basis_func_1D_numpy(n : int, x : Union[float, np.ndarray], beta=1) -> n
     ##this is the fourier transform of image-based basis functions written into
     ##Line et al. 2020, so there is a factor of pi difference. Something
     ##something fourier transform convention something something
-    norm = np.sqrt(beta)*np.sqrt((2**n*float(np.math.factorial(n))))
+    norm = np.sqrt(beta)*np.sqrt((2**n*float(math.factorial(n))))
     hermite = numpy_eval_hermite(n, x)
     gauss = np.exp(-0.5*((x*beta)**2))
     

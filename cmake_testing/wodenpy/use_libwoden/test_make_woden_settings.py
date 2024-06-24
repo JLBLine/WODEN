@@ -50,7 +50,7 @@ class PretendArgs():
         self.MWA_FEE_delays = False
         self.no_precession = False
         self.do_autos = False
-        self.use_dipamps = False
+        self.use_MWA_dipamps = False
         self.use_dipflags = False
         self.dipamps = False
         
@@ -461,7 +461,7 @@ class Test(unittest.TestCase):
         
         ##Now ask for some dipole amps, provide some (as would happen using
         # run_setup.check_args) and check things are propagated correctly
-        self.args.use_dipamps = True
+        self.args.use_MWA_dipamps = True
         self.args.dipamps = np.arange(16)
         ##This runs `create_woden_settings`
         woden_settings = self.call_create_woden_settings()

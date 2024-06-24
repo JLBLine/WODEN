@@ -320,10 +320,10 @@ def create_woden_settings(args : argparse.Namespace,
             woden_settings.band_nums[ind] = int(band)
     
     ##Are we using dipole amplitudes?
-    woden_settings.use_dipamps = args.use_dipamps
+    woden_settings.use_dipamps = args.use_MWA_dipamps
     
     ##If so, populate the array
-    if args.use_dipamps:
+    if args.use_MWA_dipamps:
         ##Assign le-memory
         woden_settings.mwa_dipole_amps = (ctypes.c_double*len(args.dipamps))()
         ##again, this is ctypes, so we need to populate it with a loop

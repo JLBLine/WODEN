@@ -233,8 +233,6 @@ through COMPONENT (fastest changing), freqeuncy, and time (slowest changing).
 If `beamtype == NO_BEAM`, set `g1x = g1y = g2x = g2y = 1` and
 `D1x = D1y = D2x = D2y = 0`
 
-@todo Prepare this function for two different primary beam responses
-
 @param[in] iBaseline Index of which baseline, freq, and time we are on
 @param[in] iComponent COMPONENT index
 @param[in] num_freqs Number of frequencies in simulation
@@ -242,14 +240,14 @@ If `beamtype == NO_BEAM`, set `g1x = g1y = g2x = g2y = 1` and
 @param[in] num_components Number of COMPONENTs
 @param[in] num_times Number of times in simulation
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
-@param[in] *d_primay_beam_J00 Pointer towards array of primary beam J[0,0]
+@param[in] *d_gxs Pointer towards array of primary beam J[0,0]
 (north-south gain)
-@param[in] *d_primay_beam_J01 Pointer towards array of primary beam J[0,1]
+@param[in] *d_Dxs Pointer towards array of primary beam J[0,1]
 (north-south leakage)
-@param[in] *d_primay_beam_J10 Pointer towards array of primary beam J[1,0]
-(east-west gain)
-@param[in] *d_primay_beam_J11 Pointer towards array of primary beam J[1,1]
+@param[in] *d_Dys Pointer towards array of primary beam J[1,0]
 (east-west leakage)
+@param[in] *d_gys Pointer towards array of primary beam J[1,1]
+(east-west gain)
 @param[in,out] *g1x Beam gain antenna 1 in north-south
 @param[in,out] *D1x Beam leakage antenna 1 from north-south
 @param[in,out] *D1y Beam gain antenna 1 in east-west
@@ -262,8 +260,68 @@ If `beamtype == NO_BEAM`, set `g1x = g1y = g2x = g2y = 1` and
 */
 __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
            int num_baselines, int num_components, int num_times, int beamtype,
-           cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
-           cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
+           cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
+           cuUserComplex *d_Dys, cuUserComplex *d_gys,
+           cuUserComplex * g1x, cuUserComplex * D1x,
+           cuUserComplex * D1y, cuUserComplex * g1y,
+           cuUserComplex * g2x, cuUserComplex * D2x,
+           cuUserComplex * D2y, cuUserComplex * g2y);
+
+/**
+@brief Given the type of primary beam simulated `beamtype`, select the beam
+gains and leakages from the arrays `d_primay_beam_J*` that match the indexes
+`iBaseline`, `iComponent`. This function assumes the primary beams are different
+for every antenna, so returns different values for each antenna. 
+
+@todo Currently this is only set up to work with the MWA_FEE and MWA_FEE_INTERP
+primary beams
+
+@details This function is built to return the correct beam gain for a given
+component on the sky, at a given time, at a given frequency, for a given baseline.
+The 4 arrays `d_primay_beam_J00`, `d_primay_beam_J01`, `d_primay_beam_J10`,
+`d_primay_beam_J11` should contain the primary beam settings for all antennas,
+all times, all frequencies, and COPMONENTs on the sky, and so should be
+`num_ants*num_freqs*num_components*num_times` long. The order elements should increment
+through COMPONENT (fastest changing), freqeuncy, time, and antenna (slowest changing).
+`iBaseline` is a combined index of baseline, frequency, and time.
+
+If `beamtype == NO_BEAM`, set `g1x = g1y = g2x = g2y = 1` and
+`D1x = D1y = D2x = D2y = 0`
+
+@param[in] iBaseline Index of which baseline, freq, and time we are on
+@param[in] iComponent COMPONENT index
+@param[in] num_freqs Number of frequencies in simulation
+@param[in] num_baselines Number of baselines for one time and one frequency step
+@param[in] num_components Number of COMPONENTs
+@param[in] num_times Number of times in simulation
+@param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
+@param[in] *d_gxs Pointer towards array of primary beam J[0,0]
+(north-south gain)
+@param[in] *d_Dxs Pointer towards array of primary beam J[0,1]
+(north-south leakage)
+@param[in] *d_Dys Pointer towards array of primary beam J[1,0]
+(east-west leakage)
+@param[in] *d_gys Pointer towards array of primary beam J[1,1]
+(east-west gain)
+@param[in] *d_ant1_to_baseline_map The index of antenna 1 in all unique pairs of
+antennas. Used to map iBaseline to the correct antenna 1
+@param[in] *d_ant2_to_baseline_map The index of antenna 1 in all unique pairs of
+antennas. Used to map iBaseline to the correct antenna 2
+@param[in,out] *g1x Beam gain antenna 1 in north-south
+@param[in,out] *D1x Beam leakage antenna 1 from north-south
+@param[in,out] *D1y Beam gain antenna 1 in east-west
+@param[in,out] *g1y Beam leakage antenna 1 from east-west
+@param[in,out] *g2x Beam gain antenna 2 in north-south
+@param[in,out] *D2x Beam leakage antenna 2 from north-south
+@param[in,out] *D2y Beam gain antenna 2 in east-west
+@param[in,out] *g2y Beam leakage antenna 2 from east-west
+
+*/
+__device__ void get_beam_gains_two_antennas(int iBaseline, int iComponent, int num_freqs,
+           int num_baselines, int num_components, int num_times, int beamtype,
+           cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
+           cuUserComplex *d_Dys, cuUserComplex *d_gys,
+           int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map,
            cuUserComplex * g1x, cuUserComplex * D1x,
            cuUserComplex * D1y, cuUserComplex * g1y,
            cuUserComplex * g2x, cuUserComplex * D2x,
@@ -287,14 +345,14 @@ apply the gains - see descriptions for what should be the arguments to them.
 @param[in] num_components Number of COMPONENTs
 @param[in] num_times Number of times in simulation
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
-@param[in] *d_primay_beam_J00 Pointer towards array of primary beam J[0,0]
+@param[in] *d_gxs Pointer towards array of primary beam J[0,0]
 (north-south gain)
-@param[in] *d_primay_beam_J01 Pointer towards array of primary beam J[0,1]
+@param[in] *d_Dxs Pointer towards array of primary beam J[0,1]
 (north-south leakage)
-@param[in] *d_primay_beam_J10 Pointer towards array of primary beam J[1,0]
-(east-west gain)
-@param[in] *d_primay_beam_J11 Pointer towards array of primary beam J[1,1]
+@param[in] *d_Dys Pointer towards array of primary beam J[1,0]
 (east-west leakage)
+@param[in] *d_gys Pointer towards array of primary beam J[1,1]
+(east-west gain)
 @param[in] visi_component Complex visibility across antennas 1 and 2
 @param[in] flux_I Stokes I flux density (Jy)
 @param[in] flux_Q Stokes Q flux density (Jy)
@@ -319,8 +377,8 @@ visibility into
 */
 __device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent, int num_freqs,
     int num_baselines, int num_components, int num_times, int beamtype,
-    cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
-    cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
+    cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
+    cuUserComplex *d_Dys, cuUserComplex *d_gys,
     cuUserComplex visi_component,
     user_precision_t flux_I, user_precision_t flux_Q,
     user_precision_t flux_U, user_precision_t flux_V,
@@ -347,14 +405,14 @@ apply the gains - see descriptions for what should be the arguments to them.
 @param[in] num_components Number of COMPONENTs
 @param[in] num_times Number of times in simulation
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
-@param[in] *d_primay_beam_J00 Pointer towards array of primary beam J[0,0]
+@param[in] *d_gxs Pointer towards array of primary beam J[0,0]
 (north-south gain)
-@param[in] *d_primay_beam_J01 Pointer towards array of primary beam J[0,1]
+@param[in] *d_Dxs Pointer towards array of primary beam J[0,1]
 (north-south leakage)
-@param[in] *d_primay_beam_J10 Pointer towards array of primary beam J[1,0]
-(east-west gain)
-@param[in] *d_primay_beam_J11 Pointer towards array of primary beam J[1,1]
+@param[in] *d_Dys Pointer towards array of primary beam J[1,0]
 (east-west leakage)
+@param[in] *d_gys Pointer towards array of primary beam J[1,1]
+(east-west gain)
 @param[in] visi_component Complex visibility across antennas 1 and 2
 @param[in] flux_I Stokes I flux density (Jy)
 @param[in,out] *d_sum_visi_XX_real Pointer to array to sum real XX visibility
@@ -376,8 +434,8 @@ visibility into
 */
 __device__ void update_sum_visis_stokesI(int iBaseline, int iComponent, int num_freqs,
     int num_baselines, int num_components, int num_times, int beamtype,
-    cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
-    cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
+    cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
+    cuUserComplex *d_Dys, cuUserComplex *d_gys,
     cuUserComplex visi_component,
     user_precision_t flux_I,
     user_precision_t *d_sum_visi_XX_real, user_precision_t *d_sum_visi_XX_imag,
@@ -799,16 +857,6 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
  */
 void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source,
                             e_component_type comptype);
-
-/**
- * @brief Copies a chunked source to the GPU.
- * 
- * This function takes a chunked source and copies it to the GPU. The chunked source is represented by a pointer to a source_t struct.
- * 
- * @param chunked_source A pointer to the chunked source to be copied to the GPU.
- * @return A pointer to the copied chunked source on the GPU.
- */
-source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
 
 /**
 @brief Frees device memory associated with `d_chunked_source`, depending on
