@@ -174,4 +174,19 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   add_test(CUDA_test_kern_calc_autos_${PRECISION}
            test_kern_calc_autos_${PRECISION}_app)
 
+
+  ##Test grabbing the correct primary beam gains when using two per baseline
+  add_executable(test_get_beam_gains_two_antennas_${PRECISION}_app
+  test_get_beam_gains_two_antennas.c
+  )
+  target_link_libraries(test_get_beam_gains_two_antennas_${PRECISION}_app
+      Unity
+      source_componentsCUDA_${PRECISION}
+      ${CC_LINKLIBS}
+  )
+  target_compile_options(test_get_beam_gains_two_antennas_${PRECISION}_app
+                      PRIVATE ${C_FLAGS})
+  add_test(CUDA_test_get_beam_gains_two_antennas_${PRECISION}
+          test_get_beam_gains_two_antennas_${PRECISION}_app)
+
 endforeach()

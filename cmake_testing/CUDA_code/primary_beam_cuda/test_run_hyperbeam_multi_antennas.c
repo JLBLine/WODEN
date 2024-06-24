@@ -77,22 +77,24 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
     handle_hyperbeam_error(__FILE__, __LINE__, "new_fee_beam");
   }
 
-  uint32_t num_tiles = 2;
+  uint32_t num_tiles = 3;
 
-  double amps[64] = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
-                     1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1,
-                     1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1,
-                     1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1};
+  double amps[96] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                     0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
+                     0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4,
+                     0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6,
+                     0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8,
+                     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
 
 
-  int num_delays = 16;
+  int num_delays_per_tile = 16;
 
-  uint32_t *hyper_delays = malloc(num_tiles*num_delays*sizeof(uint32_t));
+  uint32_t *hyper_delays = malloc(num_tiles*num_delays_per_tile*sizeof(uint32_t));
 
-  for (int delay = 0; delay < 16; delay++) {
+  for (int delay = 0; delay < num_delays_per_tile; delay++) {
     for (int tile = 0; tile < num_tiles; tile++) {
-      hyper_delays[tile*num_delays + delay] = (uint32_t)delays[delay];
-      hyper_delays[tile*num_delays + delay] = (uint32_t)delays[delay];
+      hyper_delays[tile*num_delays_per_tile + delay] = (uint32_t)delays[delay];
+      hyper_delays[tile*num_delays_per_tile + delay] = (uint32_t)delays[delay];
     }
   }
 
@@ -292,50 +294,50 @@ void check_for_env_and_run_test(double freq, user_precision_t *delays,
 Run the test but vary the frequency and pointings. Compare to pre-calculated
 values that are stored in test_RTS_FEE_beam.h
 */
-// void test_hyperbeam_100MHz_zenith(void) {
-//   check_for_env_and_run_test(100e+6, zenith_delays, zenith_100,
-//                              zenith_100_rot, "hyperbeam_zenith_100");
-// }
+void test_hyperbeam_100MHz_zenith(void) {
+  check_for_env_and_run_test(100e+6, zenith_delays, zenith_100,
+                             zenith_100_rot, "hyperbeam_zenith_100");
+}
 
-// void test_hyperbeam_150MHz_zenith(void) {
-//   check_for_env_and_run_test(150e+6, zenith_delays, zenith_150,
-//                              zenith_150_rot, "hyperbeam_zenith_150");
-// }
+void test_hyperbeam_150MHz_zenith(void) {
+  check_for_env_and_run_test(150e+6, zenith_delays, zenith_150,
+                             zenith_150_rot, "hyperbeam_zenith_150");
+}
 
 void test_hyperbeam_200MHz_zenith(void) {
   check_for_env_and_run_test(200e+6, zenith_delays, zenith_200,
                              zenith_200_rot, "hyperbeam_zenith_200_two_ants");
 }
 
-// void test_hyperbeam_100MHz_off_zenith1(void) {
-//   check_for_env_and_run_test(100e+6, off_zenith1_delays, offzen1_100,
-//                              offzen1_100_rot, "hyperbeam_offzen1_100");
-// }
+void test_hyperbeam_100MHz_off_zenith1(void) {
+  check_for_env_and_run_test(100e+6, off_zenith1_delays, offzen1_100,
+                             offzen1_100_rot, "hyperbeam_offzen1_100");
+}
 
-// void test_hyperbeam_150MHz_off_zenith1(void) {
-//   check_for_env_and_run_test(150e+6, off_zenith1_delays, offzen1_150,
-//                              offzen1_150_rot, "hyperbeam_offzen1_150");
-// }
+void test_hyperbeam_150MHz_off_zenith1(void) {
+  check_for_env_and_run_test(150e+6, off_zenith1_delays, offzen1_150,
+                             offzen1_150_rot, "hyperbeam_offzen1_150");
+}
 
-// void test_hyperbeam_200MHz_off_zenith1(void) {
-//   check_for_env_and_run_test(200e+6, off_zenith1_delays, offzen1_200,
-//                              offzen1_200_rot, "hyperbeam_offzen1_200");
-// }
+void test_hyperbeam_200MHz_off_zenith1(void) {
+  check_for_env_and_run_test(200e+6, off_zenith1_delays, offzen1_200,
+                             offzen1_200_rot, "hyperbeam_offzen1_200");
+}
 
-// void test_hyperbeam_100MHz_off_zenith2(void) {
-//   check_for_env_and_run_test(100e+6, off_zenith2_delays, offzen2_100,
-//                              offzen2_100_rot, "hyperbeam_offzen2_100");
-// }
+void test_hyperbeam_100MHz_off_zenith2(void) {
+  check_for_env_and_run_test(100e+6, off_zenith2_delays, offzen2_100,
+                             offzen2_100_rot, "hyperbeam_offzen2_100");
+}
 
-// void test_hyperbeam_150MHz_off_zenith2(void) {
-//   check_for_env_and_run_test(150e+6, off_zenith2_delays, offzen2_150,
-//                              offzen2_150_rot, "hyperbeam_offzen2_150");
-// }
+void test_hyperbeam_150MHz_off_zenith2(void) {
+  check_for_env_and_run_test(150e+6, off_zenith2_delays, offzen2_150,
+                             offzen2_150_rot, "hyperbeam_offzen2_150");
+}
 
-// void test_hyperbeam_200MHz_off_zenith2(void) {
-//   check_for_env_and_run_test(200e+6, off_zenith2_delays, offzen2_200,
-//                              offzen2_200_rot, "hyperbeam_offzen2_200");
-// }
+void test_hyperbeam_200MHz_off_zenith2(void) {
+  check_for_env_and_run_test(200e+6, off_zenith2_delays, offzen2_200,
+                             offzen2_200_rot, "hyperbeam_offzen2_200");
+}
 
 
 //Run the test with unity

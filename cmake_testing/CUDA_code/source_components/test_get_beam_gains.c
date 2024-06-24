@@ -11,14 +11,15 @@ void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
 //External CUDA code we're linking in
-extern void test_kern_get_beam_gains(int num_freqs, int num_visis,
+extern void test_kern_get_beam_gains(int num_freqs, int num_cross,
           int num_baselines, int num_components, int num_times, int beamtype,
           user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J01,
           user_precision_complex_t *primay_beam_J10, user_precision_complex_t *primay_beam_J11,
           user_precision_complex_t *recover_g1x, user_precision_complex_t *recover_D1x,
           user_precision_complex_t *recover_D1y, user_precision_complex_t *recover_g1y,
           user_precision_complex_t *recover_g2x, user_precision_complex_t *recover_D2x,
-          user_precision_complex_t *recover_D2y, user_precision_complex_t *recover_g2y);
+          user_precision_complex_t *recover_D2y, user_precision_complex_t *recover_g2y,
+          int use_twoants, int num_ants);
 
 #define UNITY_INCLUDE_FLOAT
 
@@ -76,7 +77,11 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
   user_precision_complex_t *recover_D2y = malloc(num_visis*num_components*sizeof(user_precision_complex_t));
   user_precision_complex_t *recover_g2y = malloc(num_visis*num_components*sizeof(user_precision_complex_t));
 
-  //Run the CUDA code
+  //Run the CUDA code and get some results
+  //We are running with all primary beams as identical, so num_ants = 1;
+  int use_twoants = 0;
+  int num_ants = 1;
+
   test_kern_get_beam_gains(num_freqs, num_visis,
           num_baselines, num_components, num_times, beamtype,
           primay_beam_J00, primay_beam_J01,
@@ -84,7 +89,8 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
           recover_g1x, recover_D1x,
           recover_D1y, recover_g1y,
           recover_g2x, recover_D2x,
-          recover_D2y, recover_g2y);
+          recover_D2y, recover_g2y,
+          use_twoants, num_ants);
 
   user_precision_t expected_order[] = { 0.00, 0.00, 0.00, 4.00, 4.00, 4.00, 8.00,
                              8.00, 8.00, 12.00, 12.00, 12.00, 1.00, 1.00,

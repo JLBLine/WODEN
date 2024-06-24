@@ -820,3 +820,7 @@ The ``woden_double`` code is tested to an absolute precision of 1e-12 Jy,
 with the ``woden_float`` a 1e-2 Jy precision as compared to the ``C`` code
 (note some of the resultant fluxes are >10,000 Jy, hence the large absolute
 error. You should probably just always use the double precision version).
+
+test_get_beam_gains_two_antennas.c
+***************************************
+This works the same as ``test_get_beam_gains.c``, but we run using three antennas, meaning we input three times the number of gains. Still input each beam gain as it's index in ``primay_beam_J``. The selected beam gains are now expected to be different for antenna 1 and antenna 2, depending on which visibility they correspond to; they are duly tested to be so.

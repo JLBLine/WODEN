@@ -469,209 +469,6 @@ extern "C" void calculate_RTS_MWA_analytic_beam(int num_components,
 
 }
 
-/*******************************************************************************
-                 Functions below to be used in unit tests
-*******************************************************************************/
-
-extern "C" void test_RTS_calculate_MWA_analytic_beam(int num_components,
-     int num_time_steps, int num_freqs,
-     user_precision_t *azs, user_precision_t *zas, user_precision_t *delays,
-     double latitude, int norm,
-     double *beam_has, double *beam_decs, double *freqs,
-     user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
-     user_precision_complex_t *Dys, user_precision_complex_t *gys) {
-
-  //Allocate space for beam gains
-  user_precision_complex_t *d_gxs = NULL;
-  user_precision_complex_t *d_Dxs = NULL;
-  user_precision_complex_t *d_Dys = NULL;
-  user_precision_complex_t *d_gys = NULL;
-
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_gxs,
-    num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_Dxs,
-    num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_Dys,
-    num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_gys,
-    num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
-
-  double *d_freqs = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_freqs, num_freqs*sizeof(double)) );
-  cudaErrorCheckCall( cudaMemcpy(d_freqs, freqs, num_freqs*sizeof(double),
-                      cudaMemcpyHostToDevice) );
-
-  //Run
-  calculate_RTS_MWA_analytic_beam(num_components,
-       num_time_steps, num_freqs,
-       azs, zas, delays, latitude, norm,
-       beam_has, beam_decs, d_freqs,
-       (cuUserComplex*)d_gxs, (cuUserComplex*)d_Dxs,
-       (cuUserComplex*)d_Dys, (cuUserComplex*)d_gys);
-
-  cudaErrorCheckCall( cudaMemcpy(gxs, d_gxs,
-       num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
-       cudaMemcpyDeviceToHost) );
-  cudaErrorCheckCall( cudaMemcpy(Dxs, d_Dxs,
-       num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
-       cudaMemcpyDeviceToHost) );
-  cudaErrorCheckCall( cudaMemcpy(Dys, d_Dys,
-       num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
-       cudaMemcpyDeviceToHost) );
-  cudaErrorCheckCall( cudaMemcpy(gys, d_gys,
-       num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
-       cudaMemcpyDeviceToHost) );
-
-  cudaErrorCheckCall( cudaFree(d_gxs) );
-  cudaErrorCheckCall( cudaFree(d_Dxs) );
-  cudaErrorCheckCall( cudaFree(d_Dys) );
-  cudaErrorCheckCall( cudaFree(d_gys) );
-
-  cudaErrorCheckCall( cudaFree(d_freqs) );
-
-
-}
-
-extern "C" void test_analytic_dipole_beam(int num_components,
-     int num_time_steps, int num_freqs,
-     user_precision_t *azs, user_precision_t *zas, double *freqs,
-     user_precision_complex_t *analy_beam_X,
-     user_precision_complex_t *analy_beam_Y) {
-
-  user_precision_complex_t *d_analy_beam_X = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_analy_beam_X,
-    num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
-
-  user_precision_complex_t *d_analy_beam_Y = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_analy_beam_Y,
-     num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
-
-  double *d_freqs = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_freqs, num_freqs*sizeof(double)) );
-  cudaErrorCheckCall( cudaMemcpy(d_freqs, freqs, num_freqs*sizeof(double),
-                      cudaMemcpyHostToDevice) );
-
-  calculate_analytic_dipole_beam(num_components,
-      num_time_steps, num_freqs,
-      azs, zas, d_freqs,
-      (cuUserComplex *)d_analy_beam_X, (cuUserComplex *)d_analy_beam_Y);
-
-  cudaErrorCheckCall( cudaMemcpy(analy_beam_X, d_analy_beam_X,
-             num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
-             cudaMemcpyDeviceToHost) );
-  cudaErrorCheckCall( cudaMemcpy(analy_beam_Y, d_analy_beam_Y,
-             num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
-             cudaMemcpyDeviceToHost) );
-
-  cudaErrorCheckCall( cudaFree(d_analy_beam_X) );
-  cudaErrorCheckCall( cudaFree(d_analy_beam_Y) );
-  cudaErrorCheckCall( cudaFree(d_freqs) );
-
-}
-
-extern "C" void test_kern_gaussian_beam(double *beam_ls, double *beam_ms,
-           double beam_ref_freq, double *freqs,
-           user_precision_t fwhm_lm, user_precision_t cos_theta, user_precision_t sin_theta, user_precision_t sin_2theta,
-           int num_freqs, int num_time_steps, int num_components,
-           user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J11) {
-
-  int num_beam_hadec = num_components * num_time_steps;
-
-  double *d_beam_ls = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_ls, num_beam_hadec*sizeof(double)) );
-  cudaErrorCheckCall( cudaMemcpy(d_beam_ls, beam_ls,
-                           num_beam_hadec*sizeof(double), cudaMemcpyHostToDevice ) );
-
-  double *d_beam_ms = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_ms, num_beam_hadec*sizeof(double)) );
-  cudaErrorCheckCall( cudaMemcpy(d_beam_ms, beam_ms,
-                           num_beam_hadec*sizeof(double), cudaMemcpyHostToDevice ) );
-
-  double *d_freqs = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_freqs, num_freqs*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy(d_freqs, freqs,
-                           num_freqs*sizeof(double), cudaMemcpyHostToDevice ) );
-
-  user_precision_complex_t *d_g1xs = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_g1xs,
-                                   num_freqs*num_beam_hadec*sizeof(user_precision_complex_t)) );
-
-  user_precision_complex_t *d_g1ys = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_g1ys,
-                                   num_freqs*num_beam_hadec*sizeof(user_precision_complex_t)) );
-
-  dim3 grid, threads;
-
-  threads.x = 16;
-  grid.x = (int)ceil( (float)num_beam_hadec / (float)threads.x );
-
-  threads.y = 16;
-  grid.y = (int)ceil( (float)num_freqs / (float)threads.y );
-
-  cudaErrorCheckKernel("kern_gaussian_beam",
-                        kern_gaussian_beam, grid, threads,
-                        d_beam_ls, d_beam_ms,
-                        beam_ref_freq, d_freqs,
-                        fwhm_lm, cos_theta, sin_theta, sin_2theta,
-                        num_freqs, num_time_steps, num_components,
-                        (cuUserComplex *)d_g1xs,
-                        (cuUserComplex *)d_g1ys);
-
-  cudaErrorCheckCall( cudaMemcpy(primay_beam_J00, d_g1xs,
-                 num_freqs*num_beam_hadec*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost) );
-  cudaErrorCheckCall( cudaMemcpy(primay_beam_J11, d_g1ys,
-                 num_freqs*num_beam_hadec*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost) );
-
-  cudaErrorCheckCall( cudaFree(d_beam_ls ) );
-  cudaErrorCheckCall( cudaFree(d_beam_ms ) );
-  cudaErrorCheckCall( cudaFree(d_freqs ) );
-  cudaErrorCheckCall( cudaFree(d_g1xs ) );
-  cudaErrorCheckCall( cudaFree(d_g1ys ) );
-
-}
-
-
-extern "C" void test_calculate_gaussian_beam(int num_components, int num_time_steps,
-     int num_freqs, user_precision_t ha0, user_precision_t sdec0, user_precision_t cdec0,
-     user_precision_t fwhm_lm, user_precision_t cos_theta, user_precision_t sin_theta, user_precision_t sin_2theta,
-     double beam_ref_freq, double *freqs,
-     double *beam_has, double *beam_decs,
-     user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J11) {
-
-  int num_beam_hadec = num_components * num_time_steps;
-
-  double *d_freqs = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_freqs, num_freqs*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy(d_freqs, freqs,
-                           num_freqs*sizeof(double), cudaMemcpyHostToDevice ) );
-
-  user_precision_complex_t *d_g1xs = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_g1xs,
-                                   num_freqs*num_beam_hadec*sizeof(user_precision_complex_t)) );
-
-  user_precision_complex_t *d_g1ys = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_g1ys,
-                                   num_freqs*num_beam_hadec*sizeof(user_precision_complex_t)) );
-
-
-  calculate_gaussian_beam(num_components, num_time_steps,
-                         num_freqs, ha0, sdec0, cdec0,
-                         fwhm_lm, cos_theta, sin_theta, sin_2theta,
-                         beam_ref_freq, d_freqs,
-                         beam_has, beam_decs,
-                         (cuUserComplex *)d_g1xs,
-                         (cuUserComplex *)d_g1ys);
-
-  cudaErrorCheckCall( cudaMemcpy(primay_beam_J00, d_g1xs,
-                 num_freqs*num_beam_hadec*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost) );
-  cudaErrorCheckCall( cudaMemcpy(primay_beam_J11, d_g1ys,
-                 num_freqs*num_beam_hadec*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost) );
-
-  cudaErrorCheckCall( cudaFree(d_freqs ) );
-  cudaErrorCheckCall( cudaFree(d_g1xs ) );
-  cudaErrorCheckCall( cudaFree(d_g1ys ) );
-
-}
 
 // we have 3 dimensions to loop over here:
 //  - component
@@ -801,13 +598,13 @@ __global__ void kern_map_hyperbeam_gains_multi_antennas(int num_components,
     {
       //Where the desired data sits within a single time step hyperdrive
       //output
-      hyper_ind = ((num_components * num_unique_fee_freqs * i_row) + num_components * i_col);
+      hyper_ind = ((num_components*num_unique_fee_freqs*i_row) + num_components * i_col);
 
       //Add on how many previous time-steps-worth of outputs we've
       //already remapped
       current_ind = hyper_ind + iTime*num_components*num_freqs*num_tiles + iComponent;
     } else {
-      hyper_ind = ((num_components*num_times * num_unique_fee_freqs * i_row) + num_components * i_col);
+      hyper_ind = ((num_components*num_times*num_unique_fee_freqs*i_row) + num_components * i_col);
 
       current_ind = hyper_ind + iTime*num_components*num_tiles + iComponent;
     }
@@ -1112,8 +909,209 @@ extern "C" void run_hyperbeam_cuda_multi_ants(int num_components,
 
 }
 
+/*******************************************************************************
+                 Functions below to be used in unit tests
+*******************************************************************************/
+
+extern "C" void test_RTS_calculate_MWA_analytic_beam(int num_components,
+     int num_time_steps, int num_freqs,
+     user_precision_t *azs, user_precision_t *zas, user_precision_t *delays,
+     double latitude, int norm,
+     double *beam_has, double *beam_decs, double *freqs,
+     user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
+     user_precision_complex_t *Dys, user_precision_complex_t *gys) {
+
+  //Allocate space for beam gains
+  user_precision_complex_t *d_gxs = NULL;
+  user_precision_complex_t *d_Dxs = NULL;
+  user_precision_complex_t *d_Dys = NULL;
+  user_precision_complex_t *d_gys = NULL;
+
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_gxs,
+    num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_Dxs,
+    num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_Dys,
+    num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_gys,
+    num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
+
+  double *d_freqs = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_freqs, num_freqs*sizeof(double)) );
+  cudaErrorCheckCall( cudaMemcpy(d_freqs, freqs, num_freqs*sizeof(double),
+                      cudaMemcpyHostToDevice) );
+
+  //Run
+  calculate_RTS_MWA_analytic_beam(num_components,
+       num_time_steps, num_freqs,
+       azs, zas, delays, latitude, norm,
+       beam_has, beam_decs, d_freqs,
+       (cuUserComplex*)d_gxs, (cuUserComplex*)d_Dxs,
+       (cuUserComplex*)d_Dys, (cuUserComplex*)d_gys);
+
+  cudaErrorCheckCall( cudaMemcpy(gxs, d_gxs,
+       num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
+       cudaMemcpyDeviceToHost) );
+  cudaErrorCheckCall( cudaMemcpy(Dxs, d_Dxs,
+       num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
+       cudaMemcpyDeviceToHost) );
+  cudaErrorCheckCall( cudaMemcpy(Dys, d_Dys,
+       num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
+       cudaMemcpyDeviceToHost) );
+  cudaErrorCheckCall( cudaMemcpy(gys, d_gys,
+       num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
+       cudaMemcpyDeviceToHost) );
+
+  cudaErrorCheckCall( cudaFree(d_gxs) );
+  cudaErrorCheckCall( cudaFree(d_Dxs) );
+  cudaErrorCheckCall( cudaFree(d_Dys) );
+  cudaErrorCheckCall( cudaFree(d_gys) );
+
+  cudaErrorCheckCall( cudaFree(d_freqs) );
 
 
+}
+
+extern "C" void test_analytic_dipole_beam(int num_components,
+     int num_time_steps, int num_freqs,
+     user_precision_t *azs, user_precision_t *zas, double *freqs,
+     user_precision_complex_t *analy_beam_X,
+     user_precision_complex_t *analy_beam_Y) {
+
+  user_precision_complex_t *d_analy_beam_X = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_analy_beam_X,
+    num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
+
+  user_precision_complex_t *d_analy_beam_Y = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_analy_beam_Y,
+     num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
+
+  double *d_freqs = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_freqs, num_freqs*sizeof(double)) );
+  cudaErrorCheckCall( cudaMemcpy(d_freqs, freqs, num_freqs*sizeof(double),
+                      cudaMemcpyHostToDevice) );
+
+  calculate_analytic_dipole_beam(num_components,
+      num_time_steps, num_freqs,
+      azs, zas, d_freqs,
+      (cuUserComplex *)d_analy_beam_X, (cuUserComplex *)d_analy_beam_Y);
+
+  cudaErrorCheckCall( cudaMemcpy(analy_beam_X, d_analy_beam_X,
+             num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
+             cudaMemcpyDeviceToHost) );
+  cudaErrorCheckCall( cudaMemcpy(analy_beam_Y, d_analy_beam_Y,
+             num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
+             cudaMemcpyDeviceToHost) );
+
+  cudaErrorCheckCall( cudaFree(d_analy_beam_X) );
+  cudaErrorCheckCall( cudaFree(d_analy_beam_Y) );
+  cudaErrorCheckCall( cudaFree(d_freqs) );
+
+}
+
+extern "C" void test_kern_gaussian_beam(double *beam_ls, double *beam_ms,
+           double beam_ref_freq, double *freqs,
+           user_precision_t fwhm_lm, user_precision_t cos_theta, user_precision_t sin_theta, user_precision_t sin_2theta,
+           int num_freqs, int num_time_steps, int num_components,
+           user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J11) {
+
+  int num_beam_hadec = num_components * num_time_steps;
+
+  double *d_beam_ls = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_ls, num_beam_hadec*sizeof(double)) );
+  cudaErrorCheckCall( cudaMemcpy(d_beam_ls, beam_ls,
+                           num_beam_hadec*sizeof(double), cudaMemcpyHostToDevice ) );
+
+  double *d_beam_ms = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_beam_ms, num_beam_hadec*sizeof(double)) );
+  cudaErrorCheckCall( cudaMemcpy(d_beam_ms, beam_ms,
+                           num_beam_hadec*sizeof(double), cudaMemcpyHostToDevice ) );
+
+  double *d_freqs = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_freqs, num_freqs*sizeof(double) ) );
+  cudaErrorCheckCall( cudaMemcpy(d_freqs, freqs,
+                           num_freqs*sizeof(double), cudaMemcpyHostToDevice ) );
+
+  user_precision_complex_t *d_g1xs = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_g1xs,
+                                   num_freqs*num_beam_hadec*sizeof(user_precision_complex_t)) );
+
+  user_precision_complex_t *d_g1ys = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_g1ys,
+                                   num_freqs*num_beam_hadec*sizeof(user_precision_complex_t)) );
+
+  dim3 grid, threads;
+
+  threads.x = 16;
+  grid.x = (int)ceil( (float)num_beam_hadec / (float)threads.x );
+
+  threads.y = 16;
+  grid.y = (int)ceil( (float)num_freqs / (float)threads.y );
+
+  cudaErrorCheckKernel("kern_gaussian_beam",
+                        kern_gaussian_beam, grid, threads,
+                        d_beam_ls, d_beam_ms,
+                        beam_ref_freq, d_freqs,
+                        fwhm_lm, cos_theta, sin_theta, sin_2theta,
+                        num_freqs, num_time_steps, num_components,
+                        (cuUserComplex *)d_g1xs,
+                        (cuUserComplex *)d_g1ys);
+
+  cudaErrorCheckCall( cudaMemcpy(primay_beam_J00, d_g1xs,
+                 num_freqs*num_beam_hadec*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost) );
+  cudaErrorCheckCall( cudaMemcpy(primay_beam_J11, d_g1ys,
+                 num_freqs*num_beam_hadec*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost) );
+
+  cudaErrorCheckCall( cudaFree(d_beam_ls ) );
+  cudaErrorCheckCall( cudaFree(d_beam_ms ) );
+  cudaErrorCheckCall( cudaFree(d_freqs ) );
+  cudaErrorCheckCall( cudaFree(d_g1xs ) );
+  cudaErrorCheckCall( cudaFree(d_g1ys ) );
+
+}
+
+
+extern "C" void test_calculate_gaussian_beam(int num_components, int num_time_steps,
+     int num_freqs, user_precision_t ha0, user_precision_t sdec0, user_precision_t cdec0,
+     user_precision_t fwhm_lm, user_precision_t cos_theta, user_precision_t sin_theta, user_precision_t sin_2theta,
+     double beam_ref_freq, double *freqs,
+     double *beam_has, double *beam_decs,
+     user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J11) {
+
+  int num_beam_hadec = num_components * num_time_steps;
+
+  double *d_freqs = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_freqs, num_freqs*sizeof(double) ) );
+  cudaErrorCheckCall( cudaMemcpy(d_freqs, freqs,
+                           num_freqs*sizeof(double), cudaMemcpyHostToDevice ) );
+
+  user_precision_complex_t *d_g1xs = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_g1xs,
+                                   num_freqs*num_beam_hadec*sizeof(user_precision_complex_t)) );
+
+  user_precision_complex_t *d_g1ys = NULL;
+  cudaErrorCheckCall( cudaMalloc( (void**)&d_g1ys,
+                                   num_freqs*num_beam_hadec*sizeof(user_precision_complex_t)) );
+
+
+  calculate_gaussian_beam(num_components, num_time_steps,
+                         num_freqs, ha0, sdec0, cdec0,
+                         fwhm_lm, cos_theta, sin_theta, sin_2theta,
+                         beam_ref_freq, d_freqs,
+                         beam_has, beam_decs,
+                         (cuUserComplex *)d_g1xs,
+                         (cuUserComplex *)d_g1ys);
+
+  cudaErrorCheckCall( cudaMemcpy(primay_beam_J00, d_g1xs,
+                 num_freqs*num_beam_hadec*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost) );
+  cudaErrorCheckCall( cudaMemcpy(primay_beam_J11, d_g1ys,
+                 num_freqs*num_beam_hadec*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost) );
+
+  cudaErrorCheckCall( cudaFree(d_freqs ) );
+  cudaErrorCheckCall( cudaFree(d_g1xs ) );
+  cudaErrorCheckCall( cudaFree(d_g1ys ) );
+
+}
 
 extern "C" void test_run_hyperbeam_cuda(int num_components,
            int num_time_steps, int num_freqs,
@@ -1248,17 +1246,6 @@ extern "C" void test_run_hyperbeam_cuda_multi_ants(int num_components,
              (cuUserComplex *)d_Dxs_ants,
              (cuUserComplex *)d_Dys_ants,
              (cuUserComplex *)d_gys_ants);
-
-  // run_hyperbeam_cuda(num_components,
-  //            num_time_steps, num_freqs,
-  //            parallatic,
-  //            cuda_fee_beam,
-  //            reordered_azs, reordered_zas,
-  //            latitudes,
-  //            (cuUserComplex *)d_gxs_ants,
-  //            (cuUserComplex *)d_Dxs_ants,
-  //            (cuUserComplex *)d_Dys_ants,
-  //            (cuUserComplex *)d_gys_ants);
 
   cudaErrorCheckCall( cudaMemcpy( primay_beam_J00, d_gxs_ants,
                       num_beam_values*sizeof(user_precision_complex_t),
