@@ -189,4 +189,17 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   add_test(CUDA_test_get_beam_gains_two_antennas_${PRECISION}
           test_get_beam_gains_two_antennas_${PRECISION}_app)
 
+  add_executable(test_update_sum_visis_multiants_${PRECISION}_app
+  test_update_sum_visis_multiants.c
+  )
+  target_link_libraries(test_update_sum_visis_multiants_${PRECISION}_app
+  Unity
+  source_componentsCUDA_${PRECISION}
+  ${CC_LINKLIBS}
+  )
+  target_compile_options(test_update_sum_visis_multiants_${PRECISION}_app
+                    PRIVATE ${C_FLAGS})
+  add_test(CUDA_test_update_sum_visis_multiants_${PRECISION}
+      test_update_sum_visis_multiants_${PRECISION}_app)
+
 endforeach()

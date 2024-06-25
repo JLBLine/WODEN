@@ -236,7 +236,7 @@ int main(void)
 
     // RUN_TEST(test_kern_get_beam_gains_AnalyDipoleBeam);
     RUN_TEST(test_kern_get_beam_gains_FEEBeam);
-    // RUN_TEST(test_kern_get_beam_gains_FEEBeamInterp);
+    RUN_TEST(test_kern_get_beam_gains_FEEBeamInterp);
     
     return UNITY_END();
 }

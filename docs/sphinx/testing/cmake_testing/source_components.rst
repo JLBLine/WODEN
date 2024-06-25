@@ -824,3 +824,7 @@ error. You should probably just always use the double precision version).
 test_get_beam_gains_two_antennas.c
 ***************************************
 This works the same as ``test_get_beam_gains.c``, but we run using three antennas, meaning we input three times the number of gains. Still input each beam gain as it's index in ``primay_beam_J``. The selected beam gains are now expected to be different for antenna 1 and antenna 2, depending on which visibility they correspond to; they are duly tested to be so.
+
+test_update_sum_visis_multiants.c
+***************************************
+This works similarly to same as ``test_update_sum_visis.c``, but we run using three antennas, meaning we input three times the number of gains. Still input each beam gain as it's index in ``primay_beam_J``. The selected beam gains are now expected to be different for antenna 1 and antenna 2, depending on which visibility they correspond to; they are duly tested to be so. Do a bunch of index maths to predict that the accumulated visibilities are correct.
