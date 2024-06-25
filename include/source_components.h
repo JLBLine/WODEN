@@ -10,13 +10,13 @@ A struct to contain primary beam values for a give COMPONENT
 */
 typedef struct _d_beam_gains_t {
 
-  cuUserComplex *d_gxs = NULL; /*!< Device copy of North-South Beam gain values
+  gpuUserComplex *d_gxs = NULL; /*!< Device copy of North-South Beam gain values
   for all directions, frequencies, and times for these COMPONENTS*/
-  cuUserComplex *d_Dxs = NULL; /*!< Device copy of North-South Beam leakage values
+  gpuUserComplex *d_Dxs = NULL; /*!< Device copy of North-South Beam leakage values
   for all directions, frequencies, and times for these COMPONENTS*/
-  cuUserComplex *d_Dys = NULL; /*!< Device copy of East-West Beam leakage values
+  gpuUserComplex *d_Dys = NULL; /*!< Device copy of East-West Beam leakage values
   for all directions, frequencies, and times for these COMPONENTS*/
-  cuUserComplex *d_gys = NULL; /*!< Device copy of East-West Beam gain values
+  gpuUserComplex *d_gys = NULL; /*!< Device copy of East-West Beam gain values
   for all directions, frequencies, and times for these COMPONENTS*/
 
 } d_beam_gains_t;
@@ -52,9 +52,9 @@ this yields the correct output visibilities.
 @param[in] *d_ns Pointer to \f$n\f$ coodinates
 @param[in] iBaseline Index for \f$u,v,w\f$
 @param[in] iComponent Index for \f$l,m,n\f$
-@return `visi`, a `cuUserComplex` of the visibility
+@return `visi`, a `gpuUserComplex` of the visibility
 */
-__device__ cuUserComplex calc_measurement_equation(user_precision_t *d_us,
+__device__ gpuUserComplex calc_measurement_equation(user_precision_t *d_us,
            user_precision_t *d_vs, user_precision_t *d_ws,
            double *d_ls, double *d_ms, double *d_ns,
            const int iBaseline, const int iComponent);
@@ -131,15 +131,15 @@ component into a GAUSSIAN or SHAPELET component, and has been applied in
 @param[in,out] visi_YX Output YX instrumental visibility
 @param[in,out] visi_YY Output YY instrumental visibility
 */
-__device__ void apply_beam_gains_stokesIQUV(cuUserComplex g1x, cuUserComplex D1x,
-          cuUserComplex D1y, cuUserComplex g1y,
-          cuUserComplex g2x, cuUserComplex D2x,
-          cuUserComplex D2y, cuUserComplex g2y,
+__device__ void apply_beam_gains_stokesIQUV(gpuUserComplex g1x, gpuUserComplex D1x,
+          gpuUserComplex D1y, gpuUserComplex g1y,
+          gpuUserComplex g2x, gpuUserComplex D2x,
+          gpuUserComplex D2y, gpuUserComplex g2y,
           user_precision_t flux_I, user_precision_t flux_Q,
           user_precision_t flux_U, user_precision_t flux_V,
-          cuUserComplex visi_component,
-          cuUserComplex * visi_XX, cuUserComplex * visi_XY,
-          cuUserComplex * visi_YX, cuUserComplex * visi_YY);
+          gpuUserComplex visi_component,
+          gpuUserComplex * visi_XX, gpuUserComplex * visi_XY,
+          gpuUserComplex * visi_YX, gpuUserComplex * visi_YY);
 
 /**
 @brief Given primary beam gains and leakage terms for antenna 1
@@ -195,14 +195,14 @@ component into a GAUSSIAN or SHAPELET component, and has been applied in
 @param[in,out] visi_YX Output YX instrumental visibility
 @param[in,out] visi_YY Output YY instrumental visibility
 */
-__device__ void apply_beam_gains_stokesI(cuUserComplex g1x, cuUserComplex D1x,
-          cuUserComplex D1y, cuUserComplex g1y,
-          cuUserComplex g2x, cuUserComplex D2x,
-          cuUserComplex D2y, cuUserComplex g2y,
+__device__ void apply_beam_gains_stokesI(gpuUserComplex g1x, gpuUserComplex D1x,
+          gpuUserComplex D1y, gpuUserComplex g1y,
+          gpuUserComplex g2x, gpuUserComplex D2x,
+          gpuUserComplex D2y, gpuUserComplex g2y,
           user_precision_t flux_I,
-          cuUserComplex visi_component,
-          cuUserComplex * visi_XX, cuUserComplex * visi_XY,
-          cuUserComplex * visi_YX, cuUserComplex * visi_YY);
+          gpuUserComplex visi_component,
+          gpuUserComplex * visi_XX, gpuUserComplex * visi_XY,
+          gpuUserComplex * visi_YX, gpuUserComplex * visi_YY);
 
 /**
 @brief Given the type of primary beam simulated `beamtype`, select the beam
@@ -252,12 +252,12 @@ If `beamtype == NO_BEAM`, set `g1x = g1y = g2x = g2y = 1` and
 */
 __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
            int num_baselines, int num_components, int num_times, int beamtype,
-           cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
-           cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
-           cuUserComplex * g1x, cuUserComplex * D1x,
-           cuUserComplex * D1y, cuUserComplex * g1y,
-           cuUserComplex * g2x, cuUserComplex * D2x,
-           cuUserComplex * D2y, cuUserComplex * g2y);
+           gpuUserComplex *d_primay_beam_J00, gpuUserComplex *d_primay_beam_J01,
+           gpuUserComplex *d_primay_beam_J10, gpuUserComplex *d_primay_beam_J11,
+           gpuUserComplex * g1x, gpuUserComplex * D1x,
+           gpuUserComplex * D1y, gpuUserComplex * g1y,
+           gpuUserComplex * g2x, gpuUserComplex * D2x,
+           gpuUserComplex * D2y, gpuUserComplex * g2y);
 
 /**
 @brief Given the visibility between two recieving elements for a COMPONENT
@@ -309,9 +309,9 @@ visibility into
 */
 __device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent, int num_freqs,
     int num_baselines, int num_components, int num_times, int beamtype,
-    cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
-    cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
-    cuUserComplex visi_component,
+    gpuUserComplex *d_primay_beam_J00, gpuUserComplex *d_primay_beam_J01,
+    gpuUserComplex *d_primay_beam_J10, gpuUserComplex *d_primay_beam_J11,
+    gpuUserComplex visi_component,
     user_precision_t flux_I, user_precision_t flux_Q,
     user_precision_t flux_U, user_precision_t flux_V,
     user_precision_t *d_sum_visi_XX_real, user_precision_t *d_sum_visi_XX_imag,
@@ -366,9 +366,9 @@ visibility into
 */
 __device__ void update_sum_visis_stokesI(int iBaseline, int iComponent, int num_freqs,
     int num_baselines, int num_components, int num_times, int beamtype,
-    cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J01,
-    cuUserComplex *d_primay_beam_J10, cuUserComplex *d_primay_beam_J11,
-    cuUserComplex visi_component,
+    gpuUserComplex *d_primay_beam_J00, gpuUserComplex *d_primay_beam_J01,
+    gpuUserComplex *d_primay_beam_J10, gpuUserComplex *d_primay_beam_J11,
+    gpuUserComplex visi_component,
     user_precision_t flux_I,
     user_precision_t *d_sum_visi_XX_real, user_precision_t *d_sum_visi_XX_imag,
     user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,

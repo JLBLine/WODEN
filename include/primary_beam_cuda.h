@@ -91,7 +91,7 @@ __global__ void kern_gaussian_beam(double *d_beam_ls, double *d_beam_ms,
            user_precision_t fwhm_lm, user_precision_t cos_theta,
            user_precision_t sin_theta, user_precision_t sin_2theta,
            int num_freqs, int num_times, int num_components,
-           cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J11);
+           gpuUserComplex *d_primay_beam_J00, gpuUserComplex *d_primay_beam_J11);
 
 /**
 @brief Calculate the Gaussian primary beam response at the given hour angle and
@@ -138,7 +138,7 @@ extern "C" void calculate_gaussian_beam(int num_components, int num_time_steps,
            user_precision_t sin_theta, user_precision_t sin_2theta,
            double beam_ref_freq, double *d_freqs,
            double *beam_has, double *beam_decs,
-           cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J11);
+           gpuUserComplex *d_primay_beam_J00, gpuUserComplex *d_primay_beam_J11);
 
 /**
 @brief Calculate the beam response of a north-south (X) and east-west (Y)
@@ -157,7 +157,7 @@ size on the sky scales with frequency hence the need for `wavelength`
 */
 __device__ void analytic_dipole(user_precision_t az, user_precision_t za,
            user_precision_t wavelength,
-           cuUserComplex * d_beam_X, cuUserComplex * d_beam_Y);
+           gpuUserComplex * d_beam_X, gpuUserComplex * d_beam_Y);
 
 /**
 @brief Kernel to calculate an Analytic MWA Dipole over an infinite ground screen
@@ -194,7 +194,7 @@ complex `J[1,1]` response in
 __global__ void kern_analytic_dipole_beam(user_precision_t *d_azs,
            user_precision_t *d_zas,  double *d_freqs, int num_freqs,
            int num_times, int num_components,
-           cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J11);
+           gpuUserComplex *d_primay_beam_J00, gpuUserComplex *d_primay_beam_J11);
 
 /**
 @brief Calculate the Analytic Dipole over an infinite ground screen primary beam
@@ -231,7 +231,7 @@ complex `J[1,1]` response in
 extern "C" void calculate_analytic_dipole_beam(int num_components,
      int num_time_steps, int num_freqs,
      user_precision_t *azs, user_precision_t *zas, double *d_freqs,
-     cuUserComplex *d_primay_beam_J00, cuUserComplex *d_primay_beam_J11);
+     gpuUserComplex *d_primay_beam_J00, gpuUserComplex *d_primay_beam_J11);
 
 /**
 @brief Calculate the analytic MWA beam response to a single az/za direction
@@ -265,8 +265,8 @@ __device__ void RTS_MWA_beam(user_precision_t az, user_precision_t za,
            double ha, double dec,
            double wavelength, double *d_metre_delays,
            double latitude, int norm,
-           cuUserComplex * gx, cuUserComplex * Dx,
-           cuUserComplex * Dy, cuUserComplex * gy);
+           gpuUserComplex * gx, gpuUserComplex * Dx,
+           gpuUserComplex * Dy, gpuUserComplex * gy);
 
 /**
 @brief Kernel to calculate the analytic MWA primary beam to a set of sky directions
@@ -310,8 +310,8 @@ __global__ void kern_RTS_analytic_MWA_beam(user_precision_t *d_azs,
            double *d_metre_delays,
            double *d_freqs, double latitude, int norm,
            int num_freqs, int num_times, int num_components,
-           cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
-           cuUserComplex *d_Dys, cuUserComplex *d_gys);
+           gpuUserComplex *d_gxs, gpuUserComplex *d_Dxs,
+           gpuUserComplex *d_Dys, gpuUserComplex *d_gys);
 
 /**
 @brief Calculate the analytic MWA primary beam to a set of sky directions
@@ -350,8 +350,8 @@ extern "C" void calculate_RTS_MWA_analytic_beam(int num_components,
      user_precision_t *azs, user_precision_t *zas, user_precision_t *delays,
      double latitude, int norm,
      double *beam_has, double *beam_decs, double *d_freqs,
-     cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
-     cuUserComplex *d_Dys, cuUserComplex *d_gys);
+     gpuUserComplex *d_gxs, gpuUserComplex *d_Dxs,
+     gpuUserComplex *d_Dys, gpuUserComplex *d_gys);
 
 
 
@@ -401,7 +401,7 @@ extern "C" void run_hyperbeam_cuda(int num_components,
            struct FEEBeamGpu *cuda_fee_beam,
            double *azs, double *zas,
            double *latitudes,
-           cuUserComplex *d_primay_beam_J00,
-           cuUserComplex *d_primay_beam_J01,
-           cuUserComplex *d_primay_beam_J10,
-           cuUserComplex *d_primay_beam_J11);
+           gpuUserComplex *d_primay_beam_J00,
+           gpuUserComplex *d_primay_beam_J01,
+           gpuUserComplex *d_primay_beam_J10,
+           gpuUserComplex *d_primay_beam_J11);

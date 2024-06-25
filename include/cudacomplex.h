@@ -8,77 +8,78 @@
 #pragma once
 
 #include "woden_precision_defs.h"
+#include "gpu_macros.h"
 
 #ifdef DOUBLE_PRECISION
 /*! If -DDOUBLE_PRECISION flag is added at compilation,
 then cuUserComplex is set to cuDoubleComplex */
-typedef cuDoubleComplex cuUserComplex;
+typedef gpuDoubleComplex gpuUserComplex;
 #else
 /*! If -DDOUBLE_PRECISION flag is NOT added at compilation,
 then cuUserComplex is set to cuFloatComplex */
-typedef cuFloatComplex cuUserComplex;
+typedef gpuFloatComplex gpuUserComplex;
 #endif
 
 // --------------------------------
 //! Unary negative
-inline __device__ cuFloatComplex operator-( cuFloatComplex a ) {
-  return( make_cuFloatComplex( -a.x, -a.y ) );
+inline __device__ gpuFloatComplex operator-( gpuFloatComplex a ) {
+  return( make_gpuFloatComplex( -a.x, -a.y ) );
 }
 
 // --------------------------------
 //! Self addition
-inline __device__ void operator+=( cuFloatComplex &a, const cuFloatComplex b ) {
-  a = cuCaddf( a, b );
+inline __device__ void operator+=( gpuFloatComplex &a, const gpuFloatComplex b ) {
+  a = gpuCaddf( a, b );
 }
 
 //! Addition of two complex numbers
-inline __device__ cuFloatComplex operator+( const cuFloatComplex a, const cuFloatComplex b ) {
-  return( cuCaddf( a, b ) );
+inline __device__ gpuFloatComplex operator+( const gpuFloatComplex a, const gpuFloatComplex b ) {
+  return( gpuCaddf( a, b ) );
 }
 
 //! Addition of float to complex
-inline __device__ cuFloatComplex operator+( const cuFloatComplex a, const float r ) {
-  return( make_cuFloatComplex( a.x+r, a.y ) );
+inline __device__ gpuFloatComplex operator+( const gpuFloatComplex a, const float r ) {
+  return( make_gpuFloatComplex( a.x+r, a.y ) );
 }
 
 //! Addition of complex to float
-inline __device__ cuFloatComplex operator+( const float r, const cuFloatComplex z ) {
+inline __device__ gpuFloatComplex operator+( const float r, const gpuFloatComplex z ) {
   return( z + r );
 }
 
 // --------------------------------
 //! Self subtraction
-inline __device__ void operator-=( cuFloatComplex &a, const cuFloatComplex b ) {
-  a = cuCsubf( a, b );
+inline __device__ void operator-=( gpuFloatComplex &a, const gpuFloatComplex b ) {
+  a = gpuCsubf( a, b );
 }
 
 //! Subtraction
-inline __device__ cuFloatComplex operator-( const cuFloatComplex a, const cuFloatComplex b ) {
-  return( cuCsubf( a, b ) );
+inline __device__ gpuFloatComplex operator-( const gpuFloatComplex a, const gpuFloatComplex b ) {
+  return( gpuCsubf( a, b ) );
 }
 
 
 // --------------------------------
 //! Self multiplication
-inline __device__ void operator*=( cuFloatComplex &a, const cuFloatComplex b ) {
-  a = cuCmulf( a, b );
+inline __device__ void operator*=( gpuFloatComplex &a, const gpuFloatComplex b ) {
+  a = gpuCmulf( a, b );
 }
 
 //! Multiplication of two complex numbers
-inline __device__ cuFloatComplex operator*( const cuFloatComplex a, const cuFloatComplex b ) {
-  return( cuCmulf( a, b ) );
+inline __device__ gpuFloatComplex operator*( const gpuFloatComplex a, const gpuFloatComplex b ) {
+  return( gpuCmulf( a, b ) );
 }
 
 // --------------------------------
 //! Self multiplication by real number
-inline __device__ void operator*=( cuFloatComplex &z, const float r ) {
+inline __device__ void operator*=( gpuFloatComplex &z, const float r ) {
   z.x *= r;
   z.y *= r;
 }
 
 //! Multiplication by a real number
-inline __device__ cuFloatComplex operator*( const cuFloatComplex z, const float r ) {
-  cuFloatComplex temp;
+inline __device__ gpuFloatComplex operator*( const gpuFloatComplex z, const float r ) {
+  gpuFloatComplex temp;
 
   temp=z;
   temp *= r;
@@ -86,46 +87,46 @@ inline __device__ cuFloatComplex operator*( const cuFloatComplex z, const float 
 }
 
 //! Multiplication of a real number
-inline __device__ cuFloatComplex operator*( const float r, const cuFloatComplex z ) {
+inline __device__ gpuFloatComplex operator*( const float r, const gpuFloatComplex z ) {
   return( z*r );
 }
 
 
 // --------------------------------
 //! Division of two complex numbers
-inline __device__ cuFloatComplex operator/( const cuFloatComplex a, const cuFloatComplex b ) {
-  return( cuCdivf( a, b ) );
+inline __device__ gpuFloatComplex operator/( const gpuFloatComplex a, const gpuFloatComplex b ) {
+  return( gpuCdivf( a, b ) );
 }
 
 //! Division of a real number
-inline __device__ cuFloatComplex operator/( const float r, const cuFloatComplex b ) {
-  return( cuCdivf( make_cuFloatComplex( r, 0 ), b ) );
+inline __device__ gpuFloatComplex operator/( const float r, const gpuFloatComplex b ) {
+  return( gpuCdivf( make_gpuFloatComplex( r, 0 ), b ) );
 }
 
 //! Division by a real number
-inline __device__ cuFloatComplex operator/( const cuFloatComplex a, const float r ) {
-  return( make_cuFloatComplex( a.x / r, a.y / r ) );
+inline __device__ gpuFloatComplex operator/( const gpuFloatComplex a, const float r ) {
+  return( make_gpuFloatComplex( a.x / r, a.y / r ) );
 }
 
 
 // ----------------------------------------------------------
 //! Exponentiation
 //! Computes e^z == e^x ( cos y + i sin y )
-inline __device__ cuFloatComplex cuComplexExp( const cuFloatComplex z ) {
+inline __device__ gpuFloatComplex gpuComplexExp( const gpuFloatComplex z ) {
 
-  float x = cuCrealf( z );
-  float y = cuCimagf( z );
+  float x = gpuCrealf( z );
+  float y = gpuCimagf( z );
 
-  cuFloatComplex temp = make_cuFloatComplex( cosf(y), sinf(y) );
+  gpuFloatComplex temp = make_gpuFloatComplex( cosf(y), sinf(y) );
 
   return( (expf(x)) * temp );
 }
 
 // ----------------------------------------------------------
 //! Calculate real and imaginary parts of U(1) variable e^(i*theta)
-inline __device__ cuFloatComplex U1polar( const float theta ) {
+inline __device__ gpuFloatComplex U1polar( const float theta ) {
 
-  cuFloatComplex z;
+  gpuFloatComplex z;
   sincosf(theta, &(z.y), &(z.x));
 
   return z;
@@ -139,64 +140,64 @@ inline __device__ cuFloatComplex U1polar( const float theta ) {
 
 // --------------------------------
 //! Unary negative
-inline __device__ cuDoubleComplex operator-( cuDoubleComplex a ) {
-  return( make_cuDoubleComplex( -a.x, -a.y ) );
+inline __device__ gpuDoubleComplex operator-( gpuDoubleComplex a ) {
+  return( make_gpuDoubleComplex( -a.x, -a.y ) );
 }
 
 // --------------------------------
 //! Self addition
-inline __device__ void operator+=( cuDoubleComplex &a, const cuDoubleComplex b ) {
-  a = cuCadd( a, b );
+inline __device__ void operator+=( gpuDoubleComplex &a, const gpuDoubleComplex b ) {
+  a = gpuCadd( a, b );
 }
 
 //! Addition of two complex numbers
-inline __device__ cuDoubleComplex operator+( const cuDoubleComplex a, const cuDoubleComplex b ) {
-  return( cuCadd( a, b ) );
+inline __device__ gpuDoubleComplex operator+( const gpuDoubleComplex a, const gpuDoubleComplex b ) {
+  return( gpuCadd( a, b ) );
 }
 
 //! Addition of double to complex
-inline __device__ cuDoubleComplex operator+( const cuDoubleComplex a, const double r ) {
-  return( make_cuDoubleComplex( a.x+r, a.y ) );
+inline __device__ gpuDoubleComplex operator+( const gpuDoubleComplex a, const double r ) {
+  return( make_gpuDoubleComplex( a.x+r, a.y ) );
 }
 
 //! Addition of complex to double
-inline __device__ cuDoubleComplex operator+( const double r, const cuDoubleComplex z ) {
+inline __device__ gpuDoubleComplex operator+( const double r, const gpuDoubleComplex z ) {
   return( z + r );
 }
 
 // --------------------------------
 //! Self subtraction
-inline __device__ void operator-=( cuDoubleComplex &a, const cuDoubleComplex b ) {
-  a = cuCsub( a, b );
+inline __device__ void operator-=( gpuDoubleComplex &a, const gpuDoubleComplex b ) {
+  a = gpuCsub( a, b );
 }
 
 //! Subtraction
-inline __device__ cuDoubleComplex operator-( const cuDoubleComplex a, const cuDoubleComplex b ) {
-  return( cuCsub( a, b ) );
+inline __device__ gpuDoubleComplex operator-( const gpuDoubleComplex a, const gpuDoubleComplex b ) {
+  return( gpuCsub( a, b ) );
 }
 
 
 // --------------------------------
 //! Self multiplication
-inline __device__ void operator*=( cuDoubleComplex &a, const cuDoubleComplex b ) {
-  a = cuCmul( a, b );
+inline __device__ void operator*=( gpuDoubleComplex &a, const gpuDoubleComplex b ) {
+  a = gpuCmul( a, b );
 }
 
 //! Multiplication of two complex numbers
-inline __device__ cuDoubleComplex operator*( const cuDoubleComplex a, const cuDoubleComplex b ) {
-  return( cuCmul( a, b ) );
+inline __device__ gpuDoubleComplex operator*( const gpuDoubleComplex a, const gpuDoubleComplex b ) {
+  return( gpuCmul( a, b ) );
 }
 
 // --------------------------------
 //! Self multiplication by real number
-inline __device__ void operator*=( cuDoubleComplex &z, const double r ) {
+inline __device__ void operator*=( gpuDoubleComplex &z, const double r ) {
   z.x *= r;
   z.y *= r;
 }
 
 //! Multiplication by a real number
-inline __device__ cuDoubleComplex operator*( const cuDoubleComplex z, const double r ) {
-  cuDoubleComplex temp;
+inline __device__ gpuDoubleComplex operator*( const gpuDoubleComplex z, const double r ) {
+  gpuDoubleComplex temp;
 
   temp=z;
   temp *= r;
@@ -204,55 +205,55 @@ inline __device__ cuDoubleComplex operator*( const cuDoubleComplex z, const doub
 }
 
 //! Multiplication of a real number
-inline __device__ cuDoubleComplex operator*( const double r, const cuDoubleComplex z ) {
+inline __device__ gpuDoubleComplex operator*( const double r, const gpuDoubleComplex z ) {
   return( z*r );
 }
 
 // --------------------------------
 //! Division of two complex numbers
-inline __device__ cuDoubleComplex operator/( const cuDoubleComplex a, const cuDoubleComplex b ) {
-  return( cuCdiv( a, b ) );
+inline __device__ gpuDoubleComplex operator/( const gpuDoubleComplex a, const gpuDoubleComplex b ) {
+  return( gpuCdiv( a, b ) );
 }
 
 //! Division of a real number
-inline __device__ cuDoubleComplex operator/( const double r, const cuDoubleComplex b ) {
-  return( cuCdiv( make_cuDoubleComplex( r, 0 ), b ) );
+inline __device__ gpuDoubleComplex operator/( const double r, const gpuDoubleComplex b ) {
+  return( gpuCdiv( make_gpuDoubleComplex( r, 0 ), b ) );
 }
 
 //! Division by a real number
-inline __device__ cuDoubleComplex operator/( const cuDoubleComplex a, const double r ) {
-  return( make_cuDoubleComplex( a.x / r, a.y / r ) );
+inline __device__ gpuDoubleComplex operator/( const gpuDoubleComplex a, const double r ) {
+  return( make_gpuDoubleComplex( a.x / r, a.y / r ) );
 }
 
 
 // ----------------------------------------------------------
 //! Exponentiation
 //! Computes e^z == e^x ( cos y + i sin y )
-inline __device__ cuDoubleComplex cuComplexExp( const cuDoubleComplex z ) {
+inline __device__ gpuDoubleComplex gpuComplexExp( const gpuDoubleComplex z ) {
 
-  double x = cuCreal( z );
-  double y = cuCimag( z );
+  double x = gpuCreal( z );
+  double y = gpuCimag( z );
 
-  cuDoubleComplex temp = make_cuDoubleComplex( cos(y), sin(y) );
+  gpuDoubleComplex temp = make_gpuDoubleComplex( cos(y), sin(y) );
 
   return( (exp(x)) * temp );
 }
 
 // ----------------------------------------------------------
 //! Calculate real and imaginary parts of U(1) variable e^(i*theta)
-inline __device__ cuDoubleComplex U1polar( const double theta ) {
+inline __device__ gpuDoubleComplex U1polar( const double theta ) {
 
-  cuDoubleComplex z;
+  gpuDoubleComplex z;
   sincos(theta, &(z.y), &(z.x));
 
   return z;
 }
 
 //! Make a CUDA complex to the precision set during compilation
-inline __device__ cuUserComplex make_cuUserComplex( user_precision_t real,
+inline __device__ gpuUserComplex make_gpuUserComplex( user_precision_t real,
                                                     user_precision_t imag) {
 
-  cuUserComplex z;
+  gpuUserComplex z;
   z.x = real;
   z.y = imag;
 

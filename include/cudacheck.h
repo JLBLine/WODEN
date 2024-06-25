@@ -4,6 +4,7 @@
 
 #pragma once
 #include <stdbool.h>
+#include "gpu_macros.h"
 
 //A Bool to say whether we exit if an error is found. Might be useful as an
 //option somewhere down the line
@@ -29,11 +30,10 @@ exiting if an error is found (default true)
 @param[in] abort If true, exit the CUDA code when an error is found
 
 */
-inline void ErrorCheck(const char *message, cudaError_t code, const char *file,
-                       int line, bool abort=EXITERROR){
-  if (code != cudaSuccess) {
+inline void ErrorCheck(const char *message, gpuError_t code, const char *file, int line, bool abort=EXITERROR){
+  if (code != gpuSuccess) {
     fprintf(stderr,"CUDA ERROR CHECK %s: %s\n %s:%d\n",
-                    message, cudaGetErrorString(code), file, line);
+                    message, gpuGetErrorString(code), file, line);
     if (abort) {
       printf("CUDA IS EXITING\n");
       exit(code);
@@ -43,21 +43,21 @@ inline void ErrorCheck(const char *message, cudaError_t code, const char *file,
 
 /**
 @brief Take a CUDA error message `code`, and passes it onto `ErrorCheck` to
-check for errors. This can be wrapped around any call to `cudaMalloc`,
-`cudaMemcpy`, or `cudaFree`.
+check for errors. This can be wrapped around any call to `gpuMalloc`,
+`gpuMemcpy`, or `gpuFree`.
 
 @details Example usage:
 
           float *d_array=NULL;
           int num_values=1e6;
-          cudaErrorCheckCall( cudaMalloc( (void**)&(d_array), num_values*sizeof(float)) );
+          gpuErrorCheckCall( gpuMalloc( (void**)&(d_array), num_values*sizeof(float)) );
 
 Uses `__FILE__` and `__LINE__` to get file name and line
 number to pass on to `ErrorCheck`
 
-@param[in] code A `cudaError_t` code
+@param[in] code A `gpuError_t` code
 */
-#define cudaErrorCheckCall( code) { ErrorCheck("Call", code, __FILE__, __LINE__); }
+#define gpuErrorCheckCall( code) { ErrorCheck("Call", code, __FILE__, __LINE__); }
 
 //Runs a given kernel with the appropirate number of grids/threads
 //Checks for errors and includes "message" in the error message
@@ -73,9 +73,9 @@ arguments here. `kernel` is then run via
 
 where `__VA_ARGS__` passes on the arguments located at `...`
 
-`cudaErrorCheckKernel` then passes the string `message` on to `ErrorCheck`,
+`gpuErrorCheckKernel` then passes the string `message` on to `ErrorCheck`,
 along with the file name and line number via `__FILE__` and `__LINE__`, and
-checks the errors from both `cudaGetLastError()` and `cudaDeviceSynchronize()`
+checks the errors from both `gpuGetLastError()` and `gpuDeviceSynchronize()`
 after running the kernel.
 
 For example, if `fancy_kernel` takes the arguments `arg1` and `arg2`, to run it
@@ -84,7 +84,7 @@ with 10 grids of 64 threads, run the following:
           dim3 grid, threads;
           grid.x = 10
           threads.x = 64
-          cudaErrorCheckKernel("Call to fancy_kernel",
+          gpuErrorCheckKernel("Call to fancy_kernel",
                               fancy_kernel, grid, threads,
                               arg1, arg2);
 
@@ -96,7 +96,8 @@ with 10 grids of 64 threads, run the following:
 @param[in] threads A `dim3` containing thread specifications to run `kernel` with
 @param[in] ... All arguments to be passed into `kernel`
 */
-#define cudaErrorCheckKernel(message, kernel, grid, threads, ...) \
+#define gpuErrorCheckKernel(message, kernel, grid, threads, ...) \
   kernel <<< grid , threads, 0 >>>(__VA_ARGS__); \
-  ErrorCheck(message, cudaGetLastError(), __FILE__, __LINE__); \
-  ErrorCheck(message, cudaDeviceSynchronize(), __FILE__, __LINE__);
+//  ErrorCheck(message, gpuGetLastError(), __FILE__, __LINE__); \
+  gpuGetLastError(); \\
+  ErrorCheck(message, gpuDeviceSynchronize(), __FILE__, __LINE__);
