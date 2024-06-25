@@ -52,30 +52,37 @@ if(USE_CUDA)
     elseif (CUDA_ARCH EQUAL "7.5")
         set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_75")
     endif()
+
+    set(HINTS_HBEAM_INC "/usr/local/include/;${HBEAM_ROOT}/;")
+    set(HINTS_HBEAM_LIB "/usr/local/lib/;${HBEAM_ROOT}")
+    
+    find_path(HBEAM_INC mwa_hyperbeam.h HINTS ${HINTS_HBEAM_INC})
+    find_library(HBEAM_LIB mwa_hyperbeam HINTS ${HINTS_HBEAM_LIB} REQUIRED)
 elseif(USE_HIP)
     message("DEBUG : USE_HIP=ON")
 
     project(woden VERSION 2.0 LANGUAGES CXX C)
     set(CMAKE_CXX_COMPILER hipcc)
     add_definitions("-D__HIP_PLATFORM_AMD__ -D__HIPCC__") 
+
+    include_directories( /scratch/mwavcs/msok/install/mwalib/include /scratch/mwavcs/msok/install/mwa_hyperbeam_gpu_compilation/include /scratch/mwavcs/msok/install/psrfits_utils /scratch/mwavcs/msok/install/include/ /opt/cray/pe/mpich/8.1.25/ucx/cray/10.0/include/ /opt/rocm-5.2.3/include/hipfft/ )
+    set(HINTS_HBEAM_LIB "/scratch/mwavcs/msok/install/mwa_hyperbeam_gpu_compilation/target/release/libmwa_hyperbeam.so")
+    set(HINTS_HBEAM_INC "/scratch/mwavcs/msok/install/mwa_hyperbeam_gpu_compilation/include")
+    find_path(HBEAM_INC mwa_hyperbeam.h HINTS ${HINTS_HBEAM_INC})
+    # find_library(HBEAM_LIB mwa_hyperbeam HINTS ${HINTS_HBEAM_LIB} REQUIRED)
 endif()
 
 ##Find the source codes
 file(GLOB CSOURCES "src/*.c")
 file(GLOB CUDASOURCES "src/*.cpp")
 
-include_directories( /scratch/mwavcs/msok/install/mwalib/include /scratch/mwavcs/msok/install/mwa_hyperbeam_gpu_compilation/include /scratch/mwavcs/msok/install/psrfits_utils /scratch/mwavcs/msok/install/include/ /opt/cray/pe/mpich/8.1.25/ucx/cray/10.0/include/ /opt/rocm-5.2.3/include/hipfft/ )
+if(USE_CUDA)
+    set_source_files_properties( ${CUDASOURCES} PROPERTIES LANGUAGE CUDA)
+endif()
+
+
 include_directories("src/")
 
-##Try and find the hyperbeam library
-# set(HINTS_HBEAM_INC "/usr/local/include/;${HBEAM_ROOT}/;")
-# set(HINTS_HBEAM_LIB "/usr/local/lib/;${HBEAM_ROOT}")
-set(HINTS_HBEAM_LIB "/scratch/mwavcs/msok/install/mwa_hyperbeam_gpu_compilation/target/release/libmwa_hyperbeam.so")
-set(HINTS_HBEAM_INC "/scratch/mwavcs/msok/install/mwa_hyperbeam_gpu_compilation/include")
-
-find_path(HBEAM_INC mwa_hyperbeam.h HINTS ${HINTS_HBEAM_INC})
-# find_library(HBEAM_LIB mwa_hyperbeam HINTS ${HINTS_HBEAM_LIB} REQUIRED)
-set(HBEAM_LIB "/scratch/mwavcs/msok/install/mwa_hyperbeam_gpu_compilation/target/release/libmwa_hyperbeam.so")
 if(HBEAM_LIB)
   message(STATUS "HBEAM include path: ${HBEAM_INC}")
   message(STATUS "HBEAM library path: ${HBEAM_LIB}")
