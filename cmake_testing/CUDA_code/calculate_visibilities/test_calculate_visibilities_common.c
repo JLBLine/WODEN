@@ -318,6 +318,7 @@ woden_settings_t * make_woden_settings(double ra0, double dec0) {
     woden_settings->lsts = lsts;
 
     woden_settings->do_autos = 0;
+    woden_settings->use_dipamps = 0;
 
     return woden_settings;
 }
@@ -472,6 +473,19 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
   printf("Calling CUDA\n");
   calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
                          woden_settings, visibility_set, sbf);
+
+  // for (int visi = 0; visi < woden_settings->num_visis; visi++) {
+  //   printf("\t\tVisi %d: %f %f %f %f %f %f %f %f\n", visi,
+  //               visibility_set->sum_visi_XX_real[visi],
+  //               visibility_set->sum_visi_XX_imag[visi],
+  //               visibility_set->sum_visi_XY_real[visi],
+  //               visibility_set->sum_visi_XY_imag[visi],
+  //               visibility_set->sum_visi_YX_real[visi],
+  //               visibility_set->sum_visi_YX_imag[visi],
+  //               visibility_set->sum_visi_YY_real[visi],
+  //               visibility_set->sum_visi_YY_imag[visi]);
+  // }
+
   printf("CUDA has finished\n");
 
   //Be free my pretties!

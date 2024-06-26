@@ -470,86 +470,6 @@ extern "C" void calculate_RTS_MWA_analytic_beam(int num_components,
 }
 
 
-// we have 3 dimensions to loop over here:
-//  - component
-//  - freqs
-//  - times
-//
-// it's likely that time will usually be the smallest, so I'm going to
-// loop over that. Time will tell whether that's a good idea or not LOL
-__global__ void kern_map_hyperbeam_gains(int num_components,
-           int num_times, int num_freqs, int iTime, int num_unique_fee_freqs,
-           double *d_jones, const int *d_tile_map, const int *d_freq_map,
-           int parallactic,
-           cuUserComplex *d_gxs,
-           cuUserComplex *d_Dxs,
-           cuUserComplex *d_Dys,
-           cuUserComplex *d_gys) {
-
-  //All baselines at all freqs and all times
-  int iComponent = threadIdx.x + (blockDim.x*blockIdx.x);
-
-  //The tile to map - currently unused but hopefully in the future tis possible
-  int iTile = threadIdx.y + (blockDim.y*blockIdx.y);
-
-  //freq step
-  int iFreq = threadIdx.z + (blockDim.z*blockIdx.z);
-
-  if (iComponent < num_components && iTime < num_times && iFreq < num_freqs ) {
-
-    cuUserComplex d_beam_J00;
-    cuUserComplex d_beam_J01;
-    cuUserComplex d_beam_J10;
-    cuUserComplex d_beam_J11;
-
-    // For *this tile* and *this frequency*, access the de-duplicated beam
-    // response.
-    int i_row = d_tile_map[iTile];
-    int i_col = d_freq_map[iFreq];
-
-    int hyper_ind, current_ind;
-
-    //If we are doing parallactic rotation corrections, the latitude needs
-    //to be fed in. As this change change with time, we call hyperbeam for
-    //each time step, and use pointer arithmatic when storing the outputs
-    //This means the striping for retrieving outputs is different.
-    if (parallactic == 1)
-    {
-      //Where the desired data sits within a single time step hyperdrive
-      //output
-      hyper_ind = ((num_components * num_unique_fee_freqs * i_row) + num_components * i_col);
-
-      //Add on how many previous time-steps-worth of outputs we've
-      //already remapped
-      current_ind = hyper_ind + iTime*num_components*num_freqs + iComponent;
-    } else {
-      hyper_ind = ((num_components*num_times * num_unique_fee_freqs * i_row) + num_components * i_col);
-
-      current_ind = hyper_ind + iTime*num_components + iComponent;
-    }
-
-    //Get an index to split into the WODEN style containers
-    int new_ind = num_freqs*iTime*num_components + (num_components*iFreq) + iComponent;
-
-    d_beam_J00.x = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 0];
-    d_beam_J00.y = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 1];
-    d_beam_J01.x = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 2];
-    d_beam_J01.y = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 3];
-    d_beam_J10.x = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 4];
-    d_beam_J10.y = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 5];
-    d_beam_J11.x = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 6];
-    d_beam_J11.y = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 7];
-
-    d_gxs[new_ind] = d_beam_J00;
-    d_Dxs[new_ind] = d_beam_J01;
-    d_Dys[new_ind] = d_beam_J10;
-    d_gys[new_ind] = d_beam_J11;
-
-  }
-}
-
-
-
 // we have 4 dimensions to loop over here:
 //  - component
 //  - freqs
@@ -558,14 +478,14 @@ __global__ void kern_map_hyperbeam_gains(int num_components,
 //
 // it's likely that time will usually be the smallest, so I'm going to
 // loop over that. Time will tell whether that's a good idea or not LOL
-__global__ void kern_map_hyperbeam_gains_multi_antennas(int num_components,
+__global__ void kern_map_hyperbeam_gains(int num_components,
            int num_times, int num_freqs, int num_tiles, int iTime, int num_unique_fee_freqs,
            double *d_jones, const int *d_tile_map, const int *d_freq_map,
            int parallactic,
-           cuUserComplex *d_gxs_ants,
-           cuUserComplex *d_Dxs_ants,
-           cuUserComplex *d_Dys_ants,
-           cuUserComplex *d_gys_ants) {
+           cuUserComplex *d_gxs,
+           cuUserComplex *d_Dxs,
+           cuUserComplex *d_Dys,
+           cuUserComplex *d_gys) {
 
   //All baselines at all freqs and all times
   int iComponent = threadIdx.x + (blockDim.x*blockIdx.x);
@@ -622,10 +542,10 @@ __global__ void kern_map_hyperbeam_gains_multi_antennas(int num_components,
     //Get an index to split into the WODEN style containers
     int new_ind =  num_times*num_freqs*num_components*iTile + num_freqs*iTime*num_components + (num_components*iFreq) + iComponent;
 
-    d_gxs_ants[new_ind] = d_beam_J00;
-    d_Dxs_ants[new_ind] = d_beam_J01;
-    d_Dys_ants[new_ind] = d_beam_J10;
-    d_gys_ants[new_ind] = d_beam_J11;
+    d_gxs[new_ind] = d_beam_J00;
+    d_Dxs[new_ind] = d_beam_J01;
+    d_Dys[new_ind] = d_beam_J10;
+    d_gys[new_ind] = d_beam_J11;
 
   }
 }
@@ -642,10 +562,9 @@ __global__ void fill_with_ones(int num_azza, double *d_jones) {
 }
 
 
-//TODO need this function to take in a second set of jones matrices
 extern "C" void run_hyperbeam_cuda(int num_components,
            int num_time_steps, int num_freqs,
-           uint8_t parallactic,
+           int num_ants, uint8_t parallactic,
            struct FEEBeamGpu *cuda_fee_beam,
            double *azs, double *zas,
            double *latitudes,
@@ -654,9 +573,11 @@ extern "C" void run_hyperbeam_cuda(int num_components,
            cuUserComplex *d_Dys,
            cuUserComplex *d_gys){
 
+  //Always do things in IAU order
+  int iau_order = 1;
 
   int num_azza = num_components * num_time_steps;
-  int num_beam_values = num_azza * num_freqs;
+  int num_beam_values = num_azza * num_freqs * num_ants;
 
   //TODO if not doing parallactic, we don't have to malloc this much memory;
   //only enough for ONE time step. Once we get into a beam for each tile,
@@ -667,29 +588,25 @@ extern "C" void run_hyperbeam_cuda(int num_components,
                       2*MAX_POLS*num_beam_values*sizeof(double)) );
 
   int32_t status = 0;
-  // The beam-response Jones matrix be in the IAU polarisation order
-  int iau_order = 1;
 
   //This is used for the remapping below
   dim3 grid, threads;
 
-  //For now, only using one beam
-  grid.y = threads.y = 1;
-  //In the future, different tiles can have different beams, so something like
-  // threads.x = 32;
-  // threads.y = 2;
-  // grid.y = (int)ceil( (float)num_tiles / (float)threads.y );
-
-  threads.x = 64;
+  threads.x = 32;
   threads.z = 2;
 
   grid.x = (int)ceil( (float)num_components / (float)threads.x );
   grid.z = (int)ceil( (float)num_freqs / (float)threads.z );
 
-  int num_unique_fee_freqs = get_num_unique_fee_freqs(cuda_fee_beam);
-  int num_unique_fee_tiles = get_num_unique_fee_tiles(cuda_fee_beam);
+  if (num_ants > 1) {
+    threads.y = 2;
+    grid.y = (int)ceil( (float)num_ants / (float)threads.y );
+  } else {
+    grid.y = threads.y = 1;
+  }
 
-  int num_tiles = 1;
+  int num_tiles = num_ants;
+  int num_unique_fee_freqs = get_num_unique_fee_freqs(cuda_fee_beam);
 
   //Get host pointers to the tile and freq maps
   const int *tile_map;
@@ -712,126 +629,6 @@ extern "C" void run_hyperbeam_cuda(int num_components,
             num_freqs*sizeof(int32_t), cudaMemcpyHostToDevice ) );
 
   if (parallactic) {
-
-    //The latitude of the array should change with time if we are precessing
-    //it back to J2000. This means we have to call hyperbeam for as many time
-    //steps as we have. Supply chunks of az, za, and d_jones via pointer
-    //arithmatic
-    int increment;
-    for (int time_ind = 0; time_ind < num_time_steps; time_ind++) {
-
-      //The size of the increment depends on the number of unique
-      //frequencies - 
-      increment = time_ind*num_components;
-      //You get real + imag for MAX_POLS polarisations hence the larger
-      //increment on the d_jones array below
-      status = fee_calc_jones_gpu_device(cuda_fee_beam,
-                      (uint32_t)num_components,
-                      azs + increment, zas + increment,
-                      &latitudes[time_ind],
-                      iau_order,
-                      (double *)d_jones + 2*MAX_POLS*num_freqs*increment);
-      //TODO this needs to take in a BASELINE mapping function, so we can
-      //get the correct tile going into d_gx_1 and d_gx_2
-      cudaErrorCheckKernel("kern_map_hyperbeam_gains",
-                            kern_map_hyperbeam_gains, grid, threads,
-                            num_components, num_time_steps, num_freqs,
-                            time_ind, num_unique_fee_freqs,
-                            d_jones, d_tile_map, d_freq_map,
-                            parallactic,
-                            d_gxs,
-                            d_Dxs,
-                            d_Dys,
-                            d_gys);
-    }
-
-  }
-  else {
-    status = fee_calc_jones_gpu_device(cuda_fee_beam,
-                    (uint32_t)num_azza,
-                    azs, zas,
-                    NULL,
-                    iau_order,
-                    (double *)d_jones);
-
-    for (int iTime = 0; iTime < num_time_steps; iTime++) {
-
-      cudaErrorCheckKernel("kern_map_hyperbeam_gains",
-                            kern_map_hyperbeam_gains, grid, threads,
-                            num_components, num_time_steps, num_freqs,
-                            iTime, num_unique_fee_freqs,
-                            d_jones, d_tile_map, d_freq_map,
-                            parallactic,
-                            d_gxs,
-                            d_Dxs,
-                            d_Dys,
-                            d_gys);
-    }
-
-  }
-
-  if (status != 0) {
-    const char *func_name = "fee_calc_jones_gpu_device";
-    handle_hyperbeam_error(__FILE__, __LINE__, func_name);
-  }
-
-  cudaErrorCheckCall( cudaFree(d_jones) );
-  cudaErrorCheckCall( cudaFree(d_tile_map) );
-  cudaErrorCheckCall( cudaFree(d_freq_map) );
-
-}
-
-
-
-
-//TODO need this function to take in a second set of jones matrices
-extern "C" void run_hyperbeam_cuda_multi_ants(int num_components,
-           int num_time_steps, int num_freqs,
-           int num_ants,
-           uint8_t parallactic,
-           struct FEEBeamGpu *cuda_fee_beam,
-           double *azs, double *zas,
-           double *latitudes,
-           cuUserComplex *d_gxs_ants,
-           cuUserComplex *d_Dxs_ants,
-           cuUserComplex *d_Dys_ants,
-           cuUserComplex *d_gys_ants){
-
-
-  int num_azza = num_components * num_time_steps;
-  int num_beam_values = num_azza * num_freqs * num_ants;
-
-  //TODO if not doing parallactic, we don't have to malloc this much memory;
-  //only enough for ONE time step. Once we get into a beam for each tile,
-  //this will be a useful memory save. For now, not too expensive, so leave
-  //as is
-  double *d_jones = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&(d_jones),
-                      2*MAX_POLS*num_beam_values*sizeof(double)) );
-
-  int32_t status = 0;
-  // Should the beam-response Jones matrix be in the IAU polarisation order?
-  int iau_order;
-
-  //This is used for the remapping below
-  dim3 grid, threads;
-
-  //In the future, different tiles can have different beams, so something like
-  threads.x = 32;
-  threads.y = 2;
-  threads.z = 2;
-
-  grid.x = (int)ceil( (float)num_components / (float)threads.x );
-  grid.y = (int)ceil( (float)num_ants / (float)threads.y );
-  grid.z = (int)ceil( (float)num_freqs / (float)threads.z );
-
-  int num_unique_fee_freqs;
-  const int *d_tile_map;
-  const int *d_freq_map;
-
-  if (parallactic) {
-    iau_order = 1;
-
     //The latitude of the array should change with time if we are precessing
     //it back to J2000. This means we have to call hyperbeam for as many time
     //steps as we have. Supply chunks of az, za, and d_jones via pointer
@@ -851,28 +648,19 @@ extern "C" void run_hyperbeam_cuda_multi_ants(int num_components,
                       iau_order,
                       (double *)d_jones + 2*MAX_POLS*num_freqs*num_ants*increment);
 
-      num_unique_fee_freqs = get_num_unique_fee_freqs(cuda_fee_beam);
-      d_tile_map = get_fee_tile_map(cuda_fee_beam);
-      d_freq_map = get_fee_freq_map(cuda_fee_beam);
-
-
-      //TODO this needs to take in a BASELINE mapping function, so we can
-      //get the correct tile going into d_gx_1 and d_gx_2
-      cudaErrorCheckKernel("kern_map_hyperbeam_gains_multi_antennas",
-                            kern_map_hyperbeam_gains_multi_antennas, grid, threads,
+      cudaErrorCheckKernel("kern_map_hyperbeam_gains",
+                            kern_map_hyperbeam_gains, grid, threads,
                             num_components, num_time_steps, num_freqs, num_ants,
                             time_ind, num_unique_fee_freqs,
                             d_jones, d_tile_map, d_freq_map,
                             parallactic,
-                            d_gxs_ants,
-                            d_Dxs_ants,
-                            d_Dys_ants,
-                            d_gys_ants);
+                            d_gxs,
+                            d_Dxs,
+                            d_Dys,
+                            d_gys);
     }
-
   }
   else {
-    int iau_order = 1;
     status = fee_calc_jones_gpu_device(cuda_fee_beam,
                     (uint32_t)num_azza,
                     azs, zas,
@@ -880,23 +668,19 @@ extern "C" void run_hyperbeam_cuda_multi_ants(int num_components,
                     iau_order,
                     (double *)d_jones);
 
-    num_unique_fee_freqs = get_num_unique_fee_freqs(cuda_fee_beam);
-    d_tile_map = get_fee_tile_map(cuda_fee_beam);
-    d_freq_map = get_fee_freq_map(cuda_fee_beam);
+    for (int iTime = 0; iTime < num_time_steps; iTime++) {
 
-    // for (int iTime = 0; iTime < num_time_steps; iTime++) {
-
-    //   cudaErrorCheckKernel("kern_map_hyperbeam_gains",
-    //                         kern_map_hyperbeam_gains, grid, threads,
-    //                         num_components, num_time_steps, num_freqs,
-    //                         iTime, num_unique_fee_freqs,
-    //                         d_jones, d_tile_map, d_freq_map,
-    //                         parallactic,
-    //                         d_gxs,
-    //                         d_Dxs,
-    //                         d_Dys,
-    //                         d_gys);
-    // }
+      cudaErrorCheckKernel("kern_map_hyperbeam_gains",
+                            kern_map_hyperbeam_gains, grid, threads,
+                            num_components, num_time_steps, num_freqs, num_ants,
+                            iTime, num_unique_fee_freqs,
+                            d_jones, d_tile_map, d_freq_map,
+                            parallactic,
+                            d_gxs,
+                            d_Dxs,
+                            d_Dys,
+                            d_gys);
+    }
 
   }
 
@@ -1114,7 +898,7 @@ extern "C" void test_calculate_gaussian_beam(int num_components, int num_time_st
 }
 
 extern "C" void test_run_hyperbeam_cuda(int num_components,
-           int num_time_steps, int num_freqs,
+           int num_time_steps, int num_freqs, int num_ants,
            uint8_t parallatic,
            struct FEEBeamGpu *cuda_fee_beam,
            double *azs, double *zas,
@@ -1124,7 +908,7 @@ extern "C" void test_run_hyperbeam_cuda(int num_components,
            user_precision_complex_t *primay_beam_J10,
            user_precision_complex_t *primay_beam_J11){
   uint32_t num_azza = num_components * num_time_steps;
-  int num_beam_values = num_azza * num_freqs;
+  int num_beam_values = num_azza * num_freqs * num_ants;
 
   user_precision_complex_t *d_gxs = NULL;
   user_precision_complex_t *d_Dxs = NULL;
@@ -1155,7 +939,7 @@ extern "C" void test_run_hyperbeam_cuda(int num_components,
   }
 
   run_hyperbeam_cuda(num_components,
-             num_time_steps, num_freqs,
+             num_time_steps, num_freqs, num_ants,
              parallatic,
              cuda_fee_beam,
              reordered_azs, reordered_zas,
@@ -1185,88 +969,6 @@ extern "C" void test_run_hyperbeam_cuda(int num_components,
   cudaErrorCheckCall( cudaFree(d_Dxs) );
   cudaErrorCheckCall( cudaFree(d_Dys) );
   cudaErrorCheckCall( cudaFree(d_gys) );
-
-  free(reordered_azs);
-  free(reordered_zas);
-
-}
-
-
-
-
-
-extern "C" void test_run_hyperbeam_cuda_multi_ants(int num_components,
-           int num_time_steps, int num_freqs, int num_ants,
-           uint8_t parallatic, 
-           struct FEEBeamGpu *cuda_fee_beam,
-           double *azs, double *zas,
-           double *latitudes,
-           user_precision_complex_t *primay_beam_J00,
-           user_precision_complex_t *primay_beam_J01,
-           user_precision_complex_t *primay_beam_J10,
-           user_precision_complex_t *primay_beam_J11){
-  uint32_t num_azza = num_components * num_time_steps;
-  int num_beam_values = num_azza * num_freqs * num_ants;
-
-  user_precision_complex_t *d_gxs_ants = NULL;
-  user_precision_complex_t *d_Dxs_ants = NULL;
-  user_precision_complex_t *d_Dys_ants = NULL;
-  user_precision_complex_t *d_gys_ants = NULL;
-
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_gxs_ants,
-                      num_beam_values*sizeof(user_precision_complex_t)) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_Dxs_ants,
-                      num_beam_values*sizeof(user_precision_complex_t)) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_Dys_ants,
-                      num_beam_values*sizeof(user_precision_complex_t)) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_gys_ants,
-                      num_beam_values*sizeof(user_precision_complex_t)) );
-
-  double *reordered_azs = (double *)malloc(num_azza*sizeof(double));
-  double *reordered_zas = (double *)malloc(num_azza*sizeof(double));
-
-  int stripe_new, stripe_old;
-
-  for (int time_ind = 0; time_ind < num_time_steps; time_ind++) {
-    for (int comp_ind = 0; comp_ind < num_components; comp_ind++) {
-      stripe_new = time_ind*num_components + comp_ind;
-      stripe_old = comp_ind*num_time_steps + time_ind;
-      reordered_azs[stripe_new] = azs[stripe_old];
-      reordered_zas[stripe_new] = zas[stripe_old];
-    }
-  }
-
-  run_hyperbeam_cuda_multi_ants(num_components,
-             num_time_steps, num_freqs, num_ants,
-             parallatic,
-             cuda_fee_beam,
-             reordered_azs, reordered_zas,
-             latitudes,
-             (cuUserComplex *)d_gxs_ants,
-             (cuUserComplex *)d_Dxs_ants,
-             (cuUserComplex *)d_Dys_ants,
-             (cuUserComplex *)d_gys_ants);
-
-  cudaErrorCheckCall( cudaMemcpy( primay_beam_J00, d_gxs_ants,
-                      num_beam_values*sizeof(user_precision_complex_t),
-                      cudaMemcpyDeviceToHost) );
-
-  cudaErrorCheckCall( cudaMemcpy( primay_beam_J01, d_Dxs_ants,
-                      num_beam_values*sizeof(user_precision_complex_t),
-                      cudaMemcpyDeviceToHost) );
-
-  cudaErrorCheckCall( cudaMemcpy( primay_beam_J10, d_Dys_ants,
-                      num_beam_values*sizeof(user_precision_complex_t),
-                      cudaMemcpyDeviceToHost) );
-
-  cudaErrorCheckCall( cudaMemcpy( primay_beam_J11, d_gys_ants,
-                      num_beam_values*sizeof(user_precision_complex_t),
-                      cudaMemcpyDeviceToHost) );
-
-  cudaErrorCheckCall( cudaFree(d_gxs_ants) );
-  cudaErrorCheckCall( cudaFree(d_Dxs_ants) );
-  cudaErrorCheckCall( cudaFree(d_Dys_ants) );
-  cudaErrorCheckCall( cudaFree(d_gys_ants) );
 
   free(reordered_azs);
   free(reordered_zas);

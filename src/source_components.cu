@@ -923,11 +923,19 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
       }
     }
 
-
+    //Always be doing parallatic angle rotation
     uint8_t parallactic = 1;
+
+    int num_beams;
+    if (woden_settings->use_dipamps == 1) {
+      num_beams = woden_settings->num_ants;
+    } else {
+      num_beams = 1;
+    }
+    
     run_hyperbeam_cuda(num_components,
            woden_settings->num_time_steps, woden_settings->num_freqs,
-           parallactic,
+           num_beams, parallactic,
            beam_settings->cuda_fee_beam,
            reordered_azs, reordered_zas,
            woden_settings->latitudes,
@@ -1631,11 +1639,16 @@ __global__ void kern_calc_autos(components_t d_components,
   const int iTimeFreq = threadIdx.x + (blockDim.x*blockIdx.x);
   const int iAnt = threadIdx.y + (blockDim.y*blockIdx.y);
 
-  //One day we might have different primary beams for each tile,
+  //TODO One day we might have different primary beams for each tile,
   //then we'll have to use iAuto to reference different primary
   //beams - at the mo we get grab the same primary beam for all antennas
   // const int iAuto = threadIdx.z + (blockDim.z*blockIdx.z);
   if(iAnt < num_ants && iTimeFreq < num_times*num_freqs) {
+
+    //TODO get this in as an argument
+    int *d_ant1_to_baseline_map = NULL;
+    int *d_ant2_to_baseline_map = NULL;
+    int use_twoants = 0;
 
     int time_ind = (int)floorf( (float)iTimeFreq / (float)num_freqs);
     int freq_ind = iTimeFreq - time_ind*num_freqs;
@@ -1653,11 +1666,22 @@ __global__ void kern_calc_autos(components_t d_components,
 
     for (int iComponent = 0; iComponent < num_components; iComponent++) {
 
-      get_beam_gains(iBaseline, iComponent, num_freqs,
-               num_baselines, num_components, num_times, beamtype,
-               d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
-               d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
-               &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
+      if (use_twoants == 1){
+        get_beam_gains_two_antennas(iBaseline, iComponent, num_freqs,
+                num_baselines, num_components, num_times, beamtype,
+                d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
+                d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
+                d_ant1_to_baseline_map, d_ant2_to_baseline_map,
+                &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
+      }
+      else {
+        // printf("WE IS ONLY DOING THIS TING\n");
+        get_beam_gains(iBaseline, iComponent, num_freqs,
+                num_baselines, num_components, num_times, beamtype,
+                d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
+                d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
+                &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
+      }
 
       cuUserComplex visi_component;
       visi_component = make_cuUserComplex(1.0, 0.0);
@@ -2526,9 +2550,11 @@ extern "C" void test_source_component_common(int num_of_each_flux_type,
   visibility_set_t *d_visibility_set = NULL;
   woden_settings->do_autos = 0;
 
+  //THIS IS THE CUDA CALL ACTUALLY BEING TESTED JEEZUS--------------------------
   source_component_common(woden_settings, beam_settings, d_freqs,
        chunked_source, d_chunked_source, &d_beam_gains, comptype,
        d_visibility_set);
+  //THIS IS THE CUDA CALL ACTUALLY BEING TESTED JEEZUS--------------------------
 
   int num_beam_values = NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*woden_settings->num_time_steps;
 

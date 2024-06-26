@@ -15,7 +15,7 @@ void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
 // //External CUDA code we're linking in
-extern void test_run_hyperbeam_cuda_multi_ants(int num_components,
+extern void test_run_hyperbeam_cuda(int num_components,
            int num_time_steps, int num_freqs, int num_ants,
            uint8_t parallatic, 
            struct FEEBeamGpu *cuda_fee_beam,
@@ -79,6 +79,8 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
 
   uint32_t num_tiles = 3;
 
+  //These are the amplitudes for the dipoles, as read in from metafits
+  //I believe that they have X - east-west, Y - north-south
   double amps[96] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                      0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
                      0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4,
@@ -100,6 +102,8 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
 
   //MAKE a 2D array of amps, should be num_tiles * 32 (16 for X 16 for Y)
   
+  //This num_amps is either 16 or 32, meaning either same amps for X,Y or
+  //unique amps for X,Y
   uint32_t num_amps = 32;
   uint8_t norm_to_zenith = 1;
   uint32_t num_freqs = 3;
@@ -135,7 +139,7 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
   uint8_t parallatic = (uint8_t)rotate;
 
   double latitudes[] = {-0.4660608448386394, -0.498};
-  test_run_hyperbeam_cuda_multi_ants(num_components,
+  test_run_hyperbeam_cuda(num_components,
              num_times, num_freqs, (int)num_tiles,
              parallatic,
              cuda_fee_beam,
@@ -166,34 +170,45 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
   //   // }
   //
 
-  // for (int time = 0; time < num_times; time ++) {
-  //   for (int freq = 0; freq < num_freqs; freq ++) {
-  //     for (int comp = 0; comp < num_components; comp ++) {
+  //Given the dip amps we set earlier, we can multiply the expected values by
+  //one of these constants as appropriate
 
-  //       int beam_ind = num_freqs*time*num_components + num_components*freq + comp;
+  //OKOK so when hyperdrive reads in amps, X = east-west, Y = north-south
+  //I use it with iau_order = 1;, which switches Y = east-west, X = north-south
+  //This means the expected values should be as below
+  double antx_mult[3] = {0.2, 0.6, 1.0};
+  double anty_mult[3] = {0.0, 0.4, 0.8};
 
-  //       int expected_base = 2*MAX_POLS*comp + 2*MAX_POLS*time*num_components;
+  for (int ant = 0; ant < num_tiles; ant ++) {
+    for (int time = 0; time < num_times; time ++) {
+      for (int freq = 0; freq < num_freqs; freq ++) {
+        for (int comp = 0; comp < num_components; comp ++) {
 
-  //       TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+0],
-  //                                 creal(primay_beam_J00[beam_ind]) );
-  //       TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+1],
-  //                                 cimag(primay_beam_J00[beam_ind]) );
-  //       TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+2],
-  //                                 creal(primay_beam_J01[beam_ind]) );
-  //       TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+3],
-  //                                 cimag(primay_beam_J01[beam_ind]) );
-  //       TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+4],
-  //                                 creal(primay_beam_J10[beam_ind]) );
-  //       TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+5],
-  //                                 cimag(primay_beam_J10[beam_ind]) );
-  //       TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+6],
-  //                                 creal(primay_beam_J11[beam_ind]) );
-  //       TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+7],
-  //                                 cimag(primay_beam_J11[beam_ind]) );
+          int beam_ind = ant*num_freqs*num_times*num_components + num_freqs*time*num_components + num_components*freq + comp;
 
-  //     }
-  //   }
-  // }
+          int expected_base = 2*MAX_POLS*comp + 2*MAX_POLS*time*num_components;
+
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, antx_mult[ant]*expected[expected_base+0],
+                                    creal(primay_beam_J00[beam_ind]) );
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, antx_mult[ant]*expected[expected_base+1],
+                                    cimag(primay_beam_J00[beam_ind]) );
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, antx_mult[ant]*expected[expected_base+2],
+                                    creal(primay_beam_J01[beam_ind]) );
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, antx_mult[ant]*expected[expected_base+3],
+                                    cimag(primay_beam_J01[beam_ind]) );
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, anty_mult[ant]*expected[expected_base+4],
+                                    creal(primay_beam_J10[beam_ind]) );
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, anty_mult[ant]*expected[expected_base+5],
+                                    cimag(primay_beam_J10[beam_ind]) );
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, anty_mult[ant]*expected[expected_base+6],
+                                    creal(primay_beam_J11[beam_ind]) );
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, anty_mult[ant]*expected[expected_base+7],
+                                    cimag(primay_beam_J11[beam_ind]) );
+
+        }
+      }
+    }
+  }
 
   FILE *beam_values_out;
   char buff[0x100];
@@ -345,17 +360,17 @@ int main(void)
 {
     UNITY_BEGIN();
 
-    // RUN_TEST(test_hyperbeam_100MHz_zenith);
-    // RUN_TEST(test_hyperbeam_150MHz_zenith);
+    RUN_TEST(test_hyperbeam_100MHz_zenith);
+    RUN_TEST(test_hyperbeam_150MHz_zenith);
     RUN_TEST(test_hyperbeam_200MHz_zenith);
     
-    // RUN_TEST(test_hyperbeam_100MHz_off_zenith1);
-    // RUN_TEST(test_hyperbeam_150MHz_off_zenith1);
-    // RUN_TEST(test_hyperbeam_200MHz_off_zenith1);
+    RUN_TEST(test_hyperbeam_100MHz_off_zenith1);
+    RUN_TEST(test_hyperbeam_150MHz_off_zenith1);
+    RUN_TEST(test_hyperbeam_200MHz_off_zenith1);
     
-    // RUN_TEST(test_hyperbeam_100MHz_off_zenith2);
-    // RUN_TEST(test_hyperbeam_150MHz_off_zenith2);
-    // RUN_TEST(test_hyperbeam_200MHz_off_zenith2);
+    RUN_TEST(test_hyperbeam_100MHz_off_zenith2);
+    RUN_TEST(test_hyperbeam_150MHz_off_zenith2);
+    RUN_TEST(test_hyperbeam_200MHz_off_zenith2);
 
     return UNITY_END();
 }

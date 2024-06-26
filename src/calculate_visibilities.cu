@@ -30,7 +30,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   const int num_baselines = woden_settings->num_baselines;
   const int num_time_steps = woden_settings->num_time_steps;
   const int num_visis = woden_settings->num_visis;
-  // const int num_autos = woden_settings->num_autos;
+  const int num_autos = woden_settings->num_autos;
   const int num_cross = woden_settings->num_cross;
   const int num_freqs = woden_settings->num_freqs;
 
@@ -253,6 +253,22 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
             woden_settings->cdec0,
             d_allsteps_cha0s, d_allsteps_sha0s,
             num_cross, num_baselines, num_time_steps, num_freqs);
+
+    //Set auto-correlation uvw to zero if doing autos
+    if (woden_settings->do_autos == 1){
+      grid.x = (int)ceil( (float)num_autos / (float)threads.x );
+      grid.y = threads.y = 1;
+
+      cudaErrorCheckKernel("set_auto_uvw_to_zero",
+              set_auto_uvw_to_zero, grid, threads,
+              woden_settings->num_cross, woden_settings->num_visis,
+              d_us, d_vs, d_ws);
+
+      cudaErrorCheckKernel("set_auto_uvw_to_zero",
+              set_auto_uvw_to_zero, grid, threads,
+              woden_settings->num_cross, woden_settings->num_visis,
+              d_u_metres, d_v_metres, d_w_metres);
+    }
 
     int num_points = source->n_points;
     int num_gauss = source->n_gauss;

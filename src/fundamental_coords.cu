@@ -64,6 +64,22 @@ __global__ void kern_calc_uvw(double *d_X_diff, double *d_Y_diff,
   }
 }
 
+__global__ void set_auto_uvw_to_zero(int num_cross, int num_autos,
+                                     user_precision_t *d_u,
+                                     user_precision_t *d_v,
+                                     user_precision_t *d_w) {
+
+  const int iAuto = threadIdx.x + (blockDim.x*blockIdx.x);
+
+  if (iAuto < num_autos) {
+
+    d_u[num_cross + iAuto] = 0.0;
+    d_v[num_cross + iAuto] = 0.0;
+    d_w[num_cross + iAuto] = 0.0;
+  }
+  
+}
+
 /*TODO: this might be faster to just loop over the inside the kernel? */
 __global__ void kern_calc_uv_shapelet(double *d_X_diff,
       double *d_Y_diff, double *d_Z_diff,

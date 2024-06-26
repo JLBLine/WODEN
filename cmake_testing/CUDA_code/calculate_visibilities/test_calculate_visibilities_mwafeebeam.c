@@ -106,6 +106,7 @@ void test_calculate_visibilities_MWAFEEBeam(int n_points, int n_gauss, int n_sha
   visibility_set = test_calculate_visibilities(cropped_sky_models,
                                           beam_settings, woden_settings, RA0, -0.46606083776035967,
                                           beam_settings->beamtype);
+
   test_comp_phase_centre_allgains(visibility_set,
                                   gain1xx_re, gain1xx_im,
                                   gain1xy_re, gain1xy_im,

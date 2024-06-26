@@ -16,7 +16,7 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 
 // //External CUDA code we're linking in
 extern void test_run_hyperbeam_cuda(int num_components,
-           int num_times, int num_freqs,
+           int num_times, int num_freqs, int num_ants,
            uint8_t parallatic,
            struct FEEBeamGpu *cuda_fee_beam,
            double *azs, double *zas,
@@ -114,10 +114,11 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
 
 
   uint8_t parallatic = (uint8_t)rotate;
+  int num_ants = 1;
 
   double latitudes[] = {-0.4660608448386394, -0.498};
   test_run_hyperbeam_cuda(num_components,
-             num_times, num_freqs,
+             num_times, num_freqs, num_ants,
              parallatic,
              cuda_fee_beam,
              azs, zas,

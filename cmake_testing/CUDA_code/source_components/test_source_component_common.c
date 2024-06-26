@@ -61,6 +61,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   woden_settings->sdec0 = sin(dec0);
   woden_settings->cdec0 = cos(dec0);
   woden_settings->latitude = -0.46606083776035967;
+  woden_settings->use_dipamps = 0;
 
   woden_settings->latitudes = malloc(num_times*sizeof(double));
   for (int i = 0; i < num_times; i++)
