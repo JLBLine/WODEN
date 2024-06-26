@@ -809,6 +809,17 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
 
   int do_QUV = woden_settings->do_QUV;
 
+  //Here we see if we a single primary beam for all (num_beams = 1) or
+  //a primary beam per antenna (num_beams = num_ants)
+  //This can be expanded in the future to have a primary beam per tile
+  //for different options
+  int num_beams;
+    if (woden_settings->use_dipamps == 1) {
+      num_beams = woden_settings->num_ants;
+    } else {
+      num_beams = 1;
+  }
+
   int num_components = 0;
   components_t *components = NULL;
   components_t *d_components = NULL;
@@ -833,6 +844,8 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
 
   extrapolate_Stokes(d_chunked_source, d_freqs,
                      woden_settings->num_freqs, comptype, do_QUV);
+
+  int num_gains = d_components->num_primarybeam_values*num_beams;
   
   //Only the MWA beams currently yields cross pol values, so only malloc what
   //we need here
@@ -840,14 +853,14 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
   //if we have different beams for different tiles
   if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == MWA_ANALY || beam_settings->beamtype == FEE_BEAM_INTERP) {
     cudaErrorCheckCall( cudaMalloc( (void**)&d_component_beam_gains->d_Dxs,
-                    d_components->num_primarybeam_values*sizeof(cuUserComplex) ));
+                    num_gains*sizeof(cuUserComplex) ));
     cudaErrorCheckCall( cudaMalloc( (void**)&d_component_beam_gains->d_Dys,
-                    d_components->num_primarybeam_values*sizeof(cuUserComplex) ));
+                    num_gains*sizeof(cuUserComplex) ));
   }
   cudaErrorCheckCall( cudaMalloc( (void**)&d_component_beam_gains->d_gxs,
-                    d_components->num_primarybeam_values*sizeof(cuUserComplex) ));
+                    num_gains*sizeof(cuUserComplex) ));
   cudaErrorCheckCall( cudaMalloc( (void**)&d_component_beam_gains->d_gys,
-                    d_components->num_primarybeam_values*sizeof(cuUserComplex) ));
+                    num_gains*sizeof(cuUserComplex) ));
   //
   cudaErrorCheckCall( cudaMalloc( (void**)&d_components->ls,
                                                num_components*sizeof(double) ) );
@@ -926,13 +939,6 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
     //Always be doing parallatic angle rotation
     uint8_t parallactic = 1;
 
-    int num_beams;
-    if (woden_settings->use_dipamps == 1) {
-      num_beams = woden_settings->num_ants;
-    } else {
-      num_beams = 1;
-    }
-    
     run_hyperbeam_cuda(num_components,
            woden_settings->num_time_steps, woden_settings->num_freqs,
            num_beams, parallactic,
@@ -2557,6 +2563,10 @@ extern "C" void test_source_component_common(int num_of_each_flux_type,
   //THIS IS THE CUDA CALL ACTUALLY BEING TESTED JEEZUS--------------------------
 
   int num_beam_values = NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*woden_settings->num_time_steps;
+
+  if (woden_settings->use_dipamps == 1) {
+    num_beam_values *= woden_settings->num_ants;
+  }
 
   cudaErrorCheckCall( cudaMemcpy(gxs, (user_precision_complex_t*)d_beam_gains.d_gxs,
               num_beam_values*sizeof(cuUserComplex), cudaMemcpyDeviceToHost ));

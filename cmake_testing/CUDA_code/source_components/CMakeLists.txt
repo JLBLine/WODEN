@@ -202,20 +202,20 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   add_test(CUDA_test_update_sum_visis_multiants_${PRECISION}
       test_update_sum_visis_multiants_${PRECISION}_app)
 
-  # ##Test the common calls between all component types return expected values
-  # add_executable(test_source_component_common_multiants_${PRECISION}_app
-  # test_source_component_common_multiants.c
-  # common_testing_functions.c
-  # )
-  # target_link_libraries(test_source_component_common_multiants_${PRECISION}_app
-  #     Unity
-  #     source_componentsCUDA_${PRECISION}
-  #     ${CC_LINKLIBS}
-  # )
-  # target_compile_options(test_source_component_common_multiants_${PRECISION}_app
-  #                       PRIVATE ${C_FLAGS})
-  # add_test(CUDA_test_source_component_common_multiants_${PRECISION}
-  #         test_source_component_common_multiants_${PRECISION}_app)
+  ##Test the common calls between all component types return expected values
+  add_executable(test_source_component_common_multiants_${PRECISION}_app
+  test_source_component_common_multiants.c
+  common_testing_functions.c
+  )
+  target_link_libraries(test_source_component_common_multiants_${PRECISION}_app
+      Unity
+      source_componentsCUDA_${PRECISION}
+      ${CC_LINKLIBS}
+  )
+  target_compile_options(test_source_component_common_multiants_${PRECISION}_app
+                        PRIVATE ${C_FLAGS})
+  add_test(CUDA_test_source_component_common_multiants_${PRECISION}
+          test_source_component_common_multiants_${PRECISION}_app)
 
 
 endforeach()

@@ -139,7 +139,8 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       beam_settings->hyper_delays[delay] = (uint32_t)woden_settings->FEE_ideal_delays[delay];
     }
 
-    //TODO this could be a user specified thing in the future
+    //TODO get right number of amps if use_dipamps == 1
+    //TODO YOU GOTTA HAVE AS MANY DELAYS AS AMPS
     double amps[16] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 
     // uint32_t num_freqs_hyper = ();

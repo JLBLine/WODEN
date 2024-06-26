@@ -522,11 +522,13 @@ __global__ void kern_map_hyperbeam_gains(int num_components,
 
       //Add on how many previous time-steps-worth of outputs we've
       //already remapped
-      current_ind = hyper_ind + iTime*num_components*num_freqs*num_tiles + iComponent;
+      current_ind = hyper_ind + iComponent;
     } else {
       hyper_ind = ((num_components*num_times*num_unique_fee_freqs*i_row) + num_components * i_col);
 
-      current_ind = hyper_ind + iTime*num_components*num_tiles + iComponent;
+      //There is no frequency used in first chunk of this remapping, as that's handled
+      //by the hyper_ind
+      current_ind = iTime*num_components*num_tiles + hyper_ind + iComponent;
     }
 
     d_beam_J00.x = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 0];
@@ -537,7 +539,6 @@ __global__ void kern_map_hyperbeam_gains(int num_components,
     d_beam_J10.y = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 5];
     d_beam_J11.x = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 6];
     d_beam_J11.y = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 7];
-
 
     //Get an index to split into the WODEN style containers
     int new_ind =  num_times*num_freqs*num_components*iTile + num_freqs*iTime*num_components + (num_components*iFreq) + iComponent;
@@ -579,13 +580,17 @@ extern "C" void run_hyperbeam_cuda(int num_components,
   int num_azza = num_components * num_time_steps;
   int num_beam_values = num_azza * num_freqs * num_beams;
 
-  //TODO if not doing parallactic, we don't have to malloc this much memory;
-  //only enough for ONE time step. Once we get into a beam for each tile,
-  //this will be a useful memory save. For now, not too expensive, so leave
-  //as is
+  //If doing parallactic rotation, call hyperbeam for each time step, meaning
+  //we need less memory
   double *d_jones = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&(d_jones),
+
+  if (parallactic) {
+    cudaErrorCheckCall( cudaMalloc( (void**)&(d_jones),
                       2*MAX_POLS*num_beam_values*sizeof(double)) );
+  } else {
+    cudaErrorCheckCall( cudaMalloc( (void**)&(d_jones),
+                      2*MAX_POLS*num_beam_values*num_time_steps*sizeof(double)) );
+  }
 
   int32_t status = 0;
 
@@ -607,6 +612,7 @@ extern "C" void run_hyperbeam_cuda(int num_components,
 
   // int num_tiles = num_beams;
   int num_unique_fee_freqs = get_num_unique_fee_freqs(cuda_fee_beam);
+  int num_unique_fee_tiles = get_num_unique_fee_tiles(cuda_fee_beam);
 
   //Get host pointers to the tile and freq maps
   const int *tile_map;
@@ -639,14 +645,13 @@ extern "C" void run_hyperbeam_cuda(int num_components,
       //The size of the increment depends on the number of unique
       //frequencies - 
       increment = time_ind*num_components;
-      //You get real + imag for MAX_POLS polarisations hence the larger
-      //increment on the d_jones array below
+
       status = fee_calc_jones_gpu_device(cuda_fee_beam,
                       (uint32_t)num_components,
                       azs + increment, zas + increment,
                       &latitudes[time_ind],
                       iau_order,
-                      (double *)d_jones + 2*MAX_POLS*num_freqs*num_beams*increment);
+                      (double *)d_jones);
 
       cudaErrorCheckKernel("kern_map_hyperbeam_gains",
                             kern_map_hyperbeam_gains, grid, threads,
