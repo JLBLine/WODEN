@@ -17,7 +17,7 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 
 // //External CUDA code we're linking in
 extern void test_run_hyperbeam_cuda(int num_components,
-           int num_times, int num_freqs, int num_ants,
+           int num_times, int num_freqs, int num_beams,
            uint8_t parallatic,
            struct FEEBeamGpu *cuda_fee_beam,
            double *azs, double *zas,

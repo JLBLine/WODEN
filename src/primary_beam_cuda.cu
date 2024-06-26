@@ -564,7 +564,7 @@ __global__ void fill_with_ones(int num_azza, double *d_jones) {
 
 extern "C" void run_hyperbeam_cuda(int num_components,
            int num_time_steps, int num_freqs,
-           int num_ants, uint8_t parallactic,
+           int num_beams, uint8_t parallactic,
            struct FEEBeamGpu *cuda_fee_beam,
            double *azs, double *zas,
            double *latitudes,
@@ -577,7 +577,7 @@ extern "C" void run_hyperbeam_cuda(int num_components,
   int iau_order = 1;
 
   int num_azza = num_components * num_time_steps;
-  int num_beam_values = num_azza * num_freqs * num_ants;
+  int num_beam_values = num_azza * num_freqs * num_beams;
 
   //TODO if not doing parallactic, we don't have to malloc this much memory;
   //only enough for ONE time step. Once we get into a beam for each tile,
@@ -598,14 +598,14 @@ extern "C" void run_hyperbeam_cuda(int num_components,
   grid.x = (int)ceil( (float)num_components / (float)threads.x );
   grid.z = (int)ceil( (float)num_freqs / (float)threads.z );
 
-  if (num_ants > 1) {
+  if (num_beams > 1) {
     threads.y = 2;
-    grid.y = (int)ceil( (float)num_ants / (float)threads.y );
+    grid.y = (int)ceil( (float)num_beams / (float)threads.y );
   } else {
     grid.y = threads.y = 1;
   }
 
-  int num_tiles = num_ants;
+  // int num_tiles = num_beams;
   int num_unique_fee_freqs = get_num_unique_fee_freqs(cuda_fee_beam);
 
   //Get host pointers to the tile and freq maps
@@ -618,13 +618,13 @@ extern "C" void run_hyperbeam_cuda(int num_components,
   //Copy the tile and freq maps to the GPU
   int32_t *d_tile_map = NULL;
   cudaErrorCheckCall( cudaMalloc( (void**)&(d_tile_map),
-                      num_tiles*sizeof(int32_t) ) );
+                      num_beams*sizeof(int32_t) ) );
   int32_t *d_freq_map = NULL;
   cudaErrorCheckCall( cudaMalloc( (void**)&(d_freq_map),
                       num_freqs*sizeof(int32_t) ) );
 
   cudaErrorCheckCall( cudaMemcpy(d_tile_map, tile_map,
-            num_tiles*sizeof(int32_t), cudaMemcpyHostToDevice ) );
+            num_beams*sizeof(int32_t), cudaMemcpyHostToDevice ) );
   cudaErrorCheckCall( cudaMemcpy(d_freq_map, freq_map,
             num_freqs*sizeof(int32_t), cudaMemcpyHostToDevice ) );
 
@@ -646,11 +646,11 @@ extern "C" void run_hyperbeam_cuda(int num_components,
                       azs + increment, zas + increment,
                       &latitudes[time_ind],
                       iau_order,
-                      (double *)d_jones + 2*MAX_POLS*num_freqs*num_ants*increment);
+                      (double *)d_jones + 2*MAX_POLS*num_freqs*num_beams*increment);
 
       cudaErrorCheckKernel("kern_map_hyperbeam_gains",
                             kern_map_hyperbeam_gains, grid, threads,
-                            num_components, num_time_steps, num_freqs, num_ants,
+                            num_components, num_time_steps, num_freqs, num_beams,
                             time_ind, num_unique_fee_freqs,
                             d_jones, d_tile_map, d_freq_map,
                             parallactic,
@@ -672,7 +672,7 @@ extern "C" void run_hyperbeam_cuda(int num_components,
 
       cudaErrorCheckKernel("kern_map_hyperbeam_gains",
                             kern_map_hyperbeam_gains, grid, threads,
-                            num_components, num_time_steps, num_freqs, num_ants,
+                            num_components, num_time_steps, num_freqs, num_beams,
                             iTime, num_unique_fee_freqs,
                             d_jones, d_tile_map, d_freq_map,
                             parallactic,

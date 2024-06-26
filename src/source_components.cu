@@ -145,7 +145,7 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
 } //end __device__ get_beam_gains
 
 
-__device__ void get_beam_gains_two_antennas(int iBaseline, int iComponent, int num_freqs,
+__device__ void get_beam_gains_multibeams(int iBaseline, int iComponent, int num_freqs,
            int num_baselines, int num_components, int num_times, int beamtype,
            cuUserComplex *d_gxs_ants, cuUserComplex *d_Dxs_ants,
            cuUserComplex *d_Dys_ants, cuUserComplex *d_gys_ants,
@@ -202,7 +202,7 @@ __device__ void get_beam_gains_two_antennas(int iBaseline, int iComponent, int n
     * D1y = make_cuUserComplex(0.0, 0.0);
     * D2y = make_cuUserComplex(0.0, 0.0);
   }
-} //end __device__ get_beam_gains_two_antennas
+} //end __device__ get_beam_gains_multibeams
 
 __device__ void apply_beam_gains_stokesI(cuUserComplex g1x, cuUserComplex D1x,
           cuUserComplex D1y, cuUserComplex g1y,
@@ -243,7 +243,7 @@ __device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent, int n
     int num_baselines, int num_components, int num_times, int beamtype,
     cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
     cuUserComplex *d_Dys, cuUserComplex *d_gys,
-    int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map, int use_twoants,
+    int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map, int use_twobeams,
     cuUserComplex visi_component,
     user_precision_t flux_I, user_precision_t flux_Q,
     user_precision_t flux_U, user_precision_t flux_V,
@@ -261,8 +261,8 @@ __device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent, int n
     cuUserComplex D2y;
     cuUserComplex g2y;
 
-    if (use_twoants == 1){
-      get_beam_gains_two_antennas(iBaseline, iComponent, num_freqs,
+    if (use_twobeams == 1){
+      get_beam_gains_multibeams(iBaseline, iComponent, num_freqs,
                num_baselines, num_components, num_times, beamtype,
                d_gxs, d_Dxs,
                d_Dys, d_gys,
@@ -303,7 +303,7 @@ __device__ void update_sum_visis_stokesI(int iBaseline, int iComponent, int num_
     int num_baselines, int num_components, int num_times, int beamtype,
     cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
     cuUserComplex *d_Dys, cuUserComplex *d_gys,
-    int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map, int use_twoants,
+    int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map, int use_twobeams,
     cuUserComplex visi_component,
     user_precision_t flux_I,
     user_precision_t *d_sum_visi_XX_real, user_precision_t *d_sum_visi_XX_imag,
@@ -320,8 +320,8 @@ __device__ void update_sum_visis_stokesI(int iBaseline, int iComponent, int num_
     cuUserComplex D2y;
     cuUserComplex g2y;
 
-    if (use_twoants == 1){
-      get_beam_gains_two_antennas(iBaseline, iComponent, num_freqs,
+    if (use_twobeams == 1){
+      get_beam_gains_multibeams(iBaseline, iComponent, num_freqs,
                num_baselines, num_components, num_times, beamtype,
                d_gxs, d_Dxs,
                d_Dys, d_gys,
@@ -1026,7 +1026,7 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
     //TODO get this in as an argument
     int *d_ant1_to_baseline_map = NULL;
     int *d_ant2_to_baseline_map = NULL;
-    int use_twoants = 0;
+    int use_twobeams = 0;
 
     user_precision_t flux_I;
     user_precision_t flux_Q;
@@ -1086,7 +1086,7 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
              num_baselines, num_components, num_times, beamtype,
              d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
              d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
-             d_ant1_to_baseline_map, d_ant2_to_baseline_map, use_twoants,
+             d_ant1_to_baseline_map, d_ant2_to_baseline_map, use_twobeams,
              visi_comp, flux_I, flux_Q, flux_U, flux_V,
              d_sum_visi_XX_real, d_sum_visi_XX_imag,
              d_sum_visi_XY_real, d_sum_visi_XY_imag,
@@ -1097,7 +1097,7 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
              num_baselines, num_components, num_times, beamtype,
              d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
              d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
-             d_ant1_to_baseline_map, d_ant2_to_baseline_map, use_twoants,
+             d_ant1_to_baseline_map, d_ant2_to_baseline_map, use_twobeams,
              visi_comp, flux_I,
              d_sum_visi_XX_real, d_sum_visi_XX_imag,
              d_sum_visi_XY_real, d_sum_visi_XY_imag,
@@ -1130,7 +1130,7 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
     //TODO get this in as an argument
     int *d_ant1_to_baseline_map = NULL;
     int *d_ant2_to_baseline_map = NULL;
-    int use_twoants = 0;
+    int use_twobeams = 0;
 
     user_precision_t shape_flux_I;
     user_precision_t shape_flux_Q;
@@ -1225,7 +1225,7 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
              num_baselines, num_shapes, num_times, beamtype,
              d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
              d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
-             d_ant1_to_baseline_map, d_ant2_to_baseline_map, use_twoants,
+             d_ant1_to_baseline_map, d_ant2_to_baseline_map, use_twobeams,
              visi_shape,
              shape_flux_I, shape_flux_Q, shape_flux_U, shape_flux_V,
              d_sum_visi_XX_real, d_sum_visi_XX_imag,
@@ -1237,7 +1237,7 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
              num_baselines, num_shapes, num_times, beamtype,
              d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
              d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
-             d_ant1_to_baseline_map, d_ant2_to_baseline_map, use_twoants,
+             d_ant1_to_baseline_map, d_ant2_to_baseline_map, use_twobeams,
              visi_shape, shape_flux_I,
              d_sum_visi_XX_real, d_sum_visi_XX_imag,
              d_sum_visi_XY_real, d_sum_visi_XY_imag,
@@ -1648,7 +1648,7 @@ __global__ void kern_calc_autos(components_t d_components,
     //TODO get this in as an argument
     int *d_ant1_to_baseline_map = NULL;
     int *d_ant2_to_baseline_map = NULL;
-    int use_twoants = 0;
+    int use_twobeams = 0;
 
     int time_ind = (int)floorf( (float)iTimeFreq / (float)num_freqs);
     int freq_ind = iTimeFreq - time_ind*num_freqs;
@@ -1666,8 +1666,8 @@ __global__ void kern_calc_autos(components_t d_components,
 
     for (int iComponent = 0; iComponent < num_components; iComponent++) {
 
-      if (use_twoants == 1){
-        get_beam_gains_two_antennas(iBaseline, iComponent, num_freqs,
+      if (use_twobeams == 1){
+        get_beam_gains_multibeams(iBaseline, iComponent, num_freqs,
                 num_baselines, num_components, num_times, beamtype,
                 d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
                 d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
@@ -2075,7 +2075,7 @@ __global__ void kern_get_beam_gains(int num_components, int num_baselines,
            cuUserComplex *d_recov_D1y, cuUserComplex *d_recov_g1y,
            cuUserComplex *d_recov_g2x, cuUserComplex *d_recov_D2x,
            cuUserComplex *d_recov_D2y, cuUserComplex *d_recov_g2y,
-           int use_twoants, int num_ants,
+           int use_twobeams, int num_ants,
            int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map) {
 
   // Start by computing which baseline we're going to do
@@ -2094,8 +2094,8 @@ __global__ void kern_get_beam_gains(int num_components, int num_baselines,
       cuUserComplex D2y;
       cuUserComplex g2y;
 
-      if (use_twoants == 1) {
-        get_beam_gains_two_antennas(iBaseline, iComponent, num_freqs,
+      if (use_twobeams == 1) {
+        get_beam_gains_multibeams(iBaseline, iComponent, num_freqs,
                  num_baselines, num_components, num_times, beamtype,
                  d_g1xs, d_D1xs,
                  d_D1ys, d_g1ys,
@@ -2132,7 +2132,7 @@ extern "C" void test_kern_get_beam_gains(int num_freqs, int num_cross,
           user_precision_complex_t *recover_D1y, user_precision_complex_t *recover_g1y,
           user_precision_complex_t *recover_g2x, user_precision_complex_t *recover_D2x,
           user_precision_complex_t *recover_D2y, user_precision_complex_t *recover_g2y,
-          int use_twoants, int num_ants){
+          int use_twobeams, int num_ants){
 
   user_precision_complex_t *d_recover_g1x = NULL;
   user_precision_complex_t *d_recover_D1x = NULL;
@@ -2180,7 +2180,7 @@ extern "C" void test_kern_get_beam_gains(int num_freqs, int num_cross,
   int *d_ant1_to_baseline_map = NULL;
   int *d_ant2_to_baseline_map = NULL;
 
-  if (use_twoants == 1) {
+  if (use_twobeams == 1) {
 
     cudaErrorCheckCall( cudaMalloc( (void**)&d_ant1_to_baseline_map, num_baselines*sizeof(int) ));
     cudaErrorCheckCall( cudaMalloc( (void**)&d_ant2_to_baseline_map, num_baselines*sizeof(int) ));
@@ -2202,7 +2202,7 @@ extern "C" void test_kern_get_beam_gains(int num_freqs, int num_cross,
                       (cuUserComplex *)d_recover_D1y, (cuUserComplex *)d_recover_g1y,
                       (cuUserComplex *)d_recover_g2x, (cuUserComplex *)d_recover_D2x,
                       (cuUserComplex *)d_recover_D2y, (cuUserComplex *)d_recover_g2y,
-                      use_twoants, num_ants,
+                      use_twobeams, num_ants,
                       d_ant1_to_baseline_map, d_ant2_to_baseline_map);
 
   cudaErrorCheckCall( cudaMemcpy(recover_g1x, d_recover_g1x, num_recover_gains*sizeof(user_precision_complex_t), cudaMemcpyDeviceToHost ));
@@ -2228,7 +2228,7 @@ extern "C" void test_kern_get_beam_gains(int num_freqs, int num_cross,
   cudaErrorCheckCall( cudaFree( d_D1ys ) );
   cudaErrorCheckCall( cudaFree( d_g1ys ) );
 
-  if (use_twoants == 1) {
+  if (use_twobeams == 1) {
     // free(ant1_to_baseline_map);
     // free(ant2_to_baseline_map);
     cudaErrorCheckCall( cudaFree( d_ant1_to_baseline_map ) );
@@ -2241,7 +2241,7 @@ __global__ void kern_update_sum_visis_stokesIQUV(int num_freqs,
      int num_baselines, int num_components, int num_times, int beamtype,
      cuUserComplex *d_g1xs, cuUserComplex *d_D1xs,
      cuUserComplex *d_D1ys, cuUserComplex *d_g1ys,
-     int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map, int use_twoants,
+     int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map, int use_twobeams,
      cuUserComplex *d_visi_components,
      user_precision_t *d_flux_I, user_precision_t *d_flux_Q,
      user_precision_t *d_flux_U, user_precision_t *d_flux_V,
@@ -2267,7 +2267,7 @@ __global__ void kern_update_sum_visis_stokesIQUV(int num_freqs,
              num_baselines, num_components, num_times, beamtype,
              d_g1xs, d_D1xs,
              d_D1ys, d_g1ys,
-             d_ant1_to_baseline_map, d_ant2_to_baseline_map, use_twoants,
+             d_ant1_to_baseline_map, d_ant2_to_baseline_map, use_twobeams,
              d_visi_components[iBaseline],
              d_flux_I[flux_ind], d_flux_Q[flux_ind],
              d_flux_U[flux_ind], d_flux_V[flux_ind],
@@ -2282,7 +2282,7 @@ __global__ void kern_update_sum_visis_stokesIQUV(int num_freqs,
 
 extern "C" void test_kern_update_sum_visis(int num_freqs, int num_cross,
           int num_baselines, int num_components, int num_times, int beamtype,
-          int use_twoants, int num_ants,
+          int use_twobeams, int num_ants,
           user_precision_complex_t *primay_beam_J00,
           user_precision_complex_t *primay_beam_J01,
           user_precision_complex_t *primay_beam_J10,
@@ -2383,7 +2383,7 @@ extern "C" void test_kern_update_sum_visis(int num_freqs, int num_cross,
   int *d_ant1_to_baseline_map = NULL;
   int *d_ant2_to_baseline_map = NULL;
 
-  if (use_twoants == 1) {
+  if (use_twobeams == 1) {
 
     cudaErrorCheckCall( cudaMalloc( (void**)&d_ant1_to_baseline_map, num_baselines*sizeof(int) ));
     cudaErrorCheckCall( cudaMalloc( (void**)&d_ant2_to_baseline_map, num_baselines*sizeof(int) ));
@@ -2403,7 +2403,7 @@ extern "C" void test_kern_update_sum_visis(int num_freqs, int num_cross,
                       num_freqs, num_baselines, num_components, num_times, beamtype,
                       (cuUserComplex *)d_gxs, (cuUserComplex *)d_Dxs,
                       (cuUserComplex *)d_Dys, (cuUserComplex *)d_gys,
-                      d_ant1_to_baseline_map, d_ant2_to_baseline_map, use_twoants,
+                      d_ant1_to_baseline_map, d_ant2_to_baseline_map, use_twobeams,
                       (cuUserComplex *)d_visi_components,
                       d_flux_I, d_flux_Q, d_flux_U, d_flux_V,
                       d_sum_visi_XX_real, d_sum_visi_XX_imag,
@@ -2446,7 +2446,7 @@ extern "C" void test_kern_update_sum_visis(int num_freqs, int num_cross,
   cudaErrorCheckCall( cudaFree( d_sum_visi_YX_imag ) );
   cudaErrorCheckCall( cudaFree( d_sum_visi_YY_imag ) );
 
-  if (use_twoants == 1) {
+  if (use_twobeams == 1) {
     cudaErrorCheckCall( cudaFree( d_ant1_to_baseline_map ) );
     cudaErrorCheckCall( cudaFree( d_ant2_to_baseline_map ) );
   }

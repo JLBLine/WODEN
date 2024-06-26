@@ -24,7 +24,7 @@ typedef struct _d_beam_gains_t {
 antennas. Used to map iBaseline to the correct antenna 1 */
   int *d_ant2_to_baseline_map = NULL; /* The index of antenna 2 in all unique pairs of
 antennas. Used to map iBaseline to the correct antenna 2 */
-  int use_twoants; /* The beam gains were made with unique primary beams so
+  int use_twobeams; /* The beam gains were made with unique primary beams so
   should use two antenna patterns per visibility */
 
   cuUserComplex *d_gxs_ants = NULL; /*!< Device copy of North-South Beam gain values
@@ -324,7 +324,7 @@ antennas. Used to map iBaseline to the correct antenna 2
 @param[in,out] *g2y Beam leakage antenna 2 from east-west
 
 */
-__device__ void get_beam_gains_two_antennas(int iBaseline, int iComponent, int num_freqs,
+__device__ void get_beam_gains_multibeams(int iBaseline, int iComponent, int num_freqs,
            int num_baselines, int num_components, int num_times, int beamtype,
            cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
            cuUserComplex *d_Dys, cuUserComplex *d_gys,
@@ -361,10 +361,10 @@ apply the gains - see descriptions for what should be the arguments to them.
 @param[in] *d_gys Pointer towards array of primary beam J[1,1]
 (east-west gain)
 @param[in] *d_ant1_to_baseline_map The index of antenna 1 in all unique pairs of
-antennas. Used to map iBaseline to the correct antenna 1 (only used when use_twoants == 1)
+antennas. Used to map iBaseline to the correct antenna 1 (only used when use_twobeams == 1)
 @param[in] *d_ant2_to_baseline_map The index of antenna 1 in all unique pairs of
-antennas. Used to map iBaseline to the correct antenna 2 (only used when use_twoants == 1)
-@param[in] use_twoants If 1 (True), assume all primary beams are different for each
+antennas. Used to map iBaseline to the correct antenna 2 (only used when use_twobeams == 1)
+@param[in] use_twobeams If 1 (True), assume all primary beams are different for each
 antenna. If 0 (False), assume all primary beams are the same for all antennas.
 @param[in] visi_component Complex visibility across antennas 1 and 2
 @param[in] flux_I Stokes I flux density (Jy)
@@ -392,7 +392,7 @@ __device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent, int n
     int num_baselines, int num_components, int num_times, int beamtype,
     cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
     cuUserComplex *d_Dys, cuUserComplex *d_gys,
-    int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map, int use_twoants,
+    int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map, int use_twobeams,
     cuUserComplex visi_component,
     user_precision_t flux_I, user_precision_t flux_Q,
     user_precision_t flux_U, user_precision_t flux_V,
@@ -409,7 +409,7 @@ COMPONENT Stokes I parameter to create instrumental XX,XY,YX,YY visibilities,
 and sum them into real and imaginary XX,XY,YX,YY visibilities arrays
 `d_sim_visi_*_real` and `d_sim_visi_*_imag`.
 
-@details Uses `get_beam_gains` or `get_beam_gains_two_antennas`,
+@details Uses `get_beam_gains` or `get_beam_gains_multibeams`,
  and `apply_beam_gains` as described above to apply the gains -
  see descriptions for what should be the arguments to them.
 
@@ -429,10 +429,10 @@ and sum them into real and imaginary XX,XY,YX,YY visibilities arrays
 @param[in] *d_gys Pointer towards array of primary beam J[1,1]
 (east-west gain)
 @param[in] *d_ant1_to_baseline_map The index of antenna 1 in all unique pairs of
-antennas. Used to map iBaseline to the correct antenna 1 (only used when use_twoants == 1)
+antennas. Used to map iBaseline to the correct antenna 1 (only used when use_twobeams == 1)
 @param[in] *d_ant2_to_baseline_map The index of antenna 1 in all unique pairs of
-antennas. Used to map iBaseline to the correct antenna 2 (only used when use_twoants == 1)
-@param[in] use_twoants If 1 (True), assume all primary beams are different for each
+antennas. Used to map iBaseline to the correct antenna 2 (only used when use_twobeams == 1)
+@param[in] use_twobeams If 1 (True), assume all primary beams are different for each
 antenna. If 0 (False), assume all primary beams are the same for all antennas.
 @param[in] visi_component Complex visibility across antennas 1 and 2
 @param[in] flux_I Stokes I flux density (Jy)
@@ -457,7 +457,7 @@ __device__ void update_sum_visis_stokesI(int iBaseline, int iComponent, int num_
     int num_baselines, int num_components, int num_times, int beamtype,
     cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
     cuUserComplex *d_Dys, cuUserComplex *d_gys,
-    int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map, int use_twoants,
+    int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map, int use_twobeams,
     cuUserComplex visi_component,
     user_precision_t flux_I,
     user_precision_t *d_sum_visi_XX_real, user_precision_t *d_sum_visi_XX_imag,
