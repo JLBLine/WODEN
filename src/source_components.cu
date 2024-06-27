@@ -1132,10 +1132,7 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
 
   if (iBaseline < num_cross) {
 
-    //TODO get this in as an argument
-    int *d_ant1_to_baseline_map = NULL;
-    int *d_ant2_to_baseline_map = NULL;
-    int use_twobeams = 0;
+    int use_twobeams = d_component_beam_gains.use_twobeams;
 
     user_precision_t shape_flux_I;
     user_precision_t shape_flux_Q;
@@ -1230,7 +1227,8 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
              num_baselines, num_shapes, num_times, beamtype,
              d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
              d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
-             d_ant1_to_baseline_map, d_ant2_to_baseline_map, use_twobeams,
+             d_component_beam_gains.d_ant1_to_baseline_map,
+             d_component_beam_gains.d_ant2_to_baseline_map, use_twobeams,
              visi_shape,
              shape_flux_I, shape_flux_Q, shape_flux_U, shape_flux_V,
              d_sum_visi_XX_real, d_sum_visi_XX_imag,
@@ -1242,7 +1240,8 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
              num_baselines, num_shapes, num_times, beamtype,
              d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
              d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
-             d_ant1_to_baseline_map, d_ant2_to_baseline_map, use_twobeams,
+             d_component_beam_gains.d_ant1_to_baseline_map,
+             d_component_beam_gains.d_ant2_to_baseline_map, use_twobeams,
              visi_shape, shape_flux_I,
              d_sum_visi_XX_real, d_sum_visi_XX_imag,
              d_sum_visi_XY_real, d_sum_visi_XY_imag,

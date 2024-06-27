@@ -158,9 +158,6 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     //32 means we have amplitudes for both X and Y
     if (use_twobeams == 1) {
       num_amps = 32;
-      printf("%f %f %f\n", woden_settings->mwa_dipole_amps[0],
-                                  woden_settings->mwa_dipole_amps[16],
-                                  woden_settings->mwa_dipole_amps[32]);
 
     } else {
       num_amps = 16;
@@ -374,6 +371,13 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
       //Something to store the primary beam gains (all 4 pols) in
       d_beam_gains_t d_gauss_beam_gains;
+      if (use_twobeams == 1) {
+        d_gauss_beam_gains.d_ant1_to_baseline_map = d_ant1_to_baseline_map;
+        d_gauss_beam_gains.d_ant2_to_baseline_map = d_ant2_to_baseline_map;
+        d_gauss_beam_gains.use_twobeams = 1;
+      } else {
+        d_gauss_beam_gains.use_twobeams = 0;
+      }
 
       source_component_common(woden_settings, beam_settings, d_freqs,
                               source, d_chunked_source,
@@ -426,6 +430,13 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
       //Something to store the primary beam gains (all 4 pols) in
       d_beam_gains_t d_shape_beam_gains;
+      if (use_twobeams == 1) {
+        d_shape_beam_gains.d_ant1_to_baseline_map = d_ant1_to_baseline_map;
+        d_shape_beam_gains.d_ant2_to_baseline_map = d_ant2_to_baseline_map;
+        d_shape_beam_gains.use_twobeams = 1;
+      } else {
+        d_shape_beam_gains.use_twobeams = 0;
+      }
 
       source_component_common(woden_settings, beam_settings, d_freqs,
                               source, d_chunked_source,
