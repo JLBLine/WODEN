@@ -48,7 +48,7 @@ void read_woden_settings(woden_settings_t *woden_settings)
 
   if (woden_settings->beamtype == FEE_BEAM || woden_settings->beamtype == FEE_BEAM_INTERP || woden_settings->beamtype == MWA_ANALY) {
 
-    fprintf(output_text, "FEE_ideal_delays %.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f\n", woden_settings->FEE_ideal_delays[0], woden_settings->FEE_ideal_delays[1],
+    fprintf(output_text, "FEE_ideal_delays %d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", woden_settings->FEE_ideal_delays[0], woden_settings->FEE_ideal_delays[1],
     woden_settings->FEE_ideal_delays[2], woden_settings->FEE_ideal_delays[3],
     woden_settings->FEE_ideal_delays[4], woden_settings->FEE_ideal_delays[5],
     woden_settings->FEE_ideal_delays[6], woden_settings->FEE_ideal_delays[7],
@@ -96,7 +96,7 @@ void read_woden_settings(woden_settings_t *woden_settings)
 
   if (woden_settings->use_dipamps == 1) {
 
-    fprintf(output_text, "mwa_dipole_amps %.8f,%.8f,%.8f,%.8f,%.8f,%.8f,%.8f,%.8f,%.8f,%.8f,%.8f,%.8f,%.8f,%.8f,%.8f,%.8f\n", woden_settings->mwa_dipole_amps[0], woden_settings->mwa_dipole_amps[1],
+    fprintf(output_text, "mwa_dipole_amps %.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f\n", woden_settings->mwa_dipole_amps[0], woden_settings->mwa_dipole_amps[1],
     woden_settings->mwa_dipole_amps[2], woden_settings->mwa_dipole_amps[3],
     woden_settings->mwa_dipole_amps[4], woden_settings->mwa_dipole_amps[5],
     woden_settings->mwa_dipole_amps[6], woden_settings->mwa_dipole_amps[7],

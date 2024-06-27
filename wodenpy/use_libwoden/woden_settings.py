@@ -104,7 +104,7 @@ class Woden_Settings_Double(ctypes.Structure):
                 ("latitude", c_double),
                 ("latitude_obs_epoch_base", c_double),
                 ("longitude", c_double),
-                ("FEE_ideal_delays", (c_double*16)),
+                ("FEE_ideal_delays", POINTER(c_int)),
                 ("coarse_band_width", c_double),
                 ("gauss_ra_point", c_double),
                 ("gauss_dec_point", c_double),
@@ -201,7 +201,7 @@ class Woden_Settings_Float(ctypes.Structure):
                 ("latitude", c_double),
                 ("latitude_obs_epoch_base", c_double),
                 ("longitude", c_float),
-                ("FEE_ideal_delays", (c_float*16)),
+                ("FEE_ideal_delays", POINTER(c_int)),
                 ("coarse_band_width", c_double),
                 ("gauss_ra_point", c_double),
                 ("gauss_dec_point", c_double),
@@ -275,10 +275,21 @@ def create_woden_settings(args : argparse.Namespace,
     ##If MWA_FEE_delays is set, convert into a array and populate the
     ##woden_settings equivalent
     if args.MWA_FEE_delays:
-        delays = np.array(args.MWA_FEE_delays.strip('[]').split(','))
         
-        for ind, delay in enumerate(delays):
-            woden_settings.FEE_ideal_delays[ind] = float(delay)
+        ##If using a a different set of dipole amplitudes for each tile,
+        ##need to repeat the delays for each tile
+        if args.use_MWA_dipamps:
+            num_beams = args.num_antennas
+        else:
+            num_beams = 1
+        
+        delays = np.array(args.MWA_FEE_delays.strip('[]').split(','))
+        num_delays = len(delays)*num_beams
+        woden_settings.FEE_ideal_delays = (ctypes.c_int*num_delays)()
+        
+        for delay_ind, delay in enumerate(delays):
+            for beam in range(num_beams):
+                woden_settings.FEE_ideal_delays[beam*len(delays) + delay_ind] = int(delay)
         
     if args.primary_beam == 'none':
         woden_settings.beamtype = 0

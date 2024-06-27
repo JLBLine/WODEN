@@ -147,8 +147,8 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
 
 __device__ void get_beam_gains_multibeams(int iBaseline, int iComponent, int num_freqs,
            int num_baselines, int num_components, int num_times, int beamtype,
-           cuUserComplex *d_gxs_ants, cuUserComplex *d_Dxs_ants,
-           cuUserComplex *d_Dys_ants, cuUserComplex *d_gys_ants,
+           cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
+           cuUserComplex *d_Dys, cuUserComplex *d_gys,
            int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map,
            cuUserComplex * g1x, cuUserComplex * D1x,
            cuUserComplex * D1y, cuUserComplex * g1y,
@@ -181,19 +181,19 @@ __device__ void get_beam_gains_multibeams(int iBaseline, int iComponent, int num
 
   //Get gains if using a beam
   else {
-    * g1x = d_gxs_ants[beam1];
-    * g2x = d_gxs_ants[beam2];
-    * g1y = d_gys_ants[beam1];
-    * g2y = d_gys_ants[beam2];
+    * g1x = d_gxs[beam1];
+    * g2x = d_gxs[beam2];
+    * g1y = d_gys[beam1];
+    * g2y = d_gys[beam2];
 
   }
 
   //Only MWA models have leakge terms at the moment
   if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY) {
-    * D1x = d_Dxs_ants[beam1];
-    * D2x = d_Dxs_ants[beam2];
-    * D1y = d_Dys_ants[beam1];
-    * D2y = d_Dys_ants[beam2];
+    * D1x = d_Dxs[beam1];
+    * D2x = d_Dxs[beam2];
+    * D1y = d_Dys[beam1];
+    * D2y = d_Dys[beam2];
   }
   // Set leakage to zero if no leakage
   else {
@@ -1029,10 +1029,7 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
   if(iBaseline < num_cross) {
 
-    //TODO get this in as an argument
-    int *d_ant1_to_baseline_map = NULL;
-    int *d_ant2_to_baseline_map = NULL;
-    int use_twobeams = 0;
+    int use_twobeams = d_component_beam_gains.use_twobeams;
 
     user_precision_t flux_I;
     user_precision_t flux_Q;
@@ -1092,7 +1089,8 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
              num_baselines, num_components, num_times, beamtype,
              d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
              d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
-             d_ant1_to_baseline_map, d_ant2_to_baseline_map, use_twobeams,
+             d_component_beam_gains.d_ant1_to_baseline_map,
+             d_component_beam_gains.d_ant2_to_baseline_map, use_twobeams,
              visi_comp, flux_I, flux_Q, flux_U, flux_V,
              d_sum_visi_XX_real, d_sum_visi_XX_imag,
              d_sum_visi_XY_real, d_sum_visi_XY_imag,
@@ -1103,7 +1101,8 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
              num_baselines, num_components, num_times, beamtype,
              d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
              d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
-             d_ant1_to_baseline_map, d_ant2_to_baseline_map, use_twobeams,
+             d_component_beam_gains.d_ant1_to_baseline_map,
+             d_component_beam_gains.d_ant2_to_baseline_map, use_twobeams,
              visi_comp, flux_I,
              d_sum_visi_XX_real, d_sum_visi_XX_imag,
              d_sum_visi_XY_real, d_sum_visi_XY_imag,

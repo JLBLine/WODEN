@@ -7,18 +7,18 @@
 
 /*!
 A struct to contain primary beam values for a give COMPONENT. `d_gxs,d_Dxs,d_Dys,d_gys`
-should be used when all antennas have the same primary beam, and `d_gxs_ants,d_Dxs_ants,d_Dys_ants,d_gys_ants` used when all primary beams are different.
+should be used when all antennas have the same primary beam, and `d_gxs,d_Dxs,d_Dys,d_gys` used when all primary beams are different.
 */
 typedef struct _d_beam_gains_t {
 
   cuUserComplex *d_gxs = NULL; /*!< Device copy of North-South Beam gain values
-  for all directions, frequencies, and times for these COMPONENTS*/
+  for all beams, directions, frequencies, and times for these COMPONENTS*/
   cuUserComplex *d_Dxs = NULL; /*!< Device copy of North-South Beam leakage values
-  for all directions, frequencies, and times for these COMPONENTS*/
+  for all beams, directions, frequencies, and times for these COMPONENTS*/
   cuUserComplex *d_Dys = NULL; /*!< Device copy of East-West Beam leakage values
-  for all directions, frequencies, and times for these COMPONENTS*/
+  for all beams, directions, frequencies, and times for these COMPONENTS*/
   cuUserComplex *d_gys = NULL; /*!< Device copy of East-West Beam gain values
-  for all directions, frequencies, and times for these COMPONENTS*/
+  for all beams, directions, frequencies, and times for these COMPONENTS*/
 
   int *d_ant1_to_baseline_map = NULL; /*!< The index of antenna 1 in all unique pairs of
 antennas. Used to map iBaseline to the correct antenna 1 */
@@ -26,15 +26,6 @@ antennas. Used to map iBaseline to the correct antenna 1 */
 antennas. Used to map iBaseline to the correct antenna 2 */
   int use_twobeams; /* The beam gains were made with unique primary beams so
   should use two antenna patterns per visibility */
-
-  cuUserComplex *d_gxs_ants = NULL; /*!< Device copy of North-South Beam gain values
-  for all directions, frequencies, times, and antennas for these COMPONENTS*/
-  cuUserComplex *d_Dxs_ants = NULL; /*!< Device copy of North-South Beam leakage values
-  for all directions, frequencies, times, and antennas for these COMPONENTS*/
-  cuUserComplex *d_Dys_ants = NULL; /*!< Device copy of East-West Beam leakage values
-  for all directions, frequencies, times, and antennas for these COMPONENTS*/
-  cuUserComplex *d_gys_ants = NULL; /*!< Device copy of East-West Beam gain values
-  for all directions, frequencies, times, and antennas for these COMPONENTS*/
 
 } d_beam_gains_t;
 

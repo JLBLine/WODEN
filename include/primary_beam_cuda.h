@@ -347,7 +347,7 @@ This function coverts them into a path length (metres), as needed by
 */
 extern "C" void calculate_RTS_MWA_analytic_beam(int num_components,
      int num_time_steps, int num_freqs,
-     user_precision_t *azs, user_precision_t *zas, user_precision_t *delays,
+     user_precision_t *azs, user_precision_t *zas, int *delays,
      double latitude, int norm,
      double *beam_has, double *beam_decs, double *d_freqs,
      cuUserComplex *d_gxs, cuUserComplex *d_Dxs,

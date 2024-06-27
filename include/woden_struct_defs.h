@@ -285,7 +285,8 @@ typedef struct _woden_settings_t {
   double latitude;  /*!< Latitude of the array to simulate (radians) */
   double latitude_obs_epoch_base;   /*!< Latitude of the array at the observation epoch (radians) */
   user_precision_t longitude;  /*!< Longitude of the array to simulate (radians) */
-  user_precision_t FEE_ideal_delays[16]; /*!< Delay values specifying the pointing for the MWA FEE beam model */
+  int *FEE_ideal_delays; /*!< Delay values specifying the pointing for the MWA FEE beam model.
+  Should be 16*num_beams in length*/
   double coarse_band_width;  /*!< Frequency bandwidth of a single coarse band (Hz)*/
   double gauss_ra_point;  /*!< The initial Right Ascension to point the Gaussian beam at (radians)*/
   double gauss_dec_point;  /*!< The initial Declination to point the Gaussian beam at (radians)*/

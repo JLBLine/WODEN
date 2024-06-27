@@ -125,8 +125,6 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
       }
     }
 
-    uint32_t num_tiles = (uint32_t)num_beams;
-
     //These are the amplitudes for the dipoles, as read in from metafits
     // I believe that they have X - east-west, Y - north-south
     double amps[96] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -294,6 +292,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   //analytically predict the values, so go through results and calcluate
   //expected values, and compare to what we got
   int beam_ind = 0;
+  int expec_ind = 0;
   
   if (beamtype == FEE_BEAM) {
 
@@ -308,9 +307,8 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
         for (int freq = 0; freq < num_freqs; freq ++) {
           for (int comp = 0; comp < num_components; comp ++) {
   
-            int beam_ind = ant*num_freqs*num_times*num_components + num_freqs*time*num_components + num_components*freq + comp;
-
-            int expec_ind =  num_freqs*time*num_components + num_components*freq + comp;
+            beam_ind = ant*num_freqs*num_times*num_components + num_freqs*time*num_components + num_components*freq + comp;
+            expec_ind =  num_freqs*time*num_components + num_components*freq + comp;
 
             TEST_ASSERT_DOUBLE_WITHIN(TOL, antx_mult[ant]*fee_expec_J00_re[expec_ind],
                                       creal(primay_beam_J00[beam_ind]) );

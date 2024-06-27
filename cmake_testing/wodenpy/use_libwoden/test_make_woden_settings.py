@@ -398,28 +398,9 @@ class Test(unittest.TestCase):
         self.check_basic_inputs(woden_settings)
         self.assertFalse(int(self.data['do_autos']))
 
-    def test_write_do_autos(self):
-        """Test that doing precession gets swithced on/off. No need to check for
-        float or double, this is just changing an int"""
 
-        ##This makes fake args with double precision
-        self.make_basic_inputs('double')
-        self.args.no_precession = False
         
-        ##This runs `create_woden_settings`
-        woden_settings = self.call_create_woden_settings()
-        
-        ##This passes woden_settings into C code which write contents to a text
-        ## file, reads in that text file, and checks the outputs make sense
-        self.check_basic_inputs(woden_settings)
-        self.assertTrue(int(self.data['do_precession']))
-        
-        self.args.no_precession = True
-        woden_settings = self.call_create_woden_settings()
-        self.check_basic_inputs(woden_settings)
-        self.assertFalse(int(self.data['do_precession']))
-        
-    def test_write_do_autos(self):
+    def test_write_do_precssion(self):
         """Test that doing precession gets swithced on/off. No need to check for
         float or double, this is just changing an int"""
 

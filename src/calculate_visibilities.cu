@@ -23,6 +23,20 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
   user_precision_t *sbf) {
 
+  //Boolean for if we are using two beams per visibility or assuming all
+  //beams are the same
+  int use_twobeams;
+  int num_beams;
+  //Currently only do this is we have the use_dipamps flag; could be expanded
+  if (woden_settings->use_dipamps == 1) {
+    use_twobeams = 1;
+    num_beams = woden_settings->num_ants;
+  }
+  else {
+    use_twobeams = 0;
+    num_beams = 1;
+  }
+
   //TODO - once rotation measure has been implemented, this should be set
   //only if we are using a rotation measure
   int do_QUV = woden_settings->do_QUV;
@@ -133,27 +147,37 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
         freqs_hz[freq_ind] = (uint32_t)visibility_set->channel_frequencies[freq_ind];
     }
 
-    beam_settings->hyper_delays = (uint32_t*)malloc(16*sizeof(uint32_t));
+    beam_settings->hyper_delays = (uint32_t*)malloc(16*num_beams*sizeof(uint32_t));
 
-    for (int delay = 0; delay < 16; delay++) {
+    for (int delay = 0; delay < 16*num_beams; delay++) {
       beam_settings->hyper_delays[delay] = (uint32_t)woden_settings->FEE_ideal_delays[delay];
     }
 
-    //TODO get right number of amps if use_dipamps == 1
-    //TODO YOU GOTTA HAVE AS MANY DELAYS AS AMPS
-    double amps[16] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+    uint32_t num_amps;
 
-    // uint32_t num_freqs_hyper = ();
-    uint32_t num_tiles = 1;
-    uint32_t num_amps = 16;
+    //32 means we have amplitudes for both X and Y
+    if (use_twobeams == 1) {
+      num_amps = 32;
+      printf("%f %f %f\n", woden_settings->mwa_dipole_amps[0],
+                                  woden_settings->mwa_dipole_amps[16],
+                                  woden_settings->mwa_dipole_amps[32]);
+
+    } else {
+      num_amps = 16;
+      double mwa_dipole_amps[16] = {1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,
+                                    1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0};
+      woden_settings->mwa_dipole_amps = mwa_dipole_amps;
+
+    }
+
     uint8_t norm_to_zenith = 1;
 
     int32_t status = new_gpu_fee_beam(beam_settings->fee_beam,
                             freqs_hz,
                             beam_settings->hyper_delays,
-                            amps,
+                            woden_settings->mwa_dipole_amps,
                             woden_settings->num_freqs,
-                            num_tiles,
+                            (uint32_t)num_beams,
                             num_amps,
                             norm_to_zenith,
                             &beam_settings->cuda_fee_beam);
@@ -162,6 +186,27 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       handle_hyperbeam_error(__FILE__, __LINE__, "new_gpu_fee_beam");
     }
   }
+
+  //If we a different primary beam for each antenna, setup the baseline
+  //to anetenna mapping arrays
+  int *d_ant1_to_baseline_map = NULL;
+  int *d_ant2_to_baseline_map = NULL;
+
+  if (use_twobeams == 1) {
+
+    // printf("WHAT YA DO? woden_settings->num_baselines: %d\n", woden_settings->num_baselines);
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_ant1_to_baseline_map,
+                                woden_settings->num_baselines*sizeof(int) ) );
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_ant2_to_baseline_map,
+                                woden_settings->num_baselines*sizeof(int) ) );
+
+    fill_ant_to_baseline_mapping(woden_settings->num_ants, d_ant1_to_baseline_map,
+                                                           d_ant2_to_baseline_map);
+
+  }
+
 
   //Iterate through all sky model chunks, calculated visibilities are
   //added to chunk_visibility_set, and then summed onto visibility_set
@@ -280,6 +325,13 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
       //Something to store the primary beam gains (all 4 pols) in
       d_beam_gains_t d_point_beam_gains;
+      if (use_twobeams == 1) {
+        d_point_beam_gains.d_ant1_to_baseline_map = d_ant1_to_baseline_map;
+        d_point_beam_gains.d_ant2_to_baseline_map = d_ant2_to_baseline_map;
+        d_point_beam_gains.use_twobeams = 1;
+      } else {
+        d_point_beam_gains.use_twobeams = 0;
+      }
 
       printf("\tExtrapolating fluxes and beams...\n");
       source_component_common(woden_settings, beam_settings, d_freqs,
@@ -539,6 +591,11 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
   if (cropped_sky_models->num_shapelets > 0) {
     cudaErrorCheckCall( cudaFree( d_sbf ) );
+  }
+
+  if (use_twobeams == 1) {
+    cudaErrorCheckCall( cudaFree( d_ant1_to_baseline_map ) );
+    cudaErrorCheckCall( cudaFree( d_ant2_to_baseline_map ) );
   }
 
   if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP) {

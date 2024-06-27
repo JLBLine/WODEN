@@ -17,7 +17,7 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 
 extern void test_RTS_calculate_MWA_analytic_beam(int num_components,
      int num_time_steps, int num_freqs,
-     user_precision_t *azs, user_precision_t *zas, user_precision_t *delays,
+     user_precision_t *azs, user_precision_t *zas, int *delays,
      double latitude, int norm,
      double *beam_has, double *beam_decs, double *freqs,
      user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
@@ -65,10 +65,10 @@ void test_MWA_analytic_beam_nside101() {
   user_precision_complex_t *gys = malloc(num_beam_values*sizeof(user_precision_complex_t));
 
   int norm = 1;
-  // user_precision_t delays[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  // int delays[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                     // 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
-  user_precision_t delays[] = {0, 2, 4, 8, 2, 4, 8, 12, 4, 8, 12, 16, 8, 12, 16, 20};
+  int delays[] = {0, 2, 4, 8, 2, 4, 8, 12, 4, 8, 12, 16, 8, 12, 16, 20};
   //Run the CUDA code
   test_RTS_calculate_MWA_analytic_beam(num_components,
        num_times, num_freqs,
@@ -163,10 +163,10 @@ void test_single_azza() {
   user_precision_complex_t *gys = malloc(num_beam_values*sizeof(user_precision_complex_t));
 
   int norm = 1;
-  // user_precision_t delays[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+  // int delays[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                     // 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
-  user_precision_t delays[] = {0, 2, 4, 8, 2, 4, 8, 12, 4, 8, 12, 16, 8, 12, 16, 20};
+  int delays[] = {0, 2, 4, 8, 2, 4, 8, 12, 4, 8, 12, 16, 8, 12, 16, 20};
   //Run the CUDA code
   test_RTS_calculate_MWA_analytic_beam(num_components,
        num_times, num_freqs,

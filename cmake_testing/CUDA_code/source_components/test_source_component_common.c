@@ -153,9 +153,8 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
   else if (beamtype == MWA_ANALY) {
     //Zenith pointing is your friend
-    for(int i=0;i<16;i++) {
-        woden_settings->FEE_ideal_delays[i] = 0.0;
-    }
+    int delays[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    woden_settings->FEE_ideal_delays = delays;
   }
 
   // //Output arrays
