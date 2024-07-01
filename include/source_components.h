@@ -974,6 +974,12 @@ into
 visibility into
 time step in the simulation
 @param[in] do_QUV If True, calculate full Stokes IQUV, otherwise only Stokes I
+@param[in] use_twobeams If True, use a two primary beams per visibility.
+Otherwise, assume all primary beams are identical
+@param[in] *d_ant1_to_auto_map An index of all primary beams to auto-correlations
+Currently this is just an index of all antennas. Gets passed to `get_beam_gains_multibeams`
+@param[in] *d_ant2_to_auto_map An index of all primary beams to auto-correlations
+Currently this is just an index of all antennas. Gets passed to `get_beam_gains_multibeams`
 
 */
 __global__ void kern_calc_autos(components_t d_components,
@@ -989,7 +995,9 @@ __global__ void kern_calc_autos(components_t d_components,
                                 user_precision_t *d_sum_visi_YX_imag,
                                 user_precision_t *d_sum_visi_YY_real,
                                 user_precision_t *d_sum_visi_YY_imag,
-                                int do_QUV);
+                                int do_QUV, int use_twobeams,
+                                int *d_ant1_to_auto_map,
+                                int *d_ant2_to_auto_map);
 
 /**
 @brief Fill the `d_ant1_to_baseline_map` and `d_ant2_to_baseline_map` device arrays

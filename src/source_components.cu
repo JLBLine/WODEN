@@ -814,8 +814,10 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
   //This can be expanded in the future to have a primary beam per tile
   //for different options
   int num_beams;
+  int use_twobeams = 0;
     if (woden_settings->use_dipamps == 1) {
       num_beams = woden_settings->num_ants;
+      use_twobeams = 1;
     } else {
       num_beams = 1;
   }
@@ -994,6 +996,21 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
     grid.y = (int)ceil( (float)(num_ants) / (float)threads.y );
     grid.z = 1;
 
+    int *d_ant_to_auto_map = NULL;
+
+    if (use_twobeams == 1) {
+      int *ant_to_auto_map = NULL;
+      ant_to_auto_map = (int *)malloc(num_ants*sizeof(int));
+      for (int ant = 0; ant < num_ants; ant++){
+          ant_to_auto_map[ant] = ant;
+      }
+      cudaErrorCheckCall( cudaMalloc( (void**)&d_ant_to_auto_map,
+                                    num_ants*sizeof(int) ));
+      cudaErrorCheckCall( cudaMemcpy(d_ant_to_auto_map, ant_to_auto_map,
+                                      num_ants*sizeof(int), cudaMemcpyHostToDevice ));
+      free(ant_to_auto_map);
+    }
+
     cudaErrorCheckKernel("kern_calc_autos",
                   kern_calc_autos, grid, threads,
                   *d_components, *d_component_beam_gains,
@@ -1008,7 +1025,12 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
                   d_visibility_set->sum_visi_YX_imag,
                   d_visibility_set->sum_visi_YY_real,
                   d_visibility_set->sum_visi_YY_imag,
-                  do_QUV);
+                  do_QUV, use_twobeams, d_ant_to_auto_map,
+                  d_ant_to_auto_map);
+
+    if (use_twobeams == 1) {
+    cudaErrorCheckCall(  cudaFree( d_ant_to_auto_map ) );
+    }
   }
 
 } //END source_component_common
@@ -1637,7 +1659,9 @@ __global__ void kern_calc_autos(components_t d_components,
                                 user_precision_t *d_sum_visi_YX_imag,
                                 user_precision_t *d_sum_visi_YY_real,
                                 user_precision_t *d_sum_visi_YY_imag,
-                                int do_QUV) {
+                                int do_QUV, int use_twobeams,
+                                int *d_ant1_to_auto_map,
+                                int *d_ant2_to_auto_map) {
 
   // Start by computing which baseline we're going to do
   const int iTimeFreq = threadIdx.x + (blockDim.x*blockIdx.x);
@@ -1649,18 +1673,14 @@ __global__ void kern_calc_autos(components_t d_components,
   // const int iAuto = threadIdx.z + (blockDim.z*blockIdx.z);
   if(iAnt < num_ants && iTimeFreq < num_times*num_freqs) {
 
-    //TODO get this in as an argument
-    int *d_ant1_to_baseline_map = NULL;
-    int *d_ant2_to_baseline_map = NULL;
-    int use_twobeams = 0;
-
     int time_ind = (int)floorf( (float)iTimeFreq / (float)num_freqs);
     int freq_ind = iTimeFreq - time_ind*num_freqs;
 
-    //Just set up iBaseline to be the first cross-pol of the correct time
-    //and frequency step, and then we can use `get_beam_gains` to get the
-    //correct beam gain
-    int iBaseline = num_baselines*num_freqs*time_ind + num_baselines*freq_ind;
+    //Set up iBaseline to be a cross-pol of the correct time
+    //and frequency step, that also correpsonds to the correct antenna
+    //get_beam_gains and get_beam_gains_multibeams will use this to access the
+    //correct beam gains.
+    int iBaseline = num_baselines*num_freqs*time_ind + num_baselines*freq_ind + iAnt;
 
     int num_visis = num_baselines*num_freqs*num_times;
     int iAuto = num_visis + num_ants*num_freqs*time_ind + num_ants*freq_ind + iAnt;
@@ -1675,7 +1695,7 @@ __global__ void kern_calc_autos(components_t d_components,
                 num_baselines, num_components, num_times, beamtype,
                 d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
                 d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
-                d_ant1_to_baseline_map, d_ant2_to_baseline_map,
+                d_ant1_to_auto_map, d_ant2_to_auto_map,
                 &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
       }
       else {
@@ -3009,10 +3029,16 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
 extern "C" void test_kern_calc_autos(components_t *components, int beamtype,
                                      int num_components, int num_baselines,
                                      int num_freqs, int num_times, int num_ants,
+                                     int num_beams,
                                      visibility_set_t *visibility_set){
 
+  int use_twobeams = 0;
+  if (num_beams > 1) {
+    use_twobeams = 1;
+  }
+
   ////malloc on device and copy extrapolated fluxes
-  int num_pb_values = num_freqs*num_times*num_components;
+  int num_pb_values = num_beams*num_freqs*num_times*num_components;
 
   int num_autos = num_ants*num_freqs*num_times;
   int num_cross = num_baselines*num_freqs*num_times;
@@ -3065,6 +3091,7 @@ extern "C" void test_kern_calc_autos(components_t *components, int beamtype,
   cudaErrorCheckCall( cudaMemcpy(d_component_beam_gains->d_gys,
           (cuUserComplex* )components->gys, num_pb_values*sizeof(cuUserComplex),
                                                      cudaMemcpyHostToDevice ) );
+
 
   user_precision_t *d_sum_visi_XX_real;
   user_precision_t *d_sum_visi_XX_imag;
@@ -3131,6 +3158,24 @@ extern "C" void test_kern_calc_autos(components_t *components, int beamtype,
 
   int do_QUV = 0;
 
+  int *d_ant_to_auto_map = NULL;
+
+  if (use_twobeams == 1) {
+
+    int *ant_to_auto_map = NULL;
+    ant_to_auto_map = (int *)malloc(num_ants*sizeof(int));
+    for (int ant = 0; ant < num_ants; ant++){
+        ant_to_auto_map[ant] = ant;
+    }
+
+    cudaErrorCheckCall( cudaMalloc( (void**)&d_ant_to_auto_map,
+                                    num_ants*sizeof(int) ));
+    cudaErrorCheckCall( cudaMemcpy(d_ant_to_auto_map, ant_to_auto_map,
+                                    num_ants*sizeof(int), cudaMemcpyHostToDevice ));
+
+    free(ant_to_auto_map);
+  }
+
   cudaErrorCheckKernel("kern_calc_autos",
                 kern_calc_autos, grid, threads,
                 *d_components, *d_component_beam_gains,
@@ -3140,7 +3185,8 @@ extern "C" void test_kern_calc_autos(components_t *components, int beamtype,
                 d_sum_visi_XY_real, d_sum_visi_XY_imag,
                 d_sum_visi_YX_real, d_sum_visi_YX_imag,
                 d_sum_visi_YY_real, d_sum_visi_YY_imag,
-                do_QUV);
+                do_QUV, use_twobeams, d_ant_to_auto_map,
+                d_ant_to_auto_map);
 
   //Copy outputs onto host so we can check our answers
   cudaErrorCheckCall( cudaMemcpy(visibility_set->sum_visi_XX_real,
@@ -3188,5 +3234,7 @@ extern "C" void test_kern_calc_autos(components_t *components, int beamtype,
   cudaErrorCheckCall(  cudaFree( d_sum_visi_YY_real ) );
   cudaErrorCheckCall(  cudaFree( d_sum_visi_YY_imag ) );
 
-
+  if (use_twobeams == 1) {
+    cudaErrorCheckCall(  cudaFree( d_ant_to_auto_map ) );
+  }
 }

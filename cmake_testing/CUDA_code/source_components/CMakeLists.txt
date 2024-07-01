@@ -217,5 +217,20 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   add_test(CUDA_test_source_component_common_multiants_${PRECISION}
           test_source_component_common_multiants_${PRECISION}_app)
 
+   # ##Test the function that calculates the autocorrelations
+  add_executable(test_kern_calc_autos_multiants_${PRECISION}_app
+  test_kern_calc_autos_multiants.c
+  ${CMAKE_SOURCE_DIR}/src/visibility_set.c
+  )
+  target_link_libraries(test_kern_calc_autos_multiants_${PRECISION}_app
+  source_componentsCUDA_${PRECISION}
+  ${CC_LINKLIBS}
+  Unity
+  )
+  target_compile_options(test_kern_calc_autos_multiants_${PRECISION}_app
+                      PRIVATE ${C_FLAGS})
+  add_test(CUDA_test_kern_calc_autos_multiants_${PRECISION}
+      test_kern_calc_autos_multiants_${PRECISION}_app)
+
 
 endforeach()

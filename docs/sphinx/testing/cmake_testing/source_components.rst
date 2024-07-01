@@ -832,3 +832,8 @@ This works similarly to same as ``test_update_sum_visis.c``, but we run using th
 test_source_component_common_multiants.c
 *******************************************
 This works similarly to same as ``test_source_component_common.c``, but we run using three different primary beams, meaning we input three times the number of gains. There are stored beam gains for a given set of directions on the sky used in ``test_source_component_common.c`` to check it's calling the primary beam function correctly. For each tile/pol, give it dipole amplitudes of all of either 0.0, 0.2, 0.4, 0.6, 0.8, 1.0. That way we can just multiply the expected beam gain by the dipole amplitudes to check they're being implemented and returned correctly.
+
+test_kern_calc_autos_multiants.c
+************************************
+This calls ``source_components::test_kern_calc_autos``, which in turn calls
+``source_components::kern_calc_autos``. This runs the same as ``test_kern_calc_autos.c``, but we run using three different primary beams, meaning we input three times the number of gains. Still input each beam gain as it's index in ``primay_beam_J``. The selected beam gains are now expected to be different for antenna 1 and antenna 2, depending on which visibility they correspond to; they are duly tested to be so.

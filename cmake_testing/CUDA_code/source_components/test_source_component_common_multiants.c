@@ -75,8 +75,6 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   // double ras[9] = {(3*M_PI)/2, (3*M_PI)/2, (3*M_PI)/2, (3*M_PI)/2,
   //                  (3*M_PI)/2, (3*M_PI)/2, (3*M_PI)/2, (3*M_PI)/2, (3*M_PI)/2};
 
-  
-
   double *decs = malloc(num_components*sizeof(double));
   for (int i = 0; i < num_components; i++) {
     decs[i] = dec0;
