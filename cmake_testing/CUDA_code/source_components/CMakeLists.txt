@@ -22,7 +22,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   ##Now to add the tests in
   ##----------------------------------------------------------------------------
 
-  #Test flux extrapolation
+  # Test flux extrapolation
   add_executable(test_extrap_stokes_${PRECISION}_app
       test_extrap_stokes.c
       common_testing_functions.c
@@ -173,5 +173,64 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
                          PRIVATE ${C_FLAGS})
   add_test(CUDA_test_kern_calc_autos_${PRECISION}
            test_kern_calc_autos_${PRECISION}_app)
+
+
+  ##Test grabbing the correct primary beam gains when using two per baseline
+  add_executable(test_get_beam_gains_two_antennas_${PRECISION}_app
+  test_get_beam_gains_two_antennas.c
+  )
+  target_link_libraries(test_get_beam_gains_two_antennas_${PRECISION}_app
+      Unity
+      source_componentsCUDA_${PRECISION}
+      ${CC_LINKLIBS}
+  )
+  target_compile_options(test_get_beam_gains_two_antennas_${PRECISION}_app
+                      PRIVATE ${C_FLAGS})
+  add_test(CUDA_test_get_beam_gains_two_antennas_${PRECISION}
+          test_get_beam_gains_two_antennas_${PRECISION}_app)
+
+  add_executable(test_update_sum_visis_multiants_${PRECISION}_app
+  test_update_sum_visis_multiants.c
+  )
+  target_link_libraries(test_update_sum_visis_multiants_${PRECISION}_app
+  Unity
+  source_componentsCUDA_${PRECISION}
+  ${CC_LINKLIBS}
+  )
+  target_compile_options(test_update_sum_visis_multiants_${PRECISION}_app
+                    PRIVATE ${C_FLAGS})
+  add_test(CUDA_test_update_sum_visis_multiants_${PRECISION}
+      test_update_sum_visis_multiants_${PRECISION}_app)
+
+  ##Test the common calls between all component types return expected values
+  add_executable(test_source_component_common_multiants_${PRECISION}_app
+  test_source_component_common_multiants.c
+  common_testing_functions.c
+  )
+  target_link_libraries(test_source_component_common_multiants_${PRECISION}_app
+      Unity
+      source_componentsCUDA_${PRECISION}
+      ${CC_LINKLIBS}
+  )
+  target_compile_options(test_source_component_common_multiants_${PRECISION}_app
+                        PRIVATE ${C_FLAGS})
+  add_test(CUDA_test_source_component_common_multiants_${PRECISION}
+          test_source_component_common_multiants_${PRECISION}_app)
+
+   # ##Test the function that calculates the autocorrelations
+  add_executable(test_kern_calc_autos_multiants_${PRECISION}_app
+  test_kern_calc_autos_multiants.c
+  ${CMAKE_SOURCE_DIR}/src/visibility_set.c
+  )
+  target_link_libraries(test_kern_calc_autos_multiants_${PRECISION}_app
+  source_componentsCUDA_${PRECISION}
+  ${CC_LINKLIBS}
+  Unity
+  )
+  target_compile_options(test_kern_calc_autos_multiants_${PRECISION}_app
+                      PRIVATE ${C_FLAGS})
+  add_test(CUDA_test_kern_calc_autos_multiants_${PRECISION}
+      test_kern_calc_autos_multiants_${PRECISION}_app)
+
 
 endforeach()

@@ -4,6 +4,7 @@ import numpy as np
 import sys
 import os
 from astropy.io import fits
+import warnings
 
 def get_parser():
     """
@@ -130,6 +131,14 @@ def get_parser():
               'the metafits if using a metafits file')
     tel_group.add_argument('--telescope_name', default='MWA',
         help='Name of telescope written out to the uvfits file, defaults to MWA')
+    
+    tel_group.add_argument('--use_MWA_dipflags', default=False, action='store_true',
+        help='Apply the dipole flags stored in the metafits file. Only works'
+             ' for the MWA FEE currently, not the MWA analytic model')
+    tel_group.add_argument('--use_MWA_dipamps', default=False, action='store_true',
+        help='Attempt to use bespoke MWA dipole amplitudes stored in the metafits'
+             ' file. Must be stored under the `DipAmps` column. Only works'
+             ' for the MWA FEE currently, not the MWA analytic model')
 
     input_group = parser.add_argument_group('INPUT/OUTPUT OPTIONS')
     input_group.add_argument('--IAU_order', default=False,
@@ -188,6 +197,8 @@ def get_parser():
     parser.add_argument('--height', help=argparse.SUPPRESS)
     parser.add_argument('--num_antennas', help=argparse.SUPPRESS)
     parser.add_argument('--array_layout_name', help=argparse.SUPPRESS)
+    parser.add_argument('--dipamps', help=argparse.SUPPRESS)
+    parser.add_argument('--dipflags', help=argparse.SUPPRESS)
 
     return parser
 
@@ -374,11 +385,23 @@ def check_args(args):
         with fits.open(args.metafits_filename) as f:
             date = f[0].header['DATE-OBS']
 
+            
+            ##Need to order the antennas via the Tile column to be consistent
+            ## with hyperdrive
+            tilenames = f[1].data['Tile']
+            ##The same tile name is repeated for X and Y dipoles. Doing an
+            ##argsort on this sometimes returns the X first, sometimes the Y.
+            ##This is bad as we use this to re-order dipole amplitude and flags
+            ##later on; so only select one of the pols, do an argsort, and
+            ##expand back to both pols
+            tilenames = tilenames[np.arange(0, len(tilenames), 2)]
+            order = np.argsort(tilenames)
+            
+            antenna_order = np.empty(2*len(order), dtype=int)
+            antenna_order[np.arange(0, 2*len(order), 2)] = 2*order
+            antenna_order[np.arange(1, 2*len(order), 2)] = 2*order + 1
+            
             ##Get the east, north, height antenna positions from the metafits
-            ##Need to order the antennas via the Tile
-            ##column to be consistent with hyperdrive
-            antenna_order = np.argsort(f[1].data['Tile'])
-
             east = f[1].data['East'][antenna_order]
             north = f[1].data['North'][antenna_order]
             height = f[1].data['Height'][antenna_order]
@@ -414,8 +437,8 @@ def check_args(args):
                 args.gauss_dec_point = float(f[0].header['DEC'])
 
             f.close()
-
-    ##Override metafits and/or load arguements
+            
+    ##Override metafits and/or load arguments
     args.lowest_channel_freq = select_argument_and_check(args.lowest_channel_freq,
                                   float(args.lowest_channel_freq),
                                   lowest_channel_freq, "lowest_channel_freq")
@@ -500,14 +523,145 @@ def check_args(args):
 
     ##Either read the array layout from a file or use what was in the metafits
     select_correct_enh(args)
-
+    
     ##If user asks to crop by source, change cropping by component to False
     if args.sky_crop_sources:
         args.sky_crop_components = False
-
+    
+    ##Now read in dipole flags/amplitudes if using requested
+    ##Do this after reading in the array layout as we need to know how many
+    ##antennas there are to check the shapes of the dipole flags/amplitudes
+    
+    ##Do dipole flags first
+    args.dipflags = np.ones(2*args.num_antennas*16)
+    if args.use_MWA_dipflags:
+        if args.primary_beam != 'MWA_FEE' and args.primary_beam != 'MWA_FEE_interp':
+            exit('ERROR: --use_MWA_dipflags can only be used with the MWA FEE beam'
+                 ' so must be used with --primary_beam=MWA_FEE or --primary_beam=MWA_FEE_interp.')
+            
+        if not args.metafits_filename:
+            exit('ERROR: --use_MWA_dipflags can only be used with the MWA FEE beam'
+                 ' so must be used with a metafits file. Exiting now.')
+        
+        ##We read in the Delays array, which has 16 delays per tile per pol
+        ##If that delay is 32, its flagged
+        with fits.open(args.metafits_filename) as f:
+            try:
+                dip_delays = f[1].data['Delays']
+            ##This should never happen as Delays should always be in an MWA metafits
+            ##but if people make something bespoke you never know
+            except KeyError:
+                exit('ERROR: --use_MWA_dipflags was specified but no `Delays` column'
+                     ' was found in the metafits file. Exiting now.')
+            f.close()
+            
+        # print(dip_flags.shape, dip_flags.size)
+        # print(dip_flags[0])
+        
+        if dip_delays.shape[0] != 2*args.num_antennas or dip_delays.shape[1] != 16:
+            exit('ERROR: --use_MWA_dipflags was specified. The shape of the `DipoleFlags`'
+                 f' in the metafits file was {dip_delays.shape}. This shape should be'
+                 f' (2*num_tiles, 16). Twice number of tiles as we need both X,Y dipoles.'
+                 ' The number of tiles is set to be {args.num_antennas}.'
+                 ' Either check your metafits file or if you have --array_layout set,'
+                 ' check how may tiles are in that file. Exiting now.')
+        
+        ##make sure ordering is consistent with hyperdrive
+        dip_delays = dip_delays[antenna_order, :]
+        flag_indexes = np.where(dip_delays == 32)
+        
+        if len(flag_indexes[0]) == 0:
+            warnings.warn('No dipoles were flagged at all in the metafits file.'
+                          ' Switchng off --use_MWA_dipflags. If you do not have'
+                          ' --use_MWA_dipamps set, you will use the same primary'
+                          ' beam for all antennas. This is way faster hooray')    
+            args.use_MWA_dipflags = False
+        
+        ##Apply flags and flatten
+        args.dipflags = np.ones(dip_delays.shape)
+        args.dipflags[flag_indexes] = 0
+        
+        dipflags = np.empty_like(args.dipflags)
+        
+        num_y_flags = 0
+        num_x_flags = 0
+        num_tiles = 0
+        for ant in range(int(len(antenna_order)/2)):
+            
+            add_tile = 0
+            slice = args.dipflags[2*ant, :]
+            flag_len = len(np.where(slice == 0)[0])
+            if flag_len > 0:
+                # print('Y dip', flag_len, len(slice))
+                num_y_flags += 1
+                add_tile = 1
+                
+            slice = args.dipflags[2*ant+1, :]
+            flag_len = len(np.where(slice == 0)[0])
+            if flag_len > 0:
+                # print('X dip', flag_len, len(slice))
+                num_x_flags += 1
+                add_tile = 1
+                
+            ##Flip things compared to metafits as meta goes E-W, N-S.
+            ##WODEN likes things IAU style which is N-S,E-W
+            dipflags[2*ant+1, :] = args.dipflags[2*ant, :]
+            dipflags[2*ant, :] = args.dipflags[2*ant+1, :]
+            
+            num_tiles += add_tile
+        
+        # print(f"Num tiles N-S flags: {num_x_flags}")
+        # print(f"Num tiles E-W flags: {num_y_flags}")
+        print(f"Num tiles with dipole flags: {num_tiles}")
+        args.dipflags = dipflags.flatten()
+    
+    ##Now do dipole amplitudes
+    args.dipamps = np.ones(2*args.num_antennas*16)
+    if args.use_MWA_dipamps:
+        if args.primary_beam != 'MWA_FEE' and args.primary_beam != 'MWA_FEE_interp':
+            exit('ERROR: --use_MWA_dipamps can only be used with the MWA FEE beam'
+                 ' so must be used with --primary_beam=MWA_FEE or --primary_beam=MWA_FEE_interp.')
+            
+        if not args.metafits_filename:
+            exit('ERROR: --use_MWA_dipamps can only be used with the MWA FEE beam'
+                 ' so must be used with a metafits file. Exiting now.')
+            
+        with fits.open(args.metafits_filename) as f:
+            try:
+                dip_amps = f[1].data['DipAmps']
+            except KeyError:
+                exit('ERROR: --use_MWA_dipamps was specified but no `DipAmps` column'
+                     ' was found in the metafits file. Exiting now.')
+            f.close()
+            
+        if dip_amps.shape[0] != 2*args.num_antennas or dip_amps.shape[1] != 16:
+            exit('ERROR: --use_MWA_dipamps was specified. The shape of the `DipAmps`'
+                 f' in the metafits file was {dip_amps.shape}. This shape should be'
+                 f' (2*num_tiles, 16). Twice number of tiles as we need both X,Y dipoles.'
+                 ' The number of tiles is set to be {args.num_antennas}.'
+                 ' Either check your metafits file or if you have --array_layout set,'
+                 ' check how may tiles are in that file. Exiting now.')
+        
+        ##Things are stored in the metafits as e-w first, n-s second. WODEN
+        ##works internally to IAU def which is n-s first, e-w second. So need
+        ##to reverse the order of the amplitudes here
+        args.dipamps = dip_amps[antenna_order, :]
+        dipamps = np.empty_like(args.dipamps)
+        for ant in range(int(len(args.dipamps)/2)):
+            dipamps[2*ant+1, :] = args.dipamps[2*ant, :]
+            dipamps[2*ant, :] = args.dipamps[2*ant+1, :]
+        args.dipamps = dipamps.flatten()
+        
+    ##Combine the dipole amplitudes and flags into a single array
+    ##One or the other might be array of ones so this can always be done
+    ##args.dipamps only is carried into the C/CUDA code, so always turn on
+    ##the use_MWA_diamps flag
+    if args.use_MWA_dipflags or args.use_MWA_dipamps:
+        args.dipamps = args.dipflags*args.dipamps
+        args.use_MWA_dipamps = True
+               
+        
     return args
-
-
 
 def get_code_version():
     """

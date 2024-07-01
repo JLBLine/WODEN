@@ -11,10 +11,10 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
 
   target_compile_options(primary_beam_cudaCUDA_${PRECISION} PRIVATE ${CUDA_FLAGS})
 
-  ## For CMake versions > 3.18, the arch flag settings are handled by
-  ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
-  ## replace the CUDA_FLAG lines above with something like
-  set_property(TARGET primary_beam_cudaCUDA_${PRECISION} PROPERTY CUDA_ARCHITECTURES OFF)
+#   ## For CMake versions > 3.18, the arch flag settings are handled by
+#   ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
+#   ## replace the CUDA_FLAG lines above with something like
+#   set_property(TARGET primary_beam_cudaCUDA_${PRECISION} PROPERTY CUDA_ARCHITECTURES OFF)
 
   ##Test gaussian beam functions
   add_executable(test_gaussian_beam_${PRECISION}_app
@@ -83,5 +83,19 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_compile_options(test_run_hyperbeam_interp_${PRECISION}_app PRIVATE ${C_FLAGS})
   add_test(CUDA_test_run_hyperbeam_interp_${PRECISION} test_run_hyperbeam_interp_${PRECISION}_app)
+
+
+    #Test hyperbeam with the interpolated beam
+    add_executable(test_run_hyperbeam_multi_antennas_${PRECISION}_app
+    test_run_hyperbeam_multi_antennas.c
+    )
+    target_link_libraries(test_run_hyperbeam_multi_antennas_${PRECISION}_app
+        Unity
+        primary_beam_cudaCUDA_${PRECISION}
+        ${CC_LINKLIBS}
+        # "-L/usr/local/mwa_hyperbeam -lmwa_hyperbeam"
+    )
+    target_compile_options(test_run_hyperbeam_multi_antennas_${PRECISION}_app PRIVATE ${C_FLAGS})
+    add_test(CUDA_test_run_hyperbeam_multi_antennas_${PRECISION} test_run_hyperbeam_multi_antennas_${PRECISION}_app)
 
 endforeach()

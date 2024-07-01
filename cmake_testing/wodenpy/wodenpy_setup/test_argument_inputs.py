@@ -2,6 +2,7 @@ from sys import path
 import os
 import unittest
 import numpy as np
+import numpy.testing as npt
 
 code_dir = os.path.realpath(__file__)
 code_dir = ('/').join(code_dir.split('/')[:-1])
@@ -92,6 +93,20 @@ names = ['Tile051', 'Tile052', 'Tile053', 'Tile054',
 'LBE6', 'LBE7', 'LBE8', 'LBF1', 'LBF2', 'LBF3', 'LBF4', 'LBF5', 'LBF6', 'LBF7', 
 'LBF8', 'LBG1', 'LBG2', 'LBG3', 'LBG4', 'LBG5', 'LBG6', 'LBG7', 'LBG8']
 
+
+dipflags = np.array([10, 43, 102, 110, 113, 120, 123, 198, 202, 204, 205, 213, 214, 221,
+                    223,  431,  534,  616, 1028, 1048, 1059, 1074, 1092, 1099, 1101, 1122, 1148, 1163,
+                    1179, 1215, 1217, 1268, 1350, 1386, 1429, 1572, 1599, 1613, 1700, 1740, 1744, 1811,
+                    2156, 2311, 2323, 2398, 2418, 2496, 2569, 2629, 2652, 2657, 2667, 2703, 2719, 2745,
+                    2816, 2842, 2864, 2997, 3102, 3247, 3260, 3265, 3308, 3343, 3384, 3420, 3436, 3480,
+                    3561, 3618, 3633, 3663, 3700, 3772, 3791, 3823, 3880, 3897, 3969, 4003, 4089])
+
+dipamp_indexes = np.array([ 10, 43, 102, 100, 345, 768, 2780, 3678, 4000])
+dipamps = np.array([0.90376163, 0.95701027, 0.44699562, 0.95701027,
+                    1., 0.97801661, 0.95163655, 1., 1.])
+
+dipamps_flagged = np.array([0.0, 0.0, 0.0, 0.95701027,
+                    1., 0.97801661, 0.95163655, 1., 1.])
 
 ##Vehicle for running tests
 class Test(unittest.TestCase):
@@ -440,7 +455,116 @@ class Test(unittest.TestCase):
         self.inputs.append('--sky_crop_sources')
         args = self.run_parser_and_check_args()
         self.assertEqual(False, args.sky_crop_components)
+        
+    def test_use_MWA_dipamps_works(self):
+        """Check `ra.check_args` works correctly for the `--use_MWA_dipamps` flag.
+        Should fail for a number of cases"""
 
+        ##Make minimum arguements
+        self.make_minimum_required_args_without_metafits()
+        
+        ##Set flag we want to test
+        self.inputs.append('--use_MWA_dipamps')
+        
+        # ##Try running without selecting a FEE beam - should fail
+        self.assert_check_args_errors()
+        
+        ##Put in a FEE beam, but not a metafits file - should fail
+        self.inputs.append('--primary_beam=MWA_FEE')
+        self.assert_check_args_errors()
+        
+        ##now try adding a metafits file that does not have the `Dipamps` key
+        ##this should also fail
+        self.inputs.append("--metafits_filename={:s}/1202815152_metafits_ppds.fits".format(code_dir))
+        self.assert_check_args_errors()
+        
+        ##Add a metafits file that has the `Dipamps` key. However input
+        ##args have a bespoke array layout which has 8 antennas, whereas this
+        ##metafits has 128 antennas. Should fail
+        
+        self.inputs.append("--metafits_filename={:s}/1088285600_DipAmps.metafits".format(code_dir))
+        self.assert_check_args_errors()
+        
+        ##reset to remove incorrect --array_layout flags
+        self.make_required_args()
+        self.inputs.append('--use_MWA_dipamps')
+        self.inputs.append('--primary_beam=MWA_FEE')
+        self.inputs.append("--metafits_filename={:s}/1088285600_DipAmps.metafits".format(code_dir))
+        
+        args = self.run_parser_and_check_args()
+        
+        ##check outputs are good
+        self.assertEqual(args.use_MWA_dipamps, True)
+        ##Using atol=1e-8 as only stored to 8 decimal places
+        npt.assert_allclose(args.dipamps[dipamp_indexes], dipamps, atol=1e-8)
+        
+    def test_use_MWA_dipflags_works(self):
+        """Check `ra.check_args` works correctly for the `--use_MWA_dipamps` flag.
+        Should fail for a number of cases"""
+
+        ##Make minimum arguements
+        self.make_minimum_required_args_without_metafits()
+        
+        ##Set flag we want to test
+        self.inputs.append('--use_MWA_dipflags')
+        
+        # ##Try running without selecting a FEE beam - should fail
+        self.assert_check_args_errors()
+        
+        ##Put in a FEE beam, but not a metafits file - should fail
+        self.inputs.append('--primary_beam=MWA_FEE')
+        self.assert_check_args_errors()
+        
+        ##Do give it a metafits, but combined with the `--array_layout` flag
+        ##this should crash as we have wrong number of tiles
+        self.inputs.append("--metafits_filename={:s}/1088285600_DipAmps.metafits".format(code_dir))
+        self.assert_check_args_errors()
+        
+        #reset to remove incorrect --array_layout flags
+        self.make_required_args()
+        self.inputs.append('--use_MWA_dipflags')
+        self.inputs.append('--primary_beam=MWA_FEE')
+        
+        ##Try using a metafits file that has no dipole flagging at all
+        ##As we haven't asked for dipole amplitudes here, we should stick
+        ##in a warning saying we won't flag any dipoles and will run with
+        ##perfect FEE beams (which will be way faster)
+        self.inputs.append("--metafits_filename={:s}/1088285600_DipAmps.metafits".format(code_dir))
+        args = self.run_parser_and_check_args()
+        self.assertEqual(args.use_MWA_dipflags, False)
+        
+        ##Finally run with a metafites that does have flags and read them in
+        self.inputs.append("--metafits_filename={:s}/1088285600_DipAmps_withflags.metafits".format(code_dir))
+        args = self.run_parser_and_check_args()
+        
+        ##Righto, so our fina result should live in args.dipamps and we
+        ##should have switched --use_MWA_dipamps to True
+        self.assertEqual(args.use_MWA_dipflags,True)
+        self.assertEqual(args.use_MWA_dipamps, True)
+        
+        ##Check we have a zero where we expect
+        npt.assert_array_equal(dipflags, np.where(args.dipamps == 0)[0])
+        
+    def test_use_both_MWA_dipflags_dipamps_works(self):
+        """Check `ra.check_args` works correctly for the `--use_MWA_dipflags` and
+        `--use_MWA_dipamps` flags. Make sure it combines the arrays"""
+        
+        self.make_required_args()
+        self.inputs.append('--use_MWA_dipflags')
+        self.inputs.append('--use_MWA_dipamps')
+        self.inputs.append('--primary_beam=MWA_FEE')
+        self.inputs.append("--metafits_filename={:s}/1088285600_DipAmps_withflags.metafits".format(code_dir))
+        args = self.run_parser_and_check_args()
+        
+        ##Righto, so our fina result should live in args.dipamps and we
+        ##should have switched --use_MWA_dipamps to True
+        self.assertEqual(args.use_MWA_dipflags,True)
+        self.assertEqual(args.use_MWA_dipamps, True)
+        
+        ##Check we have a zero where we expect
+        npt.assert_array_equal(dipflags, np.where(args.dipamps == 0)[0])
+        npt.assert_allclose(args.dipamps[dipamp_indexes], dipamps_flagged, atol=1e-8)
+        
 
 ##Run the test
 if __name__ == '__main__':

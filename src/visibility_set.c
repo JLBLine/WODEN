@@ -33,6 +33,12 @@ visibility_set_t * setup_visibility_set(int num_visis) {
     visibility_set->sum_visi_YX_imag[i] = 0;
     visibility_set->sum_visi_YY_real[i] = 0;
     visibility_set->sum_visi_YY_imag[i] = 0;
+
+  //   //Do the u,v,w as well, as auto-correlations get written out with a
+  //   //u,v,w length of zero. They never get filled in so need to initialise
+  //   visibility_set->us_metres[i] = 0;
+  //   visibility_set->us_metres[i] = 0;
+  //   visibility_set->us_metres[i] = 0;
   }
   
 

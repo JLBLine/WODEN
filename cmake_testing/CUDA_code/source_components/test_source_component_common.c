@@ -61,6 +61,9 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   woden_settings->sdec0 = sin(dec0);
   woden_settings->cdec0 = cos(dec0);
   woden_settings->latitude = -0.46606083776035967;
+  woden_settings->use_dipamps = 0;
+  woden_settings->num_ants = 1;
+  // woden_settings->num_ants = 1;
 
   woden_settings->latitudes = malloc(num_times*sizeof(double));
   for (int i = 0; i < num_times; i++)
@@ -150,9 +153,8 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
   else if (beamtype == MWA_ANALY) {
     //Zenith pointing is your friend
-    for(int i=0;i<16;i++) {
-        woden_settings->FEE_ideal_delays[i] = 0.0;
-    }
+    int delays[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    woden_settings->FEE_ideal_delays = delays;
   }
 
   // //Output arrays
@@ -465,7 +467,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     //Check the two are within tolerace
     // printf("%d %.3f %.3f\n",i, expec_flux_I[i], extrap_flux_I[i] );
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_I[i], extrap_flux_I[i]);
-    //in the future this should be testable, for only doing Stokes I so
+    //TODO in the future this should be testable, for only doing Stokes I so
     //lock to zero
     // TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_Q[i], extrap_flux_Q[i]);
     // TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_U[i], extrap_flux_U[i]);
@@ -626,29 +628,29 @@ int main(void)
 {
     UNITY_BEGIN();
 
-    // RUN_TEST(test_source_component_common_ConstantDecNoBeamPoint);
-    // RUN_TEST(test_source_component_common_ConstantDecNoBeamGaussian);
-    // RUN_TEST(test_source_component_common_ConstantDecNoBeamShapelet);
+    RUN_TEST(test_source_component_common_ConstantDecNoBeamPoint);
+    RUN_TEST(test_source_component_common_ConstantDecNoBeamGaussian);
+    RUN_TEST(test_source_component_common_ConstantDecNoBeamShapelet);
 
-    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamPoint);
-    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamGauss);
-    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamShapelet);
+    RUN_TEST(test_source_component_common_ConstantDecFEEBeamPoint);
+    RUN_TEST(test_source_component_common_ConstantDecFEEBeamGauss);
+    RUN_TEST(test_source_component_common_ConstantDecFEEBeamShapelet);
 
-    // RUN_TEST(test_source_component_common_ConstantDecAnalyBeamPoint);
-    // RUN_TEST(test_source_component_common_ConstantDecAnalyBeamGaussian);
-    // RUN_TEST(test_source_component_common_ConstantDecAnalyBeamShapelet);
+    RUN_TEST(test_source_component_common_ConstantDecAnalyBeamPoint);
+    RUN_TEST(test_source_component_common_ConstantDecAnalyBeamGaussian);
+    RUN_TEST(test_source_component_common_ConstantDecAnalyBeamShapelet);
 
-    // RUN_TEST(test_source_component_common_ConstantDecGaussBeamPoint);
-    // RUN_TEST(test_source_component_common_ConstantDecGaussBeamGaussian);
-    // RUN_TEST(test_source_component_common_ConstantDecGaussBeamShapelet);
+    RUN_TEST(test_source_component_common_ConstantDecGaussBeamPoint);
+    RUN_TEST(test_source_component_common_ConstantDecGaussBeamGaussian);
+    RUN_TEST(test_source_component_common_ConstantDecGaussBeamShapelet);
 
     RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpPoint);
-    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpGaussian);
-    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpShapelet);
-
-    // RUN_TEST(test_source_component_common_ConstantDecMWAAnalyPoint);
-    // RUN_TEST(test_source_component_common_ConstantDecMWAAnalyGaussian);
-    // RUN_TEST(test_source_component_common_ConstantDecMWAAnalyShapelet);
+    RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpGaussian);
+    RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpShapelet);
+ 
+    RUN_TEST(test_source_component_common_ConstantDecMWAAnalyPoint);
+    RUN_TEST(test_source_component_common_ConstantDecMWAAnalyGaussian);
+    RUN_TEST(test_source_component_common_ConstantDecMWAAnalyShapelet);
 
     return UNITY_END();
 }

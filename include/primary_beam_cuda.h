@@ -347,7 +347,7 @@ This function coverts them into a path length (metres), as needed by
 */
 extern "C" void calculate_RTS_MWA_analytic_beam(int num_components,
      int num_time_steps, int num_freqs,
-     user_precision_t *azs, user_precision_t *zas, user_precision_t *delays,
+     user_precision_t *azs, user_precision_t *zas, int *delays,
      double latitude, int norm,
      double *beam_has, double *beam_decs, double *d_freqs,
      cuUserComplex *d_gxs, cuUserComplex *d_Dxs,
@@ -383,6 +383,8 @@ d_primay_beam_J* arrays using the kernel `primary_beam_cuda::kern_map_hyperbeam_
 @param[in] num_components Number of COMPONENTS the beam is calculated for
 @param[in] num_time_steps Number of time steps being calculated
 @param[in] num_freqs Number of frequencies being calculated
+@param[in] num_beams How many primary beams are being simulated. If making all
+primary beams the same, set to 1, otherwise number of antennas(tiles).
 @param[in] parallactic Whether to rotate by parallactic angle or not
 @param[in] *cuda_fee_beam An initialised `mwa_hyperbeam` `struct FEEBeamGpu`
 @param[in] *azs Array of Azimuth angles to calculate the beam towards (radians)
@@ -397,7 +399,7 @@ can be NULL is parallactic = 0
 */
 extern "C" void run_hyperbeam_cuda(int num_components,
            int num_time_steps, int num_freqs,
-           uint8_t parallactic,
+           int num_beams, uint8_t parallactic,
            struct FEEBeamGpu *cuda_fee_beam,
            double *azs, double *zas,
            double *latitudes,

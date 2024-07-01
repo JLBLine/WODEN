@@ -67,6 +67,10 @@ class Components_Float(ctypes.Structure):
     :cvar POINTER(user_precision_complex_t) Dxs: North-South Beam leakage values for all directions, frequencies, and times for these COMPONENT
     :cvar POINTER(user_precision_complex_t) Dys: East-West Beam leakage values for all directions, frequencies, and times  for these COMPONENT
     :cvar POINTER(user_precision_complex_t) gys: East-West Beam gain values for all directions, frequencies, and times  for these COMPONENT
+    :cvar POINTER(user_precision_complex_t) gxs_ants: North-South Beam gain values for all directions, frequencies, times, and ants for these COMPONENT
+    :cvar POINTER(user_precision_complex_t) Dxs_ants: North-South Beam leakage values for all directions, frequencies, times, and ants for these COMPONENT
+    :cvar POINTER(user_precision_complex_t) Dys_ants: East-West Beam leakage values for all directions, frequencies, times, and ants  for these COMPONENT
+    :cvar POINTER(user_precision_complex_t) gys_ants: East-West Beam gain values for all directions, frequencies, times, and ants  for these COMPONENT
     :cvar POINTER(double) ls: Device memory l cosine direction coords for these COMPONENTs
     :cvar POINTER(double) ms: Device memory m cosine direction coords for these COMPONENTs
     :cvar POINTER(double) ns: Device memory n cosine direction coords for these COMPONENTs
@@ -132,6 +136,10 @@ class Components_Float(ctypes.Structure):
                 ("Dxs", POINTER(c_float)),
                 ("Dys", POINTER(c_float)),
                 ("gys", POINTER(c_float)),
+                ("gxs_ants", POINTER(c_float)),
+                ("Dxs_ants", POINTER(c_float)),
+                ("Dys_ants", POINTER(c_float)),
+                ("gys_ants", POINTER(c_float)),
                 ##used to hold l,m,n coords on the GPU
                 ("ls", POINTER(c_double)),
                 ("ms", POINTER(c_double)),
@@ -165,9 +173,9 @@ class Components_Double(ctypes.Structure):
     :cvar POINTER(user_precision_t) list_stokesQ: COMPONENT Stokes Q list flux density (Jy)
     :cvar POINTER(user_precision_t) list_stokesU: COMPONENT Stokes U list flux density (Jy)
     :cvar POINTER(user_precision_t) list_stokesV: COMPONENT Stokes V list flux density (Jy)
-    :cvar POINTER(int) num_list_values: How many freq/flux values are in each COMPONENT lis
-    :cvar POINTER(int) list_start_indexes: How many freq/flux values are in each COMPONENT lis
-    :cvar otal_num_flux_entires: The total number of freq/flux values are in all lists POINTER(int) combine
+    :cvar POINTER(int) num_list_values: How many freq/flux values are in each COMPONENT list
+    :cvar POINTER(int) list_start_indexes: How many freq/flux values are in each COMPONENT list
+    :cvar total_num_flux_entires: The total number of freq/flux values are in all lists POINTER(int) combine
     :cvar POINTER(user_precision_t) extrap_stokesI: extrapolated COMPONENT Stokes I flux densities (Jy)
     :cvar POINTER(user_precision_t) extrap_stokesQ: extrapolated COMPONENT Stokes Q flux densities (Jy)
     :cvar POINTER(user_precision_t) extrap_stokesU: extrapolated COMPONENT Stokes U flux densities (Jy)
@@ -188,6 +196,10 @@ class Components_Double(ctypes.Structure):
     :cvar POINTER(user_precision_complex_t) Dxs: North-South Beam leakage values for all directions, frequencies, and times for these COMPONENT
     :cvar POINTER(user_precision_complex_t) Dys: East-West Beam leakage values for all directions, frequencies, and times  for these COMPONENT
     :cvar POINTER(user_precision_complex_t) gys: East-West Beam gain values for all directions, frequencies, and times  for these COMPONENT
+    :cvar POINTER(user_precision_complex_t) gxs_ants: North-South Beam gain values for all directions, frequencies, times, and ants for these COMPONENT
+    :cvar POINTER(user_precision_complex_t) Dxs_ants: North-South Beam leakage values for all directions, frequencies, times, and ants for these COMPONENT
+    :cvar POINTER(user_precision_complex_t) Dys_ants: East-West Beam leakage values for all directions, frequencies, times, and ants  for these COMPONENT
+    :cvar POINTER(user_precision_complex_t) gys_ants: East-West Beam gain values for all directions, frequencies, times, and ants  for these COMPONENT
     :cvar POINTER(double) ls: Device memory l cosine direction coords for these COMPONENTs
     :cvar POINTER(double) ms: Device memory m cosine direction coords for these COMPONENTs
     :cvar POINTER(double) ns: Device memory n cosine direction coords for these COMPONENTs
@@ -253,6 +265,10 @@ class Components_Double(ctypes.Structure):
                 ("Dxs", POINTER(c_double)),
                 ("Dys", POINTER(c_double)),
                 ("gys", POINTER(c_double)),
+                ("gxs_ants", POINTER(c_double)),
+                ("Dxs_ants", POINTER(c_double)),
+                ("Dys_ants", POINTER(c_double)),
+                ("gys_ants", POINTER(c_double)),
                 ##used to hold l,m,n coords on the GPU
                 ("ls", POINTER(c_double)),
                 ("ms", POINTER(c_double)),

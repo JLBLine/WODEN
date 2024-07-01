@@ -48,7 +48,7 @@ void read_woden_settings(woden_settings_t *woden_settings)
 
   if (woden_settings->beamtype == FEE_BEAM || woden_settings->beamtype == FEE_BEAM_INTERP || woden_settings->beamtype == MWA_ANALY) {
 
-    fprintf(output_text, "FEE_ideal_delays %.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f\n", woden_settings->FEE_ideal_delays[0], woden_settings->FEE_ideal_delays[1],
+    fprintf(output_text, "FEE_ideal_delays %d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", woden_settings->FEE_ideal_delays[0], woden_settings->FEE_ideal_delays[1],
     woden_settings->FEE_ideal_delays[2], woden_settings->FEE_ideal_delays[3],
     woden_settings->FEE_ideal_delays[4], woden_settings->FEE_ideal_delays[5],
     woden_settings->FEE_ideal_delays[6], woden_settings->FEE_ideal_delays[7],
@@ -90,21 +90,23 @@ void read_woden_settings(woden_settings_t *woden_settings)
   fprintf(output_text,"hdf5_beam_path %s\n",
                        woden_settings->hdf5_beam_path);
 
-//   #ifdef DOUBLE_PRECISION
-//       fprintf(output_text,"%lf %lf %lf %lf %lf\n",
-//               visibility_set->us_metres[step + baseline],
-//               visibility_set->vs_metres[step + baseline],
-//               visibility_set->ws_metres[step + baseline],
-//               visibility_set->sum_visi_XX_real[step + baseline],
-//               visibility_set->sum_visi_XX_imag[step + baseline]);
-//   #else
-//       fprintf(output_text,"%f %f %f %f %f\n",
-//               visibility_set->us_metres[step + baseline],
-//               visibility_set->vs_metres[step + baseline],
-//               visibility_set->ws_metres[step + baseline],
-//               visibility_set->sum_visi_XX_real[step + baseline],
-//               visibility_set->sum_visi_XX_imag[step + baseline]);
-//   #endif
+  fprintf(output_text,"use_dipamps %d\n",
+                       woden_settings->use_dipamps);
+
+
+  if (woden_settings->use_dipamps == 1) {
+
+    fprintf(output_text, "mwa_dipole_amps %.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f\n", woden_settings->mwa_dipole_amps[0], woden_settings->mwa_dipole_amps[1],
+    woden_settings->mwa_dipole_amps[2], woden_settings->mwa_dipole_amps[3],
+    woden_settings->mwa_dipole_amps[4], woden_settings->mwa_dipole_amps[5],
+    woden_settings->mwa_dipole_amps[6], woden_settings->mwa_dipole_amps[7],
+    woden_settings->mwa_dipole_amps[8], woden_settings->mwa_dipole_amps[9],
+    woden_settings->mwa_dipole_amps[10], woden_settings->mwa_dipole_amps[11],
+    woden_settings->mwa_dipole_amps[12], woden_settings->mwa_dipole_amps[13],
+    woden_settings->mwa_dipole_amps[14], woden_settings->mwa_dipole_amps[15]);
+
+  }
+
   
   fflush(output_text);
   fclose(output_text);

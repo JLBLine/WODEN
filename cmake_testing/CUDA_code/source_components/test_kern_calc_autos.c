@@ -27,6 +27,7 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 extern void test_kern_calc_autos(components_t *components, int beamtype,
                                  int num_components, int num_baselines,
                                  int num_freqs, int num_times, int num_ants,
+                                 int num_beams,
                                  visibility_set_t *visibility_set);
 
 
@@ -174,9 +175,12 @@ void test_calculate_autos(e_beamtype beamtype) {
     visibility_set->sum_visi_YY_real[visi] = 0;
   }
 
+  //Doing all testing with identical primary beams so set num_beams to 1
+  int num_beams = 1;
+
   test_kern_calc_autos(components, beamtype,
                        num_comps, num_baselines,
-                       num_freqs, num_times, num_ants,
+                       num_freqs, num_times, num_ants, num_beams,
                        visibility_set);
 
   //Function shouldn't touch the cross-correlation part of the output visis

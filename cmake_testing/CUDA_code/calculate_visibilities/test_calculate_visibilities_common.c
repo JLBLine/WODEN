@@ -318,6 +318,7 @@ woden_settings_t * make_woden_settings(double ra0, double dec0) {
     woden_settings->lsts = lsts;
 
     woden_settings->do_autos = 0;
+    woden_settings->use_dipamps = 0;
 
     return woden_settings;
 }
@@ -472,6 +473,19 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
   printf("Calling CUDA\n");
   calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
                          woden_settings, visibility_set, sbf);
+
+  // for (int visi = 0; visi < woden_settings->num_visis; visi++) {
+  //   printf("\t\tVisi %d: %f %f %f %f %f %f %f %f\n", visi,
+  //               visibility_set->sum_visi_XX_real[visi],
+  //               visibility_set->sum_visi_XX_imag[visi],
+  //               visibility_set->sum_visi_XY_real[visi],
+  //               visibility_set->sum_visi_XY_imag[visi],
+  //               visibility_set->sum_visi_YX_real[visi],
+  //               visibility_set->sum_visi_YX_imag[visi],
+  //               visibility_set->sum_visi_YY_real[visi],
+  //               visibility_set->sum_visi_YY_imag[visi]);
+  // }
+
   printf("CUDA has finished\n");
 
   //Be free my pretties!
@@ -687,4 +701,150 @@ void test_comp_phase_centre_allgains(visibility_set_t *visibility_set,
                             visibility_set->sum_visi_YY_imag[num_cross + visi]);
     }
   }
+}
+
+
+void test_comp_phase_centre_allgains_multiants(visibility_set_t *visibility_set,
+                                     double gain1xx_re, double gain1xx_im,
+                                     double gain1xy_re, double gain1xy_im,
+                                     double gain1yx_re, double gain1yx_im,
+                                     double gain1yy_re, double gain1yy_im,
+                                     double gain2xx_re, double gain2xx_im,
+                                     double gain2xy_re, double gain2xy_im,
+                                     double gain2yx_re, double gain2yx_im,
+                                     double gain2yy_re, double gain2yy_im,
+                                     double *antx_mult, double *anty_mult,
+                                     int num_ants,
+                                     woden_settings_t *woden_settings,
+                                     double tol) {
+
+  int num_cross = woden_settings->num_cross;
+
+  int num_baselines = ((num_ants - 1)*num_ants) / 2;
+
+  int *ant1_to_baseline_map = NULL;
+  int *ant2_to_baseline_map = NULL;
+
+  ant1_to_baseline_map = (int *)malloc(num_baselines*sizeof(int));
+  ant2_to_baseline_map = (int *)malloc(num_baselines*sizeof(int));
+
+  //These functions only do cross correlations, so create all combos of antennas
+  //that make up all the crosses
+  int cross_index = 0;
+  for (int ant1 = 0; ant1 < num_ants-1; ant1++)
+  {
+    for (int ant2 = ant1 + 1; ant2 < num_ants; ant2++)
+    {
+      ant1_to_baseline_map[cross_index] = ant1;
+      ant2_to_baseline_map[cross_index] = ant2;
+
+      cross_index += 1;
+    }
+  }
+
+  //In all of the below, we've set all 16 dipole amplitudes to a constant value
+  //Can multiply expected values by combinations of constants to predict effect
+  //on stored values. This means leakages are multiplied by same factor as gains
+  //so can say g1x_mult = D1x_mult etc
+  float g1x_mult, g1y_mult, g2x_mult, g2y_mult;
+  float xx_gains, xy_gains, yx_gains, yy_gains;
+
+  // for (int time = 0; time < woden_settings->num_time_steps; time ++) {
+
+  int out_ind = 0;
+  int time = 0;
+
+  for (int freq = 0; freq < woden_settings->num_freqs; freq ++) {
+    for (int baseline = 0; baseline < num_baselines; baseline ++) {
+
+      g1x_mult = antx_mult[ant1_to_baseline_map[baseline]];
+      g1y_mult = anty_mult[ant1_to_baseline_map[baseline]];
+      g2x_mult = antx_mult[ant2_to_baseline_map[baseline]];
+      g2y_mult = anty_mult[ant2_to_baseline_map[baseline]];
+
+      xx_gains = g1x_mult*g2x_mult;
+      xy_gains = g1x_mult*g2y_mult;
+      yx_gains = g1y_mult*g2x_mult;
+      yy_gains = g1y_mult*g2y_mult;
+
+      time = 0;
+      out_ind = time*woden_settings->num_freqs*num_baselines + freq*num_baselines + baseline;
+
+      TEST_ASSERT_DOUBLE_WITHIN(tol, xx_gains*gain1xx_re, visibility_set->sum_visi_XX_real[out_ind]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, xx_gains*gain1xx_im, visibility_set->sum_visi_XX_imag[out_ind]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, xy_gains*gain1xy_re, visibility_set->sum_visi_XY_real[out_ind]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, xy_gains*gain1xy_im, visibility_set->sum_visi_XY_imag[out_ind]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, yx_gains*gain1yx_re, visibility_set->sum_visi_YX_real[out_ind]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, yx_gains*gain1yx_im, visibility_set->sum_visi_YX_imag[out_ind]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, yy_gains*gain1yy_re, visibility_set->sum_visi_YY_real[out_ind]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, yy_gains*gain1yy_im, visibility_set->sum_visi_YY_imag[out_ind]);
+
+      //Do it for the second time step, which has different beam gains cos sky moved
+      time = 1;
+      out_ind = time*woden_settings->num_freqs*num_baselines + freq*num_baselines + baseline;
+
+      TEST_ASSERT_DOUBLE_WITHIN(tol, xx_gains*gain2xx_re, visibility_set->sum_visi_XX_real[out_ind]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, xx_gains*gain2xx_im, visibility_set->sum_visi_XX_imag[out_ind]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, xy_gains*gain2xy_re, visibility_set->sum_visi_XY_real[out_ind]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, xy_gains*gain2xy_im, visibility_set->sum_visi_XY_imag[out_ind]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, yx_gains*gain2yx_re, visibility_set->sum_visi_YX_real[out_ind]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, yx_gains*gain2yx_im, visibility_set->sum_visi_YX_imag[out_ind]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, yy_gains*gain2yy_re, visibility_set->sum_visi_YY_real[out_ind]);
+      TEST_ASSERT_DOUBLE_WITHIN(tol, yy_gains*gain2yy_im, visibility_set->sum_visi_YY_imag[out_ind]);
+    }
+  }
+
+  //TODO - should be able to use similar logic to test above, just taking the
+  //square of the dipole amplitudes rather than different combo
+  //TODO I think I've written this test to work, but need to test just kern_calc_auto
+  //on it's own first
+
+  if (woden_settings->do_autos == 1){
+
+
+    for (int freq = 0; freq < woden_settings->num_freqs; freq ++) {
+      for (int ant = 0; ant < num_ants; ant ++) {
+
+        g1x_mult = antx_mult[ant];
+        g1y_mult = anty_mult[ant];
+
+        xx_gains = g1x_mult*g1x_mult;
+        xy_gains = g1x_mult*g1y_mult;
+        yx_gains = g1y_mult*g1x_mult;
+        yy_gains = g1y_mult*g1y_mult;
+
+        time = 0;
+        out_ind = num_cross + time*woden_settings->num_freqs*num_ants + freq*num_ants + ant;
+
+        // printf("XX %d %.8f %.8f\n", out_ind, xx_gains*gain1xx_re, visibility_set->sum_visi_XX_real[out_ind]);
+        // printf("YY %d %.8f %.8f\n", out_ind, yy_gains*gain1yy_re, visibility_set->sum_visi_YY_real[out_ind]);
+
+        TEST_ASSERT_DOUBLE_WITHIN(tol, xx_gains*gain1xx_re, visibility_set->sum_visi_XX_real[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, xx_gains*gain1xx_im, visibility_set->sum_visi_XX_imag[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, xy_gains*gain1xy_re, visibility_set->sum_visi_XY_real[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, xy_gains*gain1xy_im, visibility_set->sum_visi_XY_imag[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, yx_gains*gain1yx_re, visibility_set->sum_visi_YX_real[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, yx_gains*gain1yx_im, visibility_set->sum_visi_YX_imag[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, yy_gains*gain1yy_re, visibility_set->sum_visi_YY_real[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, yy_gains*gain1yy_im, visibility_set->sum_visi_YY_imag[out_ind]);
+
+        // //Do it for the second time step, which has different beam gains cos sky moved
+        time = 1;
+        out_ind = num_cross + time*woden_settings->num_freqs*num_ants + freq*num_ants + ant;
+
+        TEST_ASSERT_DOUBLE_WITHIN(tol, xx_gains*gain2xx_re, visibility_set->sum_visi_XX_real[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, xx_gains*gain2xx_im, visibility_set->sum_visi_XX_imag[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, xy_gains*gain2xy_re, visibility_set->sum_visi_XY_real[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, xy_gains*gain2xy_im, visibility_set->sum_visi_XY_imag[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, yx_gains*gain2yx_re, visibility_set->sum_visi_YX_real[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, yx_gains*gain2yx_im, visibility_set->sum_visi_YX_imag[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, yy_gains*gain2yy_re, visibility_set->sum_visi_YY_real[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, yy_gains*gain2yy_im, visibility_set->sum_visi_YY_imag[out_ind]);
+      }
+    }
+  }
+
+
+  free(ant1_to_baseline_map);
+  free(ant2_to_baseline_map);
 }

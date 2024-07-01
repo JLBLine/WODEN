@@ -36,9 +36,8 @@ void test_calculate_visibilities_MWAFEEBeamInterp(int n_points, int n_gauss, int
   woden_settings_t *woden_settings = make_woden_settings(RA0, -0.46606083776035967);
   woden_settings->beamtype = FEE_BEAM_INTERP;
 
-  for (int i = 0; i < 16; i++) {
-    woden_settings->FEE_ideal_delays[i] = 0.0;
-  }
+  int delays[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+  woden_settings->FEE_ideal_delays = delays;
 
   beam_settings_t *beam_settings = malloc(sizeof(beam_settings_t));
   beam_settings->beamtype = FEE_BEAM_INTERP;

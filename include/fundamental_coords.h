@@ -168,3 +168,25 @@ __global__ void kern_calc_lmn(double ra0, double sdec0,
                               double *d_ras, double *d_decs,
                               double *d_l, double *d_m, double *d_n,
                               int num_components);
+
+
+/**
+@brief Internally to WODEN C/CUDA, all cross-correlations are stored first,
+then the autos after. All autos have zero length, so use this function to
+set all autos uvw to zero.
+
+@details `num_cross` is the number of cross-correlations, so fill any uvw after
+this by adding `iAuto = threadIdx.x + (blockDim.x*blockIdx.x)`, meaning you
+should run this kernel with `grid.x` set, where:
+  - grid.x * threads.x >= `num_autos`
+
+ @param[in] num_cross Number of cross-correlations
+ @param[in] num_autos Number of auto-correlations
+ @param[in,out] d_u u coords
+ @param[in,out] d_v v coords
+ @param[in,out] d_w w coords
+*/
+__global__ void set_auto_uvw_to_zero(int num_cross, int num_autos,
+                                     user_precision_t *d_u,
+                                     user_precision_t *d_v,
+                                     user_precision_t *d_w);

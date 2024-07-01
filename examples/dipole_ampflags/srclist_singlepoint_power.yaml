@@ -1,0 +1,13 @@
+point_powerlaw1:
+  - ra: 0.0
+    dec: -27.0
+    comp_type: point
+    flux_type:
+      power_law:
+        si: 0.0
+        fd:
+          freq: 180000000.0
+          i: 1.0
+          q: 0.0
+          u: 0.0
+          v: 0.0

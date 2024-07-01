@@ -36,9 +36,9 @@ void test_calculate_visibilities_MWAFEEBeam(int n_points, int n_gauss, int n_sha
   woden_settings_t *woden_settings = make_woden_settings(RA0, -0.46606083776035967);
   woden_settings->beamtype = FEE_BEAM;
 
-  for (int i = 0; i < 16; i++) {
-    woden_settings->FEE_ideal_delays[i] = 0.0;
-  }
+  int delays[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+  // int delays[16] = {2,4,6,8,2,4,6,8,2,4,6,8,2,4,6,8};
+  woden_settings->FEE_ideal_delays = delays;
 
   beam_settings_t *beam_settings = malloc(sizeof(beam_settings_t));
   beam_settings->beamtype = FEE_BEAM;
@@ -106,6 +106,7 @@ void test_calculate_visibilities_MWAFEEBeam(int n_points, int n_gauss, int n_sha
   visibility_set = test_calculate_visibilities(cropped_sky_models,
                                           beam_settings, woden_settings, RA0, -0.46606083776035967,
                                           beam_settings->beamtype);
+
   test_comp_phase_centre_allgains(visibility_set,
                                   gain1xx_re, gain1xx_im,
                                   gain1xy_re, gain1xy_im,
@@ -205,7 +206,7 @@ void test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreePoint(void) {
 
 }
 
-void test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeMWAFEE(void) {
+void test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeGauss(void) {
   int n_points = 0;
   int n_gauss = 3;
   int n_shapes = 0;
@@ -255,7 +256,7 @@ int main(void)
 
         //Test with three SOURCEs, three COPMONENTs
         RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreePoint);
-        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeMWAFEE);
+        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeGauss);
         RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeShape);
         RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeAll);
 

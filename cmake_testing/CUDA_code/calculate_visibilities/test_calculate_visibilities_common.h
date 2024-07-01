@@ -62,3 +62,19 @@ void test_comp_phase_centre_allgains(visibility_set_t *visibility_set,
                                      double gain2yy_re, double gain2yy_im,
                                      woden_settings_t *woden_settings,
                                      double tol);
+
+//Aight this one tests things when we have all gains varying, and all antennas
+//have different primary beams
+void test_comp_phase_centre_allgains_multiants(visibility_set_t *visibility_set,
+                                     double gain1xx_re, double gain1xx_im,
+                                     double gain1xy_re, double gain1xy_im,
+                                     double gain1yx_re, double gain1yx_im,
+                                     double gain1yy_re, double gain1yy_im,
+                                     double gain2xx_re, double gain2xx_im,
+                                     double gain2xy_re, double gain2xy_im,
+                                     double gain2yx_re, double gain2yx_im,
+                                     double gain2yy_re, double gain2yy_im,
+                                     double *antx_mult, double *anty_mult,
+                                     int num_ants,
+                                     woden_settings_t *woden_settings,
+                                     double tol);

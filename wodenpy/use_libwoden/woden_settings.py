@@ -72,6 +72,8 @@ class Woden_Settings_Double(ctypes.Structure):
     :cvar POINTER(c_double) mjds:  Array to hold modified julian dates for all time centroids
     :cvar c_int do_autos:  Boolean of whether to simulate autos or not (0 False, 1 True)
     :cvar c_int do_QUV:  Boolean of whether to use Stokes Q,U,V (0 False, 1 True)
+    :cvar c_int use_dipamps:  Boolean of whether to use dipole amplitudes, so have an individual beam per tile (0 False, 1 True)
+    :cvar POINTER(c_double) mwa_dipole_amps: Bespoke MWA dipole amplitudes for each antenna(tile). Should be 2*num_ants*16 long
     """
     
     _fields_ = [("lst_base", c_double),
@@ -102,7 +104,7 @@ class Woden_Settings_Double(ctypes.Structure):
                 ("latitude", c_double),
                 ("latitude_obs_epoch_base", c_double),
                 ("longitude", c_double),
-                ("FEE_ideal_delays", (c_double*16)),
+                ("FEE_ideal_delays", POINTER(c_int)),
                 ("coarse_band_width", c_double),
                 ("gauss_ra_point", c_double),
                 ("gauss_dec_point", c_double),
@@ -115,7 +117,9 @@ class Woden_Settings_Double(ctypes.Structure):
                 ("latitudes", POINTER(c_double)),
                 ("mjds", POINTER(c_double)),
                 ("do_autos", c_int),
-                ("do_QUV", c_int)]
+                ("do_QUV", c_int),
+                ("use_dipamps", c_int),
+                ("mwa_dipole_amps", POINTER(c_double))]
 
 ##TODO gotta be a way to set the float or double fields via some kind of
 ##variable instead of making two different classes
@@ -123,7 +127,7 @@ class Woden_Settings_Float(ctypes.Structure):
     """A class structured equivalently to a `visi_set` struct, used by 
     the C and CUDA code in libwoden_float.so
     
-        :cvar c_double lst_base:  Local sidereal time for first time step (radians)
+    :cvar c_double lst_base:  Local sidereal time for first time step (radians)
     :cvar c_double lst_obs_epoch_base:  Local sidereal time for first time step (radians) for the observation epoch (e.g. in 2020 for a 2020 obs)
     :cvar c_double ra0:  Right ascension of phase centre (radians)
     :cvar c_double dec0:  Declination of phase centre (radians)
@@ -165,6 +169,8 @@ class Woden_Settings_Float(ctypes.Structure):
     :cvar POINTER(c_double) mjds:  Array to hold modified julian dates for all time centroids
     :cvar c_int do_autos:  Boolean of whether to simulate autos or not (0 False, 1 True)
     :cvar c_int do_QUV:  Boolean of whether to use Stokes Q,U,V (0 False, 1 True)
+    :cvar c_int use_dipamps:  Boolean of whether to use dipole amplitudes, so have an individual beam per tile  (0 False, 1 True)
+    :cvar POINTER(c_double) mwa_dipole_amps: Bespoke MWA dipole amplitudes for each antenna(tile). Should be 2*num_ants*16 long
     """
     
     _fields_ = [("lst_base", c_double),
@@ -195,7 +201,7 @@ class Woden_Settings_Float(ctypes.Structure):
                 ("latitude", c_double),
                 ("latitude_obs_epoch_base", c_double),
                 ("longitude", c_float),
-                ("FEE_ideal_delays", (c_float*16)),
+                ("FEE_ideal_delays", POINTER(c_int)),
                 ("coarse_band_width", c_double),
                 ("gauss_ra_point", c_double),
                 ("gauss_dec_point", c_double),
@@ -208,7 +214,9 @@ class Woden_Settings_Float(ctypes.Structure):
                 ("latitudes", POINTER(c_double)),
                 ("mjds", POINTER(c_double)),
                 ("do_autos", c_int),
-                ("do_QUV", c_int)]
+                ("do_QUV", c_int),
+                ("use_dipamps", c_int),
+                ("mwa_dipole_amps", POINTER(c_double))]
     
 def create_woden_settings(args : argparse.Namespace,
                           jd_date : float, lst : float) -> Union[Woden_Settings_Float, Woden_Settings_Double]:
@@ -267,10 +275,21 @@ def create_woden_settings(args : argparse.Namespace,
     ##If MWA_FEE_delays is set, convert into a array and populate the
     ##woden_settings equivalent
     if args.MWA_FEE_delays:
-        delays = np.array(args.MWA_FEE_delays.strip('[]').split(','))
         
-        for ind, delay in enumerate(delays):
-            woden_settings.FEE_ideal_delays[ind] = float(delay)
+        ##If using a a different set of dipole amplitudes for each tile,
+        ##need to repeat the delays for each tile
+        if args.use_MWA_dipamps:
+            num_beams = args.num_antennas
+        else:
+            num_beams = 1
+        
+        delays = np.array(args.MWA_FEE_delays.strip('[]').split(','))
+        num_delays = len(delays)*num_beams
+        woden_settings.FEE_ideal_delays = (ctypes.c_int*num_delays)()
+        
+        for delay_ind, delay in enumerate(delays):
+            for beam in range(num_beams):
+                woden_settings.FEE_ideal_delays[beam*len(delays) + delay_ind] = int(delay)
         
     if args.primary_beam == 'none':
         woden_settings.beamtype = 0
@@ -310,6 +329,17 @@ def create_woden_settings(args : argparse.Namespace,
     
     for ind, band in enumerate(args.band_nums):
             woden_settings.band_nums[ind] = int(band)
+    
+    ##Are we using dipole amplitudes?
+    woden_settings.use_dipamps = args.use_MWA_dipamps
+    
+    ##If so, populate the array
+    if args.use_MWA_dipamps:
+        ##Assign le-memory
+        woden_settings.mwa_dipole_amps = (ctypes.c_double*len(args.dipamps))()
+        ##again, this is ctypes, so we need to populate it with a loop
+        for ind, amplitude in enumerate(args.dipamps):
+                woden_settings.mwa_dipole_amps[ind] = amplitude
     
     return woden_settings
     

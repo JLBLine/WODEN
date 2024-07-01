@@ -7,7 +7,8 @@ import ctypes
 # ##Code we are testing
 import wodenpy.use_libwoden.woden_settings as ws
 from wodenpy.wodenpy_setup import run_setup
-# import woden_lib
+
+import numpy.testing as npt
 
 ##annoying path hack to find where the C library is
 test_dir = os.environ['CMAKE_CURRENT_SOURCE_DIR'] + "/../../../build/cmake_testing/wodenpy/use_libwoden/"
@@ -49,6 +50,9 @@ class PretendArgs():
         self.MWA_FEE_delays = False
         self.no_precession = False
         self.do_autos = False
+        self.use_MWA_dipamps = False
+        self.use_dipflags = False
+        self.dipamps = False
         
         self.hdf5_beam_path = ""
         
@@ -394,7 +398,9 @@ class Test(unittest.TestCase):
         self.check_basic_inputs(woden_settings)
         self.assertFalse(int(self.data['do_autos']))
 
-    def test_write_do_autos(self):
+
+        
+    def test_write_do_precssion(self):
         """Test that doing precession gets swithced on/off. No need to check for
         float or double, this is just changing an int"""
 
@@ -414,6 +420,40 @@ class Test(unittest.TestCase):
         woden_settings = self.call_create_woden_settings()
         self.check_basic_inputs(woden_settings)
         self.assertFalse(int(self.data['do_precession']))
+        
+    def test_use_dipamps(self):
+        """Test that the use_dipamp flag gets propagated correctly, and if
+        true, the dipole amplitude array is correctly passed through"""
+
+        ##This makes fake args with double precision
+        self.make_basic_inputs('double')
+        # self.args.no_precession = False
+        
+        ##This runs `create_woden_settings`
+        woden_settings = self.call_create_woden_settings()
+        
+        ##This passes woden_settings into C code which write contents to a text
+        ## file, reads in that text file, and checks the outputs make sense
+        self.check_basic_inputs(woden_settings)
+        
+        ##check it defaults to False
+        self.assertFalse(int(self.data['use_dipamps']))
+        
+        
+        ##Now ask for some dipole amps, provide some (as would happen using
+        # run_setup.check_args) and check things are propagated correctly
+        self.args.use_MWA_dipamps = True
+        self.args.dipamps = np.arange(16)
+        ##This runs `create_woden_settings`
+        woden_settings = self.call_create_woden_settings()
+        
+        self.check_basic_inputs(woden_settings)
+        ##check it we have a True flag
+        self.assertTrue(int(self.data['use_dipamps']))
+        
+        mwa_dipole_amps = np.array([float(amp) for amp in self.data['mwa_dipole_amps'].split(',')])
+        npt.assert_allclose(mwa_dipole_amps, np.arange(16), atol=1e-8)
+        
         
 
 ##Run the test

@@ -191,3 +191,8 @@ imaginary tested to be zero.
 
 For FLOAT compiled code, the absolute tolerance threshold on
 values is set to 1e-5, and 1e-9 for DOUBLE compiled code.
+
+
+``test_calculate_visibilities_multibeams.c``
+*********************************************
+Same as ``test_calculate_visibilities_mwafeebeam.c``, but where every antenna has a different primary beam. Uses gains that cause predictable scalar multiplications of stored expected visibilities from the previous tests. Doing indexing and keeping track of which primary beams should match which visibilities allows predictions of the expected visibilities to be made.

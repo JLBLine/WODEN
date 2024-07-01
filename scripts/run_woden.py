@@ -141,7 +141,7 @@ def main(argv=None):
 
     ##Check that the input arguments make sense
     args = check_args(args)
-
+    
     ##Find out what git/release version we are using, and where the code lives
     gitlabel = get_code_version()
 
