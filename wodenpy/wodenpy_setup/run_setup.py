@@ -385,11 +385,23 @@ def check_args(args):
         with fits.open(args.metafits_filename) as f:
             date = f[0].header['DATE-OBS']
 
+            
+            ##Need to order the antennas via the Tile column to be consistent
+            ## with hyperdrive
+            tilenames = f[1].data['Tile']
+            ##The same tile name is repeated for X and Y dipoles. Doing an
+            ##argsort on this sometimes returns the X first, sometimes the Y.
+            ##This is bad as we use this to re-order dipole amplitude and flags
+            ##later on; so only select one of the pols, do an argsort, and
+            ##expand back to both pols
+            tilenames = tilenames[np.arange(0, len(tilenames), 2)]
+            order = np.argsort(tilenames)
+            
+            antenna_order = np.empty(2*len(order), dtype=int)
+            antenna_order[np.arange(0, 2*len(order), 2)] = 2*order
+            antenna_order[np.arange(1, 2*len(order), 2)] = 2*order + 1
+            
             ##Get the east, north, height antenna positions from the metafits
-            ##Need to order the antennas via the Tile
-            ##column to be consistent with hyperdrive
-            antenna_order = np.argsort(f[1].data['Tile'])
-
             east = f[1].data['East'][antenna_order]
             north = f[1].data['North'][antenna_order]
             height = f[1].data['Height'][antenna_order]
@@ -568,7 +580,40 @@ def check_args(args):
         ##Apply flags and flatten
         args.dipflags = np.ones(dip_delays.shape)
         args.dipflags[flag_indexes] = 0
-        args.dipflags = args.dipflags.flatten()
+        
+        dipflags = np.empty_like(args.dipflags)
+        
+        num_y_flags = 0
+        num_x_flags = 0
+        num_tiles = 0
+        for ant in range(int(len(antenna_order)/2)):
+            
+            add_tile = 0
+            slice = args.dipflags[2*ant, :]
+            flag_len = len(np.where(slice == 0)[0])
+            if flag_len > 0:
+                # print('Y dip', flag_len, len(slice))
+                num_y_flags += 1
+                add_tile = 1
+                
+            slice = args.dipflags[2*ant+1, :]
+            flag_len = len(np.where(slice == 0)[0])
+            if flag_len > 0:
+                # print('X dip', flag_len, len(slice))
+                num_x_flags += 1
+                add_tile = 1
+                
+            ##Flip things compared to metafits as meta goes E-W, N-S.
+            ##WODEN likes things IAU style which is N-S,E-W
+            dipflags[2*ant+1, :] = args.dipflags[2*ant, :]
+            dipflags[2*ant, :] = args.dipflags[2*ant+1, :]
+            
+            num_tiles += add_tile
+        
+        # print(f"Num tiles N-S flags: {num_x_flags}")
+        # print(f"Num tiles E-W flags: {num_y_flags}")
+        print(f"Num tiles with dipole flags: {num_tiles}")
+        args.dipflags = dipflags.flatten()
     
     ##Now do dipole amplitudes
     args.dipamps = np.ones(2*args.num_antennas*16)
@@ -596,10 +641,16 @@ def check_args(args):
                  ' The number of tiles is set to be {args.num_antennas}.'
                  ' Either check your metafits file or if you have --array_layout set,'
                  ' check how may tiles are in that file. Exiting now.')
-            
-        ##antenna order was found in the metafits file earlier when reading in
-        ##re-orders things to match hyperdrive
-        args.dipamps = dip_amps[antenna_order, :].flatten()
+        
+        ##Things are stored in the metafits as e-w first, n-s second. WODEN
+        ##works internally to IAU def which is n-s first, e-w second. So need
+        ##to reverse the order of the amplitudes here
+        args.dipamps = dip_amps[antenna_order, :]
+        dipamps = np.empty_like(args.dipamps)
+        for ant in range(int(len(args.dipamps)/2)):
+            dipamps[2*ant+1, :] = args.dipamps[2*ant, :]
+            dipamps[2*ant, :] = args.dipamps[2*ant+1, :]
+        args.dipamps = dipamps.flatten()
         
     ##Combine the dipole amplitudes and flags into a single array
     ##One or the other might be array of ones so this can always be done
@@ -611,8 +662,6 @@ def check_args(args):
                
         
     return args
-
-
 
 def get_code_version():
     """
