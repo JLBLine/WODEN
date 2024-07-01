@@ -22,9 +22,9 @@ typedef struct _d_beam_gains_t {
 
   int *d_ant1_to_baseline_map = NULL; /*!< The index of antenna 1 in all unique pairs of
 antennas. Used to map iBaseline to the correct antenna 1 */
-  int *d_ant2_to_baseline_map = NULL; /* The index of antenna 2 in all unique pairs of
+  int *d_ant2_to_baseline_map = NULL; /*!< The index of antenna 2 in all unique pairs of
 antennas. Used to map iBaseline to the correct antenna 2 */
-  int use_twobeams; /* The beam gains were made with unique primary beams so
+  int use_twobeams; /*!< The beam gains were made with unique primary beams so
   should use two antenna patterns per visibility */
 
 } d_beam_gains_t;
