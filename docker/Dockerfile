@@ -1,5 +1,5 @@
 #Base image including CUDA to write everything on to
-FROM nvidia/cuda:11.4.3-devel-ubuntu20.04
+FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
 
 ##install the dependencies
 ENV DEBIAN_FRONTEND="noninteractive"
@@ -25,22 +25,22 @@ RUN apt-get update -y && \
 # Get Rust
 RUN mkdir -m755 /opt/rust /opt/cargo
 ENV RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/cargo PATH=/opt/cargo/bin:$PATH
-ENV RUST_VERSION=1.72
+ENV RUST_VERSION=1.79
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain=$RUST_VERSION
 
 # hyperbeam used for MWA primary beam
-RUN wget https://github.com/MWATelescope/mwa_hyperbeam/archive/refs/tags/v0.6.0.tar.gz \
-  && tar -xvf v0.6.0.tar.gz \
-  && cd mwa_hyperbeam-0.6.0 \
+RUN wget https://github.com/MWATelescope/mwa_hyperbeam/archive/refs/tags/v0.9.2.tar.gz \
+  && tar -xvf v0.9.2.tar.gz \
+  && cd mwa_hyperbeam-0.9.2 \
   && /opt/cargo/bin/cargo build --release --features=cuda,cuda-static \
   && cd /
 
 ## clone the release verion of WODEN and complile the C/CUDA code
-RUN git clone -b v2.0.0 https://github.com/JLBLine/WODEN.git \
+RUN git clone -b v2.1.0 https://github.com/JLBLine/WODEN.git \
   && cd WODEN \
   && mkdir build && cd build \
-  && cmake .. -DHBEAM_INC=/mwa_hyperbeam-0.6.0/include/ \
-           -DHBEAM_LIB=/mwa_hyperbeam-0.6.0/target/release/libmwa_hyperbeam.so \
+  && cmake .. -DHBEAM_INC=/mwa_hyperbeam-0.9.2/include/ \
+           -DHBEAM_LIB=/mwa_hyperbeam-0.9.2/target/release/libmwa_hyperbeam.so \
   && make
   
 ##Now do the pip install
