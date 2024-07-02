@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <cuComplex.h>
+#include "gpu_macros.h"
 #include <complex.h>
 #include <math.h>
 #include "constants.h"
@@ -168,49 +168,49 @@ extern "C" void test_kern_calc_lmn(double ra0, double dec0,
                                    double * ls, double * ms, double * ns) {
 
   double *d_ls = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_ls, num_coords*sizeof(double) ) );
+  ( gpuMalloc( (void**)&d_ls, num_coords*sizeof(double) ) );
 
   double *d_ms = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_ms, num_coords*sizeof(double) ) );
+  ( gpuMalloc( (void**)&d_ms, num_coords*sizeof(double) ) );
 
   double *d_ns = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_ns, num_coords*sizeof(double) ) );
+  ( gpuMalloc( (void**)&d_ns, num_coords*sizeof(double) ) );
 
 
   double *d_ras = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_ras, num_coords*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy(d_ras, ras,
-                           num_coords*sizeof(double), cudaMemcpyHostToDevice ) );
+  ( gpuMalloc( (void**)&d_ras, num_coords*sizeof(double) ) );
+  ( gpuMemcpy(d_ras, ras,
+                           num_coords*sizeof(double), gpuMemcpyHostToDevice ) );
 
   double *d_decs = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_decs, num_coords*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy(d_decs, decs,
-                           num_coords*sizeof(double), cudaMemcpyHostToDevice ) );
+  ( gpuMalloc( (void**)&d_decs, num_coords*sizeof(double) ) );
+  ( gpuMemcpy(d_decs, decs,
+                           num_coords*sizeof(double), gpuMemcpyHostToDevice ) );
 
   dim3 grid, threads;
 
   threads.x = 128;
   grid.x = (int)ceil( (float)num_coords / (float)threads.x );
 
-  cudaErrorCheckKernel("kern_calc_lmn",
+  gpuErrorCheckKernel("kern_calc_lmn",
           kern_calc_lmn, grid, threads,
           ra0, sin(dec0), cos(dec0),
           d_ras, d_decs, d_ls, d_ms, d_ns,
           num_coords);
 
-  cudaErrorCheckCall( cudaMemcpy(ls, d_ls,
-                             num_coords*sizeof(double),cudaMemcpyDeviceToHost) );
-  cudaErrorCheckCall( cudaMemcpy(ms, d_ms,
-                             num_coords*sizeof(double),cudaMemcpyDeviceToHost) );
-  cudaErrorCheckCall( cudaMemcpy(ns, d_ns,
-                             num_coords*sizeof(double),cudaMemcpyDeviceToHost) );
+  ( gpuMemcpy(ls, d_ls,
+                             num_coords*sizeof(double),gpuMemcpyDeviceToHost) );
+  ( gpuMemcpy(ms, d_ms,
+                             num_coords*sizeof(double),gpuMemcpyDeviceToHost) );
+  ( gpuMemcpy(ns, d_ns,
+                             num_coords*sizeof(double),gpuMemcpyDeviceToHost) );
 
-  cudaErrorCheckCall( cudaFree(d_ls) );
-  cudaErrorCheckCall( cudaFree(d_ms) );
-  cudaErrorCheckCall( cudaFree(d_ns) );
+  ( gpuFree(d_ls) );
+  ( gpuFree(d_ms) );
+  ( gpuFree(d_ns) );
 
-  cudaErrorCheckCall( cudaFree(d_ras) );
-  cudaErrorCheckCall( cudaFree(d_decs) );
+  ( gpuFree(d_ras) );
+  ( gpuFree(d_decs) );
 
 }
 
@@ -226,34 +226,34 @@ extern "C" void test_kern_calc_uvw(double *X_diff,
   double *d_Y_diff = NULL;
   double *d_Z_diff = NULL;
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_X_diff,
+  ( gpuMalloc( (void**)&d_X_diff,
                             num_times*num_baselines*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_X_diff, X_diff,
-    num_times*num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_Y_diff,
+  ( gpuMemcpy( d_X_diff, X_diff,
+    num_times*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
+  ( gpuMalloc( (void**)&d_Y_diff,
                             num_times*num_baselines*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_Y_diff, Y_diff,
-    num_times*num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_Z_diff,
+  ( gpuMemcpy( d_Y_diff, Y_diff,
+    num_times*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
+  ( gpuMalloc( (void**)&d_Z_diff,
                             num_times*num_baselines*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_Z_diff, Z_diff,
-    num_times*num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
+  ( gpuMemcpy( d_Z_diff, Z_diff,
+    num_times*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
 
   double *d_sha0s = NULL;
   double *d_cha0s = NULL;
   user_precision_t *d_wavelengths = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_sha0s,
+  ( gpuMalloc( (void**)&d_sha0s,
                                          num_cross*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_sha0s, sha0s,
-                 num_cross*sizeof(double), cudaMemcpyHostToDevice ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_cha0s,
+  ( gpuMemcpy( d_sha0s, sha0s,
+                 num_cross*sizeof(double), gpuMemcpyHostToDevice ) );
+  ( gpuMalloc( (void**)&d_cha0s,
                                          num_cross*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_cha0s, cha0s,
-                 num_cross*sizeof(double), cudaMemcpyHostToDevice ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_wavelengths,
+  ( gpuMemcpy( d_cha0s, cha0s,
+                 num_cross*sizeof(double), gpuMemcpyHostToDevice ) );
+  ( gpuMalloc( (void**)&d_wavelengths,
                                          num_cross*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_wavelengths, wavelengths,
-                 num_cross*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+  ( gpuMemcpy( d_wavelengths, wavelengths,
+                 num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
 
   user_precision_t *d_u_metres = NULL;
   user_precision_t *d_v_metres = NULL;
@@ -262,19 +262,19 @@ extern "C" void test_kern_calc_uvw(double *X_diff,
   user_precision_t *d_vs = NULL;
   user_precision_t *d_ws = NULL;
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_u_metres, num_cross*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_v_metres, num_cross*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_w_metres, num_cross*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_us, num_cross*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_vs, num_cross*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_ws, num_cross*sizeof(user_precision_t) ) );
+  ( gpuMalloc( (void**)&d_u_metres, num_cross*sizeof(user_precision_t) ) );
+  ( gpuMalloc( (void**)&d_v_metres, num_cross*sizeof(user_precision_t) ) );
+  ( gpuMalloc( (void**)&d_w_metres, num_cross*sizeof(user_precision_t) ) );
+  ( gpuMalloc( (void**)&d_us, num_cross*sizeof(user_precision_t) ) );
+  ( gpuMalloc( (void**)&d_vs, num_cross*sizeof(user_precision_t) ) );
+  ( gpuMalloc( (void**)&d_ws, num_cross*sizeof(user_precision_t) ) );
 
   dim3 grid, threads;
 
   threads.x = 128;
   grid.x = (int)ceil( (float)num_cross / (float)threads.x );
 
-  cudaErrorCheckKernel("kern_calc_uvw",
+  gpuErrorCheckKernel("kern_calc_uvw",
           kern_calc_uvw, grid, threads,
           d_X_diff, d_Y_diff, d_Z_diff,
           d_u_metres, d_v_metres, d_w_metres,
@@ -283,34 +283,34 @@ extern "C" void test_kern_calc_uvw(double *X_diff,
           d_cha0s, d_sha0s,
           num_cross, num_baselines, num_times, num_freqs);
 
-  cudaErrorCheckCall( cudaMemcpy(us, d_us,
-                   num_cross*sizeof(user_precision_t),cudaMemcpyDeviceToHost) );
-  cudaErrorCheckCall( cudaMemcpy(vs, d_vs,
-                   num_cross*sizeof(user_precision_t),cudaMemcpyDeviceToHost) );
-  cudaErrorCheckCall( cudaMemcpy(ws, d_ws,
-                   num_cross*sizeof(user_precision_t),cudaMemcpyDeviceToHost) );
+  ( gpuMemcpy(us, d_us,
+                   num_cross*sizeof(user_precision_t),gpuMemcpyDeviceToHost) );
+  ( gpuMemcpy(vs, d_vs,
+                   num_cross*sizeof(user_precision_t),gpuMemcpyDeviceToHost) );
+  ( gpuMemcpy(ws, d_ws,
+                   num_cross*sizeof(user_precision_t),gpuMemcpyDeviceToHost) );
 
-  cudaErrorCheckCall( cudaMemcpy(u_metres, d_u_metres,
-                   num_cross*sizeof(user_precision_t),cudaMemcpyDeviceToHost) );
-  cudaErrorCheckCall( cudaMemcpy(v_metres, d_v_metres,
-                   num_cross*sizeof(user_precision_t),cudaMemcpyDeviceToHost) );
-  cudaErrorCheckCall( cudaMemcpy(w_metres, d_w_metres,
-                   num_cross*sizeof(user_precision_t),cudaMemcpyDeviceToHost) );
+  ( gpuMemcpy(u_metres, d_u_metres,
+                   num_cross*sizeof(user_precision_t),gpuMemcpyDeviceToHost) );
+  ( gpuMemcpy(v_metres, d_v_metres,
+                   num_cross*sizeof(user_precision_t),gpuMemcpyDeviceToHost) );
+  ( gpuMemcpy(w_metres, d_w_metres,
+                   num_cross*sizeof(user_precision_t),gpuMemcpyDeviceToHost) );
 
-  cudaErrorCheckCall( cudaFree(d_us) );
-  cudaErrorCheckCall( cudaFree(d_vs) );
-  cudaErrorCheckCall( cudaFree(d_ws) );
+  ( gpuFree(d_us) );
+  ( gpuFree(d_vs) );
+  ( gpuFree(d_ws) );
 
-  cudaErrorCheckCall( cudaFree(d_u_metres) );
-  cudaErrorCheckCall( cudaFree(d_v_metres) );
-  cudaErrorCheckCall( cudaFree(d_w_metres) );
+  ( gpuFree(d_u_metres) );
+  ( gpuFree(d_v_metres) );
+  ( gpuFree(d_w_metres) );
 
-  cudaErrorCheckCall( cudaFree(d_sha0s) );
-  cudaErrorCheckCall( cudaFree(d_cha0s) );
+  ( gpuFree(d_sha0s) );
+  ( gpuFree(d_cha0s) );
 
-  cudaErrorCheckCall( cudaFree(d_X_diff) );
-  cudaErrorCheckCall( cudaFree(d_Y_diff) );
-  cudaErrorCheckCall( cudaFree(d_Z_diff) );
+  ( gpuFree(d_X_diff) );
+  ( gpuFree(d_Y_diff) );
+  ( gpuFree(d_Z_diff) );
 
 }
 
@@ -325,38 +325,38 @@ extern "C" void test_kern_calc_uv_shapelet(double *X_diff,
   double *d_Y_diff = NULL;
   double *d_Z_diff = NULL;
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_X_diff,
+  ( gpuMalloc( (void**)&d_X_diff,
                                     num_times*num_baselines*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_X_diff, X_diff,
-            num_times*num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_Y_diff,
+  ( gpuMemcpy( d_X_diff, X_diff,
+            num_times*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
+  ( gpuMalloc( (void**)&d_Y_diff,
                                     num_times*num_baselines*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_Y_diff, Y_diff,
-            num_times*num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_Z_diff,
+  ( gpuMemcpy( d_Y_diff, Y_diff,
+            num_times*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
+  ( gpuMalloc( (void**)&d_Z_diff,
                                     num_times*num_baselines*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_Z_diff, Z_diff,
-            num_times*num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
+  ( gpuMemcpy( d_Z_diff, Z_diff,
+            num_times*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
 
   double *d_lsts = NULL;
   double *d_ras = NULL;
   double *d_decs = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_lsts, num_times*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_lsts, lsts,
-                      num_times*sizeof(double), cudaMemcpyHostToDevice ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_ras, num_shapes*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_ras, ras,
-                      num_shapes*sizeof(double), cudaMemcpyHostToDevice ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_decs, num_shapes*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_decs, decs,
-                      num_shapes*sizeof(double), cudaMemcpyHostToDevice ) );
+  ( gpuMalloc( (void**)&d_lsts, num_times*sizeof(double) ) );
+  ( gpuMemcpy( d_lsts, lsts,
+                      num_times*sizeof(double), gpuMemcpyHostToDevice ) );
+  ( gpuMalloc( (void**)&d_ras, num_shapes*sizeof(double) ) );
+  ( gpuMemcpy( d_ras, ras,
+                      num_shapes*sizeof(double), gpuMemcpyHostToDevice ) );
+  ( gpuMalloc( (void**)&d_decs, num_shapes*sizeof(double) ) );
+  ( gpuMemcpy( d_decs, decs,
+                      num_shapes*sizeof(double), gpuMemcpyHostToDevice ) );
 
   user_precision_t *d_u_shapes = NULL;
   user_precision_t *d_v_shapes = NULL;
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_u_shapes,
+  ( gpuMalloc( (void**)&d_u_shapes,
                 num_shapes*num_baselines*num_times*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_v_shapes,
+  ( gpuMalloc( (void**)&d_v_shapes,
                 num_shapes*num_baselines*num_times*sizeof(user_precision_t) ) );
 
   dim3 grid, threads;
@@ -367,29 +367,29 @@ extern "C" void test_kern_calc_uv_shapelet(double *X_diff,
   threads.y = 2;
   grid.y = (int)ceilf( (float)num_shapes / (float)threads.y );
 
-  cudaErrorCheckKernel("kern_calc_uv_shapelet",
+  gpuErrorCheckKernel("kern_calc_uv_shapelet",
           kern_calc_uv_shapelet, grid, threads,
           d_X_diff, d_Y_diff, d_Z_diff,
           d_u_shapes, d_v_shapes,
           d_lsts, d_ras, d_decs,
           num_baselines, num_times, num_shapes);
 
-  cudaErrorCheckCall( cudaMemcpy(u_shapes, d_u_shapes,
+  ( gpuMemcpy(u_shapes, d_u_shapes,
                    num_shapes*num_baselines*num_times*sizeof(user_precision_t),
-                                                    cudaMemcpyDeviceToHost) );
-  cudaErrorCheckCall( cudaMemcpy(v_shapes, d_v_shapes,
+                                                    gpuMemcpyDeviceToHost) );
+  ( gpuMemcpy(v_shapes, d_v_shapes,
                    num_shapes*num_baselines*num_times*sizeof(user_precision_t),
-                                                    cudaMemcpyDeviceToHost) );
+                                                    gpuMemcpyDeviceToHost) );
 
-  cudaErrorCheckCall( cudaFree(d_u_shapes) );
-  cudaErrorCheckCall( cudaFree(d_v_shapes) );
+  ( gpuFree(d_u_shapes) );
+  ( gpuFree(d_v_shapes) );
 
-  cudaErrorCheckCall( cudaFree(d_lsts) );
-  cudaErrorCheckCall( cudaFree(d_ras) );
-  cudaErrorCheckCall( cudaFree(d_decs) );
+  ( gpuFree(d_lsts) );
+  ( gpuFree(d_ras) );
+  ( gpuFree(d_decs) );
 
-  cudaErrorCheckCall( cudaFree(d_X_diff) );
-  cudaErrorCheckCall( cudaFree(d_Y_diff) );
-  cudaErrorCheckCall( cudaFree(d_Z_diff) );
+  ( gpuFree(d_X_diff) );
+  ( gpuFree(d_Y_diff) );
+  ( gpuFree(d_Z_diff) );
 
 }

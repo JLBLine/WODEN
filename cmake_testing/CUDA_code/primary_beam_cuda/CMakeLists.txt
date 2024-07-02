@@ -5,9 +5,14 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   ##Set the flags depending on the precision
   DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
 
+  if(USE_CUDA)
+    set_source_files_properties("${CMAKE_SOURCE_DIR}/src/fundamental_coords.cpp"
+              "${CMAKE_SOURCE_DIR}/src/primary_beam_cuda.cpp" PROPERTIES LANGUAGE CUDA)
+  endif()
+
   add_library(primary_beam_cudaCUDA_${PRECISION} SHARED
-              "${CMAKE_SOURCE_DIR}/src/primary_beam_cuda.cu"
-              "${CMAKE_SOURCE_DIR}/src/fundamental_coords.cu")
+              "${CMAKE_SOURCE_DIR}/src/primary_beam_cuda.cpp"
+              "${CMAKE_SOURCE_DIR}/src/fundamental_coords.cpp")
 
   target_compile_options(primary_beam_cudaCUDA_${PRECISION} PRIVATE ${CUDA_FLAGS})
 

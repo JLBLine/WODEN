@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <cuComplex.h>
+// #include <cuComplex.h>
 #include <complex.h>
 #include <math.h>
 
@@ -17,6 +17,8 @@
 
 //Helpful C code we are also using
 #include "visibility_set.h"
+
+#include "gpu_macros.h"
 
 extern "C" void calculate_visibilities(array_layout_t *array_layout,
   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
@@ -63,32 +65,32 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   double *d_Y_diff = NULL;
   double *d_Z_diff = NULL;
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_X_diff,
+  ( gpuMalloc( (void**)&d_X_diff,
                                  num_time_steps*num_baselines*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_X_diff, array_layout->X_diff_metres,
-        num_time_steps*num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_Y_diff,
+  ( gpuMemcpy( d_X_diff, array_layout->X_diff_metres,
+        num_time_steps*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
+  ( gpuMalloc( (void**)&d_Y_diff,
                                  num_time_steps*num_baselines*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_Y_diff, array_layout->Y_diff_metres,
-        num_time_steps*num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_Z_diff,
+  ( gpuMemcpy( d_Y_diff, array_layout->Y_diff_metres,
+        num_time_steps*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
+  ( gpuMalloc( (void**)&d_Z_diff,
                                  num_time_steps*num_baselines*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_Z_diff, array_layout->Z_diff_metres,
-        num_time_steps*num_baselines*sizeof(double), cudaMemcpyHostToDevice ) );
+  ( gpuMemcpy( d_Z_diff, array_layout->Z_diff_metres,
+        num_time_steps*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
 
   double *d_allsteps_sha0s = NULL;
   double *d_allsteps_cha0s = NULL;
   user_precision_t *d_allsteps_wavelengths = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_allsteps_sha0s, num_cross*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_allsteps_sha0s, visibility_set->allsteps_sha0s,
-                      num_cross*sizeof(double), cudaMemcpyHostToDevice ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_allsteps_cha0s, num_cross*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_allsteps_cha0s, visibility_set->allsteps_cha0s,
-                      num_cross*sizeof(double), cudaMemcpyHostToDevice ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_allsteps_wavelengths,
+  ( gpuMalloc( (void**)&d_allsteps_sha0s, num_cross*sizeof(double) ) );
+  ( gpuMemcpy( d_allsteps_sha0s, visibility_set->allsteps_sha0s,
+                      num_cross*sizeof(double), gpuMemcpyHostToDevice ) );
+  ( gpuMalloc( (void**)&d_allsteps_cha0s, num_cross*sizeof(double) ) );
+  ( gpuMemcpy( d_allsteps_cha0s, visibility_set->allsteps_cha0s,
+                      num_cross*sizeof(double), gpuMemcpyHostToDevice ) );
+  ( gpuMalloc( (void**)&d_allsteps_wavelengths,
                                          num_cross*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_allsteps_wavelengths, visibility_set->allsteps_wavelengths,
-                      num_cross*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+  ( gpuMemcpy( d_allsteps_wavelengths, visibility_set->allsteps_wavelengths,
+                      num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
 
   user_precision_t *d_u_metres = NULL;
   user_precision_t *d_v_metres = NULL;
@@ -97,44 +99,44 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   user_precision_t *d_vs = NULL;
   user_precision_t *d_ws = NULL;
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_u_metres, num_visis*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_v_metres, num_visis*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_w_metres, num_visis*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_us, num_visis*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_vs, num_visis*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_ws, num_visis*sizeof(user_precision_t) ) );
+  ( gpuMalloc( (void**)&d_u_metres, num_visis*sizeof(user_precision_t) ) );
+  ( gpuMalloc( (void**)&d_v_metres, num_visis*sizeof(user_precision_t) ) );
+  ( gpuMalloc( (void**)&d_w_metres, num_visis*sizeof(user_precision_t) ) );
+  ( gpuMalloc( (void**)&d_us, num_visis*sizeof(user_precision_t) ) );
+  ( gpuMalloc( (void**)&d_vs, num_visis*sizeof(user_precision_t) ) );
+  ( gpuMalloc( (void**)&d_ws, num_visis*sizeof(user_precision_t) ) );
 
   visibility_set_t *d_visibility_set =  (visibility_set_t* )malloc(sizeof(visibility_set_t));
 
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_visibility_set->sum_visi_XX_real,
+  ( gpuMalloc( (void**)&d_visibility_set->sum_visi_XX_real,
                       num_visis*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_visibility_set->sum_visi_XX_imag,
+  ( gpuMalloc( (void**)&d_visibility_set->sum_visi_XX_imag,
                       num_visis*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_visibility_set->sum_visi_XY_real,
+  ( gpuMalloc( (void**)&d_visibility_set->sum_visi_XY_real,
                       num_visis*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_visibility_set->sum_visi_XY_imag,
+  ( gpuMalloc( (void**)&d_visibility_set->sum_visi_XY_imag,
                       num_visis*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_visibility_set->sum_visi_YX_real,
+  ( gpuMalloc( (void**)&d_visibility_set->sum_visi_YX_real,
                       num_visis*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_visibility_set->sum_visi_YX_imag,
+  ( gpuMalloc( (void**)&d_visibility_set->sum_visi_YX_imag,
                       num_visis*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_visibility_set->sum_visi_YY_real,
+  ( gpuMalloc( (void**)&d_visibility_set->sum_visi_YY_real,
                       num_visis*sizeof(user_precision_t) ) );
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_visibility_set->sum_visi_YY_imag,
+  ( gpuMalloc( (void**)&d_visibility_set->sum_visi_YY_imag,
                       num_visis*sizeof(user_precision_t) ) );
 
   double *d_freqs = NULL;
-  cudaErrorCheckCall( cudaMalloc( (void**)&d_freqs, num_freqs*sizeof(double) ) );
-  cudaErrorCheckCall( cudaMemcpy( d_freqs, visibility_set->channel_frequencies,
-                      num_freqs*sizeof(double), cudaMemcpyHostToDevice ) );
+  ( gpuMalloc( (void**)&d_freqs, num_freqs*sizeof(double) ) );
+  ( gpuMemcpy( d_freqs, visibility_set->channel_frequencies,
+                      num_freqs*sizeof(double), gpuMemcpyHostToDevice ) );
 
   //if we have shapelets in our sky model, copy the shapelet basis functions
   //into GPU memory
   user_precision_t *d_sbf=NULL;
   if (cropped_sky_models->num_shapelets > 0) {
-    cudaErrorCheckCall( cudaMalloc( (void**)&(d_sbf), sbf_N*sbf_L*sizeof(user_precision_t) ));
-    cudaErrorCheckCall( cudaMemcpy( d_sbf, sbf, sbf_N*sbf_L*sizeof(user_precision_t),
-                        cudaMemcpyHostToDevice ));
+    ( gpuMalloc( (void**)&(d_sbf), sbf_N*sbf_L*sizeof(user_precision_t) ));
+    ( gpuMemcpy( d_sbf, sbf, sbf_N*sbf_L*sizeof(user_precision_t),
+                        gpuMemcpyHostToDevice ));
   }
 
   //TODO - this could be a function in some other file
@@ -193,10 +195,10 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
     // printf("WHAT YA DO? woden_settings->num_baselines: %d\n", woden_settings->num_baselines);
 
-    cudaErrorCheckCall( cudaMalloc( (void**)&d_ant1_to_baseline_map,
+    ( gpuMalloc( (void**)&d_ant1_to_baseline_map,
                                 woden_settings->num_baselines*sizeof(int) ) );
 
-    cudaErrorCheckCall( cudaMalloc( (void**)&d_ant2_to_baseline_map,
+    ( gpuMalloc( (void**)&d_ant2_to_baseline_map,
                                 woden_settings->num_baselines*sizeof(int) ) );
 
     fill_ant_to_baseline_mapping(woden_settings->num_ants, d_ant1_to_baseline_map,
@@ -255,30 +257,30 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
     //ensure d_sum_visi_XX_real are set entirely to zero by copying the host
     //array values, which have been set explictly to zero during chunking
-    cudaErrorCheckCall( cudaMemcpy(d_visibility_set->sum_visi_XX_real,
+    ( gpuMemcpy(d_visibility_set->sum_visi_XX_real,
                chunk_visibility_set->sum_visi_XX_real,
-               num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
-    cudaErrorCheckCall( cudaMemcpy(d_visibility_set->sum_visi_XX_imag,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
+    ( gpuMemcpy(d_visibility_set->sum_visi_XX_imag,
                chunk_visibility_set->sum_visi_XX_imag,
-               num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
-    cudaErrorCheckCall( cudaMemcpy(d_visibility_set->sum_visi_XY_real,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
+    ( gpuMemcpy(d_visibility_set->sum_visi_XY_real,
                chunk_visibility_set->sum_visi_XY_real,
-               num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
-    cudaErrorCheckCall( cudaMemcpy(d_visibility_set->sum_visi_XY_imag,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
+    ( gpuMemcpy(d_visibility_set->sum_visi_XY_imag,
                chunk_visibility_set->sum_visi_XY_imag,
-               num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
-    cudaErrorCheckCall( cudaMemcpy(d_visibility_set->sum_visi_YX_real,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
+    ( gpuMemcpy(d_visibility_set->sum_visi_YX_real,
                chunk_visibility_set->sum_visi_YX_real,
-               num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
-    cudaErrorCheckCall( cudaMemcpy(d_visibility_set->sum_visi_YX_imag,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
+    ( gpuMemcpy(d_visibility_set->sum_visi_YX_imag,
                chunk_visibility_set->sum_visi_YX_imag,
-               num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
-    cudaErrorCheckCall( cudaMemcpy(d_visibility_set->sum_visi_YY_real,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
+    ( gpuMemcpy(d_visibility_set->sum_visi_YY_real,
                chunk_visibility_set->sum_visi_YY_real,
-               num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
-    cudaErrorCheckCall( cudaMemcpy(d_visibility_set->sum_visi_YY_imag,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
+    ( gpuMemcpy(d_visibility_set->sum_visi_YY_imag,
                chunk_visibility_set->sum_visi_YY_imag,
-               num_visis*sizeof(user_precision_t), cudaMemcpyHostToDevice ) );
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
 
     dim3 grid, threads;
 
@@ -287,7 +289,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     grid.x = (int)ceil( (float)num_cross / (float)threads.x );
     grid.y = 1;
 
-    cudaErrorCheckKernel("kern_calc_uvw",
+    gpuErrorCheckKernel("kern_calc_uvw",
             kern_calc_uvw, grid, threads,
             d_X_diff, d_Y_diff, d_Z_diff,
             d_u_metres, d_v_metres, d_w_metres,
@@ -302,12 +304,12 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       grid.x = (int)ceil( (float)num_autos / (float)threads.x );
       grid.y = threads.y = 1;
 
-      cudaErrorCheckKernel("set_auto_uvw_to_zero",
+      gpuErrorCheckKernel("set_auto_uvw_to_zero",
               set_auto_uvw_to_zero, grid, threads,
               woden_settings->num_cross, woden_settings->num_visis,
               d_us, d_vs, d_ws);
 
-      cudaErrorCheckKernel("set_auto_uvw_to_zero",
+      gpuErrorCheckKernel("set_auto_uvw_to_zero",
               set_auto_uvw_to_zero, grid, threads,
               woden_settings->num_cross, woden_settings->num_visis,
               d_u_metres, d_v_metres, d_w_metres);
@@ -343,7 +345,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       grid.y = 1;
 
       printf("\tDoing visi kernel...\n");
-      cudaErrorCheckKernel("kern_calc_visi_point_or_gauss",
+      gpuErrorCheckKernel("kern_calc_visi_point_or_gauss",
                            kern_calc_visi_point_or_gauss, grid, threads,
                            d_chunked_source->point_components, d_point_beam_gains,
                            d_us, d_vs, d_ws,
@@ -389,7 +391,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       grid.x = (int)ceil( (float)num_cross / (float)threads.x );
       grid.y = 1;
 
-      cudaErrorCheckKernel("kern_calc_visi_point_or_gauss",
+      gpuErrorCheckKernel("kern_calc_visi_point_or_gauss",
                            kern_calc_visi_point_or_gauss, grid, threads,
                            d_chunked_source->gauss_components, d_gauss_beam_gains,
                            d_us, d_vs, d_ws,
@@ -417,15 +419,15 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       user_precision_t *d_u_shapes = NULL;
       user_precision_t *d_v_shapes = NULL;
 
-      cudaErrorCheckCall( cudaMalloc( (void**)&(d_lsts),
+      ( gpuMalloc( (void**)&(d_lsts),
                                           woden_settings->num_time_steps*sizeof(double)) );
-      cudaErrorCheckCall( cudaMemcpy( d_lsts, woden_settings->lsts,
+      ( gpuMemcpy( d_lsts, woden_settings->lsts,
                              woden_settings->num_time_steps*sizeof(double),
-                             cudaMemcpyHostToDevice) );
+                             gpuMemcpyHostToDevice) );
 
-      cudaErrorCheckCall( cudaMalloc( (void**)&d_u_shapes,
+      ( gpuMalloc( (void**)&d_u_shapes,
             num_shapes*num_baselines*num_time_steps*sizeof(user_precision_t)) );
-      cudaErrorCheckCall( cudaMalloc( (void**)&d_v_shapes,
+      ( gpuMalloc( (void**)&d_v_shapes,
             num_shapes*num_baselines*num_time_steps*sizeof(user_precision_t)) );
 
       //Something to store the primary beam gains (all 4 pols) in
@@ -458,7 +460,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       }
 
       //Extra set of coords, centred on sky location of each shapelet source
-      cudaErrorCheckKernel("kern_calc_uv_shapelet",
+      gpuErrorCheckKernel("kern_calc_uv_shapelet",
                             kern_calc_uv_shapelet, grid, threads,
                             d_X_diff, d_Y_diff, d_Z_diff,
                             d_u_shapes, d_v_shapes, d_lsts,
@@ -475,7 +477,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       grid.x = (int)ceil( (float)num_cross / (float)threads.x );
       grid.y = 1;
 
-      cudaErrorCheckKernel("kern_calc_visi_shapelets",
+      gpuErrorCheckKernel("kern_calc_visi_shapelets",
             kern_calc_visi_shapelets, grid, threads,
             d_chunked_source->shape_components, d_shape_beam_gains,
             d_us, d_vs, d_ws,
@@ -494,9 +496,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
             d_chunked_source->n_shape_coeffs, num_time_steps,
             beam_settings->beamtype, do_QUV);
 
-      cudaErrorCheckCall( cudaFree(d_v_shapes) );
-      cudaErrorCheckCall( cudaFree(d_u_shapes) );
-      cudaErrorCheckCall( cudaFree(d_lsts) );
+      ( gpuFree(d_v_shapes) );
+      ( gpuFree(d_u_shapes) );
+      ( gpuFree(d_lsts) );
 
       printf("Making it to this call here\n");
       free_d_components(d_chunked_source, SHAPELET);
@@ -505,43 +507,43 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
     }//if shapelet
 
-    cudaErrorCheckCall( cudaMemcpy(chunk_visibility_set->sum_visi_XX_real,
+    ( gpuMemcpy(chunk_visibility_set->sum_visi_XX_real,
         d_visibility_set->sum_visi_XX_real, num_visis*sizeof(user_precision_t),
-                                                     cudaMemcpyDeviceToHost) );
-    cudaErrorCheckCall( cudaMemcpy(chunk_visibility_set->sum_visi_XX_imag,
+                                                     gpuMemcpyDeviceToHost) );
+    ( gpuMemcpy(chunk_visibility_set->sum_visi_XX_imag,
         d_visibility_set->sum_visi_XX_imag, num_visis*sizeof(user_precision_t),
-                                                     cudaMemcpyDeviceToHost) );
+                                                     gpuMemcpyDeviceToHost) );
 
-    cudaErrorCheckCall( cudaMemcpy(chunk_visibility_set->sum_visi_XY_real,
+    ( gpuMemcpy(chunk_visibility_set->sum_visi_XY_real,
         d_visibility_set->sum_visi_XY_real, num_visis*sizeof(user_precision_t),
-                                                     cudaMemcpyDeviceToHost) );
-    cudaErrorCheckCall( cudaMemcpy(chunk_visibility_set->sum_visi_XY_imag,
+                                                     gpuMemcpyDeviceToHost) );
+    ( gpuMemcpy(chunk_visibility_set->sum_visi_XY_imag,
         d_visibility_set->sum_visi_XY_imag, num_visis*sizeof(user_precision_t),
-                                                     cudaMemcpyDeviceToHost) );
+                                                     gpuMemcpyDeviceToHost) );
 
-    cudaErrorCheckCall( cudaMemcpy(chunk_visibility_set->sum_visi_YX_real,
+    ( gpuMemcpy(chunk_visibility_set->sum_visi_YX_real,
         d_visibility_set->sum_visi_YX_real, num_visis*sizeof(user_precision_t),
-                                                     cudaMemcpyDeviceToHost) );
-    cudaErrorCheckCall( cudaMemcpy(chunk_visibility_set->sum_visi_YX_imag,
+                                                     gpuMemcpyDeviceToHost) );
+    ( gpuMemcpy(chunk_visibility_set->sum_visi_YX_imag,
         d_visibility_set->sum_visi_YX_imag, num_visis*sizeof(user_precision_t),
-                                                     cudaMemcpyDeviceToHost) );
+                                                     gpuMemcpyDeviceToHost) );
 
-    cudaErrorCheckCall( cudaMemcpy(chunk_visibility_set->sum_visi_YY_real,
+    ( gpuMemcpy(chunk_visibility_set->sum_visi_YY_real,
         d_visibility_set->sum_visi_YY_real, num_visis*sizeof(user_precision_t),
-                                                     cudaMemcpyDeviceToHost) );
-    cudaErrorCheckCall( cudaMemcpy(chunk_visibility_set->sum_visi_YY_imag,
+                                                     gpuMemcpyDeviceToHost) );
+    ( gpuMemcpy(chunk_visibility_set->sum_visi_YY_imag,
         d_visibility_set->sum_visi_YY_imag, num_visis*sizeof(user_precision_t),
-                                                     cudaMemcpyDeviceToHost) );
+                                                     gpuMemcpyDeviceToHost) );
 
-    cudaErrorCheckCall( cudaMemcpy(chunk_visibility_set->us_metres,
+    ( gpuMemcpy(chunk_visibility_set->us_metres,
                                   d_u_metres,num_visis*sizeof(user_precision_t),
-                                                      cudaMemcpyDeviceToHost) );
-    cudaErrorCheckCall( cudaMemcpy(chunk_visibility_set->vs_metres,
+                                                      gpuMemcpyDeviceToHost) );
+    ( gpuMemcpy(chunk_visibility_set->vs_metres,
                                   d_v_metres,num_visis*sizeof(user_precision_t),
-                                                      cudaMemcpyDeviceToHost) );
-    cudaErrorCheckCall( cudaMemcpy(chunk_visibility_set->ws_metres,
+                                                      gpuMemcpyDeviceToHost) );
+    ( gpuMemcpy(chunk_visibility_set->ws_metres,
                                   d_w_metres,num_visis*sizeof(user_precision_t),
-                                                      cudaMemcpyDeviceToHost) );
+                                                      gpuMemcpyDeviceToHost) );
 
     //add to visiblity_set
     for (int visi = 0; visi < num_visis; visi++) {
@@ -585,28 +587,28 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   //that in woden::main
 
   //Free up the GPU memory
-  cudaErrorCheckCall( cudaFree(d_freqs) );
+  ( gpuFree(d_freqs) );
 
-  cudaErrorCheckCall( cudaFree(d_ws) );
-  cudaErrorCheckCall( cudaFree(d_vs) );
-  cudaErrorCheckCall( cudaFree(d_us) );
-  cudaErrorCheckCall( cudaFree(d_w_metres) );
-  cudaErrorCheckCall( cudaFree(d_v_metres) );
-  cudaErrorCheckCall( cudaFree(d_u_metres) );
-  cudaErrorCheckCall( cudaFree(d_allsteps_wavelengths) );
-  cudaErrorCheckCall( cudaFree(d_allsteps_cha0s) );
-  cudaErrorCheckCall( cudaFree(d_allsteps_sha0s) );
-  cudaErrorCheckCall( cudaFree(d_Z_diff) );
-  cudaErrorCheckCall( cudaFree(d_Y_diff) );
-  cudaErrorCheckCall( cudaFree(d_X_diff) );
+  ( gpuFree(d_ws) );
+  ( gpuFree(d_vs) );
+  ( gpuFree(d_us) );
+  ( gpuFree(d_w_metres) );
+  ( gpuFree(d_v_metres) );
+  ( gpuFree(d_u_metres) );
+  ( gpuFree(d_allsteps_wavelengths) );
+  ( gpuFree(d_allsteps_cha0s) );
+  ( gpuFree(d_allsteps_sha0s) );
+  ( gpuFree(d_Z_diff) );
+  ( gpuFree(d_Y_diff) );
+  ( gpuFree(d_X_diff) );
 
   if (cropped_sky_models->num_shapelets > 0) {
-    cudaErrorCheckCall( cudaFree( d_sbf ) );
+    ( gpuFree( d_sbf ) );
   }
 
   if (use_twobeams == 1) {
-    cudaErrorCheckCall( cudaFree( d_ant1_to_baseline_map ) );
-    cudaErrorCheckCall( cudaFree( d_ant2_to_baseline_map ) );
+    ( gpuFree( d_ant1_to_baseline_map ) );
+    ( gpuFree( d_ant2_to_baseline_map ) );
   }
 
   if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP) {
@@ -614,13 +616,13 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     free(beam_settings->hyper_delays);
   }
 
-  cudaErrorCheckCall( cudaFree(d_visibility_set->sum_visi_XX_imag) );
-  cudaErrorCheckCall( cudaFree(d_visibility_set->sum_visi_XX_real) );
-  cudaErrorCheckCall( cudaFree(d_visibility_set->sum_visi_XY_imag) );
-  cudaErrorCheckCall( cudaFree(d_visibility_set->sum_visi_XY_real) );
-  cudaErrorCheckCall( cudaFree(d_visibility_set->sum_visi_YX_imag) );
-  cudaErrorCheckCall( cudaFree(d_visibility_set->sum_visi_YX_real) );
-  cudaErrorCheckCall( cudaFree(d_visibility_set->sum_visi_YY_imag) );
-  cudaErrorCheckCall( cudaFree(d_visibility_set->sum_visi_YY_real) );
+  ( gpuFree(d_visibility_set->sum_visi_XX_imag) );
+  ( gpuFree(d_visibility_set->sum_visi_XX_real) );
+  ( gpuFree(d_visibility_set->sum_visi_XY_imag) );
+  ( gpuFree(d_visibility_set->sum_visi_XY_real) );
+  ( gpuFree(d_visibility_set->sum_visi_YX_imag) );
+  ( gpuFree(d_visibility_set->sum_visi_YX_real) );
+  ( gpuFree(d_visibility_set->sum_visi_YY_imag) );
+  ( gpuFree(d_visibility_set->sum_visi_YY_real) );
 
 }

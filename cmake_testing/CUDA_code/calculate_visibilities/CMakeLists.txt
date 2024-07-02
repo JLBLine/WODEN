@@ -10,12 +10,19 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     ##Set the flags depending on the precision
     DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
 
+    if(USE_CUDA)
+    set_source_files_properties( "${CMAKE_SOURCE_DIR}/src/calculate_visibilities.cpp"
+              "${CMAKE_SOURCE_DIR}/src/source_components.cpp"
+              "${CMAKE_SOURCE_DIR}/src/fundamental_coords.cpp"
+              "${CMAKE_SOURCE_DIR}/src/primary_beam_cuda.cpp" PROPERTIES LANGUAGE CUDA)
+    endif()
+
     ##First add necessary CUDA code to a library
     add_library(calculate_visibilitiesCUDA_${PRECISION} SHARED
-                "${CMAKE_SOURCE_DIR}/src/calculate_visibilities.cu"
-                "${CMAKE_SOURCE_DIR}/src/source_components.cu"
-                "${CMAKE_SOURCE_DIR}/src/fundamental_coords.cu"
-                "${CMAKE_SOURCE_DIR}/src/primary_beam_cuda.cu")
+                "${CMAKE_SOURCE_DIR}/src/calculate_visibilities.cpp"
+                "${CMAKE_SOURCE_DIR}/src/source_components.cpp"
+                "${CMAKE_SOURCE_DIR}/src/fundamental_coords.cpp"
+                "${CMAKE_SOURCE_DIR}/src/primary_beam_cuda.cpp")
 
     target_compile_options(calculate_visibilitiesCUDA_${PRECISION} PRIVATE ${CUDA_FLAGS})
 

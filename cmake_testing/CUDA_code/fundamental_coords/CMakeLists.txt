@@ -6,8 +6,13 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   ##Set the flags depending on the precision
   DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
 
+  if(USE_CUDA)
+    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fundamental_coords.cpp
+              PROPERTIES LANGUAGE CUDA)
+  endif()
+
   add_library(fundamental_coordsCUDA_${PRECISION} SHARED
-              ${CMAKE_SOURCE_DIR}/src/fundamental_coords.cu)
+              ${CMAKE_SOURCE_DIR}/src/fundamental_coords.cpp)
   target_compile_options(fundamental_coordsCUDA_${PRECISION} PRIVATE ${CUDA_FLAGS})
 
   ## For CMake versions > 3.18, the arch flag settings are handled by
