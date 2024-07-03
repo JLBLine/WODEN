@@ -43,7 +43,7 @@ class BuildPyCommand(_build_py):
 
 setup(
     name = "wodenpy",
-    version = '2.0.0',
+    version = '2.2.0',
     author = "Jack L. B. Line",
     url = "https://github.com/JLBLine/WODEN",
     python_requires=">=3.7",
@@ -75,4 +75,6 @@ setup(
     cmdclass={'gitinfo': GitInfo,
               'build_py': BuildPyCommand,
               },
+    install_requires=['numpy<=1.26.0'
+                     ]
 )

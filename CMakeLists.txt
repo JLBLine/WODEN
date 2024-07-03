@@ -9,7 +9,7 @@ option(USE_CUDA "Enable the GPU acceleration for NVIDIA GPUs." OFF)
 
 if(USE_CUDA)
     message("DEBUG : USE_CUDA=ON")
-    project(woden VERSION 2.0 LANGUAGES CXX C CUDA) 
+    project(woden VERSION 2.2 LANGUAGES CXX C CUDA) 
 
     ##Gotta find CUDA and get it to find libraries
     find_package(CUDA)
@@ -19,6 +19,8 @@ if(USE_CUDA)
        ##Sets the -std=c++11 nvcc compiler flag I think
        set(CMAKE_CUDA_STANDARD 11)
        #set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++11 ")
+       ##Internal flag to let code know we're using nvcc
+       set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D__NVCC__ ")
        set(CMAKE_CUDA_STANDARD_REQUIRED ON)
     endif()
 
@@ -61,15 +63,20 @@ if(USE_CUDA)
 elseif(USE_HIP)
     message("DEBUG : USE_HIP=ON")
 
-    project(woden VERSION 2.0 LANGUAGES CXX C)
+    project(woden VERSION 2.2 LANGUAGES CXX C)
     set(CMAKE_CXX_COMPILER hipcc)
-    add_definitions("-D__HIP_PLATFORM_AMD__ -D__HIPCC__") 
+    add_definitions("-D__HIP_PLATFORM_AMD__ -D__HIPCC__")
 
-    include_directories( /scratch/mwavcs/msok/install/mwalib/include /scratch/mwavcs/msok/install/mwa_hyperbeam_gpu_compilation/include /scratch/mwavcs/msok/install/psrfits_utils /scratch/mwavcs/msok/install/include/ /opt/cray/pe/mpich/8.1.25/ucx/cray/10.0/include/ /opt/rocm-5.2.3/include/hipfft/ )
-    set(HINTS_HBEAM_LIB "/scratch/mwavcs/msok/install/mwa_hyperbeam_gpu_compilation/target/release/libmwa_hyperbeam.so")
-    set(HINTS_HBEAM_INC "/scratch/mwavcs/msok/install/mwa_hyperbeam_gpu_compilation/include")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D__HIP_PLATFORM_AMD__ -D__HIPCC__ ")
+    # TODO should try and get --offload-arch=gfx90a in there for HIP
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__HIP_PLATFORM_AMD__ -D__HIPCC__")
+
+    ##Try and find the hyperbeam library
+    set(HINTS_HBEAM_INC "/usr/local/include/;${HBEAM_ROOT}/;")
+    set(HINTS_HBEAM_LIB "/usr/local/lib/;${HBEAM_ROOT}")
+
     find_path(HBEAM_INC mwa_hyperbeam.h HINTS ${HINTS_HBEAM_INC})
-    # find_library(HBEAM_LIB mwa_hyperbeam HINTS ${HINTS_HBEAM_LIB} REQUIRED)
+    find_library(HBEAM_LIB mwa_hyperbeam HINTS ${HINTS_HBEAM_LIB} REQUIRED)
 endif()
 
 ##Find the source codes

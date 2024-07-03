@@ -10,6 +10,29 @@
 void setUp (void) {} /* Is run before eVary test, put unit init calls here. */
 void tearDown (void) {} /* Is run after eVary test, put unit clean-up calls here. */
 
+// #include <stdio.h>
+
+// #if defined (__NVCC__) || defined (__HIPCC__)
+
+// #define __GPU__
+
+//Do some ridiculous exercise to work out what the tolerance should be tested to
+//Depends on whether using NVIDIA or AMD, and if double float or double precision
+// #ifdef __HIPCC__
+//   #ifdef DOUBLE_PRECISION
+//     double TOL = 1e-10;
+//   #else
+//     double TOL = 1e-10;
+//   #endif
+// #else
+//   #ifdef DOUBLE_PRECISION
+//     double TOL = 1e-12;
+//   #else
+//     double TOL = 1e-12;
+//   #endif
+// #endif
+
+
 //External CUDA code we're linking in
 extern void test_kern_update_sum_visis(int num_freqs, int num_cross,
           int num_baselines, int num_components, int num_times, int beamtype,
@@ -123,6 +146,15 @@ void test_kern_update_sum_visis_VaryGainChooseBeams(int beamtype) {
   if (beamtype == ANALY_DIPOLE || beamtype == GAUSS_BEAM) {
     for (int output = 0; output < num_visis; output++) {
 
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_order[output]/2, sum_visi_XX_real[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_XY_real[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_YX_real[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_order[output]/2, sum_visi_YY_real[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_XX_imag[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_XY_imag[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_YX_imag[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_YY_imag[output]);
+
       TEST_ASSERT_EQUAL_DOUBLE(expected_order[output]/2, sum_visi_XX_real[output]);
       TEST_ASSERT_EQUAL_DOUBLE(0.0, sum_visi_XY_real[output]);
       TEST_ASSERT_EQUAL_DOUBLE(0.0, sum_visi_YX_real[output]);
@@ -143,6 +175,15 @@ void test_kern_update_sum_visis_VaryGainChooseBeams(int beamtype) {
       //     sum_visi_YX_real[output], sum_visi_YX_imag[output],
       //     sum_visi_YY_real[output], sum_visi_YY_imag[output]);
 
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_order[output], sum_visi_XX_real[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_order[output], sum_visi_XY_real[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_order[output], sum_visi_YX_real[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_order[output], sum_visi_YY_real[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_XX_imag[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_XY_imag[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_YX_imag[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_YY_imag[output]);
+
       TEST_ASSERT_EQUAL_DOUBLE(expected_order[output], sum_visi_XX_real[output]);
       TEST_ASSERT_EQUAL_DOUBLE(expected_order[output], sum_visi_XY_real[output]);
       TEST_ASSERT_EQUAL_DOUBLE(expected_order[output], sum_visi_YX_real[output]);
@@ -159,6 +200,18 @@ void test_kern_update_sum_visis_VaryGainChooseBeams(int beamtype) {
     //as we apply a gain of 1.0
     for (int output = 0; output < num_visis; output++) {
 
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, num_components, sum_visi_XX_real[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, num_components, sum_visi_XX_real[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, num_components, sum_visi_XX_real[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_XY_real[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_YX_real[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, num_components, sum_visi_YY_real[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_XX_imag[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_XY_imag[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_YX_imag[output]);
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_YY_imag[output]);
+
+      TEST_ASSERT_EQUAL_DOUBLE(num_components, sum_visi_XX_real[output]);
       TEST_ASSERT_EQUAL_DOUBLE(num_components, sum_visi_XX_real[output]);
       TEST_ASSERT_EQUAL_DOUBLE(0.0, sum_visi_XY_real[output]);
       TEST_ASSERT_EQUAL_DOUBLE(0.0, sum_visi_YX_real[output]);

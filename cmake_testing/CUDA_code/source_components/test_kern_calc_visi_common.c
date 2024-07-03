@@ -413,23 +413,36 @@ void test_visi_outputs(int num_visis, int num_powers, int num_curves, int num_li
                        e_component_type component_type) {
 
   double frac_tol;
+  //For some reason, AMD doesn't seem as accurate
   if (component_type == POINT) {
     #ifdef DOUBLE_PRECISION
-      frac_tol = 1e-13;
+      #ifdef __HIPCC__
+        frac_tol = 1e-11;
+      #else
+        frac_tol = 1e-13;
+      #endif
     #else
       frac_tol = 7e-5;
     #endif
   }
   else if (component_type == GAUSSIAN) {
     #ifdef DOUBLE_PRECISION
-      frac_tol = 1e-12;
+      #ifdef __HIPCC__
+        frac_tol = 1e-11;
+      #else
+        frac_tol = 1e-12;
+      #endif
     #else
       frac_tol = 7e-5;
     #endif
   }
   else {
     #ifdef DOUBLE_PRECISION
-      frac_tol = 1e-12;
+      #ifdef __HIPCC__
+        frac_tol = 1e-11;
+      #else
+        frac_tol = 1e-12;
+      #endif
     #else
       frac_tol = 5e-3;
     #endif

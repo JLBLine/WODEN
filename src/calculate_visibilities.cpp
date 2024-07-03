@@ -27,17 +27,17 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
   //Boolean for if we are using two beams per visibility or assuming all
   //beams are the same
-  int use_twobeams;
-  int num_beams;
+  int use_twobeams = 0;
+  int num_beams = 1;
   //Currently only do this is we have the use_dipamps flag; could be expanded
   if (woden_settings->use_dipamps == 1) {
     use_twobeams = 1;
     num_beams = woden_settings->num_ants;
   }
-  else {
-    use_twobeams = 0;
-    num_beams = 1;
-  }
+  // else {
+  //   use_twobeams = 0;
+  //   num_beams = 1;
+  // }
 
   //TODO - once rotation measure has been implemented, this should be set
   //only if we are using a rotation measure
@@ -158,18 +158,24 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     uint32_t num_amps;
 
     //32 means we have amplitudes for both X and Y
-    if (use_twobeams == 1) {
-      num_amps = 32;
-
-    } else {
+    if (use_twobeams == 0) {
       num_amps = 16;
       double mwa_dipole_amps[16] = {1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,
                                     1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0};
       woden_settings->mwa_dipole_amps = mwa_dipole_amps;
+      printf("HIP needs this printf otherwise it doesnt work\n");
 
+    } else {
+      num_amps = 32;
+      //woden_settings->mwa_dipole_amps should already have been set so
+      //leave it alone
+      //TODO set this outside of calculate_visibilities
     }
 
     uint8_t norm_to_zenith = 1;
+
+    printf("hyper_delays[0], dip_amps[0]: %d %.1f\n", beam_settings->hyper_delays[0],
+                                                      woden_settings->mwa_dipole_amps[0]);
 
     int32_t status = new_gpu_fee_beam(beam_settings->fee_beam,
                             freqs_hz,

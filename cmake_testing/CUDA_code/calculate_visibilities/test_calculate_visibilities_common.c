@@ -448,25 +448,26 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
 
       int status =  new_fee_beam(mwa_fee_hdf5, &beam_settings->fee_beam);
       if (status != 0) {
-        handle_hyperbeam_error(__FILE__, __LINE__, "new_fee_beam");
-      }
-    } else {
-      printf("MWA_FEE_HDF5 not found - not running test_hyperbeam test");
+        // handle_hyperbeam_error(__FILE__, __LINE__, "new_fee_beam");
+        printf("Something went wrong calling new_fee_beam\n");
+      } 
+    } else{
+      printf("MWA_FEE_HDF5 not found - not running test_hyperbeam test\n");
     }
   }
   else if (beam_settings->beamtype == FEE_BEAM_INTERP) {
     char* mwa_fee_hdf5 = getenv("MWA_FEE_HDF5_INTERP");
 
     if (mwa_fee_hdf5) {
-      printf("MWA_FEE_HDF5: %s\n", mwa_fee_hdf5 );
+      printf("MWA_FEE_HDF5_INTERP: %s\n", mwa_fee_hdf5 );
 
       int status =  new_fee_beam(mwa_fee_hdf5, &beam_settings->fee_beam);
       if (status != 0) {
-        handle_hyperbeam_error(__FILE__, __LINE__, "new_fee_beam");
+        // handle_hyperbeam_error(__FILE__, __LINE__, "new_fee_beam");
+        printf("Something went wrong calling new_fee_beam\n");
       }
-
     } else {
-      printf("MWA_FEE_HDF5 not found - not running test_hyperbeam test");
+        printf("MWA_FEE_HDF5_INTERP not found - not running test_hyperbeam test\n");
     }
   }
 

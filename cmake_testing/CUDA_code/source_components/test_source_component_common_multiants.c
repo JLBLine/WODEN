@@ -155,7 +155,8 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     // printf("STATUS %d\n", status);
 
     if (status != 0) {
-      handle_hyperbeam_error(__FILE__, __LINE__, "new_gpu_fee_beam");
+      // handle_hyperbeam_error(__FILE__, __LINE__, "new_gpu_fee_beam");
+      printf("There was an error calling new_fee_beam\n");
     }
 
     TEST_ASSERT_EQUAL(0, status);

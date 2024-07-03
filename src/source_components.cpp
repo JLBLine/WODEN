@@ -2401,6 +2401,23 @@ extern "C" void test_kern_update_sum_visis(int num_freqs, int num_cross,
                                           num_cross*sizeof(user_precision_t) ));
   ( gpuMalloc( (void**)&d_sum_visi_YY_imag,
                                           num_cross*sizeof(user_precision_t) ));
+  gpuMemcpy(d_sum_visi_XX_real, sum_visi_XX_real,
+                    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+  gpuMemcpy(d_sum_visi_XY_real, sum_visi_XY_real,
+                    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+  gpuMemcpy(d_sum_visi_YX_real, sum_visi_YX_real,
+                    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+  gpuMemcpy(d_sum_visi_YY_real, sum_visi_YY_real,
+                    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+  gpuMemcpy(d_sum_visi_XX_imag, sum_visi_XX_imag,
+                    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+  gpuMemcpy(d_sum_visi_XY_imag, sum_visi_XY_imag,
+                    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+  gpuMemcpy(d_sum_visi_YX_imag, sum_visi_YX_imag,
+                    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+  gpuMemcpy(d_sum_visi_YY_imag, sum_visi_YY_imag,
+                    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+  
 
 
   //These are only needed when we're actually grabbing information for two

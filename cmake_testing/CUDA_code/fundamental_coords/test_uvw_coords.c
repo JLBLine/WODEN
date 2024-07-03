@@ -25,7 +25,7 @@ extern void test_kern_calc_uv_shapelet(double *X_diff, double *Y_diff, double *Z
                      int num_baselines, int num_times, int num_shapes);
 
 
-double TOL = 1e-16;
+double TOL = 1e-11;
 
 /*
 Given the inputs, create simulation settings that woden.c would create

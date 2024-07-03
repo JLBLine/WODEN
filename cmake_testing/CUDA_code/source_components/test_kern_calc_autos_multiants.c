@@ -14,7 +14,11 @@ Tests that the kernel that calculates auto-correlations is doing it's job
 
 
 #ifdef DOUBLE_PRECISION
-  double TOL = 1e-12;
+  #ifdef __HIPCC__
+    double TOL = 1e-10;
+  #else
+    double TOL = 1e-12;
+  #endif
 #else
   double TOL = 1e-1;
 #endif

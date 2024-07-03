@@ -88,3 +88,6 @@ wodenpy/libwoden*.so
 
 # things that exist if you pip install -e
 wodenpy.egg-info
+
+## ingnore things named with pyenv on front
+pyenv*

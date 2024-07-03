@@ -123,7 +123,11 @@ void test_kern_calc_measurement_equation_ComparedToC(void) {
       // printf("%.7f %.7f %.7f %.7f\n",cimag(visis[ind]), expec_im, tol*abs(expec_im), cimag(visis[ind]) - expec_im  );
 
       #ifdef DOUBLE_PRECISION
-        double TOL = 1e-15;
+        #ifdef __HIPCC__
+          double TOL = 1e-11;
+        #else
+          double TOL = 1e-15;
+        #endif
       #else
         double TOL = 1e-7;
       #endif

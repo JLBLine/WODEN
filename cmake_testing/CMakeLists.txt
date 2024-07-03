@@ -15,9 +15,17 @@ set(DOUBLE_C_FLAGS -Wall -g -DDOUBLE_PRECISION)
 set(FLOAT_C_COVER_FLAGS -coverage -g -Wall)
 set(DOUBLE_C_COVER_FLAGS -coverage -g -Wall -DDOUBLE_PRECISION)
 
-##Flags to make CUDA code compile in WODEN float or double modes
-set(FLOAT_CUDA_FLAGS -g -G --compiler-options -Wall )
-set(DOUBLE_CUDA_FLAGS -DDOUBLE_PRECISION -g -G --compiler-options -Wall)
+if(USE_CUDA)
+  ##Flags to make CUDA code compile in WODEN float or double modes
+  set(FLOAT_CUDA_FLAGS -g -G --compiler-options -Wall )
+  set(DOUBLE_CUDA_FLAGS -DDOUBLE_PRECISION -g -G --compiler-options -Wall -D__NVCC__)
+elseif(USE_HIP)
+  ##Flags to make CUDA code compile in WODEN float or double modes
+  set(FLOAT_CUDA_FLAGS -g -Wall )
+  set(DOUBLE_CUDA_FLAGS -DDOUBLE_PRECISION -g -Wall -D__HIPCC__)
+endif()
+
+
 
 ##define a function that switches between flags
 function(DEFINE_COMP_FLAGS PRECISION C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
