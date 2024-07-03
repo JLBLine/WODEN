@@ -1,5 +1,4 @@
 from subprocess import check_output
-import numpy as np
 import importlib_resources
 import os
 
@@ -62,12 +61,22 @@ def retrieve_gitdict():
 
     """
 
-    file_path = importlib_resources.files('wodenpy').joinpath('wodenpy_gitinfo.npz')
+    file_path = importlib_resources.files('wodenpy').joinpath('wodenpy_gitinfo.txt')
 
     ##If things have been pip installed correctly
     if os.path.isfile(file_path):
-        git_dict = np.load(file_path, allow_pickle=True)
+        git_dict = {}
+        
+        with open(file_path, "r") as infile:
+            for line in infile.read().split('\n'):
+                
+                if line == '':
+                    pass
+                else:
+                    key,entry = line.split(',')
+                    git_dict[key] = entry
+                
     else:
         git_dict = False
-
+        
     return git_dict

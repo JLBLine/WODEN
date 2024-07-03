@@ -3,12 +3,11 @@ from setuptools import setup
 from setuptools.command.build_py import build_py as _build_py
 import os
 from wodenpy.wodenpy_setup.git_helper import make_gitdict
-import numpy as np
 
 class GitInfo(setuptools.Command):
   '''A custom command to create a json file containing wodenpy git information.'''
 
-  description = 'Create the file "wodenpy/wodenpy_gitinfo.json" containing git information '
+  description = 'Create the file "wodenpy/wodenpy_gitinfo.txt" containing git information '
   user_options = []
 
   def initialize_options(self):
@@ -21,18 +20,19 @@ class GitInfo(setuptools.Command):
     '''Post-process options (this has to be included for
     setuptools.Command to work)'''
     if self.git_info:
-        print('Creating file wodenpy/wodenpy_gitinfo.npz')
+        print('Creating file wodenpy/wodenpy_gitinfo.txt')
 
   def run(self):
     '''Write the wodenpy git npz file.'''
 
     ##Find where we are running the pip install from, and add in a sensible
     ##place to save the git dictionary
-    save_path = os.path.join(os.path.abspath(os.path.dirname(__file__)),'wodenpy', 'wodenpy_gitinfo.npz')
+    save_path = os.path.join(os.path.abspath(os.path.dirname(__file__)),'wodenpy', 'wodenpy_gitinfo.txt')
 
     git_dict = make_gitdict()
-    np.savez(save_path, **git_dict)
-
+    with open(save_path, "w") as fp:
+        for key in git_dict.keys():
+            fp.write("{:s},{:s}\n".format(key, git_dict[key]))
 
 class BuildPyCommand(_build_py):
   '''Custom build command to run the gitinfo command during build'''
@@ -70,11 +70,9 @@ setup(
              "scripts/add_instrumental_effects_woden.py"],
     package_data={"wodenpy" : ["libwoden_float.so",
                                "libwoden_double.so",
-                               'wodenpy_gitinfo.npz',
+                               'wodenpy_gitinfo.txt',
                                'bandpass_1kHz.txt']},
     cmdclass={'gitinfo': GitInfo,
               'build_py': BuildPyCommand,
               },
-    install_requires=['numpy<=1.26.0'
-                     ]
 )
