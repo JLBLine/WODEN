@@ -1,6 +1,7 @@
 #include "test_source_component_common.h"
 #include "common_testing_functions.h"
 #include <mwa_hyperbeam.h>
+#include "hyperbeam_error.h"
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
@@ -109,7 +110,14 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
     int32_t status =  new_fee_beam(mwa_fee_hdf5, &beam_settings->fee_beam);
 
+    if (status != 0) {
+      handle_hyperbeam_error(__FILE__, __LINE__, "new_fee_beam");
+      // printf("There was an error calling new_fee_beam\n");
+    }
+
     TEST_ASSERT_EQUAL(status, 0);
+
+    
 
     uint32_t num_freqs_hyper;
     uint32_t *freqs_hz;
@@ -146,6 +154,11 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
                                num_amps,
                                norm_to_zenith,
                                &beam_settings->cuda_fee_beam);
+
+    if (status != 0) {
+      handle_hyperbeam_error(__FILE__, __LINE__, "new_gpu_fee_beam");
+      // printf("There was an error calling new_fee_beam\n");
+    }
 
     TEST_ASSERT_EQUAL(status, 0);
 

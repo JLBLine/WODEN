@@ -54,8 +54,8 @@ void test_hyperbeam_interp(int freq_int,
 
   status =  new_fee_beam(woden_settings->hdf5_beam_path, &fee_beam);
   if (status != 0) {
-    // handle_hyperbeam_error(__FILE__, __LINE__, "new_fee_beam");
-    printf("There was an error calling new_fee_beam\n");
+    handle_hyperbeam_error(__FILE__, __LINE__, "new_fee_beam");
+    // printf("There was an error calling new_fee_beam\n");
   }
 
   uint32_t *hyper_delays = malloc(16*sizeof(uint32_t));
@@ -96,8 +96,8 @@ void test_hyperbeam_interp(int freq_int,
                           &cuda_fee_beam);
 
   if (status != 0) {
-    // handle_hyperbeam_error(__FILE__, __LINE__, "new_gpu_fee_beam");
-    printf("There was an error calling new_fee_beam\n");
+    handle_hyperbeam_error(__FILE__, __LINE__, "new_gpu_fee_beam");
+    // printf("There was an error calling new_fee_beam\n");
   }
 
   user_precision_complex_t *primay_beam_J00 = malloc(num_beam_values*sizeof(user_precision_complex_t));

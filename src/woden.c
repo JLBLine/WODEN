@@ -64,8 +64,8 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
       status = new_fee_beam(woden_settings->hdf5_beam_path,
                             &beam_settings->fee_beam);
       if (status != 0) {
-        // handle_hyperbeam_error(__FILE__, __LINE__, "new_fee_beam");
-        printf("Something went wrong launching new_fee_beam\n");
+        handle_hyperbeam_error(__FILE__, __LINE__, "new_fee_beam");
+        // printf("Something went wrong launching new_fee_beam\n");
       }
     }
 
