@@ -692,7 +692,8 @@ extern "C" void run_hyperbeam_cuda(int num_components,
 
   if (status != 0) {
     const char *func_name = "fee_calc_jones_gpu_device";
-    handle_hyperbeam_error(__FILE__, __LINE__, func_name);
+    // handle_hyperbeam_error(__FILE__, __LINE__, func_name);
+    printf("Something went wrong running fee_calc_jones_gpu_device\n");
   }
 
   ( gpuFree(d_jones) );

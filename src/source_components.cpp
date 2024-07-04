@@ -750,7 +750,8 @@ extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
     n_powers = d_chunked_source->n_gauss_powers;
     n_curves = d_chunked_source->n_gauss_curves;
     n_lists = d_chunked_source->n_gauss_lists;
-  } else if (comptype == SHAPELET) {
+  // } else if (comptype == SHAPELET) {
+  } else {
     d_components = d_chunked_source->shape_components;
     // n_comps = d_chunked_source->n_shapes;
     n_powers = d_chunked_source->n_shape_powers;
@@ -1279,8 +1280,8 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
 void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source,
                             e_component_type comptype) {
 
-  components_t *components;
-  components_t *d_components;
+  components_t *components=NULL;
+  components_t *d_components=NULL;
   int num_comps = 0, num_shape_coeffs = 0;
   int num_powers = 0, num_curves = 0, num_lists = 0;
 
@@ -1306,7 +1307,8 @@ void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source
     num_lists = chunked_source->n_gauss_lists;
 
   }
-  else if (comptype == SHAPELET) {
+  // else if (comptype == SHAPELET) {
+  else {
     components = &chunked_source->shape_components;
     d_components = &d_chunked_source->shape_components;
 
@@ -2686,12 +2688,13 @@ extern "C" void test_source_component_common(int num_of_each_flux_type,
 
 void malloc_lmn_arrays(source_t *d_chunked_source, components_t *components,
                         int num_components, e_component_type comptype){
-  components_t *d_components;
+  components_t *d_components=NULL;
   if (comptype == POINT) {
     d_components = &d_chunked_source->point_components;
   } else if (comptype == GAUSSIAN) {
     d_components = &d_chunked_source->gauss_components;
-  } else if (comptype == SHAPELET) {
+  // } else if (comptype == SHAPELET) {
+  } else {
     d_components = &d_chunked_source->shape_components;
   }
 

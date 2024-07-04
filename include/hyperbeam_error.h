@@ -8,13 +8,14 @@
 #include <stdlib.h>
 #include <mwa_hyperbeam.h>
 
-//Going to be calling this code in both C and CUDA, so stick the
+//Going to be calling this code in both C, and CUDA, so stick the
 //conditional extern C around so linkage by compilers survives all
 //the mangling fun
-
+// #ifndef __HIPCC__
 #ifdef __cplusplus
-extern "C" {
+  extern "C" {
 #endif
+// #endif
 
 /**
 @brief Use functions out of `mwa_hyperbeam` to handle errors out of said package
@@ -31,7 +32,7 @@ normally via `__LINE__`)
 @param[in] function_name[] Name of `mwa_hyperbeam` function being called
 
 */
-inline void handle_hyperbeam_error(const char file[], int line_num, const char function_name[]) {
+static inline void handle_hyperbeam_error(const char file[], int line_num, const char function_name[]) {
     int err_length = hb_last_error_length();
     char *err = (char *)malloc(err_length * sizeof(char));
     int err_status = hb_last_error_message(err, err_length);
@@ -44,6 +45,8 @@ inline void handle_hyperbeam_error(const char file[], int line_num, const char f
     exit(EXIT_FAILURE);
 }
 
+// #ifndef __HIPCC__
 #ifdef __cplusplus
 }
 #endif
+// #endif

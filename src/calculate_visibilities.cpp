@@ -174,8 +174,6 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
     uint8_t norm_to_zenith = 1;
 
-    printf("hyper_delays[0], dip_amps[0]: %d %.1f\n", beam_settings->hyper_delays[0],
-                                                      woden_settings->mwa_dipole_amps[0]);
 
     int32_t status = new_gpu_fee_beam(beam_settings->fee_beam,
                             freqs_hz,
@@ -188,7 +186,8 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                             &beam_settings->cuda_fee_beam);
 
     if (status != 0) {
-      handle_hyperbeam_error(__FILE__, __LINE__, "new_gpu_fee_beam");
+      // handle_hyperbeam_error(__FILE__, __LINE__, "new_gpu_fee_beam");
+      printf("Something went wrong launching new_gpu_fee_beam\n");
     }
   }
 

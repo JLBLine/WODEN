@@ -2,7 +2,54 @@ import setuptools
 from setuptools import setup
 from setuptools.command.build_py import build_py as _build_py
 import os
-from wodenpy.wodenpy_setup.git_helper import make_gitdict
+from subprocess import check_output
+
+def get_commandline_output(command_list):
+    """
+    Takes a command line entry separated into list entries, and returns the
+    output from the command line as a string
+
+    Parameters
+    ----------
+    command_list : list of strings
+        list of strings that when combined form a coherent command to input into
+        the command line
+
+    Returns
+    -------
+    output : string
+        the output result of running the command
+
+    """
+    output = check_output(command_list,universal_newlines=True).strip()
+    return output
+
+def make_gitdict():
+    """
+    Makes a dictionary containing key git information about the repo by running
+    specific commands on the command line
+
+    Returns
+    -------
+    git_dict : dictionary
+        A dictionary containing git information with keywords: describe, date,
+        branch
+
+    """
+
+    ##Try and get a git version. If this is a release version, it might not
+    ##be in a git repo so try, otherwise return False
+    try:
+        git_dict = {
+            'describe': get_commandline_output(["git", "describe", "--always"]),
+            'date': get_commandline_output(["git", "log", "-1", "--format=%cd"]),
+            'branch': get_commandline_output(["git", "rev-parse", "--abbrev-ref", "HEAD"]),
+        }
+        
+    except:
+        git_dict = False
+
+    return git_dict
 
 class GitInfo(setuptools.Command):
   '''A custom command to create a json file containing wodenpy git information.'''
@@ -75,4 +122,5 @@ setup(
     cmdclass={'gitinfo': GitInfo,
               'build_py': BuildPyCommand,
               },
+    requirements=['importlib_resources']
 )

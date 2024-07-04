@@ -7,6 +7,8 @@ check_language(CUDA)
 option(USE_HIP "Enable the GPU acceleration for AMD GPUs." OFF)
 option(USE_CUDA "Enable the GPU acceleration for NVIDIA GPUs." OFF)
 
+# option(HIP_ARCH "Supply a specific arch (via --offload-arch=HIP_ARCH)" OFF)
+
 if(USE_CUDA)
     message("DEBUG : USE_CUDA=ON")
     project(woden VERSION 2.2 LANGUAGES CXX C CUDA) 
@@ -23,6 +25,9 @@ if(USE_CUDA)
        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D__NVCC__ ")
        set(CMAKE_CUDA_STANDARD_REQUIRED ON)
     endif()
+
+    ##Keep this behaviour to be backwards compatible, but really we now want
+    ##the user to supply the actualy arch code
 
     ##Pull out arch version if specified by user, and pass to nvcc
     if (CUDA_ARCH EQUAL "1.3")
@@ -55,11 +60,6 @@ if(USE_CUDA)
         set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_75")
     endif()
 
-    set(HINTS_HBEAM_INC "/usr/local/include/;${HBEAM_ROOT}/;")
-    set(HINTS_HBEAM_LIB "/usr/local/lib/;${HBEAM_ROOT}")
-    
-    find_path(HBEAM_INC mwa_hyperbeam.h HINTS ${HINTS_HBEAM_INC})
-    find_library(HBEAM_LIB mwa_hyperbeam HINTS ${HINTS_HBEAM_LIB} REQUIRED)
 elseif(USE_HIP)
     message("DEBUG : USE_HIP=ON")
 
@@ -69,15 +69,23 @@ elseif(USE_HIP)
 
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D__HIP_PLATFORM_AMD__ -D__HIPCC__ ")
     # TODO should try and get --offload-arch=gfx90a in there for HIP
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__HIP_PLATFORM_AMD__ -D__HIPCC__")
+    # --offload-arch=gfx90a"
 
-    ##Try and find the hyperbeam library
-    set(HINTS_HBEAM_INC "/usr/local/include/;${HBEAM_ROOT}/;")
-    set(HINTS_HBEAM_LIB "/usr/local/lib/;${HBEAM_ROOT}")
+    if(HIP_ARCH)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__HIP_PLATFORM_AMD__ -D__HIPCC__ --offload-arch=${HIP_ARCH}") #--offload-arch=gfx90a")
+        message("-- Using user specified HIP ARCH of --offload-arch=${HIP_ARCH}")
+    else()
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__HIP_PLATFORM_AMD__ -D__HIPCC__")
+    endif()
 
-    find_path(HBEAM_INC mwa_hyperbeam.h HINTS ${HINTS_HBEAM_INC})
-    find_library(HBEAM_LIB mwa_hyperbeam HINTS ${HINTS_HBEAM_LIB} REQUIRED)
 endif()
+
+##Try and find the hyperbeam library
+set(HINTS_HBEAM_INC "/usr/local/include/;${HBEAM_ROOT}/;")
+set(HINTS_HBEAM_LIB "/usr/local/lib/;${HBEAM_ROOT}")
+
+find_path(HBEAM_INC mwa_hyperbeam.h HINTS ${HINTS_HBEAM_INC})
+find_library(HBEAM_LIB mwa_hyperbeam HINTS ${HINTS_HBEAM_LIB} REQUIRED)
 
 ##Find the source codes
 file(GLOB CSOURCES "src/*.c")
@@ -112,11 +120,16 @@ if(TARGET_GROUP STREQUAL production)
     ##Compile CUDA code with all warnings
     if(USE_CUDA)
        target_compile_options(wodenCUDA_float PRIVATE --compiler-options -Wall)
+       set_property(TARGET wodenCUDA_float PROPERTY CUDA_ARCHITECTURES OFF)
+    endif()
+
+    if(USE_HIP)
+       target_compile_options(wodenCUDA_float PRIVATE -Wall)
     endif()
     ## For CMake versions > 3.18, the arch flag settings are handled by
     ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
     ## replace the CUDA_FLAG lines above with something like
-    set_property(TARGET wodenCUDA_float PROPERTY CUDA_ARCHITECTURES OFF)
+    
 
     ##Add the total WODEN library, linking in the CUDA code
     add_library(woden_float SHARED src/woden.c ${CSOURCES})
@@ -137,11 +150,16 @@ if(TARGET_GROUP STREQUAL production)
     ##Compile CUDA code with all warnings
     if(USE_CUDA)
        target_compile_options(wodenCUDA_double PRIVATE -DDOUBLE_PRECISION --compiler-options -Wall)
+       ## For CMake versions > 3.18, the arch flag settings are handled by
+       ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
+       ## replace the CUDA_FLAG lines above with something like
+       set_property(TARGET wodenCUDA_double PROPERTY CUDA_ARCHITECTURES OFF)
     endif()
-    ## For CMake versions > 3.18, the arch flag settings are handled by
-    ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
-    ## replace the CUDA_FLAG lines above with something like
-    set_property(TARGET wodenCUDA_double PROPERTY CUDA_ARCHITECTURES OFF)
+
+    if(USE_HIP)
+       target_compile_options(wodenCUDA_double PRIVATE -DDOUBLE_PRECISION -Wall)
+    endif()
+    
 
     ##Add the total WODEN library, linking in the CUDA code
     add_library(woden_double SHARED src/woden.c ${CSOURCES})
