@@ -1,5 +1,5 @@
 
-include(FindPythonInterp)
+include(FindPython)
 
 add_test(python_test_calc_jdcal ${PYTHON_EXECUTABLE}
          ${CMAKE_CURRENT_SOURCE_DIR}/test_calc_jdcal.py)

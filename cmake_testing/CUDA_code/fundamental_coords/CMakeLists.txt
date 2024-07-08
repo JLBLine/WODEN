@@ -15,11 +15,6 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
               ${CMAKE_SOURCE_DIR}/src/fundamental_coords.cpp)
   target_compile_options(fundamental_coordsCUDA_${PRECISION} PRIVATE ${CUDA_FLAGS})
 
-  ## For CMake versions > 3.18, the arch flag settings are handled by
-  ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
-  ## replace the CUDA_FLAG lines above with something like
-  set_property(TARGET fundamental_coordsCUDA_${PRECISION} PROPERTY CUDA_ARCHITECTURES OFF)
-
   ##Test l,m,n functions
   add_executable(test_lmn_coords_${PRECISION}_app
       test_lmn_coords.c

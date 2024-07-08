@@ -1,5 +1,5 @@
 
-include(FindPythonInterp)
+include(FindPython)
 
 add_test(python_test_RTS_encoding ${PYTHON_EXECUTABLE}
          ${CMAKE_CURRENT_SOURCE_DIR}/test_RTS_encoding.py)

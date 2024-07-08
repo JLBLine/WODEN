@@ -1,12 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
-// #include <cuComplex.h>
 #include <complex.h>
 #include <math.h>
 #include "constants.h"
 #include "fundamental_coords.h"
-#include "cudacheck.h"
-#include "primary_beam_cuda.h"
+#include "primary_beam_gpu.h"
 #include "gpu_macros.h"
 
 //__host__??

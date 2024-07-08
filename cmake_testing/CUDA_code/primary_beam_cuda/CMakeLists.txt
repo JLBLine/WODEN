@@ -7,19 +7,14 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
 
   if(USE_CUDA)
     set_source_files_properties("${CMAKE_SOURCE_DIR}/src/fundamental_coords.cpp"
-              "${CMAKE_SOURCE_DIR}/src/primary_beam_cuda.cpp" PROPERTIES LANGUAGE CUDA)
+              "${CMAKE_SOURCE_DIR}/src/primary_beam_gpu.cpp" PROPERTIES LANGUAGE CUDA)
   endif()
 
-  add_library(primary_beam_cudaCUDA_${PRECISION} SHARED
-              "${CMAKE_SOURCE_DIR}/src/primary_beam_cuda.cpp"
+  add_library(primary_beam_gpuCUDA_${PRECISION} SHARED
+              "${CMAKE_SOURCE_DIR}/src/primary_beam_gpu.cpp"
               "${CMAKE_SOURCE_DIR}/src/fundamental_coords.cpp")
 
-  target_compile_options(primary_beam_cudaCUDA_${PRECISION} PRIVATE ${CUDA_FLAGS})
-
-#   ## For CMake versions > 3.18, the arch flag settings are handled by
-#   ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
-#   ## replace the CUDA_FLAG lines above with something like
-#   set_property(TARGET primary_beam_cudaCUDA_${PRECISION} PROPERTY CUDA_ARCHITECTURES OFF)
+  target_compile_options(primary_beam_gpuCUDA_${PRECISION} PRIVATE ${CUDA_FLAGS})
 
   ##Test gaussian beam functions
   add_executable(test_gaussian_beam_${PRECISION}_app
@@ -27,7 +22,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_link_libraries(test_gaussian_beam_${PRECISION}_app
       Unity
-      primary_beam_cudaCUDA_${PRECISION}
+      primary_beam_gpuCUDA_${PRECISION}
       ${CC_LINKLIBS}
   )
   target_compile_options(test_gaussian_beam_${PRECISION}_app PRIVATE ${C_FLAGS})
@@ -41,7 +36,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_link_libraries(test_analytic_dipole_beam_${PRECISION}_app
       Unity
-      primary_beam_cudaCUDA_${PRECISION}
+      primary_beam_gpuCUDA_${PRECISION}
       ${CC_LINKLIBS}
   )
   target_compile_options(test_analytic_dipole_beam_${PRECISION}_app PRIVATE ${C_FLAGS})
@@ -55,7 +50,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_link_libraries(test_MWA_analytic_${PRECISION}_app
       Unity
-      primary_beam_cudaCUDA_${PRECISION}
+      primary_beam_gpuCUDA_${PRECISION}
       ${CC_LINKLIBS}
   )
   target_compile_options(test_MWA_analytic_${PRECISION}_app PRIVATE ${C_FLAGS})
@@ -68,7 +63,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_link_libraries(test_run_hyperbeam_${PRECISION}_app
       Unity
-      primary_beam_cudaCUDA_${PRECISION}
+      primary_beam_gpuCUDA_${PRECISION}
       ${CC_LINKLIBS}
       # "-L/usr/local/mwa_hyperbeam -lmwa_hyperbeam"
   )
@@ -82,7 +77,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_link_libraries(test_run_hyperbeam_interp_${PRECISION}_app
       Unity
-      primary_beam_cudaCUDA_${PRECISION}
+      primary_beam_gpuCUDA_${PRECISION}
       ${CC_LINKLIBS}
       # "-L/usr/local/mwa_hyperbeam -lmwa_hyperbeam"
   )
@@ -96,7 +91,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_run_hyperbeam_multi_antennas_${PRECISION}_app
         Unity
-        primary_beam_cudaCUDA_${PRECISION}
+        primary_beam_gpuCUDA_${PRECISION}
         ${CC_LINKLIBS}
         # "-L/usr/local/mwa_hyperbeam -lmwa_hyperbeam"
     )

@@ -14,7 +14,8 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
         set_source_files_properties( "${CMAKE_SOURCE_DIR}/src/calculate_visibilities.cpp"
               "${CMAKE_SOURCE_DIR}/src/source_components.cpp"
               "${CMAKE_SOURCE_DIR}/src/fundamental_coords.cpp"
-              "${CMAKE_SOURCE_DIR}/src/primary_beam_cuda.cpp" PROPERTIES LANGUAGE CUDA)
+              "${CMAKE_SOURCE_DIR}/src/primary_beam_gpu.cpp" PROPERTIES LANGUAGE CUDA)
+              
     endif()
 
     ##First add necessary CUDA code to a library
@@ -22,14 +23,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
                 "${CMAKE_SOURCE_DIR}/src/calculate_visibilities.cpp"
                 "${CMAKE_SOURCE_DIR}/src/source_components.cpp"
                 "${CMAKE_SOURCE_DIR}/src/fundamental_coords.cpp"
-                "${CMAKE_SOURCE_DIR}/src/primary_beam_cuda.cpp")
+                "${CMAKE_SOURCE_DIR}/src/primary_beam_gpu.cpp")
 
     target_compile_options(calculate_visibilitiesCUDA_${PRECISION} PRIVATE ${CUDA_FLAGS})
-
-    ## For CMake versions > 3.18, the arch flag settings are handled by
-    ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
-    ## replace the CUDA_FLAG lines above with something like
-    set_property(TARGET calculate_visibilitiesCUDA_${PRECISION} PROPERTY CUDA_ARCHITECTURES OFF)
 
     ##Quite a large number of C depenecies here so stick em in a library
     add_library(calculate_visibilities_Cdepends_${PRECISION} SHARED

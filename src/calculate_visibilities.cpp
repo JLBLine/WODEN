@@ -1,18 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
-// #include <cuComplex.h>
 #include <complex.h>
 #include <math.h>
 
 #include "woden_precision_defs.h"
-#include "cudacomplex.h"
+#include "gpucomplex.h"
 
 #include "calculate_visibilities.h"
 #include "fundamental_coords.h"
 #include "constants.h"
 #include "source_components.h"
-#include "primary_beam_cuda.h"
-#include "cudacheck.h"
+#include "primary_beam_gpu.h"
 #include "hyperbeam_error.h"
 
 //Helpful C code we are also using

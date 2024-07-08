@@ -1,7 +1,14 @@
+/*! \file
+  A bunch of macros to choose either CUDA or HIP for GPU operations. Needs the compiler to define `__NVCC__` or `__HIPCC__` to choose the correct functionality
+
+  @author Marcin Sokolowski and Cristian Di Pietrantonio, edited by Jack Line
+*/
+
 #ifndef __GPU_MACROS_H__
 #define __GPU_MACROS_H__
 
 #include <stdio.h>
+#include <stdbool.h>
 
 // #ifndef __NVCC__
 // #define __NVCC__ // should be set by compiler !!!
@@ -32,25 +39,44 @@
 #define gpuGetErrorString hipGetErrorString
 #endif
 
-// void __gpu_check_error(gpuError_t x, const char *file, int line);
-/*inline void __gpu_check_error(gpuError_t x, const char *file, int line){
-    if(x != gpuSuccess){
-        fprintf(stderr, "GPU error (%s:%d): %s\n", file, line, gpuGetErrorString(x));
-        exit(1);
-    }
-}*/
-
-
-/*#define GPU_CHECK_ERROR(X)({\
-    __gpu_check_error((X), __FILE__, __LINE__);\
-})*/
-
 #define GPU_CHECK_ERROR(X)({\
     if(X != gpuSuccess){\
         fprintf(stderr, "GPU error (%s:%d): %s\n", __FILE__ , __LINE__ , gpuGetErrorString(X));\
         exit(1);\
     }\
 })
+
+/*! `true` \n
+Used within `GPUErrorCheck`. If true, exit if an error is found */
+#define EXITERROR true
+
+
+/**
+@brief Take a GPU error message (code), and checks whether an error
+occurred.
+
+@details If an error happened, uses `message` to give more information to the
+user, along with the decoded CUDA error message. Uses `file` and `line` to
+report where the error happened. Optional bool `abort` means you can switch off
+exiting if an error is found (default true)
+
+@param[in] message User supplied error message
+@param[in] code Error message out of CUDA call (e.g. cudaMalloc)
+@param[in] file Name of file call was made in
+@param[in] line Line of file call was made in
+@param[in] abort If true, exit the CUDA code when an error is found
+
+*/
+inline void GPUErrorCheck(const char *message, gpuError_t code, const char *file, int line, bool abort=EXITERROR){
+  if (code != gpuSuccess) {
+    fprintf(stderr,"GPU ERROR %s: %s\n %s:%d\n",
+                    message, gpuGetErrorString(code), file, line);
+    if (abort) {
+      printf("GPU IS EXITING\n");
+      exit(code);
+    }
+  }
+}
 
 
 #ifdef __NVCC__
@@ -70,29 +96,29 @@
 
 #include <cuComplex.h>
 
-#define gpuMalloc(...) GPU_CHECK_ERROR(cudaMalloc(__VA_ARGS__))
-#define gpuHostAlloc(...) GPU_CHECK_ERROR(cudaHostAlloc(__VA_ARGS__, 0))
+#define gpuMalloc(...) GPUErrorCheck("cudaMalloc", cudaMalloc(__VA_ARGS__),__FILE__, __LINE__)
+#define gpuHostAlloc(...) GPUErrorCheck("cudaHostAlloc", cudaHostAlloc(__VA_ARGS__, 0),__FILE__, __LINE__)
 #define gpuHostAllocDefault cudaHostAllocDefault
-#define gpuMemcpy(...) GPU_CHECK_ERROR(cudaMemcpy(__VA_ARGS__))
-#define gpuMemcpyAsync(...) GPU_CHECK_ERROR(cudaMemcpyAsync(__VA_ARGS__))
-#define gpuMemset(...) GPU_CHECK_ERROR(cudaMemset(__VA_ARGS__))
-// #define gpuDeviceSynchronize(...) GPU_CHECK_ERROR(cudaDeviceSynchronize(__VA_ARGS__))
+#define gpuMemcpy(...) GPUErrorCheck("cudaMemcpy", cudaMemcpy(__VA_ARGS__),__FILE__, __LINE__)
+#define gpuMemcpyAsync(...) GPUErrorCheck("cudaMemcpyAsync", cudaMemcpyAsync(__VA_ARGS__),__FILE__, __LINE__)
+#define gpuMemset(...) GPUErrorCheck("cudaMemset", cudaMemset(__VA_ARGS__),__FILE__, __LINE__)
+// #define gpuDeviceSynchronize(...) GPUErrorCheck("cudaDeviceSynchronize", cudaDeviceSynchronize(__VA_ARGS__),__FILE__, __LINE__)
 #define gpuDeviceSynchronize cudaDeviceSynchronize
 #define gpuMemcpyDeviceToHost cudaMemcpyDeviceToHost
 #define gpuMemcpyHostToDevice cudaMemcpyHostToDevice
 #define gpuMemcpyDeviceToDevice cudaMemcpyDeviceToDevice
-#define gpuFree(...) GPU_CHECK_ERROR(cudaFree(__VA_ARGS__))
-#define gpuHostFree(...) GPU_CHECK_ERROR(cudaFreeHost(__VA_ARGS__))
+#define gpuFree(...) GPUErrorCheck("cudaFree", cudaFree(__VA_ARGS__),__FILE__, __LINE__)
+#define gpuHostFree(...) GPUErrorCheck("cudaFreeHost", cudaFreeHost(__VA_ARGS__),__FILE__, __LINE__)
 #define gpuStream_t cudaStream_t
-#define gpuStreamCreate(...) GPU_CHECK_ERROR(cudaStreamCreate(__VA_ARGS__))
-#define gpuStreamDestroy(...) GPU_CHECK_ERROR(cudaStreamDestroy(__VA_ARGS__))
-#define gpuEventCreate(...) GPU_CHECK_ERROR(cudaEventCreate(__VA_ARGS__))
-#define gpuGetDeviceCount(...) GPU_CHECK_ERROR(cudaGetDeviceCount(__VA_ARGS__))
+#define gpuStreamCreate(...) GPUErrorCheck("cudaStreamCreate", cudaStreamCreate(__VA_ARGS__),__FILE__, __LINE__)
+#define gpuStreamDestroy(...) GPUErrorCheck("cudaStreamDestroy", cudaStreamDestroy(__VA_ARGS__),__FILE__, __LINE__)
+#define gpuEventCreate(...) GPUErrorCheck("cudaEventCreate", cudaEventCreate(__VA_ARGS__),__FILE__, __LINE__)
+#define gpuGetDeviceCount(...) GPUErrorCheck("cudaGetDeviceCount", cudaGetDeviceCount(__VA_ARGS__),__FILE__, __LINE__)
 #define gpuGetLastError cudaGetLastError
-#define gpuMemGetInfo(...) GPU_CHECK_ERROR(cudaMemGetInfo(__VA_ARGS__))
-#define gpuMallocHost(...) GPU_CHECK_ERROR(cudaMallocHost(__VA_ARGS__))
+#define gpuMemGetInfo(...) GPUErrorCheck("cudaMemGetInfo", cudaMemGetInfo(__VA_ARGS__),__FILE__, __LINE__)
+#define gpuMallocHost(...) GPUErrorCheck("cudaMallocHost", cudaMallocHost(__VA_ARGS__),__FILE__, __LINE__)
 #define gpuCheckErrors(...) cudaCheckErrors(__VA_ARGS__)
-#define gpuFreeHost(...) GPU_CHECK_ERROR( cudaFreeHost(__VA_ARGS__) )
+#define gpuFreeHost(...) GPUErrorCheck(" cudaFreeHost",  cudaFreeHost(__VA_ARGS__),__FILE__, __LINE__ )
 #define gpuGetDeviceProperties(...) cudaGetDeviceProperties(__VA_ARGS__)
 #define gpuDeviceProp cudaDeviceProp
 #define gpuPeekAtLastError cudaPeekAtLastError
@@ -144,30 +170,30 @@
     } while (0)
 
 
-#define gpuMalloc(...) GPU_CHECK_ERROR(hipMalloc(__VA_ARGS__))
-#define gpuHostAlloc(...) GPU_CHECK_ERROR(hipHostMalloc(__VA_ARGS__, 0))
+#define gpuMalloc(...) GPUErrorCheck("hipMalloc", hipMalloc(__VA_ARGS__),__FILE__, __LINE__)
+#define gpuHostAlloc(...) GPUErrorCheck("hipHostMalloc", hipHostMalloc(__VA_ARGS__, 0),__FILE__, __LINE__)
 #define gpuHostAllocDefault 0
-#define gpuMemcpy(...) GPU_CHECK_ERROR(hipMemcpy(__VA_ARGS__))
-#define gpuMemcpyAsync(...) GPU_CHECK_ERROR(hipMemcpyAsync(__VA_ARGS__))
-#define gpuMemset(...) GPU_CHECK_ERROR(hipMemset(__VA_ARGS__))
-// #define gpuDeviceSynchronize(...) GPU_CHECK_ERROR(hipDeviceSynchronize(__VA_ARGS__))
+#define gpuMemcpy(...) GPUErrorCheck("hipMemcpy", hipMemcpy(__VA_ARGS__),__FILE__, __LINE__)
+#define gpuMemcpyAsync(...) GPUErrorCheck("hipMemcpyAsync", hipMemcpyAsync(__VA_ARGS__),__FILE__, __LINE__)
+#define gpuMemset(...) GPUErrorCheck("hipMemset", hipMemset(__VA_ARGS__),__FILE__, __LINE__)
+// #define gpuDeviceSynchronize(...) GPUErrorCheck("hipDeviceSynchronize",hipDeviceSynchronize(__VA_ARGS__),__FILE__, __LINE__)
 #define gpuDeviceSynchronize hipDeviceSynchronize
 #define gpuMemcpyDeviceToHost hipMemcpyDeviceToHost
 #define gpuMemcpyHostToDevice hipMemcpyHostToDevice
 #define gpuMemcpyDeviceToDevice hipMemcpyDeviceToDevice
-#define gpuFree(...) GPU_CHECK_ERROR(hipFree(__VA_ARGS__))
-#define gpuHostFree(...) GPU_CHECK_ERROR(hipHostFree(__VA_ARGS__))
+#define gpuFree(...) GPUErrorCheck("hipFree", hipFree(__VA_ARGS__),__FILE__, __LINE__)
+#define gpuHostFree(...) GPUErrorCheck("hipHostFree", hipHostFree(__VA_ARGS__),__FILE__, __LINE__)
 #define gpuStream_t hipStream_t
-#define gpuStreamCreate(...) GPU_CHECK_ERROR(hipStreamCreate(__VA_ARGS__))
-#define gpuStreamDestroy(...) GPU_CHECK_ERROR(hipStreamDestroy(__VA_ARGS__))
-#define gpuEventCreate(...) GPU_CHECK_ERROR(hipEventCreate(__VA_ARGS__))
-#define gpuGetDeviceCount(...) GPU_CHECK_ERROR(hipGetDeviceCount(__VA_ARGS__))
+#define gpuStreamCreate(...) GPUErrorCheck("hipStreamCreate", hipStreamCreate(__VA_ARGS__),__FILE__, __LINE__)
+#define gpuStreamDestroy(...) GPUErrorCheck("hipStreamDestroy", hipStreamDestroy(__VA_ARGS__),__FILE__, __LINE__)
+#define gpuEventCreate(...) GPUErrorCheck("hipEventCreate", hipEventCreate(__VA_ARGS__),__FILE__, __LINE__)
+#define gpuGetDeviceCount(...) GPUErrorCheck("hipGetDeviceCount", hipGetDeviceCount(__VA_ARGS__),__FILE__, __LINE__)
 #define gpuGetLastError hipGetLastError
-#define gpuMemGetInfo(...) GPU_CHECK_ERROR(hipMemGetInfo(__VA_ARGS__))
-#define gpuMallocHost(...) GPU_CHECK_ERROR(hipHostMalloc(__VA_ARGS__, 0)) // TODO : double check this may be temporary only
+#define gpuMemGetInfo(...) GPUErrorCheck("hipMemGetInfo", hipMemGetInfo(__VA_ARGS__),__FILE__, __LINE__)
+#define gpuMallocHost(...) GPUErrorCheck("hipHostMalloc", hipHostMalloc(__VA_ARGS__, 0),__FILE__, __LINE__) // TODO : double check this may be temporary only
 #define gpuCheckErrors(...) hipCheckErrors(__VA_ARGS__)
-#define gpuFreeHost(...)  GPU_CHECK_ERROR( hipFreeHost(__VA_ARGS__) )
-#define gpuGetDeviceProperties(...) GPU_CHECK_ERROR( hipGetDeviceProperties(__VA_ARGS__) )
+#define gpuFreeHost(...)  GPUErrorCheck( "hipFreeHost", hipFreeHost(__VA_ARGS__),__FILE__, __LINE__ )
+#define gpuGetDeviceProperties(...) GPUErrorCheck( "hipGetDeviceProperties", hipGetDeviceProperties(__VA_ARGS__),__FILE__, __LINE__ )
 #define gpuDeviceProp hipDeviceProp_t
 #define gpuPeekAtLastError hipPeekAtLastError
 
@@ -193,7 +219,7 @@
 #define make_gpuFloatComplex make_hipFloatComplex
 
 #endif
-#define gpuCheckLastError(...) GPU_CHECK_ERROR(gpuGetLastError())
+#define gpuCheckLastError(...) GPUErrorCheck(gpuGetLastError())
 #else
 // bool gpu_support() { return false;}
 // inline int num_available_gpus(){ return 0; } 
@@ -201,3 +227,45 @@
 
 #endif
 #endif
+
+
+
+/**
+@brief Takes a GPU kernel, runs it with given arguments, and passes results
+onto `ErrorCheck` to check for errors.
+
+@details All arguements need to run `kernel` must be included after the listed
+arguments here. `kernel` is then run via
+
+        kernel <<< grid , threads, 0 >>>(__VA_ARGS__)
+
+where `__VA_ARGS__` passes on the arguments located at `...`
+
+`gpuErrorCheckKernel` then passes the string `message` on to `ErrorCheck`,
+along with the file name and line number via `__FILE__` and `__LINE__`, and
+checks the errors from both `gpuGetLastError()` and `gpuDeviceSynchronize()`
+after running the kernel.
+
+For example, if `fancy_kernel` takes the arguments `arg1` and `arg2`, to run it
+with 10 grids of 64 threads, run the following:
+
+          dim3 grid, threads;
+          grid.x = 10
+          threads.x = 64
+          gpuErrorCheckKernel("Call to fancy_kernel",
+                              fancy_kernel, grid, threads,
+                              arg1, arg2);
+
+
+
+@param[in] message Message to report when an error occurs
+@param[in] kernel Name of kernel to be run
+@param[in] grid A `dim3` containing grid specifications to run `kernel` with
+@param[in] threads A `dim3` containing thread specifications to run `kernel` with
+@param[in] ... All arguments to be passed into `kernel`
+*/
+#define gpuErrorCheckKernel(message, kernel, grid, threads, ...) \
+  kernel <<< grid , threads, 0 >>>(__VA_ARGS__); \
+  GPUErrorCheck(message, gpuGetLastError(), __FILE__, __LINE__); \
+  GPUErrorCheck(message, gpuDeviceSynchronize(), __FILE__, __LINE__);
+//   gpuDeviceSynchronize();

@@ -6,7 +6,7 @@
 #pragma once
 #include "woden_precision_defs.h"
 #include <mwa_hyperbeam.h>
-#include "cudacomplex.h"
+#include "gpucomplex.h"
 #include "hyperbeam_error.h"
 
 /**
@@ -243,7 +243,7 @@ hence needs the ha/dec along with the az/za. The delays added to the
 paths of individual dipoles allow the beam to be 'pointed'. The physical
 length of these paths should be given in `d_metre_delays` (this conversion
 from the delays given in the MWA metafits is handled by
-`primary_beam_cuda::calculate_RTS_MWA_analytic_beam`)
+`primary_beam_gpu::calculate_RTS_MWA_analytic_beam`)
 
 
 @param[in] az Azimuth to calculate the beam toward (radians)
@@ -273,14 +273,14 @@ __device__ void RTS_MWA_beam(user_precision_t az, user_precision_t za,
 `d_azs` and `d_zas` for a given set of delays `d_metre_delays` and frequencies
 `d_freqs`.
 
-@details Kernel calls `primary_beam_cuda::RTS_MWA_beam`. The MWA primary beam
+@details Kernel calls `primary_beam_gpu::RTS_MWA_beam`. The MWA primary beam
 is stationary on the sky for a given set of delays, so the Azimuth and Zenith
 Angles in `azs,zas` should contain `num_components*num_times` values,
 as the COMPONENTs move through the beam with time. The delays added to the
 paths of individual dipoles allow the beam to be 'pointed'. The physical
 length of these paths should be given in `d_metre_delays` (this conversion
 from the delays given in the MWA metafits is handled by
-`primary_beam_cuda::calculate_RTS_MWA_analytic_beam`)
+`primary_beam_gpu::calculate_RTS_MWA_analytic_beam`)
 
 When called with `dim3 grid, threads`, kernel should be called with both
 `grid.x` and `grid.y` defined, where:
@@ -318,7 +318,7 @@ __global__ void kern_RTS_analytic_MWA_beam(user_precision_t *d_azs,
 `azs` and `zas` for a given set of delays `delays` as listed in an MWA metafits
 file, and frequencies `d_freqs`.
 
-@details Uses the kernel `primary_beam_cuda::kern_RTS_analytic_MWA_beam`.
+@details Uses the kernel `primary_beam_gpu::kern_RTS_analytic_MWA_beam`.
 The MWA primary beam is stationary on the sky for a given set of delays,
 so the Azimuth and Zenith Angles in `azs,zas` should contain
 `num_components*num_times` values, as the COMPONENTs move through the beam
@@ -326,7 +326,7 @@ with time. The delays added to the paths of individual dipoles allow the beam
 to be 'pointed'. The delays as listed in the metafits (given as `delays`) are
 listed in units of the delay time added internally to the tile (in seconds).
 This function coverts them into a path length (metres), as needed by
-`primary_beam_cuda::RTS_MWA_beam``.
+`primary_beam_gpu::RTS_MWA_beam``.
 
 @param[in] num_components Number of COMPONENTS the beam is calculated for
 @param[in] num_time_steps Number of time steps being calculated
@@ -378,7 +378,7 @@ requested frequencies, as well as the delays to point the beam. If these aren't
 setup correctly, this will fall flat on it's face.
 
 Once the beam repsonses have been calculated, split them up into the `WODEN`
-d_primay_beam_J* arrays using the kernel `primary_beam_cuda::kern_map_hyperbeam_gains`.
+d_primay_beam_J* arrays using the kernel `primary_beam_gpu::kern_map_hyperbeam_gains`.
 
 @param[in] num_components Number of COMPONENTS the beam is calculated for
 @param[in] num_time_steps Number of time steps being calculated

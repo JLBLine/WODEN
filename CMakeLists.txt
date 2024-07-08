@@ -1,64 +1,34 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.21)
 
 ##Need to find CUDA compiler
 include(CheckLanguage)
-check_language(CUDA)
+# check_language(CUDA)
 
 option(USE_HIP "Enable the GPU acceleration for AMD GPUs." OFF)
-option(USE_CUDA "Enable the GPU acceleration for NVIDIA GPUs." OFF)
+##default to using CUDA to be somewhat backwards compatible
+option(USE_CUDA "Enable the GPU acceleration for NVIDIA GPUs." ON)
 
-# option(HIP_ARCH "Supply a specific arch (via --offload-arch=HIP_ARCH)" OFF)
+if(USE_HIP)
+  set(USE_CUDA OFF)
+endif()
 
 if(USE_CUDA)
-    message("DEBUG : USE_CUDA=ON")
+    message("USING CUDA : USE_CUDA=ON")
     project(woden VERSION 2.2 LANGUAGES CXX C CUDA) 
 
-    ##Gotta find CUDA and get it to find libraries
-    find_package(CUDA)
-    if(CUDA_FOUND)
-       message(STATUS "Found CUDA ${CUDA_VERSION_STRING} at ${CUDA_TOOLKIT_ROOT_DIR}")
-       message(STATUS "CUDA library found; building GPU-enabled executables.")
-       ##Sets the -std=c++11 nvcc compiler flag I think
-       set(CMAKE_CUDA_STANDARD 11)
-       #set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++11 ")
-       ##Internal flag to let code know we're using nvcc
-       set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D__NVCC__ ")
-       set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-    endif()
+    ##Sets the -std=c++11 nvcc compiler flag I think
+    set(CMAKE_CUDA_STANDARD 11)
+    #set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++11 ")
+    ##Internal flag to let code know we're using nvcc
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D__NVCC__ ")
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
-    ##Keep this behaviour to be backwards compatible, but really we now want
-    ##the user to supply the actualy arch code
-
-    ##Pull out arch version if specified by user, and pass to nvcc
-    if (CUDA_ARCH EQUAL "1.3")
-        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_13")
-    elseif (CUDA_ARCH EQUAL "2.0")
-        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_20")
-    elseif (CUDA_ARCH EQUAL "2.1")
-        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_21")
-    elseif (CUDA_ARCH EQUAL "3.0")
-        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_30")
-    elseif (CUDA_ARCH EQUAL "3.2")
-        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_32")
-    elseif (CUDA_ARCH EQUAL "3.5")
-        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_35")
-    elseif (CUDA_ARCH EQUAL "3.7")
-        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_37")
-    elseif (CUDA_ARCH EQUAL "5.0")
-        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_50")
-    elseif (CUDA_ARCH EQUAL "5.2")
-        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_52")
-    elseif (CUDA_ARCH EQUAL "6.0")
-        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_60")
-    elseif (CUDA_ARCH EQUAL "6.1")
-        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_61")
-    elseif (CUDA_ARCH EQUAL "6.2")
-        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_62")
-    elseif (CUDA_ARCH EQUAL "7.0")
-        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_70")
-    elseif (CUDA_ARCH EQUAL "7.5")
-        set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_75")
+    if (NOT DEFINED CUDAARCHS)
+        message("WARNING : CUDAARCHS not set, so CMAKE_CUDA_ARCHITECTURES has defaulted to whatever CMake has set, which is ${CMAKE_CUDA_ARCHITECTURES}")
+    else()
+        message("INFO : CUDAARCHS was set, so now CMAKE_CUDA_ARCHITECTURES is set to ${CMAKE_CUDA_ARCHITECTURES}")
     endif()
+    
 
 elseif(USE_HIP)
     message("DEBUG : USE_HIP=ON")
@@ -68,11 +38,10 @@ elseif(USE_HIP)
     add_definitions("-D__HIP_PLATFORM_AMD__ -D__HIPCC__")
 
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D__HIP_PLATFORM_AMD__ -D__HIPCC__ ")
-    # TODO should try and get --offload-arch=gfx90a in there for HIP
-    # --offload-arch=gfx90a"
 
+    ##TODO, remove this if -DGPU_TARGETS="gfx1032;gfx1035" works
     if(HIP_ARCH)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__HIP_PLATFORM_AMD__ -D__HIPCC__ --offload-arch=${HIP_ARCH}") #--offload-arch=gfx90a")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__HIP_PLATFORM_AMD__ -D__HIPCC__ --offload-arch=${HIP_ARCH}")
         message("-- Using user specified HIP ARCH of --offload-arch=${HIP_ARCH}")
     else()
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__HIP_PLATFORM_AMD__ -D__HIPCC__")
@@ -120,16 +89,9 @@ if(TARGET_GROUP STREQUAL production)
     ##Compile CUDA code with all warnings
     if(USE_CUDA)
        target_compile_options(wodenCUDA_float PRIVATE --compiler-options -Wall)
-       set_property(TARGET wodenCUDA_float PROPERTY CUDA_ARCHITECTURES OFF)
-    endif()
-
-    if(USE_HIP)
+    elseif(USE_HIP)
        target_compile_options(wodenCUDA_float PRIVATE -Wall)
     endif()
-    ## For CMake versions > 3.18, the arch flag settings are handled by
-    ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
-    ## replace the CUDA_FLAG lines above with something like
-    
 
     ##Add the total WODEN library, linking in the CUDA code
     add_library(woden_float SHARED src/woden.c ${CSOURCES})
@@ -150,16 +112,9 @@ if(TARGET_GROUP STREQUAL production)
     ##Compile CUDA code with all warnings
     if(USE_CUDA)
        target_compile_options(wodenCUDA_double PRIVATE -DDOUBLE_PRECISION --compiler-options -Wall)
-       ## For CMake versions > 3.18, the arch flag settings are handled by
-       ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
-       ## replace the CUDA_FLAG lines above with something like
-       set_property(TARGET wodenCUDA_double PROPERTY CUDA_ARCHITECTURES OFF)
+    elseif(USE_HIP)
+        target_compile_options(wodenCUDA_double PRIVATE -DDOUBLE_PRECISION -Wall)
     endif()
-
-    if(USE_HIP)
-       target_compile_options(wodenCUDA_double PRIVATE -DDOUBLE_PRECISION -Wall)
-    endif()
-    
 
     ##Add the total WODEN library, linking in the CUDA code
     add_library(woden_double SHARED src/woden.c ${CSOURCES})
@@ -180,12 +135,12 @@ elseif(TARGET_GROUP STREQUAL debug)
     ##Generate library for the CUDA code
     add_library(wodenCUDA_float SHARED ${CUDASOURCES})
     ##Compile CUDA code with all warnings
-    target_compile_options(wodenCUDA_float PRIVATE -G --compiler-options -g)
-    ## For CMake versions > 3.18, the arch flag settings are handled by
-    ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
-    ## replace the CUDA_FLAG lines above with something like
-    set_property(TARGET wodenCUDA_float PROPERTY CUDA_ARCHITECTURES OFF)
-
+    if(USE_CUDA)
+        target_compile_options(wodenCUDA_float PRIVATE -G --compiler-options -g)
+    elseif(USE_HIP)
+        target_compile_options(wodenCUDA_float PRIVATE -G -g)
+    endif()
+    
     ##Add the total WODEN library, linking in the CUDA code
     add_library(woden_float SHARED src/woden.c ${CSOURCES})
     target_link_libraries(woden_float PUBLIC wodenCUDA_float ${CC_LINKLIBS})
@@ -197,10 +152,12 @@ elseif(TARGET_GROUP STREQUAL debug)
     ##Compile CUDA code with all warnings
     target_compile_options(wodenCUDA_double PRIVATE -DDOUBLE_PRECISION
                                                        -G --compiler-options -g)
-    ## For CMake versions > 3.18, the arch flag settings are handled by
-    ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
-    ## replace the CUDA_FLAG lines above with something like
-    set_property(TARGET wodenCUDA_double PROPERTY CUDA_ARCHITECTURES OFF)
+    if(USE_CUDA)
+        target_compile_options(wodenCUDA_double PRIVATE -DDOUBLE_PRECISION
+                               -G --compiler-options -g)
+    elseif(USE_HIP)
+        target_compile_options(wodenCUDA_double PRIVATE -DDOUBLE_PRECISION -G -g)
+    endif()
 
     ##Add the total WODEN library, linking in the CUDA code
     add_library(woden_double SHARED src/woden.c ${CSOURCES})

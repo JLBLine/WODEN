@@ -1,15 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
-// #include <cuComplex.h>
 #include <complex.h>
 #include <math.h>
-#include "cudacomplex.h"
+#include "gpucomplex.h"
 #include "fundamental_coords.h"
 #include "constants.h"
 #include "source_components.h"
-#include "cudacheck.h"
 #include "woden_struct_defs.h"
-#include "primary_beam_cuda.h"
+#include "primary_beam_gpu.h"
 #include "woden_precision_defs.h"
 #include "gpu_macros.h"
 

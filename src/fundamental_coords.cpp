@@ -4,7 +4,6 @@
 #include <complex.h>
 #include <math.h>
 #include "constants.h"
-#include "cudacheck.h"
 #include "woden_precision_defs.h"
 
 __device__ void calc_uvw(double *d_X_diff, double *d_Y_diff,
