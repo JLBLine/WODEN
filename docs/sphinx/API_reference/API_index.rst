@@ -67,12 +67,16 @@ or ``double _Complex``.
   C_code/woden_precision_defs
   C_code/woden_struct_defs
 
-``CUDA`` code
+``GPU`` code
 -------------------------
+All GPU code is either compiled as ``CUDA`` or ``HIP`` code. This is decided at
+compilation, depending on whether ``-D__NVCC__`` (for ``CUDA``) or ``-D__HIPCC__``
+(for ``HIP``) was passed to the compiler. Various macros found in ``WODEN/include/gpu_macros.h``
+are used to drop in the correct GPU calls depending on the language requested.
 
 Similarly to ``C`` code, the precision of most functions is determined at
 compilation time, via the following ``#ifdef`` statement found in
-``WODEN/include/cudacomplex.h``:
+``WODEN/include/gpucomplex.h``:
 
 .. code-block:: C
 
@@ -92,9 +96,9 @@ meaning that ``cuUserComplex`` in the API either means ``cuFloatComplex`` or
 .. toctree::
   :maxdepth: 1
 
-  CUDA_code/calculate_visibilities
-  CUDA_code/cudacheck
-  CUDA_code/cudacomplex
-  CUDA_code/fundamental_coords
-  CUDA_code/primary_beam_cuda
-  CUDA_code/source_components
+  GPU_code/calculate_visibilities
+  GPU_code/gpu_macros
+  GPU_code/gpucomplex
+  GPU_code/fundamental_coords
+  GPU_code/primary_beam_gpu
+  GPU_code/source_components

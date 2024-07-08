@@ -1,5 +1,5 @@
 /*! \file
-  A bunch of macros to choose either CUDA or HIP for GPU operations. Needs the compiler to define `__NVCC__` or `__HIPCC__` to choose the correct functionality
+  A bunch of macros to choose either CUDA or HIP for GPU operations. Needs the compiler to define `__NVCC__` or `__HIPCC__` to choose the correct functionality. Also includes a macro to check for errors in GPU operations, and a macro to run a GPU kernel and check for errors.
 
   @author Marcin Sokolowski and Cristian Di Pietrantonio, edited by Jack Line
 */

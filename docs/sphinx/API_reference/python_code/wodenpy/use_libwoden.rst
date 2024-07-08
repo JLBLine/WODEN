@@ -1,7 +1,7 @@
 ``wodenpy.use_libwoden``
 ========================
 
-Ways to interact with the C/CUDA via ``ctypes``.
+Ways to interact with the C/GPU via ``ctypes``.
 
 ``array_layout_struct``
 -------------------------

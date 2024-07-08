@@ -1,9 +1,9 @@
 .. _mwa_hyperbeam: https://github.com/MWATelescope/mwa_hyperbeam
 
 
-``primary_beam_cuda``
+``primary_beam_gpu``
 =========================
-Tests for the functions in ``WODEN/src/primary_beam_cuda.cu``. These functions
+Tests for the functions in ``WODEN/src/primary_beam_gpu.cu``. These functions
 calculate the beam responses for the following beam models:
 
  * **Gaussian** - a frequency dependent Gaussian beam; FWHM can be set by user
@@ -16,8 +16,8 @@ See :ref:`Primary Beams` for more discussion on primary beams.
 
 test_gaussian_beam.c
 *********************************
-This calls ``primary_beam_cuda::test_kern_gaussian_beam``, which in turn
-tests ``primary_beam_cuda::kern_gaussian_beam``, the kernel that calculates
+This calls ``primary_beam_gpu::test_kern_gaussian_beam``, which in turn
+tests ``primary_beam_gpu::kern_gaussian_beam``, the kernel that calculates
 the Gaussian primary beam response. As a Gaussian is an easy function to
 calculate, I've setup tests that calculate a north-south and east-west strip
 of the beam response, and then compare that to a 1D Gaussian calculation.
@@ -40,8 +40,8 @@ the DOUBLE compiled code.
 
 test_analytic_dipole_beam.c
 ***********************************
-This calls ``primary_beam_cuda::test_analytic_dipole_beam``, which in turn
-tests ``primary_beam_cuda::calculate_analytic_dipole_beam``, code that copies
+This calls ``primary_beam_gpu::test_analytic_dipole_beam``, which in turn
+tests ``primary_beam_gpu::calculate_analytic_dipole_beam``, code that copies
 az/za angles into GPU memory, calculates an analytic dipole response toward
 those directions, and then frees the az/za coords from GPU memory.
 
@@ -57,8 +57,8 @@ test_MWA_analytic.c
 ***********************************
 .. TODO:: stick the maths of what the analytic beam does here (it is involved).
 
-This calls ``primary_beam_cuda::test_calculate_MWA_analytic_beam``, which calls
-``primary_beam_cuda::calculate_MWA_analytic_beam``, which calculates an
+This calls ``primary_beam_gpu::test_calculate_MWA_analytic_beam``, which calls
+``primary_beam_gpu::calculate_MWA_analytic_beam``, which calculates an
 analytic version of the MWA primary beam, based on ideal dipoles. This code calculates
 the primary beam response of the MWA using methods from ``RTS``. The analytic
 beam is purely real.
@@ -72,7 +72,7 @@ DOUBLE compiled code (the responses are only stored to 1e-8 precision for testin
 to save space on disk).
 
 If you want to look at your outputs, you can run the notebook located at
-``cmake_testing/primary_beam_cuda/run_header_setup_and_plots.ipynb``. Along with
+``cmake_testing/primary_beam_gpu/run_header_setup_and_plots.ipynb``. Along with
 setting up the az/za coords used in the testing, it will generate a number of
 plots. It will plot the real gains and leakages of the MWA analytic
 beam (e.g. ``jones_MWA_analy_gains_nside101_t00_f200.000MHz.png``):
@@ -91,8 +91,8 @@ as well as the linear Stokes polarisations (e.g.
 
 test_run_hyperbeam.c
 ***********************************
-This calls ``primary_beam_cuda::test_run_hyperbeam_cuda``, which calls
-``primary_beam_cuda::run_hyperbeam_cuda``, which is a wrapper around
+This calls ``primary_beam_gpu::test_run_hyperbeam_gpu``, which calls
+``primary_beam_gpu::run_hyperbeam_gpu``, which is a wrapper around
 `mwa_hyperbeam`_ to calculate the MWA FEE beam.
 
 The MWA beam pointing direction on the sky is controlled by a set of 16 delays.
@@ -150,8 +150,8 @@ the FEE model is complex.
 test_run_hyperbeam_interp.c
 ***********************************
 
-This calls ``primary_beam_cuda::test_run_hyperbeam_cuda``, which calls
-``primary_beam_cuda::run_hyperbeam_cuda``, which is a wrapper around `mwa_hyperbeam`_ to calculate the MWA FEE beam. Unlike ``test_run_hyperbeam.c`` however, we used
+This calls ``primary_beam_gpu::test_run_hyperbeam_gpu``, which calls
+``primary_beam_gpu::run_hyperbeam_gpu``, which is a wrapper around `mwa_hyperbeam`_ to calculate the MWA FEE beam. Unlike ``test_run_hyperbeam.c`` however, we used
 the interpolated hdf5 file which has a higher frequency resolution, to give
 a smooth response as a function of frequency.
 
