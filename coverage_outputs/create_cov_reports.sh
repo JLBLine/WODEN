@@ -70,4 +70,4 @@ coverage xml
 ##delete things that were written out by running tests
 rm WODEN_array_layout.txt *.uvfits *.json \
     example.txt test_load_data.dat test_full_skymodel* \
-    woden_settings.txt *.so
+    woden_settings.txt *.so *.png *.npz

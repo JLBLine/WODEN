@@ -153,7 +153,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
                                num_tiles,
                                num_amps,
                                norm_to_zenith,
-                               &beam_settings->cuda_fee_beam);
+                               &beam_settings->gpu_fee_beam);
 
     if (status != 0) {
       handle_hyperbeam_error(__FILE__, __LINE__, "new_gpu_fee_beam");
@@ -379,7 +379,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     }
 
     free_fee_beam(beam_settings->fee_beam);
-    free_gpu_fee_beam(beam_settings->cuda_fee_beam);
+    free_gpu_fee_beam(beam_settings->gpu_fee_beam);
 
   }
   else if (beamtype == FEE_BEAM_INTERP) {
@@ -412,7 +412,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     }
 
     free_fee_beam(beam_settings->fee_beam);
-    free_gpu_fee_beam(beam_settings->cuda_fee_beam);
+    free_gpu_fee_beam(beam_settings->gpu_fee_beam);
   }
   else if (beamtype == MWA_ANALY) {
 

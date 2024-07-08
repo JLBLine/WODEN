@@ -157,7 +157,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
                                num_beams,
                                num_amps,
                                norm_to_zenith,
-                               &beam_settings->cuda_fee_beam);
+                               &beam_settings->gpu_fee_beam);
 
     // printf("STATUS %d\n", status);
 
@@ -340,7 +340,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     }
 
     free_fee_beam(beam_settings->fee_beam);
-    free_gpu_fee_beam(beam_settings->cuda_fee_beam);
+    free_gpu_fee_beam(beam_settings->gpu_fee_beam);
 
   }
   else if (beamtype == FEE_BEAM_INTERP) {
@@ -384,7 +384,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     }
 
     free_fee_beam(beam_settings->fee_beam);
-    free_gpu_fee_beam(beam_settings->cuda_fee_beam);
+    free_gpu_fee_beam(beam_settings->gpu_fee_beam);
   }
 
   //Now check the fluxes were extrapolated correctly

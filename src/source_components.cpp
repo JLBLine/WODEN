@@ -941,10 +941,10 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
     //Always be doing parallatic angle rotation
     uint8_t parallactic = 1;
 
-    run_hyperbeam_cuda(num_components,
+    run_hyperbeam_gpu(num_components,
            woden_settings->num_time_steps, woden_settings->num_freqs,
            num_beams, parallactic,
-           beam_settings->cuda_fee_beam,
+           beam_settings->gpu_fee_beam,
            reordered_azs, reordered_zas,
            woden_settings->latitudes,
            d_component_beam_gains->d_gxs, d_component_beam_gains->d_Dxs,
@@ -2592,11 +2592,11 @@ extern "C" void test_source_component_common(int num_of_each_flux_type,
   visibility_set_t *d_visibility_set = NULL;
   woden_settings->do_autos = 0;
 
-  //THIS IS THE CUDA CALL ACTUALLY BEING TESTED JEEZUS--------------------------
+  //THIS IS THE GPU CALL ACTUALLY BEING TESTED JEEZUS--------------------------
   source_component_common(woden_settings, beam_settings, d_freqs,
        chunked_source, d_chunked_source, &d_beam_gains, comptype,
        d_visibility_set);
-  //THIS IS THE CUDA CALL ACTUALLY BEING TESTED JEEZUS--------------------------
+  //THIS IS THE GPU CALL ACTUALLY BEING TESTED JEEZUS--------------------------
 
   int num_beam_values = NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*woden_settings->num_time_steps;
 

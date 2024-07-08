@@ -16,10 +16,10 @@ void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
 // //External CUDA code we're linking in
-extern void test_run_hyperbeam_cuda(int num_components,
+extern void test_run_hyperbeam_gpu(int num_components,
            int num_times, int num_freqs, int num_beams,
            uint8_t parallatic,
-           struct FEEBeamGpu *cuda_fee_beam,
+           struct FEEBeamGpu *gpu_fee_beam,
            double *azs, double *zas,
            double *latitudes,
            user_precision_complex_t *primay_beam_J00,
@@ -83,7 +83,7 @@ void test_hyperbeam_interp(int freq_int,
 
   }
 
-  struct FEEBeamGpu *cuda_fee_beam;
+  struct FEEBeamGpu *gpu_fee_beam;
 
   status = new_gpu_fee_beam(fee_beam,
                           freqs_hz,
@@ -93,7 +93,7 @@ void test_hyperbeam_interp(int freq_int,
                           num_tiles,
                           num_amps,
                           norm_to_zenith,
-                          &cuda_fee_beam);
+                          &gpu_fee_beam);
 
   if (status != 0) {
     handle_hyperbeam_error(__FILE__, __LINE__, "new_gpu_fee_beam");
@@ -111,10 +111,10 @@ void test_hyperbeam_interp(int freq_int,
 
   // printf("ROTATES %d %d\n", parallatic, rotate );
 
-  test_run_hyperbeam_cuda(NUM_COMPS,
+  test_run_hyperbeam_gpu(NUM_COMPS,
              num_times, num_freqs, (int)num_tiles,
              parallatic,
-             cuda_fee_beam,
+             gpu_fee_beam,
              azs, zas,
              latitudes,
              primay_beam_J00,
@@ -122,7 +122,7 @@ void test_hyperbeam_interp(int freq_int,
              primay_beam_J10,
              primay_beam_J11);
 
-  free_gpu_fee_beam(cuda_fee_beam);
+  free_gpu_fee_beam(gpu_fee_beam);
   free_fee_beam(fee_beam);
   #ifdef DOUBLE_PRECISION
     #ifdef __HIPCC__

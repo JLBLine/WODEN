@@ -464,13 +464,13 @@ __device__ void update_sum_visis_stokesI(int iBaseline, int iComponent, int num_
 @details It does this if do_QUV == 1:
 
     d_components->extrap_stokesI = NULL;
-    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesI, num_comps*num_freqs*sizeof(double) ));
+    gpuMalloc( (void**)&d_components->extrap_stokesI, num_comps*num_freqs*sizeof(double) );
     d_components->extrap_stokesQ = NULL;
-    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesQ, num_comps*num_freqs*sizeof(double) ));
+    gpuMalloc( (void**)&d_components->extrap_stokesQ, num_comps*num_freqs*sizeof(double) );
     d_components->extrap_stokesU = NULL;
-    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesU, num_comps*num_freqs*sizeof(double) ));
+    gpuMalloc( (void**)&d_components->extrap_stokesU, num_comps*num_freqs*sizeof(double) );
     d_components->extrap_stokesV = NULL;
-    cudaErrorCheckCall( cudaMalloc( (void**)&d_components->extrap_stokesV, num_comps*num_freqs*sizeof(double) ));
+    gpuMalloc( (void**)&d_components->extrap_stokesV, num_comps*num_freqs*sizeof(double) );
 
 If do_QUV == 0, only allocate the StokesI array.
 
@@ -920,10 +920,10 @@ source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
 
 @details It does this if do_QUV == 1:
 
-   cudaErrorCheckCall( cudaFree( d_components->extrap_stokesI ) );
-   cudaErrorCheckCall( cudaFree( d_components->extrap_stokesQ ) );
-   cudaErrorCheckCall( cudaFree( d_components->extrap_stokesU ) );
-   cudaErrorCheckCall( cudaFree( d_components->extrap_stokesV ) );
+   gpuFree d_components->extrap_stokesI );
+   gpuFree d_components->extrap_stokesQ );
+   gpuFree d_components->extrap_stokesU );
+   gpuFree d_components->extrap_stokesV );
 
 If do_QUV == 0, only free the StokesI array.
 

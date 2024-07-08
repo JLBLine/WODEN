@@ -17,25 +17,25 @@ set(DOUBLE_C_COVER_FLAGS -coverage -g -Wall -DDOUBLE_PRECISION)
 
 if(USE_CUDA)
   ##Flags to make CUDA code compile in WODEN float or double modes
-  set(FLOAT_CUDA_FLAGS -g -G --compiler-options -Wall )
-  set(DOUBLE_CUDA_FLAGS -DDOUBLE_PRECISION -g -G --compiler-options -Wall -D__NVCC__)
+  set(FLOAT_GPU_FLAGS -g -G --compiler-options -Wall )
+  set(DOUBLE_GPU_FLAGS -DDOUBLE_PRECISION -g -G --compiler-options -Wall -D__NVCC__)
 elseif(USE_HIP)
   ##Flags to make CUDA code compile in WODEN float or double modes
-  set(FLOAT_CUDA_FLAGS -g -Wall )
-  set(DOUBLE_CUDA_FLAGS -DDOUBLE_PRECISION -g -Wall -D__HIPCC__)
+  set(FLOAT_GPU_FLAGS -g -Wall )
+  set(DOUBLE_GPU_FLAGS -DDOUBLE_PRECISION -g -Wall -D__HIPCC__)
 endif()
 
 
 
 ##define a function that switches between flags
-function(DEFINE_COMP_FLAGS PRECISION C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
+function(DEFINE_COMP_FLAGS PRECISION C_FLAGS GPU_FLAGS C_COVER_FLAGS)
   if(${PRECISION} MATCHES ${FLOAT})
     set(${C_FLAGS} ${FLOAT_C_FLAGS} PARENT_SCOPE)
-    set(${CUDA_FLAGS} ${FLOAT_CUDA_FLAGS} PARENT_SCOPE)
+    set(${GPU_FLAGS} ${FLOAT_GPU_FLAGS} PARENT_SCOPE)
     set(${C_COVER_FLAGS} ${FLOAT_C_COVER_FLAGS} PARENT_SCOPE)
   elseif(${PRECISION} MATCHES ${DOUBLE}) # optional block, can be repeated
     set(${C_FLAGS} ${DOUBLE_C_FLAGS} PARENT_SCOPE)
-    set(${CUDA_FLAGS} ${DOUBLE_CUDA_FLAGS} PARENT_SCOPE)
+    set(${GPU_FLAGS} ${DOUBLE_GPU_FLAGS} PARENT_SCOPE)
     set(${C_COVER_FLAGS} ${DOUBLE_C_COVER_FLAGS} PARENT_SCOPE)
   endif()
 endfunction()
@@ -44,7 +44,7 @@ endfunction()
 add_subdirectory(C_code)
 
 ## Test CUDA code
-add_subdirectory(CUDA_code)
+add_subdirectory(GPU_code)
 
 ## Test python library
 add_subdirectory(wodenpy)

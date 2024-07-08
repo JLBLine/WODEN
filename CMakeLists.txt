@@ -57,10 +57,10 @@ find_library(HBEAM_LIB mwa_hyperbeam HINTS ${HINTS_HBEAM_LIB} REQUIRED)
 
 ##Find the source codes
 file(GLOB CSOURCES "src/*.c")
-file(GLOB CUDASOURCES "src/*.cpp")
+file(GLOB GPUSOURCES "src/*.cpp")
 
 if(USE_CUDA)
-    set_source_files_properties( ${CUDASOURCES} PROPERTIES LANGUAGE CUDA)
+    set_source_files_properties( ${GPUSOURCES} PROPERTIES LANGUAGE CUDA)
 endif()
 
 
@@ -84,17 +84,17 @@ set(TARGET_GROUP production CACHE STRING "Group to build")
 if(TARGET_GROUP STREQUAL production)
     ##Do it for the float code first--------------------------------------------
     ##Generate library for the CUDA code
-    add_library(wodenCUDA_float SHARED ${CUDASOURCES})
+    add_library(wodenGPU_float SHARED ${GPUSOURCES})
     ##Compile CUDA code with all warnings
     if(USE_CUDA)
-       target_compile_options(wodenCUDA_float PRIVATE --compiler-options -Wall)
+       target_compile_options(wodenGPU_float PRIVATE --compiler-options -Wall)
     elseif(USE_HIP)
-       target_compile_options(wodenCUDA_float PRIVATE -Wall)
+       target_compile_options(wodenGPU_float PRIVATE -Wall)
     endif()
 
     ##Add the total WODEN library, linking in the CUDA code
     add_library(woden_float SHARED src/woden.c ${CSOURCES})
-    target_link_libraries(woden_float PUBLIC wodenCUDA_float ${CC_LINKLIBS})
+    target_link_libraries(woden_float PUBLIC wodenGPU_float ${CC_LINKLIBS})
     target_compile_options(woden_float PRIVATE -O3 -Wall)
 
     ##Copy things into the wodenpy dir, which means everything is found when
@@ -107,17 +107,17 @@ if(TARGET_GROUP STREQUAL production)
     ##flag----------------------------------------------------------------------
 
     ##Generate library for the CUDA code
-    add_library(wodenCUDA_double SHARED ${CUDASOURCES})
+    add_library(wodenGPU_double SHARED ${GPUSOURCES})
     ##Compile CUDA code with all warnings
     if(USE_CUDA)
-       target_compile_options(wodenCUDA_double PRIVATE -DDOUBLE_PRECISION --compiler-options -Wall)
+       target_compile_options(wodenGPU_double PRIVATE -DDOUBLE_PRECISION --compiler-options -Wall)
     elseif(USE_HIP)
-        target_compile_options(wodenCUDA_double PRIVATE -DDOUBLE_PRECISION -Wall)
+        target_compile_options(wodenGPU_double PRIVATE -DDOUBLE_PRECISION -Wall)
     endif()
 
     ##Add the total WODEN library, linking in the CUDA code
     add_library(woden_double SHARED src/woden.c ${CSOURCES})
-    target_link_libraries(woden_double PUBLIC wodenCUDA_double ${CC_LINKLIBS})
+    target_link_libraries(woden_double PUBLIC wodenGPU_double ${CC_LINKLIBS})
     target_compile_options(woden_double PRIVATE -O3 -Wall -DDOUBLE_PRECISION)
 
     ##Copy things into the wodenpy dir, which means everything is found when
@@ -132,35 +132,35 @@ elseif(TARGET_GROUP STREQUAL debug)
     ##Do it for the float code first--------------------------------------------
 
     ##Generate library for the CUDA code
-    add_library(wodenCUDA_float SHARED ${CUDASOURCES})
+    add_library(wodenGPU_float SHARED ${GPUSOURCES})
     ##Compile CUDA code with all warnings
     if(USE_CUDA)
-        target_compile_options(wodenCUDA_float PRIVATE -G --compiler-options -g)
+        target_compile_options(wodenGPU_float PRIVATE -G --compiler-options -g)
     elseif(USE_HIP)
-        target_compile_options(wodenCUDA_float PRIVATE -G -g)
+        target_compile_options(wodenGPU_float PRIVATE -G -g)
     endif()
     
     ##Add the total WODEN library, linking in the CUDA code
     add_library(woden_float SHARED src/woden.c ${CSOURCES})
-    target_link_libraries(woden_float PUBLIC wodenCUDA_float ${CC_LINKLIBS})
+    target_link_libraries(woden_float PUBLIC wodenGPU_float ${CC_LINKLIBS})
     target_compile_options(woden_float PRIVATE -O3 -Wall)
 
     ##Do it for the double code now---------------------------------------------
     ##Generate library for the CUDA code
-    add_library(wodenCUDA_double SHARED ${CUDASOURCES})
+    add_library(wodenGPU_double SHARED ${GPUSOURCES})
     ##Compile CUDA code with all warnings
-    target_compile_options(wodenCUDA_double PRIVATE -DDOUBLE_PRECISION
+    target_compile_options(wodenGPU_double PRIVATE -DDOUBLE_PRECISION
                                                        -G --compiler-options -g)
     if(USE_CUDA)
-        target_compile_options(wodenCUDA_double PRIVATE -DDOUBLE_PRECISION
+        target_compile_options(wodenGPU_double PRIVATE -DDOUBLE_PRECISION
                                -G --compiler-options -g)
     elseif(USE_HIP)
-        target_compile_options(wodenCUDA_double PRIVATE -DDOUBLE_PRECISION -G -g)
+        target_compile_options(wodenGPU_double PRIVATE -DDOUBLE_PRECISION -G -g)
     endif()
 
     ##Add the total WODEN library, linking in the CUDA code
     add_library(woden_double SHARED src/woden.c ${CSOURCES})
-    target_link_libraries(woden_double PUBLIC wodenCUDA_double ${CC_LINKLIBS})
+    target_link_libraries(woden_double PUBLIC wodenGPU_double ${CC_LINKLIBS})
     target_compile_options(woden_double PRIVATE -O3 -g -Wall -DDOUBLE_PRECISION)
 
     ##Copy things into the wodenpy dir, which means everything is found when

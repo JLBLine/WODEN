@@ -13,7 +13,7 @@
 #include "visibility_set.h"
 #include "hyperbeam_error.h"
 
-//Main CUDA executable to link in
+//Main GPU executable to link in
 extern void calculate_visibilities(array_layout_t *array_layout,
   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
@@ -69,7 +69,7 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
       }
     }
 
-    //Launch the CUDA code
+    //Launch the GPU code
     calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
                   woden_settings, &visibility_sets[band], sbf);
 

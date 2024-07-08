@@ -181,7 +181,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                             (uint32_t)num_beams,
                             num_amps,
                             norm_to_zenith,
-                            &beam_settings->cuda_fee_beam);
+                            &beam_settings->gpu_fee_beam);
 
     if (status != 0) {
       // handle_hyperbeam_error(__FILE__, __LINE__, "new_gpu_fee_beam");
@@ -615,7 +615,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   }
 
   if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP) {
-    free_gpu_fee_beam(beam_settings->cuda_fee_beam);
+    free_gpu_fee_beam(beam_settings->gpu_fee_beam);
     free(beam_settings->hyper_delays);
   }
 

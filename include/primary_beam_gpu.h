@@ -363,15 +363,15 @@ extern "C" void calculate_RTS_MWA_analytic_beam(int num_components,
 /**
 @brief Calculate the FEE MWA primary beam model to a set of sky directions
 `azs` and `zas` for a given initialised `mwa_hyperbeam` device beam object
-`*cuda_fee_beam`. NOTE that the azs, zas need to increment by component
+`*gpu_fee_beam`. NOTE that the azs, zas need to increment by component
 (fastest changing), then time (slowest changing). This is the OPPOSITE
 of what happens for all other functions, but is needed for pointer arithmatic
 that must be done to feed things into `mwa_hyperbeam` efficiently. Soz boz.
 
-@details Calls `mwa_hyperbeam::calc_jones_cuda_device` to calculate the beam
+@details Calls `mwa_hyperbeam::fee_calc_jones_gpu_device` to calculate the beam
 responses on the device. This function requires an initialised
-`struct FEEBeamGpu *cuda_fee_beam` object (initialised using
-`mwa_hyperbeam::new_cuda_fee_beam`), which in turn needs a
+`struct FEEBeamGpu *gpu_fee_beam` object (initialised using
+`mwa_hyperbeam::new_gpu_fee_beam`), which in turn needs a
 `struct FEEBeam *fee_beam` (initialised using `mwa_hyperbeam::new_fee_beam`).
 Running these functions gathers the spherical harmnoic coefficients for the
 requested frequencies, as well as the delays to point the beam. If these aren't
@@ -386,7 +386,7 @@ d_primay_beam_J* arrays using the kernel `primary_beam_gpu::kern_map_hyperbeam_g
 @param[in] num_beams How many primary beams are being simulated. If making all
 primary beams the same, set to 1, otherwise number of antennas(tiles).
 @param[in] parallactic Whether to rotate by parallactic angle or not
-@param[in] *cuda_fee_beam An initialised `mwa_hyperbeam` `struct FEEBeamGpu`
+@param[in] *gpu_fee_beam An initialised `mwa_hyperbeam` `struct FEEBeamGpu`
 @param[in] *azs Array of Azimuth angles to calculate the beam towards (radians)
 @param[in] *zas Array of Zenith Angles to calculate the beam towards (radians)
 @param[in] *latitudes The latitude of the array for each time step (radians); this
@@ -397,10 +397,10 @@ can be NULL is parallactic = 0
 @param[in,out] *d_primay_beam_J11 The gains for the east-west beam
 
 */
-extern "C" void run_hyperbeam_cuda(int num_components,
+extern "C" void run_hyperbeam_gpu(int num_components,
            int num_time_steps, int num_freqs,
            int num_beams, uint8_t parallactic,
-           struct FEEBeamGpu *cuda_fee_beam,
+           struct FEEBeamGpu *gpu_fee_beam,
            double *azs, double *zas,
            double *latitudes,
            gpuUserComplex *d_primay_beam_J00,

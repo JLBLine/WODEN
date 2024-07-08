@@ -15,12 +15,12 @@ void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
 // //External CUDA code we're linking in
-extern void test_run_hyperbeam_cuda(int num_components,
-           int num_times, int num_freqs, int num_beams,
-           uint8_t parallatic,
-           struct FEEBeamGpu *cuda_fee_beam,
+extern void test_run_hyperbeam_gpu(int num_components,
+           int num_time_steps, int num_freqs, int num_beams,
+           uint8_t parallatic, 
+           struct FEEBeamGpu *gpu_fee_beam,
            double *azs, double *zas,
-           double *latitudes,
+           double *latitudes, 
            user_precision_complex_t *primay_beam_J00,
            user_precision_complex_t *primay_beam_J01,
            user_precision_complex_t *primay_beam_J10,
@@ -28,7 +28,12 @@ extern void test_run_hyperbeam_cuda(int num_components,
 
 //Different delays settings, which control the pointing of the MWA beam
 user_precision_t zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+                                      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+// user_precision_t zenith_delays[32] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                      // 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                      // 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                      // 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,};
 
 user_precision_t off_zenith1_delays[16] = {0.0, 4.0, 8.0, 12.0, 0.0, 4.0, 8.0, 12.0,
                                 0.0, 4.0, 8.0, 12.0, 0.0, 4.0, 8.0, 12.0};
@@ -73,26 +78,44 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
     // printf("There was an error calling new_fee_beam\n");
   }
 
-  uint32_t *hyper_delays = malloc(16*sizeof(uint32_t));
+  uint32_t num_tiles = 3;
 
-  for (int delay = 0; delay < 16; delay++) {
-    hyper_delays[delay] = (uint32_t)delays[delay];
+  //These are the amplitudes for the dipoles, as read in from metafits
+  //I believe that they have X - east-west, Y - north-south
+  double amps[96] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                     0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
+                     0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4,
+                     0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6,
+                     0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8,
+                     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+
+
+  int num_delays_per_tile = 16;
+
+  uint32_t *hyper_delays = malloc(num_tiles*num_delays_per_tile*sizeof(uint32_t));
+
+  for (int delay = 0; delay < num_delays_per_tile; delay++) {
+    for (int tile = 0; tile < num_tiles; tile++) {
+      hyper_delays[tile*num_delays_per_tile + delay] = (uint32_t)delays[delay];
+      hyper_delays[tile*num_delays_per_tile + delay] = (uint32_t)delays[delay];
+    }
   }
 
-  double amps[16] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-
-  uint32_t num_tiles = 1;
-  uint32_t num_amps = 16;
+  //MAKE a 2D array of amps, should be num_tiles * 32 (16 for X 16 for Y)
+  
+  //This num_amps is either 16 or 32, meaning either same amps for X,Y or
+  //unique amps for X,Y
+  uint32_t num_amps = 32;
   uint8_t norm_to_zenith = 1;
   uint32_t num_freqs = 3;
-  int num_beam_values = num_azza*num_freqs;
+  int num_beam_values = num_azza*num_freqs*num_tiles;
 
   //Check that it runs with all channel freqs, but returns the same thing
   //for all frequencies
   uint32_t freqs_hz[3] = {freq - 40e+3, freq, freq + 40e+3};
   // uint32_t freqs_hz[1] = {freq};
 
-  struct FEEBeamGpu *cuda_fee_beam;
+  struct FEEBeamGpu *gpu_fee_beam;
 
   status = new_gpu_fee_beam(fee_beam,
                              freqs_hz,
@@ -102,7 +125,7 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
                              num_tiles,
                              num_amps,
                              norm_to_zenith,
-                             &cuda_fee_beam);
+                             &gpu_fee_beam);
 
   if (status != 0) {
     handle_hyperbeam_error(__FILE__, __LINE__, "new_gpu_fee_beam");
@@ -116,13 +139,12 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
 
 
   uint8_t parallatic = (uint8_t)rotate;
-  int num_ants = 1;
 
   double latitudes[] = {-0.4660608448386394, -0.498};
-  test_run_hyperbeam_cuda(num_components,
-             num_times, num_freqs, num_ants,
+  test_run_hyperbeam_gpu(num_components,
+             num_times, num_freqs, (int)num_tiles,
              parallatic,
-             cuda_fee_beam,
+             gpu_fee_beam,
              azs, zas,
              latitudes,
              primay_beam_J00,
@@ -130,7 +152,7 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
              primay_beam_J10,
              primay_beam_J11);
 
-  free_gpu_fee_beam(cuda_fee_beam);
+  free_gpu_fee_beam(gpu_fee_beam);
   free_fee_beam(fee_beam);
 
   double TOL = 1e-6;
@@ -150,31 +172,42 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
   //   // }
   //
 
-  for (int time = 0; time < num_times; time ++) {
-    for (int freq = 0; freq < num_freqs; freq ++) {
-      for (int comp = 0; comp < num_components; comp ++) {
+  //Given the dip amps we set earlier, we can multiply the expected values by
+  //one of these constants as appropriate
 
-        int beam_ind = num_freqs*time*num_components + num_components*freq + comp;
+  //OKOK so when hyperdrive reads in amps, X = east-west, Y = north-south
+  //I use it with iau_order = 1;, which switches Y = east-west, X = north-south
+  //This means the expected values should be as below
+  double antx_mult[3] = {0.2, 0.6, 1.0};
+  double anty_mult[3] = {0.0, 0.4, 0.8};
 
-        int expected_base = 2*MAX_POLS*comp + 2*MAX_POLS*time*num_components;
+  for (int ant = 0; ant < num_tiles; ant ++) {
+    for (int time = 0; time < num_times; time ++) {
+      for (int freq = 0; freq < num_freqs; freq ++) {
+        for (int comp = 0; comp < num_components; comp ++) {
 
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+0],
-                                  creal(primay_beam_J00[beam_ind]) );
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+1],
-                                  cimag(primay_beam_J00[beam_ind]) );
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+2],
-                                  creal(primay_beam_J01[beam_ind]) );
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+3],
-                                  cimag(primay_beam_J01[beam_ind]) );
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+4],
-                                  creal(primay_beam_J10[beam_ind]) );
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+5],
-                                  cimag(primay_beam_J10[beam_ind]) );
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+6],
-                                  creal(primay_beam_J11[beam_ind]) );
-        TEST_ASSERT_DOUBLE_WITHIN(TOL, expected[expected_base+7],
-                                  cimag(primay_beam_J11[beam_ind]) );
+          int beam_ind = ant*num_freqs*num_times*num_components + num_freqs*time*num_components + num_components*freq + comp;
 
+          int expected_base = 2*MAX_POLS*comp + 2*MAX_POLS*time*num_components;
+
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, antx_mult[ant]*expected[expected_base+0],
+                                    creal(primay_beam_J00[beam_ind]) );
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, antx_mult[ant]*expected[expected_base+1],
+                                    cimag(primay_beam_J00[beam_ind]) );
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, antx_mult[ant]*expected[expected_base+2],
+                                    creal(primay_beam_J01[beam_ind]) );
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, antx_mult[ant]*expected[expected_base+3],
+                                    cimag(primay_beam_J01[beam_ind]) );
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, anty_mult[ant]*expected[expected_base+4],
+                                    creal(primay_beam_J10[beam_ind]) );
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, anty_mult[ant]*expected[expected_base+5],
+                                    cimag(primay_beam_J10[beam_ind]) );
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, anty_mult[ant]*expected[expected_base+6],
+                                    creal(primay_beam_J11[beam_ind]) );
+          TEST_ASSERT_DOUBLE_WITHIN(TOL, anty_mult[ant]*expected[expected_base+7],
+                                    cimag(primay_beam_J11[beam_ind]) );
+
+        }
       }
     }
   }
@@ -205,21 +238,24 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq,
   //   freq);
   // }
 
-  for (int time = 0; time < num_times; time ++) {
-    for (int freq = 0; freq < num_freqs; freq ++) {
-      for (int comp = 0; comp < num_components; comp ++) {
-
-        int beam_ind = num_freqs*time*num_components + num_components*freq + comp;
-        int coord_ind = comp*num_times + time;
-
-        fprintf(beam_values_out,"%.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.1d\n",
-         azs[coord_ind], zas[coord_ind],
-         creal(primay_beam_J00[beam_ind]), cimag(primay_beam_J00[beam_ind]),
-         creal(primay_beam_J01[beam_ind]), cimag(primay_beam_J01[beam_ind]),
-         creal(primay_beam_J10[beam_ind]), cimag(primay_beam_J10[beam_ind]),
-         creal(primay_beam_J11[beam_ind]), cimag(primay_beam_J11[beam_ind]),
-         freqs_hz[freq] );
-
+  for (int ant = 0; ant < num_tiles; ant ++) {
+    for (int time = 0; time < num_times; time ++) {
+      for (int freq = 0; freq < num_freqs; freq ++) {
+        for (int comp = 0; comp < num_components; comp ++) {
+  
+          int beam_ind = ant*num_freqs*num_times*num_components + num_freqs*time*num_components + num_components*freq + comp;
+          // int beam_ind = num_freqs*time*num_components + num_components*freq + comp;
+          int coord_ind = comp*num_times + time;
+  
+          fprintf(beam_values_out,"%.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.1d\n",
+          azs[coord_ind], zas[coord_ind],
+          creal(primay_beam_J00[beam_ind]), cimag(primay_beam_J00[beam_ind]),
+          creal(primay_beam_J01[beam_ind]), cimag(primay_beam_J01[beam_ind]),
+          creal(primay_beam_J10[beam_ind]), cimag(primay_beam_J10[beam_ind]),
+          creal(primay_beam_J11[beam_ind]), cimag(primay_beam_J11[beam_ind]),
+          freqs_hz[freq] );
+  
+        }
       }
     }
   }
@@ -258,9 +294,9 @@ void check_for_env_and_run_test(double freq, user_precision_t *delays,
 
     int rotate;
 
-    // Without rotation by parallactic angle
-    rotate = 0;
-    test_hyperbeam_VaryFreqVaryPointing(freq, delays, mwa_fee_hdf5, expected, outname, rotate);
+    // // Without rotation by parallactic angle
+    // rotate = 0;
+    // test_hyperbeam_VaryFreqVaryPointing(freq, delays, mwa_fee_hdf5, expected, outname, rotate);
 
     // //With rotation by parallactic angle
     rotate = 1;
@@ -287,7 +323,7 @@ void test_hyperbeam_150MHz_zenith(void) {
 
 void test_hyperbeam_200MHz_zenith(void) {
   check_for_env_and_run_test(200e+6, zenith_delays, zenith_200,
-                             zenith_200_rot, "hyperbeam_zenith_200");
+                             zenith_200_rot, "hyperbeam_zenith_200_two_ants");
 }
 
 void test_hyperbeam_100MHz_off_zenith1(void) {

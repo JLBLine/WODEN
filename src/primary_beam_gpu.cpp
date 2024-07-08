@@ -562,10 +562,10 @@ __global__ void fill_with_ones(int num_azza, double *d_jones) {
 }
 
 
-extern "C" void run_hyperbeam_cuda(int num_components,
+extern "C" void run_hyperbeam_gpu(int num_components,
            int num_time_steps, int num_freqs,
            int num_beams, uint8_t parallactic,
-           struct FEEBeamGpu *cuda_fee_beam,
+           struct FEEBeamGpu *gpu_fee_beam,
            double *azs, double *zas,
            double *latitudes,
            gpuUserComplex *d_gxs,
@@ -610,15 +610,15 @@ extern "C" void run_hyperbeam_cuda(int num_components,
   }
 
   // int num_tiles = num_beams;
-  int num_unique_fee_freqs = get_num_unique_fee_freqs(cuda_fee_beam);
-  // int num_unique_fee_tiles = get_num_unique_fee_tiles(cuda_fee_beam);
+  int num_unique_fee_freqs = get_num_unique_fee_freqs(gpu_fee_beam);
+  // int num_unique_fee_tiles = get_num_unique_fee_tiles(gpu_fee_beam);
 
   //Get host pointers to the tile and freq maps
   const int *tile_map;
   const int *freq_map;
 
-  tile_map = get_fee_tile_map(cuda_fee_beam);
-  freq_map = get_fee_freq_map(cuda_fee_beam);
+  tile_map = get_fee_tile_map(gpu_fee_beam);
+  freq_map = get_fee_freq_map(gpu_fee_beam);
 
   //Copy the tile and freq maps to the GPU
   int32_t *d_tile_map = NULL;
@@ -645,7 +645,7 @@ extern "C" void run_hyperbeam_cuda(int num_components,
       //frequencies - 
       increment = time_ind*num_components;
 
-      status = fee_calc_jones_gpu_device(cuda_fee_beam,
+      status = fee_calc_jones_gpu_device(gpu_fee_beam,
                       (uint32_t)num_components,
                       azs + increment, zas + increment,
                       &latitudes[time_ind],
@@ -665,7 +665,7 @@ extern "C" void run_hyperbeam_cuda(int num_components,
     }
   }
   else {
-    status = fee_calc_jones_gpu_device(cuda_fee_beam,
+    status = fee_calc_jones_gpu_device(gpu_fee_beam,
                     (uint32_t)num_azza,
                     azs, zas,
                     NULL,
@@ -901,10 +901,10 @@ extern "C" void test_calculate_gaussian_beam(int num_components, int num_time_st
 
 }
 
-extern "C" void test_run_hyperbeam_cuda(int num_components,
+extern "C" void test_run_hyperbeam_gpu(int num_components,
            int num_time_steps, int num_freqs, int num_ants,
            uint8_t parallatic,
-           struct FEEBeamGpu *cuda_fee_beam,
+           struct FEEBeamGpu *gpu_fee_beam,
            double *azs, double *zas,
            double *latitudes,
            user_precision_complex_t *primay_beam_J00,
@@ -942,10 +942,10 @@ extern "C" void test_run_hyperbeam_cuda(int num_components,
     }
   }
 
-  run_hyperbeam_cuda(num_components,
+  run_hyperbeam_gpu(num_components,
              num_time_steps, num_freqs, num_ants,
              parallatic,
-             cuda_fee_beam,
+             gpu_fee_beam,
              reordered_azs, reordered_zas,
              latitudes,
              (gpuUserComplex *)d_gxs,

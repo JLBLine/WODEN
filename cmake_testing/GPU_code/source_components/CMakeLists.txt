@@ -5,7 +5,7 @@ include_directories("${CMAKE_SOURCE_DIR}/cmake_testing/source_components")
 foreach(PRECISION IN LISTS FLOAT DOUBLE)
 # foreach(PRECISION IN LISTS DOUBLE)
   ##Set the flags depending on the precision
-  DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
+  DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS GPU_FLAGS C_COVER_FLAGS)
 
   if(USE_CUDA)
     set_source_files_properties("${CMAKE_SOURCE_DIR}/src/source_components.cpp"
@@ -13,12 +13,12 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
               "${CMAKE_SOURCE_DIR}/src/primary_beam_gpu.cpp" PROPERTIES LANGUAGE CUDA)
   endif()
 
-  add_library(source_componentsCUDA_${PRECISION} SHARED
+  add_library(source_componentsGPU_${PRECISION} SHARED
               "${CMAKE_SOURCE_DIR}/src/source_components.cpp"
               "${CMAKE_SOURCE_DIR}/src/fundamental_coords.cpp"
               "${CMAKE_SOURCE_DIR}/src/primary_beam_gpu.cpp")
 
-  target_compile_options(source_componentsCUDA_${PRECISION} PRIVATE ${CUDA_FLAGS})
+  target_compile_options(source_componentsGPU_${PRECISION} PRIVATE ${GPU_FLAGS})
 
   ##----------------------------------------------------------------------------
   ##Now to add the tests in
@@ -31,11 +31,11 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_link_libraries(test_extrap_stokes_${PRECISION}_app
       Unity
-      source_componentsCUDA_${PRECISION}
+      source_componentsGPU_${PRECISION}
       ${CC_LINKLIBS}
   )
   target_compile_options(test_extrap_stokes_${PRECISION}_app PRIVATE ${C_FLAGS})
-  add_test(CUDA_test_extrap_stokes_${PRECISION} test_extrap_stokes_${PRECISION}_app)
+  add_test(GPU_test_extrap_stokes_${PRECISION} test_extrap_stokes_${PRECISION}_app)
 
   ##Test measurement equation
   add_executable(test_calc_measurement_equation_${PRECISION}_app
@@ -43,12 +43,12 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_link_libraries(test_calc_measurement_equation_${PRECISION}_app
       Unity
-      source_componentsCUDA_${PRECISION}
+      source_componentsGPU_${PRECISION}
       ${CC_LINKLIBS}
   )
   target_compile_options(test_calc_measurement_equation_${PRECISION}_app
                          PRIVATE ${C_FLAGS})
-  add_test(CUDA_test_calc_measurement_equation_${PRECISION}
+  add_test(GPU_test_calc_measurement_equation_${PRECISION}
            test_calc_measurement_equation_${PRECISION}_app)
 
   ##Test ${PRECISION}_applying primary beam gains to visibilities
@@ -57,12 +57,12 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_link_libraries(test_apply_beam_gains_${PRECISION}_app
       Unity
-      source_componentsCUDA_${PRECISION}
+      source_componentsGPU_${PRECISION}
       ${CC_LINKLIBS}
   )
   target_compile_options(test_apply_beam_gains_${PRECISION}_app
                          PRIVATE ${C_FLAGS})
-  add_test(CUDA_test_apply_beam_gains_${PRECISION}
+  add_test(GPU_test_apply_beam_gains_${PRECISION}
            test_apply_beam_gains_${PRECISION}_app)
 
   ##Test grabbing the correct primary beam gains
@@ -71,12 +71,12 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_link_libraries(test_get_beam_gains_${PRECISION}_app
       Unity
-      source_componentsCUDA_${PRECISION}
+      source_componentsGPU_${PRECISION}
       ${CC_LINKLIBS}
   )
   target_compile_options(test_get_beam_gains_${PRECISION}_app
                          PRIVATE ${C_FLAGS})
-  add_test(CUDA_test_get_beam_gains_${PRECISION}
+  add_test(GPU_test_get_beam_gains_${PRECISION}
            test_get_beam_gains_${PRECISION}_app)
 
 
@@ -87,12 +87,12 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_link_libraries(test_source_component_common_${PRECISION}_app
       Unity
-      source_componentsCUDA_${PRECISION}
+      source_componentsGPU_${PRECISION}
       ${CC_LINKLIBS}
   )
   target_compile_options(test_source_component_common_${PRECISION}_app
                          PRIVATE ${C_FLAGS})
-  add_test(CUDA_test_source_component_common_${PRECISION}
+  add_test(GPU_test_source_component_common_${PRECISION}
            test_source_component_common_${PRECISION}_app)
 
   ##Test the point source visibility kernel
@@ -104,12 +104,12 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_link_libraries(test_kern_calc_visi_point_${PRECISION}_app
       Unity
-      source_componentsCUDA_${PRECISION}
+      source_componentsGPU_${PRECISION}
       ${CC_LINKLIBS}
   )
   target_compile_options(test_kern_calc_visi_point_${PRECISION}_app
                          PRIVATE ${C_FLAGS})
-  add_test(CUDA_test_kern_calc_visi_point_${PRECISION}
+  add_test(GPU_test_kern_calc_visi_point_${PRECISION}
            test_kern_calc_visi_point_${PRECISION}_app)
 
   ## Test the Gaussian visibility kernel
@@ -121,12 +121,12 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_link_libraries(test_kern_calc_visi_gauss_${PRECISION}_app
       Unity
-      source_componentsCUDA_${PRECISION}
+      source_componentsGPU_${PRECISION}
       ${CC_LINKLIBS}
   )
   target_compile_options(test_kern_calc_visi_gauss_${PRECISION}_app
                          PRIVATE ${C_FLAGS})
-  add_test(CUDA_test_kern_calc_visi_gauss_${PRECISION}
+  add_test(GPU_test_kern_calc_visi_gauss_${PRECISION}
            test_kern_calc_visi_gauss_${PRECISION}_app)
 
   ##Test the shapelet visibility kernel
@@ -138,12 +138,12 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_link_libraries(test_kern_calc_visi_shape_${PRECISION}_app
       Unity
-      source_componentsCUDA_${PRECISION}
+      source_componentsGPU_${PRECISION}
       ${CC_LINKLIBS}
   )
   target_compile_options(test_kern_calc_visi_shape_${PRECISION}_app
                          PRIVATE ${C_FLAGS})
-  add_test(CUDA_test_kern_calc_visi_shape_${PRECISION}
+  add_test(GPU_test_kern_calc_visi_shape_${PRECISION}
            test_kern_calc_visi_shape_${PRECISION}_app)
 
   ##Test applying primary beam gains and extrapolated fluxes to visibilities
@@ -152,12 +152,12 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_link_libraries(test_update_sum_visis_${PRECISION}_app
       Unity
-      source_componentsCUDA_${PRECISION}
+      source_componentsGPU_${PRECISION}
       ${CC_LINKLIBS}
   )
   target_compile_options(test_update_sum_visis_${PRECISION}_app
                          PRIVATE ${C_FLAGS})
-  add_test(CUDA_test_update_sum_visis_${PRECISION}
+  add_test(GPU_test_update_sum_visis_${PRECISION}
            test_update_sum_visis_${PRECISION}_app)
 
 
@@ -167,13 +167,13 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
       ${CMAKE_SOURCE_DIR}/src/visibility_set.c
   )
   target_link_libraries(test_kern_calc_autos_${PRECISION}_app
-      source_componentsCUDA_${PRECISION}
+      source_componentsGPU_${PRECISION}
       ${CC_LINKLIBS}
       Unity
   )
   target_compile_options(test_kern_calc_autos_${PRECISION}_app
                          PRIVATE ${C_FLAGS})
-  add_test(CUDA_test_kern_calc_autos_${PRECISION}
+  add_test(GPU_test_kern_calc_autos_${PRECISION}
            test_kern_calc_autos_${PRECISION}_app)
 
 
@@ -183,12 +183,12 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_link_libraries(test_get_beam_gains_two_antennas_${PRECISION}_app
       Unity
-      source_componentsCUDA_${PRECISION}
+      source_componentsGPU_${PRECISION}
       ${CC_LINKLIBS}
   )
   target_compile_options(test_get_beam_gains_two_antennas_${PRECISION}_app
                       PRIVATE ${C_FLAGS})
-  add_test(CUDA_test_get_beam_gains_two_antennas_${PRECISION}
+  add_test(GPU_test_get_beam_gains_two_antennas_${PRECISION}
           test_get_beam_gains_two_antennas_${PRECISION}_app)
 
   add_executable(test_update_sum_visis_multiants_${PRECISION}_app
@@ -196,12 +196,12 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_link_libraries(test_update_sum_visis_multiants_${PRECISION}_app
   Unity
-  source_componentsCUDA_${PRECISION}
+  source_componentsGPU_${PRECISION}
   ${CC_LINKLIBS}
   )
   target_compile_options(test_update_sum_visis_multiants_${PRECISION}_app
                     PRIVATE ${C_FLAGS})
-  add_test(CUDA_test_update_sum_visis_multiants_${PRECISION}
+  add_test(GPU_test_update_sum_visis_multiants_${PRECISION}
       test_update_sum_visis_multiants_${PRECISION}_app)
 
   ##Test the common calls between all component types return expected values
@@ -211,12 +211,12 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   )
   target_link_libraries(test_source_component_common_multiants_${PRECISION}_app
       Unity
-      source_componentsCUDA_${PRECISION}
+      source_componentsGPU_${PRECISION}
       ${CC_LINKLIBS}
   )
   target_compile_options(test_source_component_common_multiants_${PRECISION}_app
                         PRIVATE ${C_FLAGS})
-  add_test(CUDA_test_source_component_common_multiants_${PRECISION}
+  add_test(GPU_test_source_component_common_multiants_${PRECISION}
           test_source_component_common_multiants_${PRECISION}_app)
 
    # ##Test the function that calculates the autocorrelations
@@ -225,13 +225,13 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   ${CMAKE_SOURCE_DIR}/src/visibility_set.c
   )
   target_link_libraries(test_kern_calc_autos_multiants_${PRECISION}_app
-  source_componentsCUDA_${PRECISION}
+  source_componentsGPU_${PRECISION}
   ${CC_LINKLIBS}
   Unity
   )
   target_compile_options(test_kern_calc_autos_multiants_${PRECISION}_app
                       PRIVATE ${C_FLAGS})
-  add_test(CUDA_test_kern_calc_autos_multiants_${PRECISION}
+  add_test(GPU_test_kern_calc_autos_multiants_${PRECISION}
       test_kern_calc_autos_multiants_${PRECISION}_app)
 
 

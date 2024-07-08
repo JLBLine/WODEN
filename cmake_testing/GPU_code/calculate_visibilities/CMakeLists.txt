@@ -8,7 +8,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
 # foreach(PRECISION IN LISTS DOUBLE)
 # foreach(PRECISION IN LISTS FLOAT)
     ##Set the flags depending on the precision
-    DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
+    DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS GPU_FLAGS C_COVER_FLAGS)
 
     if(USE_CUDA)
         set_source_files_properties( "${CMAKE_SOURCE_DIR}/src/calculate_visibilities.cpp"
@@ -19,13 +19,13 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     endif()
 
     ##First add necessary CUDA code to a library
-    add_library(calculate_visibilitiesCUDA_${PRECISION} SHARED
+    add_library(calculate_visibilitiesGPU_${PRECISION} SHARED
                 "${CMAKE_SOURCE_DIR}/src/calculate_visibilities.cpp"
                 "${CMAKE_SOURCE_DIR}/src/source_components.cpp"
                 "${CMAKE_SOURCE_DIR}/src/fundamental_coords.cpp"
                 "${CMAKE_SOURCE_DIR}/src/primary_beam_gpu.cpp")
 
-    target_compile_options(calculate_visibilitiesCUDA_${PRECISION} PRIVATE ${CUDA_FLAGS})
+    target_compile_options(calculate_visibilitiesGPU_${PRECISION} PRIVATE ${GPU_FLAGS})
 
     ##Quite a large number of C depenecies here so stick em in a library
     add_library(calculate_visibilities_Cdepends_${PRECISION} SHARED
@@ -45,13 +45,13 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_calculate_visibilities_nobeam_${PRECISION}_app
         calculate_visibilities_Cdepends_${PRECISION}
-        calculate_visibilitiesCUDA_${PRECISION}
+        calculate_visibilitiesGPU_${PRECISION}
         ${CC_LINKLIBS}
         Unity
     )
     target_compile_options(test_calculate_visibilities_nobeam_${PRECISION}_app
                                                                 PRIVATE ${C_FLAGS})
-    add_test(CUDA_test_calculate_visibilities_nobeam_${PRECISION}
+    add_test(GPU_test_calculate_visibilities_nobeam_${PRECISION}
             test_calculate_visibilities_nobeam_${PRECISION}_app)
 
 
@@ -63,13 +63,13 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_calculate_visibilities_gaussbeam_${PRECISION}_app
         calculate_visibilities_Cdepends_${PRECISION}
-        calculate_visibilitiesCUDA_${PRECISION}
+        calculate_visibilitiesGPU_${PRECISION}
         ${CC_LINKLIBS}
         Unity
     )
     target_compile_options(test_calculate_visibilities_gaussbeam_${PRECISION}_app
                                                             PRIVATE ${C_FLAGS})
-    add_test(CUDA_test_calculate_visibilities_gaussbeam_${PRECISION}
+    add_test(GPU_test_calculate_visibilities_gaussbeam_${PRECISION}
             test_calculate_visibilities_gaussbeam_${PRECISION}_app)
 
 
@@ -81,13 +81,13 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_calculate_visibilities_edabeam_${PRECISION}_app
         calculate_visibilities_Cdepends_${PRECISION}
-        calculate_visibilitiesCUDA_${PRECISION}
+        calculate_visibilitiesGPU_${PRECISION}
         ${CC_LINKLIBS}
         Unity
     )
     target_compile_options(test_calculate_visibilities_edabeam_${PRECISION}_app
                                                             PRIVATE ${C_FLAGS})
-    add_test(CUDA_test_calculate_visibilities_edabeam_${PRECISION}
+    add_test(GPU_test_calculate_visibilities_edabeam_${PRECISION}
             test_calculate_visibilities_edabeam_${PRECISION}_app)
 
 
@@ -99,13 +99,13 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_calculate_visibilities_mwafeebeam_${PRECISION}_app
         calculate_visibilities_Cdepends_${PRECISION}
-        calculate_visibilitiesCUDA_${PRECISION}
+        calculate_visibilitiesGPU_${PRECISION}
         ${CC_LINKLIBS}
         Unity
     )
     target_compile_options(test_calculate_visibilities_mwafeebeam_${PRECISION}_app
                                                             PRIVATE ${C_FLAGS})
-    add_test(CUDA_test_calculate_visibilities_mwafeebeam_${PRECISION}
+    add_test(GPU_test_calculate_visibilities_mwafeebeam_${PRECISION}
             test_calculate_visibilities_mwafeebeam_${PRECISION}_app)
 
 
@@ -116,13 +116,13 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_calculate_visibilities_mwafeebeaminterp_${PRECISION}_app
         calculate_visibilities_Cdepends_${PRECISION}
-        calculate_visibilitiesCUDA_${PRECISION}
+        calculate_visibilitiesGPU_${PRECISION}
         ${CC_LINKLIBS}
         Unity
     )
     target_compile_options(test_calculate_visibilities_mwafeebeaminterp_${PRECISION}_app
                                                             PRIVATE ${C_FLAGS})
-    add_test(CUDA_test_calculate_visibilities_mwafeebeaminterp_${PRECISION}
+    add_test(GPU_test_calculate_visibilities_mwafeebeaminterp_${PRECISION}
     test_calculate_visibilities_mwafeebeaminterp_${PRECISION}_app)
 
 
@@ -133,13 +133,13 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_calculate_visibilities_mwaanalybeam_${PRECISION}_app
         calculate_visibilities_Cdepends_${PRECISION}
-        calculate_visibilitiesCUDA_${PRECISION}
+        calculate_visibilitiesGPU_${PRECISION}
         ${CC_LINKLIBS}
         Unity
     )
     target_compile_options(test_calculate_visibilities_mwaanalybeam_${PRECISION}_app
                                                             PRIVATE ${C_FLAGS})
-    add_test(CUDA_test_calculate_visibilities_mwaanalybeam_${PRECISION}
+    add_test(GPU_test_calculate_visibilities_mwaanalybeam_${PRECISION}
     test_calculate_visibilities_mwaanalybeam_${PRECISION}_app)
 
 
@@ -150,13 +150,13 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_calculate_visibilities_multibeams_${PRECISION}_app
     calculate_visibilities_Cdepends_${PRECISION}
-    calculate_visibilitiesCUDA_${PRECISION}
+    calculate_visibilitiesGPU_${PRECISION}
     ${CC_LINKLIBS}
     Unity
     )
     target_compile_options(test_calculate_visibilities_multibeams_${PRECISION}_app
                                                         PRIVATE ${C_FLAGS})
-    add_test(CUDA_test_calculate_visibilities_multibeams_${PRECISION}
+    add_test(GPU_test_calculate_visibilities_multibeams_${PRECISION}
     test_calculate_visibilities_multibeams_${PRECISION}_app)
 
 endforeach()
