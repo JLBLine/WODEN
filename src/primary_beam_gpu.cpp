@@ -611,7 +611,7 @@ extern "C" void run_hyperbeam_cuda(int num_components,
 
   // int num_tiles = num_beams;
   int num_unique_fee_freqs = get_num_unique_fee_freqs(cuda_fee_beam);
-  int num_unique_fee_tiles = get_num_unique_fee_tiles(cuda_fee_beam);
+  // int num_unique_fee_tiles = get_num_unique_fee_tiles(cuda_fee_beam);
 
   //Get host pointers to the tile and freq maps
   const int *tile_map;

@@ -33,11 +33,10 @@ if(USE_CUDA)
 elseif(USE_HIP)
     message("DEBUG : USE_HIP=ON")
 
-    project(woden VERSION 2.2 LANGUAGES CXX C)
+    project(woden VERSION 2.2 LANGUAGES CXX C HIP)
+    
     set(CMAKE_CXX_COMPILER hipcc)
     add_definitions("-D__HIP_PLATFORM_AMD__ -D__HIPCC__")
-
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D__HIP_PLATFORM_AMD__ -D__HIPCC__ ")
 
     ##TODO, remove this if -DGPU_TARGETS="gfx1032;gfx1035" works
     if(HIP_ARCH)
