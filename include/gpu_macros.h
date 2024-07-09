@@ -4,8 +4,7 @@
   @author Marcin Sokolowski and Cristian Di Pietrantonio, edited by Jack Line
 */
 
-#ifndef __GPU_MACROS_H__
-#define __GPU_MACROS_H__
+#pragma once
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -117,7 +116,7 @@ inline void GPUErrorCheck(const char *message, gpuError_t code, const char *file
 #define gpuGetLastError cudaGetLastError
 #define gpuMemGetInfo(...) GPUErrorCheck("cudaMemGetInfo", cudaMemGetInfo(__VA_ARGS__),__FILE__, __LINE__)
 #define gpuMallocHost(...) GPUErrorCheck("cudaMallocHost", cudaMallocHost(__VA_ARGS__),__FILE__, __LINE__)
-#define gpuCheckErrors(...) cudaCheckErrors(__VA_ARGS__)
+// #define gpuCheckErrors(...) cudaCheckErrors(__VA_ARGS__)
 #define gpuFreeHost(...) GPUErrorCheck(" cudaFreeHost",  cudaFreeHost(__VA_ARGS__),__FILE__, __LINE__ )
 #define gpuGetDeviceProperties(...) cudaGetDeviceProperties(__VA_ARGS__)
 #define gpuDeviceProp cudaDeviceProp
@@ -191,7 +190,7 @@ inline void GPUErrorCheck(const char *message, gpuError_t code, const char *file
 #define gpuGetLastError hipGetLastError
 #define gpuMemGetInfo(...) GPUErrorCheck("hipMemGetInfo", hipMemGetInfo(__VA_ARGS__),__FILE__, __LINE__)
 #define gpuMallocHost(...) GPUErrorCheck("hipHostMalloc", hipHostMalloc(__VA_ARGS__, 0),__FILE__, __LINE__) // TODO : double check this may be temporary only
-#define gpuCheckErrors(...) hipCheckErrors(__VA_ARGS__)
+// #define gpuCheckErrors(...) hipCheckErrors(__VA_ARGS__)
 #define gpuFreeHost(...)  GPUErrorCheck( "hipFreeHost", hipFreeHost(__VA_ARGS__),__FILE__, __LINE__ )
 #define gpuGetDeviceProperties(...) GPUErrorCheck( "hipGetDeviceProperties", hipGetDeviceProperties(__VA_ARGS__),__FILE__, __LINE__ )
 #define gpuDeviceProp hipDeviceProp_t
@@ -226,9 +225,6 @@ inline void GPUErrorCheck(const char *message, gpuError_t code, const char *file
 
 
 #endif
-#endif
-
-
 
 /**
 @brief Takes a GPU kernel, runs it with given arguments, and passes results
@@ -241,7 +237,7 @@ arguments here. `kernel` is then run via
 
 where `__VA_ARGS__` passes on the arguments located at `...`
 
-`gpuErrorCheckKernel` then passes the string `message` on to `ErrorCheck`,
+`gpuErrorCheckKernel` then passes the string `message` on to `GPUErrorCheck`,
 along with the file name and line number via `__FILE__` and `__LINE__`, and
 checks the errors from both `gpuGetLastError()` and `gpuDeviceSynchronize()`
 after running the kernel.
@@ -269,3 +265,24 @@ with 10 grids of 64 threads, run the following:
   GPUErrorCheck(message, gpuGetLastError(), __FILE__, __LINE__); \
   GPUErrorCheck(message, gpuDeviceSynchronize(), __FILE__, __LINE__);
 //   gpuDeviceSynchronize();
+
+
+/**
+@brief NOTE the actual function is `GPUErrorCheck`, but for some goddam reason Doxygen refuses to document it when inside a conditional so I've made a copy here. Take a GPU error message (code), and checks whether an error
+occurred. 
+
+@details If an error happened, uses `message` to give more information to the
+user, along with the decoded CUDA error message. Uses `file` and `line` to
+report where the error happened. Optional bool `abort` means you can switch off
+exiting if an error is found (default true)
+
+@param[in] message User supplied error message
+@param[in] code Error message out of CUDA call (e.g. cudaMalloc)
+@param[in] file Name of file call was made in
+@param[in] line Line of file call was made in
+@param[in] abort If true, exit the CUDA code when an error is found. Defaults to True.
+
+*/
+inline void docGPUErrorCheck(const char *message, gpuError_t code, const char *file, int line, bool abort=EXITERROR){
+  //Don't do nothing
+}
