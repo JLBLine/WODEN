@@ -14,7 +14,7 @@ endif()
 
 if(USE_CUDA)
     message("USING CUDA : USE_CUDA=ON")
-    project(woden VERSION 2.2 LANGUAGES CXX C CUDA) 
+    project(woden VERSION 2.2 LANGUAGES CXX C CUDA)
 
     ##Sets the -std=c++11 nvcc compiler flag I think
     set(CMAKE_CUDA_STANDARD 11)
@@ -23,10 +23,10 @@ if(USE_CUDA)
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D__NVCC__ ")
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
-    if (NOT DEFINED CUDAARCHS)
+    if (NOT DEFINED ENV{CUDAARCHS})
         message("WARNING : CUDAARCHS not set, so CMAKE_CUDA_ARCHITECTURES has defaulted to whatever CMake has set, which is ${CMAKE_CUDA_ARCHITECTURES}")
     else()
-        message("INFO : CUDAARCHS was set, so now CMAKE_CUDA_ARCHITECTURES is set to ${CMAKE_CUDA_ARCHITECTURES}")
+        message("INFO : CUDAARCHS was set to $ENV{CUDAARCHS}, so now CMAKE_CUDA_ARCHITECTURES is set to ${CMAKE_CUDA_ARCHITECTURES}")
     endif()
     
 
