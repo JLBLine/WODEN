@@ -40,6 +40,16 @@ function(DEFINE_COMP_FLAGS PRECISION C_FLAGS GPU_FLAGS C_COVER_FLAGS)
   endif()
 endfunction()
 
+##make sure we have Python. Deal with differing versions of CMake causing
+##slightly different definitions of PYTHON_EXECUTABLE
+##Why did they change PYTHON_EXECUTABLE to Python_EXECUTABLE??
+
+include(FindPython)
+
+if (NOT DEFINED ${PYTHON_EXECUTABLE})
+    set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
+endif()
+
 ## Test C code
 add_subdirectory(C_code)
 

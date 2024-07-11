@@ -1,6 +1,3 @@
-
-include(FindPython)
-
 ## Make a library to read in the woden_settings inputs, depending on whether
 ## things are float or double precision
 foreach(PRECISION IN LISTS FLOAT DOUBLE)

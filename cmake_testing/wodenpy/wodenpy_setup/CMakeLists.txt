@@ -1,6 +1,3 @@
-
-include(FindPython)
-
 ##Set an environment variable for the ctest of this, so we can find a path
 ##to some test files that live in this dir
 add_test(python_test_argument_inputs ${PYTHON_EXECUTABLE}

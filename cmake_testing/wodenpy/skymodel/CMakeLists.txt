@@ -1,6 +1,3 @@
-include(FindPython)
-
-
 # add_test(python_test_read_yaml_radec_count_components ${PYTHON_EXECUTABLE}
 #          ${CMAKE_CURRENT_SOURCE_DIR}/test_read_yaml_radec_count_components.py)
 # set_tests_properties(python_test_read_yaml_radec_count_components PROPERTIES
