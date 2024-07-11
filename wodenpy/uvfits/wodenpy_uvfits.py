@@ -181,7 +181,7 @@ def create_uvfits(v_container=None,freq_cent=None,
                   telescope_name=None,
                   baselines_array=None, date_array=None,
                   int_jd=None, hdu_ant=None, gitlabel=False,
-                  IAU_order=False):
+                  IAU_order=False, comment=False):
     """
     Takes visibility data read in from WODEN binary files, predefined
     BASELINE and DATE arrays and an antenna table, and writes them out
@@ -240,12 +240,14 @@ def create_uvfits(v_container=None,freq_cent=None,
         Optional string to add as 'GITLABEL' in the header. Used by WODEN to
         add the git commit of the code for this run
     IAU_order : Boolean
-        By default, the visibilities out of the CUDA/C code have 
+        By default, the visibilities out of the GPU/C code have 
         XX = North-South, which is the the IAU ordering. Turns out most people
         want `uvfits` with XX = East-West. So when `IAU_order == True`, do
         not reorder the input data, and add a header value of `IAUORDER` = True.
         If `IAU_order == False`, then the XX is flipped to be East-West by
-        reordering the data in 
+        reordering the data in v_container
+    comment : string
+        Optional COMMENT to add to the uvfits header
     """
 
     if not uu.shape[0]==vv.shape[0]==ww.shape[0]==baselines_array.shape[0]==date_array.shape[0]==v_container.shape[0]:
@@ -357,6 +359,9 @@ def create_uvfits(v_container=None,freq_cent=None,
         uvhdu.header['IAUORDER'] = True
     else:
         uvhdu.header['IAUORDER'] = False
+        
+    if comment:
+        uvhdu.header['COMMENT'] = comment
 
     ## Create hdulist and write out file
     hdulist = fits.HDUList(hdus=[uvhdu,hdu_ant])

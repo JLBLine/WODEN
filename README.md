@@ -49,7 +49,6 @@ and then run things through Docker or Singularity (more detail on that on [ReadT
 
 Docker versions tested to run on various Australian superclusters are listed below:
 
-- `jlbline/woden-2.2:cuda-70` - tested on Pawsey Garrawarla
 - `jlbline/woden-2.2:cuda-60` - tested on Swinburne OzStar
 - `jlbline/woden-2.2:cuda-80` - tested on Swinburne Ngarrgu Tindebeek
 - `jlbline/woden-2.2:setonix` - tested on Pawsey Setonix (this is *very* experimental)

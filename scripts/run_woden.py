@@ -316,7 +316,8 @@ def main(argv=None):
                           hdu_ant=hdu_ant, gitlabel=gitlabel,
                           longitude=args.longitude, latitude=args.latitude,
                           array_height=args.array_height,
-                          telescope_name=args.telescope_name)
+                          telescope_name=args.telescope_name,
+                          comment=args.command)
 
 if __name__ == "__main__":
     main()

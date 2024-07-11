@@ -15,10 +15,10 @@ Both options are described below, jump to whatever suits you.
 
 ``WODEN`` has been tested to run on the following Australian super computers:
 
-- Garrawarla (Pawsey)
-- OzStar (Swinburne University)
-- Ngarrgu Tindebeek (Swinburne University)
-- Setonix (Pawsey)
+- Garrawarla (Pawsey) CUDA
+- OzStar (Swinburne University) CUDA
+- Ngarrgu Tindebeek (Swinburne University) CUDA
+- Setonix (Pawsey) HIP
 
 .. _install manual:
 
