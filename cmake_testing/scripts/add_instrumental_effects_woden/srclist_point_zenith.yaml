@@ -1,0 +1,13 @@
+point_zenith:
+  - ra: 359.795173466766
+    dec: -26.78489614158702
+    comp_type: point
+    flux_type:
+      power_law:
+        si: 0.0
+        fd:
+          freq: 180000000.0
+          i: 1.0
+          q: 0.0
+          u: 0.0
+          v: 0.0

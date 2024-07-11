@@ -1,62 +1,52 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.21)
 
 ##Need to find CUDA compiler
 include(CheckLanguage)
-check_language(CUDA)
+# check_language(CUDA)
 
-project(woden VERSION 2.0 LANGUAGES CUDA CXX C)
+option(USE_HIP "Enable the GPU acceleration for AMD GPUs." OFF)
+##default to using CUDA to be somewhat backwards compatible
+option(USE_CUDA "Enable the GPU acceleration for NVIDIA GPUs." ON)
 
-##Gotta find CUDA and get it to find libraries
-find_package(CUDA)
-if(CUDA_FOUND)
-  message(STATUS "Found CUDA ${CUDA_VERSION_STRING} at ${CUDA_TOOLKIT_ROOT_DIR}")
-  message(STATUS "CUDA library found; building GPU-enabled executables.")
-  ##Sets the -std=c++11 nvcc compiler flag I think
-  set(CMAKE_CUDA_STANDARD 11)
-  #set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++11 ")
-  set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+if(USE_HIP)
+  set(USE_CUDA OFF)
 endif()
 
-##Pull out arch version if specified by user, and pass to nvcc
-if (CUDA_ARCH EQUAL "1.3")
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_13")
-elseif (CUDA_ARCH EQUAL "2.0")
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_20")
-elseif (CUDA_ARCH EQUAL "2.1")
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_21")
-elseif (CUDA_ARCH EQUAL "3.0")
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_30")
-elseif (CUDA_ARCH EQUAL "3.2")
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_32")
-elseif (CUDA_ARCH EQUAL "3.5")
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_35")
-elseif (CUDA_ARCH EQUAL "3.7")
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_37")
-elseif (CUDA_ARCH EQUAL "5.0")
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_50")
-elseif (CUDA_ARCH EQUAL "5.2")
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_52")
-elseif (CUDA_ARCH EQUAL "6.0")
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_60")
-elseif (CUDA_ARCH EQUAL "6.1")
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_61")
-elseif (CUDA_ARCH EQUAL "6.2")
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_62")
-elseif (CUDA_ARCH EQUAL "7.0")
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_70")
-elseif (CUDA_ARCH EQUAL "7.5")
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_75")
+if(USE_CUDA)
+    message("USING CUDA : USE_CUDA=ON")
+    project(woden VERSION 2.2 LANGUAGES CXX C CUDA)
+
+    ##Sets the -std=c++11 nvcc compiler flag I think
+    set(CMAKE_CUDA_STANDARD 11)
+    #set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++11 ")
+    ##Internal flag to let code know we're using nvcc
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D__NVCC__ ")
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+
+    if (NOT DEFINED ENV{CUDAARCHS})
+        message("WARNING : CUDAARCHS not set, so CMAKE_CUDA_ARCHITECTURES has defaulted to whatever CMake has set, which is ${CMAKE_CUDA_ARCHITECTURES}")
+    else()
+        message("INFO : CUDAARCHS was set to $ENV{CUDAARCHS}, so now CMAKE_CUDA_ARCHITECTURES is set to ${CMAKE_CUDA_ARCHITECTURES}")
+    endif()
+    
+
+elseif(USE_HIP)
+    message("DEBUG : USE_HIP=ON")
+
+    project(woden VERSION 2.2 LANGUAGES CXX C HIP)
+    
+    set(CMAKE_CXX_COMPILER hipcc)
+    add_definitions("-D__HIP_PLATFORM_AMD__ -D__HIPCC__")
+
+    ##TODO, remove this if -DGPU_TARGETS="gfx1032;gfx1035" works
+    if(HIP_ARCH)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__HIP_PLATFORM_AMD__ -D__HIPCC__ --offload-arch=${HIP_ARCH}")
+        message("-- Using user specified HIP ARCH of --offload-arch=${HIP_ARCH}")
+    else()
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__HIP_PLATFORM_AMD__ -D__HIPCC__")
+    endif()
+
 endif()
-
-##Set the -dc flag lets you pull device functions into separate files
-##However, doing so actually causes a huge slowdown
-##Leaving here in case things change in the future and we need this flag again
-#set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -rdc=true")
-# set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xptxas -O3 -Xcompiler -O3")
-
-##Find the source codes
-file(GLOB CSOURCES "src/*.c")
-file(GLOB CUDASOURCES "src/*.cu")
 
 ##Try and find the hyperbeam library
 set(HINTS_HBEAM_INC "/usr/local/include/;${HBEAM_ROOT}/;")
@@ -64,6 +54,18 @@ set(HINTS_HBEAM_LIB "/usr/local/lib/;${HBEAM_ROOT}")
 
 find_path(HBEAM_INC mwa_hyperbeam.h HINTS ${HINTS_HBEAM_INC})
 find_library(HBEAM_LIB mwa_hyperbeam HINTS ${HINTS_HBEAM_LIB} REQUIRED)
+
+##Find the source codes
+file(GLOB CSOURCES "src/*.c")
+file(GLOB GPUSOURCES "src/*.cpp")
+
+if(USE_CUDA)
+    set_source_files_properties( ${GPUSOURCES} PROPERTIES LANGUAGE CUDA)
+endif()
+
+
+include_directories("src/")
+
 if(HBEAM_LIB)
   message(STATUS "HBEAM include path: ${HBEAM_INC}")
   message(STATUS "HBEAM library path: ${HBEAM_LIB}")
@@ -82,18 +84,17 @@ set(TARGET_GROUP production CACHE STRING "Group to build")
 if(TARGET_GROUP STREQUAL production)
     ##Do it for the float code first--------------------------------------------
     ##Generate library for the CUDA code
-    add_library(wodenCUDA_float SHARED ${CUDASOURCES})
+    add_library(wodenGPU_float SHARED ${GPUSOURCES})
     ##Compile CUDA code with all warnings
-    target_compile_options(wodenCUDA_float PRIVATE
-                           --compiler-options -Wall)
-    ## For CMake versions > 3.18, the arch flag settings are handled by
-    ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
-    ## replace the CUDA_FLAG lines above with something like
-    set_property(TARGET wodenCUDA_float PROPERTY CUDA_ARCHITECTURES OFF)
+    if(USE_CUDA)
+       target_compile_options(wodenGPU_float PRIVATE --compiler-options -Wall)
+    elseif(USE_HIP)
+       target_compile_options(wodenGPU_float PRIVATE -Wall)
+    endif()
 
     ##Add the total WODEN library, linking in the CUDA code
     add_library(woden_float SHARED src/woden.c ${CSOURCES})
-    target_link_libraries(woden_float PUBLIC wodenCUDA_float ${CC_LINKLIBS})
+    target_link_libraries(woden_float PUBLIC wodenGPU_float ${CC_LINKLIBS})
     target_compile_options(woden_float PRIVATE -O3 -Wall)
 
     ##Copy things into the wodenpy dir, which means everything is found when
@@ -106,18 +107,17 @@ if(TARGET_GROUP STREQUAL production)
     ##flag----------------------------------------------------------------------
 
     ##Generate library for the CUDA code
-    add_library(wodenCUDA_double SHARED ${CUDASOURCES})
+    add_library(wodenGPU_double SHARED ${GPUSOURCES})
     ##Compile CUDA code with all warnings
-    target_compile_options(wodenCUDA_double PRIVATE -DDOUBLE_PRECISION
-                           --compiler-options -Wall)
-    ## For CMake versions > 3.18, the arch flag settings are handled by
-    ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
-    ## replace the CUDA_FLAG lines above with something like
-    set_property(TARGET wodenCUDA_double PROPERTY CUDA_ARCHITECTURES OFF)
+    if(USE_CUDA)
+       target_compile_options(wodenGPU_double PRIVATE -DDOUBLE_PRECISION --compiler-options -Wall)
+    elseif(USE_HIP)
+        target_compile_options(wodenGPU_double PRIVATE -DDOUBLE_PRECISION -Wall)
+    endif()
 
     ##Add the total WODEN library, linking in the CUDA code
     add_library(woden_double SHARED src/woden.c ${CSOURCES})
-    target_link_libraries(woden_double PUBLIC wodenCUDA_double ${CC_LINKLIBS})
+    target_link_libraries(woden_double PUBLIC wodenGPU_double ${CC_LINKLIBS})
     target_compile_options(woden_double PRIVATE -O3 -Wall -DDOUBLE_PRECISION)
 
     ##Copy things into the wodenpy dir, which means everything is found when
@@ -132,33 +132,35 @@ elseif(TARGET_GROUP STREQUAL debug)
     ##Do it for the float code first--------------------------------------------
 
     ##Generate library for the CUDA code
-    add_library(wodenCUDA_float SHARED ${CUDASOURCES})
+    add_library(wodenGPU_float SHARED ${GPUSOURCES})
     ##Compile CUDA code with all warnings
-    target_compile_options(wodenCUDA_float PRIVATE -G --compiler-options -g)
-    ## For CMake versions > 3.18, the arch flag settings are handled by
-    ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
-    ## replace the CUDA_FLAG lines above with something like
-    set_property(TARGET wodenCUDA_float PROPERTY CUDA_ARCHITECTURES OFF)
-
+    if(USE_CUDA)
+        target_compile_options(wodenGPU_float PRIVATE -G --compiler-options -g)
+    elseif(USE_HIP)
+        target_compile_options(wodenGPU_float PRIVATE -G -g)
+    endif()
+    
     ##Add the total WODEN library, linking in the CUDA code
     add_library(woden_float SHARED src/woden.c ${CSOURCES})
-    target_link_libraries(woden_float PUBLIC wodenCUDA_float ${CC_LINKLIBS})
+    target_link_libraries(woden_float PUBLIC wodenGPU_float ${CC_LINKLIBS})
     target_compile_options(woden_float PRIVATE -O3 -Wall)
 
     ##Do it for the double code now---------------------------------------------
     ##Generate library for the CUDA code
-    add_library(wodenCUDA_double SHARED ${CUDASOURCES})
+    add_library(wodenGPU_double SHARED ${GPUSOURCES})
     ##Compile CUDA code with all warnings
-    target_compile_options(wodenCUDA_double PRIVATE -DDOUBLE_PRECISION
+    target_compile_options(wodenGPU_double PRIVATE -DDOUBLE_PRECISION
                                                        -G --compiler-options -g)
-    ## For CMake versions > 3.18, the arch flag settings are handled by
-    ## CUDA_ARCHITECTURES. For now, just switch this warning off - in future,
-    ## replace the CUDA_FLAG lines above with something like
-    set_property(TARGET wodenCUDA_double PROPERTY CUDA_ARCHITECTURES OFF)
+    if(USE_CUDA)
+        target_compile_options(wodenGPU_double PRIVATE -DDOUBLE_PRECISION
+                               -G --compiler-options -g)
+    elseif(USE_HIP)
+        target_compile_options(wodenGPU_double PRIVATE -DDOUBLE_PRECISION -G -g)
+    endif()
 
     ##Add the total WODEN library, linking in the CUDA code
     add_library(woden_double SHARED src/woden.c ${CSOURCES})
-    target_link_libraries(woden_double PUBLIC wodenCUDA_double ${CC_LINKLIBS})
+    target_link_libraries(woden_double PUBLIC wodenGPU_double ${CC_LINKLIBS})
     target_compile_options(woden_double PRIVATE -O3 -g -Wall -DDOUBLE_PRECISION)
 
     ##Copy things into the wodenpy dir, which means everything is found when

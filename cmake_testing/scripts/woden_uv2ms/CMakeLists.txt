@@ -1,5 +1,5 @@
 
-include(FindPythonInterp)
+include(FindPython)
 
 ##Set an environment variable for the ctest of this, so we can find a path
 ##to some test files that live in this dir

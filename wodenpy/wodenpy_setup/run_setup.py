@@ -5,6 +5,7 @@ import sys
 import os
 from astropy.io import fits
 import warnings
+import sys
 
 def get_parser():
     """
@@ -199,7 +200,9 @@ def get_parser():
     parser.add_argument('--array_layout_name', help=argparse.SUPPRESS)
     parser.add_argument('--dipamps', help=argparse.SUPPRESS)
     parser.add_argument('--dipflags', help=argparse.SUPPRESS)
-
+    
+    parser.add_argument('--command', help=argparse.SUPPRESS)
+    
     return parser
 
 def select_argument_and_check(parser_arg, parser_value,
@@ -289,6 +292,38 @@ def select_correct_enh(args):
         except:
             exit("Could not read array layout file:\n"
                  "\t{:s}\nExiting before woe beings".format(args.array_layout))
+            
+            
+def get_antenna_order(tilenames: np.ndarray) -> np.ndarray:
+    """Reorder the antennas to be consistent with hyperdrive. This is done by
+    reordering off the tiles names `tilenames` from the metafits, rather than
+    the index in the metafits. As there are two polarisations per tile,
+    be careful to reorder both pols correctly.
+
+    Parameters
+    ----------
+    tilenames : np.ndarray
+        As read in from the hdus[1].data['Tile'] from the metafits
+
+    Returns
+    -------
+    np.ndarray
+        Indexes to reorder the antennas
+    """
+    
+    ##The same tile name is repeated for X and Y dipoles. Doing an
+    ##argsort on this sometimes returns the X first, sometimes the Y.
+    ##This is bad as we use this to re-order dipole amplitude and flags
+    ##later on; so only select one of the pols, do an argsort, and
+    ##expand back to both pols
+    tilenames = tilenames[np.arange(0, len(tilenames), 2)]
+    order = np.argsort(tilenames)
+    
+    antenna_order = np.empty(2*len(order), dtype=int)
+    antenna_order[np.arange(0, 2*len(order), 2)] = 2*order
+    antenna_order[np.arange(1, 2*len(order), 2)] = 2*order + 1
+    
+    return antenna_order
 
 
 def check_args(args):
@@ -309,6 +344,10 @@ def check_args(args):
         The populated arguments which will now have been checked and had
         information from metafits incorporated if requested
     """
+    
+    ##Preserve the command line arguments so we can stick them in the uvfits    
+    args.command = ""
+    for arg in sys.argv: args.command += f" {arg}"
 
     if args.primary_beam not in ['MWA_FEE', 'Gaussian', 'EDA2', 'none', 'None',
                                  'MWA_FEE_interp', 'MWA_analy']:
@@ -389,17 +428,8 @@ def check_args(args):
             ##Need to order the antennas via the Tile column to be consistent
             ## with hyperdrive
             tilenames = f[1].data['Tile']
-            ##The same tile name is repeated for X and Y dipoles. Doing an
-            ##argsort on this sometimes returns the X first, sometimes the Y.
-            ##This is bad as we use this to re-order dipole amplitude and flags
-            ##later on; so only select one of the pols, do an argsort, and
-            ##expand back to both pols
-            tilenames = tilenames[np.arange(0, len(tilenames), 2)]
-            order = np.argsort(tilenames)
             
-            antenna_order = np.empty(2*len(order), dtype=int)
-            antenna_order[np.arange(0, 2*len(order), 2)] = 2*order
-            antenna_order[np.arange(1, 2*len(order), 2)] = 2*order + 1
+            antenna_order = get_antenna_order(tilenames)
             
             ##Get the east, north, height antenna positions from the metafits
             east = f[1].data['East'][antenna_order]
@@ -586,6 +616,8 @@ def check_args(args):
         num_y_flags = 0
         num_x_flags = 0
         num_tiles = 0
+        ##TODO you could do some kind of tile flag if more than two dipoles
+        ##are flagged here
         for ant in range(int(len(antenna_order)/2)):
             
             add_tile = 0

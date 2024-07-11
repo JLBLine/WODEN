@@ -46,20 +46,20 @@ coverage_outputs/.coverage
 test_installation/*/data
 test_installation/*/images
 
-cmake_testing/CUDA_code/FEE_primary_beam_cuda/beam_plots
-cmake_testing/CUDA_code/FEE_primary_beam_cuda/hyperbeam*
-cmake_testing/CUDA_code/FEE_primary_beam_cuda/MWA_FEE_multifreq_gains*
-cmake_testing/CUDA_code/FEE_primary_beam_cuda/*.png
+cmake_testing/GPU_code/FEE_primary_beam_gpu/beam_plots
+cmake_testing/GPU_code/FEE_primary_beam_gpu/hyperbeam*
+cmake_testing/GPU_code/FEE_primary_beam_gpu/MWA_FEE_multifreq_gains*
+cmake_testing/GPU_code/FEE_primary_beam_gpu/*.png
 
-cmake_testing/CUDA_code/primary_beam_cuda/__pycache__
-cmake_testing/CUDA_code/primary_beam_cuda/hyperbeam*
-cmake_testing/CUDA_code/primary_beam_cuda/old_delete
+cmake_testing/GPU_code/primary_beam_gpu/__pycache__
+cmake_testing/GPU_code/primary_beam_gpu/hyperbeam*
+cmake_testing/GPU_code/primary_beam_gpu/old_delete
 
-cmake_testing/CUDA_code/source_components/plots
-cmake_testing/CUDA_code/source_components/*.png
+cmake_testing/GPU_code/source_components/plots
+cmake_testing/GPU_code/source_components/*.png
 
-cmake_testing/CUDA_code/primary_beam_cuda/*.png
-cmake_testing/CUDA_code/primary_beam_cuda/plots
+cmake_testing/GPU_code/primary_beam_gpu/*.png
+cmake_testing/GPU_code/primary_beam_gpu/plots
 
 *importuvfits.last
 *.log
@@ -72,6 +72,8 @@ test_installation/absolute_accuracy/uvfits
 
 *__pycache__/
 *.ms
+*.egg
+*.npz
 
 examples/MWA_EoR0
 test_installation/curved_power_law
@@ -88,3 +90,6 @@ wodenpy/libwoden*.so
 
 # things that exist if you pip install -e
 wodenpy.egg-info
+
+## ingnore things named with pyenv on front
+pyenv*

@@ -17,9 +17,13 @@ import numpy as np
 from astropy.coordinates import EarthLocation
 from astropy import units as u
 import scipy.optimize as opt
-
+import numpy.testing as npt
 import importlib_resources
 import wodenpy
+from wodenpy.uvfits import wodenpy_uvfits
+
+# from wodenpy.wodenpy_setup.git_helper import co
+from subprocess import call
 
 code_dir = os.path.realpath(__file__)
 code_dir = ('/').join(code_dir.split('/')[:-1])
@@ -28,9 +32,9 @@ code_dir = ('/').join(code_dir.split('/')[:-1])
 path.append('{:s}/../../../scripts'.format(code_dir))
 
 ##Code we are testing
-from wodenpy.uvfits import wodenpy_uvfits
+
 import add_instrumental_effects_woden as aiew
-import numpy.testing as npt
+import run_woden as rw
 
 ##Vehicle for running tests
 class Test(unittest.TestCase):
@@ -638,7 +642,7 @@ class Test(unittest.TestCase):
         self.run_code_test_reflections(args, metafits)
         
     def test_add_bandpass(self):
-        """"""
+        """This could be done one day, but it's not a priority right now"""
         
         # np.random.seed(93208)
         # self.create_uvfits_outputs(do_autos=True, num_ants=128, 
@@ -684,7 +688,7 @@ class Test(unittest.TestCase):
         
         
     def test_add_fine_channel_flags(self):
-        """"""
+        """Check we can add edge and central flags"""
         
         np.random.seed(398047)
         # self.create_uvfits_outputs(do_autos=True, num_ants=128, 
@@ -734,6 +738,39 @@ class Test(unittest.TestCase):
         npt.assert_equal(uvfits_inst.weights[:,:,2], one_pol_weights)
         npt.assert_equal(uvfits_inst.weights[:,:,3], one_pol_weights)
         
+    # def test_add_dipamps_normalisation(self):
+    #     """Check we can normalise the dipole amplitudes after the simulation
+    #     has been run"""
+
+    #     args = ""
+    #     args += " --band_nums=1"
+    #     args += " --ra0=359.795173466766"
+    #     args += " --dec0=-26.78489614158702"
+    #     args += " --freq_res=80e+3"
+    #     args += " --num_time_steps=2"
+    #     args += " --num_freq_channels=2"
+    #     args += f" --cat_filename={code_dir}/srclist_point_zenith.yaml"
+    #     args += " --output_uvfits_prepend=unittest_example1"
+    #     args += " --primary_beam=MWA_FEE_interp"
+    #     args += " --do_autos"
+    #     args += f" --metafits={code_dir}/1088285600_ladder_128.metafits"
+    #     args += " --use_MWA_dipamps"
+        
+    #     call(f"run_woden.py {args}", shell=True)
+        
+    #     uvfits = aiew.UVFITS('unittest_example1_band01.uvfits')
+        
+    #     print(uvfits.comment)
+        
+    #     if "use_MWA_dipamps" in uvfits.comment:
+    #         print("AH SHIT")
+            
+    #     if "use_MWA_dipflags" in uvfits.comment:
+    #         print("How loverly")
+            
+    #     print(uvfits.software)
+        
+    #     self.assertEqual(uvfits.software, "woden")
 
 ##Run the test
 if __name__ == '__main__':

@@ -91,12 +91,12 @@ What do the tests actually do?
 ---------------------------------
 
 The tests are all located in ``WODEN/cmake_testing``, and each directory within contains tests
-for a different file from ``WODEN/src``. Within each test directory, there are separate files for testing different functions, which include the function name. As an example, the directory ``WODEN/cmake_testing/CUDA_code/fundamental_coords`` contains tests for the file ``WODEN/src/fundamental_coords.cu``, and contains test files that test the following functions::
+for a different file from ``WODEN/src``. Within each test directory, there are separate files for testing different functions, which include the function name. As an example, the directory ``WODEN/cmake_testing/GPU_code/fundamental_coords`` contains tests for the file ``WODEN/src/fundamental_coords.cpp``, and contains test files that test the following functions::
 
-  cmake_testing/CUDA_code/fundamental_coords/test_lmn_coords.c -> src/fundamental_coords.cu::kern_calc_lmn
-  cmake_testing/CUDA_code/fundamental_coords/test_uvw_coords.c -> src/fundamental_coords.cu::kern_calc_uvw
+  cmake_testing/GPU_code/fundamental_coords/test_lmn_coords.c -> src/fundamental_coords.cpp::kern_calc_lmn
+  cmake_testing/GPU_code/fundamental_coords/test_uvw_coords.c -> src/fundamental_coords.cpp::kern_calc_uvw
 
-The ``C`` and ``CUDA`` functions are tested using the `Unity`_ library, which has useful functions like::
+The ``C`` and ``GPU`` functions are tested using the `Unity`_ library, which has useful functions like::
 
   TEST_ASSERT_FLOAT_EQUAL();
   TEST_ASSERT_DOUBLE_WITHIN();
@@ -133,14 +133,14 @@ The sections below give an outline of the tests performed in each directory.
    cmake_testing/primary_beam
    cmake_testing/visibility_set
 
-``CUDA`` code tests:
+``GPU`` code tests:
 
 .. toctree::
    :maxdepth: 1
 
    cmake_testing/calculate_visibilities
    cmake_testing/fundamental_coords
-   cmake_testing/primary_beam_cuda
+   cmake_testing/primary_beam_gpu
    cmake_testing/source_components
 
 ``script`` code tests:
@@ -154,4 +154,4 @@ The sections below give an outline of the tests performed in each directory.
    cmake_testing/scripts/run_woden
    cmake_testing/scripts/woden_uv2ms
 
-.. note:: To be able to test ``CUDA`` functions that are designed to work solely in GPU memory, it's necessary to write wrapper functions that allocate GPU memory, pass the data into the ``CUDA`` code to be tested, and then copy the results back into host memory. I've kept these 'intermediate' test functions inside the ``*.cu`` files that contain the code being tested, as it's not straight forward / performance degrading to have them in separate files. On casual inspection it looks like there are many functions in the ``*.cu`` files I haven't written tests for, but the extra functions are there *because* of testing. Sigh.
+.. note:: To be able to test ``GPU`` functions that are designed to work solely in GPU memory, it's necessary to write wrapper functions that allocate GPU memory, pass the data into the ``GPU`` code to be tested, and then copy the results back into host memory. I've kept these 'intermediate' test functions inside the ``*.cpp`` files that contain the code being tested, as it's not straight forward / performance degrading to have them in separate files. On casual inspection it looks like there are many functions in the ``*.cpp`` files I haven't written tests for, but the extra functions are there *because* of testing. Sigh.

@@ -1,0 +1,4 @@
+add_subdirectory(calculate_visibilities)
+add_subdirectory(fundamental_coords)
+add_subdirectory(primary_beam_gpu)
+add_subdirectory(source_components)

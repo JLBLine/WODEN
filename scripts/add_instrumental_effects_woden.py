@@ -147,6 +147,10 @@ class UVFITS(object):
         Whether auto-correlations are present in the UVFITS file.
     time_res : float
         The time resolution of the UVFITS file.
+    comment : str
+        Any COMMENT that was in the UVFITS file; if missing, False.
+    software : str
+        If an entry for SOFTWARE was in the header, it is stored here.
     """
 class UVFITS(object):
     def __init__(self, filename):
@@ -201,15 +205,31 @@ class UVFITS(object):
 
             num_times = int(self.num_visis / num_visi_per_time)
             self.num_times = num_times
+            
+            if num_visi_per_time == self.num_visis:
+                print("Looks like only one time step in this UVFITS file")
+                self.time_res = 0.0
+            else:
 
-            time1 = Time(hdu[0].data['DATE'][num_visi_per_time], format='jd')
-            time0 = Time(hdu[0].data['DATE'][0], format='jd')
+                time1 = Time(hdu[0].data['DATE'][num_visi_per_time], format='jd')
+                time0 = Time(hdu[0].data['DATE'][0], format='jd')
+                self.time_res = time1 - time0
+                self.time_res = self.time_res.to_value('s')
             
             self.uus = hdu[0].data['UU']
-
-        self.time_res = time1 - time0
-        self.time_res = self.time_res.to_value('s')
-
+            
+            try:
+                self.comment = ""
+                for comment in hdu[0].header['COMMENT']: self.comment += comment
+            except KeyError:
+                self.comment = False
+                
+        if self.comment:
+            if 'woden' in self.comment:
+                self.software = 'woden'
+            elif 'hyperdrive' in self.comment:
+                self.software = 'hyperdrive'
+                
         print(f"Found the following in the {filename}:")
         if self.has_autos:
             print(f"\tAutocorrelations are present")
@@ -220,8 +240,6 @@ class UVFITS(object):
         print(f"\tTime res: {self.time_res:.2f} s")
         print(f"\tFreq res: {self.freq_res:.5f} Hz")
         
-        
-
 def make_single_polarsiation_jones_gain(num_antennas, num_freqs, 
         amp_err=0.05, phase_err=10):
     """

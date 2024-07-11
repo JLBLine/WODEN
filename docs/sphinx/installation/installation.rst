@@ -1,27 +1,43 @@
+.. `Windows Subsystem for Linux 2 (WSL 2)`: https://docs.microsoft.com/en-us/windows/wsl/
+
 *************
 Installation
 *************
 
-WODEN is built on CUDA so you will need an NVIDIA GPU to run it. Currently, WODEN has only been tested and run on linux, specifically Ubuntu 16.04 up to 20.04, the OzStar super cluster of Swinburne University, and Garrawarla cluster of Pawsey. You have two options for installation:
+``WODEN`` is built for speed and only works with a GPU. Currently, you need either an NVIDIA GPU to use ``CUDA`` functionality, or something else that can use ``HIP`` (likely an AMD GPU). ``CUDA`` is tried and tested, whereas ``HIP`` is new in version 2.2 and not well tested. Furthermore, ``WODEN`` has only been tested to run on linux, specifically Ubuntu 16.04 up to 24.04. This does however include the _`Windows Subsystem for Linux 2 (WSL 2)`., so you can technically run in on Windows kinda.
 
- - More work, but tailored to your system: :ref:`install manual`
- - Less work, but less flexibility/performance: :ref:`install docker`
+You have two options for installation:
+
+- More work, but tailored to your system: :ref:`install manual`
+- Less work, but less flexibility/performance: :ref:`install docker`
 
 Both options are described below, jump to whatever suits you.
+
+``WODEN`` has been tested to run on the following Australian super computers:
+
+- Garrawarla (Pawsey) CUDA
+- OzStar (Swinburne University) CUDA
+- Ngarrgu Tindebeek (Swinburne University) CUDA
+- Setonix (Pawsey) HIP
 
 .. _install manual:
 
 Manual Installation
 ######################
 
+For examples of building ``WODEN`` from source on superclusters, see:
+
+- ``WODEN/templates/install_woden_nt.sh`` for a CUDA build on Ngarrgu Tindebeek
+- ``WODEN/templates/install_woden_setonix.sh`` for a HIP build on Setonix
+
 Dependencies
 -----------------
 
 ``WODEN`` has a number of dependencies so it doesn't reinvent the wheel. A brief list of them here is followed by detailed instructions on how I installed them in the following subsection.
 
-- **CMake** - https://cmake.org version >= 3.10
-- **NVIDIA CUDA** - https://developer.nvidia.com/cuda-downloads
-- **HDF5** - https://www.hdfgroup.org/downloads/hdf5/ (needed for ``mwa_hyperbeam``)
+- **CMake** - https://cmake.org version >= 3.21
+- Either **NVIDIA CUDA** - https://developer.nvidia.com/cuda-downloads
+- or **AMD ROCm** - https://rocm.docs.amd.com/projects/install-on-linux/en/latest/
 - **rust** - https://www.rust-lang.org/tools/install (needed for ``mwa_hyperbeam``)
 - **mwa_hyperbeam** - https://github.com/MWATelescope/mwa_hyperbeam
 - **Python >= 3.8** (as well as a number of Python modules, see below)
@@ -29,34 +45,44 @@ Dependencies
 How to install dependencies
 ****************************
 
-These instructions are for Ubuntu 20.04, but can be used as a guide for other
+These instructions are for Ubuntu 24.04, but can be used as a guide for other
 linux-like systems.
 
-+ **CMake** - https://cmake.org version >= 3.10::
++ **CMake** - https://cmake.org version >= 3.21::
 
    $ sudo snap install cmake
 
-+ **NVIDIA CUDA** - https://developer.nvidia.com/cuda-downloads. I typically download the runfile option, which you run as::
++ **NVIDIA CUDA** - https://developer.nvidia.com/cuda-downloads. Best used if you have an NVIDIA GPU. I typically download the runfile option, which you run as::
 
-  $ sudo sh cuda_11.2.2_460.32.03_linux.run
+  $ sudo sh cuda_11.2.2_460.32.03_linux.run ##your version will likely be different
 
   but I do NOT install the drivers at this point, as I'll already have drivers. Up to you and how your system works. Also, don't ignore the step of adding something like ``export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-11.2/lib64`` to your ``~/.bashrc``, or your system won't find ``CUDA``.
-+ **HDF5** - https://www.hdfgroup.org/downloads/hdf5/ - just do::
++ **AMD ROCm** - https://rocm.docs.amd.com/projects/install-on-linux/en/latest/::
 
-  $ sudo apt install libhdf5-serial-dev
+  I don't have an AMD GPU, so I've never done this. Fingers crossed the linked instructions work for you!
 + **mwa_hyperbeam** - https://github.com/MWATelescope/mwa_hyperbeam - ``mwa_hyperbeam`` is the go-to package for calculating the MWA Fully Embedded Element (FEE) primary beam model. At the time of writing (23/03/2022), we'll have to install and compile from source to get the CUDA code that we want to link to. We should be able to install release versions in the future. For now, you'll first need to install ``rust``, the language the library is written in. I followed the installation guide at https://www.rust-lang.org/tools/install, which for me on Ubuntu just means running::
 
   $ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-  Once that's installed, I ran the following commands (you can choose where to install it, I'm just putting where I happended to do it this time round)::
+  Once that's installed, I run the following commands for a CUDA installation (you can choose where to install it, I'm just putting where I happened to do it this time round)::
 
   $ cd /home/jline/software
   $ git clone https://github.com/MWATelescope/mwa_hyperbeam.git
   $ cd mwa_hyperbeam
-  $ cargo build --release --features=cuda,cuda-static
+  $ export HYPERDRIVE_CUDA_COMPUTE=60 ##your compute capability
+  $ cargo build --locked --release --features=cuda,hdf5-static
+
+  .. note:: ``export HYPERDRIVE_CUDA_COMPUTE=60`` is not essential as the compiler should be smart enough, but you *might* get a speed boost but setting the correct architecture. This of course depends on your GPU; see 'Machine specifics' below on how to work out your architecture.
+
+  If you have an AMD GPU, replace the last two lines with something like::
+
+  $ export HYPERBEAM_HIP_ARCH=gfx90a
+  $ cargo build --locked --release --features=hip,hdf5-static
+
+  where again the value of ``HYPERBEAM_HIP_ARCH`` depends on what kind of GPU you have.
 
   That's it! I'll show you how to link to it later when we install ``WODEN``. If you don't want to have to tell ``CMake`` where to look for the libraries, you'll need to link/copy ``libmwa_hyperbeam.so`` somewhere your compiler can see, as well as ``mwa_hyperbeam.h``.
-+ **python >= 3.8** - The requirements can be found in ``WODEN/requirements.txt``, which you can install via something like::
++ **python >= 3.8** - 3.8 should work, but I'd suggest going with 3.11 or 3.12. The requirements can be found in ``WODEN/requirements.txt``, which you can install via something like::
 
   $ pip3 install -r requirements_testing.txt
 
@@ -64,8 +90,8 @@ For completeness, those packages are::
 
   sphinx_argparse
   breathe
-  astropy
-  numpy
+  astropy<=6.1.0
+  numpy<=1.26.0
   pyerfa
   palpy
   importlib_resources
@@ -93,7 +119,7 @@ et voila, your code is compiled. Keep reading to see how to install ``WODEN`` so
 .. warning:: Even if the code compiled, if your GPU has a compute capability < 5.1, newer versions of ``nvcc`` won't compile code that will work. You'll get error messages like "No kernel image available". Check out how to fix that in 'Machine specifics' below.
 
 Machine specifics
-**********************
+~~~~~~~~~~~~~~~~~~~~~
 It's almost a guarantee ``cmake`` won't be able to find ``mwa_hyperbeam``, so you'll have to point it to where things are installed. You can use two keywords in the following way to achieve that::
 
   $ cmake .. -DHBEAM_INC=/home/jline/software/mwa_hyperbeam/include \
@@ -101,9 +127,9 @@ It's almost a guarantee ``cmake`` won't be able to find ``mwa_hyperbeam``, so yo
 
 Obviously you'll need to point to where you have installed things. If *you* have a library with my name in the path I'd be concerned, so edit it as appropriate.
 
-All NVIDIA GPUs have a specific compute capability, which relates to their internal architecture. You can tell the compiler which architecture to compile for, which in theory should make compilation quicker, and ensure the code runs correctly on your GPU. You can find out the compute value here (https://developer.nvidia.com/cuda-gpus), and pass it to CMake via::
+All NVIDIA GPUs have a specific compute capability, which relates to their internal architecture. You can tell the compiler which architecture to compile for, which in theory should make compilation quicker, and ensure the code runs correctly on your GPU. You can find out the compute value here (https://developer.nvidia.com/cuda-gpus), and pass it to CMake via setting the ``CUDAARCHS`` environment variable (https://cmake.org/cmake/help/latest/envvar/CUDAARCHS.html) BEFORE you run the call to ``cmake``::
 
-  $ cmake .. -DCUDA_ARCH=6.0
+  $ export CUDAARCHS=60
 
 (for a compute capability of 6.0, for example).
 
@@ -114,10 +140,32 @@ If you need to pass extra flags to your CUDA compiler, you can do so by adding s
   -DCMAKE_CUDA_FLAGS="-Dsomeflag"
 
 
-Installing ``WODEN``
+Compiling ``WODEN`` ``C/HIP`` code
+**************************************
+If you have an AMD GPU, you can compile the ``HIP`` code instead of the ``CUDA`` code. This is a new feature in ``WODEN`` and not as well tested. You can compile the ``HIP`` code by setting the ``USE_HIP`` flag to ``ON`` when you run ``cmake`` (you'll still need to link )::
+
+  $ cmake .. -DUSE_HIP=ON \
+      -DHBEAM_INC=/home/jline/software/mwa_hyperbeam/include \
+      -DHBEAM_LIB=/home/jline/software/mwa_hyperbeam/target/release/libmwa_hyperbeam.so
+
+Machine specifics
+~~~~~~~~~~~~~~~~~~~~~
+Similarly to ``CUDA``, you can set a ``HIP`` architecture. To find out which one you need, try::
+  
+  $ offload-arch
+
+which spat of ``gfx90a`` for me. You pass that onto ``cmake`` via the ``HIP_ARCH`` flag::
+
+  $ cmake .. -DUSE_HIP=ON -DHIP_ARCH=gfx90a \
+      -DHBEAM_INC=/home/jline/software/mwa_hyperbeam/include \
+      -DHBEAM_LIB=/home/jline/software/mwa_hyperbeam/target/release/libmwa_hyperbeam.so
+
+Fair warning, I *had* to include the ``HIP_ARCH`` flag. The code would compile fine but not work at runtime, so a bit nasty.
+
+Installing ``wodenpy``
 *****************************
 
-We've compiled the C/CUDA libraries; now to install the ``WODEN`` Python package and executables. You can do this by running::
+OK, we've compiled the C/GPU libraries; now to install the ``WODEN`` Python package and executables. You can do this by running::
 
   $ cd WODEN
   $ pip3 install .
@@ -145,30 +193,63 @@ To use the interpolated MWA FEE beam model, do similarly::
 
 .. _install docker:
 
-Use the ``Docker`` image
+Use a ``Docker`` image
 ##########################
-Fair warning, this is a new option, and hasn't been heavily tested. I have successfully run it on my desktop and the Garrawarla supercluster of Pawsey, but that's it. This docker image is built upon the ``nvidia/cuda:11.4.3-devel-ubuntu20.04`` image, and so your local NVIDIA cards / drives **have to work with CUDA 11.4.3; docker uses the local NVIDIA drivers**. You can pull the image from Docker Hub via::
 
-  $ docker pull jlbline/woden-2.0
+.. note:: All the images listed here were created with the script ``WODEN/docker/make_docker_image.sh``. If a particular image doesn't work for you, you can edit the source to hopefully get it working.
 
-Then in theory, you can just run WODEN commands by doing something like this::
+For CUDA
+--------------
 
-  $ docker run -it --gpus all woden-2.0 \
+Fair warning, this is a new option, and hasn't been heavily tested. I have successfully run it on a number of clusters (via singularity). Which version you pull depends on your GPU. If you have an NVIDIA GPU, you need to work out what your compute capability is, and pull the appropriate image. Say you have an NVIDIA V100 card, you have a compute capacity of 7.0, so you'd pull the image like this::
+
+  $ docker pull jlbline/woden-2.2:cuda-70
+
+I have made images for computes ``60,61,70,75,80,86``. If you need another compute, either run the Docker script to make a new docker, or just compile from source as instructed above. In theory, you can just run ``WODEN`` commands by doing something like this::
+
+  $ docker run -it --gpus all woden-2.2:cuda-70 \
     --env XDG_CONFIG_HOME=/somewhere/astropy_storage \
     --env XDG_CACHE_HOME=/somewhere/astropy_storage \
     run_woden.py --help
 
-where the ``--gpus all`` means the docker instance can see your GPUs. The environment variables point to somewhere to keep your ``astropy`` outputs, which is useful if you're running somewhere you're not admin (like on a clsuter). There must be a better way to do this but I'm a ``docker`` noob.
+where the ``--gpus all`` means the docker instance can see your GPUs. The environment variables point to somewhere to keep your ``astropy`` outputs, which is useful if you're running somewhere you're not admin (like on a cluster). There must be a better way to do this but I'm a ``docker`` noob.
+
+For HIP
+--------------
+
+The only HIP image I've made is for the Setonix cluster, and is based on a Pawsey specific image https://quay.io/repository/pawsey/rocm-mpich-base?tab=tags&tag=latest. You can pull it like this::
+
+  $ docker pull jlbline/woden-2.2:setonix
+
+It is *highly* unlikely it won't work anywhere else.
 
 Using singularity
-******************
+############################
+
+For CUDA
+--------------
+
 If your system has ``singularity`` and not docker, you can convert the docker image to a singularity image via::
 
-  $ singularity build woden-2.0.sif docker://jlbline/woden-2.0
+  $ singularity build woden-2.0-70.sif docker://jlbline/woden-2.2:cuda-70
 
 with an example of running the help looking something like::
 
   $ singularity exec --nv --home=/astro/mwaeor/jline \
-    woden-2.0.sif run_woden.py --help
+    woden-2.0-70.sif run_woden.py --help
 
-Similarly to the ``docker`` image, ``--nv`` means use the GPUs, and ``--home`` sets a specific location to treat as home if you're not on a local machine.
+Similarly to the ``docker`` image, ``--nv`` means use the NVIDIA GPUs, and ``--home`` sets a specific location to treat as home if you're not on a local machine.
+
+For HIP
+--------------
+
+Again, the only HIP image I've made is for the Setonix cluster where you can do::
+  
+    $ singularity build woden-2.2:setonix.sif docker://jlbline/woden-2.2:setonix
+
+and run it like::
+
+  $ singularity exec --home=/scratch/mwaeor/jline \
+  ${MYSOFTWARE}/woden-2.2-setonix.sif run_woden.py --help
+
+.. warning:: EVERYTHING on the internet will tell you to use the ``--rocm`` flag. This WILL NOT WORK with the Setonix based image, because of shenanigans. So leave it be.
