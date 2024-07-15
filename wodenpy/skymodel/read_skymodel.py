@@ -83,6 +83,9 @@ def read_skymodel_chunks(skymodel_path : str, chunked_skymodel_maps : list,
         A source catalogue that can be used by C/CUDA code to calculate visibilities.
     """
     
+    ##TODO reading all these tables should happen outside of this function
+    ##for small yaml/txt skymodels it's not much overhead, but for large ones
+    ## I/O is gonna be a limiting factor
     # ##Figure out if our skymodel is supported or not
     if skymodel_path[-5:] == '.fits':
         main_table = Table.read(skymodel_path, hdu=1)

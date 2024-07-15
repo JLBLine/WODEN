@@ -51,6 +51,7 @@ class Components_Map(object):
         ##the line in the original sky model file that each component
         ##appears in. Ignore all lines before the smallest line number
         ##for all components in this chunk, makes reading faster
+        ##only applied to txt/yaml models
         self.lowest_file_num = np.nan
         
         ##use this to count how many flux list entries there are in total

@@ -46,7 +46,7 @@ class Components_Float(ctypes.Structure):
     :cvar POINTER(user_precision_t) list_stokesV: COMPONENT Stokes V list flux density (Jy)
     :cvar POINTER(int) num_list_values: How many freq/flux values are in each COMPONENT lis
     :cvar POINTER(int) list_start_indexes: How many freq/flux values are in each COMPONENT lis
-    :cvar otal_num_flux_entires: The total number of freq/flux values are in all lists POINTER(int) combine
+    :cvar POINTER(int) total_num_flux_entires: The total number of freq/flux values are in all lists combine
     :cvar POINTER(user_precision_t) extrap_stokesI: extrapolated COMPONENT Stokes I flux densities (Jy)
     :cvar POINTER(user_precision_t) extrap_stokesQ: extrapolated COMPONENT Stokes Q flux densities (Jy)
     :cvar POINTER(user_precision_t) extrap_stokesU: extrapolated COMPONENT Stokes U flux densities (Jy)
@@ -175,7 +175,7 @@ class Components_Double(ctypes.Structure):
     :cvar POINTER(user_precision_t) list_stokesV: COMPONENT Stokes V list flux density (Jy)
     :cvar POINTER(int) num_list_values: How many freq/flux values are in each COMPONENT list
     :cvar POINTER(int) list_start_indexes: How many freq/flux values are in each COMPONENT list
-    :cvar total_num_flux_entires: The total number of freq/flux values are in all lists POINTER(int) combine
+    :cvar POINTER(int)  total_num_flux_entires: The total number of freq/flux values are in all lists combine
     :cvar POINTER(user_precision_t) extrap_stokesI: extrapolated COMPONENT Stokes I flux densities (Jy)
     :cvar POINTER(user_precision_t) extrap_stokesQ: extrapolated COMPONENT Stokes Q flux densities (Jy)
     :cvar POINTER(user_precision_t) extrap_stokesU: extrapolated COMPONENT Stokes U flux densities (Jy)
@@ -189,8 +189,8 @@ class Components_Double(ctypes.Structure):
     :cvar POINTER(user_precision_t) param_indexes: An index value to match each coeff, n1, and n2 to the correct ra, dec, major, minor, pa for a SHAPELET
     :cvar POINTER(user_precision_t) azs: SHAPELET source azimuth angles for all time steps
     :cvar POINTER(user_precision_t) zas: SHAPELET source zenith angles for all time steps
-    :cvar beam_has: Hour angle of COMPONENTs for all time steps, used for beam calculPOINTER(double) ations
-    :cvar beam_decs: Declinations of COMPONENTs for all time steps, used for beam calculPOINTER(double) ations
+    :cvar POINTER(double) beam_has: Hour angle of COMPONENTs for all time steps, used for beam calculations
+    :cvar POINTER(double) beam_decs: Declinations of COMPONENTs for all time steps, used for beam calculations
     :cvar POINTER(int) num_primarybeam_values: Number of beam calculations needed for COMPONENTs
     :cvar POINTER(user_precision_complex_t) gxs: North-South Beam gain values for all directions, frequencies, and times for these COMPONENT
     :cvar POINTER(user_precision_complex_t) Dxs: North-South Beam leakage values for all directions, frequencies, and times for these COMPONENT
