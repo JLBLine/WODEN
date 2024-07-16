@@ -16,6 +16,7 @@ path.append('{:s}/../../../wodenpy/skymodel'.format(code_dir))
 
 # ##Code we are testing
 import read_fits_skymodel
+import fits_skymodel_common
 # import wodenpy
 from woden_skymodel import Component_Type_Counter, CompTypes
 
@@ -712,57 +713,116 @@ class Test(unittest.TestCase):
         for comp_ind, expec_comp in enumerate(expec_comps):
             self.check_single_component(comp_counter, expec_comp, comp_ind)
         
-    # def test_SinglePointEmpty(self):
-    #     """srclist that contains a single point source with power law,
-    #     with an empty line. Should still read in fine"""
-        
-    #     ##sky model used for testing
-    #     skymodel = '{:s}/fits_models/srclist_empty_line.fits'.format(code_dir)
-        
-    #     ##Check the total numbers read in are correct
-    #     expec_nums = Expected_Total_Nums(num_sources = 1, total_comps = 1,
-    #                                      total_point_comps = 1,
-    #                                      num_point_flux_powers = 1)
-
-    #     expec_source_inds = np.arange(1)
-    #     expec_file_nums = np.arange(1,2)
-    #     comp_counter = self.run_and_check_tots_read_fits_radec_count_components(skymodel,
-    #                                 expec_nums, expec_source_inds, expec_file_nums)
-
-    #     ##check the individual components are correct
-    #     expec_comp = Expected_Component_Nums(CompTypes.POINT_POWER.value)
-    #     self.check_single_component(comp_counter, expec_comp, 0)
-        
-    # def test_SinglePointComments(self):
-    #     """srclist that contains a single point source with power law,
-    #     with commented lines. Should still read in fine"""
-        
-    #     ##sky model used for testing
-    #     skymodel = '{:s}/fits_models/srclist_comment.fits'.format(code_dir)
-        
-    #     ##Check the total numbers read in are correct
-    #     expec_nums = Expected_Total_Nums(num_sources = 1, total_comps = 1,
-    #                                      total_point_comps = 1,
-    #                                      num_point_flux_powers = 1)
-
-    #     expec_source_inds = np.arange(1)
-    #     expec_file_nums = np.arange(1,2)
-    #     comp_counter = self.run_and_check_tots_read_fits_radec_count_components(skymodel,
-    #                                 expec_nums, expec_source_inds, expec_file_nums)
-
-    #     ##check the individual components are correct
-    #     expec_comp = Expected_Component_Nums(CompTypes.POINT_POWER.value)
-    #     self.check_single_component(comp_counter, expec_comp, 0)
         
     def test_MissingFile(self):
         """If the file doesn't exist, we should has a sys exit so check things
         fail"""
         
-        skymodel = "is-not-a-thing-fool.txt"
+        skymodel = "is-not-a-thing-fool.fits"
         
         with self.assertRaises(SystemExit) as cm:
             ##code we are testing
             comp_counter = read_fits_skymodel.read_fits_radec_count_components(skymodel)
+            
+    def test_StokesV_fracpol(self):
+        """
+        """
+        
+        settings = fits_skymodel_common.FITS_Skymodel_Settings(deg_between_comps = 240,
+                                          num_coeff_per_shape = 4,
+                                          num_list_values = 4,
+                                          comps_per_source = 10,
+                                          stokesV_frac_cadence = 5,
+                                          stokesV_pl_cadence = 4,
+                                          stokesV_cpl_cadence = 3,
+                                          linpol_frac_cadence = 3,
+                                          linpol_pl_cadence = 5,
+                                          linpol_cpl_cadence = 4)
+
+        fits_skymodel_common.write_full_test_skymodel_fits(settings)
+        
+        # ##Check the total numbers read in are correct
+        # expec_nums = Expected_Total_Nums(num_sources = 10,
+        #                                 total_comps = 27,
+        #                                 total_point_comps = 9,
+        #                                 num_point_flux_powers = 3,
+        #                                 num_point_flux_curves = 3,
+        #                                 num_point_flux_lists = 3,
+        #                                 total_point_list_fluxes = 3*POINT0_NUM_LIST_ENTRIES,
+        #                                 total_gauss_comps = 9,
+        #                                 num_gauss_flux_powers = 3,
+        #                                 num_gauss_flux_curves = 3,
+        #                                 num_gauss_flux_lists = 3,
+        #                                 total_gauss_list_fluxes = 3*GAUSS0_NUM_LIST_ENTRIES,
+        #                                 total_shape_comps = 9,
+        #                                 num_shape_flux_powers = 3,
+        #                                 num_shape_flux_curves = 3,
+        #                                 num_shape_flux_lists = 3,
+        #                                 total_shape_list_fluxes = 3*SHAPE0_NUM_LIST_ENTRIES,
+        #                                 total_shape_basis = 9*SHAPE0_NUM_COEFFS)
+        
+        # expec_source_inds = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8,
+        #                             9, 9, 9, 9, 9, 9, 9, 9, 9,
+        #                             9, 9, 9, 9, 9, 9, 9, 9, 9])
+    
+        # expec_file_nums = np.array([1, 14, 34, 48, 65,83, 104, 135, 174,
+        #                             204, 216, 235, 248, 264, 284, 314, 352,
+        #                             381, 393, 412, 425, 441, 461, 491, 529,
+        #                             558, 575])
+        # comp_counter = self.run_and_check_tots_read_fits_radec_count_components(skymodel,
+        #                             expec_nums, expec_source_inds, expec_file_nums)
+        
+        # ##All the individual expected components in a list
+        # expec_comps = [Expected_Component_Nums(CompTypes.POINT_POWER.value),
+        #             Expected_Component_Nums(CompTypes.POINT_LIST.value,
+        #                                     num_list_flux = POINT0_NUM_LIST_ENTRIES),
+        #             Expected_Component_Nums(CompTypes.POINT_CURVE.value),
+        #             Expected_Component_Nums(CompTypes.GAUSS_POWER.value),
+        #             Expected_Component_Nums(CompTypes.GAUSS_CURVE.value),
+        #             Expected_Component_Nums(CompTypes.GAUSS_LIST.value,
+        #                                     num_list_flux = GAUSS0_NUM_LIST_ENTRIES),
+        #             Expected_Component_Nums(CompTypes.SHAPE_CURVE.value,
+        #                                     num_shape_basis = SHAPE0_NUM_COEFFS),
+        #             Expected_Component_Nums(CompTypes.SHAPE_LIST.value,
+        #                                     num_shape_basis = SHAPE0_NUM_COEFFS,
+        #                                     num_list_flux = SHAPE0_NUM_LIST_ENTRIES),
+        #             Expected_Component_Nums(CompTypes.SHAPE_POWER.value,
+        #                                     num_shape_basis = SHAPE0_NUM_COEFFS),
+        #             Expected_Component_Nums(CompTypes.POINT_POWER.value),
+        #             Expected_Component_Nums(CompTypes.POINT_LIST.value,
+        #                                     num_list_flux = POINT0_NUM_LIST_ENTRIES),
+        #             Expected_Component_Nums(CompTypes.POINT_CURVE.value),
+        #             Expected_Component_Nums(CompTypes.GAUSS_POWER.value),
+        #             Expected_Component_Nums(CompTypes.GAUSS_LIST.value,
+        #                                     num_list_flux = GAUSS0_NUM_LIST_ENTRIES),
+        #             Expected_Component_Nums(CompTypes.SHAPE_CURVE.value,
+        #                                     num_shape_basis = SHAPE0_NUM_COEFFS),
+        #             Expected_Component_Nums(CompTypes.SHAPE_LIST.value,
+        #                                     num_shape_basis = SHAPE0_NUM_COEFFS,
+        #                                     num_list_flux = SHAPE0_NUM_LIST_ENTRIES),
+        #             Expected_Component_Nums(CompTypes.SHAPE_POWER.value,
+        #                                     num_shape_basis = SHAPE0_NUM_COEFFS),
+        #             Expected_Component_Nums(CompTypes.POINT_POWER.value),
+        #             Expected_Component_Nums(CompTypes.POINT_LIST.value,
+        #                                     num_list_flux = POINT0_NUM_LIST_ENTRIES),
+        #             Expected_Component_Nums(CompTypes.POINT_CURVE.value),
+        #             Expected_Component_Nums(CompTypes.GAUSS_POWER.value),
+        #             Expected_Component_Nums(CompTypes.GAUSS_LIST.value,
+        #                                     num_list_flux = GAUSS0_NUM_LIST_ENTRIES),
+        #             Expected_Component_Nums(CompTypes.SHAPE_CURVE.value,
+        #                                     num_shape_basis = SHAPE0_NUM_COEFFS),
+        #             Expected_Component_Nums(CompTypes.SHAPE_LIST.value,
+        #                                     num_shape_basis = SHAPE0_NUM_COEFFS,
+        #                                     num_list_flux = SHAPE0_NUM_LIST_ENTRIES),
+        #             Expected_Component_Nums(CompTypes.SHAPE_POWER.value,
+        #                                     num_shape_basis = SHAPE0_NUM_COEFFS),
+        #             Expected_Component_Nums(CompTypes.GAUSS_CURVE.value),
+        #             Expected_Component_Nums(CompTypes.GAUSS_CURVE.value)]
+                    
+    
+        # #iterate over component details and check they are correct
+        # for comp_ind, expec_comp in enumerate(expec_comps):
+        #     self.check_single_component(comp_counter, expec_comp, comp_ind)
 
 ##Run the test
 if __name__ == '__main__':
