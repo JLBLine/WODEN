@@ -7,6 +7,8 @@ from astropy.table import Column, Table
 from astropy.io import fits
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, Component_Info, CompTypes, calc_pl_norm_at_200MHz, calc_cpl_norm_at_200MHz
 
+from read_skymodel_common import Skymodel_Settings
+
 D2R = np.pi/180.0
 # MWA_LATITUDE = -26.7*D2R
 
@@ -23,31 +25,6 @@ NUM_FLUX_TYPES = 3
 ##limits for "all sky" sky model
 LOW_DEC = -90.0*D2R
 HIGH_DEC = 30.0*D2R
-
-class FITS_Skymodel_Settings:
-    """Something to hold all the various settings and pass around between
-    functions"""
-    def __init__(self, deg_between_comps : float,
-                 num_coeff_per_shape : int,
-                 num_list_values : int,
-                 comps_per_source : int,
-                 stokesV_frac_cadence : int = 0,
-                 stokesV_pl_cadence : int = 0,
-                 stokesV_cpl_cadence : int = 0,
-                 linpol_frac_cadence : int = 0,
-                 linpol_pl_cadence : int = 0,
-                 linpol_cpl_cadence : int = 0):
-        
-        self.deg_between_comps = deg_between_comps
-        self.num_coeff_per_shape = num_coeff_per_shape
-        self.num_list_values = num_list_values
-        self.comps_per_source = comps_per_source
-        self.stokesV_frac_cadence = stokesV_frac_cadence
-        self.stokesV_pl_cadence = stokesV_pl_cadence
-        self.stokesV_cpl_cadence = stokesV_cpl_cadence
-        self.linpol_frac_cadence = linpol_frac_cadence
-        self.linpol_pl_cadence = linpol_pl_cadence
-        self.linpol_cpl_cadence = linpol_cpl_cadence
 
 def add_power_law_fits(table_dict, row_ind, value):
     """add power law info for a component"""
@@ -91,7 +68,7 @@ def add_stokesV_fits(table_dict, comp_index, stokesV_frac_cadence,
         if stokesV_frac_cadence:
             if comp_index % stokesV_frac_cadence == 0:
                 table_dict['V_MOD_TYPE'][comp_index] = 'pf'
-                table_dict['VPOL_FRAC'][comp_index] = 0.01*float(comp_index/stokesV_frac_cadence)
+                table_dict['V_POL_FRAC'][comp_index] = 0.01*float(comp_index/stokesV_frac_cadence)
                 break
                 
         if stokesV_pl_cadence:
@@ -126,7 +103,7 @@ def add_linpol_fits(table_dict, comp_index, linpol_frac_cadence,
         if linpol_frac_cadence:
             if comp_index % linpol_frac_cadence == 0:
                 table_dict['LIN_MOD_TYPE'][comp_index] = 'pf'
-                table_dict['LINPOL_FRAC'][comp_index] = 0.01*float(comp_index/linpol_frac_cadence)
+                table_dict['LIN_POL_FRAC'][comp_index] = 0.01*float(comp_index/linpol_frac_cadence)
                 table_dict['RM'][comp_index] = float(comp_index*((2*np.pi)/360))
                 table_dict['INTR_POL_ANGLE'][comp_index] = 0.1*float(comp_index*((2*np.pi)/360))
                 
@@ -158,7 +135,7 @@ def add_point_fits(table_dict : dict, all_flux_cols : list,
               point_index : int, gauss_index : int, shape_index : int,
               comp_type : CompTypes,
               flux_index : int, source_index : int,
-              settings : FITS_Skymodel_Settings):
+              settings : Skymodel_Settings):
     
     comp_index = point_index + gauss_index + shape_index
     if comp_index % settings.comps_per_source == 0:
@@ -198,7 +175,7 @@ def add_gauss_fits(table_dict : dict, all_flux_cols : list,
                     point_index : int, gauss_index : int, shape_index : int,
                     comp_type : CompTypes,
                     flux_index : int, source_index : int,
-                    settings : FITS_Skymodel_Settings):
+                    settings : Skymodel_Settings):
     
     comp_index = point_index + gauss_index + shape_index
     if comp_index % settings.comps_per_source == 0:
@@ -242,7 +219,7 @@ def add_shapelet_fits(table_dict : dict, all_flux_cols : list,
                     point_index : int, gauss_index : int, shape_index : int,
                     comp_type : CompTypes,
                     flux_index : int, source_index : int, basis_index : int,
-                    settings : FITS_Skymodel_Settings):
+                    settings : Skymodel_Settings):
     
     comp_index = point_index + gauss_index + shape_index
     if comp_index % settings.comps_per_source == 0:
@@ -296,7 +273,7 @@ def add_shapelet_fits(table_dict : dict, all_flux_cols : list,
 #                              stokesV_frac_cadence : int = 0,
 #                              stokesV_pl_cadence : int = 0,
 #                              stokesV_cpl_cadence : int = 0):
-def write_full_test_skymodel_fits(settings : FITS_Skymodel_Settings):
+def write_full_test_skymodel_fits(settings : Skymodel_Settings):
     """Write a sky model covering the whole sky"""
     # POINT_POWER
     # POINT_CURVE
@@ -330,9 +307,9 @@ def write_full_test_skymodel_fits(settings : FITS_Skymodel_Settings):
     
     new_source = False
     
-    point = False
-    gaussian = False
-    shapelet = False
+    # point = False
+    # gaussian = False
+    # shapelet = False
     
     point = True
     gaussian = True
@@ -385,8 +362,8 @@ def write_full_test_skymodel_fits(settings : FITS_Skymodel_Settings):
         table_dict['V_MOD_TYPE'] = vpol_type
     
     if settings.stokesV_frac_cadence:
-        vpol_frac = Column(data=np.full(total_num_comps, np.nan), name="VPOL_FRAC")
-        table_dict['VPOL_FRAC'] = vpol_frac
+        vpol_frac = Column(data=np.full(total_num_comps, np.nan), name="V_POL_FRAC")
+        table_dict['V_POL_FRAC'] = vpol_frac
         
     if settings.stokesV_pl_cadence:
         v_norm_comp_pl = Column(data=np.full(total_num_comps, np.nan), name="V_NORM_COMP_PL")
@@ -412,8 +389,8 @@ def write_full_test_skymodel_fits(settings : FITS_Skymodel_Settings):
         table_dict['INTR_POL_ANGLE'] = intr_pol_angle
     
     if settings.linpol_frac_cadence:
-        linpol_frac = Column(data=np.full(total_num_comps, np.nan), name="LINPOL_FRAC")
-        table_dict['LINPOL_FRAC'] = linpol_frac
+        linpol_frac = Column(data=np.full(total_num_comps, np.nan), name="LIN_POL_FRAC")
+        table_dict['LIN_POL_FRAC'] = linpol_frac
         
     if settings.linpol_pl_cadence:
         lin_norm_comp_pl = Column(data=np.full(total_num_comps, np.nan), name="LIN_NORM_COMP_PL")

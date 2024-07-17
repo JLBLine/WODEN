@@ -31,6 +31,10 @@ NUM_FLUX_TYPES = 3
 
 RTOL=1e-10
 
+##limits for "all sky" sky model
+LOW_DEC = -90.0*D2R
+HIGH_DEC = 30.0*D2R
+
 def check_components(found_comps, expec_comps,
                      n_powers, n_curves, n_lists,
                      rtol=RTOL,fits_skymodel=True):
@@ -523,9 +527,6 @@ def make_expected_chunks(ra_range, dec_range,
     has = lst - ra_range
     azs, els = erfa.hd2ae(has, dec_range, MWA_LAT)
     
-    # np.savez('/home/jline/software/WODEN_dev/cmake_testing/wodenpy/skymodel/test_sky_crop.npz', comp_has=has, comp_decs=dec_range,
-    #         comp_azs=azs, comp_els=els)
-    
     ##Crop below the horizon based on COMPONENT/SOURCE
     # include_flags = np.zeros(len(all_comp_types))
     above_horizon = np.where(els >= 0)[0]
@@ -672,3 +673,312 @@ def make_expected_chunks(ra_range, dec_range,
         expec_skymodel_chunks.append(expec_chunk)
     
     return expec_skymodel_chunks
+
+
+class Skymodel_Settings:
+    """Something to hold all the various settings and pass around between
+    functions"""
+    def __init__(self, deg_between_comps : float,
+                 num_coeff_per_shape : int,
+                 num_list_values : int,
+                 comps_per_source : int,
+                 stokesV_frac_cadence : int = 0,
+                 stokesV_pl_cadence : int = 0,
+                 stokesV_cpl_cadence : int = 0,
+                 linpol_frac_cadence : int = 0,
+                 linpol_pl_cadence : int = 0,
+                 linpol_cpl_cadence : int = 0):
+        
+        self.deg_between_comps = deg_between_comps
+        self.num_coeff_per_shape = num_coeff_per_shape
+        self.num_list_values = num_list_values
+        self.comps_per_source = comps_per_source
+        self.stokesV_frac_cadence = stokesV_frac_cadence
+        self.stokesV_pl_cadence = stokesV_pl_cadence
+        self.stokesV_cpl_cadence = stokesV_cpl_cadence
+        self.linpol_frac_cadence = linpol_frac_cadence
+        self.linpol_pl_cadence = linpol_pl_cadence
+        self.linpol_cpl_cadence = linpol_cpl_cadence
+        
+        
+def make_expected_comp_counter(settings : Skymodel_Settings):
+    """This doesn't 100% create everything that `read_fits_radec_count_components`
+    would fill, but it makes all the arrays that other values are derived from.
+    So if these are good, I would just be copying code from the function
+    which I think is a waste o time"""
+    
+    ra_range = np.arange(0, 360.0*D2R, settings.deg_between_comps*D2R)
+    dec_range = np.arange(LOW_DEC, HIGH_DEC, settings.deg_between_comps*D2R)
+    ra_range, dec_range = np.meshgrid(ra_range, dec_range)
+    ra_range, dec_range = ra_range.flatten(), dec_range.flatten()
+    
+    num_radec = len(ra_range)
+    num_comp_types = 3 #point, gauss, shape
+    total_num_comps = num_radec*NUM_FLUX_TYPES*num_comp_types
+    
+    expec_comp_counter = Component_Type_Counter(initial_size=total_num_comps)
+    
+    ##The index of each component to parent source, set via settings.comps_per_source
+    expec_comp_counter.source_indexes = np.arange(total_num_comps) // settings.comps_per_source
+    
+    ##This is the order things are written when making example sky model
+    expec_comp_counter.comp_types = np.empty(total_num_comps)
+    
+    expec_comp_counter.point_power_inds = []
+    expec_comp_counter.point_curve_inds = []
+    expec_comp_counter.point_list_inds = []
+    expec_comp_counter.gauss_power_inds = []
+    expec_comp_counter.gauss_curve_inds = []
+    expec_comp_counter.gauss_list_inds = []
+    expec_comp_counter.shape_power_inds = []
+    expec_comp_counter.shape_curve_inds = []
+    expec_comp_counter.shape_list_inds = []
+    
+    for coord in range(num_radec):
+        base = coord*NUM_FLUX_TYPES*num_comp_types
+        expec_comp_counter.comp_types[base + 0] = CompTypes.POINT_POWER.value
+        expec_comp_counter.point_power_inds.append(base + 0)
+        expec_comp_counter.comp_types[base + 1] = CompTypes.POINT_CURVE.value
+        expec_comp_counter.point_curve_inds.append(base + 1)
+        expec_comp_counter.comp_types[base + 2] = CompTypes.POINT_LIST.value
+        expec_comp_counter.point_list_inds.append(base + 2)
+        expec_comp_counter.comp_types[base + 3] = CompTypes.GAUSS_POWER.value
+        expec_comp_counter.gauss_power_inds.append(base + 3)
+        expec_comp_counter.comp_types[base + 4] = CompTypes.GAUSS_CURVE.value
+        expec_comp_counter.gauss_curve_inds.append(base + 4)
+        expec_comp_counter.comp_types[base + 5] = CompTypes.GAUSS_LIST.value
+        expec_comp_counter.gauss_list_inds.append(base + 5)
+        expec_comp_counter.comp_types[base + 6] = CompTypes.SHAPE_POWER.value
+        expec_comp_counter.shape_power_inds.append(base + 6)
+        expec_comp_counter.comp_types[base + 7] = CompTypes.SHAPE_CURVE.value
+        expec_comp_counter.shape_curve_inds.append(base + 7)
+        expec_comp_counter.comp_types[base + 8] = CompTypes.SHAPE_LIST.value
+        expec_comp_counter.shape_list_inds.append(base + 8)
+        
+    ##We stick a set number of flux entries for the list types, and they
+    ##appear every third component
+    expec_comp_counter.num_list_fluxes = np.zeros(total_num_comps)
+    expec_comp_counter.num_list_fluxes[np.arange(2, total_num_comps, 3)] = settings.num_list_values
+    
+    
+    ##We stick a set number of shapelet coeffs for the shapelet type
+    expec_comp_counter.num_shape_coeffs = np.zeros(total_num_comps)
+    
+    all_shapes = np.where((expec_comp_counter.comp_types == CompTypes.SHAPE_POWER.value) |
+                          (expec_comp_counter.comp_types == CompTypes.SHAPE_CURVE.value) |
+                          (expec_comp_counter.comp_types == CompTypes.SHAPE_LIST.value))[0]
+    
+    expec_comp_counter.num_shape_coeffs[all_shapes] = settings.num_coeff_per_shape
+    
+    stokesV_cpl_cadence = settings.stokesV_cpl_cadence
+    stokesV_pl_cadence = settings.stokesV_pl_cadence
+    stokesV_frac_cadence = settings.stokesV_frac_cadence
+    
+    expec_comp_counter.orig_v_point_power_inds = []
+    expec_comp_counter.orig_v_point_curve_inds = []
+    expec_comp_counter.orig_v_point_pol_frac_inds = []
+    expec_comp_counter.orig_v_gauss_power_inds = []
+    expec_comp_counter.orig_v_gauss_curve_inds = []
+    expec_comp_counter.orig_v_gauss_pol_frac_inds = []
+    expec_comp_counter.orig_v_shape_power_inds = []
+    expec_comp_counter.orig_v_shape_curve_inds = []
+    expec_comp_counter.orig_v_shape_pol_frac_inds = []
+    
+    ##Copy the logic from fits_skymodel_common.add_stokesV_fits to work this out
+    ##Also need to factor in that point, gauss, shape have a PPPGGGSSS order
+    
+    if stokesV_cpl_cadence or stokesV_pl_cadence or stokesV_frac_cadence:
+        expec_comp_counter.v_comp_types = np.full(total_num_comps, np.nan, dtype=np.float64)
+        
+        for comp_index in range(total_num_comps):
+        
+            while True:
+            
+                if stokesV_frac_cadence:
+                    if comp_index % stokesV_frac_cadence == 0:
+                        if comp_index % 9 < 3:
+                            expec_comp_counter.v_comp_types[comp_index] = CompTypes.V_POINT_POL_FRAC.value
+                            expec_comp_counter.orig_v_point_pol_frac_inds.append(comp_index)
+                        elif comp_index % 9 < 6:
+                            expec_comp_counter.v_comp_types[comp_index] = CompTypes.V_GAUSS_POL_FRAC.value
+                            expec_comp_counter.orig_v_gauss_pol_frac_inds.append(comp_index)
+                        else:
+                            expec_comp_counter.v_comp_types[comp_index] = CompTypes.V_SHAPE_POL_FRAC.value
+                            expec_comp_counter.orig_v_shape_pol_frac_inds.append(comp_index)
+                        break
+                        
+                if stokesV_pl_cadence:
+                    if comp_index % stokesV_pl_cadence == 0:
+                        if comp_index % 9 < 3:
+                            expec_comp_counter.v_comp_types[comp_index] = CompTypes.V_POINT_POWER.value
+                            expec_comp_counter.orig_v_point_power_inds.append(comp_index)
+                        elif comp_index % 9 < 6:
+                            expec_comp_counter.v_comp_types[comp_index] = CompTypes.V_GAUSS_POWER.value
+                            expec_comp_counter.orig_v_gauss_power_inds.append(comp_index)
+                        else:
+                            expec_comp_counter.v_comp_types[comp_index] = CompTypes.V_SHAPE_POWER.value
+                            expec_comp_counter.orig_v_shape_power_inds.append(comp_index)
+                        break
+                        
+                if stokesV_cpl_cadence:
+                    if comp_index % stokesV_cpl_cadence == 0:
+                        if comp_index % 9 < 3:
+                            expec_comp_counter.v_comp_types[comp_index] = CompTypes.V_POINT_CURVE.value
+                            expec_comp_counter.orig_v_point_curve_inds.append(comp_index)
+                        elif comp_index % 9 < 6:
+                            expec_comp_counter.v_comp_types[comp_index] = CompTypes.V_GAUSS_CURVE.value
+                            expec_comp_counter.orig_v_gauss_curve_inds.append(comp_index)
+                        else:
+                            expec_comp_counter.v_comp_types[comp_index] = CompTypes.V_SHAPE_CURVE.value
+                            expec_comp_counter.orig_v_shape_curve_inds.append(comp_index)
+                        break
+                break
+            
+            
+    linpol_cpl_cadence = settings.linpol_cpl_cadence
+    linpol_pl_cadence = settings.linpol_pl_cadence
+    linpol_frac_cadence = settings.linpol_frac_cadence
+    
+    expec_comp_counter.orig_lin_point_power_inds = []
+    expec_comp_counter.orig_lin_point_curve_inds = []
+    expec_comp_counter.orig_lin_point_pol_frac_inds = []
+    expec_comp_counter.orig_lin_gauss_power_inds = []
+    expec_comp_counter.orig_lin_gauss_curve_inds = []
+    expec_comp_counter.orig_lin_gauss_pol_frac_inds = []
+    expec_comp_counter.orig_lin_shape_power_inds = []
+    expec_comp_counter.orig_lin_shape_curve_inds = []
+    expec_comp_counter.orig_lin_shape_pol_frac_inds = []
+    
+    ##Copy the logic from fits_skymodel_common.add_linpol_fits to work this out
+    ##Also need to factor in that point, gauss, shape have a PPPGGGSSS order
+    
+    if linpol_cpl_cadence or linpol_pl_cadence or linpol_frac_cadence:
+        expec_comp_counter.lin_comp_types = np.full(total_num_comps, np.nan, dtype=np.float64)
+        
+        for comp_index in range(total_num_comps):
+        
+            while True:
+            
+                if linpol_frac_cadence:
+                    if comp_index % linpol_frac_cadence == 0:
+                        if comp_index % 9 < 3:
+                            expec_comp_counter.lin_comp_types[comp_index] = CompTypes.LIN_POINT_POL_FRAC.value
+                            expec_comp_counter.orig_lin_point_pol_frac_inds.append(comp_index)
+                        elif comp_index % 9 < 6:
+                            expec_comp_counter.lin_comp_types[comp_index] = CompTypes.LIN_GAUSS_POL_FRAC.value
+                            expec_comp_counter.orig_lin_gauss_pol_frac_inds.append(comp_index)
+                        else:
+                            expec_comp_counter.lin_comp_types[comp_index] = CompTypes.LIN_SHAPE_POL_FRAC.value
+                            expec_comp_counter.orig_lin_shape_pol_frac_inds.append(comp_index)
+                        break
+                        
+                if linpol_pl_cadence:
+                    if comp_index % linpol_pl_cadence == 0:
+                        if comp_index % 9 < 3:
+                            expec_comp_counter.lin_comp_types[comp_index] = CompTypes.LIN_POINT_POWER.value
+                            expec_comp_counter.orig_lin_point_power_inds.append(comp_index)
+                        elif comp_index % 9 < 6:
+                            expec_comp_counter.lin_comp_types[comp_index] = CompTypes.LIN_GAUSS_POWER.value
+                            expec_comp_counter.orig_lin_gauss_power_inds.append(comp_index)
+                        else:
+                            expec_comp_counter.lin_comp_types[comp_index] = CompTypes.LIN_SHAPE_POWER.value
+                            expec_comp_counter.orig_lin_shape_power_inds.append(comp_index)
+                        break
+                        
+                if linpol_cpl_cadence:
+                    if comp_index % linpol_cpl_cadence == 0:
+                        if comp_index % 9 < 3:
+                            expec_comp_counter.lin_comp_types[comp_index] = CompTypes.LIN_POINT_CURVE.value
+                            expec_comp_counter.orig_lin_point_curve_inds.append(comp_index)
+                        elif comp_index % 9 < 6:
+                            expec_comp_counter.lin_comp_types[comp_index] = CompTypes.LIN_GAUSS_CURVE.value
+                            expec_comp_counter.orig_lin_gauss_curve_inds.append(comp_index)
+                        else:
+                            expec_comp_counter.lin_comp_types[comp_index] = CompTypes.LIN_SHAPE_CURVE.value
+                            expec_comp_counter.orig_lin_shape_curve_inds.append(comp_index)
+                        break
+                break
+
+    return expec_comp_counter
+
+
+def check_comp_counter(comp_counter : Component_Type_Counter,
+                       settings : Skymodel_Settings):
+    """Check the component counter matches expectations"""
+    
+    ##Make what we should have found for testing
+    expec_comp_counter = make_expected_comp_counter(settings)
+    
+    npt.assert_array_equal(expec_comp_counter.source_indexes,
+                           comp_counter.source_indexes)
+    npt.assert_array_equal(expec_comp_counter.comp_types,
+                           comp_counter.comp_types)
+    npt.assert_array_equal(expec_comp_counter.num_list_fluxes,
+                           comp_counter.num_list_fluxes)
+    npt.assert_array_equal(expec_comp_counter.num_shape_coeffs,
+                           comp_counter.num_shape_coeffs)
+    
+    npt.assert_array_equal(expec_comp_counter.point_power_inds,
+                           comp_counter.point_power_inds)
+    npt.assert_array_equal(expec_comp_counter.point_curve_inds,
+                           comp_counter.point_curve_inds)
+    npt.assert_array_equal(expec_comp_counter.point_list_inds,
+                           comp_counter.point_list_inds)
+    npt.assert_array_equal(expec_comp_counter.gauss_power_inds,
+                           comp_counter.gauss_power_inds)
+    npt.assert_array_equal(expec_comp_counter.gauss_curve_inds,
+                           comp_counter.gauss_curve_inds)
+    npt.assert_array_equal(expec_comp_counter.gauss_list_inds,
+                           comp_counter.gauss_list_inds)
+    npt.assert_array_equal(expec_comp_counter.shape_power_inds,
+                           comp_counter.shape_power_inds)
+    npt.assert_array_equal(expec_comp_counter.shape_curve_inds,
+                           comp_counter.shape_curve_inds)
+    npt.assert_array_equal(expec_comp_counter.shape_list_inds,
+                           comp_counter.shape_list_inds)
+    
+    if settings.stokesV_cpl_cadence or settings.stokesV_pl_cadence or settings.stokesV_frac_cadence:
+        npt.assert_array_equal(expec_comp_counter.v_comp_types,
+                               comp_counter.v_comp_types)
+        
+        npt.assert_array_equal(expec_comp_counter.orig_v_point_power_inds,
+                               comp_counter.orig_v_point_power_inds)
+        npt.assert_array_equal(expec_comp_counter.orig_v_point_curve_inds,
+                               comp_counter.orig_v_point_curve_inds)
+        npt.assert_array_equal(expec_comp_counter.orig_v_point_pol_frac_inds,
+                               comp_counter.orig_v_point_pol_frac_inds)
+        npt.assert_array_equal(expec_comp_counter.orig_v_gauss_power_inds,
+                               comp_counter.orig_v_gauss_power_inds)
+        npt.assert_array_equal(expec_comp_counter.orig_v_gauss_curve_inds,
+                               comp_counter.orig_v_gauss_curve_inds)
+        npt.assert_array_equal(expec_comp_counter.orig_v_gauss_pol_frac_inds,
+                               comp_counter.orig_v_gauss_pol_frac_inds)
+        npt.assert_array_equal(expec_comp_counter.orig_v_shape_power_inds,
+                               comp_counter.orig_v_shape_power_inds)
+        npt.assert_array_equal(expec_comp_counter.orig_v_shape_curve_inds,
+                               comp_counter.orig_v_shape_curve_inds)
+        npt.assert_array_equal(expec_comp_counter.orig_v_shape_pol_frac_inds,
+                               comp_counter.orig_v_shape_pol_frac_inds)
+        
+    if settings.linpol_cpl_cadence or settings.linpol_pl_cadence or settings.linpol_frac_cadence:
+        npt.assert_array_equal(expec_comp_counter.lin_comp_types,
+                               comp_counter.lin_comp_types)
+        
+        npt.assert_array_equal(expec_comp_counter.orig_lin_point_power_inds,
+                               comp_counter.orig_lin_point_power_inds)
+        npt.assert_array_equal(expec_comp_counter.orig_lin_point_curve_inds,
+                               comp_counter.orig_lin_point_curve_inds)
+        npt.assert_array_equal(expec_comp_counter.orig_lin_point_pol_frac_inds,
+                               comp_counter.orig_lin_point_pol_frac_inds)
+        npt.assert_array_equal(expec_comp_counter.orig_lin_gauss_power_inds,
+                               comp_counter.orig_lin_gauss_power_inds)
+        npt.assert_array_equal(expec_comp_counter.orig_lin_gauss_curve_inds,
+                               comp_counter.orig_lin_gauss_curve_inds)
+        npt.assert_array_equal(expec_comp_counter.orig_lin_gauss_pol_frac_inds,
+                               comp_counter.orig_lin_gauss_pol_frac_inds)
+        npt.assert_array_equal(expec_comp_counter.orig_lin_shape_power_inds,
+                               comp_counter.orig_lin_shape_power_inds)
+        npt.assert_array_equal(expec_comp_counter.orig_lin_shape_curve_inds,
+                               comp_counter.orig_lin_shape_curve_inds)
+        npt.assert_array_equal(expec_comp_counter.orig_lin_shape_pol_frac_inds,
+                               comp_counter.orig_lin_shape_pol_frac_inds)

@@ -17,6 +17,7 @@ path.append('{:s}/../../../wodenpy/skymodel'.format(code_dir))
 # ##Code we are testing
 import read_fits_skymodel
 import fits_skymodel_common
+from read_skymodel_common import Skymodel_Settings, make_expected_comp_counter, check_comp_counter
 # import wodenpy
 from woden_skymodel import Component_Type_Counter, CompTypes
 
@@ -728,102 +729,140 @@ class Test(unittest.TestCase):
         """
         """
         
-        settings = fits_skymodel_common.FITS_Skymodel_Settings(deg_between_comps = 240,
-                                          num_coeff_per_shape = 4,
-                                          num_list_values = 4,
-                                          comps_per_source = 10,
-                                          stokesV_frac_cadence = 5,
-                                          stokesV_pl_cadence = 4,
-                                          stokesV_cpl_cadence = 3,
-                                          linpol_frac_cadence = 3,
-                                          linpol_pl_cadence = 5,
-                                          linpol_cpl_cadence = 4)
-
+        settings = Skymodel_Settings(deg_between_comps = 240,
+                                     num_coeff_per_shape = 4,
+                                     num_list_values = 4,
+                                     comps_per_source = 10,
+                                     stokesV_frac_cadence = 5)
+        
         fits_skymodel_common.write_full_test_skymodel_fits(settings)
         
-        # ##Check the total numbers read in are correct
-        # expec_nums = Expected_Total_Nums(num_sources = 10,
-        #                                 total_comps = 27,
-        #                                 total_point_comps = 9,
-        #                                 num_point_flux_powers = 3,
-        #                                 num_point_flux_curves = 3,
-        #                                 num_point_flux_lists = 3,
-        #                                 total_point_list_fluxes = 3*POINT0_NUM_LIST_ENTRIES,
-        #                                 total_gauss_comps = 9,
-        #                                 num_gauss_flux_powers = 3,
-        #                                 num_gauss_flux_curves = 3,
-        #                                 num_gauss_flux_lists = 3,
-        #                                 total_gauss_list_fluxes = 3*GAUSS0_NUM_LIST_ENTRIES,
-        #                                 total_shape_comps = 9,
-        #                                 num_shape_flux_powers = 3,
-        #                                 num_shape_flux_curves = 3,
-        #                                 num_shape_flux_lists = 3,
-        #                                 total_shape_list_fluxes = 3*SHAPE0_NUM_LIST_ENTRIES,
-        #                                 total_shape_basis = 9*SHAPE0_NUM_COEFFS)
+        comp_counter = read_fits_skymodel.read_fits_radec_count_components('test_full_skymodel.fits')
         
-        # expec_source_inds = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8,
-        #                             9, 9, 9, 9, 9, 9, 9, 9, 9,
-        #                             9, 9, 9, 9, 9, 9, 9, 9, 9])
-    
-        # expec_file_nums = np.array([1, 14, 34, 48, 65,83, 104, 135, 174,
-        #                             204, 216, 235, 248, 264, 284, 314, 352,
-        #                             381, 393, 412, 425, 441, 461, 491, 529,
-        #                             558, 575])
-        # comp_counter = self.run_and_check_tots_read_fits_radec_count_components(skymodel,
-        #                             expec_nums, expec_source_inds, expec_file_nums)
+        comp_counter.print_info()
         
-        # ##All the individual expected components in a list
-        # expec_comps = [Expected_Component_Nums(CompTypes.POINT_POWER.value),
-        #             Expected_Component_Nums(CompTypes.POINT_LIST.value,
-        #                                     num_list_flux = POINT0_NUM_LIST_ENTRIES),
-        #             Expected_Component_Nums(CompTypes.POINT_CURVE.value),
-        #             Expected_Component_Nums(CompTypes.GAUSS_POWER.value),
-        #             Expected_Component_Nums(CompTypes.GAUSS_CURVE.value),
-        #             Expected_Component_Nums(CompTypes.GAUSS_LIST.value,
-        #                                     num_list_flux = GAUSS0_NUM_LIST_ENTRIES),
-        #             Expected_Component_Nums(CompTypes.SHAPE_CURVE.value,
-        #                                     num_shape_basis = SHAPE0_NUM_COEFFS),
-        #             Expected_Component_Nums(CompTypes.SHAPE_LIST.value,
-        #                                     num_shape_basis = SHAPE0_NUM_COEFFS,
-        #                                     num_list_flux = SHAPE0_NUM_LIST_ENTRIES),
-        #             Expected_Component_Nums(CompTypes.SHAPE_POWER.value,
-        #                                     num_shape_basis = SHAPE0_NUM_COEFFS),
-        #             Expected_Component_Nums(CompTypes.POINT_POWER.value),
-        #             Expected_Component_Nums(CompTypes.POINT_LIST.value,
-        #                                     num_list_flux = POINT0_NUM_LIST_ENTRIES),
-        #             Expected_Component_Nums(CompTypes.POINT_CURVE.value),
-        #             Expected_Component_Nums(CompTypes.GAUSS_POWER.value),
-        #             Expected_Component_Nums(CompTypes.GAUSS_LIST.value,
-        #                                     num_list_flux = GAUSS0_NUM_LIST_ENTRIES),
-        #             Expected_Component_Nums(CompTypes.SHAPE_CURVE.value,
-        #                                     num_shape_basis = SHAPE0_NUM_COEFFS),
-        #             Expected_Component_Nums(CompTypes.SHAPE_LIST.value,
-        #                                     num_shape_basis = SHAPE0_NUM_COEFFS,
-        #                                     num_list_flux = SHAPE0_NUM_LIST_ENTRIES),
-        #             Expected_Component_Nums(CompTypes.SHAPE_POWER.value,
-        #                                     num_shape_basis = SHAPE0_NUM_COEFFS),
-        #             Expected_Component_Nums(CompTypes.POINT_POWER.value),
-        #             Expected_Component_Nums(CompTypes.POINT_LIST.value,
-        #                                     num_list_flux = POINT0_NUM_LIST_ENTRIES),
-        #             Expected_Component_Nums(CompTypes.POINT_CURVE.value),
-        #             Expected_Component_Nums(CompTypes.GAUSS_POWER.value),
-        #             Expected_Component_Nums(CompTypes.GAUSS_LIST.value,
-        #                                     num_list_flux = GAUSS0_NUM_LIST_ENTRIES),
-        #             Expected_Component_Nums(CompTypes.SHAPE_CURVE.value,
-        #                                     num_shape_basis = SHAPE0_NUM_COEFFS),
-        #             Expected_Component_Nums(CompTypes.SHAPE_LIST.value,
-        #                                     num_shape_basis = SHAPE0_NUM_COEFFS,
-        #                                     num_list_flux = SHAPE0_NUM_LIST_ENTRIES),
-        #             Expected_Component_Nums(CompTypes.SHAPE_POWER.value,
-        #                                     num_shape_basis = SHAPE0_NUM_COEFFS),
-        #             Expected_Component_Nums(CompTypes.GAUSS_CURVE.value),
-        #             Expected_Component_Nums(CompTypes.GAUSS_CURVE.value)]
-                    
-    
-        # #iterate over component details and check they are correct
-        # for comp_ind, expec_comp in enumerate(expec_comps):
-        #     self.check_single_component(comp_counter, expec_comp, comp_ind)
-
+        ##Test we got what we expected
+        check_comp_counter(comp_counter, settings)
+        
+    def test_StokesV_power(self):
+        """
+        """
+        
+        settings = Skymodel_Settings(deg_between_comps = 240,
+                                     num_coeff_per_shape = 4,
+                                     num_list_values = 4,
+                                     comps_per_source = 10,
+                                     stokesV_pl_cadence = 4)
+        
+        fits_skymodel_common.write_full_test_skymodel_fits(settings)
+        
+        comp_counter = read_fits_skymodel.read_fits_radec_count_components('test_full_skymodel.fits')
+        
+        comp_counter.print_info()
+        
+        ##Test we got what we expected
+        check_comp_counter(comp_counter, settings)
+        
+    def test_StokesV_curve(self):
+        """
+        """
+        
+        settings = Skymodel_Settings(deg_between_comps = 240,
+                                     num_coeff_per_shape = 4,
+                                     num_list_values = 4,
+                                     comps_per_source = 10,
+                                     stokesV_cpl_cadence = 3)
+        
+        fits_skymodel_common.write_full_test_skymodel_fits(settings)
+        
+        comp_counter = read_fits_skymodel.read_fits_radec_count_components('test_full_skymodel.fits')
+        
+        comp_counter.print_info()
+        
+        ##Test we got what we expected
+        check_comp_counter(comp_counter, settings)
+        
+    def test_linpol_fracpol(self):
+        """
+        """
+        
+        settings = Skymodel_Settings(deg_between_comps = 240,
+                                     num_coeff_per_shape = 4,
+                                     num_list_values = 4,
+                                     comps_per_source = 10,
+                                     linpol_frac_cadence = 5)
+        
+        fits_skymodel_common.write_full_test_skymodel_fits(settings)
+        
+        comp_counter = read_fits_skymodel.read_fits_radec_count_components('test_full_skymodel.fits')
+        
+        comp_counter.print_info()
+        
+        ##Test we got what we expected
+        check_comp_counter(comp_counter, settings)
+        
+    def test_linpol_power(self):
+        """
+        """
+        
+        settings = Skymodel_Settings(deg_between_comps = 240,
+                                     num_coeff_per_shape = 4,
+                                     num_list_values = 4,
+                                     comps_per_source = 10,
+                                     linpol_pl_cadence = 4)
+        
+        fits_skymodel_common.write_full_test_skymodel_fits(settings)
+        
+        comp_counter = read_fits_skymodel.read_fits_radec_count_components('test_full_skymodel.fits')
+        
+        comp_counter.print_info()
+        
+        ##Test we got what we expected
+        check_comp_counter(comp_counter, settings)
+        
+    def test_linpol_curve(self):
+        """
+        """
+        
+        settings = Skymodel_Settings(deg_between_comps = 240,
+                                     num_coeff_per_shape = 4,
+                                     num_list_values = 4,
+                                     comps_per_source = 10,
+                                     linpol_cpl_cadence = 3)
+        
+        fits_skymodel_common.write_full_test_skymodel_fits(settings)
+        
+        comp_counter = read_fits_skymodel.read_fits_radec_count_components('test_full_skymodel.fits')
+        
+        comp_counter.print_info()
+        
+        ##Test we got what we expected
+        check_comp_counter(comp_counter, settings)
+        
+    def test_all_polarisations(self):
+        """
+        """
+        
+        settings = Skymodel_Settings(deg_between_comps = 240,
+                                     num_coeff_per_shape = 4,
+                                     num_list_values = 4,
+                                     comps_per_source = 10,
+                                     stokesV_frac_cadence = 5,
+                                     stokesV_pl_cadence = 4,
+                                     stokesV_cpl_cadence = 3,
+                                     linpol_frac_cadence = 3,
+                                     linpol_pl_cadence = 5,
+                                     linpol_cpl_cadence = 4)
+        
+        fits_skymodel_common.write_full_test_skymodel_fits(settings)
+        
+        comp_counter = read_fits_skymodel.read_fits_radec_count_components('test_full_skymodel.fits')
+        
+        comp_counter.print_info()
+        
+        ##Test we got what we expected
+        check_comp_counter(comp_counter, settings)
+        
 ##Run the test
 if __name__ == '__main__':
     unittest.main()

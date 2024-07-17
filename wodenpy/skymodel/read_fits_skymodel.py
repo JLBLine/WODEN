@@ -36,10 +36,9 @@ def read_fits_radec_count_components(fits_path : str):
         sys.exit(f"Cannot read sky model from {fits_path}. Please check your paths, exiting now.")
         
         
-    ##grabd all the relevant information out of the tables
+    ##grab all the relevant information out of the tables
     
     main_table = Table.read(fits_path, hdu=1)
-    
     
     ras = np.array(main_table['RA'], dtype=np.float64)
     decs = np.array(main_table['DEC'], dtype=np.float64)
@@ -52,7 +51,6 @@ def read_fits_radec_count_components(fits_path : str):
     for key in main_table.columns:
         if key[:7] == 'INT_FLX':
             flux_col_names.append(key)
-            # flux_col_freqs.append(float(key[7:])*1e+6)
         
     num_comps = len(ras)
     
@@ -113,7 +111,7 @@ def read_fits_radec_count_components(fits_path : str):
         else:
             present_fluxes = (~main_table[flux_col].mask).astype(int)
             comp_counter.num_list_fluxes[list_type_inds] += present_fluxes[list_type_inds]
-    
+            
     ##Count how many hdus there are; first table should always be the second hdu?
     with fits.open(fits_path) as hdus:
         num_hdus = len(hdus)
@@ -129,9 +127,71 @@ def read_fits_radec_count_components(fits_path : str):
             basis_func_inds = np.where(shape_comp_names == comp_name)[0]
             comp_counter.num_shape_coeffs[comp_ind] = len(basis_func_inds)
     else:
-        print("WARNING - couldn't find second table containing shapelet information, so not attempting to load any shapelets.")
+        print("INFO: couldn't find second table containing shapelet information, so not attempting to load any shapelets.")
+        
+    ##OK OK so the following indexing seems like overkill, but it's gathering
+    ##indexes that we will use in the lazy-loading of the FITS file later on
+    ##Given we chunk by point, gauss, shapelet, need to keep things separated
+    ##by component type
+    ##Doing it once here means we won't be doing it multiple times later on
+    ##Check for (optional) polarisation information and store if needed
+    if 'V_MOD_TYPE' in main_table.columns:
+        ##Get column, find index of different types
+        v_mod_types = np.array(main_table['V_MOD_TYPE'], dtype=str)
+        
+        ##TODO add in list-type fluxes
+        v_point_power = np.where((comp_types == 'P') & (v_mod_types == 'pl'))
+        v_point_curve = np.where((comp_types == 'P') & (v_mod_types == 'cpl'))
+        v_point_pol_frac = np.where((comp_types == 'P') & (v_mod_types == 'pf'))
+        v_gauss_power = np.where((comp_types == 'G') & (v_mod_types == 'pl'))
+        v_gauss_curve = np.where((comp_types == 'G') & (v_mod_types == 'cpl'))
+        v_gauss_pol_frac = np.where((comp_types == 'G') & (v_mod_types == 'pf'))
+        v_shape_power = np.where((comp_types == 'S') & (v_mod_types == 'pl'))
+        v_shape_curve = np.where((comp_types == 'S') & (v_mod_types == 'cpl'))
+        v_shape_pol_frac = np.where((comp_types == 'S') & (v_mod_types == 'pf'))
+        
+        ##Stick em in the comp counter with specific values
+        comp_counter.v_comp_types = np.full(num_comps, np.nan, dtype=np.float64)
+        comp_counter.v_comp_types[v_point_power] = CompTypes.V_POINT_POWER.value
+        comp_counter.v_comp_types[v_point_curve] = CompTypes.V_POINT_CURVE.value
+        comp_counter.v_comp_types[v_point_pol_frac] = CompTypes.V_POINT_POL_FRAC.value
+        comp_counter.v_comp_types[v_gauss_power] = CompTypes.V_GAUSS_POWER.value
+        comp_counter.v_comp_types[v_gauss_curve] = CompTypes.V_GAUSS_CURVE.value
+        comp_counter.v_comp_types[v_gauss_pol_frac] = CompTypes.V_GAUSS_POL_FRAC.value
+        comp_counter.v_comp_types[v_shape_power] = CompTypes.V_SHAPE_POWER.value
+        comp_counter.v_comp_types[v_shape_curve] = CompTypes.V_SHAPE_CURVE.value
+        comp_counter.v_comp_types[v_shape_pol_frac] = CompTypes.V_SHAPE_POL_FRAC.value
+        
+    ##Check for (optional) polarisation information and store if needed
+    if 'LIN_MOD_TYPE' in main_table.columns:
+        ##Get column, find index of different types
+        lin_mod_types = np.array(main_table['LIN_MOD_TYPE'], dtype=str)
+        ##TODO add in list-type fluxes
+        lin_point_power = np.where((comp_types == 'P') & (lin_mod_types == 'pl'))
+        lin_point_curve = np.where((comp_types == 'P') & (lin_mod_types == 'cpl'))
+        lin_point_pol_frac = np.where((comp_types == 'P') & (lin_mod_types == 'pf'))
+        lin_gauss_power = np.where((comp_types == 'G') & (lin_mod_types == 'pl'))
+        lin_gauss_curve = np.where((comp_types == 'G') & (lin_mod_types == 'cpl'))
+        lin_gauss_pol_frac = np.where((comp_types == 'G') & (lin_mod_types == 'pf'))
+        lin_shape_power = np.where((comp_types == 'S') & (lin_mod_types == 'pl'))
+        lin_shape_curve = np.where((comp_types == 'S') & (lin_mod_types == 'cpl'))
+        lin_shape_pol_frac = np.where((comp_types == 'S') & (lin_mod_types == 'pf'))
+        
+        ##Stick em in the comp counter with specific values
+        comp_counter.lin_comp_types = np.full(num_comps, np.nan, dtype=np.float64)
+        comp_counter.lin_comp_types[lin_point_power] = CompTypes.LIN_POINT_POWER.value
+        comp_counter.lin_comp_types[lin_point_curve] = CompTypes.LIN_POINT_CURVE.value
+        comp_counter.lin_comp_types[lin_point_pol_frac] = CompTypes.LIN_POINT_POL_FRAC.value
+        comp_counter.lin_comp_types[lin_gauss_power] = CompTypes.LIN_GAUSS_POWER.value
+        comp_counter.lin_comp_types[lin_gauss_curve] = CompTypes.LIN_GAUSS_CURVE.value
+        comp_counter.lin_comp_types[lin_gauss_pol_frac] = CompTypes.LIN_GAUSS_POL_FRAC.value
+        comp_counter.lin_comp_types[lin_shape_power] = CompTypes.LIN_SHAPE_POWER.value
+        comp_counter.lin_comp_types[lin_shape_curve] = CompTypes.LIN_SHAPE_CURVE.value
+        comp_counter.lin_comp_types[lin_shape_pol_frac] = CompTypes.LIN_SHAPE_POL_FRAC.value
     
     comp_counter.total_components()
+    
+    ##Now we check for optional columns, and if they exist, we read them in
 
     return comp_counter
 
