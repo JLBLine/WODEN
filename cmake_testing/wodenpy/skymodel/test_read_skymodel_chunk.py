@@ -18,9 +18,9 @@ from wodenpy.use_libwoden.beam_settings import BeamTypes
 
 from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, _Ctype_Source_Into_Python
 
-from common_skymodel_test import fill_comp_counter, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components
+from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components
 
-from read_skymodel_common import check_components, check_all_sources, populate_pointgauss_chunk, populate_shapelet_chunk, make_expected_chunks
+from read_skymodel_common import check_components, check_all_sources, populate_pointgauss_chunk, populate_shapelet_chunk, make_expected_chunks, Skymodel_Settings
 
 import wodenpy.use_libwoden.woden_settings as ws
 
@@ -72,12 +72,12 @@ class Test(BaseChunkTest):
         woden_settings.do_precession = 1
         lsts = ws.setup_lsts_and_phase_centre(woden_settings)
         
+        settings = Skymodel_Settings(deg_between_comps, num_coeff_per_shape,
+                                     num_list_values, comps_per_source)
+        
         
         ##create a test FITS skymodel to read
-        ra_range, dec_range = write_full_test_skymodel_fits(deg_between_comps,
-                                 num_coeff_per_shape,
-                                 num_list_values,
-                                 comps_per_source)
+        ra_range, dec_range = write_full_test_skymodel_fits(settings)
         
         skymodel_filename = "test_full_skymodel.fits"
         

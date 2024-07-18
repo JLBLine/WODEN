@@ -16,7 +16,7 @@ from wodenpy.skymodel import read_yaml_skymodel
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes
 from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map, Skymodel_Chunk_Map
 
-from common_skymodel_test import fill_comp_counter, Expec_Counter, BaseChunkTest
+from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest
 
 D2R = np.pi/180.0
 
@@ -31,18 +31,24 @@ class Test(BaseChunkTest):
                             num_points : int, num_gauss : int,
                             num_shapes : int, num_coeff_per_shape : int,
                             num_list_values : int, num_time_steps : int,
-                            num_baselines : int, num_freqs : int):
+                            num_baselines : int, num_freqs : int,
+                            stokesV_cadence : int = 0,
+                            linpol_cadence : int = 0):
         """Makes a populted Component_Type_Counter based off the given
         inputs, runs it through
         `wodenpy.skymodel.chunk_sky_model.map_chunk_pointgauss` and
         checks that gives the correct answers"""
         
         ##make the fake sky model        
-        comp_counter = fill_comp_counter(num_points, num_gauss,
+        comp_counter = fill_comp_counter_for_chunking(num_points, num_gauss,
                                          num_shapes, num_coeff_per_shape,
-                                         num_list_values, num_time_steps)
+                                         num_list_values, num_time_steps,
+                                         stokesV_cadence=stokesV_cadence,
+                                         linpol_cadence=linpol_cadence)
         
         comp_counter.total_components()
+        
+        comp_counter.print_info()
         
         
         ##Run the code we are testing!
@@ -74,6 +80,7 @@ class Test(BaseChunkTest):
                                             comps_per_chunk,
                                             num_point_chunks, num_list_values,
                                             num_points,
+                                            linpol_cadence, stokesV_cadence,
                                             CompTypes.POINT,
                                             comp_counter, chunk_map,
                                             expec_counter)
@@ -86,6 +93,7 @@ class Test(BaseChunkTest):
                                             comps_per_chunk,
                                             num_gauss_chunks, num_list_values,
                                             num_gauss,
+                                            linpol_cadence, stokesV_cadence,
                                             CompTypes.GAUSSIAN,
                                             comp_counter, chunk_map,
                                             expec_counter)
@@ -97,6 +105,7 @@ class Test(BaseChunkTest):
             self.check_shapelet_chunking(coeff_ind, num_coeff_per_shape,
                                          comps_per_chunk,
                                          num_list_values,  num_shapes,
+                                         linpol_cadence, stokesV_cadence,
                                          comp_counter, chunk_map,
                                          total_point_comps=NUM_FLUX_TYPES*num_points,
                                          total_gauss_comps=NUM_FLUX_TYPES*num_gauss)
@@ -249,6 +258,31 @@ class Test(BaseChunkTest):
                                             num_shapes, num_coeff_per_shape,
                                             num_list_values, num_time_steps,
                                             num_baselines, num_freqs)
+        
+    def test_P87760_G12207_S121_678_C1e10_Time056_Lin70_V100(self):
+
+        num_points = 87760
+        num_gauss = 12207
+        num_shapes = 121
+        num_coeff_per_shape = 678
+
+        max_num_visibilities = 1e10
+
+        num_time_steps = 56
+        num_baselines = 8128
+        num_freqs = 32
+
+        num_list_values = 16
+        
+        linpol_cadence = 70
+        stokesV_cadence = 100
+        self.run_test_create_skymodel_chunk_map(max_num_visibilities,
+                                            num_points, num_gauss,
+                                            num_shapes, num_coeff_per_shape,
+                                            num_list_values, num_time_steps,
+                                            num_baselines, num_freqs,
+                                           linpol_cadence=linpol_cadence,
+                                           stokesV_cadence=stokesV_cadence)
 
 
         

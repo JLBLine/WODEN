@@ -1,3 +1,9 @@
+"""Test `wodenpy.skymodel.read_fits_skymodel.read_fits_radec_count_components`,
+which should read in and index different types of components from a FITS
+sky model. First set of tests here use existing FITS sky models to test
+against expected outcomes. Second set generate FITS sky models on the fly,
+and then compares them to similarly generated expected outcomes."""
+
 from sys import path
 import os
 import unittest
@@ -15,11 +21,13 @@ path.append('{:s}/../../../wodenpy/skymodel'.format(code_dir))
 
 
 # ##Code we are testing
-import read_fits_skymodel
+from wodenpy.skymodel import read_fits_skymodel
 import fits_skymodel_common
 from read_skymodel_common import Skymodel_Settings, make_expected_comp_counter, check_comp_counter
 # import wodenpy
-from woden_skymodel import Component_Type_Counter, CompTypes
+from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes
+
+
 
 D2R = np.pi/180.0
 

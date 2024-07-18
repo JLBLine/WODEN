@@ -179,7 +179,8 @@ class Component_Type_Counter():
         self.shape_curve_inds = False
         self.shape_list_inds = False
         
-        ##these will only get used if we have polarisation information
+        ##these will only get used if we have polarisation information----------
+        ##there are a LOT of things to keep track of, le sigh
         self.num_v_point_powers = 0
         self.num_v_point_curves = 0
         self.num_v_point_pol_fracs = 0
@@ -206,6 +207,44 @@ class Component_Type_Counter():
         self.num_lin_point = 0
         self.num_lin_gauss = 0
         self.num_lin_shape = 0
+        
+        self.v_point_power_inds = False
+        self.v_point_curve_inds = False
+        self.v_point_pol_frac_inds = False
+        self.orig_v_point_power_inds = False
+        self.orig_v_point_curve_inds = False
+        self.orig_v_point_pol_frac_inds = False
+        self.v_gauss_power_inds = False
+        self.v_gauss_curve_inds = False
+        self.v_gauss_pol_frac_inds = False
+        self.orig_v_gauss_power_inds = False
+        self.orig_v_gauss_curve_inds = False
+        self.orig_v_gauss_pol_frac_inds = False
+        self.v_shape_power_inds = False
+        self.v_shape_curve_inds = False
+        self.v_shape_pol_frac_inds = False
+        self.orig_v_shape_power_inds = False
+        self.orig_v_shape_curve_inds = False
+        self.orig_v_shape_pol_frac_inds = False
+        
+        self.lin_point_power_inds = False
+        self.lin_point_curve_inds = False
+        self.lin_point_pol_frac_inds = False
+        self.orig_lin_point_power_inds = False
+        self.orig_lin_point_curve_inds = False
+        self.orig_lin_point_pol_frac_inds = False
+        self.lin_gauss_power_inds = False
+        self.lin_gauss_curve_inds = False
+        self.lin_gauss_pol_frac_inds = False
+        self.orig_lin_gauss_power_inds = False
+        self.orig_lin_gauss_curve_inds = False
+        self.orig_lin_gauss_pol_frac_inds = False
+        self.lin_shape_power_inds = False
+        self.lin_shape_curve_inds = False
+        self.lin_shape_pol_frac_inds = False
+        self.orig_lin_shape_power_inds = False
+        self.orig_lin_shape_curve_inds = False
+        self.orig_lin_shape_pol_frac_inds = False
         
     def new_file_line(self):
         """Iterates the line in the file that we are on"""
@@ -488,13 +527,13 @@ class Component_Type_Counter():
         print("\tGauss Stokes I curved power-laws", self.num_gauss_flux_curves)
         print("\tGauss Stokes I listed fluxes", self.num_gauss_flux_lists)
         if self.num_lin_gauss > 0:
-            print("\tPoint Linear Pol power-laws", self.num_lin_gauss_powers)
-            print("\tPoint Linear Pol curved power-laws", self.num_lin_gauss_curves)
-            print("\tPoint Linear Pol polarisation fraction", self.num_lin_gauss_pol_fracs)
+            print("\tGauss Linear Pol power-laws", self.num_lin_gauss_powers)
+            print("\tGauss Linear Pol curved power-laws", self.num_lin_gauss_curves)
+            print("\tGauss Linear Pol polarisation fraction", self.num_lin_gauss_pol_fracs)
         if self.num_v_gauss > 0:
-            print("\tPoint Stokes V power-laws", self.num_v_gauss_powers)
-            print("\tPoint Stokes V curved power-laws", self.num_v_gauss_curves)
-            print("\tPoint Stokes V polarisation fraction", self.num_v_gauss_pol_fracs)
+            print("\tGauss Stokes V power-laws", self.num_v_gauss_powers)
+            print("\tGauss Stokes V curved power-laws", self.num_v_gauss_curves)
+            print("\tGauss Stokes V polarisation fraction", self.num_v_gauss_pol_fracs)
         
         print("Total Shapelet components", self.total_shape_comps)
         print("\tTotal Shapelet basis", self.total_shape_basis)
@@ -502,13 +541,13 @@ class Component_Type_Counter():
         print("\tShape Stokes I curved power-laws", self.num_shape_flux_curves)
         print("\tShape Stokes I listed fluxes", self.num_shape_flux_lists)
         if self.num_lin_shape > 0:
-            print("\tPoint Linear Pol power-laws", self.num_lin_shape_powers)
-            print("\tPoint Linear Pol curved power-laws", self.num_lin_shape_curves)
-            print("\tPoint Linear Pol polarisation fraction", self.num_lin_shape_pol_fracs)
+            print("\tShape Linear Pol power-laws", self.num_lin_shape_powers)
+            print("\tShape Linear Pol curved power-laws", self.num_lin_shape_curves)
+            print("\tShape Linear Pol polarisation fraction", self.num_lin_shape_pol_fracs)
         if self.num_v_shape > 0:
-            print("\tPoint Stokes V power-laws", self.num_v_shape_powers)
-            print("\tPoint Stokes V curved power-laws", self.num_v_shape_curves)
-            print("\tPoint Stokes V polarisation fraction", self.num_v_shape_pol_fracs)
+            print("\tShape Stokes V power-laws", self.num_v_shape_powers)
+            print("\tShape Stokes V curved power-laws", self.num_v_shape_curves)
+            print("\tShape Stokes V polarisation fraction", self.num_v_shape_pol_fracs)
         
         
 # @profile
@@ -599,6 +638,12 @@ def crop_below_horizon(lst : float, latitude : float,
     comp_counter.num_list_fluxes = comp_counter.num_list_fluxes[comp_counter.orig_comp_indexes]
     comp_counter.num_shape_coeffs = comp_counter.num_shape_coeffs[comp_counter.orig_comp_indexes]
     comp_counter.file_line_nums = comp_counter.file_line_nums[comp_counter.orig_comp_indexes]
+    
+    if type(comp_counter.v_comp_types) == np.ndarray:
+        comp_counter.v_comp_types = comp_counter.v_comp_types[comp_counter.orig_comp_indexes]
+        
+    if type(comp_counter.lin_comp_types) == np.ndarray:
+        comp_counter.lin_comp_types = comp_counter.lin_comp_types[comp_counter.orig_comp_indexes]
 
     ##re-total everything now we have changed the sizes
     comp_counter.total_components()

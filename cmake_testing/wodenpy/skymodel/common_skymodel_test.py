@@ -2,6 +2,7 @@ from sys import path
 import os
 import unittest
 import numpy as np
+import numpy.testing as npt
 
 # ##Code we are testing
 from wodenpy.skymodel import read_yaml_skymodel
@@ -21,9 +22,11 @@ HIGH_DEC = 30.0*D2R
 
 MWA_LATITUDE = -26.7*D2R
 
-def fill_comp_counter(num_points : int, num_gauss : int,
+def fill_comp_counter_for_chunking(num_points : int, num_gauss : int,
                       num_shapes : int, num_coeff_per_shape : int,
-                      num_list_values : int, num_time_steps : int) -> Component_Type_Counter:
+                      num_list_values : int, num_time_steps : int,
+                      stokesV_cadence : int = 0,
+                      linpol_cadence : int = 0) -> Component_Type_Counter:
     """Fill up a Component_Type_Counter based on given numbers. Fill
     all flux model types for each given point, gaussian, and shapelet models,
     e.g. if you set num_points = 5, you get 5 power law points, 5 curved points,
@@ -118,20 +121,82 @@ def fill_comp_counter(num_points : int, num_gauss : int,
     full_comp_counter.comp_types[offset+2*num_shapes:offset+3*num_shapes] = CompTypes.SHAPE_LIST.value
     full_comp_counter.num_list_fluxes[offset+2*num_shapes:offset+3*num_shapes] = num_list_values
     full_comp_counter.num_shape_coeffs[offset:offset+3*num_shapes] = num_coeff_per_shape
+
+    ##OK, do ALL the types of polarisation models at the same time. Keep count
+    ##of how many instances we've added, so we can keep swapping between types
+    ##Each pol model type needs to be linked to point,gaussian,shapelet for
+    ##chunking mapping purposes
     
-    
-    ##this would be done when reading in the sky model
-    full_comp_counter.point_power_inds = np.where(full_comp_counter.comp_types == CompTypes.POINT_POWER.value)[0]
-    full_comp_counter.point_curve_inds = np.where(full_comp_counter.comp_types == CompTypes.POINT_CURVE.value)[0]
-    full_comp_counter.point_list_inds = np.where(full_comp_counter.comp_types == CompTypes.POINT_LIST.value)[0]
-    full_comp_counter.gauss_power_inds = np.where(full_comp_counter.comp_types == CompTypes.GAUSS_POWER.value)[0]
-    full_comp_counter.gauss_curve_inds = np.where(full_comp_counter.comp_types == CompTypes.GAUSS_CURVE.value)[0]
-    full_comp_counter.gauss_list_inds = np.where(full_comp_counter.comp_types == CompTypes.GAUSS_LIST.value)[0]
-    full_comp_counter.shape_power_inds = np.where(full_comp_counter.comp_types == CompTypes.SHAPE_POWER.value)[0]
-    full_comp_counter.shape_curve_inds = np.where(full_comp_counter.comp_types == CompTypes.SHAPE_CURVE.value)[0]
-    full_comp_counter.shape_list_inds = np.where(full_comp_counter.comp_types == CompTypes.SHAPE_LIST.value)[0]
-    
-    
+    num_v = 0
+    if stokesV_cadence:
+        full_comp_counter.v_comp_types = np.full(total_comps, np.nan)
+        for comp in range(total_comps):
+            ##We've hit the cadence number, so add a component
+            if comp % stokesV_cadence == 0:
+                comp_type = full_comp_counter.comp_types[comp]
+                
+                ##Stick in a polarisation fraction component
+                if num_v % 3 == 0:
+                    if comp_type == CompTypes.POINT_POWER.value or comp_type == CompTypes.POINT_CURVE.value or comp_type == CompTypes.POINT_LIST.value:
+                        full_comp_counter.v_comp_types[comp] = CompTypes.V_POINT_POL_FRAC.value
+                    elif comp_type == CompTypes.GAUSS_POWER.value or comp_type == CompTypes.GAUSS_CURVE.value or comp_type == CompTypes.GAUSS_LIST.value:
+                        full_comp_counter.v_comp_types[comp] = CompTypes.V_GAUSS_POL_FRAC.value
+                    else: 
+                        full_comp_counter.v_comp_types[comp] = CompTypes.V_SHAPE_POL_FRAC.value
+                ##Stick in a power-law component
+                elif num_v % 3 == 1:
+                    if comp_type == CompTypes.POINT_POWER.value or comp_type == CompTypes.POINT_CURVE.value or comp_type == CompTypes.POINT_LIST.value:
+                        full_comp_counter.v_comp_types[comp] = CompTypes.V_POINT_POWER.value
+                    elif comp_type == CompTypes.GAUSS_POWER.value or comp_type == CompTypes.GAUSS_CURVE.value or comp_type == CompTypes.GAUSS_LIST.value:
+                        full_comp_counter.v_comp_types[comp] = CompTypes.V_GAUSS_POWER.value
+                    else: 
+                        full_comp_counter.v_comp_types[comp] = CompTypes.V_SHAPE_POWER.value
+                ##Stick in a curved power-law component
+                else:
+                    if comp_type == CompTypes.POINT_POWER.value or comp_type == CompTypes.POINT_CURVE.value or comp_type == CompTypes.POINT_LIST.value:
+                        full_comp_counter.v_comp_types[comp] = CompTypes.V_POINT_CURVE.value
+                    elif comp_type == CompTypes.GAUSS_POWER.value or comp_type == CompTypes.GAUSS_CURVE.value or comp_type == CompTypes.GAUSS_LIST.value:
+                        full_comp_counter.v_comp_types[comp] = CompTypes.V_GAUSS_CURVE.value
+                    else: 
+                        full_comp_counter.v_comp_types[comp] = CompTypes.V_SHAPE_CURVE.value
+                        
+                num_v += 1
+                
+    num_lin = 0
+    if linpol_cadence:
+        full_comp_counter.lin_comp_types = np.full(total_comps, np.nan)
+        for comp in range(total_comps):
+            ##We've hit the cadence number, so add a component
+            if comp % linpol_cadence == 0:
+                comp_type = full_comp_counter.comp_types[comp]
+                
+                ##Stick in a polarisation fraction component
+                if num_lin % 3 == 0:
+                    if comp_type == CompTypes.POINT_POWER.value or comp_type == CompTypes.POINT_CURVE.value or comp_type == CompTypes.POINT_LIST.value:
+                        full_comp_counter.lin_comp_types[comp] = CompTypes.LIN_POINT_POL_FRAC.value
+                    elif comp_type == CompTypes.GAUSS_POWER.value or comp_type == CompTypes.GAUSS_CURVE.value or comp_type == CompTypes.GAUSS_LIST.value:
+                        full_comp_counter.lin_comp_types[comp] = CompTypes.LIN_GAUSS_POL_FRAC.value
+                    else: 
+                        full_comp_counter.lin_comp_types[comp] = CompTypes.LIN_SHAPE_POL_FRAC.value
+                ##Stick in a power-law component
+                elif num_lin % 3 == 1:
+                    if comp_type == CompTypes.POINT_POWER.value or comp_type == CompTypes.POINT_CURVE.value or comp_type == CompTypes.POINT_LIST.value:
+                        full_comp_counter.lin_comp_types[comp] = CompTypes.LIN_POINT_POWER.value
+                    elif comp_type == CompTypes.GAUSS_POWER.value or comp_type == CompTypes.GAUSS_CURVE.value or comp_type == CompTypes.GAUSS_LIST.value:
+                        full_comp_counter.lin_comp_types[comp] = CompTypes.LIN_GAUSS_POWER.value
+                    else: 
+                        full_comp_counter.lin_comp_types[comp] = CompTypes.LIN_SHAPE_POWER.value
+                ##Stick in a curved power-law component
+                else:
+                    if comp_type == CompTypes.POINT_POWER.value or comp_type == CompTypes.POINT_CURVE.value or comp_type == CompTypes.POINT_LIST.value:
+                        full_comp_counter.lin_comp_types[comp] = CompTypes.LIN_POINT_CURVE.value
+                    elif comp_type == CompTypes.GAUSS_POWER.value or comp_type == CompTypes.GAUSS_CURVE.value or comp_type == CompTypes.GAUSS_LIST.value:
+                        full_comp_counter.lin_comp_types[comp] = CompTypes.LIN_GAUSS_CURVE.value
+                    else: 
+                        full_comp_counter.lin_comp_types[comp] = CompTypes.LIN_SHAPE_CURVE.value
+                        
+                num_lin += 1
+                
     return full_comp_counter
 
 class Expec_Counter(object):
@@ -156,6 +221,7 @@ class BaseChunkTest(unittest.TestCase):
     def check_pointgauss_chunking(self, chunk_ind : int, comps_per_chunk : int,
                               num_chunks : int, num_list_values : int,
                               orig_n_comps : int,
+                              linpol_cadence : int, stokesV_cadence: int,
                               comp_type : CompTypes,
                               full_comp_counter : Component_Type_Counter,
                               chunk_map : Skymodel_Chunk_Map,
@@ -306,6 +372,52 @@ class BaseChunkTest(unittest.TestCase):
         self.assertEqual(expec_num_flux_entries, components.total_num_flux_entires)
         # self.assertEqual(expec_lowest_file_num, components.lowest_file_num)
         
+        ##TODO check the polarisation stuff here booooi
+        
+        if linpol_cadence:
+            ##this is every orig index that would have had a linear comp
+            orig_lin_inds = np.arange(0, full_comp_counter.total_comps, linpol_cadence)
+            ##we cycled through pol frac, power, curve, so select subsets
+            lin_pol_frac_inds = orig_lin_inds[np.arange(0, len(orig_lin_inds), 3)]
+            lin_power_inds = orig_lin_inds[np.arange(1, len(orig_lin_inds), 3)]
+            lin_curve_inds = orig_lin_inds[np.arange(2, len(orig_lin_inds), 3)]
+            
+            ##As we know which orig components we expect, we can just check if
+            ##they had polarisation info by matching the subset arrays here
+            
+            all_expec_inds = np.concatenate((expec_power_inds, expec_curve_inds,
+                                            expec_list_inds))
+            
+            expec_lin_pol_frac_inds = np.intersect1d(lin_pol_frac_inds, all_expec_inds)
+            expec_lin_power_inds = np.intersect1d(lin_power_inds, all_expec_inds)
+            expec_lin_curve_inds = np.intersect1d(lin_curve_inds, all_expec_inds)
+            
+            npt.assert_array_equal(expec_lin_pol_frac_inds, components.lin_pol_frac_orig_inds)
+            npt.assert_array_equal(expec_lin_power_inds, components.lin_power_orig_inds)
+            npt.assert_array_equal(expec_lin_curve_inds, components.lin_curve_orig_inds)
+            
+        if stokesV_cadence:
+            ##this is every orig index that would have had a linear comp
+            orig_v_inds = np.arange(0, full_comp_counter.total_comps, stokesV_cadence)
+            ##we cycled through pol frac, power, curve, so select subsets
+            v_pol_frac_inds = orig_v_inds[np.arange(0, len(orig_v_inds), 3)]
+            v_power_inds = orig_v_inds[np.arange(1, len(orig_v_inds), 3)]
+            v_curve_inds = orig_v_inds[np.arange(2, len(orig_v_inds), 3)]
+            
+            ##As we know which orig components we expect, we can just check if
+            ##they had polarisation info by matching the subset arrays here
+            
+            all_expec_inds = np.concatenate((expec_power_inds, expec_curve_inds,
+                                            expec_list_inds))
+            
+            expec_v_pol_frac_inds = np.intersect1d(v_pol_frac_inds, all_expec_inds)
+            expec_v_power_inds = np.intersect1d(v_power_inds, all_expec_inds)
+            expec_v_curve_inds = np.intersect1d(v_curve_inds, all_expec_inds)
+            
+            npt.assert_array_equal(expec_v_pol_frac_inds, components.v_pol_frac_orig_inds)
+            npt.assert_array_equal(expec_v_power_inds, components.v_power_orig_inds)
+            npt.assert_array_equal(expec_v_curve_inds, components.v_curve_orig_inds)
+            
         ##now update the accumulated components
         if comp_type == CompTypes.POINT:
             
@@ -329,6 +441,7 @@ class BaseChunkTest(unittest.TestCase):
     def check_shapelet_chunking(self, chunk_ind : int, num_coeff_per_shape : int,
                                 coeffs_per_chunk : int,
                                 num_list_values : int, orig_n_comps : int,
+                                linpol_cadence : int, stokesV_cadence: int,
                                 full_comp_counter : Component_Type_Counter,
                                 chunk_map : Skymodel_Chunk_Map,
                                 total_point_comps = 0, 
@@ -444,6 +557,50 @@ class BaseChunkTest(unittest.TestCase):
         expec_lowest_file_num = np.nanmin([min_power, min_curve, min_list])
         # self.assertEqual(expec_lowest_file_num, components.lowest_file_num)
         
+        if linpol_cadence:
+            ##this is every orig index that would have had a linear comp
+            orig_lin_inds = np.arange(0, full_comp_counter.total_comps, linpol_cadence)
+            ##we cycled through pol frac, power, curve, so select subsets
+            lin_pol_frac_inds = orig_lin_inds[np.arange(0, len(orig_lin_inds), 3)]
+            lin_power_inds = orig_lin_inds[np.arange(1, len(orig_lin_inds), 3)]
+            lin_curve_inds = orig_lin_inds[np.arange(2, len(orig_lin_inds), 3)]
+            
+            ##As we know which orig components we expect, we can just check if
+            ##they had polarisation info by matching the subset arrays here
+            
+            all_expec_inds = np.concatenate((expec_power_inds, expec_curve_inds,
+                                            expec_list_inds))
+            
+            expec_lin_pol_frac_inds = np.intersect1d(lin_pol_frac_inds, all_expec_inds)
+            expec_lin_power_inds = np.intersect1d(lin_power_inds, all_expec_inds)
+            expec_lin_curve_inds = np.intersect1d(lin_curve_inds, all_expec_inds)
+            
+            npt.assert_array_equal(expec_lin_pol_frac_inds, components.lin_pol_frac_orig_inds)
+            npt.assert_array_equal(expec_lin_power_inds, components.lin_power_orig_inds)
+            npt.assert_array_equal(expec_lin_curve_inds, components.lin_curve_orig_inds)
+            
+        if stokesV_cadence:
+            ##this is every orig index that would have had a linear comp
+            orig_v_inds = np.arange(0, full_comp_counter.total_comps, stokesV_cadence)
+            ##we cycled through pol frac, power, curve, so select subsets
+            v_pol_frac_inds = orig_v_inds[np.arange(0, len(orig_v_inds), 3)]
+            v_power_inds = orig_v_inds[np.arange(1, len(orig_v_inds), 3)]
+            v_curve_inds = orig_v_inds[np.arange(2, len(orig_v_inds), 3)]
+            
+            ##As we know which orig components we expect, we can just check if
+            ##they had polarisation info by matching the subset arrays here
+            
+            all_expec_inds = np.concatenate((expec_power_inds, expec_curve_inds,
+                                            expec_list_inds))
+            
+            expec_v_pol_frac_inds = np.intersect1d(v_pol_frac_inds, all_expec_inds)
+            expec_v_power_inds = np.intersect1d(v_power_inds, all_expec_inds)
+            expec_v_curve_inds = np.intersect1d(v_curve_inds, all_expec_inds)
+            
+            npt.assert_array_equal(expec_v_pol_frac_inds, components.v_pol_frac_orig_inds)
+            npt.assert_array_equal(expec_v_power_inds, components.v_power_orig_inds)
+            npt.assert_array_equal(expec_v_curve_inds, components.v_curve_orig_inds)
+            
         
 class classname(object):
     """

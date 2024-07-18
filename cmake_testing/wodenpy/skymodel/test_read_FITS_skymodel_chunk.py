@@ -19,7 +19,7 @@ from wodenpy.use_libwoden.beam_settings import BeamTypes
 from wodenpy.use_libwoden.skymodel_structs import setup_source_catalogue, setup_chunked_source
 import wodenpy.use_libwoden.woden_settings as ws
 
-from common_skymodel_test import fill_comp_counter, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components
+from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components
 from read_skymodel_common import check_components, check_all_sources, populate_pointgauss_chunk, populate_shapelet_chunk, make_expected_chunks, Skymodel_Settings
 from fits_skymodel_common import write_full_test_skymodel_fits
 

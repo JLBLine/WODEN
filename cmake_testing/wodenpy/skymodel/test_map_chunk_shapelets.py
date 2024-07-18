@@ -10,7 +10,7 @@ import numpy as np
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes
 from wodenpy.skymodel.chunk_sky_model import map_chunk_shapelets, Skymodel_Chunk_Map, create_shape_basis_maps
 
-from common_skymodel_test import fill_comp_counter, Expec_Counter, BaseChunkTest
+from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest
 
 D2R = np.pi/180.0
 
@@ -24,7 +24,9 @@ class Test(BaseChunkTest):
     
     def run_test_map_chunk_shapelet(self, max_num_visibilities : int,
                                     num_shapes : int, num_coeff_per_shape : int,
-                                    num_time_steps : int, num_list_values : int):
+                                    num_time_steps : int, num_list_values : int,
+                                    stokesV_cadence : int = 0,
+                                    linpol_cadence : int = 0):
         """Makes a populted Component_Type_Counter based off the given
         inputs, runs it through
         `wodenpy.skymodel.chunk_sky_model.map_chunk_pointgauss` and
@@ -38,9 +40,11 @@ class Test(BaseChunkTest):
         num_baselines = 5
         num_freqs = 2
                 
-        full_comp_counter = fill_comp_counter(num_points, num_gauss,
+        full_comp_counter = fill_comp_counter_for_chunking(num_points, num_gauss,
                                             num_shapes, num_coeff_per_shape,
-                                            num_list_values, num_time_steps)
+                                            num_list_values, num_time_steps,
+                                            stokesV_cadence=stokesV_cadence,
+                                            linpol_cadence=linpol_cadence)
         
         full_comp_counter.total_components()
         
@@ -64,6 +68,7 @@ class Test(BaseChunkTest):
             self.check_shapelet_chunking(chunk_ind, num_coeff_per_shape,
                                          coeffs_per_chunk,
                                          num_list_values,  num_shapes,
+                                         linpol_cadence, stokesV_cadence,
                                          full_comp_counter, chunk_map)
             
     ##Ok now run with many many combinations
@@ -101,6 +106,20 @@ class Test(BaseChunkTest):
         self.run_test_map_chunk_shapelet(max_num_visibilities,
                                            num_shapes, num_coeff_per_shape,
                                            num_time_steps, num_list_values)
+        
+    def test_Shapelet193_Coeff1266_Chunk3913_Time007_Lincadence4_Vcadence3(self):
+        max_num_visibilities = 3913
+        num_shapes = 193
+        num_coeff_per_shape = 1266
+        num_time_steps = 7
+        num_list_values = 5
+        linpol_cadence = 4
+        stokesV_cadence = 3
+        self.run_test_map_chunk_shapelet(max_num_visibilities,
+                                           num_shapes, num_coeff_per_shape,
+                                           num_time_steps, num_list_values,
+                                           linpol_cadence=linpol_cadence,
+                                           stokesV_cadence=stokesV_cadence)
         
 ##Run the test
 if __name__ == '__main__':
