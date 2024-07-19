@@ -434,7 +434,8 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
             source_components.shape_coeffs[new_b_ind] = shape_table['COEFF'][this_basis]
 
             
-            comp_ind = np.where(np.array(main_table['NAME'][comp_orig_inds], dtype=str) == shape_name)[0]
+            comp_ind = np.where(np.array(main_table['NAME'][comp_orig_inds], dtype=str) == shape_name)[0][0]
+            # print(comp_ind)
             source_components.param_indexes[new_b_ind] = comp_ind
     
     return

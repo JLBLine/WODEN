@@ -68,7 +68,7 @@ def add_stokesV_fits(table_dict, comp_index, stokesV_frac_cadence,
         if stokesV_frac_cadence:
             if comp_index % stokesV_frac_cadence == 0:
                 table_dict['V_MOD_TYPE'][comp_index] = 'pf'
-                table_dict['V_POL_FRAC'][comp_index] = 0.01*float(comp_index/stokesV_frac_cadence)
+                table_dict['V_POL_FRAC'][comp_index] = float(comp_index)
                 break
                 
         if stokesV_pl_cadence:
@@ -103,7 +103,8 @@ def add_linpol_fits(table_dict, comp_index, linpol_frac_cadence,
         if linpol_frac_cadence:
             if comp_index % linpol_frac_cadence == 0:
                 table_dict['LIN_MOD_TYPE'][comp_index] = 'pf'
-                table_dict['LIN_POL_FRAC'][comp_index] = 0.01*float(comp_index/linpol_frac_cadence)
+                # table_dict['LIN_POL_FRAC'][comp_index] = 0.01*float(comp_index/linpol_frac_cadence)
+                table_dict['LIN_POL_FRAC'][comp_index] = float(comp_index)
                 table_dict['RM'][comp_index] = float(comp_index*((2*np.pi)/360))
                 table_dict['INTR_POL_ANGLE'][comp_index] = 0.1*float(comp_index*((2*np.pi)/360))
                 

@@ -55,8 +55,6 @@ class Test(BaseChunkTest):
                                           lst,
                                           crop_by_component=True):
         
-        lst = 0.0
-    
         woden_settings = ws.Woden_Settings_Double()
         
         woden_settings.time_res = 1.0
@@ -81,6 +79,8 @@ class Test(BaseChunkTest):
                                           comp_counter, 
                                           crop_by_component=crop_by_component)
         
+        # comp_counter.print_info()
+        
         ##Create a chunking map
         chunked_skymodel_maps = create_skymodel_chunk_map(comp_counter,
                                         max_num_visibilities, num_baselines,
@@ -99,9 +99,9 @@ class Test(BaseChunkTest):
         check_all_sources(expected_chunks, source_catalogue,
                            fits_skymodel=True)
         
-    def run_write_model_test_read_fits_skymodel_chunk(self, deg_between_comps : int,
-                       num_coeff_per_shape : int, num_list_values : int,
-                       comps_per_source : int, lst : float,
+    def run_write_model_test_read_fits_skymodel_chunk(self, 
+                                                      skymodel_settings : Skymodel_Settings,
+                                                      lst : float,
                        max_num_visibilities : float):
         """Let's go do a bit"""
         
@@ -109,12 +109,7 @@ class Test(BaseChunkTest):
         num_baselines = 8128
         num_time_steps = 14
         
-        settings = Skymodel_Settings(deg_between_comps,
-                                          num_coeff_per_shape,
-                                          num_list_values,
-                                          comps_per_source)
-        
-        ra_range, dec_range = write_full_test_skymodel_fits(settings)
+        ra_range, dec_range = write_full_test_skymodel_fits(skymodel_settings)
         
         # filename = f"{code_dir}/test_full_skymodel.fits"
         filename = "test_full_skymodel.fits"
@@ -123,8 +118,7 @@ class Test(BaseChunkTest):
         
         
         expec_skymodel_chunks = make_expected_chunks(ra_range, dec_range,
-                             num_coeff_per_shape, num_list_values,
-                             comps_per_source, comps_per_chunk,
+                             skymodel_settings, comps_per_chunk, lst=lst,
                              fits_skymodel=True)
         
         
@@ -140,10 +134,12 @@ class Test(BaseChunkTest):
         lst = 0.0
         max_num_visibilities = 1e7
         
-        self.run_write_model_test_read_fits_skymodel_chunk(deg_between_comps,
-                                               num_coeff_per_shape,
-                                               num_list_values,
-                                               comps_per_source, lst,
+        settings = Skymodel_Settings(deg_between_comps,
+                                          num_coeff_per_shape,
+                                          num_list_values,
+                                          comps_per_source)
+        
+        self.run_write_model_test_read_fits_skymodel_chunk(settings, lst,
                                                max_num_visibilities)
         print('-----------------------------')
         
@@ -155,10 +151,12 @@ class Test(BaseChunkTest):
         lst = 0.0
         max_num_visibilities = 1e8
         
-        self.run_write_model_test_read_fits_skymodel_chunk(deg_between_comps,
-                                               num_coeff_per_shape,
-                                               num_list_values,
-                                               comps_per_source, lst,
+        settings = Skymodel_Settings(deg_between_comps,
+                                          num_coeff_per_shape,
+                                          num_list_values,
+                                          comps_per_source)
+        
+        self.run_write_model_test_read_fits_skymodel_chunk(settings, lst,
                                                max_num_visibilities)
         print('-----------------------------')
         
@@ -167,13 +165,38 @@ class Test(BaseChunkTest):
         num_coeff_per_shape = 6
         num_list_values = 4
         comps_per_source = 20
-        lst = np.pi
+        lst = 0.0
         max_num_visibilities = 1e10
         
-        self.run_write_model_test_read_fits_skymodel_chunk(deg_between_comps,
-                                               num_coeff_per_shape,
-                                               num_list_values,
-                                               comps_per_source, lst,
+        settings = Skymodel_Settings(deg_between_comps,
+                                          num_coeff_per_shape,
+                                          num_list_values,
+                                          comps_per_source)
+        
+        self.run_write_model_test_read_fits_skymodel_chunk(settings, lst,
+                                               max_num_visibilities)
+        print('-----------------------------')
+        
+    def test_the_fourth(self):
+        deg_between_comps = 7
+        num_coeff_per_shape = 6
+        num_list_values = 4
+        comps_per_source = 20
+        lst = 0.0
+        max_num_visibilities = 1e10
+        
+        settings = Skymodel_Settings(deg_between_comps,
+                                     num_coeff_per_shape,
+                                     num_list_values,
+                                     comps_per_source,
+                                     stokesV_frac_cadence = 5,
+                                     stokesV_pl_cadence = 4,
+                                     stokesV_cpl_cadence = 3,
+                                     linpol_frac_cadence = 3,
+                                     linpol_pl_cadence = 5,
+                                     linpol_cpl_cadence = 4)
+        
+        self.run_write_model_test_read_fits_skymodel_chunk(settings, lst,
                                                max_num_visibilities)
         print('-----------------------------')
 

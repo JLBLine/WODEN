@@ -620,7 +620,9 @@ class Expected_Components(object):
     
     def __init__(self, comp_type : CompTypes, num_chunk_power = 0,
                  num_chunk_curve = 0, num_chunk_list = 0,
-                 num_list_values = 0, comps_per_chunk = 0):
+                 num_list_values = 0, comps_per_chunk = 0,
+                 num_v_pol_frac = 0, num_v_power = 0, num_v_curve = 0,
+                 num_lin_pol_frac = 0, num_lin_power = 0, num_lin_curve = 0):
         """
         docstring
         """
@@ -632,17 +634,11 @@ class Expected_Components(object):
         
         self.power_ref_freqs = np.empty(num_chunk_power)
         self.power_ref_stokesI = np.empty(num_chunk_power)
-        self.power_ref_stokesQ = np.empty(num_chunk_power)
-        self.power_ref_stokesU = np.empty(num_chunk_power)
-        self.power_ref_stokesV = np.empty(num_chunk_power)
         self.power_SIs = np.empty(num_chunk_power)
         self.power_comp_inds = np.empty(num_chunk_power)
         
         self.curve_ref_freqs = np.empty(num_chunk_curve)
         self.curve_ref_stokesI = np.empty(num_chunk_curve)
-        self.curve_ref_stokesQ = np.empty(num_chunk_curve)
-        self.curve_ref_stokesU = np.empty(num_chunk_curve)
-        self.curve_ref_stokesV = np.empty(num_chunk_curve)
         self.curve_SIs = np.empty(num_chunk_curve)
         self.curve_qs = np.empty(num_chunk_curve)
         self.curve_comp_inds = np.empty(num_chunk_curve)
@@ -665,7 +661,44 @@ class Expected_Components(object):
             self.n1s = np.empty(comps_per_chunk)
             self.n2s = np.empty(comps_per_chunk)
             self.shape_coeffs = np.empty(comps_per_chunk)
-
+        
+        
+        ##circular polarisation stuff===========================================
+        
+        self.stokesV_pol_fracs = np.empty(num_v_pol_frac)
+        self.stokesV_pol_frac_comp_inds = np.empty(num_v_pol_frac, dtype=int)
+        
+        self.stokesV_power_ref_flux = np.empty(num_v_power)
+        self.stokesV_power_SIs = np.empty(num_v_power)
+        self.stokesV_power_comp_inds = np.empty(num_v_power, dtype=int)
+        
+        self.stokesV_curve_ref_flux = np.empty(num_v_curve)
+        self.stokesV_curve_SIs = np.empty(num_v_curve)
+        self.stokesV_curve_qs = np.empty(num_v_curve)
+        self.stokesV_curve_comp_inds = np.empty(num_v_curve, dtype=int)
+        
+         ##linear polarisation stuff===========================================
+         
+        ##These values are needed for any linear polarisation model
+        ##These get used after the polarised flux has been calculated, so need
+        ##their own indexes to refer to the polarised flux
+        self.rm_values = np.empty(num_lin_pol_frac + num_lin_power + num_lin_curve)
+        self.intr_pol_angle = np.empty(num_lin_pol_frac + num_lin_power + num_lin_curve)
+        self.linpol_angle_inds = np.empty(num_lin_pol_frac + num_lin_power + num_lin_curve, dtype=int)
+        
+        ##The following are different models for linear polarisation
+        self.linpol_pol_fracs = np.empty(num_lin_pol_frac)
+        self.linpol_pol_frac_comp_inds = np.empty(num_lin_pol_frac, dtype=int)
+        
+        self.linpol_power_ref_flux = np.empty(num_lin_power)
+        self.linpol_power_SIs = np.empty(num_lin_power)
+        self.linpol_power_comp_inds = np.empty(num_lin_power, dtype=int)
+        
+        self.linpol_curve_ref_flux = np.empty(num_lin_curve)
+        self.linpol_curve_SIs = np.empty(num_lin_curve)
+        self.linpol_curve_qs = np.empty(num_lin_curve)
+        self.linpol_curve_comp_inds = np.empty(num_lin_curve, dtype=int)
+                
 class Expected_Sky_Chunk(object):
     
     def __init__(self):
@@ -691,9 +724,32 @@ class Expected_Sky_Chunk(object):
         self.gauss_components = None
         self.shape_components = None
         
+        self.n_v_point_pol_frac = 0
+        self.n_v_point_power = 0
+        self.n_v_point_curve = 0
+        self.n_lin_point_pol_frac = 0
+        self.n_lin_point_power = 0
+        self.n_lin_point_curve = 0
+        
+        self.n_v_gauss_pol_frac = 0
+        self.n_v_gauss_power = 0
+        self.n_v_gauss_curve = 0
+        self.n_lin_gauss_pol_frac = 0
+        self.n_lin_gauss_power = 0
+        self.n_lin_gauss_curve = 0
+        
+        self.n_v_shape_pol_frac = 0
+        self.n_v_shape_power = 0
+        self.n_v_shape_curve = 0
+        self.n_lin_shape_pol_frac = 0
+        self.n_lin_shape_power = 0
+        self.n_lin_shape_curve = 0
+        
     def init_point_components(self, num_chunk_power : int,
                  num_chunk_curve : int, num_chunk_list : int,
-                 num_list_values : int, comps_per_chunk : int):
+                 num_list_values : int, comps_per_chunk : int,
+                 num_v_pol_frac : int = 0, num_v_power : int = 0, num_v_curve : int = 0,
+                 num_lin_pol_frac : int = 0, num_lin_power : int = 0, num_lin_curve : int = 0):
         
         self.n_point_powers = num_chunk_power
         self.n_point_curves = num_chunk_curve
@@ -702,15 +758,21 @@ class Expected_Sky_Chunk(object):
         
         self.point_components = Expected_Components(CompTypes.POINT,
                                  num_chunk_power, num_chunk_curve, num_chunk_list,
-                                 num_list_values, comps_per_chunk)
+                                 num_list_values, comps_per_chunk,
+                                 num_v_pol_frac, num_v_power, num_v_curve,
+                                 num_lin_pol_frac, num_lin_power, num_lin_curve)
         
     def init_gauss_components(self, num_chunk_power : int,
                  num_chunk_curve : int, num_chunk_list : int,
-                 num_list_values : int, comps_per_chunk : int):
+                 num_list_values : int, comps_per_chunk : int,
+                 num_v_pol_frac : int = 0, num_v_power : int = 0, num_v_curve : int = 0,
+                 num_lin_pol_frac : int = 0, num_lin_power : int = 0, num_lin_curve : int = 0):
         
         self.gauss_components = Expected_Components(CompTypes.GAUSSIAN,
                                  num_chunk_power, num_chunk_curve, num_chunk_list,
-                                 num_list_values, comps_per_chunk)
+                                 num_list_values, comps_per_chunk,
+                                 num_v_pol_frac, num_v_power, num_v_curve,
+                                 num_lin_pol_frac, num_lin_power, num_lin_curve)
         
         self.n_gauss_powers = num_chunk_power
         self.n_gauss_curves = num_chunk_curve
@@ -719,11 +781,15 @@ class Expected_Sky_Chunk(object):
         
     def init_shape_components(self, num_chunk_power : int,
                  num_chunk_curve : int, num_chunk_list : int,
-                 num_list_values : int, comps_per_chunk : int):
+                 num_list_values : int, comps_per_chunk : int,
+                 num_v_pol_frac : int = 0, num_v_power : int = 0, num_v_curve : int = 0,
+                 num_lin_pol_frac : int = 0, num_lin_power : int = 0, num_lin_curve : int = 0):
         
         self.shape_components = Expected_Components(CompTypes.SHAPELET,
                                  num_chunk_power, num_chunk_curve, num_chunk_list,
-                                 num_list_values, comps_per_chunk)
+                                 num_list_values, comps_per_chunk,
+                                 num_v_pol_frac, num_v_power, num_v_curve,
+                                 num_lin_pol_frac, num_lin_power, num_lin_curve)
         
         self.n_shape_powers = num_chunk_power
         self.n_shape_curves = num_chunk_curve

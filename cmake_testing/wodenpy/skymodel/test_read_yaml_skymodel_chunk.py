@@ -21,7 +21,7 @@ from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, 
 
 import wodenpy.use_libwoden.woden_settings as ws
 
-from read_skymodel_common import check_components, check_all_sources, populate_pointgauss_chunk, populate_shapelet_chunk, make_expected_chunks
+from read_skymodel_common import check_components, check_all_sources, populate_pointgauss_chunk, populate_shapelet_chunk, make_expected_chunks, Skymodel_Settings
 
 
 D2R = np.pi/180.0
@@ -390,10 +390,14 @@ class Test(BaseChunkTest):
         
         comps_per_chunk = int(np.floor(max_num_visibilities / (num_baselines * num_freqs * num_time_steps)))
         
+        skymodel_settings = Skymodel_Settings(deg_between_comps,
+                                          num_coeff_per_shape,
+                                          num_list_values,
+                                          comps_per_source)
         
         expec_skymodel_chunks = make_expected_chunks(ra_range, dec_range,
-                             num_coeff_per_shape, num_list_values,
-                             comps_per_source, comps_per_chunk)
+                             skymodel_settings, comps_per_chunk, lst=lst,
+                             fits_skymodel=False)
         
         
         self.run_test_read_yaml_skymodel_chunk(filename, expec_skymodel_chunks,
@@ -435,7 +439,7 @@ class Test(BaseChunkTest):
         num_coeff_per_shape = 6
         num_list_values = 4
         comps_per_source = 20
-        lst = np.pi
+        lst = 0.0
         max_num_visibilities = 1e10
         
         self.run_write_model_test_read_yaml_skymodel_chunk(deg_between_comps,
