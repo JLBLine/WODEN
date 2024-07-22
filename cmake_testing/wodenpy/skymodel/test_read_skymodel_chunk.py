@@ -85,8 +85,7 @@ class Test(BaseChunkTest):
         comps_per_chunk = int(np.floor(max_num_visibilities / (num_baselines * num_freqs * num_time_steps)))
         
         expec_skymodel_chunks = make_expected_chunks(ra_range, dec_range,
-                             num_coeff_per_shape, num_list_values,
-                             comps_per_source, comps_per_chunk,
+                             settings, comps_per_chunk, lst=lst,
                              fits_skymodel=True)
         comp_counter = read_radec_count_components(skymodel_filename)
         
@@ -143,9 +142,16 @@ class Test(BaseChunkTest):
         ##come up with expected values
         comps_per_chunk = int(np.floor(max_num_visibilities / (num_baselines * num_freqs * num_time_steps)))
         
+        skymodel_settings = Skymodel_Settings(deg_between_comps,
+                                          num_coeff_per_shape,
+                                          num_list_values,
+                                          comps_per_source)
+        
+        skymodel_settings.before_crop_num_coords = len(ra_range)
+        
         expec_skymodel_chunks = make_expected_chunks(ra_range, dec_range,
-                             num_coeff_per_shape, num_list_values,
-                             comps_per_source, comps_per_chunk)
+                             skymodel_settings, comps_per_chunk, lst=lst,
+                             fits_skymodel=False)
         
         comp_counter = read_radec_count_components(skymodel_filename)
         

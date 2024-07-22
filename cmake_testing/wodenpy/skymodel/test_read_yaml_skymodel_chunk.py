@@ -395,6 +395,8 @@ class Test(BaseChunkTest):
                                           num_list_values,
                                           comps_per_source)
         
+        skymodel_settings.before_crop_num_coords = len(ra_range)
+        
         expec_skymodel_chunks = make_expected_chunks(ra_range, dec_range,
                              skymodel_settings, comps_per_chunk, lst=lst,
                              fits_skymodel=False)

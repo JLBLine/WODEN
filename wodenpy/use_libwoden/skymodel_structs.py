@@ -144,6 +144,34 @@ class Components_Float(ctypes.Structure):
                 ("ls", POINTER(c_double)),
                 ("ms", POINTER(c_double)),
                 ("ns", POINTER(c_double)),
+                ###polarisation information
+                ("stokesV_pol_fracs", POINTER(c_float)),
+                ("stokesV_pol_frac_comp_inds", POINTER(c_int)),
+                ("stokesV_power_ref_flux", POINTER(c_float)),
+                ("stokesV_power_SIs", POINTER(c_float)),
+                ("stokesV_power_comp_inds", POINTER(c_int)),
+                ("stokesV_curve_ref_flux", POINTER(c_float)),
+                ("stokesV_curve_SIs", POINTER(c_float)),
+                ("stokesV_curve_qs", POINTER(c_float)),
+                ("stokesV_curve_comp_inds", POINTER(c_int)),
+                ("linpol_pol_fracs", POINTER(c_float)),
+                ("linpol_pol_frac_comp_inds", POINTER(c_int)),
+                ("linpol_power_ref_flux", POINTER(c_float)),
+                ("linpol_power_SIs", POINTER(c_float)),
+                ("linpol_power_comp_inds", POINTER(c_int)),
+                ("linpol_curve_ref_flux", POINTER(c_float)),
+                ("linpol_curve_SIs", POINTER(c_float)),
+                ("linpol_curve_qs", POINTER(c_float)),
+                ("linpol_curve_comp_inds", POINTER(c_int)),
+                ("rm_values", POINTER(c_float)),
+                ("intr_pol_angle", POINTER(c_float)),
+                ("linpol_angle_inds", POINTER(c_int)),
+                ("n_stokesV_pol_frac", c_int),
+                ("n_stokesV_power", c_int),
+                ("n_stokesV_curve", c_int),
+                ("n_linpol_pol_frac", c_int),
+                ("n_linpol_power", c_int),
+                ("n_linpol_curve", c_int),
                 ]
     
 class Components_Double(ctypes.Structure):
@@ -273,6 +301,34 @@ class Components_Double(ctypes.Structure):
                 ("ls", POINTER(c_double)),
                 ("ms", POINTER(c_double)),
                 ("ns", POINTER(c_double)),
+                ##polarisation information
+                ("stokesV_pol_fracs", POINTER(c_double)),
+                ("stokesV_pol_frac_comp_inds", POINTER(c_int)),
+                ("stokesV_power_ref_flux", POINTER(c_double)),
+                ("stokesV_power_SIs", POINTER(c_double)),
+                ("stokesV_power_comp_inds", POINTER(c_int)),
+                ("stokesV_curve_ref_flux", POINTER(c_double)),
+                ("stokesV_curve_SIs", POINTER(c_double)),
+                ("stokesV_curve_qs", POINTER(c_double)),
+                ("stokesV_curve_comp_inds", POINTER(c_int)),
+                ("linpol_pol_fracs", POINTER(c_double)),
+                ("linpol_pol_frac_comp_inds", POINTER(c_int)),
+                ("linpol_power_ref_flux", POINTER(c_double)),
+                ("linpol_power_SIs", POINTER(c_double)),
+                ("linpol_power_comp_inds", POINTER(c_int)),
+                ("linpol_curve_ref_flux", POINTER(c_double)),
+                ("linpol_curve_SIs", POINTER(c_double)),
+                ("linpol_curve_qs", POINTER(c_double)),
+                ("linpol_curve_comp_inds", POINTER(c_int)),
+                ("rm_values", POINTER(c_double)),
+                ("intr_pol_angle", POINTER(c_double)),
+                ("linpol_angle_inds", POINTER(c_int)),
+                ("n_stokesV_pol_frac", c_int),
+                ("n_stokesV_power", c_int),
+                ("n_stokesV_curve", c_int),
+                ("n_linpol_pol_frac", c_int),
+                ("n_linpol_power", c_int),
+                ("n_linpol_curve", c_int),
                 ]
     
 class Source_Float(ctypes.Structure):
@@ -778,9 +834,50 @@ class _Components_Python(object):
             self.n1s = np.ctypeslib.as_array(components.n1s, shape=(n_shape_coeffs, ))
             self.n2s = np.ctypeslib.as_array(components.n2s, shape=(n_shape_coeffs, ))
             self.shape_coeffs = np.ctypeslib.as_array(components.shape_coeffs, shape=(n_shape_coeffs, ))
+            
+            
+        # self.curve_comp_inds = np.ctypeslib.as_array(components.curve_comp_inds, shape=(n_curves, ))
         
-    
-    
+        if components.n_stokesV_pol_frac > 0:
+            self.stokesV_pol_fracs = np.ctypeslib.as_array(components.stokesV_pol_fracs, shape=(components.n_stokesV_pol_frac, ))
+            self.stokesV_pol_frac_comp_inds = np.ctypeslib.as_array(components.stokesV_pol_frac_comp_inds, shape=(components.n_stokesV_pol_frac, ))
+            
+            
+        if components.n_stokesV_power > 0:
+            self.stokesV_power_ref_flux = np.ctypeslib.as_array(components.stokesV_power_ref_flux, shape=(components.n_stokesV_power, ))
+            self.stokesV_power_SIs = np.ctypeslib.as_array(components.stokesV_power_SIs, shape=(components.n_stokesV_power, ))
+            self.stokesV_power_comp_inds = np.ctypeslib.as_array(components.stokesV_power_comp_inds, shape=(components.n_stokesV_power, ))
+            
+        if components.n_stokesV_curve > 0:
+            self.stokesV_curve_ref_flux = np.ctypeslib.as_array(components.stokesV_curve_ref_flux, shape=(components.n_stokesV_curve, ))
+            self.stokesV_curve_SIs = np.ctypeslib.as_array(components.stokesV_curve_SIs, shape=(components.n_stokesV_curve, ))
+            self.stokesV_curve_qs = np.ctypeslib.as_array(components.stokesV_curve_qs, shape=(components.n_stokesV_curve, ))
+            self.stokesV_curve_comp_inds = np.ctypeslib.as_array(components.stokesV_curve_comp_inds, shape=(components.n_stokesV_curve, ))
+            
+        if components.n_linpol_pol_frac > 0:
+            self.linpol_pol_fracs = np.ctypeslib.as_array(components.linpol_pol_fracs, shape=(components.n_linpol_pol_frac, ))
+            self.linpol_pol_frac_comp_inds = np.ctypeslib.as_array(components.linpol_pol_frac_comp_inds, shape=(components.n_linpol_pol_frac, ))
+            
+            
+        if components.n_linpol_power > 0:
+            self.linpol_power_ref_flux = np.ctypeslib.as_array(components.linpol_power_ref_flux, shape=(components.n_linpol_power, ))
+            self.linpol_power_SIs = np.ctypeslib.as_array(components.linpol_power_SIs, shape=(components.n_linpol_power, ))
+            self.linpol_power_comp_inds = np.ctypeslib.as_array(components.linpol_power_comp_inds, shape=(components.n_linpol_power, ))
+            
+            
+        if components.n_linpol_curve > 0:
+            self.linpol_curve_ref_flux = np.ctypeslib.as_array(components.linpol_curve_ref_flux, shape=(components.n_linpol_curve, ))
+            self.linpol_curve_SIs = np.ctypeslib.as_array(components.linpol_curve_SIs, shape=(components.n_linpol_curve, ))
+            self.linpol_curve_qs = np.ctypeslib.as_array(components.linpol_curve_qs, shape=(components.n_linpol_curve, ))
+            self.linpol_curve_comp_inds = np.ctypeslib.as_array(components.linpol_curve_comp_inds, shape=(components.n_linpol_curve, ))
+            
+        tot_lin_pol = components.n_linpol_pol_frac + components.n_linpol_power + components.n_linpol_curve
+        
+        if tot_lin_pol > 0:
+            self.rm_values = np.ctypeslib.as_array(components.rm_values, shape=(components.tot_lin_pol, ))
+            self.intr_pol_angle = np.ctypeslib.as_array(components.intr_pol_angle, shape=(components.tot_lin_pol, ))
+            self.linpol_angle_inds = np.ctypeslib.as_array(components.linpol_angle_inds, shape=(components.tot_lin_pol, ))
+            
 
 class _Ctype_Source_Into_Python(object):
     """

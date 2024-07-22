@@ -16,7 +16,6 @@ from wodenpy.use_libwoden.beam_settings import BeamTypes
 from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, _Ctype_Source_Into_Python
 
 from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components
-# from read_skymodel_common import Skymodel_Settings
 
 import wodenpy.use_libwoden.woden_settings as ws
 from copy import deepcopy
@@ -63,6 +62,7 @@ class Skymodel_Settings:
         self.linpol_frac_cadence = linpol_frac_cadence
         self.linpol_pl_cadence = linpol_pl_cadence
         self.linpol_cpl_cadence = linpol_cpl_cadence
+        self.before_crop_num_coords = 0
 
 def check_components(found_comps, expec_comps,
                      n_powers, n_curves, n_lists,
@@ -71,8 +71,6 @@ def check_components(found_comps, expec_comps,
     # print(n_powers, n_curves, n_lists)
     # print("found", found_comps.ras)
     # print("expec", expec_comps.ras)
-    
-    
     
     npt.assert_allclose(found_comps.ras, expec_comps.ras,
                                 rtol=rtol)
@@ -133,7 +131,66 @@ def check_components(found_comps, expec_comps,
                                     expec_comps.num_list_values, rtol=rtol)
         npt.assert_allclose(found_comps.list_start_indexes,
                                     expec_comps.list_start_indexes, rtol=rtol)
-
+        
+        
+    ##Test polarisation stuff if it's supposed to be there
+    if expec_comps.n_v_pol_frac:
+        npt.assert_allclose(found_comps.stokesV_pol_fracs,
+                            expec_comps.stokesV_pol_fracs, rtol=rtol)
+        # npt.assert_allclose(found_comps.stokesV_pol_frac_comp_inds,
+        #                     expec_comps.stokesV_pol_frac_comp_inds, rtol=rtol)
+        pass
+    if expec_comps.n_v_power:
+        # npt.assert_allclose(found_comps.stokesV_power_ref_flux,
+        #                     expec_comps.stokesV_power_ref_flux, rtol=rtol)
+        # npt.assert_allclose(found_comps.stokesV_power_SIs,
+        #                     expec_comps.stokesV_power_SIs, rtol=rtol)
+        # npt.assert_allclose(found_comps.stokesV_power_comp_inds,
+        #                     expec_comps.stokesV_power_comp_inds, rtol=rtol)
+        pass
+    if expec_comps.n_v_curve:
+        # npt.assert_allclose(found_comps.stokesV_curve_ref_flux,
+        #                     expec_comps.stokesV_curve_ref_flux, rtol=rtol)
+        # npt.assert_allclose(found_comps.stokesV_curve_SIs,
+        #                     expec_comps.stokesV_curve_SIs, rtol=rtol)
+        # npt.assert_allclose(found_comps.stokesV_curve_qs,
+        #                     expec_comps.stokesV_curve_qs, rtol=rtol)
+        # npt.assert_allclose(found_comps.stokesV_curve_comp_inds,
+        #                     expec_comps.stokesV_curve_comp_inds, rtol=rtol)
+        pass
+    if expec_comps.n_lin_pol_frac:
+        # npt.assert_allclose(found_comps.linpol_pol_fracs,
+        #                     expec_comps.linpol_pol_fracs, rtol=rtol)
+        # npt.assert_allclose(found_comps.linpol_pol_frac_comp_inds,
+        #                     expec_comps.linpol_pol_frac_comp_inds, rtol=rtol)
+        pass
+    if expec_comps.n_lin_power:
+        # npt.assert_allclose(found_comps.linpol_power_ref_flux,
+        #                     expec_comps.linpol_power_ref_flux, rtol=rtol)
+        # npt.assert_allclose(found_comps.linpol_power_SIs,
+        #                     expec_comps.linpol_power_SIs, rtol=rtol)
+        # npt.assert_allclose(found_comps.linpol_power_comp_inds,
+        #                     expec_comps.linpol_power_comp_inds, rtol=rtol)
+        pass
+    if expec_comps.n_lin_curve:
+        # npt.assert_allclose(found_comps.linpol_curve_ref_flux,
+        #                     expec_comps.linpol_curve_ref_flux, rtol=rtol)
+        # npt.assert_allclose(found_comps.linpol_curve_SIs,
+        #                     expec_comps.linpol_curve_SIs, rtol=rtol)
+        # npt.assert_allclose(found_comps.linpol_curve_qs,
+        #                     expec_comps.linpol_curve_qs, rtol=rtol)
+        # npt.assert_allclose(found_comps.linpol_curve_comp_inds,
+        #                     expec_comps.linpol_curve_comp_inds, rtol=rtol)
+        pass
+    
+    if expec_comps.n_lin_pol_frac or expec_comps.n_lin_power or expec_comps.n_lin_curve:
+        # npt.assert_allclose(found_comps.rm_values,
+        #                     expec_comps.rm_values, rtol=rtol)
+        # npt.assert_allclose(found_comps.intr_pol_angle,
+        #                     expec_comps.intr_pol_angle, rtol=rtol)
+        # npt.assert_allclose(found_comps.intr_pol_angle,
+        #                     expec_comps.intr_pol_angle, rtol=rtol)
+        pass
 
 def check_all_sources(expected_chunks, source_catalogue,
                       fits_skymodel=True):
@@ -834,7 +891,10 @@ def put_pol_info_in_component(components : Expected_Components,
                               lin_power : np.array, lin_power_inds : np.array,
                               lin_curve : np.array, lin_curve_inds : np.array):
     
-    print("I DO I DO NOW")
+    
+    n_v_pol_frac = high_v_pol_frac - low_v_pol_frac
+    n_v_power = high_v_power - low_v_power
+    n_v_curve = high_v_curve - low_v_curve
     
     components.stokesV_pol_fracs[low_v_pol_frac:high_v_pol_frac] = v_pol_frac
     components.stokesV_pol_frac_comp_inds[low_v_pol_frac:high_v_pol_frac] = v_pol_frac_inds
@@ -872,16 +932,27 @@ def put_pol_info_in_component(components : Expected_Components,
     low, high = base_angle_ind, base_angle_ind + n_lin_pol_frac
     components.rm_values[low:high] = lin_pol_frac*((2*np.pi)/360)
     components.intr_pol_angle[low:high] = 0.1*lin_pol_frac*((2*np.pi)/360)
+    components.linpol_angle_inds[low:high] = lin_pol_frac_inds
     
     low += n_lin_pol_frac
     high += n_lin_power
     components.rm_values[low:high] = lin_power*((2*np.pi)/360)
     components.intr_pol_angle[low:high] = 0.1*lin_power*((2*np.pi)/360)
+    components.linpol_angle_inds[low:high] = lin_power_inds
     
     low += n_lin_power
     high += n_lin_curve
     components.rm_values[low:high] = lin_curve*((2*np.pi)/360)
     components.intr_pol_angle[low:high] = 0.1*lin_curve*((2*np.pi)/360)
+    components.linpol_angle_inds[low:high] = lin_curve_inds
+    
+    components.n_v_pol_frac = n_v_pol_frac
+    components.n_v_power = n_v_power
+    components.n_v_curve = n_v_curve
+    components.n_lin_pol_frac = n_lin_pol_frac
+    components.n_lin_power = n_lin_power
+    components.n_lin_curve = n_lin_curve
+            
     
 def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
                               comps_per_chunk : int, n_powers : int,
@@ -914,12 +985,14 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
     ##To work out how big our arrays in the init_components functions need to be
     ##we need to work out how much polarisation information there is
     
-    polvalues.choose_chunk_subset(comp_type, power_iter, curve_iter, list_iter, num_chunk_power, num_chunk_curve, num_chunk_list)
+    if polvalues:
     
-    n_v_pol_frac, n_v_power, n_v_curve, n_lin_pol_frac, n_lin_power, n_lin_curve = polvalues.count_types_in_chunk()
-    
-    print(n_v_power, n_v_curve, n_v_pol_frac, n_lin_power, n_lin_curve, n_lin_pol_frac)
-    
+        polvalues.choose_chunk_subset(comp_type, power_iter, curve_iter, list_iter, num_chunk_power, num_chunk_curve, num_chunk_list)
+        
+        n_v_pol_frac, n_v_power, n_v_curve, n_lin_pol_frac, n_lin_power, n_lin_curve = polvalues.count_types_in_chunk()
+        
+    else:
+        n_v_pol_frac, n_v_power, n_v_curve, n_lin_pol_frac, n_lin_power, n_lin_curve = 0,0,0,0,0,0
     
     expec_chunk = Expected_Sky_Chunk()
     
@@ -938,41 +1011,6 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
                                             n_v_pol_frac, n_v_power, n_v_curve,
                                             n_lin_pol_frac, n_lin_power, n_lin_curve)
         components = expec_chunk.gauss_components
-        
-
-    
-    ##THIS IS STUFF TO BE FILLED
-    # stokesV_pol_frac_comp_inds
-    # stokesV_pol_fracs
-    # stokesV_power_comp_inds
-    # stokesV_curve_comp_inds
-    # 
-    # linpol_pol_frac_comp_inds
-    # linpol_power_comp_inds
-    # linpol_curve_comp_inds
-    
-    
-    # 
-    
-    # stokesV_power_ref_flux
-    # stokesV_power_SIs
-    
-    # stokesV_curve_ref_flux
-    # stokesV_curve_SIs
-    # stokesV_curve_qs
-    
-    # rm_values
-    # intr_pol_angle
-    
-    # linpol_pol_fracs
-    
-    # linpol_power_ref_flux
-    # linpol_power_SIs
-    
-    # linpol_curve_ref_flux
-    # linpol_curve_SIs
-    # linpol_curve_qs
-        
         
     if num_chunk_power:
         low_pow_chunk = 0
@@ -1009,20 +1047,21 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
         ##this might be doing nothing
         ##We are in the power law section, so we need to draw from "powerI" values
         
-        put_pol_info_in_component(components=components,
-                              low_v_pol_frac=0, high_v_pol_frac=polvalues.n_powerI_v_pol_frac,
-                              low_v_power=0, high_v_power=polvalues.n_powerI_v_power,
-                              low_v_curve=0, high_v_curve=polvalues.n_powerI_v_curve,
-                              low_lin_pol_frac=0, high_lin_pol_frac=polvalues.n_powerI_lin_pol_frac,
-                              low_lin_power=0, high_lin_power=polvalues.n_powerI_lin_power,
-                              low_lin_curve=0, high_lin_curve=polvalues.n_powerI_lin_curve,
-                              base_angle_ind=0,
-                              v_pol_frac=polvalues.powerI_v_pol_frac, v_pol_frac_inds=polvalues.powerI_v_pol_frac_inds,
-                              v_power=polvalues.powerI_v_power, v_power_inds=polvalues.powerI_v_power_inds,
-                              v_curve=polvalues.powerI_v_curve, v_curve_inds=polvalues.powerI_v_curve_inds,
-                              lin_pol_frac=polvalues.powerI_lin_pol_frac, lin_pol_frac_inds=polvalues.powerI_lin_pol_frac_inds,
-                              lin_power=polvalues.powerI_lin_power, lin_power_inds=polvalues.powerI_lin_power_inds,
-                              lin_curve=polvalues.powerI_lin_curve, lin_curve_inds=polvalues.powerI_lin_curve_inds)
+        if polvalues:
+            put_pol_info_in_component(components=components,
+                                low_v_pol_frac=0, high_v_pol_frac=polvalues.n_powerI_v_pol_frac,
+                                low_v_power=0, high_v_power=polvalues.n_powerI_v_power,
+                                low_v_curve=0, high_v_curve=polvalues.n_powerI_v_curve,
+                                low_lin_pol_frac=0, high_lin_pol_frac=polvalues.n_powerI_lin_pol_frac,
+                                low_lin_power=0, high_lin_power=polvalues.n_powerI_lin_power,
+                                low_lin_curve=0, high_lin_curve=polvalues.n_powerI_lin_curve,
+                                base_angle_ind=0,
+                                v_pol_frac=polvalues.powerI_v_pol_frac, v_pol_frac_inds=polvalues.powerI_v_pol_frac_inds,
+                                v_power=polvalues.powerI_v_power, v_power_inds=polvalues.powerI_v_power_inds,
+                                v_curve=polvalues.powerI_v_curve, v_curve_inds=polvalues.powerI_v_curve_inds,
+                                lin_pol_frac=polvalues.powerI_lin_pol_frac, lin_pol_frac_inds=polvalues.powerI_lin_pol_frac_inds,
+                                lin_power=polvalues.powerI_lin_power, lin_power_inds=polvalues.powerI_lin_power_inds,
+                                lin_curve=polvalues.powerI_lin_curve, lin_curve_inds=polvalues.powerI_lin_curve_inds)
         
     if num_chunk_curve:
         low_cur_chunk = num_chunk_power
@@ -1072,28 +1111,29 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
         ##We are in the curved power law section, so we need to draw from "curveI" values
         ##everything shoud start after how many power-law things were added
         
-        num_powerI = polvalues.n_powerI_v_pol_frac + polvalues.n_powerI_v_power + polvalues.n_powerI_v_curve
-        
-        put_pol_info_in_component(components=components,
-                              low_v_pol_frac=polvalues.n_powerI_v_pol_frac, 
-                              high_v_pol_frac=polvalues.n_powerI_v_pol_frac + polvalues.n_curveI_v_pol_frac,
-                              low_v_power=polvalues.n_powerI_v_power, 
-                              high_v_power=polvalues.n_powerI_v_power + polvalues.n_curveI_v_power,
-                              low_v_curve=polvalues.n_powerI_v_curve, 
-                              high_v_curve=polvalues.n_powerI_v_curve + polvalues.n_curveI_v_curve,
-                              low_lin_pol_frac=polvalues.n_powerI_lin_pol_frac, 
-                              high_lin_pol_frac=polvalues.n_powerI_lin_pol_frac + polvalues.n_curveI_lin_pol_frac,
-                              low_lin_power=polvalues.n_powerI_lin_power, 
-                              high_lin_power=polvalues.n_powerI_lin_power + polvalues.n_curveI_lin_power,
-                              low_lin_curve=polvalues.n_powerI_lin_curve, 
-                              high_lin_curve=polvalues.n_powerI_lin_curve + polvalues.n_curveI_lin_curve,
-                              base_angle_ind=num_powerI,
-                              v_pol_frac=polvalues.curveI_v_pol_frac, v_pol_frac_inds=polvalues.curveI_v_pol_frac_inds,
-                              v_power=polvalues.curveI_v_power, v_power_inds=polvalues.curveI_v_power_inds,
-                              v_curve=polvalues.curveI_v_curve, v_curve_inds=polvalues.curveI_v_curve_inds,
-                              lin_pol_frac=polvalues.curveI_lin_pol_frac, lin_pol_frac_inds=polvalues.curveI_lin_pol_frac_inds,
-                              lin_power=polvalues.curveI_lin_power, lin_power_inds=polvalues.curveI_lin_power_inds,
-                              lin_curve=polvalues.curveI_lin_curve, lin_curve_inds=polvalues.curveI_lin_curve_inds)
+        if polvalues:
+            num_powerI = polvalues.n_powerI_v_pol_frac + polvalues.n_powerI_v_power + polvalues.n_powerI_v_curve
+            
+            put_pol_info_in_component(components=components,
+                                low_v_pol_frac=polvalues.n_powerI_v_pol_frac, 
+                                high_v_pol_frac=polvalues.n_powerI_v_pol_frac + polvalues.n_curveI_v_pol_frac,
+                                low_v_power=polvalues.n_powerI_v_power, 
+                                high_v_power=polvalues.n_powerI_v_power + polvalues.n_curveI_v_power,
+                                low_v_curve=polvalues.n_powerI_v_curve, 
+                                high_v_curve=polvalues.n_powerI_v_curve + polvalues.n_curveI_v_curve,
+                                low_lin_pol_frac=polvalues.n_powerI_lin_pol_frac, 
+                                high_lin_pol_frac=polvalues.n_powerI_lin_pol_frac + polvalues.n_curveI_lin_pol_frac,
+                                low_lin_power=polvalues.n_powerI_lin_power, 
+                                high_lin_power=polvalues.n_powerI_lin_power + polvalues.n_curveI_lin_power,
+                                low_lin_curve=polvalues.n_powerI_lin_curve, 
+                                high_lin_curve=polvalues.n_powerI_lin_curve + polvalues.n_curveI_lin_curve,
+                                base_angle_ind=num_powerI,
+                                v_pol_frac=polvalues.curveI_v_pol_frac, v_pol_frac_inds=polvalues.curveI_v_pol_frac_inds,
+                                v_power=polvalues.curveI_v_power, v_power_inds=polvalues.curveI_v_power_inds,
+                                v_curve=polvalues.curveI_v_curve, v_curve_inds=polvalues.curveI_v_curve_inds,
+                                lin_pol_frac=polvalues.curveI_lin_pol_frac, lin_pol_frac_inds=polvalues.curveI_lin_pol_frac_inds,
+                                lin_power=polvalues.curveI_lin_power, lin_power_inds=polvalues.curveI_lin_power_inds,
+                                lin_curve=polvalues.curveI_lin_curve, lin_curve_inds=polvalues.curveI_lin_curve_inds)
     
     if num_chunk_list:
         low_lis_chunk = num_chunk_power + num_chunk_curve
@@ -1149,33 +1189,229 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
             components.majors[low_lis_chunk:high_lis_chunk] = expec_params[low_lis_coord:high_lis_coord]*(D2R/3600.0)
             components.minors[low_lis_chunk:high_lis_chunk] = expec_params[low_lis_coord:high_lis_coord]*(D2R/3600.0)
             components.pas[low_lis_chunk:high_lis_chunk] = expec_params[low_lis_coord:high_lis_coord]*D2R
-            
-        num_curvepowerI = polvalues.n_powerI_v_pol_frac + polvalues.n_powerI_v_power + polvalues.n_powerI_v_curve \
-                          + polvalues.n_curveI_v_pol_frac + polvalues.n_curveI_v_power + polvalues.n_curveI_v_curve
         
-        put_pol_info_in_component(components=components,
-                              low_v_pol_frac=polvalues.n_powerI_v_pol_frac + polvalues.n_curveI_v_pol_frac, 
-                              high_v_pol_frac=polvalues.n_powerI_v_pol_frac + polvalues.n_curveI_v_pol_frac + polvalues.n_listI_v_pol_frac,
-                              low_v_power=polvalues.n_powerI_v_power + polvalues.n_curveI_v_power, 
-                              high_v_power=polvalues.n_powerI_v_power + polvalues.n_curveI_v_power + polvalues.n_listI_v_power,
-                              low_v_curve=polvalues.n_powerI_v_curve + polvalues.n_curveI_v_curve, 
-                              high_v_curve=polvalues.n_powerI_v_curve + polvalues.n_curveI_v_curve + polvalues.n_listI_v_curve,
-                              low_lin_pol_frac=polvalues.n_powerI_lin_pol_frac + polvalues.n_curveI_lin_pol_frac, 
-                              high_lin_pol_frac=polvalues.n_powerI_lin_pol_frac + polvalues.n_curveI_lin_pol_frac + polvalues.n_listI_lin_pol_frac,
-                              low_lin_power=polvalues.n_powerI_lin_power + polvalues.n_curveI_lin_power, 
-                              high_lin_power=polvalues.n_powerI_lin_power + polvalues.n_curveI_lin_power + polvalues.n_listI_lin_power,
-                              low_lin_curve=polvalues.n_powerI_lin_curve + polvalues.n_curveI_lin_curve, 
-                              high_lin_curve=polvalues.n_powerI_lin_curve + polvalues.n_curveI_lin_curve + polvalues.n_listI_lin_curve,
-                              base_angle_ind=num_curvepowerI,
-                              v_pol_frac=polvalues.listI_v_pol_frac, v_pol_frac_inds=polvalues.listI_v_pol_frac_inds,
-                              v_power=polvalues.listI_v_power, v_power_inds=polvalues.listI_v_power_inds,
-                              v_curve=polvalues.listI_v_curve, v_curve_inds=polvalues.listI_v_curve_inds,
-                              lin_pol_frac=polvalues.listI_lin_pol_frac, lin_pol_frac_inds=polvalues.listI_lin_pol_frac_inds,
-                              lin_power=polvalues.listI_lin_power, lin_power_inds=polvalues.listI_lin_power_inds,
-                              lin_curve=polvalues.listI_lin_curve, lin_curve_inds=polvalues.listI_lin_curve_inds)
+        if polvalues:
+            num_curvepowerI = polvalues.n_powerI_v_pol_frac + polvalues.n_powerI_v_power + polvalues.n_powerI_v_curve \
+                            + polvalues.n_curveI_v_pol_frac + polvalues.n_curveI_v_power + polvalues.n_curveI_v_curve
+            
+            put_pol_info_in_component(components=components,
+                                low_v_pol_frac=polvalues.n_powerI_v_pol_frac + polvalues.n_curveI_v_pol_frac, 
+                                high_v_pol_frac=polvalues.n_powerI_v_pol_frac + polvalues.n_curveI_v_pol_frac + polvalues.n_listI_v_pol_frac,
+                                low_v_power=polvalues.n_powerI_v_power + polvalues.n_curveI_v_power, 
+                                high_v_power=polvalues.n_powerI_v_power + polvalues.n_curveI_v_power + polvalues.n_listI_v_power,
+                                low_v_curve=polvalues.n_powerI_v_curve + polvalues.n_curveI_v_curve, 
+                                high_v_curve=polvalues.n_powerI_v_curve + polvalues.n_curveI_v_curve + polvalues.n_listI_v_curve,
+                                low_lin_pol_frac=polvalues.n_powerI_lin_pol_frac + polvalues.n_curveI_lin_pol_frac, 
+                                high_lin_pol_frac=polvalues.n_powerI_lin_pol_frac + polvalues.n_curveI_lin_pol_frac + polvalues.n_listI_lin_pol_frac,
+                                low_lin_power=polvalues.n_powerI_lin_power + polvalues.n_curveI_lin_power, 
+                                high_lin_power=polvalues.n_powerI_lin_power + polvalues.n_curveI_lin_power + polvalues.n_listI_lin_power,
+                                low_lin_curve=polvalues.n_powerI_lin_curve + polvalues.n_curveI_lin_curve, 
+                                high_lin_curve=polvalues.n_powerI_lin_curve + polvalues.n_curveI_lin_curve + polvalues.n_listI_lin_curve,
+                                base_angle_ind=num_curvepowerI,
+                                v_pol_frac=polvalues.listI_v_pol_frac, v_pol_frac_inds=polvalues.listI_v_pol_frac_inds,
+                                v_power=polvalues.listI_v_power, v_power_inds=polvalues.listI_v_power_inds,
+                                v_curve=polvalues.listI_v_curve, v_curve_inds=polvalues.listI_v_curve_inds,
+                                lin_pol_frac=polvalues.listI_lin_pol_frac, lin_pol_frac_inds=polvalues.listI_lin_pol_frac_inds,
+                                lin_power=polvalues.listI_lin_power, lin_power_inds=polvalues.listI_lin_power_inds,
+                                lin_curve=polvalues.listI_lin_curve, lin_curve_inds=polvalues.listI_lin_curve_inds)
     
     return expec_chunk
 
+def get_pol_vals_from_orig_comp_ind(old_comp_ind, settings : Skymodel_Settings,
+                                    point = True, gauss = True):
+    
+    """old_comp_ind is not actually the index in the original sky catalogue,
+    it's the index in the set of all SHAPELETs are reordered into power-law,
+    curved power-law, the list types. So reverse engineer what index we are
+    on in the original sky catalogue. Need to know if there were point or
+    gaussian components to do this"""
+    
+    stokesV_frac_cadence = settings.stokesV_frac_cadence
+    stokesV_pl_cadence = settings.stokesV_pl_cadence
+    stokesV_cpl_cadence = settings.stokesV_cpl_cadence
+    linpol_frac_cadence = settings.linpol_frac_cadence
+    linpol_pl_cadence = settings.linpol_pl_cadence
+    linpol_cpl_cadence = settings.linpol_cpl_cadence
+    
+    
+    v_pol_frac = False
+    v_power = False
+    v_curve = False
+    lin_pol_frac = False
+    lin_power = False
+    lin_curve = False
+    
+    p = int(point)
+    g = int(gauss)
+    
+    
+    flux_type = old_comp_ind // settings.before_crop_num_coords
+    coord_ind = old_comp_ind - (flux_type*settings.before_crop_num_coords)
+    base_offset = NUM_FLUX_TYPES*(p+g) + flux_type
+    catalogue_ind = base_offset + (p+g+1)*NUM_FLUX_TYPES*coord_ind
+    
+    while True:
+            
+        if stokesV_frac_cadence:
+            if catalogue_ind % stokesV_frac_cadence == 0:
+                if catalogue_ind % 9 < 6:
+                    print("Not a shapelet sheeeeeet")
+                else:
+                    v_pol_frac = catalogue_ind
+                break
+                
+        if stokesV_pl_cadence:
+            if catalogue_ind % stokesV_pl_cadence == 0:
+                if catalogue_ind % 9 < 6:
+                    print("Not a shapelet sheeeeeet")
+                else:
+                    v_power = catalogue_ind
+                break
+                
+        if stokesV_cpl_cadence:
+            if catalogue_ind % stokesV_cpl_cadence == 0:
+                if catalogue_ind % 9 < 6:
+                    print("Not a shapelet sheeeeeet")
+                else:
+                    v_curve = catalogue_ind
+                break
+        break
+    
+    while True:
+    
+        if linpol_frac_cadence:
+            if catalogue_ind % linpol_frac_cadence == 0:
+                if catalogue_ind % 9 < 6:
+                    print("Not a shapelet sheeeeeet")
+                else:
+                    lin_pol_frac = catalogue_ind
+                break
+                
+        if linpol_pl_cadence:
+            if catalogue_ind % linpol_pl_cadence == 0:
+                if catalogue_ind % 9 < 6:
+                    print("Not a shapelet sheeeeeet")
+                else:
+                    lin_power = catalogue_ind
+                break
+                
+        if linpol_cpl_cadence:
+            if catalogue_ind % linpol_cpl_cadence == 0:
+                if catalogue_ind % 9 < 6:
+                    print("Not a shapelet sheeeeeet")
+                else:
+                    lin_curve = catalogue_ind
+                break
+        break
+    
+    return v_pol_frac, v_power, v_curve, lin_pol_frac, lin_power, lin_curve
+
+
+def add_polarisation_info_to_shapelet_components(components : Expected_Components,
+                    skymodel_settings : Skymodel_Settings,
+                    old_comp_ind : int, new_chunk_ind : int,
+                    v_pol_frac_ind : int, v_power_ind : int, v_curve_ind : int,
+                    lin_pol_frac_ind : int, lin_power_ind : int, lin_curve_ind : int,
+                    linpol_ind : int):
+    
+    
+    v_pol_frac, v_power, v_curve, lin_pol_frac, lin_power, lin_curve = get_pol_vals_from_orig_comp_ind(old_comp_ind, skymodel_settings)
+    
+    # if v_pol_frac:
+    #     components.stokesV_pol_fracs[v_pol_frac_ind] = float(v_pol_frac)
+    #     components.stokesV_pol_frac_comp_inds[v_pol_frac_ind] = new_chunk_ind
+    #     v_pol_frac_ind += 1
+
+    # if v_power:
+    #     components.stokesV_power_ref_flux[v_power_ind] = v_power
+    #     components.stokesV_power_SIs[v_power_ind] = v_power
+    #     components.stokesV_power_comp_inds[v_power_ind] = new_chunk_ind
+    #     v_power_ind += 1
+
+    # if v_curve:
+    #     components.stokesV_curve_ref_flux[v_curve_ind] = v_curve
+    #     components.stokesV_curve_SIs[v_curve_ind] = v_curve
+    #     components.stokesV_curve_qs[v_curve_ind] = v_curve
+    #     components.stokesV_curve_comp_inds[v_curve_ind] = new_chunk_ind
+    #     v_curve_ind += 1
+
+    # if lin_pol_frac:
+    #     components.linpol_pol_fracs[lin_pol_frac_ind] = lin_pol_frac
+    #     components.linpol_pol_frac_comp_inds[lin_pol_frac_ind] = new_chunk_ind
+    #     components.rm_values[linpol_ind] = lin_pol_frac*((2*np.pi)/360)
+    #     components.intr_pol_angle[linpol_ind] = 0.1*lin_pol_frac*((2*np.pi)/360)
+    #     lin_pol_frac_ind += 1
+    #     linpol_ind += 1
+        
+    # if lin_power:
+    #     components.linpol_power_ref_flux[lin_power_ind] = lin_power_ind
+    #     components.linpol_power_SIs[lin_power_ind] = lin_power_ind
+    #     components.linpol_power_comp_inds[lin_power_ind] = new_chunk_ind
+    #     components.rm_values[linpol_ind] = lin_power*((2*np.pi)/360)
+    #     components.intr_pol_angle[linpol_ind] = 0.1*lin_power*((2*np.pi)/360)
+    #     lin_power_ind += 1
+    #     linpol_ind += 1
+
+    # if lin_curve:
+    #     components.linpol_curve_ref_flux[lin_curve_ind] = lin_curve_ind
+    #     components.linpol_curve_SIs[lin_curve_ind] = lin_curve_ind
+    #     components.linpol_curve_qs[lin_curve_ind] = lin_curve_ind
+    #     components.linpol_curve_comp_inds[lin_curve_ind] = new_chunk_ind
+    #     components.rm_values[linpol_ind] = lin_curve*((2*np.pi)/360)
+    #     components.intr_pol_angle[linpol_ind] = 0.1*lin_curve*((2*np.pi)/360)
+    #     lin_curve_ind += 1
+    #     linpol_ind += 1
+    
+    if v_pol_frac:
+        components.stokesV_pol_fracs.append(float(v_pol_frac))
+        components.stokesV_pol_frac_comp_inds.append(new_chunk_ind)
+        v_pol_frac_ind += 1
+
+    if v_power:
+        components.stokesV_power_ref_flux.append(v_power)
+        components.stokesV_power_SIs.append(v_power)
+        components.stokesV_power_comp_inds.append(new_chunk_ind)
+        v_power_ind += 1
+
+    if v_curve:
+        components.stokesV_curve_ref_flux.append(v_curve)
+        components.stokesV_curve_SIs.append(v_curve)
+        components.stokesV_curve_qs.append(v_curve)
+        components.stokesV_curve_comp_inds.append(new_chunk_ind)
+        v_curve_ind += 1
+
+    if lin_pol_frac:
+        components.linpol_pol_fracs.append(lin_pol_frac)
+        components.linpol_pol_frac_comp_inds.append(new_chunk_ind)
+        components.rm_values.append(lin_pol_frac*((2*np.pi)/360))
+        components.intr_pol_angle.append(0.1*lin_pol_frac*((2*np.pi)/360))
+        components.linpol_angle_inds.append(new_chunk_ind)
+        lin_pol_frac_ind += 1
+        linpol_ind += 1
+        
+    if lin_power:
+        components.linpol_power_ref_flux.append(lin_power_ind)
+        components.linpol_power_SIs.append(lin_power_ind)
+        components.linpol_power_comp_inds.append(new_chunk_ind)
+        components.rm_values.append(lin_power*((2*np.pi)/360))
+        components.intr_pol_angle.append(0.1*lin_power*((2*np.pi)/360))
+        components.linpol_angle_inds.append(new_chunk_ind)
+        lin_power_ind += 1
+        linpol_ind += 1
+
+    if lin_curve:
+        components.linpol_curve_ref_flux.append(lin_curve_ind)
+        components.linpol_curve_SIs.append(lin_curve_ind)
+        components.linpol_curve_qs.append(lin_curve_ind)
+        components.linpol_curve_comp_inds.append(new_chunk_ind)
+        components.rm_values.append(lin_curve*((2*np.pi)/360))
+        components.intr_pol_angle.append(0.1*lin_curve*((2*np.pi)/360))
+        components.linpol_angle_inds.append(new_chunk_ind)
+        lin_curve_ind += 1
+        linpol_ind += 1
+        
+    return v_pol_frac_ind, v_power_ind, v_curve_ind, lin_pol_frac_ind, lin_power_ind, lin_curve_ind, linpol_ind
+                                                 
 def populate_shapelet_chunk(expec_chunk : Expected_Sky_Chunk,
                             num_list_values : int, num_coeff_per_shape : int,
                             above_horizon : np.ndarray,
@@ -1185,6 +1421,7 @@ def populate_shapelet_chunk(expec_chunk : Expected_Sky_Chunk,
                             orig_comp_inds : np.ndarray,
                             chunk_basis_param_indexes : np.ndarray,
                             chunk_basis_values : np.ndarray,
+                            skymodel_settings: Skymodel_Settings,
                             fits_skymodel=False):
     
     # print(orig_comp_inds)
@@ -1199,7 +1436,18 @@ def populate_shapelet_chunk(expec_chunk : Expected_Sky_Chunk,
     power_comp_ind = 0
     curve_comp_ind = 0
     list_comp_ind = 0
-
+    
+    ##indexes for polarised stuff
+    v_pol_frac_ind = 0
+    v_power_ind = 0
+    v_curve_ind = 0
+    lin_pol_frac_ind = 0
+    lin_power_ind = 0
+    lin_curve_ind = 0
+    ##this indexes the RM and intrsinsic polarisation angle values which 
+    ##all linear pol models need
+    linpol_ind = 0
+    
     for new_comp_ind, old_comp_ind in enumerate(comp_inds):
         comp_type_ind = int(old_comp_ind // num_crop_comp)
         coord_expec_ind = int(old_comp_ind % num_crop_comp)
@@ -1221,7 +1469,6 @@ def populate_shapelet_chunk(expec_chunk : Expected_Sky_Chunk,
         components.param_indexes = chunk_basis_param_indexes
         # else:
             
-
         ##This means we have a power law source
         if old_comp_ind < num_crop_comp:
             ##Actual FITS model is read in at 200MHz
@@ -1285,9 +1532,9 @@ def populate_shapelet_chunk(expec_chunk : Expected_Sky_Chunk,
 
                 components.list_freqs[list_ind + flux_ind] = freq_value
                 components.list_stokesI[list_ind + flux_ind] = flux_start + flux_ind
-                components.list_stokesQ[list_ind + flux_ind] = flux_start + flux_ind
-                components.list_stokesU[list_ind + flux_ind] = flux_start + flux_ind
-                components.list_stokesV[list_ind + flux_ind] = flux_start + flux_ind
+                # components.list_stokesQ[list_ind + flux_ind] = flux_start + flux_ind
+                # components.list_stokesU[list_ind + flux_ind] = flux_start + flux_ind
+                # components.list_stokesV[list_ind + flux_ind] = flux_start + flux_ind
                 
         
             components.list_comp_inds[list_comp_ind] = new_comp_ind
@@ -1295,6 +1542,20 @@ def populate_shapelet_chunk(expec_chunk : Expected_Sky_Chunk,
             components.list_start_indexes[list_comp_ind] = list_comp_ind*num_list_values
             
             list_comp_ind += 1
+            
+        if skymodel_settings.stokesV_cpl_cadence or skymodel_settings.stokesV_pl_cadence or skymodel_settings.stokesV_frac_cadence \
+           or skymodel_settings.linpol_cpl_cadence or skymodel_settings.linpol_pl_cadence or skymodel_settings.linpol_frac_cadence:
+            v_pol_frac_ind, v_power_ind, v_curve_ind, lin_pol_frac_ind, lin_power_ind, lin_curve_ind, linpol_ind = add_polarisation_info_to_shapelet_components(components,
+                            skymodel_settings, old_comp_ind, new_comp_ind,
+                            v_pol_frac_ind, v_power_ind, v_curve_ind, lin_pol_frac_ind, lin_power_ind, lin_curve_ind, linpol_ind)
+            
+            
+        components.n_v_pol_frac = v_pol_frac_ind
+        components.n_v_power = v_power_ind
+        components.n_v_curve = v_curve_ind
+        components.n_lin_pol_frac = lin_pol_frac_ind
+        components.n_lin_power = lin_power_ind
+        components.n_lin_curve = lin_curve_ind
             
     return expec_chunk
 
@@ -1339,12 +1600,6 @@ def make_expected_chunks(ra_range, dec_range,
     
     ##Setup expectations for polarised info
     polvalues =  ExpecPolValues(num_of_each_comp)
-    
-    ##TODO TURN THIS INTO A FUNCTION, AND FEED IT THE POINT, GAUSS, AND
-    ##SHAPELET COMPONENTS SEPARATELY. That way we can have 9 diff expected
-    ##arrays for each polarisation type, split by comp type and flux type
-    
-    # for comp_index in range(num_of_each_comp*NUM_FLUX_TYPES*NUM_COMP_TYPES):
     
     comp_ind = 0
     flux_ind = 0
@@ -1484,7 +1739,7 @@ def make_expected_chunks(ra_range, dec_range,
                             above_horizon, expec_ra, expec_dec,
                             comp_inds, orig_comp_inds[comp_inds],
                             chunk_basis_param_indexes,
-                            chunk_basis_values,
+                            chunk_basis_values, skymodel_settings,
                             fits_skymodel=fits_skymodel)
         
         expec_skymodel_chunks.append(expec_chunk)

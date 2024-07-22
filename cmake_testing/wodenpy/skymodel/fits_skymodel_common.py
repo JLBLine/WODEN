@@ -267,13 +267,6 @@ def add_shapelet_fits(table_dict : dict, all_flux_cols : list,
     return source_index, shape_index, flux_index, basis_index
 
 
-# def write_full_test_skymodel_fits(deg_between_comps : float,
-#                              num_coeff_per_shape : int,
-#                              num_list_values : int,
-#                              comps_per_source : int,
-#                              stokesV_frac_cadence : int = 0,
-#                              stokesV_pl_cadence : int = 0,
-#                              stokesV_cpl_cadence : int = 0):
 def write_full_test_skymodel_fits(settings : Skymodel_Settings):
     """Write a sky model covering the whole sky"""
     # POINT_POWER
@@ -289,10 +282,10 @@ def write_full_test_skymodel_fits(settings : Skymodel_Settings):
     ra_range = np.arange(0, 360.0*D2R, settings.deg_between_comps*D2R)
     dec_range = np.arange(LOW_DEC, HIGH_DEC, settings.deg_between_comps*D2R)
     
-    
-    
     ra_range, dec_range = np.meshgrid(ra_range, dec_range)
     ra_range, dec_range = ra_range.flatten(), dec_range.flatten()
+    
+    settings.before_crop_num_coords = len(ra_range)
     
     dec_range[np.abs(dec_range) < 1e-10] = 0.0
     print('There are', len(ra_range), 'coord locations')

@@ -781,15 +781,38 @@ class Expected_Sky_Chunk(object):
         
     def init_shape_components(self, num_chunk_power : int,
                  num_chunk_curve : int, num_chunk_list : int,
-                 num_list_values : int, comps_per_chunk : int,
-                 num_v_pol_frac : int = 0, num_v_power : int = 0, num_v_curve : int = 0,
-                 num_lin_pol_frac : int = 0, num_lin_power : int = 0, num_lin_curve : int = 0):
+                 num_list_values : int, comps_per_chunk : int):
         
         self.shape_components = Expected_Components(CompTypes.SHAPELET,
                                  num_chunk_power, num_chunk_curve, num_chunk_list,
-                                 num_list_values, comps_per_chunk,
-                                 num_v_pol_frac, num_v_power, num_v_curve,
-                                 num_lin_pol_frac, num_lin_power, num_lin_curve)
+                                 num_list_values, comps_per_chunk)
+        
+        
+        ##with shapelets, easier to start things as lists and append
+        ##polarisation information
+        
+        self.shape_components.stokesV_pol_fracs = []
+        self.shape_components.stokesV_pol_frac_comp_inds = []
+        self.shape_components.stokesV_power_ref_flux = []
+        self.shape_components.stokesV_power_SIs = []
+        self.shape_components.stokesV_power_comp_inds = []
+        self.shape_components.stokesV_curve_ref_flux = []
+        self.shape_components.stokesV_curve_SIs = []
+        self.shape_components.stokesV_curve_qs = []
+        self.shape_components.stokesV_curve_comp_inds = []
+        self.shape_components.rm_values = []
+        self.shape_components.intr_pol_angle = []
+        self.shape_components.linpol_angle_inds = []
+        self.shape_components.linpol_pol_fracs = []
+        self.shape_components.linpol_pol_frac_comp_inds = []
+        self.shape_components.linpol_power_ref_flux = []
+        self.shape_components.linpol_power_SIs = []
+        self.shape_components.linpol_power_comp_inds = []
+        self.shape_components.linpol_curve_ref_flux = []
+        self.shape_components.linpol_curve_SIs = []
+        self.shape_components.linpol_curve_qs = []
+        self.shape_components.linpol_curve_comp_inds = []
+        
         
         self.n_shape_powers = num_chunk_power
         self.n_shape_curves = num_chunk_curve
