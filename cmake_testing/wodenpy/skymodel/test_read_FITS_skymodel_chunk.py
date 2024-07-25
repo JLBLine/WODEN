@@ -178,6 +178,115 @@ class Test(BaseChunkTest):
         print('-----------------------------')
         
     def test_the_fourth(self):
+        deg_between_comps = 60
+        num_coeff_per_shape = 6
+        num_list_values = 4
+        comps_per_source = 20
+        lst = 0.0
+        max_num_visibilities = 1e10
+        
+        settings = Skymodel_Settings(deg_between_comps,
+                                     num_coeff_per_shape,
+                                     num_list_values,
+                                     comps_per_source,
+                                     stokesV_frac_cadence = 5)
+        
+        self.run_write_model_test_read_fits_skymodel_chunk(settings, lst,
+                                               max_num_visibilities)
+        print('-----------------------------')
+        
+    def test_the_fifth(self):
+        deg_between_comps = 60
+        num_coeff_per_shape = 6
+        num_list_values = 4
+        comps_per_source = 20
+        lst = 0.0
+        max_num_visibilities = 1e10
+        
+        settings = Skymodel_Settings(deg_between_comps,
+                                     num_coeff_per_shape,
+                                     num_list_values,
+                                     comps_per_source,
+                                     stokesV_pl_cadence = 4)
+        
+        self.run_write_model_test_read_fits_skymodel_chunk(settings, lst,
+                                               max_num_visibilities)
+        print('-----------------------------')
+        
+    def test_the_sixth(self):
+        deg_between_comps = 60
+        num_coeff_per_shape = 6
+        num_list_values = 4
+        comps_per_source = 20
+        lst = 0.0
+        max_num_visibilities = 1e10
+        
+        settings = Skymodel_Settings(deg_between_comps,
+                                     num_coeff_per_shape,
+                                     num_list_values,
+                                     comps_per_source,
+                                     stokesV_cpl_cadence = 3)
+        
+        self.run_write_model_test_read_fits_skymodel_chunk(settings, lst,
+                                               max_num_visibilities)
+        print('-----------------------------')
+        
+    def test_the_seventh(self):
+        deg_between_comps = 60
+        num_coeff_per_shape = 6
+        num_list_values = 4
+        comps_per_source = 20
+        lst = 0.0
+        max_num_visibilities = 1e10
+        
+        settings = Skymodel_Settings(deg_between_comps,
+                                     num_coeff_per_shape,
+                                     num_list_values,
+                                     comps_per_source,
+                                     linpol_frac_cadence = 3)
+        
+        self.run_write_model_test_read_fits_skymodel_chunk(settings, lst,
+                                               max_num_visibilities)
+        print('-----------------------------')
+        
+    def test_the_eighth(self):
+        deg_between_comps = 60
+        num_coeff_per_shape = 6
+        num_list_values = 4
+        comps_per_source = 20
+        lst = 0.0
+        max_num_visibilities = 1e10
+        
+        settings = Skymodel_Settings(deg_between_comps,
+                                     num_coeff_per_shape,
+                                     num_list_values,
+                                     comps_per_source,
+                                     linpol_pl_cadence = 5)
+        
+        self.run_write_model_test_read_fits_skymodel_chunk(settings, lst,
+                                               max_num_visibilities)
+        print('-----------------------------')
+        
+    # def test_the_ninth(self):
+    #     deg_between_comps = 60
+    #     num_coeff_per_shape = 6
+    #     num_list_values = 4
+    #     comps_per_source = 20
+    #     lst = 0.0
+    #     max_num_visibilities = 1e10
+        
+    #     settings = Skymodel_Settings(deg_between_comps,
+    #                                  num_coeff_per_shape,
+    #                                  num_list_values,
+    #                                  comps_per_source,
+    #                                  linpol_cpl_cadence = 4)
+        
+    #     self.run_write_model_test_read_fits_skymodel_chunk(settings, lst,
+    #                                            max_num_visibilities)
+    #     print('-----------------------------')
+
+        
+    def test_the_big_one(self):
         deg_between_comps = 7
         num_coeff_per_shape = 6
         num_list_values = 4

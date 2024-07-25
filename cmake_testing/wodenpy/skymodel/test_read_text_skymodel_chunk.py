@@ -210,6 +210,8 @@ def make_expected_chunks_text(ra_range, dec_range,
                             fits_skymodel=fits_skymodel)
         
         expec_skymodel_chunks.append(expec_chunk)
+        
+    ##not doing polarisation in the FITS skymodel format, so go away
     
     return expec_skymodel_chunks
 

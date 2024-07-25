@@ -698,7 +698,14 @@ class Expected_Components(object):
         self.linpol_curve_SIs = np.empty(num_lin_curve)
         self.linpol_curve_qs = np.empty(num_lin_curve)
         self.linpol_curve_comp_inds = np.empty(num_lin_curve, dtype=int)
-                
+        
+        self.n_v_pol_frac = num_v_pol_frac
+        self.n_v_power = num_v_power
+        self.n_v_curve = num_v_curve
+        self.n_lin_pol_frac = num_lin_pol_frac
+        self.n_lin_power = num_lin_power
+        self.n_lin_curve = num_lin_curve
+                        
 class Expected_Sky_Chunk(object):
     
     def __init__(self):

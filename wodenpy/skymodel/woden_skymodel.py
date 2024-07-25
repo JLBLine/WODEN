@@ -74,6 +74,17 @@ class CompTypes(Enum):
     LIN_SHAPE_CURVE = auto()
     LIN_SHAPE_LIST = auto()
     
+    ##Different flux models
+    I_POWER = auto()
+    I_CURVE = auto()
+    I_LIST = auto()
+    V_POWER = auto()
+    V_CURVE = auto()
+    V_POL_FRAC = auto()
+    LIN_POWER = auto()
+    LIN_CURVE = auto()
+    LIN_POL_FRAC = auto()
+    
 class Component_Type_Counter():
     """Holds counts for the various types of components in a source list,
     including type (point, gaaussian, shapelet) and flux model (power law,

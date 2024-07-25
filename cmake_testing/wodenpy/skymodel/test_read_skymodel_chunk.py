@@ -73,7 +73,13 @@ class Test(BaseChunkTest):
         lsts = ws.setup_lsts_and_phase_centre(woden_settings)
         
         settings = Skymodel_Settings(deg_between_comps, num_coeff_per_shape,
-                                     num_list_values, comps_per_source)
+                                     num_list_values, comps_per_source,
+                                     stokesV_frac_cadence = 5,
+                                     stokesV_pl_cadence = 4,
+                                     stokesV_cpl_cadence = 3,
+                                     linpol_frac_cadence = 3,
+                                     linpol_pl_cadence = 5,
+                                     linpol_cpl_cadence = 4)
         
         
         ##create a test FITS skymodel to read
@@ -209,6 +215,8 @@ class Test(BaseChunkTest):
                                                           dec_range,
                              num_coeff_per_shape, comps_per_source,
                              comps_per_chunk)
+        
+        ##no polari
         
         comp_counter = read_radec_count_components(skymodel_filename)
         

@@ -131,67 +131,78 @@ def check_components(found_comps, expec_comps,
                                     expec_comps.num_list_values, rtol=rtol)
         npt.assert_allclose(found_comps.list_start_indexes,
                                     expec_comps.list_start_indexes, rtol=rtol)
-        
+    
+    ##ROIGHT so the code that creates 
         
     ##Test polarisation stuff if it's supposed to be there
     if expec_comps.n_v_pol_frac:
         npt.assert_allclose(found_comps.stokesV_pol_fracs,
                             expec_comps.stokesV_pol_fracs, rtol=rtol)
-        # npt.assert_allclose(found_comps.stokesV_pol_frac_comp_inds,
-        #                     expec_comps.stokesV_pol_frac_comp_inds, rtol=rtol)
-        pass
+        npt.assert_allclose(found_comps.stokesV_pol_frac_comp_inds,
+                            expec_comps.stokesV_pol_frac_comp_inds, rtol=rtol)
+        
     if expec_comps.n_v_power:
-        # npt.assert_allclose(found_comps.stokesV_power_ref_flux,
-        #                     expec_comps.stokesV_power_ref_flux, rtol=rtol)
-        # npt.assert_allclose(found_comps.stokesV_power_SIs,
-        #                     expec_comps.stokesV_power_SIs, rtol=rtol)
-        # npt.assert_allclose(found_comps.stokesV_power_comp_inds,
-        #                     expec_comps.stokesV_power_comp_inds, rtol=rtol)
-        pass
-    if expec_comps.n_v_curve:
-        # npt.assert_allclose(found_comps.stokesV_curve_ref_flux,
-        #                     expec_comps.stokesV_curve_ref_flux, rtol=rtol)
-        # npt.assert_allclose(found_comps.stokesV_curve_SIs,
-        #                     expec_comps.stokesV_curve_SIs, rtol=rtol)
-        # npt.assert_allclose(found_comps.stokesV_curve_qs,
-        #                     expec_comps.stokesV_curve_qs, rtol=rtol)
-        # npt.assert_allclose(found_comps.stokesV_curve_comp_inds,
-        #                     expec_comps.stokesV_curve_comp_inds, rtol=rtol)
-        pass
-    if expec_comps.n_lin_pol_frac:
-        # npt.assert_allclose(found_comps.linpol_pol_fracs,
-        #                     expec_comps.linpol_pol_fracs, rtol=rtol)
-        # npt.assert_allclose(found_comps.linpol_pol_frac_comp_inds,
-        #                     expec_comps.linpol_pol_frac_comp_inds, rtol=rtol)
-        pass
-    if expec_comps.n_lin_power:
-        # npt.assert_allclose(found_comps.linpol_power_ref_flux,
-        #                     expec_comps.linpol_power_ref_flux, rtol=rtol)
-        # npt.assert_allclose(found_comps.linpol_power_SIs,
-        #                     expec_comps.linpol_power_SIs, rtol=rtol)
-        # npt.assert_allclose(found_comps.linpol_power_comp_inds,
-        #                     expec_comps.linpol_power_comp_inds, rtol=rtol)
-        pass
-    if expec_comps.n_lin_curve:
-        # npt.assert_allclose(found_comps.linpol_curve_ref_flux,
-        #                     expec_comps.linpol_curve_ref_flux, rtol=rtol)
-        # npt.assert_allclose(found_comps.linpol_curve_SIs,
-        #                     expec_comps.linpol_curve_SIs, rtol=rtol)
-        # npt.assert_allclose(found_comps.linpol_curve_qs,
-        #                     expec_comps.linpol_curve_qs, rtol=rtol)
-        # npt.assert_allclose(found_comps.linpol_curve_comp_inds,
-        #                     expec_comps.linpol_curve_comp_inds, rtol=rtol)
-        pass
+        npt.assert_allclose(found_comps.stokesV_power_ref_flux,
+                            expec_comps.stokesV_power_ref_flux, rtol=rtol)
+        npt.assert_allclose(found_comps.stokesV_power_SIs,
+                            expec_comps.stokesV_power_SIs, rtol=rtol)
+        npt.assert_allclose(found_comps.stokesV_power_comp_inds,
+                            expec_comps.stokesV_power_comp_inds, rtol=rtol)
     
+    if expec_comps.n_v_curve:
+        npt.assert_allclose(found_comps.stokesV_curve_ref_flux,
+                            expec_comps.stokesV_curve_ref_flux, rtol=rtol)
+        npt.assert_allclose(found_comps.stokesV_curve_SIs,
+                            expec_comps.stokesV_curve_SIs, rtol=rtol)
+        npt.assert_allclose(found_comps.stokesV_curve_qs,
+                            expec_comps.stokesV_curve_qs, rtol=rtol)
+        npt.assert_allclose(found_comps.stokesV_curve_comp_inds,
+                            expec_comps.stokesV_curve_comp_inds, rtol=rtol)
+    
+    if expec_comps.n_lin_pol_frac:
+        npt.assert_allclose(found_comps.linpol_pol_fracs,
+                            expec_comps.linpol_pol_fracs, rtol=rtol)
+        npt.assert_allclose(found_comps.linpol_pol_frac_comp_inds,
+                            expec_comps.linpol_pol_frac_comp_inds, rtol=rtol)
+    
+    if expec_comps.n_lin_power:
+        print("WE GOT DIS",found_comps.linpol_power_ref_flux)
+        npt.assert_allclose(found_comps.linpol_power_ref_flux,
+                            expec_comps.linpol_power_ref_flux, rtol=rtol)
+        npt.assert_allclose(found_comps.linpol_power_SIs,
+                            expec_comps.linpol_power_SIs, rtol=rtol)
+        npt.assert_allclose(found_comps.linpol_power_comp_inds,
+                            expec_comps.linpol_power_comp_inds, rtol=rtol)
+    if expec_comps.n_lin_curve:
+        npt.assert_allclose(found_comps.linpol_curve_ref_flux,
+                            expec_comps.linpol_curve_ref_flux, rtol=rtol)
+        npt.assert_allclose(found_comps.linpol_curve_SIs,
+                            expec_comps.linpol_curve_SIs, rtol=rtol)
+        npt.assert_allclose(found_comps.linpol_curve_qs,
+                            expec_comps.linpol_curve_qs, rtol=rtol)
+        npt.assert_allclose(found_comps.linpol_curve_comp_inds,
+                            expec_comps.linpol_curve_comp_inds, rtol=rtol)
+    ##OK so in the following, we sort by the indexes relative to al components
+    ##in both the expected and found compoments. As long as the sorted indexes
+    ##match, and then the reordered RM and instrinsic pol angles match, we
+    ##have the same information. The order they appear doesn't matter, as long
+    ##as the same index matches the same RM/angle values.
+    ##It was one too any reordering exercises when making the expected components
     if expec_comps.n_lin_pol_frac or expec_comps.n_lin_power or expec_comps.n_lin_curve:
-        # npt.assert_allclose(found_comps.rm_values,
-        #                     expec_comps.rm_values, rtol=rtol)
-        # npt.assert_allclose(found_comps.intr_pol_angle,
-        #                     expec_comps.intr_pol_angle, rtol=rtol)
-        # npt.assert_allclose(found_comps.intr_pol_angle,
-        #                     expec_comps.intr_pol_angle, rtol=rtol)
-        pass
-
+        
+        found_order = np.argsort(found_comps.linpol_angle_inds)
+        expec_order = np.argsort(expec_comps.linpol_angle_inds)
+        
+        print(expec_comps.rm_values)
+        print(found_comps.rm_values)
+        
+        npt.assert_allclose(found_comps.rm_values[found_order],
+                            expec_comps.rm_values[expec_order], rtol=rtol)
+        npt.assert_allclose(found_comps.intr_pol_angle[found_order],
+                            expec_comps.intr_pol_angle[expec_order], rtol=rtol)
+        npt.assert_allclose(found_comps.linpol_angle_inds[found_order],
+                            expec_comps.linpol_angle_inds[expec_order], rtol=rtol)
+    
 def check_all_sources(expected_chunks, source_catalogue,
                       fits_skymodel=True):
     
@@ -373,6 +384,47 @@ class ExpecPolValues:
         # self.expec_listI_shape_rms = np.full(num_of_each_comp, np.nan)
         # self.expec_listI_shape_intr_pol_angles = np.full(num_of_each_comp, np.nan)
         
+        ##These ones are point/gauss/shape agnostic
+        self.powerI_v_pol_frac = False
+        self.powerI_v_pol_frac_inds = False
+        self.powerI_v_power = False
+        self.powerI_v_power_inds = False
+        self.powerI_v_curve = False
+        self.powerI_v_curve_inds = False
+        self.powerI_lin_pol_frac = False
+        self.powerI_lin_pol_frac_inds = False
+        self.powerI_lin_power = False
+        self.powerI_lin_power_inds = False
+        self.powerI_lin_curve = False
+        self.powerI_lin_curve_inds = False
+        
+        self.curveI_v_pol_frac = False
+        self.curveI_v_pol_frac_inds = False
+        self.curveI_v_power = False
+        self.curveI_v_power_inds = False
+        self.curveI_v_curve = False
+        self.curveI_v_curve_inds = False
+        self.curveI_lin_pol_frac = False
+        self.curveI_lin_pol_frac_inds = False
+        self.curveI_lin_power = False
+        self.curveI_lin_power_inds = False
+        self.curveI_lin_curve = False
+        self.curveI_lin_curve_inds = False
+        
+        self.listI_v_pol_frac = False
+        self.listI_v_pol_frac_inds = False
+        self.listI_v_power = False
+        self.listI_v_power_inds = False
+        self.listI_v_curve = False
+        self.listI_v_curve_inds = False
+        self.listI_lin_pol_frac = False
+        self.listI_lin_pol_frac_inds = False
+        self.listI_lin_power = False
+        self.listI_lin_power_inds = False
+        self.listI_lin_curve = False
+        self.listI_lin_curve_inds = False
+        
+        
     def choose_expected_values(self, comp_flux_type):
         """Based on the comp_flux_type, which is a combo of Stokes I model and
         component type, select a subset of the polarisation arrays"""
@@ -490,20 +542,14 @@ class ExpecPolValues:
             if skymodel_settings.linpol_frac_cadence:
                 if comp_index % skymodel_settings.linpol_frac_cadence == 0:
                     self.expec_lin_pol_frac_fluxes[flux_index] = float(comp_index)
-                    # self.expec_rms[flux_index] = float(comp_index*((2*np.pi)/360))
-                    # self.expec_intr_pol_angles[flux_index] = 0.1*float(comp_index*((2*np.pi)/360))
                     break
             if skymodel_settings.linpol_pl_cadence:
                 if comp_index % skymodel_settings.linpol_pl_cadence == 0:
                     self.expec_lin_power_fluxes[flux_index] = comp_index
-                    # self.expec_rms[flux_index] = float(comp_index*((2*np.pi)/360))
-                    # self.expec_intr_pol_angles[flux_index] = 0.1*float(comp_index*((2*np.pi)/360))
                     break
             if skymodel_settings.linpol_cpl_cadence:
                 if comp_index % skymodel_settings.linpol_cpl_cadence == 0:
                     self.expec_lin_curve_fluxes[flux_index] = comp_index
-                    # self.expec_rms[flux_index] = float(comp_index*((2*np.pi)/360))
-                    # self.expec_intr_pol_angles[flux_index] = 0.1*float(comp_index*((2*np.pi)/360))
                     break
             break
         
@@ -618,16 +664,140 @@ class ExpecPolValues:
             # self.expec_rms = self.expec_rms[above_horizon]
             # self.expec_intr_pol_angles = self.expec_intr_pol_angles[above_horizon]
             
+            self.above_horizon = above_horizon
+            
             self.update_expected_values(comp_flux_type)
             
-    def get_non_nan_subset_values(self, arr, low, high):
+    def get_non_nan_subset_values(self, low, high, input_indexes,
+                                  stokesI_flux_type, pol_flux_type):
         """For the given area, choose a subset bounded by low and high, and
         return only values that are non NaN, as well as their indexes within
         the subset"""
-        subset = arr[low:high]
+        
+        ##pick the right array to subset
+        if stokesI_flux_type == CompTypes.I_POWER:
+            if pol_flux_type == CompTypes.V_POL_FRAC:
+                input_arr = self.expec_v_pol_frac_fluxes
+            elif pol_flux_type == CompTypes.V_POWER:
+                input_arr = self.expec_v_power_fluxes
+            elif pol_flux_type == CompTypes.V_CURVE:
+                input_arr = self.expec_v_curve_fluxes
+            elif pol_flux_type == CompTypes.LIN_POL_FRAC:
+                input_arr = self.expec_lin_pol_frac_fluxes
+            elif pol_flux_type == CompTypes.LIN_POWER:
+                input_arr = self.expec_lin_power_fluxes
+            elif pol_flux_type == CompTypes.LIN_CURVE:
+                input_arr = self.expec_lin_curve_fluxes
+        elif stokesI_flux_type == CompTypes.I_CURVE:
+            if pol_flux_type == CompTypes.V_POL_FRAC:
+                input_arr = self.expec_v_pol_frac_fluxes
+            elif pol_flux_type == CompTypes.V_POWER:
+                input_arr = self.expec_v_power_fluxes
+            elif pol_flux_type == CompTypes.V_CURVE:
+                input_arr = self.expec_v_curve_fluxes
+            elif pol_flux_type == CompTypes.LIN_POL_FRAC:
+                input_arr = self.expec_lin_pol_frac_fluxes
+            elif pol_flux_type == CompTypes.LIN_POWER:
+                input_arr = self.expec_lin_power_fluxes
+            elif pol_flux_type == CompTypes.LIN_CURVE:
+                input_arr = self.expec_lin_curve_fluxes
+        elif stokesI_flux_type == CompTypes.I_LIST:
+            if pol_flux_type == CompTypes.V_POL_FRAC:
+                input_arr = self.expec_v_pol_frac_fluxes
+            elif pol_flux_type == CompTypes.V_POWER:
+                input_arr = self.expec_v_power_fluxes
+            elif pol_flux_type == CompTypes.V_CURVE:
+                input_arr = self.expec_v_curve_fluxes
+            elif pol_flux_type == CompTypes.LIN_POL_FRAC:
+                input_arr = self.expec_lin_pol_frac_fluxes
+            elif pol_flux_type == CompTypes.LIN_POWER:
+                input_arr = self.expec_lin_power_fluxes
+            elif pol_flux_type == CompTypes.LIN_CURVE:
+                input_arr = self.expec_lin_curve_fluxes
+        
+        ##do the subsetting
+        subset = input_arr[low:high]
         indexes = np.where(~np.isnan(subset))[0]
-        return indexes, subset[indexes]
+        
+        ##update the right arrays with the right values
+        if stokesI_flux_type == CompTypes.I_POWER:
+            if pol_flux_type == CompTypes.V_POL_FRAC:
+                self.powerI_v_pol_frac = subset[indexes]
+                self.powerI_v_pol_frac_inds = input_indexes[indexes]
+                
+            elif pol_flux_type == CompTypes.V_POWER:
+                self.powerI_v_power = subset[indexes]
+                self.powerI_v_power_inds = input_indexes[indexes]
+                
+            elif pol_flux_type == CompTypes.V_CURVE:
+                self.powerI_v_curve = subset[indexes]
+                self.powerI_v_curve_inds = input_indexes[indexes]
+                
+            elif pol_flux_type == CompTypes.LIN_POL_FRAC:
+                self.powerI_lin_pol_frac = subset[indexes]
+                self.powerI_lin_pol_frac_inds = input_indexes[indexes]
+                
+            elif pol_flux_type == CompTypes.LIN_POWER:
+                self.powerI_lin_power = subset[indexes]
+                self.powerI_lin_power_inds = input_indexes[indexes]
+                
+            elif pol_flux_type == CompTypes.LIN_CURVE:
+                self.powerI_lin_curve = subset[indexes]
+                self.powerI_lin_curve_inds = input_indexes[indexes]
+        
+        elif stokesI_flux_type == CompTypes.I_CURVE:
             
+            if pol_flux_type == CompTypes.V_POL_FRAC:
+                self.curveI_v_pol_frac = subset[indexes]
+                self.curveI_v_pol_frac_inds = input_indexes[indexes]
+                
+            elif pol_flux_type == CompTypes.V_POWER:
+                self.curveI_v_power = subset[indexes]
+                self.curveI_v_power_inds = input_indexes[indexes]
+                
+            elif pol_flux_type == CompTypes.V_CURVE:
+                self.curveI_v_curve = subset[indexes]
+                self.curveI_v_curve_inds = input_indexes[indexes]
+                
+            elif pol_flux_type == CompTypes.LIN_POL_FRAC:
+                self.curveI_lin_pol_frac = subset[indexes]
+                self.curveI_lin_pol_frac_inds = input_indexes[indexes]
+                
+            elif pol_flux_type == CompTypes.LIN_POWER:
+                self.curveI_lin_power = subset[indexes]
+                self.curveI_lin_power_inds = input_indexes[indexes]
+                
+            elif pol_flux_type == CompTypes.LIN_CURVE:
+                self.curveI_lin_curve = subset[indexes]
+                self.curveI_lin_curve_inds = input_indexes[indexes]
+                
+        elif stokesI_flux_type == CompTypes.I_LIST:
+            
+            if pol_flux_type == CompTypes.V_POL_FRAC:
+                self.listI_v_pol_frac = subset[indexes]
+                self.listI_v_pol_frac_inds = input_indexes[indexes]
+                
+            elif pol_flux_type == CompTypes.V_POWER:
+                self.listI_v_power = subset[indexes]
+                self.listI_v_power_inds = input_indexes[indexes]
+                
+            elif pol_flux_type == CompTypes.V_CURVE:
+                self.listI_v_curve = subset[indexes]
+                self.listI_v_curve_inds = input_indexes[indexes]
+                
+            elif pol_flux_type == CompTypes.LIN_POL_FRAC:
+                self.listI_lin_pol_frac = subset[indexes]
+                self.listI_lin_pol_frac_inds = input_indexes[indexes]
+                
+            elif pol_flux_type == CompTypes.LIN_POWER:
+                self.listI_lin_power = subset[indexes]
+                self.listI_lin_power_inds = input_indexes[indexes]
+                
+            elif pol_flux_type == CompTypes.LIN_CURVE:
+                self.listI_lin_curve = subset[indexes]
+                self.listI_lin_curve_inds = input_indexes[indexes]
+        
+        return
             
     def choose_chunk_subset(self, comp_type, power_iter, curve_iter, list_iter,
                             num_chunk_power, num_chunk_curve, num_chunk_list):
@@ -645,198 +815,62 @@ class ExpecPolValues:
         ##flux values in the grand scheme of all component fluxes. So grab subset
         ##and indexes
         
+        power_indexes = np.arange(num_chunk_power)
+        curve_indexes = np.arange(num_chunk_power, num_chunk_power+num_chunk_curve)
+        list_indexes = np.arange(num_chunk_power+num_chunk_curve, num_chunk_power+num_chunk_curve+num_chunk_list)
+        
+        pol_types = [CompTypes.V_POL_FRAC, CompTypes.V_POWER, CompTypes.V_CURVE,
+                     CompTypes.LIN_POL_FRAC, CompTypes.LIN_POWER, CompTypes.LIN_CURVE]
+        
+        
+        
         if comp_type == CompTypes.POINT:
             self.choose_expected_values(CompTypes.POINT_POWER)
-            
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_pol_frac_fluxes, low_pow_coord, high_pow_coord)
-            self.powerI_v_pol_frac = subset
-            self.powerI_v_pol_frac_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_power_fluxes, low_pow_coord, high_pow_coord)
-            self.powerI_v_power = subset
-            self.powerI_v_power_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_curve_fluxes, low_pow_coord, high_pow_coord)
-            self.powerI_v_curve = subset
-            self.powerI_v_curve_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_pol_frac_fluxes, low_pow_coord, high_pow_coord)
-            self.powerI_lin_pol_frac = subset
-            self.powerI_lin_pol_frac_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_power_fluxes, low_pow_coord, high_pow_coord)
-            self.powerI_lin_power = subset
-            self.powerI_lin_power_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_curve_fluxes, low_pow_coord, high_pow_coord)
-            self.powerI_lin_curve = subset
-            self.powerI_lin_curve_inds = indexes
-            
+            for pol_type in pol_types:
+                self.get_non_nan_subset_values(low_pow_coord, high_pow_coord, power_indexes,
+                                                CompTypes.I_POWER, pol_type)
+                
             self.choose_expected_values(CompTypes.POINT_CURVE)
-            
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_pol_frac_fluxes, low_cur_coord, high_cur_coord)
-            self.curveI_v_pol_frac = subset
-            self.curveI_v_pol_frac_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_power_fluxes, low_cur_coord, high_cur_coord)
-            self.curveI_v_power = subset
-            self.curveI_v_power_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_curve_fluxes, low_cur_coord, high_cur_coord)
-            self.curveI_v_curve = subset
-            self.curveI_v_curve_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_pol_frac_fluxes, low_cur_coord, high_cur_coord)
-            self.curveI_lin_pol_frac = subset
-            self.curveI_lin_pol_frac_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_power_fluxes, low_cur_coord, high_cur_coord)
-            self.curveI_lin_power = subset
-            self.curveI_lin_power_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_curve_fluxes, low_cur_coord, high_cur_coord)
-            self.curveI_lin_curve = subset
-            self.curveI_lin_curve_inds = indexes
+            for pol_type in pol_types:
+                self.get_non_nan_subset_values(low_cur_coord, high_cur_coord, curve_indexes,
+                                                CompTypes.I_CURVE, pol_type)
             
             self.choose_expected_values(CompTypes.POINT_LIST)
+            for pol_type in pol_types:
+                self.get_non_nan_subset_values(low_list_coord, high_list_coord, list_indexes,
+                                                CompTypes.I_LIST, pol_type)
             
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_pol_frac_fluxes, low_list_coord, high_list_coord)
-            self.listI_v_pol_frac = subset
-            self.listI_v_pol_frac_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_power_fluxes, low_list_coord, high_list_coord)
-            self.listI_v_power = subset
-            self.listI_v_power_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_curve_fluxes, low_list_coord, high_list_coord)
-            self.listI_v_curve = subset
-            self.listI_v_curve_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_pol_frac_fluxes, low_list_coord, high_list_coord)
-            self.listI_lin_pol_frac = subset
-            self.listI_lin_pol_frac_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_power_fluxes, low_list_coord, high_list_coord)
-            self.listI_lin_power = subset
-            self.listI_lin_power_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_curve_fluxes, low_list_coord, high_list_coord)
-            self.listI_lin_curve = subset
-            self.listI_lin_curve_inds = indexes
-            
-        elif comp_type == CompTypes.GAUSSIAN:
+        if comp_type == CompTypes.GAUSSIAN:
             self.choose_expected_values(CompTypes.GAUSS_POWER)
-            
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_pol_frac_fluxes, low_pow_coord, high_pow_coord)
-            self.powerI_v_pol_frac = subset
-            self.powerI_v_pol_frac_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_power_fluxes, low_pow_coord, high_pow_coord)
-            self.powerI_v_power = subset
-            self.powerI_v_power_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_curve_fluxes, low_pow_coord, high_pow_coord)
-            self.powerI_v_curve = subset
-            self.powerI_v_curve_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_pol_frac_fluxes, low_pow_coord, high_pow_coord)
-            self.powerI_lin_pol_frac = subset
-            self.powerI_lin_pol_frac_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_power_fluxes, low_pow_coord, high_pow_coord)
-            self.powerI_lin_power = subset
-            self.powerI_lin_power_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_curve_fluxes, low_pow_coord, high_pow_coord)
-            self.powerI_lin_curve = subset
-            self.powerI_lin_curve_inds = indexes
+            for pol_type in pol_types:
+                self.get_non_nan_subset_values(low_pow_coord, high_pow_coord, power_indexes,
+                                                CompTypes.I_POWER, pol_type)
             
             self.choose_expected_values(CompTypes.GAUSS_CURVE)
-            
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_pol_frac_fluxes, low_cur_coord, high_cur_coord)
-            self.curveI_v_pol_frac = subset
-            self.curveI_v_pol_frac_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_power_fluxes, low_cur_coord, high_cur_coord)
-            self.curveI_v_power = subset
-            self.curveI_v_power_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_curve_fluxes, low_cur_coord, high_cur_coord)
-            self.curveI_v_curve = subset
-            self.curveI_v_curve_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_pol_frac_fluxes, low_cur_coord, high_cur_coord)
-            self.curveI_lin_pol_frac = subset
-            self.curveI_lin_pol_frac_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_power_fluxes, low_cur_coord, high_cur_coord)
-            self.curveI_lin_power = subset
-            self.curveI_lin_power_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_curve_fluxes, low_cur_coord, high_cur_coord)
-            self.curveI_lin_curve = subset
-            self.curveI_lin_curve_inds = indexes
+            for pol_type in pol_types:
+                self.get_non_nan_subset_values(low_cur_coord, high_cur_coord, curve_indexes,
+                                                CompTypes.I_CURVE, pol_type)
             
             self.choose_expected_values(CompTypes.GAUSS_LIST)
-            
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_pol_frac_fluxes, low_list_coord, high_list_coord)
-            self.listI_v_pol_frac = subset
-            self.listI_v_pol_frac_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_power_fluxes, low_list_coord, high_list_coord)
-            self.listI_v_power = subset
-            self.listI_v_power_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_curve_fluxes, low_list_coord, high_list_coord)
-            self.listI_v_curve = subset
-            self.listI_v_curve_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_pol_frac_fluxes, low_list_coord, high_list_coord)
-            self.listI_lin_pol_frac = subset
-            self.listI_lin_pol_frac_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_power_fluxes, low_list_coord, high_list_coord)
-            self.listI_lin_power = subset
-            self.listI_lin_power_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_curve_fluxes, low_list_coord, high_list_coord)
-            self.listI_lin_curve = subset
-            self.listI_lin_curve_inds = indexes
-            
-            
-        elif comp_type == CompTypes.SHAPELET:
+            for pol_type in pol_types:
+                self.get_non_nan_subset_values(low_list_coord, high_list_coord, list_indexes,
+                                                CompTypes.I_LIST, pol_type)
+                
+        if comp_type == CompTypes.SHAPELET:
             self.choose_expected_values(CompTypes.SHAPE_POWER)
-            
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_pol_frac_fluxes, low_pow_coord, high_pow_coord)
-            self.powerI_v_pol_frac = subset
-            self.powerI_v_pol_frac_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_power_fluxes, low_pow_coord, high_pow_coord)
-            self.powerI_v_power = subset
-            self.powerI_v_power_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_curve_fluxes, low_pow_coord, high_pow_coord)
-            self.powerI_v_curve = subset
-            self.powerI_v_curve_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_pol_frac_fluxes, low_pow_coord, high_pow_coord)
-            self.powerI_lin_pol_frac = subset
-            self.powerI_lin_pol_frac_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_power_fluxes, low_pow_coord, high_pow_coord)
-            self.powerI_lin_power = subset
-            self.powerI_lin_power_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_curve_fluxes, low_pow_coord, high_pow_coord)
-            self.powerI_lin_curve = subset
-            self.powerI_lin_curve_inds = indexes
+            for pol_type in pol_types:
+                self.get_non_nan_subset_values(low_pow_coord, high_pow_coord, power_indexes,
+                                                CompTypes.I_POWER, pol_type)
             
             self.choose_expected_values(CompTypes.SHAPE_CURVE)
-            
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_pol_frac_fluxes, low_cur_coord, high_cur_coord)
-            self.curveI_v_pol_frac = subset
-            self.curveI_v_pol_frac_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_power_fluxes, low_cur_coord, high_cur_coord)
-            self.curveI_v_power = subset
-            self.curveI_v_power_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_curve_fluxes, low_cur_coord, high_cur_coord)
-            self.curveI_v_curve = subset
-            self.curveI_v_curve_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_pol_frac_fluxes, low_cur_coord, high_cur_coord)
-            self.curveI_lin_pol_frac = subset
-            self.curveI_lin_pol_frac_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_power_fluxes, low_cur_coord, high_cur_coord)
-            self.curveI_lin_power = subset
-            self.curveI_lin_power_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_curve_fluxes, low_cur_coord, high_cur_coord)
-            self.curveI_lin_curve = subset
-            self.curveI_lin_curve_inds = indexes
+            for pol_type in pol_types:
+                self.get_non_nan_subset_values(low_cur_coord, high_cur_coord, curve_indexes,
+                                                CompTypes.I_CURVE, pol_type)
             
             self.choose_expected_values(CompTypes.SHAPE_LIST)
-            
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_pol_frac_fluxes, low_list_coord, high_list_coord)
-            self.listI_v_pol_frac = subset
-            self.listI_v_pol_frac_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_power_fluxes, low_list_coord, high_list_coord)
-            self.listI_v_power = subset
-            self.listI_v_power_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_v_curve_fluxes, low_list_coord, high_list_coord)
-            self.listI_v_curve = subset
-            self.listI_v_curve_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_pol_frac_fluxes, low_list_coord, high_list_coord)
-            self.listI_lin_pol_frac = subset
-            self.listI_lin_pol_frac_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_power_fluxes, low_list_coord, high_list_coord)
-            self.listI_lin_power = subset
-            self.listI_lin_power_inds = indexes
-            indexes, subset = self.get_non_nan_subset_values(self.expec_lin_curve_fluxes, low_list_coord, high_list_coord)
-            self.listI_lin_curve = subset
-            self.listI_lin_curve_inds = indexes
+            for pol_type in pol_types:
+                self.get_non_nan_subset_values(low_list_coord, high_list_coord, list_indexes,
+                                                CompTypes.I_LIST, pol_type)
         
             
     def count_types_in_chunk(self):
@@ -891,6 +925,8 @@ def put_pol_info_in_component(components : Expected_Components,
                               lin_power : np.array, lin_power_inds : np.array,
                               lin_curve : np.array, lin_curve_inds : np.array):
     
+    ##only need to update some fields below as things like spectral index
+    ##and curve q params are the same as the flux values by design
     
     n_v_pol_frac = high_v_pol_frac - low_v_pol_frac
     n_v_power = high_v_power - low_v_power
@@ -898,22 +934,20 @@ def put_pol_info_in_component(components : Expected_Components,
     
     components.stokesV_pol_fracs[low_v_pol_frac:high_v_pol_frac] = v_pol_frac
     components.stokesV_pol_frac_comp_inds[low_v_pol_frac:high_v_pol_frac] = v_pol_frac_inds
+    
     components.stokesV_power_ref_flux[low_v_power:high_v_power] = v_power
-    components.stokesV_power_SIs[low_v_power:high_v_power] = v_power
     components.stokesV_power_comp_inds[low_v_power:high_v_power] = v_power_inds
+    
     components.stokesV_curve_ref_flux[low_v_curve:high_v_curve] = v_curve
-    components.stokesV_curve_SIs[low_v_curve:high_v_curve] = v_curve
-    components.stokesV_curve_qs[low_v_curve:high_v_curve] = v_curve
     components.stokesV_curve_comp_inds[low_v_curve:high_v_curve] = v_curve_inds
     
     components.linpol_pol_fracs[low_lin_pol_frac:high_lin_pol_frac] = lin_pol_frac
     components.linpol_pol_frac_comp_inds[low_lin_pol_frac:high_lin_pol_frac] = lin_pol_frac_inds
+    
     components.linpol_power_ref_flux[low_lin_power:high_lin_power] = lin_power
-    components.linpol_power_SIs[low_lin_power:high_lin_power] = lin_power
     components.linpol_power_comp_inds[low_lin_power:high_lin_power] = lin_power_inds
+    
     components.linpol_curve_ref_flux[low_lin_curve:high_lin_curve] = lin_curve
-    components.linpol_curve_SIs[low_lin_curve:high_lin_curve] = lin_curve
-    components.linpol_curve_qs[low_lin_curve:high_lin_curve] = lin_curve
     components.linpol_curve_comp_inds[low_lin_curve:high_lin_curve] = lin_curve_inds
     
     ##EVEN MORE COMPLICATED are the RM values and intrinsic polarisation angles
@@ -930,6 +964,7 @@ def put_pol_info_in_component(components : Expected_Components,
     n_lin_curve = high_lin_curve - low_lin_curve
     
     low, high = base_angle_ind, base_angle_ind + n_lin_pol_frac
+    
     components.rm_values[low:high] = lin_pol_frac*((2*np.pi)/360)
     components.intr_pol_angle[low:high] = 0.1*lin_pol_frac*((2*np.pi)/360)
     components.linpol_angle_inds[low:high] = lin_pol_frac_inds
@@ -952,6 +987,46 @@ def put_pol_info_in_component(components : Expected_Components,
     components.n_lin_pol_frac = n_lin_pol_frac
     components.n_lin_power = n_lin_power
     components.n_lin_curve = n_lin_curve
+    
+def reorder_and_populate_polarisation_in_component(components : Expected_Components):
+    """Reroder things as they order the appeared in the original catalogue,
+    as that's what happens in the main code (it does it iteratively)"""
+    
+    ##We set these values to the index in the original catalogue,
+    ##so can reorder based on that
+    order_stokesV_pol_frac = np.argsort(np.array(components.stokesV_pol_fracs))
+    order_stokesV_power = np.argsort(np.array(components.stokesV_power_ref_flux))
+    order_stokesV_curve = np.argsort(np.array(components.stokesV_curve_ref_flux))
+    order_linpol_pol_frac = np.argsort(np.array(components.linpol_pol_fracs))
+    order_linpol_power = np.argsort(np.array(components.linpol_power_ref_flux))
+    order_linpol_curve = np.argsort(np.array(components.linpol_curve_ref_flux))
+    order_linpol_angles = np.argsort(np.array(components.rm_values))
+    
+    components.stokesV_pol_frac_comp_inds = np.array(components.stokesV_pol_frac_comp_inds)[order_stokesV_pol_frac]
+    components.stokesV_pol_fracs = np.array(components.stokesV_pol_fracs)[order_stokesV_pol_frac]
+    components.stokesV_power_comp_inds = np.array(components.stokesV_power_comp_inds)[order_stokesV_power]
+    components.stokesV_power_ref_flux = np.array(components.stokesV_power_ref_flux)[order_stokesV_power]
+    components.stokesV_power_SIs = components.stokesV_power_ref_flux
+    components.stokesV_curve_comp_inds = np.array(components.stokesV_curve_comp_inds)[order_stokesV_curve]
+    components.stokesV_curve_ref_flux = np.array(components.stokesV_curve_ref_flux)[order_stokesV_curve]
+    components.stokesV_curve_SIs = components.stokesV_curve_ref_flux
+    components.stokesV_curve_qs = components.stokesV_curve_ref_flux
+    
+    components.linpol_pol_frac_comp_inds = np.array(components.linpol_pol_frac_comp_inds)[order_linpol_pol_frac]
+    components.linpol_pol_fracs = np.array(components.linpol_pol_fracs)[order_linpol_pol_frac]
+    components.linpol_power_comp_inds = np.array(components.linpol_power_comp_inds)[order_linpol_power]
+    components.linpol_power_ref_flux = np.array(components.linpol_power_ref_flux)[order_linpol_power]
+    components.linpol_power_SIs = components.linpol_power_ref_flux
+    components.linpol_curve_comp_inds = np.array(components.linpol_curve_comp_inds)[order_linpol_curve]
+    components.linpol_curve_ref_flux = np.array(components.linpol_curve_ref_flux)[order_linpol_curve]
+    components.linpol_curve_SIs = components.linpol_curve_ref_flux
+    components.linpol_curve_qs = components.linpol_curve_ref_flux
+    
+    components.linpol_angle_inds = np.array(components.linpol_angle_inds)[order_linpol_angles]
+    components.rm_values = np.array(components.rm_values)[order_linpol_angles]
+    components.intr_pol_angle = np.array(components.intr_pol_angle)[order_linpol_angles]
+    
+    return
             
     
 def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
@@ -986,7 +1061,6 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
     ##we need to work out how much polarisation information there is
     
     if polvalues:
-    
         polvalues.choose_chunk_subset(comp_type, power_iter, curve_iter, list_iter, num_chunk_power, num_chunk_curve, num_chunk_list)
         
         n_v_pol_frac, n_v_power, n_v_curve, n_lin_pol_frac, n_lin_power, n_lin_curve = polvalues.count_types_in_chunk()
@@ -1112,7 +1186,7 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
         ##everything shoud start after how many power-law things were added
         
         if polvalues:
-            num_powerI = polvalues.n_powerI_v_pol_frac + polvalues.n_powerI_v_power + polvalues.n_powerI_v_curve
+            num_powerI = polvalues.n_powerI_lin_pol_frac + polvalues.n_powerI_lin_power + polvalues.n_powerI_lin_curve
             
             put_pol_info_in_component(components=components,
                                 low_v_pol_frac=polvalues.n_powerI_v_pol_frac, 
@@ -1191,8 +1265,8 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
             components.pas[low_lis_chunk:high_lis_chunk] = expec_params[low_lis_coord:high_lis_coord]*D2R
         
         if polvalues:
-            num_curvepowerI = polvalues.n_powerI_v_pol_frac + polvalues.n_powerI_v_power + polvalues.n_powerI_v_curve \
-                            + polvalues.n_curveI_v_pol_frac + polvalues.n_curveI_v_power + polvalues.n_curveI_v_curve
+            num_curvepowerI = polvalues.n_powerI_lin_pol_frac + polvalues.n_powerI_lin_power + polvalues.n_powerI_lin_curve \
+                            + polvalues.n_curveI_lin_pol_frac + polvalues.n_curveI_lin_power + polvalues.n_curveI_lin_curve
             
             put_pol_info_in_component(components=components,
                                 low_v_pol_frac=polvalues.n_powerI_v_pol_frac + polvalues.n_curveI_v_pol_frac, 
@@ -1214,17 +1288,23 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
                                 lin_pol_frac=polvalues.listI_lin_pol_frac, lin_pol_frac_inds=polvalues.listI_lin_pol_frac_inds,
                                 lin_power=polvalues.listI_lin_power, lin_power_inds=polvalues.listI_lin_power_inds,
                                 lin_curve=polvalues.listI_lin_curve, lin_curve_inds=polvalues.listI_lin_curve_inds)
+            
+    reorder_and_populate_polarisation_in_component(components)
     
     return expec_chunk
 
-def get_pol_vals_from_orig_comp_ind(old_comp_ind, settings : Skymodel_Settings,
+def get_pol_vals_from_orig_comp_ind(orig_ind, settings : Skymodel_Settings,
                                     point = True, gauss = True):
     
     """old_comp_ind is not actually the index in the original sky catalogue,
     it's the index in the set of all SHAPELETs are reordered into power-law,
     curved power-law, the list types. So reverse engineer what index we are
     on in the original sky catalogue. Need to know if there were point or
-    gaussian components to do this"""
+    gaussian components to do this
+    
+    old_comp_inds goes all power-law, then all curved power-law, then all list
+    
+    """
     
     stokesV_frac_cadence = settings.stokesV_frac_cadence
     stokesV_pl_cadence = settings.stokesV_pl_cadence
@@ -1244,9 +1324,9 @@ def get_pol_vals_from_orig_comp_ind(old_comp_ind, settings : Skymodel_Settings,
     p = int(point)
     g = int(gauss)
     
+    flux_type = orig_ind % NUM_FLUX_TYPES
+    coord_ind = orig_ind // NUM_FLUX_TYPES
     
-    flux_type = old_comp_ind // settings.before_crop_num_coords
-    coord_ind = old_comp_ind - (flux_type*settings.before_crop_num_coords)
     base_offset = NUM_FLUX_TYPES*(p+g) + flux_type
     catalogue_ind = base_offset + (p+g+1)*NUM_FLUX_TYPES*coord_ind
     
@@ -1309,61 +1389,16 @@ def get_pol_vals_from_orig_comp_ind(old_comp_ind, settings : Skymodel_Settings,
 
 def add_polarisation_info_to_shapelet_components(components : Expected_Components,
                     skymodel_settings : Skymodel_Settings,
-                    old_comp_ind : int, new_chunk_ind : int,
+                    orig_ind : int, new_chunk_ind : int,
                     v_pol_frac_ind : int, v_power_ind : int, v_curve_ind : int,
                     lin_pol_frac_ind : int, lin_power_ind : int, lin_curve_ind : int,
                     linpol_ind : int):
     
     
-    v_pol_frac, v_power, v_curve, lin_pol_frac, lin_power, lin_curve = get_pol_vals_from_orig_comp_ind(old_comp_ind, skymodel_settings)
-    
-    # if v_pol_frac:
-    #     components.stokesV_pol_fracs[v_pol_frac_ind] = float(v_pol_frac)
-    #     components.stokesV_pol_frac_comp_inds[v_pol_frac_ind] = new_chunk_ind
-    #     v_pol_frac_ind += 1
-
-    # if v_power:
-    #     components.stokesV_power_ref_flux[v_power_ind] = v_power
-    #     components.stokesV_power_SIs[v_power_ind] = v_power
-    #     components.stokesV_power_comp_inds[v_power_ind] = new_chunk_ind
-    #     v_power_ind += 1
-
-    # if v_curve:
-    #     components.stokesV_curve_ref_flux[v_curve_ind] = v_curve
-    #     components.stokesV_curve_SIs[v_curve_ind] = v_curve
-    #     components.stokesV_curve_qs[v_curve_ind] = v_curve
-    #     components.stokesV_curve_comp_inds[v_curve_ind] = new_chunk_ind
-    #     v_curve_ind += 1
-
-    # if lin_pol_frac:
-    #     components.linpol_pol_fracs[lin_pol_frac_ind] = lin_pol_frac
-    #     components.linpol_pol_frac_comp_inds[lin_pol_frac_ind] = new_chunk_ind
-    #     components.rm_values[linpol_ind] = lin_pol_frac*((2*np.pi)/360)
-    #     components.intr_pol_angle[linpol_ind] = 0.1*lin_pol_frac*((2*np.pi)/360)
-    #     lin_pol_frac_ind += 1
-    #     linpol_ind += 1
-        
-    # if lin_power:
-    #     components.linpol_power_ref_flux[lin_power_ind] = lin_power_ind
-    #     components.linpol_power_SIs[lin_power_ind] = lin_power_ind
-    #     components.linpol_power_comp_inds[lin_power_ind] = new_chunk_ind
-    #     components.rm_values[linpol_ind] = lin_power*((2*np.pi)/360)
-    #     components.intr_pol_angle[linpol_ind] = 0.1*lin_power*((2*np.pi)/360)
-    #     lin_power_ind += 1
-    #     linpol_ind += 1
-
-    # if lin_curve:
-    #     components.linpol_curve_ref_flux[lin_curve_ind] = lin_curve_ind
-    #     components.linpol_curve_SIs[lin_curve_ind] = lin_curve_ind
-    #     components.linpol_curve_qs[lin_curve_ind] = lin_curve_ind
-    #     components.linpol_curve_comp_inds[lin_curve_ind] = new_chunk_ind
-    #     components.rm_values[linpol_ind] = lin_curve*((2*np.pi)/360)
-    #     components.intr_pol_angle[linpol_ind] = 0.1*lin_curve*((2*np.pi)/360)
-    #     lin_curve_ind += 1
-    #     linpol_ind += 1
+    v_pol_frac, v_power, v_curve, lin_pol_frac, lin_power, lin_curve = get_pol_vals_from_orig_comp_ind(orig_ind, skymodel_settings)
     
     if v_pol_frac:
-        components.stokesV_pol_fracs.append(float(v_pol_frac))
+        components.stokesV_pol_fracs.append(v_pol_frac)
         components.stokesV_pol_frac_comp_inds.append(new_chunk_ind)
         v_pol_frac_ind += 1
 
@@ -1390,7 +1425,7 @@ def add_polarisation_info_to_shapelet_components(components : Expected_Component
         linpol_ind += 1
         
     if lin_power:
-        components.linpol_power_ref_flux.append(lin_power_ind)
+        components.linpol_power_ref_flux.append(lin_power)
         components.linpol_power_SIs.append(lin_power_ind)
         components.linpol_power_comp_inds.append(new_chunk_ind)
         components.rm_values.append(lin_power*((2*np.pi)/360))
@@ -1400,7 +1435,7 @@ def add_polarisation_info_to_shapelet_components(components : Expected_Component
         linpol_ind += 1
 
     if lin_curve:
-        components.linpol_curve_ref_flux.append(lin_curve_ind)
+        components.linpol_curve_ref_flux.append(lin_curve)
         components.linpol_curve_SIs.append(lin_curve_ind)
         components.linpol_curve_qs.append(lin_curve_ind)
         components.linpol_curve_comp_inds.append(new_chunk_ind)
@@ -1447,6 +1482,11 @@ def populate_shapelet_chunk(expec_chunk : Expected_Sky_Chunk,
     ##this indexes the RM and intrsinsic polarisation angle values which 
     ##all linear pol models need
     linpol_ind = 0
+    
+    do_polarisation = False
+    
+    if skymodel_settings.stokesV_cpl_cadence or skymodel_settings.stokesV_pl_cadence or skymodel_settings.stokesV_frac_cadence \
+           or skymodel_settings.linpol_cpl_cadence or skymodel_settings.linpol_pl_cadence or skymodel_settings.linpol_frac_cadence: do_polarisation = True
     
     for new_comp_ind, old_comp_ind in enumerate(comp_inds):
         comp_type_ind = int(old_comp_ind // num_crop_comp)
@@ -1543,10 +1583,9 @@ def populate_shapelet_chunk(expec_chunk : Expected_Sky_Chunk,
             
             list_comp_ind += 1
             
-        if skymodel_settings.stokesV_cpl_cadence or skymodel_settings.stokesV_pl_cadence or skymodel_settings.stokesV_frac_cadence \
-           or skymodel_settings.linpol_cpl_cadence or skymodel_settings.linpol_pl_cadence or skymodel_settings.linpol_frac_cadence:
+        if do_polarisation:
             v_pol_frac_ind, v_power_ind, v_curve_ind, lin_pol_frac_ind, lin_power_ind, lin_curve_ind, linpol_ind = add_polarisation_info_to_shapelet_components(components,
-                            skymodel_settings, old_comp_ind, new_comp_ind,
+                            skymodel_settings, orig_ind, new_comp_ind,
                             v_pol_frac_ind, v_power_ind, v_curve_ind, lin_pol_frac_ind, lin_power_ind, lin_curve_ind, linpol_ind)
             
             
@@ -1556,6 +1595,17 @@ def populate_shapelet_chunk(expec_chunk : Expected_Sky_Chunk,
         components.n_lin_pol_frac = lin_pol_frac_ind
         components.n_lin_power = lin_power_ind
         components.n_lin_curve = lin_curve_ind
+        
+    if do_polarisation:
+        reorder_and_populate_polarisation_in_component(components)
+    else:
+        components.n_v_pol_frac = 0
+        components.n_v_power = 0
+        components.n_v_curve = 0
+        components.n_lin_pol_frac = 0
+        components.n_lin_power = 0
+        components.n_lin_curve = 0
+        
             
     return expec_chunk
 
@@ -1663,7 +1713,7 @@ def make_expected_chunks(ra_range, dec_range,
     shape_expec_pow_fluxes = np.repeat(expec_pow_fluxes, skymodel_settings.num_coeff_per_shape)
     shape_expec_cur_fluxes = np.repeat(expec_cur_fluxes, skymodel_settings.num_coeff_per_shape)
 
-    orig_comp_inds = np.empty(num_crop_comp*NUM_FLUX_TYPES)
+    orig_comp_inds = np.empty(num_crop_comp*NUM_FLUX_TYPES, dtype=int)
 
     orig_comp_inds[:num_crop_comp] = above_horizon*NUM_FLUX_TYPES
     orig_comp_inds[num_crop_comp:2*num_crop_comp] = above_horizon*NUM_FLUX_TYPES + 1

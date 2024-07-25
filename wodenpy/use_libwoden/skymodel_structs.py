@@ -172,6 +172,7 @@ class Components_Float(ctypes.Structure):
                 ("n_linpol_pol_frac", c_int),
                 ("n_linpol_power", c_int),
                 ("n_linpol_curve", c_int),
+                ("n_linpol_angles", c_int),
                 ]
     
 class Components_Double(ctypes.Structure):
@@ -329,6 +330,7 @@ class Components_Double(ctypes.Structure):
                 ("n_linpol_pol_frac", c_int),
                 ("n_linpol_power", c_int),
                 ("n_linpol_curve", c_int),
+                ("n_linpol_angles", c_int),
                 ]
     
 class Source_Float(ctypes.Structure):
@@ -568,6 +570,8 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
         list_int_ncomps_arr = c_int*chunk_map.n_point_lists
         n_lists = chunk_map.point_components.total_num_flux_entires
         
+        map_components = chunk_map.point_components
+        
     elif comp_type == CompTypes.GAUSSIAN:
         
         n_comps = chunk_map.n_gauss
@@ -591,6 +595,8 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
         list_int_ncomps_arr = c_int*chunk_map.n_gauss_lists
         n_lists = chunk_map.gauss_components.total_num_flux_entires
         
+        map_components = chunk_map.gauss_components
+        
     elif comp_type == CompTypes.SHAPELET:
         
         n_comps = chunk_map.n_shapes
@@ -613,6 +619,8 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
         
         list_int_ncomps_arr = c_int*chunk_map.n_shape_lists
         n_lists = chunk_map.shape_components.total_num_flux_entires
+        
+        map_components = chunk_map.shape_components
         
     ##component type specific things
     user_ncomps_arr = c_user_precision*n_comps
@@ -686,6 +694,40 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
         azza_arr = c_user_precision*(n_comps*num_times)
         components.azs = azza_arr()
         components.zas = azza_arr()
+        
+    ##now do the polarisation thingies------------------------------------------
+    
+    power_user_ncomps_arr = c_user_precision*chunk_map.n_shape_powers
+    
+    components.stokesV_pol_fracs = (c_user_precision*map_components.num_v_pol_fracs)()
+    components.stokesV_pol_frac_comp_inds = (c_int*map_components.num_v_pol_fracs)()
+    components.stokesV_power_ref_flux = (c_user_precision*map_components.num_v_powers)()
+    components.stokesV_power_SIs = (c_user_precision*map_components.num_v_powers)()
+    components.stokesV_power_comp_inds = (c_int*map_components.num_v_powers)()
+    components.stokesV_curve_ref_flux = (c_user_precision*map_components.num_v_curves)()
+    components.stokesV_curve_SIs = (c_user_precision*map_components.num_v_curves)()
+    components.stokesV_curve_qs = (c_user_precision*map_components.num_v_curves)()
+    components.stokesV_curve_comp_inds = (c_int*map_components.num_v_curves)()
+    components.linpol_pol_fracs = (c_user_precision*map_components.num_lin_pol_fracs)()
+    components.linpol_pol_frac_comp_inds = (c_int*map_components.num_lin_pol_fracs)()
+    components.linpol_power_ref_flux = (c_user_precision*map_components.num_lin_powers)()
+    components.linpol_power_SIs = (c_user_precision*map_components.num_lin_powers)()
+    components.linpol_power_comp_inds = (c_int*map_components.num_lin_powers)()
+    components.linpol_curve_ref_flux = (c_user_precision*map_components.num_lin_curves)()
+    components.linpol_curve_SIs = (c_user_precision*map_components.num_lin_curves)()
+    components.linpol_curve_qs = (c_user_precision*map_components.num_lin_curves)()
+    components.linpol_curve_comp_inds = (c_int*map_components.num_lin_curves)()
+    components.rm_values = (c_user_precision*map_components.num_lin_angles)()
+    components.intr_pol_angle = (c_user_precision*map_components.num_lin_angles)()
+    components.linpol_angle_inds = (c_int*map_components.num_lin_angles)()
+    
+    components.n_stokesV_pol_frac = map_components.num_v_pol_fracs
+    components.n_stokesV_power = map_components.num_v_powers
+    components.n_stokesV_curve = map_components.num_v_curves
+    components.n_linpol_pol_frac = map_components.num_lin_pol_fracs
+    components.n_linpol_power = map_components.num_lin_powers
+    components.n_linpol_curve = map_components.num_lin_curves
+    components.n_linpol_angles = map_components.num_lin_angles
         
     
 def setup_chunked_source(chunk_map : Skymodel_Chunk_Map, num_freqs : int,
@@ -871,12 +913,10 @@ class _Components_Python(object):
             self.linpol_curve_qs = np.ctypeslib.as_array(components.linpol_curve_qs, shape=(components.n_linpol_curve, ))
             self.linpol_curve_comp_inds = np.ctypeslib.as_array(components.linpol_curve_comp_inds, shape=(components.n_linpol_curve, ))
             
-        tot_lin_pol = components.n_linpol_pol_frac + components.n_linpol_power + components.n_linpol_curve
-        
-        if tot_lin_pol > 0:
-            self.rm_values = np.ctypeslib.as_array(components.rm_values, shape=(components.tot_lin_pol, ))
-            self.intr_pol_angle = np.ctypeslib.as_array(components.intr_pol_angle, shape=(components.tot_lin_pol, ))
-            self.linpol_angle_inds = np.ctypeslib.as_array(components.linpol_angle_inds, shape=(components.tot_lin_pol, ))
+        if components.n_linpol_angles > 0:
+            self.rm_values = np.ctypeslib.as_array(components.rm_values, shape=(components.n_linpol_angles, ))
+            self.intr_pol_angle = np.ctypeslib.as_array(components.intr_pol_angle, shape=(components.n_linpol_angles, ))
+            self.linpol_angle_inds = np.ctypeslib.as_array(components.linpol_angle_inds, shape=(components.n_linpol_angles, ))
             
 
 class _Ctype_Source_Into_Python(object):

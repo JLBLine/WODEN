@@ -25,13 +25,14 @@ class Components_Map(object):
     :cvar int total_shape_coeffs: Number of shapelet basis functions that are in total so we can allocate correct amount when reading in full information.
     :cvar int num_v_pol_fracs: Number of Stokes V fractional polarisation types.
     :cvar int num_v_powers: Number of Stokes V power-law components.
-    :cvar int num_v_cruves: Number of Stokes V curved power-law components.
+    :cvar int num_v_curves: Number of Stokes V curved power-law components.
     :cvar bool v_pol_frac_orig_inds: Relative indexes for all Stokes V fractional polarisation components w.r.t the original sky model.
     :cvar bool v_power_orig_inds: Relative indexes for all Stokes V power-law components w.r.t the original sky model
     :cvar bool v_curve_orig_inds: Relative indexes for all Stokes V curved power-law components w.r.t the original sky model
     :cvar int num_lin_pol_fracs: Number of Linear polarisation fractional polarisation types.
     :cvar int num_lin_powers: Number of Linear polarisation power-law components.
-    :cvar int num_lin_cruves: Number of Linear polarisation curved power-law components.
+    :cvar int num_lin_curves: Number of Linear polarisation curved power-law components.
+    :cvar int num_lin_angles: Total number of Linear polarisation angle components (num_lin_pol_fracs + num_lin_powers + num_lin_curves).
     :cvar bool lin_pol_frac_orig_inds: Relative indexes for all Linear polarisation fractional polarisation components w.r.t the original sky model.
     :cvar bool lin_power_orig_inds: Relative indexes for all Linear polarisation power-law components w.r.t the original sky model
     :cvar bool lin_curve_orig_inds: Relative indexes for all Linear polarisation curved power-law components w.r.t the original sky model
@@ -78,14 +79,15 @@ class Components_Map(object):
         #so we can allocate correct amount when reading in full information
         self.num_v_pol_fracs = 0
         self.num_v_powers = 0
-        self.num_v_cruves = 0
+        self.num_v_curves = 0
         self.v_pol_frac_orig_inds = False
         self.v_power_orig_inds = False
         self.v_curve_orig_inds = False
         
         self.num_lin_pol_fracs = 0
         self.num_lin_powers = 0
-        self.num_lin_cruves = 0
+        self.num_lin_curves = 0
+        self.num_lin_angles = 0
         self.lin_pol_frac_orig_inds = False
         self.lin_power_orig_inds = False
         self.lin_curve_orig_inds = False
@@ -350,7 +352,6 @@ def fill_chunk_map_polarised_info(comp_type : CompTypes,
         lin_power_inds = cropped_comp_counter.orig_lin_point_power_inds
         lin_curve_inds = cropped_comp_counter.orig_lin_point_curve_inds
         
-        
     elif comp_type == CompTypes.GAUSSIAN:
         
         components = chunk_map.gauss_components
@@ -361,7 +362,6 @@ def fill_chunk_map_polarised_info(comp_type : CompTypes,
         lin_power_inds = cropped_comp_counter.orig_lin_gauss_power_inds
         lin_curve_inds = cropped_comp_counter.orig_lin_gauss_curve_inds
         
-        
     else:
         components = chunk_map.shape_components
         v_pol_frac_inds = cropped_comp_counter.orig_v_shape_pol_frac_inds
@@ -371,7 +371,13 @@ def fill_chunk_map_polarised_info(comp_type : CompTypes,
         lin_power_inds = cropped_comp_counter.orig_lin_shape_power_inds
         lin_curve_inds = cropped_comp_counter.orig_lin_shape_curve_inds
         
-    
+    ##Default things to being zero
+    components.num_v_pol_fracs = 0
+    components.num_v_powers = 0
+    components.num_v_curves = 0
+    components.num_lin_pol_fracs = 0
+    components.num_lin_powers = 0
+    components.num_lin_curves = 0
     
     ##OK, we want to find if there was any polarisation information in this
     ##chunk, so we use np.intersect1d, which finds the common elements between
@@ -382,21 +388,33 @@ def fill_chunk_map_polarised_info(comp_type : CompTypes,
     all_orig_inds = np.concatenate((components.power_orig_inds,
                                    components.curve_orig_inds,
                                    components.list_orig_inds))
+    ##These index arrays will be False by default, so test if they are a
+    ##numpy array, and proceed if they are
+    if type(v_pol_frac_inds) == np.ndarray:
+        components.v_pol_frac_orig_inds = np.intersect1d(v_pol_frac_inds, all_orig_inds)
+        components.num_v_pol_fracs = len(components.v_pol_frac_orig_inds)
+        
+    if type(v_power_inds) == np.ndarray:
+        components.v_power_orig_inds = np.intersect1d(v_power_inds, all_orig_inds)    
+        components.num_v_powers = len(components.v_power_orig_inds)
+        
+    if type(v_curve_inds) == np.ndarray:
+        components.v_curve_orig_inds = np.intersect1d(v_curve_inds, all_orig_inds)
+        components.num_v_curves = len(components.v_curve_orig_inds)
+        
+    if type(lin_pol_frac_inds) == np.ndarray:
+        components.lin_pol_frac_orig_inds = np.intersect1d(lin_pol_frac_inds, all_orig_inds)
+        components.num_lin_pol_fracs = len(components.lin_pol_frac_orig_inds)
+        
+    if type(lin_power_inds) == np.ndarray:
+        components.lin_power_orig_inds = np.intersect1d(lin_power_inds, all_orig_inds)
+        components.num_lin_powers = len(components.lin_power_orig_inds)
+        
+    if type(lin_curve_inds) == np.ndarray:
+        components.lin_curve_orig_inds = np.intersect1d(lin_curve_inds, all_orig_inds)
+        components.num_lin_curves = len(components.lin_curve_orig_inds)
     
-    components.v_pol_frac_orig_inds = np.intersect1d(v_pol_frac_inds, all_orig_inds)
-    components.v_power_orig_inds = np.intersect1d(v_power_inds, all_orig_inds)
-    components.v_curve_orig_inds = np.intersect1d(v_curve_inds, all_orig_inds)
-    
-    components.lin_pol_frac_orig_inds = np.intersect1d(lin_pol_frac_inds, all_orig_inds)
-    components.lin_power_orig_inds = np.intersect1d(lin_power_inds, all_orig_inds)
-    components.lin_curve_orig_inds = np.intersect1d(lin_curve_inds, all_orig_inds)
-    
-    components.num_v_pol_fracs = len(components.v_pol_frac_orig_inds)
-    components.num_v_powers = len(components.v_power_orig_inds)
-    components.num_v_cruves = len(components.v_curve_orig_inds)
-    components.num_lin_pol_fracs = len(components.lin_pol_frac_orig_inds)
-    components.num_lin_powers = len(components.lin_power_orig_inds)
-    components.num_lin_cruves = len(components.lin_curve_orig_inds)
+    components.num_lin_angles = components.num_lin_pol_fracs + components.num_lin_powers + components.num_lin_curves
     
     return chunk_map
 
@@ -478,7 +496,7 @@ def fill_chunk_component(comp_type : CompTypes,
     ##Now add in any polarisation mapping as needed
     fill_chunk_map_polarised_info(comp_type, chunk_map, cropped_comp_counter)
     
-    # print(components.num_v_pol_fracs,components.num_v_powers,components.num_v_cruves,components.num_lin_pol_fracs,components.num_lin_powers,components.num_lin_cruves)
+    # print(components.num_v_pol_fracs,components.num_v_powers,components.num_v_curves,components.num_lin_pol_fracs,components.num_lin_powers,components.num_lin_curves)
     
     return chunk_map
     

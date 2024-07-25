@@ -196,6 +196,31 @@ def read_fits_radec_count_components(fits_path : str):
     return comp_counter
 
 
+def find_all_indexes_of_x_in_y(x : np.ndarray, y : np.ndarray):
+    """
+    Given two arrays `x` and `y`, find the indexes of matching elements from `y`
+    in `x`.
+    
+    See here https://stackoverflow.com/questions/8251541/numpy-for-every-element-in-one-array-find-the-index-in-another-array
+    for the origins of this function (github copypasta)
+        
+    Parameters
+    ----------
+    x : np.ndarray
+        Array of elements to find in `y`.
+    y : np.ndarray
+        Array to search for elements in `x`.
+
+    Returns
+    -------
+    np.ndarray
+        Array of indexes of `y` that match the elements in `x`.
+    """
+    xsorted = np.argsort(y)
+    ypos = np.searchsorted(y[xsorted], x)
+    
+    return xsorted[ypos]
+
 def add_fits_info_to_source_catalogue(comp_type : CompTypes,
                         main_table : Table, shape_table : Table,
                         chunk_source : Union[Source_Float, Source_Double],
@@ -226,7 +251,6 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
     """
     
     num_time_steps = len(lsts)
-
     
     if comp_type == CompTypes.POINT:
         
@@ -265,7 +289,7 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
         
         source_components = chunk_source.shape_components
         map_components = chunk_map.shape_components
-    
+        
     ##chunk_map.all_orig_inds contains indexes of all comp type, i.e.
     ##possibly POINT and GAUSSIAN, so find all indexes for this component
     ##type to iterate through, in order of power,curve,list flux type
@@ -437,7 +461,87 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
             comp_ind = np.where(np.array(main_table['NAME'][comp_orig_inds], dtype=str) == shape_name)[0][0]
             # print(comp_ind)
             source_components.param_indexes[new_b_ind] = comp_ind
+            
+            
+    ##polarisation times--------------------------------------------------------
     
+    n_stokesV_pol_frac = map_components.num_v_pol_fracs
+    n_stokesV_power = map_components.num_v_powers
+    n_stokesV_curve = map_components.num_v_curves
+    n_linpol_pol_frac = map_components.num_lin_pol_fracs
+    n_linpol_power = map_components.num_lin_powers
+    n_linpol_curve = map_components.num_lin_curves
+    
+    v_pol_frac_inds = map_components.v_pol_frac_orig_inds
+    v_power_inds = map_components.v_power_orig_inds
+    v_curve_inds = map_components.v_curve_orig_inds
+    lin_pol_frac_inds = map_components.lin_pol_frac_orig_inds
+    lin_power_inds = map_components.lin_power_orig_inds
+    lin_curve_inds = map_components.lin_curve_orig_inds
+    
+    if n_stokesV_pol_frac:
+        ##find the indexes of all the polarisation fraction relative to the
+        ##components in this chunk
+        chunk_inds = find_all_indexes_of_x_in_y(v_pol_frac_inds, comp_orig_inds)
+        ##iterate and fill in information
+        for this_ind, orig_ind, chunk_ind in zip(np.arange(n_stokesV_pol_frac), v_pol_frac_inds, chunk_inds):
+            source_components.stokesV_pol_frac_comp_inds[this_ind] = chunk_ind
+            source_components.stokesV_pol_fracs[this_ind] = main_table['V_POL_FRAC'][orig_ind]
+        
+    if n_stokesV_power:
+        chunk_inds = find_all_indexes_of_x_in_y(v_power_inds, comp_orig_inds)
+        for this_ind, orig_ind, chunk_ind in zip(np.arange(n_stokesV_power), v_power_inds, chunk_inds):
+            source_components.stokesV_power_comp_inds[this_ind] = chunk_ind
+            source_components.stokesV_power_ref_flux[this_ind] = main_table['V_NORM_COMP_PL'][orig_ind]
+            source_components.stokesV_power_SIs[this_ind] = main_table['V_ALPHA_PL'][orig_ind]
+            
+    if n_stokesV_curve:
+        chunk_inds = find_all_indexes_of_x_in_y(v_curve_inds, comp_orig_inds)
+        for this_ind, orig_ind, chunk_ind in zip(np.arange(n_stokesV_curve), v_curve_inds, chunk_inds):
+            source_components.stokesV_curve_comp_inds[this_ind] = chunk_ind
+            source_components.stokesV_curve_ref_flux[this_ind] = main_table['V_NORM_COMP_CPL'][orig_ind]
+            source_components.stokesV_curve_SIs[this_ind] = main_table['V_ALPHA_CPL'][orig_ind]
+            source_components.stokesV_curve_qs[this_ind] = main_table['V_CURVE_CPL'][orig_ind]
+    
+    ##The RM and instrinsic polarisation angle are need for all types of
+    ##linear polarisation model, so keep track of them using `linpol_ind`
+    linpol_ind = 0
+    if n_linpol_pol_frac:
+        ##find the indexes of all the polarisation fraction relative to the
+        ##components in this chunk
+        chunk_inds = find_all_indexes_of_x_in_y(lin_pol_frac_inds, comp_orig_inds)
+        ##iterate and fill in information
+        for this_ind, orig_ind, chunk_ind in zip(np.arange(n_linpol_pol_frac), lin_pol_frac_inds, chunk_inds):
+            source_components.linpol_pol_frac_comp_inds[this_ind] = chunk_ind
+            source_components.linpol_pol_fracs[this_ind] = main_table['LIN_POL_FRAC'][orig_ind]
+            source_components.linpol_angle_inds[linpol_ind] = chunk_ind
+            source_components.rm_values[linpol_ind] = main_table['RM'][orig_ind]
+            source_components.intr_pol_angle[linpol_ind] = main_table['INTR_POL_ANGLE'][orig_ind]
+            linpol_ind += 1
+        
+    if n_linpol_power:
+        chunk_inds = find_all_indexes_of_x_in_y(lin_power_inds, comp_orig_inds)
+        for this_ind, orig_ind, chunk_ind in zip(np.arange(n_linpol_power), lin_power_inds, chunk_inds):
+            source_components.linpol_power_comp_inds[this_ind] = chunk_ind
+            source_components.linpol_power_ref_flux[this_ind] = main_table['LIN_NORM_COMP_PL'][orig_ind]
+            source_components.linpol_power_SIs[this_ind] = main_table['LIN_ALPHA_PL'][orig_ind]
+            source_components.linpol_angle_inds[linpol_ind] = chunk_ind
+            source_components.rm_values[linpol_ind] = main_table['RM'][orig_ind]
+            source_components.intr_pol_angle[linpol_ind] = main_table['INTR_POL_ANGLE'][orig_ind]
+            linpol_ind += 1
+            
+    if n_linpol_curve:
+        chunk_inds = find_all_indexes_of_x_in_y(lin_curve_inds, comp_orig_inds)
+        for this_ind, orig_ind, chunk_ind in zip(np.arange(n_linpol_curve), lin_curve_inds, chunk_inds):
+            source_components.linpol_curve_comp_inds[this_ind] = chunk_ind
+            source_components.linpol_curve_ref_flux[this_ind] = main_table['LIN_NORM_COMP_CPL'][orig_ind]
+            source_components.linpol_curve_SIs[this_ind] = main_table['LIN_ALPHA_CPL'][orig_ind]
+            source_components.linpol_curve_qs[this_ind] = main_table['LIN_CURVE_CPL'][orig_ind]
+            source_components.linpol_angle_inds[linpol_ind] = chunk_ind
+            source_components.rm_values[linpol_ind] = main_table['RM'][orig_ind]
+            source_components.intr_pol_angle[linpol_ind] = main_table['INTR_POL_ANGLE'][orig_ind]
+            linpol_ind += 1
+        
     return
 
 
