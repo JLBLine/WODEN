@@ -97,3 +97,7 @@ Initially make enough room to fit 1000000 components in a source*/
 /*! 100 \n
 Initially make enough room to fit 100 flux entries in a list*/
 #define INITIAL_NUM_FLUXES 100
+
+/*! 200000000.0 \n
+Frequency (Hz) that all power-law and curved power-law models are referenced to*/
+#define REF_FREQ 200000000.0

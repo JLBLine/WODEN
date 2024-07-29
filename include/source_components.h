@@ -487,21 +487,23 @@ void malloc_extrapolated_flux_arrays(components_t *d_components, int num_comps,
 @brief Assuming a simple power-law SED of \f$ S \propto \nu^\alpha \f$,
 extrapolate Stokes I flux density parameters to the requested frequencies
 
-@details Uses the reference freq `d_components.power_ref_freqs[iFluxComp]`,
-reference flux density `d_components.power_ref_fluxes[iFluxComp]`, and `spectral index d_components.power_SIs[iFluxComp]` to calculate the flux density flux_I at the requested frequency d_extrap_freqs[iFreq].
+@details Assumes a referece frequency of 200MHz, and uses the
+reference flux density `d_ref_fluxes[iFluxComp]`, and `spectral index d_SIs[iFluxComp]` to calculate the flux density `extrap_flux` at the requested frequency d_extrap_freqs[iFreq].
 
-@param[in] d_components d_components A populated `components_t` struct containing reference flux densities and frequencies for all components
+@param[in] d_ref_fluxes Reference fluxes for all components
+@param[in] d_ref_SIs Spectral indexes for all components
 @param[in] d_extrap_freqs Pointer to array of frequencies to extrapolate to
 @param[in] iFluxComp Index of which component to extrapolate
 @param[in] iFreq Index of which frequency to extrapolate to
-@param[in,out] *flux_I Pointer to extrapolated Stokes I (Jy)
+@param[in,out] *extrap_flux Pointer to extrapolated flux (Jy)
 */
-__device__ void extrap_stokes_power_law_stokesI(components_t d_components,
+__device__ void extrap_stokes_power_law_stokesI(user_precision_t *d_ref_fluxes,
+           user_precision_t *d_SIs,
            double *d_extrap_freqs, int iFluxComp, int iFreq,
-           user_precision_t * flux_I);
+           user_precision_t * extrap_flux);
 
 /**
-@brief Kernel to run `extrap_stokes_power_law_stokesI` for all components in `d_components`.
+@brief Kernel to run `extrap_stokes_power_law` for all Stokes I components in `d_components`.
 
 @details Fills the array `d_components.extrap_stokesI` with the extrapolated Stokes I flux densities.
 
@@ -517,21 +519,25 @@ __global__ void kern_extrap_power_laws_stokesI(int num_extrap_freqs, double *d_e
 @brief Assuming a curved power-law SED of \f$ S \propto \nu^\alpha \exp(q \ln (\nu)^2 )  \f$,
 extrapolate Stokes I flux density parameters to the requested frequencies
 
-@details Uses the reference freq `d_components.power_ref_freqs[iFluxComp]`,
-reference flux density `d_components.power_ref_fluxes[iFluxComp]`, spectral index `d_components.curve_SIs[iFluxComp]`, and `q` param `d_components.curve_qs[iFluxComp]` to calculate the flux density flux_I at the requested frequency `d_extrap_freqs[iFreq]`.
+@details Assumes a referece frequency of 200MHz, and uses the
+reference flux density `d_ref_fluxes[iFluxComp]`, `spectral index d_SIs[iFluxComp]`,
+curvature `q` param `spectral index d_qs[iFluxComp]` to calculate the flux density `extrap_flux` at the requested frequency d_extrap_freqs[iFreq].
 
-@param[in] d_components d_components A populated `components_t` struct containing reference flux densities and frequencies for all components
+@param[in] d_ref_fluxes Reference fluxes for all components
+@param[in] d_ref_SIs Spectral indexes for all components
+@param[in] d_qs Curvature `q` param for all components
 @param[in] d_extrap_freqs Pointer to array of frequencies to extrapolate to
 @param[in] iFluxComp Index of which component to extrapolate
 @param[in] iFreq Index of which frequency to extrapolate to
-@param[in,out] *flux_I Pointer to extrapolated Stokes I (Jy)
+@param[in,out] *extrap_flux Pointer to extrapolated flux (Jy)
 */
-__device__ void extrap_stokes_curved_power_law_stokesI(components_t d_components,
+__device__ void extrap_stokes_curved_power_law(user_precision_t *d_ref_fluxes,
+           user_precision_t *d_SIs, user_precision_t *d_qs,
            double *d_extrap_freqs, int iFluxComp, int iFreq,
-           user_precision_t * flux_I);
+           user_precision_t * extrap_flux);
 
 /**
-@brief Kernel to run `extrap_stokes_curved_power_law_stokesI` for all components in `d_components`.
+@brief Kernel to run `extrap_stokes_curved_power_law` for all Stokes I components in `d_components`.
 
 @details Fills the array `d_components.extrap_stokesI` with the extrapolated Stokes I flux densities.
 

@@ -47,31 +47,24 @@ void test_kern_extrap_stokes_GivesCorrectValues(void) {
   // int num_extrap_freqs = 25;
   int num_components = chunked_source->n_points;
 
-  comps->power_ref_freqs = ref_freqs;
+  // comps->power_ref_freqs = ref_freqs;
   comps->power_ref_stokesI = ref_stokesI;
-  comps->power_ref_stokesQ = ref_stokesQ;
-  comps->power_ref_stokesU = ref_stokesU;
-  comps->power_ref_stokesV = ref_stokesV;
-  comps->power_SIs = ref_power_SIs;
+  comps->power_SIs = stokesI_power_SIs;
 
   comps->power_comp_inds = malloc(chunked_source->n_point_powers*sizeof(int));
   for (int pow_ind = 0; pow_ind < chunked_source->n_point_powers; pow_ind++) {
     comps->power_comp_inds[pow_ind] = pow_ind;
   }
 
-  comps->curve_ref_freqs = ref_freqs;
+  // comps->curve_ref_freqs = ref_freqs;
   comps->curve_ref_stokesI = ref_stokesI;
-  comps->curve_ref_stokesQ = ref_stokesQ;
-  comps->curve_ref_stokesU = ref_stokesU;
-  comps->curve_ref_stokesV = ref_stokesV;
-  comps->curve_SIs = ref_curve_SIs;
-  comps->curve_qs = ref_qs;
+  comps->curve_SIs = stokesI_curve_SIs;
+  comps->curve_qs = stokesI_qs;
 
   comps->curve_comp_inds = malloc(chunked_source->n_point_curves*sizeof(int));
   for (int cur_ind = 0; cur_ind < chunked_source->n_point_curves; cur_ind++) {
     comps->curve_comp_inds[cur_ind] = chunked_source->n_point_powers + cur_ind;
   }
-
 
   comps->list_freqs = list_freqs;
   comps->list_stokesI = list_stokesI;

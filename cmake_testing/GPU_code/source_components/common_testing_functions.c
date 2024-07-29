@@ -142,12 +142,12 @@ void extrap_stokes_power_law(components_t *components,
            double * flux_U, double * flux_V) {
 
   double extrap_freq = extrap_freqs[iFreq];
-  double flux_ratio = pow(extrap_freq / components->power_ref_freqs[iPowerComp], components->power_SIs[iPowerComp]);
+  double flux_ratio = pow(extrap_freq / REF_FREQ, components->power_SIs[iPowerComp]);
 
   * flux_I = components->power_ref_stokesI[iPowerComp] * flux_ratio;
-  * flux_Q = components->power_ref_stokesQ[iPowerComp] * flux_ratio;
-  * flux_U = components->power_ref_stokesU[iPowerComp] * flux_ratio;
-  * flux_V = components->power_ref_stokesV[iPowerComp] * flux_ratio;
+  // * flux_Q = components->power_ref_stokesQ[iPowerComp] * flux_ratio;
+  // * flux_U = components->power_ref_stokesU[iPowerComp] * flux_ratio;
+  // * flux_V = components->power_ref_stokesV[iPowerComp] * flux_ratio;
 
 }
 
@@ -165,20 +165,20 @@ void extrap_stokes_curved_power_law(components_t *components,
 
 
   double extrap_freq = extrap_freqs[iFreq];
-  double ref_freq = components->curve_ref_freqs[iCurveComp];
+  // double ref_freq = components->curve_ref_freqs[iCurveComp];
 
-  double si_ratio = pow(extrap_freq / ref_freq,
+  double si_ratio = pow(extrap_freq / REF_FREQ,
                                              components->curve_SIs[iCurveComp]);
-  double log_ratio = log(extrap_freq / ref_freq);
+  double log_ratio = log(extrap_freq / REF_FREQ);
 
   double exp_ratio = exp((double)components->curve_qs[iCurveComp]*log_ratio*log_ratio);
 
   // printf("%d %.4f %.4f %.4f\n",iCurveComp, si_ratio, exp_ratio );
 
   * flux_I = components->curve_ref_stokesI[iCurveComp] * exp_ratio * si_ratio;
-  * flux_Q = components->curve_ref_stokesQ[iCurveComp] * exp_ratio * si_ratio;
-  * flux_U = components->curve_ref_stokesU[iCurveComp] * exp_ratio * si_ratio;
-  * flux_V = components->curve_ref_stokesV[iCurveComp] * exp_ratio * si_ratio;
+  // * flux_Q = components->curve_ref_stokesQ[iCurveComp] * exp_ratio * si_ratio;
+  // * flux_U = components->curve_ref_stokesU[iCurveComp] * exp_ratio * si_ratio;
+  // * flux_V = components->curve_ref_stokesV[iCurveComp] * exp_ratio * si_ratio;
 
   // if (iCurveComp == 9) {
   //   printf("In C %d %.1f %.1f %.1f %.1f %.5f\n", iFreq,
@@ -213,9 +213,9 @@ void CPU_extrapolate_fluxes_in_components(components_t *comps, int num_powers,
                                             &flux_I, &flux_Q, &flux_U, &flux_V);
 
       expec_flux_I[ind] = flux_I;
-      expec_flux_Q[ind] = flux_Q;
-      expec_flux_U[ind] = flux_U;
-      expec_flux_V[ind] = flux_V;
+      // expec_flux_Q[ind] = flux_Q;
+      // expec_flux_U[ind] = flux_U;
+      // expec_flux_V[ind] = flux_V;
       // printf("ind, flux %d %.3f\n",ind, ref_stokesI[comp] * flux_ratio );
       ind ++;
 
@@ -235,9 +235,9 @@ void CPU_extrapolate_fluxes_in_components(components_t *comps, int num_powers,
                                             &flux_I, &flux_Q, &flux_U, &flux_V);
 
       expec_flux_I[ind + num_extrap_freqs*num_powers] = flux_I;
-      expec_flux_Q[ind + num_extrap_freqs*num_powers] = flux_Q;
-      expec_flux_U[ind + num_extrap_freqs*num_powers] = flux_U;
-      expec_flux_V[ind + num_extrap_freqs*num_powers] = flux_V;
+      // expec_flux_Q[ind + num_extrap_freqs*num_powers] = flux_Q;
+      // expec_flux_U[ind + num_extrap_freqs*num_powers] = flux_U;
+      // expec_flux_V[ind + num_extrap_freqs*num_powers] = flux_V;
       // printf("ind, flux %d %.3f\n",ind + num_extrap_freqs*num_powers,
       //                              expec_flux_I[ind + num_extrap_freqs*num_powers]);
       ind ++;

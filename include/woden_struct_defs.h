@@ -127,6 +127,35 @@ typedef struct _components_t {
   double *ms; /*!< Device memory m cosine direction coords for these COMPONENTs*/
   double *ns; /*!< Device memory n cosine direction coords for these COMPONENTs*/
 
+  user_precision_t *stokesV_pol_fracs; /*!< Stokes V polarisation fractions */
+  int *stokesV_pol_frac_comp_inds; /*!< The indexes of all Stokes V polarisation fraction models w.r.t ra,dec */
+  user_precision_t *stokesV_power_ref_flux; /*!< Stokes V reference flux for power-law */
+  user_precision_t *stokesV_power_SIs; /*!< Stokes V spectral index for power-law */
+  int *stokesV_power_comp_inds; /*!< The indexes of all Stokes V power-law models w.r.t ra,dec */
+  user_precision_t *stokesV_curve_ref_flux; /*!< Stokes V reference flux for curved power-law */
+  user_precision_t *stokesV_curve_SIs; /*!< Stokes V spectral index for curved power-law */
+  user_precision_t *stokesV_curve_qs; /*!< Stokes V q param for curved power-law */
+  int *stokesV_curve_comp_inds; /*!< The indexes of Stokes V curved power-law models w.r.t ra,dec */
+  user_precision_t *linpol_pol_fracs; /*!< Linear polarisation polarisation fractions */
+  int *linpol_pol_frac_comp_inds; /*!< The indexes of all linear polarisation fraction models w.r.t ra,dec */
+  user_precision_t *linpol_power_ref_flux; /*!< Linear polarisation reference flux for power-law */
+  user_precision_t *linpol_power_SIs; /*!< Linear polarisation spectral index for power-law */
+  int *linpol_power_comp_inds;  /*!< The indexes of all linear polarisation power-law models w.r.t ra,dec */
+  user_precision_t *linpol_curve_ref_flux; /*!< Linear polarisation reference flux for curved power-law */
+  user_precision_t *linpol_curve_SIs; /*!< Linear polarisation spectral index for curved power-law */
+  user_precision_t *linpol_curve_qs; /*!< Linear polarisation q param for curved power-law */
+  int *linpol_curve_comp_inds; /*!< The indexes of all linear polarisation curved power-law models w.r.t ra,dec */
+  user_precision_t *rm_values; /*!< Linear polarisation rotation measures */
+  user_precision_t *intr_pol_angle; /*!<  Linear polarisation instrinsic polarisation angles */
+  int *linpol_angle_inds;  /*!< The indexes of all RM/intrinsic polarisation angles w.r.t ra,dec */
+  int n_stokesV_pol_frac; /*!< The number of Stokes V polarisation fraction models */
+  int n_stokesV_power; /*!< The number of Stokes V power-law models */
+  int n_stokesV_curve; /*!< The number of V curved power-law models */
+  int n_linpol_pol_frac;  /*!< The number of linear polarisation fraction models */
+  int n_linpol_power; /*!< The number of linear polarisation power-law models */
+  int n_linpol_curve; /*!< The number of linear polarisation curved power-law models */
+  int n_linpol_angles; /*!< The number of RM/intrinsic polarisation angles */
+
 } components_t;
 
 
