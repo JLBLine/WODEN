@@ -198,11 +198,11 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
     // printf("WHAT YA DO? woden_settings->num_baselines: %d\n", woden_settings->num_baselines);
 
-    ( gpuMalloc( (void**)&d_ant1_to_baseline_map,
-                                woden_settings->num_baselines*sizeof(int) ) );
+    gpuMalloc( (void**)&d_ant1_to_baseline_map,
+                                woden_settings->num_baselines*sizeof(int) );
 
-    ( gpuMalloc( (void**)&d_ant2_to_baseline_map,
-                                woden_settings->num_baselines*sizeof(int) ) );
+    gpuMalloc( (void**)&d_ant2_to_baseline_map,
+                                woden_settings->num_baselines*sizeof(int) );
 
     fill_ant_to_baseline_mapping(woden_settings->num_ants, d_ant1_to_baseline_map,
                                                            d_ant2_to_baseline_map);
@@ -260,30 +260,30 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
     //ensure d_sum_visi_XX_real are set entirely to zero by copying the host
     //array values, which have been set explictly to zero during chunking
-    ( gpuMemcpy(d_visibility_set->sum_visi_XX_real,
+    gpuMemcpy(d_visibility_set->sum_visi_XX_real,
                chunk_visibility_set->sum_visi_XX_real,
-               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-    ( gpuMemcpy(d_visibility_set->sum_visi_XX_imag,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMemcpy(d_visibility_set->sum_visi_XX_imag,
                chunk_visibility_set->sum_visi_XX_imag,
-               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-    ( gpuMemcpy(d_visibility_set->sum_visi_XY_real,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMemcpy(d_visibility_set->sum_visi_XY_real,
                chunk_visibility_set->sum_visi_XY_real,
-               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-    ( gpuMemcpy(d_visibility_set->sum_visi_XY_imag,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMemcpy(d_visibility_set->sum_visi_XY_imag,
                chunk_visibility_set->sum_visi_XY_imag,
-               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-    ( gpuMemcpy(d_visibility_set->sum_visi_YX_real,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMemcpy(d_visibility_set->sum_visi_YX_real,
                chunk_visibility_set->sum_visi_YX_real,
-               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-    ( gpuMemcpy(d_visibility_set->sum_visi_YX_imag,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMemcpy(d_visibility_set->sum_visi_YX_imag,
                chunk_visibility_set->sum_visi_YX_imag,
-               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-    ( gpuMemcpy(d_visibility_set->sum_visi_YY_real,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMemcpy(d_visibility_set->sum_visi_YY_real,
                chunk_visibility_set->sum_visi_YY_real,
-               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-    ( gpuMemcpy(d_visibility_set->sum_visi_YY_imag,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMemcpy(d_visibility_set->sum_visi_YY_imag,
                chunk_visibility_set->sum_visi_YY_imag,
-               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice );
 
     dim3 grid, threads;
 

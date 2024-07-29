@@ -112,6 +112,15 @@ void malloc_args_for_testing(args_for_testing_t *args_ft,
     components->shape_coeffs = malloc(num_coeffs*sizeof(user_precision_t));
     components->param_indexes = malloc(num_coeffs*sizeof(user_precision_t));
   }
+
+  components->n_stokesV_pol_frac = 0;
+  components->n_stokesV_power = 0;
+  components->n_stokesV_curve = 0;
+  components->n_linpol_pol_frac = 0;
+  components->n_linpol_power = 0;
+  components->n_linpol_curve = 0;
+  components->n_linpol_angles = 0;
+
 }
 
 void free_args_for_testing(args_for_testing_t *args_ft,

@@ -1479,31 +1479,149 @@ void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source
                         components->list_start_indexes,
                         num_lists*sizeof(int), gpuMemcpyHostToDevice ) );
 
-    ( gpuMalloc( (void**)&d_components->list_freqs,
-                        num_list_values*sizeof(double) ) );
-    ( gpuMemcpy( d_components->list_freqs, components->list_freqs,
-                        num_list_values*sizeof(double), gpuMemcpyHostToDevice ) );
+    gpuMalloc( (void**)&d_components->list_freqs,
+                        num_list_values*sizeof(double) );
+    gpuMemcpy( d_components->list_freqs, components->list_freqs,
+                        num_list_values*sizeof(double), gpuMemcpyHostToDevice );
 
-    ( gpuMalloc( (void**)&d_components->list_stokesI,
-                        num_list_values*sizeof(user_precision_t) ) );
-    ( gpuMemcpy( d_components->list_stokesI, components->list_stokesI,
-                        num_list_values*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
+    gpuMalloc( (void**)&d_components->list_stokesI,
+                        num_list_values*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->list_stokesI, components->list_stokesI,
+                        num_list_values*sizeof(user_precision_t), gpuMemcpyHostToDevice );
 
-    ( gpuMalloc( (void**)&d_components->list_stokesQ,
-                        num_list_values*sizeof(user_precision_t) ) );
-    ( gpuMemcpy( d_components->list_stokesQ, components->list_stokesQ,
-                        num_list_values*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
+    gpuMalloc( (void**)&d_components->list_stokesQ,
+                        num_list_values*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->list_stokesQ, components->list_stokesQ,
+                        num_list_values*sizeof(user_precision_t), gpuMemcpyHostToDevice );
 
-    ( gpuMalloc( (void**)&d_components->list_stokesU,
-                        num_list_values*sizeof(user_precision_t) ) );
-    ( gpuMemcpy( d_components->list_stokesU, components->list_stokesU,
-                        num_list_values*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
+    gpuMalloc( (void**)&d_components->list_stokesU,
+                        num_list_values*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->list_stokesU, components->list_stokesU,
+                        num_list_values*sizeof(user_precision_t), gpuMemcpyHostToDevice );
 
-    ( gpuMalloc( (void**)&d_components->list_stokesV,
-                        num_list_values*sizeof(user_precision_t) ) );
-    ( gpuMemcpy( d_components->list_stokesV, components->list_stokesV,
-                        num_list_values*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
+    gpuMalloc( (void**)&d_components->list_stokesV,
+                        num_list_values*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->list_stokesV, components->list_stokesV,
+                        num_list_values*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+  }
 
+  int n_stokesV_pol_frac = components->n_stokesV_pol_frac;
+  int n_stokesV_power = components->n_stokesV_power;
+  int n_stokesV_curve = components->n_stokesV_curve;
+  int n_linpol_pol_frac = components->n_linpol_pol_frac;
+  int n_linpol_power = components->n_linpol_power;
+  int n_linpol_curve = components->n_linpol_curve;
+  int n_linpol_angles = components->n_linpol_angles;
+
+  d_components->n_stokesV_pol_frac = n_stokesV_pol_frac;
+  d_components->n_stokesV_power = n_stokesV_power;
+  d_components->n_stokesV_curve = n_stokesV_curve;
+  d_components->n_linpol_pol_frac = n_linpol_pol_frac;
+  d_components->n_linpol_power = n_linpol_power;
+  d_components->n_linpol_curve = n_linpol_curve;
+  d_components->n_linpol_angles = n_linpol_angles;
+
+  if (n_stokesV_pol_frac > 0) {
+    gpuMalloc( (void**)&d_components->stokesV_pol_fracs,
+                        n_stokesV_pol_frac*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->stokesV_pol_fracs, components->stokesV_pol_fracs,
+                n_stokesV_pol_frac*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->stokesV_pol_frac_comp_inds,
+                        n_stokesV_pol_frac*sizeof(int) );
+    gpuMemcpy( d_components->stokesV_pol_frac_comp_inds, components->stokesV_pol_frac_comp_inds,
+                n_stokesV_pol_frac*sizeof(int), gpuMemcpyHostToDevice );
+  }
+  if (n_stokesV_power > 0){
+    gpuMalloc( (void**)&d_components->stokesV_power_ref_flux,
+                        n_stokesV_power*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->stokesV_power_ref_flux, components->stokesV_power_ref_flux,
+                n_stokesV_power*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->stokesV_power_SIs,
+                        n_stokesV_power*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->stokesV_power_SIs, components->stokesV_power_SIs,
+                n_stokesV_power*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->stokesV_power_comp_inds,
+                        n_stokesV_power*sizeof(int) );
+    gpuMemcpy( d_components->stokesV_power_comp_inds, components->stokesV_power_comp_inds,
+                n_stokesV_power*sizeof(int), gpuMemcpyHostToDevice );
+  }
+
+  if (n_stokesV_curve > 0){
+    gpuMalloc( (void**)&d_components->stokesV_curve_ref_flux,
+                        n_stokesV_curve*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->stokesV_curve_ref_flux, components->stokesV_curve_ref_flux,
+                n_stokesV_curve*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->stokesV_curve_SIs,
+                        n_stokesV_curve*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->stokesV_curve_SIs, components->stokesV_curve_SIs,
+                n_stokesV_curve*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->stokesV_curve_qs,
+                        n_stokesV_curve*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->stokesV_curve_qs, components->stokesV_curve_qs,
+                n_stokesV_curve*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->stokesV_curve_comp_inds,
+                        n_stokesV_curve*sizeof(int) );
+    gpuMemcpy( d_components->stokesV_curve_comp_inds, components->stokesV_curve_comp_inds,
+                n_stokesV_curve*sizeof(int), gpuMemcpyHostToDevice );
+  }
+
+  if (n_linpol_pol_frac > 0) {
+    gpuMalloc( (void**)&d_components->linpol_pol_fracs,
+                        n_linpol_pol_frac*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->linpol_pol_fracs, components->linpol_pol_fracs,
+                n_linpol_pol_frac*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->linpol_pol_frac_comp_inds,
+                        n_linpol_pol_frac*sizeof(int) );
+    gpuMemcpy( d_components->linpol_pol_frac_comp_inds, components->linpol_pol_frac_comp_inds,
+                n_linpol_pol_frac*sizeof(int), gpuMemcpyHostToDevice );
+  }
+  if (n_linpol_power > 0){
+    gpuMalloc( (void**)&d_components->linpol_power_ref_flux,
+                        n_linpol_power*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->linpol_power_ref_flux, components->linpol_power_ref_flux,
+                n_linpol_power*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->linpol_power_SIs,
+                        n_linpol_power*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->linpol_power_SIs, components->linpol_power_SIs,
+                n_linpol_power*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->linpol_power_comp_inds,
+                        n_linpol_power*sizeof(int) );
+    gpuMemcpy( d_components->linpol_power_comp_inds, components->linpol_power_comp_inds,
+                n_linpol_power*sizeof(int), gpuMemcpyHostToDevice );
+  }
+
+  if (n_linpol_curve > 0){
+    gpuMalloc( (void**)&d_components->linpol_curve_ref_flux,
+                        n_linpol_curve*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->linpol_curve_ref_flux, components->linpol_curve_ref_flux,
+                n_linpol_curve*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->linpol_curve_SIs,
+                        n_linpol_curve*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->linpol_curve_SIs, components->linpol_curve_SIs,
+                n_linpol_curve*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->linpol_curve_qs,
+                        n_linpol_curve*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->linpol_curve_qs, components->linpol_curve_qs,
+                n_linpol_curve*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->linpol_curve_comp_inds,
+                        n_linpol_curve*sizeof(int) );
+    gpuMemcpy( d_components->linpol_curve_comp_inds, components->linpol_curve_comp_inds,
+                n_linpol_curve*sizeof(int), gpuMemcpyHostToDevice );
+  }
+
+  if (n_linpol_angles > 0){
+    gpuMalloc( (void**)&d_components->rm_values,
+                        n_linpol_angles*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->rm_values, components->rm_values,
+                n_linpol_angles*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->intr_pol_angle,
+                        n_linpol_angles*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->intr_pol_angle, components->intr_pol_angle,
+                n_linpol_angles*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->linpol_angle_inds,
+                        n_linpol_angles*sizeof(int) );
+    gpuMemcpy( d_components->linpol_angle_inds, components->linpol_angle_inds,
+                n_linpol_angles*sizeof(int), gpuMemcpyHostToDevice );
   }
 }
 
@@ -1580,57 +1698,96 @@ extern "C" void free_d_components(source_t *d_chunked_source,
     n_lists = d_chunked_source->n_shape_lists;
   }
 
-  ( gpuFree( d_components.decs) );
-  ( gpuFree( d_components.ras) );
-
-  ( gpuFree( d_components.ls) );
-  ( gpuFree( d_components.ms) );
-  ( gpuFree( d_components.ns) );
+  gpuFree( d_components.decs);
+  gpuFree( d_components.ras);
+  gpuFree( d_components.ls);
+  gpuFree( d_components.ms);
+  gpuFree( d_components.ns);
 
   //The az,za,beam_has,beam_decs are handled by other functions
 
   if (n_powers > 0) {
-    ( gpuFree( d_components.power_ref_freqs ) );
-    ( gpuFree( d_components.power_ref_stokesI ) );
-    ( gpuFree( d_components.power_ref_stokesQ ) );
-    ( gpuFree( d_components.power_ref_stokesU ) );
-    ( gpuFree( d_components.power_ref_stokesV ) );
-    ( gpuFree( d_components.power_SIs ) );
-    ( gpuFree( d_components.power_comp_inds ) );
+    gpuFree( d_components.power_ref_freqs );
+    gpuFree( d_components.power_ref_stokesI );
+    gpuFree( d_components.power_ref_stokesQ );
+    gpuFree( d_components.power_ref_stokesU );
+    gpuFree( d_components.power_ref_stokesV );
+    gpuFree( d_components.power_SIs );
+    gpuFree( d_components.power_comp_inds );
   }
 
   if (n_curves > 0) {
-    ( gpuFree( d_components.curve_ref_freqs ) );
-    ( gpuFree( d_components.curve_ref_stokesI ) );
-    ( gpuFree( d_components.curve_ref_stokesQ ) );
-    ( gpuFree( d_components.curve_ref_stokesU ) );
-    ( gpuFree( d_components.curve_ref_stokesV ) );
-    ( gpuFree( d_components.curve_SIs ) );
-    ( gpuFree( d_components.curve_qs ) );
-    ( gpuFree( d_components.curve_comp_inds ) );
+    gpuFree( d_components.curve_ref_freqs );
+    gpuFree( d_components.curve_ref_stokesI );
+    gpuFree( d_components.curve_ref_stokesQ );
+    gpuFree( d_components.curve_ref_stokesU );
+    gpuFree( d_components.curve_ref_stokesV );
+    gpuFree( d_components.curve_SIs );
+    gpuFree( d_components.curve_qs );
+    gpuFree( d_components.curve_comp_inds );
   }
   if (n_lists > 0) {
-    ( gpuFree( d_components.list_comp_inds ) );
-    ( gpuFree( d_components.list_freqs ) );
-    ( gpuFree( d_components.list_stokesI ) );
-    ( gpuFree( d_components.list_stokesQ ) );
-    ( gpuFree( d_components.list_stokesU ) );
-    ( gpuFree( d_components.list_stokesV ) );
-    ( gpuFree( d_components.num_list_values ) );
-    ( gpuFree( d_components.list_start_indexes ) );
+    gpuFree( d_components.list_comp_inds );
+    gpuFree( d_components.list_freqs );
+    gpuFree( d_components.list_stokesI );
+    gpuFree( d_components.list_stokesQ );
+    gpuFree( d_components.list_stokesU );
+    gpuFree( d_components.list_stokesV );
+    gpuFree( d_components.num_list_values );
+    gpuFree( d_components.list_start_indexes );
   }
 
   if (comptype == GAUSSIAN || comptype == SHAPELET) {
-    ( gpuFree( d_components.pas ) );
-    ( gpuFree( d_components.majors ) );
-    ( gpuFree( d_components.minors ) );
+    gpuFree( d_components.pas );
+    gpuFree( d_components.majors );
+    gpuFree( d_components.minors );
   }
 
   if (comptype == SHAPELET) {
-    ( gpuFree( d_components.shape_coeffs ) );
-    ( gpuFree( d_components.n1s ) );
-    ( gpuFree( d_components.n2s ) );
-    ( gpuFree( d_components.param_indexes ) );
+    gpuFree( d_components.shape_coeffs );
+    gpuFree( d_components.n1s );
+    gpuFree( d_components.n2s );
+    gpuFree( d_components.param_indexes );
+  }
+  //Free whatever polarisation information we have
+  if (d_components.n_stokesV_pol_frac > 0) {
+    gpuFree(d_components.stokesV_pol_fracs);
+    gpuFree(d_components.stokesV_pol_frac_comp_inds);
+  }
+  if (d_components.n_stokesV_power > 0){
+    gpuFree(d_components.stokesV_power_ref_flux);
+    gpuFree(d_components.stokesV_power_SIs);
+    gpuFree(d_components.stokesV_power_comp_inds);
+  }
+
+  if (d_components.n_stokesV_curve > 0){
+    gpuFree(d_components.stokesV_curve_ref_flux);
+    gpuFree(d_components.stokesV_curve_SIs);
+    gpuFree(d_components.stokesV_curve_qs);
+    gpuFree(d_components.stokesV_curve_comp_inds);
+  }
+
+  if (d_components.n_linpol_pol_frac > 0) {
+    gpuFree(d_components.linpol_pol_fracs);
+    gpuFree(d_components.linpol_pol_frac_comp_inds);
+  }
+  if (d_components.n_linpol_power > 0){
+    gpuFree(d_components.linpol_power_ref_flux);
+    gpuFree(d_components.linpol_power_SIs);
+    gpuFree(d_components.linpol_power_comp_inds);
+  }
+
+  if (d_components.n_linpol_curve > 0){
+    gpuFree(d_components.linpol_curve_ref_flux);
+    gpuFree(d_components.linpol_curve_SIs);
+    gpuFree(d_components.linpol_curve_qs);
+    gpuFree(d_components.linpol_curve_comp_inds);
+  }
+
+  if (d_components.n_linpol_angles > 0){
+    gpuFree(d_components.rm_values);
+    gpuFree(d_components.intr_pol_angle);
+    gpuFree(d_components.linpol_angle_inds);
   }
 }
 

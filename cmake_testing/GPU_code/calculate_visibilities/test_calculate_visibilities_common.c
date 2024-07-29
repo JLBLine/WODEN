@@ -143,6 +143,14 @@ void populate_components(components_t *comps, int n_comps,
     }
   }
 
+  comps->n_stokesV_pol_frac = 0;
+  comps->n_stokesV_power = 0;
+  comps->n_stokesV_curve = 0;
+  comps->n_linpol_pol_frac = 0;
+  comps->n_linpol_power = 0;
+  comps->n_linpol_curve = 0;
+  comps->n_linpol_angles = 0;
+
 }
 
 
