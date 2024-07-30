@@ -47,6 +47,7 @@ void test_kern_extrap_stokes_GivesCorrectValues(void) {
   // int num_extrap_freqs = 25;
   int num_components = chunked_source->n_points;
 
+  //Stokes I power laws---------------------------------------------------------
   // comps->power_ref_freqs = ref_freqs;
   comps->power_ref_stokesI = ref_stokesI;
   comps->power_SIs = stokesI_power_SIs;
@@ -56,6 +57,8 @@ void test_kern_extrap_stokes_GivesCorrectValues(void) {
     comps->power_comp_inds[pow_ind] = pow_ind;
   }
 
+
+  //Stokes I curved power laws--------------------------------------------------
   // comps->curve_ref_freqs = ref_freqs;
   comps->curve_ref_stokesI = ref_stokesI;
   comps->curve_SIs = stokesI_curve_SIs;
@@ -66,11 +69,24 @@ void test_kern_extrap_stokes_GivesCorrectValues(void) {
     comps->curve_comp_inds[cur_ind] = chunked_source->n_point_powers + cur_ind;
   }
 
+  //Stokes I list fluxes--------------------------------------------------------
   comps->list_freqs = list_freqs;
   comps->list_stokesI = list_stokesI;
-  comps->list_stokesQ = list_stokesQ;
-  comps->list_stokesU = list_stokesU;
-  comps->list_stokesV = list_stokesV;
+  // comps->list_stokesQ = list_stokesQ;
+  // comps->list_stokesU = list_stokesU;
+  // comps->list_stokesV = list_stokesV;
+  //TODO work out what we are doing r.e. list fluxes for the FITS sky model
+  comps->list_stokesQ = malloc(chunked_source->n_point_lists*sizeof(user_precision_t));
+  comps->list_stokesU = malloc(chunked_source->n_point_lists*sizeof(user_precision_t));
+  comps->list_stokesV = malloc(chunked_source->n_point_lists*sizeof(user_precision_t));
+
+  for (int list_ind = 0; list_ind < chunked_source->n_point_lists; list_ind++) {
+    comps->list_stokesQ[list_ind] = 0.0;
+    comps->list_stokesU[list_ind] = 0.0;
+    comps->list_stokesV[list_ind] = 0.0;
+  }
+
+
   comps->num_list_values = num_list_values;
   comps->list_start_indexes = list_start_indexes;
 
@@ -83,12 +99,69 @@ void test_kern_extrap_stokes_GivesCorrectValues(void) {
   //copying over to the GPU
 
   //Sum up everything in num_list_values gives us how much we need to malloc
-    int total_num_flux_entires = 0;
-    for (int list_comp = 0; list_comp < num_lists; list_comp++) {
-      total_num_flux_entires += comps->num_list_values[list_comp];
-    }
+  int total_num_flux_entires = 0;
+  for (int list_comp = 0; list_comp < num_lists; list_comp++) {
+    total_num_flux_entires += comps->num_list_values[list_comp];
+  }
 
-    comps->total_num_flux_entires = total_num_flux_entires;
+  comps->total_num_flux_entires = total_num_flux_entires;
+
+  //Stokes V shizzle------------------------------------------------------------
+  //Indexes of the component pols can match any of the Stokes I flux models,
+  //so offset them to be sure we're getting all this indexing hell correct
+
+
+  comps->n_stokesV_pol_frac = num_pol_frac;
+  comps->stokesV_pol_fracs = stokesV_pol_fracs;
+  comps->stokesV_pol_frac_comp_inds = malloc(num_pol_frac*sizeof(int));
+  for (int frac_ind = 0; frac_ind < num_pol_frac; frac_ind++) {
+    comps->stokesV_pol_frac_comp_inds[frac_ind] = frac_ind*3;
+  }
+
+  comps->n_stokesV_power = num_powers;
+  comps->stokesV_power_ref_flux = ref_stokesV;
+  comps->stokesV_power_SIs = stokesV_power_SIs;
+  comps->stokesV_power_comp_inds = malloc(num_powers*sizeof(int));
+  for (int pow_ind = 0; pow_ind < num_powers; pow_ind++) {
+    comps->stokesV_power_comp_inds[pow_ind] = 1 + pow_ind*3;
+  }
+  
+
+  comps->n_stokesV_curve = num_curves;
+  comps->stokesV_curve_ref_flux = ref_stokesV;
+  comps->stokesV_curve_SIs = stokesV_curve_SIs;
+  comps->stokesV_curve_qs = stokesV_qs;
+  comps->stokesV_curve_comp_inds = malloc(num_curves*sizeof(int));
+  for (int cur_ind = 0; cur_ind < num_curves; cur_ind++) {
+    comps->stokesV_curve_comp_inds[cur_ind] = 2 + cur_ind*3;
+  }
+
+  comps->n_linpol_pol_frac = num_pol_frac;
+  comps->linpol_pol_fracs = linpol_pol_fracs;
+  comps->linpol_pol_frac_comp_inds = malloc(num_pol_frac*sizeof(int));
+  for (int frac_ind = 0; frac_ind < num_pol_frac; frac_ind++) {
+    comps->linpol_pol_frac_comp_inds[frac_ind] = 2 + frac_ind*3;
+  }
+
+  comps->n_linpol_power = num_powers;
+  comps->linpol_power_ref_flux = ref_linpol;
+  comps->linpol_power_SIs = linpol_power_SIs;
+  comps->linpol_power_comp_inds = malloc(num_powers*sizeof(int));
+  for (int pow_ind = 0; pow_ind < num_powers; pow_ind++) {
+    comps->linpol_power_comp_inds[pow_ind] = pow_ind*3;
+  }
+  
+
+  comps->n_linpol_curve = num_curves;
+  comps->linpol_curve_ref_flux = ref_linpol;
+  comps->linpol_curve_SIs = linpol_curve_SIs;
+  comps->linpol_curve_qs = linpol_qs;
+  comps->linpol_curve_comp_inds = malloc(num_curves*sizeof(int));
+  for (int cur_ind = 0; cur_ind < num_curves; cur_ind++) {
+    comps->linpol_curve_comp_inds[cur_ind] = 1 + cur_ind*3;
+  }
+
+  comps->n_linpol_angles = 0;
 
 
   //The generic function that copies sky models from CPU to GPU needs
@@ -125,9 +198,11 @@ void test_kern_extrap_stokes_GivesCorrectValues(void) {
     // printf("%d %.3f %.3f\n",i, expec_flux_I[i], extrap_flux_I[i] );
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_I[i], extrap_flux_I[i]);
     //once we have RM sythnesis going, this should work
-    // TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_Q[i], extrap_flux_Q[i]);
-    // TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_U[i], extrap_flux_U[i]);
-    // TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_V[i], extrap_flux_V[i]);
+    // printf("%d %.3f %.3f\n",i, expec_flux_Q[i], extrap_flux_Q[i] );
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_Q[i], extrap_flux_Q[i]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_U[i], extrap_flux_U[i]);
+    // printf("%d %.3f %.3f\n",i, expec_flux_V[i], extrap_flux_V[i] );
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_V[i], extrap_flux_V[i]);
   }
 
   FILE *output_text;

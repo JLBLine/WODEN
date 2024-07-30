@@ -379,6 +379,7 @@ void malloc_extrapolated_flux_arrays(components_t *d_components, int num_comps,
 
   if (do_QUV == 1)
   {
+      // printf("Doing full polarisation\n");
       d_components->extrap_stokesQ = NULL;
       ( gpuMalloc( (void**)&d_components->extrap_stokesQ,
                                       num_comps*num_freqs*sizeof(user_precision_t) ));
@@ -446,6 +447,50 @@ __global__ void kern_extrap_power_laws_stokesI(int num_extrap_freqs, double *d_e
   }
 }
 
+__global__ void kern_extrap_power_laws_stokesV(int num_extrap_freqs, double *d_extrap_freqs,
+                                       int num_comps, components_t d_components) {
+
+  // Start by computing which baseline we're going to do
+  const int iFluxComp = threadIdx.x + (blockDim.x*blockIdx.x);
+  const int iFreq = threadIdx.y + (blockDim.y*blockIdx.y);
+  if(iFluxComp < num_comps && iFreq < num_extrap_freqs) {
+
+    user_precision_t flux_V;
+
+    extrap_stokes_power_law(d_components.stokesV_power_ref_flux,
+                            d_components.stokesV_power_SIs,
+                            d_extrap_freqs,
+                            iFluxComp, iFreq, &flux_V);
+
+    int iComponent = d_components.stokesV_power_comp_inds[iFluxComp];
+    int extrap_ind = num_extrap_freqs*iComponent + iFreq;
+
+    d_components.extrap_stokesV[extrap_ind] = flux_V;
+  }
+}
+
+__global__ void kern_extrap_power_laws_linpol(int num_extrap_freqs, double *d_extrap_freqs,
+                                       int num_comps, components_t d_components) {
+
+  // Start by computing which baseline we're going to do
+  const int iFluxComp = threadIdx.x + (blockDim.x*blockIdx.x);
+  const int iFreq = threadIdx.y + (blockDim.y*blockIdx.y);
+  if(iFluxComp < num_comps && iFreq < num_extrap_freqs) {
+
+    user_precision_t flux_linpol;
+
+    extrap_stokes_power_law(d_components.linpol_power_ref_flux,
+                            d_components.linpol_power_SIs,
+                            d_extrap_freqs,
+                            iFluxComp, iFreq, &flux_linpol);
+
+    int iComponent = d_components.linpol_power_comp_inds[iFluxComp];
+    int extrap_ind = num_extrap_freqs*iComponent + iFreq;
+
+    d_components.extrap_stokesQ[extrap_ind] = flux_linpol;
+  }
+}
+
 __device__ void extrap_stokes_curved_power_law(user_precision_t *d_ref_fluxes,
            user_precision_t *d_SIs, user_precision_t *d_qs,
            double *d_extrap_freqs, int iFluxComp, int iFreq,
@@ -487,6 +532,92 @@ __global__ void kern_extrap_curved_power_laws_stokesI(int num_extrap_freqs, doub
 
     d_components.extrap_stokesI[extrap_ind] = flux_I;
 
+  }
+}
+
+__global__ void kern_extrap_curved_power_laws_stokesV(int num_extrap_freqs, double *d_extrap_freqs,
+                                              int num_comps, components_t d_components) {
+
+  // Start by computing which baseline we're going to do
+  const int iFluxComp = threadIdx.x + (blockDim.x*blockIdx.x);
+  const int iFreq = threadIdx.y + (blockDim.y*blockIdx.y);
+
+  if(iFluxComp < num_comps && iFreq < num_extrap_freqs) {
+
+    user_precision_t flux_V;
+
+    extrap_stokes_curved_power_law(d_components.stokesV_curve_ref_flux,
+                            d_components.stokesV_curve_SIs,
+                            d_components.stokesV_curve_qs, 
+                            d_extrap_freqs, iFluxComp, iFreq, &flux_V);
+
+    int iComponent = d_components.stokesV_curve_comp_inds[iFluxComp];
+    int extrap_ind = num_extrap_freqs*iComponent + iFreq;
+
+    d_components.extrap_stokesV[extrap_ind] = flux_V;
+
+  }
+}
+
+__global__ void kern_extrap_curved_power_laws_linpol(int num_extrap_freqs, double *d_extrap_freqs,
+                                              int num_comps, components_t d_components) {
+
+  // Start by computing which baseline we're going to do
+  const int iFluxComp = threadIdx.x + (blockDim.x*blockIdx.x);
+  const int iFreq = threadIdx.y + (blockDim.y*blockIdx.y);
+
+  if(iFluxComp < num_comps && iFreq < num_extrap_freqs) {
+
+    user_precision_t flux_linpol;
+
+    extrap_stokes_curved_power_law(d_components.linpol_curve_ref_flux,
+                            d_components.linpol_curve_SIs,
+                            d_components.linpol_curve_qs, 
+                            d_extrap_freqs, iFluxComp, iFreq, &flux_linpol);
+
+    int iComponent = d_components.linpol_curve_comp_inds[iFluxComp];
+    int extrap_ind = num_extrap_freqs*iComponent + iFreq;
+
+    d_components.extrap_stokesQ[extrap_ind] = flux_linpol;
+
+  }
+}
+
+__global__ void kern_polarisation_fraction_stokesV(int num_extrap_freqs, 
+             double *d_extrap_freqs, int num_comps, components_t d_components) {
+
+  // Start by computing which baseline we're going to do
+  const int iFluxComp = threadIdx.x + (blockDim.x*blockIdx.x);
+  const int iFreq = threadIdx.y + (blockDim.y*blockIdx.y);
+
+  if(iFluxComp < num_comps && iFreq < num_extrap_freqs) {
+
+    user_precision_t pol_frac;
+    pol_frac = d_components.stokesV_pol_fracs[iFluxComp];
+
+    int iComponent = d_components.stokesV_pol_frac_comp_inds[iFluxComp];
+    int extrap_ind = num_extrap_freqs*iComponent + iFreq;
+
+    d_components.extrap_stokesV[extrap_ind] = pol_frac*d_components.extrap_stokesI[extrap_ind];
+  }
+}
+
+__global__ void kern_polarisation_fraction_linpol(int num_extrap_freqs, 
+             double *d_extrap_freqs, int num_comps, components_t d_components) {
+
+  // Start by computing which baseline we're going to do
+  const int iFluxComp = threadIdx.x + (blockDim.x*blockIdx.x);
+  const int iFreq = threadIdx.y + (blockDim.y*blockIdx.y);
+
+  if(iFluxComp < num_comps && iFreq < num_extrap_freqs) {
+
+    user_precision_t pol_frac;
+    pol_frac = d_components.linpol_pol_fracs[iFluxComp];
+
+    int iComponent = d_components.linpol_pol_frac_comp_inds[iFluxComp];
+    int extrap_ind = num_extrap_freqs*iComponent + iFreq;
+
+    d_components.extrap_stokesQ[extrap_ind] = pol_frac*d_components.extrap_stokesI[extrap_ind];
   }
 }
 
@@ -831,8 +962,63 @@ extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
                           num_extrap_freqs, d_extrap_freqs,
                           n_lists, d_components);
     }
-    
   }
+
+  if (d_components.n_stokesV_power > 0) {
+    printf("Extrapolating Stokes V power laws\n");
+    grid.x = (int)ceilf( (float)d_components.n_stokesV_power / (float)threads.x );
+    gpuErrorCheckKernel("kern_extrap_power_laws_stokesV",
+                          kern_extrap_power_laws_stokesV, grid, threads,
+                          num_extrap_freqs, d_extrap_freqs,
+                          d_components.n_stokesV_power, d_components);
+  }
+
+  if (d_components.n_stokesV_curve > 0) {
+    printf("Extrapolating Stokes V curved power laws\n");
+    grid.x = (int)ceilf( (float)d_components.n_stokesV_curve / (float)threads.x );
+    gpuErrorCheckKernel("kern_extrap_curved_power_laws_stokesV",
+                          kern_extrap_curved_power_laws_stokesV, grid, threads,
+                          num_extrap_freqs, d_extrap_freqs,
+                          d_components.n_stokesV_curve, d_components);
+  }
+
+  if (d_components.n_stokesV_pol_frac > 0) {
+    printf("Extrapolating Stokes V polarisation fractions\n");
+    grid.x = (int)ceilf( (float)d_components.n_stokesV_pol_frac / (float)threads.x );
+    gpuErrorCheckKernel("kern_polarisation_fraction_stokesV",
+                          kern_polarisation_fraction_stokesV, grid, threads,
+                          num_extrap_freqs, d_extrap_freqs,
+                          d_components.n_stokesV_pol_frac, d_components);
+  }
+
+  if (d_components.n_linpol_power > 0) {
+    printf("Extrapolating linear polarisation power laws\n");
+    grid.x = (int)ceilf( (float)d_components.n_linpol_power / (float)threads.x );
+    gpuErrorCheckKernel("kern_extrap_power_laws_linpol",
+                          kern_extrap_power_laws_linpol, grid, threads,
+                          num_extrap_freqs, d_extrap_freqs,
+                          d_components.n_linpol_power, d_components);
+  }
+
+  if (d_components.n_linpol_curve > 0) {
+    printf("Extrapolating linear polarisation curved power laws\n");
+    grid.x = (int)ceilf( (float)d_components.n_linpol_curve / (float)threads.x );
+    gpuErrorCheckKernel("kern_extrap_curved_power_laws_linpol",
+                          kern_extrap_curved_power_laws_linpol, grid, threads,
+                          num_extrap_freqs, d_extrap_freqs,
+                          d_components.n_linpol_curve, d_components);
+  }
+
+  if (d_components.n_linpol_pol_frac > 0) {
+    printf("Extrapolating linear polarisation polarisation fractions\n");
+    grid.x = (int)ceilf( (float)d_components.n_linpol_pol_frac / (float)threads.x );
+    gpuErrorCheckKernel("kern_polarisation_fraction_linpol",
+                          kern_polarisation_fraction_linpol, grid, threads,
+                          num_extrap_freqs, d_extrap_freqs,
+                          d_components.n_linpol_pol_frac, d_components);
+  }
+
+
 }
 
 extern "C" void source_component_common(woden_settings_t *woden_settings,
@@ -886,25 +1072,20 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
   
   //Only the MWA beams currently yields cross pol values, so only malloc what
   //we need here
-  //TODO in the future, this might need to be a loop over all primary beams,
-  //if we have different beams for different tiles
   if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == MWA_ANALY || beam_settings->beamtype == FEE_BEAM_INTERP) {
-    ( gpuMalloc( (void**)&d_component_beam_gains->d_Dxs,
-                    num_gains*sizeof(gpuUserComplex) ));
-    ( gpuMalloc( (void**)&d_component_beam_gains->d_Dys,
-                    num_gains*sizeof(gpuUserComplex) ));
+    gpuMalloc( (void**)&d_component_beam_gains->d_Dxs,
+                    num_gains*sizeof(gpuUserComplex) );
+    gpuMalloc( (void**)&d_component_beam_gains->d_Dys,
+                    num_gains*sizeof(gpuUserComplex) );
   }
-  ( gpuMalloc( (void**)&d_component_beam_gains->d_gxs,
-                    num_gains*sizeof(gpuUserComplex) ));
-  ( gpuMalloc( (void**)&d_component_beam_gains->d_gys,
-                    num_gains*sizeof(gpuUserComplex) ));
-  //
-  ( gpuMalloc( (void**)&d_components->ls,
-                                               num_components*sizeof(double) ) );
-  ( gpuMalloc( (void**)&d_components->ms,
-                                               num_components*sizeof(double) ) );
-  ( gpuMalloc( (void**)&d_components->ns,
-                                               num_components*sizeof(double) ) );
+  gpuMalloc( (void**)&d_component_beam_gains->d_gxs,
+                    num_gains*sizeof(gpuUserComplex) );
+  gpuMalloc( (void**)&d_component_beam_gains->d_gys,
+                    num_gains*sizeof(gpuUserComplex) );
+  
+  gpuMalloc( (void**)&d_components->ls, num_components*sizeof(double));
+  gpuMalloc( (void**)&d_components->ms, num_components*sizeof(double));
+  gpuMalloc( (void**)&d_components->ns, num_components*sizeof(double));
 
 
   dim3 grid, threads;

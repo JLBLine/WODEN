@@ -485,7 +485,7 @@ void malloc_extrapolated_flux_arrays(components_t *d_components, int num_comps,
 
 /**
 @brief Assuming a simple power-law SED of \f$ S \propto \nu^\alpha \f$,
-extrapolate Stokes I flux density parameters to the requested frequencies
+extrapolate flux density parameters to the requested frequencies
 
 @details Assumes a referece frequency of 200MHz, and uses the
 reference flux density `d_ref_fluxes[iFluxComp]`, and `spectral index d_SIs[iFluxComp]` to calculate the flux density `extrap_flux` at the requested frequency d_extrap_freqs[iFreq].
@@ -497,7 +497,7 @@ reference flux density `d_ref_fluxes[iFluxComp]`, and `spectral index d_SIs[iFlu
 @param[in] iFreq Index of which frequency to extrapolate to
 @param[in,out] *extrap_flux Pointer to extrapolated flux (Jy)
 */
-__device__ void extrap_stokes_power_law_stokesI(user_precision_t *d_ref_fluxes,
+__device__ void extrap_stokes_power_law(user_precision_t *d_ref_fluxes,
            user_precision_t *d_SIs,
            double *d_extrap_freqs, int iFluxComp, int iFreq,
            user_precision_t * extrap_flux);
@@ -514,6 +514,33 @@ __device__ void extrap_stokes_power_law_stokesI(user_precision_t *d_ref_fluxes,
 */
 __global__ void kern_extrap_power_laws_stokesI(int num_extrap_freqs, double *d_extrap_freqs,
                                        int num_comps, components_t d_components);
+
+/**
+@brief Kernel to run `extrap_stokes_power_law` for all Stokes V components in `d_components`.
+
+@details Fills the array `d_components.extrap_stokesV` with the extrapolated Stokes V flux densities.
+
+@param[in] num_extrap_freqs The number of frequencies to extrapolate to.
+@param[in] d_extrap_freqs Pointer to an array of frequencies to extrapolate to on the device.
+@param[in] num_comps The number of components to extrapolate.
+@param[in,out] d_components The components to extrapolate on the device.
+*/
+__global__ void kern_extrap_power_laws_stokesV(int num_extrap_freqs, double *d_extrap_freqs,
+                                       int num_comps, components_t d_components);
+
+/**
+@brief Kernel to run `extrap_stokes_power_law` for all linear polarisation components in `d_components`.
+
+@details Temporarily fills the array `d_components.extrap_stokesQ` with the extrapolated linear polarisation flux densities. The intention is to the use `kern_apply_rotation_measure` after the fact, which will use `d_components.extrap_stokesQ` as input flux, do rotations, and then fill `d_components.extrap_stokesU` and `d_components.extrap_stokesV`.
+
+@param[in] num_extrap_freqs The number of frequencies to extrapolate to.
+@param[in] d_extrap_freqs Pointer to an array of frequencies to extrapolate to on the device.
+@param[in] num_comps The number of components to extrapolate.
+@param[in,out] d_components The components to extrapolate on the device.
+*/
+__global__ void kern_extrap_power_laws_linpol(int num_extrap_freqs, double *d_extrap_freqs,
+                                       int num_comps, components_t d_components);
+
 
 /**
 @brief Assuming a curved power-law SED of \f$ S \propto \nu^\alpha \exp(q \ln (\nu)^2 )  \f$,
@@ -549,6 +576,58 @@ __device__ void extrap_stokes_curved_power_law(user_precision_t *d_ref_fluxes,
 __global__ void kern_extrap_curved_power_laws_stokesI(int num_extrap_freqs, double *d_extrap_freqs,
                                        int num_comps, components_t d_components);
 
+
+/**
+@brief Kernel to run `extrap_stokes_curved_power_law` for all Stokes I components in `d_components`.
+
+@details Fills the array `d_components.extrap_stokesV` with the extrapolated Stokes V flux densities.
+
+@param[in] num_extrap_freqs The number of frequencies to extrapolate to.
+@param[in] d_extrap_freqs Pointer to an array of frequencies to extrapolate to on the device.
+@param[in] num_comps The number of components to extrapolate.
+@param[in,out] d_components The components to extrapolate on the device.
+*/
+__global__ void kern_extrap_curved_power_laws_stokesV(int num_extrap_freqs, double *d_extrap_freqs,
+                                       int num_comps, components_t d_components);
+
+/**
+@brief Kernel to run `extrap_stokes_curved_power_law` for all linear polarisation components in `d_components`.
+
+@details Temporarily fills the array `d_components.extrap_stokesQ` with the extrapolated linear polarisation flux densities. The intention is to the use `kern_apply_rotation_measure` after the fact, which will use `d_components.extrap_stokesQ` as input flux, do rotations, and then fill `d_components.extrap_stokesU` and `d_components.extrap_stokesV`.
+
+@param[in] num_extrap_freqs The number of frequencies to extrapolate to.
+@param[in] d_extrap_freqs Pointer to an array of frequencies to extrapolate to on the device.
+@param[in] num_comps The number of components to extrapolate.
+@param[in,out] d_components The components to extrapolate on the device.
+*/
+__global__ void kern_extrap_curved_power_laws_linpol(int num_extrap_freqs, double *d_extrap_freqs,
+                                       int num_comps, components_t d_components);
+
+/**
+@brief Kernel to calculate polarisation fractions for all Stokes V components in `d_components`.
+
+@details MUST have the `d_components.extrap_stokesI` filled already. Fills the array `d_components.extrap_stokesV` using `d_components.extrap_stokesI` and `d_components.stokesV_pol_fracs`.
+
+@param[in] num_extrap_freqs The number of frequencies to extrapolate to.
+@param[in] d_extrap_freqs Pointer to an array of frequencies to extrapolate to on the device.
+@param[in] num_comps The number of components to extrapolate.
+@param[in,out] d_components The components to extrapolate on the device.
+*/
+__global__ void kern_polarisation_fraction_stokesV(int num_extrap_freqs, 
+             double *d_extrap_freqs, int num_comps, components_t d_components);
+
+/**
+@brief Kernel to calculate polarisation fractions for all linear polarisation components in `d_components`.
+
+@details MUST have the `d_components.extrap_stokesI` filled already. Temporarily fills the array `d_components.extrap_stokesQ` using `d_components.extrap_stokesI` and `d_components.linpol_pol_fracs`. The intention is to the use `kern_apply_rotation_measure` after the fact, which will use `d_components.extrap_stokesQ` as input flux, do rotations, and then fill `d_components.extrap_stokesU` and `d_components.extrap_stokesV`.
+
+@param[in] num_extrap_freqs The number of frequencies to extrapolate to.
+@param[in] d_extrap_freqs Pointer to an array of frequencies to extrapolate to on the device.
+@param[in] num_comps The number of components to extrapolate.
+@param[in,out] d_components The components to extrapolate on the device.
+*/
+__global__ void kern_polarisation_fraction_linpol(int num_extrap_freqs, 
+             double *d_extrap_freqs, int num_comps, components_t d_components);
 
 /**
 Assuming a list-type spectral model, extrapolates the Stokes IQUV flux for a given set component and frequency.
