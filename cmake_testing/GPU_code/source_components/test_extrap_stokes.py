@@ -96,7 +96,7 @@ if __name__ == '__main__':
     ##read in the data output by ctest - obviously need to run ctest first!
 
 
-    ctest_data = np.loadtxt("../../../build/cmake_testing/CUDA_code/source_components/test_extrap_stokes.txt")
+    ctest_data = np.loadtxt("../../../build/cmake_testing/GPU_code/source_components/test_extrap_stokes.txt")
 
     fig, axs = plt.subplots(3, 2, figsize=(8, 8))
 
@@ -105,9 +105,9 @@ if __name__ == '__main__':
     for power in range(num_powers):
 
         expec_I, expec_Q, expec_U, expec_V = power_law(extrap_freqs,
-                                          ref_freqs[power], ref_power_SIs[power],
-                                          ref_stokesI[power], ref_stokesQ[power],
-                                          ref_stokesU[power], ref_stokesV[power])
+                                          200e+6, stokesI_power_SIs[power],
+                                          ref_stokesI[power], ref_linpol[power],
+                                          ref_linpol[power], ref_stokesV[power])
 
         axs[power].loglog(extrap_freqs/1e+6, expec_I, label='Expected I')
 
@@ -137,9 +137,9 @@ if __name__ == '__main__':
 
 
         expec_I, expec_Q, expec_U, expec_V = curved_power_law(extrap_freqs,
-                                          ref_freqs[curve], ref_curve_SIs[curve], ref_qs[curve],
-                                          ref_stokesI[curve], ref_stokesQ[curve],
-                                          ref_stokesU[curve], ref_stokesV[curve])
+                                          200e+6, stokesI_curve_SIs[curve], stokesI_qs[curve],
+                                          ref_stokesI[curve], ref_linpol[curve],
+                                          ref_linpol[curve], ref_stokesV[curve])
 
         axs[curve].loglog(extrap_freqs/1e+6, expec_I, label='Expected I')
 

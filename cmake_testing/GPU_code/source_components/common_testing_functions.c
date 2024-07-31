@@ -265,7 +265,6 @@ void CPU_extrapolate_fluxes_in_components(components_t *comps, int num_powers,
       lind = lcomp*num_extrap_freqs + extrap;
       expec_flux_Q[lind] = flux_Q;
 
-      ind ++;
 
     }
   }
@@ -292,7 +291,6 @@ void CPU_extrapolate_fluxes_in_components(components_t *comps, int num_powers,
       expec_flux_Q[lind] = flux_Q;
 
 
-      ind ++;
 
     }
   }
@@ -315,8 +313,28 @@ void CPU_extrapolate_fluxes_in_components(components_t *comps, int num_powers,
       // printf("lind, pol_frac, expec_flux_I[lind] %d %f %f\n", lind, pol_frac, expec_flux_I[lind]);
 
       expec_flux_Q[lind] = expec_flux_I[lind]*pol_frac;
+    }
+  }
 
-      ind ++;
+  double wavelength, angle;
+  user_precision_t rm, intr_pol_angle, linpol_flux;
+
+  for (int comp = 0; comp < comps->n_linpol_angles; comp++) {
+    for (int extrap = 0; extrap < num_extrap_freqs; extrap++) {
+
+      rm = comps->rm_values[comp];
+      intr_pol_angle = comps->intr_pol_angle[comp];
+
+      lcomp = comps->linpol_angle_inds[comp];
+      lind = lcomp*num_extrap_freqs + extrap;
+
+      linpol_flux = expec_flux_Q[lind];
+
+      wavelength = VELC / extrap_freqs[extrap];
+      angle = 2*(intr_pol_angle + rm*wavelength*wavelength);
+
+      expec_flux_Q[lind] = (linpol_flux/sqrt(2.0))*cos(angle);
+      expec_flux_U[lind] = (linpol_flux/sqrt(2.0))*sin(angle);
 
     }
   }

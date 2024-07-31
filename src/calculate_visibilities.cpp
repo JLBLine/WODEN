@@ -63,32 +63,32 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   double *d_Y_diff = NULL;
   double *d_Z_diff = NULL;
 
-  ( gpuMalloc( (void**)&d_X_diff,
-                                 num_time_steps*num_baselines*sizeof(double) ) );
-  ( gpuMemcpy( d_X_diff, array_layout->X_diff_metres,
-        num_time_steps*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
-  ( gpuMalloc( (void**)&d_Y_diff,
-                                 num_time_steps*num_baselines*sizeof(double) ) );
-  ( gpuMemcpy( d_Y_diff, array_layout->Y_diff_metres,
-        num_time_steps*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
-  ( gpuMalloc( (void**)&d_Z_diff,
-                                 num_time_steps*num_baselines*sizeof(double) ) );
-  ( gpuMemcpy( d_Z_diff, array_layout->Z_diff_metres,
-        num_time_steps*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
+   gpuMalloc( (void**)&d_X_diff,
+                                 num_time_steps*num_baselines*sizeof(double) );
+   gpuMemcpy( d_X_diff, array_layout->X_diff_metres,
+        num_time_steps*num_baselines*sizeof(double), gpuMemcpyHostToDevice );
+   gpuMalloc( (void**)&d_Y_diff,
+                                 num_time_steps*num_baselines*sizeof(double) );
+   gpuMemcpy( d_Y_diff, array_layout->Y_diff_metres,
+        num_time_steps*num_baselines*sizeof(double), gpuMemcpyHostToDevice );
+   gpuMalloc( (void**)&d_Z_diff,
+                                 num_time_steps*num_baselines*sizeof(double) );
+   gpuMemcpy( d_Z_diff, array_layout->Z_diff_metres,
+        num_time_steps*num_baselines*sizeof(double), gpuMemcpyHostToDevice );
 
   double *d_allsteps_sha0s = NULL;
   double *d_allsteps_cha0s = NULL;
   user_precision_t *d_allsteps_wavelengths = NULL;
-  ( gpuMalloc( (void**)&d_allsteps_sha0s, num_cross*sizeof(double) ) );
-  ( gpuMemcpy( d_allsteps_sha0s, visibility_set->allsteps_sha0s,
-                      num_cross*sizeof(double), gpuMemcpyHostToDevice ) );
-  ( gpuMalloc( (void**)&d_allsteps_cha0s, num_cross*sizeof(double) ) );
-  ( gpuMemcpy( d_allsteps_cha0s, visibility_set->allsteps_cha0s,
-                      num_cross*sizeof(double), gpuMemcpyHostToDevice ) );
-  ( gpuMalloc( (void**)&d_allsteps_wavelengths,
-                                         num_cross*sizeof(user_precision_t) ) );
-  ( gpuMemcpy( d_allsteps_wavelengths, visibility_set->allsteps_wavelengths,
-                      num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
+  gpuMalloc( (void**)&d_allsteps_sha0s, num_cross*sizeof(double) );
+  gpuMemcpy( d_allsteps_sha0s, visibility_set->allsteps_sha0s,
+                      num_cross*sizeof(double), gpuMemcpyHostToDevice );
+  gpuMalloc( (void**)&d_allsteps_cha0s, num_cross*sizeof(double) );
+  gpuMemcpy( d_allsteps_cha0s, visibility_set->allsteps_cha0s,
+                      num_cross*sizeof(double), gpuMemcpyHostToDevice );
+  gpuMalloc( (void**)&d_allsteps_wavelengths,
+                                         num_cross*sizeof(user_precision_t) );
+  gpuMemcpy( d_allsteps_wavelengths, visibility_set->allsteps_wavelengths,
+                      num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
 
   user_precision_t *d_u_metres = NULL;
   user_precision_t *d_v_metres = NULL;

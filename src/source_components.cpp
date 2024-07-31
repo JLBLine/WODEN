@@ -888,6 +888,34 @@ __global__ void kern_extrap_list_fluxes_stokesI(int num_extrap_freqs, double *d_
   }
 }
 
+__global__ void kern_apply_rotation_measure(int num_extrap_freqs, double *d_extrap_freqs,
+                                            int num_comps, components_t d_components) {
+
+  // Start by computing which baseline we're going to do
+  const int iFluxComp = threadIdx.x + (blockDim.x*blockIdx.x);
+  const int iFreq = threadIdx.y + (blockDim.y*blockIdx.y);
+  if(iFluxComp < num_comps && iFreq < num_extrap_freqs) {
+
+    int iComponent = d_components.linpol_angle_inds[iFluxComp];
+    int extrap_ind = num_extrap_freqs*iComponent + iFreq;
+
+    user_precision_t rm = d_components.rm_values[iFluxComp];
+    user_precision_t intr_pol_angle = d_components.intr_pol_angle[iFluxComp];
+
+    //We should have calculated the linear polarisation flux before, and
+    //shoved it in the Stokes Q extrap array. No point in wasting precious
+    //GPU memory as we'll immediate overwrite it
+    user_precision_t linpol_flux = d_components.extrap_stokesQ[extrap_ind];
+
+    double wavelength = VELC / d_extrap_freqs[iFreq];
+    double angle = 2*(intr_pol_angle + rm*wavelength*wavelength);
+
+    d_components.extrap_stokesQ[extrap_ind] = (linpol_flux/sqrt(2.0))*cos(angle);
+    d_components.extrap_stokesU[extrap_ind] = (linpol_flux/sqrt(2.0))*sin(angle);
+
+  }
+}
+
 
 extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
                                    double *d_extrap_freqs, int num_extrap_freqs,
@@ -1018,7 +1046,14 @@ extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
                           d_components.n_linpol_pol_frac, d_components);
   }
 
-
+    if (d_components.n_linpol_angles > 0) {
+    printf("Extrapolating linear polarisation polarisation fractions\n");
+    grid.x = (int)ceilf( (float)d_components.n_linpol_angles / (float)threads.x );
+    gpuErrorCheckKernel("kern_apply_rotation_measure",
+                          kern_apply_rotation_measure, grid, threads,
+                          num_extrap_freqs, d_extrap_freqs,
+                          d_components.n_linpol_angles, d_components);
+  }
 }
 
 extern "C" void source_component_common(woden_settings_t *woden_settings,

@@ -161,7 +161,13 @@ void test_kern_extrap_stokes_GivesCorrectValues(void) {
     comps->linpol_curve_comp_inds[cur_ind] = 1 + cur_ind*3;
   }
 
-  comps->n_linpol_angles = 0;
+  comps->n_linpol_angles = num_pol_frac + num_powers + num_curves;
+  comps->intr_pol_angle = intr_pol_angle;
+  comps->rm_values = rms;
+  comps->linpol_angle_inds = malloc(comps->n_linpol_angles*sizeof(int));
+  for (int ind = 0; ind < comps->n_linpol_angles; ind++) {
+    comps->linpol_angle_inds[ind] = ind;
+  }
 
 
   //The generic function that copies sky models from CPU to GPU needs
@@ -196,12 +202,10 @@ void test_kern_extrap_stokes_GivesCorrectValues(void) {
   for (int i = 0; i < num_extrap_freqs*(num_powers + num_curves + num_lists); i++) {
     //Check the two are within tolerace
     // printf("%d %.3f %.3f\n",i, expec_flux_I[i], extrap_flux_I[i] );
+    // printf("%d %.3f %.3f\n",i, expec_flux_V[i], extrap_flux_V[i] );
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_I[i], extrap_flux_I[i]);
-    //once we have RM sythnesis going, this should work
-    // printf("%d %.3f %.3f\n",i, expec_flux_Q[i], extrap_flux_Q[i] );
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_Q[i], extrap_flux_Q[i]);
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_U[i], extrap_flux_U[i]);
-    // printf("%d %.3f %.3f\n",i, expec_flux_V[i], extrap_flux_V[i] );
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_V[i], extrap_flux_V[i]);
   }
 
@@ -211,8 +215,9 @@ void test_kern_extrap_stokes_GivesCorrectValues(void) {
 
   for (int i = 0; i < num_extrap_freqs*(num_powers + num_curves + num_lists); i++) {
 
-    fprintf(output_text,"%.12f %.12f %.12f %.12f\n", extrap_flux_I[i],
-                          extrap_flux_Q[i], extrap_flux_U[i], extrap_flux_V[i]);
+    fprintf(output_text,"%.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f\n", extrap_flux_I[i],
+                      extrap_flux_Q[i], extrap_flux_U[i], extrap_flux_V[i],
+          expec_flux_I[i], expec_flux_Q[i], expec_flux_U[i], expec_flux_V[i]);
 
   }
 
