@@ -164,9 +164,16 @@ void test_kern_calc_visi_shape_VarylmnMultipleCoeff(int beamtype) {
   //Stick the gains to one everywhere
   for (int visi = 0; visi < num_beam_values; visi++) {
     args_ft->primay_beam_J00[visi] = 1.0 + I*0.0;
-    args_ft->primay_beam_J01[visi] = 1.0 + I*0.0;
-    args_ft->primay_beam_J10[visi] = 1.0 + I*0.0;
     args_ft->primay_beam_J11[visi] = 1.0 + I*0.0;
+
+    if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY ) {
+      args_ft->primay_beam_J01[visi] = 1.0 + I*0.0;
+      args_ft->primay_beam_J10[visi] = 1.0 + I*0.0;
+    }
+    else {
+      args_ft->primay_beam_J01[visi] = 0.0 + I*0.0;
+      args_ft->primay_beam_J10[visi] = 0.0 + I*0.0;
+    }
   }
 
   //Just stick Stokes I to 1.0, SI to zero, and reference freqs to 150MHz

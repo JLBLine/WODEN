@@ -993,7 +993,7 @@ extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
   }
 
   if (d_components.n_stokesV_power > 0) {
-    printf("Extrapolating Stokes V power laws\n");
+    // printf("Extrapolating Stokes V power laws\n");
     grid.x = (int)ceilf( (float)d_components.n_stokesV_power / (float)threads.x );
     gpuErrorCheckKernel("kern_extrap_power_laws_stokesV",
                           kern_extrap_power_laws_stokesV, grid, threads,
@@ -1002,7 +1002,7 @@ extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
   }
 
   if (d_components.n_stokesV_curve > 0) {
-    printf("Extrapolating Stokes V curved power laws\n");
+    // printf("Extrapolating Stokes V curved power laws\n");
     grid.x = (int)ceilf( (float)d_components.n_stokesV_curve / (float)threads.x );
     gpuErrorCheckKernel("kern_extrap_curved_power_laws_stokesV",
                           kern_extrap_curved_power_laws_stokesV, grid, threads,
@@ -1011,7 +1011,7 @@ extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
   }
 
   if (d_components.n_stokesV_pol_frac > 0) {
-    printf("Extrapolating Stokes V polarisation fractions\n");
+    // printf("Extrapolating Stokes V polarisation fractions\n");
     grid.x = (int)ceilf( (float)d_components.n_stokesV_pol_frac / (float)threads.x );
     gpuErrorCheckKernel("kern_polarisation_fraction_stokesV",
                           kern_polarisation_fraction_stokesV, grid, threads,
@@ -1020,7 +1020,7 @@ extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
   }
 
   if (d_components.n_linpol_power > 0) {
-    printf("Extrapolating linear polarisation power laws\n");
+    // printf("Extrapolating linear polarisation power laws\n");
     grid.x = (int)ceilf( (float)d_components.n_linpol_power / (float)threads.x );
     gpuErrorCheckKernel("kern_extrap_power_laws_linpol",
                           kern_extrap_power_laws_linpol, grid, threads,
@@ -1029,7 +1029,7 @@ extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
   }
 
   if (d_components.n_linpol_curve > 0) {
-    printf("Extrapolating linear polarisation curved power laws\n");
+    // printf("Extrapolating linear polarisation curved power laws\n");
     grid.x = (int)ceilf( (float)d_components.n_linpol_curve / (float)threads.x );
     gpuErrorCheckKernel("kern_extrap_curved_power_laws_linpol",
                           kern_extrap_curved_power_laws_linpol, grid, threads,
@@ -1038,7 +1038,7 @@ extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
   }
 
   if (d_components.n_linpol_pol_frac > 0) {
-    printf("Extrapolating linear polarisation polarisation fractions\n");
+    // printf("Extrapolating linear polarisation polarisation fractions\n");
     grid.x = (int)ceilf( (float)d_components.n_linpol_pol_frac / (float)threads.x );
     gpuErrorCheckKernel("kern_polarisation_fraction_linpol",
                           kern_polarisation_fraction_linpol, grid, threads,
@@ -1047,7 +1047,7 @@ extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
   }
 
     if (d_components.n_linpol_angles > 0) {
-    printf("Extrapolating linear polarisation polarisation fractions\n");
+    // printf("Extrapolating linear polarisation polarisation fractions\n");
     grid.x = (int)ceilf( (float)d_components.n_linpol_angles / (float)threads.x );
     gpuErrorCheckKernel("kern_apply_rotation_measure",
                           kern_apply_rotation_measure, grid, threads,
@@ -3136,6 +3136,16 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
           user_precision_complex_t *Dys, user_precision_complex_t *gys){
 
   int do_QUV = 0;
+
+  if (components.n_stokesV_pol_frac > 0 ||
+      components.n_stokesV_power > 0 ||
+      components.n_stokesV_curve > 0 ||
+      components.n_linpol_pol_frac > 0 ||
+      components.n_linpol_power > 0 ||
+      components.n_linpol_curve > 0 ||
+      components.n_linpol_angles > 0) {
+    do_QUV = 1;
+  }
   
   int num_components = n_powers + n_curves + n_lists;
 

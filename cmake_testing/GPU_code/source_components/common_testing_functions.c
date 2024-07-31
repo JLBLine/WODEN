@@ -245,97 +245,115 @@ void CPU_extrapolate_fluxes_in_components(components_t *comps, int num_powers,
   int vcomp;
   int lcomp;
 
-  for (int comp = 0; comp < num_powers; comp++) {
-    for (int extrap = 0; extrap < num_extrap_freqs; extrap++) {
+  if (comps->n_stokesV_power > 0) {
+    for (int comp = 0; comp < comps->n_stokesV_power; comp++) {
+      for (int extrap = 0; extrap < num_extrap_freqs; extrap++) {
 
-      extrap_stokes_power_law(comps->stokesV_power_ref_flux,
-                              comps->stokesV_power_SIs,
-                              extrap_freqs, comp, extrap, &flux_V);
+        extrap_stokes_power_law(comps->stokesV_power_ref_flux,
+                                comps->stokesV_power_SIs,
+                                extrap_freqs, comp, extrap, &flux_V);
 
-      vcomp = comps->stokesV_power_comp_inds[comp];
-      vind = vcomp*num_extrap_freqs + extrap;
-      expec_flux_V[vind] = flux_V;
-      // expec_flux_V[vind] = 0.0;
+        vcomp = comps->stokesV_power_comp_inds[comp];
+        vind = vcomp*num_extrap_freqs + extrap;
+        expec_flux_V[vind] = flux_V;
+      }
+    }
+  }
+  if (comps->n_linpol_power > 0){
+    for (int comp = 0; comp < comps->n_linpol_power ; comp++) {
+      for (int extrap = 0; extrap < num_extrap_freqs; extrap++) {
 
-      extrap_stokes_power_law(comps->linpol_power_ref_flux,
-                              comps->linpol_power_SIs,
-                              extrap_freqs, comp, extrap, &flux_Q);
+        extrap_stokes_power_law(comps->linpol_power_ref_flux,
+                                comps->linpol_power_SIs,
+                                extrap_freqs, comp, extrap, &flux_Q);
 
-      lcomp = comps->linpol_power_comp_inds[comp];
-      lind = lcomp*num_extrap_freqs + extrap;
-      expec_flux_Q[lind] = flux_Q;
-
-
+        lcomp = comps->linpol_power_comp_inds[comp];
+        lind = lcomp*num_extrap_freqs + extrap;
+        expec_flux_Q[lind] = flux_Q;
+      }
     }
   }
 
-  for (int comp = 0; comp < num_curves; comp++) {
-    for (int extrap = 0; extrap < num_extrap_freqs; extrap++) {
+  if (comps->n_stokesV_curve > 0) {
+    for (int comp = 0; comp < comps->n_stokesV_curve; comp++) {
+      for (int extrap = 0; extrap < num_extrap_freqs; extrap++) {
 
-      extrap_stokes_curved_power_law(comps->stokesV_curve_ref_flux,
-                              comps->stokesV_curve_SIs,
-                              comps->stokesV_curve_qs,
-                              extrap_freqs, comp, extrap, &flux_V);
+        extrap_stokes_curved_power_law(comps->stokesV_curve_ref_flux,
+                                comps->stokesV_curve_SIs,
+                                comps->stokesV_curve_qs,
+                                extrap_freqs, comp, extrap, &flux_V);
 
-      vcomp = comps->stokesV_curve_comp_inds[comp];
-      vind = vcomp*num_extrap_freqs + extrap;
-      expec_flux_V[vind] = flux_V;
-
-      extrap_stokes_curved_power_law(comps->linpol_curve_ref_flux,
-                              comps->linpol_curve_SIs,
-                              comps->linpol_curve_qs,
-                              extrap_freqs, comp, extrap, &flux_Q);
-
-      lcomp = comps->linpol_curve_comp_inds[comp];
-      lind = lcomp*num_extrap_freqs + extrap;
-      expec_flux_Q[lind] = flux_Q;
-
-
-
+        vcomp = comps->stokesV_curve_comp_inds[comp];
+        vind = vcomp*num_extrap_freqs + extrap;
+        expec_flux_V[vind] = flux_V;
+      }
     }
   }
 
-  user_precision_t pol_frac;
-  for (int comp = 0; comp < comps->n_stokesV_pol_frac; comp++) {
-    for (int extrap = 0; extrap < num_extrap_freqs; extrap++) {
+  if (comps->n_linpol_curve > 0) {
+    for (int comp = 0; comp < comps->n_linpol_curve; comp++) {
+      for (int extrap = 0; extrap < num_extrap_freqs; extrap++) {
+        extrap_stokes_curved_power_law(comps->linpol_curve_ref_flux,
+                                comps->linpol_curve_SIs,
+                                comps->linpol_curve_qs,
+                                extrap_freqs, comp, extrap, &flux_Q);
 
-      vcomp = comps->stokesV_pol_frac_comp_inds[comp];
-      vind = vcomp*num_extrap_freqs + extrap;
+        lcomp = comps->linpol_curve_comp_inds[comp];
+        lind = lcomp*num_extrap_freqs + extrap;
+        expec_flux_Q[lind] = flux_Q;
+      }
+    }
+  }
 
-      pol_frac = comps->stokesV_pol_fracs[comp];
-      expec_flux_V[vind] = expec_flux_I[vind]*pol_frac;
+  if (comps->n_stokesV_pol_frac > 0) {
+    user_precision_t pol_frac;
+    for (int comp = 0; comp < comps->n_stokesV_pol_frac; comp++) {
+      for (int extrap = 0; extrap < num_extrap_freqs; extrap++) {
 
-      lcomp = comps->linpol_pol_frac_comp_inds[comp];
-      lind = lcomp*num_extrap_freqs + extrap;
+        vcomp = comps->stokesV_pol_frac_comp_inds[comp];
+        vind = vcomp*num_extrap_freqs + extrap;
 
-      pol_frac = comps->linpol_pol_fracs[comp];
+        pol_frac = comps->stokesV_pol_fracs[comp];
+        expec_flux_V[vind] = expec_flux_I[vind]*pol_frac;
+      }
+    }
+  }
 
-      // printf("lind, pol_frac, expec_flux_I[lind] %d %f %f\n", lind, pol_frac, expec_flux_I[lind]);
+  if (comps->n_linpol_pol_frac > 0) {
+    user_precision_t pol_frac;
+    for (int comp = 0; comp < comps->n_linpol_pol_frac; comp++) {
+      for (int extrap = 0; extrap < num_extrap_freqs; extrap++) {
+        lcomp = comps->linpol_pol_frac_comp_inds[comp];
+        lind = lcomp*num_extrap_freqs + extrap;
 
-      expec_flux_Q[lind] = expec_flux_I[lind]*pol_frac;
+        pol_frac = comps->linpol_pol_fracs[comp];
+        expec_flux_Q[lind] = expec_flux_I[lind]*pol_frac;
+      }
     }
   }
 
   double wavelength, angle;
   user_precision_t rm, intr_pol_angle, linpol_flux;
 
-  for (int comp = 0; comp < comps->n_linpol_angles; comp++) {
-    for (int extrap = 0; extrap < num_extrap_freqs; extrap++) {
+  if (comps->n_linpol_angles > 0 ) {
+    for (int comp = 0; comp < comps->n_linpol_angles; comp++) {
+      for (int extrap = 0; extrap < num_extrap_freqs; extrap++) {
 
-      rm = comps->rm_values[comp];
-      intr_pol_angle = comps->intr_pol_angle[comp];
+        rm = comps->rm_values[comp];
+        intr_pol_angle = comps->intr_pol_angle[comp];
 
-      lcomp = comps->linpol_angle_inds[comp];
-      lind = lcomp*num_extrap_freqs + extrap;
+        lcomp = comps->linpol_angle_inds[comp];
+        lind = lcomp*num_extrap_freqs + extrap;
 
-      linpol_flux = expec_flux_Q[lind];
+        linpol_flux = expec_flux_Q[lind];
 
-      wavelength = VELC / extrap_freqs[extrap];
-      angle = 2*(intr_pol_angle + rm*wavelength*wavelength);
+        wavelength = VELC / extrap_freqs[extrap];
+        angle = 2*(intr_pol_angle + rm*wavelength*wavelength);
 
-      expec_flux_Q[lind] = (linpol_flux/sqrt(2.0))*cos(angle);
-      expec_flux_U[lind] = (linpol_flux/sqrt(2.0))*sin(angle);
+        expec_flux_Q[lind] = (linpol_flux/sqrt(2.0))*cos(angle);
+        expec_flux_U[lind] = (linpol_flux/sqrt(2.0))*sin(angle);
 
+      }
     }
   }
 }

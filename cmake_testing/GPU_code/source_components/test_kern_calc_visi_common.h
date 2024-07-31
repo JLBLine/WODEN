@@ -113,7 +113,10 @@ void get_expected(int visi, int num_powers, int num_curves, int num_lists,
                   args_for_testing_t *args_ft,
                   components_t components,
                   e_component_type component_type,
-                  double * expec_re, double * expec_im);
+                  double * expec_re_xx, double * expec_im_xx,
+                  double * expec_re_xy, double * expec_im_xy,
+                  double * expec_re_yx, double * expec_im_yx,
+                  double * expec_re_yy, double * expec_im_yy);
 
 //Take input parameters and test whether GPU outputs match expectations
 void test_visi_outputs(int num_visis, int num_powers, int num_curves, int num_lists,
