@@ -166,7 +166,6 @@ def check_components(found_comps, expec_comps,
                             expec_comps.linpol_pol_frac_comp_inds, rtol=rtol)
     
     if expec_comps.n_lin_power:
-        print("WE GOT DIS",found_comps.linpol_power_ref_flux)
         npt.assert_allclose(found_comps.linpol_power_ref_flux,
                             expec_comps.linpol_power_ref_flux, rtol=rtol)
         npt.assert_allclose(found_comps.linpol_power_SIs,
@@ -193,15 +192,21 @@ def check_components(found_comps, expec_comps,
         found_order = np.argsort(found_comps.linpol_angle_inds)
         expec_order = np.argsort(expec_comps.linpol_angle_inds)
         
-        print(expec_comps.rm_values)
-        print(found_comps.rm_values)
-        
         npt.assert_allclose(found_comps.rm_values[found_order],
                             expec_comps.rm_values[expec_order], rtol=rtol)
         npt.assert_allclose(found_comps.intr_pol_angle[found_order],
                             expec_comps.intr_pol_angle[expec_order], rtol=rtol)
         npt.assert_allclose(found_comps.linpol_angle_inds[found_order],
                             expec_comps.linpol_angle_inds[expec_order], rtol=rtol)
+        
+    if expec_comps.n_v_pol_frac + expec_comps.n_v_power + \
+        expec_comps.n_v_curve + expec_comps.n_lin_pol_frac + \
+        expec_comps.n_lin_power + expec_comps.n_lin_curve > 0:
+        do_QUV = 1
+    else:
+        do_QUV = 0
+        
+    npt.assert_equal(found_comps.do_QUV, do_QUV)
     
 def check_all_sources(expected_chunks, source_catalogue,
                       fits_skymodel=True):
@@ -875,11 +880,6 @@ class ExpecPolValues:
             
     def count_types_in_chunk(self):
         
-        ##OK, all arrays we initialised to nan, so we can just count the number
-        ##of non-nan values in each array
-        ##We need the full arrarys to make indexing with respect to overall
-        ##component index easier
-        
         self.n_powerI_v_pol_frac = len(self.powerI_v_pol_frac)
         self.n_powerI_v_power = len(self.powerI_v_power)
         self.n_powerI_v_curve = len(self.powerI_v_curve)
@@ -1026,6 +1026,13 @@ def reorder_and_populate_polarisation_in_component(components : Expected_Compone
     components.rm_values = np.array(components.rm_values)[order_linpol_angles]
     components.intr_pol_angle = np.array(components.intr_pol_angle)[order_linpol_angles]
     
+    components.n_v_pol_frac = len(components.stokesV_pol_frac_comp_inds)
+    components.n_v_power = len(components.stokesV_power_comp_inds)
+    components.n_v_curve = len(components.stokesV_curve_comp_inds)
+    components.n_lin_pol_frac = len(components.linpol_pol_frac_comp_inds)
+    components.n_lin_power = len(components.linpol_power_comp_inds)
+    components.n_lin_curve = len(components.linpol_curve_comp_inds)
+    
     return
             
     
@@ -1067,6 +1074,8 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
         
     else:
         n_v_pol_frac, n_v_power, n_v_curve, n_lin_pol_frac, n_lin_power, n_lin_curve = 0,0,0,0,0,0
+        
+    # print("n_v_pol_frac, n_v_power, n_v_curve, n_lin_pol_frac, n_lin_power, n_lin_curve", n_v_pol_frac, n_v_power, n_v_curve, n_lin_pol_frac, n_lin_power, n_lin_curve)
     
     expec_chunk = Expected_Sky_Chunk()
     

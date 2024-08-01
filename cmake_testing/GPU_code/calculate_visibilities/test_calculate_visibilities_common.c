@@ -150,6 +150,7 @@ void populate_components(components_t *comps, int n_comps,
   comps->n_linpol_power = 0;
   comps->n_linpol_curve = 0;
   comps->n_linpol_angles = 0;
+  comps->do_QUV = 0;
 
 }
 

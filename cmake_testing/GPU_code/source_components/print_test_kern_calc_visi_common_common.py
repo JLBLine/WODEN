@@ -75,22 +75,13 @@ linpol_power_comp_inds = np.random.choice(num_comps, n_linpol_power, replace=Fal
 
 linpol_qs = np.random.uniform(-2, 0.5, n_linpol_curve)
 # linpol_curve_SIs = np.random.uniform(-1, 1, n_linpol_curve)
-stokesV_curve_SIs = -2*linpol_qs*np.log(peak_freqs)
+linpol_curve_SIs = -2*linpol_qs*np.log(peak_freqs)
 linpol_curve_comp_inds = np.random.choice(num_comps, n_linpol_curve, replace=False)
 
 
 intr_pol_angle = np.random.uniform(0, 2*np.pi, n_linpol_angles)
 rms = np.random.uniform(0, 80, n_linpol_angles)
 linpol_angle_inds = np.concatenate([linpol_pol_frac_comp_inds, linpol_power_comp_inds, linpol_curve_comp_inds])
-
-
-# 
-# 
-# 
-# 
-# 
-# 
-
 
 
 start_index = 0

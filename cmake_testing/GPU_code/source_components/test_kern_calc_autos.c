@@ -181,7 +181,7 @@ void test_calculate_autos(e_beamtype beamtype) {
 
   //Doing all testing with identical primary beams so set num_beams to 1
   int num_beams = 1;
-
+  components->do_QUV = 0;
   test_kern_calc_autos(components, beamtype,
                        num_comps, num_baselines,
                        num_freqs, num_times, num_ants, num_beams,

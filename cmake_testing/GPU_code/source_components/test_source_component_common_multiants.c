@@ -217,17 +217,17 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
   components.power_ref_freqs = ref_freqs;
   components.power_ref_stokesI = ref_stokesI;
-  components.power_ref_stokesQ = ref_stokesQ;
-  components.power_ref_stokesU = ref_stokesU;
-  components.power_ref_stokesV = ref_stokesV;
+  // components.power_ref_stokesQ = ref_stokesQ;
+  // components.power_ref_stokesU = ref_stokesU;
+  // components.power_ref_stokesV = ref_stokesV;
   components.power_SIs = ref_power_SIs;
   components.power_comp_inds = power_comp_inds;
 
   components.curve_ref_freqs = ref_freqs;
   components.curve_ref_stokesI = ref_stokesI;
-  components.curve_ref_stokesQ = ref_stokesQ;
-  components.curve_ref_stokesU = ref_stokesU;
-  components.curve_ref_stokesV = ref_stokesV;
+  // components.curve_ref_stokesQ = ref_stokesQ;
+  // components.curve_ref_stokesU = ref_stokesU;
+  // components.curve_ref_stokesV = ref_stokesV;
   components.curve_SIs = ref_curve_SIs;
   components.curve_qs = ref_qs;
   components.curve_comp_inds = curve_comp_inds;
@@ -418,13 +418,13 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_I[i], extrap_flux_I[i]);
     //in the future this should be testable, for only doing Stokes I so
     //lock to zero
-    // TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_Q[i], extrap_flux_Q[i]);
-    // TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_U[i], extrap_flux_U[i]);
-    // TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_V[i], extrap_flux_V[i]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_Q[i], extrap_flux_Q[i]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_U[i], extrap_flux_U[i]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_V[i], extrap_flux_V[i]);
 
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, extrap_flux_Q[i]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, extrap_flux_U[i]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, extrap_flux_V[i]);
+    // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, extrap_flux_Q[i]);
+    // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, extrap_flux_U[i]);
+    // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, extrap_flux_V[i]);
 
   }
 

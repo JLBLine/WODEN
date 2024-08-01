@@ -169,6 +169,7 @@ void test_kern_extrap_stokes_GivesCorrectValues(void) {
     comps->linpol_angle_inds[ind] = ind;
   }
 
+  comps->do_QUV = 1;
 
   //The generic function that copies sky models from CPU to GPU needs
   //things in the ra, dec etc arrays to be malloced

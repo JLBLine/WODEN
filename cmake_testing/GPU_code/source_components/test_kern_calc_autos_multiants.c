@@ -183,6 +183,7 @@ void test_calculate_autos(e_beamtype beamtype) {
     visibility_set->sum_visi_YY_real[visi] = 0;
   }
 
+  components->do_QUV = 0;
   test_kern_calc_autos(components, beamtype,
                        num_comps, num_baselines,
                        num_freqs, num_times, num_ants,

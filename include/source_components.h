@@ -461,7 +461,7 @@ __device__ void update_sum_visis_stokesI(int iBaseline, int iComponent, int num_
 /**
 @brief Allocate device memory of extrapolated Stokes arrays int `d_components`
 
-@details It does this if do_QUV == 1:
+@details It does this if d_components.do_QUV == 1:
 
     d_components->extrap_stokesI = NULL;
     gpuMalloc( (void**)&d_components->extrap_stokesI, num_comps*num_freqs*sizeof(double) );
@@ -477,10 +477,9 @@ If do_QUV == 0, only allocate the StokesI array.
 @param[in,out] *d_components A populated `components_t` struct
 @param[in] num_comps Number of components
 @param[in] num_freqs Number of frequencies
-@param[in] do_QUV If True, free full Stokes IQUV, otherwise only Stokes I
 */
 void malloc_extrapolated_flux_arrays(components_t *d_components, int num_comps,
-                                     int num_freqs, int do_QUV);
+                                     int num_freqs);
 
 
 /**
@@ -701,12 +700,10 @@ and store the results within `d_chunked_source`
 @param[in] d_extrap_freqs Pointer to an array of frequencies to extrapolate to.
 @param[in] num_extrap_freqs Number of frequencies in the `d_extrap_freqs` array.
 @param[in] comptype The type of component to extrapolate (e.g. POINT, GAUSSIAN, SHAPELET).
-@param[in] do_QUV Whether to extrapolate Stokes QUV (do_QUV = 1) or to only do Stokes I.
  */
 extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
                                    double *d_extrap_freqs, int num_extrap_freqs,
-                                   e_component_type comptype,
-                                   int do_QUV);
+                                   e_component_type comptype);
 
 /**
 @brief Performs necessary calculations that are common to all POINT, GAUSSIAN,
@@ -736,8 +733,6 @@ need to be set.
 If `woden_settings->do_autos` is True, will use `source_components::kern_calc_autos`
 to calculate all the auto-correlations, and stores them in `d_visibility_set`.
 
-If `woden_settings->do_QUV` is True, will use the full Stokes IQUV model to calculate all the auto-correlations. If False, will only use Stokes I
-for the calculation (which is faster).
 
 @param[in] woden_settings Populated `woden_settings_t` struct
 @param[in] beam_settings Populated `beam_settings_t` struct
@@ -823,7 +818,6 @@ simulation
 @param[in] num_times Number of time steps in simulation
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
 @param[in] comptype Component type, either POINT or GAUSSIAN
-@param[in] do_QUV If True, calculate full Stokes IQUV, otherwise only Stokes I
 */
 __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            d_beam_gains_t d_component_beam_gains,
@@ -833,8 +827,7 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
            user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
            int num_components, int num_baselines, int num_freqs, int num_cross,
-           int num_times, e_beamtype beamtype, e_component_type comptype,
-           int do_QUV);
+           int num_times, e_beamtype beamtype, e_component_type comptype);
 
 /**
 @brief Kernel to calculate the visibility response to a number `num_shapes` of
@@ -926,7 +919,6 @@ simulation
 @param[in] num_coeffs Number of shapelet basis functions and coefficents
 @param[in] num_times Number of time steps in simulation
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
-@param[in] do_QUV If True, calculate full Stokes IQUV, otherwise only Stokes I
 */
 __global__ void kern_calc_visi_shapelets(components_t d_components,
       d_beam_gains_t d_component_beam_gains,
@@ -939,8 +931,7 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
       user_precision_t *d_sbf,
       int num_shapes, int num_baselines, int num_freqs, int num_cross,
-      const int num_coeffs, int num_times, e_beamtype beamtype,
-      int do_QUV);
+      const int num_coeffs, int num_times, e_beamtype beamtype);
 
 /**
 @brief Copies the specified type of source components from host memory to device memory.
@@ -1003,7 +994,7 @@ source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
 /**
 @brief Free device memory of extrapolated Stokes arrays from `d_components`
 
-@details It does this if do_QUV == 1:
+@details It does this if d_components.do_QUV == 1:
 
    gpuFree d_components->extrap_stokesI );
    gpuFree d_components->extrap_stokesQ );
@@ -1015,7 +1006,7 @@ If do_QUV == 0, only free the StokesI array.
 @param[in,out] *d_components A populated `components_t` struct
 @param[in] do_QUV If True, free full Stokes IQUV, otherwise only Stokes I
 */
-void free_extrapolated_flux_arrays(components_t *d_components, int do_QUV);
+void free_extrapolated_flux_arrays(components_t *d_components);
 
 /**
 @brief Calculate the auto-correlations for all antennas given the fluxes
@@ -1058,7 +1049,6 @@ into
 @param[in,out] *d_sum_visi_YY_imag Pointer to array to sum imaginary YY
 visibility into
 time step in the simulation
-@param[in] do_QUV If True, calculate full Stokes IQUV, otherwise only Stokes I
 @param[in] use_twobeams If True, use a two primary beams per visibility.
 Otherwise, assume all primary beams are identical
 @param[in] *d_ant1_to_auto_map An index of all primary beams to auto-correlations
@@ -1080,7 +1070,7 @@ __global__ void kern_calc_autos(components_t d_components,
                                 user_precision_t *d_sum_visi_YX_imag,
                                 user_precision_t *d_sum_visi_YY_real,
                                 user_precision_t *d_sum_visi_YY_imag,
-                                int do_QUV, int use_twobeams,
+                                int use_twobeams,
                                 int *d_ant1_to_auto_map,
                                 int *d_ant2_to_auto_map);
 

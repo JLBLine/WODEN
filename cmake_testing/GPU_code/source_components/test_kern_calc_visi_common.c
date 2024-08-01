@@ -581,43 +581,6 @@ void test_visi_outputs(int num_visis, int num_powers, int num_curves, int num_li
       TEST_ASSERT_DOUBLE_WITHIN(frac_tol*expec_re_yy, expec_re_yy, args_ft->sum_visi_YY_real[visi]);
       TEST_ASSERT_DOUBLE_WITHIN(frac_tol*expec_im_yy, expec_im_yy, args_ft->sum_visi_YY_imag[visi]);
 
-    // printf("%.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
-    //       args_ft->sum_visi_XX_real[visi], args_ft->sum_visi_XX_imag[visi],
-    //       args_ft->sum_visi_XY_real[visi], args_ft->sum_visi_XY_imag[visi],
-    //       args_ft->sum_visi_YX_real[visi], args_ft->sum_visi_YX_imag[visi],
-    //       args_ft->sum_visi_YY_real[visi], args_ft->sum_visi_YY_imag[visi]);
-    //
-    // if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY ) {
-    //   //MWA beam has cross pols which double everything when using just Stokes I
-    //   //and setting the cross pols to 1.0 as well as the gains
-    //   //Also means cross-pols are non-zero
-
-    //   // printf("%.16f %.16f\n",2*expec_re, args_ft->sum_visi_XX_real[visi]);
-
-    //   TEST_ASSERT_DOUBLE_WITHIN(2*frac_tol*expec_re, 2.0*expec_re, args_ft->sum_visi_XX_real[visi]);
-    //   TEST_ASSERT_DOUBLE_WITHIN(2*frac_tol*expec_im, 2.0*expec_im, args_ft->sum_visi_XX_imag[visi]);
-    //   TEST_ASSERT_DOUBLE_WITHIN(2*frac_tol*expec_re, 2.0*expec_re, args_ft->sum_visi_XY_real[visi]);
-    //   TEST_ASSERT_DOUBLE_WITHIN(2*frac_tol*expec_im, 2.0*expec_im, args_ft->sum_visi_XY_imag[visi]);
-    //   TEST_ASSERT_DOUBLE_WITHIN(2*frac_tol*expec_re, 2.0*expec_re, args_ft->sum_visi_YX_real[visi]);
-    //   TEST_ASSERT_DOUBLE_WITHIN(2*frac_tol*expec_im, 2.0*expec_im, args_ft->sum_visi_YX_imag[visi]);
-    //   TEST_ASSERT_DOUBLE_WITHIN(2*frac_tol*expec_re, 2.0*expec_re, args_ft->sum_visi_YY_real[visi]);
-    //   TEST_ASSERT_DOUBLE_WITHIN(2*frac_tol*expec_im, 2.0*expec_im, args_ft->sum_visi_YY_imag[visi]);
-    // }
-    // else {
-
-    //   // printf("%.8f %.8f\n", expec_re, args_ft->sum_visi_XX_real[visi]);
-    //   // printf("%.8f %.8f\n", expec_im, args_ft->sum_visi_XX_imag[visi]);
-
-    //   TEST_ASSERT_DOUBLE_WITHIN(frac_tol*expec_re, expec_re, args_ft->sum_visi_XX_real[visi]);
-    //   TEST_ASSERT_DOUBLE_WITHIN(frac_tol*expec_im, expec_im, args_ft->sum_visi_XX_imag[visi]);
-    //   TEST_ASSERT_DOUBLE_WITHIN(frac_tol, 0.0, args_ft->sum_visi_XY_real[visi]);
-    //   TEST_ASSERT_DOUBLE_WITHIN(frac_tol, 0.0, args_ft->sum_visi_XY_imag[visi]);
-    //   TEST_ASSERT_DOUBLE_WITHIN(frac_tol, 0.0, args_ft->sum_visi_YX_real[visi]);
-    //   TEST_ASSERT_DOUBLE_WITHIN(frac_tol, 0.0, args_ft->sum_visi_YX_imag[visi]);
-    //   TEST_ASSERT_DOUBLE_WITHIN(frac_tol*expec_re, expec_re, args_ft->sum_visi_YY_real[visi]);
-    //   TEST_ASSERT_DOUBLE_WITHIN(frac_tol*expec_im, expec_im, args_ft->sum_visi_YY_imag[visi]);
-
-    // }
   }
 }
 
@@ -727,7 +690,7 @@ void test_kern_calc_visi_Varylmn(e_beamtype beamtype, e_component_type comptype)
       components.param_indexes[coeff] = coeff;
     }
   }
-  //
+  components.do_QUV = 0;
   test_kern_calc_visi_all(n_powers, n_curves, n_lists, num_baselines, num_coeffs,
           num_freqs, num_visis, num_times, beamtype, comptype,
           components, args_ft->extrap_freqs,
@@ -908,6 +871,7 @@ void test_kern_calc_visi_VarylmnVaryFlux(e_beamtype beamtype,
   components.intr_pol_angle = k_intr_pol_angle;
   components.rm_values = k_rms;
   components.linpol_angle_inds = k_linpol_angle_inds;
+  components.do_QUV = 1;
 
   //Run the CUDA code
   test_kern_calc_visi_all(n_powers, n_curves, n_lists, num_baselines, num_coeffs,
@@ -1029,6 +993,7 @@ void test_kern_calc_visi_VarylmnVaryBeam(e_beamtype beamtype,
       components.param_indexes[coeff] = coeff;
     }
   }
+  components.do_QUV = 0;
 
   //Run the CUDA code
   test_kern_calc_visi_all(n_powers, n_curves, n_lists, num_baselines, num_coeffs,
@@ -1145,7 +1110,7 @@ void test_kern_calc_visi_VarylmnVaryPAMajMin(e_beamtype beamtype,
       components.param_indexes[coeff] = coeff;
     }
   }
-
+  components.do_QUV = 0;
   //
   test_kern_calc_visi_all(n_powers, n_curves, n_lists, num_baselines, num_coeffs,
           num_freqs, num_visis, num_times, beamtype, comptype,

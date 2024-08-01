@@ -155,6 +155,7 @@ typedef struct _components_t {
   int n_linpol_power; /*!< The number of linear polarisation power-law models */
   int n_linpol_curve; /*!< The number of linear polarisation curved power-law models */
   int n_linpol_angles; /*!< The number of RM/intrinsic polarisation angles */
+  int do_QUV; /*!< Set if doing any polarised information */
 
 } components_t;
 

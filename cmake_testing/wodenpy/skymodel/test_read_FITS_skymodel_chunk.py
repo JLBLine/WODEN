@@ -267,23 +267,23 @@ class Test(BaseChunkTest):
                                                max_num_visibilities)
         print('-----------------------------')
         
-    # def test_the_ninth(self):
-    #     deg_between_comps = 60
-    #     num_coeff_per_shape = 6
-    #     num_list_values = 4
-    #     comps_per_source = 20
-    #     lst = 0.0
-    #     max_num_visibilities = 1e10
+    def test_the_ninth(self):
+        deg_between_comps = 60
+        num_coeff_per_shape = 6
+        num_list_values = 4
+        comps_per_source = 20
+        lst = 0.0
+        max_num_visibilities = 1e10
         
-    #     settings = Skymodel_Settings(deg_between_comps,
-    #                                  num_coeff_per_shape,
-    #                                  num_list_values,
-    #                                  comps_per_source,
-    #                                  linpol_cpl_cadence = 4)
+        settings = Skymodel_Settings(deg_between_comps,
+                                     num_coeff_per_shape,
+                                     num_list_values,
+                                     comps_per_source,
+                                     linpol_cpl_cadence = 4)
         
-    #     self.run_write_model_test_read_fits_skymodel_chunk(settings, lst,
-    #                                            max_num_visibilities)
-    #     print('-----------------------------')
+        self.run_write_model_test_read_fits_skymodel_chunk(settings, lst,
+                                               max_num_visibilities)
+        print('-----------------------------')
 
         
     def test_the_big_one(self):

@@ -74,6 +74,35 @@ class Components_Float(ctypes.Structure):
     :cvar POINTER(double) ls: Device memory l cosine direction coords for these COMPONENTs
     :cvar POINTER(double) ms: Device memory m cosine direction coords for these COMPONENTs
     :cvar POINTER(double) ns: Device memory n cosine direction coords for these COMPONENTs
+    :cvar POINTER(c_float) stokesV_pol_fracs:  Stokes V polarisation fractions
+    :cvar POINTER(c_int) stokesV_pol_frac_comp_inds: The indexes of all Stokes V polarisation fraction models w.r.t ra,dec
+    :cvar POINTER(c_float) stokesV_power_ref_flux: Stokes V reference flux for power-law
+    :cvar POINTER(c_float) stokesV_power_SIs: Stokes V spectral index for power-law
+    :cvar POINTER(c_int) stokesV_power_comp_inds: The indexes of all Stokes V power-law models w.r.t ra,dec
+    :cvar POINTER(c_float) stokesV_curve_ref_flux: Stokes V reference flux for curved power-law
+    :cvar POINTER(c_float) stokesV_curve_SIs: Stokes V spectral index for curved power-law
+    :cvar POINTER(c_float) stokesV_curve_qs: Stokes V q param for curved power-law
+    :cvar POINTER(c_int) stokesV_curve_comp_inds: The indexes of Stokes V curved power-law models w.r.t ra,dec
+    :cvar POINTER(c_float) linpol_pol_fracs: Linear polarisation polarisation fractions
+    :cvar POINTER(c_int) linpol_pol_frac_comp_inds: The indexes of all linear polarisation fraction models w.r.t ra,dec
+    :cvar POINTER(c_float) linpol_power_ref_flux: Linear polarisation reference flux for power-law
+    :cvar POINTER(c_float) linpol_power_SIs: Linear polarisation spectral index for power-law
+    :cvar POINTER(c_int) linpol_power_comp_inds: The indexes of all linear polarisation power-law models w.r.t ra,dec
+    :cvar POINTER(c_float) linpol_curve_ref_flux: Linear polarisation reference flux for curved power-law
+    :cvar POINTER(c_float) linpol_curve_SIs: Linear polarisation spectral index for curved power-law
+    :cvar POINTER(c_float) linpol_curve_qs: Linear polarisation q param for curved power-law
+    :cvar POINTER(c_int) linpol_curve_comp_inds: The indexes of all linear polarisation curved power-law models w.r.t ra,dec
+    :cvar POINTER(c_float) rm_values: Linear polarisation rotation measures
+    :cvar POINTER(c_float) intr_pol_angle: Linear polarisation instrinsic polarisation angles
+    :cvar POINTER(c_int) linpol_angle_inds: The indexes of all RM/intrinsic polarisation angles w.r.t ra,dec
+    :cvar c_int n_stokesV_pol_frac: The number of Stokes V polarisation fraction models
+    :cvar c_int n_stokesV_power: The number of Stokes V power-law models
+    :cvar c_int n_stokesV_curve: The number of V curved power-law models
+    :cvar c_int n_linpol_pol_frac: The number of linear polarisation fraction models
+    :cvar c_int n_linpol_power: The number of linear polarisation power-law models
+    :cvar c_int n_linpol_curve: The number of linear polarisation curved power-law models
+    :cvar c_int n_linpol_angles: The number of RM/intrinsic polarisation angles
+    :cvar c_int do_QUV: Set if doing any polarised information
     
     """
     
@@ -173,6 +202,7 @@ class Components_Float(ctypes.Structure):
                 ("n_linpol_power", c_int),
                 ("n_linpol_curve", c_int),
                 ("n_linpol_angles", c_int),
+                ("do_QUV", c_int),
                 ]
     
 class Components_Double(ctypes.Structure):
@@ -232,7 +262,35 @@ class Components_Double(ctypes.Structure):
     :cvar POINTER(double) ls: Device memory l cosine direction coords for these COMPONENTs
     :cvar POINTER(double) ms: Device memory m cosine direction coords for these COMPONENTs
     :cvar POINTER(double) ns: Device memory n cosine direction coords for these COMPONENTs
-    
+    :cvar POINTER(c_double) stokesV_pol_fracs:  Stokes V polarisation fractions
+    :cvar POINTER(c_int) stokesV_pol_frac_comp_inds: The indexes of all Stokes V polarisation fraction models w.r.t ra,dec
+    :cvar POINTER(c_double) stokesV_power_ref_flux: Stokes V reference flux for power-law
+    :cvar POINTER(c_double) stokesV_power_SIs: Stokes V spectral index for power-law
+    :cvar POINTER(c_int) stokesV_power_comp_inds: The indexes of all Stokes V power-law models w.r.t ra,dec
+    :cvar POINTER(c_double) stokesV_curve_ref_flux: Stokes V reference flux for curved power-law
+    :cvar POINTER(c_double) stokesV_curve_SIs: Stokes V spectral index for curved power-law
+    :cvar POINTER(c_float) stokesV_curve_qs: Stokes V q param for curved power-law
+    :cvar POINTER(c_int) stokesV_curve_comp_inds: The indexes of Stokes V curved power-law models w.r.t ra,dec
+    :cvar POINTER(c_double) linpol_pol_fracs: Linear polarisation polarisation fractions
+    :cvar POINTER(c_int) linpol_pol_frac_comp_inds: The indexes of all linear polarisation fraction models w.r.t ra,dec
+    :cvar POINTER(c_double) linpol_power_ref_flux: Linear polarisation reference flux for power-law
+    :cvar POINTER(c_double) linpol_power_SIs: Linear polarisation spectral index for power-law
+    :cvar POINTER(c_int) linpol_power_comp_inds: The indexes of all linear polarisation power-law models w.r.t ra,dec
+    :cvar POINTER(c_double) linpol_curve_ref_flux: Linear polarisation reference flux for curved power-law
+    :cvar POINTER(c_double) linpol_curve_SIs: Linear polarisation spectral index for curved power-law
+    :cvar POINTER(c_double) linpol_curve_qs: Linear polarisation q param for curved power-law
+    :cvar POINTER(c_int) linpol_curve_comp_inds: The indexes of all linear polarisation curved power-law models w.r.t ra,dec
+    :cvar POINTER(c_double) rm_values: Linear polarisation rotation measures
+    :cvar POINTER(c_double) intr_pol_angle: Linear polarisation instrinsic polarisation angles
+    :cvar POINTER(c_int) linpol_angle_inds: The indexes of all RM/intrinsic polarisation angles w.r.t ra,dec
+    :cvar c_int n_stokesV_pol_frac: The number of Stokes V polarisation fraction models
+    :cvar c_int n_stokesV_power: The number of Stokes V power-law models
+    :cvar c_int n_stokesV_curve: The number of V curved power-law models
+    :cvar c_int n_linpol_pol_frac: The number of linear polarisation fraction models
+    :cvar c_int n_linpol_power: The number of linear polarisation power-law models
+    :cvar c_int n_linpol_curve: The number of linear polarisation curved power-law models
+    :cvar c_int n_linpol_angles: The number of RM/intrinsic polarisation angles
+    :cvar c_int do_QUV: Set if doing any polarised information
     """
     
     _fields_ = [## Instrinsic to COMPONENT values
@@ -331,6 +389,7 @@ class Components_Double(ctypes.Structure):
                 ("n_linpol_power", c_int),
                 ("n_linpol_curve", c_int),
                 ("n_linpol_angles", c_int),
+                ("do_QUV", c_int),
                 ]
     
 class Source_Float(ctypes.Structure):
@@ -659,8 +718,6 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
     components.list_start_indexes = list_int_ncomps_arr()
     components.total_num_flux_entires = n_lists
     
-    # print("WE BE ASSIGNED THIS NUM", components.total_num_flux_entires)
-    
     ##indexes of types
     components.power_comp_inds = power_int_ncomps_arr()
     components.curve_comp_inds = curve_int_ncomps_arr()
@@ -880,43 +937,60 @@ class _Components_Python(object):
             
         # self.curve_comp_inds = np.ctypeslib.as_array(components.curve_comp_inds, shape=(n_curves, ))
         
+        self.n_stokesV_pol_frac = 0
+        self.n_stokesV_power = 0
+        self.n_stokesV_curve = 0
+        self.n_linpol_pol_frac = 0
+        self.n_linpol_power = 0
+        self.n_linpol_curve = 0
+        self.n_linpol_angles = 0
+        
         if components.n_stokesV_pol_frac > 0:
+            self.n_stokesV_pol_frac = components.n_stokesV_pol_frac
             self.stokesV_pol_fracs = np.ctypeslib.as_array(components.stokesV_pol_fracs, shape=(components.n_stokesV_pol_frac, ))
             self.stokesV_pol_frac_comp_inds = np.ctypeslib.as_array(components.stokesV_pol_frac_comp_inds, shape=(components.n_stokesV_pol_frac, ))
             
             
         if components.n_stokesV_power > 0:
+            self.n_stokesV_power = components.n_stokesV_power
             self.stokesV_power_ref_flux = np.ctypeslib.as_array(components.stokesV_power_ref_flux, shape=(components.n_stokesV_power, ))
             self.stokesV_power_SIs = np.ctypeslib.as_array(components.stokesV_power_SIs, shape=(components.n_stokesV_power, ))
             self.stokesV_power_comp_inds = np.ctypeslib.as_array(components.stokesV_power_comp_inds, shape=(components.n_stokesV_power, ))
             
         if components.n_stokesV_curve > 0:
+            self.n_stokesV_curve = components.n_stokesV_curve
             self.stokesV_curve_ref_flux = np.ctypeslib.as_array(components.stokesV_curve_ref_flux, shape=(components.n_stokesV_curve, ))
             self.stokesV_curve_SIs = np.ctypeslib.as_array(components.stokesV_curve_SIs, shape=(components.n_stokesV_curve, ))
             self.stokesV_curve_qs = np.ctypeslib.as_array(components.stokesV_curve_qs, shape=(components.n_stokesV_curve, ))
             self.stokesV_curve_comp_inds = np.ctypeslib.as_array(components.stokesV_curve_comp_inds, shape=(components.n_stokesV_curve, ))
             
         if components.n_linpol_pol_frac > 0:
+            self.n_linpol_pol_frac = components.n_linpol_pol_frac
             self.linpol_pol_fracs = np.ctypeslib.as_array(components.linpol_pol_fracs, shape=(components.n_linpol_pol_frac, ))
             self.linpol_pol_frac_comp_inds = np.ctypeslib.as_array(components.linpol_pol_frac_comp_inds, shape=(components.n_linpol_pol_frac, ))
             
             
         if components.n_linpol_power > 0:
+            self.n_linpol_power = components.n_linpol_power
             self.linpol_power_ref_flux = np.ctypeslib.as_array(components.linpol_power_ref_flux, shape=(components.n_linpol_power, ))
             self.linpol_power_SIs = np.ctypeslib.as_array(components.linpol_power_SIs, shape=(components.n_linpol_power, ))
             self.linpol_power_comp_inds = np.ctypeslib.as_array(components.linpol_power_comp_inds, shape=(components.n_linpol_power, ))
             
             
         if components.n_linpol_curve > 0:
+            self.n_linpol_curve = components.n_linpol_curve
             self.linpol_curve_ref_flux = np.ctypeslib.as_array(components.linpol_curve_ref_flux, shape=(components.n_linpol_curve, ))
             self.linpol_curve_SIs = np.ctypeslib.as_array(components.linpol_curve_SIs, shape=(components.n_linpol_curve, ))
             self.linpol_curve_qs = np.ctypeslib.as_array(components.linpol_curve_qs, shape=(components.n_linpol_curve, ))
             self.linpol_curve_comp_inds = np.ctypeslib.as_array(components.linpol_curve_comp_inds, shape=(components.n_linpol_curve, ))
             
         if components.n_linpol_angles > 0:
+            self.n_linpol_angles = components.n_linpol_angles
             self.rm_values = np.ctypeslib.as_array(components.rm_values, shape=(components.n_linpol_angles, ))
             self.intr_pol_angle = np.ctypeslib.as_array(components.intr_pol_angle, shape=(components.n_linpol_angles, ))
             self.linpol_angle_inds = np.ctypeslib.as_array(components.linpol_angle_inds, shape=(components.n_linpol_angles, ))
+            
+        self.do_QUV = components.do_QUV
             
 
 class _Ctype_Source_Into_Python(object):

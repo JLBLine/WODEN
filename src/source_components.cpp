@@ -372,12 +372,12 @@ __global__ void kern_make_zeros_user_precision(user_precision_t *array, int num_
 
 //Allocate space for the extrapolated Stokes parameters
 void malloc_extrapolated_flux_arrays(components_t *d_components, int num_comps,
-                                     int num_freqs, int do_QUV){
+                                     int num_freqs){
   d_components->extrap_stokesI = NULL;
   ( gpuMalloc( (void**)&d_components->extrap_stokesI,
                                    num_comps*num_freqs*sizeof(user_precision_t) ));
 
-  if (do_QUV == 1)
+  if (d_components->do_QUV == 1)
   {
       // printf("Doing full polarisation\n");
       d_components->extrap_stokesQ = NULL;
@@ -390,7 +390,7 @@ void malloc_extrapolated_flux_arrays(components_t *d_components, int num_comps,
       ( gpuMalloc( (void**)&d_components->extrap_stokesV,
                                       num_comps*num_freqs*sizeof(user_precision_t) ));
 
-      //set everything to zero in case we're not doing full full polarisation
+      //set everything to zero at not every component has to have full polarisation
 
       dim3 grid, threads;
 
@@ -919,8 +919,7 @@ __global__ void kern_apply_rotation_measure(int num_extrap_freqs, double *d_extr
 
 extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
                                    double *d_extrap_freqs, int num_extrap_freqs,
-                                   e_component_type comptype,
-                                   int do_QUV){
+                                   e_component_type comptype){
 
   components_t d_components;
   // int n_comps = 0;
@@ -978,18 +977,18 @@ extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
   //Finally, do any list flux peeps
   if (n_lists > 0) {
     grid.x = (int)ceilf( (float)n_lists / (float)threads.x );
-    if (do_QUV == 1) {
-      gpuErrorCheckKernel("kern_extrap_list_fluxes_stokesIQUV",
-                          kern_extrap_list_fluxes_stokesIQUV, grid, threads,
-                          num_extrap_freqs, d_extrap_freqs,
-                          n_lists, d_components);
-    }
-    else {
-      gpuErrorCheckKernel("kern_extrap_list_fluxes_stokesI",
-                          kern_extrap_list_fluxes_stokesI, grid, threads,
-                          num_extrap_freqs, d_extrap_freqs,
-                          n_lists, d_components);
-    }
+    gpuErrorCheckKernel("kern_extrap_list_fluxes_stokesI",
+                        kern_extrap_list_fluxes_stokesI, grid, threads,
+                        num_extrap_freqs, d_extrap_freqs,
+                        n_lists, d_components);
+
+    // if (d_components.do_QUV == 1) {
+    //TODO get some kind of switch to use list QUV entires if we have them
+    //in here
+    //   gpuErrorCheckKernel("kern_extrap_list_fluxes_stokesIQUV",
+    //                       kern_extrap_list_fluxes_stokesIQUV, grid, threads,
+    //                       num_extrap_freqs, d_extrap_freqs,
+    //                       n_lists, d_components);
   }
 
   if (d_components.n_stokesV_power > 0) {
@@ -1063,18 +1062,16 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
            e_component_type comptype,
            visibility_set_t *d_visibility_set){
 
-  int do_QUV = woden_settings->do_QUV;
-
   //Here we see if we a single primary beam for all (num_beams = 1) or
   //a primary beam per antenna (num_beams = num_ants)
   //This can be expanded in the future to have a primary beam per tile
   //for different options
   int num_beams;
   int use_twobeams = 0;
-    if (woden_settings->use_dipamps == 1) {
-      num_beams = woden_settings->num_ants;
-      use_twobeams = 1;
-    } else {
+  if (woden_settings->use_dipamps == 1) {
+    num_beams = woden_settings->num_ants;
+    use_twobeams = 1;
+  } else {
       num_beams = 1;
   }
 
@@ -1096,12 +1093,16 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
     d_components = &d_chunked_source->shape_components;
   }
 
+  // int do_QUV = d_components->do_QUV;
+
+  // printf("\tExtrapolating Stokes IQUV\n");
+
   //Will need this later
   malloc_extrapolated_flux_arrays(d_components, num_components,
-                                  woden_settings->num_freqs, do_QUV);
+                                  woden_settings->num_freqs);
 
   extrapolate_Stokes(d_chunked_source, d_freqs,
-                     woden_settings->num_freqs, comptype, do_QUV);
+                     woden_settings->num_freqs, comptype);
 
   int num_gains = d_components->num_primarybeam_values*num_beams;
   
@@ -1276,7 +1277,7 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
                   d_visibility_set->sum_visi_YX_imag,
                   d_visibility_set->sum_visi_YY_real,
                   d_visibility_set->sum_visi_YY_imag,
-                  do_QUV, use_twobeams, d_ant_to_auto_map,
+                  use_twobeams, d_ant_to_auto_map,
                   d_ant_to_auto_map);
 
     if (use_twobeams == 1) {
@@ -1295,8 +1296,7 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
            user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
            int num_components, int num_baselines, int num_freqs, int num_cross,
-           int num_times, e_beamtype beamtype, e_component_type comptype,
-           int do_QUV) {
+           int num_times, e_beamtype beamtype, e_component_type comptype) {
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
@@ -1324,7 +1324,7 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
       int extrap_ind = num_freqs*iComponent + freq_ind;
 
       flux_I = d_components.extrap_stokesI[extrap_ind];
-      if (do_QUV == 1) {
+      if (d_components.do_QUV == 1) {
         flux_Q = d_components.extrap_stokesQ[extrap_ind];
         flux_U = d_components.extrap_stokesU[extrap_ind];
         flux_V = d_components.extrap_stokesV[extrap_ind];
@@ -1356,7 +1356,7 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
         visi_comp = visi_comp*V_envelop;
       }
 
-      if (do_QUV == 1)
+      if (d_components.do_QUV == 1)
       {
         update_sum_visis_stokesIQUV(iBaseline, iComponent, num_freqs,
              num_baselines, num_components, num_times, beamtype,
@@ -1397,8 +1397,7 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
       user_precision_t *d_sbf,
       int num_shapes, int num_baselines, int num_freqs, int num_cross,
-      const int num_coeffs, int num_times, e_beamtype beamtype,
-      int do_QUV) {
+      const int num_coeffs, int num_times, e_beamtype beamtype) {
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
@@ -1429,7 +1428,7 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
 
       shape_flux_I = d_components.extrap_stokesI[extrap_ind];
 
-      if (do_QUV == 1) {
+      if (d_components.do_QUV == 1) {
         shape_flux_Q = d_components.extrap_stokesQ[extrap_ind];
         shape_flux_U = d_components.extrap_stokesU[extrap_ind];
         shape_flux_V = d_components.extrap_stokesV[extrap_ind];
@@ -1495,7 +1494,7 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
 
       visi_shape = visi_shape*V_envelop;
 
-      if (do_QUV == 1) {
+      if (d_components.do_QUV == 1) {
         update_sum_visis_stokesIQUV(iBaseline, iComponent, num_freqs,
              num_baselines, num_shapes, num_times, beamtype,
              d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
@@ -1771,6 +1770,7 @@ void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source
   d_components->n_linpol_power = n_linpol_power;
   d_components->n_linpol_curve = n_linpol_curve;
   d_components->n_linpol_angles = n_linpol_angles;
+  d_components->do_QUV = components->do_QUV;
 
   if (n_stokesV_pol_frac > 0) {
     gpuMalloc( (void**)&d_components->stokesV_pol_fracs,
@@ -1911,10 +1911,10 @@ source_t * copy_chunked_source_to_GPU(source_t *chunked_source){
   return d_chunked_source;
 }
 
-void free_extrapolated_flux_arrays(components_t *d_components, int do_QUV){
+void free_extrapolated_flux_arrays(components_t *d_components){
   ( gpuFree( d_components->extrap_stokesI ) );
 
-  if (do_QUV) {
+  if (d_components->do_QUV) {
     ( gpuFree( d_components->extrap_stokesQ ) );
     ( gpuFree( d_components->extrap_stokesU ) );
     ( gpuFree( d_components->extrap_stokesV ) );
@@ -2068,7 +2068,7 @@ __global__ void kern_calc_autos(components_t d_components,
                                 user_precision_t *d_sum_visi_YX_imag,
                                 user_precision_t *d_sum_visi_YY_real,
                                 user_precision_t *d_sum_visi_YY_imag,
-                                int do_QUV, int use_twobeams,
+                                int use_twobeams,
                                 int *d_ant1_to_auto_map,
                                 int *d_ant2_to_auto_map) {
 
@@ -2123,7 +2123,7 @@ __global__ void kern_calc_autos(components_t d_components,
 
       user_precision_t flux_I = d_components.extrap_stokesI[extrap_ind];
 
-      if (do_QUV == 1) {
+      if (d_components.do_QUV == 1) {
         user_precision_t flux_Q = d_components.extrap_stokesQ[extrap_ind];
         user_precision_t flux_U = d_components.extrap_stokesU[extrap_ind];
         user_precision_t flux_V = d_components.extrap_stokesV[extrap_ind];
@@ -2199,8 +2199,6 @@ extern "C" void test_extrap_stokes_all_models(source_t *chunked_source,
            user_precision_t *extrap_flux_I, user_precision_t *extrap_flux_Q,
            user_precision_t *extrap_flux_U, user_precision_t *extrap_flux_V){
 
-  int do_QUV = 1;
-
   source_t *d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
 
   double *d_extrap_freqs = NULL;
@@ -2211,9 +2209,9 @@ extern "C" void test_extrap_stokes_all_models(source_t *chunked_source,
 
   malloc_extrapolated_flux_arrays(&d_chunked_source->point_components,
                                   d_chunked_source->n_points,
-                                  num_extrap_freqs, do_QUV);
+                                  num_extrap_freqs);
 
-  extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_extrap_freqs, POINT, do_QUV);
+  extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_extrap_freqs, POINT);
 
 
   components_t d_components = d_chunked_source->point_components;
@@ -2232,7 +2230,7 @@ extern "C" void test_extrap_stokes_all_models(source_t *chunked_source,
                                                       gpuMemcpyDeviceToHost );
   //
   gpuFree( d_extrap_freqs );
-  free_extrapolated_flux_arrays(&d_chunked_source->point_components, do_QUV);
+  free_extrapolated_flux_arrays(&d_chunked_source->point_components);
 }
 
 
@@ -2926,8 +2924,6 @@ extern "C" void test_source_component_common(int num_of_each_flux_type,
            double *ls, double *ms, double *ns,
            e_component_type comptype){
 
-  woden_settings->do_QUV = 1;
-
   source_t *chunked_source = (source_t *)malloc(sizeof(source_t));
 
   //TODODOD have a if (comptype == POINT) etc here so we can use same
@@ -2991,10 +2987,10 @@ extern "C" void test_source_component_common(int num_of_each_flux_type,
   source_t *d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
 
   double *d_freqs = NULL;
-  ( gpuMalloc( (void**)&d_freqs,
-                                     woden_settings->num_freqs*sizeof(double) ));
-  ( gpuMemcpy( d_freqs, freqs,
-             woden_settings->num_freqs*sizeof(double), gpuMemcpyHostToDevice) );
+  gpuMalloc( (void**)&d_freqs,
+                                     woden_settings->num_freqs*sizeof(double) );
+  gpuMemcpy( d_freqs, freqs,
+             woden_settings->num_freqs*sizeof(double), gpuMemcpyHostToDevice) ;
 
   d_beam_gains_t d_beam_gains;
   visibility_set_t *d_visibility_set = NULL;
@@ -3062,15 +3058,22 @@ extern "C" void test_source_component_common(int num_of_each_flux_type,
   grid.x = (int)ceil( (float)num_things / (float)threads.x );
   grid.y = 1;
 
-  gpuErrorCheckKernel("kern_make_zeros_user_precision",
+  if (d_components.do_QUV == 0) {
+
+    gpuMalloc( (void**)&d_components.extrap_stokesQ, num_things*sizeof(user_precision_t) );
+    gpuMalloc( (void**)&d_components.extrap_stokesU, num_things*sizeof(user_precision_t) );
+    gpuMalloc( (void**)&d_components.extrap_stokesV, num_things*sizeof(user_precision_t) );
+
+    gpuErrorCheckKernel("kern_make_zeros_user_precision",
             kern_make_zeros_user_precision, grid, threads,
             d_components.extrap_stokesQ, num_things);
-  gpuErrorCheckKernel("kern_make_zeros_user_precision",
-            kern_make_zeros_user_precision, grid, threads,
-            d_components.extrap_stokesU, num_things);
-  gpuErrorCheckKernel("kern_make_zeros_user_precision",
-            kern_make_zeros_user_precision, grid, threads,
-            d_components.extrap_stokesV, num_things);
+    gpuErrorCheckKernel("kern_make_zeros_user_precision",
+              kern_make_zeros_user_precision, grid, threads,
+              d_components.extrap_stokesU, num_things);
+    gpuErrorCheckKernel("kern_make_zeros_user_precision",
+              kern_make_zeros_user_precision, grid, threads,
+              d_components.extrap_stokesV, num_things);
+  }
 
   ( gpuMemcpy(extrap_flux_I, d_components.extrap_stokesI,
   NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t),
@@ -3086,7 +3089,7 @@ extern "C" void test_source_component_common(int num_of_each_flux_type,
                                                       gpuMemcpyDeviceToHost ));
 
   ( gpuFree( d_freqs ) );
-  free_extrapolated_flux_arrays(&d_components, woden_settings->do_QUV);
+  free_extrapolated_flux_arrays(&d_components);
   free_d_components(d_chunked_source, comptype);
   free_beam_gains(d_beam_gains, beam_settings->beamtype);
 }
@@ -3135,18 +3138,6 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
           user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
           user_precision_complex_t *Dys, user_precision_complex_t *gys){
 
-  int do_QUV = 0;
-
-  if (components.n_stokesV_pol_frac > 0 ||
-      components.n_stokesV_power > 0 ||
-      components.n_stokesV_curve > 0 ||
-      components.n_linpol_pol_frac > 0 ||
-      components.n_linpol_power > 0 ||
-      components.n_linpol_curve > 0 ||
-      components.n_linpol_angles > 0) {
-    do_QUV = 1;
-  }
-  
   int num_components = n_powers + n_curves + n_lists;
 
   user_precision_t *d_us = NULL;
@@ -3203,8 +3194,8 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
 
     malloc_extrapolated_flux_arrays(&d_chunked_source->point_components,
                                     d_chunked_source->n_points,
-                                    num_freqs, do_QUV);
-    extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, POINT, do_QUV);
+                                    num_freqs);
+    extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, POINT);
     d_components = d_chunked_source->point_components;
   }
   else if (comptype == GAUSSIAN) {
@@ -3230,8 +3221,8 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
 
     malloc_extrapolated_flux_arrays(&d_chunked_source->gauss_components,
                                     d_chunked_source->n_gauss,
-                                    num_freqs, do_QUV);
-    extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, GAUSSIAN, do_QUV);
+                                    num_freqs);
+    extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, GAUSSIAN);
     d_components = d_chunked_source->gauss_components;
   }
   else if (comptype == SHAPELET) {
@@ -3256,8 +3247,8 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
 
     malloc_extrapolated_flux_arrays(&d_chunked_source->shape_components,
                                     d_chunked_source->n_shapes,
-                                    num_freqs, do_QUV);
-    extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, SHAPELET, do_QUV);
+                                    num_freqs);
+    extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, SHAPELET);
     d_components = d_chunked_source->shape_components;
   }
 
@@ -3390,7 +3381,7 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
                   d_sum_visi_YX_real, d_sum_visi_YX_imag,
                   d_sum_visi_YY_real, d_sum_visi_YY_imag,
                   num_components, num_baselines, num_freqs, num_cross,
-                  num_times, beamtype, comptype, do_QUV);
+                  num_times, beamtype, comptype);
   }
   else if (comptype == SHAPELET) {
     gpuErrorCheckKernel("kern_calc_visi_shapelets",
@@ -3405,7 +3396,7 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
                   d_sum_visi_YY_real, d_sum_visi_YY_imag,
                   d_sbf,  num_components,
                   num_baselines, num_freqs, num_cross,
-                  num_shape_coeffs, num_times, beamtype, do_QUV);
+                  num_shape_coeffs, num_times, beamtype);
   }
 
   ( gpuMemcpy(sum_visi_XX_real, d_sum_visi_XX_real,
@@ -3449,13 +3440,13 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
   ( gpuFree( d_extrap_freqs ) );
 
   if (comptype == POINT) {
-    free_extrapolated_flux_arrays(&d_chunked_source->point_components, do_QUV);
+    free_extrapolated_flux_arrays(&d_chunked_source->point_components);
   }
   else if (comptype == GAUSSIAN) {
-    free_extrapolated_flux_arrays(&d_chunked_source->gauss_components, do_QUV);
+    free_extrapolated_flux_arrays(&d_chunked_source->gauss_components);
   }
   if (comptype == SHAPELET){
-    free_extrapolated_flux_arrays(&d_chunked_source->shape_components, do_QUV);
+    free_extrapolated_flux_arrays(&d_chunked_source->shape_components);
     (  gpuFree( d_sbf) );
     (  gpuFree( d_u_shapes) );
     (  gpuFree( d_v_shapes) );
@@ -3593,8 +3584,6 @@ extern "C" void test_kern_calc_autos(components_t *components, int beamtype,
   grid.y = (int)ceil( (float)(num_ants) / (float)threads.y );
   grid.z = 1;
 
-  int do_QUV = 0;
-
   int *d_ant_to_auto_map = NULL;
 
   if (use_twobeams == 1) {
@@ -3622,7 +3611,7 @@ extern "C" void test_kern_calc_autos(components_t *components, int beamtype,
                 d_sum_visi_XY_real, d_sum_visi_XY_imag,
                 d_sum_visi_YX_real, d_sum_visi_YX_imag,
                 d_sum_visi_YY_real, d_sum_visi_YY_imag,
-                do_QUV, use_twobeams, d_ant_to_auto_map,
+                use_twobeams, d_ant_to_auto_map,
                 d_ant_to_auto_map);
 
   //Copy outputs onto host so we can check our answers

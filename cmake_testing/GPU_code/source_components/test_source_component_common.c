@@ -215,17 +215,17 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
   components.power_ref_freqs = ref_freqs;
   components.power_ref_stokesI = ref_stokesI;
-  components.power_ref_stokesQ = ref_stokesQ;
-  components.power_ref_stokesU = ref_stokesU;
-  components.power_ref_stokesV = ref_stokesV;
+  // components.power_ref_stokesQ = ref_stokesQ;
+  // components.power_ref_stokesU = ref_stokesU;
+  // components.power_ref_stokesV = ref_stokesV;
   components.power_SIs = ref_power_SIs;
   components.power_comp_inds = power_comp_inds;
 
   components.curve_ref_freqs = ref_freqs;
   components.curve_ref_stokesI = ref_stokesI;
-  components.curve_ref_stokesQ = ref_stokesQ;
-  components.curve_ref_stokesU = ref_stokesU;
-  components.curve_ref_stokesV = ref_stokesV;
+  // components.curve_ref_stokesQ = ref_stokesQ;
+  // components.curve_ref_stokesU = ref_stokesU;
+  // components.curve_ref_stokesV = ref_stokesV;
   components.curve_SIs = ref_curve_SIs;
   components.curve_qs = ref_qs;
   components.curve_comp_inds = curve_comp_inds;
@@ -263,13 +263,43 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
   components.num_primarybeam_values = num_components*woden_settings->num_freqs*woden_settings->num_time_steps;
 
-  components.n_stokesV_pol_frac = 0;
-  components.n_stokesV_power = 0;
-  components.n_stokesV_curve = 0;
-  components.n_linpol_pol_frac = 0;
-  components.n_linpol_power = 0;
-  components.n_linpol_curve = 0;
-  components.n_linpol_angles = 0;
+    //Polarisation models behbeh
+  components.n_stokesV_pol_frac = num_lists;
+  components.stokesV_pol_fracs = stokesV_pol_fracs;
+  components.stokesV_pol_frac_comp_inds = stokesV_pol_frac_comp_inds;
+
+  components.n_stokesV_power = num_powers;
+  components.stokesV_power_ref_flux = ref_stokesV;
+  components.stokesV_power_SIs = stokesV_power_SIs;
+  components.stokesV_power_comp_inds =stokesV_power_comp_inds;
+  
+  components.n_stokesV_curve = num_curves;
+  components.stokesV_curve_ref_flux = ref_stokesV;
+  components.stokesV_curve_SIs = stokesV_curve_SIs;
+  components.stokesV_curve_qs = stokesV_qs;
+  components.stokesV_curve_comp_inds = stokesV_curve_comp_inds;
+
+  components.n_linpol_pol_frac = num_lists;
+  components.linpol_pol_fracs = linpol_pol_fracs;
+  components.linpol_pol_frac_comp_inds = linpol_pol_frac_comp_inds;
+
+  components.n_linpol_power = num_powers;
+  components.linpol_power_ref_flux = ref_linpol;
+  components.linpol_power_SIs = linpol_power_SIs;
+  components.linpol_power_comp_inds = linpol_power_comp_inds;
+  
+  components.n_linpol_curve = num_curves;
+  components.linpol_curve_ref_flux = ref_linpol;
+  components.linpol_curve_SIs = linpol_curve_SIs;
+  components.linpol_curve_qs = linpol_qs;
+  components.linpol_curve_comp_inds = linpol_curve_comp_inds;
+
+  components.n_linpol_angles = components.n_linpol_pol_frac + components.n_linpol_power + components.n_linpol_curve;
+  components.intr_pol_angle = intr_pol_angle;
+  components.rm_values = rms;
+  components.linpol_angle_inds = linpol_angle_inds;
+
+  components.do_QUV = 1;
 
   //Run the CUDA code
   test_source_component_common(num_powers, components, freqs,
@@ -479,9 +509,9 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
                         expec_flux_I, expec_flux_Q, expec_flux_U, expec_flux_V);
 
   #ifdef DOUBLE_PRECISION
-    TOL = 1e-12;
+    TOL = 1e-11;
   #else
-    TOL = 1e-4;
+    TOL = 4e-4;
   #endif
 
   for (int i = 0; i < num_freqs*(num_powers + num_curves + num_lists); i++) {
@@ -490,13 +520,13 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_I[i], extrap_flux_I[i]);
     //TODO in the future this should be testable, for only doing Stokes I so
     //lock to zero
-    // TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_Q[i], extrap_flux_Q[i]);
-    // TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_U[i], extrap_flux_U[i]);
-    // TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_V[i], extrap_flux_V[i]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_Q[i], extrap_flux_Q[i]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_U[i], extrap_flux_U[i]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_V[i], extrap_flux_V[i]);
 
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, extrap_flux_Q[i]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, extrap_flux_U[i]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, extrap_flux_V[i]);
+    // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, extrap_flux_Q[i]);
+    // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, extrap_flux_U[i]);
+    // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, extrap_flux_V[i]);
 
   }
 

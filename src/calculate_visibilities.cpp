@@ -39,7 +39,6 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
   //TODO - once rotation measure has been implemented, this should be set
   //only if we are using a rotation measure
-  int do_QUV = woden_settings->do_QUV;
 
   const int num_baselines = woden_settings->num_baselines;
   const int num_time_steps = woden_settings->num_time_steps;
@@ -361,11 +360,11 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                            d_visibility_set->sum_visi_YY_real,
                            d_visibility_set->sum_visi_YY_imag,
                            num_points, num_baselines, num_freqs, num_cross,
-                           num_time_steps, beam_settings->beamtype, POINT, do_QUV);
+                           num_time_steps, beam_settings->beamtype, POINT);
       printf("\tVisi kernel done\n");
 
       free_d_components(d_chunked_source, POINT);
-      free_extrapolated_flux_arrays(&d_chunked_source->point_components, do_QUV);
+      free_extrapolated_flux_arrays(&d_chunked_source->point_components);
       free_beam_gains(d_point_beam_gains, beam_settings->beamtype);
 
     }//if point sources
@@ -407,10 +406,10 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                            d_visibility_set->sum_visi_YY_real,
                            d_visibility_set->sum_visi_YY_imag,
                            num_gauss, num_baselines, num_freqs, num_cross,
-                           num_time_steps, beam_settings->beamtype, GAUSSIAN, do_QUV);
+                           num_time_steps, beam_settings->beamtype, GAUSSIAN);
 
       free_d_components(d_chunked_source, GAUSSIAN);
-      free_extrapolated_flux_arrays(&d_chunked_source->gauss_components, do_QUV);
+      free_extrapolated_flux_arrays(&d_chunked_source->gauss_components);
       free_beam_gains(d_gauss_beam_gains, beam_settings->beamtype);
 
     }//if gauss sources
@@ -497,7 +496,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
             d_sbf,
             num_shapes, num_baselines, num_freqs, num_cross,
             d_chunked_source->n_shape_coeffs, num_time_steps,
-            beam_settings->beamtype, do_QUV);
+            beam_settings->beamtype);
 
       ( gpuFree(d_v_shapes) );
       ( gpuFree(d_u_shapes) );
@@ -505,7 +504,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
       printf("Making it to this call here\n");
       free_d_components(d_chunked_source, SHAPELET);
-      free_extrapolated_flux_arrays(&d_chunked_source->shape_components, do_QUV);
+      free_extrapolated_flux_arrays(&d_chunked_source->shape_components);
       free_beam_gains(d_shape_beam_gains, beam_settings->beamtype);
 
     }//if shapelet

@@ -211,6 +211,10 @@ void CPU_extrapolate_fluxes_in_components(components_t *comps, int num_powers,
                                      comps->curve_qs ,
                                       extrap_freqs, comp, extrap, &flux_I);
 
+      if (flux_I > 80000) {
+        printf("Curved power law flux is too high %d %.3e %f %f %f\n", comp, flux_I, comps->curve_ref_stokesI[comp], comps->curve_SIs[comp], comps->curve_qs[comp]);
+      }
+
       expec_flux_I[ind + num_extrap_freqs*num_powers] = flux_I;
       expec_flux_Q[ind + num_extrap_freqs*num_powers] = 0.0;
       expec_flux_U[ind + num_extrap_freqs*num_powers] = 0.0;

@@ -232,7 +232,7 @@ void test_kern_calc_visi_shape_VarylmnMultipleCoeff(int beamtype) {
       count ++;
     }
   }
-
+  components.do_QUV = 0;
   test_kern_calc_visi_all(n_powers, n_curves, n_lists, num_baselines, num_coeffs,
           num_freqs, num_visis, num_times, beamtype, SHAPELET,
           components, args_ft->extrap_freqs,

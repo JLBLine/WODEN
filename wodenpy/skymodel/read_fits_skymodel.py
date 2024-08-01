@@ -472,6 +472,16 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
     n_linpol_power = map_components.num_lin_powers
     n_linpol_curve = map_components.num_lin_curves
     
+    ##TODO maybe one day in a far off future, if someone is doing a big
+    ##linear diffuse sky, it might be worth adding the option to only so
+    ##stokesI, stokesQ, stokesU, and not stokesV. This would involve updating
+    ##some GPU code to not bother using V when calculating XX, YY, XY, YX
+    ##If we have polarisation information
+    if n_stokesV_pol_frac + n_stokesV_power + n_stokesV_curve + n_linpol_pol_frac + n_linpol_power + n_linpol_curve > 0:
+        source_components.do_QUV = 1
+    else:
+        source_components.do_QUV = 0
+    
     v_pol_frac_inds = map_components.v_pol_frac_orig_inds
     v_power_inds = map_components.v_power_orig_inds
     v_curve_inds = map_components.v_curve_orig_inds
