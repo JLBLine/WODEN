@@ -333,8 +333,6 @@ typedef struct _woden_settings_t {
     are different when precession is happening)*/
   double *mjds; /*!< Array to hold modified julian dates for all time centroids*/
   int do_autos; /*!< Boolean of whether to simulate autos or not (0 False, 1 True)*/
-  int do_QUV; /*!< Boolean of whether to use Stokes Q,U,V*/
-
   int use_dipamps; /*!< Boolean of whether to use dipole amplitudes, so have an individual beam per tile*/
   double *mwa_dipole_amps; /*!< Bespoke MWA dipole amplitudes for each antenna(tile). Should be 2*num_ants*16 long*/
 

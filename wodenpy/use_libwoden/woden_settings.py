@@ -71,7 +71,6 @@ class Woden_Settings_Double(ctypes.Structure):
     :cvar POINTER(c_double) latitudes:  Array to hold latitudes for all time centroids (these are different when precession is happening)
     :cvar POINTER(c_double) mjds:  Array to hold modified julian dates for all time centroids
     :cvar c_int do_autos:  Boolean of whether to simulate autos or not (0 False, 1 True)
-    :cvar c_int do_QUV:  Boolean of whether to use Stokes Q,U,V (0 False, 1 True)
     :cvar c_int use_dipamps:  Boolean of whether to use dipole amplitudes, so have an individual beam per tile (0 False, 1 True)
     :cvar POINTER(c_double) mwa_dipole_amps: Bespoke MWA dipole amplitudes for each antenna(tile). Should be 2*num_ants*16 long
     """
@@ -117,7 +116,6 @@ class Woden_Settings_Double(ctypes.Structure):
                 ("latitudes", POINTER(c_double)),
                 ("mjds", POINTER(c_double)),
                 ("do_autos", c_int),
-                ("do_QUV", c_int),
                 ("use_dipamps", c_int),
                 ("mwa_dipole_amps", POINTER(c_double))]
 
@@ -168,7 +166,6 @@ class Woden_Settings_Float(ctypes.Structure):
     :cvar POINTER(c_double) latitudes:  Array to hold latitudes for all time centroids (these are different when precession is happening)
     :cvar POINTER(c_double) mjds:  Array to hold modified julian dates for all time centroids
     :cvar c_int do_autos:  Boolean of whether to simulate autos or not (0 False, 1 True)
-    :cvar c_int do_QUV:  Boolean of whether to use Stokes Q,U,V (0 False, 1 True)
     :cvar c_int use_dipamps:  Boolean of whether to use dipole amplitudes, so have an individual beam per tile  (0 False, 1 True)
     :cvar POINTER(c_double) mwa_dipole_amps: Bespoke MWA dipole amplitudes for each antenna(tile). Should be 2*num_ants*16 long
     """
@@ -214,7 +211,6 @@ class Woden_Settings_Float(ctypes.Structure):
                 ("latitudes", POINTER(c_double)),
                 ("mjds", POINTER(c_double)),
                 ("do_autos", c_int),
-                ("do_QUV", c_int),
                 ("use_dipamps", c_int),
                 ("mwa_dipole_amps", POINTER(c_double))]
     

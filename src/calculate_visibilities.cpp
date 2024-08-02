@@ -498,9 +498,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
             d_chunked_source->n_shape_coeffs, num_time_steps,
             beam_settings->beamtype);
 
-      ( gpuFree(d_v_shapes) );
-      ( gpuFree(d_u_shapes) );
-      ( gpuFree(d_lsts) );
+      gpuFree(d_v_shapes);
+      gpuFree(d_u_shapes);
+      gpuFree(d_lsts);
 
       printf("Making it to this call here\n");
       free_d_components(d_chunked_source, SHAPELET);
@@ -509,43 +509,43 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
     }//if shapelet
 
-    ( gpuMemcpy(chunk_visibility_set->sum_visi_XX_real,
+    gpuMemcpy(chunk_visibility_set->sum_visi_XX_real,
         d_visibility_set->sum_visi_XX_real, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost) );
-    ( gpuMemcpy(chunk_visibility_set->sum_visi_XX_imag,
+                                                     gpuMemcpyDeviceToHost);
+    gpuMemcpy(chunk_visibility_set->sum_visi_XX_imag,
         d_visibility_set->sum_visi_XX_imag, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost) );
+                                                     gpuMemcpyDeviceToHost);
 
-    ( gpuMemcpy(chunk_visibility_set->sum_visi_XY_real,
+    gpuMemcpy(chunk_visibility_set->sum_visi_XY_real,
         d_visibility_set->sum_visi_XY_real, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost) );
-    ( gpuMemcpy(chunk_visibility_set->sum_visi_XY_imag,
+                                                     gpuMemcpyDeviceToHost);
+    gpuMemcpy(chunk_visibility_set->sum_visi_XY_imag,
         d_visibility_set->sum_visi_XY_imag, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost) );
+                                                     gpuMemcpyDeviceToHost);
 
-    ( gpuMemcpy(chunk_visibility_set->sum_visi_YX_real,
+    gpuMemcpy(chunk_visibility_set->sum_visi_YX_real,
         d_visibility_set->sum_visi_YX_real, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost) );
-    ( gpuMemcpy(chunk_visibility_set->sum_visi_YX_imag,
+                                                     gpuMemcpyDeviceToHost);
+    gpuMemcpy(chunk_visibility_set->sum_visi_YX_imag,
         d_visibility_set->sum_visi_YX_imag, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost) );
+                                                     gpuMemcpyDeviceToHost);
 
-    ( gpuMemcpy(chunk_visibility_set->sum_visi_YY_real,
+    gpuMemcpy(chunk_visibility_set->sum_visi_YY_real,
         d_visibility_set->sum_visi_YY_real, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost) );
-    ( gpuMemcpy(chunk_visibility_set->sum_visi_YY_imag,
+                                                     gpuMemcpyDeviceToHost);
+    gpuMemcpy(chunk_visibility_set->sum_visi_YY_imag,
         d_visibility_set->sum_visi_YY_imag, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost) );
+                                                     gpuMemcpyDeviceToHost);
 
-    ( gpuMemcpy(chunk_visibility_set->us_metres,
+    gpuMemcpy(chunk_visibility_set->us_metres,
                                   d_u_metres,num_visis*sizeof(user_precision_t),
-                                                      gpuMemcpyDeviceToHost) );
-    ( gpuMemcpy(chunk_visibility_set->vs_metres,
+                                                      gpuMemcpyDeviceToHost);
+    gpuMemcpy(chunk_visibility_set->vs_metres,
                                   d_v_metres,num_visis*sizeof(user_precision_t),
-                                                      gpuMemcpyDeviceToHost) );
-    ( gpuMemcpy(chunk_visibility_set->ws_metres,
+                                                      gpuMemcpyDeviceToHost);
+    gpuMemcpy(chunk_visibility_set->ws_metres,
                                   d_w_metres,num_visis*sizeof(user_precision_t),
-                                                      gpuMemcpyDeviceToHost) );
+                                                      gpuMemcpyDeviceToHost);
 
     //add to visiblity_set
     for (int visi = 0; visi < num_visis; visi++) {

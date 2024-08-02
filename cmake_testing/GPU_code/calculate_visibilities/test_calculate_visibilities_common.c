@@ -31,7 +31,7 @@ user_precision_t zas[] = {0.0, 0.6978088917603547};
 
 //Different delays settings, which control the comping of the MWA beam
 user_precision_t zenith_delays[16] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+                                      0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
 
 void populate_components(components_t *comps, int n_comps,
@@ -59,35 +59,71 @@ void populate_components(components_t *comps, int n_comps,
   //No matter what, always have one POWER_LAW source
   comps->power_ref_freqs = malloc(sizeof(double));
   comps->power_ref_stokesI = malloc(sizeof(user_precision_t));
-  comps->power_ref_stokesQ = malloc(sizeof(user_precision_t));
-  comps->power_ref_stokesU = malloc(sizeof(user_precision_t));
-  comps->power_ref_stokesV = malloc(sizeof(user_precision_t));
+  // comps->power_ref_stokesQ = malloc(sizeof(user_precision_t));
+  // comps->power_ref_stokesU = malloc(sizeof(user_precision_t));
+  // comps->power_ref_stokesV = malloc(sizeof(user_precision_t));
   comps->power_SIs = malloc(sizeof(user_precision_t));
   comps->power_comp_inds = malloc(sizeof(int));
 
-  comps->power_ref_freqs[0] = 150e+6;
+  comps->power_ref_freqs[0] = REF_FREQ;
   comps->power_ref_stokesI[0] = STOKESI;
-  comps->power_ref_stokesQ[0] = 0.0;
-  comps->power_ref_stokesU[0] = 0.0;
-  comps->power_ref_stokesV[0] = 0.0;
+  // comps->power_ref_stokesQ[0] = 0.0;
+  // comps->power_ref_stokesU[0] = 0.0;
+  // comps->power_ref_stokesV[0] = 0.0;
   comps->power_SIs[0] = 0.0;
   comps->power_comp_inds[0] = 0;
+
+  //set everything to zero first, and update if necessary
+  comps->n_stokesV_pol_frac = 0;
+  comps->n_stokesV_power = 0;
+  comps->n_stokesV_curve = 0;
+  comps->n_linpol_pol_frac = 0;
+  comps->n_linpol_power = 0;
+  comps->n_linpol_curve = 0;
+  comps->n_linpol_angles = 0;
+  comps->do_QUV = 1;
+
+  //No matter what, always have one POL_FRACTION source for both pols
+  comps->stokesV_pol_fracs = malloc(sizeof(user_precision_t));
+  comps->stokesV_pol_frac_comp_inds = malloc(sizeof(int));
+  comps->linpol_pol_fracs = malloc(sizeof(user_precision_t));
+  comps->linpol_pol_frac_comp_inds = malloc(sizeof(int));
+
+  comps->n_stokesV_pol_frac = 1;
+  comps->stokesV_pol_fracs[0] = POL_FRAC;
+  comps->stokesV_pol_frac_comp_inds[0] = 0;
+  comps->n_linpol_pol_frac = 1;
+  comps->linpol_pol_fracs[0] = POL_FRAC*sqrt(2.0);
+  comps->linpol_pol_frac_comp_inds[0] = 0;
+
+  comps->n_linpol_angles = n_comps;
+  comps->intr_pol_angle = malloc(n_comps*sizeof(user_precision_t));
+  comps->rm_values = malloc(n_comps*sizeof(user_precision_t));
+  comps->linpol_angle_inds = malloc(n_comps*sizeof(int));
+
+  for (int i = 0; i < n_comps; i++)
+  {
+    comps->intr_pol_angle[i] = 0;
+    comps->rm_values[i] = 0;
+    comps->linpol_angle_inds[i] = i;
+  }
+  
 
   if (n_comps > 1) {
     comps->curve_ref_freqs = malloc(sizeof(double));
     comps->curve_ref_stokesI = malloc(sizeof(user_precision_t));
-    comps->curve_ref_stokesQ = malloc(sizeof(user_precision_t));
-    comps->curve_ref_stokesU = malloc(sizeof(user_precision_t));
-    comps->curve_ref_stokesV = malloc(sizeof(user_precision_t));
+    // comps->curve_ref_stokesQ = malloc(sizeof(user_precision_t));
+    // comps->curve_ref_stokesU = malloc(sizeof(user_precision_t));
+    // comps->curve_ref_stokesV = malloc(sizeof(user_precision_t));
     comps->curve_SIs = malloc(sizeof(user_precision_t));
     comps->curve_qs = malloc(sizeof(user_precision_t));
     comps->curve_comp_inds = malloc(sizeof(int));
 
-    comps->curve_ref_freqs[0] = 150e+6;
+    comps->curve_ref_freqs[0] = REF_FREQ;
     comps->curve_ref_stokesI[0] = STOKESI;
-    comps->curve_ref_stokesQ[0] = 0.0;
-    comps->curve_ref_stokesU[0] = 0.0;
-    comps->curve_ref_stokesV[0] = 0.0;
+    // comps->curve_ref_stokesQ[0] = 0.0;
+    // comps->curve_ref_stokesU[0] = 0.0;
+    // comps->curve_ref_stokesV[0] = 0.0;
     comps->curve_SIs[0] = 0.0;
     comps->curve_qs[0] = 0.0;
     comps->curve_comp_inds[0] = 1;
@@ -118,7 +154,46 @@ void populate_components(components_t *comps, int n_comps,
     comps->num_list_values[0] = 2;
     comps->list_start_indexes[0] = 0;
 
-  }
+    //TODO chuck in power and curved power pol frac stuff here.
+    //TODO change all the reference stuff to 200MHz like it should be
+    //TODO take all the reference frequency stuff out of main WODEN??
+
+    comps->n_stokesV_power = 1;
+    comps->stokesV_power_ref_flux = malloc(sizeof(user_precision_t));
+    comps->stokesV_power_SIs = malloc(sizeof(user_precision_t));
+    comps->stokesV_power_comp_inds = malloc(sizeof(int));
+    comps->stokesV_power_ref_flux[0] = STOKESI;
+    comps->stokesV_power_SIs[0] = 0.0;
+    comps->stokesV_power_comp_inds[0] = 1;
+
+    comps->n_stokesV_curve = 1;
+    comps->stokesV_curve_ref_flux = malloc(sizeof(user_precision_t));
+    comps->stokesV_curve_SIs = malloc(sizeof(user_precision_t));
+    comps->stokesV_curve_qs = malloc(sizeof(user_precision_t));
+    comps->stokesV_curve_comp_inds = malloc(sizeof(int));
+    comps->stokesV_curve_ref_flux[0] = STOKESI;
+    comps->stokesV_curve_SIs[0] = 0.0;
+    comps->stokesV_curve_qs[0] = 0.0;
+    comps->stokesV_curve_comp_inds[0] = 2;
+    
+    comps->n_linpol_power = 1;
+    comps->linpol_power_ref_flux = malloc(sizeof(user_precision_t));
+    comps->linpol_power_SIs = malloc(sizeof(user_precision_t));
+    comps->linpol_power_comp_inds = malloc(sizeof(int));
+    comps->linpol_power_ref_flux[0] = STOKESI*sqrt(2.0);
+    comps->linpol_power_SIs[0] = 0.0;
+    comps->linpol_power_comp_inds[0] = 1;
+
+    comps->n_linpol_curve = 1;
+    comps->linpol_curve_ref_flux = malloc(sizeof(user_precision_t));
+    comps->linpol_curve_SIs = malloc(sizeof(user_precision_t));
+    comps->linpol_curve_qs = malloc(sizeof(user_precision_t));
+    comps->linpol_curve_comp_inds = malloc(sizeof(int));
+    comps->linpol_curve_ref_flux[0] = STOKESI*sqrt(2.0);
+    comps->linpol_curve_SIs[0] = 0.0;
+    comps->linpol_curve_qs[0] = 0.0;
+    comps->linpol_curve_comp_inds[0] = 2;
+  } 
 
   for (int comp = 0; comp < n_comps; comp++) {
     comps->ras[comp] = ra0;
@@ -142,15 +217,6 @@ void populate_components(components_t *comps, int n_comps,
       comps->zas[step] = zas[time];
     }
   }
-
-  comps->n_stokesV_pol_frac = 0;
-  comps->n_stokesV_power = 0;
-  comps->n_stokesV_curve = 0;
-  comps->n_linpol_pol_frac = 0;
-  comps->n_linpol_power = 0;
-  comps->n_linpol_curve = 0;
-  comps->n_linpol_angles = 0;
-  comps->do_QUV = 0;
 
 }
 
@@ -245,18 +311,23 @@ void free_components(components_t comps, int num_comps) {
 
   free(comps.power_ref_freqs);
   free(comps.power_ref_stokesI);
-  free(comps.power_ref_stokesQ);
-  free(comps.power_ref_stokesU);
-  free(comps.power_ref_stokesV);
+  // free(comps.power_ref_stokesQ);
+  // free(comps.power_ref_stokesU);
+  // free(comps.power_ref_stokesV);
   free(comps.power_SIs);
   free(comps.power_comp_inds);
+
+  free(comps.stokesV_pol_fracs);
+  free(comps.stokesV_pol_frac_comp_inds);
+  free(comps.linpol_pol_fracs);
+  free(comps.linpol_pol_frac_comp_inds);
 
   if (num_comps > 1) {
     free(comps.curve_ref_freqs);
     free(comps.curve_ref_stokesI);
-    free(comps.curve_ref_stokesQ);
-    free(comps.curve_ref_stokesU);
-    free(comps.curve_ref_stokesV);
+    // free(comps.curve_ref_stokesQ);
+    // free(comps.curve_ref_stokesU);
+    // free(comps.curve_ref_stokesV);
     free(comps.curve_SIs);
     free(comps.curve_qs);
     free(comps.curve_comp_inds);
@@ -269,6 +340,21 @@ void free_components(components_t comps, int num_comps) {
     free(comps.list_comp_inds);
     free(comps.num_list_values);
     free(comps.list_start_indexes);
+
+    free(comps.stokesV_power_ref_flux);
+    free(comps.stokesV_power_SIs);
+    free(comps.stokesV_power_comp_inds);
+    free(comps.stokesV_curve_ref_flux);
+    free(comps.stokesV_curve_SIs);
+    free(comps.stokesV_curve_qs);
+    free(comps.stokesV_curve_comp_inds);
+    free(comps.linpol_power_ref_flux);
+    free(comps.linpol_power_SIs);
+    free(comps.linpol_power_comp_inds);
+    free(comps.linpol_curve_ref_flux);
+    free(comps.linpol_curve_SIs);
+    free(comps.linpol_curve_qs);
+    free(comps.linpol_curve_comp_inds);
   }
 }
 
@@ -414,8 +500,6 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
                                  double ra0, double dec0,
                                  int beamtype) {
 
-  woden_settings->do_QUV = 0;
-
   double base_band_freq = BASE_BAND_FREQ;
   // user_precision_t base_band_freq = 120e+6;
 
@@ -480,7 +564,7 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
     }
   }
 
-  printf("Calling CUDA\n");
+  printf("Calling GPU\n");
   calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
                          woden_settings, visibility_set, sbf);
 
@@ -496,7 +580,7 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
   //               visibility_set->sum_visi_YY_imag[visi]);
   // }
 
-  printf("CUDA has finished\n");
+  printf("GPU has finished\n");
 
   //Be free my pretties!
   if (cropped_sky_models->num_shapelets > 0) {
@@ -515,27 +599,84 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
 
 }
 
+
+//Due to the way I've set up the sky model, the I,Q,U,V fluxes should all be
+//some multiple of the number of components. Everything is also stuck at phase
+//centre, so visis should be the same for all baselines. Give given the complex
+//beam values, we can predict the visibilities
+void predict_inst_stokes(int num_comps, double _Complex g1x, double _Complex D1x,
+                                        double _Complex D1y, double _Complex g1y,
+                                        double _Complex g2x, double _Complex D2x,
+                                        double _Complex D2y, double _Complex g2y,
+                                        double _Complex * xx, double _Complex * xy,
+                                        double _Complex * yx, double _Complex * yy) {
+  
+  double _Complex stokesI = num_comps*STOKESI + I*0;
+  double _Complex stokesQ = num_comps*STOKESI + I*0;
+  // double _Complex stokesU = num_comps*STOKESI + I*0;
+  double _Complex stokesU = 0 + I*0;
+  double _Complex stokesV = num_comps*STOKESI + I*0;
+
+  double _Complex g2x_conj = conj(g2x);
+  double _Complex D2x_conj = conj(D2x);
+  double _Complex D2y_conj = conj(D2y);
+  double _Complex g2y_conj = conj(g2y);
+
+  * xx = (g1x*g2x_conj + D1x*D2x_conj)*stokesI;
+  * xx += (g1x*g2x_conj - D1x*D2x_conj)*stokesQ;
+  * xx += (g1x*D2x_conj + D1x*g2x_conj)*stokesU;
+  * xx += ((0.0 + I*1.0)*stokesV)*(g1x*D2x_conj - D1x*g2x_conj);
+
+  * xy = (g1x*D2y_conj + D1x*g2y_conj)*stokesI;
+  * xy += (g1x*D2y_conj - D1x*g2y_conj)*stokesQ;
+  * xy += (g1x*g2y_conj + D1x*D2y_conj)*stokesU;
+  * xy += ((0.0 + I*1.0)*stokesV)* (g1x*g2y_conj - D1x*D2y_conj);
+
+  * yx = (D1y*g2x_conj + g1y*D2x_conj)*stokesI;
+  * yx += (D1y*g2x_conj - g1y*D2x_conj)*stokesQ;
+  * yx += (D1y*D2x_conj + g1y*g2x_conj)*stokesU;
+  * yx += ((0.0 + I*1.0)*stokesV)* (D1y*D2x_conj - g1y*g2x_conj);
+
+  * yy = (D1y*D2y_conj + g1y*g2y_conj)*stokesI;
+  * yy += (D1y*D2y_conj - g1y*g2y_conj)*stokesQ;
+  * yy += (D1y*g2y_conj + g1y*D2y_conj)*stokesU;
+  * yy += ((0.0 + I*1.0)*stokesV)* (D1y*g2y_conj - g1y*D2y_conj);
+
+}
+
 /*
 This test works for beams that change with time, but have no cross-pol info
 Can just test whether the XX/YY real values match expected
 */
 void test_comp_phase_centre_twogains(visibility_set_t *visibility_set,
-                                     double gain1xx, double gain1yy,
-                                     double gain2xx, double gain2yy,
+                                     int num_comps,
+                                     double _Complex gain1x, double _Complex gain1y,
+                                     double _Complex gain2x, double _Complex gain2y,
                                      woden_settings_t *woden_settings) {
 
   int num_cross = woden_settings->num_cross;
 
-  double *expec_gainsxx = malloc(num_cross*sizeof(double));
-  double *expec_gainsyy = malloc(num_cross*sizeof(double));
+  double _Complex *expec_xx = malloc(num_cross*sizeof(double _Complex));
+  double _Complex *expec_xy = malloc(num_cross*sizeof(double _Complex));
+  double _Complex *expec_yx = malloc(num_cross*sizeof(double _Complex));
+  double _Complex *expec_yy = malloc(num_cross*sizeof(double _Complex));
 
-  double gainsxx[] = {gain1xx, gain2xx};
-  double gainsyy[] = {gain1yy, gain2yy};
+  double _Complex leak = 0.0 + I*0.0;
+  double _Complex xx, xy, yx, yy;
 
+  double _Complex gainsx[] = {gain1x, gain2x};
+  double _Complex gainsy[] = {gain1y, gain2y};
+  
   for (int time = 0; time < NUM_TIME_STEPS; time++) {
+    predict_inst_stokes(num_comps, gainsx[time], leak, leak, gainsy[time],
+                                   gainsx[time], leak, leak, gainsy[time],
+                        &xx, &xy, &yx, &yy);
+
     for (int visi = 0; visi < num_cross/2; visi++) {
-      expec_gainsxx[time*(num_cross/2) + visi] = gainsxx[time];
-      expec_gainsyy[time*(num_cross/2) + visi] = gainsyy[time];
+      expec_xx[time*(num_cross/2) + visi] = xx;
+      expec_xy[time*(num_cross/2) + visi] = xy;
+      expec_yx[time*(num_cross/2) + visi] = yx;
+      expec_yy[time*(num_cross/2) + visi] = yy;
     }
 
   }
@@ -550,34 +691,44 @@ void test_comp_phase_centre_twogains(visibility_set_t *visibility_set,
   //the real vary slightly for baseline (I've set the major/minor to be small
   //enough to be close to 1.0 but not quite)
   for (int visi = 0; visi < num_cross; visi++) {
-  //   printf("%.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
-  //           visibility_set->sum_visi_XX_real[visi],
-  //           visibility_set->sum_visi_XX_imag[visi],
-  //           visibility_set->sum_visi_XY_real[visi],
-  //           visibility_set->sum_visi_XY_imag[visi],
-  //           visibility_set->sum_visi_YX_real[visi],
-  //           visibility_set->sum_visi_YX_imag[visi],
-  //           visibility_set->sum_visi_YY_imag[visi],
-  //           visibility_set->sum_visi_YY_real[visi] );
+
+    // printf("%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n",
+    //        creal(expec_xx[visi]), cimag(expec_xx[visi]),
+    //        creal(expec_xy[visi]), cimag(expec_xy[visi]),
+    //        creal(expec_yx[visi]), cimag(expec_yx[visi]),
+    //        creal(expec_yy[visi]), cimag(expec_yy[visi]));
+
+
+    // printf("%.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
+    //         visibility_set->sum_visi_XX_real[visi],
+    //         visibility_set->sum_visi_XX_imag[visi],
+    //         visibility_set->sum_visi_XY_real[visi],
+    //         visibility_set->sum_visi_XY_imag[visi],
+    //         visibility_set->sum_visi_YX_real[visi],
+    //         visibility_set->sum_visi_YX_imag[visi],
+    //         visibility_set->sum_visi_YY_imag[visi],
+    //         visibility_set->sum_visi_YY_real[visi] );
 
     // printf("Expec GAIN %.16f %.16f\n", expec_gainsxx[visi],
     //                             visibility_set->sum_visi_XX_real[visi] );
 
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_gainsxx[visi],
+
+
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(expec_xx[visi]),
                               visibility_set->sum_visi_XX_real[visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cimag(expec_xx[visi]),
                               visibility_set->sum_visi_XX_imag[visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(expec_xy[visi]),
                               visibility_set->sum_visi_XY_real[visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cimag(expec_xy[visi]),
                               visibility_set->sum_visi_XY_imag[visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(expec_yx[visi]),
                               visibility_set->sum_visi_YX_real[visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cimag(expec_yx[visi]),
                               visibility_set->sum_visi_YX_imag[visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_gainsyy[visi],
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(expec_yy[visi]),
                               visibility_set->sum_visi_YY_real[visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cimag(expec_yy[visi]),
                               visibility_set->sum_visi_YY_imag[visi]);
 
   }
@@ -596,137 +747,120 @@ void test_comp_phase_centre_twogains(visibility_set_t *visibility_set,
     // printf("Expec GAIN %.16f %.16f\n", expec_gainsxx[visi],
     //                             visibility_set->sum_visi_XX_real[visi] );
 
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_gainsxx[visi],
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(expec_xx[visi]),
                               visibility_set->sum_visi_XX_real[num_cross + visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cimag(expec_xx[visi]),
                               visibility_set->sum_visi_XX_imag[num_cross + visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(expec_xy[visi]),
                               visibility_set->sum_visi_XY_real[num_cross + visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cimag(expec_xy[visi]),
                               visibility_set->sum_visi_XY_imag[num_cross + visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(expec_yx[visi]),
                               visibility_set->sum_visi_YX_real[num_cross + visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cimag(expec_yx[visi]),
                               visibility_set->sum_visi_YX_imag[num_cross + visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_gainsyy[visi],
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(expec_yy[visi]),
                               visibility_set->sum_visi_YY_real[num_cross + visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cimag(expec_yy[visi]),
                               visibility_set->sum_visi_YY_imag[num_cross + visi]);
 
   }
 
-  free(expec_gainsxx);
-  free(expec_gainsyy);
+  free(expec_xx);
+  free(expec_xy);
+  free(expec_yx);
+  free(expec_yy);
+  
 }
 
 
 void test_comp_phase_centre_allgains(visibility_set_t *visibility_set,
-                                     double gain1xx_re, double gain1xx_im,
-                                     double gain1xy_re, double gain1xy_im,
-                                     double gain1yx_re, double gain1yx_im,
-                                     double gain1yy_re, double gain1yy_im,
-                                     double gain2xx_re, double gain2xx_im,
-                                     double gain2xy_re, double gain2xy_im,
-                                     double gain2yx_re, double gain2yx_im,
-                                     double gain2yy_re, double gain2yy_im,
-                                     woden_settings_t *woden_settings,
-                                     double tol) {
+      int num_comps,
+      double _Complex gain1x, double _Complex leak1x,
+      double _Complex leak1y, double _Complex gain1y,
+      double _Complex gain2x, double _Complex leak2x,
+      double _Complex leak2y, double _Complex gain2y,
+      woden_settings_t *woden_settings, double tol) {
 
   int num_cross = woden_settings->num_cross;
 
+  double _Complex xx, xy, yx, yy;
+
   for (int visi = 0; visi < num_cross; visi++) {
     if (visi < num_cross / 2) {
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1xx_re,
-                                        visibility_set->sum_visi_XX_real[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1xx_im,
-                                        visibility_set->sum_visi_XX_imag[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1xy_re,
-                                        visibility_set->sum_visi_XY_real[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1xy_im,
-                                        visibility_set->sum_visi_XY_imag[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1yx_re,
-                                        visibility_set->sum_visi_YX_real[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1yx_im,
-                                        visibility_set->sum_visi_YX_imag[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1yy_re,
-                                        visibility_set->sum_visi_YY_real[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1yy_im,
-                                        visibility_set->sum_visi_YY_imag[visi]);
+      predict_inst_stokes(num_comps, gain1x, leak1x, leak1y, gain1y,
+                                     gain1x, leak1x, leak1y, gain1y,
+                                     &xx, &xy, &yx, &yy);
+    } else {
+      predict_inst_stokes(num_comps, gain2x, leak2x, leak2y, gain2y,
+                                     gain2x, leak2x, leak2y, gain2y,
+                                     &xx, &xy, &yx, &yy);
     }
-    else {
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2xx_re,
-                                        visibility_set->sum_visi_XX_real[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2xx_im,
-                                        visibility_set->sum_visi_XX_imag[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2xy_re,
-                                        visibility_set->sum_visi_XY_real[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2xy_im,
-                                        visibility_set->sum_visi_XY_imag[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2yx_re,
-                                        visibility_set->sum_visi_YX_real[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2yx_im,
-                                        visibility_set->sum_visi_YX_imag[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2yy_re,
-                                        visibility_set->sum_visi_YY_real[visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2yy_im,
-                                        visibility_set->sum_visi_YY_imag[visi]);
-    }
+    // printf("%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n",
+    //        creal(xx), cimag(xx), creal(xy), cimag(xy),
+    //        creal(yx), cimag(yx), creal(yy), cimag(yy));
+
+    TEST_ASSERT_DOUBLE_WITHIN(tol, creal(xx),
+                                      visibility_set->sum_visi_XX_real[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(xx),
+                                      visibility_set->sum_visi_XX_imag[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(tol, creal(xy),
+                                      visibility_set->sum_visi_XY_real[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(xy),
+                                      visibility_set->sum_visi_XY_imag[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(tol, creal(yx),
+                                      visibility_set->sum_visi_YX_real[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(yx),
+                                      visibility_set->sum_visi_YX_imag[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(tol, creal(yy),
+                                      visibility_set->sum_visi_YY_real[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(yy),
+                                      visibility_set->sum_visi_YY_imag[visi]);
   }
 
   for (int visi = 0; visi < woden_settings->num_autos; visi++) {
     if (visi < num_cross / 2) {
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1xx_re,
-                            visibility_set->sum_visi_XX_real[num_cross + visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1xx_im,
-                            visibility_set->sum_visi_XX_imag[num_cross + visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1xy_re,
-                            visibility_set->sum_visi_XY_real[num_cross + visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1xy_im,
-                            visibility_set->sum_visi_XY_imag[num_cross + visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1yx_re,
-                            visibility_set->sum_visi_YX_real[num_cross + visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1yx_im,
-                            visibility_set->sum_visi_YX_imag[num_cross + visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1yy_re,
-                            visibility_set->sum_visi_YY_real[num_cross + visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain1yy_im,
-                            visibility_set->sum_visi_YY_imag[num_cross + visi]);
+      predict_inst_stokes(num_comps, gain1x, leak1x, leak1y, gain1y,
+                                     gain1x, leak1x, leak1y, gain1y,
+                                     &xx, &xy, &yx, &yy);
+    } else {
+      predict_inst_stokes(num_comps, gain2x, leak2x, leak2y, gain2y,
+                                     gain2x, leak2x, leak2y, gain2y,
+                                     &xx, &xy, &yx, &yy);
     }
-    else {
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2xx_re,
-                            visibility_set->sum_visi_XX_real[num_cross + visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2xx_im,
-                            visibility_set->sum_visi_XX_imag[num_cross + visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2xy_re,
-                            visibility_set->sum_visi_XY_real[num_cross + visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2xy_im,
-                            visibility_set->sum_visi_XY_imag[num_cross + visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2yx_re,
-                            visibility_set->sum_visi_YX_real[num_cross + visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2yx_im,
-                            visibility_set->sum_visi_YX_imag[num_cross + visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2yy_re,
-                            visibility_set->sum_visi_YY_real[num_cross + visi]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, gain2yy_im,
-                            visibility_set->sum_visi_YY_imag[num_cross + visi]);
-    }
+    // printf("%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n",
+    //        creal(xx), cimag(xx), creal(xy), cimag(xy),
+    //        creal(yx), cimag(yx), creal(yy), cimag(yy));
+    
+    TEST_ASSERT_DOUBLE_WITHIN(tol, creal(xx),
+                                      visibility_set->sum_visi_XX_real[num_cross + visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(xx),
+                                      visibility_set->sum_visi_XX_imag[num_cross + visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(tol, creal(xy),
+                                      visibility_set->sum_visi_XY_real[num_cross + visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(xy),
+                                      visibility_set->sum_visi_XY_imag[num_cross + visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(tol, creal(yx),
+                                      visibility_set->sum_visi_YX_real[num_cross + visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(yx),
+                                      visibility_set->sum_visi_YX_imag[num_cross + visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(tol, creal(yy),
+                                      visibility_set->sum_visi_YY_real[num_cross + visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(yy),
+                                      visibility_set->sum_visi_YY_imag[num_cross + visi]);
   }
 }
 
 
 void test_comp_phase_centre_allgains_multiants(visibility_set_t *visibility_set,
-                                     double gain1xx_re, double gain1xx_im,
-                                     double gain1xy_re, double gain1xy_im,
-                                     double gain1yx_re, double gain1yx_im,
-                                     double gain1yy_re, double gain1yy_im,
-                                     double gain2xx_re, double gain2xx_im,
-                                     double gain2xy_re, double gain2xy_im,
-                                     double gain2yx_re, double gain2yx_im,
-                                     double gain2yy_re, double gain2yy_im,
-                                     double *antx_mult, double *anty_mult,
-                                     int num_ants,
-                                     woden_settings_t *woden_settings,
-                                     double tol) {
+                                int num_comps, 
+                                double _Complex gain1x, double _Complex leak1x,
+                                double _Complex leak1y, double _Complex gain1y,
+                                double _Complex gain2x, double _Complex leak2x,
+                                double _Complex leak2y, double _Complex gain2y,
+                                double *antx_mult, double *anty_mult, int num_ants,
+                                woden_settings_t *woden_settings,
+                                double tol) {
 
   int num_cross = woden_settings->num_cross;
 
@@ -757,12 +891,13 @@ void test_comp_phase_centre_allgains_multiants(visibility_set_t *visibility_set,
   //on stored values. This means leakages are multiplied by same factor as gains
   //so can say g1x_mult = D1x_mult etc
   float g1x_mult, g1y_mult, g2x_mult, g2y_mult;
-  float xx_gains, xy_gains, yx_gains, yy_gains;
+  // float xx_gains, xy_gains, yx_gains, yy_gains;
+
+  double _Complex xx, xy, yx, yy;
 
   // for (int time = 0; time < woden_settings->num_time_steps; time ++) {
 
   int out_ind = 0;
-  int time = 0;
 
   for (int freq = 0; freq < woden_settings->num_freqs; freq ++) {
     for (int baseline = 0; baseline < num_baselines; baseline ++) {
@@ -772,42 +907,31 @@ void test_comp_phase_centre_allgains_multiants(visibility_set_t *visibility_set,
       g2x_mult = antx_mult[ant2_to_baseline_map[baseline]];
       g2y_mult = anty_mult[ant2_to_baseline_map[baseline]];
 
-      xx_gains = g1x_mult*g2x_mult;
-      xy_gains = g1x_mult*g2y_mult;
-      yx_gains = g1y_mult*g2x_mult;
-      yy_gains = g1y_mult*g2y_mult;
+      for (int time = 0; time < 2; time++)
+      {
+        if (time == 0){
+          predict_inst_stokes(num_comps, g1x_mult*gain1x, g1x_mult*leak1x, g1y_mult*leak1y, g1y_mult*gain1y,
+                                     g2x_mult*gain1x, g2x_mult*leak1x, g2y_mult*leak1y, g2y_mult*gain1y,
+                                     &xx, &xy, &yx, &yy);
+        } else {
+          predict_inst_stokes(num_comps, g1x_mult*gain2x, g1x_mult*leak2x, g1y_mult*leak2y, g1y_mult*gain2y,
+                                     g2x_mult*gain2x, g2x_mult*leak2x, g2y_mult*leak2y, g2y_mult*gain2y,
+                                     &xx, &xy, &yx, &yy);
+        }
 
-      time = 0;
-      out_ind = time*woden_settings->num_freqs*num_baselines + freq*num_baselines + baseline;
+        out_ind = time*woden_settings->num_freqs*num_baselines + freq*num_baselines + baseline;
 
-      TEST_ASSERT_DOUBLE_WITHIN(tol, xx_gains*gain1xx_re, visibility_set->sum_visi_XX_real[out_ind]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, xx_gains*gain1xx_im, visibility_set->sum_visi_XX_imag[out_ind]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, xy_gains*gain1xy_re, visibility_set->sum_visi_XY_real[out_ind]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, xy_gains*gain1xy_im, visibility_set->sum_visi_XY_imag[out_ind]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, yx_gains*gain1yx_re, visibility_set->sum_visi_YX_real[out_ind]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, yx_gains*gain1yx_im, visibility_set->sum_visi_YX_imag[out_ind]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, yy_gains*gain1yy_re, visibility_set->sum_visi_YY_real[out_ind]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, yy_gains*gain1yy_im, visibility_set->sum_visi_YY_imag[out_ind]);
-
-      //Do it for the second time step, which has different beam gains cos sky moved
-      time = 1;
-      out_ind = time*woden_settings->num_freqs*num_baselines + freq*num_baselines + baseline;
-
-      TEST_ASSERT_DOUBLE_WITHIN(tol, xx_gains*gain2xx_re, visibility_set->sum_visi_XX_real[out_ind]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, xx_gains*gain2xx_im, visibility_set->sum_visi_XX_imag[out_ind]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, xy_gains*gain2xy_re, visibility_set->sum_visi_XY_real[out_ind]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, xy_gains*gain2xy_im, visibility_set->sum_visi_XY_imag[out_ind]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, yx_gains*gain2yx_re, visibility_set->sum_visi_YX_real[out_ind]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, yx_gains*gain2yx_im, visibility_set->sum_visi_YX_imag[out_ind]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, yy_gains*gain2yy_re, visibility_set->sum_visi_YY_real[out_ind]);
-      TEST_ASSERT_DOUBLE_WITHIN(tol, yy_gains*gain2yy_im, visibility_set->sum_visi_YY_imag[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, creal(xx), visibility_set->sum_visi_XX_real[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(xx), visibility_set->sum_visi_XX_imag[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, creal(xy), visibility_set->sum_visi_XY_real[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(xy), visibility_set->sum_visi_XY_imag[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, creal(yx), visibility_set->sum_visi_YX_real[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(yx), visibility_set->sum_visi_YX_imag[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, creal(yy), visibility_set->sum_visi_YY_real[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(yy), visibility_set->sum_visi_YY_imag[out_ind]);
+      }
     }
   }
-
-  //TODO - should be able to use similar logic to test above, just taking the
-  //square of the dipole amplitudes rather than different combo
-  //TODO I think I've written this test to work, but need to test just kern_calc_auto
-  //on it's own first
 
   if (woden_settings->do_autos == 1){
 
@@ -818,38 +942,29 @@ void test_comp_phase_centre_allgains_multiants(visibility_set_t *visibility_set,
         g1x_mult = antx_mult[ant];
         g1y_mult = anty_mult[ant];
 
-        xx_gains = g1x_mult*g1x_mult;
-        xy_gains = g1x_mult*g1y_mult;
-        yx_gains = g1y_mult*g1x_mult;
-        yy_gains = g1y_mult*g1y_mult;
+        for (int time = 0; time < 2; time++) {
+          if (time == 0){
+            predict_inst_stokes(num_comps, g1x_mult*gain1x, g1x_mult*leak1x, g1y_mult*leak1y, g1y_mult*gain1y,
+                                           g1x_mult*gain1x, g1x_mult*leak1x, g1y_mult*leak1y, g1y_mult*gain1y,
+                                      &xx, &xy, &yx, &yy);
+          } else {
+            predict_inst_stokes(num_comps, g1x_mult*gain2x, g1x_mult*leak2x, g1y_mult*leak2y, g1y_mult*gain2y,
+                                           g1x_mult*gain2x, g1x_mult*leak2x, g1y_mult*leak2y, g1y_mult*gain2y,
+                                      &xx, &xy, &yx, &yy);
+          }
 
-        time = 0;
-        out_ind = num_cross + time*woden_settings->num_freqs*num_ants + freq*num_ants + ant;
+  
+          out_ind = num_cross + time*woden_settings->num_freqs*num_ants + freq*num_ants + ant;
 
-        // printf("XX %d %.8f %.8f\n", out_ind, xx_gains*gain1xx_re, visibility_set->sum_visi_XX_real[out_ind]);
-        // printf("YY %d %.8f %.8f\n", out_ind, yy_gains*gain1yy_re, visibility_set->sum_visi_YY_real[out_ind]);
-
-        TEST_ASSERT_DOUBLE_WITHIN(tol, xx_gains*gain1xx_re, visibility_set->sum_visi_XX_real[out_ind]);
-        TEST_ASSERT_DOUBLE_WITHIN(tol, xx_gains*gain1xx_im, visibility_set->sum_visi_XX_imag[out_ind]);
-        TEST_ASSERT_DOUBLE_WITHIN(tol, xy_gains*gain1xy_re, visibility_set->sum_visi_XY_real[out_ind]);
-        TEST_ASSERT_DOUBLE_WITHIN(tol, xy_gains*gain1xy_im, visibility_set->sum_visi_XY_imag[out_ind]);
-        TEST_ASSERT_DOUBLE_WITHIN(tol, yx_gains*gain1yx_re, visibility_set->sum_visi_YX_real[out_ind]);
-        TEST_ASSERT_DOUBLE_WITHIN(tol, yx_gains*gain1yx_im, visibility_set->sum_visi_YX_imag[out_ind]);
-        TEST_ASSERT_DOUBLE_WITHIN(tol, yy_gains*gain1yy_re, visibility_set->sum_visi_YY_real[out_ind]);
-        TEST_ASSERT_DOUBLE_WITHIN(tol, yy_gains*gain1yy_im, visibility_set->sum_visi_YY_imag[out_ind]);
-
-        // //Do it for the second time step, which has different beam gains cos sky moved
-        time = 1;
-        out_ind = num_cross + time*woden_settings->num_freqs*num_ants + freq*num_ants + ant;
-
-        TEST_ASSERT_DOUBLE_WITHIN(tol, xx_gains*gain2xx_re, visibility_set->sum_visi_XX_real[out_ind]);
-        TEST_ASSERT_DOUBLE_WITHIN(tol, xx_gains*gain2xx_im, visibility_set->sum_visi_XX_imag[out_ind]);
-        TEST_ASSERT_DOUBLE_WITHIN(tol, xy_gains*gain2xy_re, visibility_set->sum_visi_XY_real[out_ind]);
-        TEST_ASSERT_DOUBLE_WITHIN(tol, xy_gains*gain2xy_im, visibility_set->sum_visi_XY_imag[out_ind]);
-        TEST_ASSERT_DOUBLE_WITHIN(tol, yx_gains*gain2yx_re, visibility_set->sum_visi_YX_real[out_ind]);
-        TEST_ASSERT_DOUBLE_WITHIN(tol, yx_gains*gain2yx_im, visibility_set->sum_visi_YX_imag[out_ind]);
-        TEST_ASSERT_DOUBLE_WITHIN(tol, yy_gains*gain2yy_re, visibility_set->sum_visi_YY_real[out_ind]);
-        TEST_ASSERT_DOUBLE_WITHIN(tol, yy_gains*gain2yy_im, visibility_set->sum_visi_YY_imag[out_ind]);
+          TEST_ASSERT_DOUBLE_WITHIN(tol, creal(xx), visibility_set->sum_visi_XX_real[out_ind]);
+          TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(xx), visibility_set->sum_visi_XX_imag[out_ind]);
+          TEST_ASSERT_DOUBLE_WITHIN(tol, creal(xy), visibility_set->sum_visi_XY_real[out_ind]);
+          TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(xy), visibility_set->sum_visi_XY_imag[out_ind]);
+          TEST_ASSERT_DOUBLE_WITHIN(tol, creal(yx), visibility_set->sum_visi_YX_real[out_ind]);
+          TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(yx), visibility_set->sum_visi_YX_imag[out_ind]);
+          TEST_ASSERT_DOUBLE_WITHIN(tol, creal(yy), visibility_set->sum_visi_YY_real[out_ind]);
+          TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(yy), visibility_set->sum_visi_YY_imag[out_ind]);
+        }
       }
     }
   }

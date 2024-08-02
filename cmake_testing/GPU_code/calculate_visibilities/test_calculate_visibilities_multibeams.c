@@ -87,28 +87,19 @@ void test_calculate_visibilities_MWAFEEBeamInterp(int n_points, int n_gauss, int
   //           visibility_set->sum_visi_YY_imag[visi]);
   // }
 
-  double multiplier = (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
+  int num_comps = (n_points + n_gauss + n_shapes)*num_sources;
 
-  //These values are taken from the double precision version of the MWA FEE
-  //beam code mwa_hyperbeam v0.6.0
+  double _Complex gain1x, leak1x, leak1y, gain1y;
+  double _Complex gain2x, leak2x, leak2y, gain2y;
 
-  double gain1xx_re = 1.000000061194 * multiplier;
-  double gain1xx_im = 0.0 * multiplier;
-  double gain1xy_re = -0.000479483373 * multiplier;
-  double gain1xy_im = -0.000005186970 * multiplier;
-  double gain1yx_re = -0.000479483373 * multiplier;
-  double gain1yx_im = 0.000005186970 * multiplier;
-  double gain1yy_re = 1.000000062639 * multiplier;
-  double gain1yy_im = 0.0 * multiplier;
-
-  double gain2xx_re = 0.040788894851 * multiplier;
-  double gain2xx_im = 0.0 * multiplier;
-  double gain2xy_re = -0.002259324774 * multiplier;
-  double gain2xy_im = 0.000231387877 * multiplier;
-  double gain2yx_re = -0.002259324774 * multiplier;
-  double gain2yx_im = -0.000231387877 * multiplier;
-  double gain2yy_re = 0.020703061370 * multiplier;
-  double gain2yy_im = 0.0 * multiplier;
+  gain1x = 0.947431083057 + I*0.319959908285;
+  leak1x = -0.000246714867 + I*-0.000016523331;
+  leak1y = -0.000249894393 + I*-0.000011798344;
+  gain1y = 0.947019358550 + I*0.321176485103;
+  gain2x = -0.198505432118 + I*-0.037188871831;
+  leak2x = -0.001189280798 + I*-0.000248382900;
+  leak2y = 0.011616550617 + I*0.003414333525;
+  gain2y = -0.137450706771 + I*-0.040789246826;
 
   #ifdef DOUBLE_PRECISION
     double TOL = 8e-7;
@@ -119,15 +110,9 @@ void test_calculate_visibilities_MWAFEEBeamInterp(int n_points, int n_gauss, int
   double antx_mult[3] = {0.2, 0.6, 1.0};
   double anty_mult[3] = {0.0, 0.4, 0.8};
 
-  test_comp_phase_centre_allgains_multiants(visibility_set,
-                                  gain1xx_re, gain1xx_im,
-                                  gain1xy_re, gain1xy_im,
-                                  gain1yx_re, gain1yx_im,
-                                  gain1yy_re, gain1yy_im,
-                                  gain2xx_re, gain2xx_im,
-                                  gain2xy_re, gain2xy_im,
-                                  gain2yx_re, gain2yx_im,
-                                  gain2yy_re, gain2yy_im,
+  test_comp_phase_centre_allgains_multiants(visibility_set,num_comps,
+                                  gain1x, leak1x, leak1y, gain1y,
+                                  gain2x, leak2x, leak2y, gain2y,
                                   antx_mult, anty_mult, NUM_ANTS,
                                   woden_settings, TOL);
 
@@ -147,15 +132,9 @@ void test_calculate_visibilities_MWAFEEBeamInterp(int n_points, int n_gauss, int
                                           beam_settings, woden_settings, RA0, -0.46606083776035967,
                                           beam_settings->beamtype);
 
-  test_comp_phase_centre_allgains_multiants(visibility_set,
-                                  gain1xx_re, gain1xx_im,
-                                  gain1xy_re, gain1xy_im,
-                                  gain1yx_re, gain1yx_im,
-                                  gain1yy_re, gain1yy_im,
-                                  gain2xx_re, gain2xx_im,
-                                  gain2xy_re, gain2xy_im,
-                                  gain2yx_re, gain2yx_im,
-                                  gain2yy_re, gain2yy_im,
+  test_comp_phase_centre_allgains_multiants(visibility_set,num_comps,
+                                  gain1x, leak1x, leak1y, gain1y,
+                                  gain2x, leak2x, leak2y, gain2y,
                                   antx_mult, anty_mult, NUM_ANTS,
                                   woden_settings, TOL);
 

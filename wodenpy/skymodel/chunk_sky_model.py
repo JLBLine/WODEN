@@ -180,6 +180,9 @@ class Skymodel_Chunk_Map(object):
         ##added, gets updated by `use_libwoden.add_info_to_source_catalogue`
         ##when reading in the full model from the catalogue file
         self.current_shape_basis_index = 0
+        
+        ##Does the catalogue have the INTR_POL_ANGLE column?
+        self.has_intr_pol_angle = False
             
     def print_info(self):
         """
@@ -416,6 +419,8 @@ def fill_chunk_map_polarised_info(comp_type : CompTypes,
     
     components.num_lin_angles = components.num_lin_pol_fracs + components.num_lin_powers + components.num_lin_curves
     
+    
+    
     return chunk_map
 
 
@@ -592,6 +597,8 @@ def map_chunk_pointgauss(cropped_comp_counter : Component_Type_Counter,
                                              power_iter, num_chunk_power,
                                              curve_iter, num_chunk_curve,
                                              list_iter, num_chunk_list)
+            
+        chunk_map.has_intr_pol_angle = cropped_comp_counter.has_intr_pol_angle
     
         return chunk_map
 
@@ -771,6 +778,8 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
     
     ##chuck in any polarisation information if needed
     fill_chunk_map_polarised_info(CompTypes.SHAPELET, chunk_map, cropped_comp_counter)
+    
+    chunk_map.has_intr_pol_angle = cropped_comp_counter.has_intr_pol_angle
     
     return chunk_map
 

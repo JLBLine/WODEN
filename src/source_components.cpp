@@ -276,10 +276,15 @@ __device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent, int n
                &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
     }
 
+    // printf("Beam gains: %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f\n", g1x.x, g1x.y, D1x.x, D1x.y, D1y.x, D1y.y, g1y.x, g1y.y);
+    // printf("Beam gains: %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f\n", g2x.x, g2x.y, D2x.x, D2x.y, D2y.x, D2y.y, g2y.x, g2y.y);
+
     gpuUserComplex visi_XX;
     gpuUserComplex visi_XY;
     gpuUserComplex visi_YX;
     gpuUserComplex visi_YY;
+
+    // printf("iComponent IQUV: %d %f %f %f %f\n", iComponent, flux_I, flux_Q, flux_U, flux_V);
 
     apply_beam_gains_stokesIQUV(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
                     flux_I, flux_Q, flux_U, flux_V,

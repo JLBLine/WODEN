@@ -39,14 +39,15 @@ void test_calculate_visibilities_EDA2Beam(int n_points, int n_gauss, int n_shape
                                           beam_settings, woden_settings, RA0, -0.46606083776035967,
                                           beam_settings->beamtype);
 
-  double gain1xx = (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
-  double gain1yy = (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
+  int num_comps = (n_points + n_gauss + n_shapes)*num_sources;
 
-  double gain2xx = 0.6277594613698111 * (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
-  double gain2yy = 0.3825515398230647 * (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
-  //
-  test_comp_phase_centre_twogains(visibility_set, gain1xx, gain1yy,
-                                  gain2xx, gain2yy, woden_settings);
+  double _Complex gain1x = 1.0 + I*0.0;
+  double _Complex gain1y = 1.0 + I*0.0;
+  double _Complex gain2x = 0.792312729527 + I*0.0;
+  double _Complex gain2y = 0.618507509916 + I*0.0;
+
+  test_comp_phase_centre_twogains(visibility_set, num_comps, gain1x, gain1y,
+                                  gain2x, gain2y, woden_settings);
 
   free_visi_set_inputs(visibility_set);
   free_visi_set_outputs(visibility_set);
@@ -63,8 +64,8 @@ void test_calculate_visibilities_EDA2Beam(int n_points, int n_gauss, int n_shape
   visibility_set = test_calculate_visibilities(cropped_sky_models,
                                           beam_settings, woden_settings, RA0, -0.46606083776035967,
                                           beam_settings->beamtype);
-  test_comp_phase_centre_twogains(visibility_set, gain1xx, gain1yy,
-                                  gain2xx, gain2yy, woden_settings);
+  test_comp_phase_centre_twogains(visibility_set, num_comps, gain1x, gain1y,
+                                  gain2x, gain2y, woden_settings);
 
   free_visi_set_inputs(visibility_set);
   free_visi_set_outputs(visibility_set);

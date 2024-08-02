@@ -188,6 +188,10 @@ def read_fits_radec_count_components(fits_path : str):
         comp_counter.lin_comp_types[lin_shape_power] = CompTypes.LIN_SHAPE_POWER.value
         comp_counter.lin_comp_types[lin_shape_curve] = CompTypes.LIN_SHAPE_CURVE.value
         comp_counter.lin_comp_types[lin_shape_pol_frac] = CompTypes.LIN_SHAPE_POL_FRAC.value
+        
+        ##check to see if they've included a INTR_POL_ANGLE angle
+        if 'INTR_POL_ANGLE' in main_table.columns:
+            comp_counter.has_intr_pol_angle = True
     
     comp_counter.total_components()
     
@@ -481,6 +485,8 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
         source_components.do_QUV = 1
     else:
         source_components.do_QUV = 0
+        
+    # print("WE BE HERE", comp_type, n_stokesV_pol_frac, n_stokesV_power, n_stokesV_curve, n_linpol_pol_frac, n_linpol_power, n_linpol_curve, source_components.do_QUV)
     
     v_pol_frac_inds = map_components.v_pol_frac_orig_inds
     v_power_inds = map_components.v_power_orig_inds
@@ -526,7 +532,11 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
             source_components.linpol_pol_fracs[this_ind] = main_table['LIN_POL_FRAC'][orig_ind]
             source_components.linpol_angle_inds[linpol_ind] = chunk_ind
             source_components.rm_values[linpol_ind] = main_table['RM'][orig_ind]
-            source_components.intr_pol_angle[linpol_ind] = main_table['INTR_POL_ANGLE'][orig_ind]
+            if chunk_map.has_intr_pol_angle:
+                source_components.intr_pol_angle[linpol_ind] = main_table['INTR_POL_ANGLE'][orig_ind]
+                ##TODO might need to catch empty entries (NaNs) are convert to 0?
+            else:
+                source_components.intr_pol_angle[linpol_ind] = 0.0
             linpol_ind += 1
         
     if n_linpol_power:
@@ -537,7 +547,10 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
             source_components.linpol_power_SIs[this_ind] = main_table['LIN_ALPHA_PL'][orig_ind]
             source_components.linpol_angle_inds[linpol_ind] = chunk_ind
             source_components.rm_values[linpol_ind] = main_table['RM'][orig_ind]
-            source_components.intr_pol_angle[linpol_ind] = main_table['INTR_POL_ANGLE'][orig_ind]
+            if chunk_map.has_intr_pol_angle:
+                source_components.intr_pol_angle[linpol_ind] = main_table['INTR_POL_ANGLE'][orig_ind]
+            else:
+                source_components.intr_pol_angle[linpol_ind] = 0.0
             linpol_ind += 1
             
     if n_linpol_curve:
@@ -549,7 +562,10 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
             source_components.linpol_curve_qs[this_ind] = main_table['LIN_CURVE_CPL'][orig_ind]
             source_components.linpol_angle_inds[linpol_ind] = chunk_ind
             source_components.rm_values[linpol_ind] = main_table['RM'][orig_ind]
-            source_components.intr_pol_angle[linpol_ind] = main_table['INTR_POL_ANGLE'][orig_ind]
+            if chunk_map.has_intr_pol_angle:
+                source_components.intr_pol_angle[linpol_ind] = main_table['INTR_POL_ANGLE'][orig_ind]
+            else:
+                source_components.intr_pol_angle[linpol_ind] = 0.0
             linpol_ind += 1
         
     return

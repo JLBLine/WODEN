@@ -49,11 +49,13 @@ void test_calculate_visibilities_GaussBeam(int n_points, int n_gauss, int n_shap
   // user_precision_t gain = (n_points + n_gauss + n_shapes)*num_sources;
   // test_comp_phase_centre(visibility_set, gain);
 
-  double gain1 = 0.9702956182744840 * (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
-  double gain2 = 0.3359480937784178 * (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
+  int num_comps = (n_points + n_gauss + n_shapes)*num_sources;
 
-  test_comp_phase_centre_twogains(visibility_set, gain1, gain1, gain2, gain2,
-                                                                woden_settings);
+  double _Complex gain1 = 0.985035846188 + I*0.0;
+  double _Complex gain2 = 0.579610294748 + I*0.0;
+
+  test_comp_phase_centre_twogains(visibility_set, num_comps, gain1, gain1,
+                                  gain2, gain2, woden_settings);
 
   free_visi_set_inputs(visibility_set);
   free_visi_set_outputs(visibility_set);
@@ -70,8 +72,8 @@ void test_calculate_visibilities_GaussBeam(int n_points, int n_gauss, int n_shap
   visibility_set = test_calculate_visibilities(cropped_sky_models,
                                           beam_settings, woden_settings, RA0, -0.46606083776035967,
                                           beam_settings->beamtype);
-  test_comp_phase_centre_twogains(visibility_set, gain1, gain1, gain2, gain2,
-                                                                woden_settings);
+  test_comp_phase_centre_twogains(visibility_set, num_comps, gain1, gain1,
+                                  gain2, gain2, woden_settings);
 
   free_visi_set_inputs(visibility_set);
   free_visi_set_outputs(visibility_set);

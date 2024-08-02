@@ -212,6 +212,8 @@ class Component_Type_Counter():
         self.num_lin_shape_curves = 0
         self.num_lin_shape_pol_fracs = 0
         
+        self.has_intr_pol_angle = False
+        
         self.num_v_point = 0
         self.num_v_gauss = 0
         self.num_v_shape = 0
