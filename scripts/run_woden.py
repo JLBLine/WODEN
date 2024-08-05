@@ -317,6 +317,7 @@ def main(argv=None):
                           longitude=args.longitude, latitude=args.latitude,
                           array_height=args.array_height,
                           telescope_name=args.telescope_name,
+                          IAU_order=args.IAU_order,
                           comment=args.command)
 
 if __name__ == "__main__":
