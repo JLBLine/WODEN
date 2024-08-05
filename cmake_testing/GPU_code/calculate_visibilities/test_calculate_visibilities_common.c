@@ -93,7 +93,7 @@ void populate_components(components_t *comps, int n_comps,
   comps->stokesV_pol_fracs[0] = POL_FRAC;
   comps->stokesV_pol_frac_comp_inds[0] = 0;
   comps->n_linpol_pol_frac = 1;
-  comps->linpol_pol_fracs[0] = POL_FRAC*sqrt(2.0);
+  comps->linpol_pol_fracs[0] = POL_FRAC;
   comps->linpol_pol_frac_comp_inds[0] = 0;
 
   comps->n_linpol_angles = n_comps;
@@ -180,7 +180,7 @@ void populate_components(components_t *comps, int n_comps,
     comps->linpol_power_ref_flux = malloc(sizeof(user_precision_t));
     comps->linpol_power_SIs = malloc(sizeof(user_precision_t));
     comps->linpol_power_comp_inds = malloc(sizeof(int));
-    comps->linpol_power_ref_flux[0] = STOKESI*sqrt(2.0);
+    comps->linpol_power_ref_flux[0] = STOKESI;
     comps->linpol_power_SIs[0] = 0.0;
     comps->linpol_power_comp_inds[0] = 1;
 
@@ -189,7 +189,7 @@ void populate_components(components_t *comps, int n_comps,
     comps->linpol_curve_SIs = malloc(sizeof(user_precision_t));
     comps->linpol_curve_qs = malloc(sizeof(user_precision_t));
     comps->linpol_curve_comp_inds = malloc(sizeof(int));
-    comps->linpol_curve_ref_flux[0] = STOKESI*sqrt(2.0);
+    comps->linpol_curve_ref_flux[0] = STOKESI;
     comps->linpol_curve_SIs[0] = 0.0;
     comps->linpol_curve_qs[0] = 0.0;
     comps->linpol_curve_comp_inds[0] = 2;

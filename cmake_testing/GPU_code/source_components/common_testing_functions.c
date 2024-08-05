@@ -354,8 +354,8 @@ void CPU_extrapolate_fluxes_in_components(components_t *comps, int num_powers,
         wavelength = VELC / extrap_freqs[extrap];
         angle = 2*(intr_pol_angle + rm*wavelength*wavelength);
 
-        expec_flux_Q[lind] = (linpol_flux/sqrt(2.0))*cos(angle);
-        expec_flux_U[lind] = (linpol_flux/sqrt(2.0))*sin(angle);
+        expec_flux_Q[lind] = (linpol_flux)*cos(angle);
+        expec_flux_U[lind] = (linpol_flux)*sin(angle);
 
       }
     }

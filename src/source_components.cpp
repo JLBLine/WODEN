@@ -915,8 +915,8 @@ __global__ void kern_apply_rotation_measure(int num_extrap_freqs, double *d_extr
     double wavelength = VELC / d_extrap_freqs[iFreq];
     double angle = 2*(intr_pol_angle + rm*wavelength*wavelength);
 
-    d_components.extrap_stokesQ[extrap_ind] = (linpol_flux/sqrt(2.0))*cos(angle);
-    d_components.extrap_stokesU[extrap_ind] = (linpol_flux/sqrt(2.0))*sin(angle);
+    d_components.extrap_stokesQ[extrap_ind] = linpol_flux*cos(angle);
+    d_components.extrap_stokesU[extrap_ind] = linpol_flux*sin(angle);
 
   }
 }
