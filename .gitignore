@@ -93,3 +93,8 @@ wodenpy.egg-info
 
 ## ingnore things named with pyenv on front
 pyenv*
+
+##outputs in examples
+examples/polarisation/*.fits
+examples/polarisation/*.uvfits
+examples/polarisation/*.ms

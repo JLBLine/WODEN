@@ -191,15 +191,15 @@ def plot_individual_precision(fig, axs, label, filename):
 
     data = np.load(filename)
 
-    if label == 'float (mix)':
+    if label == 'float':
         marker = 'C1s'
         ms = 7
     elif label == 'double':
         marker = 'C0x'
         ms = 4
-    else:
-        marker = 'C2^'
-        ms = 7
+    # else:
+    #     marker = 'C2^'
+    #     ms = 7
 
     # print(len(data['u_lengths']))
 
@@ -208,11 +208,11 @@ def plot_individual_precision(fig, axs, label, filename):
     axs[1].plot(data['u_lengths'], data['abs_diff_im'], marker, mfc='none', ms=ms,
                 label=label)
 
-def plot_accuracy(float_filename, double_filename, float_full_filename):
+def plot_accuracy(float_filename, double_filename):
     fig, axs = plt.subplots(1,2, figsize=(8,4.0))
 
-    plot_individual_precision(fig, axs, "float (full)", float_full_filename)
-    plot_individual_precision(fig, axs, "float (mix)", float_filename)
+    # plot_individual_precision(fig, axs, "float (full)", float_full_filename)
+    plot_individual_precision(fig, axs, "float", float_filename)
     plot_individual_precision(fig, axs, "double", double_filename)
 
     for ax in axs:
@@ -264,5 +264,4 @@ if __name__ == '__main__':
         ##old fully float results, using an old version of master
         # run_simulation('fully_float')
 
-    plot_accuracy("accuracy_test_outputs_float.npz", "accuracy_test_outputs_double.npz",
-                  "accuracy_test_outputs_fully_float.npz")
+    plot_accuracy("accuracy_test_outputs_float.npz", "accuracy_test_outputs_double.npz")

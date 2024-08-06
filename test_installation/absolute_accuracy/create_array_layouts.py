@@ -3,6 +3,7 @@ import palpy as pal
 from astropy.time import Time, TimeDelta
 from astropy.coordinates import EarthLocation
 from astropy import units as u
+from run_accuracy_test import estimate_zero_lat_long
 
 DD2R = np.pi/180.0
 
@@ -107,11 +108,13 @@ if __name__ == '__main__':
 
     ##observation date
     date = "2020-01-01T12:00:00.0"
+    
+    latitude, longitude = estimate_zero_lat_long()
 
     #Lat/long of the array at the observation date
-    latitude = 0.10950738359636049*(np.pi/180.0)
-    longitude = 79.638150061479*(np.pi/180.0)
-
+    latitude *= (np.pi/180.0)
+    longitude *= (np.pi/180.0)
+    
     ##Setup location
     observing_location = EarthLocation(lat=latitude*u.rad, lon=longitude*u.rad, height=0.0)
     ##Setup time at that locatoin

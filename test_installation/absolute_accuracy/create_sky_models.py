@@ -28,7 +28,7 @@ SI = -0.8
 target_freq = 299792458.0
 target_flux = 1.0
 
-ref_freq = 150e+6
+ref_freq = 200e+6
 ref_flux = target_flux * (ref_freq / target_freq)**SI
 
 print(ref_flux)
@@ -54,6 +54,6 @@ for ind, phi_simple in enumerate(phi_simples):
     with open(f"sky_models/srclist_ang{ind:02d}.txt", 'w') as outfile:
         outfile.write("SOURCE testing P 1 G 0 S 0 0\n")
         outfile.write(f"COMPONENT POINT {ra:.16f} {dec:.16f}\n")
-        outfile.write(f"LINEAR 150e+6 {ref_flux:.16f} 0 0 0 -0.8\n")
+        outfile.write(f"LINEAR 200e+6 {ref_flux:.16f} 0 0 0 -0.8\n")
         outfile.write(f"ENDCOMPONENT\n")
         outfile.write(f"ENDSOURCE")
