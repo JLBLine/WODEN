@@ -9,3 +9,4 @@ sphinx-math-dollar
 matplotlib
 pyuvdata
 python-casacore
+myst-nb

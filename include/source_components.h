@@ -490,7 +490,7 @@ extrapolate flux density parameters to the requested frequencies
 reference flux density `d_ref_fluxes[iFluxComp]`, and `spectral index d_SIs[iFluxComp]` to calculate the flux density `extrap_flux` at the requested frequency d_extrap_freqs[iFreq].
 
 @param[in] d_ref_fluxes Reference fluxes for all components
-@param[in] d_ref_SIs Spectral indexes for all components
+@param[in] d_SIs Spectral indexes for all components
 @param[in] d_extrap_freqs Pointer to array of frequencies to extrapolate to
 @param[in] iFluxComp Index of which component to extrapolate
 @param[in] iFreq Index of which frequency to extrapolate to
@@ -550,7 +550,7 @@ reference flux density `d_ref_fluxes[iFluxComp]`, `spectral index d_SIs[iFluxCom
 curvature `q` param `spectral index d_qs[iFluxComp]` to calculate the flux density `extrap_flux` at the requested frequency d_extrap_freqs[iFreq].
 
 @param[in] d_ref_fluxes Reference fluxes for all components
-@param[in] d_ref_SIs Spectral indexes for all components
+@param[in] d_SIs Spectral indexes for all components
 @param[in] d_qs Curvature `q` param for all components
 @param[in] d_extrap_freqs Pointer to array of frequencies to extrapolate to
 @param[in] iFluxComp Index of which component to extrapolate
@@ -1004,7 +1004,6 @@ source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
 If do_QUV == 0, only free the StokesI array.
 
 @param[in,out] *d_components A populated `components_t` struct
-@param[in] do_QUV If True, free full Stokes IQUV, otherwise only Stokes I
 */
 void free_extrapolated_flux_arrays(components_t *d_components);
 

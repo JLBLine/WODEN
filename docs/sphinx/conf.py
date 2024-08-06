@@ -77,8 +77,11 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.coverage',
     'sphinx.ext.autosectionlabel',
-    'breathe'
+    'breathe',
+    "myst_nb",
 ]
+
+nb_execution_mode = "off"
 
 todo_include_todos = True
 
