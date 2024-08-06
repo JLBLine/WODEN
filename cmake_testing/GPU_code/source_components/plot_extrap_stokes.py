@@ -47,7 +47,7 @@ if __name__ == '__main__':
             axs[1,1].loglog(extrap_freqs/1e+6, extrap_V, 'C1o', mfc='none', label='GPU Stokes V')
         
         axs[0,1].set_xscale('log')
-        axs[1,1].set_xscale('log')
+        axs[1,0].set_xscale('log')
 
 
         for ax in axs.flatten():
