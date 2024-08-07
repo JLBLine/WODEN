@@ -83,18 +83,25 @@ make sure ``calculate_visibilities`` is calling the appropriate functions:
      - 3
      - 3
      - 27
-
+  
 All sources are given an *RA,Dec* equal to the phase centre, and a Stokes I
 flux density of 0.3333333333333333 Jy. Each type of flux component (either
 POWER_LAW, CURVED_POWER_LAW, or LIST) are set up so they have a perfectly flat
-spectrum. This way, the output visibilities (in the absence of a primary beam)
-should be fully real, and equal to the sum of the number of
-COMPONENTs in the sky model multiplied by 0.3333333333333333. This numerical 1/3
-flux is a good test of the precision of the FLOAT and DOUBLE compiled codes.
+spectrum. 
+
+In addition to the Stokes I parameters above, each component is given a linear
+and circular polarisation component. Again, the polarised components are given
+flat spectras and a reference flux density of 0.3333333333333333 Jy. The linear
+polarisation is given an RM of zero, meaning Stokes Q is equal to the linear
+polarisation flux, and Stokes U is zero. All versions of the polarisation
+models are tested (power-law, curved power-law, and polarisation fraction).
+
+This way, the expected sum of Stokes IQUV are simply multiples of the number of
+components in the model, modulu the beam response (see below).
 
 .. note::
 
-	Given all sources are at phase centre, this means the cross-correlations and the auto-correlations should have exactly the same values. So in all tests described below, ``calculate_visibilities`` is run with both ``woden_settings->do_autos`` set to 0 and to 1. If the autos are calculated, the number of output visibilities should double (as I only simulate three baselines from three antennas here). The latter half are where the autos are set, and are tested to be equal to the expected values for the crosses.
+	Given all sources are at phase centre, and the beam model is the same for all antennas, the cross-correlations and the auto-correlations should have exactly the same values. So in all tests described below, ``calculate_visibilities`` is run with both ``woden_settings->do_autos`` set to 0 and to 1. If the autos are calculated, the number of output visibilities should double (as I only simulate three baselines from three antennas here). The latter half are where the autos are set, and are tested to be equal to the expected values for the crosses.
 
 When the tests have a single COMPONENT per SOURCE, I use a POWER_LAW type flux
 behaviour. When there are three COMPONENTs, I use one of each of POWER_LAW,
@@ -108,7 +115,7 @@ For all tests below, I setup a simulation with three baselines, three frequencie
 and two timesteps. For all sky models, frequencies, time steps, and baselines, I check:
 
  - The *u,v,w* are as expected
- - The real part of the visibilities are equal to number of COMPONENTs times 0.3333333333333333 Jy (modulu the beam repsonse - see below)
+ - The XX,XY,YX,YY visibilities are as expected. The expected visibilities are calculated by predicting the Stokes IQUV values as explained above, and then applying stored beam gain values to predict the visibilities. These beam gain values are taken from the DOUBLE compiled versions of the repsective beam models
 
 To keep testing the *u,v,w* straight forward, I've set the baseline lengths in :math:`X` and :math:`Y` equal, (i.e. :math:`X_{\mathrm{diff}} = X_{\mathrm{ant1}} - X_{\mathrm{ant2}} = Y_{\mathrm{diff}}`), and the length in :math:`Z` to zero. With this configuration, the
 following is true:
@@ -125,74 +132,30 @@ values is set to 1e-5, and 1e-12 for DOUBLE compiled code.
 
 ``test_calculate_visibilities_nobeam.c``
 *********************************************
-This runs the tests explained above, whilst switching the primary beam off. This
-really does check that real visibilities are equal to the number of COMPONENTs
-times 0.3333333333333333 for all 12 sky model configurations, and the imaginary
-equal to zero.
-
-For FLOAT compiled code, the absolute tolerance threshold on
-values is set to 1e-6, and 1e-9 for DOUBLE compiled code.
+Runs tests above, but with no primary beam model applied. Predicted gains are 
+ones with zero leakage.
 
 ``test_calculate_visibilities_gaussbeam.c``
 *********************************************
-This runs the same tests as ``test_calculate_visibilities_nobeam.c``, but applies
-a Gaussian primary beam model. As all sky model COMPONENTs are set at the same location,
-only one beam gain per time step should be applied to visibilities, so for each time
-step, we can check whether the visibilities equal this gain times the number of
-COMPONENTs. The Gaussian beam is fully real and has no cross-pol values, so only
-check that the real XX and YY visibilities have value, and ensure all other
-visibility information is zero.
-
-For FLOAT compiled code, the absolute tolerance threshold on
-values is set to 1e-5, and 1e-8 for DOUBLE compiled code.
+Runs tests using the Gaussian primary beam model. No leakage in this model.
 
 ``test_calculate_visibilities_edabeam.c``
 *********************************************
-Runs exactly the same tests as ``test_calculate_visibilities_gaussbeam.c``, but
-using the analytic single dipole beam (the EDA2 beam). Obviously tests the
-visiblities match the gain values that are expected for the EDA2 beam and not
-the Gaussian Beam test.
-
-For FLOAT compiled code, the absolute tolerance threshold on
-values is set to 1e-5, and 1e-8 for DOUBLE compiled code.
+Runs tests using the EDA2 primary beam model. No leakage in this model.
 
 ``test_calculate_visibilities_mwafeebeam.c``
 *********************************************
-Again, runs the same tests as ``test_calculate_visibilities_gaussbeam.c``, but
-this time for the coarse resolution MWA FEE primary beam. As this model is
-complex and includes mutual coupling, both the real and imaginary values
-for all XX, XY, YX, and YY polarisations are tested.
-
-For FLOAT compiled code, the absolute tolerance threshold on
-values is set to 4e-3, and 1e-7 for DOUBLE compiled code. The expected gains
-of the MWA FEE beam are taken from the DOUBLE compiled code, and so the large
-threshold for the FLOAT here is mostly due to the inaccuracy of the FLOAT
-MWA FEE beam code (see :ref:`FEE_primary_beam_cuda_cmake` for more discussion on this).
+Runs tests using the MWA FEE primary beam model. Has gains and leakage terms.
 
 ``test_calculate_visibilities_mwafeebeaminterp.c``
 ****************************************************
-Same as ``test_calculate_visibilities_mwafeebeam.c``, but
-this time for the frequency interpolated MWA FEE primary beam. As this model is
-complex and includes mutual coupling, both the real and imaginary values
-for all XX, XY, YX, and YY polarisations are tested.
-
-For FLOAT compiled code, the absolute tolerance threshold on
-values is set to 3e-2, and 1e-7 for DOUBLE compiled code. The expected gains
-of the MWA FEE beam are taken from the DOUBLE compiled code, and so the large
-threshold for the FLOAT here is mostly due to the inaccuracy of the FLOAT
-MWA FEE beam code (see :ref:`FEE_primary_beam_cuda_cmake` for more discussion on this).
+Runs tests using the interpolated MWA FEE primary beam model. Has gains and leakage terms.
 
 ``test_calculate_visibilities_mwaanalybeam.c``
 ****************************************************
-Same as ``test_calculate_visibilities_mwafeebeam.c``, but
-this time for the analytic primary beam. As this model is real only but contains
-leakage terms, all real values are tested to match expectations, and all
-imaginary tested to be zero.
-
-For FLOAT compiled code, the absolute tolerance threshold on
-values is set to 1e-5, and 1e-9 for DOUBLE compiled code.
-
+Runs tests using the interpolated MWA FEE primary beam model. Has gains and leakage terms,
+but is a real-only model.
 
 ``test_calculate_visibilities_multibeams.c``
 *********************************************
-Same as ``test_calculate_visibilities_mwafeebeam.c``, but where every antenna has a different primary beam. Uses gains that cause predictable scalar multiplications of stored expected visibilities from the previous tests. Doing indexing and keeping track of which primary beams should match which visibilities allows predictions of the expected visibilities to be made.
+Same as ``test_calculate_visibilities_mwafeebeaminterp.c``, but where every antenna has a different primary beam. Uses dipole amplitude gains that cause predictable scalar multiplications of expected visibilities from the previous tests. Doing indexing and keeping track of which primary beams should match which visibilities allows predictions of the expected visibilities to be made.

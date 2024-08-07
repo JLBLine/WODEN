@@ -563,21 +563,24 @@ This calls ``source_components::test_extrap_stokes_all_models``, which
 calls ``source_components::extrapolate_Stokes``, which handles extrapolating
 a the flux density of component to a given set of frequencies. This covers
 all types of flux behaviours (currently POWER_LAW, CURVED_POWER_LAW,
-and LIST types).
+and LIST types for Stokes I, and POWER_LAW, CURVED_POWER_LAW, POLARISATION FRACTION
+for linear and circular polarisation).
 
-Six components of each type of flux behaviour are tested, each with randomly
+Six components of each type of Stokes I flux behaviour are tested, each with randomly
 assigned values (these values are generated using the script
 ``WODEN/cmake_testing/source_components/write_test_extrap_stokes_header.py``).
 For the LIST flux types, each list has a random number of entries, as well
-as each list entry begin given a random flux.
+as each list entry begin given a random flux. Every component is also assigned
+random polarisation models for linear and circular polarisation.
+
 The values are copied into a ``source_t`` struct, passed through the ``CUDA``
-code, and extrapolated to 25 frequencies between 50 and 300 MHz. The outputs
+code, and extrapolated to 100 frequencies between 50 and 300 MHz. The outputs
 are tested against equivalent ``C`` functions in double precision. The
 ``woden_double`` code is tested to an absolute precision of 1e-11 Jy, with the
 ``woden_float`` a 9e-4 Jy precision (note some of the extrapolated fluxes
 are of order 1e3).
 
-To visualise the results, run ``WODEN/cmake_testing/source_components/test_extrap_stokes.py``,
+To visualise the Stokes I results, run ``WODEN/cmake_testing/source_components/test_extrap_stokes.py``,
 which will produce the following plots. The plots only show the Stokes I outputs,
 but all Stokes values are tested against the ``C`` test code.
 
@@ -604,10 +607,10 @@ everything, and the cyan squares are what is output by the ``CUDA`` code.
 .. image:: test_extrap_list_laws.png
   :width: 800
 
-.. this is commented out
-..   .. math::
+To visualise the full Stokes result for each component, run `plot_extrap_stokes.py`. An example of a Stokes I ``power_law``, Stokes Q/U ``polarisation fraction``, and Stokes V ``curved_power_law`` is:
 
-      S_{\mathrm{extrap}} = S_{\mathrm{ref}} \left( \frac{\nu_{\mathrm{ref}}}{\nu_{\mathrm{extrap}}} \right)^{\alpha}
+.. image:: eg_fluxes_comp02.png
+   :width: 500pt
 
 test_get_beam_gains.c
 ************************************
@@ -696,8 +699,9 @@ described in :ref:`test_gaussian_beam.c`.
 Of the nine components tested, 3 are given POWER_LAW, 3 are CURVED_POWER_LAW, and
 3 are LIST flux styles. Similarly to ``test_extrap_stokes.c``, each component
 is given a random set of parameters, and compared to a C version of the functions
-to extrapolate the Stokes parameters. The ``woden_double`` code is tested to
-an absolute precision of 1e-12 Jy, with the ``woden_float`` a 1e-4 Jy precision
+to extrapolate the Stokes parameters. Again, all components are also give both
+linear and circular polarisation models. The ``woden_double`` code is tested to
+an absolute precision of 1e-12 Jy, with the ``woden_float`` a 4e-4 Jy precision
 (note some of the extrapolated fluxes are of order 1e3).
 
 test_kern_calc_visi_point.c
@@ -725,7 +729,7 @@ two time steps to make sure the resultant visibilities end up in the right order
 Overall, I run three groups of tests here:
 
  - Keeping the beam gains and flux densities constant at 1.0
- - Varying the flux densities with frequency and keeping the beam gains constant at 1.0. I set all components to just be Stokes I, as the other polarisations are tested elsewhere. There are 10 POWER_LAW, 10 CURVED_POWER_LAW, and 5 LIST type components, each with randomly generated values. Equivalent C code is used to calculate the expected fluxes
+ - Varying the flux densities with frequency and keeping the beam gains constant at 1.0. There are 10 POWER_LAW, 10 CURVED_POWER_LAW, and 5 LIST type components, each with randomly generated values. Equivalent C code is used to calculate the expected fluxes. Some sources are given linear and circular polarisation models; some are not. This tests not only correct polarised flux extrapolation, but also checks those without polarisation information return zeros.
  - Varying the beam gains with frequency and keeping the flux densities constant at 1.0. As the beam can vary with time, frequency, and direction on sky, I assign each beam gain a different value. As *num_freqs*num_times*num_components* = 375, I set the real of all beam gains to :math:`\frac{1}{375}(B_{\mathrm{ind}} + 1)`, where :math:`B_{\mathrm{ind}}` is the beam value index. This way we get a unique value between 0 and 1 for all beam gains, allowing us to test time/frequency is handled correctly by the function under test
 
 Each set of tests is run for all six primary beam types, so a total of 18 tests
@@ -798,7 +802,9 @@ three sets of tests consist of:
 
 Each set of tests is run for all primary beam types, for a total of 18 tests.
 The different beam models have different expected values depending on whether
-they include leakage terms or not.
+they include leakage terms or not. Note this test actually doesn't test with
+Stokes QUV, but it's used in an integration test in ``test_calculate_visibilities.c``
+with full polarisation.
 
 test_kern_calc_autos.c
 ************************************
@@ -807,7 +813,7 @@ This calls ``source_components::test_kern_calc_autos``, which in turn calls
 primary beam values, and Stokes flux densities, and performs a dot-product
 to calculate the auto-correlations of all antennas, for all time steps.
 
-This test runs by creating a Stokes I sky model of 4 components, extrapolated
+This test runs by creating full Stokes IQUV model of 4 components, extrapolated
 to three frequencies and two time steps. Complex beam gains are generated for all
 directions, times, and frequencies. The auto-correlation calculation is then
 performed by ``C`` code, which the outputs of the GPU code are tested against.
@@ -818,7 +824,7 @@ outcomes calculated accordingly.
 
 The ``woden_double`` code is tested to an absolute precision of 1e-12 Jy,
 with the ``woden_float`` a 1e-2 Jy precision as compared to the ``C`` code
-(note some of the resultant fluxes are >10,000 Jy, hence the large absolute
+(note some of the resultant fluxes are >1000 Jy, hence the large absolute
 error. You should probably just always use the double precision version).
 
 test_get_beam_gains_two_antennas.c

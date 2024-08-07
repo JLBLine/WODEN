@@ -3489,6 +3489,8 @@ extern "C" void test_kern_calc_autos(components_t *components, int beamtype,
   ( gpuMalloc( (void**)&d_components->extrap_stokesV,
               num_components*num_freqs*sizeof(user_precision_t) ));
 
+  d_components->do_QUV = components->do_QUV;
+
 
   ( gpuMemcpy(d_components->extrap_stokesI,
          components->extrap_stokesI, num_components*num_freqs*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
