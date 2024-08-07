@@ -12,9 +12,187 @@ from astropy.table import Table, Column
 import erfa
 from astropy.io import fits
 
+from sys import exit
+
 REF_FREQ = 200e+6
 
 D2R = np.pi/180.0
+
+def _error_for_missing_columns(message_start : str, fits_path : str, missing_cols : list,
+                                col_present_dict : dict):
+    """Given a list of missing columns to test for, error out with a helpful message
+    detailing which columns are missing from the FITS file at `fits_path`.
+
+    Parameters
+    ----------
+    message_start : str
+        Initial part of the error message.
+    fits_path : str
+        Path to FITS sky model file.
+    missing_cols : list
+        List of missing columns.
+    col_present_dict : dict
+        Dictionary of all columns in the FITS file, and whether they are present or not.
+    """
+    
+    present = 0
+    
+    for col in missing_cols:
+        present += col_present_dict[col]
+        
+    if present < len(missing_cols):
+        missing = ""
+        for col in missing_cols:
+            if not col_present_dict[col]:
+                missing += f"{col} "
+        
+        sys.exit(f"Found {message_start} in the FITS file {fits_path}, but missing {missing}columns. Exiting now.")
+
+def check_columns_fits(fits_path : str):
+    """Checks that the FITS file at `fits_path` contains all the necessary
+    information to be read in correctly. Also checks for optional columns, and
+    certain combinations that must be present e.g. if there are shapelets
+    specified in `COMP_TYPE`, then there must be a second shapelet HDU.
+    
+    Any problems and the function errors out with a helpful error message.
+
+    Parameters
+    ----------
+    fits_path : str
+        Path to FITS sky model file.
+    """
+    
+    main_table = Table.read(fits_path, hdu=1)
+    
+    all_col_names = ["UNQ_SOURCE_ID", "NAME", "RA", "DEC", "COMP_TYPE",
+                     "MAJOR_DC", "MINOR_DC", "PA_DC", "MOD_TYPE",
+                     "NORM_COMP_PL", "ALPHA_PL", "NORM_COMP_CPL", "ALPHA_CPL",
+                     "CURVE_CPL", "V_MOD_TYPE", "V_POL_FRAC", "V_NORM_COMP_PL",
+                     "V_ALPHA_PL", "V_NORM_COMP_CPL", "V_ALPHA_CPL",
+                     "V_CURVE_CPL", "LIN_MOD_TYPE", "RM", "INTR_POL_ANGLE",
+                     "LIN_POL_FRAC", "LIN_NORM_COMP_PL", "LIN_ALPHA_PL",
+                     "LIN_NORM_COMP_CPL", "LIN_ALPHA_CPL", "LIN_CURVE_CPL"]
+    
+    ##set up a dictionary, set all columns as unfound
+    col_present_dict = {}
+    for col_name in all_col_names:
+        col_present_dict[col_name] = False
+    
+    ##loop through all the columns in the FITS file, and if they are present,
+    ##mark them as found
+    for col_name in all_col_names:
+        if col_name in main_table.columns:
+            col_present_dict[col_name] = True
+            
+    ##Every catalogue must contain these columns, so error if missing
+    essentials = ["UNQ_SOURCE_ID", "NAME", "RA", "DEC", "COMP_TYPE", "MOD_TYPE"]
+    for essential in essentials:
+        if col_present_dict[essential] == False:
+            sys.exit(f"Essential column {essential} is missing from the FITS file {fits_path}. Exiting now.")
+            
+    ##Check for Gaussians, and verify that the major, minor, PA columns are present
+    if 'G' in main_table['COMP_TYPE']:
+        _error_for_missing_columns("Gaussian components", fits_path,
+                                   ["MAJOR_DC", "MINOR_DC", "PA_DC"],
+                                   col_present_dict)
+        
+    ##Check for shapelets, and verify that the major, minor, PA columns are present
+    ##Also check the second shapelet table is present, and contains columns it needs
+    if 'S' in main_table['COMP_TYPE']:
+        _error_for_missing_columns("Shapelet components", fits_path,
+                                   ["MAJOR_DC", "MINOR_DC", "PA_DC"],
+                                   col_present_dict)
+            
+        with fits.open(fits_path) as hdus:
+            num_hdus = len(hdus)
+            
+        if num_hdus < 3:
+            sys.exit(f"Found Shapelet components in the FITS file {fits_path}, but missing the second shapelet table. Exiting now.")
+            
+        else:
+            shape_table = Table.read(fits_path, hdu=2)
+            
+            shape_table_cols = ["NAME", "N1", "N2", "COEFF"]
+            for shape_col in shape_table_cols:
+                if shape_col not in shape_table.columns:
+                    sys.exit(f"Found Shapelet components in the FITS file {fits_path}, but missing the {shape_col} column in the shapelet table. Exiting now.")
+                    
+            if np.max(shape_table['N1']) > 100 or np.max(shape_table['N2']) > 100:
+                sys.exit(f"Found Shapelet components in the FITS file {fits_path}, but the maximum N1 or N2 value is greater than 100. Basis functions are only stored up to 100, so this isn't possible. Exiting now.")
+                
+    
+    ##Check for Stokes I flux models making sense-------------------------------
+    if 'pl' in main_table['MOD_TYPE']:
+        _error_for_missing_columns("pl (power-law) in MOD_TYPE column", fits_path,
+                                   ["NORM_COMP_PL", "ALPHA_PL"],
+                                   col_present_dict)
+        
+    if 'cpl' in main_table['MOD_TYPE']:
+        _error_for_missing_columns("cpl (curved power-law) in MOD_TYPE column", fits_path,
+                                   ["NORM_COMP_CPL", "ALPHA_CPL", "CURVE_CPL"],
+                                   col_present_dict)
+    
+    ##This one is trickier because the name starts with 'INT_FLX' but can
+    ##end with any number (which is the frequency in MHz)
+    if 'nan' in main_table['MOD_TYPE']:
+        have_any_int_flx = False
+        for key in main_table.columns:
+            if key[:7] == 'INT_FLX':
+                have_any_int_flx = True
+        
+        if not have_any_int_flx:
+        
+            sys.exit(f"Found nan (list flux) in MOD_TYPE column in the FITS file {fits_path}, but no columns start with INT_FLX, which are how list-type fluxes are added. Exiting now.")
+                
+    
+    ##Check for Stokes V information, and verify that V_MOD_TYPE is present-------
+    if col_present_dict["V_POL_FRAC"] or col_present_dict["V_NORM_COMP_PL"] or col_present_dict["V_ALPHA_PL"] or col_present_dict["V_NORM_COMP_CPL"] or col_present_dict["V_ALPHA_CPL"] or col_present_dict["V_CURVE_CPL"]:
+        
+        if not col_present_dict["V_MOD_TYPE"]:
+            sys.exit(f"Found polarisation information in the FITS file {fits_path}, but no V_MOD_TYPE column. Needed to distinguish between Stokes V model types. Exiting now.")
+            
+    if col_present_dict["V_MOD_TYPE"]:
+            
+        ##Check for Stokes V flux models making sense-------------------------------
+        if 'pl' in main_table['V_MOD_TYPE']:
+            _error_for_missing_columns("pl (power-law) in V_MOD_TYPE column", fits_path,
+                                    ["V_NORM_COMP_PL", "V_ALPHA_PL"],
+                                    col_present_dict)
+            
+        if 'cpl' in main_table['V_MOD_TYPE']:
+            _error_for_missing_columns("cpl (curved power-law) in V_MOD_TYPE column", fits_path,
+                                    ["V_NORM_COMP_CPL", "V_ALPHA_CPL", "V_CURVE_CPL"],
+                                    col_present_dict)
+            
+        if 'pf' in main_table['V_MOD_TYPE']:
+            _error_for_missing_columns("pf (polarisation fraction) in V_MOD_TYPE column", fits_path,
+                                    ["V_POL_FRAC"],
+                                    col_present_dict)
+            
+    ##Check for linear polarisation information, and verify that LIN_MOD_TYPE is present-------
+    if col_present_dict["LIN_POL_FRAC"] or col_present_dict["LIN_NORM_COMP_PL"] or col_present_dict["LIN_ALPHA_PL"] or col_present_dict["LIN_NORM_COMP_CPL"] or col_present_dict["LIN_ALPHA_CPL"] or col_present_dict["LIN_CURVE_CPL"] or col_present_dict["RM"] or col_present_dict["INTR_POL_ANGLE"]:
+        
+        if not col_present_dict["LIN_MOD_TYPE"]:
+            sys.exit(f"Found polarisation information in the FITS file {fits_path}, but no LIN_MOD_TYPE column. Needed to distinguish between linear polarisation model types. Exiting now.")
+            
+    if col_present_dict["LIN_MOD_TYPE"]:
+            
+        ##Check for Stokes V flux models making sense-------------------------------
+        if 'pl' in main_table['LIN_MOD_TYPE']:
+            _error_for_missing_columns("pl (power-law) in LIN_MOD_TYPE column", fits_path,
+                                    ["LIN_NORM_COMP_PL", "LIN_ALPHA_PL", "RM"],
+                                    col_present_dict)
+            
+        if 'cpl' in main_table['LIN_MOD_TYPE']:
+            _error_for_missing_columns("cpl (curved power-law) in LIN_MOD_TYPE column", fits_path,
+                                    ["LIN_NORM_COMP_CPL", "LIN_ALPHA_CPL", "LIN_CURVE_CPL", "RM"],
+                                    col_present_dict)
+            
+        if 'pf' in main_table['LIN_MOD_TYPE']:
+            _error_for_missing_columns("pf (polarisation fraction) in LIN_MOD_TYPE column", fits_path,
+                                    ["LIN_POL_FRAC", "RM"],
+                                    col_present_dict)
+    
 
 # @profile
 def read_fits_radec_count_components(fits_path : str):

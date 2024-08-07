@@ -42,3 +42,6 @@ add_test(python_test_read_skymodel_chunk ${PYTHON_EXECUTABLE}
          ${CMAKE_CURRENT_SOURCE_DIR}/test_read_skymodel_chunk.py)
 set_tests_properties(python_test_read_skymodel_chunk PROPERTIES
          ENVIRONMENT CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})
+
+add_test(python_test_check_columns_fits ${PYTHON_EXECUTABLE}
+         ${CMAKE_CURRENT_SOURCE_DIR}/test_check_columns_fits.py)
