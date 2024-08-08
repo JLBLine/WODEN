@@ -22,34 +22,34 @@ path.append('{:s}/../../../wodenpy/skymodel'.format(code_dir))
 
 # ##Code we are testing
 from wodenpy.skymodel import read_fits_skymodel
-# import fits_skymodel_common
-# from read_skymodel_common import Skymodel_Settings, make_expected_comp_counter, check_comp_counter
-# # import wodenpy
-# from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes
 from astropy.table import Column, Table
 from astropy.io import fits
 
 def write_borked_skymodel(unq_source_id=True, name=True, ra=True, dec=True, comp_type=True, major_dc=True,
                           minor_dc=True, pa_dc=True, mod_type=True, norm_comp_pl=True, alpha_pl=True,
                           norm_comp_cpl=True, alpha_cpl=True, curve_cpl=True, v_mod_type=True,
-                          use_mod_types='pl', use_v_mod_types='pl', use_lin_mod_types='pl', 
+                          use_mod_types='pl', use_comp_types='P', use_v_mod_types='pl', use_lin_mod_types='pl', 
                           v_pol_frac=True, v_norm_comp_pl=True, v_alpha_pl=True, v_norm_comp_cpl=True,
                           v_alpha_cpl=True, v_curve_cpl=True, lin_mod_type=True, rm=True,
                           intr_pol_angle=True, lin_pol_frac=True, lin_norm_comp_pl=True,
                           lin_alpha_pl=True, lin_norm_comp_cpl=True, lin_alpha_cpl=True,
                           lin_curve_cpl=True, int_flux=True, shape_table=True,
                           s_names=True, s_n1s=True, s_n2s=True, s_coeffs=True, shape_max_n=10,
-                          use_comp_types='P'):
+                          p_flux_table=True, p_flux_names=True, p_flux_fluxes=True,
+                          q_flux_table=True, q_flux_names=True, q_flux_fluxes=True,
+                          u_flux_table=True, u_flux_names=True, u_flux_fluxes=True,
+                          v_flux_table=True, v_flux_names=True, v_flux_fluxes=True,
+                          use_table_names=True):
     
     num_comps = 3
     main_cols = []
     
     if unq_source_id:
-        this_col = Column(data=np.zeros(num_comps), name="UNQ_SOURCE_ID")
+        this_col = Column(data=['bleh']*3, name="UNQ_SOURCE_ID")
         main_cols.append(this_col)
 
     if name:
-        this_col = Column(data=np.zeros(num_comps), name="NAME")
+        this_col = Column(data=[f'bleh_C{i:2d}' for i in range(num_comps)], name="NAME")
         main_cols.append(this_col)
 
     if ra:
@@ -172,6 +172,9 @@ def write_borked_skymodel(unq_source_id=True, name=True, ra=True, dec=True, comp
     main_table = Table()
     main_table.add_columns(main_cols)
     
+    hdulist = [fits.PrimaryHDU(), fits.table_to_hdu(main_table)]
+    table_names = ['MAIN']
+    
     if shape_table:
         shape_cols = []
         if s_names:
@@ -189,21 +192,77 @@ def write_borked_skymodel(unq_source_id=True, name=True, ra=True, dec=True, comp
         
         shape_table = Table()
         shape_table.add_columns(shape_cols)
+        table_names.append('SHAPELET')
 
-        hdu_list = fits.HDUList([
-            fits.PrimaryHDU(),
-            fits.table_to_hdu(main_table),
-            fits.table_to_hdu(shape_table),
-        ])
+        hdulist.append(fits.table_to_hdu(shape_table))
         
-    else:
+    if q_flux_table:
+        q_flux_cols = []
+        if q_flux_names:
+            this_col = Column(data=[f'bleh_C{i:2d}' for i in range(num_comps)], name="NAME")
+            q_flux_cols.append(this_col)
+        if q_flux_fluxes:
+            this_col = Column(data=np.zeros(num_comps), name="Q_INT_FLX200.0")
+            q_flux_cols.append(this_col)
+        
+        q_flux_table = Table()
+        q_flux_table.add_columns(q_flux_cols)
+        table_names.append('Q_LIST_FLUXES')
 
-        hdu_list = fits.HDUList([
-            fits.PrimaryHDU(),
-            fits.table_to_hdu(main_table),
-        ])
+        hdulist.append(fits.table_to_hdu(q_flux_table))
+        
+    if u_flux_table:
+        u_flux_cols = []
+        if u_flux_names:
+            this_col = Column(data=[f'bleh_C{i:2d}' for i in range(num_comps)], name="NAME")
+            u_flux_cols.append(this_col)
+        if u_flux_fluxes:
+            this_col = Column(data=np.zeros(num_comps), name="U_INT_FLX200.0")
+            u_flux_cols.append(this_col)
+        
+        u_flux_table = Table()
+        u_flux_table.add_columns(u_flux_cols)
+        table_names.append('U_LIST_FLUXES')
+
+        hdulist.append(fits.table_to_hdu(u_flux_table))
+        
+    if p_flux_table:
+        p_flux_cols = []
+        if p_flux_names:
+            this_col = Column(data=[f'bleh_C{i:2d}' for i in range(num_comps)], name="NAME")
+            p_flux_cols.append(this_col)
+        if p_flux_fluxes:
+            this_col = Column(data=np.zeros(num_comps), name="P_INT_FLX200.0")
+            p_flux_cols.append(this_col)
+        
+        p_flux_table = Table()
+        p_flux_table.add_columns(p_flux_cols)
+        table_names.append('P_LIST_FLUXES')
+
+        hdulist.append(fits.table_to_hdu(p_flux_table))
+        
+    if v_flux_table:
+        v_flux_cols = []
+        if v_flux_names:
+            this_col = Column(data=[f'bleh_C{i:2d}' for i in range(num_comps)], name="NAME")
+            v_flux_cols.append(this_col)
+        if v_flux_fluxes:
+            this_col = Column(data=np.zeros(num_comps), name="V_INT_FLX200.0")
+            v_flux_cols.append(this_col)
+        
+        v_flux_table = Table()
+        v_flux_table.add_columns(v_flux_cols)
+        table_names.append('V_LIST_FLUXES')
+
+        hdulist.append(fits.table_to_hdu(v_flux_table))
+        
+    hdulist = fits.HDUList(hdulist)
     
-    hdu_list.writeto("test_full_skymodel.fits", overwrite=True)
+    if use_table_names:
+        for index, name in enumerate(table_names):
+            hdulist[index+1].name = name
+    
+    hdulist.writeto("test_full_skymodel.fits", overwrite=True)
     
     
 ##Vehicle for running tests
@@ -262,6 +321,9 @@ class Test(unittest.TestCase):
         ##Error out if maximum basis order is too high
         self.make_sky_test_fails(use_comp_types='S', shape_max_n=101)
         
+        ##Check things still fail the same way if we don't use table names
+        self.make_sky_test_fails(use_comp_types='S', use_table_names=False, shape_max_n=101)
+        
     def test_missing_stokesI(self):
         """Ensure we fail Stokes I flux models if missing columns"""
         
@@ -283,6 +345,9 @@ class Test(unittest.TestCase):
         self.make_sky_test_fails(use_v_mod_types='cpl', v_alpha_cpl=False)
         self.make_sky_test_fails(use_v_mod_types='cpl', v_curve_cpl=False)
         self.make_sky_test_fails(use_v_mod_types='pf', v_pol_frac=False)
+        self.make_sky_test_fails(use_v_mod_types='nan', v_flux_table=False)
+        self.make_sky_test_fails(use_v_mod_types='nan', v_flux_names=False)
+        self.make_sky_test_fails(use_v_mod_types='nan', v_flux_fluxes=False)
         
     def test_missing_lin_pol(self):
         """Ensure we fail linear polarisation models if missing columns"""
@@ -297,6 +362,30 @@ class Test(unittest.TestCase):
         self.make_sky_test_fails(use_lin_mod_types='cpl', rm=False)
         self.make_sky_test_fails(use_lin_mod_types='pf', lin_pol_frac=False)
         self.make_sky_test_fails(use_lin_mod_types='pf', rm=False)
+        
+        self.make_sky_test_fails(use_lin_mod_types='nan', q_flux_table=False)
+        self.make_sky_test_fails(use_lin_mod_types='nan', q_flux_names=False)
+        self.make_sky_test_fails(use_lin_mod_types='nan', q_flux_fluxes=False)
+        self.make_sky_test_fails(use_lin_mod_types='nan', u_flux_table=False)
+        self.make_sky_test_fails(use_lin_mod_types='nan', u_flux_names=False)
+        self.make_sky_test_fails(use_lin_mod_types='nan', u_flux_fluxes=False)
+        
+        self.make_sky_test_fails(use_lin_mod_types='p_nan', rm=False)
+        self.make_sky_test_fails(use_lin_mod_types='p_nan', p_flux_table=False)
+        self.make_sky_test_fails(use_lin_mod_types='p_nan', p_flux_names=False)
+        self.make_sky_test_fails(use_lin_mod_types='p_nan', p_flux_fluxes=False)
+        
+    def test_how_does_this_work(self):
+        """"""
+        write_borked_skymodel(use_table_names=False)
+        
+        with fits.open('test_full_skymodel.fits') as hdulist:
+            names = [hdu.name for hdu in hdulist]
+            # print(dir(hdulist))
+            # print(hdulist.info())
+            # print(hdulist[1].name)
+            # print(hdulist[2].name)
+            print(names)
         
         
     

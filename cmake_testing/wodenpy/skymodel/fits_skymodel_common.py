@@ -52,8 +52,7 @@ def add_list_flux_fits(table_dict, all_flux_cols, row_ind, flux_index, num_list_
         
     return flux_index
 
-def add_stokesV_fits(table_dict, comp_index, stokesV_frac_cadence,
-                     stokesV_pl_cadence, stokesV_cpl_cadence):
+def add_stokesV_fits(table_dict, source_index, comp_index, settings):
     """Add a Stokes V polarisation fraction type to a component"""
     
     ##OK we only want to add the Stokes V polarisation info for one specific
@@ -65,30 +64,38 @@ def add_stokesV_fits(table_dict, comp_index, stokesV_frac_cadence,
     
     while True:
         
-        if stokesV_frac_cadence:
-            if comp_index % stokesV_frac_cadence == 0:
+        if settings.stokesV_frac_cadence:
+            if comp_index % settings.stokesV_frac_cadence == 0:
                 table_dict['V_MOD_TYPE'][comp_index] = 'pf'
                 table_dict['V_POL_FRAC'][comp_index] = float(comp_index)
                 break
                 
-        if stokesV_pl_cadence:
-            if comp_index % stokesV_pl_cadence == 0:
+        if settings.stokesV_pl_cadence:
+            if comp_index % settings.stokesV_pl_cadence == 0:
                 table_dict['V_MOD_TYPE'][comp_index] = 'pl'
                 table_dict['V_NORM_COMP_PL'][comp_index] = comp_index
                 table_dict['V_ALPHA_PL'][comp_index] = comp_index
                 break
                 
-        if stokesV_cpl_cadence:
-            if comp_index % stokesV_cpl_cadence == 0:
+        if settings.stokesV_cpl_cadence:
+            if comp_index % settings.stokesV_cpl_cadence == 0:
                 table_dict['V_MOD_TYPE'][comp_index] = 'cpl'
                 table_dict['V_NORM_COMP_CPL'][comp_index] = comp_index
                 table_dict['V_ALPHA_CPL'][comp_index] = comp_index
                 table_dict['V_CURVE_CPL'][comp_index] = comp_index
                 break
+            
+        if settings.stokesV_list_cadence:
+            if comp_index % settings.stokesV_list_cadence == 0:
+                table_dict['V_MOD_TYPE'][comp_index] = 'nan'
+                table_dict['V_NAME'].append(f"{source_index:07d}_C{comp_index:05d}")
+                for flux_col_ind in range(settings.stokesV_num_list):
+                    table_dict[f"V_INT_FLX{flux_col_ind:07.3f}"].append(float(comp_index))
+                break
+            
         break
     
-def add_linpol_fits(table_dict, comp_index, linpol_frac_cadence,
-                     linpol_pl_cadence, linpol_cpl_cadence):
+def add_linpol_fits(table_dict, source_index, comp_index, settings):
     """Add a Stokes V polarisation fraction type to a component"""
     
     ##OK we only want to add the Stokes V polarisation info for one specific
@@ -100,18 +107,17 @@ def add_linpol_fits(table_dict, comp_index, linpol_frac_cadence,
     
     while True:
         
-        if linpol_frac_cadence:
-            if comp_index % linpol_frac_cadence == 0:
+        if settings.linpol_frac_cadence:
+            if comp_index % settings.linpol_frac_cadence == 0:
                 table_dict['LIN_MOD_TYPE'][comp_index] = 'pf'
                 # table_dict['LIN_POL_FRAC'][comp_index] = 0.01*float(comp_index/linpol_frac_cadence)
                 table_dict['LIN_POL_FRAC'][comp_index] = float(comp_index)
                 table_dict['RM'][comp_index] = float(comp_index*((2*np.pi)/360))
                 table_dict['INTR_POL_ANGLE'][comp_index] = 0.1*float(comp_index*((2*np.pi)/360))
-                
                 break
                 
-        if linpol_pl_cadence:
-            if comp_index % linpol_pl_cadence == 0:
+        if settings.linpol_pl_cadence:
+            if comp_index % settings.linpol_pl_cadence == 0:
                 table_dict['LIN_MOD_TYPE'][comp_index] = 'pl'
                 table_dict['LIN_NORM_COMP_PL'][comp_index] = comp_index
                 table_dict['LIN_ALPHA_PL'][comp_index] = comp_index
@@ -119,8 +125,8 @@ def add_linpol_fits(table_dict, comp_index, linpol_frac_cadence,
                 table_dict['INTR_POL_ANGLE'][comp_index] = 0.1*float(comp_index*((2*np.pi)/360))
                 break
                 
-        if linpol_cpl_cadence:
-            if comp_index % linpol_cpl_cadence == 0:
+        if settings.linpol_cpl_cadence:
+            if comp_index % settings.linpol_cpl_cadence == 0:
                 table_dict['LIN_MOD_TYPE'][comp_index] = 'cpl'
                 table_dict['LIN_NORM_COMP_CPL'][comp_index] = comp_index
                 table_dict['LIN_ALPHA_CPL'][comp_index] = comp_index
@@ -128,6 +134,26 @@ def add_linpol_fits(table_dict, comp_index, linpol_frac_cadence,
                 table_dict['RM'][comp_index] = float(comp_index*((2*np.pi)/360))
                 table_dict['INTR_POL_ANGLE'][comp_index] = 0.1*float(comp_index*((2*np.pi)/360))
                 break
+        if settings.linpol_list_cadence:
+            if comp_index % settings.linpol_list_cadence == 0:
+                table_dict['LIN_MOD_TYPE'][comp_index] = 'nan'
+                table_dict['Q_NAME'].append(f"{source_index:07d}_C{comp_index:05d}")
+                table_dict['U_NAME'].append(f"{source_index:07d}_C{comp_index:05d}")
+                for flux_col_ind in range(settings.linpol_num_list):
+                    table_dict[f"Q_INT_FLX{flux_col_ind:07.3f}"].append(float(comp_index))
+                    table_dict[f"U_INT_FLX{flux_col_ind:07.3f}"].append(float(comp_index))
+                break
+            
+        if settings.linpol_p_list_cadence:
+            if comp_index % settings.linpol_p_list_cadence == 0:
+                table_dict['LIN_MOD_TYPE'][comp_index] = 'p_nan'
+                table_dict['RM'][comp_index] = float(comp_index*((2*np.pi)/360))
+                table_dict['INTR_POL_ANGLE'][comp_index] = 0.1*float(comp_index*((2*np.pi)/360))
+                table_dict['P_NAME'].append(f"{source_index:07d}_C{comp_index:05d}")
+                for flux_col_ind in range(settings.linpol_num_p_list):
+                    table_dict[f"P_INT_FLX{flux_col_ind:07.3f}"].append(float(comp_index))
+                break
+            
         break
                 
                 
@@ -160,11 +186,8 @@ def add_point_fits(table_dict : dict, all_flux_cols : list,
         flux_index = add_list_flux_fits(table_dict, all_flux_cols, row_ind, flux_index, settings.num_list_values)
         
     ##This will add the Stokes V polarisation fraction style if required
-    add_stokesV_fits(table_dict, comp_index, settings.stokesV_frac_cadence,
-                     settings.stokesV_pl_cadence, settings.stokesV_cpl_cadence)
-    
-    add_linpol_fits(table_dict, comp_index, settings.linpol_frac_cadence,
-                     settings.linpol_pl_cadence, settings.linpol_cpl_cadence)
+    add_stokesV_fits(table_dict, source_index, comp_index, settings)
+    add_linpol_fits(table_dict, source_index, comp_index, settings)
         
         
     point_index += 1
@@ -204,11 +227,8 @@ def add_gauss_fits(table_dict : dict, all_flux_cols : list,
         flux_index = add_list_flux_fits(table_dict, all_flux_cols, row_ind, flux_index, settings.num_list_values)
         
     ##This will add the Stokes V polarisation fraction style if required
-    add_stokesV_fits(table_dict, comp_index, settings.stokesV_frac_cadence,
-                     settings.stokesV_pl_cadence, settings.stokesV_cpl_cadence)
-    
-    add_linpol_fits(table_dict, comp_index, settings.linpol_frac_cadence,
-                     settings.linpol_pl_cadence, settings.linpol_cpl_cadence)
+    add_stokesV_fits(table_dict, source_index, comp_index, settings)
+    add_linpol_fits(table_dict, source_index, comp_index, settings)
 
     gauss_index += 1
         
@@ -256,16 +276,27 @@ def add_shapelet_fits(table_dict : dict, all_flux_cols : list,
         flux_index = add_list_flux_fits(table_dict, all_flux_cols, row_ind, flux_index, settings.num_list_values)
         
     ##This will add the Stokes V polarisation fraction style if required
-    add_stokesV_fits(table_dict, comp_index, settings.stokesV_frac_cadence,
-                     settings.stokesV_pl_cadence, settings.stokesV_cpl_cadence)
-    
-    add_linpol_fits(table_dict, comp_index, settings.linpol_frac_cadence,
-                     settings.linpol_pl_cadence, settings.linpol_cpl_cadence)
+    add_stokesV_fits(table_dict, source_index, comp_index, settings)
+    add_linpol_fits(table_dict, source_index, comp_index, settings)
         
     shape_index += 1
         
     return source_index, shape_index, flux_index, basis_index
 
+
+def make_list_flux_hdu(flux_prepend, num_list_values, table_dict, 
+                        hdu_list, table_names):
+    
+    table = Table()
+    cols = [Column(data=table_dict[f'{flux_prepend}_NAME'], name="NAME")]
+    
+    for flux_col_ind in range(num_list_values):
+        cols.append(Column(data=table_dict[f"{flux_prepend}_INT_FLX{flux_col_ind:07.3f}"],
+                                    name=f"{flux_prepend}_INT_FLX{flux_col_ind:07.3f}"))
+    
+    table.add_columns(cols)
+    hdu_list.append(fits.table_to_hdu(table))
+    table_names.append(f"{flux_prepend}_LIST_FLUXES")
 
 def write_full_test_skymodel_fits(settings : Skymodel_Settings):
     """Write a sky model covering the whole sky"""
@@ -351,7 +382,7 @@ def write_full_test_skymodel_fits(settings : Skymodel_Settings):
     table_dict['curve_cpl'] = curve_cpl
     
     ##Now we add the optional circular polarisation columns
-    if settings.stokesV_frac_cadence or settings.stokesV_pl_cadence or settings.stokesV_cpl_cadence:
+    if settings.stokesV_frac_cadence or settings.stokesV_pl_cadence or settings.stokesV_cpl_cadence  or settings.stokesV_list_cadence:
         vpol_type = Column(data=np.full(total_num_comps, '', dtype='|S3'), name="V_MOD_TYPE", dtype='|S3')
         table_dict['V_MOD_TYPE'] = vpol_type
     
@@ -372,15 +403,28 @@ def write_full_test_skymodel_fits(settings : Skymodel_Settings):
         table_dict['V_ALPHA_CPL'] = v_alpha_cpl
         v_curve_cpl = Column(data=np.full(total_num_comps, np.nan), name="V_CURVE_CPL")
         table_dict['V_CURVE_CPL'] = v_curve_cpl
-    
+        
+    if settings.stokesV_list_cadence:
+        ##we could do hella maths to work out how many list entries there will
+        ##be, but it depends on how many of the other types there are, so just
+        ##make em lists and append. Then convert to columns when we make the
+        ##flux tables
+        table_dict["V_NAME"] = []
+        for flux_col_ind in range(settings.stokesV_num_list):
+            table_dict[f"V_INT_FLX{flux_col_ind:07.3f}"] = []
+        
     ##Now we add the optional linear polarisation columns    
-    if settings.linpol_frac_cadence or settings.linpol_pl_cadence or settings.linpol_cpl_cadence:
-        linpol_type = Column(data=np.full(total_num_comps, '', dtype='|S3'), name="LIN_MOD_TYPE", dtype='|S3')
+    if settings.linpol_frac_cadence or settings.linpol_pl_cadence or settings.linpol_cpl_cadence or settings.linpol_p_list_cadence:
+        linpol_type = Column(data=np.full(total_num_comps, '', dtype='|S5'), name="LIN_MOD_TYPE", dtype='|S5')
         table_dict['LIN_MOD_TYPE'] = linpol_type
         rm = Column(data=np.full(total_num_comps, np.nan), name='RM')
         table_dict['RM'] = rm
         intr_pol_angle = Column(data=np.full(total_num_comps, np.nan), name='INTR_POL_ANGLE')
         table_dict['INTR_POL_ANGLE'] = intr_pol_angle
+        
+    elif settings.linpol_list_cadence:
+        linpol_type = Column(data=np.full(total_num_comps, '', dtype='|S5'), name="LIN_MOD_TYPE", dtype='|S5')
+        table_dict['LIN_MOD_TYPE'] = linpol_type
     
     if settings.linpol_frac_cadence:
         linpol_frac = Column(data=np.full(total_num_comps, np.nan), name="LIN_POL_FRAC")
@@ -399,6 +443,18 @@ def write_full_test_skymodel_fits(settings : Skymodel_Settings):
         table_dict['LIN_ALPHA_CPL'] = lin_alpha_cpl
         lin_curve_cpl = Column(data=np.full(total_num_comps, np.nan), name="LIN_CURVE_CPL")
         table_dict['LIN_CURVE_CPL'] = lin_curve_cpl
+        
+    if settings.linpol_list_cadence:
+        table_dict["Q_NAME"] = []
+        table_dict["U_NAME"] = []
+        for flux_col_ind in range(settings.linpol_num_list):
+            table_dict[f"Q_INT_FLX{flux_col_ind:07.3f}"] = []
+            table_dict[f"U_INT_FLX{flux_col_ind:07.3f}"] = []
+            
+    if settings.linpol_p_list_cadence:
+        table_dict["P_NAME"] = []
+        for flux_col_ind in range(settings.linpol_num_p_list):
+            table_dict[f"P_INT_FLX{flux_col_ind:07.3f}"] = []
     
     ##Let's populate the source and component names
     
@@ -410,7 +466,6 @@ def write_full_test_skymodel_fits(settings : Skymodel_Settings):
     
     num_shape_coeffs = shapelet*settings.num_coeff_per_shape*NUM_FLUX_TYPES*len(ra_range)
     
-    # s_names = Column(data=np.full(num_shape_coeffs, np.nan, dtype='str'), name="NAME")
     s_names = []
     s_n1s = Column(data=np.full(num_shape_coeffs, np.nan, dtype=int), name="N1")
     s_n2s = Column(data=np.full(num_shape_coeffs, np.nan, dtype=int), name="N2")
@@ -493,7 +548,7 @@ def write_full_test_skymodel_fits(settings : Skymodel_Settings):
                    norm_comp_pl, alpha_pl, norm_comp_cpl, alpha_cpl, curve_cpl]
     
     ##Add circ pol columns if required
-    if settings.stokesV_frac_cadence or settings.stokesV_pl_cadence or settings.stokesV_cpl_cadence:
+    if settings.stokesV_frac_cadence or settings.stokesV_pl_cadence or settings.stokesV_cpl_cadence or settings.stokesV_list_cadence:
         out_columns.append(vpol_type)
     
     if settings.stokesV_frac_cadence:
@@ -509,10 +564,13 @@ def write_full_test_skymodel_fits(settings : Skymodel_Settings):
         out_columns.append(v_curve_cpl)
         
     ##Add circ pol columns if required
-    if settings.linpol_frac_cadence or settings.linpol_pl_cadence or settings.linpol_cpl_cadence:
+    if settings.linpol_frac_cadence or settings.linpol_pl_cadence or settings.linpol_cpl_cadence or settings.linpol_p_list_cadence:
         out_columns.append(linpol_type)
         out_columns.append(rm)
         out_columns.append(intr_pol_angle)
+    ##don't need RM or intr_pol_angle for the Q and U lists
+    elif settings.linpol_pl_cadence:
+        out_columns.append(linpol_type)
         
     if settings.linpol_frac_cadence:
         out_columns.append(linpol_frac)
@@ -529,18 +587,38 @@ def write_full_test_skymodel_fits(settings : Skymodel_Settings):
     for flux_col in all_flux_cols:
         out_columns.append(flux_col)
 
+
+    hdu_list = [fits.PrimaryHDU()]
+    table_names = []
+
     main_table = Table()
     main_table.add_columns(out_columns)
+    hdu_list.append(fits.table_to_hdu(main_table))
+    table_names.append("MAIN")
     
     shape_table = Table()
     shape_table.add_columns([s_names, s_n1s, s_n2s, s_coeffs])
-
-    hdu_list = fits.HDUList([
-        fits.PrimaryHDU(),
-        fits.table_to_hdu(main_table),
-        fits.table_to_hdu(shape_table),
-    ])
+    hdu_list.append(fits.table_to_hdu(shape_table))
+    table_names.append("SHAPELET")
     
+    if settings.stokesV_list_cadence:
+        make_list_flux_hdu('V', settings.stokesV_num_list, table_dict, 
+                            hdu_list, table_names)
+        
+    if settings.linpol_list_cadence:
+        make_list_flux_hdu('Q', settings.linpol_num_list, table_dict, 
+                            hdu_list, table_names)
+        make_list_flux_hdu('U', settings.linpol_num_list, table_dict, 
+                            hdu_list, table_names)
+        
+    if settings.linpol_p_list_cadence:
+        make_list_flux_hdu('P', settings.linpol_num_p_list, table_dict, 
+                            hdu_list, table_names)
+    
+    for index, name in enumerate(table_names):
+        hdu_list[index+1].name = name
+    
+    hdu_list = fits.HDUList(hdu_list)
     hdu_list.writeto("test_full_skymodel.fits", overwrite=True)
                 
     return ra_range, dec_range

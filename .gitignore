@@ -61,6 +61,8 @@ cmake_testing/GPU_code/source_components/*.png
 cmake_testing/GPU_code/primary_beam_gpu/*.png
 cmake_testing/GPU_code/primary_beam_gpu/plots
 
+cmake_testing/wodenpy/skymodel/test_full_skymodel.fits
+
 *importuvfits.last
 *.log
 
@@ -98,3 +100,4 @@ pyenv*
 examples/polarisation/*.fits
 examples/polarisation/*.uvfits
 examples/polarisation/*.ms
+examples/polarisation/eg_array.txt

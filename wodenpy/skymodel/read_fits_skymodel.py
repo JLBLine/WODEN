@@ -47,6 +47,33 @@ def _error_for_missing_columns(message_start : str, fits_path : str, missing_col
                 missing += f"{col} "
         
         sys.exit(f"Found {message_start} in the FITS file {fits_path}, but missing {missing}columns. Exiting now.")
+        
+def _error_for_missing_int_flx(table, col_entry, col_prepend, mod_col_name, fits_path, hdu_name=False):
+    
+    have_any_int_flx = False
+    for key in table.columns:
+        if key[:len(col_prepend)] == col_prepend:
+            have_any_int_flx = True
+    
+    if not have_any_int_flx:
+        
+        if hdu_name:
+            sys.exit(f"Found {col_entry} (list flux) in {mod_col_name} column in the FITS file {fits_path}, but no columns start with {col_prepend} in the {hdu_name} HDU, which are how list-type fluxes are added. Exiting now.")
+        else:
+            sys.exit(f"Found {col_entry} (list flux) in {mod_col_name} column in the FITS file {fits_path}, but no columns start with {col_prepend}, which are how list-type fluxes are added. Exiting now.")
+    
+    if col_prepend != 'INT_FLX':
+    
+        if 'NAME' not in table.columns:
+            sys.exit(f"Found {col_entry} (list flux) in {mod_col_name} column in the FITS file {fits_path}, but no NAME column in the {hdu_name} HDU. The NAME links the flux entries to the ra/dec in the main table so is necessary. Exiting now.")
+                
+def _error_for_missing_flx_table_cols(hdu_names, hdu_name,  col_entry, col_prepend, mod_col_name, fits_path):
+    
+    if hdu_name in hdu_names:
+        list_table = Table.read(fits_path, hdu=hdu_name )
+        _error_for_missing_int_flx(list_table, col_entry, col_prepend, mod_col_name, fits_path, hdu_name)
+    else:
+        exit(f"Found {col_entry} (list flux) in {mod_col_name} column in the FITS file {fits_path}, but no HDU named {hdu_name} was present. You need an HDU containing the fluxes, and to name that HDU {hdu_name}. Exiting now.")
 
 def check_columns_fits(fits_path : str):
     """Checks that the FITS file at `fits_path` contains all the necessary
@@ -61,6 +88,10 @@ def check_columns_fits(fits_path : str):
     fits_path : str
         Path to FITS sky model file.
     """
+    
+    with fits.open(fits_path) as hdus:
+        num_hdus = len(hdus)
+        hdu_names = [hdu.name for hdu in hdus]
     
     main_table = Table.read(fits_path, hdu=1)
     
@@ -103,22 +134,24 @@ def check_columns_fits(fits_path : str):
                                    ["MAJOR_DC", "MINOR_DC", "PA_DC"],
                                    col_present_dict)
             
-        with fits.open(fits_path) as hdus:
-            num_hdus = len(hdus)
-            
+        ##Minimum number of HDUs is 2, as header is first, main table second
         if num_hdus < 3:
-            sys.exit(f"Found Shapelet components in the FITS file {fits_path}, but missing the second shapelet table. Exiting now.")
+            sys.exit(f"Found Shapelet components in the FITS file {fits_path}, but missing the shapelet table. Exiting now.")
             
+        ##check if there are names on the HDUs. If not, assume shapelets is in the second table HDU
+        ##we didn't name HDUs before we started with the whole polarisation gamut
+        if 'SHAPELET' in hdu_names:
+            shape_table = Table.read(fits_path, hdu='SHAPELET')
         else:
             shape_table = Table.read(fits_path, hdu=2)
             
-            shape_table_cols = ["NAME", "N1", "N2", "COEFF"]
-            for shape_col in shape_table_cols:
-                if shape_col not in shape_table.columns:
-                    sys.exit(f"Found Shapelet components in the FITS file {fits_path}, but missing the {shape_col} column in the shapelet table. Exiting now.")
-                    
-            if np.max(shape_table['N1']) > 100 or np.max(shape_table['N2']) > 100:
-                sys.exit(f"Found Shapelet components in the FITS file {fits_path}, but the maximum N1 or N2 value is greater than 100. Basis functions are only stored up to 100, so this isn't possible. Exiting now.")
+        shape_table_cols = ["NAME", "N1", "N2", "COEFF"]
+        for shape_col in shape_table_cols:
+            if shape_col not in shape_table.columns:
+                sys.exit(f"Found Shapelet components in the FITS file {fits_path}, but missing the {shape_col} column in the shapelet table. Exiting now.")
+                
+        if np.max(shape_table['N1']) > 100 or np.max(shape_table['N2']) > 100:
+            sys.exit(f"Found Shapelet components in the FITS file {fits_path}, but the maximum N1 or N2 value is greater than 100. Basis functions are only stored up to 100, so this isn't possible. Exiting now.")
                 
     
     ##Check for Stokes I flux models making sense-------------------------------
@@ -135,14 +168,7 @@ def check_columns_fits(fits_path : str):
     ##This one is trickier because the name starts with 'INT_FLX' but can
     ##end with any number (which is the frequency in MHz)
     if 'nan' in main_table['MOD_TYPE']:
-        have_any_int_flx = False
-        for key in main_table.columns:
-            if key[:7] == 'INT_FLX':
-                have_any_int_flx = True
-        
-        if not have_any_int_flx:
-        
-            sys.exit(f"Found nan (list flux) in MOD_TYPE column in the FITS file {fits_path}, but no columns start with INT_FLX, which are how list-type fluxes are added. Exiting now.")
+        _error_for_missing_int_flx(main_table, 'nan', 'INT_FLX', 'MOD_TYPE', fits_path)
                 
     
     ##Check for Stokes V information, and verify that V_MOD_TYPE is present-------
@@ -168,6 +194,10 @@ def check_columns_fits(fits_path : str):
             _error_for_missing_columns("pf (polarisation fraction) in V_MOD_TYPE column", fits_path,
                                     ["V_POL_FRAC"],
                                     col_present_dict)
+        
+        if 'nan' in main_table['V_MOD_TYPE']:
+            _error_for_missing_flx_table_cols(hdu_names, 'V_LIST_FLUXES',  'nan',
+                                              'V_INT_FLX', 'V_MOD_TYPE', fits_path)
             
     ##Check for linear polarisation information, and verify that LIN_MOD_TYPE is present-------
     if col_present_dict["LIN_POL_FRAC"] or col_present_dict["LIN_NORM_COMP_PL"] or col_present_dict["LIN_ALPHA_PL"] or col_present_dict["LIN_NORM_COMP_CPL"] or col_present_dict["LIN_ALPHA_CPL"] or col_present_dict["LIN_CURVE_CPL"] or col_present_dict["RM"] or col_present_dict["INTR_POL_ANGLE"]:
@@ -192,7 +222,62 @@ def check_columns_fits(fits_path : str):
             _error_for_missing_columns("pf (polarisation fraction) in LIN_MOD_TYPE column", fits_path,
                                     ["LIN_POL_FRAC", "RM"],
                                     col_present_dict)
+        
+        ##'nan' means list types for both Q and U. So test that both the
+        ##HDUs exist
+        if 'nan' in main_table['LIN_MOD_TYPE']:
+            _error_for_missing_flx_table_cols(hdu_names, 'Q_LIST_FLUXES',  'nan',
+                                              'Q_INT_FLX', 'LIN_MOD_TYPE', fits_path)
+            _error_for_missing_flx_table_cols(hdu_names, 'U_LIST_FLUXES',  'nan',
+                                              'U_INT_FLX', 'LIN_MOD_TYPE', fits_path)
+        
+        ##'p_nan' means list type for linear polarised flux. So test that the polarised
+        ##HDU exists. And we need at least rotation measure, as we'll be doing
+        ##the whole RM rotation thing
+        if 'p_nan' in main_table['LIN_MOD_TYPE']:
+            _error_for_missing_flx_table_cols(hdu_names, 'P_LIST_FLUXES',  'p_nan',
+                                              'P_INT_FLX', 'LIN_MOD_TYPE', fits_path)
+            _error_for_missing_columns("p_nan (list flux) in LIN_MOD_TYPE column",
+                                       fits_path, ["RM"], col_present_dict)
     
+
+def count_num_list_fluxes(flux_mod_col_name : str, flux_col_prepend : str,
+                          num_list_fluxes : np.ndarray,
+                          main_table : Table, comp_counter : Component_Type_Counter,
+                          model_type='nan',
+                          optional_table = False):
+    
+    
+    flux_col_names = []
+    list_type_inds = np.where(main_table[flux_mod_col_name] == model_type)[0]
+            
+    if optional_table:
+        ##Do an extra check here that the number of model types in the main table
+        ##match 
+        use_table = optional_table
+        num_flux_lists = len(use_table['NAME'])
+        
+        if num_flux_lists != len(list_type_inds):
+            exit(f"The number of {model_type} entries in main table column {flux_mod_col_name} does not match the number of rows in the table {[flux_col_prepend[0]]}_LIST_FLUXES. They should match otherwise things will go wrong. Exiting now.")
+    else:
+        use_table = main_table
+        
+    for key in use_table.columns:
+        if key[:len(flux_col_prepend)] == flux_col_prepend:
+            flux_col_names.append(key)
+        
+    for flux_col in flux_col_names:
+        
+        if type(use_table[flux_col]) == Column:
+            present_fluxes = np.where(np.isnan(use_table[flux_col]) == False)[0]
+            num_list_fluxes[list_type_inds] += 1
+        ##OK, astropy.Table can turns things into masked arrays. Here we are
+        ##accessing a column `main_table[flux_col]`, reading it's `mask` which
+        ##returns a bunch of booleans (True == masked). We want everything that
+        ##isn't masked, so use the ~ to swap. Finally, we want ints, not booleans
+        else:
+            present_fluxes = (~use_table[flux_col].mask).astype(int)
+            num_list_fluxes[list_type_inds] += present_fluxes[list_type_inds]
 
 # @profile
 def read_fits_radec_count_components(fits_path : str):
@@ -225,11 +310,6 @@ def read_fits_radec_count_components(fits_path : str):
     unq_source_ID = np.array(main_table['UNQ_SOURCE_ID'], dtype=str)
     comp_names = np.array(main_table['NAME'], dtype=str)
     
-    flux_col_names = []
-    for key in main_table.columns:
-        if key[:7] == 'INT_FLX':
-            flux_col_names.append(key)
-        
     num_comps = len(ras)
     
     comp_counter = Component_Type_Counter(initial_size=num_comps)
@@ -274,22 +354,9 @@ def read_fits_radec_count_components(fits_path : str):
     
     ##for the list flux types, we want to count how many freqs we have.
     ##need them to malloc the ctype sky model later on
+    count_num_list_fluxes('MOD_TYPE', 'INT_FLX', comp_counter.num_list_fluxes,
+                    main_table, comp_counter)
     
-    list_type_inds = np.where(flux_types == 'nan')[0]
-    for flux_col in flux_col_names:
-        
-        ##OK, astropy.Table can turns things into masked arrays. Here we are
-        ##accessing a column `main_table[flux_col]`, reading it's `mask` which
-        ##returns a bunch of booleans (True == masked). We want everything that
-        ##isn't masked, so use the ~ to swap. Finally, we want ints, not booleans
-        
-        if type(main_table[flux_col]) == Column:
-            present_fluxes = np.where(np.isnan(main_table[flux_col]) == False)[0]
-            comp_counter.num_list_fluxes[list_type_inds] += 1
-        else:
-            present_fluxes = (~main_table[flux_col].mask).astype(int)
-            comp_counter.num_list_fluxes[list_type_inds] += present_fluxes[list_type_inds]
-            
     ##Count how many hdus there are; first table should always be the second hdu?
     with fits.open(fits_path) as hdus:
         num_hdus = len(hdus)
@@ -317,54 +384,70 @@ def read_fits_radec_count_components(fits_path : str):
         ##Get column, find index of different types
         v_mod_types = np.array(main_table['V_MOD_TYPE'], dtype=str)
         
-        ##TODO add in list-type fluxes
         v_point_power = np.where((comp_types == 'P') & (v_mod_types == 'pl'))
         v_point_curve = np.where((comp_types == 'P') & (v_mod_types == 'cpl'))
         v_point_pol_frac = np.where((comp_types == 'P') & (v_mod_types == 'pf'))
+        v_point_list = np.where((comp_types == 'P') & (v_mod_types == 'nan'))
         v_gauss_power = np.where((comp_types == 'G') & (v_mod_types == 'pl'))
         v_gauss_curve = np.where((comp_types == 'G') & (v_mod_types == 'cpl'))
         v_gauss_pol_frac = np.where((comp_types == 'G') & (v_mod_types == 'pf'))
+        v_gauss_list = np.where((comp_types == 'G') & (v_mod_types == 'nan'))
         v_shape_power = np.where((comp_types == 'S') & (v_mod_types == 'pl'))
         v_shape_curve = np.where((comp_types == 'S') & (v_mod_types == 'cpl'))
         v_shape_pol_frac = np.where((comp_types == 'S') & (v_mod_types == 'pf'))
+        v_shape_list = np.where((comp_types == 'S') & (v_mod_types == 'nan'))
         
         ##Stick em in the comp counter with specific values
         comp_counter.v_comp_types = np.full(num_comps, np.nan, dtype=np.float64)
         comp_counter.v_comp_types[v_point_power] = CompTypes.V_POINT_POWER.value
         comp_counter.v_comp_types[v_point_curve] = CompTypes.V_POINT_CURVE.value
         comp_counter.v_comp_types[v_point_pol_frac] = CompTypes.V_POINT_POL_FRAC.value
+        comp_counter.v_comp_types[v_point_list] = CompTypes.V_POINT_LIST.value
         comp_counter.v_comp_types[v_gauss_power] = CompTypes.V_GAUSS_POWER.value
         comp_counter.v_comp_types[v_gauss_curve] = CompTypes.V_GAUSS_CURVE.value
         comp_counter.v_comp_types[v_gauss_pol_frac] = CompTypes.V_GAUSS_POL_FRAC.value
+        comp_counter.v_comp_types[v_gauss_list] = CompTypes.V_GAUSS_LIST.value
         comp_counter.v_comp_types[v_shape_power] = CompTypes.V_SHAPE_POWER.value
         comp_counter.v_comp_types[v_shape_curve] = CompTypes.V_SHAPE_CURVE.value
         comp_counter.v_comp_types[v_shape_pol_frac] = CompTypes.V_SHAPE_POL_FRAC.value
+        comp_counter.v_comp_types[v_shape_list] = CompTypes.V_SHAPE_LIST.value
         
     ##Check for (optional) polarisation information and store if needed
     if 'LIN_MOD_TYPE' in main_table.columns:
         ##Get column, find index of different types
         lin_mod_types = np.array(main_table['LIN_MOD_TYPE'], dtype=str)
-        ##TODO add in list-type fluxes
         lin_point_power = np.where((comp_types == 'P') & (lin_mod_types == 'pl'))
         lin_point_curve = np.where((comp_types == 'P') & (lin_mod_types == 'cpl'))
         lin_point_pol_frac = np.where((comp_types == 'P') & (lin_mod_types == 'pf'))
+        lin_point_list = np.where((comp_types == 'P') & (lin_mod_types == 'nan'))
+        lin_point_p_list = np.where((comp_types == 'P') & (lin_mod_types == 'p_nan'))
         lin_gauss_power = np.where((comp_types == 'G') & (lin_mod_types == 'pl'))
         lin_gauss_curve = np.where((comp_types == 'G') & (lin_mod_types == 'cpl'))
         lin_gauss_pol_frac = np.where((comp_types == 'G') & (lin_mod_types == 'pf'))
+        lin_gauss_list = np.where((comp_types == 'G') & (lin_mod_types == 'nan'))
+        lin_gauss_p_list = np.where((comp_types == 'G') & (lin_mod_types == 'p_nan'))
         lin_shape_power = np.where((comp_types == 'S') & (lin_mod_types == 'pl'))
         lin_shape_curve = np.where((comp_types == 'S') & (lin_mod_types == 'cpl'))
         lin_shape_pol_frac = np.where((comp_types == 'S') & (lin_mod_types == 'pf'))
+        lin_shape_list = np.where((comp_types == 'S') & (lin_mod_types == 'nan'))
+        lin_shape_p_list = np.where((comp_types == 'S') & (lin_mod_types == 'p_nan'))
         
         ##Stick em in the comp counter with specific values
         comp_counter.lin_comp_types = np.full(num_comps, np.nan, dtype=np.float64)
         comp_counter.lin_comp_types[lin_point_power] = CompTypes.LIN_POINT_POWER.value
         comp_counter.lin_comp_types[lin_point_curve] = CompTypes.LIN_POINT_CURVE.value
+        comp_counter.lin_comp_types[lin_point_list] = CompTypes.LIN_POINT_LIST.value
+        comp_counter.lin_comp_types[lin_point_p_list] = CompTypes.LIN_POINT_P_LIST.value
         comp_counter.lin_comp_types[lin_point_pol_frac] = CompTypes.LIN_POINT_POL_FRAC.value
         comp_counter.lin_comp_types[lin_gauss_power] = CompTypes.LIN_GAUSS_POWER.value
         comp_counter.lin_comp_types[lin_gauss_curve] = CompTypes.LIN_GAUSS_CURVE.value
+        comp_counter.lin_comp_types[lin_gauss_list] = CompTypes.LIN_GAUSS_LIST.value
+        comp_counter.lin_comp_types[lin_gauss_p_list] = CompTypes.LIN_GAUSS_P_LIST.value
         comp_counter.lin_comp_types[lin_gauss_pol_frac] = CompTypes.LIN_GAUSS_POL_FRAC.value
         comp_counter.lin_comp_types[lin_shape_power] = CompTypes.LIN_SHAPE_POWER.value
         comp_counter.lin_comp_types[lin_shape_curve] = CompTypes.LIN_SHAPE_CURVE.value
+        comp_counter.lin_comp_types[lin_shape_list] = CompTypes.LIN_SHAPE_LIST.value
+        comp_counter.lin_comp_types[lin_shape_p_list] = CompTypes.LIN_SHAPE_P_LIST.value
         comp_counter.lin_comp_types[lin_shape_pol_frac] = CompTypes.LIN_SHAPE_POL_FRAC.value
         
         ##check to see if they've included a INTR_POL_ANGLE angle
@@ -372,6 +455,36 @@ def read_fits_radec_count_components(fits_path : str):
             comp_counter.has_intr_pol_angle = True
     
     comp_counter.total_components()
+    
+    ##If we have list-style polarisation information, we need to count how many
+    ##flux entries there are for each component (needed for mallocing down the line)
+    
+    if comp_counter.num_v_point_lists + comp_counter.num_v_gauss_lists + comp_counter.num_v_shape_lists > 0:
+        comp_counter.num_v_list_fluxes = np.zeros(num_comps, dtype=np.int32)
+    
+        count_num_list_fluxes('V_MOD_TYPE', 'V_INT_FLX', comp_counter.num_v_list_fluxes,
+                            main_table, comp_counter,
+                            optional_table=Table.read(fits_path, hdu='V_LIST_FLUXES'))
+        
+    if comp_counter.num_lin_point_lists + comp_counter.num_lin_gauss_lists + comp_counter.num_lin_shape_lists > 0:
+        comp_counter.num_q_list_fluxes = np.zeros(num_comps, dtype=np.int32)
+        comp_counter.num_u_list_fluxes = np.zeros(num_comps, dtype=np.int32)
+    
+        count_num_list_fluxes('LIN_MOD_TYPE', 'Q_INT_FLX', comp_counter.num_q_list_fluxes,
+                            main_table, comp_counter,
+                            optional_table=Table.read(fits_path, hdu='Q_LIST_FLUXES'))
+        count_num_list_fluxes('LIN_MOD_TYPE', 'U_INT_FLX', comp_counter.num_u_list_fluxes,
+                            main_table, comp_counter,
+                            optional_table=Table.read(fits_path, hdu='U_LIST_FLUXES'))
+        
+    if comp_counter.num_lin_point_p_lists + comp_counter.num_lin_gauss_p_lists + comp_counter.num_lin_shape_p_lists > 0:
+        comp_counter.num_p_list_fluxes = np.zeros(num_comps, dtype=np.int32)
+    
+        count_num_list_fluxes('LIN_MOD_TYPE', 'P_INT_FLX', comp_counter.num_p_list_fluxes,
+                            main_table, comp_counter,
+                            optional_table=Table.read(fits_path, hdu='P_LIST_FLUXES'),
+                            model_type='p_nan')
+        
     
     ##Now we check for optional columns, and if they exist, we read them in
 

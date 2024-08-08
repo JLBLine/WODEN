@@ -790,6 +790,27 @@ class Test(unittest.TestCase):
         ##Test we got what we expected
         check_comp_counter(comp_counter, settings)
         
+    def test_StokesV_list(self):
+        """
+        """
+        
+        settings = Skymodel_Settings(deg_between_comps = 240,
+                                     num_coeff_per_shape = 4,
+                                     num_list_values = 4,
+                                     comps_per_source = 10,
+                                     stokesV_list_cadence = 5,
+                                     stokesV_num_list = 3)
+        
+        fits_skymodel_common.write_full_test_skymodel_fits(settings)
+        
+        comp_counter = read_fits_skymodel.read_fits_radec_count_components('test_full_skymodel.fits')
+        
+        comp_counter.print_info()
+        
+        ##Test we got what we expected
+        check_comp_counter(comp_counter, settings)
+        
+        
     def test_linpol_fracpol(self):
         """
         """
@@ -847,7 +868,8 @@ class Test(unittest.TestCase):
         ##Test we got what we expected
         check_comp_counter(comp_counter, settings)
         
-    def test_all_polarisations(self):
+        
+    def test_linpol_list(self):
         """
         """
         
@@ -855,12 +877,43 @@ class Test(unittest.TestCase):
                                      num_coeff_per_shape = 4,
                                      num_list_values = 4,
                                      comps_per_source = 10,
+                                     linpol_list_cadence = 3,
+                                     linpol_p_list_cadence = 4,
+                                     linpol_num_list = 5,
+                                     linpol_num_p_list = 4)
+        
+        fits_skymodel_common.write_full_test_skymodel_fits(settings)
+        
+        comp_counter = read_fits_skymodel.read_fits_radec_count_components('test_full_skymodel.fits')
+        
+        comp_counter.print_info()
+        
+        ##Test we got what we expected
+        check_comp_counter(comp_counter, settings)
+    
+    
+        
+        
+    def test_all_polarisations(self):
+        """
+        """
+        
+        settings = Skymodel_Settings(deg_between_comps = 50,
+                                     num_coeff_per_shape = 4,
+                                     num_list_values = 4,
+                                     comps_per_source = 10,
                                      stokesV_frac_cadence = 5,
-                                     stokesV_pl_cadence = 4,
-                                     stokesV_cpl_cadence = 3,
-                                     linpol_frac_cadence = 3,
-                                     linpol_pl_cadence = 5,
-                                     linpol_cpl_cadence = 4)
+                                     stokesV_pl_cadence = 7,
+                                     stokesV_cpl_cadence = 11,
+                                     stokesV_list_cadence = 13,
+                                     stokesV_num_list = 3,
+                                     linpol_frac_cadence = 17,
+                                     linpol_pl_cadence = 19,
+                                     linpol_cpl_cadence = 23,
+                                     linpol_list_cadence = 29,
+                                     linpol_p_list_cadence = 31,
+                                     linpol_num_list = 5,
+                                     linpol_num_p_list = 4)
         
         fits_skymodel_common.write_full_test_skymodel_fits(settings)
         

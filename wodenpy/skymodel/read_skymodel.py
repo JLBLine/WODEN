@@ -1,5 +1,5 @@
 from wodenpy.skymodel.read_yaml_skymodel import read_yaml_radec_count_components
-from wodenpy.skymodel.read_fits_skymodel import read_fits_skymodel_chunks, read_fits_radec_count_components
+from wodenpy.skymodel.read_fits_skymodel import read_fits_skymodel_chunks, read_fits_radec_count_components, check_columns_fits
 from wodenpy.skymodel.read_text_skymodel import read_text_radec_count_components
 from wodenpy.use_libwoden.skymodel_structs import Source_Catalogue_Float, Source_Catalogue_Double
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter
@@ -32,6 +32,7 @@ def read_radec_count_components(skymodel_path : str) -> Component_Type_Counter:
     
     ##Figure out if our skymodel is supported or not
     if skymodel_path[-5:] == '.fits':
+        check_columns_fits(skymodel_path)
         comp_counter = read_fits_radec_count_components(skymodel_path)
     
     elif skymodel_path[-5:] == '.yaml':
