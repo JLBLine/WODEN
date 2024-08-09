@@ -15,7 +15,7 @@ from wodenpy.use_libwoden.beam_settings import BeamTypes
 
 from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, _Ctype_Source_Into_Python
 
-from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components
+from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components, Skymodel_Settings
 
 import wodenpy.use_libwoden.woden_settings as ws
 from copy import deepcopy
@@ -37,45 +37,6 @@ RTOL=1e-10
 ##limits for "all sky" sky model
 LOW_DEC = -90.0*D2R
 HIGH_DEC = 30.0*D2R
-
-class Skymodel_Settings:
-    """Something to hold all the various settings and pass around between
-    functions"""
-    def __init__(self, deg_between_comps : float,
-                 num_coeff_per_shape : int,
-                 num_list_values : int,
-                 comps_per_source : int,
-                 stokesV_frac_cadence : int = 0,
-                 stokesV_pl_cadence : int = 0,
-                 stokesV_cpl_cadence : int = 0,
-                 stokesV_list_cadence : int = 0,
-                 stokesV_num_list : int = 0,
-                 linpol_frac_cadence : int = 0,
-                 linpol_pl_cadence : int = 0,
-                 linpol_cpl_cadence : int = 0,
-                 linpol_list_cadence : int = 0,
-                 linpol_p_list_cadence : int = 0,
-                 linpol_num_list : int = 0,
-                 linpol_num_p_list : int =0 ):
-        
-        self.deg_between_comps = deg_between_comps
-        self.num_coeff_per_shape = num_coeff_per_shape
-        self.num_list_values = num_list_values
-        self.comps_per_source = comps_per_source
-        self.stokesV_frac_cadence = stokesV_frac_cadence
-        self.stokesV_pl_cadence = stokesV_pl_cadence
-        self.stokesV_cpl_cadence = stokesV_cpl_cadence
-        self.linpol_frac_cadence = linpol_frac_cadence
-        self.linpol_pl_cadence = linpol_pl_cadence
-        self.linpol_cpl_cadence = linpol_cpl_cadence
-        self.stokesV_list_cadence = stokesV_list_cadence
-        self.stokesV_num_list = stokesV_num_list
-        self.linpol_list_cadence = linpol_list_cadence
-        self.linpol_p_list_cadence = linpol_p_list_cadence
-        self.linpol_num_list = linpol_num_list
-        self.linpol_num_p_list = linpol_num_p_list
-        
-        self.before_crop_num_coords = 0
 
 def check_components(found_comps, expec_comps,
                      n_powers, n_curves, n_lists,

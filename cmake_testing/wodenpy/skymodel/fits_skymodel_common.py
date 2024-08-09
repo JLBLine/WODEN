@@ -7,7 +7,8 @@ from astropy.table import Column, Table
 from astropy.io import fits
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, Component_Info, CompTypes, calc_pl_norm_at_200MHz, calc_cpl_norm_at_200MHz
 
-from read_skymodel_common import Skymodel_Settings
+from common_skymodel_test import Skymodel_Settings
+# from read_skymodel_common import Skymodel_Settings
 
 D2R = np.pi/180.0
 # MWA_LATITUDE = -26.7*D2R

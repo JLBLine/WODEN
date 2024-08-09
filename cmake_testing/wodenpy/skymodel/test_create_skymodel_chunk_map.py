@@ -16,7 +16,7 @@ from wodenpy.skymodel import read_yaml_skymodel
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes
 from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map, Skymodel_Chunk_Map
 
-from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest
+from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Skymodel_Settings
 
 D2R = np.pi/180.0
 
@@ -27,24 +27,25 @@ NUM_FLUX_TYPES = 3
 ##for 
 class Test(BaseChunkTest):
     
-    def run_test_create_skymodel_chunk_map(self, max_num_visibilities : int,
-                            num_points : int, num_gauss : int,
-                            num_shapes : int, num_coeff_per_shape : int,
-                            num_list_values : int, num_time_steps : int,
-                            num_baselines : int, num_freqs : int,
-                            stokesV_cadence : int = 0,
-                            linpol_cadence : int = 0):
+    def run_test_create_skymodel_chunk_map(self, settings : Skymodel_Settings):
         """Makes a populted Component_Type_Counter based off the given
         inputs, runs it through
         `wodenpy.skymodel.chunk_sky_model.map_chunk_pointgauss` and
         checks that gives the correct answers"""
         
+        
+        max_num_visibilities = settings.max_num_visibilities
+        num_time_steps = settings.num_time_steps
+        num_baselines = settings.num_baselines
+        num_freqs = settings.num_freqs
+        
+        num_points = settings.num_points
+        num_gauss = settings.num_gauss
+        num_shapes = settings.num_shapes
+        num_coeff_per_shape = settings.num_coeff_per_shape
+        
         ##make the fake sky model        
-        comp_counter = fill_comp_counter_for_chunking(num_points, num_gauss,
-                                         num_shapes, num_coeff_per_shape,
-                                         num_list_values, num_time_steps,
-                                         stokesV_cadence=stokesV_cadence,
-                                         linpol_cadence=linpol_cadence)
+        comp_counter = fill_comp_counter_for_chunking(settings)
         
         comp_counter.total_components()
         
@@ -78,9 +79,8 @@ class Test(BaseChunkTest):
             
             expec_counter = self.check_pointgauss_chunking(point_ind,
                                             comps_per_chunk,
-                                            num_point_chunks, num_list_values,
-                                            num_points,
-                                            linpol_cadence, stokesV_cadence,
+                                            num_point_chunks, num_points,
+                                            settings,
                                             CompTypes.POINT,
                                             comp_counter, chunk_map,
                                             expec_counter)
@@ -91,9 +91,8 @@ class Test(BaseChunkTest):
             
             expec_counter = self.check_pointgauss_chunking(gauss_ind,
                                             comps_per_chunk,
-                                            num_gauss_chunks, num_list_values,
-                                            num_gauss,
-                                            linpol_cadence, stokesV_cadence,
+                                            num_gauss_chunks, num_gauss,
+                                            settings,
                                             CompTypes.GAUSSIAN,
                                             comp_counter, chunk_map,
                                             expec_counter)
@@ -103,9 +102,8 @@ class Test(BaseChunkTest):
             chunk_map = chunked_skymodel_counters[num_point_chunks + num_gauss_chunks + coeff_ind]
             
             self.check_shapelet_chunking(coeff_ind, num_coeff_per_shape,
-                                         comps_per_chunk,
-                                         num_list_values,  num_shapes,
-                                         linpol_cadence, stokesV_cadence,
+                                         comps_per_chunk, num_shapes,
+                                         settings,
                                          comp_counter, chunk_map,
                                          total_point_comps=NUM_FLUX_TYPES*num_points,
                                          total_gauss_comps=NUM_FLUX_TYPES*num_gauss)
@@ -115,174 +113,118 @@ class Test(BaseChunkTest):
     def test_P3_G0000_S00_00_C1_Time001(self):
         max_num_visibilities = 2
         
-        num_points = 3
-        num_gauss = 0
-        num_shapes = 0
-        num_coeff_per_shape = 0
-
-        num_time_steps = 1
-        num_baselines = 1
-        num_freqs = 1
-
-        num_list_values = 3
-        
-        self.run_test_create_skymodel_chunk_map(max_num_visibilities,
-                                            num_points, num_gauss,
-                                            num_shapes, num_coeff_per_shape,
-                                            num_list_values, num_time_steps,
-                                            num_baselines, num_freqs)
+        settings = Skymodel_Settings(num_points = 3,
+                                     num_gauss = 0,
+                                     num_shapes = 0,
+                                     num_coeff_per_shape = 0,
+                                     num_time_steps = 1,
+                                     num_freqs = 1,
+                                     num_baselines = 8128,
+                                     num_list_values = 3)
+        self.run_test_create_skymodel_chunk_map(settings),
         
 
 
     def test_P4544_G1736_S20_14_C1e8_Time014(self):
 
-        num_points = 4544
-        num_gauss = 1736
-        num_shapes = 20
-        num_coeff_per_shape = 14
-
-        max_num_visibilities = 1e8
-
-        num_time_steps = 14
-        num_baselines = 8128
-        num_freqs = 16
-
-        num_list_values = 4
-        self.run_test_create_skymodel_chunk_map(max_num_visibilities,
-                                            num_points, num_gauss,
-                                            num_shapes, num_coeff_per_shape,
-                                            num_list_values, num_time_steps,
-                                            num_baselines, num_freqs)
+        settings = Skymodel_Settings(num_points = 4544,
+                                    num_gauss = 1736,
+                                    num_shapes = 20,
+                                    num_coeff_per_shape = 14,
+                                    max_num_visibilities = 1e8,
+                                    num_time_steps = 14,
+                                    num_baselines = 8128,
+                                    num_freqs = 16,
+                                    num_list_values = 4)
+        self.run_test_create_skymodel_chunk_map(settings)
 
 
     def test_P1000_G0000_S00_00_C1e8_Time014(self):
 
-        num_points = 1000
-        num_gauss = 0
-        num_shapes = 0
-        num_coeff_per_shape = 0
-
-        max_num_visibilities = 1e9
-
-        num_time_steps = 14
-        num_baselines = 8128
-        num_freqs = 16
-
-        num_list_values = 6
-        self.run_test_create_skymodel_chunk_map(max_num_visibilities,
-                                            num_points, num_gauss,
-                                            num_shapes, num_coeff_per_shape,
-                                            num_list_values, num_time_steps,
-                                            num_baselines, num_freqs)
+        settings = Skymodel_Settings(num_points = 1000,
+                                    num_gauss = 0,
+                                    num_shapes = 0,
+                                    num_coeff_per_shape = 0,
+                                    max_num_visibilities = 1e9,
+                                    num_time_steps = 14,
+                                    num_baselines = 8128,
+                                    num_freqs = 16,
+                                    num_list_values = 6)
+        self.run_test_create_skymodel_chunk_map(settings)
 
 
     def test_P0000_G1000_S00_00_C1e8_Time014(self):
 
-        num_points = 0
-        num_gauss = 1000
-        num_shapes = 0
-        num_coeff_per_shape = 0
-
-        max_num_visibilities = 1e9
-
-        num_time_steps = 14
-        num_baselines = 8128
-        num_freqs = 16
-
-        num_list_values = 5
-        self.run_test_create_skymodel_chunk_map(max_num_visibilities,
-                                            num_points, num_gauss,
-                                            num_shapes, num_coeff_per_shape,
-                                            num_list_values, num_time_steps,
-                                            num_baselines, num_freqs)
+        settings = Skymodel_Settings(num_points = 0,
+                                    num_gauss = 1000,
+                                    num_shapes = 0,
+                                    num_coeff_per_shape = 0,
+                                    max_num_visibilities = 1e9,
+                                    num_time_steps = 14,
+                                    num_baselines = 8128,
+                                    num_freqs = 16,
+                                    num_list_values = 5)
+        self.run_test_create_skymodel_chunk_map(settings)
 
 
     def test_P0000_G0000_S67_78_C1e8_Time014(self):
 
-        num_points = 0
-        num_gauss = 0
-        num_shapes = 67
-        num_coeff_per_shape = 78
-
-        max_num_visibilities = 1e9
-
-        num_time_steps = 14
-        num_baselines = 8128
-        num_freqs = 16
-
-        num_list_values = 2
-        self.run_test_create_skymodel_chunk_map(max_num_visibilities,
-                                            num_points, num_gauss,
-                                            num_shapes, num_coeff_per_shape,
-                                            num_list_values, num_time_steps,
-                                            num_baselines, num_freqs)
+        settings = Skymodel_Settings(num_points = 0,
+                                    num_gauss = 0,
+                                    num_shapes = 67,
+                                    num_coeff_per_shape = 78,
+                                    max_num_visibilities = 1e9,
+                                    num_time_steps = 14,
+                                    num_baselines = 8128,
+                                    num_freqs = 16,
+                                    num_list_values = 2)
+        self.run_test_create_skymodel_chunk_map(settings)
 
 
     def test_P0050_G0050_S10_25_C4576_Time014(self):
 
-        num_points = 50
-        num_gauss = 50
-        num_shapes = 10
-        num_coeff_per_shape = 25
-
-        max_num_visibilities = 4576
-
-        num_time_steps = 14
-        num_baselines = 8128
-        num_freqs = 16
-
-        num_list_values = 8
-        self.run_test_create_skymodel_chunk_map(max_num_visibilities,
-                                            num_points, num_gauss,
-                                            num_shapes, num_coeff_per_shape,
-                                            num_list_values, num_time_steps,
-                                            num_baselines, num_freqs)
+        settings = Skymodel_Settings(num_points = 50,
+                                    num_gauss = 50,
+                                    num_shapes = 10,
+                                    num_coeff_per_shape = 25,
+                                    max_num_visibilities = 4576,
+                                    num_time_steps = 14,
+                                    num_baselines = 8128,
+                                    num_freqs = 16,
+                                    num_list_values = 8)
+        self.run_test_create_skymodel_chunk_map(settings)
 
 
     def test_P87760_G12207_S121_678_C1e10_Time056(self):
 
-        num_points = 87760
-        num_gauss = 12207
-        num_shapes = 121
-        num_coeff_per_shape = 678
-
-        max_num_visibilities = 1e10
-
-        num_time_steps = 56
-        num_baselines = 8128
-        num_freqs = 32
-
-        num_list_values = 16
-        self.run_test_create_skymodel_chunk_map(max_num_visibilities,
-                                            num_points, num_gauss,
-                                            num_shapes, num_coeff_per_shape,
-                                            num_list_values, num_time_steps,
-                                            num_baselines, num_freqs)
+        settings = Skymodel_Settings(num_points = 87760,
+                                    num_gauss = 12207,
+                                    num_shapes = 121,
+                                    num_coeff_per_shape = 678,
+                                    max_num_visibilities = 1e10,
+                                    num_time_steps = 56,
+                                    num_baselines = 8128,
+                                    num_freqs = 32,
+                                    num_list_values = 16)
+        self.run_test_create_skymodel_chunk_map(settings)
         
     def test_P87760_G12207_S121_678_C1e10_Time056_Lin70_V100(self):
 
-        num_points = 87760
-        num_gauss = 12207
-        num_shapes = 121
-        num_coeff_per_shape = 678
-
-        max_num_visibilities = 1e10
-
-        num_time_steps = 56
-        num_baselines = 8128
-        num_freqs = 32
-
-        num_list_values = 16
-        
-        linpol_cadence = 70
-        stokesV_cadence = 100
-        self.run_test_create_skymodel_chunk_map(max_num_visibilities,
-                                            num_points, num_gauss,
-                                            num_shapes, num_coeff_per_shape,
-                                            num_list_values, num_time_steps,
-                                            num_baselines, num_freqs,
-                                           linpol_cadence=linpol_cadence,
-                                           stokesV_cadence=stokesV_cadence)
+        settings = Skymodel_Settings(num_points = 87760,
+                                    num_gauss = 12207,
+                                    num_shapes = 121,
+                                    num_coeff_per_shape = 678,
+                                    max_num_visibilities = 1e10,
+                                    num_time_steps = 56,
+                                    num_baselines = 8128,
+                                    num_freqs = 32,
+                                    num_list_values = 16,
+                                    linpol_cadence = 70,
+                                    linpol_num_list=2,
+                                    linpol_num_p_list=3,
+                                    stokesV_cadence = 80,
+                                    stokesV_num_list=4)
+        self.run_test_create_skymodel_chunk_map(settings)
 
 
         

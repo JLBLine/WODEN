@@ -23,7 +23,8 @@ path.append('{:s}/../../../wodenpy/skymodel'.format(code_dir))
 # ##Code we are testing
 from wodenpy.skymodel import read_fits_skymodel
 import fits_skymodel_common
-from read_skymodel_common import Skymodel_Settings, make_expected_comp_counter, check_comp_counter
+from common_skymodel_test import Skymodel_Settings
+from read_skymodel_common import make_expected_comp_counter, check_comp_counter
 # import wodenpy
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes
 

@@ -210,6 +210,7 @@ class Component_Type_Counter():
         self.num_v_point_lists = 0
         self.num_v_gauss_lists = 0
         self.num_v_shape_lists = 0
+        ##this will be an array that holds how many flux list entries each comp has
         self.num_v_list_fluxes = False
         
         self.num_lin_point_powers = 0
@@ -227,7 +228,7 @@ class Component_Type_Counter():
         self.num_lin_gauss_p_lists = 0
         self.num_lin_shape_lists = 0
         self.num_lin_shape_p_lists = 0
-        
+        ##this will be arrays that holds how many flux list entries each comp has
         self.num_q_list_fluxes = False
         self.num_u_list_fluxes = False
         self.num_lin_p_list_fluxes = False
@@ -734,9 +735,13 @@ def crop_below_horizon(lst : float, latitude : float,
     
     if type(comp_counter.v_comp_types) == np.ndarray:
         comp_counter.v_comp_types = comp_counter.v_comp_types[comp_counter.orig_comp_indexes]
+        comp_counter.num_v_list_fluxes = comp_counter.num_v_list_fluxes[comp_counter.orig_comp_indexes]
         
     if type(comp_counter.lin_comp_types) == np.ndarray:
         comp_counter.lin_comp_types = comp_counter.lin_comp_types[comp_counter.orig_comp_indexes]
+        comp_counter.num_lin_p_list_fluxes = comp_counter.num_lin_p_list_fluxes[comp_counter.orig_comp_indexes]
+        comp_counter.num_q_list_fluxes = comp_counter.num_q_list_fluxes[comp_counter.orig_comp_indexes]
+        comp_counter.num_u_list_fluxes = comp_counter.num_u_list_fluxes[comp_counter.orig_comp_indexes]
 
     ##re-total everything now we have changed the sizes
     comp_counter.total_components()
