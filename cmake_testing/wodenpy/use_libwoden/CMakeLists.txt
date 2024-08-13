@@ -17,6 +17,16 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   target_compile_options(read_woden_settings_${PRECISION} PRIVATE
                           ${C_FLAGS})
 
+
+  add_library(read_source_catalogue_${PRECISION} SHARED read_source_catalogue.c)
+  target_link_libraries(read_source_catalogue_${PRECISION})
+
+  target_include_directories(read_source_catalogue_${PRECISION} PUBLIC
+                "${CMAKE_SOURCE_DIR}/cmake_testing/wodenpy/use_libwoden/"
+                "${CMAKE_SOURCE_DIR}/include")
+  target_compile_options(read_source_catalogue_${PRECISION} PRIVATE
+                          ${C_FLAGS})
+
 endforeach()
 
 ##Set an environment variable for the ctest of this, so we can find a path
@@ -36,4 +46,11 @@ set_tests_properties(python_test_setup_lsts_and_phase_centre PROPERTIES
 add_test(python_test_create_sbf ${PYTHON_EXECUTABLE}
          ${CMAKE_CURRENT_SOURCE_DIR}/test_create_sbf.py)
 set_tests_properties(python_test_create_sbf PROPERTIES
+         ENVIRONMENT CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})
+
+##Set an environment variable for the ctest of this, so we can find a path
+##to some test files that live in this dir
+add_test(python_test_make_skymodel_structs ${PYTHON_EXECUTABLE}
+         ${CMAKE_CURRENT_SOURCE_DIR}/test_make_skymodel_structs.py)
+set_tests_properties(python_test_make_skymodel_structs PROPERTIES
          ENVIRONMENT CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})

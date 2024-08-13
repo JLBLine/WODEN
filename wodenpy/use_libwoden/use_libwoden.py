@@ -7,12 +7,12 @@ import os
 
 from wodenpy.use_libwoden.visibility_set import Visi_Set_Float, Visi_Set_Double
 from wodenpy.use_libwoden.woden_settings import Woden_Settings_Float, Woden_Settings_Double
-from wodenpy.use_libwoden.skymodel_structs import Source_Catalogue_Float, Source_Catalogue_Double
+from wodenpy.use_libwoden.skymodel_structs import create_source_catalogue_struct
 from wodenpy.use_libwoden.array_layout_struct import Array_Layout
 
 VELC = 299792458.0
 
-def load_in_woden_library(precision='double'):
+def load_in_woden_library(woden_struct_classes, precision='double'):
     """Load in the WODEN C and CUDA code via a dynamic library, with the
     required `precision` (either load `libwoden_float.so` or `libwoden_double.so`)
 
@@ -53,16 +53,18 @@ def load_in_woden_library(precision='double'):
 
     run_woden.restype = ctypes.c_int
     
+    Source_Catalogue = woden_struct_classes.Source_Catalogue
+    
     if precision == 'float':
         run_woden.argtypes = [ctypes.POINTER(Woden_Settings_Float),
                               ctypes.POINTER(Visi_Set_Float),
-                              ctypes.POINTER(Source_Catalogue_Float),
+                              ctypes.POINTER(woden_struct_classes.Source_Catalogue),
                               ctypes.POINTER(Array_Layout),
                               ctypes.POINTER(ctypes.c_float)]
     else:
         run_woden.argtypes = [ctypes.POINTER(Woden_Settings_Double),
                               ctypes.POINTER(Visi_Set_Double),
-                              ctypes.POINTER(Source_Catalogue_Double),
+                              ctypes.POINTER(woden_struct_classes.Source_Catalogue),
                               ctypes.POINTER(Array_Layout),
                               ctypes.POINTER(ctypes.c_double)]
         

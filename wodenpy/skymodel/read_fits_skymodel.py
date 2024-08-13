@@ -5,7 +5,7 @@ from typing import Union
 
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, Component_Info, CompTypes
 from wodenpy.skymodel.chunk_sky_model import Skymodel_Chunk_Map
-from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, setup_source_catalogue, Source_Catalogue_Float, Source_Catalogue_Double, _Ctype_Source_Into_Python, Components_Float, Components_Double, Source_Float, Source_Double
+from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, setup_source_catalogue, _Ctype_Source_Into_Python
 from wodenpy.use_libwoden.beam_settings import BeamTypes
 
 from astropy.table import Table, Column
@@ -518,7 +518,7 @@ def find_all_indexes_of_x_in_y(x : np.ndarray, y : np.ndarray):
 
 def add_fits_info_to_source_catalogue(comp_type : CompTypes,
                         main_table : Table, shape_table : Table,
-                        chunk_source : Union[Source_Float, Source_Double],
+                        chunk_source,
                         chunk_map : Skymodel_Chunk_Map,
                         beamtype : int, lsts : np.ndarray, latitude : float):
     """Given the desired components as detailed in the `chunk_map`, add
@@ -643,9 +643,6 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
         
         source_components.power_ref_freqs[pow_ind] = REF_FREQ
         source_components.power_ref_stokesI[pow_ind] = main_table['NORM_COMP_PL'][old_comp_ind]
-        source_components.power_ref_stokesQ[pow_ind] = 0.0
-        source_components.power_ref_stokesU[pow_ind] = 0.0
-        source_components.power_ref_stokesV[pow_ind] = 0.0
         source_components.power_SIs[pow_ind] = main_table['ALPHA_PL'][old_comp_ind]
         
         
@@ -655,9 +652,6 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
         
         source_components.curve_ref_freqs[cur_ind] = REF_FREQ
         source_components.curve_ref_stokesI[cur_ind] = main_table['NORM_COMP_CPL'][old_comp_ind]
-        source_components.curve_ref_stokesQ[cur_ind] = 0.0
-        source_components.curve_ref_stokesU[cur_ind] = 0.0
-        source_components.curve_ref_stokesV[cur_ind] = 0.0
         source_components.curve_SIs[cur_ind] = main_table['ALPHA_CPL'][old_comp_ind]
         source_components.curve_qs[cur_ind] = main_table['CURVE_CPL'][old_comp_ind]
         
@@ -863,12 +857,12 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
 
 
 # @profile
-def read_fits_skymodel_chunks(main_table : Table, shape_table : Table,
+def read_fits_skymodel_chunks(woden_struct_classes, main_table : Table, shape_table : Table,
                               chunked_skymodel_maps : list,
                               num_freqs : int, num_time_steps : int,
                               beamtype : int,
                               lsts : np.ndarray, latitude : float,
-                              precision = "double") -> Union[Source_Catalogue_Float, Source_Catalogue_Double]:
+                              precision = "double"):
     """
     Uses Tables read from a FITS file and returns a source catalogue
     that can be used by C/CUDA code to calculate visibilities. Uses the
@@ -910,17 +904,31 @@ def read_fits_skymodel_chunks(main_table : Table, shape_table : Table,
         
     ##setup the source catalogue, which is going to store all of the information
     ##of each source and be fed straight into C/CUDA
-    source_catalogue = setup_source_catalogue(len(chunked_skymodel_maps), num_shapelets,
-                                precision = precision)
+    source_catalogue = setup_source_catalogue(woden_struct_classes.Source,
+                                              woden_struct_classes.Source_Catalogue,
+                                              len(chunked_skymodel_maps), num_shapelets,
+                                              precision = precision)
     
     ##for each chunk map, create a Source_Float or Source_Double ctype
     ##struct, and "malloc" the right amount of arrays to store required infor
     for chunk_ind, chunk_map in enumerate(chunked_skymodel_maps):
-        source_catalogue.sources[chunk_ind] = setup_chunked_source(chunk_map,
+        # source_catalogue.sources[chunk_ind] = setup_chunked_source(woden_struct_classes,
+        #                                         chunk_map,
+        #                                         num_freqs, num_time_steps,
+        #                                         beamtype, precision=precision)
+        
+        # chunk_source = source_catalogue.sources[chunk_ind]
+        
+        setup_chunked_source(woden_struct_classes,
+            source_catalogue.sources[chunk_ind], chunk_map,
                                                 num_freqs, num_time_steps,
                                                 beamtype, precision=precision)
         
-        chunk_source = source_catalogue.sources[chunk_ind]
+        
+        
+        
+        
+        # print("HOW AND WHY", source_catalogue.sources[0].point_components.ras[1])
         
         ##count up the total number of components across all chunks
         ##annoyingly, beacuse Jack sucks, we split shapelet us by basis 
@@ -931,24 +939,25 @@ def read_fits_skymodel_chunks(main_table : Table, shape_table : Table,
         if chunk_map.n_points > 0:
             add_fits_info_to_source_catalogue(CompTypes.POINT,
                                       main_table, shape_table,
-                                      chunk_source, chunk_map,
+                                      source_catalogue.sources[chunk_ind], chunk_map,
                                       beamtype, lsts, latitude)
             
         if chunk_map.n_gauss > 0:
             add_fits_info_to_source_catalogue(CompTypes.GAUSSIAN,
                                       main_table, shape_table,
-                                      chunk_source, chunk_map,
+                                      source_catalogue.sources[chunk_ind], chunk_map,
                                       beamtype, lsts, latitude)
             
         if chunk_map.n_shapes > 0:
             add_fits_info_to_source_catalogue(CompTypes.SHAPELET,
                                       main_table, shape_table,
-                                      chunk_source, chunk_map,
+                                      source_catalogue.sources[chunk_ind], chunk_map,
                                       beamtype, lsts, latitude)
-        
-
+            
     ##TODO some kind of consistency check between the chunk_maps and the
     ##sources in the catalogue - make sure we read in the correct information
+    
+    # Source_Catalogue = create_source_catalogue_struct(precision)
     
     return source_catalogue
 

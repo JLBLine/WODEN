@@ -273,6 +273,8 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   components.n_linpol_curve = 0;
   components.n_linpol_angles = 0;
 
+  components.do_QUV = 0;
+
   //Run the CUDA code
   test_source_component_common(num_powers, components, freqs,
            woden_settings, beam_settings,

@@ -138,6 +138,11 @@ class Component_Type_Counter():
         self.num_list_fluxes = np.zeros(self.array_size, dtype=int)
         self.num_shape_coeffs = np.zeros(self.array_size, dtype=int)
         
+        self.num_v_list_fluxes = np.zeros(self.array_size, dtype=int)
+        self.num_q_list_fluxes = np.zeros(self.array_size, dtype=int)
+        self.num_u_list_fluxes = np.zeros(self.array_size, dtype=int)
+        self.num_lin_p_list_fluxes = np.zeros(self.array_size, dtype=int)
+        
         ##these are optional, so only fill if we need them
         self.v_comp_types = False
         self.lin_comp_types = False
@@ -210,8 +215,6 @@ class Component_Type_Counter():
         self.num_v_point_lists = 0
         self.num_v_gauss_lists = 0
         self.num_v_shape_lists = 0
-        ##this will be an array that holds how many flux list entries each comp has
-        self.num_v_list_fluxes = False
         
         self.num_lin_point_powers = 0
         self.num_lin_point_curves = 0
@@ -228,11 +231,6 @@ class Component_Type_Counter():
         self.num_lin_gauss_p_lists = 0
         self.num_lin_shape_lists = 0
         self.num_lin_shape_p_lists = 0
-        ##this will be arrays that holds how many flux list entries each comp has
-        self.num_q_list_fluxes = False
-        self.num_u_list_fluxes = False
-        self.num_lin_p_list_fluxes = False
-        
         self.has_intr_pol_angle = False
         
         self.num_v_point = 0

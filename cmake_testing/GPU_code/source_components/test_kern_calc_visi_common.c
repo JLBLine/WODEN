@@ -114,9 +114,9 @@ void malloc_args_for_testing(args_for_testing_t *args_ft,
   components->decs = malloc(num_components*sizeof(double));
 
   components->power_ref_stokesI = malloc(n_powers*sizeof(user_precision_t));
-  components->power_ref_stokesQ = malloc(n_powers*sizeof(user_precision_t));
-  components->power_ref_stokesU = malloc(n_powers*sizeof(user_precision_t));
-  components->power_ref_stokesV = malloc(n_powers*sizeof(user_precision_t));
+  // components->power_ref_stokesQ = malloc(n_powers*sizeof(user_precision_t));
+  // components->power_ref_stokesU = malloc(n_powers*sizeof(user_precision_t));
+  // components->power_ref_stokesV = malloc(n_powers*sizeof(user_precision_t));
   components->power_SIs = malloc(n_powers*sizeof(user_precision_t));
   components->power_ref_freqs = malloc(n_powers*sizeof(double));
   components->power_comp_inds = malloc(n_powers*sizeof(int));
@@ -183,9 +183,9 @@ void free_args_for_testing(args_for_testing_t *args_ft,
   free( components.decs );
 
   free( components.power_ref_stokesI );
-  free( components.power_ref_stokesQ );
-  free( components.power_ref_stokesU );
-  free( components.power_ref_stokesV );
+  // free( components.power_ref_stokesQ );
+  // free( components.power_ref_stokesU );
+  // free( components.power_ref_stokesV );
   free( components.power_SIs );
   free( components.power_ref_freqs );
   free( components.power_comp_inds );

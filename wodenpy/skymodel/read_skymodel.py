@@ -1,7 +1,7 @@
 from wodenpy.skymodel.read_yaml_skymodel import read_yaml_radec_count_components
 from wodenpy.skymodel.read_fits_skymodel import read_fits_skymodel_chunks, read_fits_radec_count_components, check_columns_fits
 from wodenpy.skymodel.read_text_skymodel import read_text_radec_count_components
-from wodenpy.use_libwoden.skymodel_structs import Source_Catalogue_Float, Source_Catalogue_Double
+# from wodenpy.use_libwoden.skymodel_structs import Source_Catalogue
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter
 import numpy as np
 from typing import Union
@@ -49,11 +49,12 @@ def read_radec_count_components(skymodel_path : str) -> Component_Type_Counter:
     return comp_counter
 
 
-def read_skymodel_chunks(skymodel_path : str, chunked_skymodel_maps : list,
+def read_skymodel_chunks(woden_struct_classes,
+                         skymodel_path : str, chunked_skymodel_maps : list,
                          num_freqs : int, num_time_steps : int,
                          beamtype : int,
                          lsts : np.ndarray, latitude : float,
-                         precision = "double") -> Union[Source_Catalogue_Float, Source_Catalogue_Double]:
+                         precision = "double"):
     """Lazy loads chunks of a sky model at `skymodel_path` into a
     Source_Catalogue object, as mapped by `chunked_skymodel_maps`. If the
     sky model isn't already a FITS file, it is converted to one. The
@@ -110,9 +111,12 @@ def read_skymodel_chunks(skymodel_path : str, chunked_skymodel_maps : list,
     else:
         sys.exit('The filename fed into `wodenpy/read_skymodel/read_skymodel_chunks` was not of a supported file type. Currently supported formats are: .fits, .yaml, .txt')
         
-    source_catalogue = read_fits_skymodel_chunks(main_table, shape_table,
+    source_catalogue = read_fits_skymodel_chunks(woden_struct_classes,
+                              main_table, shape_table,
                               chunked_skymodel_maps,
                               num_freqs, num_time_steps, beamtype,
                               lsts, latitude, precision = precision)
+    
+    # print("HERE", type(source_catalogue))
         
     return source_catalogue

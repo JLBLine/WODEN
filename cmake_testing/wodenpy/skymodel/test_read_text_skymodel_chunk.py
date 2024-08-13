@@ -19,7 +19,7 @@ from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, _Ctype_S
 
 from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components, Skymodel_Settings
 
-
+from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 import wodenpy.use_libwoden.woden_settings as ws
 
 from read_skymodel_common import check_components, check_all_sources, populate_pointgauss_chunk, populate_shapelet_chunk, make_expected_chunks
@@ -443,6 +443,8 @@ class Test(BaseChunkTest):
                                           lst,
                                           crop_by_component=True):
         
+        precision = "double"
+        woden_struct_classes = Woden_Struct_Classes(precision)
         woden_settings = ws.Woden_Settings_Double()
         
         woden_settings.time_res = 1.0
@@ -473,7 +475,7 @@ class Test(BaseChunkTest):
         
         beamtype = BeamTypes.FEE_BEAM.value
 
-        source_catalogue = read_skymodel.read_skymodel_chunks(
+        source_catalogue = read_skymodel.read_skymodel_chunks(woden_struct_classes,
                                               skymodel_filename, chunked_skymodel_maps,
                                               num_freqs, num_time_steps,
                                               beamtype, lsts, MWA_LAT)

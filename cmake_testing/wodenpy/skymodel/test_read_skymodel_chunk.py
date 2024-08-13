@@ -23,7 +23,7 @@ from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, 
 from read_skymodel_common import check_components, check_all_sources, populate_pointgauss_chunk, populate_shapelet_chunk, make_expected_chunks
 
 import wodenpy.use_libwoden.woden_settings as ws
-
+from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 from test_read_FITS_skymodel_chunk import write_full_test_skymodel_fits
 from test_read_yaml_skymodel_chunk import write_full_test_skymodel_yaml
 from test_read_text_skymodel_chunk import write_full_test_skymodel_text, make_expected_chunks_text
@@ -57,6 +57,8 @@ class Test(BaseChunkTest):
         
         lst = 0.0
     
+        precision = "double"
+        woden_struct_classes = Woden_Struct_Classes(precision)
         woden_settings = ws.Woden_Settings_Double()
         
         woden_settings.time_res = 1.0
@@ -108,7 +110,8 @@ class Test(BaseChunkTest):
         
         beamtype = BeamTypes.FEE_BEAM.value
 
-        source_catalogue = read_skymodel_chunks(skymodel_filename,
+        source_catalogue = read_skymodel_chunks(woden_struct_classes,
+                                                skymodel_filename,
                                                 chunked_skymodel_maps,
                                                 num_freqs, num_time_steps,
                                                 beamtype, lsts, MWA_LAT)
@@ -121,6 +124,8 @@ class Test(BaseChunkTest):
         
         lst = 0.0
     
+        precision = "double"
+        woden_struct_classes = Woden_Struct_Classes(precision)
         woden_settings = ws.Woden_Settings_Double()
         
         woden_settings.time_res = 1.0
@@ -174,7 +179,8 @@ class Test(BaseChunkTest):
         
         beamtype = BeamTypes.FEE_BEAM.value
 
-        source_catalogue = read_skymodel_chunks(skymodel_filename,
+        source_catalogue = read_skymodel_chunks(woden_struct_classes,
+                                                skymodel_filename,
                                                 chunked_skymodel_maps,
                                                 num_freqs, num_time_steps,
                                                 beamtype, lsts, MWA_LAT)
@@ -185,6 +191,8 @@ class Test(BaseChunkTest):
         
         lst = 0.0
     
+        precision = "double"
+        woden_struct_classes = Woden_Struct_Classes(precision)
         woden_settings = ws.Woden_Settings_Double()
         
         woden_settings.time_res = 1.0
@@ -233,7 +241,8 @@ class Test(BaseChunkTest):
         
         beamtype = BeamTypes.FEE_BEAM.value
 
-        source_catalogue = read_skymodel_chunks(skymodel_filename,
+        source_catalogue = read_skymodel_chunks(woden_struct_classes,
+                                                skymodel_filename,
                                                 chunked_skymodel_maps,
                                                 num_freqs, num_time_steps,
                                                 beamtype, lsts, MWA_LAT)

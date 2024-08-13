@@ -32,10 +32,6 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     use_twobeams = 1;
     num_beams = woden_settings->num_ants;
   }
-  // else {
-  //   use_twobeams = 0;
-  //   num_beams = 1;
-  // }
 
   //TODO - once rotation measure has been implemented, this should be set
   //only if we are using a rotation measure
@@ -212,8 +208,6 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   //Iterate through all sky model chunks, calculated visibilities are
   //added to chunk_visibility_set, and then summed onto visibility_set
   for (int chunk = 0; chunk < cropped_sky_models->num_sources; chunk++) {
-
-    // source_t *source = (source_t *)malloc(sizeof(source_t));
 
     source_t *source = &cropped_sky_models->sources[chunk];
 

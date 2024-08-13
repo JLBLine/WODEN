@@ -42,17 +42,17 @@ typedef struct _components_t {
   //power law params
   double *power_ref_freqs; /*!< COMPONENT Flux density reference frequencies (Hz) */
   user_precision_t *power_ref_stokesI; /*!< COMPONENT Stokes I reference flux density (Jy) */
-  user_precision_t *power_ref_stokesQ; /*!< COMPONENT Stokes Q reference flux density (Jy) */
-  user_precision_t *power_ref_stokesU; /*!< COMPONENT Stokes U reference flux density (Jy) */
-  user_precision_t *power_ref_stokesV; /*!< COMPONENT Stokes V reference flux density (Jy) */
+  // user_precision_t *power_ref_stokesQ; /*!< COMPONENT Stokes Q reference flux density (Jy) */
+  // user_precision_t *power_ref_stokesU; /*!< COMPONENT Stokes U reference flux density (Jy) */
+  // user_precision_t *power_ref_stokesV; /*!< COMPONENT Stokes V reference flux density (Jy) */
   user_precision_t *power_SIs; /*!<  COMPONENT spectral indexes */
 
   // curved power law params
   double *curve_ref_freqs; /*!< COMPONENT Flux density reference frequencies (Hz) */
   user_precision_t *curve_ref_stokesI; /*!< COMPONENT Stokes I reference flux density (Jy) */
-  user_precision_t *curve_ref_stokesQ; /*!< COMPONENT Stokes Q reference flux density (Jy) */
-  user_precision_t *curve_ref_stokesU; /*!< COMPONENT Stokes U reference flux density (Jy) */
-  user_precision_t *curve_ref_stokesV; /*!< COMPONENT Stokes V reference flux density (Jy) */
+  // user_precision_t *curve_ref_stokesQ; /*!< COMPONENT Stokes Q reference flux density (Jy) */
+  // user_precision_t *curve_ref_stokesU; /*!< COMPONENT Stokes U reference flux density (Jy) */
+  // user_precision_t *curve_ref_stokesV; /*!< COMPONENT Stokes V reference flux density (Jy) */
   user_precision_t *curve_SIs; /*!<  COMPONENT spectral indexes */
   user_precision_t *curve_qs; /*!<  COMPONENT curvature */
 
@@ -151,9 +151,16 @@ typedef struct _components_t {
   int n_stokesV_pol_frac; /*!< The number of Stokes V polarisation fraction models */
   int n_stokesV_power; /*!< The number of Stokes V power-law models */
   int n_stokesV_curve; /*!< The number of V curved power-law models */
+  int n_stokesV_list;
+  int n_stokesV_list_flux_entries;
   int n_linpol_pol_frac;  /*!< The number of linear polarisation fraction models */
   int n_linpol_power; /*!< The number of linear polarisation power-law models */
   int n_linpol_curve; /*!< The number of linear polarisation curved power-law models */
+  int n_linpol_list;
+  int n_stokesQ_list_flux_entries;
+  int n_stokesU_list_flux_entries;
+  int n_linpol_p_list;
+  int n_linpol_p_list_flux_entries;
   int n_linpol_angles; /*!< The number of RM/intrinsic polarisation angles */
   int do_QUV; /*!< Set if doing any polarised information */
 

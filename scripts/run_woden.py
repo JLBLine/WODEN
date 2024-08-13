@@ -25,6 +25,7 @@ from wodenpy.uvfits.wodenpy_uvfits import make_antenna_table, make_baseline_date
 from wodenpy.phase_rotate.remove_phase_track import remove_phase_tracking
 from wodenpy.use_libwoden.shapelets import create_sbf
 from typing import Union
+from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 
 ##Constants
 R2D = 180.0 / np.pi
@@ -70,11 +71,12 @@ def woden_thread(the_queue : Queue, run_woden, woden_settings : Union[Woden_Sett
         run_woden(woden_settings, visibility_set, source_catalogue, array_layout,
                   sbf)
         
-def read_skymodel_thread(the_queue : Queue, chunked_skymodel_maps: list,
-                                    max_num_chunks : int,
-                                    lsts : np.ndarray, latitude : float,
-                                    args : argparse.Namespace,
-                                    beamtype : int):
+def read_skymodel_thread(the_queue : Queue, woden_struct_classes, 
+                         chunked_skymodel_maps: list,
+                         max_num_chunks : int,
+                         lsts : np.ndarray, latitude : float,
+                         args : argparse.Namespace,
+                         beamtype : int):
     """
     Reads a chunked skymodel map and puts the resulting source catalogue into a queue.
     
@@ -103,12 +105,13 @@ def read_skymodel_thread(the_queue : Queue, chunked_skymodel_maps: list,
         print(f"Reading chunks skymodel chunks {lower_chunk_iter}:{lower_chunk_iter+max_num_chunks}")
         t_before = time()
     
-        source_catalogue = read_skymodel_chunks(args.cat_filename, chunk_map_subset,
-                                                     args.num_freq_channels,
-                                                     args.num_time_steps,
-                                                     beamtype,
-                                                     lsts, latitude,
-                                                     precision=args.precision)
+        source_catalogue = read_skymodel_chunks(woden_struct_classes, 
+                                                args.cat_filename, chunk_map_subset,
+                                                args.num_freq_channels,
+                                                args.num_time_steps,
+                                                beamtype,
+                                                lsts, latitude,
+                                                precision=args.precision)
         
         the_queue.put(source_catalogue, block=True)
         
@@ -160,10 +163,13 @@ def main(argv=None):
         pass
         
     else:
+        ##Generate the woden_struct_classes, which are used to mimic the C
+        ##structs. Must be made dynamically, as the precision can change
+        woden_struct_classes = Woden_Struct_Classes(args.precision)
+        
         ##Depending on what precision was selected by the user, load in the
         ##C/CUDA library and return the `run_woden` function
-
-        run_woden = load_in_woden_library(args.precision)
+        run_woden = load_in_woden_library(woden_struct_classes, args.precision)
         
         num_baselines = int(((args.num_antennas - 1)*args.num_antennas) / 2)
 
@@ -205,9 +211,9 @@ def main(argv=None):
                                           crop_by_component=crop_by_component)
         
         chunked_skymodel_maps = create_skymodel_chunk_map(comp_counter,
-                                            args.chunking_size, woden_settings.num_baselines,
-                                            args.num_freq_channels,
-                                            args.num_time_steps)
+                                                          args.chunking_size, woden_settings.num_baselines,
+                                                          args.num_freq_channels,
+                                                          args.num_time_steps)
         
         ##Create the shapelet basis functions
         sbf = create_sbf(precision=args.precision)
@@ -231,7 +237,8 @@ def main(argv=None):
         the_queue = Queue(maxsize=1)
         
         t1 = Thread(target = read_skymodel_thread,
-                    args =(the_queue, chunked_skymodel_maps,
+                    args =(the_queue, woden_struct_classes, 
+                                    chunked_skymodel_maps,
                                     max_num_chunks, lsts,
                                     woden_settings.latitude, args,
                                     woden_settings.beamtype), daemon=True)

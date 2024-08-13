@@ -179,9 +179,9 @@ void test_kern_calc_visi_shape_VarylmnMultipleCoeff(int beamtype) {
   //Just stick Stokes I to 1.0, SI to zero, and reference freqs to 150MHz
   for (int comp = 0; comp < num_components; comp++) {
     components.power_ref_stokesI[comp] = 1.0;
-    components.power_ref_stokesQ[comp] = 0.0;
-    components.power_ref_stokesU[comp] = 0.0;
-    components.power_ref_stokesV[comp] = 0.0;
+    // components.power_ref_stokesQ[comp] = 0.0;
+    // components.power_ref_stokesU[comp] = 0.0;
+    // components.power_ref_stokesV[comp] = 0.0;
     components.power_SIs[comp] = 0.0;
     components.power_ref_freqs[comp] = 150e+6;
 
