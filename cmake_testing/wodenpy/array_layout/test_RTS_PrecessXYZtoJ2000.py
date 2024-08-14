@@ -6,7 +6,7 @@ from ctypes import c_double
 import argparse
 
 ##This is where our code lives
-from wodenpy.use_libwoden.woden_settings import Woden_Settings_Double
+from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 from wodenpy.use_libwoden.array_layout_struct import setup_array_layout
 from wodenpy.array_layout.create_array_layout import RTS_PrecessXYZtoJ2000
 
@@ -66,7 +66,8 @@ expec_Z_prec = np.array([98.629888069350, 178.965419626805, 334.283004207471,
 class Test(unittest.TestCase):
     def test_RTS_PrecessXYZtoJ2000(self):
         
-        woden_settings = Woden_Settings_Double()
+        woden_struct_classes = Woden_Struct_Classes("double")
+        woden_settings = woden_struct_classes.Woden_Settings()
         ##Set up where woden_settings correctly
         woden_settings.latitude = -0.46606083776035967
         woden_settings.jd_date = 2457278.2010995

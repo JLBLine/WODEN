@@ -17,17 +17,12 @@ VELC = 299792458.0
 SOLAR2SIDEREAL = 1.00274
 DS2R = 7.2722052166430399038487115353692196393452995355905e-5
 
-# ##If we are performing a ctest, this check means we use the code we are
-# ##testing and NOT what has been pip or conda installed
-# try:
-#     testdir = os.environ['CMAKE_CURRENT_SOURCE_DIR']
-#     sys.path.append('{:s}/../../../wodenpy/use_libwoden'.format(testdir))
-#     from woden_settings import Woden_Settings_Float, Woden_Settings_Double
-#     from array_layout_struct import Array_Layout, setup_array_layout
-    
-# except KeyError:
-from wodenpy.use_libwoden.woden_settings import Woden_Settings_Float, Woden_Settings_Double
+from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 from wodenpy.use_libwoden.array_layout_struct import Array_Layout, setup_array_layout
+
+##This call is so we can use it as a type annotation
+woden_struct_classes = Woden_Struct_Classes()
+Woden_Settings = woden_struct_classes.Woden_Settings
 
 def enh2xyz(east : float, north : float, height : float, latitude : float) -> Tuple[float, float, float]:
     """
@@ -113,7 +108,7 @@ def RTS_precXYZ(rmat : np.ndarray, x : float, y : float, z : float, lmst : float
     return xp, yp, zp
 
 def RTS_PrecessXYZtoJ2000( array_layout : Array_Layout,
-        woden_settings : Union[Woden_Settings_Float, Woden_Settings_Double]) -> Array_Layout:
+        woden_settings : Woden_Settings) -> Array_Layout:
     """Given the populated `array_layout` and settings in `woden_settings`, use
     RTS functions to precess the array back to J2000, to account for the
     skymodel being in J2000.
@@ -122,7 +117,7 @@ def RTS_PrecessXYZtoJ2000( array_layout : Array_Layout,
     ----------
     array_layout : Array_Layout
         Populated array layout in the simulation epoch
-    woden_settings : Union[Woden_Settings_Float, Woden_Settings_Double]
+    woden_settings : Woden_Settings
         Populated settings, where the `woden_settings.lsts` should have been
         precessed back to J2000 already.
 
@@ -169,7 +164,7 @@ def RTS_PrecessXYZtoJ2000( array_layout : Array_Layout,
 
 
 
-def calc_XYZ_diffs(woden_settings : Union[Woden_Settings_Float, Woden_Settings_Double],
+def calc_XYZ_diffs(woden_settings : Woden_Settings,
                    args : argparse.Namespace) -> Array_Layout:
     """
     Populates an Array_Layout class with the instrument layout, given the command
@@ -178,7 +173,7 @@ def calc_XYZ_diffs(woden_settings : Union[Woden_Settings_Float, Woden_Settings_D
 
     Parameters
     ----------
-    woden_settings: Woden_Settings_Float or Woden_Settings_Double
+    woden_settings: Woden_Settings
         An populated Woden_Settings instance
     args: argparse.Namespace
         The command line arguments checked by `wodenpy.wodenpy_setup.check_args`

@@ -57,7 +57,7 @@ class Test(BaseChunkTest):
         
         precision = "double"
         woden_struct_classes = Woden_Struct_Classes(precision)
-        woden_settings = ws.Woden_Settings_Double()
+        woden_settings = woden_struct_classes.Woden_Settings()
         
         woden_settings.time_res = 1.0
         woden_settings.latitude = -0.46606083776035967

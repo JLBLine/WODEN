@@ -1,5 +1,5 @@
 from wodenpy.use_libwoden.skymodel_structs import create_components_struct, create_source_struct, create_source_catalogue_struct, setup_source_catalogue
-
+from wodenpy.use_libwoden.woden_settings import create_woden_settings_struct
 
 
 class Woden_Struct_Classes:
@@ -21,3 +21,6 @@ class Woden_Struct_Classes:
         self.Components = create_components_struct(precision)
         self.Source = create_source_struct(self.Components)
         self.Source_Catalogue = create_source_catalogue_struct(self.Source)
+        
+        ##Woden settings
+        self.Woden_Settings = create_woden_settings_struct(precision)

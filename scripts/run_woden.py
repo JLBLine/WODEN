@@ -11,7 +11,7 @@ from queue import Queue
 from threading import Thread
 from ctypes import POINTER, c_double, c_float
 
-from wodenpy.use_libwoden.woden_settings import create_woden_settings, setup_lsts_and_phase_centre, Woden_Settings_Float, Woden_Settings_Double
+from wodenpy.use_libwoden.woden_settings import create_woden_settings, setup_lsts_and_phase_centre
 from wodenpy.use_libwoden.visibility_set import setup_visi_set_array, load_visibility_set, Visi_Set_Float, Visi_Set_Double
 from wodenpy.wodenpy_setup.run_setup import get_parser, check_args, get_code_version
 from wodenpy.use_libwoden.use_libwoden import load_in_woden_library
@@ -41,7 +41,13 @@ sbf_L = 10001
 sbf_c = 5000
 sbf_dx = 0.01
 
-def woden_thread(the_queue : Queue, run_woden, woden_settings : Union[Woden_Settings_Float, Woden_Settings_Double], visibility_set : Union[Visi_Set_Float, Visi_Set_Double], array_layout : Array_Layout,
+##This call is so we can use it as a type annotation
+woden_struct_classes = Woden_Struct_Classes()
+Woden_Settings = woden_struct_classes.Woden_Settings
+
+def woden_thread(the_queue : Queue, run_woden, woden_settings : Woden_Settings, #type: ignore
+                 visibility_set : Union[Visi_Set_Float, Visi_Set_Double],
+                 array_layout : Array_Layout,
                  sbf : np.ndarray):
     """
     This function runs WODEN C/CUDA code on a separate thread, processing source catalogues from a queue until the queue is empty.
@@ -52,7 +58,7 @@ def woden_thread(the_queue : Queue, run_woden, woden_settings : Union[Woden_Sett
         A queue of source catalogues to be processed.
     run_woden : _NamedFuncPointer
         A pointer to the WODEN function to be run.
-    woden_settings : Union[Woden_Settings_Float, Woden_Settings_Double]
+    woden_settings : Woden_Settings
         The WODEN settings to be used.
     visibility_set : Union[Visi_Set_Float, Visi_Set_Double]
         The visibility set to write outputs to.
@@ -71,7 +77,7 @@ def woden_thread(the_queue : Queue, run_woden, woden_settings : Union[Woden_Sett
         run_woden(woden_settings, visibility_set, source_catalogue, array_layout,
                   sbf)
         
-def read_skymodel_thread(the_queue : Queue, woden_struct_classes, 
+def read_skymodel_thread(the_queue : Queue, woden_struct_classes : Woden_Struct_Classes, 
                          chunked_skymodel_maps: list,
                          max_num_chunks : int,
                          lsts : np.ndarray, latitude : float,
@@ -84,6 +90,9 @@ def read_skymodel_thread(the_queue : Queue, woden_struct_classes,
     =============
     the_queue : Queue
         A queue to put the resulting source catalogue into.
+    woden_struct_classes : Woden_Struct_Classes
+        This holds all the various ctype structure classes that are equivalent
+        to the C/CUDA structs.
     chunked_skymodel_maps : list
         A list of chunked skymodel maps to read.
     max_num_chunks : int
@@ -180,7 +189,8 @@ def main(argv=None):
 
         ##populates a ctype equivalent of woden_settings struct to pass
         ##to the C library
-        woden_settings = create_woden_settings(args, jd_date, lst_deg)
+        woden_settings = create_woden_settings(woden_struct_classes.Woden_Settings(),
+                                               args, jd_date, lst_deg)
         
         ##fill the lst and mjds fields, precessing if necessary
         lsts = setup_lsts_and_phase_centre(woden_settings)
