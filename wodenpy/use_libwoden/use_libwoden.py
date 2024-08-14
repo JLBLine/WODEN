@@ -5,7 +5,6 @@ import numpy as np
 import sys
 import os
 
-from wodenpy.use_libwoden.visibility_set import Visi_Set_Float, Visi_Set_Double
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 from wodenpy.use_libwoden.array_layout_struct import Array_Layout
 
@@ -60,13 +59,13 @@ def load_in_woden_library(woden_struct_classes : Woden_Struct_Classes, precision
     
     if precision == 'float':
         run_woden.argtypes = [ctypes.POINTER(woden_struct_classes.Woden_Settings),
-                              ctypes.POINTER(Visi_Set_Float),
+                              ctypes.POINTER(woden_struct_classes.Visi_Set),
                               ctypes.POINTER(woden_struct_classes.Source_Catalogue),
                               ctypes.POINTER(Array_Layout),
                               ctypes.POINTER(ctypes.c_float)]
     else:
         run_woden.argtypes = [ctypes.POINTER(woden_struct_classes.Woden_Settings),
-                              ctypes.POINTER(Visi_Set_Double),
+                              ctypes.POINTER(woden_struct_classes.Visi_Set),
                               ctypes.POINTER(woden_struct_classes.Source_Catalogue),
                               ctypes.POINTER(Array_Layout),
                               ctypes.POINTER(ctypes.c_double)]

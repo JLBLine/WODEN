@@ -1,5 +1,6 @@
 from wodenpy.use_libwoden.skymodel_structs import create_components_struct, create_source_struct, create_source_catalogue_struct, setup_source_catalogue
 from wodenpy.use_libwoden.woden_settings import create_woden_settings_struct
+from wodenpy.use_libwoden.visibility_set import create_visi_set_struct
 
 
 class Woden_Struct_Classes:
@@ -24,3 +25,6 @@ class Woden_Struct_Classes:
         
         ##Woden settings
         self.Woden_Settings = create_woden_settings_struct(precision)
+        
+        ##visibility set
+        self.Visi_Set = create_visi_set_struct(precision)

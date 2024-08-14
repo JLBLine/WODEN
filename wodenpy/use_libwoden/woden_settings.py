@@ -27,6 +27,20 @@ def command(cmd):
     subprocess.call(cmd,shell=True)
 
 def create_woden_settings_struct(precision : str = "double"):
+    """Creates a `Woden_Settings` class structured equivalently to a `woden_settings_t`
+    struct in the C/CUDA code. Created dynamically based on the `precision`,
+    to match the compile time precision flag `-DUSE_DOUBLE` in the C code.
+
+    Parameters
+    ----------
+    precision : str, optional
+        Either "float" or "double:, by default "double"
+
+    Returns
+    -------
+    Woden_Settings
+        The Woden_Settings class structured equivalently to a `woden_settings_t` struct
+    """
     
     if precision == "float":
         c_user_precision = c_float
@@ -36,8 +50,11 @@ def create_woden_settings_struct(precision : str = "double"):
     ##TODO gotta be a way to set the float or double fields via some kind of
     ##variable instead of making two different classes
     class Woden_Settings(ctypes.Structure):
-        """A class structured equivalently to a `visi_set` struct, used by 
-        the C and CUDA code in libwoden_float.so
+        """A class structured equivalently to a `woden_settings_t` struct, used by 
+        the C and CUDA code in libwoden_float.so or libwoden_double.so.
+        
+        Created by the function `create_woden_settings_struct`, which sets
+        `user_precision_t` to either `c_float` or `c_double`.
         
         :cvar c_double lst_base:  Local sidereal time for first time step (radians)
         :cvar c_double lst_obs_epoch_base:  Local sidereal time for first time step (radians) for the observation epoch (e.g. in 2020 for a 2020 obs)

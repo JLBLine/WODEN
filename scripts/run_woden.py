@@ -12,7 +12,7 @@ from threading import Thread
 from ctypes import POINTER, c_double, c_float
 
 from wodenpy.use_libwoden.woden_settings import create_woden_settings, setup_lsts_and_phase_centre
-from wodenpy.use_libwoden.visibility_set import setup_visi_set_array, load_visibility_set, Visi_Set_Float, Visi_Set_Double
+from wodenpy.use_libwoden.visibility_set import setup_visi_set_array, load_visibility_set
 from wodenpy.wodenpy_setup.run_setup import get_parser, check_args, get_code_version
 from wodenpy.use_libwoden.use_libwoden import load_in_woden_library
 from wodenpy.observational.calc_obs import get_uvfits_date_and_position_constants, calc_jdcal
@@ -44,9 +44,10 @@ sbf_dx = 0.01
 ##This call is so we can use it as a type annotation
 woden_struct_classes = Woden_Struct_Classes()
 Woden_Settings = woden_struct_classes.Woden_Settings
+Visi_Set = woden_struct_classes.Visi_Set
 
 def woden_thread(the_queue : Queue, run_woden, woden_settings : Woden_Settings, #type: ignore
-                 visibility_set : Union[Visi_Set_Float, Visi_Set_Double],
+                 visibility_set : Visi_Set, #type: ignore
                  array_layout : Array_Layout,
                  sbf : np.ndarray):
     """
@@ -60,7 +61,7 @@ def woden_thread(the_queue : Queue, run_woden, woden_settings : Woden_Settings, 
         A pointer to the WODEN function to be run.
     woden_settings : Woden_Settings
         The WODEN settings to be used.
-    visibility_set : Union[Visi_Set_Float, Visi_Set_Double]
+    visibility_set : Visi_Set
         The visibility set to write outputs to.
     array_layout : Array_Layout
         The array layout to be used.
@@ -230,7 +231,8 @@ def main(argv=None):
 
         ##Create an array of visibility_sets, which get fed into run_woden
         ##and store the output visibilities
-        visi_set_array = setup_visi_set_array(len(args.band_nums), num_visis,
+        visi_set_array = setup_visi_set_array(woden_struct_classes.Visi_Set,
+                                              len(args.band_nums), num_visis,
                                               precision=args.precision)
 
         ###---------------------------------------------------------------------
