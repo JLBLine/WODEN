@@ -7,7 +7,7 @@ from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, Component_In
 from wodenpy.skymodel.chunk_sky_model import Skymodel_Chunk_Map
 from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, setup_source_catalogue, _Ctype_Source_Into_Python
 from wodenpy.use_libwoden.beam_settings import BeamTypes
-
+from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 from astropy.table import Table, Column
 import erfa
 from astropy.io import fits
@@ -49,6 +49,29 @@ def _error_for_missing_columns(message_start : str, fits_path : str, missing_col
         sys.exit(f"Found {message_start} in the FITS file {fits_path}, but missing {missing}columns. Exiting now.")
         
 def _error_for_missing_int_flx(table, col_entry, col_prepend, mod_col_name, fits_path, hdu_name=False):
+    """
+    Check if the table has any columns starting with `col_prepend` and raise an error if not found.
+    Parameters
+    ----------
+    table: 
+        The table to check for columns.
+    col_entry: 
+        The name of the SED model type column entry (e.g. "nan")
+    col_prepend: 
+        The prefix of the columns to search for (e.g. "INT_FLX")
+    mod_col_name: 
+        The name of the model column in the FITS file.
+    fits_path: 
+        The path to the FITS file.
+    hdu_name: 
+        The name of the HDU in the FITS file (default is False).
+    Raises:
+    - SystemExit: If no columns starting with `col_prepend` are found in the table.
+                 If `hdu_name` is provided, the error message includes the HDU name.
+                 If no `hdu_name` is provided, the error message does not include the HDU name.
+                 If `col_prepend` is not 'INT_FLX' and 'NAME' column is not found in the table.
+    """
+    
     
     have_any_int_flx = False
     for key in table.columns:
@@ -68,6 +91,21 @@ def _error_for_missing_int_flx(table, col_entry, col_prepend, mod_col_name, fits
             sys.exit(f"Found {col_entry} (list flux) in {mod_col_name} column in the FITS file {fits_path}, but no NAME column in the {hdu_name} HDU. The NAME links the flux entries to the ra/dec in the main table so is necessary. Exiting now.")
                 
 def _error_for_missing_flx_table_cols(hdu_names, hdu_name,  col_entry, col_prepend, mod_col_name, fits_path):
+    """
+    Check if the specified HDU name exists in the given list of HDU names.
+    If the HDU name exists, read the FITS file using the specified HDU name and perform additional checks.
+    If the HDU name does not exist, exit the program with an error message.
+    Parameters:
+    - hdu_names (list): A list of HDU names.
+    - hdu_name (str): The name of the HDU to check for existence.
+    - col_entry (str): The name of the column entry.
+    - col_prepend (str): The prepend value for the column.
+    - mod_col_name (str): The name of the modified column.
+    - fits_path (str): The path to the FITS file.
+    Returns:
+    None
+    """
+    
     
     if hdu_name in hdu_names:
         list_table = Table.read(fits_path, hdu=hdu_name )
@@ -245,7 +283,35 @@ def count_num_list_fluxes(flux_mod_col_name : str, flux_col_prepend : str,
                           num_list_fluxes : np.ndarray,
                           main_table : Table, comp_counter : Component_Type_Counter,
                           model_type='nan',
-                          optional_table = False):
+                          optional_table : Table = False):
+    """Counts the number of list-type fluxes for a given model type. Default
+    is to look for Stokes I fluxes in the main table, but can be one of the 
+    optional HDUs like `V_LIST_FLUXES`; point `optional_table` to correct
+    table if needed. Fills `num_list_fluxes` with the number of list-type fluxes
+    for each component of the given model type.
+    
+    Also checks that the number of references to that model type (e.g. 'nan'
+    in the `MOD_TYPE` column) matches the number of rows in the table that
+    have list fluxes. If they don't match, the function exits.
+
+    Parameters
+    ----------
+    flux_mod_col_name : str
+        The model column name, e.g. 'MOD_TYPE' or `V_MOD_TYPE`.
+    flux_col_prepend : str
+        Prepend that flux columns start with, e.g. 'INT_FLX' or 'V_INT_FLX'.
+    num_list_fluxes : np.ndarray
+        Array to fill with the number of list-type fluxes for each component (e.g. `comp_counter.num_list_fluxes`).
+    main_table : Table
+        The main table (e.g. `Table.read(fits_path, hdu=1)`)
+    comp_counter : Component_Type_Counter
+        _description_
+    model_type : str, optional
+        _description_, by default 'nan'
+    optional_table : Table, optional
+        _description_, by default False
+    """
+
     
     
     flux_col_names = []
@@ -516,9 +582,12 @@ def find_all_indexes_of_x_in_y(x : np.ndarray, y : np.ndarray):
     
     return xsorted[ypos]
 
+woden_struct_classes = Woden_Struct_Classes()
+Source = woden_struct_classes.Source
+
 def add_fits_info_to_source_catalogue(comp_type : CompTypes,
                         main_table : Table, shape_table : Table,
-                        chunk_source,
+                        chunk_source : Source,
                         chunk_map : Skymodel_Chunk_Map,
                         beamtype : int, lsts : np.ndarray, latitude : float):
     """Given the desired components as detailed in the `chunk_map`, add
@@ -533,7 +602,7 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
         The main Table (with RA,Dec etc) from the FITS file.
     shape_table : Table
         The shapelet Table from the FITS file.
-    chunk_source : Union[Source_Float, Source_Double]
+    chunk_source : Source
         The ctypes Source object to add information to.
     chunk_map : Skymodel_Chunk_Map
         The map object containing information about components for this chunk.
@@ -857,7 +926,8 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
 
 
 # @profile
-def read_fits_skymodel_chunks(woden_struct_classes, main_table : Table, shape_table : Table,
+def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
+                              main_table : Table, shape_table : Table,
                               chunked_skymodel_maps : list,
                               num_freqs : int, num_time_steps : int,
                               beamtype : int,
@@ -871,6 +941,8 @@ def read_fits_skymodel_chunks(woden_struct_classes, main_table : Table, shape_ta
 
     Parameters
     ----------
+    woden_struct_classes : Woden_Struct_Classes
+        A class containing all the ctypes structures with the correct precision, needed for the C/CUDA code.
     main_table : Table
         The main Table (with RA,Dec etc) from the FITS file.
     shape_table : Table
@@ -912,23 +984,9 @@ def read_fits_skymodel_chunks(woden_struct_classes, main_table : Table, shape_ta
     ##for each chunk map, create a Source_Float or Source_Double ctype
     ##struct, and "malloc" the right amount of arrays to store required infor
     for chunk_ind, chunk_map in enumerate(chunked_skymodel_maps):
-        # source_catalogue.sources[chunk_ind] = setup_chunked_source(woden_struct_classes,
-        #                                         chunk_map,
-        #                                         num_freqs, num_time_steps,
-        #                                         beamtype, precision=precision)
         
-        # chunk_source = source_catalogue.sources[chunk_ind]
-        
-        setup_chunked_source(woden_struct_classes,
-            source_catalogue.sources[chunk_ind], chunk_map,
-                                                num_freqs, num_time_steps,
-                                                beamtype, precision=precision)
-        
-        
-        
-        
-        
-        # print("HOW AND WHY", source_catalogue.sources[0].point_components.ras[1])
+        setup_chunked_source(source_catalogue.sources[chunk_ind], chunk_map,
+                             num_freqs, num_time_steps, beamtype, precision=precision)
         
         ##count up the total number of components across all chunks
         ##annoyingly, beacuse Jack sucks, we split shapelet us by basis 
@@ -956,8 +1014,6 @@ def read_fits_skymodel_chunks(woden_struct_classes, main_table : Table, shape_ta
             
     ##TODO some kind of consistency check between the chunk_maps and the
     ##sources in the catalogue - make sure we read in the correct information
-    
-    # Source_Catalogue = create_source_catalogue_struct(precision)
     
     return source_catalogue
 

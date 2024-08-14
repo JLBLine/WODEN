@@ -15,6 +15,12 @@ Ways to interact with the C/GPU via ``ctypes``.
 .. automodule:: beam_settings
    :members:
 
+``create_woden_struct_classes``
+----------------------------------
+
+.. automodule:: create_woden_struct_classes
+   :members:
+
 ``shapelets``
 --------------
 

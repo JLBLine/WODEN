@@ -7,17 +7,21 @@ import os
 
 from wodenpy.use_libwoden.visibility_set import Visi_Set_Float, Visi_Set_Double
 from wodenpy.use_libwoden.woden_settings import Woden_Settings_Float, Woden_Settings_Double
-from wodenpy.use_libwoden.skymodel_structs import create_source_catalogue_struct
+from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 from wodenpy.use_libwoden.array_layout_struct import Array_Layout
 
 VELC = 299792458.0
 
-def load_in_woden_library(woden_struct_classes, precision='double'):
+def load_in_woden_library(woden_struct_classes : Woden_Struct_Classes, precision='double'):
     """Load in the WODEN C and CUDA code via a dynamic library, with the
     required `precision` (either load `libwoden_float.so` or `libwoden_double.so`)
 
     Parameters
     ----------
+    woden_struct_classes : Woden_Struct_Classes
+        This holds all the various ctype structure classes that are equivalent
+        to the C/CUDA structs. Should have been initialised with the correct
+        precision ("float" or "double").
     precision : str, optional
         Choose to use "float" precision or "double". By default 'double'
 
@@ -40,8 +44,8 @@ def load_in_woden_library(woden_struct_classes, precision='double'):
 
         
     """
-
-    woden_lib = importlib_resources.files(wodenpy).joinpath(f"libwoden_{precision}.so")
+    
+    woden_lib = importlib_resources.files(wodenpy).joinpath(f"libwoden_{woden_struct_classes.precision}.so")
     
     print("LOADING IN", woden_lib)
 

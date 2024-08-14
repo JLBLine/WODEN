@@ -892,9 +892,6 @@ class Test(unittest.TestCase):
         ##Test we got what we expected
         check_comp_counter(comp_counter, settings)
     
-    
-        
-        
     def test_all_polarisations(self):
         """
         """

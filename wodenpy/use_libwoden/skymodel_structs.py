@@ -16,6 +16,20 @@ D2R = np.pi / 180.0
 
 
 def create_components_struct(precision="double"):
+    """Creates a `Components` class structured equivalently to a `components_t`
+    struct in the C/CUDA code. Created dynamically based on the `precision`,
+    to match the compile time precision flag `-DUSE_DOUBLE` in the C code.
+
+    Parameters
+    ----------
+    precision : str, optional
+        Either "float" or "double:, by default "double"
+
+    Returns
+    -------
+    Components
+        The Components class structured equivalently to a `components_t` struct
+    """
     
     if precision == "float":
         c_user_precision = c_float
@@ -24,7 +38,10 @@ def create_components_struct(precision="double"):
     
     class Components(ctypes.Structure):
         """A class structured equivalently to a `components_t` struct, used by 
-        the C and CUDA code in libwoden_float.so
+        the C and CUDA code in libwoden_float.so or libwoden_double.so.
+        
+        Created by the function `create_components_struct`, which sets
+        `user_precision_t` to either `c_float` or `c_double`.
         
         :cvar POINTER(double) ras: COMPONENT right ascensions (radians)
         :cvar POINTER(double) decs: COMPONENT declinations (radians)
@@ -212,9 +229,26 @@ def create_components_struct(precision="double"):
                     ]
         
     return Components
+
+##This call is so we can use it as a type annotation, and so sphinx can document the class
+Components = create_components_struct("double")
     
+def create_source_struct(Components : Components): # type: ignore
+    """Creates a `Source` class structured equivalent to a `source_t` struct,
+    used by the C and CUDA code in libwoden_double.so. The `Components` class
+    is passed in as the `Components` class is created dynamically depending on
+    the required precision.
     
-def create_source_struct(Components):
+    Parameters
+    ----------
+    Components : Components
+        The Components class structured equivalently to a `components_t` struct
+        
+    Returns
+    -------
+    Source
+        The Source class structured equivalent to a `source_t` struct
+    """
     
     class Source(ctypes.Structure):
         """A class structured equivalent to a `source_t` struct, used by 
@@ -235,12 +269,12 @@ def create_source_struct(Components):
         :cvar c_int n_shape_powers: Number of SHAPELETs with POWER_LAW type flux
         :cvar c_int n_shape_curves: Number of SHAPELETs with CURVED_POWER_LAW type flux
         :cvar c_int n_shape_coeffs: Total number of SHAPELET coefficients
-        :cvar Components_Double point_components: `Components_Double` holding component information for all POINT COMPONENTs in this SOURCE
-        :cvar Components_Double gauss_components: `Components_Double` holding component information for all GAUSSIAN COMPONENTs in this SOURCE
-        :cvar Components_Double shape_components: `Components_Double` holding component information for all SHAPELET COMPONENTs in this SOURCE
-        :cvar Components_Double d_point_components: `Components_Double` holding component information on the device for all POINT COMPONENTs in this SOURCE
-        :cvar Components_Double d_gauss_components: `Components_Double` holding component information on the device for all GAUSSIAN COMPONENTs in this SOURCE
-        :cvar Components_Double d_shape_components: `Components_Double` holding component information on the device for all SHAPELET COMPONENTs in this SOURCE
+        :cvar Components_Double point_components: `Components` holding component information for all POINT COMPONENTs in this SOURCE
+        :cvar Components_Double gauss_components: `Components` holding component information for all GAUSSIAN COMPONENTs in this SOURCE
+        :cvar Components_Double shape_components: `Components` holding component information for all SHAPELET COMPONENTs in this SOURCE
+        :cvar Components_Double d_point_components: `Components` holding component information on the device for all POINT COMPONENTs in this SOURCE
+        :cvar Components_Double d_gauss_components: `Components` holding component information on the device for all GAUSSIAN COMPONENTs in this SOURCE
+        :cvar Components_Double d_shape_components: `Components` holding component information on the device for all SHAPELET COMPONENTs in this SOURCE
         
         """
         
@@ -269,28 +303,26 @@ def create_source_struct(Components):
         ]
         
     return Source
-    
-# class Source_Catalogue_Double(ctypes.Structure):
-#     """
-#     A class structured equivalent to a `source_t` struct, used by 
-#     the C and CUDA code in libwoden_double.so
-    
-#     Attributes
-#     -----------
-#     num_sources : int
-#         The number of sources in the catalogue
-#     num_shapelets : int
-#         The total number of shapelets components in the catalogue
-#     sources : POINTER(Source_Double)
-#         A pointer to an array of `Source_Double` objects representing the sources in the catalogue
-#     """
-    
-#     _fields_ = [("num_sources", c_int),
-#                 ("num_shapelets", c_int),
-#                 ("sources", POINTER(Source_Double))]
 
-
-def create_source_catalogue_struct(Source):
+##This call is so we can use it as a type annotation, and so sphinx can document the class
+Source = create_source_struct(Components)
+    
+def create_source_catalogue_struct(Source : Source): # type: ignore
+    """Creates a `Source_Catalogue` class structured equivalent to a 
+    `source_catalogue_t` struct, used by the C and CUDA code. The `Source` class
+    is passed in as the `Source` class is created dynamically depending on
+    the required precision.
+    
+    Parameters
+    ----------
+    Source : Source
+        The Source class structured equivalent to a `source_t` struct
+        
+    Returns
+    -------
+    Source_Catalogue
+        The Source_Catalogue class structured equivalent to a `source_catalogue_t` struct
+    """
     
     # Source = create_source_struct(precision)
     
@@ -309,21 +341,22 @@ def create_source_catalogue_struct(Source):
             A pointer to an array of `Source_Float` objects representing the sources in the catalogue
         """
         
-        # _fields_ = [("num_sources", c_int),
-        #             ("num_shapelets", c_int),
-        #             ("sources", POINTER(Source))]
-        
         _fields_ = [("num_sources", c_int),
                     ("num_shapelets", c_int),
                     ("sources", POINTER(Source))]
         
     return Source_Catalogue
+
+##This call is so we can use it as a type annotation, and so sphinx can document the class
+Source_Catalogue = create_source_catalogue_struct(Source)
     
     
-def setup_source_catalogue(Source, Source_Catalogue, num_sources : int, num_shapelets : int,
-                           precision = "double"):
+def setup_source_catalogue(Source : Source, Source_Catalogue : Source_Catalogue, # type: ignore
+                           num_sources : int, num_shapelets : int,
+                           precision = "double") -> Source_Catalogue: # type: ignore
     """
-    Creates a source catalogue object with the specified number of sources and shapelets.
+    Creates a `Source_Catalogue` with the specified number of sources and shapelets.
+    Sets source_catalogue.sources an array of `Source` objects of length `num_sources`
     
     Parameters
     ------------
@@ -336,7 +369,7 @@ def setup_source_catalogue(Source, Source_Catalogue, num_sources : int, num_shap
     
     Returns
     ---------
-    source_catalogue : (Source_Catalogue_Float or Source_Catalogue_Double)
+    source_catalogue : Source_Catalogue
         The initialised source_catalogue object.
     """
     
@@ -350,9 +383,8 @@ def setup_source_catalogue(Source, Source_Catalogue, num_sources : int, num_shap
     
     return source_catalogue
     
-def setup_components(woden_struct_classes,
-                     chunk_map : Skymodel_Chunk_Map,
-                     chunked_source,
+def setup_components(chunk_map : Skymodel_Chunk_Map,
+                     chunked_source : Source, # type: ignore
                      num_freqs : int,
                      num_times : int, comp_type : CompTypes,
                      beamtype : int, 
@@ -473,9 +505,6 @@ def setup_components(woden_struct_classes,
     
     ##power-law flux things
     components.power_ref_freqs = power_double_ncomps_arr() ##this is always double
-    
-    # print("DIS", type(components.power_ref_stokesI))
-    
     components.power_ref_stokesI = power_user_ncomps_arr()
     components.power_SIs = power_user_ncomps_arr()
     
@@ -573,14 +602,13 @@ def setup_components(woden_struct_classes,
     # print(components.n_linpol_angles)
         
     
-def setup_chunked_source(woden_struct_classes, chunked_source, chunk_map : Skymodel_Chunk_Map, num_freqs : int,
+def setup_chunked_source(chunked_source : Source, chunk_map : Skymodel_Chunk_Map, num_freqs : int, # type: ignore
                          num_times : int, beamtype : int,
                          precision='double'):
     """
-    Sets up a ctypes structure class to contain a chunked sky model.
-    This class is compatible with the C/CUDA code, and will allocate the
+    Sets up `chunked_source`, which will be passed to C/CUDA. Allocates the
     correct amount of memory, based on whether the precision is either
-    'double' or 'float'.
+    'double' or 'float', as well as what is detailed in the `chunk_map`.
 
     Parameters
     ------------
@@ -597,7 +625,7 @@ def setup_chunked_source(woden_struct_classes, chunked_source, chunk_map : Skymo
 
     Returns
     ---------
-      Source_Float or Source_Double
+      Source : Source
           The ctypes structure class containing the chunked sky model.
     """
     
@@ -624,15 +652,15 @@ def setup_chunked_source(woden_struct_classes, chunked_source, chunk_map : Skymo
     chunked_source.n_comps = chunk_map.n_comps
         
     if chunk_map.n_points > 0:
-        setup_components(woden_struct_classes, chunk_map, chunked_source, num_freqs, num_times,
+        setup_components(chunk_map, chunked_source, num_freqs, num_times,
                          CompTypes.POINT, beamtype, c_user_precision)
         
     if chunk_map.n_gauss > 0:
-        setup_components(woden_struct_classes, chunk_map, chunked_source, num_freqs, num_times,
+        setup_components(chunk_map, chunked_source, num_freqs, num_times,
                          CompTypes.GAUSSIAN, beamtype, c_user_precision)
         
     if chunk_map.n_shapes > 0:
-        setup_components(woden_struct_classes, chunk_map, chunked_source, num_freqs, num_times,
+        setup_components(chunk_map, chunked_source, num_freqs, num_times,
                          CompTypes.SHAPELET, beamtype, c_user_precision)
     
     return chunked_source

@@ -2316,7 +2316,7 @@ def make_expected_comp_counter(settings : Skymodel_Settings):
     ##Copy the logic from fits_skymodel_common.add_linpol_fits to work this out
     ##Also need to factor in that point, gauss, shape have a PPPGGGSSS order
     
-    if linpol_cpl_cadence or linpol_pl_cadence or linpol_frac_cadence:
+    if linpol_cpl_cadence or linpol_pl_cadence or linpol_frac_cadence or linpol_list_cadence or linpol_p_list_cadence:
         expec_comp_counter.lin_comp_types = np.full(total_num_comps, np.nan, dtype=np.float64)
         
         for comp_index in range(total_num_comps):
@@ -2467,6 +2467,9 @@ def check_comp_counter(comp_counter : Component_Type_Counter,
     
     if settings.linpol_cpl_cadence or settings.linpol_pl_cadence or settings.linpol_frac_cadence \
         or settings.linpol_list_cadence or settings.linpol_p_list_cadence:
+        # print("DIS", expec_comp_counter.lin_comp_types)
+        # print("DIS", comp_counter.lin_comp_types)
+            
         npt.assert_array_equal(expec_comp_counter.lin_comp_types,
                                comp_counter.lin_comp_types)
         

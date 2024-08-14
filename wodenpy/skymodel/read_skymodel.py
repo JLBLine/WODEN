@@ -9,6 +9,7 @@ import sys
 from astropy.table import Table
 from wodenpy.skymodel.read_text_skymodel import read_full_text_into_fitstable
 from wodenpy.skymodel.read_yaml_skymodel import read_full_yaml_into_fitstable
+from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 
 
 def read_radec_count_components(skymodel_path : str) -> Component_Type_Counter:
@@ -49,7 +50,7 @@ def read_radec_count_components(skymodel_path : str) -> Component_Type_Counter:
     return comp_counter
 
 
-def read_skymodel_chunks(woden_struct_classes,
+def read_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
                          skymodel_path : str, chunked_skymodel_maps : list,
                          num_freqs : int, num_time_steps : int,
                          beamtype : int,
@@ -62,6 +63,9 @@ def read_skymodel_chunks(woden_struct_classes,
 
     Parameters
     ----------
+    woden_struct_classes : Woden_Struct_Classes
+        This holds all the various ctype structure classes that are equivalent
+        to the C/CUDA structs.
     skymodel_path : str
         The path to the sky model file.
     chunked_skymodel_maps : list
