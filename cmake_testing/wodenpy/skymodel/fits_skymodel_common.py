@@ -415,17 +415,17 @@ def write_full_test_skymodel_fits(settings : Skymodel_Settings):
             table_dict[f"V_INT_FLX{flux_col_ind:07.3f}"] = []
         
     ##Now we add the optional linear polarisation columns    
-    if settings.linpol_frac_cadence or settings.linpol_pl_cadence or settings.linpol_cpl_cadence or settings.linpol_p_list_cadence:
+    if settings.linpol_frac_cadence or settings.linpol_pl_cadence or settings.linpol_cpl_cadence \
+        or settings.linpol_list_cadence or settings.linpol_p_list_cadence:
         linpol_type = Column(data=np.full(total_num_comps, '', dtype='|S5'), name="LIN_MOD_TYPE", dtype='|S5')
         table_dict['LIN_MOD_TYPE'] = linpol_type
+        
+    if settings.linpol_frac_cadence or settings.linpol_pl_cadence or settings.linpol_cpl_cadence \
+        or settings.linpol_p_list_cadence:
         rm = Column(data=np.full(total_num_comps, np.nan), name='RM')
         table_dict['RM'] = rm
         intr_pol_angle = Column(data=np.full(total_num_comps, np.nan), name='INTR_POL_ANGLE')
         table_dict['INTR_POL_ANGLE'] = intr_pol_angle
-        
-    elif settings.linpol_list_cadence:
-        linpol_type = Column(data=np.full(total_num_comps, '', dtype='|S5'), name="LIN_MOD_TYPE", dtype='|S5')
-        table_dict['LIN_MOD_TYPE'] = linpol_type
     
     if settings.linpol_frac_cadence:
         linpol_frac = Column(data=np.full(total_num_comps, np.nan), name="LIN_POL_FRAC")
@@ -565,13 +565,14 @@ def write_full_test_skymodel_fits(settings : Skymodel_Settings):
         out_columns.append(v_curve_cpl)
         
     ##Add circ pol columns if required
-    if settings.linpol_frac_cadence or settings.linpol_pl_cadence or settings.linpol_cpl_cadence or settings.linpol_p_list_cadence:
+    if settings.linpol_frac_cadence or settings.linpol_pl_cadence or settings.linpol_cpl_cadence \
+        or settings.linpol_list_cadence or settings.linpol_p_list_cadence:
         out_columns.append(linpol_type)
+        
+    ##don't need RM or intr_pol_angle for the Q and U lists
+    if settings.linpol_frac_cadence or settings.linpol_pl_cadence or settings.linpol_cpl_cadence or settings.linpol_p_list_cadence:
         out_columns.append(rm)
         out_columns.append(intr_pol_angle)
-    ##don't need RM or intr_pol_angle for the Q and U lists
-    elif settings.linpol_pl_cadence:
-        out_columns.append(linpol_type)
         
     if settings.linpol_frac_cadence:
         out_columns.append(linpol_frac)

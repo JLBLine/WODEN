@@ -438,6 +438,7 @@ def fill_chunk_map_polarised_info(comp_type : CompTypes,
         ##we need it for mallocing later
         list_inds = np.where(np.isin(cropped_comp_counter.orig_comp_indexes, components.v_list_orig_inds) == True)[0]
         components.total_num_v_flux_entires = np.sum(cropped_comp_counter.num_v_list_fluxes[list_inds])
+        # print("HAS VALUE", components.total_num_v_flux_entires, list_inds, cropped_comp_counter.num_v_list_fluxes)
         
         
     if type(lin_pol_frac_inds) == np.ndarray:
@@ -455,7 +456,6 @@ def fill_chunk_map_polarised_info(comp_type : CompTypes,
     if type(lin_list_inds) == np.ndarray:
         components.lin_list_orig_inds = np.intersect1d(lin_list_inds, all_orig_inds)
         components.num_lin_lists = len(components.lin_list_orig_inds)
-        
         list_inds = np.where(np.isin(cropped_comp_counter.orig_comp_indexes, components.lin_list_orig_inds) == True)[0]
         components.total_num_q_flux_entires = np.sum(cropped_comp_counter.num_q_list_fluxes[list_inds])
         components.total_num_u_flux_entires = np.sum(cropped_comp_counter.num_u_list_fluxes[list_inds])
@@ -466,9 +466,12 @@ def fill_chunk_map_polarised_info(comp_type : CompTypes,
         components.num_lin_p_lists = len(components.lin_p_list_orig_inds)
         
         list_inds = np.where(np.isin(cropped_comp_counter.orig_comp_indexes, components.lin_p_list_orig_inds) == True)[0]
-        components.total_num_lin_p_flux_entires = np.sum(cropped_comp_counter.num_lin_p_list_fluxes[list_inds])
         
-    
+        # print('YO', lin_p_list_inds)
+        # print("HOL UP", components.num_lin_p_lists, list_inds, cropped_comp_counter.num_p_list_fluxes[list_inds]) #cropped_comp_counter.num_p_list_fluxes
+        
+        components.total_num_lin_p_flux_entires = np.sum(cropped_comp_counter.num_p_list_fluxes[list_inds])
+        
     ##Don't count num_lin_lists in the angles, because that model doesn't
     ##use the rotation measure
     components.num_lin_angles = components.num_lin_pol_fracs + components.num_lin_powers \

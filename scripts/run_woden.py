@@ -179,7 +179,7 @@ def main(argv=None):
         
         ##Depending on what precision was selected by the user, load in the
         ##C/CUDA library and return the `run_woden` function
-        run_woden = load_in_woden_library(woden_struct_classes, args.precision)
+        run_woden = load_in_woden_library(woden_struct_classes)
         
         num_baselines = int(((args.num_antennas - 1)*args.num_antennas) / 2)
 

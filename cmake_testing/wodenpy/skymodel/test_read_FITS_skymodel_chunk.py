@@ -76,14 +76,14 @@ class Test(BaseChunkTest):
         
         comp_counter = read_fits_skymodel.read_fits_radec_count_components(skymodel_filename)
         
-        comp_counter.print_info()
+        # comp_counter.print_info()
         
         
         comp_counter = crop_below_horizon(lst, MWA_LAT,
                                           comp_counter, 
                                           crop_by_component=crop_by_component)
         
-        # comp_counter.print_info()
+        comp_counter.print_info()
         
         ##Create a chunking map
         chunked_skymodel_maps = create_skymodel_chunk_map(comp_counter,
@@ -94,11 +94,38 @@ class Test(BaseChunkTest):
         
         main_table = Table.read(skymodel_filename, hdu=1)
         shape_table = Table.read(skymodel_filename, hdu=2)
+        
+        with fits.open(skymodel_filename) as hdus:
+            num_hdus = len(hdus)
+            hdu_names = [hdu.name for hdu in hdus]
+            
+        if 'V_LIST_FLUXES' in hdu_names:
+                v_table = Table.read(skymodel_filename, hdu='V_LIST_FLUXES')
+        else:
+            v_table = False
+            
+        if 'Q_LIST_FLUXES' in hdu_names:
+                q_table = Table.read(skymodel_filename, hdu='Q_LIST_FLUXES')
+        else:
+            q_table = False    
+            
+        if 'U_LIST_FLUXES' in hdu_names:
+                u_table = Table.read(skymodel_filename, hdu='U_LIST_FLUXES')
+        else:
+            u_table = False
+            
+        if 'P_LIST_FLUXES' in hdu_names:
+                p_table = Table.read(skymodel_filename, hdu='P_LIST_FLUXES')
+        else:
+            p_table = False
+            
+        # print("TABLES", type(v_table), type(q_table), type(u_table), type(p_table))
 
         source_catalogue = read_fits_skymodel.read_fits_skymodel_chunks(woden_struct_classes,
                                               main_table, shape_table, chunked_skymodel_maps,
                                               num_freqs, num_time_steps,
-                                              beamtype, lsts, MWA_LAT)
+                                              beamtype, lsts, MWA_LAT,
+                                              v_table, q_table, u_table, p_table,)
         
         check_all_sources(expected_chunks, source_catalogue,
                            fits_skymodel=True)
@@ -288,6 +315,63 @@ class Test(BaseChunkTest):
         self.run_write_model_test_read_fits_skymodel_chunk(settings, lst,
                                                max_num_visibilities)
         print('-----------------------------')
+        
+    def test_the_tenth(self):
+        deg_between_comps = 60
+        num_coeff_per_shape = 6
+        num_list_values = 4
+        comps_per_source = 20
+        lst = 0.0
+        max_num_visibilities = 1e10
+        
+        settings = Skymodel_Settings(deg_between_comps,
+                                     num_coeff_per_shape,
+                                     num_list_values,
+                                     comps_per_source,
+                                     stokesV_list_cadence=5,
+                                     stokesV_num_list=3)
+        
+        self.run_write_model_test_read_fits_skymodel_chunk(settings, lst,
+                                               max_num_visibilities)
+        print('-----------------------------')
+        
+    def test_the_eleventh(self):
+        deg_between_comps = 60
+        num_coeff_per_shape = 6
+        num_list_values = 4
+        comps_per_source = 20
+        lst = 0.0
+        max_num_visibilities = 1e10
+        
+        settings = Skymodel_Settings(deg_between_comps,
+                                     num_coeff_per_shape,
+                                     num_list_values,
+                                     comps_per_source,
+                                     linpol_list_cadence=6,
+                                     linpol_num_list=4)
+        
+        self.run_write_model_test_read_fits_skymodel_chunk(settings, lst,
+                                               max_num_visibilities)
+        print('-----------------------------')
+        
+    def test_the_twelfth(self):
+        deg_between_comps = 60
+        num_coeff_per_shape = 6
+        num_list_values = 4
+        comps_per_source = 20
+        lst = 0.0
+        max_num_visibilities = 1e10
+        
+        settings = Skymodel_Settings(deg_between_comps,
+                                     num_coeff_per_shape,
+                                     num_list_values,
+                                     comps_per_source,
+                                     linpol_p_list_cadence=3,
+                                     linpol_num_p_list=5)
+        
+        self.run_write_model_test_read_fits_skymodel_chunk(settings, lst,
+                                               max_num_visibilities)
+        print('-----------------------------')
 
         
     def test_the_big_one(self):
@@ -307,15 +391,18 @@ class Test(BaseChunkTest):
                                      stokesV_cpl_cadence = 3,
                                      linpol_frac_cadence = 3,
                                      linpol_pl_cadence = 5,
-                                     linpol_cpl_cadence = 4)
+                                     linpol_cpl_cadence = 4,
+                                     stokesV_list_cadence=7,
+                                     stokesV_num_list=3,
+                                     linpol_list_cadence=7,
+                                     linpol_num_list=4,
+                                     linpol_p_list_cadence=11,
+                                     linpol_num_p_list=5)
         
         self.run_write_model_test_read_fits_skymodel_chunk(settings, lst,
                                                max_num_visibilities)
         print('-----------------------------')
 
-
-
-        
 ##Run the test
 if __name__ == '__main__':
     unittest.main()

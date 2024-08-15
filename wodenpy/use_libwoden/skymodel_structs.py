@@ -199,6 +199,11 @@ def create_components_struct(precision="double"):
                     ("stokesV_curve_SIs", POINTER(c_user_precision)),
                     ("stokesV_curve_qs", POINTER(c_user_precision)),
                     ("stokesV_curve_comp_inds", POINTER(c_int)),
+                    ("stokesV_list_ref_freqs", POINTER(c_double)),
+                    ("stokesV_list_ref_flux", POINTER(c_user_precision)),
+                    ("stokesV_list_comp_inds", POINTER(c_int)),
+                    ("stokesV_num_list_values", POINTER(c_int)),
+                    ("stokesV_list_start_indexes", POINTER(c_int)),
                     ("linpol_pol_fracs", POINTER(c_user_precision)),
                     ("linpol_pol_frac_comp_inds", POINTER(c_int)),
                     ("linpol_power_ref_flux", POINTER(c_user_precision)),
@@ -208,6 +213,21 @@ def create_components_struct(precision="double"):
                     ("linpol_curve_SIs", POINTER(c_user_precision)),
                     ("linpol_curve_qs", POINTER(c_user_precision)),
                     ("linpol_curve_comp_inds", POINTER(c_int)),
+                    ("stokesQ_list_ref_freqs", POINTER(c_double)),
+                    ("stokesQ_list_ref_flux", POINTER(c_user_precision)),
+                    ("stokesQ_list_comp_inds", POINTER(c_int)),
+                    ("stokesQ_num_list_values", POINTER(c_int)),
+                    ("stokesQ_list_start_indexes", POINTER(c_int)),
+                    ("stokesU_list_ref_freqs", POINTER(c_double)),
+                    ("stokesU_list_ref_flux", POINTER(c_user_precision)),
+                    ("stokesU_list_comp_inds", POINTER(c_int)),
+                    ("stokesU_num_list_values", POINTER(c_int)),
+                    ("stokesU_list_start_indexes", POINTER(c_int)),
+                    ("linpol_p_list_ref_freqs", POINTER(c_double)),
+                    ("linpol_p_list_ref_flux", POINTER(c_user_precision)),
+                    ("linpol_p_list_comp_inds", POINTER(c_int)),
+                    ("linpol_p_num_list_values", POINTER(c_int)),
+                    ("linpol_p_list_start_indexes", POINTER(c_int)),
                     ("rm_values", POINTER(c_user_precision)),
                     ("intr_pol_angle", POINTER(c_user_precision)),
                     ("linpol_angle_inds", POINTER(c_int)),
@@ -561,7 +581,7 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
         
     ##now do the polarisation thingies------------------------------------------
     
-    power_user_ncomps_arr = c_user_precision*chunk_map.n_shape_powers
+    # power_user_ncomps_arr = c_user_precision*chunk_map.n_shape_powers
     
     components.stokesV_pol_fracs = (c_user_precision*map_components.num_v_pol_fracs)()
     components.stokesV_pol_frac_comp_inds = (c_int*map_components.num_v_pol_fracs)()
@@ -592,6 +612,39 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
     components.n_linpol_power = map_components.num_lin_powers
     components.n_linpol_curve = map_components.num_lin_curves
     components.n_linpol_angles = map_components.num_lin_angles
+    
+    components.n_stokesV_list = map_components.num_v_lists
+    components.n_linpol_list = map_components.num_lin_lists
+    components.n_linpol_p_list = map_components.num_lin_p_lists
+    
+    components.n_stokesV_list_flux_entries = map_components.total_num_v_flux_entires
+    components.n_stokesQ_list_flux_entries = map_components.total_num_q_flux_entires
+    components.n_stokesU_list_flux_entries = map_components.total_num_u_flux_entires
+    components.n_linpol_p_list_flux_entries = map_components.total_num_lin_p_flux_entires
+    
+    components.stokesV_list_ref_freqs = (c_double*map_components.total_num_v_flux_entires)()
+    components.stokesV_list_ref_flux = (c_user_precision*map_components.total_num_v_flux_entires)()
+    components.stokesV_list_comp_inds = (c_int*map_components.num_v_lists)()
+    components.stokesV_num_list_values = (c_int*map_components.num_v_lists)()
+    components.stokesV_list_start_indexes = (c_int*map_components.num_v_lists)()
+    
+    components.stokesQ_list_ref_freqs = (c_double*map_components.total_num_q_flux_entires)()
+    components.stokesQ_list_ref_flux = (c_user_precision*map_components.total_num_q_flux_entires)()
+    components.stokesQ_list_comp_inds = (c_int*map_components.num_lin_lists)()
+    components.stokesQ_num_list_values = (c_int*map_components.num_lin_lists)()
+    components.stokesQ_list_start_indexes = (c_int*map_components.num_lin_lists)()
+    
+    components.stokesU_list_ref_freqs = (c_double*map_components.total_num_u_flux_entires)()
+    components.stokesU_list_ref_flux = (c_user_precision*map_components.total_num_u_flux_entires)()
+    components.stokesU_list_comp_inds = (c_int*map_components.num_lin_lists)()
+    components.stokesU_num_list_values = (c_int*map_components.num_lin_lists)()
+    components.stokesU_list_start_indexes = (c_int*map_components.num_lin_lists)()
+    
+    components.linpol_p_list_ref_freqs = (c_double*map_components.total_num_lin_p_flux_entires)()
+    components.linpol_p_list_ref_flux = (c_user_precision*map_components.total_num_lin_p_flux_entires)()
+    components.linpol_p_list_comp_inds = (c_int*map_components.num_lin_p_lists)()
+    components.linpol_p_num_list_values = (c_int*map_components.num_lin_p_lists)()
+    components.linpol_p_list_start_indexes = (c_int*map_components.num_lin_p_lists)()
     
     # print(components.n_stokesV_pol_frac)
     # print(components.n_stokesV_power)
@@ -741,10 +794,17 @@ class _Components_Python(object):
         self.n_stokesV_pol_frac = 0
         self.n_stokesV_power = 0
         self.n_stokesV_curve = 0
+        self.n_stokesV_list = 0
         self.n_linpol_pol_frac = 0
         self.n_linpol_power = 0
         self.n_linpol_curve = 0
+        self.n_linpol_list = 0
+        self.n_linpol_p_list = 0
         self.n_linpol_angles = 0
+        self.n_stokesV_list_flux_entries = 0
+        self.n_stokesQ_list_flux_entries = 0
+        self.n_stokesU_list_flux_entries = 0
+        self.n_linpol_p_list_flux_entries = 0
         
         if components.n_stokesV_pol_frac > 0:
             self.n_stokesV_pol_frac = components.n_stokesV_pol_frac
@@ -764,6 +824,15 @@ class _Components_Python(object):
             self.stokesV_curve_SIs = np.ctypeslib.as_array(components.stokesV_curve_SIs, shape=(components.n_stokesV_curve, ))
             self.stokesV_curve_qs = np.ctypeslib.as_array(components.stokesV_curve_qs, shape=(components.n_stokesV_curve, ))
             self.stokesV_curve_comp_inds = np.ctypeslib.as_array(components.stokesV_curve_comp_inds, shape=(components.n_stokesV_curve, ))
+            
+        if components.n_stokesV_list > 0:
+            self.n_stokesV_list = components.n_stokesV_list
+            self.n_stokesV_list_flux_entries = components.n_stokesV_list_flux_entries
+            self.stokesV_list_ref_freqs = np.ctypeslib.as_array(components.stokesV_list_ref_freqs, shape=(components.n_stokesV_list_flux_entries, ))
+            self.stokesV_list_ref_flux = np.ctypeslib.as_array(components.stokesV_list_ref_flux, shape=(components.n_stokesV_list_flux_entries, ))
+            self.stokesV_list_comp_inds = np.ctypeslib.as_array(components.stokesV_list_comp_inds, shape=(components.n_stokesV_list, ))
+            self.stokesV_num_list_values = np.ctypeslib.as_array(components.stokesV_num_list_values, shape=(components.n_stokesV_list, ))
+            self.stokesV_list_start_indexes = np.ctypeslib.as_array(components.stokesV_list_start_indexes, shape=(components.n_stokesV_list, ))
             
         if components.n_linpol_pol_frac > 0:
             self.n_linpol_pol_frac = components.n_linpol_pol_frac
@@ -790,6 +859,33 @@ class _Components_Python(object):
             self.rm_values = np.ctypeslib.as_array(components.rm_values, shape=(components.n_linpol_angles, ))
             self.intr_pol_angle = np.ctypeslib.as_array(components.intr_pol_angle, shape=(components.n_linpol_angles, ))
             self.linpol_angle_inds = np.ctypeslib.as_array(components.linpol_angle_inds, shape=(components.n_linpol_angles, ))
+            
+        if components.n_linpol_list > 0:
+            self.n_linpol_list = components.n_linpol_list
+            
+            self.n_stokesQ_list_flux_entries = components.n_stokesQ_list_flux_entries
+            self.stokesQ_list_ref_freqs = np.ctypeslib.as_array(components.stokesQ_list_ref_freqs, shape=(components.n_stokesQ_list_flux_entries, ))
+            self.stokesQ_list_ref_flux = np.ctypeslib.as_array(components.stokesQ_list_ref_flux, shape=(components.n_stokesQ_list_flux_entries, ))
+            self.stokesQ_list_comp_inds = np.ctypeslib.as_array(components.stokesQ_list_comp_inds, shape=(components.n_linpol_list, ))
+            self.stokesQ_num_list_values = np.ctypeslib.as_array(components.stokesQ_num_list_values, shape=(components.n_linpol_list, ))
+            self.stokesQ_list_start_indexes = np.ctypeslib.as_array(components.stokesQ_list_start_indexes, shape=(components.n_linpol_list, ))
+            
+            self.n_stokesU_list_flux_entries = components.n_stokesU_list_flux_entries
+            self.stokesU_list_ref_freqs = np.ctypeslib.as_array(components.stokesU_list_ref_freqs, shape=(components.n_stokesU_list_flux_entries, ))
+            self.stokesU_list_ref_flux = np.ctypeslib.as_array(components.stokesU_list_ref_flux, shape=(components.n_stokesU_list_flux_entries, ))
+            self.stokesU_list_comp_inds = np.ctypeslib.as_array(components.stokesU_list_comp_inds, shape=(components.n_linpol_list, ))
+            self.stokesU_num_list_values = np.ctypeslib.as_array(components.stokesU_num_list_values, shape=(components.n_linpol_list, ))
+            self.stokesU_list_start_indexes = np.ctypeslib.as_array(components.stokesU_list_start_indexes, shape=(components.n_linpol_list, ))
+            
+        if components.n_linpol_p_list > 0:
+            self.n_linpol_p_list = components.n_linpol_p_list
+            self.n_linpol_p_list_flux_entries = components.n_linpol_p_list_flux_entries
+            
+            self.linpol_p_list_ref_freqs = np.ctypeslib.as_array(components.linpol_p_list_ref_freqs, shape=(components.n_linpol_p_list_flux_entries, ))
+            self.linpol_p_list_ref_flux = np.ctypeslib.as_array(components.linpol_p_list_ref_flux, shape=(components.n_linpol_p_list_flux_entries, ))
+            self.linpol_p_list_comp_inds = np.ctypeslib.as_array(components.linpol_p_list_comp_inds, shape=(components.n_linpol_p_list, ))
+            self.linpol_p_num_list_values = np.ctypeslib.as_array(components.linpol_p_num_list_values, shape=(components.n_linpol_p_list, ))
+            self.linpol_p_list_start_indexes = np.ctypeslib.as_array(components.linpol_p_list_start_indexes, shape=(components.n_linpol_p_list, ))
             
         self.do_QUV = components.do_QUV
             

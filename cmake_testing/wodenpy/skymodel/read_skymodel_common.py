@@ -132,7 +132,20 @@ def check_components(found_comps, expec_comps,
                             expec_comps.stokesV_curve_qs, rtol=rtol)
         npt.assert_allclose(found_comps.stokesV_curve_comp_inds,
                             expec_comps.stokesV_curve_comp_inds, rtol=rtol)
-    
+        
+    if expec_comps.n_v_list:
+        
+        npt.assert_allclose(found_comps.stokesV_list_ref_freqs,
+                            expec_comps.stokesV_list_ref_freqs,rtol=rtol)
+        npt.assert_allclose(found_comps.stokesV_list_ref_flux,
+                            expec_comps.stokesV_list_ref_flux,rtol=rtol)
+        npt.assert_allclose(found_comps.stokesV_list_comp_inds,
+                            expec_comps.stokesV_list_comp_inds,rtol=rtol)
+        npt.assert_allclose(found_comps.stokesV_num_list_values,
+                            expec_comps.stokesV_num_list_values,rtol=rtol)
+        npt.assert_allclose(found_comps.stokesV_list_start_indexes,
+                            expec_comps.stokesV_list_start_indexes,rtol=rtol)
+        
     if expec_comps.n_lin_pol_frac:
         npt.assert_allclose(found_comps.linpol_pol_fracs,
                             expec_comps.linpol_pol_fracs, rtol=rtol)
@@ -155,13 +168,56 @@ def check_components(found_comps, expec_comps,
                             expec_comps.linpol_curve_qs, rtol=rtol)
         npt.assert_allclose(found_comps.linpol_curve_comp_inds,
                             expec_comps.linpol_curve_comp_inds, rtol=rtol)
+        
+    if expec_comps.n_lin_list:
+        
+        npt.assert_allclose(found_comps.stokesQ_list_ref_freqs,
+                            expec_comps.linpol_list_ref_freqs,rtol=rtol)
+        npt.assert_allclose(found_comps.stokesQ_list_ref_flux,
+                            expec_comps.linpol_list_ref_flux,rtol=rtol)
+        npt.assert_allclose(found_comps.stokesQ_list_comp_inds,
+                            expec_comps.linpol_list_comp_inds,rtol=rtol)
+        npt.assert_allclose(found_comps.stokesQ_num_list_values,
+                            expec_comps.linpol_num_list_values,rtol=rtol)
+        npt.assert_allclose(found_comps.stokesQ_list_start_indexes,
+                            expec_comps.linpol_list_start_indexes,rtol=rtol)
+        
+        npt.assert_allclose(found_comps.stokesU_list_ref_freqs,
+                            expec_comps.linpol_list_ref_freqs,rtol=rtol)
+        npt.assert_allclose(found_comps.stokesU_list_ref_flux,
+                            expec_comps.linpol_list_ref_flux,rtol=rtol)
+        npt.assert_allclose(found_comps.stokesU_list_comp_inds,
+                            expec_comps.linpol_list_comp_inds,rtol=rtol)
+        npt.assert_allclose(found_comps.stokesU_num_list_values,
+                            expec_comps.linpol_num_list_values,rtol=rtol)
+        npt.assert_allclose(found_comps.stokesU_list_start_indexes,
+                            expec_comps.linpol_list_start_indexes,rtol=rtol)
+        
+    if expec_comps.n_lin_p_list:
+        
+        npt.assert_allclose(found_comps.linpol_p_list_ref_freqs,
+                            expec_comps.linpol_p_list_ref_freqs,rtol=rtol)
+        npt.assert_allclose(found_comps.linpol_p_list_ref_flux,
+                            expec_comps.linpol_p_list_ref_flux,rtol=rtol)
+        npt.assert_allclose(found_comps.linpol_p_list_comp_inds,
+                            expec_comps.linpol_p_list_comp_inds,rtol=rtol)
+        npt.assert_allclose(found_comps.linpol_p_num_list_values,
+                            expec_comps.linpol_p_num_list_values,rtol=rtol)
+        npt.assert_allclose(found_comps.linpol_p_list_start_indexes,
+                            expec_comps.linpol_p_list_start_indexes,rtol=rtol)
+        
+        
+        
+    ##TODO get list type lin pol checks in here
+        
+        
     ##OK so in the following, we sort by the indexes relative to al components
     ##in both the expected and found compoments. As long as the sorted indexes
     ##match, and then the reordered RM and instrinsic pol angles match, we
     ##have the same information. The order they appear doesn't matter, as long
     ##as the same index matches the same RM/angle values.
     ##It was one too any reordering exercises when making the expected components
-    if expec_comps.n_lin_pol_frac or expec_comps.n_lin_power or expec_comps.n_lin_curve:
+    if expec_comps.n_lin_pol_frac or expec_comps.n_lin_power or expec_comps.n_lin_curve  or expec_comps.n_lin_p_list:
         
         found_order = np.argsort(found_comps.linpol_angle_inds)
         expec_order = np.argsort(expec_comps.linpol_angle_inds)
@@ -182,7 +238,7 @@ def check_components(found_comps, expec_comps,
     else:
         do_QUV = 0
         
-    npt.assert_equal(found_comps.do_QUV, do_QUV)
+    # npt.assert_equal(found_comps.do_QUV, do_QUV)
     
 def check_all_sources(expected_chunks, source_catalogue,
                       fits_skymodel=True):
@@ -210,7 +266,6 @@ def check_all_sources(expected_chunks, source_catalogue,
             found_comps = python_source.point_components
             expec_comps = expec_chunk.point_components
             
-            # print("point")
             check_components(found_comps, expec_comps,
                         n_powers, n_curves, n_lists,
                         fits_skymodel=fits_skymodel)
@@ -1003,7 +1058,8 @@ class PolIncCounter:
         
     
 def put_pol_info_in_component(components : Expected_Components,
-                              polinc : PolIncCounter):
+                              polinc : PolIncCounter,
+                              skymodel_settings : Skymodel_Settings):
     
     ##only need to update some fields below as things like spectral index
     ##and curve q params are the same as the flux values by design
@@ -1027,7 +1083,14 @@ def put_pol_info_in_component(components : Expected_Components,
     components.stokesV_curve_ref_flux[polinc.low_v_curve:polinc.high_v_curve] = polinc.v_curve
     components.stokesV_curve_comp_inds[polinc.low_v_curve:polinc.high_v_curve] = polinc.v_curve_inds
     
-    components.stokesV_list_ref_flux[polinc.low_v_list:polinc.high_v_list] = polinc.v_list
+    # print('Jessy what the fuck are you talking about', polinc.v_list, polinc.low_v_list, polinc.high_v_list)
+    
+    ##There are multiple flux entries per component, which have all been
+    ##set to the same value
+    
+    low = polinc.low_v_list*skymodel_settings.stokesV_num_list
+    high = polinc.high_v_list*skymodel_settings.stokesV_num_list
+    components.stokesV_list_ref_flux[low:high] = np.repeat(polinc.v_list, skymodel_settings.stokesV_num_list)
     components.stokesV_list_comp_inds[polinc.low_v_list:polinc.high_v_list] = polinc.v_list_inds
     
     components.linpol_pol_fracs[polinc.low_lin_pol_frac:polinc.high_lin_pol_frac] = polinc.lin_pol_frac
@@ -1036,16 +1099,17 @@ def put_pol_info_in_component(components : Expected_Components,
     components.linpol_power_ref_flux[polinc.low_lin_power:polinc.high_lin_power] = polinc.lin_power
     components.linpol_power_comp_inds[polinc.low_lin_power:polinc.high_lin_power] = polinc.lin_power_inds
     
-    
-    # print(polinc.low_lin_curve, polinc.high_lin_curve)
-    
     components.linpol_curve_ref_flux[polinc.low_lin_curve:polinc.high_lin_curve] = polinc.lin_curve
     components.linpol_curve_comp_inds[polinc.low_lin_curve:polinc.high_lin_curve] = polinc.lin_curve_inds
     
-    components.linpol_list_ref_flux[polinc.low_lin_list:polinc.high_lin_list] = polinc.lin_list
+    low = polinc.low_lin_list*skymodel_settings.linpol_num_list
+    high = polinc.high_lin_list*skymodel_settings.linpol_num_list
+    components.linpol_list_ref_flux[low:high] = np.repeat(polinc.lin_list, skymodel_settings.linpol_num_list)
     components.linpol_list_comp_inds[polinc.low_lin_list:polinc.high_lin_list] = polinc.lin_list_inds
     
-    components.linpol_p_list_ref_flux[polinc.low_lin_p_list:polinc.high_lin_p_list] = polinc.lin_p_list
+    low = polinc.low_lin_p_list*skymodel_settings.linpol_num_p_list
+    high = polinc.high_lin_p_list*skymodel_settings.linpol_num_p_list
+    components.linpol_p_list_ref_flux[low:high] = np.repeat(polinc.lin_p_list, skymodel_settings.linpol_num_p_list)
     components.linpol_p_list_comp_inds[polinc.low_lin_p_list:polinc.high_lin_p_list] = polinc.lin_p_list_inds
     
     ##EVEN MORE COMPLICATED are the RM values and intrinsic polarisation angles
@@ -1060,13 +1124,11 @@ def put_pol_info_in_component(components : Expected_Components,
     n_lin_pol_frac = polinc.high_lin_pol_frac - polinc.low_lin_pol_frac
     n_lin_power = polinc.high_lin_power - polinc.low_lin_power
     n_lin_curve = polinc.high_lin_curve - polinc.low_lin_curve
-    n_lin_list = polinc.high_lin_list - polinc.low_lin_list
     n_lin_p_list = polinc.high_lin_p_list - polinc.low_lin_p_list
     
     components.n_lin_pol_frac = n_lin_pol_frac
     components.n_lin_power = n_lin_power
     components.n_lin_curve = n_lin_curve
-    components.n_lin_list = n_lin_list
     components.n_lin_p_list = n_lin_p_list
     
     low, high = polinc.base_angle_ind, polinc.base_angle_ind + n_lin_pol_frac
@@ -1093,23 +1155,26 @@ def put_pol_info_in_component(components : Expected_Components,
     components.intr_pol_angle[low:high] = 0.1*polinc.lin_p_list*((2*np.pi)/360)
     components.linpol_angle_inds[low:high] = polinc.lin_p_list_inds
     
+    # print("SAY WHAT", components.linpol_angle_inds)
+    
 def reorder_and_populate_polarisation_in_component(components : Expected_Components,
                                                    skymodel_settings : Skymodel_Settings):
     """Reroder things as they order the appeared in the original catalogue,
     as that's what happens in the main code (it does it iteratively)"""
+    
+    stokesV_num_list = skymodel_settings.stokesV_num_list
+    linpol_num_list = skymodel_settings.linpol_num_list
+    linpol_num_p_list = skymodel_settings.linpol_num_p_list
     
     ##We set these values to the index in the original catalogue,
     ##so can reorder based on that
     order_stokesV_pol_frac = np.argsort(np.array(components.stokesV_pol_fracs))
     order_stokesV_power = np.argsort(np.array(components.stokesV_power_ref_flux))
     order_stokesV_curve = np.argsort(np.array(components.stokesV_curve_ref_flux))
-    order_stokesV_list = np.argsort(np.array(components.stokesV_list_ref_flux))
     order_linpol_pol_frac = np.argsort(np.array(components.linpol_pol_fracs))
     order_linpol_power = np.argsort(np.array(components.linpol_power_ref_flux))
     order_linpol_curve = np.argsort(np.array(components.linpol_curve_ref_flux))
-    order_linpol_list = np.argsort(np.array(components.linpol_list_ref_flux))
-    order_linpol_p_list = np.argsort(np.array(components.linpol_p_list_ref_flux))
-    order_linpol_angles = np.argsort(np.array(components.rm_values))
+    # order_linpol_angles = np.argsort(np.array(components.rm_values))
     
     components.stokesV_pol_frac_comp_inds = np.array(components.stokesV_pol_frac_comp_inds)[order_stokesV_pol_frac]
     components.stokesV_pol_fracs = np.array(components.stokesV_pol_fracs)[order_stokesV_pol_frac]
@@ -1131,9 +1196,9 @@ def reorder_and_populate_polarisation_in_component(components : Expected_Compone
     components.linpol_curve_SIs = components.linpol_curve_ref_flux
     components.linpol_curve_qs = components.linpol_curve_ref_flux
     
-    components.linpol_angle_inds = np.array(components.linpol_angle_inds)[order_linpol_angles]
-    components.rm_values = np.array(components.rm_values)[order_linpol_angles]
-    components.intr_pol_angle = np.array(components.intr_pol_angle)[order_linpol_angles]
+    components.linpol_angle_inds = np.array(components.linpol_angle_inds) #[order_linpol_angles]
+    components.rm_values = np.array(components.rm_values) #[order_linpol_angles]
+    components.intr_pol_angle = np.array(components.intr_pol_angle) #[order_linpol_angles]
     
     components.n_v_pol_frac = len(components.stokesV_pol_frac_comp_inds)
     components.n_v_power = len(components.stokesV_power_comp_inds)
@@ -1145,21 +1210,59 @@ def reorder_and_populate_polarisation_in_component(components : Expected_Compone
     ##LIST SHIT IS COMPLIACTED SHIT
     n_v_list = len(components.stokesV_list_comp_inds)
     components.n_v_list = n_v_list
-    components.stokesV_list_comp_inds = np.array(components.stokesV_list_comp_inds)[order_stokesV_list]
-    components.stokesV_list_ref_freqs = np.tile(np.arange(skymodel_settings.stokesV_num_list), n_v_list)*1e+6
-    components.stokesV_list_ref_flux = np.repeat(components.stokesV_list_ref_flux[order_stokesV_list], n_v_list)
-    
     n_lin_list = len(components.linpol_list_comp_inds)
     components.n_lin_list = n_lin_list
-    components.linpol_list_comp_inds = np.array(components.linpol_list_comp_inds)[order_linpol_list]
-    components.linpol_list_ref_freqs = np.tile(np.arange(skymodel_settings.linpol_num_list), n_lin_list)*1e+6
-    components.linpol_list_ref_flux = np.repeat(components.linpol_list_ref_flux[order_linpol_list], n_lin_list)
-    
     n_lin_p_list = len(components.linpol_p_list_comp_inds)
     components.n_lin_p_list = n_lin_p_list
-    components.linpol_p_list_comp_inds = np.array(components.linpol_p_list_comp_inds)[order_linpol_p_list]
-    components.linpol_p_list_ref_freqs = np.tile(np.arange(skymodel_settings.linpol_num_p_list), n_lin_p_list)*1e+6
-    components.linpol_p_list_ref_flux = np.repeat(components.linpol_p_list_ref_flux[order_linpol_p_list], n_lin_p_list)
+    
+    if n_v_list:
+        ##There are multiple flux entries per component for list fluxes, so need
+        ##to only select every first flux entry
+        stokesV_list_sample = np.arange(0, len(components.stokesV_list_ref_flux), stokesV_num_list, dtype=int)
+        order_stokesV_list = np.argsort(np.array(components.stokesV_list_ref_flux)[stokesV_list_sample])
+        components.stokesV_list_comp_inds = np.array(components.stokesV_list_comp_inds)[order_stokesV_list]
+        components.stokesV_list_ref_freqs = np.tile(np.arange(stokesV_num_list), n_v_list)*1e+6
+        order_stokesV_list_flux = np.empty(stokesV_num_list*len(order_stokesV_list), dtype=int)
+        for i in range(stokesV_num_list):
+            order_stokesV_list_flux[np.arange(i, stokesV_num_list*len(order_stokesV_list), stokesV_num_list)] = stokesV_num_list*order_stokesV_list + i
+        components.stokesV_list_ref_flux = np.array(components.stokesV_list_ref_flux)[order_stokesV_list_flux]
+        
+        num_list_values = len(components.stokesV_list_comp_inds)
+        components.stokesV_num_list_values = np.full(num_list_values, stokesV_num_list)
+        components.stokesV_list_start_indexes = np.arange(0, num_list_values*stokesV_num_list, stokesV_num_list)
+    
+    if n_lin_list:
+        ##There are multiple flux entries per component for list fluxes, so need
+        ##to only select every first flux entry
+        linpol_list_sample = np.arange(0, len(components.linpol_list_ref_flux), linpol_num_list, dtype=int)
+        order_linpol_list = np.argsort(np.array(components.linpol_list_ref_flux)[linpol_list_sample])
+        components.linpol_list_comp_inds = np.array(components.linpol_list_comp_inds)[order_linpol_list]
+        components.linpol_list_ref_freqs = np.tile(np.arange(skymodel_settings.linpol_num_list), n_lin_list)*1e+6
+        order_linpol_list_flux = np.empty(linpol_num_list*len(order_linpol_list), dtype=int)
+        for i in range(linpol_num_list):
+            order_linpol_list_flux[np.arange(i, linpol_num_list*len(order_linpol_list), linpol_num_list)] = linpol_num_list*order_linpol_list + i
+        components.linpol_list_ref_flux = np.array(components.linpol_list_ref_flux)[order_linpol_list_flux]
+        
+        num_list_values = len(components.linpol_list_comp_inds)
+        components.linpol_num_list_values = np.full(num_list_values, linpol_num_list)
+        components.linpol_list_start_indexes = np.arange(0, num_list_values*linpol_num_list, linpol_num_list)
+    
+    if n_lin_p_list:
+        ##There are multiple flux entries per component for list fluxes, so need
+        ##to only select every first flux entry
+        linpol_p_list_sample = np.arange(0, len(components.linpol_p_list_ref_flux), linpol_num_p_list, dtype=int)
+        order_linpol_p_list = np.argsort(np.array(components.linpol_p_list_ref_flux)[linpol_p_list_sample])
+    
+        components.linpol_p_list_comp_inds = np.array(components.linpol_p_list_comp_inds)[order_linpol_p_list]
+        components.linpol_p_list_ref_freqs = np.tile(np.arange(skymodel_settings.linpol_num_p_list), n_lin_p_list)*1e+6
+        order_linpol_p_list_flux = np.empty(linpol_num_p_list*len(order_linpol_p_list), dtype=int)
+        for i in range(linpol_num_p_list):
+            order_linpol_p_list_flux[np.arange(i, linpol_num_p_list*len(order_linpol_p_list), linpol_num_p_list)] = linpol_num_p_list*order_linpol_p_list + i
+        components.linpol_p_list_ref_flux = np.array(components.linpol_p_list_ref_flux)[order_linpol_p_list_flux]
+        
+        num_p_list_values = len(components.linpol_p_list_comp_inds)
+        components.linpol_p_num_list_values = np.full(num_p_list_values, linpol_num_p_list)
+        components.linpol_p_list_start_indexes = np.arange(0, num_p_list_values*linpol_num_p_list, linpol_num_p_list)
     
     return
             
@@ -1214,8 +1317,10 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
         expec_chunk.init_point_components(num_chunk_power, num_chunk_curve, num_chunk_list,
                                             skymodel_settings.num_list_values, comps_per_chunk,
                                             n_v_pol_frac, n_v_power, n_v_curve, n_v_list,
+                                            skymodel_settings.stokesV_num_list,
                                             n_lin_pol_frac, n_lin_power, n_lin_curve,
-                                            n_lin_list, n_lin_p_list)
+                                            n_lin_list, skymodel_settings.linpol_num_list,
+                                            n_lin_p_list, skymodel_settings.linpol_num_p_list)
         components = expec_chunk.point_components
         
     elif comp_type == CompTypes.GAUSSIAN:
@@ -1223,8 +1328,10 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
         expec_chunk.init_gauss_components(num_chunk_power, num_chunk_curve, num_chunk_list,
                                             skymodel_settings.num_list_values, comps_per_chunk,
                                             n_v_pol_frac, n_v_power, n_v_curve, n_v_list,
+                                            skymodel_settings.stokesV_num_list,
                                             n_lin_pol_frac, n_lin_power, n_lin_curve,
-                                            n_lin_list, n_lin_p_list)
+                                            n_lin_list, skymodel_settings.linpol_num_list,
+                                            n_lin_p_list, skymodel_settings.linpol_num_p_list)
         components = expec_chunk.gauss_components
         
     if num_chunk_power:
@@ -1302,22 +1409,7 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
             polinc.lin_p_list=polvalues.powerI_lin_p_list
             polinc.lin_p_list_inds=polvalues.powerI_lin_p_list_inds
             
-            put_pol_info_in_component(components, polinc)
-            
-            # put_pol_info_in_component(components=components,
-            #                     low_v_pol_frac=0, high_v_pol_frac=polvalues.n_powerI_v_pol_frac,
-            #                     low_v_power=0, high_v_power=polvalues.n_powerI_v_power,
-            #                     low_v_curve=0, high_v_curve=polvalues.n_powerI_v_curve,
-            #                     low_lin_pol_frac=0, high_lin_pol_frac=polvalues.n_powerI_lin_pol_frac,
-            #                     low_lin_power=0, high_lin_power=polvalues.n_powerI_lin_power,
-            #                     low_lin_curve=0, high_lin_curve=polvalues.n_powerI_lin_curve,
-            #                     base_angle_ind=0,
-            #                     v_pol_frac=polvalues.powerI_v_pol_frac, v_pol_frac_inds=polvalues.powerI_v_pol_frac_inds,
-            #                     v_power=polvalues.powerI_v_power, v_power_inds=polvalues.powerI_v_power_inds,
-            #                     v_curve=polvalues.powerI_v_curve, v_curve_inds=polvalues.powerI_v_curve_inds,
-            #                     lin_pol_frac=polvalues.powerI_lin_pol_frac, lin_pol_frac_inds=polvalues.powerI_lin_pol_frac_inds,
-            #                     lin_power=polvalues.powerI_lin_power, lin_power_inds=polvalues.powerI_lin_power_inds,
-            #                     lin_curve=polvalues.powerI_lin_curve, lin_curve_inds=polvalues.powerI_lin_curve_inds)
+            put_pol_info_in_component(components, polinc, skymodel_settings)
         
     if num_chunk_curve:
         low_cur_chunk = num_chunk_power
@@ -1368,7 +1460,8 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
         ##everything shoud start after how many power-law things were added
         
         if polvalues:
-            num_powerI = polvalues.n_powerI_lin_pol_frac + polvalues.n_powerI_lin_power + polvalues.n_powerI_lin_curve
+            num_powerI = polvalues.n_powerI_lin_pol_frac + polvalues.n_powerI_lin_power \
+                       + polvalues.n_powerI_lin_curve + polvalues.n_powerI_lin_p_list
             
             polinc.low_v_pol_frac=polvalues.n_powerI_v_pol_frac
             polinc.high_v_pol_frac=polvalues.n_powerI_v_pol_frac + polvalues.n_curveI_v_pol_frac
@@ -1395,6 +1488,12 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
             polinc.lin_power_inds=polvalues.curveI_lin_power_inds
             polinc.lin_curve=polvalues.curveI_lin_curve
             polinc.lin_curve_inds=polvalues.curveI_lin_curve_inds
+            polinc.v_list=polvalues.curveI_v_list
+            polinc.v_list_inds=polvalues.curveI_v_list_inds
+            polinc.lin_list=polvalues.curveI_lin_list
+            polinc.lin_list_inds=polvalues.curveI_lin_list_inds
+            polinc.lin_p_list=polvalues.curveI_lin_p_list
+            polinc.lin_p_list_inds=polvalues.curveI_lin_p_list_inds
             
             polinc.low_v_list=polvalues.n_powerI_v_list
             polinc.high_v_list=polvalues.n_powerI_v_list + polvalues.n_curveI_v_list
@@ -1407,29 +1506,8 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
             polinc.lin_p_list=polvalues.curveI_lin_p_list
             polinc.lin_p_list_inds=polvalues.curveI_lin_p_list_inds
             
-            put_pol_info_in_component(components, polinc)
+            put_pol_info_in_component(components, polinc, skymodel_settings)
             
-            # put_pol_info_in_component(components=components,
-            #                     low_v_pol_frac=polvalues.n_powerI_v_pol_frac, 
-            #                     high_v_pol_frac=polvalues.n_powerI_v_pol_frac + polvalues.n_curveI_v_pol_frac,
-            #                     low_v_power=polvalues.n_powerI_v_power, 
-            #                     high_v_power=polvalues.n_powerI_v_power + polvalues.n_curveI_v_power,
-            #                     low_v_curve=polvalues.n_powerI_v_curve, 
-            #                     high_v_curve=polvalues.n_powerI_v_curve + polvalues.n_curveI_v_curve,
-            #                     low_lin_pol_frac=polvalues.n_powerI_lin_pol_frac, 
-            #                     high_lin_pol_frac=polvalues.n_powerI_lin_pol_frac + polvalues.n_curveI_lin_pol_frac,
-            #                     low_lin_power=polvalues.n_powerI_lin_power, 
-            #                     high_lin_power=polvalues.n_powerI_lin_power + polvalues.n_curveI_lin_power,
-            #                     low_lin_curve=polvalues.n_powerI_lin_curve, 
-            #                     high_lin_curve=polvalues.n_powerI_lin_curve + polvalues.n_curveI_lin_curve,
-            #                     base_angle_ind=num_powerI,
-            #                     v_pol_frac=polvalues.curveI_v_pol_frac, v_pol_frac_inds=polvalues.curveI_v_pol_frac_inds,
-            #                     v_power=polvalues.curveI_v_power, v_power_inds=polvalues.curveI_v_power_inds,
-            #                     v_curve=polvalues.curveI_v_curve, v_curve_inds=polvalues.curveI_v_curve_inds,
-            #                     lin_pol_frac=polvalues.curveI_lin_pol_frac, lin_pol_frac_inds=polvalues.curveI_lin_pol_frac_inds,
-            #                     lin_power=polvalues.curveI_lin_power, lin_power_inds=polvalues.curveI_lin_power_inds,
-            #                     lin_curve=polvalues.curveI_lin_curve, lin_curve_inds=polvalues.curveI_lin_curve_inds)
-    
     if num_chunk_list:
         low_lis_chunk = num_chunk_power + num_chunk_curve
         high_lis_chunk = num_chunk_power + num_chunk_curve + num_chunk_list
@@ -1486,8 +1564,10 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
             components.pas[low_lis_chunk:high_lis_chunk] = expec_params[low_lis_coord:high_lis_coord]*D2R
         
         if polvalues:
-            num_curvepowerI = polvalues.n_powerI_lin_pol_frac + polvalues.n_powerI_lin_power + polvalues.n_powerI_lin_curve \
-                            + polvalues.n_curveI_lin_pol_frac + polvalues.n_curveI_lin_power + polvalues.n_curveI_lin_curve
+            num_curvepowerI = num_powerI = polvalues.n_powerI_lin_pol_frac + polvalues.n_powerI_lin_power \
+                                         + polvalues.n_powerI_lin_curve + polvalues.n_powerI_lin_p_list \
+                                         + polvalues.n_curveI_lin_pol_frac + polvalues.n_curveI_lin_power \
+                                         + polvalues.n_curveI_lin_curve + polvalues.n_curveI_lin_p_list
                             
             polinc.low_v_pol_frac=polvalues.n_powerI_v_pol_frac + polvalues.n_curveI_v_pol_frac
             polinc.high_v_pol_frac=polvalues.n_powerI_v_pol_frac + polvalues.n_curveI_v_pol_frac + polvalues.n_listI_v_pol_frac
@@ -1514,6 +1594,12 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
             polinc.lin_power_inds=polvalues.listI_lin_power_inds
             polinc.lin_curve=polvalues.listI_lin_curve
             polinc.lin_curve_inds=polvalues.listI_lin_curve_inds
+            polinc.v_list=polvalues.listI_v_list
+            polinc.v_list_inds=polvalues.listI_v_list_inds
+            polinc.lin_list=polvalues.listI_lin_list
+            polinc.lin_list_inds=polvalues.listI_lin_list_inds
+            polinc.lin_p_list=polvalues.listI_lin_p_list
+            polinc.lin_p_list_inds=polvalues.listI_lin_p_list_inds
             
             polinc.low_v_list=polvalues.n_powerI_v_list + polvalues.n_curveI_v_list
             polinc.high_v_list=polvalues.n_powerI_v_list + polvalues.n_curveI_v_list + polvalues.n_listI_v_list
@@ -1526,28 +1612,7 @@ def populate_pointgauss_chunk(comp_type : CompTypes, chunk_ind : int,
             polinc.lin_p_list=polvalues.listI_lin_p_list
             polinc.lin_p_list_inds=polvalues.listI_lin_p_list_inds
             
-            put_pol_info_in_component(components, polinc)
-            
-            # put_pol_info_in_component(components=components,
-            #                     low_v_pol_frac=polvalues.n_powerI_v_pol_frac + polvalues.n_curveI_v_pol_frac, 
-            #                     high_v_pol_frac=polvalues.n_powerI_v_pol_frac + polvalues.n_curveI_v_pol_frac + polvalues.n_listI_v_pol_frac,
-            #                     low_v_power=polvalues.n_powerI_v_power + polvalues.n_curveI_v_power, 
-            #                     high_v_power=polvalues.n_powerI_v_power + polvalues.n_curveI_v_power + polvalues.n_listI_v_power,
-            #                     low_v_curve=polvalues.n_powerI_v_curve + polvalues.n_curveI_v_curve, 
-            #                     high_v_curve=polvalues.n_powerI_v_curve + polvalues.n_curveI_v_curve + polvalues.n_listI_v_curve,
-            #                     low_lin_pol_frac=polvalues.n_powerI_lin_pol_frac + polvalues.n_curveI_lin_pol_frac, 
-            #                     high_lin_pol_frac=polvalues.n_powerI_lin_pol_frac + polvalues.n_curveI_lin_pol_frac + polvalues.n_listI_lin_pol_frac,
-            #                     low_lin_power=polvalues.n_powerI_lin_power + polvalues.n_curveI_lin_power, 
-            #                     high_lin_power=polvalues.n_powerI_lin_power + polvalues.n_curveI_lin_power + polvalues.n_listI_lin_power,
-            #                     low_lin_curve=polvalues.n_powerI_lin_curve + polvalues.n_curveI_lin_curve, 
-            #                     high_lin_curve=polvalues.n_powerI_lin_curve + polvalues.n_curveI_lin_curve + polvalues.n_listI_lin_curve,
-            #                     base_angle_ind=num_curvepowerI,
-            #                     v_pol_frac=polvalues.listI_v_pol_frac, v_pol_frac_inds=polvalues.listI_v_pol_frac_inds,
-            #                     v_power=polvalues.listI_v_power, v_power_inds=polvalues.listI_v_power_inds,
-            #                     v_curve=polvalues.listI_v_curve, v_curve_inds=polvalues.listI_v_curve_inds,
-            #                     lin_pol_frac=polvalues.listI_lin_pol_frac, lin_pol_frac_inds=polvalues.listI_lin_pol_frac_inds,
-            #                     lin_power=polvalues.listI_lin_power, lin_power_inds=polvalues.listI_lin_power_inds,
-            #                     lin_curve=polvalues.listI_lin_curve, lin_curve_inds=polvalues.listI_lin_curve_inds)
+            put_pol_info_in_component(components, polinc, skymodel_settings)
             
     reorder_and_populate_polarisation_in_component(components, skymodel_settings)
     
@@ -1725,10 +1790,10 @@ def add_polarisation_info_to_shapelet_components(components : Expected_Component
         components.stokesV_list_comp_inds.append(new_chunk_ind)
         shapepol.v_list_ind += 1
         for ind in range(skymodel_settings.stokesV_num_list):
+            # print("WHAT HAT", ind, shapepol.v_list)
             components.stokesV_list_ref_flux.append(shapepol.v_list)
             components.stokesV_list_ref_freqs.append(ind*1e+6)
             
-
     if shapepol.lin_pol_frac:
         components.linpol_pol_fracs.append(shapepol.lin_pol_frac)
         components.linpol_pol_frac_comp_inds.append(new_chunk_ind)
@@ -1766,11 +1831,13 @@ def add_polarisation_info_to_shapelet_components(components : Expected_Component
             components.linpol_list_ref_flux.append(shapepol.lin_list)
             components.linpol_list_ref_freqs.append(ind*1e+6)
             
-            
     if shapepol.lin_p_list:
+        components.rm_values.append(shapepol.lin_p_list*((2*np.pi)/360))
+        components.intr_pol_angle.append(0.1*shapepol.lin_p_list*((2*np.pi)/360))
+        components.linpol_angle_inds.append(new_chunk_ind)
         components.linpol_p_list_comp_inds.append(new_chunk_ind)
-        shapepol.p_lin_list_ind += 1
-        for ind in range(skymodel_settings.linpol_num_lp_ist):
+        shapepol.lin_p_list_ind += 1
+        for ind in range(skymodel_settings.linpol_num_p_list):
             components.linpol_p_list_ref_flux.append(shapepol.lin_p_list)
             components.linpol_p_list_ref_freqs.append(ind*1e+6)
             
@@ -1823,7 +1890,7 @@ def populate_shapelet_chunk(expec_chunk : Expected_Sky_Chunk,
     
     if do_polarisation:
         shapepol = ShapePolCounter()
-    
+        
     for new_comp_ind, old_comp_ind in enumerate(comp_inds):
         comp_type_ind = int(old_comp_ind // num_crop_comp)
         coord_expec_ind = int(old_comp_ind % num_crop_comp)

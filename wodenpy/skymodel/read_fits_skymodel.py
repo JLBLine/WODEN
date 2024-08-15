@@ -4,7 +4,7 @@ import os
 from typing import Union
 
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, Component_Info, CompTypes
-from wodenpy.skymodel.chunk_sky_model import Skymodel_Chunk_Map
+from wodenpy.skymodel.chunk_sky_model import Skymodel_Chunk_Map, Components_Map
 from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, setup_source_catalogue, _Ctype_Source_Into_Python
 from wodenpy.use_libwoden.beam_settings import BeamTypes
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
@@ -311,8 +311,6 @@ def count_num_list_fluxes(flux_mod_col_name : str, flux_col_prepend : str,
     optional_table : Table, optional
         _description_, by default False
     """
-
-    
     
     flux_col_names = []
     list_type_inds = np.where(main_table[flux_mod_col_name] == model_type)[0]
@@ -331,6 +329,8 @@ def count_num_list_fluxes(flux_mod_col_name : str, flux_col_prepend : str,
     for key in use_table.columns:
         if key[:len(flux_col_prepend)] == flux_col_prepend:
             flux_col_names.append(key)
+            
+    # print('HALLO', flux_col_names)
         
     for flux_col in flux_col_names:
         
@@ -521,7 +521,6 @@ def read_fits_radec_count_components(fits_path : str):
             comp_counter.has_intr_pol_angle = True
     
     comp_counter.total_components()
-    
     ##If we have list-style polarisation information, we need to count how many
     ##flux entries there are for each component (needed for mallocing down the line)
     
@@ -551,9 +550,6 @@ def read_fits_radec_count_components(fits_path : str):
                             optional_table=Table.read(fits_path, hdu='P_LIST_FLUXES'),
                             model_type='p_nan')
         
-    
-    ##Now we check for optional columns, and if they exist, we read them in
-
     return comp_counter
 
 
@@ -584,12 +580,125 @@ def find_all_indexes_of_x_in_y(x : np.ndarray, y : np.ndarray):
 
 woden_struct_classes = Woden_Struct_Classes()
 Source = woden_struct_classes.Source
+Components = woden_struct_classes.Components
+
+def add_list_flux_info(mod_type : CompTypes, n_lists : int,
+                       key_prepend : str, list_table : Table, map_components : Components_Map,
+                       source_components : Components, main_table : Table = False,
+                       comp_orig_inds : np.ndarray = False,
+                       list_comp_ind_offset : int = 0):
+    
+    if mod_type == CompTypes.I_LIST:
+        list_comp_inds = source_components.list_comp_inds
+        num_list_values = source_components.num_list_values
+        list_start_indexes = source_components.list_start_indexes
+        list_freqs = source_components.list_freqs
+        list_ref_flux = source_components.list_stokesI
+        list_orig_inds = map_components.list_orig_inds
+        new_list_indexes = np.arange(n_lists)
+        
+    elif mod_type == CompTypes.V_LIST:
+        list_comp_inds = source_components.stokesV_list_comp_inds
+        num_list_values = source_components.stokesV_num_list_values
+        list_start_indexes = source_components.stokesV_list_start_indexes
+        list_freqs = source_components.stokesV_list_ref_freqs
+        list_ref_flux = source_components.stokesV_list_ref_flux
+        main_orig_inds = map_components.v_list_orig_inds
+        
+    elif mod_type == CompTypes.Q_LIST:
+        list_comp_inds = source_components.stokesQ_list_comp_inds
+        num_list_values = source_components.stokesQ_num_list_values
+        list_start_indexes = source_components.stokesQ_list_start_indexes
+        list_freqs = source_components.stokesQ_list_ref_freqs
+        list_ref_flux = source_components.stokesQ_list_ref_flux
+        main_orig_inds = map_components.lin_list_orig_inds
+        
+    elif mod_type == CompTypes.U_LIST:
+        list_comp_inds = source_components.stokesU_list_comp_inds
+        num_list_values = source_components.stokesU_num_list_values
+        list_start_indexes = source_components.stokesU_list_start_indexes
+        list_freqs = source_components.stokesU_list_ref_freqs
+        list_ref_flux = source_components.stokesU_list_ref_flux
+        main_orig_inds = map_components.lin_list_orig_inds
+        
+    elif mod_type == CompTypes.LIN_LIST:
+        list_comp_inds = source_components.linpol_p_list_comp_inds
+        num_list_values = source_components.linpol_p_num_list_values
+        list_start_indexes = source_components.linpol_p_list_start_indexes
+        list_freqs = source_components.linpol_p_list_ref_freqs
+        list_ref_flux = source_components.linpol_p_list_ref_flux
+        main_orig_inds = map_components.lin_p_list_orig_inds
+        
+        # print(list_comp_inds)
+        # print(num_list_values)
+        # print(list_start_indexes)
+        # print(list_freqs)
+        # print(list_ref_flux)
+        # print("main_orig_inds",main_orig_inds)
+    
+    ##If we're not doing Stokes I, we're using list information from a different
+    ##table. We have the original indexes w.r.t the main_table, but the 
+    ##list information is stored in the list table. So we need to match the 
+    ##list information, which is done via the NAME column
+    if mod_type != CompTypes.I_LIST:
+        
+        list_name_subset = np.array(main_table['NAME'])[main_orig_inds]
+        all_list_names = np.array(list_table['NAME'], dtype=str)
+        list_orig_inds = find_all_indexes_of_x_in_y(list_name_subset, all_list_names)
+        ##also have to find the index of these list-type components w.r.t the
+        ##chunk subset we're going into
+        new_list_indexes = find_all_indexes_of_x_in_y(main_orig_inds, comp_orig_inds)
+        
+    ##Get all the flux column names/freqs and put em in a list
+    flux_col_freqs = []
+    flux_col_names = []
+    for key in list_table.columns:
+        if key[:len(key_prepend)] == key_prepend:
+            flux_col_names.append(key)
+            flux_col_freqs.append(float(key[len(key_prepend):])*1e+6)
+    flux_col_freqs = np.array(flux_col_freqs)
+    
+    ##Read all flux info for the current chunk into an array so we can do
+    ##faster array manipulation on it
+    
+    all_list_fluxes = np.zeros((n_lists, len(flux_col_names)), dtype=np.float64)
+    
+    for flux_ind, flux_col in enumerate(flux_col_names):
+        all_list_fluxes[:, flux_ind] = list_table[flux_col][list_orig_inds]
+        
+    # ##TODO vectorise this please, is probs sloooow
+    list_start_index = 0
+    for list_ind, new_list_ind in enumerate(new_list_indexes):
+        
+        list_comp_inds[list_ind] = list_comp_ind_offset + new_list_ind
+        
+        ##Gather all frequency column information for this component
+        these_fluxes = all_list_fluxes[list_ind, :]
+        
+        ##Figure out what isn't a nan to grab actual values
+        use_fluxes = np.where(np.isnan(these_fluxes) == False)
+        
+        these_fluxes = these_fluxes[use_fluxes]
+        these_freqs = flux_col_freqs[use_fluxes]
+        
+        num_list_values[list_ind] = int(len(these_freqs))
+        list_start_indexes[list_ind] = list_start_index
+        
+        find = 0
+        for freq, flux in zip(these_freqs, these_fluxes):
+            list_freqs[list_start_index + find] = freq
+            list_ref_flux[list_start_index + find] = flux
+            find += 1
+        
+        list_start_index += int(len(these_freqs))
 
 def add_fits_info_to_source_catalogue(comp_type : CompTypes,
                         main_table : Table, shape_table : Table,
                         chunk_source : Source,
                         chunk_map : Skymodel_Chunk_Map,
-                        beamtype : int, lsts : np.ndarray, latitude : float):
+                        beamtype : int, lsts : np.ndarray, latitude : float,
+                        v_table : Table = False, q_table : Table = False,
+                        u_table : Table = False, p_table : Table = False):
     """Given the desired components as detailed in the `chunk_map`, add
     the relevant information from the FITS file `main_table`, `shape_table` objects to the `chunk_source` object. As well as the skymodel information, this function adds either
     az/za or ha/dec information, depending on the `beamtype`.
@@ -723,53 +832,12 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
         source_components.curve_ref_stokesI[cur_ind] = main_table['NORM_COMP_CPL'][old_comp_ind]
         source_components.curve_SIs[cur_ind] = main_table['ALPHA_CPL'][old_comp_ind]
         source_components.curve_qs[cur_ind] = main_table['CURVE_CPL'][old_comp_ind]
-        
-        
-    ##Get all the flux column names/freqs and put em in a list
-    flux_col_freqs = []
-    flux_col_names = []
-    for key in main_table.columns:
-        if key[:7] == 'INT_FLX':
-            flux_col_names.append(key)
-            flux_col_freqs.append(float(key[7:])*1e+6)
-    flux_col_freqs = np.array(flux_col_freqs)
     
-    ##Read all flux info for the current chunk into an array so we can do
-    ##faster array manipulation on it
-    
-    all_list_fluxes = np.zeros((n_lists, len(flux_col_names)), dtype=np.float64)
-    
-    for flux_ind, flux_col in enumerate(flux_col_names):
-        all_list_fluxes[:, flux_ind] = main_table[flux_col][map_components.list_orig_inds]
-        
-    # ##TODO vectorise this please, is probs sloooow
-    list_start_index = 0
-    for list_ind, old_comp_ind in enumerate(map_components.list_orig_inds):
-        
-        source_components.list_comp_inds[list_ind] = n_powers + n_curves + list_ind
-        
-        ##Gather all frequency column information for this component
-        these_fluxes = all_list_fluxes[list_ind, :]
-        
-        ##Figure out what isn't a nan to grab actual values
-        use_fluxes = np.where(np.isnan(these_fluxes) == False)
-        
-        these_fluxes = these_fluxes[use_fluxes]
-        these_freqs = flux_col_freqs[use_fluxes]
-        
-        source_components.num_list_values[list_ind] = int(len(these_freqs))
-        source_components.list_start_indexes[list_ind] = list_start_index
-        
-        find = 0
-        for freq, flux in zip(these_freqs, these_fluxes):
-            source_components.list_freqs[list_start_index + find] = freq
-            source_components.list_stokesI[list_start_index + find] = flux
-            source_components.list_stokesQ[list_start_index + find] = 0.0
-            source_components.list_stokesU[list_start_index + find] = 0.0
-            source_components.list_stokesV[list_start_index + find] = 0.0
-            find += 1
-        
-        list_start_index += int(len(these_freqs))
+    ##Add the Stokes I list flux information
+    add_list_flux_info(CompTypes.I_LIST, n_lists,
+                       'INT_FLX', main_table, map_components,
+                       source_components,
+                       list_comp_ind_offset=n_powers + n_curves)
         
     # ##only some people need major, minor, pas
     if comp_type == CompTypes.GAUSSIAN or comp_type == CompTypes.SHAPELET:
@@ -826,28 +894,32 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
     n_stokesV_pol_frac = map_components.num_v_pol_fracs
     n_stokesV_power = map_components.num_v_powers
     n_stokesV_curve = map_components.num_v_curves
+    n_stokesV_list = map_components.num_v_lists
+    
     n_linpol_pol_frac = map_components.num_lin_pol_fracs
     n_linpol_power = map_components.num_lin_powers
     n_linpol_curve = map_components.num_lin_curves
+    n_linpol_list = map_components.num_lin_lists
+    n_linpol_p_list = map_components.num_lin_p_lists
     
     ##TODO maybe one day in a far off future, if someone is doing a big
     ##linear diffuse sky, it might be worth adding the option to only so
     ##stokesI, stokesQ, stokesU, and not stokesV. This would involve updating
     ##some GPU code to not bother using V when calculating XX, YY, XY, YX
     ##If we have polarisation information
-    if n_stokesV_pol_frac + n_stokesV_power + n_stokesV_curve + n_linpol_pol_frac + n_linpol_power + n_linpol_curve > 0:
+    if n_stokesV_pol_frac + n_stokesV_power + n_stokesV_curve + n_stokesV_list + \
+        n_linpol_pol_frac + n_linpol_power + n_linpol_curve + n_linpol_list + n_linpol_p_list > 0:
         source_components.do_QUV = 1
     else:
         source_components.do_QUV = 0
         
-    # print("WE BE HERE", comp_type, n_stokesV_pol_frac, n_stokesV_power, n_stokesV_curve, n_linpol_pol_frac, n_linpol_power, n_linpol_curve, source_components.do_QUV)
-    
     v_pol_frac_inds = map_components.v_pol_frac_orig_inds
     v_power_inds = map_components.v_power_orig_inds
     v_curve_inds = map_components.v_curve_orig_inds
     lin_pol_frac_inds = map_components.lin_pol_frac_orig_inds
     lin_power_inds = map_components.lin_power_orig_inds
     lin_curve_inds = map_components.lin_curve_orig_inds
+    lin_p_list_inds = map_components.lin_p_list_orig_inds
     
     if n_stokesV_pol_frac:
         ##find the indexes of all the polarisation fraction relative to the
@@ -872,6 +944,13 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
             source_components.stokesV_curve_ref_flux[this_ind] = main_table['V_NORM_COMP_CPL'][orig_ind]
             source_components.stokesV_curve_SIs[this_ind] = main_table['V_ALPHA_CPL'][orig_ind]
             source_components.stokesV_curve_qs[this_ind] = main_table['V_CURVE_CPL'][orig_ind]
+            
+    if n_stokesV_list:
+        ##Add the Stokes V list flux information
+        add_list_flux_info(CompTypes.V_LIST, n_stokesV_list,
+                        'V_INT_FLX', v_table, map_components,
+                        source_components, main_table=main_table,
+                        comp_orig_inds=comp_orig_inds)
     
     ##The RM and instrinsic polarisation angle are need for all types of
     ##linear polarisation model, so keep track of them using `linpol_ind`
@@ -921,6 +1000,33 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
             else:
                 source_components.intr_pol_angle[linpol_ind] = 0.0
             linpol_ind += 1
+            
+    if n_linpol_list:
+        add_list_flux_info(CompTypes.Q_LIST, n_linpol_list,
+                        'Q_INT_FLX', q_table, map_components,
+                        source_components, main_table=main_table,
+                        comp_orig_inds=comp_orig_inds)
+        
+        add_list_flux_info(CompTypes.U_LIST, n_linpol_list,
+                        'U_INT_FLX', u_table, map_components,
+                        source_components, main_table=main_table,
+                        comp_orig_inds=comp_orig_inds)
+        
+    if n_linpol_p_list:
+        add_list_flux_info(CompTypes.LIN_LIST, n_linpol_p_list,
+                        'P_INT_FLX', p_table, map_components,
+                        source_components, main_table=main_table,
+                        comp_orig_inds=comp_orig_inds)
+        
+        chunk_inds = find_all_indexes_of_x_in_y(lin_p_list_inds, comp_orig_inds)
+        for this_ind, orig_ind, chunk_ind in zip(np.arange(n_linpol_p_list), lin_p_list_inds, chunk_inds):
+            source_components.linpol_angle_inds[linpol_ind] = chunk_ind
+            source_components.rm_values[linpol_ind] = main_table['RM'][orig_ind]
+            if chunk_map.has_intr_pol_angle:
+                source_components.intr_pol_angle[linpol_ind] = main_table['INTR_POL_ANGLE'][orig_ind]
+            else:
+                source_components.intr_pol_angle[linpol_ind] = 0.0
+            linpol_ind += 1
         
     return
 
@@ -932,6 +1038,8 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
                               num_freqs : int, num_time_steps : int,
                               beamtype : int,
                               lsts : np.ndarray, latitude : float,
+                              v_table : Table = False, q_table : Table = False,
+                              u_table : Table = False, p_table : Table = False,
                               precision = "double"):
     """
     Uses Tables read from a FITS file and returns a source catalogue
@@ -998,19 +1106,22 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
             add_fits_info_to_source_catalogue(CompTypes.POINT,
                                       main_table, shape_table,
                                       source_catalogue.sources[chunk_ind], chunk_map,
-                                      beamtype, lsts, latitude)
+                                      beamtype, lsts, latitude,
+                                      v_table, q_table, u_table, p_table)
             
         if chunk_map.n_gauss > 0:
             add_fits_info_to_source_catalogue(CompTypes.GAUSSIAN,
                                       main_table, shape_table,
                                       source_catalogue.sources[chunk_ind], chunk_map,
-                                      beamtype, lsts, latitude)
+                                      beamtype, lsts, latitude,
+                                      v_table, q_table, u_table, p_table)
             
         if chunk_map.n_shapes > 0:
             add_fits_info_to_source_catalogue(CompTypes.SHAPELET,
                                       main_table, shape_table,
                                       source_catalogue.sources[chunk_ind], chunk_map,
-                                      beamtype, lsts, latitude)
+                                      beamtype, lsts, latitude,
+                                      v_table, q_table, u_table, p_table)
             
     ##TODO some kind of consistency check between the chunk_maps and the
     ##sources in the catalogue - make sure we read in the correct information

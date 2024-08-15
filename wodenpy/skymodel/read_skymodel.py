@@ -10,6 +10,7 @@ from astropy.table import Table
 from wodenpy.skymodel.read_text_skymodel import read_full_text_into_fitstable
 from wodenpy.skymodel.read_yaml_skymodel import read_full_yaml_into_fitstable
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
+from astropy.io import fits
 
 
 def read_radec_count_components(skymodel_path : str) -> Component_Type_Counter:
@@ -99,18 +100,55 @@ def read_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
         num_shapelets = 0
         for chunk_map in chunked_skymodel_maps:
             num_shapelets += chunk_map.n_shapes
+            
+        with fits.open(skymodel_path) as hdus:
+            num_hdus = len(hdus)
+            hdu_names = [hdu.name for hdu in hdus]
+            
+        print('YO', hdu_names)
     
         ##Only read in a shape table if there are shapelets
         if num_shapelets:
-            shape_table = Table.read(skymodel_path, hdu=2)
+            if 'SHAPELET' in hdu_names:
+                shape_table = Table.read(skymodel_path, hdu='SHAPELET')
+            else:
+                shape_table = Table.read(skymodel_path, hdu=2)
         else:
             shape_table = 'no_shape_table'
+            
+        if 'V_LIST_FLUXES' in hdu_names:
+                v_table = Table.read(skymodel_path, hdu='V_LIST_FLUXES')
+        else:
+            v_table = False
+            
+        if 'Q_LIST_FLUXES' in hdu_names:
+                q_table = Table.read(skymodel_path, hdu='Q_LIST_FLUXES')
+        else:
+            q_table = False    
+            
+        if 'U_LIST_FLUXES' in hdu_names:
+                u_table = Table.read(skymodel_path, hdu='U_LIST_FLUXES')
+        else:
+            u_table = False
+            
+        if 'P_LIST_FLUXES' in hdu_names:
+                p_table = Table.read(skymodel_path, hdu='P_LIST_FLUXES')
+        else:
+            p_table = False
     
     elif skymodel_path[-5:] == '.yaml':
         main_table, shape_table = read_full_yaml_into_fitstable(skymodel_path)
+        v_table = False
+        q_table = False    
+        u_table = False
+        p_table = False
         
     elif skymodel_path[-4:] == '.txt':
         main_table, shape_table = read_full_text_into_fitstable(skymodel_path)
+        v_table = False
+        q_table = False    
+        u_table = False
+        p_table = False
         
     else:
         sys.exit('The filename fed into `wodenpy/read_skymodel/read_skymodel_chunks` was not of a supported file type. Currently supported formats are: .fits, .yaml, .txt')
@@ -119,7 +157,9 @@ def read_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
                               main_table, shape_table,
                               chunked_skymodel_maps,
                               num_freqs, num_time_steps, beamtype,
-                              lsts, latitude, precision = precision)
+                              lsts, latitude,
+                              v_table, q_table, u_table, p_table,
+                              precision = precision)
     
     # print("HERE", type(source_catalogue))
         

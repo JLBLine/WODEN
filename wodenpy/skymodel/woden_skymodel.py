@@ -89,6 +89,8 @@ class CompTypes(Enum):
     LIN_CURVE = auto()
     LIN_POL_FRAC = auto()
     LIN_LIST = auto()
+    Q_LIST = auto()
+    U_LIST = auto()
     LIN_P_LIST = auto()
     
 class Component_Type_Counter():
@@ -141,7 +143,7 @@ class Component_Type_Counter():
         self.num_v_list_fluxes = np.zeros(self.array_size, dtype=int)
         self.num_q_list_fluxes = np.zeros(self.array_size, dtype=int)
         self.num_u_list_fluxes = np.zeros(self.array_size, dtype=int)
-        self.num_lin_p_list_fluxes = np.zeros(self.array_size, dtype=int)
+        self.num_p_list_fluxes = np.zeros(self.array_size, dtype=int)
         
         ##these are optional, so only fill if we need them
         self.v_comp_types = False
@@ -737,7 +739,7 @@ def crop_below_horizon(lst : float, latitude : float,
         
     if type(comp_counter.lin_comp_types) == np.ndarray:
         comp_counter.lin_comp_types = comp_counter.lin_comp_types[comp_counter.orig_comp_indexes]
-        comp_counter.num_lin_p_list_fluxes = comp_counter.num_lin_p_list_fluxes[comp_counter.orig_comp_indexes]
+        comp_counter.num_p_list_fluxes = comp_counter.num_p_list_fluxes[comp_counter.orig_comp_indexes]
         comp_counter.num_q_list_fluxes = comp_counter.num_q_list_fluxes[comp_counter.orig_comp_indexes]
         comp_counter.num_u_list_fluxes = comp_counter.num_u_list_fluxes[comp_counter.orig_comp_indexes]
 
