@@ -203,11 +203,11 @@ For CUDA
 
 Fair warning, this is a new option, and hasn't been heavily tested. I have successfully run it on a number of clusters (via singularity). Which version you pull depends on your GPU. If you have an NVIDIA GPU, you need to work out what your compute capability is, and pull the appropriate image. Say you have an NVIDIA V100 card, you have a compute capacity of 7.0, so you'd pull the image like this::
 
-  $ docker pull jlbline/woden-2.2:cuda-70
+  $ docker pull jlbline/woden-2.3:cuda-70
 
 I have made images for computes ``60,61,70,75,80,86``. If you need another compute, either run the Docker script to make a new docker, or just compile from source as instructed above. In theory, you can just run ``WODEN`` commands by doing something like this::
 
-  $ docker run -it --gpus all woden-2.2:cuda-70 \
+  $ docker run -it --gpus all woden-2.3:cuda-70 \
     --env XDG_CONFIG_HOME=/somewhere/astropy_storage \
     --env XDG_CACHE_HOME=/somewhere/astropy_storage \
     run_woden.py --help
@@ -219,7 +219,7 @@ For HIP
 
 The only HIP image I've made is for the Setonix cluster, and is based on a Pawsey specific image https://quay.io/repository/pawsey/rocm-mpich-base?tab=tags&tag=latest. You can pull it like this::
 
-  $ docker pull jlbline/woden-2.2:setonix
+  $ docker pull jlbline/woden-2.3:setonix
 
 It is *highly* unlikely it won't work anywhere else.
 
@@ -231,12 +231,12 @@ For CUDA
 
 If your system has ``singularity`` and not docker, you can convert the docker image to a singularity image via::
 
-  $ singularity build woden-2.0-70.sif docker://jlbline/woden-2.2:cuda-70
+  $ singularity build woden-2.3-70.sif docker://jlbline/woden-2.3:cuda-70
 
 with an example of running the help looking something like::
 
   $ singularity exec --nv --home=/astro/mwaeor/jline \
-    woden-2.0-70.sif run_woden.py --help
+    woden-2.3-70.sif run_woden.py --help
 
 Similarly to the ``docker`` image, ``--nv`` means use the NVIDIA GPUs, and ``--home`` sets a specific location to treat as home if you're not on a local machine.
 
@@ -245,11 +245,11 @@ For HIP
 
 Again, the only HIP image I've made is for the Setonix cluster where you can do::
   
-    $ singularity build woden-2.2:setonix.sif docker://jlbline/woden-2.2:setonix
+    $ singularity build woden-2.3:setonix.sif docker://jlbline/woden-2.3:setonix
 
 and run it like::
 
   $ singularity exec --home=/scratch/mwaeor/jline \
-  ${MYSOFTWARE}/woden-2.2-setonix.sif run_woden.py --help
+  ${MYSOFTWARE}/woden-2.3-setonix.sif run_woden.py --help
 
 .. warning:: EVERYTHING on the internet will tell you to use the ``--rocm`` flag. This WILL NOT WORK with the Setonix based image, because of shenanigans. So leave it be.

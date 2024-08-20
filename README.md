@@ -11,6 +11,11 @@
 
 <!-- > Although ``WODEN`` is still very much a great tool for MWA interferomteric simulations, I (Jack Line) am no longer working in astronomy. I'll drop in to advise and/or fix bugs from time to time, but I can't commit to developing new features I'm afraid. If you want new features (or even better, want to write new features), please reach out to the [Epoch of Reionisation group at Curtin University](https://astronomy.curtin.edu.au/research/epoch-of-reionisation/). They should know if anyone is actively working on/using the software. If you end up taking over this project, feel free to delete this message! -->
 
+> New in version 2.3-alpha:
+ - Full polarisation is back! You can now simulate QUV visibilities, and they can be independent to Stokes I. In fact, you can set Stokes I to zero in the sky model, and still enter QUV information.
+ - Stokes V can either be a power-law, curved power-law, be a polarisation fraction of Stokes I, or be a list of flux densities.
+ - Linear polarisation (Q and U) can either be a power-law, curved power-law, be a polarisation fraction of Stokes I, or be a list of flux densities. The first three are always used in conjunction with a rotation measure. List-type fluxes can be given separately for Q and U, which makes Q and U independent of each other. Alternatively, a single list of linear polarisation fluxes can be given, which is used in conjunction with a rotation measure to determine Q and U.
+
 > New in version 2.2-alpha:
  - Thanks to Marcin Sokolowski, and code from the [PaCER Blink project](https://github.com/PaCER-BLINK-Project), there is nominal support for AMD GPUs via ROCm. I've managed to compile and run on the Pawsey Setonix cluster, but this is the only AMD GPU I have access to. If you have an AMD GPU, please test and let me know how you go!
  - There are some installation examples in ``WODEN/templates/`` for a CUDA and an AMD installation on superclusters. Hopefully you can adapt these to your needs if the Docker images don't work for you.
@@ -42,16 +47,16 @@ Read the comprehensive [installation guide on readthedocs](https://woden.readthe
 The quickest way is to use a docker image (for a CUDA arch of 7.5 for example):
 
 ```
-docker pull docker://jlbline/woden-2.2:cuda-75
+docker pull docker://jlbline/woden-2.3:cuda-75
 ```
 
 and then run things through Docker or Singularity (more detail on that on [ReadTheDocs](https://woden.readthedocs.io/en/latest/installation/installation.html#dependencies)). These versions come bundled with all the MWA FEE primary beam files which is nice.
 
 Docker versions tested to run on various Australian superclusters are listed below:
 
-- `jlbline/woden-2.2:cuda-60` - tested on Swinburne OzStar
-- `jlbline/woden-2.2:cuda-80` - tested on Swinburne Ngarrgu Tindebeek
-- `jlbline/woden-2.2:setonix` - tested on Pawsey Setonix (this is *very* experimental)
+- `jlbline/woden-2.3:cuda-60` - tested on Swinburne OzStar
+- `jlbline/woden-2.3:cuda-80` - tested on Swinburne Ngarrgu Tindebeek
+- `jlbline/woden-2.3:setonix` - tested on Pawsey Setonix (this is *very* experimental)
 
 To get the most control, install yourself. Again, go to [ReadTheDocs](https://woden.readthedocs.io/en/latest/installation/installation.html#dependencies) for details, but in short, you will need the dependencies:
 
