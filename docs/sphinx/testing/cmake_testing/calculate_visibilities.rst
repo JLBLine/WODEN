@@ -64,25 +64,25 @@ make sure ``calculate_visibilities`` is calling the appropriate functions:
      - 1
      - 9
    * - 3
-     - 3
+     - 5
      - 0
      - 0
-     - 9
+     - 15
    * - 3
      - 0
-     - 3
+     - 5
      - 0
-     - 9
+     - 15
    * - 3
      - 0
      - 0
-     - 3
-     - 9
+     - 5
+     - 15
    * - 3
-     - 3
-     - 3
-     - 3
-     - 27
+     - 5
+     - 5
+     - 5
+     - 45
   
 All sources are given an *RA,Dec* equal to the phase centre, and a Stokes I
 flux density of 0.3333333333333333 Jy. Each type of flux component (either
@@ -94,7 +94,7 @@ and circular polarisation component. Again, the polarised components are given
 flat spectras and a reference flux density of 0.3333333333333333 Jy. The linear
 polarisation is given an RM of zero, meaning Stokes Q is equal to the linear
 polarisation flux, and Stokes U is zero. All versions of the polarisation
-models are tested (power-law, curved power-law, and polarisation fraction).
+models are tested (power-law, curved power-law, polarisation fraction, list-type).
 
 This way, the expected sum of Stokes IQUV are simply multiples of the number of
 components in the model, modulu the beam response (see below).

@@ -562,16 +562,18 @@ test_extrap_stokes.c
 This calls ``source_components::test_extrap_stokes_all_models``, which
 calls ``source_components::extrapolate_Stokes``, which handles extrapolating
 a the flux density of component to a given set of frequencies. This covers
-all types of flux behaviours (currently POWER_LAW, CURVED_POWER_LAW,
-and LIST types for Stokes I, and POWER_LAW, CURVED_POWER_LAW, POLARISATION FRACTION
-for linear and circular polarisation).
+all types of flux behaviours. Currently that POWER_LAW, CURVED_POWER_LAW,
+and LIST types for Stokes I, and POWER_LAW, CURVED_POWER_LAW, POLARISATION FRACTION, LIST,
+for linear and circular polarisation. Linear polarisation also has a P_LIST type,
+where a list of polarised fluxes are given, which are still used in conjunction with
+an RM. The LIST for linear polarisation requires two separate lists for Q and U.
 
-Six components of each type of Stokes I flux behaviour are tested, each with randomly
+Five components of each type of Stokes I flux behaviour are tested, each with randomly
 assigned values (these values are generated using the script
 ``WODEN/cmake_testing/source_components/write_test_extrap_stokes_header.py``).
 For the LIST flux types, each list has a random number of entries, as well
 as each list entry begin given a random flux. Every component is also assigned
-random polarisation models for linear and circular polarisation.
+random polarisation model for linear and circular polarisation.
 
 The values are copied into a ``source_t`` struct, passed through the ``CUDA``
 code, and extrapolated to 100 frequencies between 50 and 300 MHz. The outputs

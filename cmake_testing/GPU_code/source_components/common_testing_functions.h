@@ -8,10 +8,10 @@
 //Linear interpolation between list flux values - go through the list
 //and find out which points the desired frequency lies between, and then
 //interpolate between the fluxes for that point
-void extrap_stokes_list_flux(components_t *components,
+void extrap_stokes_list_flux(int *arr_num_list_values, int *list_start_indexes,
+            user_precision_t *list_fluxes, double *list_freqs,
            double *extrap_freqs, int iFluxComp, int iFreq,
-           double * flux_I, double * flux_Q,
-           double * flux_U, double * flux_V);
+           double * extrap_flux);
 
 
 //Extrapolate the power law flux of the iPowerComp component in components

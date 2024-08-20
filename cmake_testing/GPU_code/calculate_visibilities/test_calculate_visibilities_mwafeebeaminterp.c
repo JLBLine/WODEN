@@ -185,7 +185,7 @@ void test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_SingleAll(void) {
 
 //Test with three SOURCEs, three COPMONENTs
 void test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_ThreePoint(void) {
-  int n_points = 3;
+  int n_points = 5;
   int n_gauss = 0;
   int n_shapes = 0;
   int num_sources = 3;
@@ -195,7 +195,7 @@ void test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_ThreePoint(void) {
 
 void test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_ThreeGauss(void) {
   int n_points = 0;
-  int n_gauss = 3;
+  int n_gauss = 5;
   int n_shapes = 0;
   int num_sources = 3;
   test_calculate_visibilities_MWAFEEBeamInterp(n_points, n_gauss, n_shapes, num_sources);
@@ -204,15 +204,15 @@ void test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_ThreeGauss(void) {
 void test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_ThreeShape(void) {
   int n_points = 0;
   int n_gauss = 0;
-  int n_shapes = 3;
+  int n_shapes = 5;
   int num_sources = 3;
   test_calculate_visibilities_MWAFEEBeamInterp(n_points, n_gauss, n_shapes, num_sources);
 }
 
 void test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_ThreeAll(void) {
-  int n_points = 3;
-  int n_gauss = 3;
-  int n_shapes = 3;
+  int n_points = 5;
+  int n_gauss = 5;
+  int n_shapes = 5;
   int num_sources = 3;
   test_calculate_visibilities_MWAFEEBeamInterp(n_points, n_gauss, n_shapes, num_sources);
 }

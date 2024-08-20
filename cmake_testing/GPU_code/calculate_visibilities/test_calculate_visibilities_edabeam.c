@@ -143,8 +143,8 @@ void test_calculate_visibilities_EDA2Beam_ThreeSource_SingleAll(void) {
 
 
 //Test with three SOURCEs, three COPMONENTs
-void test_calculate_visibilities_EDA2Beam_ThreeSource_ThreePoint(void) {
-  int n_points = 3;
+void test_calculate_visibilities_EDA2Beam_ThreeSource_FivePoint(void) {
+  int n_points = 5;
   int n_gauss = 0;
   int n_shapes = 0;
   int num_sources = 3;
@@ -152,26 +152,26 @@ void test_calculate_visibilities_EDA2Beam_ThreeSource_ThreePoint(void) {
 
 }
 
-void test_calculate_visibilities_EDA2Beam_ThreeSource_ThreeEDA2(void) {
+void test_calculate_visibilities_EDA2Beam_ThreeSource_FiveEDA2(void) {
   int n_points = 0;
-  int n_gauss = 3;
+  int n_gauss = 5;
   int n_shapes = 0;
   int num_sources = 3;
   test_calculate_visibilities_EDA2Beam(n_points, n_gauss, n_shapes, num_sources);
 }
 
-void test_calculate_visibilities_EDA2Beam_ThreeSource_ThreeShape(void) {
+void test_calculate_visibilities_EDA2Beam_ThreeSource_FiveShape(void) {
   int n_points = 0;
   int n_gauss = 0;
-  int n_shapes = 3;
+  int n_shapes = 5;
   int num_sources = 3;
   test_calculate_visibilities_EDA2Beam(n_points, n_gauss, n_shapes, num_sources);
 }
 
-void test_calculate_visibilities_EDA2Beam_ThreeSource_ThreeAll(void) {
-  int n_points = 3;
-  int n_gauss = 3;
-  int n_shapes = 3;
+void test_calculate_visibilities_EDA2Beam_ThreeSource_FiveAll(void) {
+  int n_points = 5;
+  int n_gauss = 5;
+  int n_shapes = 5;
   int num_sources = 3;
   test_calculate_visibilities_EDA2Beam(n_points, n_gauss, n_shapes, num_sources);
 }
@@ -195,10 +195,10 @@ int main(void)
     RUN_TEST(test_calculate_visibilities_EDA2Beam_ThreeSource_SingleAll);
 
     //Test with three SOURCEs, three COPMONENTs
-    RUN_TEST(test_calculate_visibilities_EDA2Beam_ThreeSource_ThreePoint);
-    RUN_TEST(test_calculate_visibilities_EDA2Beam_ThreeSource_ThreeEDA2);
-    RUN_TEST(test_calculate_visibilities_EDA2Beam_ThreeSource_ThreeShape);
-    RUN_TEST(test_calculate_visibilities_EDA2Beam_ThreeSource_ThreeAll);
+    RUN_TEST(test_calculate_visibilities_EDA2Beam_ThreeSource_FivePoint);
+    RUN_TEST(test_calculate_visibilities_EDA2Beam_ThreeSource_FiveEDA2);
+    RUN_TEST(test_calculate_visibilities_EDA2Beam_ThreeSource_FiveShape);
+    RUN_TEST(test_calculate_visibilities_EDA2Beam_ThreeSource_FiveAll);
 
     return UNITY_END();
 }

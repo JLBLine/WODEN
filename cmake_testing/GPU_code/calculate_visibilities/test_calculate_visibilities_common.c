@@ -74,16 +74,17 @@ void populate_components(components_t *comps, int n_comps,
   comps->power_comp_inds[0] = 0;
 
   //set everything to zero first, and update if necessary
-  comps->n_stokesV_pol_frac = 0;
   comps->n_stokesV_power = 0;
   comps->n_stokesV_curve = 0;
-  comps->n_linpol_pol_frac = 0;
+  comps->n_stokesV_list = 0;
   comps->n_linpol_power = 0;
   comps->n_linpol_curve = 0;
+  comps->n_linpol_list = 0;
+  comps->n_linpol_p_list = 0;
   comps->n_linpol_angles = 0;
-  comps->do_QUV = 1;
-
+  
   //No matter what, always have one POL_FRACTION source for both pols
+  comps->do_QUV = 1;
   comps->stokesV_pol_fracs = malloc(sizeof(user_precision_t));
   comps->stokesV_pol_frac_comp_inds = malloc(sizeof(int));
   comps->linpol_pol_fracs = malloc(sizeof(user_precision_t));
@@ -96,6 +97,13 @@ void populate_components(components_t *comps, int n_comps,
   comps->linpol_pol_fracs[0] = POL_FRAC;
   comps->linpol_pol_frac_comp_inds[0] = 0;
 
+
+  //This is techincally illegal, but I wrote the code so I'll allow it;
+  //here we give everything a linpol angle. This means it'll grab whatever is
+  //in Stokes Q, and use that to calculate Stokes Q and U via the RM. As we've
+  //set RM to zero, should always leave Stokes Q as, and set U to zero. This
+  //makes predicting the visibilities easier, and we have tests elsewhere to
+  //make sure the RM stuff works
   comps->n_linpol_angles = n_comps;
   comps->intr_pol_angle = malloc(n_comps*sizeof(user_precision_t));
   comps->rm_values = malloc(n_comps*sizeof(user_precision_t));
@@ -110,53 +118,44 @@ void populate_components(components_t *comps, int n_comps,
   
 
   if (n_comps > 1) {
-    comps->curve_ref_freqs = malloc(sizeof(double));
-    comps->curve_ref_stokesI = malloc(sizeof(user_precision_t));
-    // comps->curve_ref_stokesQ = malloc(sizeof(user_precision_t));
-    // comps->curve_ref_stokesU = malloc(sizeof(user_precision_t));
-    // comps->curve_ref_stokesV = malloc(sizeof(user_precision_t));
-    comps->curve_SIs = malloc(sizeof(user_precision_t));
-    comps->curve_qs = malloc(sizeof(user_precision_t));
-    comps->curve_comp_inds = malloc(sizeof(int));
+    comps->curve_ref_freqs = malloc(2*sizeof(double));
+    comps->curve_ref_stokesI = malloc(2*sizeof(user_precision_t));
+    comps->curve_SIs = malloc(2*sizeof(user_precision_t));
+    comps->curve_qs = malloc(2*sizeof(user_precision_t));
+    comps->curve_comp_inds = malloc(2*sizeof(int));
 
     comps->curve_ref_freqs[0] = REF_FREQ;
+    comps->curve_ref_freqs[1] = REF_FREQ;
     comps->curve_ref_stokesI[0] = STOKESI;
-    // comps->curve_ref_stokesQ[0] = 0.0;
-    // comps->curve_ref_stokesU[0] = 0.0;
-    // comps->curve_ref_stokesV[0] = 0.0;
+    comps->curve_ref_stokesI[1] = STOKESI;
     comps->curve_SIs[0] = 0.0;
+    comps->curve_SIs[1] = 0.0;
     comps->curve_qs[0] = 0.0;
+    comps->curve_qs[1] = 0.0;
     comps->curve_comp_inds[0] = 1;
+    comps->curve_comp_inds[1] = 2;
 
-    comps->list_freqs = malloc(2*sizeof(double));
-    comps->list_stokesI = malloc(2*sizeof(user_precision_t));
-    comps->list_stokesQ = malloc(2*sizeof(user_precision_t));
-    comps->list_stokesU = malloc(2*sizeof(user_precision_t));
-    comps->list_stokesV = malloc(2*sizeof(user_precision_t));
-    comps->list_comp_inds = malloc(sizeof(int));
-    comps->num_list_values = malloc(sizeof(int));
-    comps->list_start_indexes = malloc(sizeof(int));
-    comps->total_num_flux_entires = 2;
+    comps->list_freqs = malloc(4*sizeof(double));
+    comps->list_stokesI = malloc(4*sizeof(user_precision_t));
+    comps->list_comp_inds = malloc(2*sizeof(int));
+    comps->num_list_values = malloc(2*sizeof(int));
+    comps->list_start_indexes = malloc(2*sizeof(int));
+    comps->total_num_flux_entires = 4;
 
     comps->list_freqs[0] = 150e+6;
     comps->list_stokesI[0] = STOKESI;
-    comps->list_stokesQ[0] = 0.0;
-    comps->list_stokesU[0] = 0.0;
-    comps->list_stokesV[0] = 0.0;
-
     comps->list_freqs[1] = 170e+6;
     comps->list_stokesI[1] = STOKESI;
-    comps->list_stokesQ[1] = 0.0;
-    comps->list_stokesU[1] = 0.0;
-    comps->list_stokesV[1] = 0.0;
-
-    comps->list_comp_inds[0] = 2;
+    comps->list_freqs[2] = 150e+6;
+    comps->list_stokesI[2] = STOKESI;
+    comps->list_freqs[3] = 170e+6;
+    comps->list_stokesI[3] = STOKESI;
+    comps->list_comp_inds[0] = 3;
+    comps->list_comp_inds[1] = 4;
     comps->num_list_values[0] = 2;
+    comps->num_list_values[1] = 2;
     comps->list_start_indexes[0] = 0;
-
-    //TODO chuck in power and curved power pol frac stuff here.
-    //TODO change all the reference stuff to 200MHz like it should be
-    //TODO take all the reference frequency stuff out of main WODEN??
+    comps->list_start_indexes[1] = 2;
 
     comps->n_stokesV_power = 1;
     comps->stokesV_power_ref_flux = malloc(sizeof(user_precision_t));
@@ -193,6 +192,70 @@ void populate_components(components_t *comps, int n_comps,
     comps->linpol_curve_SIs[0] = 0.0;
     comps->linpol_curve_qs[0] = 0.0;
     comps->linpol_curve_comp_inds[0] = 2;
+
+    comps->n_stokesV_list = 1;
+    comps->n_stokesV_list_flux_entries = 2;
+    comps->stokesV_list_ref_freqs = malloc(2*sizeof(double));
+    comps->stokesV_list_ref_flux = malloc(2*sizeof(user_precision_t));
+    comps->stokesV_list_comp_inds = malloc(sizeof(int));
+    comps->stokesV_num_list_values = malloc(sizeof(int));
+    comps->stokesV_list_start_indexes = malloc(sizeof(int));
+    comps->stokesV_list_ref_freqs[0] = 150e+6;
+    comps->stokesV_list_ref_flux[0] = STOKESI;
+    comps->stokesV_list_ref_freqs[1] = 170e+6;
+    comps->stokesV_list_ref_flux[1] = STOKESI;
+    comps->stokesV_list_comp_inds[0] = 3;
+    comps->stokesV_num_list_values[0] = 2;
+    comps->stokesV_list_start_indexes[0] = 0;
+
+    comps->n_stokesV_pol_frac = 2;
+    comps->stokesV_pol_fracs[1] = POL_FRAC;
+    comps->stokesV_pol_frac_comp_inds[1] = 4;
+
+    comps->n_linpol_list = 1;
+    comps->n_stokesQ_list_flux_entries = 2;
+    comps->stokesQ_list_ref_freqs = malloc(2*sizeof(double));
+    comps->stokesQ_list_ref_flux = malloc(2*sizeof(user_precision_t));
+    comps->stokesQ_list_comp_inds = malloc(sizeof(int));
+    comps->stokesQ_num_list_values = malloc(sizeof(int));
+    comps->stokesQ_list_start_indexes = malloc(sizeof(int));
+    comps->stokesQ_list_ref_freqs[0] = 150e+6;
+    comps->stokesQ_list_ref_flux[0] = STOKESI;
+    comps->stokesQ_list_ref_freqs[1] = 170e+6;
+    comps->stokesQ_list_ref_flux[1] = STOKESI;
+    comps->stokesQ_list_comp_inds[0] = 3;
+    comps->stokesQ_num_list_values[0] = 2;
+    comps->stokesQ_list_start_indexes[0] = 0;
+    comps->n_stokesU_list_flux_entries = 2;
+    comps->stokesU_list_ref_freqs = malloc(2*sizeof(double));
+    comps->stokesU_list_ref_flux = malloc(2*sizeof(user_precision_t));
+    comps->stokesU_list_comp_inds = malloc(sizeof(int));
+    comps->stokesU_num_list_values = malloc(sizeof(int));
+    comps->stokesU_list_start_indexes = malloc(sizeof(int));
+    comps->stokesU_list_ref_freqs[0] = 150e+6;
+    comps->stokesU_list_ref_flux[0] = STOKESI;
+    comps->stokesU_list_ref_freqs[1] = 170e+6;
+    comps->stokesU_list_ref_flux[1] = STOKESI;
+    comps->stokesU_list_comp_inds[0] = 3;
+    comps->stokesU_num_list_values[0] = 2;
+    comps->stokesU_list_start_indexes[0] = 0;
+
+    comps->n_linpol_p_list = 1;
+    comps->n_linpol_p_list_flux_entries = 2;
+    comps->linpol_p_list_ref_freqs = malloc(2*sizeof(double));
+    comps->linpol_p_list_ref_flux = malloc(2*sizeof(user_precision_t));
+    comps->linpol_p_list_comp_inds = malloc(sizeof(int));
+    comps->linpol_p_num_list_values = malloc(sizeof(int));
+    comps->linpol_p_list_start_indexes = malloc(sizeof(int));
+    comps->linpol_p_list_ref_freqs[0] = 150e+6;
+    comps->linpol_p_list_ref_flux[0] = STOKESI;
+    comps->linpol_p_list_ref_freqs[1] = 170e+6;
+    comps->linpol_p_list_ref_flux[1] = STOKESI;
+    comps->linpol_p_list_comp_inds[0] = 4;
+    comps->linpol_p_num_list_values[0] = 2;
+    comps->linpol_p_list_start_indexes[0] = 0;
+
+
   } 
 
   for (int comp = 0; comp < n_comps; comp++) {
@@ -263,8 +326,8 @@ source_catalogue_t * make_cropped_sky_models(double ra0, double dec0,
                           n_points, ra0, dec0);
       cropped_sky_models->sources[cats_ind].n_point_powers = 1;
       if (n_points > 1) {
-        cropped_sky_models->sources[cats_ind].n_point_curves = 1;
-        cropped_sky_models->sources[cats_ind].n_point_lists = 1;
+        cropped_sky_models->sources[cats_ind].n_point_curves = 2;
+        cropped_sky_models->sources[cats_ind].n_point_lists = 2;
       }
     }
 
@@ -273,8 +336,8 @@ source_catalogue_t * make_cropped_sky_models(double ra0, double dec0,
                           n_gauss, ra0, dec0);
       cropped_sky_models->sources[cats_ind].n_gauss_powers = 1;
       if (n_gauss > 1) {
-        cropped_sky_models->sources[cats_ind].n_gauss_curves = 1;
-        cropped_sky_models->sources[cats_ind].n_gauss_lists = 1;
+        cropped_sky_models->sources[cats_ind].n_gauss_curves = 2;
+        cropped_sky_models->sources[cats_ind].n_gauss_lists = 2;
       }
     }
 
@@ -283,8 +346,8 @@ source_catalogue_t * make_cropped_sky_models(double ra0, double dec0,
                           n_shapes, ra0, dec0);
       cropped_sky_models->sources[cats_ind].n_shape_powers = 1;
       if (n_shapes > 1) {
-        cropped_sky_models->sources[cats_ind].n_shape_curves = 1;
-        cropped_sky_models->sources[cats_ind].n_shape_lists = 1;
+        cropped_sky_models->sources[cats_ind].n_shape_curves = 2;
+        cropped_sky_models->sources[cats_ind].n_shape_lists = 2;
       }
     }
   }
@@ -311,9 +374,6 @@ void free_components(components_t comps, int num_comps) {
 
   free(comps.power_ref_freqs);
   free(comps.power_ref_stokesI);
-  // free(comps.power_ref_stokesQ);
-  // free(comps.power_ref_stokesU);
-  // free(comps.power_ref_stokesV);
   free(comps.power_SIs);
   free(comps.power_comp_inds);
 
@@ -325,18 +385,12 @@ void free_components(components_t comps, int num_comps) {
   if (num_comps > 1) {
     free(comps.curve_ref_freqs);
     free(comps.curve_ref_stokesI);
-    // free(comps.curve_ref_stokesQ);
-    // free(comps.curve_ref_stokesU);
-    // free(comps.curve_ref_stokesV);
     free(comps.curve_SIs);
     free(comps.curve_qs);
     free(comps.curve_comp_inds);
 
     free(comps.list_freqs);
     free(comps.list_stokesI);
-    free(comps.list_stokesQ);
-    free(comps.list_stokesU);
-    free(comps.list_stokesV);
     free(comps.list_comp_inds);
     free(comps.num_list_values);
     free(comps.list_start_indexes);
@@ -355,6 +409,27 @@ void free_components(components_t comps, int num_comps) {
     free(comps.linpol_curve_SIs);
     free(comps.linpol_curve_qs);
     free(comps.linpol_curve_comp_inds);
+
+    free(comps.stokesV_num_list_values);
+    free(comps.stokesV_list_start_indexes);
+    free(comps.stokesV_list_comp_inds);
+    free(comps.stokesV_list_ref_freqs);
+    free(comps.stokesV_list_ref_flux);
+    free(comps.stokesQ_num_list_values);
+    free(comps.stokesQ_list_start_indexes);
+    free(comps.stokesQ_list_comp_inds);
+    free(comps.stokesQ_list_ref_freqs);
+    free(comps.stokesQ_list_ref_flux);
+    free(comps.stokesU_num_list_values);
+    free(comps.stokesU_list_start_indexes);
+    free(comps.stokesU_list_comp_inds);
+    free(comps.stokesU_list_ref_freqs);
+    free(comps.stokesU_list_ref_flux);
+    free(comps.linpol_p_num_list_values);
+    free(comps.linpol_p_list_start_indexes);
+    free(comps.linpol_p_list_comp_inds);
+    free(comps.linpol_p_list_ref_freqs);
+    free(comps.linpol_p_list_ref_flux);
   }
 }
 
@@ -526,7 +601,7 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
     sbf = create_sbf(sbf);
   }
 
-  printf("SIZE OF THING %d\n",woden_settings->num_visis );
+  // printf("SIZE OF THING %d\n",woden_settings->num_visis );
 
   visibility_set_t *visibility_set = setup_visibility_set(woden_settings->num_visis);
 

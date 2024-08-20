@@ -663,13 +663,13 @@ __device__ user_precision_t calc_gradient_extrap_list(user_precision_t *list_flu
 }
 
 
-__device__ void extrap_stokes_list_flux_stokesIQUV(components_t d_components,
+__device__ void extrap_stokes_list_fluxes(user_precision_t *list_stokes,
+           double *list_freqs, int *arr_num_list_values, int *list_start_indexes,
            double *d_extrap_freqs, int iFluxComp, int iFreq,
-           user_precision_t * flux_I, user_precision_t * flux_Q,
-           user_precision_t * flux_U, user_precision_t * flux_V){
+           user_precision_t * extrap_flux){
 
-  int num_list_values = d_components.num_list_values[iFluxComp];
-  int list_start_ind = d_components.list_start_indexes[iFluxComp];
+  int num_list_values = arr_num_list_values[iFluxComp];
+  int list_start_ind = list_start_indexes[iFluxComp];
 
   double d_extrap_freq = d_extrap_freqs[iFreq];
 
@@ -683,16 +683,13 @@ __device__ void extrap_stokes_list_flux_stokesIQUV(components_t d_components,
   double abs_diff_freq;
 
   if (num_list_values == 1) {
-    * flux_I = d_components.list_stokesI[list_start_ind];
-    * flux_Q = d_components.list_stokesQ[list_start_ind];
-    * flux_U = d_components.list_stokesU[list_start_ind];
-    * flux_V = d_components.list_stokesV[list_start_ind];
+    * extrap_flux = list_stokes[list_start_ind];
     return;
   }
 
   //First loop finds the absolute closest frequency
   for (int i = 0; i < num_list_values; i++) {
-    ref_freq = d_components.list_freqs[list_start_ind + i];
+    ref_freq = list_freqs[list_start_ind + i];
     abs_diff_freq = abs(ref_freq - d_extrap_freq);
 
     if (abs_diff_freq < low_val_1) {
@@ -705,11 +702,8 @@ __device__ void extrap_stokes_list_flux_stokesIQUV(components_t d_components,
   //below the target frequency to find points either side of the target freq
 
   //We happen to need the reference frequency; just return the refs
-  if (d_components.list_freqs[list_start_ind + low_ind_1] == d_extrap_freq) {
-    * flux_I = d_components.list_stokesI[list_start_ind + low_ind_1];
-    * flux_Q = d_components.list_stokesQ[list_start_ind + low_ind_1];
-    * flux_U = d_components.list_stokesU[list_start_ind + low_ind_1];
-    * flux_V = d_components.list_stokesV[list_start_ind + low_ind_1];
+  if (list_freqs[list_start_ind + low_ind_1] == d_extrap_freq) {
+    * extrap_flux = list_stokes[list_start_ind + low_ind_1];
     return;
   }
   else {
@@ -727,7 +721,7 @@ __device__ void extrap_stokes_list_flux_stokesIQUV(components_t d_components,
       //closest freq is higher than desired - set second index to one below
       //(order of indexes doesn't matter, as the calculated gradient is pos/neg
       //as needed)
-      if (d_components.list_freqs[list_start_ind + low_ind_1] > d_extrap_freq){
+      if (list_freqs[list_start_ind + low_ind_1] > d_extrap_freq){
         low_ind_2 = low_ind_1 - 1;
       }
       else {
@@ -738,157 +732,42 @@ __device__ void extrap_stokes_list_flux_stokesIQUV(components_t d_components,
     }
   }
 
-  * flux_I = calc_gradient_extrap_list(d_components.list_stokesI,
-            d_components.list_freqs, d_extrap_freq,
-            list_start_ind + low_ind_1, list_start_ind + low_ind_2);
-  * flux_Q = calc_gradient_extrap_list(d_components.list_stokesQ,
-            d_components.list_freqs, d_extrap_freq,
-            list_start_ind + low_ind_1, list_start_ind + low_ind_2);
-  * flux_U = calc_gradient_extrap_list(d_components.list_stokesU,
-            d_components.list_freqs, d_extrap_freq,
-            list_start_ind + low_ind_1, list_start_ind + low_ind_2);
-  * flux_V = calc_gradient_extrap_list(d_components.list_stokesV,
-            d_components.list_freqs, d_extrap_freq,
+  * extrap_flux = calc_gradient_extrap_list(list_stokes,
+            list_freqs, d_extrap_freq,
             list_start_ind + low_ind_1, list_start_ind + low_ind_2);
 
   if (low_ind_2 == -1){
 
-    printf("wrong range %.3e %.3e iFreq %d %.3e low %d %.3e\n", d_components.list_freqs[list_start_ind],
-    d_components.list_freqs[list_start_ind + num_list_values-1],
+    printf("wrong range %.3e %.3e iFreq %d %.3e low %d %.3e\n", list_freqs[list_start_ind],
+    list_freqs[list_start_ind + num_list_values-1],
     iFreq, d_extrap_freq,
-    low_ind_1, d_components.list_freqs[list_start_ind + low_ind_1]);
-    printf("The flooxes %.3e %.3e %.3e %.3e\n",* flux_I, * flux_Q, * flux_U, * flux_V );
+    low_ind_1, list_freqs[list_start_ind + low_ind_1]);
+    printf("The flooxes %.3e \n",* extrap_flux);
   }
 }
 
-__device__ void extrap_stokes_list_flux_stokesI(components_t d_components,
-           double *d_extrap_freqs, int iFluxComp, int iFreq,
-           user_precision_t * flux_I){
-
-  int num_list_values = d_components.num_list_values[iFluxComp];
-  int list_start_ind = d_components.list_start_indexes[iFluxComp];
-
-  double d_extrap_freq = d_extrap_freqs[iFreq];
-
-  int low_ind_1 = -1;
-  int low_ind_2 = -1;
-
-  double low_val_1 = 1e16;
-  // double low_val_2 = 1e16;
-
-  double ref_freq;
-  double abs_diff_freq;
-
-  if (num_list_values == 1) {
-    * flux_I = d_components.list_stokesI[list_start_ind];
-    return;
-  }
-
-  //First loop finds the absolute closest frequency
-  for (int i = 0; i < num_list_values; i++) {
-    ref_freq = d_components.list_freqs[list_start_ind + i];
-    abs_diff_freq = abs(ref_freq - d_extrap_freq);
-
-    if (abs_diff_freq < low_val_1) {
-      low_val_1 = abs_diff_freq;
-      low_ind_1 = i;
-    }
-  }
-
-  //Depending on the closest frequency, we either want to search above or
-  //below the target frequency to find points either side of the target freq
-
-  //We happen to need the reference frequency; just return the refs
-  if (d_components.list_freqs[list_start_ind + low_ind_1] == d_extrap_freq) {
-    * flux_I = d_components.list_stokesI[list_start_ind + low_ind_1];
-    return;
-  }
-  else {
-    //The closest freq is the first index, so set the second index to the second
-    if (low_ind_1 == 0) {
-      low_ind_2 = 1;
-    }
-    //closest freq the highest list entry - set second index to one below
-    //(order of indexes doesn't matter, as the calculated gradient is pos/neg
-    //as needed)
-    else if (low_ind_1 == num_list_values - 1){
-      low_ind_2 = low_ind_1 - 1;
-    }
-    else {
-      //closest freq is higher than desired - set second index to one below
-      //(order of indexes doesn't matter, as the calculated gradient is pos/neg
-      //as needed)
-      if (d_components.list_freqs[list_start_ind + low_ind_1] > d_extrap_freq){
-        low_ind_2 = low_ind_1 - 1;
-      }
-      else {
-        low_ind_2 = low_ind_1 + 1;
-      }
-        //We are extrapolating to a frequency that is lower than all list entries
-        //so just stick low_ind_2 to one above low_ind_1
-    }
-  }
-
-  * flux_I = calc_gradient_extrap_list(d_components.list_stokesI,
-            d_components.list_freqs, d_extrap_freq,
-            list_start_ind + low_ind_1, list_start_ind + low_ind_2);
-
-  if (low_ind_2 == -1){
-
-    printf("wrong range %.3e %.3e iFreq %d %.3e low %d %.3e\n", d_components.list_freqs[list_start_ind],
-    d_components.list_freqs[list_start_ind + num_list_values-1],
-    iFreq, d_extrap_freq,
-    low_ind_1, d_components.list_freqs[list_start_ind + low_ind_1]);
-    printf("The flooxes %.3e \n",* flux_I);
-  }
-}
-
-__global__ void kern_extrap_list_fluxes_stokesIQUV(int num_extrap_freqs, double *d_extrap_freqs,
-                                        int num_comps, components_t d_components) {
+__global__ void kern_extrap_list_fluxes(user_precision_t *list_stokes, double *list_freqs,
+                                        int *num_list_values, int *list_start_indexes,
+                                        int *list_comp_inds,
+                                        int num_extrap_freqs, double *d_extrap_freqs,
+                                        int num_comps, user_precision_t *extrap_stokes) {
 
   // Start by computing which baseline we're going to do
   const int iFluxComp = threadIdx.x + (blockDim.x*blockIdx.x);
   const int iFreq = threadIdx.y + (blockDim.y*blockIdx.y);
   if(iFluxComp < num_comps && iFreq < num_extrap_freqs) {
 
-    user_precision_t flux_I;
-    user_precision_t flux_Q;
-    user_precision_t flux_U;
-    user_precision_t flux_V;
+    user_precision_t extrap_flux;
 
-    extrap_stokes_list_flux_stokesIQUV(d_components, d_extrap_freqs,
-                 iFluxComp, iFreq,
-                 &flux_I, &flux_Q, &flux_U, &flux_V);
-
-    int iComponent = d_components.list_comp_inds[iFluxComp];
+    int iComponent = list_comp_inds[iFluxComp];
     int extrap_ind = num_extrap_freqs*iComponent + iFreq;
 
-    d_components.extrap_stokesI[extrap_ind] = flux_I;
-    d_components.extrap_stokesQ[extrap_ind] = flux_Q;
-    d_components.extrap_stokesU[extrap_ind] = flux_U;
-    d_components.extrap_stokesV[extrap_ind] = flux_V;
+    extrap_stokes_list_fluxes(list_stokes, list_freqs, num_list_values,
+                              list_start_indexes, d_extrap_freqs,
+                              iFluxComp, iFreq,
+                              &extrap_flux);
 
-  }
-}
-
-__global__ void kern_extrap_list_fluxes_stokesI(int num_extrap_freqs, double *d_extrap_freqs,
-                                        int num_comps, components_t d_components) {
-
-  // Start by computing which baseline we're going to do
-  const int iFluxComp = threadIdx.x + (blockDim.x*blockIdx.x);
-  const int iFreq = threadIdx.y + (blockDim.y*blockIdx.y);
-  if(iFluxComp < num_comps && iFreq < num_extrap_freqs) {
-
-    user_precision_t flux_I;
-
-    extrap_stokes_list_flux_stokesI(d_components, d_extrap_freqs,
-                 iFluxComp, iFreq,
-                 &flux_I);
-
-    int iComponent = d_components.list_comp_inds[iFluxComp];
-    int extrap_ind = num_extrap_freqs*iComponent + iFreq;
-
-    d_components.extrap_stokesI[extrap_ind] = flux_I;
+    extrap_stokes[extrap_ind] = extrap_flux;
 
   }
 }
@@ -917,6 +796,25 @@ __global__ void kern_apply_rotation_measure(int num_extrap_freqs, double *d_extr
 
     d_components.extrap_stokesQ[extrap_ind] = linpol_flux*cos(angle);
     d_components.extrap_stokesU[extrap_ind] = linpol_flux*sin(angle);
+
+  }
+}
+
+__global__ void kern_print_extrap_fluxes(int freq_ind, int num_extrap_freqs,
+                                         int num_comps, components_t d_components) {
+
+  // Start by computing which baseline we're going to do
+  const int iComp = threadIdx.x + (blockDim.x*blockIdx.x);
+  if(iComp < num_comps) {
+
+    int extrap_ind = num_extrap_freqs*iComp + freq_ind;
+
+    printf("iComp: %d %.5f %.5f %.5f %.5f\n", iComp, d_components.extrap_stokesI[extrap_ind],
+                                                     d_components.extrap_stokesQ[extrap_ind],
+                                                     d_components.extrap_stokesU[extrap_ind],
+                                                     d_components.extrap_stokesV[extrap_ind]);
+
+    
 
   }
 }
@@ -982,18 +880,13 @@ extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
   //Finally, do any list flux peeps
   if (n_lists > 0) {
     grid.x = (int)ceilf( (float)n_lists / (float)threads.x );
-    gpuErrorCheckKernel("kern_extrap_list_fluxes_stokesI",
-                        kern_extrap_list_fluxes_stokesI, grid, threads,
+    gpuErrorCheckKernel("kern_extrap_list_fluxes",
+                        kern_extrap_list_fluxes, grid, threads,
+                        d_components.list_stokesI, d_components.list_freqs,
+                        d_components.num_list_values, d_components.list_start_indexes,
+                        d_components.list_comp_inds,
                         num_extrap_freqs, d_extrap_freqs,
-                        n_lists, d_components);
-
-    // if (d_components.do_QUV == 1) {
-    //TODO get some kind of switch to use list QUV entires if we have them
-    //in here
-    //   gpuErrorCheckKernel("kern_extrap_list_fluxes_stokesIQUV",
-    //                       kern_extrap_list_fluxes_stokesIQUV, grid, threads,
-    //                       num_extrap_freqs, d_extrap_freqs,
-    //                       n_lists, d_components);
+                        n_lists, d_components.extrap_stokesI);
   }
 
   if (d_components.n_stokesV_power > 0) {
@@ -1023,6 +916,18 @@ extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
                           d_components.n_stokesV_pol_frac, d_components);
   }
 
+  if (d_components.n_stokesV_list > 0) {
+    grid.x = (int)ceilf( (float)d_components.n_stokesV_list / (float)threads.x );
+    // printf("Extrapolating Stokes V list fluxes\n");
+    gpuErrorCheckKernel("kern_extrap_list_fluxes",
+                        kern_extrap_list_fluxes, grid, threads,
+                        d_components.stokesV_list_ref_flux, d_components.stokesV_list_ref_freqs,
+                        d_components.stokesV_num_list_values, d_components.stokesV_list_start_indexes,
+                        d_components.stokesV_list_comp_inds,
+                        num_extrap_freqs, d_extrap_freqs,
+                        d_components.n_stokesV_list, d_components.extrap_stokesV);
+  }
+
   if (d_components.n_linpol_power > 0) {
     // printf("Extrapolating linear polarisation power laws\n");
     grid.x = (int)ceilf( (float)d_components.n_linpol_power / (float)threads.x );
@@ -1050,14 +955,55 @@ extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
                           d_components.n_linpol_pol_frac, d_components);
   }
 
-    if (d_components.n_linpol_angles > 0) {
-    // printf("Extrapolating linear polarisation polarisation fractions\n");
-    grid.x = (int)ceilf( (float)d_components.n_linpol_angles / (float)threads.x );
-    gpuErrorCheckKernel("kern_apply_rotation_measure",
-                          kern_apply_rotation_measure, grid, threads,
-                          num_extrap_freqs, d_extrap_freqs,
-                          d_components.n_linpol_angles, d_components);
+  if (d_components.n_linpol_list > 0) {
+    // printf("Extrapolating linear polarisation list fluxes\n");
+    grid.x = (int)ceilf( (float)d_components.n_linpol_list / (float)threads.x );
+    gpuErrorCheckKernel("kern_extrap_list_fluxes",
+                        kern_extrap_list_fluxes, grid, threads,
+                        d_components.stokesQ_list_ref_flux, d_components.stokesQ_list_ref_freqs,
+                        d_components.stokesQ_num_list_values, d_components.stokesQ_list_start_indexes,
+                        d_components.stokesQ_list_comp_inds,
+                        num_extrap_freqs, d_extrap_freqs,
+                        d_components.n_linpol_list, d_components.extrap_stokesQ);
+
+    grid.x = (int)ceilf( (float)d_components.n_linpol_list / (float)threads.x );
+    gpuErrorCheckKernel("kern_extrap_list_fluxes",
+                        kern_extrap_list_fluxes, grid, threads,
+                        d_components.stokesU_list_ref_flux, d_components.stokesU_list_ref_freqs,
+                        d_components.stokesU_num_list_values, d_components.stokesU_list_start_indexes,
+                        d_components.stokesU_list_comp_inds,
+                        num_extrap_freqs, d_extrap_freqs,
+                        d_components.n_linpol_list, d_components.extrap_stokesU);
   }
+
+  if (d_components.n_linpol_p_list > 0) {
+    // printf("Extrapolating linear polarisation polarisation fractions\n");
+    grid.x = (int)ceilf( (float)d_components.n_linpol_p_list / (float)threads.x );
+    gpuErrorCheckKernel("kern_extrap_list_fluxes",
+                        kern_extrap_list_fluxes, grid, threads,
+                        d_components.linpol_p_list_ref_flux, d_components.linpol_p_list_ref_freqs,
+                        d_components.linpol_p_num_list_values, d_components.linpol_p_list_start_indexes,
+                        d_components.linpol_p_list_comp_inds,
+                        num_extrap_freqs, d_extrap_freqs,
+                        d_components.n_linpol_p_list, d_components.extrap_stokesQ);
+  }
+
+
+  if (d_components.n_linpol_angles > 0) {
+  // printf("Extrapolating linear polarisation polarisation fractions\n");
+  grid.x = (int)ceilf( (float)d_components.n_linpol_angles / (float)threads.x );
+  gpuErrorCheckKernel("kern_apply_rotation_measure",
+                        kern_apply_rotation_measure, grid, threads,
+                        num_extrap_freqs, d_extrap_freqs,
+                        d_components.n_linpol_angles, d_components);
+  }
+
+//   grid.x = (int)ceilf( (float)25 / (float)threads.x );
+//   grid.y = threads.y = 1;
+//   gpuErrorCheckKernel("kern_print_extrap_fluxes",
+//                         kern_print_extrap_fluxes, grid, threads,
+//                         0, num_extrap_freqs,
+//                         25, d_components);
 }
 
 extern "C" void source_component_common(woden_settings_t *woden_settings,
@@ -1097,10 +1043,6 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
     components = &chunked_source->shape_components;
     d_components = &d_chunked_source->shape_components;
   }
-
-  // int do_QUV = d_components->do_QUV;
-
-  // printf("\tExtrapolating Stokes IQUV\n");
 
   //Will need this later
   malloc_extrapolated_flux_arrays(d_components, num_components,
@@ -1638,30 +1580,10 @@ void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source
     gpuMemcpy( d_components->power_comp_inds, components->power_comp_inds,
                         num_powers*sizeof(int), gpuMemcpyHostToDevice );
 
-    // ( gpuMalloc( (void**)&d_components->power_ref_freqs,
-    //                     num_powers*sizeof(double) ) );
-    // ( gpuMemcpy( d_components->power_ref_freqs, components->power_ref_freqs,
-    //                     num_powers*sizeof(double), gpuMemcpyHostToDevice ) );
-
     gpuMalloc( (void**)&d_components->power_ref_stokesI,
                         num_powers*sizeof(user_precision_t) );
     gpuMemcpy( d_components->power_ref_stokesI, components->power_ref_stokesI,
                         num_powers*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-
-    // gpuMalloc( (void**)&d_components->power_ref_stokesQ,
-    //                     num_powers*sizeof(user_precision_t) );
-    // gpuMemcpy( d_components->power_ref_stokesQ, components->power_ref_stokesQ,
-    //                     num_powers*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-
-    // gpuMalloc( (void**)&d_components->power_ref_stokesU,
-    //                     num_powers*sizeof(user_precision_t) );
-    // gpuMemcpy( d_components->power_ref_stokesU, components->power_ref_stokesU,
-    //                     num_powers*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-
-    // gpuMalloc( (void**)&d_components->power_ref_stokesV,
-    //                     num_powers*sizeof(user_precision_t) );
-    // gpuMemcpy( d_components->power_ref_stokesV, components->power_ref_stokesV,
-    //                     num_powers*sizeof(user_precision_t), gpuMemcpyHostToDevice );
 
     gpuMalloc( (void**)&d_components->power_SIs,
                         num_powers*sizeof(user_precision_t) );
@@ -1676,30 +1598,10 @@ void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source
     gpuMemcpy( d_components->curve_comp_inds, components->curve_comp_inds,
                         num_curves*sizeof(int), gpuMemcpyHostToDevice );
 
-    // ( gpuMalloc( (void**)&d_components->curve_ref_freqs,
-    //                     num_curves*sizeof(double) ) );
-    // ( gpuMemcpy( d_components->curve_ref_freqs, components->curve_ref_freqs,
-    //                     num_curves*sizeof(double), gpuMemcpyHostToDevice ) );
-
     gpuMalloc( (void**)&d_components->curve_ref_stokesI,
                         num_curves*sizeof(user_precision_t) );
     gpuMemcpy( d_components->curve_ref_stokesI, components->curve_ref_stokesI,
                         num_curves*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-
-    // gpuMalloc( (void**)&d_components->curve_ref_stokesQ,
-    //                     num_curves*sizeof(user_precision_t) );
-    // gpuMemcpy( d_components->curve_ref_stokesQ, components->curve_ref_stokesQ,
-    //                     num_curves*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-
-    // gpuMalloc( (void**)&d_components->curve_ref_stokesU,
-    //                     num_curves*sizeof(user_precision_t) );
-    // gpuMemcpy( d_components->curve_ref_stokesU, components->curve_ref_stokesU,
-    //                     num_curves*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-
-    // gpuMalloc( (void**)&d_components->curve_ref_stokesV,
-    //                     num_curves*sizeof(user_precision_t) );
-    // gpuMemcpy( d_components->curve_ref_stokesV, components->curve_ref_stokesV,
-    //                     num_curves*sizeof(user_precision_t), gpuMemcpyHostToDevice );
 
     gpuMalloc( (void**)&d_components->curve_SIs,
                         num_curves*sizeof(user_precision_t) );
@@ -1744,36 +1646,37 @@ void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source
     gpuMemcpy( d_components->list_stokesI, components->list_stokesI,
                         num_list_values*sizeof(user_precision_t), gpuMemcpyHostToDevice );
 
-    gpuMalloc( (void**)&d_components->list_stokesQ,
-                        num_list_values*sizeof(user_precision_t) );
-    gpuMemcpy( d_components->list_stokesQ, components->list_stokesQ,
-                        num_list_values*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-
-    gpuMalloc( (void**)&d_components->list_stokesU,
-                        num_list_values*sizeof(user_precision_t) );
-    gpuMemcpy( d_components->list_stokesU, components->list_stokesU,
-                        num_list_values*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-
-    gpuMalloc( (void**)&d_components->list_stokesV,
-                        num_list_values*sizeof(user_precision_t) );
-    gpuMemcpy( d_components->list_stokesV, components->list_stokesV,
-                        num_list_values*sizeof(user_precision_t), gpuMemcpyHostToDevice );
   }
 
   int n_stokesV_pol_frac = components->n_stokesV_pol_frac;
   int n_stokesV_power = components->n_stokesV_power;
   int n_stokesV_curve = components->n_stokesV_curve;
+  int n_stokesV_list = components->n_stokesV_list;
+  int n_stokesV_list_flux_entries = components->n_stokesV_list_flux_entries;
   int n_linpol_pol_frac = components->n_linpol_pol_frac;
   int n_linpol_power = components->n_linpol_power;
   int n_linpol_curve = components->n_linpol_curve;
   int n_linpol_angles = components->n_linpol_angles;
+  int n_linpol_list = components->n_linpol_list;
+  int n_stokesQ_list_flux_entries = components->n_stokesQ_list_flux_entries;
+  int n_stokesU_list_flux_entries = components->n_stokesU_list_flux_entries;
+  int n_linpol_p_list = components->n_linpol_p_list;
+  int n_linpol_p_list_flux_entries = components->n_linpol_p_list_flux_entries;
 
   d_components->n_stokesV_pol_frac = n_stokesV_pol_frac;
   d_components->n_stokesV_power = n_stokesV_power;
   d_components->n_stokesV_curve = n_stokesV_curve;
+  d_components->n_stokesV_list = n_stokesV_list;
+  d_components->n_stokesV_list_flux_entries = n_stokesV_list_flux_entries;
   d_components->n_linpol_pol_frac = n_linpol_pol_frac;
   d_components->n_linpol_power = n_linpol_power;
   d_components->n_linpol_curve = n_linpol_curve;
+  d_components->n_linpol_list = n_linpol_list;
+  d_components->n_stokesQ_list_flux_entries = n_stokesQ_list_flux_entries;
+  d_components->n_stokesU_list_flux_entries = n_stokesU_list_flux_entries;
+  d_components->n_linpol_p_list = n_linpol_p_list;
+  d_components->n_linpol_p_list_flux_entries = n_linpol_p_list_flux_entries;
+
   d_components->n_linpol_angles = n_linpol_angles;
   d_components->do_QUV = components->do_QUV;
 
@@ -1821,6 +1724,30 @@ void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source
                 n_stokesV_curve*sizeof(int), gpuMemcpyHostToDevice );
   }
 
+  if (n_stokesV_list > 0) {
+    gpuMalloc( (void**)&d_components->stokesV_num_list_values,
+                        n_stokesV_list*sizeof(int) );
+    gpuMemcpy( d_components->stokesV_num_list_values, components->stokesV_num_list_values,
+                n_stokesV_list*sizeof(int), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->stokesV_list_start_indexes,
+                        n_stokesV_list*sizeof(int) );
+    gpuMemcpy( d_components->stokesV_list_start_indexes, components->stokesV_list_start_indexes,
+                n_stokesV_list*sizeof(int), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->stokesV_list_comp_inds,
+                        n_stokesV_list*sizeof(int) );
+    gpuMemcpy( d_components->stokesV_list_comp_inds, components->stokesV_list_comp_inds,
+                n_stokesV_list*sizeof(int), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->stokesV_list_ref_freqs,
+                        n_stokesV_list_flux_entries*sizeof(double) );
+    gpuMemcpy( d_components->stokesV_list_ref_freqs, components->stokesV_list_ref_freqs,
+                n_stokesV_list_flux_entries*sizeof(double), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->stokesV_list_ref_flux,
+                        n_stokesV_list_flux_entries*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->stokesV_list_ref_flux, components->stokesV_list_ref_flux,
+                n_stokesV_list_flux_entries*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+
+  }
+
   if (n_linpol_pol_frac > 0) {
     gpuMalloc( (void**)&d_components->linpol_pol_fracs,
                         n_linpol_pol_frac*sizeof(user_precision_t) );
@@ -1864,6 +1791,76 @@ void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source
     gpuMemcpy( d_components->linpol_curve_comp_inds, components->linpol_curve_comp_inds,
                 n_linpol_curve*sizeof(int), gpuMemcpyHostToDevice );
   }
+
+  if (n_linpol_list > 0) {
+    gpuMalloc( (void**)&d_components->stokesQ_num_list_values,
+                        n_linpol_list*sizeof(int) );
+    gpuMemcpy( d_components->stokesQ_num_list_values, components->stokesQ_num_list_values,
+                n_linpol_list*sizeof(int), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->stokesQ_list_start_indexes,
+                        n_linpol_list*sizeof(int) );
+    gpuMemcpy( d_components->stokesQ_list_start_indexes, components->stokesQ_list_start_indexes,
+                n_linpol_list*sizeof(int), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->stokesQ_list_comp_inds,
+                        n_linpol_list*sizeof(int) );
+    gpuMemcpy( d_components->stokesQ_list_comp_inds, components->stokesQ_list_comp_inds,
+                n_linpol_list*sizeof(int), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->stokesQ_list_ref_freqs,
+                        n_stokesQ_list_flux_entries*sizeof(double) );
+    gpuMemcpy( d_components->stokesQ_list_ref_freqs, components->stokesQ_list_ref_freqs,
+                n_stokesQ_list_flux_entries*sizeof(double), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->stokesQ_list_ref_flux,
+                        n_stokesQ_list_flux_entries*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->stokesQ_list_ref_flux, components->stokesQ_list_ref_flux,
+                n_stokesQ_list_flux_entries*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+
+    gpuMalloc( (void**)&d_components->stokesU_num_list_values,
+                        n_linpol_list*sizeof(int) );
+    gpuMemcpy( d_components->stokesU_num_list_values, components->stokesU_num_list_values,
+                n_linpol_list*sizeof(int), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->stokesU_list_start_indexes,
+                        n_linpol_list*sizeof(int) );
+    gpuMemcpy( d_components->stokesU_list_start_indexes, components->stokesU_list_start_indexes,
+                n_linpol_list*sizeof(int), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->stokesU_list_comp_inds,
+                        n_linpol_list*sizeof(int) );
+    gpuMemcpy( d_components->stokesU_list_comp_inds, components->stokesU_list_comp_inds,
+                n_linpol_list*sizeof(int), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->stokesU_list_ref_freqs,
+                        n_stokesU_list_flux_entries*sizeof(double) );
+    gpuMemcpy( d_components->stokesU_list_ref_freqs, components->stokesU_list_ref_freqs,
+                n_stokesU_list_flux_entries*sizeof(double), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->stokesU_list_ref_flux,
+                        n_stokesU_list_flux_entries*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->stokesU_list_ref_flux, components->stokesU_list_ref_flux,
+                n_stokesU_list_flux_entries*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+
+  }
+
+  if (n_linpol_p_list > 0) {
+    gpuMalloc( (void**)&d_components->linpol_p_num_list_values,
+                        n_linpol_p_list*sizeof(int) );
+    gpuMemcpy( d_components->linpol_p_num_list_values, components->linpol_p_num_list_values,
+                n_linpol_p_list*sizeof(int), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->linpol_p_list_start_indexes,
+                        n_linpol_p_list*sizeof(int) );
+    gpuMemcpy( d_components->linpol_p_list_start_indexes, components->linpol_p_list_start_indexes,
+                n_linpol_p_list*sizeof(int), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->linpol_p_list_comp_inds,
+                        n_linpol_p_list*sizeof(int) );
+    gpuMemcpy( d_components->linpol_p_list_comp_inds, components->linpol_p_list_comp_inds,
+                n_linpol_p_list*sizeof(int), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->linpol_p_list_ref_freqs,
+                        n_linpol_p_list_flux_entries*sizeof(double) );
+    gpuMemcpy( d_components->linpol_p_list_ref_freqs, components->linpol_p_list_ref_freqs,
+                n_linpol_p_list_flux_entries*sizeof(double), gpuMemcpyHostToDevice );
+    gpuMalloc( (void**)&d_components->linpol_p_list_ref_flux,
+                        n_linpol_p_list_flux_entries*sizeof(user_precision_t) );
+    gpuMemcpy( d_components->linpol_p_list_ref_flux, components->linpol_p_list_ref_flux,
+                n_linpol_p_list_flux_entries*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+                
+  }
+
 
   if (n_linpol_angles > 0){
     gpuMalloc( (void**)&d_components->rm_values,
@@ -1963,21 +1960,13 @@ extern "C" void free_d_components(source_t *d_chunked_source,
   //The az,za,beam_has,beam_decs are handled by other functions
 
   if (n_powers > 0) {
-    // gpuFree( d_components.power_ref_freqs );
     gpuFree( d_components.power_ref_stokesI );
-    // gpuFree( d_components.power_ref_stokesQ );
-    // gpuFree( d_components.power_ref_stokesU );
-    // gpuFree( d_components.power_ref_stokesV );
     gpuFree( d_components.power_SIs );
     gpuFree( d_components.power_comp_inds );
   }
 
   if (n_curves > 0) {
-    // gpuFree( d_components.curve_ref_freqs );
     gpuFree( d_components.curve_ref_stokesI );
-    // gpuFree( d_components.curve_ref_stokesQ );
-    // gpuFree( d_components.curve_ref_stokesU );
-    // gpuFree( d_components.curve_ref_stokesV );
     gpuFree( d_components.curve_SIs );
     gpuFree( d_components.curve_qs );
     gpuFree( d_components.curve_comp_inds );
@@ -1986,9 +1975,6 @@ extern "C" void free_d_components(source_t *d_chunked_source,
     gpuFree( d_components.list_comp_inds );
     gpuFree( d_components.list_freqs );
     gpuFree( d_components.list_stokesI );
-    gpuFree( d_components.list_stokesQ );
-    gpuFree( d_components.list_stokesU );
-    gpuFree( d_components.list_stokesV );
     gpuFree( d_components.num_list_values );
     gpuFree( d_components.list_start_indexes );
   }
@@ -2023,6 +2009,14 @@ extern "C" void free_d_components(source_t *d_chunked_source,
     gpuFree(d_components.stokesV_curve_comp_inds);
   }
 
+  if (d_components.n_stokesV_list > 0) {
+    gpuFree(d_components.stokesV_num_list_values);
+    gpuFree(d_components.stokesV_list_start_indexes);
+    gpuFree(d_components.stokesV_list_comp_inds);
+    gpuFree(d_components.stokesV_list_ref_freqs);
+    gpuFree(d_components.stokesV_list_ref_flux);
+  }
+
   if (d_components.n_linpol_pol_frac > 0) {
     gpuFree(d_components.linpol_pol_fracs);
     gpuFree(d_components.linpol_pol_frac_comp_inds);
@@ -2038,6 +2032,27 @@ extern "C" void free_d_components(source_t *d_chunked_source,
     gpuFree(d_components.linpol_curve_SIs);
     gpuFree(d_components.linpol_curve_qs);
     gpuFree(d_components.linpol_curve_comp_inds);
+  }
+
+    if (d_components.n_linpol_list > 0) {
+    gpuFree(d_components.stokesQ_num_list_values);
+    gpuFree(d_components.stokesQ_list_start_indexes);
+    gpuFree(d_components.stokesQ_list_comp_inds);
+    gpuFree(d_components.stokesQ_list_ref_freqs);
+    gpuFree(d_components.stokesQ_list_ref_flux);
+    gpuFree(d_components.stokesU_num_list_values);
+    gpuFree(d_components.stokesU_list_start_indexes);
+    gpuFree(d_components.stokesU_list_comp_inds);
+    gpuFree(d_components.stokesU_list_ref_freqs);
+    gpuFree(d_components.stokesU_list_ref_flux);
+  }
+
+  if (d_components.n_linpol_p_list > 0) {
+    gpuFree(d_components.linpol_p_num_list_values);
+    gpuFree(d_components.linpol_p_list_start_indexes);
+    gpuFree(d_components.linpol_p_list_comp_inds);
+    gpuFree(d_components.linpol_p_list_ref_freqs);
+    gpuFree(d_components.linpol_p_list_ref_flux);
   }
 
   if (d_components.n_linpol_angles > 0){
@@ -2931,9 +2946,6 @@ extern "C" void test_source_component_common(int num_of_each_flux_type,
 
   source_t *chunked_source = (source_t *)malloc(sizeof(source_t));
 
-  //TODODOD have a if (comptype == POINT) etc here so we can use same
-  //componenets to test all POINT, GAUSSIAN, SHAPELET
-
   int NUM_FLUX_TYPES = 3;
 
   if (comptype == POINT) {
@@ -2992,10 +3004,8 @@ extern "C" void test_source_component_common(int num_of_each_flux_type,
   source_t *d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
 
   double *d_freqs = NULL;
-  gpuMalloc( (void**)&d_freqs,
-                                     woden_settings->num_freqs*sizeof(double) );
-  gpuMemcpy( d_freqs, freqs,
-             woden_settings->num_freqs*sizeof(double), gpuMemcpyHostToDevice) ;
+  gpuMalloc( (void**)&d_freqs, woden_settings->num_freqs*sizeof(double) );
+  gpuMemcpy( d_freqs, freqs, woden_settings->num_freqs*sizeof(double), gpuMemcpyHostToDevice) ;
 
   d_beam_gains_t d_beam_gains;
   visibility_set_t *d_visibility_set = NULL;

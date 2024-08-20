@@ -628,62 +628,46 @@ __global__ void kern_polarisation_fraction_stokesV(int num_extrap_freqs,
 __global__ void kern_polarisation_fraction_linpol(int num_extrap_freqs, 
              double *d_extrap_freqs, int num_comps, components_t d_components);
 
-/**
-Assuming a list-type spectral model, extrapolates the Stokes IQUV flux for a given set component and frequency.
 
-@param[in] d_components The components to use for the extrapolation.
-@param[in] d_extrap_freqs The frequencies to use for the extrapolation.
-@param[in] iFluxComp The index of the flux component to use.
-@param[in] iFreq The index of the frequency to use.
-@param[in,out] flux_I The output array for the Stokes I flux.
-@param[in,out] flux_Q The output array for the Stokes Q flux.
-@param[in,out] flux_U The output array for the Stokes U flux.
-@param[in,out] flux_V The output array for the Stokes V flux.
- */
-__device__ void extrap_stokes_list_flux_stokesIQUV(components_t d_components,
-           double *d_extrap_freqs, int iFluxComp, int iFreq,
-           user_precision_t * flux_I, user_precision_t * flux_Q,
-           user_precision_t * flux_U, user_precision_t * flux_V);
 
 /**
-@brief Kernel to run `extrap_stokes_list_flux_stokesIQUV` for all components in `d_components`.
-
-@details Fills the arrays `d_components.extrap_stokes*` with the extrapolated Stokes flux densities.
-
-@param[in] num_extrap_freqs The number of extrapolation frequencies.
-@param[in] d_extrap_freqs   Pointer to the array of extrapolation frequencies.
-@param[in] num_comps        The number of components.
-@param[in,out] d_components     The components to use for extrapolation.
- */
-__global__ void kern_extrap_list_fluxes_stokesIQUV(int num_extrap_freqs, double *d_extrap_freqs,
-                                        int num_comps, components_t d_components);
-
-/**
-Assuming a list-type spectral model, extrapolates the Stokes I flux for a given component and
+Assuming a list-type spectral model, extrapolates the flux for a given component and
 frequency.
 
-@param[in] d_components The components to use for the extrapolation.
+@param[in] user_precision_t *list_stokes Array containing all the list-fluxes used for the extrapolation.
+@param[in] double *list_freqs Array containing all the list-frequencies used for the extrapolation; must match order of `list_stokes`.
+@param[in] int *num_list_values Array containing the number of list values for each component.
+@param[in] int *list_start_indexes Array containing the starting index of each component within `list_stokes` and `list_freqs`.
 @param[in] d_extrap_freqs The frequencies to use for the extrapolation.
 @param[in] iFluxComp The index of the flux component to store the result in.
 @param[in] iFreq The index of the frequency component to extrapolate.
-@param[in,out] flux_I The array to store the resulting flux value in.
+@param[in,out]  extrap_flux The extrapolated flux.
  */
-__device__ void extrap_stokes_list_flux_stokesI(components_t d_components,
+__device__ void extrap_stokes_list_fluxes(user_precision_t *list_stokes,
+           double *list_freqs, int *arr_num_list_values, int *list_start_indexes,
            double *d_extrap_freqs, int iFluxComp, int iFreq,
-           user_precision_t * flux_I);
+           user_precision_t * extrap_flux);
 
 /**
-@brief Kernel to run `extrap_stokes_list_flux_stokesI` for all components in `d_components`.
+@brief Extrapolates list-type spectral model fluxes to given frequencies.
 
-@details Fills the arrays `d_components.extrap_stokesI` with the extrapolated Stokes I flux densities.
+@details Fills `extrap_stokes` with the extrapolated stokes flux densities. Runs the function `extrap_stokes_list_fluxes`. 
 
+@param[in] user_precision_t *list_stokes Array containing all the list-fluxes used for the extrapolation.
+@param[in] double *list_freqs Array containing all the list-frequencies used for the extrapolation; must match order of `list_stokes`.
+@param[in] int *num_list_values Array containing the number of list values for each component.
+@param[in] int *list_start_indexes Array containing the starting index of each component within `list_stokes` and `list_freqs`.
+@param[in] int *list_comp_inds Array containing the component index for list component; used to index the extrapolated fluxes to `extrap_stokes`.
 @param[in] num_extrap_freqs The number of extrapolation frequencies.
-@param[in] d_extrap_freqs   Pointer to the array of extrapolation frequencies.
-@param[in] num_comps        The number of components.
-@param[in,out] d_components     The components to use for extrapolation.
+@param[in] d_extrap_freqs Pointer to the array of extrapolation frequencies.
+@param[in] num_comps The number of components.
+@param[in,out] extrap_stokes Output extrapolated fluxes
  */
-__global__ void kern_extrap_list_fluxes_stokesI(int num_extrap_freqs, double *d_extrap_freqs,
-                                        int num_comps, components_t d_components);
+__global__ void kern_extrap_list_fluxes(user_precision_t *list_stokes, double *list_freqs,
+                                        int *num_list_values, int *list_start_indexes,
+                                        int *list_comp_inds,
+                                        int num_extrap_freqs, double *d_extrap_freqs,
+                                        int num_comps, user_precision_t *extrap_stokes);
 
 
 
