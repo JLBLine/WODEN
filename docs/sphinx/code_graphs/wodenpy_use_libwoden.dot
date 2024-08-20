@@ -1,0 +1,169 @@
+digraph G {
+    graph [rankdir=LR, clusterrank="local"];
+    subgraph cluster_G {
+
+        graph [style="filled,rounded", fillcolor="#80808018", label=""];
+        run_woden [label="run_woden", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="0"];
+        wodenpy__use_libwoden__array_layout_struct [label="wodenpy.use_libwoden.array_layout_struct", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="1"];
+        wodenpy__use_libwoden__shapelets [label="wodenpy.use_libwoden.shapelets", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="2"];
+        wodenpy__use_libwoden__skymodel_structs [label="wodenpy.use_libwoden.skymodel_structs", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="3"];
+        wodenpy__use_libwoden__use_libwoden [label="wodenpy.use_libwoden.use_libwoden", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="4"];
+        wodenpy__use_libwoden__visibility_set [label="wodenpy.use_libwoden.visibility_set", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="5"];
+        wodenpy__use_libwoden__woden_settings [label="wodenpy.use_libwoden.woden_settings", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="6"];
+        subgraph cluster_run_woden {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="run_woden"];
+            run_woden__main [label="main", style="filled", fillcolor="#feccccb2", fontcolor="#000000", group="0"];
+            run_woden__read_skymodel_thread [label="read_skymodel_thread", style="filled", fillcolor="#feccccb2", fontcolor="#000000", group="0"];
+            run_woden__woden_thread [label="woden_thread", style="filled", fillcolor="#feccccb2", fontcolor="#000000", group="0"];
+        }
+        subgraph cluster_wodenpy__use_libwoden__array_layout_struct {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="wodenpy.use_libwoden.array_layout_struct"];
+            wodenpy__use_libwoden__array_layout_struct__Array_Layout [label="Array_Layout", style="filled", fillcolor="#ffd865b2", fontcolor="#000000", group="1"];
+            wodenpy__use_libwoden__array_layout_struct__setup_array_layout [label="setup_array_layout", style="filled", fillcolor="#ffd865b2", fontcolor="#000000", group="1"];
+        }
+        subgraph cluster_wodenpy__use_libwoden__shapelets {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="wodenpy.use_libwoden.shapelets"];
+            wodenpy__use_libwoden__shapelets__calc_basis_func_1D_numpy [label="calc_basis_func_1D_numpy", style="filled", fillcolor="#b2ff65b2", fontcolor="#000000", group="2"];
+            wodenpy__use_libwoden__shapelets__create_sbf [label="create_sbf", style="filled", fillcolor="#b2ff65b2", fontcolor="#000000", group="2"];
+            wodenpy__use_libwoden__shapelets__numpy_eval_hermite [label="numpy_eval_hermite", style="filled", fillcolor="#b2ff65b2", fontcolor="#000000", group="2"];
+        }
+        subgraph cluster_wodenpy__use_libwoden__skymodel_structs {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="wodenpy.use_libwoden.skymodel_structs"];
+            wodenpy__use_libwoden__skymodel_structs___Components_Python [label="_Components_Python", style="filled", fillcolor="#65ff8cb2", fontcolor="#000000", group="3"];
+            wodenpy__use_libwoden__skymodel_structs___Ctype_Source_Into_Python [label="_Ctype_Source_Into_Python", style="filled", fillcolor="#65ff8cb2", fontcolor="#000000", group="3"];
+            wodenpy__use_libwoden__skymodel_structs__create_components_struct [label="create_components_struct", style="filled", fillcolor="#65ff8cb2", fontcolor="#000000", group="3"];
+            wodenpy__use_libwoden__skymodel_structs__create_source_catalogue_struct [label="create_source_catalogue_struct", style="filled", fillcolor="#65ff8cb2", fontcolor="#000000", group="3"];
+            wodenpy__use_libwoden__skymodel_structs__create_source_struct [label="create_source_struct", style="filled", fillcolor="#65ff8cb2", fontcolor="#000000", group="3"];
+            wodenpy__use_libwoden__skymodel_structs__setup_chunked_source [label="setup_chunked_source", style="filled", fillcolor="#65ff8cb2", fontcolor="#000000", group="3"];
+            wodenpy__use_libwoden__skymodel_structs__setup_components [label="setup_components", style="filled", fillcolor="#65ff8cb2", fontcolor="#000000", group="3"];
+            wodenpy__use_libwoden__skymodel_structs__setup_source_catalogue [label="setup_source_catalogue", style="filled", fillcolor="#65ff8cb2", fontcolor="#000000", group="3"];
+            subgraph cluster_wodenpy__use_libwoden__skymodel_structs___Components_Python {
+
+                graph [style="filled,rounded", fillcolor="#80808018", label="wodenpy.use_libwoden.skymodel_structs._Components_Python"];
+                wodenpy__use_libwoden__skymodel_structs___Components_Python____init__ [label="__init__", style="filled", fillcolor="#32ff66b2", fontcolor="#000000", group="3"];
+            }
+            subgraph cluster_wodenpy__use_libwoden__skymodel_structs___Ctype_Source_Into_Python {
+
+                graph [style="filled,rounded", fillcolor="#80808018", label="wodenpy.use_libwoden.skymodel_structs._Ctype_Source_Into_Python"];
+                wodenpy__use_libwoden__skymodel_structs___Ctype_Source_Into_Python____init__ [label="__init__", style="filled", fillcolor="#32ff66b2", fontcolor="#000000", group="3"];
+            }
+            subgraph cluster_wodenpy__use_libwoden__skymodel_structs__create_components_struct {
+
+                graph [style="filled,rounded", fillcolor="#80808018", label="wodenpy.use_libwoden.skymodel_structs.create_components_struct"];
+                wodenpy__use_libwoden__skymodel_structs__create_components_struct__Components [label="Components", style="filled", fillcolor="#32ff66b2", fontcolor="#000000", group="3"];
+            }
+            subgraph cluster_wodenpy__use_libwoden__skymodel_structs__create_source_catalogue_struct {
+
+                graph [style="filled,rounded", fillcolor="#80808018", label="wodenpy.use_libwoden.skymodel_structs.create_source_catalogue_struct"];
+                wodenpy__use_libwoden__skymodel_structs__create_source_catalogue_struct__Source_Catalogue [label="Source_Catalogue", style="filled", fillcolor="#32ff66b2", fontcolor="#000000", group="3"];
+            }
+            subgraph cluster_wodenpy__use_libwoden__skymodel_structs__create_source_struct {
+
+                graph [style="filled,rounded", fillcolor="#80808018", label="wodenpy.use_libwoden.skymodel_structs.create_source_struct"];
+                wodenpy__use_libwoden__skymodel_structs__create_source_struct__Source [label="Source", style="filled", fillcolor="#32ff66b2", fontcolor="#000000", group="3"];
+            }
+        }
+        subgraph cluster_wodenpy__use_libwoden__use_libwoden {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="wodenpy.use_libwoden.use_libwoden"];
+            wodenpy__use_libwoden__use_libwoden__load_in_woden_library [label="load_in_woden_library", style="filled", fillcolor="#65feffb2", fontcolor="#000000", group="4"];
+        }
+        subgraph cluster_wodenpy__use_libwoden__visibility_set {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="wodenpy.use_libwoden.visibility_set"];
+            wodenpy__use_libwoden__visibility_set__create_visi_set_struct [label="create_visi_set_struct", style="filled", fillcolor="#658cffb2", fontcolor="#000000", group="5"];
+            wodenpy__use_libwoden__visibility_set__load_visibility_set [label="load_visibility_set", style="filled", fillcolor="#658cffb2", fontcolor="#000000", group="5"];
+            wodenpy__use_libwoden__visibility_set__setup_visi_set [label="setup_visi_set", style="filled", fillcolor="#658cffb2", fontcolor="#000000", group="5"];
+            wodenpy__use_libwoden__visibility_set__setup_visi_set_array [label="setup_visi_set_array", style="filled", fillcolor="#658cffb2", fontcolor="#000000", group="5"];
+            subgraph cluster_wodenpy__use_libwoden__visibility_set__create_visi_set_struct {
+
+                graph [style="filled,rounded", fillcolor="#80808018", label="wodenpy.use_libwoden.visibility_set.create_visi_set_struct"];
+                wodenpy__use_libwoden__visibility_set__create_visi_set_struct__Visi_Set [label="Visi_Set", style="filled", fillcolor="#3265ffb2", fontcolor="#000000", group="5"];
+            }
+        }
+        subgraph cluster_wodenpy__use_libwoden__woden_settings {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="wodenpy.use_libwoden.woden_settings"];
+            wodenpy__use_libwoden__woden_settings__command [label="command", style="filled", fillcolor="#b265ffb2", fontcolor="#000000", group="6"];
+            wodenpy__use_libwoden__woden_settings__create_woden_settings [label="create_woden_settings", style="filled", fillcolor="#b265ffb2", fontcolor="#000000", group="6"];
+            wodenpy__use_libwoden__woden_settings__create_woden_settings_struct [label="create_woden_settings_struct", style="filled", fillcolor="#b265ffb2", fontcolor="#000000", group="6"];
+            wodenpy__use_libwoden__woden_settings__setup_lsts_and_phase_centre [label="setup_lsts_and_phase_centre", style="filled", fillcolor="#b265ffb2", fontcolor="#000000", group="6"];
+            subgraph cluster_wodenpy__use_libwoden__woden_settings__create_woden_settings_struct {
+
+                graph [style="filled,rounded", fillcolor="#80808018", label="wodenpy.use_libwoden.woden_settings.create_woden_settings_struct"];
+                wodenpy__use_libwoden__woden_settings__create_woden_settings_struct__Woden_Settings [label="Woden_Settings", style="filled", fillcolor="#9832ffb2", fontcolor="#000000", group="6"];
+            }
+        }
+    }
+        run_woden -> run_woden__read_skymodel_thread [style="dashed",  color="#838b8b"];
+        run_woden -> run_woden__woden_thread [style="dashed",  color="#838b8b"];
+        run_woden -> run_woden__main [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__array_layout_struct -> wodenpy__use_libwoden__array_layout_struct__Array_Layout [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__array_layout_struct -> wodenpy__use_libwoden__array_layout_struct__setup_array_layout [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__shapelets -> wodenpy__use_libwoden__shapelets__numpy_eval_hermite [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__shapelets -> wodenpy__use_libwoden__shapelets__calc_basis_func_1D_numpy [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__shapelets -> wodenpy__use_libwoden__shapelets__create_sbf [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__skymodel_structs -> wodenpy__use_libwoden__skymodel_structs__create_source_struct [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__skymodel_structs -> wodenpy__use_libwoden__skymodel_structs__create_source_catalogue_struct [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__skymodel_structs -> wodenpy__use_libwoden__skymodel_structs___Components_Python [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__skymodel_structs -> wodenpy__use_libwoden__skymodel_structs__setup_chunked_source [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__skymodel_structs -> wodenpy__use_libwoden__skymodel_structs__create_components_struct [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__skymodel_structs -> wodenpy__use_libwoden__skymodel_structs___Ctype_Source_Into_Python [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__skymodel_structs -> wodenpy__use_libwoden__skymodel_structs__setup_source_catalogue [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__skymodel_structs -> wodenpy__use_libwoden__skymodel_structs__setup_components [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__skymodel_structs__create_components_struct -> wodenpy__use_libwoden__skymodel_structs__create_components_struct__Components [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__skymodel_structs__create_source_struct -> wodenpy__use_libwoden__skymodel_structs__create_source_struct__Source [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__skymodel_structs__create_source_catalogue_struct -> wodenpy__use_libwoden__skymodel_structs__create_source_catalogue_struct__Source_Catalogue [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__skymodel_structs___Components_Python -> wodenpy__use_libwoden__skymodel_structs___Components_Python____init__ [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__skymodel_structs___Ctype_Source_Into_Python -> wodenpy__use_libwoden__skymodel_structs___Ctype_Source_Into_Python____init__ [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__use_libwoden -> wodenpy__use_libwoden__use_libwoden__load_in_woden_library [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__visibility_set -> wodenpy__use_libwoden__visibility_set__create_visi_set_struct [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__visibility_set -> wodenpy__use_libwoden__visibility_set__setup_visi_set_array [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__visibility_set -> wodenpy__use_libwoden__visibility_set__setup_visi_set [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__visibility_set -> wodenpy__use_libwoden__visibility_set__load_visibility_set [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__visibility_set__create_visi_set_struct -> wodenpy__use_libwoden__visibility_set__create_visi_set_struct__Visi_Set [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__woden_settings -> wodenpy__use_libwoden__woden_settings__create_woden_settings [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__woden_settings -> wodenpy__use_libwoden__woden_settings__setup_lsts_and_phase_centre [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__woden_settings -> wodenpy__use_libwoden__woden_settings__create_woden_settings_struct [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__woden_settings -> wodenpy__use_libwoden__woden_settings__command [style="dashed",  color="#838b8b"];
+        wodenpy__use_libwoden__woden_settings__create_woden_settings_struct -> wodenpy__use_libwoden__woden_settings__create_woden_settings_struct__Woden_Settings [style="dashed",  color="#838b8b"];
+        run_woden -> wodenpy__use_libwoden__shapelets__create_sbf [style="solid",  color="#000000"];
+        run_woden -> wodenpy__use_libwoden__visibility_set__load_visibility_set [style="solid",  color="#000000"];
+        run_woden -> wodenpy__use_libwoden__woden_settings__create_woden_settings [style="solid",  color="#000000"];
+        run_woden -> wodenpy__use_libwoden__array_layout_struct__Array_Layout [style="solid",  color="#000000"];
+        run_woden -> wodenpy__use_libwoden__woden_settings__setup_lsts_and_phase_centre [style="solid",  color="#000000"];
+        run_woden -> wodenpy__use_libwoden__use_libwoden__load_in_woden_library [style="solid",  color="#000000"];
+        run_woden -> wodenpy__use_libwoden__visibility_set__setup_visi_set_array [style="solid",  color="#000000"];
+        run_woden -> run_woden__main [style="solid",  color="#000000"];
+        run_woden__main -> wodenpy__use_libwoden__visibility_set__load_visibility_set [style="solid",  color="#000000"];
+        run_woden__main -> run_woden__woden_thread [style="solid",  color="#000000"];
+        run_woden__main -> wodenpy__use_libwoden__woden_settings__setup_lsts_and_phase_centre [style="solid",  color="#000000"];
+        run_woden__main -> wodenpy__use_libwoden__visibility_set__setup_visi_set_array [style="solid",  color="#000000"];
+        run_woden__main -> wodenpy__use_libwoden__shapelets__create_sbf [style="solid",  color="#000000"];
+        run_woden__main -> wodenpy__use_libwoden__woden_settings__create_woden_settings [style="solid",  color="#000000"];
+        run_woden__main -> wodenpy__use_libwoden__use_libwoden__load_in_woden_library [style="solid",  color="#000000"];
+        run_woden__main -> run_woden__read_skymodel_thread [style="solid",  color="#000000"];
+        wodenpy__use_libwoden__array_layout_struct__setup_array_layout -> wodenpy__use_libwoden__array_layout_struct__Array_Layout [style="solid",  color="#000000"];
+        wodenpy__use_libwoden__shapelets__calc_basis_func_1D_numpy -> wodenpy__use_libwoden__shapelets__numpy_eval_hermite [style="solid",  color="#000000"];
+        wodenpy__use_libwoden__shapelets__create_sbf -> wodenpy__use_libwoden__shapelets__calc_basis_func_1D_numpy [style="solid",  color="#000000"];
+        wodenpy__use_libwoden__skymodel_structs -> wodenpy__use_libwoden__skymodel_structs__create_source_catalogue_struct [style="solid",  color="#000000"];
+        wodenpy__use_libwoden__skymodel_structs -> wodenpy__use_libwoden__skymodel_structs__create_components_struct [style="solid",  color="#000000"];
+        wodenpy__use_libwoden__skymodel_structs -> wodenpy__use_libwoden__skymodel_structs__create_source_struct [style="solid",  color="#000000"];
+        wodenpy__use_libwoden__skymodel_structs__create_components_struct -> wodenpy__use_libwoden__skymodel_structs__create_components_struct__Components [style="solid",  color="#000000"];
+        wodenpy__use_libwoden__skymodel_structs__create_source_struct -> wodenpy__use_libwoden__skymodel_structs__create_source_struct__Source [style="solid",  color="#000000"];
+        wodenpy__use_libwoden__skymodel_structs__create_source_catalogue_struct -> wodenpy__use_libwoden__skymodel_structs__create_source_catalogue_struct__Source_Catalogue [style="solid",  color="#000000"];
+        wodenpy__use_libwoden__skymodel_structs__setup_chunked_source -> wodenpy__use_libwoden__skymodel_structs__setup_components [style="solid",  color="#000000"];
+        wodenpy__use_libwoden__skymodel_structs___Ctype_Source_Into_Python____init__ -> wodenpy__use_libwoden__skymodel_structs___Components_Python____init__ [style="solid",  color="#000000"];
+        wodenpy__use_libwoden__skymodel_structs___Ctype_Source_Into_Python____init__ -> wodenpy__use_libwoden__skymodel_structs___Components_Python [style="solid",  color="#000000"];
+        wodenpy__use_libwoden__use_libwoden -> wodenpy__use_libwoden__array_layout_struct__Array_Layout [style="solid",  color="#000000"];
+        wodenpy__use_libwoden__use_libwoden__load_in_woden_library -> wodenpy__use_libwoden__array_layout_struct__Array_Layout [style="solid",  color="#000000"];
+        wodenpy__use_libwoden__visibility_set -> wodenpy__use_libwoden__visibility_set__create_visi_set_struct [style="solid",  color="#000000"];
+        wodenpy__use_libwoden__visibility_set__create_visi_set_struct -> wodenpy__use_libwoden__visibility_set__create_visi_set_struct__Visi_Set [style="solid",  color="#000000"];
+        wodenpy__use_libwoden__visibility_set__setup_visi_set_array -> wodenpy__use_libwoden__visibility_set__setup_visi_set [style="solid",  color="#000000"];
+        wodenpy__use_libwoden__woden_settings -> wodenpy__use_libwoden__woden_settings__create_woden_settings_struct [style="solid",  color="#000000"];
+        wodenpy__use_libwoden__woden_settings__create_woden_settings_struct -> wodenpy__use_libwoden__woden_settings__create_woden_settings_struct__Woden_Settings [style="solid",  color="#000000"];
+    }

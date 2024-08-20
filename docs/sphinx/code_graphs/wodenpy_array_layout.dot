@@ -1,0 +1,48 @@
+digraph G {
+    graph [rankdir=LR, clusterrank="local"];
+    subgraph cluster_G {
+
+        graph [style="filled,rounded", fillcolor="#80808018", label=""];
+        run_woden [label="run_woden", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="0"];
+        wodenpy__array_layout__create_array_layout [label="wodenpy.array_layout.create_array_layout", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="1"];
+        wodenpy__array_layout__precession [label="wodenpy.array_layout.precession", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="2"];
+        subgraph cluster_run_woden {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="run_woden"];
+            run_woden__main [label="main", style="filled", fillcolor="#feccccb2", fontcolor="#000000", group="0"];
+            run_woden__read_skymodel_thread [label="read_skymodel_thread", style="filled", fillcolor="#feccccb2", fontcolor="#000000", group="0"];
+            run_woden__woden_thread [label="woden_thread", style="filled", fillcolor="#feccccb2", fontcolor="#000000", group="0"];
+        }
+        subgraph cluster_wodenpy__array_layout__create_array_layout {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="wodenpy.array_layout.create_array_layout"];
+            wodenpy__array_layout__create_array_layout__RTS_PrecessXYZtoJ2000 [label="RTS_PrecessXYZtoJ2000", style="filled", fillcolor="#b2ff65b2", fontcolor="#000000", group="1"];
+            wodenpy__array_layout__create_array_layout__RTS_precXYZ [label="RTS_precXYZ", style="filled", fillcolor="#b2ff65b2", fontcolor="#000000", group="1"];
+            wodenpy__array_layout__create_array_layout__calc_XYZ_diffs [label="calc_XYZ_diffs", style="filled", fillcolor="#b2ff65b2", fontcolor="#000000", group="1"];
+            wodenpy__array_layout__create_array_layout__enh2xyz [label="enh2xyz", style="filled", fillcolor="#b2ff65b2", fontcolor="#000000", group="1"];
+        }
+        subgraph cluster_wodenpy__array_layout__precession {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="wodenpy.array_layout.precession"];
+            wodenpy__array_layout__precession__RTS_Precess_LST_Lat_to_J2000 [label="RTS_Precess_LST_Lat_to_J2000", style="filled", fillcolor="#65feffb2", fontcolor="#000000", group="2"];
+        }
+    }
+        run_woden -> run_woden__woden_thread [style="dashed",  color="#838b8b"];
+        run_woden -> run_woden__read_skymodel_thread [style="dashed",  color="#838b8b"];
+        run_woden -> run_woden__main [style="dashed",  color="#838b8b"];
+        wodenpy__array_layout__create_array_layout -> wodenpy__array_layout__create_array_layout__enh2xyz [style="dashed",  color="#838b8b"];
+        wodenpy__array_layout__create_array_layout -> wodenpy__array_layout__create_array_layout__RTS_PrecessXYZtoJ2000 [style="dashed",  color="#838b8b"];
+        wodenpy__array_layout__create_array_layout -> wodenpy__array_layout__create_array_layout__RTS_precXYZ [style="dashed",  color="#838b8b"];
+        wodenpy__array_layout__create_array_layout -> wodenpy__array_layout__create_array_layout__calc_XYZ_diffs [style="dashed",  color="#838b8b"];
+        wodenpy__array_layout__precession -> wodenpy__array_layout__precession__RTS_Precess_LST_Lat_to_J2000 [style="dashed",  color="#838b8b"];
+        run_woden -> wodenpy__array_layout__create_array_layout__enh2xyz [style="solid",  color="#000000"];
+        run_woden -> run_woden__main [style="solid",  color="#000000"];
+        run_woden -> wodenpy__array_layout__create_array_layout__calc_XYZ_diffs [style="solid",  color="#000000"];
+        run_woden__main -> run_woden__read_skymodel_thread [style="solid",  color="#000000"];
+        run_woden__main -> wodenpy__array_layout__create_array_layout__enh2xyz [style="solid",  color="#000000"];
+        run_woden__main -> run_woden__woden_thread [style="solid",  color="#000000"];
+        run_woden__main -> wodenpy__array_layout__create_array_layout__calc_XYZ_diffs [style="solid",  color="#000000"];
+        wodenpy__array_layout__create_array_layout__RTS_PrecessXYZtoJ2000 -> wodenpy__array_layout__create_array_layout__RTS_precXYZ [style="solid",  color="#000000"];
+        wodenpy__array_layout__create_array_layout__calc_XYZ_diffs -> wodenpy__array_layout__create_array_layout__enh2xyz [style="solid",  color="#000000"];
+        wodenpy__array_layout__create_array_layout__calc_XYZ_diffs -> wodenpy__array_layout__create_array_layout__RTS_PrecessXYZtoJ2000 [style="solid",  color="#000000"];
+    }

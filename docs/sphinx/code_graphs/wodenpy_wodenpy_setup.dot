@@ -1,0 +1,75 @@
+digraph G {
+    graph [rankdir=LR, clusterrank="local"];
+    subgraph cluster_G {
+
+        graph [style="filled,rounded", fillcolor="#80808018", label=""];
+        run_woden [label="run_woden", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="0"];
+        wodenpy__wodenpy_setup__git_helper [label="wodenpy.wodenpy_setup.git_helper", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="1"];
+        wodenpy__wodenpy_setup__run_setup [label="wodenpy.wodenpy_setup.run_setup", style="filled", fillcolor="#ffffffb2", fontcolor="#000000", group="2"];
+        subgraph cluster_run_woden {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="run_woden"];
+            run_woden__main [label="main", style="filled", fillcolor="#feccccb2", fontcolor="#000000", group="0"];
+            run_woden__read_skymodel_thread [label="read_skymodel_thread", style="filled", fillcolor="#feccccb2", fontcolor="#000000", group="0"];
+            run_woden__woden_thread [label="woden_thread", style="filled", fillcolor="#feccccb2", fontcolor="#000000", group="0"];
+        }
+        subgraph cluster_wodenpy__wodenpy_setup__git_helper {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="wodenpy.wodenpy_setup.git_helper"];
+            wodenpy__wodenpy_setup__git_helper__get_commandline_output [label="get_commandline_output", style="filled", fillcolor="#b2ff65b2", fontcolor="#000000", group="1"];
+            wodenpy__wodenpy_setup__git_helper__make_gitdict [label="make_gitdict", style="filled", fillcolor="#b2ff65b2", fontcolor="#000000", group="1"];
+            wodenpy__wodenpy_setup__git_helper__retrieve_gitdict [label="retrieve_gitdict", style="filled", fillcolor="#b2ff65b2", fontcolor="#000000", group="1"];
+        }
+        subgraph cluster_wodenpy__wodenpy_setup__run_setup {
+
+            graph [style="filled,rounded", fillcolor="#80808018", label="wodenpy.wodenpy_setup.run_setup"];
+            wodenpy__wodenpy_setup__run_setup__check_args [label="check_args", style="filled", fillcolor="#65feffb2", fontcolor="#000000", group="2"];
+            wodenpy__wodenpy_setup__run_setup__get_antenna_order [label="get_antenna_order", style="filled", fillcolor="#65feffb2", fontcolor="#000000", group="2"];
+            wodenpy__wodenpy_setup__run_setup__get_code_version [label="get_code_version", style="filled", fillcolor="#65feffb2", fontcolor="#000000", group="2"];
+            wodenpy__wodenpy_setup__run_setup__get_parser [label="get_parser", style="filled", fillcolor="#65feffb2", fontcolor="#000000", group="2"];
+            wodenpy__wodenpy_setup__run_setup__select_argument_and_check [label="select_argument_and_check", style="filled", fillcolor="#65feffb2", fontcolor="#000000", group="2"];
+            wodenpy__wodenpy_setup__run_setup__select_correct_enh [label="select_correct_enh", style="filled", fillcolor="#65feffb2", fontcolor="#000000", group="2"];
+            subgraph cluster_wodenpy__wodenpy_setup__run_setup__get_parser {
+
+                graph [style="filled,rounded", fillcolor="#80808018", label="wodenpy.wodenpy_setup.run_setup.get_parser"];
+                wodenpy__wodenpy_setup__run_setup__get_parser__SmartFormatter [label="SmartFormatter", style="filled", fillcolor="#32feffb2", fontcolor="#000000", group="2"];
+                subgraph cluster_wodenpy__wodenpy_setup__run_setup__get_parser__SmartFormatter {
+
+                    graph [style="filled,rounded", fillcolor="#80808018", label="wodenpy.wodenpy_setup.run_setup.get_parser.SmartFormatter"];
+                    wodenpy__wodenpy_setup__run_setup__get_parser__SmartFormatter___split_lines [label="_split_lines", style="filled", fillcolor="#00feffb2", fontcolor="#000000", group="2"];
+                }
+            }
+        }
+    }
+        run_woden -> run_woden__woden_thread [style="dashed",  color="#838b8b"];
+        run_woden -> run_woden__main [style="dashed",  color="#838b8b"];
+        run_woden -> run_woden__read_skymodel_thread [style="dashed",  color="#838b8b"];
+        wodenpy__wodenpy_setup__git_helper -> wodenpy__wodenpy_setup__git_helper__get_commandline_output [style="dashed",  color="#838b8b"];
+        wodenpy__wodenpy_setup__git_helper -> wodenpy__wodenpy_setup__git_helper__retrieve_gitdict [style="dashed",  color="#838b8b"];
+        wodenpy__wodenpy_setup__git_helper -> wodenpy__wodenpy_setup__git_helper__make_gitdict [style="dashed",  color="#838b8b"];
+        wodenpy__wodenpy_setup__run_setup -> wodenpy__wodenpy_setup__run_setup__get_antenna_order [style="dashed",  color="#838b8b"];
+        wodenpy__wodenpy_setup__run_setup -> wodenpy__wodenpy_setup__run_setup__select_correct_enh [style="dashed",  color="#838b8b"];
+        wodenpy__wodenpy_setup__run_setup -> wodenpy__wodenpy_setup__run_setup__select_argument_and_check [style="dashed",  color="#838b8b"];
+        wodenpy__wodenpy_setup__run_setup -> wodenpy__wodenpy_setup__run_setup__get_code_version [style="dashed",  color="#838b8b"];
+        wodenpy__wodenpy_setup__run_setup -> wodenpy__wodenpy_setup__run_setup__get_parser [style="dashed",  color="#838b8b"];
+        wodenpy__wodenpy_setup__run_setup -> wodenpy__wodenpy_setup__run_setup__check_args [style="dashed",  color="#838b8b"];
+        wodenpy__wodenpy_setup__run_setup__get_parser -> wodenpy__wodenpy_setup__run_setup__get_parser__SmartFormatter [style="dashed",  color="#838b8b"];
+        wodenpy__wodenpy_setup__run_setup__get_parser__SmartFormatter -> wodenpy__wodenpy_setup__run_setup__get_parser__SmartFormatter___split_lines [style="dashed",  color="#838b8b"];
+        run_woden -> wodenpy__wodenpy_setup__run_setup__get_code_version [style="solid",  color="#000000"];
+        run_woden -> run_woden__main [style="solid",  color="#000000"];
+        run_woden -> wodenpy__wodenpy_setup__run_setup__get_parser [style="solid",  color="#000000"];
+        run_woden -> wodenpy__wodenpy_setup__run_setup__check_args [style="solid",  color="#000000"];
+        run_woden__main -> run_woden__woden_thread [style="solid",  color="#000000"];
+        run_woden__main -> wodenpy__wodenpy_setup__run_setup__get_antenna_order [style="solid",  color="#000000"];
+        run_woden__main -> run_woden__read_skymodel_thread [style="solid",  color="#000000"];
+        run_woden__main -> wodenpy__wodenpy_setup__run_setup__get_parser [style="solid",  color="#000000"];
+        run_woden__main -> wodenpy__wodenpy_setup__run_setup__check_args [style="solid",  color="#000000"];
+        run_woden__main -> wodenpy__wodenpy_setup__run_setup__get_code_version [style="solid",  color="#000000"];
+        wodenpy__wodenpy_setup__git_helper__make_gitdict -> wodenpy__wodenpy_setup__git_helper__get_commandline_output [style="solid",  color="#000000"];
+        wodenpy__wodenpy_setup__run_setup -> wodenpy__wodenpy_setup__git_helper__retrieve_gitdict [style="solid",  color="#000000"];
+        wodenpy__wodenpy_setup__run_setup__get_parser -> wodenpy__wodenpy_setup__run_setup__get_parser__SmartFormatter [style="solid",  color="#000000"];
+        wodenpy__wodenpy_setup__run_setup__check_args -> wodenpy__wodenpy_setup__run_setup__get_antenna_order [style="solid",  color="#000000"];
+        wodenpy__wodenpy_setup__run_setup__check_args -> wodenpy__wodenpy_setup__run_setup__select_correct_enh [style="solid",  color="#000000"];
+        wodenpy__wodenpy_setup__run_setup__check_args -> wodenpy__wodenpy_setup__run_setup__select_argument_and_check [style="solid",  color="#000000"];
+        wodenpy__wodenpy_setup__run_setup__get_code_version -> wodenpy__wodenpy_setup__git_helper__retrieve_gitdict [style="solid",  color="#000000"];
+    }

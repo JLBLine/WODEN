@@ -634,10 +634,10 @@ __global__ void kern_polarisation_fraction_linpol(int num_extrap_freqs,
 Assuming a list-type spectral model, extrapolates the flux for a given component and
 frequency.
 
-@param[in] user_precision_t *list_stokes Array containing all the list-fluxes used for the extrapolation.
-@param[in] double *list_freqs Array containing all the list-frequencies used for the extrapolation; must match order of `list_stokes`.
-@param[in] int *num_list_values Array containing the number of list values for each component.
-@param[in] int *list_start_indexes Array containing the starting index of each component within `list_stokes` and `list_freqs`.
+@param[in] list_stokes Array containing all the list-fluxes used for the extrapolation.
+@param[in] list_freqs Array containing all the list-frequencies used for the extrapolation; must match order of `list_stokes`.
+@param[in] arr_num_list_values Array containing the number of list values for each component.
+@param[in] list_start_indexes Array containing the starting index of each component within `list_stokes` and `list_freqs`.
 @param[in] d_extrap_freqs The frequencies to use for the extrapolation.
 @param[in] iFluxComp The index of the flux component to store the result in.
 @param[in] iFreq The index of the frequency component to extrapolate.
@@ -653,11 +653,11 @@ __device__ void extrap_stokes_list_fluxes(user_precision_t *list_stokes,
 
 @details Fills `extrap_stokes` with the extrapolated stokes flux densities. Runs the function `extrap_stokes_list_fluxes`. 
 
-@param[in] user_precision_t *list_stokes Array containing all the list-fluxes used for the extrapolation.
-@param[in] double *list_freqs Array containing all the list-frequencies used for the extrapolation; must match order of `list_stokes`.
-@param[in] int *num_list_values Array containing the number of list values for each component.
-@param[in] int *list_start_indexes Array containing the starting index of each component within `list_stokes` and `list_freqs`.
-@param[in] int *list_comp_inds Array containing the component index for list component; used to index the extrapolated fluxes to `extrap_stokes`.
+@param[in] list_stokes Array containing all the list-fluxes used for the extrapolation.
+@param[in] list_freqs Array containing all the list-frequencies used for the extrapolation; must match order of `list_stokes`.
+@param[in] num_list_values Array containing the number of list values for each component.
+@param[in] list_start_indexes Array containing the starting index of each component within `list_stokes` and `list_freqs`.
+@param[in] list_comp_inds Array containing the component index for list component; used to index the extrapolated fluxes to `extrap_stokes`.
 @param[in] num_extrap_freqs The number of extrapolation frequencies.
 @param[in] d_extrap_freqs Pointer to the array of extrapolation frequencies.
 @param[in] num_comps The number of components.

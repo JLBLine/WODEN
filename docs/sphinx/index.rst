@@ -34,6 +34,7 @@ Documentation
    operating_principles/operating_principles
    examples/example_simulations
    API_reference/API_index
+   code_graphs/code_graphs
 
 .. Indices and tables
 .. --------------------
