@@ -11,8 +11,8 @@ from queue import Queue
 from threading import Thread
 from ctypes import POINTER, c_double, c_float
 
-from wodenpy.use_libwoden.woden_settings import create_woden_settings, setup_lsts_and_phase_centre, Woden_Settings_Float, Woden_Settings_Double
-from wodenpy.use_libwoden.visibility_set import setup_visi_set_array, load_visibility_set, Visi_Set_Float, Visi_Set_Double
+from wodenpy.use_libwoden.woden_settings import create_woden_settings, setup_lsts_and_phase_centre
+from wodenpy.use_libwoden.visibility_set import setup_visi_set_array, load_visibility_set
 from wodenpy.wodenpy_setup.run_setup import get_parser, check_args, get_code_version
 from wodenpy.use_libwoden.use_libwoden import load_in_woden_library
 from wodenpy.observational.calc_obs import get_uvfits_date_and_position_constants, calc_jdcal
@@ -25,6 +25,7 @@ from wodenpy.uvfits.wodenpy_uvfits import make_antenna_table, make_baseline_date
 from wodenpy.phase_rotate.remove_phase_track import remove_phase_tracking
 from wodenpy.use_libwoden.shapelets import create_sbf
 from typing import Union
+from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 
 ##Constants
 R2D = 180.0 / np.pi
@@ -40,7 +41,14 @@ sbf_L = 10001
 sbf_c = 5000
 sbf_dx = 0.01
 
-def woden_thread(the_queue : Queue, run_woden, woden_settings : Union[Woden_Settings_Float, Woden_Settings_Double], visibility_set : Union[Visi_Set_Float, Visi_Set_Double], array_layout : Array_Layout,
+##This call is so we can use it as a type annotation
+woden_struct_classes = Woden_Struct_Classes()
+Woden_Settings = woden_struct_classes.Woden_Settings
+Visi_Set = woden_struct_classes.Visi_Set
+
+def woden_thread(the_queue : Queue, run_woden, woden_settings : Woden_Settings, #type: ignore
+                 visibility_set : Visi_Set, #type: ignore
+                 array_layout : Array_Layout,
                  sbf : np.ndarray):
     """
     This function runs WODEN C/CUDA code on a separate thread, processing source catalogues from a queue until the queue is empty.
@@ -51,9 +59,9 @@ def woden_thread(the_queue : Queue, run_woden, woden_settings : Union[Woden_Sett
         A queue of source catalogues to be processed.
     run_woden : _NamedFuncPointer
         A pointer to the WODEN function to be run.
-    woden_settings : Union[Woden_Settings_Float, Woden_Settings_Double]
+    woden_settings : Woden_Settings
         The WODEN settings to be used.
-    visibility_set : Union[Visi_Set_Float, Visi_Set_Double]
+    visibility_set : Visi_Set
         The visibility set to write outputs to.
     array_layout : Array_Layout
         The array layout to be used.
@@ -70,11 +78,12 @@ def woden_thread(the_queue : Queue, run_woden, woden_settings : Union[Woden_Sett
         run_woden(woden_settings, visibility_set, source_catalogue, array_layout,
                   sbf)
         
-def read_skymodel_thread(the_queue : Queue, chunked_skymodel_maps: list,
-                                    max_num_chunks : int,
-                                    lsts : np.ndarray, latitude : float,
-                                    args : argparse.Namespace,
-                                    beamtype : int):
+def read_skymodel_thread(the_queue : Queue, woden_struct_classes : Woden_Struct_Classes, 
+                         chunked_skymodel_maps: list,
+                         max_num_chunks : int,
+                         lsts : np.ndarray, latitude : float,
+                         args : argparse.Namespace,
+                         beamtype : int):
     """
     Reads a chunked skymodel map and puts the resulting source catalogue into a queue.
     
@@ -82,6 +91,9 @@ def read_skymodel_thread(the_queue : Queue, chunked_skymodel_maps: list,
     =============
     the_queue : Queue
         A queue to put the resulting source catalogue into.
+    woden_struct_classes : Woden_Struct_Classes
+        This holds all the various ctype structure classes that are equivalent
+        to the C/CUDA structs.
     chunked_skymodel_maps : list
         A list of chunked skymodel maps to read.
     max_num_chunks : int
@@ -103,12 +115,13 @@ def read_skymodel_thread(the_queue : Queue, chunked_skymodel_maps: list,
         print(f"Reading chunks skymodel chunks {lower_chunk_iter}:{lower_chunk_iter+max_num_chunks}")
         t_before = time()
     
-        source_catalogue = read_skymodel_chunks(args.cat_filename, chunk_map_subset,
-                                                     args.num_freq_channels,
-                                                     args.num_time_steps,
-                                                     beamtype,
-                                                     lsts, latitude,
-                                                     precision=args.precision)
+        source_catalogue = read_skymodel_chunks(woden_struct_classes, 
+                                                args.cat_filename, chunk_map_subset,
+                                                args.num_freq_channels,
+                                                args.num_time_steps,
+                                                beamtype,
+                                                lsts, latitude,
+                                                precision=args.precision)
         
         the_queue.put(source_catalogue, block=True)
         
@@ -160,10 +173,13 @@ def main(argv=None):
         pass
         
     else:
+        ##Generate the woden_struct_classes, which are used to mimic the C
+        ##structs. Must be made dynamically, as the precision can change
+        woden_struct_classes = Woden_Struct_Classes(args.precision)
+        
         ##Depending on what precision was selected by the user, load in the
         ##C/CUDA library and return the `run_woden` function
-
-        run_woden = load_in_woden_library(args.precision)
+        run_woden = load_in_woden_library(woden_struct_classes)
         
         num_baselines = int(((args.num_antennas - 1)*args.num_antennas) / 2)
 
@@ -174,7 +190,8 @@ def main(argv=None):
 
         ##populates a ctype equivalent of woden_settings struct to pass
         ##to the C library
-        woden_settings = create_woden_settings(args, jd_date, lst_deg)
+        woden_settings = create_woden_settings(woden_struct_classes.Woden_Settings(),
+                                               args, jd_date, lst_deg)
         
         ##fill the lst and mjds fields, precessing if necessary
         lsts = setup_lsts_and_phase_centre(woden_settings)
@@ -205,16 +222,17 @@ def main(argv=None):
                                           crop_by_component=crop_by_component)
         
         chunked_skymodel_maps = create_skymodel_chunk_map(comp_counter,
-                                            args.chunking_size, woden_settings.num_baselines,
-                                            args.num_freq_channels,
-                                            args.num_time_steps)
+                                                          args.chunking_size, woden_settings.num_baselines,
+                                                          args.num_freq_channels,
+                                                          args.num_time_steps)
         
         ##Create the shapelet basis functions
         sbf = create_sbf(precision=args.precision)
 
         ##Create an array of visibility_sets, which get fed into run_woden
         ##and store the output visibilities
-        visi_set_array = setup_visi_set_array(len(args.band_nums), num_visis,
+        visi_set_array = setup_visi_set_array(woden_struct_classes.Visi_Set,
+                                              len(args.band_nums), num_visis,
                                               precision=args.precision)
 
         ###---------------------------------------------------------------------
@@ -231,7 +249,8 @@ def main(argv=None):
         the_queue = Queue(maxsize=1)
         
         t1 = Thread(target = read_skymodel_thread,
-                    args =(the_queue, chunked_skymodel_maps,
+                    args =(the_queue, woden_struct_classes, 
+                                    chunked_skymodel_maps,
                                     max_num_chunks, lsts,
                                     woden_settings.latitude, args,
                                     woden_settings.beamtype), daemon=True)
@@ -317,6 +336,7 @@ def main(argv=None):
                           longitude=args.longitude, latitude=args.latitude,
                           array_height=args.array_height,
                           telescope_name=args.telescope_name,
+                          IAU_order=args.IAU_order,
                           comment=args.command)
 
 if __name__ == "__main__":

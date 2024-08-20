@@ -14,15 +14,28 @@ class Components_Map(object):
     GAUSSIAN or SHAPELET type.
     
     
-    :cvar bool power_orig_inds: Relative indexes w.r.t all power-law components in the original sky model for power components.
-    :cvar bool curve_orig_inds: Relative indexes w.r.t all curved power-law components in the original sky model for curve components.
-    :cvar bool list_orig_inds: Relative indexes w.r.t all list-type components in the original sky model for list components.
+    :cvar bool power_orig_inds: Relative indexes for all power-law components w.r.t to the original sky model.
+    :cvar bool curve_orig_inds: Relative indexes for all curved power-law components w.r.t to the original sky model.
+    :cvar bool list_orig_inds: Relative indexes for all list-type components w.r.t to the original sky model.
     :cvar bool power_shape_basis_inds: Index of a basis function entry relative to its component for power components.
     :cvar bool curve_shape_basis_inds: Index of a basis function entry relative to its component for curve components.
     :cvar bool list_shape_basis_inds: Index of a basis function entry relative to its component for list components.
-    :cvar float lowest_file_num: The line in the original sky model file that each component appears in. Ignore all lines before the smallest line number for all components in this chunk, makes reading faster.
+    :cvar int lowest_file_num: The line in the original sky model file that each component appears in. Ignore all lines before the smallest line number for all components in this chunk, makes reading faster.
     :cvar int total_num_flux_entires: Number of flux list entries there are in total so we can allocate correct amount when reading in full information.
     :cvar int total_shape_coeffs: Number of shapelet basis functions that are in total so we can allocate correct amount when reading in full information.
+    :cvar int num_v_pol_fracs: Number of Stokes V fractional polarisation types.
+    :cvar int num_v_powers: Number of Stokes V power-law components.
+    :cvar int num_v_curves: Number of Stokes V curved power-law components.
+    :cvar bool v_pol_frac_orig_inds: Relative indexes for all Stokes V fractional polarisation components w.r.t the original sky model.
+    :cvar bool v_power_orig_inds: Relative indexes for all Stokes V power-law components w.r.t the original sky model
+    :cvar bool v_curve_orig_inds: Relative indexes for all Stokes V curved power-law components w.r.t the original sky model
+    :cvar int num_lin_pol_fracs: Number of Linear polarisation fractional polarisation types.
+    :cvar int num_lin_powers: Number of Linear polarisation power-law components.
+    :cvar int num_lin_curves: Number of Linear polarisation curved power-law components.
+    :cvar int num_lin_angles: Total number of Linear polarisation angle components (num_lin_pol_fracs + num_lin_powers + num_lin_curves).
+    :cvar bool lin_pol_frac_orig_inds: Relative indexes for all Linear polarisation fractional polarisation components w.r.t the original sky model.
+    :cvar bool lin_power_orig_inds: Relative indexes for all Linear polarisation power-law components w.r.t the original sky model
+    :cvar bool lin_curve_orig_inds: Relative indexes for all Linear polarisation curved power-law components w.r.t the original sky model
     
     """
     ##Mapping information for a set of components, of either POINT,
@@ -51,6 +64,7 @@ class Components_Map(object):
         ##the line in the original sky model file that each component
         ##appears in. Ignore all lines before the smallest line number
         ##for all components in this chunk, makes reading faster
+        ##only applied to txt/yaml models
         self.lowest_file_num = np.nan
         
         ##use this to count how many flux list entries there are in total
@@ -60,6 +74,36 @@ class Components_Map(object):
         #use this to count how many shapelet basis functions that are in total
         #so we can allocate correct amount when reading in full information
         self.total_shape_coeffs = 0
+        
+        ##count polarised flux types
+        #so we can allocate correct amount when reading in full information
+        self.num_v_pol_fracs = 0
+        self.num_v_powers = 0
+        self.num_v_curves = 0
+        self.num_v_lists = 0
+        self.v_pol_frac_orig_inds = False
+        self.v_power_orig_inds = False
+        self.v_curve_orig_inds = False
+        self.v_list_orig_inds = False
+        
+        self.total_num_v_flux_entires = 0
+        
+        self.num_lin_pol_fracs = 0
+        self.num_lin_powers = 0
+        self.num_lin_curves = 0
+        self.num_lin_lists = 0
+        self.num_lin_p_lists = 0
+        self.num_lin_angles = 0
+        self.lin_pol_frac_orig_inds = False
+        self.lin_power_orig_inds = False
+        self.lin_curve_orig_inds = False
+        self.lin_list_orig_inds = False
+        self.lin_p_list_orig_inds = False
+        
+        self.total_num_u_flux_entires = 0
+        self.total_num_q_flux_entires = 0
+        self.total_num_lin_p_flux_entires = 0
+        
     
     
 class Skymodel_Chunk_Map(object):
@@ -148,67 +192,9 @@ class Skymodel_Chunk_Map(object):
         ##added, gets updated by `use_libwoden.add_info_to_source_catalogue`
         ##when reading in the full model from the catalogue file
         self.current_shape_basis_index = 0
-            
-    def make_all_orig_inds_array(self):
-        """Look through all component and flux types and consolidate into one
-        array `self.all_orig_inds` of original component indexes. Use this when reading in full
-        information from the sky model"""
         
-        self.all_orig_inds = np.empty(self.n_points + self.n_gauss + self.n_shape_coeffs, dtype=int)
-        
-        lowest_file_lines = []
-        
-        if self.n_points > 0:
-            lowest_file_lines.append(self.point_components.lowest_file_num)
-            low_ind = 0
-            if self.n_point_powers > 0:
-                self.all_orig_inds[low_ind:low_ind+self.n_point_powers] = self.point_components.power_orig_inds
-                low_ind += self.n_point_powers
-                
-            if self.n_point_curves > 0:
-                self.all_orig_inds[low_ind:low_ind+self.n_point_curves] = self.point_components.curve_orig_inds
-                low_ind += self.n_point_curves
-                
-            if self.n_point_lists > 0:
-                self.all_orig_inds[low_ind:low_ind+self.n_point_lists] = self.point_components.list_orig_inds
-                low_ind += self.n_point_lists
-                
-        if self.n_gauss > 0:
-            lowest_file_lines.append(self.gauss_components.lowest_file_num)
-            low_ind = self.n_points
-            if self.n_gauss_powers > 0:
-                self.all_orig_inds[low_ind:low_ind+self.n_gauss_powers] = self.gauss_components.power_orig_inds
-                low_ind += self.n_gauss_powers
-                
-            if self.n_gauss_curves > 0:
-                self.all_orig_inds[low_ind:low_ind+self.n_gauss_curves] = self.gauss_components.curve_orig_inds
-                low_ind += self.n_gauss_curves
-                
-            if self.n_gauss_lists > 0:
-                self.all_orig_inds[low_ind:low_ind+self.n_gauss_lists] = self.gauss_components.list_orig_inds
-                low_ind += self.n_gauss_lists
-        
-        if self.n_shapes > 0:
-            
-            lowest_file_lines.append(self.shape_components.lowest_file_num)
-            low_ind = self.n_points + self.n_gauss
-            if self.n_shape_powers > 0:
-                
-                power_indexes = self.shape_components.power_shape_orig_inds
-                self.all_orig_inds[low_ind:low_ind+len(power_indexes)] = power_indexes
-                low_ind += len(power_indexes)
-                
-            if self.n_shape_curves > 0:
-                curve_indexes = self.shape_components.curve_shape_orig_inds
-                self.all_orig_inds[low_ind:low_ind+len(curve_indexes)] = curve_indexes
-                low_ind += len(curve_indexes)
-                
-            if self.n_shape_lists > 0:
-                list_indexes = self.shape_components.list_shape_orig_inds
-                self.all_orig_inds[low_ind:low_ind+len(list_indexes)] = list_indexes
-                low_ind += len(list_indexes)
-                
-        self.lowest_file_number = min(lowest_file_lines)
+        ##Does the catalogue have the INTR_POL_ANGLE column?
+        self.has_intr_pol_angle = False
             
     def print_info(self):
         """
@@ -364,6 +350,135 @@ def increment_flux_type_counters(power_iter : int, curve_iter : int,
 
     return power_iter, curve_iter, list_iter, num_chunk_power, num_chunk_curve, num_chunk_list
 
+
+def fill_chunk_map_polarised_info(comp_type : CompTypes,
+        chunk_map : Skymodel_Chunk_Map,
+        cropped_comp_counter : Component_Type_Counter) -> Skymodel_Chunk_Map:
+    """This should be called within map_chunk_pointgauss or map_chunk_shapelet,
+    as a bunch of things should be filled"""
+    
+    if comp_type == CompTypes.POINT:
+    
+        components = chunk_map.point_components
+        v_pol_frac_inds = cropped_comp_counter.orig_v_point_pol_frac_inds
+        v_power_inds = cropped_comp_counter.orig_v_point_power_inds
+        v_curve_inds = cropped_comp_counter.orig_v_point_curve_inds
+        v_list_inds = cropped_comp_counter.orig_v_point_list_inds
+        lin_pol_frac_inds = cropped_comp_counter.orig_lin_point_pol_frac_inds
+        lin_power_inds = cropped_comp_counter.orig_lin_point_power_inds
+        lin_curve_inds = cropped_comp_counter.orig_lin_point_curve_inds
+        lin_list_inds = cropped_comp_counter.orig_lin_point_list_inds
+        lin_p_list_inds = cropped_comp_counter.orig_lin_point_p_list_inds
+        
+    elif comp_type == CompTypes.GAUSSIAN:
+        
+        components = chunk_map.gauss_components
+        v_pol_frac_inds = cropped_comp_counter.orig_v_gauss_pol_frac_inds
+        v_power_inds = cropped_comp_counter.orig_v_gauss_power_inds
+        v_curve_inds = cropped_comp_counter.orig_v_gauss_curve_inds
+        v_list_inds = cropped_comp_counter.orig_v_gauss_list_inds
+        lin_pol_frac_inds = cropped_comp_counter.orig_lin_gauss_pol_frac_inds
+        lin_power_inds = cropped_comp_counter.orig_lin_gauss_power_inds
+        lin_curve_inds = cropped_comp_counter.orig_lin_gauss_curve_inds
+        lin_list_inds = cropped_comp_counter.orig_lin_gauss_list_inds
+        lin_p_list_inds = cropped_comp_counter.orig_lin_gauss_p_list_inds
+        
+    else:
+        components = chunk_map.shape_components
+        v_pol_frac_inds = cropped_comp_counter.orig_v_shape_pol_frac_inds
+        v_power_inds = cropped_comp_counter.orig_v_shape_power_inds
+        v_curve_inds = cropped_comp_counter.orig_v_shape_curve_inds
+        v_list_inds = cropped_comp_counter.orig_v_shape_list_inds
+        lin_pol_frac_inds = cropped_comp_counter.orig_lin_shape_pol_frac_inds
+        lin_power_inds = cropped_comp_counter.orig_lin_shape_power_inds
+        lin_curve_inds = cropped_comp_counter.orig_lin_shape_curve_inds
+        lin_list_inds = cropped_comp_counter.orig_lin_shape_list_inds
+        lin_p_list_inds = cropped_comp_counter.orig_lin_shape_p_list_inds
+        
+    ##Default things to being zero
+    components.num_v_pol_fracs = 0
+    components.num_v_powers = 0
+    components.num_v_curves = 0
+    components.num_v_lists = 0
+    components.num_lin_pol_fracs = 0
+    components.num_lin_powers = 0
+    components.num_lin_curves = 0
+    components.num_lin_lists = 0
+    components.num_lin_p_lists = 0
+    
+    ##OK, we want to find if there was any polarisation information in this
+    ##chunk, so we use np.intersect1d, which finds the common elements between
+    ##two arrays
+    ##Doesn't matter what Stokes I flux type, if any of them have polarisation
+    ##info we want to know, so combine them into one array
+    
+    all_orig_inds = np.concatenate((components.power_orig_inds,
+                                   components.curve_orig_inds,
+                                   components.list_orig_inds))
+    ##These index arrays will be False by default, so test if they are a
+    ##numpy array, and proceed if they are
+    if type(v_pol_frac_inds) == np.ndarray:
+        components.v_pol_frac_orig_inds = np.intersect1d(v_pol_frac_inds, all_orig_inds)
+        components.num_v_pol_fracs = len(components.v_pol_frac_orig_inds)
+        
+    if type(v_power_inds) == np.ndarray:
+        components.v_power_orig_inds = np.intersect1d(v_power_inds, all_orig_inds)    
+        components.num_v_powers = len(components.v_power_orig_inds)
+        
+    if type(v_curve_inds) == np.ndarray:
+        components.v_curve_orig_inds = np.intersect1d(v_curve_inds, all_orig_inds)
+        components.num_v_curves = len(components.v_curve_orig_inds)
+        
+    if type(v_list_inds) == np.ndarray:
+        components.v_list_orig_inds = np.intersect1d(v_list_inds, all_orig_inds)
+        components.num_v_lists = len(components.v_list_orig_inds)
+        
+        ##Each list-type flux entry can have a different number of entires
+        ##as sometimes you have NaNs in a column etc. Count the total here as
+        ##we need it for mallocing later
+        list_inds = np.where(np.isin(cropped_comp_counter.orig_comp_indexes, components.v_list_orig_inds) == True)[0]
+        components.total_num_v_flux_entires = np.sum(cropped_comp_counter.num_v_list_fluxes[list_inds])
+        # print("HAS VALUE", components.total_num_v_flux_entires, list_inds, cropped_comp_counter.num_v_list_fluxes)
+        
+        
+    if type(lin_pol_frac_inds) == np.ndarray:
+        components.lin_pol_frac_orig_inds = np.intersect1d(lin_pol_frac_inds, all_orig_inds)
+        components.num_lin_pol_fracs = len(components.lin_pol_frac_orig_inds)
+        
+    if type(lin_power_inds) == np.ndarray:
+        components.lin_power_orig_inds = np.intersect1d(lin_power_inds, all_orig_inds)
+        components.num_lin_powers = len(components.lin_power_orig_inds)
+        
+    if type(lin_curve_inds) == np.ndarray:
+        components.lin_curve_orig_inds = np.intersect1d(lin_curve_inds, all_orig_inds)
+        components.num_lin_curves = len(components.lin_curve_orig_inds)
+        
+    if type(lin_list_inds) == np.ndarray:
+        components.lin_list_orig_inds = np.intersect1d(lin_list_inds, all_orig_inds)
+        components.num_lin_lists = len(components.lin_list_orig_inds)
+        list_inds = np.where(np.isin(cropped_comp_counter.orig_comp_indexes, components.lin_list_orig_inds) == True)[0]
+        components.total_num_q_flux_entires = np.sum(cropped_comp_counter.num_q_list_fluxes[list_inds])
+        components.total_num_u_flux_entires = np.sum(cropped_comp_counter.num_u_list_fluxes[list_inds])
+        
+        
+    if type(lin_p_list_inds) == np.ndarray:
+        components.lin_p_list_orig_inds = np.intersect1d(lin_p_list_inds, all_orig_inds)
+        components.num_lin_p_lists = len(components.lin_p_list_orig_inds)
+        
+        list_inds = np.where(np.isin(cropped_comp_counter.orig_comp_indexes, components.lin_p_list_orig_inds) == True)[0]
+        
+        # print('YO', lin_p_list_inds)
+        # print("HOL UP", components.num_lin_p_lists, list_inds, cropped_comp_counter.num_p_list_fluxes[list_inds]) #cropped_comp_counter.num_p_list_fluxes
+        
+        components.total_num_lin_p_flux_entires = np.sum(cropped_comp_counter.num_p_list_fluxes[list_inds])
+        
+    ##Don't count num_lin_lists in the angles, because that model doesn't
+    ##use the rotation measure
+    components.num_lin_angles = components.num_lin_pol_fracs + components.num_lin_powers \
+                              + components.num_lin_curves + components.num_lin_p_lists
+    
+    return chunk_map
+
 def fill_chunk_component(comp_type : CompTypes,
                          cropped_comp_counter : Component_Type_Counter,
                          power_iter: int, num_chunk_power : int,
@@ -412,9 +527,7 @@ def fill_chunk_component(comp_type : CompTypes,
         power_inds = cropped_comp_counter.orig_point_power_inds
         curve_inds = cropped_comp_counter.orig_point_curve_inds
         list_inds = cropped_comp_counter.orig_point_list_inds
-        
-        cropped_power_inds = np.where(cropped_comp_counter.comp_types == CompTypes.POINT_POWER.value)[0]
-        cropped_curve_inds = np.where(cropped_comp_counter.comp_types == CompTypes.POINT_CURVE.value)[0]
+        ##Need this to count the total number of list type flux entries
         cropped_list_inds = np.where(cropped_comp_counter.comp_types == CompTypes.POINT_LIST.value)[0]
         
     elif comp_type == CompTypes.GAUSSIAN:
@@ -427,28 +540,22 @@ def fill_chunk_component(comp_type : CompTypes,
         power_inds = cropped_comp_counter.orig_gauss_power_inds
         curve_inds = cropped_comp_counter.orig_gauss_curve_inds
         list_inds = cropped_comp_counter.orig_gauss_list_inds
-        
-        cropped_power_inds = np.where(cropped_comp_counter.comp_types == CompTypes.GAUSS_POWER.value)[0]
-        cropped_curve_inds = np.where(cropped_comp_counter.comp_types == CompTypes.GAUSS_CURVE.value)[0]
+        ##Need this to count the total number of list type flux entries
         cropped_list_inds = np.where(cropped_comp_counter.comp_types == CompTypes.GAUSS_LIST.value)[0]
         
-        
+    ##chop everything down to what we want in this chunk
     components.power_orig_inds = power_inds[power_iter:power_iter+num_chunk_power]
     components.curve_orig_inds = curve_inds[curve_iter:curve_iter+num_chunk_curve]
     components.list_orig_inds = list_inds[list_iter:list_iter+num_chunk_list]
     
-    cropped_power_inds = cropped_power_inds[power_iter:power_iter+num_chunk_power]
-    cropped_curve_inds = cropped_curve_inds[curve_iter:curve_iter+num_chunk_curve]
+    # do this one to count how many flux entries there are in total
     cropped_list_inds = cropped_list_inds[list_iter:list_iter+num_chunk_list]
-    
     components.total_num_flux_entires = np.sum(cropped_comp_counter.num_list_fluxes[cropped_list_inds])
     
-    min_comp_inds = []
-    if len(cropped_power_inds) > 0: min_comp_inds.append(components.power_orig_inds.min())
-    if len(cropped_curve_inds) > 0: min_comp_inds.append(components.curve_orig_inds.min())
-    if len(cropped_list_inds) > 0: min_comp_inds.append(components.list_orig_inds.min())
+    ##Now add in any polarisation mapping as needed
+    fill_chunk_map_polarised_info(comp_type, chunk_map, cropped_comp_counter)
     
-    components.min_comp_ind = np.min(min_comp_inds)
+    # print(components.num_v_pol_fracs,components.num_v_powers,components.num_v_curves,components.num_lin_pol_fracs,components.num_lin_powers,components.num_lin_curves)
     
     return chunk_map
     
@@ -544,9 +651,9 @@ def map_chunk_pointgauss(cropped_comp_counter : Component_Type_Counter,
                                              power_iter, num_chunk_power,
                                              curve_iter, num_chunk_curve,
                                              list_iter, num_chunk_list)
+            
+        chunk_map.has_intr_pol_angle = cropped_comp_counter.has_intr_pol_angle
     
-        chunk_map.make_all_orig_inds_array()
-
         return chunk_map
 
 
@@ -692,7 +799,7 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
     ##shorthand so we're not typing as many things
     components = chunk_map.shape_components
     
-    ##TODO need some way to know what shapelet basis function indexes we
+    ##need some way to know what shapelet basis function indexes we
     ##want; similar to orig_comp_ind but for the basis functions
     components.power_shape_orig_inds = power_shape_orig_inds
     components.curve_shape_orig_inds = curve_shape_orig_inds
@@ -712,9 +819,6 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
     
     ##these are the indexes of each included component, within the cropped
     ##sky model itself
-    
-    cropped_power_inds = np.where(np.isin(cropped_comp_counter.orig_comp_indexes, power_orig_inds) == True)[0]
-    cropped_curve_inds = np.where(np.isin(cropped_comp_counter.orig_comp_indexes, curve_orig_inds) == True)[0]
     cropped_list_inds = np.where(np.isin(cropped_comp_counter.orig_comp_indexes, list_orig_inds) == True)[0]
     
     ##if we have list type fluxes, count have many entries in total there are
@@ -723,7 +827,10 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
         
         components.total_num_flux_entires = np.sum(cropped_comp_counter.num_list_fluxes[cropped_list_inds])
     
-    chunk_map.make_all_orig_inds_array()
+    ##chuck in any polarisation information if needed
+    fill_chunk_map_polarised_info(CompTypes.SHAPELET, chunk_map, cropped_comp_counter)
+    
+    chunk_map.has_intr_pol_angle = cropped_comp_counter.has_intr_pol_angle
     
     return chunk_map
 

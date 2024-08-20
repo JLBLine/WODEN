@@ -58,7 +58,7 @@ copyright = '2024, J.L.B. Line'
 author = 'J.L.B. Line'
 
 # The full version, including alpha/beta/rc tags
-release = '2.2'
+release = '2.3'
 
 # -- General configuration ---------------------------------------------------
 
@@ -77,8 +77,11 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.coverage',
     'sphinx.ext.autosectionlabel',
-    'breathe'
+    'breathe',
+    "myst_nb",
 ]
+
+nb_execution_mode = "off"
 
 todo_include_todos = True
 

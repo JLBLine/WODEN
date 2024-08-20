@@ -92,7 +92,7 @@ As `WODEN` is written primarily for the MWA, the simplest way to feed in observa
 ```bash
 run_woden.py \
     --ra0=50.67 --dec0=-37.2 \
-    --cat_filename=srclist_msclean_fornaxA_phase1+2.txt \
+    --cat_filename=srclist_msclean_fornaxA_phase1+2.fits \
     --metafits_filename=1202815152_metafits_ppds.fits \
     --primary_beam=MWA_FEE
 ```
@@ -101,7 +101,7 @@ where the array layout, observational settings, frequency and time resolution ar
 ```bash
 run_woden.py \
     --ra0=50.67 --dec0=-37.2 \
-    --cat_filename=srclist_msclean_fornaxA_phase1+2.txt \
+    --cat_filename=srclist_msclean_fornaxA_phase1+2.fits \
     --primary_beam=MWA_FEE \
     --MWA_FEE_delays=[6,4,2,0,8,6,4,2,10,8,6,4,12,10,8,6] \
     --lowest_channel_freq=169.6e+6 \
@@ -114,5 +114,7 @@ run_woden.py \
 
 `WODEN` can read in an array layout as specified in local east, north, and height, and can simulate for any location on Earth (defaults to the MWA but you can specify Earth location with `--longitude` / `--latitude`).
 
-## 4. WODEN sky model
-The `WODEN` sky model uses point sources, elliptical Gaussians, and shapelet models. All sources can either have power-law, curved power law, or list of flux densities spectral behaviour. A full [breakdown of the sky model lives here on readthedocs](https://woden.readthedocs.io/en/latest/operating_principles/skymodel.html), along with the possible formats to feed into `WODEN`.
+## 4. LoBES/hyperdrive/WODEN sky model
+This sky model uses point sources, elliptical Gaussians, and shapelet models. All sources can either have power-law, curved power-law, or list of flux densities for Stokes I spectral behaviour. It can optionally also have a polarisation fraction, power-law, or curved power-law for linear (Q and U) and circular (V) polarisation.
+
+ A full [breakdown of the sky model lives here on readthedocs](https://woden.readthedocs.io/en/latest/operating_principles/skymodel.html), along with the possible formats to feed into `WODEN`.

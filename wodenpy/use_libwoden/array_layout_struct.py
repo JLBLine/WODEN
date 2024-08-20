@@ -4,8 +4,7 @@ import sys
 import os
 from typing import Union
 import argparse
-
-from wodenpy.use_libwoden.woden_settings import Woden_Settings_Float, Woden_Settings_Double
+from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 
 VELC = 299792458.0
 
@@ -42,7 +41,11 @@ class Array_Layout(Structure):
                 ("num_tiles", c_int),
                 ("lst_base", c_double)]
     
-def setup_array_layout(woden_settings : Union[Woden_Settings_Float, Woden_Settings_Double], args : argparse.Namespace) -> Array_Layout:
+##This call is so we can use it as a type annotation
+woden_struct_classes = Woden_Struct_Classes()
+Woden_Settings = woden_struct_classes.Woden_Settings
+    
+def setup_array_layout(woden_settings : Woden_Settings, args : argparse.Namespace) -> Array_Layout: #type: ignore
     """Given the populated Woden_Settings struct and the command line arguments, set up the `array_layout` struct, and fill it with the correct values, as well as doing the equivalent of a "malloc" for the arrays:
      - array_layout.ant_X
      - array_layout.ant_Y
@@ -53,7 +56,7 @@ def setup_array_layout(woden_settings : Union[Woden_Settings_Float, Woden_Settin
 
     Parameters
     ----------
-    woden_settings : Union[Woden_Settings_Float, Woden_Settings_Double]
+    woden_settings : Woden_Settings
         Populated Woden_Settings struct.
     args : argparse.Namespace
         Input arguments from the command line that have been checked using

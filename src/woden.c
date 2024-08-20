@@ -31,7 +31,6 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
   //Is everything OK integer
   int status=0;
 
-
   //Setup some beam settings given user chose parameters
   beam_settings_t *beam_settings = fill_primary_beam_settings(woden_settings,
                                                               woden_settings->lsts);

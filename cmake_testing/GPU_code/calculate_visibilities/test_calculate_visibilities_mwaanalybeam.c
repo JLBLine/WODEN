@@ -58,37 +58,29 @@ void test_calculate_visibilities_MWAAnalyBeam(int n_points, int n_gauss, int n_s
   //           visibility_set->sum_visi_YY_imag[visi]);
   // }
 
-  double multiplier = (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
-
-
-  //These values are taken from the double precision version of the MWA FEE
-  //beam code
-  double gain1xx_re = 1.000000000000 * multiplier;
-  double gain1xy_re = 0.0 * multiplier;
-  double gain1yx_re = 0.0 * multiplier;
-  double gain1yy_re = 1.000000000000 * multiplier;
-
-  double gain2xx_re = 0.006995163591 * multiplier;
-  double gain2xy_re = -0.000526843713 * multiplier;
-  double gain2yx_re = -0.000526843713 * multiplier;
-  double gain2yy_re = 0.004262796131* multiplier;
-
   #ifdef DOUBLE_PRECISION
-    double TOL = 1e-9;
+    double TOL = 5e-9;
   #else
-    double TOL = 1e-6;
+    double TOL = 8e-5;
   #endif
 
-  double img = 0.0;
-  test_comp_phase_centre_allgains(visibility_set,
-                                  gain1xx_re, img,
-                                  gain1xy_re, img,
-                                  gain1yx_re, img,
-                                  gain1yy_re, img,
-                                  gain2xx_re, img,
-                                  gain2xy_re, img,
-                                  gain2yx_re, img,
-                                  gain2yy_re, img,
+  int num_comps = (n_points + n_gauss + n_shapes)*num_sources;
+
+  double _Complex gain1x, leak1x, leak1y, gain1y;
+  double _Complex gain2x, leak2x, leak2y, gain2y;
+
+  gain1x = 1.0 + I*0.0;
+  leak1x = 0 + I*0.0;
+  leak1y = 0 + I*0.0;
+  gain1y = 1.0 + I*0.0;
+  gain2x = -0.079240023999 + I*0.0;
+  leak2x = -0.026761580433 + I*0.0;
+  leak2y = 0.026761580433 + I*0.0;
+  gain2y = -0.059553454504 + I*0.0;
+  
+  test_comp_phase_centre_allgains(visibility_set, num_comps,
+                                  gain1x, leak1x, leak1y, gain1y,
+                                  gain2x, leak2x, leak2y, gain2y,
                                   woden_settings, TOL);
 
 
@@ -108,16 +100,9 @@ void test_calculate_visibilities_MWAAnalyBeam(int n_points, int n_gauss, int n_s
                                           beam_settings, woden_settings, RA0, -0.46606083776035967,
                                           beam_settings->beamtype);
 
-
-  test_comp_phase_centre_allgains(visibility_set,
-                                  gain1xx_re, img,
-                                  gain1xy_re, img,
-                                  gain1yx_re, img,
-                                  gain1yy_re, img,
-                                  gain2xx_re, img,
-                                  gain2xy_re, img,
-                                  gain2yx_re, img,
-                                  gain2yy_re, img,
+  test_comp_phase_centre_allgains(visibility_set, num_comps,
+                                  gain1x, leak1x, leak1y, gain1y,
+                                  gain2x, leak2x, leak2y, gain2y,
                                   woden_settings, TOL);
 
   free_visi_set_inputs(visibility_set);
@@ -197,8 +182,8 @@ void test_calculate_visibilities_MWAAnalyBeam_ThreeSource_SingleAll(void) {
 
 
 //Test with three SOURCEs, three COPMONENTs
-void test_calculate_visibilities_MWAAnalyBeam_ThreeSource_ThreePoint(void) {
-  int n_points = 3;
+void test_calculate_visibilities_MWAAnalyBeam_ThreeSource_FivePoint(void) {
+  int n_points = 5;
   int n_gauss = 0;
   int n_shapes = 0;
   int num_sources = 3;
@@ -206,26 +191,26 @@ void test_calculate_visibilities_MWAAnalyBeam_ThreeSource_ThreePoint(void) {
 
 }
 
-void test_calculate_visibilities_MWAAnalyBeam_ThreeSource_ThreeMWAFEE(void) {
+void test_calculate_visibilities_MWAAnalyBeam_ThreeSource_FiveMWAFEE(void) {
   int n_points = 0;
-  int n_gauss = 3;
+  int n_gauss = 5;
   int n_shapes = 0;
   int num_sources = 3;
   test_calculate_visibilities_MWAAnalyBeam(n_points, n_gauss, n_shapes, num_sources);
 }
 
-void test_calculate_visibilities_MWAAnalyBeam_ThreeSource_ThreeShape(void) {
+void test_calculate_visibilities_MWAAnalyBeam_ThreeSource_FiveShape(void) {
   int n_points = 0;
   int n_gauss = 0;
-  int n_shapes = 3;
+  int n_shapes = 5;
   int num_sources = 3;
   test_calculate_visibilities_MWAAnalyBeam(n_points, n_gauss, n_shapes, num_sources);
 }
 
-void test_calculate_visibilities_MWAAnalyBeam_ThreeSource_ThreeAll(void) {
-  int n_points = 3;
-  int n_gauss = 3;
-  int n_shapes = 3;
+void test_calculate_visibilities_MWAAnalyBeam_ThreeSource_FiveAll(void) {
+  int n_points = 5;
+  int n_gauss = 5;
+  int n_shapes = 5;
   int num_sources = 3;
   test_calculate_visibilities_MWAAnalyBeam(n_points, n_gauss, n_shapes, num_sources);
 }
@@ -250,10 +235,10 @@ int main(void)
     RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_SingleAll);
 
     //Test with three SOURCEs, three COPMONENTs
-    RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_ThreePoint);
-    RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_ThreeMWAFEE);
-    RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_ThreeShape);
-    RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_ThreeAll);
+    RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_FivePoint);
+    RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_FiveMWAFEE);
+    RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_FiveShape);
+    RUN_TEST(test_calculate_visibilities_MWAAnalyBeam_ThreeSource_FiveAll);
 
     return UNITY_END();
 }

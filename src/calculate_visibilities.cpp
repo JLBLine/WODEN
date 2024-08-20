@@ -32,14 +32,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     use_twobeams = 1;
     num_beams = woden_settings->num_ants;
   }
-  // else {
-  //   use_twobeams = 0;
-  //   num_beams = 1;
-  // }
 
   //TODO - once rotation measure has been implemented, this should be set
   //only if we are using a rotation measure
-  int do_QUV = woden_settings->do_QUV;
 
   const int num_baselines = woden_settings->num_baselines;
   const int num_time_steps = woden_settings->num_time_steps;
@@ -63,32 +58,32 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   double *d_Y_diff = NULL;
   double *d_Z_diff = NULL;
 
-  ( gpuMalloc( (void**)&d_X_diff,
-                                 num_time_steps*num_baselines*sizeof(double) ) );
-  ( gpuMemcpy( d_X_diff, array_layout->X_diff_metres,
-        num_time_steps*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
-  ( gpuMalloc( (void**)&d_Y_diff,
-                                 num_time_steps*num_baselines*sizeof(double) ) );
-  ( gpuMemcpy( d_Y_diff, array_layout->Y_diff_metres,
-        num_time_steps*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
-  ( gpuMalloc( (void**)&d_Z_diff,
-                                 num_time_steps*num_baselines*sizeof(double) ) );
-  ( gpuMemcpy( d_Z_diff, array_layout->Z_diff_metres,
-        num_time_steps*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
+   gpuMalloc( (void**)&d_X_diff,
+                                 num_time_steps*num_baselines*sizeof(double) );
+   gpuMemcpy( d_X_diff, array_layout->X_diff_metres,
+        num_time_steps*num_baselines*sizeof(double), gpuMemcpyHostToDevice );
+   gpuMalloc( (void**)&d_Y_diff,
+                                 num_time_steps*num_baselines*sizeof(double) );
+   gpuMemcpy( d_Y_diff, array_layout->Y_diff_metres,
+        num_time_steps*num_baselines*sizeof(double), gpuMemcpyHostToDevice );
+   gpuMalloc( (void**)&d_Z_diff,
+                                 num_time_steps*num_baselines*sizeof(double) );
+   gpuMemcpy( d_Z_diff, array_layout->Z_diff_metres,
+        num_time_steps*num_baselines*sizeof(double), gpuMemcpyHostToDevice );
 
   double *d_allsteps_sha0s = NULL;
   double *d_allsteps_cha0s = NULL;
   user_precision_t *d_allsteps_wavelengths = NULL;
-  ( gpuMalloc( (void**)&d_allsteps_sha0s, num_cross*sizeof(double) ) );
-  ( gpuMemcpy( d_allsteps_sha0s, visibility_set->allsteps_sha0s,
-                      num_cross*sizeof(double), gpuMemcpyHostToDevice ) );
-  ( gpuMalloc( (void**)&d_allsteps_cha0s, num_cross*sizeof(double) ) );
-  ( gpuMemcpy( d_allsteps_cha0s, visibility_set->allsteps_cha0s,
-                      num_cross*sizeof(double), gpuMemcpyHostToDevice ) );
-  ( gpuMalloc( (void**)&d_allsteps_wavelengths,
-                                         num_cross*sizeof(user_precision_t) ) );
-  ( gpuMemcpy( d_allsteps_wavelengths, visibility_set->allsteps_wavelengths,
-                      num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
+  gpuMalloc( (void**)&d_allsteps_sha0s, num_cross*sizeof(double) );
+  gpuMemcpy( d_allsteps_sha0s, visibility_set->allsteps_sha0s,
+                      num_cross*sizeof(double), gpuMemcpyHostToDevice );
+  gpuMalloc( (void**)&d_allsteps_cha0s, num_cross*sizeof(double) );
+  gpuMemcpy( d_allsteps_cha0s, visibility_set->allsteps_cha0s,
+                      num_cross*sizeof(double), gpuMemcpyHostToDevice );
+  gpuMalloc( (void**)&d_allsteps_wavelengths,
+                                         num_cross*sizeof(user_precision_t) );
+  gpuMemcpy( d_allsteps_wavelengths, visibility_set->allsteps_wavelengths,
+                      num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
 
   user_precision_t *d_u_metres = NULL;
   user_precision_t *d_v_metres = NULL;
@@ -198,11 +193,11 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
     // printf("WHAT YA DO? woden_settings->num_baselines: %d\n", woden_settings->num_baselines);
 
-    ( gpuMalloc( (void**)&d_ant1_to_baseline_map,
-                                woden_settings->num_baselines*sizeof(int) ) );
+    gpuMalloc( (void**)&d_ant1_to_baseline_map,
+                                woden_settings->num_baselines*sizeof(int) );
 
-    ( gpuMalloc( (void**)&d_ant2_to_baseline_map,
-                                woden_settings->num_baselines*sizeof(int) ) );
+    gpuMalloc( (void**)&d_ant2_to_baseline_map,
+                                woden_settings->num_baselines*sizeof(int) );
 
     fill_ant_to_baseline_mapping(woden_settings->num_ants, d_ant1_to_baseline_map,
                                                            d_ant2_to_baseline_map);
@@ -213,8 +208,6 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   //Iterate through all sky model chunks, calculated visibilities are
   //added to chunk_visibility_set, and then summed onto visibility_set
   for (int chunk = 0; chunk < cropped_sky_models->num_sources; chunk++) {
-
-    // source_t *source = (source_t *)malloc(sizeof(source_t));
 
     source_t *source = &cropped_sky_models->sources[chunk];
 
@@ -260,30 +253,30 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
     //ensure d_sum_visi_XX_real are set entirely to zero by copying the host
     //array values, which have been set explictly to zero during chunking
-    ( gpuMemcpy(d_visibility_set->sum_visi_XX_real,
+    gpuMemcpy(d_visibility_set->sum_visi_XX_real,
                chunk_visibility_set->sum_visi_XX_real,
-               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-    ( gpuMemcpy(d_visibility_set->sum_visi_XX_imag,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMemcpy(d_visibility_set->sum_visi_XX_imag,
                chunk_visibility_set->sum_visi_XX_imag,
-               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-    ( gpuMemcpy(d_visibility_set->sum_visi_XY_real,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMemcpy(d_visibility_set->sum_visi_XY_real,
                chunk_visibility_set->sum_visi_XY_real,
-               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-    ( gpuMemcpy(d_visibility_set->sum_visi_XY_imag,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMemcpy(d_visibility_set->sum_visi_XY_imag,
                chunk_visibility_set->sum_visi_XY_imag,
-               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-    ( gpuMemcpy(d_visibility_set->sum_visi_YX_real,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMemcpy(d_visibility_set->sum_visi_YX_real,
                chunk_visibility_set->sum_visi_YX_real,
-               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-    ( gpuMemcpy(d_visibility_set->sum_visi_YX_imag,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMemcpy(d_visibility_set->sum_visi_YX_imag,
                chunk_visibility_set->sum_visi_YX_imag,
-               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-    ( gpuMemcpy(d_visibility_set->sum_visi_YY_real,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMemcpy(d_visibility_set->sum_visi_YY_real,
                chunk_visibility_set->sum_visi_YY_real,
-               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-    ( gpuMemcpy(d_visibility_set->sum_visi_YY_imag,
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice );
+    gpuMemcpy(d_visibility_set->sum_visi_YY_imag,
                chunk_visibility_set->sum_visi_YY_imag,
-               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
+               num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice );
 
     dim3 grid, threads;
 
@@ -361,11 +354,11 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                            d_visibility_set->sum_visi_YY_real,
                            d_visibility_set->sum_visi_YY_imag,
                            num_points, num_baselines, num_freqs, num_cross,
-                           num_time_steps, beam_settings->beamtype, POINT, do_QUV);
+                           num_time_steps, beam_settings->beamtype, POINT);
       printf("\tVisi kernel done\n");
 
       free_d_components(d_chunked_source, POINT);
-      free_extrapolated_flux_arrays(&d_chunked_source->point_components, do_QUV);
+      free_extrapolated_flux_arrays(&d_chunked_source->point_components);
       free_beam_gains(d_point_beam_gains, beam_settings->beamtype);
 
     }//if point sources
@@ -407,10 +400,10 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                            d_visibility_set->sum_visi_YY_real,
                            d_visibility_set->sum_visi_YY_imag,
                            num_gauss, num_baselines, num_freqs, num_cross,
-                           num_time_steps, beam_settings->beamtype, GAUSSIAN, do_QUV);
+                           num_time_steps, beam_settings->beamtype, GAUSSIAN);
 
       free_d_components(d_chunked_source, GAUSSIAN);
-      free_extrapolated_flux_arrays(&d_chunked_source->gauss_components, do_QUV);
+      free_extrapolated_flux_arrays(&d_chunked_source->gauss_components);
       free_beam_gains(d_gauss_beam_gains, beam_settings->beamtype);
 
     }//if gauss sources
@@ -497,56 +490,56 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
             d_sbf,
             num_shapes, num_baselines, num_freqs, num_cross,
             d_chunked_source->n_shape_coeffs, num_time_steps,
-            beam_settings->beamtype, do_QUV);
+            beam_settings->beamtype);
 
-      ( gpuFree(d_v_shapes) );
-      ( gpuFree(d_u_shapes) );
-      ( gpuFree(d_lsts) );
+      gpuFree(d_v_shapes);
+      gpuFree(d_u_shapes);
+      gpuFree(d_lsts);
 
       printf("Making it to this call here\n");
       free_d_components(d_chunked_source, SHAPELET);
-      free_extrapolated_flux_arrays(&d_chunked_source->shape_components, do_QUV);
+      free_extrapolated_flux_arrays(&d_chunked_source->shape_components);
       free_beam_gains(d_shape_beam_gains, beam_settings->beamtype);
 
     }//if shapelet
 
-    ( gpuMemcpy(chunk_visibility_set->sum_visi_XX_real,
+    gpuMemcpy(chunk_visibility_set->sum_visi_XX_real,
         d_visibility_set->sum_visi_XX_real, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost) );
-    ( gpuMemcpy(chunk_visibility_set->sum_visi_XX_imag,
+                                                     gpuMemcpyDeviceToHost);
+    gpuMemcpy(chunk_visibility_set->sum_visi_XX_imag,
         d_visibility_set->sum_visi_XX_imag, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost) );
+                                                     gpuMemcpyDeviceToHost);
 
-    ( gpuMemcpy(chunk_visibility_set->sum_visi_XY_real,
+    gpuMemcpy(chunk_visibility_set->sum_visi_XY_real,
         d_visibility_set->sum_visi_XY_real, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost) );
-    ( gpuMemcpy(chunk_visibility_set->sum_visi_XY_imag,
+                                                     gpuMemcpyDeviceToHost);
+    gpuMemcpy(chunk_visibility_set->sum_visi_XY_imag,
         d_visibility_set->sum_visi_XY_imag, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost) );
+                                                     gpuMemcpyDeviceToHost);
 
-    ( gpuMemcpy(chunk_visibility_set->sum_visi_YX_real,
+    gpuMemcpy(chunk_visibility_set->sum_visi_YX_real,
         d_visibility_set->sum_visi_YX_real, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost) );
-    ( gpuMemcpy(chunk_visibility_set->sum_visi_YX_imag,
+                                                     gpuMemcpyDeviceToHost);
+    gpuMemcpy(chunk_visibility_set->sum_visi_YX_imag,
         d_visibility_set->sum_visi_YX_imag, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost) );
+                                                     gpuMemcpyDeviceToHost);
 
-    ( gpuMemcpy(chunk_visibility_set->sum_visi_YY_real,
+    gpuMemcpy(chunk_visibility_set->sum_visi_YY_real,
         d_visibility_set->sum_visi_YY_real, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost) );
-    ( gpuMemcpy(chunk_visibility_set->sum_visi_YY_imag,
+                                                     gpuMemcpyDeviceToHost);
+    gpuMemcpy(chunk_visibility_set->sum_visi_YY_imag,
         d_visibility_set->sum_visi_YY_imag, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost) );
+                                                     gpuMemcpyDeviceToHost);
 
-    ( gpuMemcpy(chunk_visibility_set->us_metres,
+    gpuMemcpy(chunk_visibility_set->us_metres,
                                   d_u_metres,num_visis*sizeof(user_precision_t),
-                                                      gpuMemcpyDeviceToHost) );
-    ( gpuMemcpy(chunk_visibility_set->vs_metres,
+                                                      gpuMemcpyDeviceToHost);
+    gpuMemcpy(chunk_visibility_set->vs_metres,
                                   d_v_metres,num_visis*sizeof(user_precision_t),
-                                                      gpuMemcpyDeviceToHost) );
-    ( gpuMemcpy(chunk_visibility_set->ws_metres,
+                                                      gpuMemcpyDeviceToHost);
+    gpuMemcpy(chunk_visibility_set->ws_metres,
                                   d_w_metres,num_visis*sizeof(user_precision_t),
-                                                      gpuMemcpyDeviceToHost) );
+                                                      gpuMemcpyDeviceToHost);
 
     //add to visiblity_set
     for (int visi = 0; visi < num_visis; visi++) {

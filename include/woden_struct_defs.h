@@ -42,17 +42,11 @@ typedef struct _components_t {
   //power law params
   double *power_ref_freqs; /*!< COMPONENT Flux density reference frequencies (Hz) */
   user_precision_t *power_ref_stokesI; /*!< COMPONENT Stokes I reference flux density (Jy) */
-  user_precision_t *power_ref_stokesQ; /*!< COMPONENT Stokes Q reference flux density (Jy) */
-  user_precision_t *power_ref_stokesU; /*!< COMPONENT Stokes U reference flux density (Jy) */
-  user_precision_t *power_ref_stokesV; /*!< COMPONENT Stokes V reference flux density (Jy) */
   user_precision_t *power_SIs; /*!<  COMPONENT spectral indexes */
 
   // curved power law params
   double *curve_ref_freqs; /*!< COMPONENT Flux density reference frequencies (Hz) */
   user_precision_t *curve_ref_stokesI; /*!< COMPONENT Stokes I reference flux density (Jy) */
-  user_precision_t *curve_ref_stokesQ; /*!< COMPONENT Stokes Q reference flux density (Jy) */
-  user_precision_t *curve_ref_stokesU; /*!< COMPONENT Stokes U reference flux density (Jy) */
-  user_precision_t *curve_ref_stokesV; /*!< COMPONENT Stokes V reference flux density (Jy) */
   user_precision_t *curve_SIs; /*!<  COMPONENT spectral indexes */
   user_precision_t *curve_qs; /*!<  COMPONENT curvature */
 
@@ -126,6 +120,63 @@ typedef struct _components_t {
   double *ls; /*!< Device memory l cosine direction coords for these COMPONENTs*/
   double *ms; /*!< Device memory m cosine direction coords for these COMPONENTs*/
   double *ns; /*!< Device memory n cosine direction coords for these COMPONENTs*/
+
+  user_precision_t *stokesV_pol_fracs; /*!< Stokes V polarisation fractions */
+  int *stokesV_pol_frac_comp_inds; /*!< The indexes of all Stokes V polarisation fraction models w.r.t ra,dec */
+  user_precision_t *stokesV_power_ref_flux; /*!< Stokes V reference flux for power-law */
+  user_precision_t *stokesV_power_SIs; /*!< Stokes V spectral index for power-law */
+  int *stokesV_power_comp_inds; /*!< The indexes of all Stokes V power-law models w.r.t ra,dec */
+  user_precision_t *stokesV_curve_ref_flux; /*!< Stokes V reference flux for curved power-law */
+  user_precision_t *stokesV_curve_SIs; /*!< Stokes V spectral index for curved power-law */
+  user_precision_t *stokesV_curve_qs; /*!< Stokes V q param for curved power-law */
+  int *stokesV_curve_comp_inds; /*!< The indexes of Stokes V curved power-law models w.r.t ra,dec */
+  double *stokesV_list_ref_freqs; /*!< Stokes V reference frequencies for list type models */
+  user_precision_t* stokesV_list_ref_flux; /*!< Stokes V reference fluxes for list type models */
+  int *stokesV_list_comp_inds; /*!< The indexes of all Stokes V list type models w.r.t ra,dec */
+  int *stokesV_num_list_values; /*!< How many freq/flux values there are for Stokes V list-type component*/
+  int *stokesV_list_start_indexes; /*!< Where the Stokes V list-type component starts in the list flux arrays */
+  user_precision_t *linpol_pol_fracs; /*!< Linear polarisation polarisation fractions */
+  int *linpol_pol_frac_comp_inds; /*!< The indexes of all linear polarisation fraction models w.r.t ra,dec */
+  user_precision_t *linpol_power_ref_flux; /*!< Linear polarisation reference flux for power-law */
+  user_precision_t *linpol_power_SIs; /*!< Linear polarisation spectral index for power-law */
+  int *linpol_power_comp_inds;  /*!< The indexes of all linear polarisation power-law models w.r.t ra,dec */
+  user_precision_t *linpol_curve_ref_flux; /*!< Linear polarisation reference flux for curved power-law */
+  user_precision_t *linpol_curve_SIs; /*!< Linear polarisation spectral index for curved power-law */
+  user_precision_t *linpol_curve_qs; /*!< Linear polarisation q param for curved power-law */
+  int *linpol_curve_comp_inds; /*!< The indexes of all linear polarisation curved power-law models w.r.t ra,dec */
+  double *stokesQ_list_ref_freqs; /*!< Stokes Q reference frequencies for list type models */
+  user_precision_t* stokesQ_list_ref_flux; /*!< Stokes Q reference fluxes for list type models */
+  int *stokesQ_list_comp_inds; /*!< The indexes of all Stokes Q list type models w.r.t ra,dec */
+  int *stokesQ_num_list_values; /*!< How many freq/flux values there are for Stokes Q list-type component*/
+  int *stokesQ_list_start_indexes; /*!< Where the Stokes Q list-type component starts in the list flux arrays */
+  double *stokesU_list_ref_freqs; /*!< Stokes U reference frequencies for list type models */
+  user_precision_t* stokesU_list_ref_flux; /*!< Stokes U reference fluxes for list type models */
+  int *stokesU_list_comp_inds; /*!< The indexes of all Stokes U list type models w.r.t ra,dec */
+  int *stokesU_num_list_values; /*!< How many freq/flux values there are for Stokes U list-type component*/
+  int *stokesU_list_start_indexes; /*!< Where the Stokes U list-type component starts in the list flux arrays */
+  double *linpol_p_list_ref_freqs; /*!< Linear polarisation flux reference frequencies for list type models */
+  user_precision_t* linpol_p_list_ref_flux; /*!< Linear polarisation flux reference fluxes for list type models */
+  int *linpol_p_list_comp_inds; /*!< The indexes of all Linear polarisation flux list type models w.r.t ra,dec */
+  int *linpol_p_num_list_values; /*!< How many freq/flux values there are for Linear polarisation flux list-type component*/
+  int *linpol_p_list_start_indexes; /*!< Where the Linear polarisation flux list-type component starts in the list flux arrays */
+  user_precision_t *rm_values; /*!< Linear polarisation rotation measures */
+  user_precision_t *intr_pol_angle; /*!<  Linear polarisation instrinsic polarisation angles */
+  int *linpol_angle_inds;  /*!< The indexes of all RM/intrinsic polarisation angles w.r.t ra,dec */
+  int n_stokesV_pol_frac; /*!< The number of Stokes V polarisation fraction models */
+  int n_stokesV_power; /*!< The number of Stokes V power-law models */
+  int n_stokesV_curve; /*!< The number of Stokes V curved power-law models */
+  int n_stokesV_list; /*!< The number of Stokes V list type models */
+  int n_stokesV_list_flux_entries; /*!< The total number of Stokes V list type flux entries */
+  int n_linpol_pol_frac;  /*!< The number of linear polarisation fraction models */
+  int n_linpol_power; /*!< The number of linear polarisation power-law models */
+  int n_linpol_curve; /*!< The number of linear polarisation curved power-law models */
+  int n_linpol_list; /*!< The number of linear pol list type models */
+  int n_stokesQ_list_flux_entries; /*!< The total number of Stokes Q list type flux entries */
+  int n_stokesU_list_flux_entries;  /*!< The total number of Stokes U list type flux entries */
+  int n_linpol_p_list; /*!< The number of linear polarised flux list type models */
+  int n_linpol_p_list_flux_entries;  /*!< The total number of Polarised flux list type flux entries */
+  int n_linpol_angles; /*!< The number of RM/intrinsic polarisation angles */
+  int do_QUV; /*!< Set if doing any polarised information */
 
 } components_t;
 
@@ -303,8 +354,6 @@ typedef struct _woden_settings_t {
     are different when precession is happening)*/
   double *mjds; /*!< Array to hold modified julian dates for all time centroids*/
   int do_autos; /*!< Boolean of whether to simulate autos or not (0 False, 1 True)*/
-  int do_QUV; /*!< Boolean of whether to use Stokes Q,U,V*/
-
   int use_dipamps; /*!< Boolean of whether to use dipole amplitudes, so have an individual beam per tile*/
   double *mwa_dipole_amps; /*!< Bespoke MWA dipole amplitudes for each antenna(tile). Should be 2*num_ants*16 long*/
 

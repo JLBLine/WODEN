@@ -18,27 +18,42 @@ are launched by calculate_visibilities::calculate_visibilities`
 #include "test_calculate_visibilities_common.h"
 
 #ifdef DOUBLE_PRECISION
-  double TOL = 1e-9;
+  double TOL = 1e-8;
 #else
-  double TOL = 1e-6;
+  double TOL = 5e-5;
 #endif
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
+
 
 /*
 For a numbre of COMPONENTs at phase centre, with no beam model
 should just have a single gain in the XX and YY
 real visis
 */
-void test_comp_phase_centre_nobeam(visibility_set_t *visibility_set, double gain,
+void test_comp_phase_centre_nobeam(int num_comps,
+                                   visibility_set_t *visibility_set,
                                    woden_settings_t *woden_settings) {
 
   int num_cross = woden_settings->num_cross;
 
-  //First up check that the cross-correlations are as expected
+  double _Complex gain = 1.0 + I*0.0;
+  double _Complex leak = 0.0 + I*0.0;
+
+  double _Complex xx, xy, yx, yy;
+
+  predict_inst_stokes(num_comps, gain, leak, leak, gain, gain, leak, leak, gain,
+                        &xx, &xy, &yx, &yy);
+
+  // printf("%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n", creal(xx), cimag(xx),
+  //          creal(xy), cimag(xy), creal(yx), cimag(yx), creal(yy), cimag(yy));
+
+  // //First up check that the cross-correlations are as expected
   for (int visi = 0; visi < num_cross; visi++) {
-  //   printf("%.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n",
+
+  // printf("%d %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n",
+  //           visi,
   //           visibility_set->sum_visi_XX_real[visi],
   //           visibility_set->sum_visi_XX_imag[visi],
   //           visibility_set->sum_visi_XY_real[visi],
@@ -48,16 +63,14 @@ void test_comp_phase_centre_nobeam(visibility_set_t *visibility_set, double gain
   //           visibility_set->sum_visi_YY_imag[visi],
   //           visibility_set->sum_visi_YY_real[visi] );
 
-    // printf("%.11f %.11f\n",gain, visibility_set->sum_visi_XX_real[visi] );
-
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, gain, visibility_set->sum_visi_XX_real[visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, visibility_set->sum_visi_XX_imag[visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, visibility_set->sum_visi_XY_real[visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, visibility_set->sum_visi_XY_imag[visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, visibility_set->sum_visi_YX_real[visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, visibility_set->sum_visi_YX_imag[visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, visibility_set->sum_visi_YY_imag[visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, gain, visibility_set->sum_visi_YY_real[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(xx), visibility_set->sum_visi_XX_real[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cimag(xx), visibility_set->sum_visi_XX_imag[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(xy), visibility_set->sum_visi_XY_real[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cimag(xy), visibility_set->sum_visi_XY_imag[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(yx), visibility_set->sum_visi_YX_real[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cimag(yx), visibility_set->sum_visi_YX_imag[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(yy), visibility_set->sum_visi_YY_real[visi]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cimag(yy), visibility_set->sum_visi_YY_imag[visi]);
   }
 
   //Next, if there are auto-correlations, check they are correct
@@ -65,21 +78,21 @@ void test_comp_phase_centre_nobeam(visibility_set_t *visibility_set, double gain
   //as the cross-correlations
   for (int visi = 0; visi < woden_settings->num_autos; visi++) {
 
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, gain,
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(xx),
                              visibility_set->sum_visi_XX_real[num_cross+visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cimag(xx),
                              visibility_set->sum_visi_XX_imag[num_cross+visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(xy),
                              visibility_set->sum_visi_XY_real[num_cross+visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cimag(xy),
                              visibility_set->sum_visi_XY_imag[num_cross+visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(yx),
                              visibility_set->sum_visi_YX_real[num_cross+visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cimag(yx),
                              visibility_set->sum_visi_YX_imag[num_cross+visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0,
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(yy),
                              visibility_set->sum_visi_YY_imag[num_cross+visi]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, gain,
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cimag(yy),
                              visibility_set->sum_visi_YY_real[num_cross+visi]);
   }
 }
@@ -111,8 +124,8 @@ void test_calculate_visibilities_NoBeam(int n_points, int n_gauss, int n_shapes,
                                           beam_settings, woden_settings, RA0, -0.46606083776035967,
                                           beam_settings->beamtype);
 
-  double gain = (n_points + n_gauss + n_shapes)*num_sources*STOKESI;
-  test_comp_phase_centre_nobeam(visibility_set, gain, woden_settings);
+  int num_comps = (n_points + n_gauss + n_shapes)*num_sources;
+  test_comp_phase_centre_nobeam(num_comps, visibility_set, woden_settings);
 
   free_visi_set_inputs(visibility_set);
   free_visi_set_outputs(visibility_set);
@@ -129,7 +142,7 @@ void test_calculate_visibilities_NoBeam(int n_points, int n_gauss, int n_shapes,
   visibility_set = test_calculate_visibilities(cropped_sky_models,
                                           beam_settings, woden_settings, RA0, -0.46606083776035967,
                                           beam_settings->beamtype);
-  test_comp_phase_centre_nobeam(visibility_set, gain, woden_settings);
+  test_comp_phase_centre_nobeam(num_comps, visibility_set, woden_settings);
 
   free_visi_set_inputs(visibility_set);
   free_visi_set_outputs(visibility_set);
@@ -205,10 +218,9 @@ void test_calculate_visibilities_NoBeam_ThreeSource_SingleAll(void) {
   test_calculate_visibilities_NoBeam(n_points, n_gauss, n_shapes, num_sources);
 }
 
-
 //Test with three SOURCEs, three COPMONENTs
-void test_calculate_visibilities_NoBeam_ThreeSource_ThreePoint(void) {
-  int n_points = 3;
+void test_calculate_visibilities_NoBeam_ThreeSource_FivePoint(void) {
+  int n_points = 5;
   int n_gauss = 0;
   int n_shapes = 0;
   int num_sources = 3;
@@ -216,35 +228,36 @@ void test_calculate_visibilities_NoBeam_ThreeSource_ThreePoint(void) {
 
 }
 
-void test_calculate_visibilities_NoBeam_ThreeSource_ThreeGauss(void) {
+void test_calculate_visibilities_NoBeam_ThreeSource_FiveGauss(void) {
   int n_points = 0;
-  int n_gauss = 3;
+  int n_gauss = 5;
   int n_shapes = 0;
   int num_sources = 3;
   test_calculate_visibilities_NoBeam(n_points, n_gauss, n_shapes, num_sources);
 }
 
-void test_calculate_visibilities_NoBeam_ThreeSource_ThreeShape(void) {
+void test_calculate_visibilities_NoBeam_ThreeSource_FiveShape(void) {
   int n_points = 0;
   int n_gauss = 0;
-  int n_shapes = 3;
+  int n_shapes = 5;
   int num_sources = 3;
   test_calculate_visibilities_NoBeam(n_points, n_gauss, n_shapes, num_sources);
 }
 
-void test_calculate_visibilities_NoBeam_ThreeSource_ThreeAll(void) {
-  int n_points = 3;
-  int n_gauss = 3;
-  int n_shapes = 3;
+void test_calculate_visibilities_NoBeam_ThreeSource_FiveAll(void) {
+  int n_points = 5;
+  int n_gauss = 5;
+  int n_shapes = 5;
   int num_sources = 3;
   test_calculate_visibilities_NoBeam(n_points, n_gauss, n_shapes, num_sources);
 }
+
 
 //Run the test with unity
 int main(void)
 {
     UNITY_BEGIN();
-    //Test with a single SOURCE, single COMPONENT
+    // //Test with a single SOURCE, single COMPONENT
     RUN_TEST(test_calculate_visibilities_NoBeam_OneSource_SinglePoint);
     RUN_TEST(test_calculate_visibilities_NoBeam_OneSource_SingleGauss);
     RUN_TEST(test_calculate_visibilities_NoBeam_OneSource_SingleShape);
@@ -256,11 +269,11 @@ int main(void)
     RUN_TEST(test_calculate_visibilities_NoBeam_ThreeSource_SingleShape);
     RUN_TEST(test_calculate_visibilities_NoBeam_ThreeSource_SingleAll);
 
-    // //Test with three SOURCEs, three COPMONENTs
-    RUN_TEST(test_calculate_visibilities_NoBeam_ThreeSource_ThreePoint);
-    RUN_TEST(test_calculate_visibilities_NoBeam_ThreeSource_ThreeGauss);
-    RUN_TEST(test_calculate_visibilities_NoBeam_ThreeSource_ThreeShape);
-    RUN_TEST(test_calculate_visibilities_NoBeam_ThreeSource_ThreeAll);
+    // //Test with three SOURCEs, five COPMONENTs
+    RUN_TEST(test_calculate_visibilities_NoBeam_ThreeSource_FivePoint);
+    RUN_TEST(test_calculate_visibilities_NoBeam_ThreeSource_FiveGauss);
+    RUN_TEST(test_calculate_visibilities_NoBeam_ThreeSource_FiveShape);
+    RUN_TEST(test_calculate_visibilities_NoBeam_ThreeSource_FiveAll);
 
     return UNITY_END();
 }

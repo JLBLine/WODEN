@@ -26,200 +26,133 @@ def command(cmd):
     """
     subprocess.call(cmd,shell=True)
 
-class Woden_Settings_Double(ctypes.Structure):
-    """A class structured equivalently to a `visi_set` struct, used by 
-    the C and CUDA code in libwoden_double.so
-    
-    :cvar c_double lst_base:  Local sidereal time for first time step (radians)
-    :cvar c_double lst_obs_epoch_base:  Local sidereal time for first time step (radians) for the observation epoch (e.g. in 2020 for a 2020 obs)
-    :cvar c_double ra0:  Right ascension of phase centre (radians)
-    :cvar c_double dec0:  Declination of phase centre (radians)
-    :cvar c_double sdec0:  Sine of Declination of phase centre (radians)
-    :cvar c_double cdec0:  Cosine of Declination of phase centre (radians)
-    :cvar c_int num_baselines:  Number of baselines this array layout has
-    :cvar c_int num_ants:  Number of antennas this array layout has (MWA calls this number of tiles)
-    :cvar c_int num_freqs:  Number of frequencies per coarse band
-    :cvar c_double frequency_resolution:  Frequency resolution of a fine channel (Hz)
-    :cvar c_double base_low_freq:  The lowest fine channel frequency of band 1
-    :cvar c_int num_time_steps:  Number of time steps to simulate
-    :cvar c_double time_res:  Time resolution of simulation (seconds)
-    :cvar POINTER(c_char) cat_filename:  Path to WODEN-style sky model
-    :cvar c_int num_bands:  Number of coarse frequency bands to simulate 
-    :cvar POINTER(c_int) band_nums:  Which number coarse bands to simulate (e.g 1,4,6) 
-    :cvar c_int sky_crop_type:  Whether to crop sky models by SOURCE or COMPONENT 
-    :cvar c_int beamtype:  What type of primary beam to simulate with 
-    :cvar c_double gauss_beam_FWHM:  FWHM of Gaussian primary beam (degrees)
-    :cvar c_double gauss_beam_ref_freq:  Reference frequency for given Gaussian primary beam FWHM
-    :cvar c_uint64 chunking_size:  Maximum number of COMPONENTs to include in a single chunk
-    :cvar POINTER(c_char) hdf5_beam_path:  Path to *.hf file containing MWA FEE beam spherical harmonic information
-    :cvar c_double jd_date:  Julian date at beginning of simulation
-    :cvar c_int array_layout_file:  Do we have a path to the array layout or not 
-    :cvar POINTER(c_char) array_layout_file_path:  ath to file containing E,N,H coords of array layout 
-    :cvar c_double latitude:  Latitude of the array to simulate (radians) 
-    :cvar c_double latitude_obs_epoch_base:  Latitude of the array at the observation epoch (radians) 
-    :cvar c_double longitude:  Longitude of the array to simulate (radians) 
-    :cvar (c_double*16) FEE_ideal_delays:  Delay values specifying the pointing for the MWA FEE beam model 
-    :cvar c_double coarse_band_width:  Frequency bandwidth of a single coarse band (Hz)
-    :cvar c_double gauss_ra_point:  The initial Right Ascension to point the Gaussian beam at (radians)
-    :cvar c_double gauss_dec_point:  The initial Declination to point the Gaussian beam at (radians)
-    :cvar c_int num_cross:  Total number of cross-correlations to simulate, so freqs*times*baselines 
-    :cvar c_int num_autos:  Total number of auto-correlations to simulate, so freqs*times*baselines 
-    :cvar c_int num_visis:  Total number of visibilities to simulate, so num_cross + num_autos 
-    :cvar c_double base_band_freq:  The lowest fine channel frequency in the current band being simulated
-    :cvar c_int do_precession:  Boolean of whether to apply precession to the array layout or not
-    :cvar POINTER(c_double) lsts:  Array to hold LSTs for all time centroids (these are different when precession is happening)
-    :cvar POINTER(c_double) latitudes:  Array to hold latitudes for all time centroids (these are different when precession is happening)
-    :cvar POINTER(c_double) mjds:  Array to hold modified julian dates for all time centroids
-    :cvar c_int do_autos:  Boolean of whether to simulate autos or not (0 False, 1 True)
-    :cvar c_int do_QUV:  Boolean of whether to use Stokes Q,U,V (0 False, 1 True)
-    :cvar c_int use_dipamps:  Boolean of whether to use dipole amplitudes, so have an individual beam per tile (0 False, 1 True)
-    :cvar POINTER(c_double) mwa_dipole_amps: Bespoke MWA dipole amplitudes for each antenna(tile). Should be 2*num_ants*16 long
-    """
-    
-    _fields_ = [("lst_base", c_double),
-                ("lst_obs_epoch_base", c_double),
-                ("ra0", c_double),
-                ("dec0", c_double),
-                ("sdec0", c_double),
-                ("cdec0", c_double),
-                ("num_baselines", c_int),
-                ("num_ants", c_int),
-                ("num_freqs", c_int),
-                ("frequency_resolution", c_double),
-                ("base_low_freq", c_double),
-                ("num_time_steps", c_int),
-                ("time_res", c_double),
-                ("cat_filename", POINTER(c_char)),
-                ("num_bands", c_int),
-                ("band_nums", POINTER(c_int)),
-                ("sky_crop_type", c_int),
-                ("beamtype", c_int),
-                ("gauss_beam_FWHM", c_double),
-                ("gauss_beam_ref_freq", c_double),
-                ("chunking_size", c_uint64),
-                ("hdf5_beam_path", POINTER(c_char)),
-                ("jd_date", c_double),
-                ("array_layout_file", c_int),
-                ("array_layout_file_path", POINTER(c_char)),
-                ("latitude", c_double),
-                ("latitude_obs_epoch_base", c_double),
-                ("longitude", c_double),
-                ("FEE_ideal_delays", POINTER(c_int)),
-                ("coarse_band_width", c_double),
-                ("gauss_ra_point", c_double),
-                ("gauss_dec_point", c_double),
-                ("num_cross", c_int),
-                ("num_autos", c_int),
-                ("num_visis", c_int),
-                ("base_band_freq", c_double),
-                ("do_precession", c_int),
-                ("lsts", POINTER(c_double)),
-                ("latitudes", POINTER(c_double)),
-                ("mjds", POINTER(c_double)),
-                ("do_autos", c_int),
-                ("do_QUV", c_int),
-                ("use_dipamps", c_int),
-                ("mwa_dipole_amps", POINTER(c_double))]
+def create_woden_settings_struct(precision : str = "double"):
+    """Creates a `Woden_Settings` class structured equivalently to a `woden_settings_t`
+    struct in the C/CUDA code. Created dynamically based on the `precision`,
+    to match the compile time precision flag `-DUSE_DOUBLE` in the C code.
 
-##TODO gotta be a way to set the float or double fields via some kind of
-##variable instead of making two different classes
-class Woden_Settings_Float(ctypes.Structure):
-    """A class structured equivalently to a `visi_set` struct, used by 
-    the C and CUDA code in libwoden_float.so
-    
-    :cvar c_double lst_base:  Local sidereal time for first time step (radians)
-    :cvar c_double lst_obs_epoch_base:  Local sidereal time for first time step (radians) for the observation epoch (e.g. in 2020 for a 2020 obs)
-    :cvar c_double ra0:  Right ascension of phase centre (radians)
-    :cvar c_double dec0:  Declination of phase centre (radians)
-    :cvar c_double sdec0:  Sine of Declination of phase centre (radians)
-    :cvar c_double cdec0:  Cosine of Declination of phase centre (radians)
-    :cvar c_int num_baselines:  Number of baselines this array layout has
-    :cvar c_int num_ants:  Number of antennas this array layout has (MWA calls this number of tiles)
-    :cvar c_int num_freqs:  Number of frequencies per coarse band
-    :cvar c_double frequency_resolution:  Frequency resolution of a fine channel (Hz)
-    :cvar c_double base_low_freq:  The lowest fine channel frequency of band 1
-    :cvar c_int num_time_steps:  Number of time steps to simulate
-    :cvar c_double time_res:  Time resolution of simulation (seconds)
-    :cvar POINTER(c_char) cat_filename:  Path to WODEN-style sky model
-    :cvar c_int num_bands:  Number of coarse frequency bands to simulate 
-    :cvar POINTER(c_int) band_nums:  Which number coarse bands to simulate (e.g 1,4,6) 
-    :cvar c_int sky_crop_type:  Whether to crop sky models by SOURCE or COMPONENT 
-    :cvar c_int beamtype:  What type of primary beam to simulate with 
-    :cvar c_float gauss_beam_FWHM:  FWHM of Gaussian primary beam (degrees)
-    :cvar c_double gauss_beam_ref_freq:  Reference frequency for given Gaussian primary beam FWHM
-    :cvar c_uint64 chunking_size:  Maximum number of COMPONENTs to include in a single chunk
-    :cvar POINTER(c_char) hdf5_beam_path:  Path to *.hf file containing MWA FEE beam spherical harmonic information
-    :cvar c_double jd_date:  Julian date at beginning of simulation
-    :cvar c_int array_layout_file:  Do we have a path to the array layout or not 
-    :cvar POINTER(c_char) array_layout_file_path:  ath to file containing E,N,H coords of array layout 
-    :cvar c_double latitude:  Latitude of the array to simulate (radians) 
-    :cvar c_double latitude_obs_epoch_base:  Latitude of the array at the observation epoch (radians) 
-    :cvar c_float longitude:  Longitude of the array to simulate (radians) 
-    :cvar (c_float*16) FEE_ideal_delays:  Delay values specifying the pointing for the MWA FEE beam model 
-    :cvar c_double coarse_band_width:  Frequency bandwidth of a single coarse band (Hz)
-    :cvar c_double gauss_ra_point:  The initial Right Ascension to point the Gaussian beam at (radians)
-    :cvar c_double gauss_dec_point:  The initial Declination to point the Gaussian beam at (radians)
-    :cvar c_int num_cross:  Total number of cross-correlations to simulate, so freqs*times*baselines 
-    :cvar c_int num_autos:  Total number of auto-correlations to simulate, so freqs*times*baselines 
-    :cvar c_int num_visis:  Total number of visibilities to simulate, so num_cross + num_autos 
-    :cvar c_double base_band_freq:  The lowest fine channel frequency in the current band being simulated
-    :cvar c_int do_precession:  Boolean of whether to apply precession to the array layout or not
-    :cvar POINTER(c_double) lsts:  Array to hold LSTs for all time centroids (these are different when precession is happening)
-    :cvar POINTER(c_double) latitudes:  Array to hold latitudes for all time centroids (these are different when precession is happening)
-    :cvar POINTER(c_double) mjds:  Array to hold modified julian dates for all time centroids
-    :cvar c_int do_autos:  Boolean of whether to simulate autos or not (0 False, 1 True)
-    :cvar c_int do_QUV:  Boolean of whether to use Stokes Q,U,V (0 False, 1 True)
-    :cvar c_int use_dipamps:  Boolean of whether to use dipole amplitudes, so have an individual beam per tile  (0 False, 1 True)
-    :cvar POINTER(c_double) mwa_dipole_amps: Bespoke MWA dipole amplitudes for each antenna(tile). Should be 2*num_ants*16 long
+    Parameters
+    ----------
+    precision : str, optional
+        Either "float" or "double:, by default "double"
+
+    Returns
+    -------
+    Woden_Settings
+        The Woden_Settings class structured equivalently to a `woden_settings_t` struct
     """
     
-    _fields_ = [("lst_base", c_double),
-                ("lst_obs_epoch_base", c_double),
-                ("ra0", c_double),
-                ("dec0", c_double),
-                ("sdec0", c_double),
-                ("cdec0", c_double),
-                ("num_baselines", c_int),
-                ("num_ants", c_int),
-                ("num_freqs", c_int),
-                ("frequency_resolution", c_double),
-                ("base_low_freq", c_double),
-                ("num_time_steps", c_int),
-                ("time_res", c_double),
-                ("cat_filename", POINTER(c_char)),
-                ("num_bands", c_int),
-                ("band_nums", POINTER(c_int)),
-                ("sky_crop_type", c_int),
-                ("beamtype", c_int),
-                ("gauss_beam_FWHM", c_float),
-                ("gauss_beam_ref_freq", c_double),
-                ("chunking_size", c_ulong),
-                ("hdf5_beam_path", POINTER(c_char)),
-                ("jd_date", c_double),
-                ("array_layout_file", c_int),
-                ("array_layout_file_path", POINTER(c_char)),
-                ("latitude", c_double),
-                ("latitude_obs_epoch_base", c_double),
-                ("longitude", c_float),
-                ("FEE_ideal_delays", POINTER(c_int)),
-                ("coarse_band_width", c_double),
-                ("gauss_ra_point", c_double),
-                ("gauss_dec_point", c_double),
-                ("num_cross", c_int),
-                ("num_autos", c_int),
-                ("num_visis", c_int),
-                ("base_band_freq", c_double),
-                ("do_precession", c_int),
-                ("lsts", POINTER(c_double)),
-                ("latitudes", POINTER(c_double)),
-                ("mjds", POINTER(c_double)),
-                ("do_autos", c_int),
-                ("do_QUV", c_int),
-                ("use_dipamps", c_int),
-                ("mwa_dipole_amps", POINTER(c_double))]
+    if precision == "float":
+        c_user_precision = c_float
+    else:
+        c_user_precision = c_double
+
+    ##TODO gotta be a way to set the float or double fields via some kind of
+    ##variable instead of making two different classes
+    class Woden_Settings(ctypes.Structure):
+        """A class structured equivalently to a `woden_settings_t` struct, used by 
+        the C and CUDA code in libwoden_float.so or libwoden_double.so.
+        
+        Created by the function `create_woden_settings_struct`, which sets
+        `user_precision_t` to either `c_float` or `c_double`.
+        
+        :cvar c_double lst_base:  Local sidereal time for first time step (radians)
+        :cvar c_double lst_obs_epoch_base:  Local sidereal time for first time step (radians) for the observation epoch (e.g. in 2020 for a 2020 obs)
+        :cvar c_double ra0:  Right ascension of phase centre (radians)
+        :cvar c_double dec0:  Declination of phase centre (radians)
+        :cvar c_double sdec0:  Sine of Declination of phase centre (radians)
+        :cvar c_double cdec0:  Cosine of Declination of phase centre (radians)
+        :cvar c_int num_baselines:  Number of baselines this array layout has
+        :cvar c_int num_ants:  Number of antennas this array layout has (MWA calls this number of tiles)
+        :cvar c_int num_freqs:  Number of frequencies per coarse band
+        :cvar c_double frequency_resolution:  Frequency resolution of a fine channel (Hz)
+        :cvar c_double base_low_freq:  The lowest fine channel frequency of band 1
+        :cvar c_int num_time_steps:  Number of time steps to simulate
+        :cvar c_double time_res:  Time resolution of simulation (seconds)
+        :cvar POINTER(c_char) cat_filename:  Path to WODEN-style sky model
+        :cvar c_int num_bands:  Number of coarse frequency bands to simulate 
+        :cvar POINTER(c_int) band_nums:  Which number coarse bands to simulate (e.g 1,4,6) 
+        :cvar c_int sky_crop_type:  Whether to crop sky models by SOURCE or COMPONENT 
+        :cvar c_int beamtype:  What type of primary beam to simulate with 
+        :cvar c_user_precision gauss_beam_FWHM:  FWHM of Gaussian primary beam (degrees)
+        :cvar c_double gauss_beam_ref_freq:  Reference frequency for given Gaussian primary beam FWHM
+        :cvar c_uint64 chunking_size:  Maximum number of COMPONENTs to include in a single chunk
+        :cvar POINTER(c_char) hdf5_beam_path:  Path to *.hf file containing MWA FEE beam spherical harmonic information
+        :cvar c_double jd_date:  Julian date at beginning of simulation
+        :cvar c_int array_layout_file:  Do we have a path to the array layout or not 
+        :cvar POINTER(c_char) array_layout_file_path:  ath to file containing E,N,H coords of array layout 
+        :cvar c_double latitude:  Latitude of the array to simulate (radians) 
+        :cvar c_double latitude_obs_epoch_base:  Latitude of the array at the observation epoch (radians) 
+        :cvar c_user_precision longitude:  Longitude of the array to simulate (radians) 
+        :cvar POINTER(c_int) FEE_ideal_delays:  Delay values specifying the pointing for the MWA FEE beam model 
+        :cvar c_double coarse_band_width:  Frequency bandwidth of a single coarse band (Hz)
+        :cvar c_double gauss_ra_point:  The initial Right Ascension to point the Gaussian beam at (radians)
+        :cvar c_double gauss_dec_point:  The initial Declination to point the Gaussian beam at (radians)
+        :cvar c_int num_cross:  Total number of cross-correlations to simulate, so freqs*times*baselines 
+        :cvar c_int num_autos:  Total number of auto-correlations to simulate, so freqs*times*baselines 
+        :cvar c_int num_visis:  Total number of visibilities to simulate, so num_cross + num_autos 
+        :cvar c_double base_band_freq:  The lowest fine channel frequency in the current band being simulated
+        :cvar c_int do_precession:  Boolean of whether to apply precession to the array layout or not
+        :cvar POINTER(c_double) lsts:  Array to hold LSTs for all time centroids (these are different when precession is happening)
+        :cvar POINTER(c_double) latitudes:  Array to hold latitudes for all time centroids (these are different when precession is happening)
+        :cvar POINTER(c_double) mjds:  Array to hold modified julian dates for all time centroids
+        :cvar c_int do_autos:  Boolean of whether to simulate autos or not (0 False, 1 True)
+        :cvar c_int use_dipamps:  Boolean of whether to use dipole amplitudes, so have an individual beam per tile  (0 False, 1 True)
+        :cvar POINTER(c_double) mwa_dipole_amps: Bespoke MWA dipole amplitudes for each antenna(tile). Should be 2*num_ants*16 long
+        """
+        
+        _fields_ = [("lst_base", c_double),
+                    ("lst_obs_epoch_base", c_double),
+                    ("ra0", c_double),
+                    ("dec0", c_double),
+                    ("sdec0", c_double),
+                    ("cdec0", c_double),
+                    ("num_baselines", c_int),
+                    ("num_ants", c_int),
+                    ("num_freqs", c_int),
+                    ("frequency_resolution", c_double),
+                    ("base_low_freq", c_double),
+                    ("num_time_steps", c_int),
+                    ("time_res", c_double),
+                    ("cat_filename", POINTER(c_char)),
+                    ("num_bands", c_int),
+                    ("band_nums", POINTER(c_int)),
+                    ("sky_crop_type", c_int),
+                    ("beamtype", c_int),
+                    ("gauss_beam_FWHM", c_user_precision),
+                    ("gauss_beam_ref_freq", c_double),
+                    ("chunking_size", c_ulong),
+                    ("hdf5_beam_path", POINTER(c_char)),
+                    ("jd_date", c_double),
+                    ("array_layout_file", c_int),
+                    ("array_layout_file_path", POINTER(c_char)),
+                    ("latitude", c_double),
+                    ("latitude_obs_epoch_base", c_double),
+                    ("longitude", c_user_precision),
+                    ("FEE_ideal_delays", POINTER(c_int)),
+                    ("coarse_band_width", c_double),
+                    ("gauss_ra_point", c_double),
+                    ("gauss_dec_point", c_double),
+                    ("num_cross", c_int),
+                    ("num_autos", c_int),
+                    ("num_visis", c_int),
+                    ("base_band_freq", c_double),
+                    ("do_precession", c_int),
+                    ("lsts", POINTER(c_double)),
+                    ("latitudes", POINTER(c_double)),
+                    ("mjds", POINTER(c_double)),
+                    ("do_autos", c_int),
+                    ("use_dipamps", c_int),
+                    ("mwa_dipole_amps", POINTER(c_double))]
+        
+    return Woden_Settings
+
+##This call is so we can use it as a type annotation, and so sphinx can document the class
+Woden_Settings = create_woden_settings_struct()
     
-def create_woden_settings(args : argparse.Namespace,
-                          jd_date : float, lst : float) -> Union[Woden_Settings_Float, Woden_Settings_Double]:
+def create_woden_settings(woden_settings : Woden_Settings, # type: ignore
+                          args : argparse.Namespace,
+                          jd_date : float, lst : float) -> Woden_Settings:  ## type: ignore
     """Given the parsed and checked arguments in `args`, populate a
     `woden_settings` ctypes.Structure that can be passed into
     libwoden_float.so or libwoden_double.so, depending on the desired
@@ -227,6 +160,8 @@ def create_woden_settings(args : argparse.Namespace,
 
     Parameters
     ----------
+    woden_settings : Woden_Settings
+        An initialised Woden_Settings class struct
     args : argparse.Namespace
         The populated arguments `args = parser.parse_args()`` as returned from
         the parser given by :func:`~wodenpy.run_setup.check_args`
@@ -237,16 +172,10 @@ def create_woden_settings(args : argparse.Namespace,
 
     Returns
     -------
-    woden_settings : Woden_Settings_Float or Woden_Settings_Double
+    woden_settings : Woden_Settings
        Populated ctype struct that can be passed into the C/CUDA code
     """
     
-    if args.precision == 'float':
-        woden_settings = Woden_Settings_Float()
-    else:
-        woden_settings = Woden_Settings_Double()
-        
-        
     woden_settings.ra0 = args.ra0 * D2R
     woden_settings.dec0 = args.dec0 * D2R
     
@@ -343,7 +272,7 @@ def create_woden_settings(args : argparse.Namespace,
     
     return woden_settings
     
-def setup_lsts_and_phase_centre(woden_settings : Union[Woden_Settings_Float, Woden_Settings_Double]) -> np.ndarray:
+def setup_lsts_and_phase_centre(woden_settings : Woden_Settings) -> np.ndarray: # type: ignore
     """
     Calculate the Local Sidereal Time (LST) for each time step of an observation,
     and set the phase centre coordinates. If `woden_settings.do_precession == True`,
@@ -351,7 +280,7 @@ def setup_lsts_and_phase_centre(woden_settings : Union[Woden_Settings_Float, Wod
 
     Parameters
     ----------
-    woden_settings : (Union[Woden_Settings_Float, Woden_Settings_Double])
+    woden_settings : Woden_Settings
         A populated Woden_Settings object containing the observation parameters.
 
     Returns

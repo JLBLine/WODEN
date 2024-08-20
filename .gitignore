@@ -61,6 +61,10 @@ cmake_testing/GPU_code/source_components/*.png
 cmake_testing/GPU_code/primary_beam_gpu/*.png
 cmake_testing/GPU_code/primary_beam_gpu/plots
 
+cmake_testing/wodenpy/skymodel/test_full_skymodel.fits
+cmake_testing/wodenpy/skymodel/test_full_skymodel.txt
+cmake_testing/wodenpy/skymodel/test_full_skymodel.yaml
+
 *importuvfits.last
 *.log
 
@@ -93,3 +97,9 @@ wodenpy.egg-info
 
 ## ingnore things named with pyenv on front
 pyenv*
+
+##outputs in examples
+examples/polarisation/*.fits
+examples/polarisation/*.uvfits
+examples/polarisation/*.ms
+examples/polarisation/eg_array.txt

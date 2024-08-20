@@ -7,7 +7,7 @@ import ctypes
 # ##Code we are testing
 import wodenpy.use_libwoden.woden_settings as ws
 from wodenpy.wodenpy_setup import run_setup
-
+from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 import numpy.testing as npt
 
 ##annoying path hack to find where the C library is
@@ -63,6 +63,20 @@ class PretendArgs():
 class Test(unittest.TestCase):
     """Test the `rw.write_json` function, which writes an input file to feed
     into the WODEN executable"""
+    
+    
+    def read_in_C_functions(self):
+        """Read in the C library function that reads the ctypes woden_settings
+        structure and writes the content to a text file"""
+        
+        woden_struct_classes = Woden_Struct_Classes(self.precision)
+        self.woden_settings = woden_struct_classes.Woden_Settings()
+        
+        ## Read in the C library for float version
+        libwoden = ctypes.cdll.LoadLibrary(f"{test_dir}/libread_woden_settings_{self.precision}.so")
+        self.read_woden_settings = libwoden.read_woden_settings
+        self.read_woden_settings.argtypes = [ctypes.POINTER(woden_struct_classes.Woden_Settings)]
+        
     def make_basic_inputs(self, precision):
         """Make some basis input arguments for `rw.write_json`"""
         self.jd_date = 2458647.044583333
@@ -70,22 +84,11 @@ class Test(unittest.TestCase):
         self.lst = 10.0
         self.args = PretendArgs()
         self.args.precision = precision
+        self.precision = precision
         
-    def read_in_C_functions(self):
-        """Read in the C library function that reads the ctypes woden_settings
-        structure and writes the content to a text file"""
+        ##load in the C library
+        self.read_in_C_functions()
         
-        ## Read in the C library for float version
-        libwoden_float = ctypes.cdll.LoadLibrary(f"{test_dir}/libread_woden_settings_float.so")
-        self.read_woden_settings_float = libwoden_float.read_woden_settings
-        self.read_woden_settings_float.argtypes = [ctypes.POINTER(ws.Woden_Settings_Float)]
-        
-        ## Read in the C library for double version
-        libwoden_double = ctypes.cdll.LoadLibrary(f"{test_dir}/libread_woden_settings_double.so")
-        self.read_woden_settings_double = libwoden_double.read_woden_settings
-        self.read_woden_settings_double.argtypes = [ctypes.POINTER(ws.Woden_Settings_Double)]
-
-    
     def read_C_output_textfile(self):
         
         output_dict = {}
@@ -103,18 +106,16 @@ class Test(unittest.TestCase):
         """Run C code that reads in the woden_settings struct and prints
         out the contents to a text file"""
 
-        ##load in the C library
-        self.read_in_C_functions()
-        
         if self.args.precision == 'float':
             # print("Checking the FLOAT")
-            self.read_woden_settings_float(woden_settings)
+            # self.read_woden_settings_float(woden_settings)
             delta = 1e-8
         else:
             # print("Checking the DOUBLE")
-            self.read_woden_settings_double(woden_settings)
+            # self.read_woden_settings_double(woden_settings)
             delta = 1e-12
             
+        self.read_woden_settings(woden_settings)
         data = self.read_C_output_textfile()
 
         self.assertAlmostEqual(self.args.ra0*D2R, float(data['ra0']), delta=delta)
@@ -148,27 +149,19 @@ class Test(unittest.TestCase):
 
     def call_create_woden_settings(self):
         """Calls the function under test"""
-        woden_settings = ws.create_woden_settings(args=self.args,
+        woden_settings = ws.create_woden_settings(self.woden_settings,
+                                 args=self.args,
                                  lst=self.lst, jd_date=self.jd_date)
         return woden_settings
     
 
     def test_make_minimum_settings(self):
         """Run the bare mimimum set of choices """
-
-        ##This makes fake args with double precision
-        self.make_basic_inputs('double')
         
-        ##This runs `create_woden_settings`
-        woden_settings = self.call_create_woden_settings()
-
-        ##This passes woden_settings into C code which write contents to a text ## file, reads in that text file, and checks the outputs make sense
-        self.check_basic_inputs(woden_settings)
-        
-        ##Do it again with float precision
-        self.make_basic_inputs('float')
-        woden_settings = self.call_create_woden_settings()
-        self.check_basic_inputs(woden_settings)
+        for precision in ['float', 'double']:
+            self.make_basic_inputs(precision)
+            woden_settings = self.call_create_woden_settings()
+            self.check_basic_inputs(woden_settings)
         
     def test_write_gaussian_beam(self):
         """Test that the Gaussian primary beam options work correctly"""
@@ -189,7 +182,7 @@ class Test(unittest.TestCase):
                 delta = 1e-8
             else:
                 delta = 1e-10
-            
+                
             self.assertEqual(1, int(self.data['beamtype']))
             self.assertAlmostEqual(self.args.gauss_ra_point,
                              float(self.data['gauss_ra_point'])/D2R,
@@ -202,30 +195,19 @@ class Test(unittest.TestCase):
             self.assertEqual(self.args.gauss_beam_ref_freq,
                              float(self.data['gauss_beam_ref_freq']))
 
-        ##This makes fake args with double precision
-        self.make_basic_inputs('double')
-        add_extra_gauss_args()
-        
-        ##This runs `create_woden_settings`
-        woden_settings = self.call_create_woden_settings()
 
-        ##This passes woden_settings into C code which write contents to a text
-        ## file, reads in that text file, and checks the outputs make sense
-        self.check_basic_inputs(woden_settings)
-        check_gauss_outputs()
-        
-        ##Do it again with float precision
-        ##This makes fake args with double precision
-        self.make_basic_inputs('float')
-        add_extra_gauss_args()
-        
-        ##This runs `create_woden_settings`
-        woden_settings = self.call_create_woden_settings()
+        for precision in ['float', 'double']:
+            ##This makes fake args with double precision
+            self.make_basic_inputs(precision)
+            add_extra_gauss_args()
+            
+            ##This runs `create_woden_settings`
+            woden_settings = self.call_create_woden_settings()
 
-        ##This passes woden_settings into C code which write contents to a text
-        ## file, reads in that text file, and checks the outputs make sense
-        self.check_basic_inputs(woden_settings)
-        check_gauss_outputs()
+            ##This passes woden_settings into C code which write contents to a text
+            ## file, reads in that text file, and checks the outputs make sense
+            self.check_basic_inputs(woden_settings)
+            check_gauss_outputs()
 
     def check_mwa_beam_delays(self):
         
@@ -251,33 +233,21 @@ class Test(unittest.TestCase):
             self.assertEqual(self.args.hdf5_beam_path, self.data['hdf5_beam_path'])
             self.check_mwa_beam_delays()
             
+        for precision in ['float', 'double']:
+            
         
-        ##This makes fake args with double precision
-        self.make_basic_inputs('double')
-        add_extra_MWAFEE_args()
+            ##This makes fake args with double precision
+            self.make_basic_inputs(precision)
+            add_extra_MWAFEE_args()
+            
+            ##This runs `create_woden_settings`
+            woden_settings = self.call_create_woden_settings()
+
+            ##This passes woden_settings into C code which write contents to a text
+            ## file, reads in that text file, and checks the outputs make sense
+            self.check_basic_inputs(woden_settings)
+            check_MWAFEE_outputs()
         
-        ##This runs `create_woden_settings`
-        woden_settings = self.call_create_woden_settings()
-
-        ##This passes woden_settings into C code which write contents to a text
-        ## file, reads in that text file, and checks the outputs make sense
-        self.check_basic_inputs(woden_settings)
-        check_MWAFEE_outputs()
-        
-        ##Do it again with float precision
-        ##This makes fake args with double precision
-        self.make_basic_inputs('float')
-        add_extra_MWAFEE_args()
-        
-        ##This runs `create_woden_settings`
-        woden_settings = self.call_create_woden_settings()
-
-        ##This passes woden_settings into C code which write contents to a text
-        ## file, reads in that text file, and checks the outputs make sense
-        self.check_basic_inputs(woden_settings)
-        check_MWAFEE_outputs()
-
-
     def test_write_MWA_FEE_beam_interp(self):
         """Test that the interpolated MWA FEE primary beam options work correctly"""
 
@@ -293,31 +263,19 @@ class Test(unittest.TestCase):
             self.check_mwa_beam_delays()
             
         
-        ##This makes fake args with double precision
-        self.make_basic_inputs('double')
-        add_extra_MWAFEE_args()
-        
-        ##This runs `create_woden_settings`
-        woden_settings = self.call_create_woden_settings()
+        for precision in ['float', 'double']:
+            ##This makes fake args with double precision
+            self.make_basic_inputs(precision)
+            add_extra_MWAFEE_args()
+            
+            ##This runs `create_woden_settings`
+            woden_settings = self.call_create_woden_settings()
 
-        ##This passes woden_settings into C code which write contents to a text
-        ## file, reads in that text file, and checks the outputs make sense
-        self.check_basic_inputs(woden_settings)
-        check_MWAFEE_outputs()
+            ##This passes woden_settings into C code which write contents to a text
+            ## file, reads in that text file, and checks the outputs make sense
+            self.check_basic_inputs(woden_settings)
+            check_MWAFEE_outputs()
         
-        ##Do it again with float precision
-        ##This makes fake args with double precision
-        self.make_basic_inputs('float')
-        add_extra_MWAFEE_args()
-        
-        ##This runs `create_woden_settings`
-        woden_settings = self.call_create_woden_settings()
-
-        ##This passes woden_settings into C code which write contents to a text
-        ## file, reads in that text file, and checks the outputs make sense
-        self.check_basic_inputs(woden_settings)
-        check_MWAFEE_outputs()
-
     def test_write_MWA_analy_beam(self):
         """Test that the interpolated analytic MWA primary beam options work correctly"""
 
@@ -330,52 +288,34 @@ class Test(unittest.TestCase):
             self.assertEqual(5, int(self.data['beamtype']))
             self.check_mwa_beam_delays()
             
-        ##This makes fake args with double precision
-        self.make_basic_inputs('double')
-        add_extra_MWAanaly_args()
-        
-        ##This runs `create_woden_settings`
-        woden_settings = self.call_create_woden_settings()
+        for precision in ['float', 'double']:
+            ##This makes fake args with double precision
+            self.make_basic_inputs(precision)
+            add_extra_MWAanaly_args()
+            
+            ##This runs `create_woden_settings`
+            woden_settings = self.call_create_woden_settings()
 
-        ##This passes woden_settings into C code which write contents to a text
-        ## file, reads in that text file, and checks the outputs make sense
-        self.check_basic_inputs(woden_settings)
-        check_MWAanaly_outputs()
-        
-        ##Do it again with float precision
-        ##This makes fake args with double precision
-        self.make_basic_inputs('float')
-        add_extra_MWAanaly_args()
-        
-        ##This runs `create_woden_settings`
-        woden_settings = self.call_create_woden_settings()
-
-        ##This passes woden_settings into C code which write contents to a text
-        ## file, reads in that text file, and checks the outputs make sense
-        self.check_basic_inputs(woden_settings)
-        check_MWAanaly_outputs()
-
+            ##This passes woden_settings into C code which write contents to a text
+            ## file, reads in that text file, and checks the outputs make sense
+            self.check_basic_inputs(woden_settings)
+            check_MWAanaly_outputs()
+            
     def test_write_EDA2_beam(self):
         """Test that the EDA2 primary beam options work correctly"""
+        
+        for precision in ['float', 'double']:
+            ##This makes fake args with double precision
+            self.make_basic_inputs(precision)
+            self.args.primary_beam = 'EDA2'
+            
+            ##This runs `create_woden_settings`
+            woden_settings = self.call_create_woden_settings()
 
-        ##This makes fake args with double precision
-        self.make_basic_inputs('double')
-        self.args.primary_beam = 'EDA2'
-        
-        ##This runs `create_woden_settings`
-        woden_settings = self.call_create_woden_settings()
-        
-        ##This passes woden_settings into C code which write contents to a text
-        ## file, reads in that text file, and checks the outputs make sense
-        self.check_basic_inputs(woden_settings)
-        self.assertEqual(3, int(self.data['beamtype']))
-        
-        ##Do it again with float precision
-        self.make_basic_inputs('float')
-        self.args.primary_beam = 'EDA2'
-        woden_settings = self.call_create_woden_settings()
-        self.check_basic_inputs(woden_settings)
-        self.assertEqual(3, int(self.data['beamtype']))
+            ##This passes woden_settings into C code which write contents to a text
+            ## file, reads in that text file, and checks the outputs make sense
+            self.check_basic_inputs(woden_settings)
+            self.assertEqual(3, int(self.data['beamtype']))
 
     def test_write_do_autos(self):
         """Test that doing autos gets swithced on. No need to check for
@@ -403,7 +343,7 @@ class Test(unittest.TestCase):
     def test_write_do_precssion(self):
         """Test that doing precession gets swithced on/off. No need to check for
         float or double, this is just changing an int"""
-
+        
         ##This makes fake args with double precision
         self.make_basic_inputs('double')
         self.args.no_precession = False

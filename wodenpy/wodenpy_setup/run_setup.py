@@ -142,7 +142,7 @@ def get_parser():
              ' for the MWA FEE currently, not the MWA analytic model')
 
     input_group = parser.add_argument_group('INPUT/OUTPUT OPTIONS')
-    input_group.add_argument('--IAU_order', default=False,
+    input_group.add_argument('--IAU_order', default=False, action='store_true',
         help='NEW IN WODEN versions >= 1.4.0. By default, the XX pol is now '
              'from the East-West aligned dipoles. Add --IAU_order to define '
              'the XX pol as North-South. Background: '

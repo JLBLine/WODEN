@@ -21,6 +21,7 @@
 #define BASE_BAND_FREQ 120000000.0
 #define STOKESI 0.3333333333333333
 // #define STOKESI 1.0
+#define POL_FRAC 1.0
 
 //External CUDA code we're linking in
 extern void calculate_visibilities(array_layout_t *array_layout,
@@ -46,35 +47,39 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
                                  double ra0, double dec0,
                                  int beamtype);
 
+//Due to the way I've set up the sky model, the I,Q,U,V fluxes should all be
+//some multiple of the number of components. Everything is also stuck at phase
+//centre, so visis should be the same for all baselines. Give given the complex
+//beam values, we can predict the visibilities
+void predict_inst_stokes(int num_comps, double _Complex g1x, double _Complex D1x,
+                                        double _Complex D1y, double _Complex g1y,
+                                        double _Complex g2x, double _Complex D2x,
+                                        double _Complex D2y, double _Complex g2y,
+                                        double _Complex * xx, double _Complex * xy,
+                                        double _Complex * yx, double _Complex * yy);
+
 void test_comp_phase_centre_twogains(visibility_set_t *visibility_set,
-                                     double gain1xx, double gain1yy,
-                                     double gain2xx, double gain2yy,
+                                     int num_comps,
+                                     double _Complex gain1x, double _Complex gain1y,
+                                     double _Complex gain2x, double _Complex gain2y,
                                      woden_settings_t *woden_settings);
 
 void test_comp_phase_centre_allgains(visibility_set_t *visibility_set,
-                                     double gain1xx_re, double gain1xx_im,
-                                     double gain1xy_re, double gain1xy_im,
-                                     double gain1yx_re, double gain1yx_im,
-                                     double gain1yy_re, double gain1yy_im,
-                                     double gain2xx_re, double gain2xx_im,
-                                     double gain2xy_re, double gain2xy_im,
-                                     double gain2yx_re, double gain2yx_im,
-                                     double gain2yy_re, double gain2yy_im,
-                                     woden_settings_t *woden_settings,
-                                     double tol);
+                              int num_comps,
+                              double _Complex gain1x, double _Complex leak1x,
+                              double _Complex leak1y, double _Complex gain1y,
+                              double _Complex gain2x, double _Complex leak2x,
+                              double _Complex leak2y, double _Complex gain2y,
+                              woden_settings_t *woden_settings, double tol);
 
 //Aight this one tests things when we have all gains varying, and all antennas
 //have different primary beams
 void test_comp_phase_centre_allgains_multiants(visibility_set_t *visibility_set,
-                                     double gain1xx_re, double gain1xx_im,
-                                     double gain1xy_re, double gain1xy_im,
-                                     double gain1yx_re, double gain1yx_im,
-                                     double gain1yy_re, double gain1yy_im,
-                                     double gain2xx_re, double gain2xx_im,
-                                     double gain2xy_re, double gain2xy_im,
-                                     double gain2yx_re, double gain2yx_im,
-                                     double gain2yy_re, double gain2yy_im,
-                                     double *antx_mult, double *anty_mult,
-                                     int num_ants,
-                                     woden_settings_t *woden_settings,
-                                     double tol);
+                                int num_comps, 
+                                double _Complex gain1x, double _Complex leak1x,
+                                double _Complex leak1y, double _Complex gain1y,
+                                double _Complex gain2x, double _Complex leak2x,
+                                double _Complex leak2y, double _Complex gain2y,
+                                double *antx_mult, double *anty_mult, int num_ants,
+                                woden_settings_t *woden_settings,
+                                double tol);

@@ -74,7 +74,7 @@ void test_calculate_autos(e_beamtype beamtype) {
 
   int flux_ind = 0;
   int beam_ind = 0;
-  double flux_value = 1;
+  double flux_value = 0.1;
   double beam_value = 0;
   int auto_stripe;
 
@@ -84,15 +84,14 @@ void test_calculate_autos(e_beamtype beamtype) {
 
       flux_ind = num_freqs*comp + freq;
 
-      expec_XX = 0.0 + 0.0*I;
+      // expec_XX = 0.0 + 0.0*I;
 
       components->extrap_stokesI[flux_ind] = flux_value;
-      components->extrap_stokesQ[flux_ind] = 0;
-      components->extrap_stokesU[flux_ind] = 0;
-      components->extrap_stokesV[flux_ind] = 0;
+      components->extrap_stokesQ[flux_ind] = flux_value;
+      components->extrap_stokesU[flux_ind] = flux_value;
+      components->extrap_stokesV[flux_ind] = flux_value;
 
-      flux_value ++;
-
+      flux_value += 0.1;
 
     }
   }
@@ -101,7 +100,7 @@ void test_calculate_autos(e_beamtype beamtype) {
   //   printf("%.1f\n",components->extrap_stokesI[i] );
   // }
 
-  user_precision_complex_t expec_I;
+  user_precision_complex_t expec_flux;
 
   user_precision_complex_t gx, Dx, Dy, gy;
 
@@ -128,25 +127,42 @@ void test_calculate_autos(e_beamtype beamtype) {
 
         flux_ind = num_freqs*comp + freq;
 
-        expec_I = components->extrap_stokesI[flux_ind] + 0*I;
+        expec_flux = components->extrap_stokesI[flux_ind] + 0*I;
 
         if (beamtype == NO_BEAM) {
-          expec_XX += expec_I;
-          expec_YY += expec_I;
+          gx = 1 + 0.0*I;
+          Dx = 0 + 0.0*I;
+          Dy = 0 + 0.0*I;
+          gy = 1 + 0.0*I;
         }
 
         //Only MWA models have leakge terms at the moment
-       else if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY) {
-         expec_XX += (gx*conj(gx) + Dx*conj(Dx))*expec_I;
-         expec_XY += (gx*conj(Dy) + conj(gy)*Dx)*expec_I;
-         expec_YX += (Dy*conj(gx) + gy*conj(Dx))*expec_I;
-         expec_YY += (gy*conj(gy) + Dy*conj(Dy))*expec_I;
-       }
-
-       else{
-          expec_XX += (gx*conj(gx))*expec_I;
-          expec_YY += (gy*conj(gy))*expec_I;
+        else if (beamtype == ANALY_DIPOLE || beamtype == GAUSS_BEAM) {
+            Dx = 0 + 0.0*I;
+            Dy = 0 + 0.0*I;
         }
+
+        expec_XX += (gx*conj(gx) + Dx*conj(Dx))*expec_flux;
+        expec_XX += (gx*conj(gx) - Dx*conj(Dx))*expec_flux;
+        expec_XX += (gx*conj(Dx) + Dx*conj(gx))*expec_flux;
+        expec_XX += ((0.0 + I*1.0)*expec_flux)*(gx*conj(Dx) - Dx*conj(gx));
+
+        expec_XY += (gx*conj(Dy) + Dx*conj(gy))*expec_flux;
+        expec_XY += (gx*conj(Dy) - Dx*conj(gy))*expec_flux;
+        expec_XY += (gx*conj(gy) + Dx*conj(Dy))*expec_flux;
+        expec_XY += ((0.0 + I*1.0)*expec_flux)* (gx*conj(gy) - Dx*conj(Dy));
+
+        expec_YX += (Dy*conj(gx) + gy*conj(Dx))*expec_flux;
+        expec_YX += (Dy*conj(gx) - gy*conj(Dx))*expec_flux;
+        expec_YX += (Dy*conj(Dx) + gy*conj(gx))*expec_flux;
+        expec_YX += ((0.0 + I*1.0)*expec_flux)* (Dy*conj(Dx) - gy*conj(gx));
+
+        expec_YY += (Dy*conj(Dy) + gy*conj(gy))*expec_flux;
+        expec_YY += (Dy*conj(Dy) - gy*conj(gy))*expec_flux;
+        expec_YY += (Dy*conj(gy) + gy*conj(Dy))*expec_flux;
+        expec_YY += ((0.0 + I*1.0)*expec_flux)* (Dy*conj(gy) - gy*conj(Dy));
+
+        // printf("expec_XX %.1f %.1f\n",creal(expec_XX), cimag(expec_XX) );
 
         beam_value ++;
         beam_ind ++;
@@ -181,7 +197,7 @@ void test_calculate_autos(e_beamtype beamtype) {
 
   //Doing all testing with identical primary beams so set num_beams to 1
   int num_beams = 1;
-
+  components->do_QUV = 1;
   test_kern_calc_autos(components, beamtype,
                        num_comps, num_baselines,
                        num_freqs, num_times, num_ants, num_beams,

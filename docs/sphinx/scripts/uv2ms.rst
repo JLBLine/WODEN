@@ -1,5 +1,5 @@
 ``woden_uv2ms.py``
-=============
+====================
 
 Helper script to convert ``uvfits`` files to ``measurement sets`` using ``pyuvdata``.
 

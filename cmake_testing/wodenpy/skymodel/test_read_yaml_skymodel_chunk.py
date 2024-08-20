@@ -17,11 +17,12 @@ from wodenpy.use_libwoden.beam_settings import BeamTypes
 
 from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, _Ctype_Source_Into_Python
 
-from common_skymodel_test import fill_comp_counter, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components
+from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components, Skymodel_Settings
 
 import wodenpy.use_libwoden.woden_settings as ws
 
 from read_skymodel_common import check_components, check_all_sources, populate_pointgauss_chunk, populate_shapelet_chunk, make_expected_chunks
+from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 
 
 D2R = np.pi/180.0
@@ -330,8 +331,10 @@ class Test(BaseChunkTest):
                                           crop_by_component=True):
         
         lst = 0.0
-    
-        woden_settings = ws.Woden_Settings_Double()
+        
+        precision = 'double'
+        woden_struct_classes = Woden_Struct_Classes(precision)
+        woden_settings = woden_struct_classes.Woden_Settings()
         
         woden_settings.time_res = 1.0
         woden_settings.latitude = -0.46606083776035967
@@ -362,7 +365,7 @@ class Test(BaseChunkTest):
         
         beamtype = BeamTypes.FEE_BEAM.value
 
-        source_catalogue = read_skymodel.read_skymodel_chunks(
+        source_catalogue = read_skymodel.read_skymodel_chunks(woden_struct_classes,
                                               skymodel_filename, chunked_skymodel_maps,
                                               num_freqs, num_time_steps,
                                               beamtype, lsts, MWA_LAT)
@@ -390,10 +393,16 @@ class Test(BaseChunkTest):
         
         comps_per_chunk = int(np.floor(max_num_visibilities / (num_baselines * num_freqs * num_time_steps)))
         
+        skymodel_settings = Skymodel_Settings(deg_between_comps,
+                                          num_coeff_per_shape,
+                                          num_list_values,
+                                          comps_per_source)
+        
+        skymodel_settings.before_crop_num_coords = len(ra_range)
         
         expec_skymodel_chunks = make_expected_chunks(ra_range, dec_range,
-                             num_coeff_per_shape, num_list_values,
-                             comps_per_source, comps_per_chunk)
+                             skymodel_settings, comps_per_chunk, lst=lst,
+                             fits_skymodel=False)
         
         
         self.run_test_read_yaml_skymodel_chunk(filename, expec_skymodel_chunks,
@@ -435,7 +444,7 @@ class Test(BaseChunkTest):
         num_coeff_per_shape = 6
         num_list_values = 4
         comps_per_source = 20
-        lst = np.pi
+        lst = 0.0
         max_num_visibilities = 1e10
         
         self.run_write_model_test_read_yaml_skymodel_chunk(deg_between_comps,

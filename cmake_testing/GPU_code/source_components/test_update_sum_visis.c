@@ -175,15 +175,6 @@ void test_kern_update_sum_visis_VaryGainChooseBeams(int beamtype) {
       //     sum_visi_YX_real[output], sum_visi_YX_imag[output],
       //     sum_visi_YY_real[output], sum_visi_YY_imag[output]);
 
-      // TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_order[output], sum_visi_XX_real[output]);
-      // TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_order[output], sum_visi_XY_real[output]);
-      // TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_order[output], sum_visi_YX_real[output]);
-      // TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_order[output], sum_visi_YY_real[output]);
-      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_XX_imag[output]);
-      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_XY_imag[output]);
-      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_YX_imag[output]);
-      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_YY_imag[output]);
-
       TEST_ASSERT_EQUAL_DOUBLE(expected_order[output], sum_visi_XX_real[output]);
       TEST_ASSERT_EQUAL_DOUBLE(expected_order[output], sum_visi_XY_real[output]);
       TEST_ASSERT_EQUAL_DOUBLE(expected_order[output], sum_visi_YX_real[output]);
@@ -200,18 +191,6 @@ void test_kern_update_sum_visis_VaryGainChooseBeams(int beamtype) {
     //as we apply a gain of 1.0
     for (int output = 0; output < num_visis; output++) {
 
-      // TEST_ASSERT_DOUBLE_WITHIN(TOL, num_components, sum_visi_XX_real[output]);
-      // TEST_ASSERT_DOUBLE_WITHIN(TOL, num_components, sum_visi_XX_real[output]);
-      // TEST_ASSERT_DOUBLE_WITHIN(TOL, num_components, sum_visi_XX_real[output]);
-      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_XY_real[output]);
-      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_YX_real[output]);
-      // TEST_ASSERT_DOUBLE_WITHIN(TOL, num_components, sum_visi_YY_real[output]);
-      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_XX_imag[output]);
-      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_XY_imag[output]);
-      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_YX_imag[output]);
-      // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, sum_visi_YY_imag[output]);
-
-      TEST_ASSERT_EQUAL_DOUBLE(num_components, sum_visi_XX_real[output]);
       TEST_ASSERT_EQUAL_DOUBLE(num_components, sum_visi_XX_real[output]);
       TEST_ASSERT_EQUAL_DOUBLE(0.0, sum_visi_XY_real[output]);
       TEST_ASSERT_EQUAL_DOUBLE(0.0, sum_visi_YX_real[output]);

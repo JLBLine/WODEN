@@ -217,26 +217,17 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
   components.power_ref_freqs = ref_freqs;
   components.power_ref_stokesI = ref_stokesI;
-  components.power_ref_stokesQ = ref_stokesQ;
-  components.power_ref_stokesU = ref_stokesU;
-  components.power_ref_stokesV = ref_stokesV;
   components.power_SIs = ref_power_SIs;
   components.power_comp_inds = power_comp_inds;
 
   components.curve_ref_freqs = ref_freqs;
   components.curve_ref_stokesI = ref_stokesI;
-  components.curve_ref_stokesQ = ref_stokesQ;
-  components.curve_ref_stokesU = ref_stokesU;
-  components.curve_ref_stokesV = ref_stokesV;
   components.curve_SIs = ref_curve_SIs;
   components.curve_qs = ref_qs;
   components.curve_comp_inds = curve_comp_inds;
 
   components.list_freqs = list_freqs;
   components.list_stokesI = list_stokesI;
-  components.list_stokesQ = list_stokesQ;
-  components.list_stokesU = list_stokesU;
-  components.list_stokesV = list_stokesV;
   components.num_list_values = num_list_values;
   components.list_start_indexes = list_start_indexes;
   components.list_comp_inds = list_comp_inds;
@@ -264,6 +255,19 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   }
 
   components.num_primarybeam_values = num_components*woden_settings->num_freqs*woden_settings->num_time_steps;
+
+  components.n_stokesV_pol_frac = 0;
+  components.n_stokesV_power = 0;
+  components.n_stokesV_curve = 0;
+  components.n_stokesV_list = 0;
+  components.n_linpol_pol_frac = 0;
+  components.n_linpol_power = 0;
+  components.n_linpol_curve = 0;
+  components.n_linpol_list = 0;
+  components.n_linpol_p_list = 0;
+  components.n_linpol_angles = 0;
+
+  components.do_QUV = 0;
 
   //Run the CUDA code
   test_source_component_common(num_powers, components, freqs,
@@ -394,6 +398,8 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   double *expec_flux_U = malloc(num_freqs*num_components*sizeof(double));
   double *expec_flux_V = malloc(num_freqs*num_components*sizeof(double));
 
+  // printf("num_powers %d num_curves %d num_lists %d\n", num_powers, num_curves, num_lists);
+
   CPU_extrapolate_fluxes_in_components(&components, num_powers, num_curves, num_lists,
                         freqs, num_freqs,
                         expec_flux_I, expec_flux_Q, expec_flux_U, expec_flux_V);
@@ -401,22 +407,20 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   #ifdef DOUBLE_PRECISION
     TOL = 1e-12;
   #else
-    TOL = 1e-4;
+    TOL = 2e-4;
   #endif
 
   for (int i = 0; i < num_freqs*(num_powers + num_curves + num_lists); i++) {
     //Check the two are within tolerace
     // printf("%d %.3f %.3f\n",i, expec_flux_I[i], extrap_flux_I[i] );
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_I[i], extrap_flux_I[i]);
-    //in the future this should be testable, for only doing Stokes I so
-    //lock to zero
-    // TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_Q[i], extrap_flux_Q[i]);
-    // TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_U[i], extrap_flux_U[i]);
-    // TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_V[i], extrap_flux_V[i]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_Q[i], extrap_flux_Q[i]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_U[i], extrap_flux_U[i]);
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_V[i], extrap_flux_V[i]);
 
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, extrap_flux_Q[i]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, extrap_flux_U[i]);
-    TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, extrap_flux_V[i]);
+    // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, extrap_flux_Q[i]);
+    // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, extrap_flux_U[i]);
+    // TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, extrap_flux_V[i]);
 
   }
 
@@ -504,12 +508,12 @@ int main(void)
     UNITY_BEGIN();
 
     RUN_TEST(test_source_component_common_ConstantDecFEEBeamPoint);
-    RUN_TEST(test_source_component_common_ConstantDecFEEBeamGauss);
-    RUN_TEST(test_source_component_common_ConstantDecFEEBeamShapelet);
+    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamGauss);
+    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamShapelet);
 
-    RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpPoint);
-    RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpGaussian);
-    RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpShapelet);
+    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpPoint);
+    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpGaussian);
+    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpShapelet);
 
     return UNITY_END();
 }

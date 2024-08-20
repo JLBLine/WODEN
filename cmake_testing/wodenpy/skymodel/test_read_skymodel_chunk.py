@@ -18,12 +18,12 @@ from wodenpy.use_libwoden.beam_settings import BeamTypes
 
 from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, _Ctype_Source_Into_Python
 
-from common_skymodel_test import fill_comp_counter, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components
+from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components, Skymodel_Settings
 
 from read_skymodel_common import check_components, check_all_sources, populate_pointgauss_chunk, populate_shapelet_chunk, make_expected_chunks
 
 import wodenpy.use_libwoden.woden_settings as ws
-
+from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 from test_read_FITS_skymodel_chunk import write_full_test_skymodel_fits
 from test_read_yaml_skymodel_chunk import write_full_test_skymodel_yaml
 from test_read_text_skymodel_chunk import write_full_test_skymodel_text, make_expected_chunks_text
@@ -57,7 +57,9 @@ class Test(BaseChunkTest):
         
         lst = 0.0
     
-        woden_settings = ws.Woden_Settings_Double()
+        precision = "double"
+        woden_struct_classes = Woden_Struct_Classes(precision)
+        woden_settings = woden_struct_classes.Woden_Settings()
         
         woden_settings.time_res = 1.0
         woden_settings.latitude = -0.46606083776035967
@@ -72,12 +74,18 @@ class Test(BaseChunkTest):
         woden_settings.do_precession = 1
         lsts = ws.setup_lsts_and_phase_centre(woden_settings)
         
+        settings = Skymodel_Settings(deg_between_comps, num_coeff_per_shape,
+                                     num_list_values, comps_per_source,
+                                     stokesV_frac_cadence = 5,
+                                     stokesV_pl_cadence = 4,
+                                     stokesV_cpl_cadence = 3,
+                                     linpol_frac_cadence = 3,
+                                     linpol_pl_cadence = 5,
+                                     linpol_cpl_cadence = 4)
+        
         
         ##create a test FITS skymodel to read
-        ra_range, dec_range = write_full_test_skymodel_fits(deg_between_comps,
-                                 num_coeff_per_shape,
-                                 num_list_values,
-                                 comps_per_source)
+        ra_range, dec_range = write_full_test_skymodel_fits(settings)
         
         skymodel_filename = "test_full_skymodel.fits"
         
@@ -85,8 +93,7 @@ class Test(BaseChunkTest):
         comps_per_chunk = int(np.floor(max_num_visibilities / (num_baselines * num_freqs * num_time_steps)))
         
         expec_skymodel_chunks = make_expected_chunks(ra_range, dec_range,
-                             num_coeff_per_shape, num_list_values,
-                             comps_per_source, comps_per_chunk,
+                             settings, comps_per_chunk, lst=lst,
                              fits_skymodel=True)
         comp_counter = read_radec_count_components(skymodel_filename)
         
@@ -103,7 +110,8 @@ class Test(BaseChunkTest):
         
         beamtype = BeamTypes.FEE_BEAM.value
 
-        source_catalogue = read_skymodel_chunks(skymodel_filename,
+        source_catalogue = read_skymodel_chunks(woden_struct_classes,
+                                                skymodel_filename,
                                                 chunked_skymodel_maps,
                                                 num_freqs, num_time_steps,
                                                 beamtype, lsts, MWA_LAT)
@@ -116,7 +124,9 @@ class Test(BaseChunkTest):
         
         lst = 0.0
     
-        woden_settings = ws.Woden_Settings_Double()
+        precision = "double"
+        woden_struct_classes = Woden_Struct_Classes(precision)
+        woden_settings = woden_struct_classes.Woden_Settings()
         
         woden_settings.time_res = 1.0
         woden_settings.latitude = -0.46606083776035967
@@ -143,9 +153,16 @@ class Test(BaseChunkTest):
         ##come up with expected values
         comps_per_chunk = int(np.floor(max_num_visibilities / (num_baselines * num_freqs * num_time_steps)))
         
+        skymodel_settings = Skymodel_Settings(deg_between_comps,
+                                          num_coeff_per_shape,
+                                          num_list_values,
+                                          comps_per_source)
+        
+        skymodel_settings.before_crop_num_coords = len(ra_range)
+        
         expec_skymodel_chunks = make_expected_chunks(ra_range, dec_range,
-                             num_coeff_per_shape, num_list_values,
-                             comps_per_source, comps_per_chunk)
+                             skymodel_settings, comps_per_chunk, lst=lst,
+                             fits_skymodel=False)
         
         comp_counter = read_radec_count_components(skymodel_filename)
         
@@ -162,7 +179,8 @@ class Test(BaseChunkTest):
         
         beamtype = BeamTypes.FEE_BEAM.value
 
-        source_catalogue = read_skymodel_chunks(skymodel_filename,
+        source_catalogue = read_skymodel_chunks(woden_struct_classes,
+                                                skymodel_filename,
                                                 chunked_skymodel_maps,
                                                 num_freqs, num_time_steps,
                                                 beamtype, lsts, MWA_LAT)
@@ -173,7 +191,9 @@ class Test(BaseChunkTest):
         
         lst = 0.0
     
-        woden_settings = ws.Woden_Settings_Double()
+        precision = "double"
+        woden_struct_classes = Woden_Struct_Classes(precision)
+        woden_settings = woden_struct_classes.Woden_Settings()
         
         woden_settings.time_res = 1.0
         woden_settings.latitude = -0.46606083776035967
@@ -204,6 +224,8 @@ class Test(BaseChunkTest):
                              num_coeff_per_shape, comps_per_source,
                              comps_per_chunk)
         
+        ##no polari
+        
         comp_counter = read_radec_count_components(skymodel_filename)
         
         
@@ -219,7 +241,8 @@ class Test(BaseChunkTest):
         
         beamtype = BeamTypes.FEE_BEAM.value
 
-        source_catalogue = read_skymodel_chunks(skymodel_filename,
+        source_catalogue = read_skymodel_chunks(woden_struct_classes,
+                                                skymodel_filename,
                                                 chunked_skymodel_maps,
                                                 num_freqs, num_time_steps,
                                                 beamtype, lsts, MWA_LAT)

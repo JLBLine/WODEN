@@ -17,12 +17,12 @@ from wodenpy.use_libwoden.beam_settings import BeamTypes
 
 from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, _Ctype_Source_Into_Python
 
-from common_skymodel_test import fill_comp_counter, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components
+from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components, Skymodel_Settings
 
+from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 import wodenpy.use_libwoden.woden_settings as ws
 
 from read_skymodel_common import check_components, check_all_sources, populate_pointgauss_chunk, populate_shapelet_chunk, make_expected_chunks
-
 
 D2R = np.pi/180.0
 # MWA_LATITUDE = -26.7*D2R
@@ -51,6 +51,11 @@ def make_expected_chunks_text(ra_range, dec_range,
     
     num_list_values = 0
     num_of_each_comp = len(ra_range)
+    
+    settings = Skymodel_Settings(120,
+                                num_coeff_per_shape,
+                                num_list_values,
+                                comps_per_source)
     
     # comp_index_range = np.arange(num_of_each_comp)
     coeff_range = np.arange(NUM_FLUX_TYPES*num_of_each_comp*num_coeff_per_shape)
@@ -82,13 +87,16 @@ def make_expected_chunks_text(ra_range, dec_range,
     n_curves = 0
     n_lists = 0
     
+    polvalues = False
+    
     for chunk_ind in range(num_point_chunks):
         expec_chunk = populate_pointgauss_chunk(CompTypes.POINT, chunk_ind,
                             comps_per_chunk, n_powers,
-                            n_curves, n_lists, num_list_values,
+                            n_curves, n_lists, settings,
                             num_of_each_comp, above_horizon,
                             expec_ra, expec_dec,
                             expec_pow_fluxes, expec_cur_fluxes,
+                            polvalues,
                             fits_skymodel=fits_skymodel)
         
         expec_skymodel_chunks.append(expec_chunk)
@@ -96,10 +104,11 @@ def make_expected_chunks_text(ra_range, dec_range,
     for chunk_ind in range(num_gauss_chunks):
         expec_chunk = populate_pointgauss_chunk(CompTypes.GAUSSIAN, chunk_ind,
                             comps_per_chunk, n_powers,
-                            n_curves, n_lists, num_list_values,
+                            n_curves, n_lists, settings,
                             num_of_each_comp, above_horizon,
                             expec_ra, expec_dec,
                             expec_pow_fluxes, expec_cur_fluxes,
+                            polvalues,
                             fits_skymodel=fits_skymodel)
         
         expec_skymodel_chunks.append(expec_chunk)
@@ -197,9 +206,12 @@ def make_expected_chunks_text(ra_range, dec_range,
                             comp_inds, orig_comp_inds[comp_inds],
                             chunk_basis_param_indexes,
                             chunk_basis_values,
+                            settings,
                             fits_skymodel=fits_skymodel)
         
         expec_skymodel_chunks.append(expec_chunk)
+        
+    ##not doing polarisation in the FITS skymodel format, so go away
     
     return expec_skymodel_chunks
 
@@ -361,6 +373,8 @@ def write_full_test_skymodel_text(deg_between_comps : float,
                              comps_per_source : int):
     """Write a sky model covering the whole sky"""
     
+    
+    
     ra_range = np.arange(0, 360.0*D2R, deg_between_comps*D2R)
     dec_range = np.arange(LOW_DEC, HIGH_DEC, deg_between_comps*D2R)
     
@@ -429,7 +443,9 @@ class Test(BaseChunkTest):
                                           lst,
                                           crop_by_component=True):
         
-        woden_settings = ws.Woden_Settings_Double()
+        precision = "double"
+        woden_struct_classes = Woden_Struct_Classes(precision)
+        woden_settings = woden_struct_classes.Woden_Settings()
         
         woden_settings.time_res = 1.0
         woden_settings.latitude = -0.46606083776035967
@@ -459,7 +475,7 @@ class Test(BaseChunkTest):
         
         beamtype = BeamTypes.FEE_BEAM.value
 
-        source_catalogue = read_skymodel.read_skymodel_chunks(
+        source_catalogue = read_skymodel.read_skymodel_chunks(woden_struct_classes,
                                               skymodel_filename, chunked_skymodel_maps,
                                               num_freqs, num_time_steps,
                                               beamtype, lsts, MWA_LAT)
