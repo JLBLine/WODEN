@@ -4,6 +4,7 @@
 .. _Callingham et al. 2017: https://iopscience.iop.org/article/10.3847/1538-4357/836/2/174/pdf
 .. _Lynch et al. 2021: https://doi.org/10.1017/pasa.2021.50
 .. _Risely et al. 2020: https://doi.org/10.1017/pasa.2020.20
+.. _Topcat: https://doi.org/10.1017/pasa.2020.20
 
 .. _sky model formats:
 
@@ -67,20 +68,22 @@ Using Euler's formula, this can be used to calculate :math:`Q,U` individually:
   Q = \mathrm{P}(\lambda) \cos(2\chi_0 + 2\phi_{\textrm{RM}} \lambda^2), \\
   U = \mathrm{P}(\lambda) \sin(2\chi_0 + 2\phi_{\textrm{RM}} \lambda^2).
 
-There are three models to calculate the linear polarisation flux :math:`\mathrm{P}(\lambda)` in ``WODEN``: ``power_law``; ``curved_power_law``; ``polarisation fraction``. The first two models work exactly the same as the Stokes I models, but with their own reference fluxes and spectral indices. The ``polarisation fraction`` model is a simple fraction of the Stokes I flux density, and is defined as:
+There are five models to calculate the linear polarisation flux :math:`\mathrm{P}(\lambda)` in ``WODEN``: ``power_law``; ``curved_power_law``; ``polarisation fraction``; ``list``; ``p-list``. The first two models work exactly the same as the Stokes I models, but with their own reference fluxes and spectral indices. The ``polarisation fraction`` model is a simple fraction of the Stokes I flux density, and is defined as:
 
 .. math::
   \mathrm{P}(\lambda) = \Pi I(\lambda) ,
 
 where :math:`\Pi` is the polarisation fraction, and :math:`I(\lambda)` is the Stokes I flux density. Note that :math:`\Pi` can be negative, and greater than one.
 
+The ``list`` model is the same as the Stokes I list model, but the user enters two separate lists for Stokes :math:`Q` and :math:`U` as a function of frequency. This means :math:`Q`/:math:`U` are extrapolated independently of one another, and not related via :math:`\phi_{\textrm{RM}}`. With the ``p-list`` model the user enters a list of :math:`\mathrm{P}(\lambda)` fluxes, which is used in conjunction with the rotation measure to calculate :math:`Q` and :math:`U`. See below for exactly how to input these lists using the FITS format.
+
 Circular polarisation (Stokes V)
 -----------------------------------
-Similarly to linear polarisation, circular polarisation can be calculated via three different models: ``power_law``; ``curved_power_law``; ``polarisation fraction``. Again, both ``power_law`` and ``curved_power_law`` mean Stokes V will be modelled separately from Stokes I. ``polarisation fraction`` is again a fraction of the Stokes I flux density.
+Similarly to linear polarisation, circular polarisation can be calculated via three different models: ``power_law``; ``curved_power_law``; ``polarisation fraction``; ``list``. Again, both ``power_law`` and ``curved_power_law`` mean Stokes V will be modelled separately from Stokes I. ``polarisation fraction`` is again a fraction of the Stokes I flux density. Finally ``list`` is a list of flux densities as a function of frequency, and ``WODEN`` will interpolate between these values.
 
 Example of a full Stokes SED
 -----------------------------------
-An example of all these models for a single component (again, plots made using unit tests out of ``WODEN``) is below. Here, Stokes I is a ``power_law``, Stokes Q/U are a ``polarisation fraction``, and Stokes V is a ``curved_power_law``:
+An example of these models for a single component (again, plots made using unit tests out of ``WODEN``) is below. Here, Stokes I is a ``power_law``, Stokes Q/U are a ``polarisation fraction``, and Stokes V is a ``curved_power_law``:
 
 .. image:: eg_fluxes_comp02.png
    :width: 500pt
@@ -92,9 +95,9 @@ In ``WODEN`` nomenclature (which was inherited from the oracle ``RTS``), each as
 
 FITS sky model format
 ----------------------------------
-This sky model follows (and expands upon) the format of the LoBES catalogue `Lynch et al. 2021`_ and is the preferred format as it's the fastest and easiest to lazy load. There are three COMPONENT types: point source; Gaussian; shapelets. These are all the model types as defined in `Line et al. 2020`_ (including the mathematics of how each model is simulated). You can create any number of SOURCEs, each with any number of COMPONENTs, by using the `UNQ_SOURCE_ID` and `NAME` columns as detailed below. The sky model is a FITS file with at least one HDU with the following columns:
+This sky model follows (and expands upon) the format of the LoBES catalogue `Lynch et al. 2021`_ and is the preferred format as it's the fastest and easiest to lazy load. There are three COMPONENT types: point source; Gaussian; shapelets. These are all the model types as defined in `Line et al. 2020`_ (including the mathematics of how each model is simulated). You can create any number of SOURCEs, each with any number of COMPONENTs, by using the `UNQ_SOURCE_ID` and `NAME` columns as detailed below. The sky model is a FITS file with at least one HDU (must appear first, and best to be given name ``MAIN``) with the following columns. Unless otherwise stated, all columns are optional (e.g. if you don't want to include polarisation information, you can leave out the polarisation columns): 
 
-.. list-table:: FITS HDU 0 columns
+.. list-table:: ``MAIN`` HDU
    :header-rows: 1
    :widths: 10 10 80
    :stub-columns: 1
@@ -104,19 +107,19 @@ This sky model follows (and expands upon) the format of the LoBES catalogue `Lyn
       - Description
    *  - UNQ_SOURCE_ID
       -
-      - Unique source ID. This is used to group COMPONENTs into SOURCEs. If you want to have multiple components in a single source, they must have the same ``UNQ_SOURCE_ID``.
+      - (Required) Unique source ID. This is used to group COMPONENTs into SOURCEs. If you want to have multiple components in a single source, they must have the same ``UNQ_SOURCE_ID``.
    *  - NAME
       -
-      - This is a COMPONENT name, and should read as UNQ_SOURCE_ID_C`number` where \`number\` is a COMPONENT number. For example, if you have a SOURCE with UNQ_SOURCE_ID = FornaxA, and you have two components, you should have two rows with NAME = FornaxA_C000 and FornaxA_C001.
+      - (Required) This is a COMPONENT name, and should read as UNQ_SOURCE_ID_C`number` where \`number\` is a COMPONENT number. For example, if you have a SOURCE with UNQ_SOURCE_ID = FornaxA, and you have two components, you should have two rows with NAME = FornaxA_C000 and FornaxA_C001.
    *  - RA
       - deg
-      - Right Ascension (J2000)
+      - (Required) Right Ascension (J2000)
    *  - DEC
       - deg
-      - Declination (J2000)
+      - (Required) Declination (J2000)
    *  - COMP_TYPE
       -
-      - Specifies if the component is a point source, Gaussian, or shapelet. Entered as either ``P``, ``G``, or ``S``.
+      - (Required) Specifies if the component is a point source, Gaussian, or shapelet. Entered as either ``P``, ``G``, or ``S``.
    *  - MAJOR_DC
       - deg
       - Major axis of Gaussian or shapelet model
@@ -128,7 +131,7 @@ This sky model follows (and expands upon) the format of the LoBES catalogue `Lyn
       - Position angle of Gaussian or shapelet model
    *  - MOD_TYPE
       -
-      - The Stokes I flux model of this component. Can be either ``pl`` (power-law), ``cpl`` (curved power-law), or ``nan`` (list of flux densities).
+      - (Required) The Stokes I flux model of this component. Can be either ``pl`` (power-law), ``cpl`` (curved power-law), or ``nan`` (list of flux densities).
    *  - NORM_COMP_PL
       - Jy
       - The Stokes I reference flux for a power-law ``pl`` component model, *must be at the reference frequency 200MHz.*
@@ -196,9 +199,9 @@ This sky model follows (and expands upon) the format of the LoBES catalogue `Lyn
       -
       - The Linear Polarisation flux curvature `q` for a curved power-law ``cpl`` component model
 
-If you want to include SHAPELETS, you must include a second HDU that details the shapelet basis functions for each component, using the following columns:
+If you want to include SHAPELETS, you must include a second HDU that details the shapelet basis functions for each component, using the following columns. If the table does not appear directly after the ``MAIN`` table, it must be given the name ``SHAPELET``:
 
-.. list-table:: FITS HDU 1 columns
+.. list-table:: ``SHAPELET`` HDU
    :header-rows: 1
    :widths: 10 80
    :stub-columns: 1
@@ -213,3 +216,76 @@ If you want to include SHAPELETS, you must include a second HDU that details the
       - The second shapelet order
    *  - COEFF
       - The coefficient to multiply this basis function by
+
+The ``SHAPELET`` HDU is optional, and if it is not present, ``WODEN`` will assume all components are either point sources or Gaussians.
+
+Polarisation list-style flux tables
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you want to include polarised list-style information, besides setting ``nan`` in the ``V_MOD_TYPE`` and/or ``nan`` / ``p_nan`` in the ``LIN_MOD_TYPE`` columns, you must include extra HDUs that contain the listed fluxes. See ``WODEN/examples/polarisation/polarisation_examples.ipynb`` for example Python code to create these tables.
+
+To include a list of Stokes V fluxes, you must include an HDU with the name ``V_LIST_FLUXES`` (it MUST be named). This HDU must have the following columns:
+
+.. list-table:: ``V_LIST_FLUXES`` HDU
+   :header-rows: 1
+   :widths: 20 10 70
+   :stub-columns: 1
+
+   *  - Column Name
+      - Unit
+      - Description
+   *  - NAME
+      -
+      - The COMPONENT name exactly as appears in the ``MAIN`` HDU ``NAME`` column. ``WODEN`` will cross-reference the two HDUs to link the RA/DEC / Stokes I information for the COMPONENT.
+   *  - V_INT_FLX*frequency*
+      - Jy
+      - A reference Stokes V flux density, where *frequency* is the frequency in MHz. For a list type flux model, you can include as many V_INT_FLX*frequency* columns as necessary. For example, if you have three reference fluxes at 100, 150, and 200 MHz, you should have three columns V_INT_FLX100, V_INT_FLX150, and V_INT_FLX200.
+
+If you set ``p_nan`` in the ``LIN_MOD_TYPE`` columns, it means you want to include a list of polarised flux densities (:math:`P(\nu)`). These are used in conjunction with the ``RM`` and ``INTR_POL_ANGLE`` columns in the ``MAIN`` HDU to calculate Stokes Q/U. You must include an HDU with the name ``P_LIST_FLUXES`` (it MUST be named). This HDU must have the following columns:
+
+.. list-table:: ``P_LIST_FLUXES`` HDU
+   :header-rows: 1
+   :widths: 20 10 70
+   :stub-columns: 1
+
+   *  - Column Name
+      - Unit
+      - Description
+   *  - NAME
+      -
+      - The COMPONENT name exactly as appears in the ``MAIN`` HDU ``NAME`` column. ``WODEN`` will cross-reference the two HDUs to link the RA/DEC / Stokes I information for the COMPONENT.
+   *  - P_INT_FLX*frequency*
+      - Jy
+      - A reference linear polarised flux density, where *frequency* is the frequency in MHz. For a list type flux model, you can include as many P_INT_FLX*frequency* columns as necessary. For example, if you have three reference fluxes at 100, 150, and 200 MHz, you should have three columns P_INT_FLX100, P_INT_FLX150, and P_INT_FLX200.
+
+If you set ``nan`` in the ``LIN_MOD_TYPE`` columns, it means you want to include separate lists for Stokes Q and U. These lists will be used to extrapolate the Q and U fluxes separately. You must include two extra HDUs with the names ``Q_LIST_FLUXES`` and ``U_LIST_FLUXES`` (they MUST be named). Both HDUs must include the same number of COMPONENTs, as ``WODEN`` will try to extrapolate the Q/U fluxes for every ``nan`` entry in the ``LIN_MOD_TYPE`` column in the ``MAIN`` HDU. The HDUs must have the following columns:
+
+.. list-table:: ``Q_LIST_FLUXES`` HDU
+   :header-rows: 1
+   :widths: 20 10 70
+   :stub-columns: 1
+
+   *  - Column Name
+      - Unit
+      - Description
+   *  - NAME
+      -
+      - The COMPONENT name exactly as appears in the ``MAIN`` HDU ``NAME`` column. ``WODEN`` will cross-reference the two HDUs to link the RA/DEC / Stokes I information for the COMPONENT.
+   *  - Q_INT_FLX*frequency*
+      - Jy
+      - A reference Stokes Q flux density, where *frequency* is the frequency in MHz. For a list type flux model, you can include as many Q_INT_FLX*frequency* columns as necessary. For example, if you have three reference fluxes at 100, 150, and 200 MHz, you should have three columns Q_INT_FLX100, Q_INT_FLX150, and Q_INT_FLX200.
+
+.. list-table:: ``U_LIST_FLUXES`` HDU
+   :header-rows: 1
+   :widths: 20 10 70
+   :stub-columns: 1
+
+   *  - Column Name
+      - Unit
+      - Description
+   *  - NAME
+      -
+      - The COMPONENT name exactly as appears in the ``MAIN`` HDU ``NAME`` column. ``WODEN`` will cross-reference the two HDUs to link the RA/DEC / Stokes I information for the COMPONENT.
+   *  - U_INT_FLX*frequency*
+      - Jy
+      - A reference Stokes P flux density, where *frequency* is the frequency in MHz. For a list type flux model, you can include as many U_INT_FLX*frequency* columns as necessary. For example, if you have three reference fluxes at 100, 150, and 200 MHz, you should have three columns U_INT_FLX100, U_INT_FLX150, and U_INT_FLX200.
