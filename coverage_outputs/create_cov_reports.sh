@@ -28,6 +28,7 @@ coverage run --source=wodenpy.skymodel.chunk_sky_model -a ../cmake_testing/woden
 coverage run --source=wodenpy.skymodel.chunk_sky_model -a ../cmake_testing/wodenpy/skymodel/test_map_chunk_pointgauss.py
 coverage run --source=wodenpy.skymodel.chunk_sky_model -a ../cmake_testing/wodenpy/skymodel/test_map_chunk_shapelets.py
 coverage run --source=wodenpy.skymodel.read_fits_skymodel -a ../cmake_testing/wodenpy/skymodel/test_read_FITS_skymodel_chunk.py
+coverage run --source=wodenpy.skymodel.read_fits_skymodel -a ../cmake_testing/wodenpy/skymodel/test_check_columns_fits.py
 coverage run --source=wodenpy.use_libwoden.skymodel_structs -a ../cmake_testing/wodenpy/skymodel/test_read_FITS_skymodel_chunk.py
 coverage run --source=wodenpy.skymodel.read_text_skymodel -a ../cmake_testing/wodenpy/skymodel/test_read_text_skymodel_chunk.py
 coverage run --source=wodenpy.skymodel.woden_skymodel -a ../cmake_testing/wodenpy/skymodel/test_read_text_skymodel_chunk.py
@@ -70,4 +71,4 @@ coverage xml
 ##delete things that were written out by running tests
 rm WODEN_array_layout.txt *.uvfits *.json \
     example.txt test_load_data.dat test_full_skymodel* \
-    woden_settings.txt *.so *.png *.npz
+    woden_settings.txt *.so *.png *.npz 
