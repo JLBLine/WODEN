@@ -5,7 +5,6 @@ import numpy as np
 import sys
 import os
 from time import time
-from multiprocessing import Pool
 import argparse
 from queue import Queue
 from threading import Thread

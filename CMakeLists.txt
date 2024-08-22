@@ -14,7 +14,7 @@ endif()
 
 if(USE_CUDA)
     message("USING CUDA : USE_CUDA=ON")
-    project(woden VERSION 2.2 LANGUAGES CXX C CUDA)
+    project(woden VERSION 2.3 LANGUAGES CXX C CUDA)
 
     ##Sets the -std=c++11 nvcc compiler flag I think
     set(CMAKE_CUDA_STANDARD 11)
@@ -33,7 +33,7 @@ if(USE_CUDA)
 elseif(USE_HIP)
     message("DEBUG : USE_HIP=ON")
 
-    project(woden VERSION 2.2 LANGUAGES CXX C HIP)
+    project(woden VERSION 2.3 LANGUAGES CXX C HIP)
     
     set(CMAKE_CXX_COMPILER hipcc)
     add_definitions("-D__HIP_PLATFORM_AMD__ -D__HIPCC__")
