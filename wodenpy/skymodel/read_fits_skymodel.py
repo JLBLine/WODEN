@@ -842,15 +842,24 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
                     beam_ind = num_freqs*time_ind*num_components + (num_components*freq_ind) + new_comp_ind
                     
                     ##TODO likely need some kind of reordering to do IAU
-                    ##convention
-                    source_components.gxs[beam_ind].real = jones[0,0].real
-                    source_components.gxs[beam_ind].imag = jones[0,0].imag
-                    source_components.Dxs[beam_ind].real = jones[0,1].real
-                    source_components.Dxs[beam_ind].imag = jones[0,1].imag
-                    source_components.Dys[beam_ind].real = jones[1,0].real
-                    source_components.Dys[beam_ind].imag = jones[1,0].imag
-                    source_components.gys[beam_ind].real = jones[1,1].real
-                    source_components.gys[beam_ind].imag = jones[1,1].imag
+                    # ##convention
+                    # source_components.gxs[beam_ind].real = jones[0,0].real
+                    # source_components.gxs[beam_ind].imag = jones[0,0].imag
+                    # source_components.Dxs[beam_ind].real = jones[0,1].real
+                    # source_components.Dxs[beam_ind].imag = jones[0,1].imag
+                    # source_components.Dys[beam_ind].real = jones[1,0].real
+                    # source_components.Dys[beam_ind].imag = jones[1,0].imag
+                    # source_components.gys[beam_ind].real = jones[1,1].real
+                    # source_components.gys[beam_ind].imag = jones[1,1].imag
+                    
+                    source_components.gxs[beam_ind].real = -jones[1,1].real
+                    source_components.gxs[beam_ind].imag = -jones[1,1].imag
+                    source_components.Dxs[beam_ind].real = jones[1,0].real
+                    source_components.Dxs[beam_ind].imag = jones[1,0].imag
+                    source_components.Dys[beam_ind].real = -jones[0,1].real
+                    source_components.Dys[beam_ind].imag = -jones[0,1].imag
+                    source_components.gys[beam_ind].real = jones[0,0].real
+                    source_components.gys[beam_ind].imag = jones[0,0].imag
     
     ##now handle flux related things    
     ##always shove things into the source as power, curve, list
