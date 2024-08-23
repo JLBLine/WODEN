@@ -35,6 +35,8 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
   beam_settings_t *beam_settings = fill_primary_beam_settings(woden_settings,
                                                               woden_settings->lsts);
 
+  printf("YO YO YO woden_settings->beamtype: %d\n", woden_settings->beamtype);
+
   //MWA correlator data is split into 24 'coarse' bands of 1.28MHz bandwidth,
   //which is typically split into 10, 20, or 40kHz fine channels
   //User can change these settings using run_woden.py / in the json

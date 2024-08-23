@@ -11,7 +11,12 @@ from wodenpy.skymodel.read_text_skymodel import read_full_text_into_fitstable
 from wodenpy.skymodel.read_yaml_skymodel import read_full_yaml_into_fitstable
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 from astropy.io import fits
+import argparse
 
+
+##This call is so we can use it as a type annotation
+woden_struct_classes = Woden_Struct_Classes()
+Woden_Settings = woden_struct_classes.Woden_Settings
 
 def read_radec_count_components(skymodel_path : str) -> Component_Type_Counter:
     """
@@ -52,6 +57,8 @@ def read_radec_count_components(skymodel_path : str) -> Component_Type_Counter:
 
 
 def read_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
+                         woden_settings : Woden_Settings,
+                         args : argparse.Namespace,
                          skymodel_path : str, chunked_skymodel_maps : list,
                          num_freqs : int, num_time_steps : int,
                          beamtype : int,
@@ -105,8 +112,6 @@ def read_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
             num_hdus = len(hdus)
             hdu_names = [hdu.name for hdu in hdus]
             
-        print('YO', hdu_names)
-    
         ##Only read in a shape table if there are shapelets
         if num_shapelets:
             if 'SHAPELET' in hdu_names:
@@ -154,6 +159,7 @@ def read_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
         sys.exit('The filename fed into `wodenpy/read_skymodel/read_skymodel_chunks` was not of a supported file type. Currently supported formats are: .fits, .yaml, .txt')
         
     source_catalogue = read_fits_skymodel_chunks(woden_struct_classes,
+                              woden_settings, args,
                               main_table, shape_table,
                               chunked_skymodel_maps,
                               num_freqs, num_time_steps, beamtype,

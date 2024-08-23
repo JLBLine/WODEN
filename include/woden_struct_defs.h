@@ -20,6 +20,7 @@ typedef enum {NO_BEAM, /*!< Do not use a primary beam in the simulation */
               frequencies. Should be using an hdf5 file that has been frequency
               interpolated*/
               MWA_ANALY, /*!< Use an analytic MWA tile primary beam */
+              EB_OSKAR, /*!< Use everybeam with the OSKAR primary beam */
               }e_beamtype;
 
 typedef enum {POWER_LAW=0, /*!< Power law flux model */

@@ -6,6 +6,8 @@ import os
 from astropy.io import fits
 import warnings
 import sys
+from casacore.tables import table
+from wodenpy.array_layout.create_array_layout import convert_ecef_to_enh
 
 def get_parser():
     """
@@ -101,9 +103,13 @@ def get_parser():
             "\t\t and --gauss_beam_ref_freq for\nfine control)\n"
             "\t - EDA2 (Analytic dipole with a ground mesh) \n"
             "\t - MWA_analy (MWA analytic model)\n"
+            "\t - everybeam_OSKAR (requires an OSKAR measurement set via --beam_ms_path)\n"
             "\t - none (Don't use a primary beam at all)\n"
             "Defaults to --primary_beam=none")
 
+    tel_group.add_argument('--beam_ms_path', default=False,
+                           help='When using any `everybeam` primary beam option, '
+                                'must provide a path to the measurement set')
 
     tel_group.add_argument('--gauss_beam_FWHM', default=20, type=float,
         help='The FWHM of the Gaussian beam in deg - WODEN defaults to using'
@@ -278,6 +284,25 @@ def select_correct_enh(args):
         args.north = args.north[selection]
         args.height = args.height[selection]
         args.ant_names = args.ant_names[selection]
+        
+    elif args.array_layout == "from_ms":
+        ##TODO work out how to get the lat/lon of the array from the measurement set
+        with table(args.beam_ms_path + '/ANTENNA') as t: 
+        
+            num_ants = len(t)
+            args.num_antennas = num_ants
+            ant_locations = np.array([t.getcell('POSITION', ant) for ant in range(num_ants)])
+            ##convert from ECEF to ENH, as WODEN starts with enh coords
+            east, north, height = convert_ecef_to_enh(ant_locations[:,0],
+                                        ant_locations[:,1], ant_locations[:,2],
+                                        np.radians(args.longitude),
+                                        np.radians(args.latitude))
+            
+            args.east = east
+            args.north = north
+            args.height = height
+            args.ant_names = np.array([t.getcell('NAME', ant) for ant in range(num_ants)])
+        
     else:
         try:
             array_layout = np.loadtxt(args.array_layout)
@@ -350,9 +375,10 @@ def check_args(args):
     for arg in sys.argv: args.command += f" {arg}"
 
     if args.primary_beam not in ['MWA_FEE', 'Gaussian', 'EDA2', 'none', 'None',
-                                 'MWA_FEE_interp', 'MWA_analy']:
+                                 'MWA_FEE_interp', 'MWA_analy',
+                                 'everybeam_OSKAR']:
         exit('Primary beam option --primary_beam must be one of:\n'
-             '\t MWA_FEE, MWA_FEE_interp, Gaussian, EDA2, none\n'
+             '\t Gaussian, EDA2, none, MWA_FEE, MWA_FEE_interp, MWA_analy, everybeam_OSKAR\n'
              'User has entered --primary_beam={:s}\n'
              'Please fix and try again. Exiting now'.format(args.primary_beam))
 
@@ -401,7 +427,7 @@ def check_args(args):
                 exit('To use MWA FEE intrep beam, either --hdf5_beam_path or environment\n'
                      'variable MWA_FEE_HDF5_INTERP must point towards the file\n'
                      'MWA_embedded_element_pattern_rev2_interp_167_197MHz.h5. Exiting now as WODEN will fail.')
-
+                
     ##variables that will be filled by metafits if reading a metafits
     ##set them as False here for testing later on
     MWA_FEE_delays = False
@@ -468,6 +494,18 @@ def check_args(args):
 
             f.close()
             
+    if args.primary_beam == 'everybeam_OSKAR':
+        if not args.beam_ms_path:
+            exit('To use the everybeam_OSKAR beam, you must specify a path to the'
+                 ' measurement set using --beam_ms_path. Exiting now as WODEN will fail.')
+            
+        if not os.path.isdir(args.beam_ms_path):
+            exit('Could not open measurement set specified by user as:\n'
+                 '\t--beam_ms_path={:s}.\n'
+                 'Cannot get required observation settings, exiting now'.format(args.beam_ms_path))
+            
+        array_layout = "from_ms"
+            
     ##Override metafits and/or load arguments
     args.lowest_channel_freq = select_argument_and_check(args.lowest_channel_freq,
                                   float(args.lowest_channel_freq),
@@ -528,6 +566,13 @@ def check_args(args):
                        f"    --band_nums={args.band_nums}\n"
                        "Exiting now.")
             exit(message)
+            
+    if args.primary_beam == 'everybeam_OSKAR':
+        if len(args.band_nums) > 1:
+            exit('ERROR: --band_nums must be a single band when using everybeam '
+                 'as these beam models are calculated on the CPU; the bands '
+                 'are iterated over the GPU. Please iterate over bands by '
+                 'multiple calls to run_woden.py. Exiting now.')
 
     ##If pointing for Gaussian beam is not set, point it at the phase centre
     if args.primary_beam == 'Gaussian':

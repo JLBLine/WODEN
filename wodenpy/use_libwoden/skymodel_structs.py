@@ -2,7 +2,7 @@ import ctypes
 import importlib_resources
 import numpy as np
 from typing import Union
-from ctypes import POINTER, c_float, c_double, c_int, c_char, pointer
+from ctypes import POINTER, c_float, c_double, c_int, c_char, pointer, Structure
 import os
 import sys
 import erfa
@@ -14,6 +14,30 @@ from wodenpy.use_libwoden.beam_settings import BeamTypes
 VELC = 299792458.0
 D2R = np.pi / 180.0
 
+class c_double_complex(Structure): 
+    """ctypes doesn't have a built-in complex type, define one here.
+    Thanks to random internet person for this code.
+    https://stackoverflow.com/questions/13373291/complex-number-in-ctypes
+    
+    Note you could use python complex types, and some wrapper functions
+    inside C, but I'd keep C code as simple as possible
+    
+    """
+    _fields_ = [("real", c_double),("imag", c_double)]
+    # @property
+    # def value(self):
+    #     return self.real+1j*self.imag # fields declared above
+    
+class c_float_complex(Structure): 
+    """ctypes doesn't have a built-in complex type, define one here.
+    Thanks to random internet person for this code.
+    https://stackoverflow.com/questions/13373291/complex-number-in-ctypes
+    
+    Note you could use python complex types, and some wrapper functions
+    inside C, but I'd keep C code as simple as possible
+    
+    """
+    _fields_ = [("real", c_float),("imag", c_float)]
 
 def create_components_struct(precision="double"):
     """Creates a `Components` class structured equivalently to a `components_t`
@@ -33,10 +57,12 @@ def create_components_struct(precision="double"):
     
     if precision == "float":
         c_user_precision = c_float
+        c_user_precision_complex = c_float_complex
     else:
         c_user_precision = c_double
+        c_user_precision_complex = c_double_complex
     
-    class Components(ctypes.Structure):
+    class Components(Structure):
         """A class structured equivalently to a `components_t` struct, used by 
         the C and CUDA code in libwoden_float.so or libwoden_double.so.
         
@@ -174,13 +200,10 @@ def create_components_struct(precision="double"):
                     ("beam_decs", POINTER(c_double)),
                     ("num_primarybeam_values", c_int),
                     ##things to hold the beam gain
-                    ##these are _complex in the C struct; we are not allocating
-                    ##memory on the python side, so I think we can just call them
-                    ##a double here?
-                    ("gxs", POINTER(c_user_precision)),
-                    ("Dxs", POINTER(c_user_precision)),
-                    ("Dys", POINTER(c_user_precision)),
-                    ("gys", POINTER(c_user_precision)),
+                    ("gxs", POINTER(c_user_precision_complex)),
+                    ("Dxs", POINTER(c_user_precision_complex)),
+                    ("Dys", POINTER(c_user_precision_complex)),
+                    ("gys", POINTER(c_user_precision_complex)),
                     ("gxs_ants", POINTER(c_user_precision)),
                     ("Dxs_ants", POINTER(c_user_precision)),
                     ("Dys_ants", POINTER(c_user_precision)),
@@ -270,7 +293,7 @@ def create_source_struct(Components : Components): # type: ignore
         The Source class structured equivalent to a `source_t` struct
     """
     
-    class Source(ctypes.Structure):
+    class Source(Structure):
         """A class structured equivalent to a `source_t` struct, used by 
         the C and CUDA code in libwoden_double.so
         
@@ -346,7 +369,7 @@ def create_source_catalogue_struct(Source : Source): # type: ignore
     
     # Source = create_source_struct(precision)
     
-    class Source_Catalogue(ctypes.Structure):
+    class Source_Catalogue(Structure):
         """
         A class structured equivalent to a `source_t` struct, used by 
         the C and CUDA code in libwoden_float.so
@@ -407,8 +430,8 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
                      chunked_source : Source, # type: ignore
                      num_freqs : int,
                      num_times : int, comp_type : CompTypes,
-                     beamtype : int, 
-                     c_user_precision : Union[c_float, c_double]):
+                     beamtype : int,
+                     precision : str = "double") -> None:
     """
     Given the mapping information in `chunk_map`, initialise the necessary
     components in `chunked_source` for the given `comp_type`, this being one
@@ -432,11 +455,18 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
         enum representing the type of component.
     beamtype: int
         representing the type of beam.
-    c_user_precision: Union
-       [c_float, c_double] representing the user precision.
+    precision: str
+       Either "float" or "double", default "double".
 
 
     """
+    
+    if precision == 'float':
+        c_user_precision = c_float
+        c_user_precision_complex = c_float_complex
+    else:
+        c_user_precision = c_double
+        c_user_precision_complex = c_double_complex
     
     if comp_type == CompTypes.POINT:
         
@@ -579,6 +609,19 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
         components.azs = azza_arr()
         components.zas = azza_arr()
         
+    ##TODO if we use a different primary beam per antenna, need to allocate
+    ##more memory here
+    eb_beams = [BeamTypes.EB_OSKAR.value]
+    if beamtype in eb_beams:
+        ##yes, you have to have those brackets around the numbers, otherwise
+        ##ctypes makes a 3D array
+        complex_num_beams = c_user_precision_complex*(n_comps*num_freqs*num_times)
+        
+        components.gxs = complex_num_beams()
+        components.Dxs = complex_num_beams()
+        components.Dys = complex_num_beams()
+        components.gys = complex_num_beams()
+        
     ##now do the polarisation thingies------------------------------------------
     
     # power_user_ncomps_arr = c_user_precision*chunk_map.n_shape_powers
@@ -655,7 +698,8 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
     # print(components.n_linpol_angles)
         
     
-def setup_chunked_source(chunked_source : Source, chunk_map : Skymodel_Chunk_Map, num_freqs : int, # type: ignore
+def setup_chunked_source(chunked_source : Source, chunk_map : Skymodel_Chunk_Map, # type: ignore
+                         num_freqs : int, 
                          num_times : int, beamtype : int,
                          precision='double'):
     """
@@ -684,11 +728,6 @@ def setup_chunked_source(chunked_source : Source, chunk_map : Skymodel_Chunk_Map
     
     # set_precision_global(precision)
     
-    if precision == 'float':
-        c_user_precision = c_float
-    else:
-        c_user_precision = c_double
-    
     chunked_source.n_points = chunk_map.n_points
     chunked_source.n_point_lists = chunk_map.n_point_lists
     chunked_source.n_point_powers = chunk_map.n_point_powers
@@ -706,15 +745,15 @@ def setup_chunked_source(chunked_source : Source, chunk_map : Skymodel_Chunk_Map
         
     if chunk_map.n_points > 0:
         setup_components(chunk_map, chunked_source, num_freqs, num_times,
-                         CompTypes.POINT, beamtype, c_user_precision)
+                         CompTypes.POINT, beamtype, precision)
         
     if chunk_map.n_gauss > 0:
         setup_components(chunk_map, chunked_source, num_freqs, num_times,
-                         CompTypes.GAUSSIAN, beamtype, c_user_precision)
+                         CompTypes.GAUSSIAN, beamtype, precision)
         
     if chunk_map.n_shapes > 0:
         setup_components(chunk_map, chunked_source, num_freqs, num_times,
-                         CompTypes.SHAPELET, beamtype, c_user_precision)
+                         CompTypes.SHAPELET, beamtype, precision)
     
     return chunked_source
 

@@ -33,3 +33,4 @@ class BeamTypes(Enum):
     ANALY_DIPOLE = 3
     FEE_BEAM_INTERP = 4
     MWA_ANALY = 5
+    EB_OSKAR = 6

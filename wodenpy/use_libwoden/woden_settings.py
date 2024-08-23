@@ -4,7 +4,7 @@ import os
 import subprocess
 from typing import Union
 from wodenpy.array_layout.precession import RTS_Precess_LST_Lat_to_J2000
-
+from wodenpy.use_libwoden.beam_settings import BeamTypes
 import numpy as np
 import argparse
 
@@ -221,28 +221,31 @@ def create_woden_settings(woden_settings : Woden_Settings, # type: ignore
                 woden_settings.FEE_ideal_delays[beam*len(delays) + delay_ind] = int(delay)
         
     if args.primary_beam == 'none':
-        woden_settings.beamtype = 0
+        woden_settings.beamtype = BeamTypes.NO_BEAM.value
     
     elif args.primary_beam == 'Gaussian':
-        woden_settings.beamtype = 1
+        woden_settings.beamtype = BeamTypes.GAUSS_BEAM.value
         woden_settings.gauss_beam_FWHM = float(args.gauss_beam_FWHM)
         woden_settings.gauss_beam_ref_freq = float(args.gauss_beam_ref_freq)
         woden_settings.gauss_ra_point = float(args.gauss_ra_point)*D2R
         woden_settings.gauss_dec_point = float(args.gauss_dec_point)*D2R
 
     elif args.primary_beam == 'MWA_FEE':
-        woden_settings.beamtype = 2
+        woden_settings.beamtype = BeamTypes.FEE_BEAM.value
         woden_settings.hdf5_beam_path = create_string_buffer(args.hdf5_beam_path.encode('utf-8'))
         
     elif args.primary_beam == 'EDA2':
-        woden_settings.beamtype = 3
+        woden_settings.beamtype = BeamTypes.ANALY_DIPOLE.value
         
     elif args.primary_beam == 'MWA_FEE_interp':
-        woden_settings.beamtype = 4
+        woden_settings.beamtype = BeamTypes.FEE_BEAM_INTERP.value
         woden_settings.hdf5_beam_path = create_string_buffer(args.hdf5_beam_path.encode('utf-8'))
         
     elif args.primary_beam == 'MWA_analy':
-        woden_settings.beamtype = 5
+        woden_settings.beamtype = BeamTypes.MWA_ANALY.value
+        
+    elif args.primary_beam == 'everybeam_OSKAR':
+        woden_settings.beamtype = BeamTypes.EB_OSKAR.value
         
     if args.no_precession:
         woden_settings.do_precession = 0
@@ -257,7 +260,7 @@ def create_woden_settings(woden_settings : Woden_Settings, # type: ignore
     woden_settings.band_nums = (ctypes.c_int*woden_settings.num_bands)()
     
     for ind, band in enumerate(args.band_nums):
-            woden_settings.band_nums[ind] = int(band)
+        woden_settings.band_nums[ind] = int(band)
     
     ##Are we using dipole amplitudes?
     woden_settings.use_dipamps = args.use_MWA_dipamps

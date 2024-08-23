@@ -18,6 +18,36 @@
 
 #include "gpu_macros.h"
 
+extern "C" void copy_CPU_beam_gains_to_GPU(components_t *components,
+  d_beam_gains_t *d_beam_gains, int num_gains, int num_beams) {
+
+
+    gpuMalloc( (void**)&d_beam_gains->d_gxs,
+                      num_gains*sizeof(gpuUserComplex) );
+    gpuMalloc( (void**)&d_beam_gains->d_Dxs,
+                      num_gains*sizeof(gpuUserComplex) );
+    gpuMalloc( (void**)&d_beam_gains->d_Dys,
+                      num_gains*sizeof(gpuUserComplex) );
+    gpuMalloc( (void**)&d_beam_gains->d_gys,
+                      num_gains*sizeof(gpuUserComplex) );
+
+    gpuMemcpy( d_beam_gains->d_gxs,
+               (gpuUserComplex *)components->gxs, num_gains*sizeof(gpuUserComplex),
+                gpuMemcpyHostToDevice );
+
+    gpuMemcpy( d_beam_gains->d_Dxs,
+               (gpuUserComplex *)components->Dxs, num_gains*sizeof(gpuUserComplex),
+                gpuMemcpyHostToDevice );
+
+    gpuMemcpy( d_beam_gains->d_Dys,
+               (gpuUserComplex *)components->Dys, num_gains*sizeof(gpuUserComplex),
+                gpuMemcpyHostToDevice );
+
+    gpuMemcpy( d_beam_gains->d_gys,
+               (gpuUserComplex *)components->gys, num_gains*sizeof(gpuUserComplex),
+                gpuMemcpyHostToDevice );
+}
+
 extern "C" void calculate_visibilities(array_layout_t *array_layout,
   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
@@ -328,6 +358,13 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
         d_point_beam_gains.use_twobeams = 0;
       }
 
+      //If an everybeam model, already calculated beam gains on the CPU
+      //So just copy them across
+      if (beam_settings->beamtype == EB_OSKAR) {
+        copy_CPU_beam_gains_to_GPU(&source->point_components,
+          &d_point_beam_gains, num_points*num_freqs*num_time_steps, num_beams);
+      }
+
       printf("\tExtrapolating fluxes and beams...\n");
       source_component_common(woden_settings, beam_settings, d_freqs,
                               source, d_chunked_source,
@@ -377,6 +414,13 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
         d_gauss_beam_gains.use_twobeams = 0;
       }
 
+      //If an everybeam model, already calculated beam gains on the CPU
+      //So just copy them across
+      if (beam_settings->beamtype == EB_OSKAR) {
+        copy_CPU_beam_gains_to_GPU(&source->gauss_components,
+          &d_gauss_beam_gains, num_gauss*num_freqs*num_time_steps, num_beams);
+      }
+
       source_component_common(woden_settings, beam_settings, d_freqs,
                               source, d_chunked_source,
                               &d_gauss_beam_gains, GAUSSIAN,
@@ -415,16 +459,15 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       user_precision_t *d_u_shapes = NULL;
       user_precision_t *d_v_shapes = NULL;
 
-      ( gpuMalloc( (void**)&(d_lsts),
-                                          woden_settings->num_time_steps*sizeof(double)) );
-      ( gpuMemcpy( d_lsts, woden_settings->lsts,
+      gpuMalloc( (void**)&(d_lsts), woden_settings->num_time_steps*sizeof(double));
+      gpuMemcpy( d_lsts, woden_settings->lsts,
                              woden_settings->num_time_steps*sizeof(double),
-                             gpuMemcpyHostToDevice) );
+                             gpuMemcpyHostToDevice);
 
-      ( gpuMalloc( (void**)&d_u_shapes,
-            num_shapes*num_baselines*num_time_steps*sizeof(user_precision_t)) );
-      ( gpuMalloc( (void**)&d_v_shapes,
-            num_shapes*num_baselines*num_time_steps*sizeof(user_precision_t)) );
+      gpuMalloc( (void**)&d_u_shapes,
+            num_shapes*num_baselines*num_time_steps*sizeof(user_precision_t));
+      gpuMalloc( (void**)&d_v_shapes,
+            num_shapes*num_baselines*num_time_steps*sizeof(user_precision_t));
 
       //Something to store the primary beam gains (all 4 pols) in
       d_beam_gains_t d_shape_beam_gains;
@@ -434,6 +477,13 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
         d_shape_beam_gains.use_twobeams = 1;
       } else {
         d_shape_beam_gains.use_twobeams = 0;
+      }
+
+      //If an everybeam model, already calculated beam gains on the CPU
+      //So just copy them across
+      if (beam_settings->beamtype == EB_OSKAR) {
+        copy_CPU_beam_gains_to_GPU(&source->shape_components,
+          &d_shape_beam_gains, num_shapes*num_freqs*num_time_steps, num_beams);
       }
 
       source_component_common(woden_settings, beam_settings, d_freqs,

@@ -188,7 +188,7 @@ __device__ void get_beam_gains_multibeams(int iBaseline, int iComponent, int num
   }
 
   //Only MWA models have leakge terms at the moment
-  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY) {
+  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY || EB_OSKAR) {
     * D1x = d_Dxs[beam1];
     * D2x = d_Dxs[beam2];
     * D1y = d_Dys[beam1];
@@ -1053,18 +1053,22 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
 
   int num_gains = d_components->num_primarybeam_values*num_beams;
   
-  //Only the MWA beams currently yields cross pol values, so only malloc what
-  //we need here
-  if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == MWA_ANALY || beam_settings->beamtype == FEE_BEAM_INTERP) {
-    gpuMalloc( (void**)&d_component_beam_gains->d_Dxs,
-                    num_gains*sizeof(gpuUserComplex) );
-    gpuMalloc( (void**)&d_component_beam_gains->d_Dys,
-                    num_gains*sizeof(gpuUserComplex) );
+  //If we're using an everybeam model, all memory and values have already
+  //been copied to GPU, so no need to allocate here
+  if (beam_settings->beamtype != EB_OSKAR) {
+
+    if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == MWA_ANALY || beam_settings->beamtype == FEE_BEAM_INTERP) {
+      gpuMalloc( (void**)&d_component_beam_gains->d_Dxs,
+                      num_gains*sizeof(gpuUserComplex) );
+      gpuMalloc( (void**)&d_component_beam_gains->d_Dys,
+                      num_gains*sizeof(gpuUserComplex) );
+    }
+    gpuMalloc( (void**)&d_component_beam_gains->d_gxs,
+                      num_gains*sizeof(gpuUserComplex) );
+    gpuMalloc( (void**)&d_component_beam_gains->d_gys,
+                      num_gains*sizeof(gpuUserComplex) );
+
   }
-  gpuMalloc( (void**)&d_component_beam_gains->d_gxs,
-                    num_gains*sizeof(gpuUserComplex) );
-  gpuMalloc( (void**)&d_component_beam_gains->d_gys,
-                    num_gains*sizeof(gpuUserComplex) );
   
   gpuMalloc( (void**)&d_components->ls, num_components*sizeof(double));
   gpuMalloc( (void**)&d_components->ms, num_components*sizeof(double));
@@ -2067,7 +2071,7 @@ extern "C" void free_beam_gains(d_beam_gains_t d_beam_gains, e_beamtype beamtype
   ( gpuFree( d_beam_gains.d_gxs) );
   ( gpuFree( d_beam_gains.d_gys) );
 
-  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY){
+  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY || beamtype == EB_OSKAR){
     ( gpuFree( d_beam_gains.d_Dxs ) );
     ( gpuFree( d_beam_gains.d_Dys ) );
   }

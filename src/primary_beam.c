@@ -9,6 +9,8 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
   //Setup primary beam settings for observation
   beam_settings_t *beam_settings = malloc(sizeof(beam_settings_t));
 
+  printf("woden_settings->beamtype: %d\n", woden_settings->beamtype);
+
   //Both GAUSS_BEAM needs a bunch of extra settings
   if (woden_settings->beamtype == GAUSS_BEAM) {
     
@@ -46,6 +48,10 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
 
   else if (woden_settings->beamtype == ANALY_DIPOLE) {
     beam_settings->beamtype = ANALY_DIPOLE;
+  }
+
+  else if (woden_settings->beamtype == EB_OSKAR) {
+    beam_settings->beamtype = EB_OSKAR;
   }
 
   else {

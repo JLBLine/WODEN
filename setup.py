@@ -109,6 +109,7 @@ setup(
                 'wodenpy.uvfits',
                 'wodenpy.array_layout',
                 'wodenpy.phase_rotate',
+                'wodenpy.primary_beam',
                 'wodenpy.skymodel'],
     scripts=["scripts/run_woden.py",
              "scripts/add_woden_uvfits.py",

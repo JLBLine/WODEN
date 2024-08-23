@@ -11,8 +11,16 @@ from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classe
 from astropy.table import Table, Column
 import erfa
 from astropy.io import fits
-
+from wodenpy.primary_beam.everybeam import run_everybeam, load_OSKAR_telescope, get_everybeam_norm
 from sys import exit
+from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
+import argparse
+from astropy.time import Time, TimeDelta
+
+##This call is so we can use it as a type annotation
+woden_struct_classes = Woden_Struct_Classes()
+Woden_Settings = woden_struct_classes.Woden_Settings
+
 
 REF_FREQ = 200e+6
 
@@ -698,7 +706,11 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
                         chunk_map : Skymodel_Chunk_Map,
                         beamtype : int, lsts : np.ndarray, latitude : float,
                         v_table : Table = False, q_table : Table = False,
-                        u_table : Table = False, p_table : Table = False):
+                        u_table : Table = False, p_table : Table = False, 
+                        ra0 = False, dec0 = False, telescope = False,
+                        beam_norms = False,
+                        all_times : np.ndarray = False,
+                        all_freqs : np.ndarray = False):
     """Given the desired components as detailed in the `chunk_map`, add
     the relevant information from the FITS file `main_table`, `shape_table` objects to the `chunk_source` object. As well as the skymodel information, this function adds either
     az/za or ha/dec information, depending on the `beamtype`.
@@ -763,6 +775,8 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
         source_components = chunk_source.shape_components
         map_components = chunk_map.shape_components
         
+    num_components = n_powers + n_curves + n_lists
+        
     ##chunk_map.all_orig_inds contains indexes of all comp type, i.e.
     ##possibly POINT and GAUSSIAN, so find all indexes for this component
     ##type to iterate through, in order of power,curve,list flux type
@@ -790,9 +804,12 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
                     hadec_low = new_comp_ind*num_time_steps
                     source_components.beam_has[hadec_low + time_ind] = comp_has[time_ind]
                     source_components.beam_decs[hadec_low + time_ind] = source_components.decs[new_comp_ind]
-            
+        
+        ##Some beam models don't need az/za coords
+        skip_beams = [BeamTypes.NO_BEAM.value, BeamTypes.GAUSS_BEAM.value,
+                     BeamTypes.EB_OSKAR.value]
         ##only the NO_BEAM and GAUSS_BEAM options don't need az,za coords
-        if beamtype == BeamTypes.GAUSS_BEAM.value or beamtype == BeamTypes.NO_BEAM.value:
+        if beamtype in skip_beams:
             pass
         else:
             ##Calculate lst, and then azimuth/elevation
@@ -806,6 +823,34 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
                 azza_low = new_comp_ind*num_time_steps
                 source_components.azs[azza_low + time_ind] = comp_azs[time_ind]
                 source_components.zas[azza_low + time_ind] = np.pi/2 - comp_els[time_ind]
+                
+        eb_beams = [BeamTypes.EB_OSKAR.value]
+        
+        if beamtype in eb_beams:
+            num_freqs = len(all_freqs)
+            ##Everybeam models are calculated on the CPU. This function will only
+        ##run if we have set args.primary_beam to an everybeam model
+        
+            for time_ind, time in enumerate(all_times):
+                for freq_ind, freq in enumerate(all_freqs):
+                    
+                    jones = run_everybeam(source_components.ras[new_comp_ind],
+                                          source_components.decs[new_comp_ind],
+                                          ra0, dec0, time, freq, telescope,
+                                          beam_norms=beam_norms[time_ind, freq_ind, :])
+                    
+                    beam_ind = num_freqs*time_ind*num_components + (num_components*freq_ind) + new_comp_ind
+                    
+                    ##TODO likely need some kind of reordering to do IAU
+                    ##convention
+                    source_components.gxs[beam_ind].real = jones[0,0].real
+                    source_components.gxs[beam_ind].imag = jones[0,0].imag
+                    source_components.Dxs[beam_ind].real = jones[0,1].real
+                    source_components.Dxs[beam_ind].imag = jones[0,1].imag
+                    source_components.Dys[beam_ind].real = jones[1,0].real
+                    source_components.Dys[beam_ind].imag = jones[1,0].imag
+                    source_components.gys[beam_ind].real = jones[1,1].real
+                    source_components.gys[beam_ind].imag = jones[1,1].imag
     
     ##now handle flux related things    
     ##always shove things into the source as power, curve, list
@@ -1033,6 +1078,8 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
 
 # @profile
 def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
+                              woden_settings : Woden_Settings,
+                              args : argparse.Namespace,
                               main_table : Table, shape_table : Table,
                               chunked_skymodel_maps : list,
                               num_freqs : int, num_time_steps : int,
@@ -1089,6 +1136,44 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
                                               len(chunked_skymodel_maps), num_shapelets,
                                               precision = precision)
     
+    ##if we have an everybeam primary beam, we will be calculating it
+    ##as we load in the sky model, as it happens on the CPU. So need to set
+    ##some extra arguments here
+    
+    ra0 = woden_settings.ra0
+    dec0 = woden_settings.dec0
+    eb_beams = [BeamTypes.EB_OSKAR.value]
+    
+    if beamtype in eb_beams:
+        all_times = []
+        obs_time = Time(args.date, scale='utc')
+        for time_step in range(woden_settings.num_time_steps):
+            time_current = obs_time + TimeDelta((time_step + 0.5)*woden_settings.time_res, format='sec')
+            all_times.append(time_current)
+        
+        band_num = woden_settings.band_nums[0]
+        
+        base_band_freq = ((band_num - 1)*woden_settings.coarse_band_width) + woden_settings.base_low_freq
+        all_freqs = base_band_freq + np.arange(woden_settings.num_freqs)*woden_settings.frequency_resolution
+        
+        if beamtype == BeamTypes.EB_OSKAR.value:
+            telescope = load_OSKAR_telescope(args.beam_ms_path)
+            
+        beam_norms = np.empty((len(all_times), len(all_freqs), 2))
+        
+        for time_ind, time in enumerate(all_times):
+            for freq_ind, freq in enumerate(all_freqs):
+                norm_x, norm_y = get_everybeam_norm(ra0, dec0, time, freq, telescope)
+                beam_norms[time_ind, freq_ind, 0] = 1 / norm_x
+                beam_norms[time_ind, freq_ind, 1] = 1 / norm_y
+                # print(time_ind, freq_ind, beam_norms[time_ind, freq_ind])
+        
+    else:
+        beam_norms = False
+        telescope = False
+        all_times = False
+        all_freqs = False
+        
     ##for each chunk map, create a Source_Float or Source_Double ctype
     ##struct, and "malloc" the right amount of arrays to store required infor
     for chunk_ind, chunk_map in enumerate(chunked_skymodel_maps):
@@ -1107,21 +1192,27 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
                                       main_table, shape_table,
                                       source_catalogue.sources[chunk_ind], chunk_map,
                                       beamtype, lsts, latitude,
-                                      v_table, q_table, u_table, p_table)
+                                      v_table, q_table, u_table, p_table,
+                                      ra0, dec0, telescope, beam_norms,
+                                      all_times, all_freqs)
             
         if chunk_map.n_gauss > 0:
             add_fits_info_to_source_catalogue(CompTypes.GAUSSIAN,
                                       main_table, shape_table,
                                       source_catalogue.sources[chunk_ind], chunk_map,
                                       beamtype, lsts, latitude,
-                                      v_table, q_table, u_table, p_table)
+                                      v_table, q_table, u_table, p_table,
+                                      ra0, dec0, telescope, beam_norms,
+                                      all_times, all_freqs)
             
         if chunk_map.n_shapes > 0:
             add_fits_info_to_source_catalogue(CompTypes.SHAPELET,
                                       main_table, shape_table,
                                       source_catalogue.sources[chunk_ind], chunk_map,
                                       beamtype, lsts, latitude,
-                                      v_table, q_table, u_table, p_table)
+                                      v_table, q_table, u_table, p_table,
+                                      ra0, dec0, telescope, beam_norms,
+                                      all_times, all_freqs)
             
     ##TODO some kind of consistency check between the chunk_maps and the
     ##sources in the catalogue - make sure we read in the correct information

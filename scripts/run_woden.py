@@ -77,7 +77,8 @@ def woden_thread(the_queue : Queue, run_woden, woden_settings : Woden_Settings, 
         run_woden(woden_settings, visibility_set, source_catalogue, array_layout,
                   sbf)
         
-def read_skymodel_thread(the_queue : Queue, woden_struct_classes : Woden_Struct_Classes, 
+def read_skymodel_thread(the_queue : Queue, woden_struct_classes : Woden_Struct_Classes,
+                         woden_settings : Woden_Settings,
                          chunked_skymodel_maps: list,
                          max_num_chunks : int,
                          lsts : np.ndarray, latitude : float,
@@ -115,6 +116,7 @@ def read_skymodel_thread(the_queue : Queue, woden_struct_classes : Woden_Struct_
         t_before = time()
     
         source_catalogue = read_skymodel_chunks(woden_struct_classes, 
+                                                woden_settings, args,
                                                 args.cat_filename, chunk_map_subset,
                                                 args.num_freq_channels,
                                                 args.num_time_steps,
@@ -248,7 +250,7 @@ def main(argv=None):
         the_queue = Queue(maxsize=1)
         
         t1 = Thread(target = read_skymodel_thread,
-                    args =(the_queue, woden_struct_classes, 
+                    args =(the_queue, woden_struct_classes, woden_settings,
                                     chunked_skymodel_maps,
                                     max_num_chunks, lsts,
                                     woden_settings.latitude, args,
