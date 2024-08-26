@@ -1,10 +1,18 @@
-import everybeam as eb
 import numpy as np
 from astropy.coordinates import ITRS, SkyCoord #AltAz, EarthLocation, 
 from astropy.time import Time, TimeDelta
 import astropy.units as u
 import argparse
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
+
+import os
+##Are we just making documentation? If so, don't import everybeam
+read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
+
+if read_the_docs_build:
+    pass
+else:
+    import everybeam as eb
 
 ##This call is so we can use it as a type annotation
 woden_struct_classes = Woden_Struct_Classes()
