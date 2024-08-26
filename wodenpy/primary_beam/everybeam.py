@@ -6,11 +6,21 @@ import argparse
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 
 import os
-##Are we just making documentation? If so, don't import everybeam
+##Are we just making online documentation? If so, don't import everybeam
 read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 
 if read_the_docs_build:
-    pass
+    class EB:
+        def __init__(self):
+            """
+            A fake `everybeam` class so we can build the documentation online
+            in ReadTheDocs without installing `everybeam`, which is non-trivial
+            """
+            self.OSKAR = None
+            self.LOFAR = None
+            self.load_telescope = None
+            self.Telescope = None
+    eb = EB()
 else:
     import everybeam as eb
 
