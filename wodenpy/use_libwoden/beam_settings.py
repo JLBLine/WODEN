@@ -34,3 +34,4 @@ class BeamTypes(Enum):
     FEE_BEAM_INTERP = 4
     MWA_ANALY = 5
     EB_OSKAR = 6
+    EB_LOFAR = 7

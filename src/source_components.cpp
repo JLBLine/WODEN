@@ -188,7 +188,7 @@ __device__ void get_beam_gains_multibeams(int iBaseline, int iComponent, int num
   }
 
   //Only MWA models have leakge terms at the moment
-  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY || EB_OSKAR) {
+  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY || beamtype == EB_OSKAR || beamtype == EB_LOFAR) {
     * D1x = d_Dxs[beam1];
     * D2x = d_Dxs[beam2];
     * D1y = d_Dys[beam1];
@@ -1055,7 +1055,7 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
   
   //If we're using an everybeam model, all memory and values have already
   //been copied to GPU, so no need to allocate here
-  if (beam_settings->beamtype != EB_OSKAR) {
+  if (beam_settings->beamtype != EB_OSKAR && beam_settings->beamtype != EB_LOFAR) {
 
     if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == MWA_ANALY || beam_settings->beamtype == FEE_BEAM_INTERP) {
       gpuMalloc( (void**)&d_component_beam_gains->d_Dxs,
@@ -2071,7 +2071,7 @@ extern "C" void free_beam_gains(d_beam_gains_t d_beam_gains, e_beamtype beamtype
   ( gpuFree( d_beam_gains.d_gxs) );
   ( gpuFree( d_beam_gains.d_gys) );
 
-  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY || beamtype == EB_OSKAR){
+  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY || beamtype == EB_OSKAR || beamtype == EB_LOFAR){
     ( gpuFree( d_beam_gains.d_Dxs ) );
     ( gpuFree( d_beam_gains.d_Dys ) );
   }

@@ -54,6 +54,10 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
     beam_settings->beamtype = EB_OSKAR;
   }
 
+  else if (woden_settings->beamtype == EB_LOFAR) {
+    beam_settings->beamtype = EB_LOFAR;
+  }
+
   else {
     printf("NO PRIMARY BEAM HAS BEEN SELECTED\n\tWill run without a primary beam\n");
     beam_settings->beamtype = NO_BEAM;

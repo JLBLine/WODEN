@@ -12,11 +12,14 @@ Source_Catalogue = woden_struct_classes.Source_Catalogue
 Woden_Settings = woden_struct_classes.Woden_Settings
 
 
-# https://everybeam.readthedocs.io/en/latest/tree/demos/lofar-array-factor.html
+# 
 
 def radec_to_xyz(ra : float, dec : float, time : Time):
     """
     Convert RA and Dec ICRS coordinates to ITRS cartesian coordinates.
+    
+    Taken from the everybeam documentation
+    https://everybeam.readthedocs.io/en/latest/tree/demos/lofar-array-factor.html
 
     Args:
         ra (astropy.coordinates.Angle): Right ascension
@@ -33,7 +36,19 @@ def radec_to_xyz(ra : float, dec : float, time : Time):
     
     return np.asarray(coord_itrs.cartesian.xyz.transpose())
 
-def load_OSKAR_telescope(ms_path):
+def load_OSKAR_telescope(ms_path : str) -> eb.OSKAR:
+    """Load an OSKAR telescope from a measurement set.
+
+    Parameters
+    ----------
+    ms_path : str
+        Path to the measurement set
+
+    Returns
+    -------
+    eb.OSKAR
+        Telescope object
+    """
 
     ##TODO what does this mean, what is differential beam?
     use_differential_beam = False
@@ -55,64 +70,124 @@ def load_OSKAR_telescope(ms_path):
     return telescope
 
 
-def get_everybeam_norm(ra0, dec0, time, freq, telescope, station_id = 0):
+def load_LOFAR_telescope(ms_path : str) -> eb.LOFAR:
+    """Load an LOFAR telescope from a measurement set. Settings lifted
+    directly from https://everybeam.readthedocs.io/en/latest/tree/demos/lofar-lobes.html
+
+    Parameters
+    ----------
+    ms_path : str
+        Path to the measurement set
+
+    Returns
+    -------
+    eb.LOFAR
+        Telescope object
+    """
+
+    # Set element response model
+    response_model = "lobes"
+    
+    ##TODO what does this mean, what is differential beam?
+    use_differential_beam = False
+
+    # Load the telescope
+    telescope = eb.load_telescope(ms_path,
+                                  use_differential_beam=use_differential_beam,
+                                  element_response_model=response_model)
+    
+    # assert type(telescope) == eb.LOFAR
+    if type(telescope) != eb.LOFAR:
+        print(f'WARNING: Telescope specified in {ms_path} is not an OSKAR telescope. Proceeding, but you might get nonsense results.')
+    
+    return telescope
+
+
+def get_everybeam_norm(ra0 : float, dec0 : float, time : Time, freq : float,
+                       telescope : eb.Telescope, station_id = 0) -> np.ndarray:
+    """_summary_
+
+    Parameters
+    ----------
+    ra0 : float
+        RA of phase center in radians
+    dec0 : float
+        Dec of phase center in radians
+    time : Time
+        Astropy Time object of observation
+    freq : float
+        Frequency of observation in Hz
+    telescope : eb.Telescope
+        An everybeam telescope object
+    station_id : int, optional
+        Integer index of station, by default 0
+
+    Returns
+    -------
+    np.ndarray
+        Normalization factors for the X and Y beams (multiply by this number to apply the norm)
+    """
     
     phase_itrf = radec_to_xyz(ra0, dec0, time)
     
     # Full beam for station 0
     response = telescope.station_response(time.mjd*3600*24, station_id,
-                                          freq, phase_itrf, phase_itrf)
+                                          freq, phase_itrf, phase_itrf,
+                                          rotate=True)
     
-    norm_x = np.abs(response[0,0])
-    norm_y = np.abs(response[1,1])
+    norm_x = 1 / np.abs(response[0,0])
+    norm_y = 1 / np.abs(response[1,1])
     
     return norm_x, norm_y
 
-def run_everybeam(ra, dec, ra0, dec0, time, freq, telescope,
-                  station_id = 0, beam_norms = np.ones(2)):
+def run_everybeam(dir_itrf : np.ndarray, phase_itrf : np.ndarray, 
+                  time : Time, freq : float, telescope: eb.Telescope,
+                  station_id : int = 0, beam_norms : np.ndarray = np.ones(2),
+                  reorder_jones : bool = True):
+    """_summary_
+
+    Parameters
+    ----------
+    ra : float
+        RA to direction of interest in radians
+    dec : float
+        Dec to direction of interest in radians
+    ra0 : float
+        RA of beam phase center in radians
+    dec0 : float
+        Dec of beam phase center in radians
+    time : Time
+        Astropy Time object of observation
+    freq : float
+        Frequency of observation in Hz
+    telescope : eb.Telescope
+        An everybeam telescope object
+    station_id : int, optional
+        Integer index of station, by default 0
+    beam_norms : np.ndarray, optional
+        Normalisation to apply, [X_norm, Y_norm], by default np.ones(2). Outputs are multiplied by these values
+    reorder_jones : bool, optional
+        If True, reorder the Jones matrix to be [-j11, j10, -j01, j00], which
+        is the order expected by WODEN, by default True
+
+    Returns
+    -------
+    np.ndarray
+        2x2 array of complex beam jones matrix
+    """
     
-    # Convert RA and Dec to ITRS coordinates
-    dir_itrf = radec_to_xyz(ra, dec, time)
-    phase_itrf = radec_to_xyz(ra0, dec0, time)
     
+    ##Get the response
     response = telescope.station_response(time.mjd*3600*24, station_id, freq,
-                                          dir_itrf, phase_itrf)
+                                          dir_itrf, phase_itrf,
+                                          rotate=True)
     
-    response[0,:] *= beam_norms[0] 
+    ##normalise the beams using previously calculated norms
+    response[0,:] *= beam_norms[0]
     response[1,:] *= beam_norms[1]
     
+    if reorder_jones:
+        # Reorder the Jones matrix to be [-j11, j10, -j01, j00]
+        response = np.array([[-response[1,1], response[1,0]], [-response[0,1], response[0,0]]])
+    
     return response
-            
-    
-            
-
-# def run_everybeam(source_catalogue : Source_Catalogue, args : argparse.Namespace,
-#                   woden_settings : Woden_Settings):
-    
-    
-#     everybeam_models = ["everybeam_OSKAR"]
-    
-#     ##Only need to run everybeam if we are using an everybeam model
-#     if args.primary_beam in everybeam_models:
-        
-#         if args.primary_beam == "everybeam_OSKAR":
-#             telescope = load_OSKAR_telescope(args.beam_ms_path)
-        
-    
-#         obs_time = Time(args.date, scale='utc')
-        
-#         for time_step in range(woden_settings.num_time_steps):
-        
-#             time_current = obs_time + TimeDelta((time_step + 0.5)*woden_settings.time_res, format='sec')
-            
-#             for source_ind in range(source_catalogue.num_sources):
-#                 source = source_catalogue.sources[source_ind]
-                
-#                 print(source.n_points)
-                
-#                 # if source.n_points > 0:
-#                 #     print(source.n_points)
-                
-                
-        
-#     return

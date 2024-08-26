@@ -21,6 +21,7 @@ typedef enum {NO_BEAM, /*!< Do not use a primary beam in the simulation */
               interpolated*/
               MWA_ANALY, /*!< Use an analytic MWA tile primary beam */
               EB_OSKAR, /*!< Use everybeam with the OSKAR primary beam */
+              EB_LOFAR, /*!< Use everybeam with the LOFAR primary beam */
               }e_beamtype;
 
 typedef enum {POWER_LAW=0, /*!< Power law flux model */

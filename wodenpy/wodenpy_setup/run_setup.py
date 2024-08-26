@@ -376,9 +376,10 @@ def check_args(args):
 
     if args.primary_beam not in ['MWA_FEE', 'Gaussian', 'EDA2', 'none', 'None',
                                  'MWA_FEE_interp', 'MWA_analy',
-                                 'everybeam_OSKAR']:
+                                 'everybeam_OSKAR', 'everybeam_LOFAR']:
         exit('Primary beam option --primary_beam must be one of:\n'
-             '\t Gaussian, EDA2, none, MWA_FEE, MWA_FEE_interp, MWA_analy, everybeam_OSKAR\n'
+             '\t Gaussian, EDA2, none, MWA_FEE, MWA_FEE_interp, '
+             'MWA_analy, everybeam_OSKAR, everybeam_LOFAR\n'
              'User has entered --primary_beam={:s}\n'
              'Please fix and try again. Exiting now'.format(args.primary_beam))
 
@@ -494,9 +495,9 @@ def check_args(args):
 
             f.close()
             
-    if args.primary_beam == 'everybeam_OSKAR':
+    if args.primary_beam == 'everybeam_OSKAR' or args.primary_beam == 'everybeam_LOFAR':
         if not args.beam_ms_path:
-            exit('To use the everybeam_OSKAR beam, you must specify a path to the'
+            exit(f'To use the {args.primary_beam} beam, you must specify a path to the'
                  ' measurement set using --beam_ms_path. Exiting now as WODEN will fail.')
             
         if not os.path.isdir(args.beam_ms_path):
@@ -567,12 +568,13 @@ def check_args(args):
                        "Exiting now.")
             exit(message)
             
-    if args.primary_beam == 'everybeam_OSKAR':
+    if args.primary_beam == 'everybeam_OSKAR' or args.primary_beam == 'everybeam_LOFAR':
         if len(args.band_nums) > 1:
             exit('ERROR: --band_nums must be a single band when using everybeam '
                  'as these beam models are calculated on the CPU; the bands '
                  'are iterated over the GPU. Please iterate over bands by '
                  'multiple calls to run_woden.py. Exiting now.')
+            
 
     ##If pointing for Gaussian beam is not set, point it at the phase centre
     if args.primary_beam == 'Gaussian':
