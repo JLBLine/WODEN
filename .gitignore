@@ -75,7 +75,6 @@ test_installation/absolute_accuracy/uvfits
 *ipynb_checkpoints/
 
 *__pycache__/
-*.ms
 *.egg
 *.npz
 
@@ -103,3 +102,6 @@ examples/polarisation/*.fits
 examples/polarisation/*.uvfits
 examples/polarisation/*.ms
 examples/polarisation/eg_array.txt
+
+test_installation/everybeam/*.fits
+test_installation/everybeam/eg_array.txt
