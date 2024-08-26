@@ -11,7 +11,7 @@ from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classe
 from astropy.table import Table, Column
 import erfa
 from astropy.io import fits
-from wodenpy.primary_beam.everybeam import run_everybeam, load_OSKAR_telescope, load_LOFAR_telescope, get_everybeam_norm, radec_to_xyz
+from wodenpy.primary_beam.use_everybeam import run_everybeam, load_OSKAR_telescope, load_LOFAR_telescope, get_everybeam_norm, radec_to_xyz
 from sys import exit
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 import argparse

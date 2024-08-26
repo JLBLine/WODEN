@@ -30,8 +30,6 @@ Source_Catalogue = woden_struct_classes.Source_Catalogue
 Woden_Settings = woden_struct_classes.Woden_Settings
 
 
-# 
-
 def radec_to_xyz(ra : float, dec : float, time : Time):
     """
     Convert RA and Dec ICRS coordinates to ITRS cartesian coordinates.
