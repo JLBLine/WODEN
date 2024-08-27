@@ -7,6 +7,8 @@ from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classe
 
 import os
 ##Are we just making online documentation? If so, don't import everybeam
+##Installing everybeam is non-trivial, so trying to get readthedocs to install
+##it is a waste of time
 read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 
 if read_the_docs_build:
@@ -121,7 +123,8 @@ def load_LOFAR_telescope(ms_path : str) -> eb.LOFAR:
 
 def get_everybeam_norm(ra0 : float, dec0 : float, time : Time, freq : float,
                        telescope : eb.Telescope, station_id = 0) -> np.ndarray:
-    """_summary_
+    """Get a normalisation factor for the X and Y beams from everybeam for
+    a given phase centre (ra0, dec), time, frequency, telescope, and station.
 
     Parameters
     ----------
@@ -141,7 +144,7 @@ def get_everybeam_norm(ra0 : float, dec0 : float, time : Time, freq : float,
     Returns
     -------
     np.ndarray
-        Normalization factors for the X and Y beams (multiply by this number to apply the norm)
+        Normalisation factors for the X and Y beams (multiply by this number to apply the norm)
     """
     
     phase_itrf = radec_to_xyz(ra0, dec0, time)
@@ -160,18 +163,27 @@ def run_everybeam(dir_itrf : np.ndarray, phase_itrf : np.ndarray,
                   time : Time, freq : float, telescope: eb.Telescope,
                   station_id : int = 0, beam_norms : np.ndarray = np.ones(2),
                   reorder_jones : bool = True):
-    """_summary_
+    """For a given direction, phase centre, time, frequency, telescope, station,
+    calculate an everybeam jones matrix. Optionally normalise using the given
+    beam norms [X_norm, Y_norm]. Explicitly, where
+    `response` = [[j00, j01], [j10, j11]], norms are applied as
+    
+    response[0,:] *= beam_norms[0]
+    response[1,:] *= beam_norms[1]
+    
+    By defauly, reorder the Jones matrix to be
+    [-j11, j10, -j01, j00], as WODEN expects X = NS, Y = EW. The negatives
+    may be down to a definition of Stokes V. This reordering is the same as
+    done in `mwa_hyperbeam`. The reordering is done *after* the beam norms. As
+    long as the beam norms have been calculated using `get_everybeam_norm` the
+    ordering should be correct.
 
     Parameters
     ----------
-    ra : float
-        RA to direction of interest in radians
-    dec : float
-        Dec to direction of interest in radians
-    ra0 : float
-        RA of beam phase center in radians
-    dec0 : float
-        Dec of beam phase center in radians
+    dir_itrf : np.ndarray
+        XYZ itfr array (as output by `radec_to_xyz`) of direction of interest 
+    phase_itrf : np.ndarray
+        XYZ itfr array (as output by `radec_to_xyz`) of beam phase centre
     time : Time
         Astropy Time object of observation
     freq : float
@@ -189,9 +201,8 @@ def run_everybeam(dir_itrf : np.ndarray, phase_itrf : np.ndarray,
     Returns
     -------
     np.ndarray
-        2x2 array of complex beam jones matrix
+        2x2 array of complex beam jones matrix [[j00, j01], [j10, j11]]
     """
-    
     
     ##Get the response
     response = telescope.station_response(time.mjd*3600*24, station_id, freq,
