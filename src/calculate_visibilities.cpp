@@ -63,9 +63,6 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     num_beams = woden_settings->num_ants;
   }
 
-  //TODO - once rotation measure has been implemented, this should be set
-  //only if we are using a rotation measure
-
   const int num_baselines = woden_settings->num_baselines;
   const int num_time_steps = woden_settings->num_time_steps;
   const int num_visis = woden_settings->num_visis;

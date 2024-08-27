@@ -1190,8 +1190,6 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
     dec0 = woden_settings.dec0
     eb_beams = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value]
     
-    print("HERE", beamtype)
-    
     if beamtype in eb_beams:
         all_times = []
         obs_time = Time(args.date, scale='utc')
