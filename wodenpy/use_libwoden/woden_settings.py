@@ -99,6 +99,7 @@ def create_woden_settings_struct(precision : str = "double"):
         :cvar c_int do_autos:  Boolean of whether to simulate autos or not (0 False, 1 True)
         :cvar c_int use_dipamps:  Boolean of whether to use dipole amplitudes, so have an individual beam per tile  (0 False, 1 True)
         :cvar POINTER(c_double) mwa_dipole_amps: Bespoke MWA dipole amplitudes for each antenna(tile). Should be 2*num_ants*16 long
+        :cvar c_int single_everybeam_station: If using everybeam, add this to say we are only using a single station
         """
         
         _fields_ = [("lst_base", c_double),
@@ -143,7 +144,8 @@ def create_woden_settings_struct(precision : str = "double"):
                     ("mjds", POINTER(c_double)),
                     ("do_autos", c_int),
                     ("use_dipamps", c_int),
-                    ("mwa_dipole_amps", POINTER(c_double))]
+                    ("mwa_dipole_amps", POINTER(c_double)),
+                    ("single_everybeam_station", c_int),]
         
     return Woden_Settings
 
@@ -276,6 +278,11 @@ def create_woden_settings(woden_settings : Woden_Settings, # type: ignore
         for ind, amplitude in enumerate(args.dipamps):
                 woden_settings.mwa_dipole_amps[ind] = amplitude
     
+    if np.isnan(args.station_id):
+        woden_settings.single_everybeam_station = 0
+    else:
+        woden_settings.single_everybeam_station = 1
+        
     return woden_settings
     
 def setup_lsts_and_phase_centre(woden_settings : Woden_Settings) -> np.ndarray: # type: ignore

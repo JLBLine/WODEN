@@ -63,6 +63,25 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     num_beams = woden_settings->num_ants;
   }
 
+  //Default behaviour with everybeam is to use a different beam for each station
+  if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR) {
+    use_twobeams = 1;
+    num_beams = woden_settings->num_ants;
+
+    //However if single_everybeam_station is set, we're only using one beam
+    //for all stations
+    if (woden_settings->single_everybeam_station == 1) {
+      use_twobeams = 0;
+      num_beams = 1;
+    }
+
+  }
+
+  // if (woden_settings->use_dipamps == 1) {
+  //   use_twobeams = 1;
+  //   num_beams = woden_settings->num_ants;
+  // }
+
   const int num_baselines = woden_settings->num_baselines;
   const int num_time_steps = woden_settings->num_time_steps;
   const int num_visis = woden_settings->num_visis;

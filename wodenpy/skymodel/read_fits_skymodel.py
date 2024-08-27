@@ -1086,42 +1086,56 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
 def calc_everybeam_for_components(ra0 : float, dec0 : float, num_components : int,
                    components : Components, telescope,
                    all_times : np.ndarray, all_freqs : np.ndarray,
-                   reorder_jones : bool = True):
+                   reorder_jones : bool = True,
+                   station_id = np.nan):
     
     ##convert back from ctypes to numpy arrays
     ras = np.ctypeslib.as_array(components.ras, shape=(num_components, ))
     decs = np.ctypeslib.as_array(components.decs, shape=(num_components, ))
     num_freqs = len(all_freqs)
+    num_times = len(all_times)
 
+    ##If station_id is nan, we want to calculate a different beam for each station
+    ##other functions should have done the correct amount of memory allocation
+    ##for this
+    if np.isnan(station_id):
+        num_beams = telescope.nr_stations
+        station_ids = np.arange(num_beams)
+    ##othewise, we want a single beam, and we are choosing the station `station_id`
+    else:
+        station_ids = [station_id]
+        num_beams = 1
 
-    reorder_jones = True
-
-    for time_ind, time in enumerate(all_times):
-        phase_itrf = radec_to_xyz(ra0, dec0, time)
-        dir_itrfs = radec_to_xyz(ras, decs, time)
-        
-        for freq_ind, freq in enumerate(all_freqs):
-            beam_norms = get_everybeam_norm(ra0, dec0, time, freq, telescope)
+    ##iterate over beams, times, freqs, and directions (comps)
+    for station_ind, station_id in enumerate(station_ids):
+        for time_ind, time in enumerate(all_times):
+            phase_itrf = radec_to_xyz(ra0, dec0, time)
+            dir_itrfs = radec_to_xyz(ras, decs, time)
             
-            for comp_ind, ra, dec in zip(np.arange(num_components), ras, decs):
+            for freq_ind, freq in enumerate(all_freqs):
+                beam_norms = get_everybeam_norm(ra0, dec0, time, freq, telescope,
+                                                station_id=station_id)
                 
-                jones = run_everybeam(dir_itrfs[comp_ind], phase_itrf,
-                                      time, freq, telescope,
+                for comp_ind, ra, dec in zip(np.arange(num_components), ras, decs):
+                    
+                    jones = run_everybeam(dir_itrfs[comp_ind], phase_itrf,
+                                        time, freq, telescope,
+                                        station_id=station_id,
                                         beam_norms=beam_norms,
                                         reorder_jones=reorder_jones)
-                
-                beam_ind = num_freqs*time_ind*num_components + (num_components*freq_ind) + comp_ind
-                
-                components.gxs[beam_ind].real = jones[0,0].real
-                components.gxs[beam_ind].imag = jones[0,0].imag
-                components.Dxs[beam_ind].real = jones[0,1].real
-                components.Dxs[beam_ind].imag = jones[0,1].imag
-                components.Dys[beam_ind].real = jones[1,0].real
-                components.Dys[beam_ind].imag = jones[1,0].imag
-                components.gys[beam_ind].real = jones[1,1].real
-                components.gys[beam_ind].imag = jones[1,1].imag
                     
-
+                    beam_ind = num_freqs*num_components*num_times*station_ind + num_freqs*num_components*time_ind + num_components*freq_ind + comp_ind
+                    
+                    components.gxs[beam_ind].real = jones[0,0].real
+                    components.gxs[beam_ind].imag = jones[0,0].imag
+                    components.Dxs[beam_ind].real = jones[0,1].real
+                    components.Dxs[beam_ind].imag = jones[0,1].imag
+                    components.Dys[beam_ind].real = jones[1,0].real
+                    components.Dys[beam_ind].imag = jones[1,0].imag
+                    components.gys[beam_ind].real = jones[1,1].real
+                    components.gys[beam_ind].imag = jones[1,1].imag
+                    
+                    
 # @profile
 def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
                               woden_settings : Woden_Settings,
@@ -1208,18 +1222,27 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
         if beamtype == BeamTypes.EB_LOFAR.value:
             telescope = load_LOFAR_telescope(args.beam_ms_path)
             
+        ##Default for station_id is to be np.nan and to use a unique beam for each station
+        if np.isnan(args.station_id):
+            num_beams = args.num_antennas
+        ##If it's set, we only use one beam
+        else:
+            num_beams = 1
+            
     else:
         beam_norms = False
         telescope = False
         all_times = False
         all_freqs = False
+        num_beams = 1
         
     ##for each chunk map, create a Source_Float or Source_Double ctype
     ##struct, and "malloc" the right amount of arrays to store required infor
     for chunk_ind, chunk_map in enumerate(chunked_skymodel_maps):
         
         setup_chunked_source(source_catalogue.sources[chunk_ind], chunk_map,
-                             num_freqs, num_time_steps, beamtype, precision=precision)
+                             num_freqs, num_time_steps, num_beams,
+                             beamtype, precision=precision)
         
         ##count up the total number of components across all chunks
         ##annoyingly, beacuse Jack sucks, we split shapelet us by basis 
@@ -1238,7 +1261,7 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
             if beamtype in eb_beams:
                 calc_everybeam_for_components(ra0, dec0, chunk_map.n_points,
                                source_catalogue.sources[chunk_ind].point_components,
-                               telescope, all_times, all_freqs)
+                               telescope, all_times, all_freqs, station_id=args.station_id)
             
         if chunk_map.n_gauss > 0:
             add_fits_info_to_source_catalogue(CompTypes.GAUSSIAN,
@@ -1247,7 +1270,7 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
                                       beamtype, lsts, latitude,
                                       v_table, q_table, u_table, p_table,
                                       ra0, dec0, telescope,
-                                      all_times, all_freqs)
+                                      all_times, all_freqs, station_id=args.station_id)
             if beamtype in eb_beams:
                 calc_everybeam_for_components(ra0, dec0, chunk_map.n_points,
                                source_catalogue.sources[chunk_ind].gauss_components,
@@ -1260,7 +1283,7 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
                                       beamtype, lsts, latitude,
                                       v_table, q_table, u_table, p_table,
                                       ra0, dec0, telescope,
-                                      all_times, all_freqs)
+                                      all_times, all_freqs, station_id=args.station_id)
             if beamtype in eb_beams:
                 calc_everybeam_for_components(ra0, dec0, chunk_map.n_points,
                                source_catalogue.sources[chunk_ind].shape_components,

@@ -104,13 +104,19 @@ def get_parser():
             "\t - EDA2 (Analytic dipole with a ground mesh) \n"
             "\t - MWA_analy (MWA analytic model)\n"
             "\t - everybeam_OSKAR (requires an OSKAR measurement set via --beam_ms_path)\n"
+            "\t - everybeam_LOFAR (requires a LOFAR measurement set via --beam_ms_path)\n"
             "\t - none (Don't use a primary beam at all)\n"
             "Defaults to --primary_beam=none")
-
+    
     tel_group.add_argument('--beam_ms_path', default=False,
                            help='When using any `everybeam` primary beam option, '
                                 'must provide a path to the measurement set')
-
+    tel_group.add_argument('--station_id', default=np.nan, type=int,
+                           help='When using any `everybeam` primary beam option, '
+                                'default is to simulate a unique beam per station.'
+                                'Include this index to use a specific station number '
+                                'for all stations instead.')
+    
     tel_group.add_argument('--gauss_beam_FWHM', default=20, type=float,
         help='The FWHM of the Gaussian beam in deg - WODEN defaults to using'
              ' 20 deg if this is not set')
@@ -738,7 +744,11 @@ def check_args(args):
     if args.use_MWA_dipflags or args.use_MWA_dipamps:
         args.dipamps = args.dipflags*args.dipamps
         args.use_MWA_dipamps = True
-               
+       
+    if ~np.isnan(args.station_id):
+        if args.station_id >= args.num_antennas:
+            exit(f"ERROR: --station_id={args.station_id} (zero indexed) is larger than the number of antennas {args.num_antennas}"
+                 f" read in from the measurement set {args.beam_ms_path}. Exiting now.")
         
     return args
 

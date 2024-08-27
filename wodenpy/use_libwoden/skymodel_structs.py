@@ -428,9 +428,8 @@ def setup_source_catalogue(Source : Source, Source_Catalogue : Source_Catalogue,
     
 def setup_components(chunk_map : Skymodel_Chunk_Map,
                      chunked_source : Source, # type: ignore
-                     num_freqs : int,
-                     num_times : int, comp_type : CompTypes,
-                     beamtype : int,
+                     num_freqs : int, num_times : int, num_beams : int,
+                     comp_type : CompTypes, beamtype : int,
                      precision : str = "double") -> None:
     """
     Given the mapping information in `chunk_map`, initialise the necessary
@@ -451,6 +450,10 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
         representing the number of frequencies.
     num_times: int
         representing the number of times.
+    num_beams : int
+        Number of beams to be calculated (only used for certain beam types).
+        If using one beam for all station/tiles, num_beams=1, otherwise
+        num_beams=num_ants.
     comp_type: CompTypes
         enum representing the type of component.
     beamtype: int
@@ -615,7 +618,7 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
     if beamtype in eb_beams:
         ##yes, you have to have those brackets around the numbers, otherwise
         ##ctypes makes a 3D array
-        complex_num_beams = c_user_precision_complex*(n_comps*num_freqs*num_times)
+        complex_num_beams = c_user_precision_complex*(n_comps*num_beams*num_freqs*num_times)
         
         components.gxs = complex_num_beams()
         components.Dxs = complex_num_beams()
@@ -699,8 +702,8 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
         
     
 def setup_chunked_source(chunked_source : Source, chunk_map : Skymodel_Chunk_Map, # type: ignore
-                         num_freqs : int, 
-                         num_times : int, beamtype : int,
+                         num_freqs : int, num_times : int, 
+                         num_beams : int, beamtype : int,
                          precision='double'):
     """
     Sets up `chunked_source`, which will be passed to C/CUDA. Allocates the
@@ -715,6 +718,10 @@ def setup_chunked_source(chunked_source : Source, chunk_map : Skymodel_Chunk_Map
         The number of frequency channels.
     num_times : int
         The number of time samples.
+    num_beams : int
+        Number of beams to be calculated (only used for certain beam types).
+        If using one beam for all station/tiles, num_beams=1, otherwise
+        num_beams=num_ants.
     beamtype : int
         The type of primary beam.
     precision : str, optional
@@ -745,15 +752,15 @@ def setup_chunked_source(chunked_source : Source, chunk_map : Skymodel_Chunk_Map
         
     if chunk_map.n_points > 0:
         setup_components(chunk_map, chunked_source, num_freqs, num_times,
-                         CompTypes.POINT, beamtype, precision)
+                         num_beams, CompTypes.POINT, beamtype, precision)
         
     if chunk_map.n_gauss > 0:
         setup_components(chunk_map, chunked_source, num_freqs, num_times,
-                         CompTypes.GAUSSIAN, beamtype, precision)
+                         num_beams, CompTypes.GAUSSIAN, beamtype, precision)
         
     if chunk_map.n_shapes > 0:
         setup_components(chunk_map, chunked_source, num_freqs, num_times,
-                         CompTypes.SHAPELET, beamtype, precision)
+                         num_beams, CompTypes.SHAPELET, beamtype, precision)
     
     return chunked_source
 

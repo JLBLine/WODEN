@@ -358,6 +358,7 @@ typedef struct _woden_settings_t {
   int do_autos; /*!< Boolean of whether to simulate autos or not (0 False, 1 True)*/
   int use_dipamps; /*!< Boolean of whether to use dipole amplitudes, so have an individual beam per tile*/
   double *mwa_dipole_amps; /*!< Bespoke MWA dipole amplitudes for each antenna(tile). Should be 2*num_ants*16 long*/
+  int single_everybeam_station; /*!< If using everybeam, add this to say we are only using a single station*/
 
 } woden_settings_t;
 
