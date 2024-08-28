@@ -128,7 +128,7 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
   }
 
   //Only MWA models have leakge terms at the moment
-  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY) {
+  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY || beamtype == EB_OSKAR || beamtype == EB_LOFAR) {
     * D1x = d_Dxs[beam_ind];
     * D2x = d_Dxs[beam_ind];
     * D1y = d_Dys[beam_ind];
@@ -141,6 +141,19 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
     * D1y = make_gpuUserComplex(0.0, 0.0);
     * D2y = make_gpuUserComplex(0.0, 0.0);
   }
+
+  // if (iBaseline == 0){
+  //   gpuUserComplex g1x = d_gxs[beam_ind];
+  //   gpuUserComplex g2x = d_gxs[beam_ind];
+  //   gpuUserComplex g1y = d_gys[beam_ind];
+  //   gpuUserComplex g2y = d_gys[beam_ind];
+
+  //   printf("Beam gains: %.4f %.4f %.4f %.4f \n", g1x.x, g1x.y, g1y.x, g1y.y);
+  //   printf("Beam gains: %.4f %.4f %.4f %.4f \n", g2x.x, g2x.y, g2y.x, g2y.y);
+  // }
+
+  
+
 } //end __device__ get_beam_gains
 
 
@@ -201,6 +214,19 @@ __device__ void get_beam_gains_multibeams(int iBaseline, int iComponent, int num
     * D1y = make_gpuUserComplex(0.0, 0.0);
     * D2y = make_gpuUserComplex(0.0, 0.0);
   }
+
+  // if (ant1_ind == 20 && ant2_ind == 21){
+
+  //   gpuUserComplex g1x = d_gxs[beam1];
+  //   gpuUserComplex g2x = d_gxs[beam2];
+  //   gpuUserComplex g1y = d_gys[beam1];
+  //   gpuUserComplex g2y = d_gys[beam2];
+
+  //   printf("Beam gains %d: %.4f %.4f %.4f %.4f \n", ant1_ind, g1x.x, g1x.y, g1y.x, g1y.y);
+  //   printf("Beam gains %d: %.4f %.4f %.4f %.4f \n", ant2_ind, g2x.x, g2x.y, g2y.x, g2y.y);
+  // }
+
+
 } //end __device__ get_beam_gains_multibeams
 
 __device__ void apply_beam_gains_stokesI(gpuUserComplex g1x, gpuUserComplex D1x,
@@ -348,6 +374,11 @@ __device__ void update_sum_visis_stokesI(int iBaseline, int iComponent, int num_
     apply_beam_gains_stokesI(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
                     flux_I,
                     visi_component, &visi_XX, &visi_XY, &visi_YX, &visi_YY);
+
+    // if (iBaseline == 1912) {
+    //   printf("Beam gains: %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f\n", g1x.x, g1x.y, D1x.x, D1x.y, D1y.x, D1y.y, g1y.x, g1y.y);
+    //   printf("Beam gains: %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f\n", g2x.x, g2x.y, D2x.x, D2x.y, D2y.x, D2y.y, g2y.x, g2y.y);
+    // }
 
     d_sum_visi_XX_real[iBaseline] += visi_XX.x;
     d_sum_visi_XX_imag[iBaseline] += visi_XX.y;

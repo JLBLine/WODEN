@@ -338,8 +338,6 @@ def count_num_list_fluxes(flux_mod_col_name : str, flux_col_prepend : str,
         if key[:len(flux_col_prepend)] == flux_col_prepend:
             flux_col_names.append(key)
             
-    # print('HALLO', flux_col_names)
-        
     for flux_col in flux_col_names:
         
         if type(use_table[flux_col]) == Column:
@@ -790,9 +788,6 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
     for new_comp_ind, old_comp_ind in enumerate(comp_orig_inds):
         source_components.ras[new_comp_ind] = main_table['RA'][old_comp_ind]*D2R
         source_components.decs[new_comp_ind] = main_table['DEC'][old_comp_ind]*D2R
-        
-        # print('ra, dec', main_table['RA'][old_comp_ind], main_table['DEC'][old_comp_ind])
-        # print('ra, dec', source_components.ras[new_comp_ind], source_components.decs[new_comp_ind])
         
         if beamtype == BeamTypes.GAUSS_BEAM.value or beamtype == BeamTypes.MWA_ANALY.value:
                 comp_has = lsts - source_components.ras[new_comp_ind]

@@ -54,13 +54,15 @@ def radec_to_xyz(ra : float, dec : float, time : Time):
     
     return np.asarray(coord_itrs.cartesian.xyz.transpose())
 
-def load_OSKAR_telescope(ms_path : str) -> eb.OSKAR:
+def load_OSKAR_telescope(ms_path : str, response_model = "skala40_wave") -> eb.OSKAR:
     """Load an OSKAR telescope from a measurement set.
 
     Parameters
     ----------
     ms_path : str
         Path to the measurement set
+    response_model : str, optional
+        Response model to use, by default "skala40_wave"
 
     Returns
     -------
@@ -70,15 +72,14 @@ def load_OSKAR_telescope(ms_path : str) -> eb.OSKAR:
 
     ##TODO what does this mean, what is differential beam?
     use_differential_beam = False
-
-    # Set element response model
-    element_response_model = "skala40_wave"
+    
+    print("OSKAR response model", response_model)
 
     # Load the telescope
     telescope = eb.load_telescope(
         ms_path,
         use_differential_beam=use_differential_beam,
-        element_response_model=element_response_model,
+        element_response_model=response_model,
     )
     
     # assert type(telescope) == eb.OSKAR
@@ -88,7 +89,7 @@ def load_OSKAR_telescope(ms_path : str) -> eb.OSKAR:
     return telescope
 
 
-def load_LOFAR_telescope(ms_path : str) -> eb.LOFAR:
+def load_LOFAR_telescope(ms_path : str, response_model = "lobes") -> eb.LOFAR:
     """Load an LOFAR telescope from a measurement set. Settings lifted
     directly from https://everybeam.readthedocs.io/en/latest/tree/demos/lofar-lobes.html
 
@@ -96,6 +97,8 @@ def load_LOFAR_telescope(ms_path : str) -> eb.LOFAR:
     ----------
     ms_path : str
         Path to the measurement set
+    response_model : str, optional
+        Response model to use, by default "lobes"
 
     Returns
     -------
@@ -103,9 +106,6 @@ def load_LOFAR_telescope(ms_path : str) -> eb.LOFAR:
         Telescope object
     """
 
-    # Set element response model
-    response_model = "lobes"
-    
     ##TODO what does this mean, what is differential beam?
     use_differential_beam = False
 
@@ -156,6 +156,7 @@ def get_everybeam_norm(ra0 : float, dec0 : float, time : Time, freq : float,
     
     norm_x = 1 / np.abs(response[0,0])
     norm_y = 1 / np.abs(response[1,1])
+    # print(station_id, norm_x, norm_y)
     
     return norm_x, norm_y
 
@@ -214,7 +215,25 @@ def run_everybeam(dir_itrf : np.ndarray, phase_itrf : np.ndarray,
     response[1,:] *= beam_norms[1]
     
     if reorder_jones:
-        # Reorder the Jones matrix to be [-j11, j10, -j01, j00]
-        response = np.array([[-response[1,1], response[1,0]], [-response[0,1], response[0,0]]])
-    
+        # print("HERE")
+        
+        # print(response)
+        
+        ##Might be the case we have to do some different kind of reordering here
+        if telescope.__class__ == eb.LOFAR:
+            response = np.array([[-response[1,1], response[1,0]], [-response[0,1], response[0,0]]])
+            
+            ##diff stokes convention??
+            response /= np.sqrt(2)
+            
+            ##rotate by 90 degrees??
+            # response = np.dot(np.array([[0, 1], [-1, 0]]), response)
+            
+        elif telescope.__class__ == eb.OSKAR:
+        # else:
+        #     # Reorder the Jones matrix to be [-j11, j10, -j01, j00]
+        #     # print('Doing this reorder')
+            response = np.array([[-response[1,1], response[1,0]], [-response[0,1], response[0,0]]])
+            # response = np.array([[response[1,1], response[1,0]], [-response[0,1], response[0,0]]])
+        
     return response

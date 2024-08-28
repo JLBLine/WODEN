@@ -19,7 +19,7 @@
 #include "gpu_macros.h"
 
 extern "C" void copy_CPU_beam_gains_to_GPU(components_t *components,
-  d_beam_gains_t *d_beam_gains, int num_gains, int num_beams) {
+  d_beam_gains_t *d_beam_gains, int num_gains) {
 
 
     gpuMalloc( (void**)&d_beam_gains->d_gxs,
@@ -378,7 +378,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       //So just copy them across
       if (beam_settings->beamtype == EB_OSKAR || beam_settings->beamtype == EB_LOFAR) {
         copy_CPU_beam_gains_to_GPU(&source->point_components,
-          &d_point_beam_gains, num_points*num_freqs*num_time_steps, num_beams);
+          &d_point_beam_gains, num_points*num_freqs*num_time_steps*num_beams);
       }
 
       printf("\tExtrapolating fluxes and beams...\n");
@@ -434,7 +434,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       //So just copy them across
       if (beam_settings->beamtype == EB_OSKAR || beam_settings->beamtype == EB_LOFAR) {
         copy_CPU_beam_gains_to_GPU(&source->gauss_components,
-          &d_gauss_beam_gains, num_gauss*num_freqs*num_time_steps, num_beams);
+          &d_gauss_beam_gains, num_gauss*num_freqs*num_time_steps*num_beams);
       }
 
       source_component_common(woden_settings, beam_settings, d_freqs,
@@ -499,7 +499,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
       //So just copy them across
       if (beam_settings->beamtype == EB_OSKAR || beam_settings->beamtype == EB_LOFAR) {
         copy_CPU_beam_gains_to_GPU(&source->shape_components,
-          &d_shape_beam_gains, num_shapes*num_freqs*num_time_steps, num_beams);
+          &d_shape_beam_gains, num_shapes*num_freqs*num_time_steps*num_beams);
       }
 
       source_component_common(woden_settings, beam_settings, d_freqs,
