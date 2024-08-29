@@ -100,12 +100,11 @@ def plot_everybeam_on_sky(ra0, dec0, observing_time, freq, station_id, telescope
     all_Dy = np.empty(len(ras), dtype=complex)
     all_gy = np.empty(len(ras), dtype=complex)
 
-    norm = get_everybeam_norm(np.radians(ra0), np.radians(dec0),
-                            observing_time, freq, telescope,
-                            station_id=station_id)
-
     dir_itrfs = radec_to_xyz(ras, decs, observing_time)
     phase_itrf = radec_to_xyz(np.radians(ra0), np.radians(dec0), observing_time)
+    
+    norm = get_everybeam_norm(phase_itrf, observing_time, freq, telescope,
+                              station_id=station_id)
 
     ind = 0
     for dir_itrf in dir_itrfs:

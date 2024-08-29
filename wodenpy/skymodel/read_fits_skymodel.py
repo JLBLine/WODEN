@@ -1102,13 +1102,14 @@ def calc_everybeam_for_components(ra0 : float, dec0 : float, num_components : in
         num_beams = 1
 
     ##iterate over beams, times, freqs, and directions (comps)
-    for station_ind, station_id in enumerate(station_ids):
-        for time_ind, time in enumerate(all_times):
-            phase_itrf = radec_to_xyz(ra0, dec0, time)
-            dir_itrfs = radec_to_xyz(ras, decs, time)
-            
+    for time_ind, time in enumerate(all_times):
+        ##ra_dec_to_xyz is super expenside (why is astropy always so inefficient?)
+        ##make sure we only call it the minimum number of times
+        phase_itrf = radec_to_xyz(ra0, dec0, time)
+        dir_itrfs = radec_to_xyz(ras, decs, time)
+        for station_ind, station_id in enumerate(station_ids):
             for freq_ind, freq in enumerate(all_freqs):
-                beam_norms = get_everybeam_norm(ra0, dec0, time, freq, telescope,
+                beam_norms = get_everybeam_norm(phase_itrf, time, freq, telescope,
                                                 station_id=station_id)
                 
                 for comp_ind, ra, dec in zip(np.arange(num_components), ras, decs):

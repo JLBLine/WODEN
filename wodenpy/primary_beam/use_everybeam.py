@@ -121,17 +121,15 @@ def load_LOFAR_telescope(ms_path : str, response_model = "lobes") -> eb.LOFAR:
     return telescope
 
 
-def get_everybeam_norm(ra0 : float, dec0 : float, time : Time, freq : float,
+def get_everybeam_norm(phase_itrf : np.ndarray, time : Time, freq : float,
                        telescope : eb.Telescope, station_id = 0) -> np.ndarray:
     """Get a normalisation factor for the X and Y beams from everybeam for
     a given phase centre (ra0, dec), time, frequency, telescope, and station.
 
     Parameters
     ----------
-    ra0 : float
-        RA of phase center in radians
-    dec0 : float
-        Dec of phase center in radians
+    phase_itrf : np.ndarray
+        XYZ itfr array (as output by `radec_to_xyz`) of beam phase centre
     time : Time
         Astropy Time object of observation
     freq : float
@@ -147,11 +145,11 @@ def get_everybeam_norm(ra0 : float, dec0 : float, time : Time, freq : float,
         Normalisation factors for the X and Y beams (multiply by this number to apply the norm)
     """
     
-    phase_itrf = radec_to_xyz(ra0, dec0, time)
+    # phase_itrf = radec_to_xyz(ra0, dec0, time)
     
     # Full beam for station 0
-    response = telescope.station_response(time.mjd*3600*24, station_id,
-                                          freq, phase_itrf, phase_itrf,
+    response = telescope.station_response(time.mjd*3600*24, station_id, freq,
+                                          phase_itrf, phase_itrf,
                                           rotate=True)
     
     norm_x = 1 / np.abs(response[0,0])

@@ -44,13 +44,27 @@ sbf_dx = 0.01
 woden_struct_classes = Woden_Struct_Classes()
 Woden_Settings = woden_struct_classes.Woden_Settings
 Visi_Set = woden_struct_classes.Visi_Set
+Source_Catalogue = woden_struct_classes.Source_Catalogue
+
+def _run_run_woden(run_woden, woden_settings : Woden_Settings,
+                   visibility_set : Visi_Set, source_catalogue : Source_Catalogue,
+                   array_layout : Array_Layout, sbf : np.ndarray):
+    """This is silly, but for profiling purposes, we need to wrap the `run_woden`
+    C/GPU function in another function so it's easy to pick out when profiling.
+    We can search for just `_run_run_woden` in the profiling output to see how
+    long we're spending on the GPU (just searching for `run_woden` doesn't
+    seem to work, at least in `yappi`.)
+    """
+    
+    run_woden(woden_settings, visibility_set, source_catalogue, array_layout,
+                  sbf)
 
 def woden_thread(the_queue : Queue, run_woden, woden_settings : Woden_Settings, #type: ignore
                  visibility_set : Visi_Set, #type: ignore
                  array_layout : Array_Layout,
                  sbf : np.ndarray):
     """
-    This function runs WODEN C/CUDA code on a separate thread, processing source catalogues from a queue until the queue is empty.
+    This function runs WODEN C/GPU code on a separate thread, processing source catalogues from a queue until the queue is empty.
     
     Parameters
     ----------
@@ -74,8 +88,13 @@ def woden_thread(the_queue : Queue, run_woden, woden_settings : Woden_Settings, 
         if source_catalogue is None:
             return
         
-        run_woden(woden_settings, visibility_set, source_catalogue, array_layout,
+        ##Run the GPU code in a wrapper function so we can easily profile it
+        _run_run_woden(run_woden, woden_settings, visibility_set, source_catalogue, array_layout,
                   sbf)
+        ##Calling _run_run_woden above is equivalent to calling the C/GPU
+        ##directly via the `run_woden` function below.
+        # run_woden(woden_settings, visibility_set, source_catalogue, array_layout,
+        #           sbf)
         
 def read_skymodel_thread(the_queue : Queue, woden_struct_classes : Woden_Struct_Classes,
                          woden_settings : Woden_Settings,
