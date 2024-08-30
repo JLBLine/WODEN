@@ -17,7 +17,7 @@ from wodenpy.use_libwoden.beam_settings import BeamTypes
 
 from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, _Ctype_Source_Into_Python
 
-from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components, Skymodel_Settings
+from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components, Skymodel_Settings, Args
 
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 import wodenpy.use_libwoden.woden_settings as ws
@@ -474,8 +474,12 @@ class Test(BaseChunkTest):
                                         num_freqs, num_time_steps)
         
         beamtype = BeamTypes.FEE_BEAM.value
+        
+        ##TODO if using everybeam, need args to have correct values
+        args = Args()
 
         source_catalogue = read_skymodel.read_skymodel_chunks(woden_struct_classes,
+                                              woden_settings, args,
                                               skymodel_filename, chunked_skymodel_maps,
                                               num_freqs, num_time_steps,
                                               beamtype, lsts, MWA_LAT)

@@ -86,7 +86,7 @@ def plot_jones_on_sky(all_gx, all_Dx, all_Dy, all_gy, wcs):
 
     plt.show()
 
-def plot_everybeam_on_sky(ra0, dec0, observing_time, freq, station_id, telescope, nside=100, radec_reso=120/100):
+def plot_everybeam_on_sky(ra0, dec0, observing_time, freq, station_id, telescope, nside=100, radec_reso=120/100, show_plot=True):
 
     header, wcs = create_WCS(ra0, dec0, nside, radec_reso)
     x_mesh, y_mesh = np.meshgrid(np.arange(nside), np.arange(nside))
@@ -105,7 +105,7 @@ def plot_everybeam_on_sky(ra0, dec0, observing_time, freq, station_id, telescope
     
     norm = get_everybeam_norm(phase_itrf, observing_time, freq, telescope,
                               station_id=station_id)
-
+    
     ind = 0
     for dir_itrf in dir_itrfs:
         response = run_everybeam(dir_itrf, phase_itrf,
@@ -123,7 +123,9 @@ def plot_everybeam_on_sky(ra0, dec0, observing_time, freq, station_id, telescope
     all_Dy.shape = (nside, nside)
     all_gy.shape = (nside, nside)
     
-    plot_jones_on_sky(all_gx, all_Dx, all_Dy, all_gy, wcs)
+    if show_plot: plot_jones_on_sky(all_gx, all_Dx, all_Dy, all_gy, wcs)
+    
+    return all_gx, all_Dx, all_Dy, all_gy, wcs
     
     
 def make_sky_models(ra0, dec0):

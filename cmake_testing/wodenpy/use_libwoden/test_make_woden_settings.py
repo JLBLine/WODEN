@@ -55,6 +55,7 @@ class PretendArgs():
         self.dipamps = False
         
         self.hdf5_beam_path = ""
+        self.station_id = np.nan
         
     def __init__(self):
         self.make_basic_args()

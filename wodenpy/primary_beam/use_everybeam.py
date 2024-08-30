@@ -145,16 +145,12 @@ def get_everybeam_norm(phase_itrf : np.ndarray, time : Time, freq : float,
         Normalisation factors for the X and Y beams (multiply by this number to apply the norm)
     """
     
-    # phase_itrf = radec_to_xyz(ra0, dec0, time)
-    
-    # Full beam for station 0
     response = telescope.station_response(time.mjd*3600*24, station_id, freq,
                                           phase_itrf, phase_itrf,
                                           rotate=True)
     
     norm_x = 1 / np.abs(response[0,0])
     norm_y = 1 / np.abs(response[1,1])
-    # print(station_id, norm_x, norm_y)
     
     return norm_x, norm_y
 
@@ -207,16 +203,11 @@ def run_everybeam(dir_itrf : np.ndarray, phase_itrf : np.ndarray,
     response = telescope.station_response(time.mjd*3600*24, station_id, freq,
                                           dir_itrf, phase_itrf,
                                           rotate=True)
-    
     ##normalise the beams using previously calculated norms
     response[0,:] *= beam_norms[0]
     response[1,:] *= beam_norms[1]
     
     if reorder_jones:
-        # print("HERE")
-        
-        # print(response)
-        
         ##Might be the case we have to do some different kind of reordering here
         if telescope.__class__ == eb.LOFAR:
             response = np.array([[-response[1,1], response[1,0]], [-response[0,1], response[0,0]]])
@@ -228,10 +219,7 @@ def run_everybeam(dir_itrf : np.ndarray, phase_itrf : np.ndarray,
             # response = np.dot(np.array([[0, 1], [-1, 0]]), response)
             
         elif telescope.__class__ == eb.OSKAR:
-        # else:
-        #     # Reorder the Jones matrix to be [-j11, j10, -j01, j00]
-        #     # print('Doing this reorder')
+            ## Reorder the Jones matrix to be [-j11, j10, -j01, j00]
             response = np.array([[-response[1,1], response[1,0]], [-response[0,1], response[0,0]]])
-            # response = np.array([[response[1,1], response[1,0]], [-response[0,1], response[0,0]]])
         
     return response

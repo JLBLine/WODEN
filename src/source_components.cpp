@@ -127,32 +127,20 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
 
   }
 
-  //Only MWA models have leakge terms at the moment
-  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY || beamtype == EB_OSKAR || beamtype == EB_LOFAR) {
-    * D1x = d_Dxs[beam_ind];
-    * D2x = d_Dxs[beam_ind];
-    * D1y = d_Dys[beam_ind];
-    * D2y = d_Dys[beam_ind];
-  }
   // Set leakage to zero if no leakage
-  else {
+  if (beamtype == NO_BEAM || beamtype == GAUSS_BEAM || beamtype == ANALY_DIPOLE) {
     * D1x = make_gpuUserComplex(0.0, 0.0);
     * D2x = make_gpuUserComplex(0.0, 0.0);
     * D1y = make_gpuUserComplex(0.0, 0.0);
     * D2y = make_gpuUserComplex(0.0, 0.0);
   }
-
-  // if (iBaseline == 0){
-  //   gpuUserComplex g1x = d_gxs[beam_ind];
-  //   gpuUserComplex g2x = d_gxs[beam_ind];
-  //   gpuUserComplex g1y = d_gys[beam_ind];
-  //   gpuUserComplex g2y = d_gys[beam_ind];
-
-  //   printf("Beam gains: %.4f %.4f %.4f %.4f \n", g1x.x, g1x.y, g1y.x, g1y.y);
-  //   printf("Beam gains: %.4f %.4f %.4f %.4f \n", g2x.x, g2x.y, g2y.x, g2y.y);
-  // }
-
   
+  else {
+    * D1x = d_Dxs[beam_ind];
+    * D2x = d_Dxs[beam_ind];
+    * D1y = d_Dys[beam_ind];
+    * D2y = d_Dys[beam_ind];
+  }
 
 } //end __device__ get_beam_gains
 
@@ -201,31 +189,19 @@ __device__ void get_beam_gains_multibeams(int iBaseline, int iComponent, int num
   }
 
   //Only MWA models have leakge terms at the moment
-  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY || beamtype == EB_OSKAR || beamtype == EB_LOFAR) {
-    * D1x = d_Dxs[beam1];
-    * D2x = d_Dxs[beam2];
-    * D1y = d_Dys[beam1];
-    * D2y = d_Dys[beam2];
-  }
-  // Set leakage to zero if no leakage
-  else {
+  if (beamtype == NO_BEAM || beamtype == GAUSS_BEAM || beamtype == ANALY_DIPOLE) {
     * D1x = make_gpuUserComplex(0.0, 0.0);
     * D2x = make_gpuUserComplex(0.0, 0.0);
     * D1y = make_gpuUserComplex(0.0, 0.0);
     * D2y = make_gpuUserComplex(0.0, 0.0);
   }
-
-  // if (ant1_ind == 20 && ant2_ind == 21){
-
-  //   gpuUserComplex g1x = d_gxs[beam1];
-  //   gpuUserComplex g2x = d_gxs[beam2];
-  //   gpuUserComplex g1y = d_gys[beam1];
-  //   gpuUserComplex g2y = d_gys[beam2];
-
-  //   printf("Beam gains %d: %.4f %.4f %.4f %.4f \n", ant1_ind, g1x.x, g1x.y, g1y.x, g1y.y);
-  //   printf("Beam gains %d: %.4f %.4f %.4f %.4f \n", ant2_ind, g2x.x, g2x.y, g2y.x, g2y.y);
-  // }
-
+  // Set leakage to zero if no leakage
+  else {
+    * D1x = d_Dxs[beam1];
+    * D2x = d_Dxs[beam2];
+    * D1y = d_Dys[beam1];
+    * D2y = d_Dys[beam2];
+  }
 
 } //end __device__ get_beam_gains_multibeams
 
@@ -1086,8 +1062,11 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
   
   //If we're using an everybeam model, all memory and values have already
   //been copied to GPU, so no need to allocate here
-  if (beam_settings->beamtype != EB_OSKAR && beam_settings->beamtype != EB_LOFAR) {
+  //
+  if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == MWA_ANALY || beam_settings->beamtype == FEE_BEAM_INTERP
+      || beam_settings->beamtype == GAUSS_BEAM || beam_settings->beamtype == ANALY_DIPOLE || beam_settings->beamtype == NO_BEAM) {
 
+    //Only some models would have had leakage terms malloced
     if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == MWA_ANALY || beam_settings->beamtype == FEE_BEAM_INTERP) {
       gpuMalloc( (void**)&d_component_beam_gains->d_Dxs,
                       num_gains*sizeof(gpuUserComplex) );

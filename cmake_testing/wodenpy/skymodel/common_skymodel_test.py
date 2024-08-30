@@ -25,6 +25,13 @@ MWA_LATITUDE = -26.7*D2R
 NUM_STOKESV_MODELS = 4
 NUM_LINPOL_MODELS = 5
 
+class Args:
+    """reduced argparse.Namespace class for testing everybeams"""
+    def __init__(self):
+        self.date = "2000-01-01T12:00:00"
+        self.beam_ms_path = "lba.MS"
+        self.station_id = 0
+
 class Skymodel_Settings:
     """Something to hold all the various settings and pass around between
     functions"""

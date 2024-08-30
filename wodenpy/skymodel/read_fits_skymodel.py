@@ -799,13 +799,10 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
                     source_components.beam_has[hadec_low + time_ind] = comp_has[time_ind]
                     source_components.beam_decs[hadec_low + time_ind] = source_components.decs[new_comp_ind]
         
-        ##Some beam models don't need az/za coords
-        skip_beams = [BeamTypes.NO_BEAM.value, BeamTypes.GAUSS_BEAM.value,
-                     BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value]
-        ##only the NO_BEAM and GAUSS_BEAM options don't need az,za coords
-        if beamtype in skip_beams:
-            pass
-        else:
+        # ##Only some models calculated on the GPU need az/za coords
+        azza_beams = [BeamTypes.FEE_BEAM.value, BeamTypes.ANALY_DIPOLE.value,
+                      BeamTypes.FEE_BEAM_INTERP.value, BeamTypes.MWA_ANALY.value]
+        if beamtype in azza_beams:
             ##Calculate lst, and then azimuth/elevation
             comp_has = lsts - source_components.ras[new_comp_ind]
             comp_azs, comp_els = erfa.hd2ae(comp_has, source_components.decs[new_comp_ind],
@@ -817,43 +814,6 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
                 azza_low = new_comp_ind*num_time_steps
                 source_components.azs[azza_low + time_ind] = comp_azs[time_ind]
                 source_components.zas[azza_low + time_ind] = np.pi/2 - comp_els[time_ind]
-                
-        # eb_beams = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value]
-        
-        # if beamtype in eb_beams:
-        #     num_freqs = len(all_freqs)
-        #     ##Everybeam models are calculated on the CPU. This function will only
-        # ##run if we have set args.primary_beam to an everybeam model
-        
-        #     for time_ind, time in enumerate(all_times):
-        #         for freq_ind, freq in enumerate(all_freqs):
-                    
-        #             jones = run_everybeam(source_components.ras[new_comp_ind],
-        #                                   source_components.decs[new_comp_ind],
-        #                                   ra0, dec0, time, freq, telescope,
-        #                                   beam_norms=beam_norms[time_ind, freq_ind, :])
-                    
-        #             beam_ind = num_freqs*time_ind*num_components + (num_components*freq_ind) + new_comp_ind
-                    
-        #             ##TODO likely need some kind of reordering to do IAU
-        #             # ##convention
-        #             source_components.gxs[beam_ind].real = jones[0,0].real
-        #             source_components.gxs[beam_ind].imag = jones[0,0].imag
-        #             source_components.Dxs[beam_ind].real = jones[0,1].real
-        #             source_components.Dxs[beam_ind].imag = jones[0,1].imag
-        #             source_components.Dys[beam_ind].real = jones[1,0].real
-        #             source_components.Dys[beam_ind].imag = jones[1,0].imag
-        #             source_components.gys[beam_ind].real = jones[1,1].real
-        #             source_components.gys[beam_ind].imag = jones[1,1].imag
-                    
-        #             # source_components.gxs[beam_ind].real = -jones[1,1].real
-        #             # source_components.gxs[beam_ind].imag = -jones[1,1].imag
-        #             # source_components.Dxs[beam_ind].real = jones[1,0].real
-        #             # source_components.Dxs[beam_ind].imag = jones[1,0].imag
-        #             # source_components.Dys[beam_ind].real = -jones[0,1].real
-        #             # source_components.Dys[beam_ind].imag = -jones[0,1].imag
-        #             # source_components.gys[beam_ind].real = jones[0,0].real
-        #             # source_components.gys[beam_ind].imag = jones[0,0].imag
     
     ##now handle flux related things    
     ##always shove things into the source as power, curve, list
@@ -1266,11 +1226,11 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
                                       beamtype, lsts, latitude,
                                       v_table, q_table, u_table, p_table,
                                       ra0, dec0, telescope,
-                                      all_times, all_freqs, station_id=args.station_id)
+                                      all_times, all_freqs)
             if beamtype in eb_beams:
                 calc_everybeam_for_components(ra0, dec0, chunk_map.n_points,
                                source_catalogue.sources[chunk_ind].gauss_components,
-                               telescope, all_times, all_freqs)
+                               telescope, all_times, all_freqs, station_id=args.station_id)
             
         if chunk_map.n_shapes > 0:
             add_fits_info_to_source_catalogue(CompTypes.SHAPELET,
@@ -1279,11 +1239,11 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
                                       beamtype, lsts, latitude,
                                       v_table, q_table, u_table, p_table,
                                       ra0, dec0, telescope,
-                                      all_times, all_freqs, station_id=args.station_id)
+                                      all_times, all_freqs)
             if beamtype in eb_beams:
                 calc_everybeam_for_components(ra0, dec0, chunk_map.n_points,
                                source_catalogue.sources[chunk_ind].shape_components,
-                               telescope, all_times, all_freqs)
+                               telescope, all_times, all_freqs, station_id=args.station_id)
             
     ##TODO some kind of consistency check between the chunk_maps and the
     ##sources in the catalogue - make sure we read in the correct information

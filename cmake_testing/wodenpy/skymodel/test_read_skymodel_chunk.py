@@ -18,7 +18,7 @@ from wodenpy.use_libwoden.beam_settings import BeamTypes
 
 from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, _Ctype_Source_Into_Python
 
-from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components, Skymodel_Settings
+from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components, Skymodel_Settings, Args
 
 from read_skymodel_common import check_components, check_all_sources, populate_pointgauss_chunk, populate_shapelet_chunk, make_expected_chunks
 
@@ -110,7 +110,10 @@ class Test(BaseChunkTest):
         
         beamtype = BeamTypes.FEE_BEAM.value
 
+        ##TODO if using everybeam, need args to have correct values
+        args = Args()
         source_catalogue = read_skymodel_chunks(woden_struct_classes,
+                                                woden_settings, args,
                                                 skymodel_filename,
                                                 chunked_skymodel_maps,
                                                 num_freqs, num_time_steps,
@@ -179,7 +182,10 @@ class Test(BaseChunkTest):
         
         beamtype = BeamTypes.FEE_BEAM.value
 
+        ##TODO if using everybeam, need args to have correct values
+        args = Args()
         source_catalogue = read_skymodel_chunks(woden_struct_classes,
+                                                woden_settings, args,
                                                 skymodel_filename,
                                                 chunked_skymodel_maps,
                                                 num_freqs, num_time_steps,
@@ -241,7 +247,10 @@ class Test(BaseChunkTest):
         
         beamtype = BeamTypes.FEE_BEAM.value
 
+        ##TODO if using everybeam, need args to have correct values
+        args = Args()
         source_catalogue = read_skymodel_chunks(woden_struct_classes,
+                                                woden_settings, args,
                                                 skymodel_filename,
                                                 chunked_skymodel_maps,
                                                 num_freqs, num_time_steps,

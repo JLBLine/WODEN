@@ -12,7 +12,7 @@ There are two ways to test WODEN. The first is to use the CMake testing suite wh
 EveryBeam Testing
 -----------------------
 
-As a temporary measure while developing ``everybeam`` functionality , I've made a number of notebooks that live in ``WODEN/test_installation/everybeam/``. Click below to see what they do.
+As a temporary measure while developing ``everybeam`` functionality , I've made a number of notebooks that live in ``WODEN/test_installation/everybeam/``. This is in lieu of full unit testing to speed up developement. At some point the correct thing would be to go back and break down the testing into units. The integration tests in the notebooks are:
 
 .. toctree::
    :maxdepth: 2

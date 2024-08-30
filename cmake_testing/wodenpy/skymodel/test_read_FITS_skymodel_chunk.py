@@ -19,7 +19,7 @@ from wodenpy.use_libwoden.beam_settings import BeamTypes
 from wodenpy.use_libwoden.skymodel_structs import setup_source_catalogue, setup_chunked_source
 import wodenpy.use_libwoden.woden_settings as ws
 
-from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components, Skymodel_Settings
+from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components, Skymodel_Settings, Args
 from read_skymodel_common import check_components, check_all_sources, populate_pointgauss_chunk, populate_shapelet_chunk, make_expected_chunks
 from fits_skymodel_common import write_full_test_skymodel_fits
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
@@ -118,14 +118,17 @@ class Test(BaseChunkTest):
                 p_table = Table.read(skymodel_filename, hdu='P_LIST_FLUXES')
         else:
             p_table = False
-            
-        # print("TABLES", type(v_table), type(q_table), type(u_table), type(p_table))
+        
+        ##TODO - if unit testing everybeam, need to make an args object that
+        ##looks something like this (obvisoully with the correct values)
+        args = Args()
 
         source_catalogue = read_fits_skymodel.read_fits_skymodel_chunks(woden_struct_classes,
+                                              woden_settings, args,
                                               main_table, shape_table, chunked_skymodel_maps,
                                               num_freqs, num_time_steps,
                                               beamtype, lsts, MWA_LAT,
-                                              v_table, q_table, u_table, p_table,)
+                                              v_table, q_table, u_table, p_table)
         
         check_all_sources(expected_chunks, source_catalogue,
                            fits_skymodel=True)
