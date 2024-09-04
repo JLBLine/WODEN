@@ -106,8 +106,12 @@ examples/polarisation/eg_array.txt
 test_installation/everybeam/*.fits
 test_installation/everybeam/eg_array.txt
 test_installation/everybeam/profile_run_woden_band01.ms
+test_installation/everybeam/profile_run_woden_lofar_band01.ms
+test_installation/everybeam/profile_run_woden_lofar-mwabeam_band01.ms
+test_installation/everybeam/ska_image_test_band01.ms
 
 
 test_installation/everybeam/create_OSKAR-MWA_ms/MWA_phase1
 test_installation/everybeam/create_OSKAR-MWA_ms/MWA_phase1_flags
 test_installation/everybeam/create_OSKAR-MWA_ms/skymodel.osm
+test_installation/everybeam/create_OSKAR-SKA_ms
