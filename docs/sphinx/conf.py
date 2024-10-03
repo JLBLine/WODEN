@@ -84,6 +84,12 @@ extensions = [
 
 nb_execution_mode = "off"
 
+# Enable LaTeX rendering in markdown cells
+myst_enable_extensions = [
+    "amsmath",  # Supports LaTeX math environments like bmatrix
+    "dollarmath"  # Supports $...$ and $$...$$ for inline and block math
+]
+
 todo_include_todos = True
 
 # Add any paths that contain templates here, relative to this directory.
