@@ -20,6 +20,7 @@ if read_the_docs_build:
             """
             self.OSKAR = None
             self.LOFAR = None
+            self.MWA = None
             self.load_telescope = None
             self.Telescope = None
     eb = EB()
@@ -31,6 +32,8 @@ woden_struct_classes = Woden_Struct_Classes()
 Source_Catalogue = woden_struct_classes.Source_Catalogue
 Woden_Settings = woden_struct_classes.Woden_Settings
 
+
+USE_DIFFERENTIAL_BEAM = True
 
 def radec_to_xyz(ra : float, dec : float, time : Time):
     """
@@ -70,15 +73,12 @@ def load_OSKAR_telescope(ms_path : str, response_model = "skala40_wave") -> eb.O
         Telescope object
     """
 
-    ##TODO what does this mean, what is differential beam?
-    use_differential_beam = False
-    
     print("OSKAR response model", response_model)
 
     # Load the telescope
     telescope = eb.load_telescope(
         ms_path,
-        use_differential_beam=use_differential_beam,
+        use_differential_beam=USE_DIFFERENTIAL_BEAM,
         element_response_model=response_model,
     )
     
@@ -106,17 +106,43 @@ def load_LOFAR_telescope(ms_path : str, response_model = "lobes") -> eb.LOFAR:
         Telescope object
     """
 
-    ##TODO what does this mean, what is differential beam?
-    use_differential_beam = False
-
     # Load the telescope
     telescope = eb.load_telescope(ms_path,
-                                  use_differential_beam=use_differential_beam,
+                                  use_differential_beam=False,
                                   element_response_model=response_model)
     
     # assert type(telescope) == eb.LOFAR
     if type(telescope) != eb.LOFAR:
         print(f'WARNING: Telescope specified in {ms_path} is not an OSKAR telescope. Proceeding, but you might get nonsense results.')
+    
+    return telescope
+
+
+def load_MWA_telescope(ms_path : str, coeff_path : str) -> eb.MWA:
+    """Load an MWA telescope from a measurement set.
+
+    Parameters
+    ----------
+    ms_path : str
+        Path to the measurement set
+    response_model : str, optional
+        Response model to use, by default "lobes"
+
+    Returns
+    -------
+    eb.MWA
+        Telescope object
+    """
+
+    # Load the telescope
+    telescope = eb.load_telescope(ms_path,
+                                  use_differential_beam=USE_DIFFERENTIAL_BEAM,
+                                  coeff_path=coeff_path)
+                                #   element_response_model=response_model)
+    
+    # assert type(telescope) == eb.MWA
+    if type(telescope) != eb.MWA:
+        print(f'WARNING: Telescope specified in {ms_path} is not an MWA telescope. Proceeding, but you might get nonsense results.')
     
     return telescope
 
@@ -157,7 +183,10 @@ def get_everybeam_norm(phase_itrf : np.ndarray, time : Time, freq : float,
 def run_everybeam(dir_itrf : np.ndarray, phase_itrf : np.ndarray, 
                   time : Time, freq : float, telescope: eb.Telescope,
                   station_id : int = 0, beam_norms : np.ndarray = np.ones(2),
-                  reorder_jones : bool = True):
+                  reorder_jones : bool = True,
+                  ra : float = False, dec : float = False,
+                  parallactic_angle : float = 0,
+                  para_angle_offset : float = -np.pi/2) -> np.ndarray:
     """For a given direction, phase centre, time, frequency, telescope, station,
     calculate an everybeam jones matrix. Optionally normalise using the given
     beam norms [X_norm, Y_norm]. Explicitly, where
@@ -190,8 +219,16 @@ def run_everybeam(dir_itrf : np.ndarray, phase_itrf : np.ndarray,
     beam_norms : np.ndarray, optional
         Normalisation to apply, [X_norm, Y_norm], by default np.ones(2). Outputs are multiplied by these values
     reorder_jones : bool, optional
-        If True, reorder the Jones matrix to be [-j11, j10, -j01, j00], which
+        If True, reorder the Jones matrix to be [j11, j10, j01, j00], which
         is the order expected by WODEN, by default True
+    ra : float, optional
+        Right ascension of direction of interest (radians), by default False. Needed for MWA beam
+    dec : float, optional
+        Declination of direction of interest (radians), by default False. Needed for MWA beam
+    parallactic_angle : float, optional
+        Rotate by this parallactic angle (radians); by default 0
+    para_angle_offset : float, optional
+        Offset to apply to parallactic angle (radians); by default -np.pi/2
 
     Returns
     -------
@@ -199,27 +236,44 @@ def run_everybeam(dir_itrf : np.ndarray, phase_itrf : np.ndarray,
         2x2 array of complex beam jones matrix [[j00, j01], [j10, j11]]
     """
     
-    ##Get the response
-    response = telescope.station_response(time.mjd*3600*24, station_id, freq,
-                                          dir_itrf, phase_itrf,
-                                          rotate=True)
+    ##The MWA everybeam function takes ra, dec, not dir_itrf
+    
+    if type(telescope) == eb.MWA:
+        ##Get the response
+        response = telescope.station_response(time.mjd*3600*24, station_id, freq,
+                                            ra, dec)
+    else:
+        
+        parallactic_angle = 0
+    
+        ##Get the response
+        response = telescope.station_response(time.mjd*3600*24, station_id, freq,
+                                              dir_itrf, phase_itrf,
+                                              rotate=True)
     ##normalise the beams using previously calculated norms
     response[0,:] *= beam_norms[0]
     response[1,:] *= beam_norms[1]
     
+    if parallactic_angle:
+        
+        cospa = np.cos(parallactic_angle + para_angle_offset)
+        sinpa = np.sin(parallactic_angle + para_angle_offset)
+        
+        rotated_response = np.zeros_like(response)
+        
+        rotated_response[0,0] = response[0,0]*cospa - response[0,1]*sinpa
+        rotated_response[0,1] = response[0,0]*sinpa + response[0,1]*cospa
+        rotated_response[1,0] = response[1,0]*cospa - response[1,1]*sinpa
+        rotated_response[1,1] = response[1,0]*sinpa + response[1,1]*cospa
+        
+        response = rotated_response
+    
     if reorder_jones:
-        ##Might be the case we have to do some different kind of reordering here
-        if telescope.__class__ == eb.LOFAR:
-            response = np.array([[-response[1,1], response[1,0]], [-response[0,1], response[0,0]]])
-            
-            ##diff stokes convention??
-            response /= np.sqrt(2)
-            
-            ##rotate by 90 degrees??
-            # response = np.dot(np.array([[0, 1], [-1, 0]]), response)
-            
-        elif telescope.__class__ == eb.OSKAR:
-            ## Reorder the Jones matrix to be [-j11, j10, -j01, j00]
-            response = np.array([[-response[1,1], response[1,0]], [-response[0,1], response[0,0]]])
+        response = np.array([[response[1,1], -response[1,0]],
+                             [response[0,1], -response[0,0]]])
+        
+    ##diff stokes convention??
+    # if type(telescope) == eb.LOFAR:
+    #     response /= np.sqrt(2)
         
     return response

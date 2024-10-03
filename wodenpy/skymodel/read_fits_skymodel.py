@@ -11,11 +11,33 @@ from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classe
 from astropy.table import Table, Column
 import erfa
 from astropy.io import fits
-from wodenpy.primary_beam.use_everybeam import run_everybeam, load_OSKAR_telescope, load_LOFAR_telescope, get_everybeam_norm, radec_to_xyz
+from wodenpy.primary_beam.use_everybeam import run_everybeam, load_MWA_telescope, load_OSKAR_telescope, load_LOFAR_telescope, get_everybeam_norm, radec_to_xyz
 from sys import exit
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 import argparse
 from astropy.time import Time, TimeDelta
+
+import os
+##Are we just making online documentation? If so, don't import everybeam
+##Installing everybeam is non-trivial, so trying to get readthedocs to install
+##it is a waste of time
+read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
+
+if read_the_docs_build:
+    class EB:
+        def __init__(self):
+            """
+            A fake `everybeam` class so we can build the documentation online
+            in ReadTheDocs without installing `everybeam`, which is non-trivial
+            """
+            self.OSKAR = None
+            self.LOFAR = None
+            self.MWA = None
+            self.load_telescope = None
+            self.Telescope = None
+    eb = EB()
+else:
+    import everybeam as eb
 
 ##This call is so we can use it as a type annotation
 woden_struct_classes = Woden_Struct_Classes()
@@ -1042,7 +1064,9 @@ def calc_everybeam_for_components(ra0 : float, dec0 : float, num_components : in
                    components : Components, telescope,
                    all_times : np.ndarray, all_freqs : np.ndarray,
                    reorder_jones : bool = True,
-                   station_id = np.nan):
+                   station_id = np.nan, 
+                   lsts : np.ndarray = False, latitudes : float = False,
+                   parallactic_rotate : bool = True):
     
     ##convert back from ctypes to numpy arrays
     ras = np.ctypeslib.as_array(components.ras, shape=(num_components, ))
@@ -1063,24 +1087,66 @@ def calc_everybeam_for_components(ra0 : float, dec0 : float, num_components : in
 
     ##iterate over beams, times, freqs, and directions (comps)
     for time_ind, time in enumerate(all_times):
-        ##ra_dec_to_xyz is super expenside (why is astropy always so inefficient?)
-        ##make sure we only call it the minimum number of times
-        phase_itrf = radec_to_xyz(ra0, dec0, time)
-        dir_itrfs = radec_to_xyz(ras, decs, time)
+        
+        ##If we're using the MWA, we don't need to itrf coords, just use ra,dec
+        if type(telescope) == eb.MWA:
+            phase_itrf = False
+        else:
+            ##ra_dec_to_xyz is super expenside (why is astropy always so inefficient?)
+            ##make sure we only call it the minimum number of times
+            phase_itrf = radec_to_xyz(ra0, dec0, time)
+            dir_itrfs = radec_to_xyz(ras, decs, time)
+        
+        if parallactic_rotate:
+            has = lsts[time_ind] - ras
+            para_angles = erfa.hd2pa(has, decs, latitudes[time_ind])
+            # cospa = np.cos(para_angles)
+            # sinpa = np.sin(para_angles)
+        
         for station_ind, station_id in enumerate(station_ids):
             for freq_ind, freq in enumerate(all_freqs):
-                beam_norms = get_everybeam_norm(phase_itrf, time, freq, telescope,
-                                                station_id=station_id)
+                ##The normalisation for the MWA seems to work, and not for
+                ##other everybeams
+                if type(telescope) == eb.MWA:
+                    beam_norms = np.ones(2)
+                else:
+                    beam_norms = get_everybeam_norm(phase_itrf, time, freq, telescope,
+                                                    station_id=station_id)
                 
                 for comp_ind, ra, dec in zip(np.arange(num_components), ras, decs):
                     
-                    jones = run_everybeam(dir_itrfs[comp_ind], phase_itrf,
+                    if type(telescope) == eb.MWA:
+                        dir_itrf = False
+                    else:
+                        dir_itrf = dir_itrfs[comp_ind]
+                    
+                    if parallactic_rotate:
+                        para_angle = para_angles[comp_ind]
+                    else:
+                        para_angle = False
+                    
+                    jones = run_everybeam(dir_itrf, phase_itrf,
                                         time, freq, telescope,
                                         station_id=station_id,
                                         beam_norms=beam_norms,
-                                        reorder_jones=reorder_jones)
+                                        reorder_jones=reorder_jones,
+                                        ra=ra, dec=dec,
+                                        parallactic_angle=para_angle)
                     
                     beam_ind = num_freqs*num_components*num_times*station_ind + num_freqs*num_components*time_ind + num_components*freq_ind + comp_ind
+                    
+                    # # print('HERE GO', parallactic_rotate)
+                    # if parallactic_rotate:
+                    #     components.gxs[beam_ind].real = jones[0,0].real*cospa[comp_ind] - jones[1,0].real*sinpa[comp_ind]
+                    #     components.gxs[beam_ind].imag = jones[0,0].imag*cospa[comp_ind] - jones[1,0].imag*sinpa[comp_ind]
+                    #     components.Dxs[beam_ind].real = jones[0,1].real*cospa[comp_ind] - jones[1,1].real*sinpa[comp_ind]
+                    #     components.Dxs[beam_ind].imag = jones[0,1].imag*cospa[comp_ind] - jones[1,1].imag*sinpa[comp_ind]
+                    #     components.Dys[beam_ind].real = jones[0,0].real*sinpa[comp_ind] + jones[1,0].real*cospa[comp_ind]
+                    #     components.Dys[beam_ind].imag = jones[0,0].imag*sinpa[comp_ind] + jones[1,0].imag*cospa[comp_ind]
+                    #     components.gys[beam_ind].real = jones[0,1].real*sinpa[comp_ind] + jones[1,1].real*cospa[comp_ind]
+                    #     components.gys[beam_ind].imag = jones[0,1].imag*sinpa[comp_ind] + jones[1,1].imag*cospa[comp_ind]
+                        
+                    # else:
                     
                     components.gxs[beam_ind].real = jones[0,0].real
                     components.gxs[beam_ind].imag = jones[0,0].imag
@@ -1158,7 +1224,7 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
     
     ra0 = woden_settings.ra0
     dec0 = woden_settings.dec0
-    eb_beams = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value]
+    eb_beams = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value, BeamTypes.EB_MWA.value]
     
     if beamtype in eb_beams:
         all_times = []
@@ -1171,6 +1237,9 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
         
         base_band_freq = ((band_num - 1)*woden_settings.coarse_band_width) + woden_settings.base_low_freq
         all_freqs = base_band_freq + np.arange(woden_settings.num_freqs)*woden_settings.frequency_resolution
+        
+        if beamtype == BeamTypes.EB_MWA.value:
+            telescope = load_MWA_telescope(args.beam_ms_path, args.hdf5_beam_path)
         
         if beamtype == BeamTypes.EB_OSKAR.value:
             telescope = load_OSKAR_telescope(args.beam_ms_path)
@@ -1185,12 +1254,16 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
         else:
             num_beams = 1
             
+        lsts = np.ctypeslib.as_array(woden_settings.lsts, shape=(woden_settings.num_time_steps, ))
+        latitudes = np.ctypeslib.as_array(woden_settings.latitudes, shape=(woden_settings.num_time_steps, ))
+            
     else:
         beam_norms = False
         telescope = False
         all_times = False
         all_freqs = False
         num_beams = 1
+        latitudes = False
         
     ##for each chunk map, create a Source_Float or Source_Double ctype
     ##struct, and "malloc" the right amount of arrays to store required infor
@@ -1205,7 +1278,6 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
         ##and not component, so this number is actually a combination of
         ##component and basis numbers
         # num_comps_all_chunks += chunk_map.n_points + chunk_map.n_gauss + chunk_map.n_shape_coeffs
-        
         if chunk_map.n_points > 0:
             add_fits_info_to_source_catalogue(CompTypes.POINT,
                                       main_table, shape_table,
@@ -1217,7 +1289,8 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
             if beamtype in eb_beams:
                 calc_everybeam_for_components(ra0, dec0, chunk_map.n_points,
                                source_catalogue.sources[chunk_ind].point_components,
-                               telescope, all_times, all_freqs, station_id=args.station_id)
+                               telescope, all_times, all_freqs, station_id=args.station_id,
+                               lsts=lsts, latitudes=latitudes, parallactic_rotate=True)
             
         if chunk_map.n_gauss > 0:
             add_fits_info_to_source_catalogue(CompTypes.GAUSSIAN,
@@ -1230,7 +1303,8 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
             if beamtype in eb_beams:
                 calc_everybeam_for_components(ra0, dec0, chunk_map.n_points,
                                source_catalogue.sources[chunk_ind].gauss_components,
-                               telescope, all_times, all_freqs, station_id=args.station_id)
+                               telescope, all_times, all_freqs, station_id=args.station_id,
+                               lsts=lsts, latitudes=latitudes, parallactic_rotate=True)
             
         if chunk_map.n_shapes > 0:
             add_fits_info_to_source_catalogue(CompTypes.SHAPELET,
@@ -1243,7 +1317,8 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
             if beamtype in eb_beams:
                 calc_everybeam_for_components(ra0, dec0, chunk_map.n_points,
                                source_catalogue.sources[chunk_ind].shape_components,
-                               telescope, all_times, all_freqs, station_id=args.station_id)
+                               telescope, all_times, all_freqs, station_id=args.station_id,
+                               lsts=lsts, latitudes=latitudes, parallactic_rotate=True)
             
     ##TODO some kind of consistency check between the chunk_maps and the
     ##sources in the catalogue - make sure we read in the correct information

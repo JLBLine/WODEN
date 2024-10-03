@@ -27,10 +27,13 @@ if __name__ == "__main__":
     args.append(f"--ra0={ra0}")
     args.append(f"--dec0={dec0}")
     args.append(f"--date={date}")
+    args.append(f"--station_id=0")
     args.append(f"--cat_filename={profile_cat}")
     args.append("--output_uvfits_prepend=profile_run_woden")
-    args.append(f'--beam_ms_path=create_OSKAR-MWA_ms/OSKAR-MWA-flags-layout.ms')
-    args.append("--primary_beam=everybeam_OSKAR")
+    args.append(f'--beam_ms_path=MWA-single-timeslot.ms')
+    args.append("--primary_beam=everybeam_MWA")
+    
+    # rw.main(args)
     
     yappi.set_clock_type("wall") # Use set_clock_type("cpu") for CPU time
     # yappi.start()

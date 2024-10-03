@@ -2081,7 +2081,7 @@ extern "C" void free_beam_gains(d_beam_gains_t d_beam_gains, e_beamtype beamtype
   ( gpuFree( d_beam_gains.d_gxs) );
   ( gpuFree( d_beam_gains.d_gys) );
 
-  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY || beamtype == EB_OSKAR || beamtype == EB_LOFAR){
+  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY || beamtype == EB_OSKAR || beamtype == EB_LOFAR || beamtype == EB_MWA){
     ( gpuFree( d_beam_gains.d_Dxs ) );
     ( gpuFree( d_beam_gains.d_Dys ) );
   }

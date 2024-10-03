@@ -42,11 +42,19 @@ def create_WCS(ra_cent, dec_cent, nside, radec_reso):
     return header, WCS(header).celestial
 
 
-def plot_jones_on_sky(all_gx, all_Dx, all_Dy, all_gy, wcs):
-    fig, axs = plt.subplots(4, 3, figsize=(12, 12), layout='constrained', subplot_kw={'projection': wcs})
+def plot_jones_on_sky(all_gx, all_Dx, all_Dy, all_gy, wcs, title=False,
+                      show_plot = True):
+    fig, axs = plt.subplots(4, 4, figsize=(16, 12), layout='constrained', subplot_kw={'projection': wcs})
 
-    for row in range(3):
-        if row == 2:
+    for row in range(4):
+        if row == 3:
+            gx = np.angle(all_gx)
+            Dx = np.angle(all_Dx)
+            Dy = np.angle(all_Dy)
+            gy = np.angle(all_gy)
+            tag = "Phase"
+            
+        elif row == 2:
             gx = np.abs(all_gx)
             Dx = np.abs(all_Dx)
             Dy = np.abs(all_Dy)
@@ -81,10 +89,15 @@ def plot_jones_on_sky(all_gx, all_Dx, all_Dy, all_gy, wcs):
         im3 = axs[3, row].imshow(gy, origin='lower')
         plt.colorbar(im3, ax=axs[3, row])
         axs[3, row].set_title(f'{tag} g_y')
+        
+    if title: fig.suptitle(title)
 
     for ax in axs.flatten(): ax.grid()
 
-    plt.show()
+    if show_plot:
+        plt.show()
+    else:
+        fig.savefig('beam_plot.png', bbox_inches='tight')
 
 def plot_everybeam_on_sky(ra0, dec0, observing_time, freq, station_id, telescope, nside=100, radec_reso=120/100, show_plot=True):
 

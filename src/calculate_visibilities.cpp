@@ -64,7 +64,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   }
 
   //Default behaviour with everybeam is to use a different beam for each station
-  if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR) {
+  if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
     use_twobeams = 1;
     num_beams = woden_settings->num_ants;
 
@@ -376,7 +376,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
       //If an everybeam model, already calculated beam gains on the CPU
       //So just copy them across
-      if (beam_settings->beamtype == EB_OSKAR || beam_settings->beamtype == EB_LOFAR) {
+      if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
         copy_CPU_beam_gains_to_GPU(&source->point_components,
           &d_point_beam_gains, num_points*num_freqs*num_time_steps*num_beams);
       }
@@ -432,7 +432,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
       //If an everybeam model, already calculated beam gains on the CPU
       //So just copy them across
-      if (beam_settings->beamtype == EB_OSKAR || beam_settings->beamtype == EB_LOFAR) {
+      if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
         copy_CPU_beam_gains_to_GPU(&source->gauss_components,
           &d_gauss_beam_gains, num_gauss*num_freqs*num_time_steps*num_beams);
       }
@@ -497,7 +497,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
       //If an everybeam model, already calculated beam gains on the CPU
       //So just copy them across
-      if (beam_settings->beamtype == EB_OSKAR || beam_settings->beamtype == EB_LOFAR) {
+      if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
         copy_CPU_beam_gains_to_GPU(&source->shape_components,
           &d_shape_beam_gains, num_shapes*num_freqs*num_time_steps*num_beams);
       }

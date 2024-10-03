@@ -26,6 +26,9 @@ class BeamTypes(Enum):
         ANALY_DIPOLE (int): Analytical dipole beam type.
         FEE_BEAM_INTERP (int): Interpolated FEE beam type.
         MWA_ANALY (int): MWA analytical beam type.
+        EB_OSKAR (int): EveryBeam OSKAR beam type.
+        EB_LOFAR (int): EveryBeam LOFAR beam type.
+        EB_MWA (int): EveryBeam MWA beam type.
     """
     NO_BEAM = 0
     GAUSS_BEAM = 1
@@ -35,3 +38,4 @@ class BeamTypes(Enum):
     MWA_ANALY = 5
     EB_OSKAR = 6
     EB_LOFAR = 7
+    EB_MWA = 8

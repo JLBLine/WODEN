@@ -252,6 +252,9 @@ def create_woden_settings(woden_settings : Woden_Settings, # type: ignore
     elif args.primary_beam == 'everybeam_LOFAR':
         woden_settings.beamtype = BeamTypes.EB_LOFAR.value
         
+    elif args.primary_beam == 'everybeam_MWA':
+        woden_settings.beamtype = BeamTypes.EB_MWA.value
+        
     if args.no_precession:
         woden_settings.do_precession = 0
     else:

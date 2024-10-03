@@ -614,7 +614,7 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
         
     ##TODO if we use a different primary beam per antenna, need to allocate
     ##more memory here
-    eb_beams = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value]
+    eb_beams = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value, BeamTypes.EB_MWA.value]
     if beamtype in eb_beams:
         ##yes, you have to have those brackets around the numbers, otherwise
         ##ctypes makes a 3D array

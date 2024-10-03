@@ -5,7 +5,7 @@ import sys
 import os
 from astropy.io import fits
 import warnings
-import sys
+from sys import exit
 from casacore.tables import table
 from wodenpy.array_layout.create_array_layout import convert_ecef_to_enh
 
@@ -81,7 +81,7 @@ def get_parser():
     obs_group.add_argument('--no_precession', default=False, action='store_true',
         help='By default, WODEN rotates the array back to J2000 to match '
              'the input sky catalogue. Add this to switch off precession')
-
+    
     tel_group = parser.add_argument_group('TELESCOPE OPTIONS')
     tel_group.add_argument('--latitude', default=-26.703319405555554, type=float,
         help='Latitude (deg) of the array - defaults to MWA at -26.703319405555554')
@@ -105,6 +105,7 @@ def get_parser():
             "\t - MWA_analy (MWA analytic model)\n"
             "\t - everybeam_OSKAR (requires an OSKAR measurement set via --beam_ms_path)\n"
             "\t - everybeam_LOFAR (requires a LOFAR measurement set via --beam_ms_path)\n"
+            "\t - everybeam_MWA (requires an MWA measurement set via --beam_ms_path)\n"
             "\t - none (Don't use a primary beam at all)\n"
             "Defaults to --primary_beam=none")
     
@@ -382,10 +383,11 @@ def check_args(args):
 
     if args.primary_beam not in ['MWA_FEE', 'Gaussian', 'EDA2', 'none', 'None',
                                  'MWA_FEE_interp', 'MWA_analy',
-                                 'everybeam_OSKAR', 'everybeam_LOFAR']:
-        exit('Primary beam option --primary_beam must be one of:\n'
+                                 'everybeam_OSKAR', 'everybeam_LOFAR',
+                                 'everybeam_MWA']:
+        sys.exit('Primary beam option --primary_beam must be one of:\n'
              '\t Gaussian, EDA2, none, MWA_FEE, MWA_FEE_interp, '
-             'MWA_analy, everybeam_OSKAR, everybeam_LOFAR\n'
+             'MWA_analy, everybeam_OSKAR, everybeam_LOFAR, everybeam_MWA, \n'
              'User has entered --primary_beam={:s}\n'
              'Please fix and try again. Exiting now'.format(args.primary_beam))
 
@@ -434,6 +436,26 @@ def check_args(args):
                 exit('To use MWA FEE intrep beam, either --hdf5_beam_path or environment\n'
                      'variable MWA_FEE_HDF5_INTERP must point towards the file\n'
                      'MWA_embedded_element_pattern_rev2_interp_167_197MHz.h5. Exiting now as WODEN will fail.')
+                
+    if args.primary_beam == 'everybeam_MWA':
+        
+        if args.hdf5_beam_path:
+            if not os.path.isfile(args.hdf5_beam_path):
+                exit('Could not open hdf5 MWA FEE path as specified by user as:\n'
+                     '\t--hdf5_beam_path={:s}.\n'
+                     'This will cause WODEN to fail, exiting now'.format(args.hdf5_beam_path))
+        else:
+            try:
+                MWA_FEE_HDF5 = os.environ['MWA_FEE_HDF5']
+                args.hdf5_beam_path = MWA_FEE_HDF5
+                if not os.path.isfile(args.hdf5_beam_path):
+                    exit('Could not open hdf5 MWA FEE path as specified by user as:\n'
+                         '\t--environ["MWA_FEE_HDF5"]={:s}.\n'
+                         'This will cause WODEN to fail, exiting now'.format(args.hdf5_beam_path))
+            except KeyError:
+                exit('To use EveryBeam MWA, either --hdf5_beam_path or environment\n'
+                     'variable MWA_FEE_HDF5 must point towards the file\n'
+                     'mwa_full_embedded_element_pattern.h5. Exiting now as WODEN will fail.')
                 
     ##variables that will be filled by metafits if reading a metafits
     ##set them as False here for testing later on
@@ -501,7 +523,7 @@ def check_args(args):
 
             f.close()
             
-    if args.primary_beam == 'everybeam_OSKAR' or args.primary_beam == 'everybeam_LOFAR':
+    if args.primary_beam == 'everybeam_OSKAR' or args.primary_beam == 'everybeam_LOFAR' or args.primary_beam == 'everybeam_MWA':
         if not args.beam_ms_path:
             exit(f'To use the {args.primary_beam} beam, you must specify a path to the'
                  ' measurement set using --beam_ms_path. Exiting now as WODEN will fail.')
@@ -574,7 +596,7 @@ def check_args(args):
                        "Exiting now.")
             exit(message)
             
-    if args.primary_beam == 'everybeam_OSKAR' or args.primary_beam == 'everybeam_LOFAR':
+    if args.primary_beam == 'everybeam_OSKAR' or args.primary_beam == 'everybeam_LOFAR' or args.primary_beam == 'everybeam_MWA':
         if len(args.band_nums) > 1:
             exit('ERROR: --band_nums must be a single band when using everybeam '
                  'as these beam models are calculated on the CPU; the bands '
