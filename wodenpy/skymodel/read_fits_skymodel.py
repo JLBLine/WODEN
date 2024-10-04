@@ -400,7 +400,11 @@ def read_fits_radec_count_components(fits_path : str):
     ras = np.array(main_table['RA'], dtype=np.float64)
     decs = np.array(main_table['DEC'], dtype=np.float64)
     comp_types = np.array(main_table['COMP_TYPE'], dtype=str)
+    ##strip leading and trailing whitespace from the components types
+    comp_types = np.char.strip(comp_types)
     flux_types = np.array(main_table['MOD_TYPE'], dtype=str)
+    ##strip leading and trailing whitespace from the flux types
+    flux_types = np.char.strip(flux_types)
     unq_source_ID = np.array(main_table['UNQ_SOURCE_ID'], dtype=str)
     comp_names = np.array(main_table['NAME'], dtype=str)
     
@@ -549,6 +553,7 @@ def read_fits_radec_count_components(fits_path : str):
             comp_counter.has_intr_pol_angle = True
     
     comp_counter.total_components()
+    # comp_counter.print_info()
     ##If we have list-style polarisation information, we need to count how many
     ##flux entries there are for each component (needed for mallocing down the line)
     
