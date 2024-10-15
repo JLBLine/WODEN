@@ -1020,6 +1020,8 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
            e_component_type comptype,
            visibility_set_t *d_visibility_set){
 
+  int verbose = 0;
+
   //Here we see if we a single primary beam for all (num_beams = 1) or
   //a primary beam per antenna (num_beams = num_ants)
   //This can be expanded in the future to have a primary beam per tile
@@ -1112,7 +1114,9 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
     user_precision_t sin_2theta = 0.0;
     user_precision_t fwhm_lm = sin(beam_settings->beam_FWHM_rad);
 
-    printf("\tDoing Gaussian Beam\n");
+    if (verbose == 1){
+      printf("\tDoing Gaussian Beam\n");
+    }
 
     calculate_gaussian_beam(num_components,
          woden_settings->num_time_steps, woden_settings->num_freqs,
@@ -1128,10 +1132,12 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
 
   else if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP) {
 
-    if (beam_settings->beamtype == FEE_BEAM_INTERP) {
-      printf("\tDoing the hyperbeam (interpolated)\n");
-    } else {
-      printf("\tDoing the hyperbeam\n");
+    if (verbose == 1){
+      if (beam_settings->beamtype == FEE_BEAM_INTERP) {
+        printf("\tDoing the hyperbeam (interpolated)\n");
+      } else {
+        printf("\tDoing the hyperbeam\n");
+      }
     }
 
     //Have to reorder the az/za from comp ind, time ind to time ind, comp ind
@@ -1168,7 +1174,9 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
   }
 
   else if (beam_settings->beamtype == ANALY_DIPOLE) {
-    printf("\tDoing analytic_dipole (EDA2 beam)\n");
+    if (verbose == 1){
+      printf("\tDoing analytic_dipole (EDA2 beam)\n");
+    }
 
     calculate_analytic_dipole_beam(num_components,
          woden_settings->num_time_steps, woden_settings->num_freqs,
@@ -1180,8 +1188,9 @@ extern "C" void source_component_common(woden_settings_t *woden_settings,
 
     //Always normalise to zenith
     int norm = 1;
-
-    printf("\tDoing analytic MWA beam\n");
+    if (verbose == 1){
+      printf("\tDoing analytic MWA beam\n");
+    }
 
     calculate_RTS_MWA_analytic_beam(num_components,
          woden_settings->num_time_steps, woden_settings->num_freqs,

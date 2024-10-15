@@ -68,13 +68,13 @@ class Test(unittest.TestCase):
             
             self.read_in_C_functions(precision)
             
-            cropped_sky_models = setup_source_catalogue(self.woden_struct_classes.Source,
+            cropped_sky_models = setup_source_catalogue(self.woden_struct_classes.Source_Ctypes,
                                                         self.woden_struct_classes.Source_Catalogue, num_sources, num_shapelets,
                                                         precision)
             
             for i in range(num_sources):
                 
-                cropped_sky_models.sources[i] = self.woden_struct_classes.Source()
+                cropped_sky_models.sources[i] = self.woden_struct_classes.Source_Ctypes()
                 
                 components = cropped_sky_models.sources[i].gauss_components
                 components.ras = (num_comps*ctypes.c_double)()

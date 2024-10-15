@@ -288,7 +288,7 @@ def create_woden_settings(woden_settings : Woden_Settings, # type: ignore
         
     return woden_settings
     
-def setup_lsts_and_phase_centre(woden_settings : Woden_Settings) -> np.ndarray: # type: ignore
+def setup_lsts_and_phase_centre(woden_settings : Woden_Settings) -> np.ndarray | np.ndarray: # type: ignore
     """
     Calculate the Local Sidereal Time (LST) for each time step of an observation,
     and set the phase centre coordinates. If `woden_settings.do_precession == True`,
@@ -303,6 +303,10 @@ def setup_lsts_and_phase_centre(woden_settings : Woden_Settings) -> np.ndarray: 
     -------
     lsts : np.ndarray:
         An array of LST values, one for each time step of the observation.
+    latitudes : np.ndarray:
+        An array of latitude values, one for each time step of the observation
+        (these should be the same if precession is not applied, and even if applied
+        there should be tiny differences).
 
     """
 
@@ -366,6 +370,7 @@ def setup_lsts_and_phase_centre(woden_settings : Woden_Settings) -> np.ndarray: 
             woden_settings.latitudes[time_step] = woden_settings.latitude_obs_epoch_base
             if time_step == 0:
                 print("Obs epoch initial LST was {:.10f} deg\n".format(lst_current/D2R) )
-            
+        
+    latitudes = np.ctypeslib.as_array(woden_settings.latitudes, shape=(woden_settings.num_time_steps, ))
     
-    return lsts
+    return lsts, latitudes

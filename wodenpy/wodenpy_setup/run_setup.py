@@ -8,6 +8,8 @@ import warnings
 from sys import exit
 from casacore.tables import table
 from wodenpy.array_layout.create_array_layout import convert_ecef_to_enh
+import psutil
+import argparse
 
 def get_parser():
     """
@@ -186,12 +188,13 @@ def get_parser():
              ' flag to include auto-correlations.')
 
     sim_group = parser.add_argument_group('SIMULATOR OPTIONS')
+    sim_group.add_argument('--num_threads', default=0, type=int,
+        help='Number of threads to run the sky model reading / EveryBeam calculations on. '
+             'Defaults to the number of physical cores on the machine. Add to set a specific number '
+             'e.g. --num_threads=8')
     sim_group.add_argument('--precision', default='double',
         help='What precision to run WODEN at. Options are "double" or "float". '
              'Defaults to "double"')
-    sim_group.add_argument('--remove_phase_tracking', default=False, action='store_true',
-        help='By adding this flag, remove the phase tracking of the '
-             'visibilities - use this to feed uvfits into the RTS')
     sim_group.add_argument('--no_tidy', default=False, action='store_true',
         help='Defaults to deleting output binary files from woden and json '
              'files. Add this flag to not delete those files')
@@ -201,6 +204,9 @@ def get_parser():
     sim_group.add_argument('--dry_run', default=False, action='store_true',
         help='Add this to NOT call the WODEN executable - this will just write '
              'out the .json file and do nothing else')
+    sim_group.add_argument('--remove_phase_tracking', default=False, action='store_true',
+        help='By adding this flag, remove the phase tracking of the '
+             'visibilities - use this to feed uvfits into the RTS')
 
 
     ##Add a number of hidden arguments. This means we can add attributes to
@@ -358,7 +364,7 @@ def get_antenna_order(tilenames: np.ndarray) -> np.ndarray:
     return antenna_order
 
 
-def check_args(args):
+def check_args(args : argparse.Namespace) -> argparse.Namespace:
     """Check that the combination of arguments parsed will work with the
     WODEN executable. Attempts to grab information from a metafits file if
     possible. Should error with helpful messages if a combination that won't
@@ -372,7 +378,7 @@ def check_args(args):
 
     Returns
     -------
-    args : `argparse.Namespacer`
+    args : `argparse.Namespace`
         The populated arguments which will now have been checked and had
         information from metafits incorporated if requested
     """
@@ -771,6 +777,9 @@ def check_args(args):
         if args.station_id >= args.num_antennas:
             exit(f"ERROR: --station_id={args.station_id} (zero indexed) is larger than the number of antennas {args.num_antennas}"
                  f" read in from the measurement set {args.beam_ms_path}. Exiting now.")
+            
+    if args.num_threads == 0:
+        args.num_threads = psutil.cpu_count(logical=False)
         
     return args
 

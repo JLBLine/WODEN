@@ -7,8 +7,8 @@ class Woden_Struct_Classes:
     """Create and store the classes for the WODEN data structures.
     
     :cvar str precision: Either "float" or "double" to determine the precision of the data types.
-    :cvar Components Components: Equivalent to the C struct `components_t`.
-    :cvar Source Source: Equivalent to the C struct `source_t`.
+    :cvar Components_Ctypes Components_Ctypes: Equivalent to the C struct `components_t`.
+    :cvar Source_Ctypes Source_Ctypes: Equivalent to the C struct `source_t`.
     :cvar Source_Catalogue Source_Catalogue: Equivalent to the C struct `source_catalogue_t`.
     :cvar Woden_Settings Woden_Settings: Equivalent to the C struct `woden_settings_t`.
     :cvar Visi_Set Visi_Set: Equivalent to the C struct `visibility_set_t`.
@@ -29,9 +29,9 @@ class Woden_Struct_Classes:
         self.precision = precision
         
         ##Sky model bits
-        self.Components = create_components_struct(precision)
-        self.Source = create_source_struct(self.Components)
-        self.Source_Catalogue = create_source_catalogue_struct(self.Source)
+        self.Components_Ctypes = create_components_struct(precision)
+        self.Source_Ctypes = create_source_struct(self.Components_Ctypes)
+        self.Source_Catalogue = create_source_catalogue_struct(self.Source_Ctypes)
         
         ##Woden settings
         self.Woden_Settings = create_woden_settings_struct(precision)

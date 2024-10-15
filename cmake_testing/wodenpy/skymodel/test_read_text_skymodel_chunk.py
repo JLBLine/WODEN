@@ -14,9 +14,9 @@ from wodenpy.skymodel import read_skymodel
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes, crop_below_horizon
 from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map, Skymodel_Chunk_Map, increment_flux_type_counters
 from wodenpy.use_libwoden.beam_settings import BeamTypes
-
+from wodenpy.skymodel.read_skymodel import create_source_catalogue_from_python_sources
 from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, _Ctype_Source_Into_Python
-
+from wodenpy.skymodel.read_fits_skymodel import read_fits_skymodel_chunks
 from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components, Skymodel_Settings, Args
 
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
@@ -458,7 +458,7 @@ class Test(BaseChunkTest):
         woden_settings.num_time_steps = num_time_steps
         
         woden_settings.do_precession = 1
-        lsts = ws.setup_lsts_and_phase_centre(woden_settings)
+        lsts, latitudes = ws.setup_lsts_and_phase_centre(woden_settings)
         
         comp_counter = read_text_skymodel.read_text_radec_count_components(skymodel_filename)
         
@@ -477,12 +477,25 @@ class Test(BaseChunkTest):
         
         ##TODO if using everybeam, need args to have correct values
         args = Args()
+        args.precision = precision
 
-        source_catalogue = read_skymodel.read_skymodel_chunks(woden_struct_classes,
-                                              woden_settings, args,
-                                              skymodel_filename, chunked_skymodel_maps,
-                                              num_freqs, num_time_steps,
-                                              beamtype, lsts, MWA_LAT)
+        num_beams = 1
+        
+        main_table, shape_table, v_table, q_table, u_table, p_table = read_skymodel.get_skymodel_tables(skymodel_filename)
+
+        python_sources = read_fits_skymodel_chunks(args, main_table, shape_table,
+                                                    chunked_skymodel_maps,
+                                                    num_freqs, num_time_steps,
+                                                    beamtype,
+                                                    lsts, latitudes,
+                                                    v_table, q_table,
+                                                    u_table, p_table,
+                                                    args.precision)
+        
+        source_catalogue = create_source_catalogue_from_python_sources(python_sources,
+                                                                       chunked_skymodel_maps,
+                                                                       woden_struct_classes,
+                                                                       beamtype, precision)
         
         check_all_sources(expected_chunks, source_catalogue)
         

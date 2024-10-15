@@ -40,7 +40,7 @@ class c_float_complex(Structure):
     _fields_ = [("real", c_float),("imag", c_float)]
 
 def create_components_struct(precision="double"):
-    """Creates a `Components` class structured equivalently to a `components_t`
+    """Creates a `Components_Ctypes` class structured equivalently to a `components_t`
     struct in the C/CUDA code. Created dynamically based on the `precision`,
     to match the compile time precision flag `-DUSE_DOUBLE` in the C code.
 
@@ -51,8 +51,8 @@ def create_components_struct(precision="double"):
 
     Returns
     -------
-    Components
-        The Components class structured equivalently to a `components_t` struct
+    Components_Ctypes
+        The Components_Ctypes class structured equivalently to a `components_t` struct
     """
     
     if precision == "float":
@@ -62,7 +62,7 @@ def create_components_struct(precision="double"):
         c_user_precision = c_double
         c_user_precision_complex = c_double_complex
     
-    class Components(Structure):
+    class Components_Ctypes(Structure):
         """A class structured equivalently to a `components_t` struct, used by 
         the C and CUDA code in libwoden_float.so or libwoden_double.so.
         
@@ -271,29 +271,140 @@ def create_components_struct(precision="double"):
                     ("do_QUV", c_int),
                     ]
         
-    return Components
+    return Components_Ctypes
+
+class Components_Python(object):
+    """A class structured equivalently to a `components_t` struct but using
+    Python native data types. This can be pickled and therefore fed to Python
+    multiprocessing functions. Needed as `ctypes` pointers cannot be pickled,
+    and therefore cannot be passed to Python multiprocessing functions.
+    
+    """
+    
+    def __init__(self) -> None:
+        self.ras = None
+        self.decs = None
+        self.power_ref_freqs = None
+        self.power_ref_stokesI = None
+        self.power_SIs = None
+        self.curved = None
+        self.curve_ref_freqs = None
+        self.curve_ref_stokesI = None
+        self.curve_SIs = None
+        self.curve_qs = None
+        self.indexes = None
+        self.power_comp_inds = None
+        self.curve_comp_inds = None
+        self.list_comp_inds = None
+        self.list = None
+        self.list_freqs = None
+        self.list_stokesI = None
+        self.list_stokesQ = None
+        self.list_stokesU = None
+        self.list_stokesV = None
+        self.num_list_values = None
+        self.list_start_indexes = None
+        self.total_num_flux_entires = None
+        self.something = None
+        self.extrap_stokesI = None
+        self.extrap_stokesQ = None
+        self.extrap_stokesU = None
+        self.extrap_stokesV = None
+        self.shape_coeffs = None
+        self.n1s = None
+        self.n2s = None
+        self.majors = None
+        self.minors = None
+        self.pas = None
+        self.param_indexes = None
+        self.azs = None
+        self.zas = None
+        self.beam_has = None
+        self.beam_decs = None
+        self.num_primarybeam_values = None
+        self.gxs = None
+        self.Dxs = None
+        self.Dys = None
+        self.gys = None
+        self.stokesV_pol_fracs = None
+        self.stokesV_pol_frac_comp_inds = None
+        self.stokesV_power_ref_flux = None
+        self.stokesV_power_SIs = None
+        self.stokesV_power_comp_inds = None
+        self.stokesV_curve_ref_flux = None
+        self.stokesV_curve_SIs = None
+        self.stokesV_curve_qs = None
+        self.stokesV_curve_comp_inds = None
+        self.stokesV_list_ref_freqs = None
+        self.stokesV_list_ref_flux = None
+        self.stokesV_list_comp_inds = None
+        self.stokesV_num_list_values = None
+        self.stokesV_list_start_indexes = None
+        self.linpol_pol_fracs = None
+        self.linpol_pol_frac_comp_inds = None
+        self.linpol_power_ref_flux = None
+        self.linpol_power_SIs = None
+        self.linpol_power_comp_inds = None
+        self.linpol_curve_ref_flux = None
+        self.linpol_curve_SIs = None
+        self.linpol_curve_qs = None
+        self.linpol_curve_comp_inds = None
+        self.stokesQ_list_ref_freqs = None
+        self.stokesQ_list_ref_flux = None
+        self.stokesQ_list_comp_inds = None
+        self.stokesQ_num_list_values = None
+        self.stokesQ_list_start_indexes = None
+        self.stokesU_list_ref_freqs = None
+        self.stokesU_list_ref_flux = None
+        self.stokesU_list_comp_inds = None
+        self.stokesU_num_list_values = None
+        self.stokesU_list_start_indexes = None
+        self.linpol_p_list_ref_freqs = None
+        self.linpol_p_list_ref_flux = None
+        self.linpol_p_list_comp_inds = None
+        self.linpol_p_num_list_values = None
+        self.linpol_p_list_start_indexes = None
+        self.rm_values = None
+        self.intr_pol_angle = None
+        self.linpol_angle_inds = None
+        self.n_stokesV_pol_frac = None
+        self.n_stokesV_power = None
+        self.n_stokesV_curve = None
+        self.n_stokesV_list = None
+        self.n_stokesV_list_flux_entries = None
+        self.n_linpol_pol_frac = None
+        self.n_linpol_power = None
+        self.n_linpol_curve = None
+        self.n_linpol_list = None
+        self.n_stokesQ_list_flux_entries = None
+        self.n_stokesU_list_flux_entries = None
+        self.n_linpol_p_list = None
+        self.n_linpol_p_list_flux_entries = None
+        self.n_linpol_angles = None
+        self.do_QUV = None
+
 
 ##This call is so we can use it as a type annotation, and so sphinx can document the class
-Components = create_components_struct("double")
+Components_Ctypes = create_components_struct("double")
     
-def create_source_struct(Components : Components): # type: ignore
-    """Creates a `Source` class structured equivalent to a `source_t` struct,
-    used by the C and CUDA code in libwoden_double.so. The `Components` class
-    is passed in as the `Components` class is created dynamically depending on
+def create_source_struct(Components_Ctypes : Components_Ctypes): # type: ignore
+    """Creates a `Source_Ctypes` class structured equivalent to a `source_t` struct,
+    used by the C and CUDA code in libwoden_double.so. The `Components_Ctypes` class
+    is passed in as the `Components_Ctypes` class is created dynamically depending on
     the required precision.
     
     Parameters
     ----------
-    Components : Components
-        The Components class structured equivalently to a `components_t` struct
+    Components_Ctypes : Components_Ctypes
+        The Components_Ctypes class structured equivalently to a `components_t` struct
         
     Returns
     -------
-    Source
-        The Source class structured equivalent to a `source_t` struct
+    Source_Ctypes
+        The Source_Ctypes class structured equivalent to a `source_t` struct
     """
     
-    class Source(Structure):
+    class Source_Ctypes(Structure):
         """A class structured equivalent to a `source_t` struct, used by 
         the C and CUDA code in libwoden_double.so
         
@@ -312,12 +423,12 @@ def create_source_struct(Components : Components): # type: ignore
         :cvar c_int n_shape_powers: Number of SHAPELETs with POWER_LAW type flux
         :cvar c_int n_shape_curves: Number of SHAPELETs with CURVED_POWER_LAW type flux
         :cvar c_int n_shape_coeffs: Total number of SHAPELET coefficients
-        :cvar Components_Double point_components: `Components` holding component information for all POINT COMPONENTs in this SOURCE
-        :cvar Components_Double gauss_components: `Components` holding component information for all GAUSSIAN COMPONENTs in this SOURCE
-        :cvar Components_Double shape_components: `Components` holding component information for all SHAPELET COMPONENTs in this SOURCE
-        :cvar Components_Double d_point_components: `Components` holding component information on the device for all POINT COMPONENTs in this SOURCE
-        :cvar Components_Double d_gauss_components: `Components` holding component information on the device for all GAUSSIAN COMPONENTs in this SOURCE
-        :cvar Components_Double d_shape_components: `Components` holding component information on the device for all SHAPELET COMPONENTs in this SOURCE
+        :cvar Components_Ctypes_Double point_components: `Components_Ctypes` holding component information for all POINT COMPONENTs in this SOURCE
+        :cvar Components_Ctypes_Double gauss_components: `Components_Ctypes` holding component information for all GAUSSIAN COMPONENTs in this SOURCE
+        :cvar Components_Ctypes_Double shape_components: `Components_Ctypes` holding component information for all SHAPELET COMPONENTs in this SOURCE
+        :cvar Components_Ctypes_Double d_point_components: `Components_Ctypes` holding component information on the device for all POINT COMPONENTs in this SOURCE
+        :cvar Components_Ctypes_Double d_gauss_components: `Components_Ctypes` holding component information on the device for all GAUSSIAN COMPONENTs in this SOURCE
+        :cvar Components_Ctypes_Double d_shape_components: `Components_Ctypes` holding component information on the device for all SHAPELET COMPONENTs in this SOURCE
         
         """
         
@@ -337,37 +448,63 @@ def create_source_struct(Components : Components): # type: ignore
             ("n_shape_powers", c_int),
             ("n_shape_curves", c_int),
             ("n_shape_coeffs", c_int),
-            ("point_components",  Components),
-            ("gauss_components",  Components),
-            ("shape_components",  Components),
-            ("d_point_components",  Components),
-            ("d_gauss_components",  Components),
-            ("d_shape_components",  Components),
+            ("point_components",  Components_Ctypes),
+            ("gauss_components",  Components_Ctypes),
+            ("shape_components",  Components_Ctypes),
+            ("d_point_components",  Components_Ctypes),
+            ("d_gauss_components",  Components_Ctypes),
+            ("d_shape_components",  Components_Ctypes),
         ]
         
-    return Source
+    return Source_Ctypes
+
+class Source_Python(Structure):
+    """A class structured equivalent to a `source_t` struct,  but using
+    Python native data types. This can be pickled and therefore fed to Python
+    multiprocessing functions. Needed as `ctypes` pointers cannot be pickled,
+    and therefore cannot be passed to Python multiprocessing functions.
+    """
+        
+    def __init__(self) -> None:
+        self.name = None
+        self.n_comps = None
+        self.n_points = None
+        self.n_point_lists = None
+        self.n_point_powers = None
+        self.n_point_curves = None
+        self.n_gauss = None
+        self.n_gauss_lists = None
+        self.n_gauss_powers = None
+        self.n_gauss_curves = None
+        self.n_shapes = None
+        self.n_shape_lists = None
+        self.n_shape_powers = None
+        self.n_shape_curves = None
+        self.n_shape_coeffs = None
+        self.point_components = Components_Python()
+        self.gauss_components = Components_Python()
+        self.shape_components = Components_Python()
+        
 
 ##This call is so we can use it as a type annotation, and so sphinx can document the class
-Source = create_source_struct(Components)
+Source_Ctypes = create_source_struct(Components_Ctypes)
     
-def create_source_catalogue_struct(Source : Source): # type: ignore
+def create_source_catalogue_struct(Source_Ctypes : Source_Ctypes): # type: ignore
     """Creates a `Source_Catalogue` class structured equivalent to a 
-    `source_catalogue_t` struct, used by the C and CUDA code. The `Source` class
-    is passed in as the `Source` class is created dynamically depending on
+    `source_catalogue_t` struct, used by the C and CUDA code. The `Source_Ctypes` class
+    is passed in as the `Source_Ctypes` class is created dynamically depending on
     the required precision.
     
     Parameters
     ----------
-    Source : Source
-        The Source class structured equivalent to a `source_t` struct
+    Source_Ctypes : Source_Ctypes
+        The Source_Ctypes class structured equivalent to a `source_t` struct
         
     Returns
     -------
     Source_Catalogue
         The Source_Catalogue class structured equivalent to a `source_catalogue_t` struct
     """
-    
-    # Source = create_source_struct(precision)
     
     class Source_Catalogue(Structure):
         """
@@ -386,20 +523,20 @@ def create_source_catalogue_struct(Source : Source): # type: ignore
         
         _fields_ = [("num_sources", c_int),
                     ("num_shapelets", c_int),
-                    ("sources", POINTER(Source))]
+                    ("sources", POINTER(Source_Ctypes))]
         
     return Source_Catalogue
 
 ##This call is so we can use it as a type annotation, and so sphinx can document the class
-Source_Catalogue = create_source_catalogue_struct(Source)
+Source_Catalogue = create_source_catalogue_struct(Source_Ctypes)
     
     
-def setup_source_catalogue(Source : Source, Source_Catalogue : Source_Catalogue, # type: ignore
+def setup_source_catalogue(Source_Ctypes : Source_Ctypes, Source_Catalogue : Source_Catalogue, # type: ignore
                            num_sources : int, num_shapelets : int,
                            precision = "double") -> Source_Catalogue: # type: ignore
     """
     Creates a `Source_Catalogue` with the specified number of sources and shapelets.
-    Sets source_catalogue.sources an array of `Source` objects of length `num_sources`
+    Sets source_catalogue.sources an array of `Source_Ctypes` objects of length `num_sources`
     
     Parameters
     ------------
@@ -418,7 +555,7 @@ def setup_source_catalogue(Source : Source, Source_Catalogue : Source_Catalogue,
     
     source_catalogue = Source_Catalogue()
     
-    source_array = num_sources*Source
+    source_array = num_sources*Source_Ctypes
         
     source_catalogue.sources = source_array()
     source_catalogue.num_sources = num_sources
@@ -426,11 +563,11 @@ def setup_source_catalogue(Source : Source, Source_Catalogue : Source_Catalogue,
     
     return source_catalogue
     
-def setup_components(chunk_map : Skymodel_Chunk_Map,
-                     chunked_source : Source, # type: ignore
-                     num_freqs : int, num_times : int, num_beams : int,
-                     comp_type : CompTypes, beamtype : int,
-                     precision : str = "double") -> None:
+def setup_components(chunk_map: Skymodel_Chunk_Map,
+                     chunked_source: Source_Ctypes | Source_Python, # type: ignore
+                     num_freqs: int, num_times: int, num_beams: int,
+                     comp_type: CompTypes, beamtype: int,
+                     precision: str = "double") -> None:
     """
     Given the mapping information in `chunk_map`, initialise the necessary
     components in `chunked_source` for the given `comp_type`, this being one
@@ -444,8 +581,8 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
     ------------
     chunk_map: Skymodel_Chunk_Map
         Object containing information about the chunk of the sky model.
-    chunked_source: Union
-       [Source_Float, Source_Double] object containing the chunked source information.
+    chunked_source: Union[Source_Ctypes, Source_Python]
+       Object containing the chunked source information.
     num_freqs: int
         representing the number of frequencies.
     num_times: int
@@ -460,199 +597,317 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
         representing the type of beam.
     precision: str
        Either "float" or "double", default "double".
-
-
     """
     
-    if precision == 'float':
-        c_user_precision = c_float
-        c_user_precision_complex = c_float_complex
-    else:
-        c_user_precision = c_double
-        c_user_precision_complex = c_double_complex
+    eb_beams = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value, BeamTypes.EB_MWA.value]
+    need_azza = [BeamTypes.MWA_ANALY.value, BeamTypes.FEE_BEAM.value,
+                 BeamTypes.FEE_BEAM_INTERP.value, BeamTypes.ANALY_DIPOLE.value]
     
     if comp_type == CompTypes.POINT:
-        
-        n_comps = chunk_map.n_points
         components = chunked_source.point_components
+        n_comps = chunk_map.n_points
+        map_components = chunk_map.point_components
+        n_powers = chunk_map.n_point_powers
+        n_curves = chunk_map.n_point_curves
+        n_lists = chunk_map.n_point_lists
+        total_num_flux_entires = chunk_map.point_components.total_num_flux_entires
+        
+    elif comp_type == CompTypes.GAUSSIAN:
+        components = chunked_source.gauss_components
+        n_comps = chunk_map.n_gauss
+        map_components = chunk_map.gauss_components
+        n_powers = chunk_map.n_gauss_powers
+        n_curves = chunk_map.n_gauss_curves
+        n_lists = chunk_map.n_gauss_lists
+        total_num_flux_entires = chunk_map.gauss_components.total_num_flux_entires
+        
+    # elif comp_type == CompTypes.SHAPELET:
+    else:
+        components = chunked_source.shape_components
+        n_comps = chunk_map.n_shapes
+        map_components = chunk_map.shape_components
+        n_powers = chunk_map.n_shape_powers
+        n_curves = chunk_map.n_shape_curves
+        n_lists = chunk_map.n_shape_lists
+        total_num_flux_entires = chunk_map.shape_components.total_num_flux_entires
+    
+    if type(chunked_source) == Source_Python:
+        ##Assign empty numpy arrays to everything. As these aren't being
+        ##sent to the GPU (they will be copied into a ctypes array later),
+        ##Make sure we match the float/double precision that will be
+        ##going into the ctypes equivalent arrays
+        
+        if precision == 'float':
+            np_precision = np.float32
+        else:
+            np_precision = np.float64
+        
+        components.ras = np.empty(n_comps, dtype=np.float64)
+        components.decs = np.empty(n_comps, dtype=np.float64)
+        
+        ##power-law flux things
+        components.power_ref_freqs = np.empty(n_powers, dtype=np.float64)
+        components.power_ref_stokesI = np.empty(n_powers, dtype=np_precision)
+        components.power_SIs = np.empty(n_powers, dtype=np_precision)
+        
+        ##curved power-law flux things
+        components.curve_ref_freqs = np.empty(n_curves, dtype=np.float64)
+        components.curve_ref_stokesI = np.empty(n_curves, dtype=np_precision)
+        components.curve_SIs = np.empty(n_curves, dtype=np_precision)
+        components.curve_qs = np.empty(n_curves, dtype=np_precision)
+        
+        ##list flux things
+        components.list_freqs = np.empty(total_num_flux_entires, dtype=np.float64)
+        components.list_stokesI = np.empty(total_num_flux_entires, dtype=np_precision)
+        components.list_stokesQ = np.empty(total_num_flux_entires, dtype=np_precision)
+        components.list_stokesU = np.empty(total_num_flux_entires, dtype=np_precision)
+        components.list_stokesV = np.empty(total_num_flux_entires, dtype=np_precision)
+        
+        components.num_list_values = np.empty(n_lists, dtype=np.int32)
+        components.list_start_indexes = np.empty(n_lists, dtype=np.int32)
+        
+        ##indexes of types
+        components.power_comp_inds = np.empty(n_powers, dtype=np.int32)
+        components.curve_comp_inds = np.empty(n_curves, dtype=np.int32)
+        components.list_comp_inds = np.empty(n_lists, dtype=np.int32)
+        
+        if comp_type == CompTypes.GAUSSIAN or comp_type == CompTypes.SHAPELET:
+            components.majors = np.empty(n_comps, dtype=np_precision)
+            components.minors = np.empty(n_comps, dtype=np_precision)
+            components.pas = np.empty(n_comps, dtype=np_precision)
+            
+            
+        if comp_type == CompTypes.SHAPELET:
+            total_shape_coeffs = chunk_map.shape_components.total_shape_coeffs
+            components.shape_coeffs = np.empty(total_shape_coeffs, dtype=np_precision)
+            components.n1s = np.empty(total_shape_coeffs, dtype=np_precision)
+            components.n2s = np.empty(total_shape_coeffs, dtype=np_precision)
+            components.param_indexes = np.empty(total_shape_coeffs, dtype=np_precision)
+            
+        ##----------------------------------------------------------------
+        ##now we make space for coordinates that are need for the primary beam
+        if beamtype == BeamTypes.GAUSS_BEAM.value or beamtype == BeamTypes.MWA_ANALY.value:
+            components.beam_has = np.empty(n_comps*num_times, dtype=np.float64)
+            components.beam_decs = np.empty(n_comps*num_times, dtype=np.float64)
+            
+        if beamtype in need_azza:
+            components.azs = np.empty(n_comps*num_times, dtype=np_precision)
+            components.zas = np.empty(n_comps*num_times, dtype=np_precision)
+            
+        if beamtype in eb_beams:
+            components.gxs = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
+            components.Dxs = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
+            components.Dys = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
+            components.gys = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
+            
+        ##now do the polarisation thingies------------------------------------------
+        
+        components.stokesV_pol_fracs = np.empty(map_components.num_v_pol_fracs, dtype=np_precision)
+        components.stokesV_pol_frac_comp_inds = np.empty(map_components.num_v_pol_fracs, dtype=np.int32)
+        components.stokesV_power_ref_flux = np.empty(map_components.num_v_powers, dtype=np_precision)
+        components.stokesV_power_SIs = np.empty(map_components.num_v_powers, dtype=np_precision)
+        components.stokesV_power_comp_inds = np.empty(map_components.num_v_powers, dtype=np.int32)
+        components.stokesV_curve_ref_flux = np.empty(map_components.num_v_curves, dtype=np_precision)
+        components.stokesV_curve_SIs = np.empty(map_components.num_v_curves, dtype=np_precision)
+        components.stokesV_curve_qs = np.empty(map_components.num_v_curves, dtype=np_precision)
+        components.stokesV_curve_comp_inds = np.empty(map_components.num_v_curves, dtype=np.int32)
+        components.linpol_pol_fracs = np.empty(map_components.num_lin_pol_fracs, dtype=np_precision)
+        components.linpol_pol_frac_comp_inds = np.empty(map_components.num_lin_pol_fracs, dtype=np.int32)
+        components.linpol_power_ref_flux =np.empty(map_components.num_lin_powers, dtype=np_precision)
+        components.linpol_power_SIs = np.empty(map_components.num_lin_powers, dtype=np_precision)
+        components.linpol_power_comp_inds = np.empty(map_components.num_lin_powers, dtype=np.int32)
+        components.linpol_curve_ref_flux = np.empty(map_components.num_lin_curves, dtype=np_precision)
+        components.linpol_curve_SIs = np.empty(map_components.num_lin_curves, dtype=np_precision)
+        components.linpol_curve_qs = np.empty(map_components.num_lin_curves, dtype=np_precision)
+        components.linpol_curve_comp_inds = np.empty(map_components.num_lin_curves, dtype=np.int32)
+        components.rm_values = np.empty(map_components.num_lin_angles, dtype=np_precision)
+        components.intr_pol_angle = np.empty(map_components.num_lin_angles, dtype=np_precision)
+        components.linpol_angle_inds = np.empty(map_components.num_lin_angles, dtype=np.int32)
+        
+        components.stokesV_list_ref_freqs = np.empty(map_components.total_num_v_flux_entires, dtype=np_precision)
+        components.stokesV_list_ref_flux = np.empty(map_components.total_num_v_flux_entires, dtype=np_precision)
+        components.stokesV_list_comp_inds = np.empty(map_components.num_v_lists, dtype=np.int32)
+        components.stokesV_num_list_values = np.empty(map_components.num_v_lists, dtype=np.int32)
+        components.stokesV_list_start_indexes = np.empty(map_components.num_v_lists, dtype=np.int32)
+        
+        components.stokesQ_list_ref_freqs = np.empty(map_components.total_num_q_flux_entires, dtype=np_precision)
+        components.stokesQ_list_ref_flux = np.empty(map_components.total_num_q_flux_entires, dtype=np_precision)
+        components.stokesQ_list_comp_inds = np.empty(map_components.num_lin_lists, dtype=np.int32)
+        components.stokesQ_num_list_values = np.empty(map_components.num_lin_lists, dtype=np.int32)
+        components.stokesQ_list_start_indexes = np.empty(map_components.num_lin_lists, dtype=np.int32)
+        
+        components.stokesU_list_ref_freqs = np.empty(map_components.total_num_u_flux_entires, dtype=np_precision)
+        components.stokesU_list_ref_flux = np.empty(map_components.total_num_u_flux_entires, dtype=np_precision)
+        components.stokesU_list_comp_inds = np.empty(map_components.num_lin_lists, dtype=np.int32)
+        components.stokesU_num_list_values = np.empty(map_components.num_lin_lists, dtype=np.int32)
+        components.stokesU_list_start_indexes = np.empty(map_components.num_lin_lists, dtype=np.int32)
+        
+        components.linpol_p_list_ref_freqs = np.empty(map_components.total_num_lin_p_flux_entires, dtype=np_precision)
+        components.linpol_p_list_ref_flux = np.empty(map_components.total_num_lin_p_flux_entires, dtype=np_precision)
+        components.linpol_p_list_comp_inds = np.empty(map_components.num_lin_p_lists, dtype=np.int32)
+        components.linpol_p_num_list_values = np.empty(map_components.num_lin_p_lists, dtype=np.int32)
+        components.linpol_p_list_start_indexes = np.empty(map_components.num_lin_p_lists, dtype=np.int32)
+    
+    ##because of the dynamic way the Source_Ctypes class is created, we can't
+    ##do the elif statement below. Gonna be lazy and just do the else statement
+    # elif type(chunked_source) == Source_Ctypes:
+    else:
+        if precision == 'float':
+            c_user_precision = c_float
+            c_user_precision_complex = c_float_complex
+        else:
+            c_user_precision = c_double
+            c_user_precision_complex = c_double_complex
         
         ##flux type specific things - need arrays of certain lengths, in
         ##in 'user' precision, int, and double
-        power_user_ncomps_arr = c_user_precision*chunk_map.n_point_powers
-        curve_user_ncomps_arr = c_user_precision*chunk_map.n_point_curves
+        power_user_ncomps_arr = c_user_precision*n_powers
+        curve_user_ncomps_arr = c_user_precision*n_curves
         
-        power_int_ncomps_arr = c_int*chunk_map.n_point_powers
-        curve_int_ncomps_arr = c_int*chunk_map.n_point_curves
+        power_int_ncomps_arr = c_int*n_powers
+        curve_int_ncomps_arr = c_int*n_curves
         
-        power_double_ncomps_arr = c_double*chunk_map.n_point_powers
-        curve_double_ncomps_arr = c_double*chunk_map.n_point_curves
-        
-        ##the number of entires for list flux types isn't the number
-        ##of components, are any component can have multiple list entries
-        list_user_nflux_arr = c_user_precision*chunk_map.point_components.total_num_flux_entires
-        list_double_nflux_arr = c_double*chunk_map.point_components.total_num_flux_entires
-        
-        list_int_ncomps_arr = c_int*chunk_map.n_point_lists
-        n_lists = chunk_map.point_components.total_num_flux_entires
-        
-        map_components = chunk_map.point_components
-        
-    elif comp_type == CompTypes.GAUSSIAN:
-        
-        n_comps = chunk_map.n_gauss
-        components = chunked_source.gauss_components
-        
-        ##flux type specific things
-        power_user_ncomps_arr = c_user_precision*chunk_map.n_gauss_powers
-        curve_user_ncomps_arr = c_user_precision*chunk_map.n_gauss_curves
-        
-        power_int_ncomps_arr = c_int*chunk_map.n_gauss_powers
-        curve_int_ncomps_arr = c_int*chunk_map.n_gauss_curves
-        
-        power_double_ncomps_arr = c_double*chunk_map.n_gauss_powers
-        curve_double_ncomps_arr = c_double*chunk_map.n_gauss_curves
+        power_double_ncomps_arr = c_double*n_powers
+        curve_double_ncomps_arr = c_double*n_curves
         
         ##the number of entires for list flux types isn't the number
         ##of components, are any component can have multiple list entries
-        list_user_nflux_arr = c_user_precision*chunk_map.gauss_components.total_num_flux_entires
-        list_double_nflux_arr = c_double*chunk_map.gauss_components.total_num_flux_entires
+        list_user_nflux_arr = c_user_precision*total_num_flux_entires
+        list_double_nflux_arr = c_double*total_num_flux_entires
         
-        list_int_ncomps_arr = c_int*chunk_map.n_gauss_lists
-        n_lists = chunk_map.gauss_components.total_num_flux_entires
+        list_int_ncomps_arr = c_int*n_lists
+            
+        ##component type specific things
+        user_ncomps_arr = c_user_precision*n_comps
+        double_ncomps_arr = c_double*n_comps
         
-        map_components = chunk_map.gauss_components
+        components.ras = double_ncomps_arr()
+        components.decs = double_ncomps_arr()
         
-    elif comp_type == CompTypes.SHAPELET:
+        ##power-law flux things
+        components.power_ref_freqs = power_double_ncomps_arr() ##this is always double
+        components.power_ref_stokesI = power_user_ncomps_arr()
+        components.power_SIs = power_user_ncomps_arr()
         
-        n_comps = chunk_map.n_shapes
-        components = chunked_source.shape_components
+        ##curved power-law flux things
+        components.curve_ref_freqs = curve_double_ncomps_arr() ##this is always double
+        components.curve_ref_stokesI = curve_user_ncomps_arr()
+        components.curve_SIs = curve_user_ncomps_arr()
+        components.curve_qs = curve_user_ncomps_arr()
         
-        ##flux type specific things
-        power_user_ncomps_arr = c_user_precision*chunk_map.n_shape_powers
-        curve_user_ncomps_arr = c_user_precision*chunk_map.n_shape_curves
+        ##list flux things
+        components.list_freqs = list_double_nflux_arr() ##this is always double
+        components.list_stokesI = list_user_nflux_arr()
+        components.list_stokesQ = list_user_nflux_arr()
+        components.list_stokesU = list_user_nflux_arr()
+        components.list_stokesV = list_user_nflux_arr()
         
-        power_int_ncomps_arr = c_int*chunk_map.n_shape_powers
-        curve_int_ncomps_arr = c_int*chunk_map.n_shape_curves
+        components.num_list_values = list_int_ncomps_arr()
+        components.list_start_indexes = list_int_ncomps_arr()
         
-        power_double_ncomps_arr = c_double*chunk_map.n_shape_powers
-        curve_double_ncomps_arr = c_double*chunk_map.n_shape_curves
         
-        ##the number of entires for list flux types isn't the number
-        ##of components, are any component can have multiple list entries
-        list_user_nflux_arr = c_user_precision*chunk_map.shape_components.total_num_flux_entires
-        list_double_nflux_arr = c_double*chunk_map.shape_components.total_num_flux_entires
+        ##indexes of types
+        components.power_comp_inds = power_int_ncomps_arr()
+        components.curve_comp_inds = curve_int_ncomps_arr()
+        components.list_comp_inds = list_int_ncomps_arr()
         
-        list_int_ncomps_arr = c_int*chunk_map.n_shape_lists
-        n_lists = chunk_map.shape_components.total_num_flux_entires
+        if comp_type == CompTypes.GAUSSIAN or comp_type == CompTypes.SHAPELET:
+            components.majors = user_ncomps_arr()
+            components.minors = user_ncomps_arr()
+            components.pas = user_ncomps_arr()
+            
+            
+        if comp_type == CompTypes.SHAPELET:
+            user_ncoeffs_arr = c_user_precision*chunk_map.shape_components.total_shape_coeffs
+            components.shape_coeffs = user_ncoeffs_arr()
+            components.n1s = user_ncoeffs_arr()
+            components.n2s = user_ncoeffs_arr()
+            components.param_indexes = user_ncoeffs_arr()
+            
+        ##----------------------------------------------------------------
+        ##now we make space for coordinates that are need for the primary beam
         
-        map_components = chunk_map.shape_components
+        if beamtype == BeamTypes.GAUSS_BEAM.value or beamtype == BeamTypes.MWA_ANALY.value:
+            hadec_arr = c_double*(n_comps*num_times)
+            components.beam_has = hadec_arr()
+            components.beam_decs = hadec_arr()
+            
+        ##only the NO_BEAM and GAUSS_BEAM options don't need az,za coords
+        if beamtype in need_azza:
+            azza_arr = c_user_precision*(n_comps*num_times)
+            components.azs = azza_arr()
+            components.zas = azza_arr()
+            
         
-    ##component type specific things
-    user_ncomps_arr = c_user_precision*n_comps
-    double_ncomps_arr = c_double*n_comps
+        if beamtype in eb_beams:
+            ##yes, you have to have those brackets around the numbers, otherwise
+            ##ctypes makes a 3D array
+            complex_num_beams = c_user_precision_complex*(n_comps*num_beams*num_freqs*num_times)
+            
+            components.gxs = complex_num_beams()
+            components.Dxs = complex_num_beams()
+            components.Dys = complex_num_beams()
+            components.gys = complex_num_beams()
+            
+        ##now do the polarisation thingies------------------------------------------
+        
+        components.stokesV_pol_fracs = (c_user_precision*map_components.num_v_pol_fracs)()
+        components.stokesV_pol_frac_comp_inds = (c_int*map_components.num_v_pol_fracs)()
+        components.stokesV_power_ref_flux = (c_user_precision*map_components.num_v_powers)()
+        components.stokesV_power_SIs = (c_user_precision*map_components.num_v_powers)()
+        components.stokesV_power_comp_inds = (c_int*map_components.num_v_powers)()
+        components.stokesV_curve_ref_flux = (c_user_precision*map_components.num_v_curves)()
+        components.stokesV_curve_SIs = (c_user_precision*map_components.num_v_curves)()
+        components.stokesV_curve_qs = (c_user_precision*map_components.num_v_curves)()
+        components.stokesV_curve_comp_inds = (c_int*map_components.num_v_curves)()
+        components.linpol_pol_fracs = (c_user_precision*map_components.num_lin_pol_fracs)()
+        components.linpol_pol_frac_comp_inds = (c_int*map_components.num_lin_pol_fracs)()
+        components.linpol_power_ref_flux = (c_user_precision*map_components.num_lin_powers)()
+        components.linpol_power_SIs = (c_user_precision*map_components.num_lin_powers)()
+        components.linpol_power_comp_inds = (c_int*map_components.num_lin_powers)()
+        components.linpol_curve_ref_flux = (c_user_precision*map_components.num_lin_curves)()
+        components.linpol_curve_SIs = (c_user_precision*map_components.num_lin_curves)()
+        components.linpol_curve_qs = (c_user_precision*map_components.num_lin_curves)()
+        components.linpol_curve_comp_inds = (c_int*map_components.num_lin_curves)()
+        components.rm_values = (c_user_precision*map_components.num_lin_angles)()
+        components.intr_pol_angle = (c_user_precision*map_components.num_lin_angles)()
+        components.linpol_angle_inds = (c_int*map_components.num_lin_angles)()
+        
+        components.stokesV_list_ref_freqs = (c_double*map_components.total_num_v_flux_entires)()
+        components.stokesV_list_ref_flux = (c_user_precision*map_components.total_num_v_flux_entires)()
+        components.stokesV_list_comp_inds = (c_int*map_components.num_v_lists)()
+        components.stokesV_num_list_values = (c_int*map_components.num_v_lists)()
+        components.stokesV_list_start_indexes = (c_int*map_components.num_v_lists)()
+        
+        components.stokesQ_list_ref_freqs = (c_double*map_components.total_num_q_flux_entires)()
+        components.stokesQ_list_ref_flux = (c_user_precision*map_components.total_num_q_flux_entires)()
+        components.stokesQ_list_comp_inds = (c_int*map_components.num_lin_lists)()
+        components.stokesQ_num_list_values = (c_int*map_components.num_lin_lists)()
+        components.stokesQ_list_start_indexes = (c_int*map_components.num_lin_lists)()
+        
+        components.stokesU_list_ref_freqs = (c_double*map_components.total_num_u_flux_entires)()
+        components.stokesU_list_ref_flux = (c_user_precision*map_components.total_num_u_flux_entires)()
+        components.stokesU_list_comp_inds = (c_int*map_components.num_lin_lists)()
+        components.stokesU_num_list_values = (c_int*map_components.num_lin_lists)()
+        components.stokesU_list_start_indexes = (c_int*map_components.num_lin_lists)()
+        
+        components.linpol_p_list_ref_freqs = (c_double*map_components.total_num_lin_p_flux_entires)()
+        components.linpol_p_list_ref_flux = (c_user_precision*map_components.total_num_lin_p_flux_entires)()
+        components.linpol_p_list_comp_inds = (c_int*map_components.num_lin_p_lists)()
+        components.linpol_p_num_list_values = (c_int*map_components.num_lin_p_lists)()
+        components.linpol_p_list_start_indexes = (c_int*map_components.num_lin_p_lists)()
+        
+        
+    ##These things are all single ints so doesn't matter if we have the
+    ##Python or ctypes version
     num_primarybeam_values = n_comps*num_freqs*num_times
-        
-    components.ras = double_ncomps_arr()
-    components.decs = double_ncomps_arr()
     components.num_primarybeam_values = num_primarybeam_values
-    
-    ##power-law flux things
-    components.power_ref_freqs = power_double_ncomps_arr() ##this is always double
-    components.power_ref_stokesI = power_user_ncomps_arr()
-    components.power_SIs = power_user_ncomps_arr()
-    
-    ##curved power-law flux things
-    components.curve_ref_freqs = curve_double_ncomps_arr() ##this is always double
-    components.curve_ref_stokesI = curve_user_ncomps_arr()
-    components.curve_SIs = curve_user_ncomps_arr()
-    components.curve_qs = curve_user_ncomps_arr()
-    
-    ##list flux things
-    components.list_freqs = list_double_nflux_arr() ##this is always double
-    components.list_stokesI = list_user_nflux_arr()
-    components.list_stokesQ = list_user_nflux_arr()
-    components.list_stokesU = list_user_nflux_arr()
-    components.list_stokesV = list_user_nflux_arr()
-    
-    components.num_list_values = list_int_ncomps_arr()
-    components.list_start_indexes = list_int_ncomps_arr()
-    components.total_num_flux_entires = n_lists
-    
-    ##indexes of types
-    components.power_comp_inds = power_int_ncomps_arr()
-    components.curve_comp_inds = curve_int_ncomps_arr()
-    components.list_comp_inds = list_int_ncomps_arr()
-    
-    if comp_type == CompTypes.GAUSSIAN or comp_type == CompTypes.SHAPELET:
-        components.majors = user_ncomps_arr()
-        components.minors = user_ncomps_arr()
-        components.pas = user_ncomps_arr()
-        
-        
-    if comp_type == CompTypes.SHAPELET:
-        user_ncoeffs_arr = c_user_precision*chunk_map.shape_components.total_shape_coeffs
-        components.shape_coeffs = user_ncoeffs_arr()
-        components.n1s = user_ncoeffs_arr()
-        components.n2s = user_ncoeffs_arr()
-        components.param_indexes = user_ncoeffs_arr()
-        
-    ##----------------------------------------------------------------
-    ##now we make space for coordinates that are need for the primary beam
-    
-    if beamtype == BeamTypes.GAUSS_BEAM.value or beamtype == BeamTypes.MWA_ANALY.value:
-        hadec_arr = c_double*(n_comps*num_times)
-        components.beam_has = hadec_arr()
-        components.beam_decs = hadec_arr()
-        
-    ##only the NO_BEAM and GAUSS_BEAM options don't need az,za coords
-    if beamtype == BeamTypes.GAUSS_BEAM.value or beamtype == BeamTypes.NO_BEAM.value:
-        pass
-    else:
-        azza_arr = c_user_precision*(n_comps*num_times)
-        components.azs = azza_arr()
-        components.zas = azza_arr()
-        
-    ##TODO if we use a different primary beam per antenna, need to allocate
-    ##more memory here
-    eb_beams = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value, BeamTypes.EB_MWA.value]
-    if beamtype in eb_beams:
-        ##yes, you have to have those brackets around the numbers, otherwise
-        ##ctypes makes a 3D array
-        complex_num_beams = c_user_precision_complex*(n_comps*num_beams*num_freqs*num_times)
-        
-        components.gxs = complex_num_beams()
-        components.Dxs = complex_num_beams()
-        components.Dys = complex_num_beams()
-        components.gys = complex_num_beams()
-        
-    ##now do the polarisation thingies------------------------------------------
-    
-    # power_user_ncomps_arr = c_user_precision*chunk_map.n_shape_powers
-    
-    components.stokesV_pol_fracs = (c_user_precision*map_components.num_v_pol_fracs)()
-    components.stokesV_pol_frac_comp_inds = (c_int*map_components.num_v_pol_fracs)()
-    components.stokesV_power_ref_flux = (c_user_precision*map_components.num_v_powers)()
-    components.stokesV_power_SIs = (c_user_precision*map_components.num_v_powers)()
-    components.stokesV_power_comp_inds = (c_int*map_components.num_v_powers)()
-    components.stokesV_curve_ref_flux = (c_user_precision*map_components.num_v_curves)()
-    components.stokesV_curve_SIs = (c_user_precision*map_components.num_v_curves)()
-    components.stokesV_curve_qs = (c_user_precision*map_components.num_v_curves)()
-    components.stokesV_curve_comp_inds = (c_int*map_components.num_v_curves)()
-    components.linpol_pol_fracs = (c_user_precision*map_components.num_lin_pol_fracs)()
-    components.linpol_pol_frac_comp_inds = (c_int*map_components.num_lin_pol_fracs)()
-    components.linpol_power_ref_flux = (c_user_precision*map_components.num_lin_powers)()
-    components.linpol_power_SIs = (c_user_precision*map_components.num_lin_powers)()
-    components.linpol_power_comp_inds = (c_int*map_components.num_lin_powers)()
-    components.linpol_curve_ref_flux = (c_user_precision*map_components.num_lin_curves)()
-    components.linpol_curve_SIs = (c_user_precision*map_components.num_lin_curves)()
-    components.linpol_curve_qs = (c_user_precision*map_components.num_lin_curves)()
-    components.linpol_curve_comp_inds = (c_int*map_components.num_lin_curves)()
-    components.rm_values = (c_user_precision*map_components.num_lin_angles)()
-    components.intr_pol_angle = (c_user_precision*map_components.num_lin_angles)()
-    components.linpol_angle_inds = (c_int*map_components.num_lin_angles)()
+    components.total_num_flux_entires = total_num_flux_entires
     
     components.n_stokesV_pol_frac = map_components.num_v_pol_fracs
     components.n_stokesV_power = map_components.num_v_powers
+    components.n_stokesV_curve = map_components.num_v_curves
+    components.n_linpol_pol_frac = map_components.num_lin_pol_fracs
     components.n_stokesV_curve = map_components.num_v_curves
     components.n_linpol_pol_frac = map_components.num_lin_pol_fracs
     components.n_linpol_power = map_components.num_lin_powers
@@ -668,40 +923,10 @@ def setup_components(chunk_map : Skymodel_Chunk_Map,
     components.n_stokesU_list_flux_entries = map_components.total_num_u_flux_entires
     components.n_linpol_p_list_flux_entries = map_components.total_num_lin_p_flux_entires
     
-    components.stokesV_list_ref_freqs = (c_double*map_components.total_num_v_flux_entires)()
-    components.stokesV_list_ref_flux = (c_user_precision*map_components.total_num_v_flux_entires)()
-    components.stokesV_list_comp_inds = (c_int*map_components.num_v_lists)()
-    components.stokesV_num_list_values = (c_int*map_components.num_v_lists)()
-    components.stokesV_list_start_indexes = (c_int*map_components.num_v_lists)()
-    
-    components.stokesQ_list_ref_freqs = (c_double*map_components.total_num_q_flux_entires)()
-    components.stokesQ_list_ref_flux = (c_user_precision*map_components.total_num_q_flux_entires)()
-    components.stokesQ_list_comp_inds = (c_int*map_components.num_lin_lists)()
-    components.stokesQ_num_list_values = (c_int*map_components.num_lin_lists)()
-    components.stokesQ_list_start_indexes = (c_int*map_components.num_lin_lists)()
-    
-    components.stokesU_list_ref_freqs = (c_double*map_components.total_num_u_flux_entires)()
-    components.stokesU_list_ref_flux = (c_user_precision*map_components.total_num_u_flux_entires)()
-    components.stokesU_list_comp_inds = (c_int*map_components.num_lin_lists)()
-    components.stokesU_num_list_values = (c_int*map_components.num_lin_lists)()
-    components.stokesU_list_start_indexes = (c_int*map_components.num_lin_lists)()
-    
-    components.linpol_p_list_ref_freqs = (c_double*map_components.total_num_lin_p_flux_entires)()
-    components.linpol_p_list_ref_flux = (c_user_precision*map_components.total_num_lin_p_flux_entires)()
-    components.linpol_p_list_comp_inds = (c_int*map_components.num_lin_p_lists)()
-    components.linpol_p_num_list_values = (c_int*map_components.num_lin_p_lists)()
-    components.linpol_p_list_start_indexes = (c_int*map_components.num_lin_p_lists)()
-    
-    # print(components.n_stokesV_pol_frac)
-    # print(components.n_stokesV_power)
-    # print(components.n_stokesV_curve)
-    # print(components.n_linpol_pol_frac)
-    # print(components.n_linpol_power)
-    # print(components.n_linpol_curve)
-    # print(components.n_linpol_angles)
         
     
-def setup_chunked_source(chunked_source : Source, chunk_map : Skymodel_Chunk_Map, # type: ignore
+def setup_chunked_source(chunked_source : Source_Ctypes | Source_Python,     # type: ignore
+                         chunk_map : Skymodel_Chunk_Map, 
                          num_freqs : int, num_times : int, 
                          num_beams : int, beamtype : int,
                          precision='double'):
@@ -729,7 +954,7 @@ def setup_chunked_source(chunked_source : Source, chunk_map : Skymodel_Chunk_Map
 
     Returns
     ---------
-      Source : Source
+      Source_Ctypes : Source_Ctypes
           The ctypes structure class containing the chunked sky model.
     """
     
@@ -765,8 +990,249 @@ def setup_chunked_source(chunked_source : Source, chunk_map : Skymodel_Chunk_Map
     return chunked_source
 
 
+def copy_python_components_to_ctypes(python_comps : Components_Python,
+                                     ctypes_comps : Components_Ctypes, # type: ignore
+                                     comp_type : CompTypes, n_powers : int,
+                                     n_curves : int, n_lists : int,
+                                     beamtype : int,
+                                     n_shape_coeffs = 0, precision = 'double'):
+    
+    ##TODO need someway of making these lists global
+    eb_beams = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value, BeamTypes.EB_MWA.value]
+    azza_beams = [BeamTypes.FEE_BEAM.value, BeamTypes.ANALY_DIPOLE.value,
+                  BeamTypes.FEE_BEAM_INTERP.value, BeamTypes.MWA_ANALY.value]
+    hadec_beams = [BeamTypes.GAUSS_BEAM.value, BeamTypes.MWA_ANALY.value]
+    
+    if precision == 'float':
+        c_user_precision = c_float
+        c_user_precision_complex = c_float_complex
+    else:
+        c_user_precision = c_double
+        c_user_precision_complex = c_double_complex
+    
+    n_comps = n_powers + n_curves + n_lists
+    total_num_flux_entires = int(python_comps.total_num_flux_entires)
+    
+    ctypes_comps.ras = python_comps.ras.ctypes.data_as(POINTER(c_double))
+    ctypes_comps.decs = python_comps.decs.ctypes.data_as(POINTER(c_double))
+    ctypes_comps.power_ref_freqs = python_comps.power_ref_freqs.ctypes.data_as(POINTER(c_double))
+    ctypes_comps.power_ref_stokesI = python_comps.power_ref_stokesI.ctypes.data_as(POINTER(c_user_precision))
+    ctypes_comps.power_SIs = python_comps.power_SIs.ctypes.data_as(POINTER(c_user_precision))
+    ctypes_comps.curve_ref_freqs = python_comps.curve_ref_freqs.ctypes.data_as(POINTER(c_double))
+    ctypes_comps.curve_ref_stokesI = python_comps.curve_ref_stokesI.ctypes.data_as(POINTER(c_user_precision))
+    ctypes_comps.curve_SIs = python_comps.curve_SIs.ctypes.data_as(POINTER(c_user_precision))
+    ctypes_comps.curve_qs = python_comps.curve_qs.ctypes.data_as(POINTER(c_user_precision))
+    ctypes_comps.power_comp_inds = python_comps.power_comp_inds.ctypes.data_as(POINTER(c_int))
+    ctypes_comps.curve_comp_inds = python_comps.curve_comp_inds.ctypes.data_as(POINTER(c_int))
+    ctypes_comps.list_comp_inds = python_comps.list_comp_inds.ctypes.data_as(POINTER(c_int))
+    ctypes_comps.list_freqs = python_comps.list_freqs.ctypes.data_as(POINTER(c_double))
+    ctypes_comps.list_stokesI = python_comps.list_stokesI.ctypes.data_as(POINTER(c_user_precision))
+    ctypes_comps.list_stokesQ = python_comps.list_stokesQ.ctypes.data_as(POINTER(c_user_precision))
+    ctypes_comps.list_stokesU = python_comps.list_stokesU.ctypes.data_as(POINTER(c_user_precision))
+    ctypes_comps.list_stokesV = python_comps.list_stokesV.ctypes.data_as(POINTER(c_user_precision))
+    
+    ctypes_comps.num_list_values = python_comps.num_list_values.ctypes.data_as(POINTER(c_int))
+    ctypes_comps.list_start_indexes = python_comps.list_start_indexes.ctypes.data_as(POINTER(c_int))
+    ctypes_comps.total_num_flux_entires = python_comps.total_num_flux_entires
+    
+    if comp_type == CompTypes.GAUSSIAN or comp_type == CompTypes.SHAPELET:
+        ctypes_comps.majors = python_comps.majors.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.minors = python_comps.minors.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.pas = python_comps.pas.ctypes.data_as(POINTER(c_user_precision))
+    
+    if comp_type == CompTypes.SHAPELET:
+        ctypes_comps.shape_coeffs = python_comps.shape_coeffs.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.n1s = python_comps.n1s.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.n2s = python_comps.n2s.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.param_indexes = python_comps.param_indexes.ctypes.data_as(POINTER(c_user_precision))
+    
+    
+    if beamtype in azza_beams:
+        ctypes_comps.azs = python_comps.azs.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.zas = python_comps.zas.ctypes.data_as(POINTER(c_user_precision))
+        
+    if beamtype in hadec_beams:
+        ctypes_comps.beam_has = python_comps.beam_has.ctypes.data_as(POINTER(c_double))
+        ctypes_comps.beam_decs = python_comps.beam_decs.ctypes.data_as(POINTER(c_double))
+    
+    ctypes_comps.num_primarybeam_values = python_comps.num_primarybeam_values
+    ##things to hold the beam gain
+    
+    if beamtype in eb_beams:
+        num_gains = len(python_comps.gxs)
+        
+        complex_num_beams = c_user_precision_complex*num_gains
+            
+        ctypes_comps.gxs = complex_num_beams()
+        ctypes_comps.Dxs = complex_num_beams()
+        ctypes_comps.Dys = complex_num_beams()
+        ctypes_comps.gys = complex_num_beams()
+        
+        ##Actually iterate over the complex beam gains, as the ctypes complex
+        ##object is actually a bespoke class
+        for beam_ind in range(num_gains):
+            ctypes_comps.gxs[beam_ind].real = python_comps.gxs[beam_ind].real
+            ctypes_comps.gxs[beam_ind].imag = python_comps.gxs[beam_ind].imag
+            ctypes_comps.Dxs[beam_ind].real = python_comps.Dxs[beam_ind].real
+            ctypes_comps.Dxs[beam_ind].imag = python_comps.Dxs[beam_ind].imag
+            ctypes_comps.Dys[beam_ind].real = python_comps.Dys[beam_ind].real
+            ctypes_comps.Dys[beam_ind].imag = python_comps.Dys[beam_ind].imag
+            ctypes_comps.gys[beam_ind].real = python_comps.gys[beam_ind].real
+            ctypes_comps.gys[beam_ind].imag = python_comps.gys[beam_ind].imag
+        
+    ctypes_comps.n_stokesV_pol_frac = 0
+    ctypes_comps.n_stokesV_power = 0
+    ctypes_comps.n_stokesV_curve = 0
+    ctypes_comps.n_stokesV_list = 0
+    ctypes_comps.n_linpol_pol_frac = 0
+    ctypes_comps.n_linpol_power = 0
+    ctypes_comps.n_linpol_curve = 0
+    ctypes_comps.n_linpol_list = 0
+    ctypes_comps.n_linpol_p_list = 0
+    ctypes_comps.n_linpol_angles = 0
+    ctypes_comps.n_stokesV_list_flux_entries = 0
+    ctypes_comps.n_stokesQ_list_flux_entries = 0
+    ctypes_comps.n_stokesU_list_flux_entries = 0
+    ctypes_comps.n_linpol_p_list_flux_entries = 0
+    
+    if python_comps.n_stokesV_pol_frac > 0:
+        ctypes_comps.n_stokesV_pol_frac = python_comps.n_stokesV_pol_frac
+        ctypes_comps.stokesV_pol_fracs = python_comps.stokesV_pol_fracs.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.stokesV_pol_frac_comp_inds = python_comps.stokesV_pol_frac_comp_inds.ctypes.data_as(POINTER(c_int))
+        
+        
+    if python_comps.n_stokesV_power > 0:
+        ctypes_comps.n_stokesV_power = python_comps.n_stokesV_power
+        ctypes_comps.stokesV_power_ref_flux = python_comps.stokesV_power_ref_flux.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.stokesV_power_SIs = python_comps.stokesV_power_SIs.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.stokesV_power_comp_inds = python_comps.stokesV_power_comp_inds.ctypes.data_as(POINTER(c_int))
+        
+    if python_comps.n_stokesV_curve > 0:
+        ctypes_comps.n_stokesV_curve = python_comps.n_stokesV_curve
+        ctypes_comps.stokesV_curve_ref_flux = python_comps.stokesV_curve_ref_flux.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.stokesV_curve_SIs = python_comps.stokesV_curve_SIs.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.stokesV_curve_qs = python_comps.stokesV_curve_qs.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.stokesV_curve_comp_inds = python_comps.stokesV_curve_comp_inds.ctypes.data_as(POINTER(c_int))
+        
+    if python_comps.n_stokesV_list > 0:
+        ctypes_comps.n_stokesV_list = python_comps.n_stokesV_list
+        ctypes_comps.n_stokesV_list_flux_entries = python_comps.n_stokesV_list_flux_entries
+        ctypes_comps.stokesV_list_ref_freqs = python_comps.stokesV_list_ref_freqs.ctypes.data_as(POINTER(c_double))
+        ctypes_comps.stokesV_list_ref_flux = python_comps.stokesV_list_ref_flux.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.stokesV_list_comp_inds = python_comps.stokesV_list_comp_inds.ctypes.data_as(POINTER(c_int))
+        ctypes_comps.stokesV_num_list_values = python_comps.stokesV_num_list_values.ctypes.data_as(POINTER(c_int))
+        ctypes_comps.stokesV_list_start_indexes = python_comps.stokesV_list_start_indexes.ctypes.data_as(POINTER(c_int))
+        
+    if python_comps.n_linpol_pol_frac > 0:
+        ctypes_comps.n_linpol_pol_frac = python_comps.n_linpol_pol_frac
+        ctypes_comps.linpol_pol_fracs = python_comps.linpol_pol_fracs.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.linpol_pol_frac_comp_inds = python_comps.linpol_pol_frac_comp_inds.ctypes.data_as(POINTER(c_int))
+        
+        
+    if python_comps.n_linpol_power > 0:
+        ctypes_comps.n_linpol_power = python_comps.n_linpol_power
+        ctypes_comps.linpol_power_ref_flux = python_comps.linpol_power_ref_flux.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.linpol_power_SIs = python_comps.linpol_power_SIs.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.linpol_power_comp_inds = python_comps.linpol_power_comp_inds.ctypes.data_as(POINTER(c_int))
+        
+        
+    if python_comps.n_linpol_curve > 0:
+        ctypes_comps.n_linpol_curve = python_comps.n_linpol_curve
+        ctypes_comps.linpol_curve_ref_flux = python_comps.linpol_curve_ref_flux.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.linpol_curve_SIs = python_comps.linpol_curve_SIs.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.linpol_curve_qs = python_comps.linpol_curve_qs.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.linpol_curve_comp_inds = python_comps.linpol_curve_comp_inds.ctypes.data_as(POINTER(c_int))
+        
+    if python_comps.n_linpol_angles > 0:
+        ctypes_comps.n_linpol_angles = python_comps.n_linpol_angles
+        ctypes_comps.rm_values = python_comps.rm_values.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.intr_pol_angle = python_comps.intr_pol_angle.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.linpol_angle_inds = python_comps.linpol_angle_inds.ctypes.data_as(POINTER(c_int))
+        
+    if python_comps.n_linpol_list > 0:
+        ctypes_comps.n_linpol_list = python_comps.n_linpol_list
+        
+        ctypes_comps.n_stokesQ_list_flux_entries = python_comps.n_stokesQ_list_flux_entries
+        ctypes_comps.stokesQ_list_ref_freqs = python_comps.stokesQ_list_ref_freqs.ctypes.data_as(POINTER(c_double))
+        ctypes_comps.stokesQ_list_ref_flux = python_comps.stokesQ_list_ref_flux.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.stokesQ_list_comp_inds = python_comps.stokesQ_list_comp_inds.ctypes.data_as(POINTER(c_int))
+        ctypes_comps.stokesQ_num_list_values = python_comps.stokesQ_num_list_values.ctypes.data_as(POINTER(c_int))
+        ctypes_comps.stokesQ_list_start_indexes = python_comps.stokesQ_list_start_indexes.ctypes.data_as(POINTER(c_int))
+        
+        ctypes_comps.n_stokesU_list_flux_entries = python_comps.n_stokesU_list_flux_entries
+        ctypes_comps.stokesU_list_ref_freqs = python_comps.stokesU_list_ref_freqs.ctypes.data_as(POINTER(c_double))
+        ctypes_comps.stokesU_list_ref_flux = python_comps.stokesU_list_ref_flux.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.stokesU_list_comp_inds = python_comps.stokesU_list_comp_inds.ctypes.data_as(POINTER(c_int))
+        ctypes_comps.stokesU_num_list_values = python_comps.stokesU_num_list_values.ctypes.data_as(POINTER(c_int))
+        ctypes_comps.stokesU_list_start_indexes = python_comps.stokesU_list_start_indexes.ctypes.data_as(POINTER(c_int))
+        
+    if python_comps.n_linpol_p_list > 0:
+        ctypes_comps.n_linpol_p_list = python_comps.n_linpol_p_list
+        ctypes_comps.n_linpol_p_list_flux_entries = python_comps.n_linpol_p_list_flux_entries
+        ctypes_comps.linpol_p_list_ref_freqs = python_comps.linpol_p_list_ref_freqs.ctypes.data_as(POINTER(c_double))
+        ctypes_comps.linpol_p_list_ref_flux = python_comps.linpol_p_list_ref_flux.ctypes.data_as(POINTER(c_user_precision))
+        ctypes_comps.linpol_p_list_comp_inds = python_comps.linpol_p_list_comp_inds.ctypes.data_as(POINTER(c_int))
+        ctypes_comps.linpol_p_num_list_values = python_comps.linpol_p_num_list_values.ctypes.data_as(POINTER(c_int))
+        ctypes_comps.linpol_p_list_start_indexes = python_comps.linpol_p_list_start_indexes.ctypes.data_as(POINTER(c_int))
+        
+    ctypes_comps.do_QUV = python_comps.do_QUV
+    
+
+def copy_python_source_to_ctypes(python_source : Source_Python,
+                                 ctypes_source : Source_Ctypes, # type: ignore
+                                 beamtype : int, precision : str = 'double'):
+                                
+    """Assumes that memory has already been allocated for the ctypes_source"""
+    
+    ctypes_source.n_points = python_source.n_points
+    ctypes_source.n_point_lists = python_source.n_point_lists
+    ctypes_source.n_point_powers = python_source.n_point_powers
+    ctypes_source.n_point_curves = python_source.n_point_curves
+    ctypes_source.n_gauss = python_source.n_gauss
+    ctypes_source.n_gauss_lists = python_source.n_gauss_lists
+    ctypes_source.n_gauss_powers = python_source.n_gauss_powers
+    ctypes_source.n_gauss_curves = python_source.n_gauss_curves
+    ctypes_source.n_shapes = python_source.n_shapes
+    ctypes_source.n_shape_lists = python_source.n_shape_lists
+    ctypes_source.n_shape_powers = python_source.n_shape_powers
+    ctypes_source.n_shape_curves = python_source.n_shape_curves
+    ctypes_source.n_shape_coeffs = python_source.n_shape_coeffs
+    ctypes_source.n_comps = python_source.n_comps
+    
+    if python_source.n_points:
+        copy_python_components_to_ctypes(python_source.point_components,
+                                         ctypes_source.point_components,
+                                         CompTypes.POINT,
+                                         python_source.n_point_powers,
+                                         python_source.n_point_curves,
+                                         python_source.n_point_lists,
+                                         beamtype,
+                                         precision=precision)
+        
+    if python_source.n_gauss:
+        copy_python_components_to_ctypes(python_source.gauss_components,
+                                         ctypes_source.gauss_components,
+                                         CompTypes.GAUSSIAN,
+                                         ctypes_source.n_gauss_powers,
+                                         ctypes_source.n_gauss_curves,
+                                         ctypes_source.n_gauss_lists,
+                                         beamtype,
+                                         precision=precision)
+        
+    if python_source.n_shapes:
+        copy_python_components_to_ctypes(python_source.shape_components,
+                                         ctypes_source.shape_components,
+                                         CompTypes.SHAPELET,
+                                         ctypes_source.n_shape_powers,
+                                         ctypes_source.n_shape_curves,
+                                         ctypes_source.n_shape_lists,
+                                         beamtype,
+                                         n_shape_coeffs=ctypes_source.n_shape_coeffs,
+                                         precision=precision)
+        
+        
 class _Components_Python(object):
-    """python equivalent to Components_Float or Components_Double"""
+    """python equivalent to Components_Ctypes_Float or Components_Ctypes_Double"""
     
     def __init__(self, components,
                        comp_type : CompTypes, n_powers : int,
@@ -938,7 +1404,7 @@ class _Components_Python(object):
 
 class _Ctype_Source_Into_Python(object):
     """
-    Class to convert a ctype Source model into a pythonic version
+    Class to convert a ctype Source_Ctypes model into a pythonic version
     """
     
     # def __init__(self, source : Union[Source_Float, Source_Double]):
@@ -983,11 +1449,5 @@ class _Ctype_Source_Into_Python(object):
                                                        self.n_shape_curves,
                                                        self.n_shape_lists,
                                                        self.n_shape_coeffs)
-            
-            
-    # num_cross = num_time_steps * num_freq_channels * num_baselines
 
-    ##Righto, this converts from the ctype POINTER into a numpy array
-    ##This is grabbing all the lovely things calculated by the GPU
-    # us_metres = np.ctypeslib.as_array(visibility_set.us_metres, shape=(num_visi,))
  

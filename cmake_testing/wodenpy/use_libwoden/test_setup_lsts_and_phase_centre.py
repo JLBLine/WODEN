@@ -27,7 +27,7 @@ class Test(unittest.TestCase):
         ##do it with precession
         woden_settings.do_precession = 1
         
-        lsts = ws.setup_lsts_and_phase_centre(woden_settings)
+        lsts, latitudes = ws.setup_lsts_and_phase_centre(woden_settings)
         
         self.assertTrue(np.array_equal(expec_prec_lsts, lsts))
         
@@ -40,7 +40,7 @@ class Test(unittest.TestCase):
         
             expected_lsts[time_step] = woden_settings.lst_obs_epoch_base + (time_step + 0.5)*woden_settings.time_res*SOLAR2SIDEREAL*DS2R
         
-        lsts = ws.setup_lsts_and_phase_centre(woden_settings)
+        lsts, latitudes = ws.setup_lsts_and_phase_centre(woden_settings)
         self.assertTrue(np.allclose(expected_lsts, lsts, atol=1e-8))
         
     

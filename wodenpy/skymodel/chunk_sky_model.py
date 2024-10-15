@@ -3,7 +3,7 @@ import numpy as np
 import sys
 import os
 from enum import Enum
-
+import binpacking
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes
     
 NUM_FLUX_TYPES = 3
@@ -719,8 +719,8 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
                         shape_basis_to_orig_comp_index_map : np.ndarray,
                         shape_basis_to_orig_type_map : np.ndarray,
                         shape_basis_param_index : np.ndarray,
-                        chunk_ind : int,
-                        coeffs_per_chunk : int):
+                        coeffs_per_chunk : int,
+                        num_shape_dirs : int = 1):
     """
     Maps the shapelet components in a chunk of the sky model to their corresponding
     indices in the original sky model. This function is used to create a mapping
@@ -752,92 +752,131 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
     None
     """
     
-    ##Upper indexes of components covered in this chunk
-    upper_coeff_ind = (chunk_ind + 1) * coeffs_per_chunk
+    # ##Upper indexes of components covered in this chunk
+    # upper_coeff_ind = (chunk_ind + 1) * coeffs_per_chunk
 
-    ##These ints are used to do pointer arithmatic to grab the correct portions
-    ##of arrays out of `cropped_src` and into `temp_cropped_src`
-    lower_coeff_ind = chunk_ind * coeffs_per_chunk
+    # ##These ints are used to do pointer arithmatic to grab the correct portions
+    # ##of arrays out of `cropped_src` and into `temp_cropped_src`
+    # lower_coeff_ind = chunk_ind * coeffs_per_chunk
 
-    ##If there are enough coeffs to fill the chunk?
-    if (cropped_comp_counter.total_shape_basis >= upper_coeff_ind):
-        n_shape_coeffs = coeffs_per_chunk
+    # ##If there are enough coeffs to fill the chunk?
+    # if (cropped_comp_counter.total_shape_basis >= upper_coeff_ind):
+    #     n_shape_coeffs = coeffs_per_chunk
         
+    # else:
+    #     n_shape_coeffs = cropped_comp_counter.total_shape_basis % coeffs_per_chunk
+    
+    shape_basis_to_new_comp_index_map = np.zeros_like(shape_basis_to_orig_comp_index_map)
+    for new_ind, orig_comp_index in enumerate(np.unique(shape_basis_to_orig_comp_index_map)):
+        shape_basis_to_new_comp_index_map[shape_basis_to_orig_comp_index_map == orig_comp_index] = new_ind
+    
+    lower_comp_ind = 0
+    lower_coeff_ind = 0
+    upper_coeff_ind = 0
+    chunk_maps = []
+    
+    while lower_coeff_ind < len(shape_basis_to_orig_comp_index_map)-1:
+        
+        # print(f"Is between {lower_comp_ind} and {lower_comp_ind + num_shape_dirs}?")
+        subset_new_comp_index_map = shape_basis_to_new_comp_index_map[lower_coeff_ind:lower_coeff_ind+coeffs_per_chunk]
+        new_inds = np.where((subset_new_comp_index_map >= lower_comp_ind) &
+                            (subset_new_comp_index_map < lower_comp_ind + num_shape_dirs))[0]
+        
+        n_shape_coeffs = len(new_inds)
+        upper_coeff_ind += n_shape_coeffs
+        
+        ##the ranges of comp types being sampled depends on which basis function
+        ##coeffs we are sampling, so work out that range from the mapping arrays
+        orig_index_chunk = shape_basis_to_orig_comp_index_map[lower_coeff_ind:upper_coeff_ind]
+        orig_type_chunk = shape_basis_to_orig_type_map[lower_coeff_ind:upper_coeff_ind]
+        
+        shape_basis_param_index_chunk = shape_basis_param_index[lower_coeff_ind:upper_coeff_ind]
+        
+        ##cop that for an annoyingly complicated piece of logic
+        ##this selects the subset of original component indexes that we want
+        power_orig_inds = np.unique(orig_index_chunk[orig_type_chunk == CompTypes.SHAPE_POWER.value]).astype(int)
+        curve_orig_inds = np.unique(orig_index_chunk[orig_type_chunk == CompTypes.SHAPE_CURVE.value]).astype(int)
+        list_orig_inds = np.unique(orig_index_chunk[orig_type_chunk == CompTypes.SHAPE_LIST.value]).astype(int)
+        
+        power_shape_orig_inds = orig_index_chunk[orig_type_chunk == CompTypes.SHAPE_POWER.value]
+        curve_shape_orig_inds = orig_index_chunk[orig_type_chunk == CompTypes.SHAPE_CURVE.value]
+        list_shape_orig_inds = orig_index_chunk[orig_type_chunk == CompTypes.SHAPE_LIST.value]
+        
+        power_shape_basis_inds = shape_basis_param_index_chunk[orig_type_chunk == CompTypes.SHAPE_POWER.value]
+        curve_shape_basis_inds = shape_basis_param_index_chunk[orig_type_chunk == CompTypes.SHAPE_CURVE.value]
+        list_shape_basis_inds = shape_basis_param_index_chunk[orig_type_chunk == CompTypes.SHAPE_LIST.value]
+        
+        num_chunk_power = len(power_orig_inds)
+        num_chunk_curve = len(curve_orig_inds)
+        num_chunk_list = len(list_orig_inds)
+        
+        chunk_map = Skymodel_Chunk_Map(n_shape_powers = num_chunk_power,
+                                    n_shape_curves = num_chunk_curve,
+                                    n_shape_lists = num_chunk_list,
+                                    n_shape_coeffs = n_shape_coeffs)
+        
+        ##shorthand so we're not typing as many things
+        components = chunk_map.shape_components
+        
+        ##need some way to know what shapelet basis function indexes we
+        ##want; similar to orig_comp_ind but for the basis functions
+        components.power_shape_orig_inds = power_shape_orig_inds
+        components.curve_shape_orig_inds = curve_shape_orig_inds
+        components.list_shape_orig_inds = list_shape_orig_inds
+        components.power_shape_basis_inds = power_shape_basis_inds
+        components.curve_shape_basis_inds = curve_shape_basis_inds
+        components.list_shape_basis_inds = list_shape_basis_inds
+        
+        ##Indexes of the shapelet components in the original sky model
+        components.power_orig_inds = power_orig_inds
+        components.curve_orig_inds = curve_orig_inds
+        components.list_orig_inds = list_orig_inds
+        
+        ##how many shapelet coeffs we have
+        components.total_shape_coeffs = n_shape_coeffs
+        
+        
+        ##these are the indexes of each included component, within the cropped
+        ##sky model itself
+        cropped_list_inds = np.where(np.isin(cropped_comp_counter.orig_comp_indexes, list_orig_inds) == True)[0]
+        
+        ##if we have list type fluxes, count have many entries in total there are
+        if num_chunk_list > 0:
+            ##how many flux list entries in total are shared by these components
+            
+            components.total_num_flux_entires = np.sum(cropped_comp_counter.num_list_fluxes[cropped_list_inds])
+        
+        ##chuck in any polarisation information if needed
+        fill_chunk_map_polarised_info(CompTypes.SHAPELET, chunk_map, cropped_comp_counter)
+        
+        chunk_map.has_intr_pol_angle = cropped_comp_counter.has_intr_pol_angle
+        
+        chunk_maps.append(chunk_map)
+        
+        lower_coeff_ind += n_shape_coeffs
+        lower_comp_ind = int(np.max(subset_new_comp_index_map[new_inds]))
+        
+    return chunk_maps
+
+
+def find_num_dirs_per_chunk(num_directions : int, max_directions_per_chunk : int,
+                            num_threads : int) -> int:
+    
+    if num_directions / num_threads > max_directions_per_chunk:
+        int_mult = np.ceil(num_directions / (num_threads*max_directions_per_chunk))
+        num_dirs_per_chunk = np.ceil(num_directions / (num_threads*int_mult))
     else:
-        n_shape_coeffs = cropped_comp_counter.total_shape_basis % coeffs_per_chunk
+        num_dirs_per_chunk = np.ceil(num_directions / num_threads)
         
-    ##the ranges of comp types being sampled depends on which basis function
-    ##coeffs we are sampling, so work out that range from the mapping arrays
-    orig_index_chunk = shape_basis_to_orig_comp_index_map[lower_coeff_ind:upper_coeff_ind]
-    orig_type_chunk = shape_basis_to_orig_type_map[lower_coeff_ind:upper_coeff_ind]
+    # print(num_directions, max_directions_per_chunk, num_threads, num_dirs_per_chunk)
     
-    shape_basis_param_index_chunk = shape_basis_param_index[lower_coeff_ind:upper_coeff_ind]
-    
-    ##cop that for an annoyingly complicated piece of logic
-    ##this selects the subset of original component indexes that we want
-    power_orig_inds = np.unique(orig_index_chunk[orig_type_chunk == CompTypes.SHAPE_POWER.value]).astype(int)
-    curve_orig_inds = np.unique(orig_index_chunk[orig_type_chunk == CompTypes.SHAPE_CURVE.value]).astype(int)
-    list_orig_inds = np.unique(orig_index_chunk[orig_type_chunk == CompTypes.SHAPE_LIST.value]).astype(int)
-    
-    power_shape_orig_inds = orig_index_chunk[orig_type_chunk == CompTypes.SHAPE_POWER.value]
-    curve_shape_orig_inds = orig_index_chunk[orig_type_chunk == CompTypes.SHAPE_CURVE.value]
-    list_shape_orig_inds = orig_index_chunk[orig_type_chunk == CompTypes.SHAPE_LIST.value]
-    
-    power_shape_basis_inds = shape_basis_param_index_chunk[orig_type_chunk == CompTypes.SHAPE_POWER.value]
-    curve_shape_basis_inds = shape_basis_param_index_chunk[orig_type_chunk == CompTypes.SHAPE_CURVE.value]
-    list_shape_basis_inds = shape_basis_param_index_chunk[orig_type_chunk == CompTypes.SHAPE_LIST.value]
-    
-    num_chunk_power = len(power_orig_inds)
-    num_chunk_curve = len(curve_orig_inds)
-    num_chunk_list = len(list_orig_inds)
-    
-    chunk_map = Skymodel_Chunk_Map(n_shape_powers = num_chunk_power,
-                                   n_shape_curves = num_chunk_curve,
-                                   n_shape_lists = num_chunk_list,
-                                   n_shape_coeffs = n_shape_coeffs)
-    
-    ##shorthand so we're not typing as many things
-    components = chunk_map.shape_components
-    
-    ##need some way to know what shapelet basis function indexes we
-    ##want; similar to orig_comp_ind but for the basis functions
-    components.power_shape_orig_inds = power_shape_orig_inds
-    components.curve_shape_orig_inds = curve_shape_orig_inds
-    components.list_shape_orig_inds = list_shape_orig_inds
-    components.power_shape_basis_inds = power_shape_basis_inds
-    components.curve_shape_basis_inds = curve_shape_basis_inds
-    components.list_shape_basis_inds = list_shape_basis_inds
-    
-    ##Indexes of the shapelet components in the original sky model
-    components.power_orig_inds = power_orig_inds
-    components.curve_orig_inds = curve_orig_inds
-    components.list_orig_inds = list_orig_inds
-    
-    ##how many shapelet coeffs we have
-    components.total_shape_coeffs = n_shape_coeffs
-    
-    
-    ##these are the indexes of each included component, within the cropped
-    ##sky model itself
-    cropped_list_inds = np.where(np.isin(cropped_comp_counter.orig_comp_indexes, list_orig_inds) == True)[0]
-    
-    ##if we have list type fluxes, count have many entries in total there are
-    if num_chunk_list > 0:
-        ##how many flux list entries in total are shared by these components
-        
-        components.total_num_flux_entires = np.sum(cropped_comp_counter.num_list_fluxes[cropped_list_inds])
-    
-    ##chuck in any polarisation information if needed
-    fill_chunk_map_polarised_info(CompTypes.SHAPELET, chunk_map, cropped_comp_counter)
-    
-    chunk_map.has_intr_pol_angle = cropped_comp_counter.has_intr_pol_angle
-    
-    return chunk_map
+    return num_dirs_per_chunk
 
 
 def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
                               max_num_visibilities : int, num_baselines : int,
                               num_freqs : int, num_time_steps : int,
+                              num_threads : int = 1,
                               text_file=False) -> list:
                               
     """
@@ -870,55 +909,169 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
         A list of dictionaries containing information about the chunked sky model.
     """
         
-    ##The number of components per chunk is set by how many visibilities
+    ##The number of calculations per chunk
     ##we have
-    comps_per_chunk = int(np.floor(max_num_visibilities / (num_baselines * num_freqs * num_time_steps)))
+    max_coeffs_per_chunk = int(np.floor(max_num_visibilities / (num_baselines * num_freqs * num_time_steps)))
+    max_dirs_per_chunk = int(np.floor(max_num_visibilities / (num_baselines * num_freqs * num_time_steps)))
+    
+    # print(max_dirs_per_chunk)
+    
+    max_dirs = 30
+    
+    if max_dirs_per_chunk > max_dirs:
+        max_dirs_per_chunk = max_dirs
+        
+    # min_dirs_per_chunk = int(np.ceil(comp_counter.total_comps / (num_threads - 1)))
+    
+    # if min_dirs_per_chunk > max_dirs_per_chunk:
+    #     dirs_per_chunk = max_dirs_per_chunk
+    # else:
+    #     dirs_per_chunk = min_dirs_per_chunk
+        
+    # ##TODO chuck a if beam_type = eb then do this max_dirs_per_chunk = 200?
+    # max_dirs_per_chunk = 200
+    # if dirs_per_chunk > max_dirs_per_chunk:
+    #     dirs_per_chunk = max_dirs_per_chunk
+    
+    # print(comp_counter.total_shape_comps, comp_counter.total_comps)
     
     ##pray this never happens, probably means we're going to run out of
     ##GPU memory TODO don't pray, submit a warning?
-    if comps_per_chunk < 1: comps_per_chunk = 1
+    if max_coeffs_per_chunk < 1: max_coeffs_per_chunk = 1
     
     ##chunks numbers for each type of component
-    num_point_chunks = int(np.ceil(comp_counter.total_point_comps / comps_per_chunk))
-    num_gauss_chunks = int(np.ceil(comp_counter.total_gauss_comps / comps_per_chunk))
+    num_point_dirs = find_num_dirs_per_chunk(comp_counter.total_point_comps, max_dirs_per_chunk,
+                            num_threads)
+    num_gauss_dirs = find_num_dirs_per_chunk(comp_counter.total_gauss_comps, max_dirs_per_chunk,
+                            num_threads)
     
-    ##we split SHAPELET by the basis components (number of coeffs)
-    num_coeff_chunks = int(np.ceil(comp_counter.total_shape_basis / comps_per_chunk))
+    num_point_chunks = int(np.ceil(comp_counter.total_point_comps / num_point_dirs))
+    num_point_sets = int(np.ceil(num_point_chunks / num_threads))
     
-    ##total number of chunks the sky model is splitted into
-    num_chunks = num_point_chunks + num_gauss_chunks + num_coeff_chunks
+    num_gauss_chunks = int(np.ceil(comp_counter.total_gauss_comps / num_gauss_dirs))
+    num_gauss_sets = int(np.ceil(num_gauss_chunks / num_threads))
+    
+    # print('YO', num_gauss_chunks, num_gauss_dirs, num_gauss_sets, comp_counter.total_gauss_comps)
+    
+    # ##total number of chunks the sky model is splitted into
+    # num_chunks = num_point_chunks + num_gauss_chunks + num_coeff_chunks
 
-    ##TODO maybe more efficient to set an array and shove in
-    ##elements rather than appending?
-    chunked_skymodel_maps = []
+    chunked_skymodel_map_sets = []
+    point_maps = [[] for _ in range(num_point_sets)]
+    gauss_maps = [[] for _ in range(num_gauss_sets)]
     
     ##Go through the point sources and add chunked maps
     for chunk_ind in range(num_point_chunks):
         chunk_map = map_chunk_pointgauss(comp_counter, chunk_ind,
-                                         comps_per_chunk,
+                                         int(num_point_dirs),
                                          point_source = True)
-        chunked_skymodel_maps.append(chunk_map)
+        set_ind = chunk_ind // num_threads
+        point_maps[set_ind].append([chunk_map])
     
     ##Go through the gaussian sources and add chunked maps
     for chunk_ind in range(num_gauss_chunks):
         chunk_map = map_chunk_pointgauss(comp_counter, chunk_ind,
-                                         comps_per_chunk,
+                                         int(num_gauss_dirs),
                                          gaussian_source = True)
-        chunked_skymodel_maps.append(chunk_map)
+        # chunked_skymodel_maps.append(chunk_map)
+        
+        set_ind = chunk_ind // num_threads
+        gauss_maps[set_ind].append([chunk_map])
+        
+    chunked_skymodel_map_sets.extend(point_maps)
+    chunked_skymodel_map_sets.extend(gauss_maps)
         
     ##need some extra mapping arrays to be able to grab the SHAPELET component
     ##that matches each basis function
     shape_basis_to_orig_comp_index_map, shape_basis_to_comp_type_map, shape_basis_param_index = create_shape_basis_maps(comp_counter)
+    num_shape_dirs = find_num_dirs_per_chunk(comp_counter.total_shape_comps, max_dirs_per_chunk,
+                            num_threads)
+    
+    # np.save('shape_basis_to_orig_comp_index_map.npy', shape_basis_to_orig_comp_index_map)
+    # np.save('shape_basis_to_comp_type_map.npy', shape_basis_to_comp_type_map)
+    # np.save('shape_basis_param_index.npy', shape_basis_param_index)
+    # print("max_coeffs_per_chunk", max_coeffs_per_chunk)
         
-    for chunk_ind in range(num_coeff_chunks):
-        chunk_map = map_chunk_shapelets(comp_counter,
+    # # for chunk_ind in range(num_coeff_chunks):
+    # #     chunk_map = map_chunk_shapelets(comp_counter,
+    # #                                     shape_basis_to_orig_comp_index_map,
+    # #                                     shape_basis_to_comp_type_map,
+    # #                                     shape_basis_param_index,
+    # #                                     chunk_ind, max_coeffs_per_chunk)
+        
+    # #     chunked_skymodel_maps.append(chunk_map)
+    
+    ##we split SHAPELET by the basis components (number of coeffs)
+    num_coeff_chunks = int(np.ceil(comp_counter.total_shape_basis / max_coeffs_per_chunk))
+    
+    shapelet_chunk_maps = map_chunk_shapelets(comp_counter,
                                         shape_basis_to_orig_comp_index_map,
                                         shape_basis_to_comp_type_map,
                                         shape_basis_param_index,
-                                        chunk_ind, comps_per_chunk)
+                                        max_coeffs_per_chunk,
+                                        num_shape_dirs)
+    
+    indexed_shape_chunk_sizes = [(i, chunk_map.n_shapes) for i,chunk_map in enumerate(shapelet_chunk_maps)]  # List of (index, value) tuples
+    target_volume = num_shape_dirs  # Set the target volume for each bin
+
+    # Step 2: Partition the numbers while keeping track of indices using the `to_constant_volume` function
+    binned_shape_chunk_sizes = binpacking.to_constant_volume(indexed_shape_chunk_sizes, target_volume, weight_pos=1)
+    
+    # print(len(binned_shape_chunk_sizes), binned_shape_chunk_sizes)
+    
+    if len(binned_shape_chunk_sizes) > num_threads:
+        while len(binned_shape_chunk_sizes) > num_threads:
+            # Find the two smallest binned_shape_chunk_sizes and merge them
+            binned_shape_chunk_sizes = sorted(binned_shape_chunk_sizes, key=lambda bin: sum(item[1] for item in bin))  # Sort binned_shape_chunk_sizes by their total sum
+            binned_shape_chunk_sizes[0].extend(binned_shape_chunk_sizes[1])  # Merge the two smallest binned_shape_chunk_sizes
+            binned_shape_chunk_sizes.pop(1)  # Remove the now-empty bin
+            
+    # # # Step 3: Extract the values and indices from the result
+    # for bin_idx, bin in enumerate(binned_shape_chunk_sizes):
+    #     print(f"Bin {bin_idx + 1}:")
+    #     for index, value in bin:
+    #         print(f"  Index: {index}, Value: {value}")
+
+    binned_shape_chunks = []            
+    for bin_index_size in binned_shape_chunk_sizes:
+        shape_chunk_bin = []
+        for index, value in bin_index_size:
+            shape_chunk_bin.append(shapelet_chunk_maps[index])
+        binned_shape_chunks.append(shape_chunk_bin)
         
-        chunked_skymodel_maps.append(chunk_map)
+    chunked_skymodel_map_sets.append(binned_shape_chunks)
         
-    print(f"After chunking there are {len(chunked_skymodel_maps)} chunks")
-        
-    return chunked_skymodel_maps
+    print(f"After chunking there are {len(chunked_skymodel_map_sets)} sets")
+    
+    # for chunk_ind, chunk_set in enumerate(chunked_skymodel_map_sets):
+    #     for thread_ind, thread_list in enumerate(chunk_set):
+    #         n_p, n_g, n_s, n_c = 0, 0, 0, 0
+    #         for chunk in thread_list:
+                
+    #             n_p += chunk.n_points
+    #             n_g += chunk.n_gauss
+    #             n_s += chunk.n_shapes
+    #             n_c += chunk.n_shape_coeffs
+                
+    #         print(f"Set {chunk_ind} thread {thread_ind} has {n_p} points, {n_g} gauss, {n_s} shape, {n_c} shape coeffs")
+    #             # if chunk.n_shape_coeffs > 0:
+    #             #     print(chunk.shape_components.power_shape_orig_inds)
+    #     print('---------------------------------------------------------------')
+            
+    return chunked_skymodel_map_sets
+
+import pulp
+
+
+# # Helper function to partition the values into 8 sums with equal volume
+# def partition_into_sums(values, target_volume_per_sum, num_sums):
+#     # Create partitions of the values into `num_sums` bins, each with volume ~target_volume_per_sum
+#     result = binpacking.to_constant_volume(values, target_volume_per_sum, weight_pos=1)
+    
+#     # Ensure the number of bins matches `num_sums` by combining or splitting bins as needed
+#     while len(result) > num_sums:
+#         # Merge the smallest bins to reduce the number of bins
+#         result[-2].extend(result[-1])
+#         result.pop()
+#     return result
+

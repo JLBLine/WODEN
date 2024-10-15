@@ -5,7 +5,7 @@ from typing import Union
 
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, Component_Info, CompTypes
 from wodenpy.skymodel.chunk_sky_model import Skymodel_Chunk_Map, Components_Map
-from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, setup_source_catalogue, _Ctype_Source_Into_Python
+from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, setup_source_catalogue, _Ctype_Source_Into_Python, Source_Python, Components_Python
 from wodenpy.use_libwoden.beam_settings import BeamTypes
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 from astropy.table import Table, Column
@@ -13,7 +13,6 @@ import erfa
 from astropy.io import fits
 from wodenpy.primary_beam.use_everybeam import run_everybeam, load_MWA_telescope, load_OSKAR_telescope, load_LOFAR_telescope, get_everybeam_norm, radec_to_xyz
 from sys import exit
-from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 import argparse
 from astropy.time import Time, TimeDelta
 
@@ -43,9 +42,7 @@ else:
 woden_struct_classes = Woden_Struct_Classes()
 Woden_Settings = woden_struct_classes.Woden_Settings
 
-
 REF_FREQ = 200e+6
-
 D2R = np.pi/180.0
 
 def _error_for_missing_columns(message_start : str, fits_path : str, missing_cols : list,
@@ -612,12 +609,12 @@ def find_all_indexes_of_x_in_y(x : np.ndarray, y : np.ndarray):
     return xsorted[ypos]
 
 woden_struct_classes = Woden_Struct_Classes()
-Source = woden_struct_classes.Source
-Components = woden_struct_classes.Components
+Source_Ctypes = woden_struct_classes.Source_Ctypes
+# Components_Ctypes = woden_struct_classes.Components_Ctypes
 
 def add_list_flux_info(mod_type : CompTypes, n_lists : int,
                        key_prepend : str, list_table : Table, map_components : Components_Map,
-                       source_components : Components, main_table : Table = False,
+                       source_components : Components_Python, main_table : Table = False,
                        comp_orig_inds : np.ndarray = False,
                        list_comp_ind_offset : int = 0):
     
@@ -727,9 +724,9 @@ def add_list_flux_info(mod_type : CompTypes, n_lists : int,
 
 def add_fits_info_to_source_catalogue(comp_type : CompTypes,
                         main_table : Table, shape_table : Table,
-                        chunk_source : Source,
+                        chunk_source : Source_Ctypes,
                         chunk_map : Skymodel_Chunk_Map,
-                        beamtype : int, lsts : np.ndarray, latitude : float,
+                        beamtype : int, lsts : np.ndarray, latitudes : np.ndarray,
                         v_table : Table = False, q_table : Table = False,
                         u_table : Table = False, p_table : Table = False, 
                         ra0 = False, dec0 = False, telescope = False,
@@ -747,8 +744,8 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
         The main Table (with RA,Dec etc) from the FITS file.
     shape_table : Table
         The shapelet Table from the FITS file.
-    chunk_source : Source
-        The ctypes Source object to add information to.
+    chunk_source : Source_Ctypes
+        The ctypes Source_Ctypes object to add information to.
     chunk_map : Skymodel_Chunk_Map
         The map object containing information about components for this chunk.
     beamtype : int
@@ -830,10 +827,10 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
         azza_beams = [BeamTypes.FEE_BEAM.value, BeamTypes.ANALY_DIPOLE.value,
                       BeamTypes.FEE_BEAM_INTERP.value, BeamTypes.MWA_ANALY.value]
         if beamtype in azza_beams:
-            ##Calculate lst, and then azimuth/elevation
+            ##Calculate ha, and then azimuth/elevation
             comp_has = lsts - source_components.ras[new_comp_ind]
             comp_azs, comp_els = erfa.hd2ae(comp_has, source_components.decs[new_comp_ind],
-                                            latitude)
+                                            latitudes)
             
             ##OK these ctype arrays cannot be sliced, so let's increment
             ##over them at a snail's pace
@@ -923,7 +920,6 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
             # print(comp_ind)
             source_components.param_indexes[new_b_ind] = comp_ind
             
-            
     ##polarisation times--------------------------------------------------------
     
     n_stokesV_pol_frac = map_components.num_v_pol_fracs
@@ -1002,7 +998,7 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
             source_components.rm_values[linpol_ind] = main_table['RM'][orig_ind]
             if chunk_map.has_intr_pol_angle:
                 source_components.intr_pol_angle[linpol_ind] = main_table['INTR_POL_ANGLE'][orig_ind]
-                ##TODO might need to catch empty entries (NaNs) are convert to 0?
+                ##TODO might need to catch empty entries (NaNs) and convert to 0?
             else:
                 source_components.intr_pol_angle[linpol_ind] = 0.0
             linpol_ind += 1
@@ -1066,7 +1062,7 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
     return
 
 def calc_everybeam_for_components(ra0 : float, dec0 : float, num_components : int,
-                   components : Components, telescope,
+                   components : Components_Python, telescope,
                    all_times : np.ndarray, all_freqs : np.ndarray,
                    reorder_jones : bool = True,
                    station_id = np.nan, 
@@ -1074,8 +1070,8 @@ def calc_everybeam_for_components(ra0 : float, dec0 : float, num_components : in
                    parallactic_rotate : bool = True):
     
     ##convert back from ctypes to numpy arrays
-    ras = np.ctypeslib.as_array(components.ras, shape=(num_components, ))
-    decs = np.ctypeslib.as_array(components.decs, shape=(num_components, ))
+    ras = components.ras
+    decs = components.decs
     num_freqs = len(all_freqs)
     num_times = len(all_times)
 
@@ -1140,46 +1136,32 @@ def calc_everybeam_for_components(ra0 : float, dec0 : float, num_components : in
                     
                     beam_ind = num_freqs*num_components*num_times*station_ind + num_freqs*num_components*time_ind + num_components*freq_ind + comp_ind
                     
-                    # # print('HERE GO', parallactic_rotate)
-                    # if parallactic_rotate:
-                    #     components.gxs[beam_ind].real = jones[0,0].real*cospa[comp_ind] - jones[1,0].real*sinpa[comp_ind]
-                    #     components.gxs[beam_ind].imag = jones[0,0].imag*cospa[comp_ind] - jones[1,0].imag*sinpa[comp_ind]
-                    #     components.Dxs[beam_ind].real = jones[0,1].real*cospa[comp_ind] - jones[1,1].real*sinpa[comp_ind]
-                    #     components.Dxs[beam_ind].imag = jones[0,1].imag*cospa[comp_ind] - jones[1,1].imag*sinpa[comp_ind]
-                    #     components.Dys[beam_ind].real = jones[0,0].real*sinpa[comp_ind] + jones[1,0].real*cospa[comp_ind]
-                    #     components.Dys[beam_ind].imag = jones[0,0].imag*sinpa[comp_ind] + jones[1,0].imag*cospa[comp_ind]
-                    #     components.gys[beam_ind].real = jones[0,1].real*sinpa[comp_ind] + jones[1,1].real*cospa[comp_ind]
-                    #     components.gys[beam_ind].imag = jones[0,1].imag*sinpa[comp_ind] + jones[1,1].imag*cospa[comp_ind]
-                        
-                    # else:
+                    components.gxs[beam_ind] = jones[0,0]
+                    components.Dxs[beam_ind] = jones[0,1]
+                    components.Dys[beam_ind] = jones[1,0]
+                    components.gys[beam_ind] = jones[1,1]
                     
-                    components.gxs[beam_ind].real = jones[0,0].real
-                    components.gxs[beam_ind].imag = jones[0,0].imag
-                    components.Dxs[beam_ind].real = jones[0,1].real
-                    components.Dxs[beam_ind].imag = jones[0,1].imag
-                    components.Dys[beam_ind].real = jones[1,0].real
-                    components.Dys[beam_ind].imag = jones[1,0].imag
-                    components.gys[beam_ind].real = jones[1,1].real
-                    components.gys[beam_ind].imag = jones[1,1].imag
+                    # print(components.gxs[beam_ind], jones[0,0])
                     
                     
 # @profile
-def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
-                              woden_settings : Woden_Settings,
-                              args : argparse.Namespace,
+def read_fits_skymodel_chunks(args : argparse.Namespace,
                               main_table : Table, shape_table : Table,
                               chunked_skymodel_maps : list,
                               num_freqs : int, num_time_steps : int,
                               beamtype : int,
-                              lsts : np.ndarray, latitude : float,
+                              lsts : np.ndarray, latitudes : np.ndarray,
                               v_table : Table = False, q_table : Table = False,
                               u_table : Table = False, p_table : Table = False,
                               precision = "double"):
     """
-    Uses Tables read from a FITS file and returns a source catalogue
-    that can be used by C/CUDA code to calculate visibilities. Uses the
-    maps in `chunked_skymodel_maps` to determine which components to read in
-    and add to the `source_catalogue`
+    Uses Tables read from a FITS file and returns a list of populated
+    `Source_Python` classes. Uses the maps in `chunked_skymodel_maps` to
+    determine which components to read in.
+    
+    This function is run in parallel, and Python multiprocessing requires
+    everything to be picklable. This means we can't use ctypes, so we
+    can't use `Woden_Settings`.
 
     Parameters
     ----------
@@ -1210,38 +1192,26 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
         A source catalogue that can be used by C/CUDA code to calculate visibilities.
     """
     
-    ##want to know how many shapelets are in all the chunks (used later
-    # by "calculate_visiblities.cu")
-    num_shapelets = 0
-    for chunk_map in chunked_skymodel_maps:
-        num_shapelets += chunk_map.n_shapes
-        
-    ##setup the source catalogue, which is going to store all of the information
-    ##of each source and be fed straight into C/CUDA
-    source_catalogue = setup_source_catalogue(woden_struct_classes.Source,
-                                              woden_struct_classes.Source_Catalogue,
-                                              len(chunked_skymodel_maps), num_shapelets,
-                                              precision = precision)
-    
     ##if we have an everybeam primary beam, we will be calculating it
     ##as we load in the sky model, as it happens on the CPU. So need to set
     ##some extra arguments here
     
-    ra0 = woden_settings.ra0
-    dec0 = woden_settings.dec0
+    ra0 = np.radians(args.ra0)
+    dec0 = np.radians(args.dec0)
+    
     eb_beams = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value, BeamTypes.EB_MWA.value]
     
     if beamtype in eb_beams:
         all_times = []
         obs_time = Time(args.date, scale='utc')
-        for time_step in range(woden_settings.num_time_steps):
-            time_current = obs_time + TimeDelta((time_step + 0.5)*woden_settings.time_res, format='sec')
+        for time_step in range(args.num_time_steps):
+            time_current = obs_time + TimeDelta((time_step + 0.5)*args.time_res, format='sec')
             all_times.append(time_current)
         
-        band_num = woden_settings.band_nums[0]
+        band_num = args.band_nums[0]
         
-        base_band_freq = ((band_num - 1)*woden_settings.coarse_band_width) + woden_settings.base_low_freq
-        all_freqs = base_band_freq + np.arange(woden_settings.num_freqs)*woden_settings.frequency_resolution
+        base_band_freq = ((band_num - 1)*float(args.coarse_band_width)) + args.lowest_channel_freq
+        all_freqs = base_band_freq + np.arange(args.num_freq_channels)*args.freq_res
         
         if beamtype == BeamTypes.EB_MWA.value:
             telescope = load_MWA_telescope(args.beam_ms_path, args.hdf5_beam_path)
@@ -1259,24 +1229,31 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
         else:
             num_beams = 1
             
-        lsts = np.ctypeslib.as_array(woden_settings.lsts, shape=(woden_settings.num_time_steps, ))
-        latitudes = np.ctypeslib.as_array(woden_settings.latitudes, shape=(woden_settings.num_time_steps, ))
-            
     else:
         beam_norms = False
         telescope = False
         all_times = False
         all_freqs = False
         num_beams = 1
-        latitudes = False
+        
+    # source_array = len(chunked_skymodel_maps)*woden_struct_classes.Source_Ctypes
+    # source_array = source_array()
+    
+    source_array = [Source_Python() for i in range(len(chunked_skymodel_maps))]
         
     ##for each chunk map, create a Source_Float or Source_Double ctype
     ##struct, and "malloc" the right amount of arrays to store required infor
     for chunk_ind, chunk_map in enumerate(chunked_skymodel_maps):
         
-        setup_chunked_source(source_catalogue.sources[chunk_ind], chunk_map,
+        # setup_chunked_source(source_catalogue.sources[chunk_ind], chunk_map,
+        #                      num_freqs, num_time_steps, num_beams,
+        #                      beamtype, precision=precision)
+        
+        setup_chunked_source(source_array[chunk_ind], chunk_map,
                              num_freqs, num_time_steps, num_beams,
                              beamtype, precision=precision)
+        
+        
         
         ##count up the total number of components across all chunks
         ##annoyingly, beacuse Jack sucks, we split shapelet us by basis 
@@ -1286,47 +1263,48 @@ def read_fits_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
         if chunk_map.n_points > 0:
             add_fits_info_to_source_catalogue(CompTypes.POINT,
                                       main_table, shape_table,
-                                      source_catalogue.sources[chunk_ind], chunk_map,
-                                      beamtype, lsts, latitude,
+                                      source_array[chunk_ind], chunk_map,
+                                      beamtype, lsts, latitudes,
                                       v_table, q_table, u_table, p_table,
                                       ra0, dec0, telescope,
                                       all_times, all_freqs)
+            
             if beamtype in eb_beams:
                 calc_everybeam_for_components(ra0, dec0, chunk_map.n_points,
-                               source_catalogue.sources[chunk_ind].point_components,
+                               source_array[chunk_ind].point_components,
                                telescope, all_times, all_freqs, station_id=args.station_id,
                                lsts=lsts, latitudes=latitudes, parallactic_rotate=True)
             
         if chunk_map.n_gauss > 0:
             add_fits_info_to_source_catalogue(CompTypes.GAUSSIAN,
                                       main_table, shape_table,
-                                      source_catalogue.sources[chunk_ind], chunk_map,
-                                      beamtype, lsts, latitude,
+                                      source_array[chunk_ind], chunk_map,
+                                      beamtype, lsts, latitudes,
                                       v_table, q_table, u_table, p_table,
                                       ra0, dec0, telescope,
                                       all_times, all_freqs)
             if beamtype in eb_beams:
-                calc_everybeam_for_components(ra0, dec0, chunk_map.n_points,
-                               source_catalogue.sources[chunk_ind].gauss_components,
+                calc_everybeam_for_components(ra0, dec0, chunk_map.n_gauss,
+                               source_array[chunk_ind].gauss_components,
                                telescope, all_times, all_freqs, station_id=args.station_id,
                                lsts=lsts, latitudes=latitudes, parallactic_rotate=True)
             
         if chunk_map.n_shapes > 0:
             add_fits_info_to_source_catalogue(CompTypes.SHAPELET,
                                       main_table, shape_table,
-                                      source_catalogue.sources[chunk_ind], chunk_map,
-                                      beamtype, lsts, latitude,
+                                      source_array[chunk_ind], chunk_map,
+                                      beamtype, lsts, latitudes,
                                       v_table, q_table, u_table, p_table,
                                       ra0, dec0, telescope,
                                       all_times, all_freqs)
             if beamtype in eb_beams:
-                calc_everybeam_for_components(ra0, dec0, chunk_map.n_points,
-                               source_catalogue.sources[chunk_ind].shape_components,
+                calc_everybeam_for_components(ra0, dec0, chunk_map.n_shapes,
+                               source_array[chunk_ind].shape_components,
                                telescope, all_times, all_freqs, station_id=args.station_id,
                                lsts=lsts, latitudes=latitudes, parallactic_rotate=True)
             
     ##TODO some kind of consistency check between the chunk_maps and the
     ##sources in the catalogue - make sure we read in the correct information
     
-    return source_catalogue
+    return source_array
 

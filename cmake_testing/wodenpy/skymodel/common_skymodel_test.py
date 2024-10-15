@@ -31,6 +31,16 @@ class Args:
         self.date = "2000-01-01T12:00:00"
         self.beam_ms_path = "lba.MS"
         self.station_id = 0
+        
+        self.ra0 = 0
+        self.dec0 = 0
+        self.num_time_steps = 0
+        self.band_nums = [1]
+        self.coarse_band_width = 1.28e+6
+        self.lowest_channel_freq = 167.035e+6
+        self.num_freq_channels = 0
+        self.freq_res = 80e+3
+        self.hdf5_beam_path = ""
 
 class Skymodel_Settings:
     """Something to hold all the various settings and pass around between
