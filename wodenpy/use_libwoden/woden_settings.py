@@ -288,7 +288,7 @@ def create_woden_settings(woden_settings : Woden_Settings, # type: ignore
         
     return woden_settings
     
-def setup_lsts_and_phase_centre(woden_settings : Woden_Settings) -> np.ndarray | np.ndarray: # type: ignore
+def setup_lsts_and_phase_centre(woden_settings : Woden_Settings) -> Union[np.ndarray, np.ndarray]: # type: ignore
     """
     Calculate the Local Sidereal Time (LST) for each time step of an observation,
     and set the phase centre coordinates. If `woden_settings.do_precession == True`,

@@ -564,7 +564,7 @@ def setup_source_catalogue(Source_Ctypes : Source_Ctypes, Source_Catalogue : Sou
     return source_catalogue
     
 def setup_components(chunk_map: Skymodel_Chunk_Map,
-                     chunked_source: Source_Ctypes | Source_Python, # type: ignore
+                     chunked_source: Union[Source_Ctypes, Source_Python], # type: ignore
                      num_freqs: int, num_times: int, num_beams: int,
                      comp_type: CompTypes, beamtype: int,
                      precision: str = "double") -> None:
@@ -925,7 +925,7 @@ def setup_components(chunk_map: Skymodel_Chunk_Map,
     
         
     
-def setup_chunked_source(chunked_source : Source_Ctypes | Source_Python,     # type: ignore
+def setup_chunked_source(chunked_source : Union[Source_Ctypes, Source_Python], # type: ignore
                          chunk_map : Skymodel_Chunk_Map, 
                          num_freqs : int, num_times : int, 
                          num_beams : int, beamtype : int,
