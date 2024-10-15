@@ -10,3 +10,4 @@ matplotlib
 pyuvdata
 python-casacore
 myst-nb
+binpacking
