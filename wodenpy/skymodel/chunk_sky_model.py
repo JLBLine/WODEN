@@ -1059,19 +1059,3 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
     #     print('---------------------------------------------------------------')
             
     return chunked_skymodel_map_sets
-
-import pulp
-
-
-# # Helper function to partition the values into 8 sums with equal volume
-# def partition_into_sums(values, target_volume_per_sum, num_sums):
-#     # Create partitions of the values into `num_sums` bins, each with volume ~target_volume_per_sum
-#     result = binpacking.to_constant_volume(values, target_volume_per_sum, weight_pos=1)
-    
-#     # Ensure the number of bins matches `num_sums` by combining or splitting bins as needed
-#     while len(result) > num_sums:
-#         # Merge the smallest bins to reduce the number of bins
-#         result[-2].extend(result[-1])
-#         result.pop()
-#     return result
-
