@@ -944,11 +944,16 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
                             num_threads)
     num_gauss_dirs = find_num_dirs_per_chunk(comp_counter.total_gauss_comps, max_dirs_per_chunk,
                             num_threads)
-    
-    num_point_chunks = int(np.ceil(comp_counter.total_point_comps / num_point_dirs))
+    if comp_counter.total_point_comps:
+        num_point_chunks = int(np.ceil(comp_counter.total_point_comps / num_point_dirs))
+    else:
+        num_point_chunks = 0
     num_point_sets = int(np.ceil(num_point_chunks / num_threads))
     
-    num_gauss_chunks = int(np.ceil(comp_counter.total_gauss_comps / num_gauss_dirs))
+    if comp_counter.total_gauss_comps:
+        num_gauss_chunks = int(np.ceil(comp_counter.total_gauss_comps / num_gauss_dirs))
+    else:
+        num_gauss_chunks = 0
     num_gauss_sets = int(np.ceil(num_gauss_chunks / num_threads))
     
     # print('YO', num_gauss_chunks, num_gauss_dirs, num_gauss_sets, comp_counter.total_gauss_comps)
@@ -956,9 +961,17 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
     # ##total number of chunks the sky model is splitted into
     # num_chunks = num_point_chunks + num_gauss_chunks + num_coeff_chunks
 
-    chunked_skymodel_map_sets = []
-    point_maps = [[] for _ in range(num_point_sets)]
-    gauss_maps = [[] for _ in range(num_gauss_sets)]
+    # chunked_skymodel_map_sets = []
+    # point_maps = [[] for _ in range(num_point_sets)]
+    # gauss_maps = [[] for _ in range(num_gauss_sets)]
+    
+    num_sets = num_point_sets + num_gauss_sets + 1
+    
+    chunked_skymodel_map_sets = np.empty((num_sets, num_threads), dtype=object)
+    
+    for i in range(num_sets):
+        for j in range(num_threads):
+            chunked_skymodel_map_sets[i,j] = []
     
     ##Go through the point sources and add chunked maps
     for chunk_ind in range(num_point_chunks):
@@ -966,7 +979,8 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
                                          int(num_point_dirs),
                                          point_source = True)
         set_ind = chunk_ind // num_threads
-        point_maps[set_ind].append([chunk_map])
+        thread_ind = chunk_ind % num_threads
+        chunked_skymodel_map_sets[set_ind][thread_ind] = [chunk_map]
     
     ##Go through the gaussian sources and add chunked maps
     for chunk_ind in range(num_gauss_chunks):
@@ -975,11 +989,13 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
                                          gaussian_source = True)
         # chunked_skymodel_maps.append(chunk_map)
         
-        set_ind = chunk_ind // num_threads
-        gauss_maps[set_ind].append([chunk_map])
+        set_ind = chunk_ind // num_threads + num_point_sets
+        thread_ind = chunk_ind % num_threads
+        chunked_skymodel_map_sets[set_ind][thread_ind] = [chunk_map]
         
-    chunked_skymodel_map_sets.extend(point_maps)
-    chunked_skymodel_map_sets.extend(gauss_maps)
+        
+    # chunked_skymodel_map_sets.extend(point_maps)
+    # chunked_skymodel_map_sets.extend(gauss_maps)
         
     ##need some extra mapping arrays to be able to grab the SHAPELET component
     ##that matches each basis function
@@ -1001,45 +1017,52 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
         
     # #     chunked_skymodel_maps.append(chunk_map)
     
-    ##we split SHAPELET by the basis components (number of coeffs)
-    num_coeff_chunks = int(np.ceil(comp_counter.total_shape_basis / max_coeffs_per_chunk))
+    if comp_counter.total_shape_basis > 0:
     
-    shapelet_chunk_maps = map_chunk_shapelets(comp_counter,
-                                        shape_basis_to_orig_comp_index_map,
-                                        shape_basis_to_comp_type_map,
-                                        shape_basis_param_index,
-                                        max_coeffs_per_chunk,
-                                        num_shape_dirs)
-    
-    indexed_shape_chunk_sizes = [(i, chunk_map.n_shapes) for i,chunk_map in enumerate(shapelet_chunk_maps)]  # List of (index, value) tuples
-    target_volume = num_shape_dirs  # Set the target volume for each bin
-
-    # Step 2: Partition the numbers while keeping track of indices using the `to_constant_volume` function
-    binned_shape_chunk_sizes = binpacking.to_constant_volume(indexed_shape_chunk_sizes, target_volume, weight_pos=1)
-    
-    # print(len(binned_shape_chunk_sizes), binned_shape_chunk_sizes)
-    
-    if len(binned_shape_chunk_sizes) > num_threads:
-        while len(binned_shape_chunk_sizes) > num_threads:
-            # Find the two smallest binned_shape_chunk_sizes and merge them
-            binned_shape_chunk_sizes = sorted(binned_shape_chunk_sizes, key=lambda bin: sum(item[1] for item in bin))  # Sort binned_shape_chunk_sizes by their total sum
-            binned_shape_chunk_sizes[0].extend(binned_shape_chunk_sizes[1])  # Merge the two smallest binned_shape_chunk_sizes
-            binned_shape_chunk_sizes.pop(1)  # Remove the now-empty bin
-            
-    # # # Step 3: Extract the values and indices from the result
-    # for bin_idx, bin in enumerate(binned_shape_chunk_sizes):
-    #     print(f"Bin {bin_idx + 1}:")
-    #     for index, value in bin:
-    #         print(f"  Index: {index}, Value: {value}")
-
-    binned_shape_chunks = []            
-    for bin_index_size in binned_shape_chunk_sizes:
-        shape_chunk_bin = []
-        for index, value in bin_index_size:
-            shape_chunk_bin.append(shapelet_chunk_maps[index])
-        binned_shape_chunks.append(shape_chunk_bin)
+        ##we split SHAPELET by the basis components (number of coeffs)
+        num_coeff_chunks = int(np.ceil(comp_counter.total_shape_basis / max_coeffs_per_chunk))
         
-    chunked_skymodel_map_sets.append(binned_shape_chunks)
+        shapelet_chunk_maps = map_chunk_shapelets(comp_counter,
+                                            shape_basis_to_orig_comp_index_map,
+                                            shape_basis_to_comp_type_map,
+                                            shape_basis_param_index,
+                                            max_coeffs_per_chunk,
+                                            num_shape_dirs)
+        
+        indexed_shape_chunk_sizes = [(i, chunk_map.n_shapes) for i,chunk_map in enumerate(shapelet_chunk_maps)]  # List of (index, value) tuples
+        target_volume = num_shape_dirs  # Set the target volume for each bin
+
+        # Step 2: Partition the numbers while keeping track of indices using the `to_constant_volume` function
+        binned_shape_chunk_sizes = binpacking.to_constant_volume(indexed_shape_chunk_sizes, target_volume, weight_pos=1)
+        
+        # print(len(binned_shape_chunk_sizes), binned_shape_chunk_sizes)
+        
+        if len(binned_shape_chunk_sizes) > num_threads:
+            while len(binned_shape_chunk_sizes) > num_threads:
+                # Find the two smallest binned_shape_chunk_sizes and merge them
+                binned_shape_chunk_sizes = sorted(binned_shape_chunk_sizes, key=lambda bin: sum(item[1] for item in bin))  # Sort binned_shape_chunk_sizes by their total sum
+                binned_shape_chunk_sizes[0].extend(binned_shape_chunk_sizes[1])  # Merge the two smallest binned_shape_chunk_sizes
+                binned_shape_chunk_sizes.pop(1)  # Remove the now-empty bin
+                
+        # # # Step 3: Extract the values and indices from the result
+        # for bin_idx, bin in enumerate(binned_shape_chunk_sizes):
+        #     print(f"Bin {bin_idx + 1}:")
+        #     for index, value in bin:
+        #         print(f"  Index: {index}, Value: {value}")
+
+        binned_shape_chunks = []            
+        for bin_index_size in binned_shape_chunk_sizes:
+            shape_chunk_bin = []
+            for index, value in bin_index_size:
+                shape_chunk_bin.append(shapelet_chunk_maps[index])
+            binned_shape_chunks.append(shape_chunk_bin)
+            
+        # chunked_skymodel_map_sets.append(binned_shape_chunks)
+        
+        chunked_skymodel_map_sets[-1, :] = binned_shape_chunks
+        
+        
+    print(chunked_skymodel_map_sets)
         
     print(f"After chunking there are {len(chunked_skymodel_map_sets)} sets")
     
