@@ -9,7 +9,7 @@ import argparse
 from queue import Queue
 from threading import Thread
 from ctypes import POINTER, c_double, c_float
-from typing import Union
+from typing import Union, Tuple, List
 from astropy.table import Table
 from astropy.io import fits
 from wodenpy.use_libwoden.beam_settings import BeamTypes
@@ -20,7 +20,7 @@ from wodenpy.use_libwoden.use_libwoden import load_in_woden_library
 from wodenpy.observational.calc_obs import get_uvfits_date_and_position_constants, calc_jdcal
 from wodenpy.skymodel.woden_skymodel import crop_below_horizon
 from wodenpy.skymodel.read_skymodel import get_skymodel_tables, read_radec_count_components, create_source_catalogue_from_python_sources
-from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map, reshape_chunked_skymodel_map_sets
+from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map, reshape_chunked_skymodel_map_sets, Skymodel_Chunk_Map
 from wodenpy.array_layout.create_array_layout import calc_XYZ_diffs, enh2xyz
 from wodenpy.use_libwoden.array_layout_struct import Array_Layout
 from wodenpy.uvfits.wodenpy_uvfits import make_antenna_table, make_baseline_date_arrays, create_uvfits
@@ -28,7 +28,7 @@ from wodenpy.phase_rotate.remove_phase_track import remove_phase_tracking
 from wodenpy.use_libwoden.shapelets import create_sbf
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 from wodenpy.skymodel.read_fits_skymodel import read_fits_skymodel_chunks
-from wodenpy.use_libwoden.skymodel_structs import setup_source_catalogue
+from wodenpy.use_libwoden.skymodel_structs import setup_source_catalogue, Source_Python
 
 import concurrent.futures
 
@@ -80,21 +80,32 @@ def woden_thread(all_loaded_python_sources : list,
     
     Parameters
     ----------
-    the_queue : Queue
-        A queue of source catalogues to be processed.
+    all_loaded_python_sources : list
+        A list of lists of `Source_Python` to be processed, as ouput by `read_skymodel_thread`,
+        where each list of `Source_Python` matches a chunk_map in `chunked_skymodel_map_set`.
+    all_loaded_sources_orders : list
+        The order of the sources in `all_loaded_python_sources` as matched to `chunked_skymodel_map_set`;
+        orders also output by `read_skymodel_thread` (different threads finish in different times so
+        the order of the sources in `all_loaded_python_sources` may not match the order of the chunk_maps)
+    chunked_skymodel_map_set : list
+        The list of `Chunked_Skymodel_Map`s used to create `all_loaded_python_sources`.
+    round_num : int
+        The round number of the processing
     run_woden : _NamedFuncPointer
-        A pointer to the WODEN function to be run.
+        A pointer to the WODEN GPU function to be run.
     woden_settings : Woden_Settings
         The WODEN settings to be used.
     visibility_set : Visi_Set
         The visibility set to write outputs to.
     array_layout : Array_Layout
         The array layout to be used.
+    woden_struct_classes : Woden_Struct_Classes
+        The WODEN struct classes to be used
     sbf : np.ndarray
         The shapelet basis function array
+    beamtype : int
+        The value of the type of beam being used, e.g. BeamTypes.FEE_BEAM.value
     """
-    
-    
     python_sources = []
     
     ##grab all the python sources, and reorder them to match the order of
@@ -105,16 +116,11 @@ def woden_thread(all_loaded_python_sources : list,
         for source in sources:
             python_sources.append(source)
     
-    # for sources in all_loaded_python_sources:
-    #     for source in sources:
-    #         python_sources.append(source)
-    
     chunked_skymodel_maps = []
     for map_chunks in chunked_skymodel_map_set:
         chunked_skymodel_maps.extend(map_chunks)
         
-    # print(f"CONVERTING USING {precision}")
-        
+    ##Create a ctypes Source_Catalogue from the python sources to feed the GPU
     source_catalogue = create_source_catalogue_from_python_sources(python_sources,
                                                                    chunked_skymodel_maps,
                                                                    woden_struct_classes,
@@ -129,59 +135,64 @@ def woden_thread(all_loaded_python_sources : list,
     end = time()
     
     print(f"Set {round_num} has returned from the GPU after {end-start:.1f} seconds")
-    # print(f"Set {round_num} has returned from the GPU")
     
-    return 1
+    return 0
         
 def read_skymodel_thread(thread_id : int, num_threads : int,
-                         chunked_skymodel_map_sets: list,
+                         chunked_skymodel_map_sets: List[Skymodel_Chunk_Map],
                          lsts : np.ndarray, latitudes : np.ndarray,
                          args : argparse.Namespace,
                          beamtype : int,
                          main_table : Table, shape_table : Table,
                          v_table : Table = False, q_table : Table = False,
-                         u_table : Table = False, p_table : Table = False):
+                         u_table : Table = False, p_table : Table = False) -> Tuple[List[Source_Python], int]:
     """
-    Reads a chunked skymodel map and puts the resulting source catalogue into a queue.
+    Reads a list of `Skymodel_Chunk_Map` types in `chunked_skymodel_map_sets`
+    from the given astropy tables, into a list of `Source_Python` types.
+    Depending on the type of primary beam specified by `beamtype`
     
     Parameters
-    =============
-    the_queue : Queue
-        A queue to put the resulting source catalogue into.
-    woden_struct_classes : Woden_Struct_Classes
-        This holds all the various ctype structure classes that are equivalent
-        to the C/CUDA structs.
-    chunked_skymodel_maps : list
-        A list of chunked skymodel maps to read.
-    max_num_chunks : int
-        The maximum number of chunks to read at once.
+    ==========
+    thread_id : int
+        The ID of the current thread.
+    num_threads : int
+        The total number of threads.
+    chunked_skymodel_map_sets : list
+        A list of chunked skymodel map sets.
     lsts : np.ndarray
-        An array of LST values.
-    latitude : float
-        The latitude of the observation.
+        Local Sidereal Times (LSTs) for all time steps.
+    latitudes : np.ndarray
+        Latitudes of the array at all time steps; when doing array precession,
+        these will all be slightly different.
     args : argparse.Namespace
-        An argparse namespace containing command line arguments.
+        Command-line arguments namespace.
     beamtype : int
-        The type of beam to use.
+        The value of the type of beam being used, e.g. BeamTypes.FEE_BEAM.value
+    main_table : Table
+        Main table containing skymodel data.
+    shape_table : Table
+        Table containing Shapelet data.
+    v_table : Table, optional
+        Table containing V polarization data (default is False).
+    q_table : Table, optional
+        Table containing Q polarization data (default is False).
+    u_table : Table, optional
+        Table containing U polarization data (default is False).
+    p_table : Table, optional
+        Table containing P polarization data (default is False).
+    Returns
+    =======
+    tuple
+        A tuple containing the list of `Source_Python`s and the thread number,
+        where thead number is `thread_id % num_threads`; this can be used to
+        match the order of recovered data to the order of the chunked maps.
+    
     """
-    
-    # low_ind = thread_id*thread_size
-    # high_ind = (thread_id+1)*thread_size
-    
-    
-    
-    # if low_ind >= len(chunked_skymodel_maps):
-    #     print(f"Thread {thread_id} has no work to do")
-    #     return []
-    
-    
     set_ind = thread_id // num_threads
     thread_num = thread_id % num_threads
     
     start = time()
     
-    # 
-    # 
     chunk_maps = chunked_skymodel_map_sets[set_ind][thread_num]
     
     n_p, n_g, n_s, n_c = 0, 0, 0, 0
@@ -209,7 +220,6 @@ def read_skymodel_thread(thread_id : int, num_threads : int,
     end = time()
     
     print(f"Finshed thread {thread_id} in {end-start:.1f} seconds")
-    # print(f"Finshed thread {thread_id}")
     
     return python_sources, thread_num
 
@@ -226,8 +236,6 @@ def main(argv=None):
         Will be parsed from the command line if run in main script. Can be
         passed in explicitly for easy testing
     """
-    
-
     ##Grab the parser and parse some args
     parser = get_parser()
     args = parser.parse_args(argv)
@@ -291,16 +299,7 @@ def main(argv=None):
                                         woden_settings.latitude,
                                         comp_counter,
                                         crop_by_component=crop_by_component)
-    
-    
-    comp_counter.print_info()
-    
-    eb_beams = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value, BeamTypes.EB_MWA.value]
-    
-    # if woden_settings.beamtype in eb_beams:
-    #     max_dirs = 50
-    # else:
-    #     max_dirs = 1
+    # comp_counter.print_info()
     
     chunked_skymodel_map_sets = create_skymodel_chunk_map(comp_counter,
                                                       args.chunking_size, woden_settings.num_baselines,
@@ -312,9 +311,7 @@ def main(argv=None):
     if args.dry_run:
         ##User only wants to check whether the arguments would have worked or not
         pass
-        
     else:
-        
         ##Create the shapelet basis functions
         sbf = create_sbf(precision=args.precision)
 
@@ -333,18 +330,15 @@ def main(argv=None):
         num_threads = args.num_threads
         
         num_rounds = len(chunked_skymodel_map_sets)
-        
         main_table, shape_table, v_table, q_table, u_table, p_table = get_skymodel_tables(args.cat_filename)
         
         with concurrent.futures.ProcessPoolExecutor(max_workers=num_threads) as executor:
         
             gpu_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-            
             gpu_calc = None  # To store the future of the calculation thread
 
             # Loop through multiple rounds of data reading and calculation
             for round_num in range(num_rounds):
-                
                 future_data = [executor.submit(read_skymodel_thread, i + round_num * num_threads,
                                                num_threads, chunked_skymodel_map_sets,
                                                lsts, latitudes,
@@ -354,7 +348,7 @@ def main(argv=None):
                                                v_table, q_table, u_table, p_table)
                                for i in range(num_threads)]
                 
-                all_loaded_python_sources = []  #
+                all_loaded_python_sources = []
                 all_loaded_sources_orders = []
                 for future in concurrent.futures.as_completed(future_data):
                     python_sources, order = future.result()
@@ -379,7 +373,6 @@ def main(argv=None):
             # # Wait for the final calculation to complete
             if gpu_calc is not None:
                 meh = gpu_calc.result()
-        
         
         ### we've now calculated all the visibilities
         ###---------------------------------------------------------------------
