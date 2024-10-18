@@ -12,7 +12,7 @@ from ctypes import POINTER, c_double, c_float
 from typing import Union
 from astropy.table import Table
 from astropy.io import fits
-
+from wodenpy.use_libwoden.beam_settings import BeamTypes
 from wodenpy.use_libwoden.woden_settings import create_woden_settings, setup_lsts_and_phase_centre
 from wodenpy.use_libwoden.visibility_set import setup_visi_set_array, load_visibility_set
 from wodenpy.wodenpy_setup.run_setup import get_parser, check_args, get_code_version
@@ -20,15 +20,13 @@ from wodenpy.use_libwoden.use_libwoden import load_in_woden_library
 from wodenpy.observational.calc_obs import get_uvfits_date_and_position_constants, calc_jdcal
 from wodenpy.skymodel.woden_skymodel import crop_below_horizon
 from wodenpy.skymodel.read_skymodel import get_skymodel_tables, read_radec_count_components, create_source_catalogue_from_python_sources
-from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map
+from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map, reshape_chunked_skymodel_map_sets
 from wodenpy.array_layout.create_array_layout import calc_XYZ_diffs, enh2xyz
 from wodenpy.use_libwoden.array_layout_struct import Array_Layout
 from wodenpy.uvfits.wodenpy_uvfits import make_antenna_table, make_baseline_date_arrays, create_uvfits
 from wodenpy.phase_rotate.remove_phase_track import remove_phase_tracking
 from wodenpy.use_libwoden.shapelets import create_sbf
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
-# from wodenpy.skymodel.read_text_skymodel import read_full_text_into_fitstable
-# from wodenpy.skymodel.read_yaml_skymodel import read_full_yaml_into_fitstable
 from wodenpy.skymodel.read_fits_skymodel import read_fits_skymodel_chunks
 from wodenpy.use_libwoden.skymodel_structs import setup_source_catalogue
 
@@ -131,6 +129,7 @@ def woden_thread(all_loaded_python_sources : list,
     end = time()
     
     print(f"Set {round_num} has returned from the GPU after {end-start:.1f} seconds")
+    # print(f"Set {round_num} has returned from the GPU")
     
     return 1
         
@@ -181,8 +180,8 @@ def read_skymodel_thread(thread_id : int, num_threads : int,
     
     start = time()
     
-    
-    
+    # 
+    # 
     chunk_maps = chunked_skymodel_map_sets[set_ind][thread_num]
     
     n_p, n_g, n_s, n_c = 0, 0, 0, 0
@@ -210,6 +209,7 @@ def read_skymodel_thread(thread_id : int, num_threads : int,
     end = time()
     
     print(f"Finshed thread {thread_id} in {end-start:.1f} seconds")
+    # print(f"Finshed thread {thread_id}")
     
     return python_sources, thread_num
 
@@ -295,11 +295,19 @@ def main(argv=None):
     
     comp_counter.print_info()
     
+    eb_beams = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value, BeamTypes.EB_MWA.value]
+    
+    # if woden_settings.beamtype in eb_beams:
+    #     max_dirs = 50
+    # else:
+    #     max_dirs = 1
+    
     chunked_skymodel_map_sets = create_skymodel_chunk_map(comp_counter,
                                                       args.chunking_size, woden_settings.num_baselines,
                                                       args.num_freq_channels,
                                                       args.num_time_steps,
-                                                      num_threads=args.num_threads)
+                                                      num_threads=args.num_threads,
+                                                      max_dirs=args.max_sky_directions)
     
     if args.dry_run:
         ##User only wants to check whether the arguments would have worked or not

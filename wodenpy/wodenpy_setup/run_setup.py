@@ -192,6 +192,11 @@ def get_parser():
         help='Number of threads to run the sky model reading / EveryBeam calculations on. '
              'Defaults to the number of physical cores on the machine. Add to set a specific number '
              'e.g. --num_threads=8')
+    sim_group.add_argument('--max_sky_directions', default=0, type=int,
+        help='Maximum number of directions on the sky to calculate per sky model chunk. '
+             'Only useful for controlling EveryBeam calculations. For EveryBeam, defaults to 200, '
+             'which means a maximum of 200 components go into each chunk. '
+             'For other primary beams, finds a maximum based on --chunking_size.')
     sim_group.add_argument('--precision', default='double',
         help='What precision to run WODEN at. Options are "double" or "float". '
              'Defaults to "double"')
@@ -529,7 +534,9 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
 
             f.close()
             
-    if args.primary_beam == 'everybeam_OSKAR' or args.primary_beam == 'everybeam_LOFAR' or args.primary_beam == 'everybeam_MWA':
+    eb_args = ['everybeam_OSKAR', 'everybeam_LOFAR', 'everybeam_MWA']
+            
+    if args.primary_beam in eb_args:
         if not args.beam_ms_path:
             exit(f'To use the {args.primary_beam} beam, you must specify a path to the'
                  ' measurement set using --beam_ms_path. Exiting now as WODEN will fail.')
@@ -540,6 +547,9 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
                  'Cannot get required observation settings, exiting now'.format(args.beam_ms_path))
             
         array_layout = "from_ms"
+        
+        if not args.max_sky_directions:
+            args.max_sky_directions = 200
             
     ##Override metafits and/or load arguments
     args.lowest_channel_freq = select_argument_and_check(args.lowest_channel_freq,

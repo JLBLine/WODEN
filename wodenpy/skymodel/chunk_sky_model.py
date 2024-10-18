@@ -752,45 +752,61 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
     None
     """
     
-    # ##Upper indexes of components covered in this chunk
-    # upper_coeff_ind = (chunk_ind + 1) * coeffs_per_chunk
-
-    # ##These ints are used to do pointer arithmatic to grab the correct portions
-    # ##of arrays out of `cropped_src` and into `temp_cropped_src`
-    # lower_coeff_ind = chunk_ind * coeffs_per_chunk
-
-    # ##If there are enough coeffs to fill the chunk?
-    # if (cropped_comp_counter.total_shape_basis >= upper_coeff_ind):
-    #     n_shape_coeffs = coeffs_per_chunk
-        
-    # else:
-    #     n_shape_coeffs = cropped_comp_counter.total_shape_basis % coeffs_per_chunk
+    sort_inds = np.argsort(shape_basis_to_orig_comp_index_map)
     
-    shape_basis_to_new_comp_index_map = np.zeros_like(shape_basis_to_orig_comp_index_map)
-    for new_ind, orig_comp_index in enumerate(np.unique(shape_basis_to_orig_comp_index_map)):
-        shape_basis_to_new_comp_index_map[shape_basis_to_orig_comp_index_map == orig_comp_index] = new_ind
+    # sorted_shape_basis_to_orig_comp_index_map = shape_basis_to_orig_comp_index_map[sort_inds]
+    # sorted_shape_basis_to_orig_type_map = shape_basis_to_orig_type_map[sort_inds]
+    # sorted_shape_basis_param_index = shape_basis_param_index[sort_inds]
+    
+    sorted_shape_basis_to_orig_comp_index_map = shape_basis_to_orig_comp_index_map
+    sorted_shape_basis_to_orig_type_map = shape_basis_to_orig_type_map
+    sorted_shape_basis_param_index = shape_basis_param_index
+    
+    shape_basis_to_new_comp_index_map = np.zeros_like(sorted_shape_basis_to_orig_comp_index_map)
+    
+    # print('YEP', np.unique(shape_basis_to_orig_comp_index_map))
+    
+    # print("OG", shape_basis_to_orig_comp_index_map)
+    
+    unique, unique_index = np.unique(sorted_shape_basis_to_orig_comp_index_map, return_index = True)
+    
+    # print('UNIQUE', unique)
+    # print('UNIQUE INDEX', unique_index, np.sort(unique_index))
+
+    # Get the unique values in order of appearance
+    ordered_unique_values = sorted_shape_basis_to_orig_comp_index_map[np.sort(unique_index)]
+    
+    # print("WTF", ordered_unique_values)
+    
+    for new_ind, orig_comp_index in enumerate(ordered_unique_values):
+        shape_basis_to_new_comp_index_map[sorted_shape_basis_to_orig_comp_index_map == orig_comp_index] = new_ind
+        
+    # print('YEP', shape_basis_to_new_comp_index_map)
     
     lower_comp_ind = 0
     lower_coeff_ind = 0
     upper_coeff_ind = 0
     chunk_maps = []
     
-    while lower_coeff_ind < len(shape_basis_to_orig_comp_index_map)-1:
-        
+    while lower_coeff_ind < len(sorted_shape_basis_to_orig_comp_index_map):
         # print(f"Is between {lower_comp_ind} and {lower_comp_ind + num_shape_dirs}?")
+        # print(shape_basis_to_new_comp_index_map[lower_coeff_ind:lower_coeff_ind+coeffs_per_chunk])
         subset_new_comp_index_map = shape_basis_to_new_comp_index_map[lower_coeff_ind:lower_coeff_ind+coeffs_per_chunk]
         new_inds = np.where((subset_new_comp_index_map >= lower_comp_ind) &
-                            (subset_new_comp_index_map < lower_comp_ind + num_shape_dirs))[0]
+                            (subset_new_comp_index_map <= lower_comp_ind + num_shape_dirs))[0]
         
         n_shape_coeffs = len(new_inds)
         upper_coeff_ind += n_shape_coeffs
         
         ##the ranges of comp types being sampled depends on which basis function
         ##coeffs we are sampling, so work out that range from the mapping arrays
-        orig_index_chunk = shape_basis_to_orig_comp_index_map[lower_coeff_ind:upper_coeff_ind]
-        orig_type_chunk = shape_basis_to_orig_type_map[lower_coeff_ind:upper_coeff_ind]
+        orig_index_chunk = sorted_shape_basis_to_orig_comp_index_map[lower_coeff_ind:upper_coeff_ind]
+        orig_type_chunk = sorted_shape_basis_to_orig_type_map[lower_coeff_ind:upper_coeff_ind]
+        shape_basis_param_index_chunk = sorted_shape_basis_param_index[lower_coeff_ind:upper_coeff_ind]
         
-        shape_basis_param_index_chunk = shape_basis_param_index[lower_coeff_ind:upper_coeff_ind]
+        # print("orig_index_chunk", orig_index_chunk)
+        # print("orig_type_chunk", orig_type_chunk)
+        # print("shape_basis_param_index_chunk", shape_basis_param_index_chunk)
         
         ##cop that for an annoyingly complicated piece of logic
         ##this selects the subset of original component indexes that we want
@@ -809,6 +825,8 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
         num_chunk_power = len(power_orig_inds)
         num_chunk_curve = len(curve_orig_inds)
         num_chunk_list = len(list_orig_inds)
+        
+        # print("INSIDE", num_chunk_power, num_chunk_curve, num_chunk_list)
         
         chunk_map = Skymodel_Chunk_Map(n_shape_powers = num_chunk_power,
                                     n_shape_curves = num_chunk_curve,
@@ -862,6 +880,9 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
 def find_num_dirs_per_chunk(num_directions : int, max_directions_per_chunk : int,
                             num_threads : int) -> int:
     
+    if num_threads == 1:
+        return max_directions_per_chunk
+    
     if num_directions / num_threads > max_directions_per_chunk:
         int_mult = np.ceil(num_directions / (num_threads*max_directions_per_chunk))
         num_dirs_per_chunk = np.ceil(num_directions / (num_threads*int_mult))
@@ -876,7 +897,8 @@ def find_num_dirs_per_chunk(num_directions : int, max_directions_per_chunk : int
 def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
                               max_num_visibilities : int, num_baselines : int,
                               num_freqs : int, num_time_steps : int,
-                              num_threads : int = 1,
+                              num_threads : int = 1, max_dirs : int = 0,
+                              max_chunks_per_set : int = 50,
                               text_file=False) -> list:
                               
     """
@@ -914,59 +936,51 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
     max_coeffs_per_chunk = int(np.floor(max_num_visibilities / (num_baselines * num_freqs * num_time_steps)))
     max_dirs_per_chunk = int(np.floor(max_num_visibilities / (num_baselines * num_freqs * num_time_steps)))
     
-    # print(max_dirs_per_chunk)
-    
-    max_dirs = 30
+    ##If max_dirs isn't set, use `max_dirs_per_chunk` as the default
+    if max_dirs == 0: max_dirs = max_dirs_per_chunk
     
     if max_dirs_per_chunk > max_dirs:
         max_dirs_per_chunk = max_dirs
         
-    # min_dirs_per_chunk = int(np.ceil(comp_counter.total_comps / (num_threads - 1)))
-    
-    # if min_dirs_per_chunk > max_dirs_per_chunk:
-    #     dirs_per_chunk = max_dirs_per_chunk
-    # else:
-    #     dirs_per_chunk = min_dirs_per_chunk
-        
-    # ##TODO chuck a if beam_type = eb then do this max_dirs_per_chunk = 200?
-    # max_dirs_per_chunk = 200
-    # if dirs_per_chunk > max_dirs_per_chunk:
-    #     dirs_per_chunk = max_dirs_per_chunk
-    
-    # print(comp_counter.total_shape_comps, comp_counter.total_comps)
-    
     ##pray this never happens, probably means we're going to run out of
     ##GPU memory TODO don't pray, submit a warning?
     if max_coeffs_per_chunk < 1: max_coeffs_per_chunk = 1
+    if max_dirs_per_chunk < 1: max_dirs_per_chunk = 1
     
     ##chunks numbers for each type of component
-    num_point_dirs = find_num_dirs_per_chunk(comp_counter.total_point_comps, max_dirs_per_chunk,
-                            num_threads)
-    num_gauss_dirs = find_num_dirs_per_chunk(comp_counter.total_gauss_comps, max_dirs_per_chunk,
-                            num_threads)
     if comp_counter.total_point_comps:
+        num_point_dirs = find_num_dirs_per_chunk(comp_counter.total_point_comps, max_dirs_per_chunk,
+                            num_threads)
         num_point_chunks = int(np.ceil(comp_counter.total_point_comps / num_point_dirs))
     else:
+        num_point_dirs = max_dirs
         num_point_chunks = 0
     num_point_sets = int(np.ceil(num_point_chunks / num_threads))
     
     if comp_counter.total_gauss_comps:
+        num_gauss_dirs = find_num_dirs_per_chunk(comp_counter.total_gauss_comps, max_dirs_per_chunk,
+                            num_threads)
         num_gauss_chunks = int(np.ceil(comp_counter.total_gauss_comps / num_gauss_dirs))
+        
     else:
+        num_gauss_dirs = max_dirs
         num_gauss_chunks = 0
     num_gauss_sets = int(np.ceil(num_gauss_chunks / num_threads))
     
-    # print('YO', num_gauss_chunks, num_gauss_dirs, num_gauss_sets, comp_counter.total_gauss_comps)
+    ##We always do a single set for the shapelets; rarely have more than
+    ##100 shapelet components. The chunking is also done over the basis functions
+    ##so easiest just to stick everything in one set
+    if comp_counter.total_shape_comps:
+        num_shape_sets = 1
+    else:
+        num_shape_sets = 0
     
-    # ##total number of chunks the sky model is splitted into
-    # num_chunks = num_point_chunks + num_gauss_chunks + num_coeff_chunks
-
-    # chunked_skymodel_map_sets = []
-    # point_maps = [[] for _ in range(num_point_sets)]
-    # gauss_maps = [[] for _ in range(num_gauss_sets)]
+    num_sets = num_point_sets + num_gauss_sets + num_shape_sets
     
-    num_sets = num_point_sets + num_gauss_sets + 1
-    
+    ##Something to hold all the chunked maps; each element in this array will
+    ##itself be a list, as the shapelet chunking gets complicated. Sometimes
+    ##it's most efficient to run a couple of chunks through the same 
+    ##sky model reading thread when calcualting the beam on the CPU
     chunked_skymodel_map_sets = np.empty((num_sets, num_threads), dtype=object)
     
     for i in range(num_sets):
@@ -993,35 +1007,14 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
         thread_ind = chunk_ind % num_threads
         chunked_skymodel_map_sets[set_ind][thread_ind] = [chunk_map]
         
-        
-    # chunked_skymodel_map_sets.extend(point_maps)
-    # chunked_skymodel_map_sets.extend(gauss_maps)
-        
     ##need some extra mapping arrays to be able to grab the SHAPELET component
     ##that matches each basis function
     shape_basis_to_orig_comp_index_map, shape_basis_to_comp_type_map, shape_basis_param_index = create_shape_basis_maps(comp_counter)
     num_shape_dirs = find_num_dirs_per_chunk(comp_counter.total_shape_comps, max_dirs_per_chunk,
                             num_threads)
     
-    # np.save('shape_basis_to_orig_comp_index_map.npy', shape_basis_to_orig_comp_index_map)
-    # np.save('shape_basis_to_comp_type_map.npy', shape_basis_to_comp_type_map)
-    # np.save('shape_basis_param_index.npy', shape_basis_param_index)
-    # print("max_coeffs_per_chunk", max_coeffs_per_chunk)
-        
-    # # for chunk_ind in range(num_coeff_chunks):
-    # #     chunk_map = map_chunk_shapelets(comp_counter,
-    # #                                     shape_basis_to_orig_comp_index_map,
-    # #                                     shape_basis_to_comp_type_map,
-    # #                                     shape_basis_param_index,
-    # #                                     chunk_ind, max_coeffs_per_chunk)
-        
-    # #     chunked_skymodel_maps.append(chunk_map)
-    
+    ##Only do all the shapelet faffing if we actually have shapelets
     if comp_counter.total_shape_basis > 0:
-    
-        ##we split SHAPELET by the basis components (number of coeffs)
-        num_coeff_chunks = int(np.ceil(comp_counter.total_shape_basis / max_coeffs_per_chunk))
-        
         shapelet_chunk_maps = map_chunk_shapelets(comp_counter,
                                             shape_basis_to_orig_comp_index_map,
                                             shape_basis_to_comp_type_map,
@@ -1029,6 +1022,8 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
                                             max_coeffs_per_chunk,
                                             num_shape_dirs)
         
+        ##We will have some unedfined number of chunks, so we want to split
+        ##things as evenly as possible in the available number of threads
         indexed_shape_chunk_sizes = [(i, chunk_map.n_shapes) for i,chunk_map in enumerate(shapelet_chunk_maps)]  # List of (index, value) tuples
         target_volume = num_shape_dirs  # Set the target volume for each bin
 
@@ -1043,42 +1038,94 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
                 binned_shape_chunk_sizes = sorted(binned_shape_chunk_sizes, key=lambda bin: sum(item[1] for item in bin))  # Sort binned_shape_chunk_sizes by their total sum
                 binned_shape_chunk_sizes[0].extend(binned_shape_chunk_sizes[1])  # Merge the two smallest binned_shape_chunk_sizes
                 binned_shape_chunk_sizes.pop(1)  # Remove the now-empty bin
-                
-        # # # Step 3: Extract the values and indices from the result
-        # for bin_idx, bin in enumerate(binned_shape_chunk_sizes):
-        #     print(f"Bin {bin_idx + 1}:")
-        #     for index, value in bin:
-        #         print(f"  Index: {index}, Value: {value}")
 
+
+        new_order = []
         binned_shape_chunks = []            
         for bin_index_size in binned_shape_chunk_sizes:
             shape_chunk_bin = []
             for index, value in bin_index_size:
                 shape_chunk_bin.append(shapelet_chunk_maps[index])
+                new_order.append(index)
             binned_shape_chunks.append(shape_chunk_bin)
             
-        # chunked_skymodel_map_sets.append(binned_shape_chunks)
-        
+        ##Always shove the shapelet chunks into the last set
         chunked_skymodel_map_sets[-1, :] = binned_shape_chunks
         
-        
-    print(chunked_skymodel_map_sets)
-        
-    print(f"After chunking there are {len(chunked_skymodel_map_sets)} sets")
-    
     # for chunk_ind, chunk_set in enumerate(chunked_skymodel_map_sets):
     #     for thread_ind, thread_list in enumerate(chunk_set):
     #         n_p, n_g, n_s, n_c = 0, 0, 0, 0
     #         for chunk in thread_list:
                 
-    #             n_p += chunk.n_points
-    #             n_g += chunk.n_gauss
-    #             n_s += chunk.n_shapes
-    #             n_c += chunk.n_shape_coeffs
+    #         #     n_p += chunk.n_points
+    #         #     n_g += chunk.n_gauss
+    #         #     n_s += chunk.n_shapes
+    #         #     n_c += chunk.n_shape_coeffs
                 
-    #         print(f"Set {chunk_ind} thread {thread_ind} has {n_p} points, {n_g} gauss, {n_s} shape, {n_c} shape coeffs")
+    #         # print(f"Set {chunk_ind} thread {thread_ind} has {n_p} points, {n_g} gauss, {n_s} shape, {n_c} shape coeffs")
+            
+            
+    #             n_p = chunk.n_points
+    #             n_g = chunk.n_gauss
+    #             n_s = chunk.n_shapes
+    #             n_c = chunk.n_shape_coeffs
+                
+    #             print(f"Set {chunk_ind} thread {thread_ind} has {n_p} points, {n_g} gauss, {n_s} shape, {n_c} shape coeffs")
+            
     #             # if chunk.n_shape_coeffs > 0:
     #             #     print(chunk.shape_components.power_shape_orig_inds)
     #     print('---------------------------------------------------------------')
-            
+        
+    # if num_threads == 1:
+    
+    chunked_skymodel_map_sets = reshape_chunked_skymodel_map_sets(chunked_skymodel_map_sets,
+                                                                  num_threads, max_chunks_per_set)
+    
     return chunked_skymodel_map_sets
+
+
+def reshape_chunked_skymodel_map_sets(chunked_skymodel_map_sets : np.ndarray,
+                                      num_threads : int,
+                                      max_chunks_per_set : int = 50) -> np.ndarray:
+    """
+    Reshapes the chunked sky model map sets into a 1D array for easier access
+    and manipulation.
+
+    Parameters
+    ----------
+    chunked_skymodel_map_sets : np.ndarray
+        An array containing information about the chunked sky model.
+    num_threads : int
+        The number of threads used to chunk the sky model.
+
+    Returns
+    -------
+    np.ndarray:
+        A 1D array containing the chunked sky model information.
+    """
+    
+    
+    num_sets, _ = chunked_skymodel_map_sets.shape
+    new_num_sets = int(np.ceil(num_sets*num_threads / max_chunks_per_set))
+    num_chunk_per_thread = int(max_chunks_per_set // num_threads)
+    
+    # print("HIYA", num_sets, new_num_sets, num_chunk_per_thread)
+    
+    new_chunked_skymodel_map_sets = np.empty((new_num_sets, num_threads), dtype=object)
+    
+    for new_set_ind in range(new_num_sets):
+        for thread_id in range(num_threads):
+            new_chunked_skymodel_map_sets[new_set_ind,thread_id] = []
+            
+            lower_ind = new_set_ind * num_chunk_per_thread
+            
+            chunks = chunked_skymodel_map_sets[lower_ind:lower_ind + num_chunk_per_thread, thread_id]
+            
+            for chunk in chunks:
+                new_chunked_skymodel_map_sets[new_set_ind,thread_id].extend(chunk)
+                
+                # if len(chunk) > 1:
+                #     print(chunk)
+                #     print(new_chunked_skymodel_map_sets)
+            
+    return new_chunked_skymodel_map_sets

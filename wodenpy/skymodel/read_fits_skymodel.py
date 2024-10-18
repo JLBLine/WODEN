@@ -16,6 +16,9 @@ from sys import exit
 import argparse
 from astropy.time import Time, TimeDelta
 
+# import mwa_hyperbeam
+# beam = mwa_hyperbeam.FEEBeam()
+
 import os
 ##Are we just making online documentation? If so, don't import everybeam
 ##Installing everybeam is non-trivial, so trying to get readthedocs to install
@@ -1103,6 +1106,8 @@ def calc_everybeam_for_components(ra0 : float, dec0 : float, num_components : in
             para_angles = erfa.hd2pa(has, decs, latitudes[time_ind])
             # cospa = np.cos(para_angles)
             # sinpa = np.sin(para_angles)
+            # azs, els = erfa.hd2ae(has, decs, latitudes[time_ind])
+            # zas = np.pi/2 - els
         
         for station_ind, station_id in enumerate(station_ids):
             for freq_ind, freq in enumerate(all_freqs):
@@ -1133,6 +1138,11 @@ def calc_everybeam_for_components(ra0 : float, dec0 : float, num_components : in
                                         reorder_jones=reorder_jones,
                                         ra=ra, dec=dec,
                                         parallactic_angle=para_angle)
+                    
+                    # delays = [0,2,4,6,0,2,4,6,0,2,4,6,0,2,4,6]
+                    # jones = beam.calc_jones(azs[comp_ind], zas[comp_ind], freq, delays, [1]*16, True,
+                    #                         np.radians(-26.703319405555554), True)
+                    # jones.shape = (2,2)
                     
                     beam_ind = num_freqs*num_components*num_times*station_ind + num_freqs*num_components*time_ind + num_components*freq_ind + comp_ind
                     
@@ -1215,6 +1225,7 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
         
         if beamtype == BeamTypes.EB_MWA.value:
             telescope = load_MWA_telescope(args.beam_ms_path, args.hdf5_beam_path)
+            # telescope = False
         
         if beamtype == BeamTypes.EB_OSKAR.value:
             telescope = load_OSKAR_telescope(args.beam_ms_path)
@@ -1270,6 +1281,7 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                                       all_times, all_freqs)
             
             if beamtype in eb_beams:
+
                 calc_everybeam_for_components(ra0, dec0, chunk_map.n_points,
                                source_array[chunk_ind].point_components,
                                telescope, all_times, all_freqs, station_id=args.station_id,

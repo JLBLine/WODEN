@@ -364,6 +364,8 @@ class Test(BaseChunkTest):
                                         max_num_visibilities, num_baselines,
                                         num_freqs, num_time_steps)
         
+        chunked_skymodel_maps = chunked_skymodel_maps[0,0]
+        
         beamtype = BeamTypes.FEE_BEAM.value
 
         ##TODO if using everybeam, need args to have correct values

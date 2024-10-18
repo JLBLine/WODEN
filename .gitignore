@@ -115,3 +115,9 @@ test_installation/everybeam/create_OSKAR-MWA_ms/MWA_phase1
 test_installation/everybeam/create_OSKAR-MWA_ms/MWA_phase1_flags
 test_installation/everybeam/create_OSKAR-MWA_ms/skymodel.osm
 test_installation/everybeam/create_OSKAR-SKA_ms
+
+
+test_installation/everybeam/everybeam_n3000_band01.ms
+test_installation/everybeam/hyperbeam_n3000_band01.ms
+test_installation/everybeam/check_positions_everybeam_MWA_band01.ms
+test_installation/everybeam/wut_band01.ms

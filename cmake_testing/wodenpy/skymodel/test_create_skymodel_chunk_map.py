@@ -18,6 +18,8 @@ from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map, Skymodel
 
 from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Skymodel_Settings
 
+import binpacking
+
 D2R = np.pi/180.0
 
 ##for now, WODEN has three flux types: power law, curved power law, and list
@@ -55,7 +57,11 @@ class Test(BaseChunkTest):
         ##Run the code we are testing!
         chunked_skymodel_counters = create_skymodel_chunk_map(comp_counter,
                                         max_num_visibilities, num_baselines,
-                                        num_freqs, num_time_steps)
+                                        num_freqs, num_time_steps,
+                                        max_chunks_per_set=1e5)
+        
+        # print("DIS", chunked_skymodel_counters.shape)
+        # print("DIS", len(chunked_skymodel_counters[0,0]), chunked_skymodel_counters[0,0])
         
         comps_per_chunk = int(np.floor(max_num_visibilities / (num_baselines * num_freqs * num_time_steps)))
         
@@ -75,7 +81,8 @@ class Test(BaseChunkTest):
         
         for point_ind in range(num_point_chunks):
             
-            chunk_map = chunked_skymodel_counters[point_ind]
+            # chunk_map = chunked_skymodel_counters[point_ind][0][0]
+            chunk_map = chunked_skymodel_counters[0,0][point_ind]
             
             expec_counter = self.check_pointgauss_chunking(point_ind,
                                             comps_per_chunk,
@@ -87,7 +94,8 @@ class Test(BaseChunkTest):
             
         for gauss_ind in range(num_gauss_chunks):
             
-            chunk_map = chunked_skymodel_counters[num_point_chunks + gauss_ind]
+            # chunk_map = chunked_skymodel_counters[num_point_chunks + gauss_ind][0][0]
+            chunk_map = chunked_skymodel_counters[0,0][num_point_chunks + gauss_ind]
             
             expec_counter = self.check_pointgauss_chunking(gauss_ind,
                                             comps_per_chunk,
@@ -96,17 +104,58 @@ class Test(BaseChunkTest):
                                             CompTypes.GAUSSIAN,
                                             comp_counter, chunk_map,
                                             expec_counter)
+        
+        if num_coeff_chunks > 0:
+            num_shapes_per_comp = []
+                
+            for coeff_ind in range(num_coeff_chunks):
+                chunk_map = 'meh'
+                
+                num_shapes_comp = self.check_shapelet_chunking(coeff_ind, num_coeff_per_shape,
+                                            comps_per_chunk, num_shapes,
+                                            settings,
+                                            comp_counter, chunk_map,
+                                            total_point_comps=NUM_FLUX_TYPES*num_points,
+                                            total_gauss_comps=NUM_FLUX_TYPES*num_gauss,
+                                            do_check=False)
+                num_shapes_per_comp.append(num_shapes_comp)
+                
+            ##We will have some unedfined number of chunks, so we want to split
+            ##things as evenly as possible in the available number of threads
+            indexed_shape_chunk_sizes = [(i, n_shape) for i,n_shape in enumerate(num_shapes_per_comp)]  # List of (index, value) tuples
+            target_volume = comps_per_chunk  # Set the target volume for each bin
+
+            # Step 2: Partition the numbers while keeping track of indices using the `to_constant_volume` function
+            binned_shape_chunk_sizes = binpacking.to_constant_volume(indexed_shape_chunk_sizes, target_volume, weight_pos=1)
             
-        for coeff_ind in range(num_coeff_chunks):
-            
-            chunk_map = chunked_skymodel_counters[num_point_chunks + num_gauss_chunks + coeff_ind]
-            
-            self.check_shapelet_chunking(coeff_ind, num_coeff_per_shape,
-                                         comps_per_chunk, num_shapes,
-                                         settings,
-                                         comp_counter, chunk_map,
-                                         total_point_comps=NUM_FLUX_TYPES*num_points,
-                                         total_gauss_comps=NUM_FLUX_TYPES*num_gauss)
+            # print(len(binned_shape_chunk_sizes), binned_shape_chunk_sizes)
+            num_threads = 1
+            if len(binned_shape_chunk_sizes) > num_threads:
+                while len(binned_shape_chunk_sizes) > num_threads:
+                    # Find the two smallest binned_shape_chunk_sizes and merge them
+                    binned_shape_chunk_sizes = sorted(binned_shape_chunk_sizes, key=lambda bin: sum(item[1] for item in bin))  # Sort binned_shape_chunk_sizes by their total sum
+                    binned_shape_chunk_sizes[0].extend(binned_shape_chunk_sizes[1])  # Merge the two smallest binned_shape_chunk_sizes
+                    binned_shape_chunk_sizes.pop(1)  # Remove the now-empty bin
+
+            shape_comp_chunk_order = []
+
+            for bin_index_size in binned_shape_chunk_sizes:
+                for index, value in bin_index_size:
+                    shape_comp_chunk_order.append(index)
+                    
+            for new_ind, coeff_ind in enumerate(shape_comp_chunk_order):
+                # print(num_coeff_chunks, num_point_chunks, num_gauss_chunks)
+                # print(len(chunked_skymodel_counters[0,0])-num_point_chunks-num_gauss_chunks)
+                
+                # chunk_map = chunked_skymodel_counters[-1][0][coeff_ind]
+                chunk_map = chunked_skymodel_counters[0,0][num_point_chunks + num_gauss_chunks + new_ind]
+                
+                self.check_shapelet_chunking(coeff_ind, num_coeff_per_shape,
+                                            comps_per_chunk, num_shapes,
+                                            settings,
+                                            comp_counter, chunk_map,
+                                            total_point_comps=NUM_FLUX_TYPES*num_points,
+                                            total_gauss_comps=NUM_FLUX_TYPES*num_gauss)
             
     ##Ok now run with many many combinations
     

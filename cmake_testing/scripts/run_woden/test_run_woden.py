@@ -174,6 +174,7 @@ class Test(unittest.TestCase):
         args.append(f"--array_layout={code_dir}/simple_array.txt")
         args.append("--telescope_name=test")
         args.append("--no_precession")
+        args.append("--num_threads=1")
 
         rw.main(args)
         
@@ -203,6 +204,7 @@ class Test(unittest.TestCase):
         args.append("--telescope_name=test")
         args.append("--no_precession")
         args.append("--precision=float")
+        args.append("--num_threads=1")
 
         rw.main(args)
         
@@ -232,6 +234,7 @@ class Test(unittest.TestCase):
         args.append("--telescope_name=test")
         args.append("--no_precession")
         args.append("--do_autos")
+        args.append("--num_threads=1")
 
         rw.main(args)
         

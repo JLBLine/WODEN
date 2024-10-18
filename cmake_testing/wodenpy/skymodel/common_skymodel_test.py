@@ -589,7 +589,8 @@ class BaseChunkTest(unittest.TestCase):
                                 full_comp_counter : Component_Type_Counter,
                                 chunk_map : Skymodel_Chunk_Map,
                                 total_point_comps = 0, 
-                                total_gauss_comps = 0):
+                                total_gauss_comps = 0,
+                                do_check = True):
         """check that we've got the right chunking outcomes after doing the
         chunking
         
@@ -667,21 +668,18 @@ class BaseChunkTest(unittest.TestCase):
             
         expec_n_comp = expec_n_powers + expec_n_curves + expec_n_lists
         
-        components = chunk_map.shape_components
-        
-        
+        expec_num_flux_entries = expec_n_lists*settings.num_list_values
         # # ##check everything is correct  
         
-        self.assertEqual(expec_n_powers, chunk_map.n_shape_powers)
-        self.assertEqual(expec_n_curves, chunk_map.n_shape_curves)
-        self.assertEqual(expec_n_lists, chunk_map.n_shape_lists)
-        
-        self.assertTrue(np.array_equal(expec_power_inds, components.power_orig_inds))
-        self.assertTrue(np.array_equal(expec_curve_inds, components.curve_orig_inds))
-        self.assertTrue(np.array_equal(expec_list_inds, components.list_orig_inds))
-        
-        expec_num_flux_entries = expec_n_lists*settings.num_list_values
-        self.assertEqual(expec_num_flux_entries, components.total_num_flux_entires)
+        if do_check:
+            components = chunk_map.shape_components
+            self.assertEqual(expec_n_powers, chunk_map.n_shape_powers)
+            self.assertEqual(expec_n_curves, chunk_map.n_shape_curves)
+            self.assertEqual(expec_n_lists, chunk_map.n_shape_lists)
+            self.assertTrue(np.array_equal(expec_power_inds, components.power_orig_inds))
+            self.assertTrue(np.array_equal(expec_curve_inds, components.curve_orig_inds))
+            self.assertTrue(np.array_equal(expec_list_inds, components.list_orig_inds))
+            self.assertEqual(expec_num_flux_entries, components.total_num_flux_entires)
         
         if expec_n_powers:
             min_power = expec_power_inds.min()
@@ -701,10 +699,13 @@ class BaseChunkTest(unittest.TestCase):
         expec_lowest_file_num = np.nanmin([min_power, min_curve, min_list])
         # self.assertEqual(expec_lowest_file_num, components.lowest_file_num)
         
-        self.check_polarisation_chunking(full_comp_counter,
+        if do_check:
+            self.check_polarisation_chunking(full_comp_counter,
                                          expec_power_inds, expec_curve_inds,
                                          expec_list_inds, components,
                                          settings)
+            
+        return expec_n_comp
             
         
 class classname(object):

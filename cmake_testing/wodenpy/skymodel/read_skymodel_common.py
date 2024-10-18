@@ -19,7 +19,7 @@ from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, 
 
 import wodenpy.use_libwoden.woden_settings as ws
 from copy import deepcopy
-
+import binpacking
 
 D2R = np.pi/180.0
 # MWA_LATITUDE = -26.7*D2R
@@ -307,7 +307,7 @@ def check_all_sources(expected_chunks, source_catalogue,
             
             found_comps = python_source.shape_components
             expec_comps = expec_chunk.shape_components
-
+            
             # print("shape")
             check_components(found_comps, expec_comps,
                         n_powers, n_curves, n_lists,
@@ -2043,7 +2043,7 @@ def make_expected_chunks(ra_range, dec_range,
     num_gauss_chunks = int(np.ceil((NUM_FLUX_TYPES*num_crop_comp) / comps_per_chunk))
     num_coeff_chunks = int(np.ceil((NUM_FLUX_TYPES*skymodel_settings.num_coeff_per_shape*num_crop_comp) / comps_per_chunk))
     
-    expec_skymodel_chunks = []
+    expec_skymodel_chunks = np.empty(num_point_chunks + num_gauss_chunks + num_coeff_chunks, dtype=Expected_Sky_Chunk)
     
     ##start with the POINTS
     
@@ -2083,7 +2083,8 @@ def make_expected_chunks(ra_range, dec_range,
                             polvalues,
                             fits_skymodel=fits_skymodel)
         
-        expec_skymodel_chunks.append(expec_chunk)
+        # expec_skymodel_chunks.append(expec_chunk)
+        expec_skymodel_chunks[chunk_ind] = expec_chunk
         
     for chunk_ind in range(num_gauss_chunks):
         expec_chunk = populate_pointgauss_chunk(CompTypes.GAUSSIAN, chunk_ind,
@@ -2095,7 +2096,8 @@ def make_expected_chunks(ra_range, dec_range,
                             polvalues,
                             fits_skymodel=fits_skymodel)
         
-        expec_skymodel_chunks.append(expec_chunk)
+        # expec_skymodel_chunks.append(expec_chunk)
+        expec_skymodel_chunks[num_point_chunks + chunk_ind] = expec_chunk
         
     total_shape_basis = skymodel_settings.num_coeff_per_shape*num_crop_comp*NUM_FLUX_TYPES
     
@@ -2151,6 +2153,57 @@ def make_expected_chunks(ra_range, dec_range,
         high_ind = low_ind + num_coeff_per_shape
         shape_basis_values[low_ind:high_ind] = range(low_coeff, low_coeff + num_coeff_per_shape)
         
+    ##Because the crazy threading stuff reorders the shapelet chunks,
+    ##copy the logic that does the reshaping here
+    
+    num_shapes_per_comp = []
+                
+    for coeff_ind in range(num_coeff_chunks):
+        coeff_lower = coeff_ind*comps_per_chunk
+        coeff_higher = (coeff_ind + 1)*comps_per_chunk
+        
+        ##Are there are enough coeffs to fill the chunk?
+        if (total_shape_basis >= coeff_higher):
+            n_shape_coeffs = comps_per_chunk
+            
+        else:
+            n_shape_coeffs = total_shape_basis % comps_per_chunk
+            
+        basis_inds = np.arange(coeff_lower, coeff_lower+n_shape_coeffs)
+        comp_inds = np.array(np.unique(shape_basis_to_comp_ind[basis_inds]), dtype=int)
+
+        power_inds = np.unique(np.where(shape_comp_ind_to_comp_type[comp_inds] == CompTypes.SHAPE_POWER)[0])
+        curve_inds = np.unique(np.where(shape_comp_ind_to_comp_type[comp_inds] == CompTypes.SHAPE_CURVE)[0])
+        list_inds = np.unique(np.where(shape_comp_ind_to_comp_type[comp_inds] == CompTypes.SHAPE_LIST)[0])
+        
+        num_chunk_power = len(power_inds)
+        num_chunk_curve = len(curve_inds)
+        num_chunk_list = len(list_inds)
+        num_shapes_per_comp.append(num_chunk_power + num_chunk_curve + num_chunk_list)
+        
+    if skymodel_settings.num_coeff_per_shape:
+        ##We will have some unedfined number of chunks, so we want to split
+        ##things as evenly as possible in the available number of threads
+        indexed_shape_chunk_sizes = [(i, n_shape) for i,n_shape in enumerate(num_shapes_per_comp)]  # List of (index, value) tuples
+        target_volume = comps_per_chunk  # Set the target volume for each bin
+        # Step 2: Partition the numbers while keeping track of indices using the `to_constant_volume` function
+        binned_shape_chunk_sizes = binpacking.to_constant_volume(indexed_shape_chunk_sizes, target_volume, weight_pos=1)
+        
+        # print(len(binned_shape_chunk_sizes), binned_shape_chunk_sizes)
+        num_threads = 1
+        if len(binned_shape_chunk_sizes) > num_threads:
+            while len(binned_shape_chunk_sizes) > num_threads:
+                # Find the two smallest binned_shape_chunk_sizes and merge them
+                binned_shape_chunk_sizes = sorted(binned_shape_chunk_sizes, key=lambda bin: sum(item[1] for item in bin))  # Sort binned_shape_chunk_sizes by their total sum
+                binned_shape_chunk_sizes[0].extend(binned_shape_chunk_sizes[1])  # Merge the two smallest binned_shape_chunk_sizes
+                binned_shape_chunk_sizes.pop(1)  # Remove the now-empty bin
+
+        shape_comp_chunk_order = []
+
+        for bin_index_size in binned_shape_chunk_sizes:
+            for index, value in bin_index_size:
+                shape_comp_chunk_order.append(index)
+                
     for chunk_ind in range(num_coeff_chunks):
         
         coeff_lower = chunk_ind*comps_per_chunk
@@ -2195,7 +2248,11 @@ def make_expected_chunks(ra_range, dec_range,
                             chunk_basis_values, skymodel_settings,
                             fits_skymodel=fits_skymodel)
         
-        expec_skymodel_chunks.append(expec_chunk)
+        # expec_skymodel_chunks.append(expec_chunk)
+        
+        new_ind = np.argsort(shape_comp_chunk_order)[chunk_ind]
+        expec_skymodel_chunks[num_point_chunks + num_gauss_chunks + new_ind] = expec_chunk
+        # expec_skymodel_chunks[num_point_chunks + num_gauss_chunks + chunk_ind] = expec_chunk
     
     return expec_skymodel_chunks
 

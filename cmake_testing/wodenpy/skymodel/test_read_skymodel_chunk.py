@@ -108,6 +108,7 @@ class Test(BaseChunkTest):
         chunked_skymodel_maps = create_skymodel_chunk_map(comp_counter,
                                         max_num_visibilities, num_baselines,
                                         num_freqs, num_time_steps)
+        chunked_skymodel_maps = chunked_skymodel_maps[0,0]
         
         
         beamtype = BeamTypes.FEE_BEAM.value
@@ -192,6 +193,7 @@ class Test(BaseChunkTest):
         chunked_skymodel_maps = create_skymodel_chunk_map(comp_counter,
                                         max_num_visibilities, num_baselines,
                                         num_freqs, num_time_steps)
+        chunked_skymodel_maps = chunked_skymodel_maps[0,0]
         
         
         beamtype = BeamTypes.FEE_BEAM.value
@@ -270,6 +272,7 @@ class Test(BaseChunkTest):
         chunked_skymodel_maps = create_skymodel_chunk_map(comp_counter,
                                         max_num_visibilities, num_baselines,
                                         num_freqs, num_time_steps)
+        chunked_skymodel_maps = chunked_skymodel_maps[0,0]
         
         
         beamtype = BeamTypes.FEE_BEAM.value
