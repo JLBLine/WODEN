@@ -5,6 +5,8 @@ import os
 from enum import Enum
 import binpacking
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes
+from numpy.typing import NDArray
+from typing import List
     
 NUM_FLUX_TYPES = 3
     
@@ -354,8 +356,27 @@ def increment_flux_type_counters(power_iter : int, curve_iter : int,
 def fill_chunk_map_polarised_info(comp_type : CompTypes,
         chunk_map : Skymodel_Chunk_Map,
         cropped_comp_counter : Component_Type_Counter) -> Skymodel_Chunk_Map:
-    """This should be called within map_chunk_pointgauss or map_chunk_shapelet,
-    as a bunch of things should be filled"""
+    """Fill in all the polarisation information for a given chunk.
+    
+    This should be called within map_chunk_pointgauss or map_chunk_shapelet,
+    as a bunch of things should be filled
+    
+    Parameters
+    -----------
+    comp_type : CompTypes
+        The type of component to be filled in the chunk.
+    chunk_map : Skymodel_Chunk_Map
+        A `Skymodel_Chunk_Map` object that contains mapping information about the components in the chunk.
+    cropped_comp_counter : Component_Type_Counter
+        The counter object that contains the indices of the cropped components.
+    
+    Returns
+    --------
+    chunk_map : Skymodel_Chunk_Map
+        A `Skymodel_Chunk_Map` object that contains the filled-in `Components_Map`.
+    
+    
+    """
     
     if comp_type == CompTypes.POINT:
     
@@ -720,7 +741,7 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
                         shape_basis_to_orig_type_map : np.ndarray,
                         shape_basis_param_index : np.ndarray,
                         coeffs_per_chunk : int,
-                        num_shape_dirs : int = 1):
+                        num_shape_dirs : int = 1e+5):
     """
     Maps the shapelet components in a chunk of the sky model to their corresponding
     indices in the original sky model. This function is used to create a mapping
@@ -746,51 +767,37 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
         The index of the chunk being mapped.
     coeffs_per_chunk : int
         The number of shapelet coefficients in each chunk.
+    num_shape_dirs : int = 1e+5
+        The maximum number of shapelet directions to include in each chunk;
+        useful to limit when calculating primary beams on CPU. By default set
+        to 1e+5 in the assumption the limiting factor should be `coeffs_per_chunk`.
 
     Returns
     --------
     None
     """
     
-    sort_inds = np.argsort(shape_basis_to_orig_comp_index_map)
+    ##We want to create an array of indexes to unique shapelet components,
+    ##in their order of appearance. We'll use this to ensure that only
+    ##a maximum number of shapelet directions are included in each chunk,
+    ##at the same time as ensuring a maximum number of coefficients. Efficient
+    ##chunking for primary beam calculations on CPU is over direction, and
+    ##memory-limiting chunking is over number of coefficients for GPU
+    ##Complicated...
+    shape_basis_to_new_comp_index_map = np.zeros_like(shape_basis_to_orig_comp_index_map)
     
-    # sorted_shape_basis_to_orig_comp_index_map = shape_basis_to_orig_comp_index_map[sort_inds]
-    # sorted_shape_basis_to_orig_type_map = shape_basis_to_orig_type_map[sort_inds]
-    # sorted_shape_basis_param_index = shape_basis_param_index[sort_inds]
-    
-    sorted_shape_basis_to_orig_comp_index_map = shape_basis_to_orig_comp_index_map
-    sorted_shape_basis_to_orig_type_map = shape_basis_to_orig_type_map
-    sorted_shape_basis_param_index = shape_basis_param_index
-    
-    shape_basis_to_new_comp_index_map = np.zeros_like(sorted_shape_basis_to_orig_comp_index_map)
-    
-    # print('YEP', np.unique(shape_basis_to_orig_comp_index_map))
-    
-    # print("OG", shape_basis_to_orig_comp_index_map)
-    
-    unique, unique_index = np.unique(sorted_shape_basis_to_orig_comp_index_map, return_index = True)
-    
-    # print('UNIQUE', unique)
-    # print('UNIQUE INDEX', unique_index, np.sort(unique_index))
-
-    # Get the unique values in order of appearance
-    ordered_unique_values = sorted_shape_basis_to_orig_comp_index_map[np.sort(unique_index)]
-    
-    # print("WTF", ordered_unique_values)
+    unique, unique_index = np.unique(shape_basis_to_orig_comp_index_map, return_index = True)
+    ordered_unique_values = shape_basis_to_orig_comp_index_map[np.sort(unique_index)]
     
     for new_ind, orig_comp_index in enumerate(ordered_unique_values):
-        shape_basis_to_new_comp_index_map[sorted_shape_basis_to_orig_comp_index_map == orig_comp_index] = new_ind
-        
-    # print('YEP', shape_basis_to_new_comp_index_map)
+        shape_basis_to_new_comp_index_map[shape_basis_to_orig_comp_index_map == orig_comp_index] = new_ind
     
     lower_comp_ind = 0
     lower_coeff_ind = 0
     upper_coeff_ind = 0
     chunk_maps = []
     
-    while lower_coeff_ind < len(sorted_shape_basis_to_orig_comp_index_map):
-        # print(f"Is between {lower_comp_ind} and {lower_comp_ind + num_shape_dirs}?")
-        # print(shape_basis_to_new_comp_index_map[lower_coeff_ind:lower_coeff_ind+coeffs_per_chunk])
+    while lower_coeff_ind < len(shape_basis_to_orig_comp_index_map):
         subset_new_comp_index_map = shape_basis_to_new_comp_index_map[lower_coeff_ind:lower_coeff_ind+coeffs_per_chunk]
         new_inds = np.where((subset_new_comp_index_map >= lower_comp_ind) &
                             (subset_new_comp_index_map <= lower_comp_ind + num_shape_dirs))[0]
@@ -800,13 +807,9 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
         
         ##the ranges of comp types being sampled depends on which basis function
         ##coeffs we are sampling, so work out that range from the mapping arrays
-        orig_index_chunk = sorted_shape_basis_to_orig_comp_index_map[lower_coeff_ind:upper_coeff_ind]
-        orig_type_chunk = sorted_shape_basis_to_orig_type_map[lower_coeff_ind:upper_coeff_ind]
-        shape_basis_param_index_chunk = sorted_shape_basis_param_index[lower_coeff_ind:upper_coeff_ind]
-        
-        # print("orig_index_chunk", orig_index_chunk)
-        # print("orig_type_chunk", orig_type_chunk)
-        # print("shape_basis_param_index_chunk", shape_basis_param_index_chunk)
+        orig_index_chunk = shape_basis_to_orig_comp_index_map[lower_coeff_ind:upper_coeff_ind]
+        orig_type_chunk = shape_basis_to_orig_type_map[lower_coeff_ind:upper_coeff_ind]
+        shape_basis_param_index_chunk = shape_basis_param_index[lower_coeff_ind:upper_coeff_ind]
         
         ##cop that for an annoyingly complicated piece of logic
         ##this selects the subset of original component indexes that we want
@@ -853,7 +856,6 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
         ##how many shapelet coeffs we have
         components.total_shape_coeffs = n_shape_coeffs
         
-        
         ##these are the indexes of each included component, within the cropped
         ##sky model itself
         cropped_list_inds = np.where(np.isin(cropped_comp_counter.orig_comp_indexes, list_orig_inds) == True)[0]
@@ -879,6 +881,28 @@ def map_chunk_shapelets(cropped_comp_counter : Component_Type_Counter,
 
 def find_num_dirs_per_chunk(num_directions : int, max_directions_per_chunk : int,
                             num_threads : int) -> int:
+    """
+    Given the number of directions in the sky model `num_directions`,
+    the maximum number of directions per chunk `max_directions_per_chunk`,
+    and the number of threads `num_threads`, this function calculates the
+    number of directions per chunk to evenly distribute the number of directions
+    across the threads. This calculated number must be less than or equal to
+    `max_directions_per_chunk`.
+    
+    Parameters
+    -----------
+    num_directions : int
+        The number of directions in the sky model.
+    max_directions_per_chunk : int
+        The maximum number of directions per chunk.
+    num_threads : int
+        The number of threads.
+        
+    Returns
+    --------
+    num_dirs_per_chunk : int
+        The number of directions per chunk.
+    """
     
     if num_threads == 1:
         return max_directions_per_chunk
@@ -889,8 +913,6 @@ def find_num_dirs_per_chunk(num_directions : int, max_directions_per_chunk : int
     else:
         num_dirs_per_chunk = np.ceil(num_directions / num_threads)
         
-    # print(num_directions, max_directions_per_chunk, num_threads, num_dirs_per_chunk)
-    
     return num_dirs_per_chunk
 
 
@@ -898,15 +920,19 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
                               max_num_visibilities : int, num_baselines : int,
                               num_freqs : int, num_time_steps : int,
                               num_threads : int = 1, max_dirs : int = 0,
-                              max_chunks_per_set : int = 50,
-                              text_file=False) -> list:
+                              max_chunks_per_set : int = 64,
+                              text_file=False) -> NDArray[List[Skymodel_Chunk_Map]]: #type: ignore
                               
     """
     Given all the information in `comp_counter`, make a map of how to split
-    the whole sky model up into manageable chunks to fit in memory. The
-    purpose of this function is to record what to 'malloc' in each
-    `Components_t` and `Source_t` ctype class before we lazy-load all the 
-    values into them directly from the skymodel.
+    the whole sky model up into manageable chunks to fit in memory. As the
+    sky model reading is split across `num_threads`, in parallel, ensure that
+    the chunks are split evenly across the threads. Even distribution across
+    threads only really important when calculating the primary beam on the CPU.
+    
+    Returns an array of shape `(num_sets, num_threads)`, where each element
+    is a list of `Skymodel_Chunk_Map` objects. Each list contains chunk maps
+    that should evenly distribute the work across the threads for each set.
 
     Parameters
     ----------
@@ -914,12 +940,24 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
          object that contains information about the number of components of each type in the sky model.
     max_num_visibilities: int
         The maximum number of visibilities that can be loaded into memory at once.
+        If `max_dirs` isn't set, `max_num_visibilities` is used to calculate `max_dirs`.
     num_baselines: int
-        The number of baselines in the observation.
+        The number of instataneous baselines in the observation.
     num_freqs: int
         The number of frequency channels in the observation.
     num_time_steps: int
         The number of time steps in the observation.
+    num_threads: int
+        The number of threads to use for parallel processing (default 1).
+    max_dirs: int
+        The maximum number of directions to include in each chunk. This should be
+        set if calculating the primary beam on the CPU, to try and balance the length
+        of time spent on CPU and GPU for optimal efficiency (default 0).
+    max_chunks_per_set: int
+        The maximum number of chunks to include in each set. Each set is sent
+        to the GPU for processing, and iterated over. Again, can use this to
+        balance the length of time spent on CPU and GPU for optimal efficiency.
+        (default 64)
     text_file: Boolean
         A boolean flag indicating whether to we are reading in from text file
         or not (default False)
@@ -1084,24 +1122,27 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
     return chunked_skymodel_map_sets
 
 
-def reshape_chunked_skymodel_map_sets(chunked_skymodel_map_sets : np.ndarray,
+def reshape_chunked_skymodel_map_sets(chunked_skymodel_map_sets : NDArray[List[Skymodel_Chunk_Map]],  #type: ignore
                                       num_threads : int,
-                                      max_chunks_per_set : int = 50) -> np.ndarray:
+                                      max_chunks_per_set : int = 64) -> NDArray[List[Skymodel_Chunk_Map]]:  #type: ignore
     """
-    Reshapes the chunked sky model map sets into a 1D array for easier access
-    and manipulation.
+    Reshapes the chunked sky model map sets into a 2D array of shape
+    (num_sets, num_threads). `num_sets` is found by filling the threads in
+    each set, up to the maximum number of chunks per set.
 
     Parameters
     ----------
-    chunked_skymodel_map_sets : np.ndarray
+    chunked_skymodel_map_sets : NDArray[List[Skymodel_Chunk_Map]]
         An array containing information about the chunked sky model.
     num_threads : int
         The number of threads used to chunk the sky model.
+    max_chunks_per_set : int
+        The maximum number of chunks per set. Default is 64.
 
     Returns
     -------
-    np.ndarray:
-        A 1D array containing the chunked sky model information.
+    NDArray[List[Skymodel_Chunk_Map]]:
+        A 2D array of shape (num_sets, num_threads) where each element is a list of `Skymodel_Chunk_Map` objects.
     """
     
     
@@ -1124,8 +1165,4 @@ def reshape_chunked_skymodel_map_sets(chunked_skymodel_map_sets : np.ndarray,
             for chunk in chunks:
                 new_chunked_skymodel_map_sets[new_set_ind,thread_id].extend(chunk)
                 
-                # if len(chunk) > 1:
-                #     print(chunk)
-                #     print(new_chunked_skymodel_map_sets)
-            
     return new_chunked_skymodel_map_sets

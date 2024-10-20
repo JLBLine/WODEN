@@ -27,6 +27,8 @@ read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 
 if read_the_docs_build:
     class EB:
+        """A pretend `everybeam` class so we can build the documentation online
+        without having to install `everybeam`, which is non-trivial"""
         def __init__(self):
             """
             A fake `everybeam` class so we can build the documentation online
@@ -620,6 +622,34 @@ def add_list_flux_info(mod_type : CompTypes, n_lists : int,
                        source_components : Components_Python, main_table : Table = False,
                        comp_orig_inds : np.ndarray = False,
                        list_comp_ind_offset : int = 0):
+    """
+    Given a list of components, and a table containing list flux information,
+    add the list flux information to the components. This is done by matching
+    the component names in the main table with the list table, and then
+    extracting the flux information for each component.
+    
+    Parameters
+    ----------
+    mod_type : CompTypes
+        The component type, e.g. `CompTypes.V_LIST`.
+    n_lists : int
+        The number of list-type components.
+    key_prepend : str
+        The prepend value for the flux columns in the list table e.g. 'V_INT_FLX'.
+    list_table : Table
+        The table containing the list flux information.
+    map_components : Components_Map
+        The Components_Map object containing the mapping between the main table
+        and the list table.
+    source_components : Components_Python
+        The Components_Python object containing the source component information.
+    main_table : Table, optional
+        The main table containing the component information, by default False.
+    comp_orig_inds : np.ndarray, optional
+        The original indexes of the components in the main table, by default False.
+    list_comp_ind_offset : int, optional
+        The offset to apply to the list component indexes, by default 0.
+    """
     
     if mod_type == CompTypes.I_LIST:
         list_comp_inds = source_components.list_comp_inds
@@ -731,13 +761,12 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
                         chunk_map : Skymodel_Chunk_Map,
                         beamtype : int, lsts : np.ndarray, latitudes : np.ndarray,
                         v_table : Table = False, q_table : Table = False,
-                        u_table : Table = False, p_table : Table = False, 
-                        ra0 = False, dec0 = False, telescope = False,
-                        all_times : np.ndarray = False,
-                        all_freqs : np.ndarray = False):
+                        u_table : Table = False, p_table : Table = False):
     """Given the desired components as detailed in the `chunk_map`, add
-    the relevant information from the FITS file `main_table`, `shape_table` objects to the `chunk_source` object. As well as the skymodel information, this function adds either
-    az/za or ha/dec information, depending on the `beamtype`.
+    the relevant information from the FITS file `main_table`, `shape_table`
+    objects to the `chunk_source` object. As well as the skymodel information
+    this function adds either az/za or ha/dec information, depending on the `beamtype`,
+    and polarisation information if it is present.
 
     Parameters
     ----------
@@ -755,8 +784,16 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
         The type of beam used (BeamTypes)
     lsts : np.ndarray
         LSTs for all time steps for this simulation.
-    latitude : float
-        Latitude of the array
+    latitudes : np.ndarray
+        Latitudes for all time steps for this simulation.
+    v_table : Table, optional
+        The Table containing the Stokes V information, by default False.
+    q_table : Table, optional
+        The Table containing the Stokes Q information, by default False.
+    u_table : Table, optional
+        The Table containing the Stokes U information, by default False.
+    p_table : Table, optional
+        The Table containing the linear polarisation information, by default False.
     """
     
     num_time_steps = len(lsts)
@@ -1071,6 +1108,41 @@ def calc_everybeam_for_components(ra0 : float, dec0 : float, num_components : in
                    station_id = np.nan, 
                    lsts : np.ndarray = False, latitudes : float = False,
                    parallactic_rotate : bool = True):
+    """
+    Given a set of components, calculate the Jones matrices for each component
+    at each time and frequency using the EveryBeam `telescope` object.
+    This function is used to calculate the Jones matrices for the components
+    in the sky model, and is run in parallel.
+    
+    Parameters
+    ----------
+    ra0 : float
+        The RA of the pointing centre. (radians)
+    dec0 : float
+        The Dec of the pointing centre. (radians)
+    num_components : int
+        The number of components in the sky model.
+    components : Components_Python
+        The Components_Python object containing the component information.
+    telescope : Telescope
+        The EveryBeam Telescope object.
+    all_times : np.ndarray
+        All times for the simulation.
+    all_freqs : np.ndarray
+        All frequencies for the simulation (Hz)
+    reorder_jones : bool, optional
+        Whether to reorder the Jones matrices (swap EW to NS and vice versa),
+        by default True.
+    station_id : float, optional
+        The station ID to use for the beam calculation. If `np.nan`, calculate
+        a different beam for each station, by default np.nan.
+    lsts : np.ndarray, optional
+        The LSTs for each time step, by default False.
+    latitudes : float, optional
+        The latitude for each time step, by default False.
+    parallactic_rotate : bool, optional
+        Whether to apply parallactic rotation to the beam, by default True.
+    """
     
     ##convert back from ctypes to numpy arrays
     ras = components.ras
@@ -1193,6 +1265,14 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
         Array of LST values for each time step in the sky model.
     latitude : float
         Latitude of the observation site.
+    v_table : Table, optional
+        The Table containing the Stokes V information, by default False.
+    q_table : Table, optional
+        The Table containing the Stokes Q information, by default False.
+    u_table : Table, optional
+        The Table containing the Stokes U information, by default False.
+    p_table : Table, optional
+        The Table containing the linear polarisation information, by default False.
     precision : str, optional
         Precision of the source catalogue (either "float" or "double"), by default "double".
 
@@ -1276,9 +1356,7 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                                       main_table, shape_table,
                                       source_array[chunk_ind], chunk_map,
                                       beamtype, lsts, latitudes,
-                                      v_table, q_table, u_table, p_table,
-                                      ra0, dec0, telescope,
-                                      all_times, all_freqs)
+                                      v_table, q_table, u_table, p_table)
             
             if beamtype in eb_beams:
 
@@ -1292,9 +1370,7 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                                       main_table, shape_table,
                                       source_array[chunk_ind], chunk_map,
                                       beamtype, lsts, latitudes,
-                                      v_table, q_table, u_table, p_table,
-                                      ra0, dec0, telescope,
-                                      all_times, all_freqs)
+                                      v_table, q_table, u_table, p_table)
             if beamtype in eb_beams:
                 calc_everybeam_for_components(ra0, dec0, chunk_map.n_gauss,
                                source_array[chunk_ind].gauss_components,
@@ -1306,9 +1382,7 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                                       main_table, shape_table,
                                       source_array[chunk_ind], chunk_map,
                                       beamtype, lsts, latitudes,
-                                      v_table, q_table, u_table, p_table,
-                                      ra0, dec0, telescope,
-                                      all_times, all_freqs)
+                                      v_table, q_table, u_table, p_table)
             if beamtype in eb_beams:
                 calc_everybeam_for_components(ra0, dec0, chunk_map.n_shapes,
                                source_array[chunk_ind].shape_components,

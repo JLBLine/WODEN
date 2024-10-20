@@ -387,7 +387,6 @@ class Test(BaseChunkTest):
                                                     args.precision)
         
         source_catalogue = create_source_catalogue_from_python_sources(python_sources,
-                                                                       chunked_skymodel_maps,
                                                                        woden_struct_classes,
                                                                        beamtype, precision)
         

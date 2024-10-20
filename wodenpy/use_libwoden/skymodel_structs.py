@@ -509,7 +509,7 @@ def create_source_catalogue_struct(Source_Ctypes : Source_Ctypes): # type: ignor
     class Source_Catalogue(Structure):
         """
         A class structured equivalent to a `source_t` struct, used by 
-        the C and CUDA code in libwoden_float.so
+        the C/GPU code
         
         Attributes
         -----------
@@ -517,7 +517,7 @@ def create_source_catalogue_struct(Source_Ctypes : Source_Ctypes): # type: ignor
             The number of sources in the catalogue
         num_shapelets : int
             The total number of shapelets components in the catalogue
-        sources : POINTER(Source_Float)
+        sources : POINTER(Source_Ctypes)
             A pointer to an array of `Source_Float` objects representing the sources in the catalogue
         """
         
@@ -575,18 +575,19 @@ def setup_components(chunk_map: Skymodel_Chunk_Map,
      - chunked_source.point_components
      - chunked_source.gaussion_components
      - chunked_source.shape_components
-    This setup includes allocating memory.
+    This setup includes allocating ctypes memory/numpy arrays for the components,
+    depending on what type of `chunked_source` is passed in.
 
     Parameters
     ------------
     chunk_map: Skymodel_Chunk_Map
         Object containing information about the chunk of the sky model.
     chunked_source: Union[Source_Ctypes, Source_Python]
-       Object containing the chunked source information.
+        Object containing the chunked source information.
     num_freqs: int
-        representing the number of frequencies.
+        Number of frequencies
     num_times: int
-        representing the number of times.
+        Number of times
     num_beams : int
         Number of beams to be calculated (only used for certain beam types).
         If using one beam for all station/tiles, num_beams=1, otherwise
@@ -937,6 +938,10 @@ def setup_chunked_source(chunked_source : Union[Source_Ctypes, Source_Python], #
 
     Parameters
     ------------
+    chunked_source : Union[Source_Ctypes, Source_Python]
+        Object to contain the chunked source information. If `Source_Python`,
+        all the data will be stored in numpy arrays, if `Source_Ctypes`, the
+        data will be stored in ctypes arrays.
     chunk_map : Skymodel_Chunk_Map
         Object containing information about the chunk of the sky model.
     num_freqs : int
@@ -990,13 +995,39 @@ def setup_chunked_source(chunked_source : Union[Source_Ctypes, Source_Python], #
     return chunked_source
 
 
-def copy_python_components_to_ctypes(python_comps : Components_Python,
-                                     ctypes_comps : Components_Ctypes, # type: ignore
-                                     comp_type : CompTypes, n_powers : int,
-                                     n_curves : int, n_lists : int,
-                                     beamtype : int,
-                                     n_shape_coeffs = 0, precision = 'double'):
+
+def copy_python_components_to_ctypes(python_comps: Components_Python,
+                                     ctypes_comps: Components_Ctypes,  # type: ignore
+                                     comp_type: CompTypes, n_powers: int,
+                                     n_curves: int, n_lists: int,
+                                     beamtype: int,
+                                     precision='double'):
+    """
+    Copies data from `python_comps` to `ctypes_comps` ctypes structures for use
+    in C libraries. Handles memory allocation itself via the
+    np.ndarray.ctypes.data_as() method, combined with the precision as
+    specified by `precision``
     
+    Parameters
+    -----------
+    python_comps : Components_Python
+        The Python components containing the data to be copied.
+    ctypes_comps : Components_Ctypes
+        The ctypes components where the data will be copied to.
+    comp_type : CompTypes
+        The type of components being copied (e.g., POINT, GAUSSIAN, SHAPELET).
+    n_powers : int
+        Number of power components.
+    n_curves : int
+        Number of curve components.
+    n_lists : int
+        Number of list components.
+    beamtype : int
+        The type of beam being used.
+    precision : str, optional
+        Precision of the data ('float' or 'double', default is 'double').
+    """
+
     ##TODO need someway of making these lists global
     eb_beams = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value, BeamTypes.EB_MWA.value]
     azza_beams = [BeamTypes.FEE_BEAM.value, BeamTypes.ANALY_DIPOLE.value,
@@ -1178,11 +1209,34 @@ def copy_python_components_to_ctypes(python_comps : Components_Python,
     ctypes_comps.do_QUV = python_comps.do_QUV
     
 
-def copy_python_source_to_ctypes(python_source : Source_Python,
-                                 ctypes_source : Source_Ctypes, # type: ignore
-                                 beamtype : int, precision : str = 'double'):
-                                
-    """Assumes that memory has already been allocated for the ctypes_source"""
+
+def copy_python_source_to_ctypes(python_source: Source_Python,
+                                 ctypes_source: Source_Ctypes, # type: ignore
+                                 beamtype: int, precision: str = 'double'):
+    """
+    Copies data from a Python source object to a ctypes source object, which
+    can be fed to the C/GPU code. Handles memory allocation itself via the
+    np.ndarray.ctypes.data_as() method, combined with the precision as
+    specified by `precision``
+    
+    Parameters
+    -----------
+    python_source : Source_Python
+        The source object containing data in Python format.
+    ctypes_source : Source_Ctypes
+        The source object to be populated with data in ctypes format.
+    beamtype : int
+        The type of beam to be used.
+    precision : str, optional
+        The precision of the data to be copied, either 'float' or 'double'; 
+        default is 'double'.
+    Notes
+    ------
+    This function transfers various attributes from the Python source object
+    to the ctypes source object, including the number of points, Gaussian
+    components, and shapelet components. It also calls `copy_python_components_to_ctypes`
+    to copy the components of each type if they exist in the Python source object.
+    """
     
     ctypes_source.n_points = python_source.n_points
     ctypes_source.n_point_lists = python_source.n_point_lists
@@ -1227,10 +1281,10 @@ def copy_python_source_to_ctypes(python_source : Source_Python,
                                          ctypes_source.n_shape_curves,
                                          ctypes_source.n_shape_lists,
                                          beamtype,
-                                         n_shape_coeffs=ctypes_source.n_shape_coeffs,
                                          precision=precision)
         
-        
+##TODO we now already have a Components_Python class, so we should use that
+##here. This was only written for testing so todo not a high priority
 class _Components_Python(object):
     """python equivalent to Components_Ctypes_Float or Components_Ctypes_Double"""
     
@@ -1401,7 +1455,8 @@ class _Components_Python(object):
             
         self.do_QUV = components.do_QUV
             
-
+##TODO we now already have a Source_Python class, so we should use that
+##here. This was only written for testing so todo not a high priority
 class _Ctype_Source_Into_Python(object):
     """
     Class to convert a ctype Source_Ctypes model into a pythonic version

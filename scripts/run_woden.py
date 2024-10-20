@@ -66,9 +66,8 @@ def _run_run_woden(run_woden, woden_settings : Woden_Settings,
     run_woden(woden_settings, visibility_set, source_catalogue, array_layout,
                   sbf)
 
-def woden_thread(all_loaded_python_sources : list,
-                 all_loaded_sources_orders : list,
-                 chunked_skymodel_map_set : list, round_num : int,
+def woden_thread(all_loaded_python_sources : List[List[Source_Python]],
+                 all_loaded_sources_orders : List[int], round_num : int,
                  run_woden, woden_settings : Woden_Settings, #type: ignore
                  visibility_set : Visi_Set, #type: ignore
                  array_layout : Array_Layout,
@@ -80,15 +79,16 @@ def woden_thread(all_loaded_python_sources : list,
     
     Parameters
     ----------
-    all_loaded_python_sources : list
+    all_loaded_python_sources : List[List[Source_Python]]
         A list of lists of `Source_Python` to be processed, as ouput by `read_skymodel_thread`,
         where each list of `Source_Python` matches a chunk_map in `chunked_skymodel_map_set`.
-    all_loaded_sources_orders : list
+        Each entry is a list itself as the Shapelet chunking can result in multiple sources
+        per thread per round, as the chunking happens by sky direction as well as number of
+        shapelet coefficients.
+    all_loaded_sources_orders : List[int]
         The order of the sources in `all_loaded_python_sources` as matched to `chunked_skymodel_map_set`;
         orders also output by `read_skymodel_thread` (different threads finish in different times so
         the order of the sources in `all_loaded_python_sources` may not match the order of the chunk_maps)
-    chunked_skymodel_map_set : list
-        The list of `Chunked_Skymodel_Map`s used to create `all_loaded_python_sources`.
     round_num : int
         The round number of the processing
     run_woden : _NamedFuncPointer
@@ -108,21 +108,18 @@ def woden_thread(all_loaded_python_sources : list,
     """
     python_sources = []
     
-    ##grab all the python sources, and reorder them to match the order of
-    #chunked_skymodel_maps
+    ##grab all the python sources, and reorder/flatten them to match the order of
+    ##chunked_skymodel_maps. Not actually sure we need to do this, but if we
+    ##change this order it'll mean we have to change the order of a bunch of
+    ##tests. I don't think it costs much, and saves a bunch of developing time
     ordering = np.argsort(all_loaded_sources_orders)
     for order in ordering:
         sources = all_loaded_python_sources[order]
         for source in sources:
             python_sources.append(source)
     
-    chunked_skymodel_maps = []
-    for map_chunks in chunked_skymodel_map_set:
-        chunked_skymodel_maps.extend(map_chunks)
-        
     ##Create a ctypes Source_Catalogue from the python sources to feed the GPU
     source_catalogue = create_source_catalogue_from_python_sources(python_sources,
-                                                                   chunked_skymodel_maps,
                                                                    woden_struct_classes,
                                                                    beamtype, precision)
     
@@ -157,7 +154,7 @@ def read_skymodel_thread(thread_id : int, num_threads : int,
         The ID of the current thread.
     num_threads : int
         The total number of threads.
-    chunked_skymodel_map_sets : list
+    chunked_skymodel_map_sets : List[Skymodel_Chunk_Map]
         A list of chunked skymodel map sets.
     lsts : np.ndarray
         Local Sidereal Times (LSTs) for all time steps.
@@ -182,7 +179,7 @@ def read_skymodel_thread(thread_id : int, num_threads : int,
         Table containing P polarization data (default is False).
     Returns
     =======
-    tuple
+    tuple : Tuple[List[Source_Python], int]
         A tuple containing the list of `Source_Python`s and the thread number,
         where thead number is `thread_id % num_threads`; this can be used to
         match the order of recovered data to the order of the chunked maps.
@@ -362,7 +359,6 @@ def main(argv=None):
                 gpu_calc = gpu_executor.submit(woden_thread,
                                                all_loaded_python_sources,
                                                all_loaded_sources_orders,
-                                               chunked_skymodel_map_sets[round_num],
                                                round_num,
                                                run_woden, woden_settings,
                                                visi_set_array, array_layout, 

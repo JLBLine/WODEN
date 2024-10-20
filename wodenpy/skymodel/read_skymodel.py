@@ -141,27 +141,55 @@ def get_skymodel_tables(skymodel_path : str) -> tuple:
 woden_struct_classes = Woden_Struct_Classes()
 Source_Catalogue = woden_struct_classes.Source_Catalogue
 
+##It makes most sense to have this function withing `wodenpy.use_libwoden.skymodel_structs`
+##but we have to create Woden_Struct_Classes in a module that loads `skymodel_structs` so
+##we ge a circular import. So we have to put it here.
+
 def create_source_catalogue_from_python_sources(python_sources : List[Source_Python],
-                                                chunked_skymodel_maps : List[Skymodel_Chunk_Map],
                                                 woden_struct_classes : Woden_Struct_Classes,
                                                 beamtype : int, precision : str = 'double') -> Source_Catalogue: # type: ignore
     
+    """
+    Create a Source_Catalogue object from a list of Source_Python objects. This
+    is the main function to convert from the Python source objects to the C
+    source objects. The Source_Catalogue object is a ctypes object that is
+    directly fed into the C/GPU code.
+    
+    Parameters
+    ----------
+    python_sources : list
+        A list of Source_Python objects.
+    woden_struct_classes : Woden_Struct_Classes
+        A Woden_Struct_Classes object that contains the ctypes classes for the
+        Source_Catalogue object.
+    beamtype : int
+        The beam type of the sources. This is used to determine what information
+        needs to be copied from the `Source_Python` objects to the `Source_Catalogue`,
+        e.g. azimuth/altitude, or actual complex beam values etc.
+    precision : str
+        The precision of the source catalogue. Either 'single' or 'double'.
+        Default is 'double'.
+        
+    Returns
+    -------
+    source_catalogue : Source_Catalogue
+        A Source_Catalogue object that contains all of the source information
+        in a format that can be fed directly into the C/GPU code.
+    """
+    
     num_shapelets = 0
 
-    for chunk_map in chunked_skymodel_maps:
-        num_shapelets += chunk_map.n_shapes
+    for python_source in python_sources:
+        num_shapelets += python_source.n_shapes
         
     ##setup the source catalogue, which is going to store all of the information
     ##of each source and be fed straight into C/CUDA
     source_catalogue = setup_source_catalogue(woden_struct_classes.Source_Ctypes,
                                               woden_struct_classes.Source_Catalogue,
-                                              len(chunked_skymodel_maps), num_shapelets,
+                                              len(python_sources), num_shapelets,
                                               precision = precision)
-    
-    
-    for chunk_ind, chunk_map, python_source in zip(range(len(chunked_skymodel_maps)),
-                                                    chunked_skymodel_maps,
-                                                    python_sources):
+        
+    for chunk_ind, python_source in enumerate(python_sources):
     
         copy_python_source_to_ctypes(python_source, source_catalogue.sources[chunk_ind],
                                      beamtype, precision=precision)
