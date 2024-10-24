@@ -7,6 +7,7 @@ EveryBeam Testing and Development
    :maxdepth: 2
    :caption: Click these links to go to notebooks of integration tests
 
+   test_parallactic_rotation.ipynb
    test_MWA.ipynb
    test_OSKAR-MWA.ipynb
    test_LOFAR.ipynb
