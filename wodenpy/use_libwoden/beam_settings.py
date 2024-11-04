@@ -1,15 +1,4 @@
-import ctypes 
-# import importlib_resources
-import numpy as np
-from typing import Union
-from ctypes import POINTER, c_float, c_double, c_int, c_char
-import os
-import sys
 from enum import Enum, auto
-
-from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes, Component_Info
-from wodenpy.skymodel.chunk_sky_model import Skymodel_Chunk_Map
-
 
 class BeamTypes(Enum):
     """
@@ -39,3 +28,28 @@ class BeamTypes(Enum):
     EB_OSKAR = 6
     EB_LOFAR = 7
     EB_MWA = 8
+    
+class BeamGroups:
+    """A class to represent different groups of beam types.
+    Each group contains a list of `BeamTypes` values that are used in WODEN.
+    
+    Attributes
+    ----------
+    eb_beam_values : list
+        All the EveryBeam beam types.
+    azza_beam_values : list
+        All beams that need azimuth/altitude calculated before sending to GPU.
+    hadec_beam_values : list
+        All beams that need Hour Angle/Declination calculated/filled before sending to GPU.
+    off_cardinal_beam_values : list
+        All beams that have off-cardinal dipole alignments, e.g. not N/S or E/W at 0,90 degrees,
+        but rather 45, 135 degrees (e.g. LOFAR).
+    """
+    
+    eb_beam_values = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value, BeamTypes.EB_MWA.value]
+    azza_beam_values = [BeamTypes.MWA_ANALY.value, BeamTypes.FEE_BEAM.value,
+                        BeamTypes.FEE_BEAM_INTERP.value, BeamTypes.ANALY_DIPOLE.value]
+    hadec_beam_values = [BeamTypes.GAUSS_BEAM.value, BeamTypes.MWA_ANALY.value]
+    off_cardinal_beam_values = [BeamTypes.EB_LOFAR.value]
+        
+        

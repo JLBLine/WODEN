@@ -13,7 +13,7 @@ void tearDown (void) {} /* Is run after eVary test, put unit clean-up calls here
 //External CUDA code we're linking in
 extern void test_kern_update_sum_visis(int num_freqs, int num_cross,
           int num_baselines, int num_components, int num_times, int beamtype,
-          int use_twobeams, int num_ants,
+          int use_twobeams, int num_ants, int off_cardinal_dipoles,
           user_precision_complex_t *primay_beam_J00,
           user_precision_complex_t *primay_beam_J01,
           user_precision_complex_t *primay_beam_J10,
@@ -102,11 +102,12 @@ void test_kern_update_sum_visis_VaryGainChooseBeams(int beamtype) {
   user_precision_t *sum_visi_YY_imag = calloc(num_visis, sizeof(user_precision_t));
 
   
+  int off_cardinal_dipoles = 0;
 
   //Run the CUDA code
   test_kern_update_sum_visis(num_freqs, num_visis,
           num_baselines, num_components, num_times, beamtype,
-          use_twobeams, num_ants,
+          use_twobeams, num_ants, off_cardinal_dipoles,
           primay_beam_J00, primay_beam_J01,
           primay_beam_J10, primay_beam_J11,
           visi_components,

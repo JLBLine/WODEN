@@ -360,6 +360,8 @@ typedef struct _woden_settings_t {
   int use_dipamps; /*!< Boolean of whether to use dipole amplitudes, so have an individual beam per tile*/
   double *mwa_dipole_amps; /*!< Bespoke MWA dipole amplitudes for each antenna(tile). Should be 2*num_ants*16 long*/
   int single_everybeam_station; /*!< If using everybeam, add this to say we are only using a single station*/
+  int off_cardinal_dipoles; /*!< Boolean of whether to use off-cardinal dipole equations to
+  apply the beams gains to the Stokes IQUV parameters*/
 
 } woden_settings_t;
 

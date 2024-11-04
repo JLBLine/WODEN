@@ -111,6 +111,14 @@ def get_parser():
             "\t - none (Don't use a primary beam at all)\n"
             "Defaults to --primary_beam=none")
     
+    tel_group.add_argument('--off_cardinal_dipoles', default=False, action='store_true',
+                           help='Add this to force the dipole orientations to be at 45, 135 degrees '
+                                '(aka NE-SW and SE-NW orientated) rather than 0, 90 (a.k.a. N-S, E-W). '
+                                'By default the dipole orientations are set depending on what primary '
+                                'beam has been selected. This changes the mixing matrix that applies '
+                                'the beam gains to the Stokes IQUV values to create instrumental '
+                                'Stokes visibilities. ')
+    
     tel_group.add_argument('--beam_ms_path', default=False,
                            help='When using any `everybeam` primary beam option, '
                                 'must provide a path to the measurement set')
@@ -518,7 +526,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
             freqcent = float(f[0].header['FREQCENT'])*1e+6
             b_width = float(f[0].header['BANDWDTH'])*1e+6
             lowest_channel_freq = freqcent - (b_width/2) - (freq_res/2)
-
+            
             num_time_steps = int(f[0].header['NSCANS'])
 
             delays = np.array(f[0].header['DELAYS'].split(','),dtype=int)
@@ -790,6 +798,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
             
     if args.num_threads == 0:
         args.num_threads = psutil.cpu_count(logical=False)
+        
         
     return args
 

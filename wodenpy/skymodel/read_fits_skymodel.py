@@ -6,7 +6,7 @@ from typing import Union
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, Component_Info, CompTypes
 from wodenpy.skymodel.chunk_sky_model import Skymodel_Chunk_Map, Components_Map
 from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, setup_source_catalogue, _Ctype_Source_Into_Python, Source_Python, Components_Python
-from wodenpy.use_libwoden.beam_settings import BeamTypes
+from wodenpy.use_libwoden.beam_settings import BeamTypes, BeamGroups
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 from astropy.table import Table, Column
 import erfa
@@ -853,7 +853,7 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
         source_components.ras[new_comp_ind] = main_table['RA'][old_comp_ind]*D2R
         source_components.decs[new_comp_ind] = main_table['DEC'][old_comp_ind]*D2R
         
-        if beamtype == BeamTypes.GAUSS_BEAM.value or beamtype == BeamTypes.MWA_ANALY.value:
+        if beamtype in BeamGroups.hadec_beam_values:
                 comp_has = lsts - source_components.ras[new_comp_ind]
                 
                 ##OK these ctype arrays cannot be sliced, so let's increment
@@ -864,9 +864,7 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
                     source_components.beam_decs[hadec_low + time_ind] = source_components.decs[new_comp_ind]
         
         # ##Only some models calculated on the GPU need az/za coords
-        azza_beams = [BeamTypes.FEE_BEAM.value, BeamTypes.ANALY_DIPOLE.value,
-                      BeamTypes.FEE_BEAM_INTERP.value, BeamTypes.MWA_ANALY.value]
-        if beamtype in azza_beams:
+        if beamtype in BeamGroups.azza_beam_values:
             ##Calculate ha, and then azimuth/elevation
             comp_has = lsts - source_components.ras[new_comp_ind]
             comp_azs, comp_els = erfa.hd2ae(comp_has, source_components.decs[new_comp_ind],
@@ -1101,13 +1099,13 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
         
     return
 
-def calc_everybeam_for_components(ra0 : float, dec0 : float, num_components : int,
-                   components : Components_Python, telescope,
-                   all_times : np.ndarray, all_freqs : np.ndarray,
-                   reorder_jones : bool = True,
-                   station_id = np.nan, 
-                   lsts : np.ndarray = False, latitudes : float = False,
-                   parallactic_rotate : bool = True):
+def calc_everybeam_for_components(beam_ra0 : float, beam_dec0 : float, num_components : int,
+                                  components : Components_Python, telescope,
+                                  all_times : np.ndarray, all_freqs : np.ndarray,
+                                  lsts : np.ndarray, latitude : float, longitude : float,
+                                  station_id = np.nan, 
+                                  reorder_jones : bool = False,
+                                  parallactic_rotate : bool = True):
     """
     Given a set of components, calculate the Jones matrices for each component
     at each time and frequency using the EveryBeam `telescope` object.
@@ -1144,11 +1142,8 @@ def calc_everybeam_for_components(ra0 : float, dec0 : float, num_components : in
         Whether to apply parallactic rotation to the beam, by default True.
     """
     
-    ##convert back from ctypes to numpy arrays
     ras = components.ras
     decs = components.decs
-    num_freqs = len(all_freqs)
-    num_times = len(all_times)
 
     ##If station_id is nan, we want to calculate a different beam for each station
     ##other functions should have done the correct amount of memory allocation
@@ -1160,71 +1155,105 @@ def calc_everybeam_for_components(ra0 : float, dec0 : float, num_components : in
     else:
         station_ids = [station_id]
         num_beams = 1
-
-    ##iterate over beams, times, freqs, and directions (comps)
-    for time_ind, time in enumerate(all_times):
         
-        ##If we're using the MWA, we don't need to itrf coords, just use ra,dec
-        if type(telescope) == eb.MWA:
-            phase_itrf = False
-        else:
-            ##ra_dec_to_xyz is super expenside (why is astropy always so inefficient?)
-            ##make sure we only call it the minimum number of times
-            phase_itrf = radec_to_xyz(ra0, dec0, time)
-            dir_itrfs = radec_to_xyz(ras, decs, time)
+    apply_beam_norms = True
+    element_only = False
+    eb_rotate = True
         
-        if parallactic_rotate:
-            has = lsts[time_ind] - ras
-            para_angles = erfa.hd2pa(has, decs, latitudes[time_ind])
-            # cospa = np.cos(para_angles)
-            # sinpa = np.sin(para_angles)
-            # azs, els = erfa.hd2ae(has, decs, latitudes[time_ind])
-            # zas = np.pi/2 - els
+    # all_jones = run_everybeam(ras, decs, beam_ra0, beam_dec0,
+    #                           latitudes, longitude,
+    #                           all_times, all_freqs,
+    #                           telescope,
+    #                           station_ids,
+    #                           apply_beam_norms=apply_beam_norms,
+    #                           reorder_jones=reorder_jones,
+    #                           element_only=element_only,
+    #                           eb_rotate=eb_rotate,
+    #                           parallactic_rotate=parallactic_rotate)
+    
+    all_jones = run_everybeam(ras, decs, beam_ra0, beam_dec0,
+                              latitude, longitude,
+                              all_times, all_freqs,
+                              telescope,
+                              station_ids,
+                              apply_beam_norms=apply_beam_norms,
+                              reorder_jones=reorder_jones,
+                              element_only=element_only,
+                              eb_rotate=eb_rotate,
+                              parallactic_rotate=parallactic_rotate)
+    
+    ##all_jones comes out as shape (num_beams, num_times, num_freqs, num_components, 2, 2)
+    ##WODEN wants this to be flat. I've intentionally made the shape so we can just
+    ##use the flatten call
+    
+    gxs = all_jones[:,:,:,:, 0,0]
+    Dxs = all_jones[:,:,:,:, 0,1]
+    Dys = all_jones[:,:,:,:, 1,0]
+    gys = all_jones[:,:,:,:, 1,1]
+    
+    components.gxs = gxs.flatten()
+    components.Dxs = Dxs.flatten()
+    components.Dys = Dys.flatten()
+    components.gys = gys.flatten()
+    
+    # ##iterate over beams, times, freqs, and directions (comps)
+    # for time_ind, time in enumerate(all_times):
         
-        for station_ind, station_id in enumerate(station_ids):
-            for freq_ind, freq in enumerate(all_freqs):
-                ##The normalisation for the MWA seems to work, and not for
-                ##other everybeams
-                if type(telescope) == eb.MWA:
-                    beam_norms = np.ones(2)
-                else:
-                    beam_norms = get_everybeam_norm(phase_itrf, time, freq, telescope,
-                                                    station_id=station_id)
+    #     ##If we're using the MWA, we don't need to itrf coords, just use ra,dec
+    #     if type(telescope) == eb.MWA:
+    #         phase_itrf = False
+    #     else:
+    #         ##ra_dec_to_xyz is super expenside (why is astropy always so inefficient?)
+    #         ##make sure we only call it the minimum number of times
+    #         phase_itrf = radec_to_xyz(ra0, dec0, time)
+    #         dir_itrfs = radec_to_xyz(ras, decs, time)
+        
+    #     if parallactic_rotate:
+    #         has = lsts[time_ind] - ras
+    #         para_angles = erfa.hd2pa(has, decs, latitudes[time_ind])
+    #         # cospa = np.cos(para_angles)
+    #         # sinpa = np.sin(para_angles)
+    #         # azs, els = erfa.hd2ae(has, decs, latitudes[time_ind])
+    #         # zas = np.pi/2 - els
+        
+    #     for station_ind, station_id in enumerate(station_ids):
+    #         for freq_ind, freq in enumerate(all_freqs):
+    #             ##The normalisation for the MWA seems to work, and not for
+    #             ##other everybeams
+    #             if type(telescope) == eb.MWA:
+    #                 beam_norms = np.ones(2)
+    #             else:
+    #                 beam_norms = get_everybeam_norm(phase_itrf, time, freq, telescope,
+    #                                                 station_id=station_id)
                 
-                for comp_ind, ra, dec in zip(np.arange(num_components), ras, decs):
+    #             for comp_ind, ra, dec in zip(np.arange(num_components), ras, decs):
                     
-                    if type(telescope) == eb.MWA:
-                        dir_itrf = False
-                    else:
-                        dir_itrf = dir_itrfs[comp_ind]
+    #                 if type(telescope) == eb.MWA:
+    #                     dir_itrf = False
+    #                 else:
+    #                     dir_itrf = dir_itrfs[comp_ind]
                     
-                    if parallactic_rotate:
-                        para_angle = para_angles[comp_ind]
-                    else:
-                        para_angle = False
+    #                 if parallactic_rotate:
+    #                     para_angle = para_angles[comp_ind]
+    #                 else:
+    #                     para_angle = False
                     
-                    jones = run_everybeam(dir_itrf, phase_itrf,
-                                        time, freq, telescope,
-                                        station_id=station_id,
-                                        beam_norms=beam_norms,
-                                        reorder_jones=reorder_jones,
-                                        ra=ra, dec=dec,
-                                        parallactic_angle=para_angle)
+    #                 jones = run_everybeam(dir_itrf, phase_itrf,
+    #                                     time, freq, telescope,
+    #                                     station_id=station_id,
+    #                                     beam_norms=beam_norms,
+    #                                     reorder_jones=reorder_jones,
+    #                                     ra=ra, dec=dec,
+    #                                     parallactic_angle=para_angle)
                     
-                    # delays = [0,2,4,6,0,2,4,6,0,2,4,6,0,2,4,6]
-                    # jones = beam.calc_jones(azs[comp_ind], zas[comp_ind], freq, delays, [1]*16, True,
-                    #                         np.radians(-26.703319405555554), True)
-                    # jones.shape = (2,2)
+    #                 # delays = [0,2,4,6,0,2,4,6,0,2,4,6,0,2,4,6]
+    #                 # jones = beam.calc_jones(azs[comp_ind], zas[comp_ind], freq, delays, [1]*16, True,
+    #                 #                         np.radians(-26.703319405555554), True)
+    #                 # jones.shape = (2,2)
                     
-                    beam_ind = num_freqs*num_components*num_times*station_ind + num_freqs*num_components*time_ind + num_components*freq_ind + comp_ind
+    #                 beam_ind = num_freqs*num_components*num_times*station_ind + num_freqs*num_components*time_ind + num_components*freq_ind + comp_ind
                     
-                    components.gxs[beam_ind] = jones[0,0]
-                    components.Dxs[beam_ind] = jones[0,1]
-                    components.Dys[beam_ind] = jones[1,0]
-                    components.gys[beam_ind] = jones[1,1]
-                    
-                    # print(components.gxs[beam_ind], jones[0,0])
-                    
+
                     
 # @profile
 def read_fits_skymodel_chunks(args : argparse.Namespace,
@@ -1263,8 +1292,8 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
         Type of beam used in the sky model.
     lsts : np.ndarray
         Array of LST values for each time step in the sky model.
-    latitude : float
-        Latitude of the observation site.
+    latitudes : np.ndarray
+        Latitude of the observation site for all times (changes very slowly with precession)
     v_table : Table, optional
         The Table containing the Stokes V information, by default False.
     q_table : Table, optional
@@ -1286,14 +1315,20 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
     ##as we load in the sky model, as it happens on the CPU. So need to set
     ##some extra arguments here
     
-    ra0 = np.radians(args.ra0)
-    dec0 = np.radians(args.dec0)
+    beam_ra0 = np.radians(args.ra0)
+    beam_dec0 = np.radians(args.dec0)
     
-    eb_beams = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value, BeamTypes.EB_MWA.value]
+    parallactic_rotate = False
     
-    if beamtype in eb_beams:
-        all_times = []
+    if beamtype in BeamGroups.eb_beam_values:
+        
+        # if beamtype == BeamTypes.EB_MWA.value:
+        #     obs_time = Time("2000-01-01T00:00:00", scale='utc')
+        # else:
         obs_time = Time(args.date, scale='utc')
+        
+        all_times = []
+        
         for time_step in range(args.num_time_steps):
             time_current = obs_time + TimeDelta((time_step + 0.5)*args.time_res, format='sec')
             all_times.append(time_current)
@@ -1305,7 +1340,7 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
         
         if beamtype == BeamTypes.EB_MWA.value:
             telescope = load_MWA_telescope(args.beam_ms_path, args.hdf5_beam_path)
-            # telescope = False
+            parallactic_rotate = True
         
         if beamtype == BeamTypes.EB_OSKAR.value:
             telescope = load_OSKAR_telescope(args.beam_ms_path)
@@ -1336,15 +1371,9 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
     ##struct, and "malloc" the right amount of arrays to store required infor
     for chunk_ind, chunk_map in enumerate(chunked_skymodel_maps):
         
-        # setup_chunked_source(source_catalogue.sources[chunk_ind], chunk_map,
-        #                      num_freqs, num_time_steps, num_beams,
-        #                      beamtype, precision=precision)
-        
         setup_chunked_source(source_array[chunk_ind], chunk_map,
                              num_freqs, num_time_steps, num_beams,
                              beamtype, precision=precision)
-        
-        
         
         ##count up the total number of components across all chunks
         ##annoyingly, beacuse Jack sucks, we split shapelet us by basis 
@@ -1358,12 +1387,14 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                                       beamtype, lsts, latitudes,
                                       v_table, q_table, u_table, p_table)
             
-            if beamtype in eb_beams:
-
-                calc_everybeam_for_components(ra0, dec0, chunk_map.n_points,
+            if beamtype in BeamGroups.eb_beam_values:
+                
+                calc_everybeam_for_components(beam_ra0, beam_dec0, chunk_map.n_points,
                                source_array[chunk_ind].point_components,
-                               telescope, all_times, all_freqs, station_id=args.station_id,
-                               lsts=lsts, latitudes=latitudes, parallactic_rotate=True)
+                               telescope, all_times, all_freqs,
+                               lsts, latitudes, np.radians(args.longitude),
+                               station_id=args.station_id,
+                               parallactic_rotate=parallactic_rotate)
             
         if chunk_map.n_gauss > 0:
             add_fits_info_to_source_catalogue(CompTypes.GAUSSIAN,
@@ -1371,11 +1402,13 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                                       source_array[chunk_ind], chunk_map,
                                       beamtype, lsts, latitudes,
                                       v_table, q_table, u_table, p_table)
-            if beamtype in eb_beams:
-                calc_everybeam_for_components(ra0, dec0, chunk_map.n_gauss,
+            if beamtype in BeamGroups.eb_beam_values:
+                calc_everybeam_for_components(beam_ra0, beam_dec0, chunk_map.n_gauss,
                                source_array[chunk_ind].gauss_components,
-                               telescope, all_times, all_freqs, station_id=args.station_id,
-                               lsts=lsts, latitudes=latitudes, parallactic_rotate=True)
+                               telescope, all_times, all_freqs,
+                               lsts, latitudes, np.radians(args.longitude),
+                               station_id=args.station_id,
+                               parallactic_rotate=parallactic_rotate)
             
         if chunk_map.n_shapes > 0:
             add_fits_info_to_source_catalogue(CompTypes.SHAPELET,
@@ -1383,11 +1416,13 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                                       source_array[chunk_ind], chunk_map,
                                       beamtype, lsts, latitudes,
                                       v_table, q_table, u_table, p_table)
-            if beamtype in eb_beams:
-                calc_everybeam_for_components(ra0, dec0, chunk_map.n_shapes,
+            if beamtype in BeamGroups.eb_beam_values:
+                calc_everybeam_for_components(beam_ra0, beam_dec0, chunk_map.n_shapes,
                                source_array[chunk_ind].shape_components,
-                               telescope, all_times, all_freqs, station_id=args.station_id,
-                               lsts=lsts, latitudes=latitudes, parallactic_rotate=True)
+                               telescope, all_times, all_freqs,
+                               lsts, latitudes, np.radians(args.longitude),
+                               station_id=args.station_id,
+                               parallactic_rotate=parallactic_rotate)
             
     ##TODO some kind of consistency check between the chunk_maps and the
     ##sources in the catalogue - make sure we read in the correct information

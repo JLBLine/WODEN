@@ -9,7 +9,7 @@ import erfa
 
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes, Component_Info
 from wodenpy.skymodel.chunk_sky_model import Skymodel_Chunk_Map
-from wodenpy.use_libwoden.beam_settings import BeamTypes
+from wodenpy.use_libwoden.beam_settings import BeamTypes, BeamGroups
 
 VELC = 299792458.0
 D2R = np.pi / 180.0
@@ -600,10 +600,6 @@ def setup_components(chunk_map: Skymodel_Chunk_Map,
        Either "float" or "double", default "double".
     """
     
-    eb_beams = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value, BeamTypes.EB_MWA.value]
-    need_azza = [BeamTypes.MWA_ANALY.value, BeamTypes.FEE_BEAM.value,
-                 BeamTypes.FEE_BEAM_INTERP.value, BeamTypes.ANALY_DIPOLE.value]
-    
     if comp_type == CompTypes.POINT:
         components = chunked_source.point_components
         n_comps = chunk_map.n_points
@@ -687,15 +683,15 @@ def setup_components(chunk_map: Skymodel_Chunk_Map,
             
         ##----------------------------------------------------------------
         ##now we make space for coordinates that are need for the primary beam
-        if beamtype == BeamTypes.GAUSS_BEAM.value or beamtype == BeamTypes.MWA_ANALY.value:
+        if beamtype in BeamGroups.hadec_beam_values:
             components.beam_has = np.empty(n_comps*num_times, dtype=np.float64)
             components.beam_decs = np.empty(n_comps*num_times, dtype=np.float64)
             
-        if beamtype in need_azza:
+        if beamtype in BeamGroups.azza_beam_values:
             components.azs = np.empty(n_comps*num_times, dtype=np_precision)
             components.zas = np.empty(n_comps*num_times, dtype=np_precision)
             
-        if beamtype in eb_beams:
+        if beamtype in BeamGroups.eb_beam_values:
             components.gxs = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
             components.Dxs = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
             components.Dys = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
@@ -828,19 +824,19 @@ def setup_components(chunk_map: Skymodel_Chunk_Map,
         ##----------------------------------------------------------------
         ##now we make space for coordinates that are need for the primary beam
         
-        if beamtype == BeamTypes.GAUSS_BEAM.value or beamtype == BeamTypes.MWA_ANALY.value:
+        if beamtype in BeamGroups.hadec_beam_values:
             hadec_arr = c_double*(n_comps*num_times)
             components.beam_has = hadec_arr()
             components.beam_decs = hadec_arr()
             
         ##only the NO_BEAM and GAUSS_BEAM options don't need az,za coords
-        if beamtype in need_azza:
+        if beamtype in BeamGroups.azza_beam_values:
             azza_arr = c_user_precision*(n_comps*num_times)
             components.azs = azza_arr()
             components.zas = azza_arr()
             
         
-        if beamtype in eb_beams:
+        if beamtype in BeamGroups.eb_beam_values:
             ##yes, you have to have those brackets around the numbers, otherwise
             ##ctypes makes a 3D array
             complex_num_beams = c_user_precision_complex*(n_comps*num_beams*num_freqs*num_times)
@@ -1028,12 +1024,6 @@ def copy_python_components_to_ctypes(python_comps: Components_Python,
         Precision of the data ('float' or 'double', default is 'double').
     """
 
-    ##TODO need someway of making these lists global
-    eb_beams = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value, BeamTypes.EB_MWA.value]
-    azza_beams = [BeamTypes.FEE_BEAM.value, BeamTypes.ANALY_DIPOLE.value,
-                  BeamTypes.FEE_BEAM_INTERP.value, BeamTypes.MWA_ANALY.value]
-    hadec_beams = [BeamTypes.GAUSS_BEAM.value, BeamTypes.MWA_ANALY.value]
-    
     if precision == 'float':
         c_user_precision = c_float
         c_user_precision_complex = c_float_complex
@@ -1078,18 +1068,18 @@ def copy_python_components_to_ctypes(python_comps: Components_Python,
         ctypes_comps.param_indexes = python_comps.param_indexes.ctypes.data_as(POINTER(c_user_precision))
     
     
-    if beamtype in azza_beams:
+    if beamtype in BeamGroups.azza_beam_values:
         ctypes_comps.azs = python_comps.azs.ctypes.data_as(POINTER(c_user_precision))
         ctypes_comps.zas = python_comps.zas.ctypes.data_as(POINTER(c_user_precision))
         
-    if beamtype in hadec_beams:
+    if beamtype in BeamGroups.hadec_beam_values:
         ctypes_comps.beam_has = python_comps.beam_has.ctypes.data_as(POINTER(c_double))
         ctypes_comps.beam_decs = python_comps.beam_decs.ctypes.data_as(POINTER(c_double))
     
     ctypes_comps.num_primarybeam_values = python_comps.num_primarybeam_values
     ##things to hold the beam gain
     
-    if beamtype in eb_beams:
+    if beamtype in BeamGroups.eb_beam_values:
         num_gains = len(python_comps.gxs)
         
         complex_num_beams = c_user_precision_complex*num_gains

@@ -422,7 +422,8 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                            d_visibility_set->sum_visi_YY_real,
                            d_visibility_set->sum_visi_YY_imag,
                            num_points, num_baselines, num_freqs, num_cross,
-                           num_time_steps, beam_settings->beamtype, POINT);
+                           num_time_steps, beam_settings->beamtype, POINT,
+                           woden_settings->off_cardinal_dipoles);
       if (verbose == 1){
         printf("\tVisi kernel done\n");
       }
@@ -479,7 +480,8 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                            d_visibility_set->sum_visi_YY_real,
                            d_visibility_set->sum_visi_YY_imag,
                            num_gauss, num_baselines, num_freqs, num_cross,
-                           num_time_steps, beam_settings->beamtype, GAUSSIAN);
+                           num_time_steps, beam_settings->beamtype, GAUSSIAN,
+                           woden_settings->off_cardinal_dipoles);
 
       free_d_components(d_chunked_source, GAUSSIAN);
       free_extrapolated_flux_arrays(&d_chunked_source->gauss_components);
@@ -577,7 +579,7 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
             d_sbf,
             num_shapes, num_baselines, num_freqs, num_cross,
             d_chunked_source->n_shape_coeffs, num_time_steps,
-            beam_settings->beamtype);
+            beam_settings->beamtype, woden_settings->off_cardinal_dipoles);
 
       gpuFree(d_v_shapes);
       gpuFree(d_u_shapes);

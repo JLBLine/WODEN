@@ -39,7 +39,7 @@ __device__  gpuUserComplex calc_measurement_equation(user_precision_t *d_us,
   return visi;
 }
 
-__device__ void apply_beam_gains_stokesIQUV(gpuUserComplex g1x, gpuUserComplex D1x,
+__device__ void apply_beam_gains_stokesIQUV_on_cardinal(gpuUserComplex g1x, gpuUserComplex D1x,
           gpuUserComplex D1y, gpuUserComplex g1y,
           gpuUserComplex g2x, gpuUserComplex D2x,
           gpuUserComplex D2y, gpuUserComplex g2y,
@@ -74,17 +74,71 @@ __device__ void apply_beam_gains_stokesIQUV(gpuUserComplex g1x, gpuUserComplex D
   this_XY = (g1x*D2y_conj + D1x*g2y_conj)*visi_I;
   this_XY += (g1x*D2y_conj - D1x*g2y_conj)*visi_Q;
   this_XY += (g1x*g2y_conj + D1x*D2y_conj)*visi_U;
-  this_XY += (make_gpuUserComplex(0.0,1.0)*visi_V)* (g1x*g2y_conj - D1x*D2y_conj);
+  this_XY += (make_gpuUserComplex(0.0,1.0)*visi_V)*(g1x*g2y_conj - D1x*D2y_conj);
 
   this_YX = (D1y*g2x_conj + g1y*D2x_conj)*visi_I;
   this_YX += (D1y*g2x_conj - g1y*D2x_conj)*visi_Q;
   this_YX += (D1y*D2x_conj + g1y*g2x_conj)*visi_U;
-  this_YX += (make_gpuUserComplex(0.0,1.0)*visi_V)* (D1y*D2x_conj - g1y*g2x_conj);
+  this_YX += (make_gpuUserComplex(0.0,1.0)*visi_V)*(D1y*D2x_conj - g1y*g2x_conj);
 
   this_YY = (D1y*D2y_conj + g1y*g2y_conj)*visi_I;
   this_YY += (D1y*D2y_conj - g1y*g2y_conj)*visi_Q;
   this_YY += (D1y*g2y_conj + g1y*D2y_conj)*visi_U;
-  this_YY += (make_gpuUserComplex(0.0,1.0)*visi_V)* (D1y*g2y_conj - g1y*D2y_conj);
+  this_YY += (make_gpuUserComplex(0.0,1.0)*visi_V)*(D1y*g2y_conj - g1y*D2y_conj);
+
+  * visi_XX = this_XX;
+  * visi_XY = this_XY;
+  * visi_YX = this_YX;
+  * visi_YY = this_YY;
+
+}
+
+__device__ void apply_beam_gains_stokesIQUV_off_cardinal(gpuUserComplex g1x, gpuUserComplex D1x,
+          gpuUserComplex D1y, gpuUserComplex g1y,
+          gpuUserComplex g2x, gpuUserComplex D2x,
+          gpuUserComplex D2y, gpuUserComplex g2y,
+          user_precision_t flux_I, user_precision_t flux_Q,
+          user_precision_t flux_U, user_precision_t flux_V,
+          gpuUserComplex visi_component,
+          gpuUserComplex * visi_XX, gpuUserComplex * visi_XY,
+          gpuUserComplex * visi_YX, gpuUserComplex * visi_YY) {
+
+  //Conjugate the second beam gains
+  gpuUserComplex g2x_conj = make_gpuUserComplex(g2x.x,-g2x.y);
+  gpuUserComplex D2x_conj = make_gpuUserComplex(D2x.x,-D2x.y);
+  gpuUserComplex D2y_conj = make_gpuUserComplex(D2y.x,-D2y.y);
+  gpuUserComplex g2y_conj = make_gpuUserComplex(g2y.x,-g2y.y);
+
+  //Create the Stokes visibilities
+  gpuUserComplex visi_I = make_gpuUserComplex(flux_I, 0.0)*visi_component;
+  gpuUserComplex visi_Q = make_gpuUserComplex(flux_Q, 0.0)*visi_component;
+  gpuUserComplex visi_U = make_gpuUserComplex(flux_U, 0.0)*visi_component;
+  gpuUserComplex visi_V = make_gpuUserComplex(flux_V, 0.0)*visi_component;
+
+  gpuUserComplex this_XX;
+  gpuUserComplex this_XY;
+  gpuUserComplex this_YX;
+  gpuUserComplex this_YY;
+
+  this_XX = (g1x*g2x_conj + D1x*D2x_conj)*visi_I;
+  this_XX -= (g1x*D2x_conj + D1x*g2x_conj)*visi_Q;
+  this_XX += (g1x*g2x_conj + D1x*D2x_conj)*visi_U;
+  this_XX += (make_gpuUserComplex(0.0,1.0)*visi_V)*(g1x*D2x_conj - D1x*g2x_conj);
+
+  this_XY = (g1x*D2y_conj + D1x*g2y_conj)*visi_I;
+  this_XY -= (g1x*g2y_conj + D1x*D2y_conj)*visi_Q;
+  this_XY += (g1x*D2y_conj - D1x*g2y_conj)*visi_U;
+  this_XY += (make_gpuUserComplex(0.0,1.0)*visi_V)*(g1x*g2y_conj - D1x*D2y_conj);
+
+  this_YX = (D1y*g2x_conj + g1y*D2x_conj)*visi_I;
+  this_YX -= (D1y*D2x_conj + g1y*g2x_conj)*visi_Q;
+  this_YX += (D1y*g2x_conj - g1y*D2x_conj)*visi_U;
+  this_YX += (make_gpuUserComplex(0.0,1.0)*visi_V)*(D1y*D2x_conj - g1y*g2x_conj);
+
+  this_YY = (D1y*D2y_conj + g1y*g2y_conj)*visi_I;
+  this_YY -= (D1y*g2y_conj + g1y*D2y_conj)*visi_Q;
+  this_YY += (D1y*D2y_conj - g1y*g2y_conj)*visi_U;
+  this_YY += (make_gpuUserComplex(0.0,1.0)*visi_V)*(D1y*g2y_conj - g1y*D2y_conj);
 
   * visi_XX = this_XX;
   * visi_XY = this_XY;
@@ -205,7 +259,7 @@ __device__ void get_beam_gains_multibeams(int iBaseline, int iComponent, int num
 
 } //end __device__ get_beam_gains_multibeams
 
-__device__ void apply_beam_gains_stokesI(gpuUserComplex g1x, gpuUserComplex D1x,
+__device__ void apply_beam_gains_stokesI_on_cardinal(gpuUserComplex g1x, gpuUserComplex D1x,
           gpuUserComplex D1y, gpuUserComplex g1y,
           gpuUserComplex g2x, gpuUserComplex D2x,
           gpuUserComplex D2y, gpuUserComplex g2y,
@@ -240,8 +294,44 @@ __device__ void apply_beam_gains_stokesI(gpuUserComplex g1x, gpuUserComplex D1x,
 
 }
 
-__device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent, int num_freqs,
-    int num_baselines, int num_components, int num_times, int beamtype,
+__device__ void apply_beam_gains_stokesI_off_cardinal(gpuUserComplex g1x, gpuUserComplex D1x,
+          gpuUserComplex D1y, gpuUserComplex g1y,
+          gpuUserComplex g2x, gpuUserComplex D2x,
+          gpuUserComplex D2y, gpuUserComplex g2y,
+          user_precision_t flux_I,
+          gpuUserComplex visi_component,
+          gpuUserComplex * visi_XX, gpuUserComplex * visi_XY,
+          gpuUserComplex * visi_YX, gpuUserComplex * visi_YY) {
+
+  //Conjugate the second beam gains
+  gpuUserComplex g2x_conj = make_gpuUserComplex(g2x.x,-g2x.y);
+  gpuUserComplex D2x_conj = make_gpuUserComplex(D2x.x,-D2x.y);
+  gpuUserComplex D2y_conj = make_gpuUserComplex(D2y.x,-D2y.y);
+  gpuUserComplex g2y_conj = make_gpuUserComplex(g2y.x,-g2y.y);
+
+  //Create the Stokes visibilities
+  gpuUserComplex visi_I = make_gpuUserComplex(flux_I, 0.0)*visi_component;
+
+  gpuUserComplex this_XX;
+  gpuUserComplex this_XY;
+  gpuUserComplex this_YX;
+  gpuUserComplex this_YY;
+
+  this_XX = (g1x*g2x_conj + D1x*D2x_conj)*visi_I;
+  this_XY = (g1x*D2y_conj + D1x*g2y_conj)*visi_I;
+  this_YX = (D1y*g2x_conj + g1y*D2x_conj)*visi_I;
+  this_YY = (D1y*D2y_conj + g1y*g2y_conj)*visi_I;
+
+  * visi_XX = this_XX;
+  * visi_XY = this_XY;
+  * visi_YX = this_YX;
+  * visi_YY = this_YY;
+
+}
+
+__device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent,
+    int num_freqs, int num_baselines, int num_components, int num_times,
+    int beamtype, int off_cardinal_dipoles,
     gpuUserComplex *d_gxs, gpuUserComplex *d_Dxs,
     gpuUserComplex *d_Dys, gpuUserComplex *d_gys,
     int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map, int use_twobeams,
@@ -288,9 +378,15 @@ __device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent, int n
 
     // printf("iComponent IQUV: %d %f %f %f %f\n", iComponent, flux_I, flux_Q, flux_U, flux_V);
 
-    apply_beam_gains_stokesIQUV(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
+    if (off_cardinal_dipoles == 1) {
+      apply_beam_gains_stokesIQUV_off_cardinal(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
                     flux_I, flux_Q, flux_U, flux_V,
                     visi_component, &visi_XX, &visi_XY, &visi_YX, &visi_YY);
+    } else {
+      apply_beam_gains_stokesIQUV_on_cardinal(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
+                    flux_I, flux_Q, flux_U, flux_V,
+                    visi_component, &visi_XX, &visi_XY, &visi_YX, &visi_YY);
+    }
 
     d_sum_visi_XX_real[iBaseline] += visi_XX.x;
     d_sum_visi_XX_imag[iBaseline] += visi_XX.y;
@@ -305,8 +401,9 @@ __device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent, int n
     d_sum_visi_YY_imag[iBaseline] += visi_YY.y;
 }
 
-__device__ void update_sum_visis_stokesI(int iBaseline, int iComponent, int num_freqs,
-    int num_baselines, int num_components, int num_times, int beamtype,
+__device__ void update_sum_visis_stokesI(int iBaseline, int iComponent,
+    int num_freqs, int num_baselines, int num_components, int num_times,
+    int beamtype, int off_cardinal_dipoles,
     gpuUserComplex *d_gxs, gpuUserComplex *d_Dxs,
     gpuUserComplex *d_Dys, gpuUserComplex *d_gys,
     int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map, int use_twobeams,
@@ -347,9 +444,15 @@ __device__ void update_sum_visis_stokesI(int iBaseline, int iComponent, int num_
     gpuUserComplex visi_YX;
     gpuUserComplex visi_YY;
 
-    apply_beam_gains_stokesI(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
-                    flux_I,
-                    visi_component, &visi_XX, &visi_XY, &visi_YX, &visi_YY);
+    if (off_cardinal_dipoles == 1) {
+      apply_beam_gains_stokesI_off_cardinal(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
+                                           flux_I, visi_component,
+                                           &visi_XX, &visi_XY, &visi_YX, &visi_YY);
+    } else {
+      apply_beam_gains_stokesI_on_cardinal(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
+                                           flux_I, visi_component,
+                                           &visi_XX, &visi_XY, &visi_YX, &visi_YY);
+    }
 
     // if (iBaseline == 1912) {
     //   printf("Beam gains: %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f\n", g1x.x, g1x.y, D1x.x, D1x.y, D1y.x, D1y.y, g1y.x, g1y.y);
@@ -1266,7 +1369,8 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
            user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
            int num_components, int num_baselines, int num_freqs, int num_cross,
-           int num_times, e_beamtype beamtype, e_component_type comptype) {
+           int num_times, e_beamtype beamtype, e_component_type comptype,
+           int off_cardinal_dipoles) {
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
@@ -1329,7 +1433,7 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
       if (d_components.do_QUV == 1)
       {
         update_sum_visis_stokesIQUV(iBaseline, iComponent, num_freqs,
-             num_baselines, num_components, num_times, beamtype,
+             num_baselines, num_components, num_times, beamtype, off_cardinal_dipoles,
              d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
              d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
              d_component_beam_gains.d_ant1_to_baseline_map,
@@ -1341,7 +1445,7 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
              d_sum_visi_YY_real, d_sum_visi_YY_imag);
       } else {
         update_sum_visis_stokesI(iBaseline, iComponent, num_freqs,
-             num_baselines, num_components, num_times, beamtype,
+             num_baselines, num_components, num_times, beamtype, off_cardinal_dipoles,
              d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
              d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
              d_component_beam_gains.d_ant1_to_baseline_map,
@@ -1367,13 +1471,13 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
       user_precision_t *d_sbf,
       int num_shapes, int num_baselines, int num_freqs, int num_cross,
-      const int num_coeffs, int num_times, e_beamtype beamtype) {
+      const int num_coeffs, int num_times, e_beamtype beamtype,
+      int off_cardinal_dipoles) {
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
 
   if (iBaseline < num_cross) {
-
     int use_twobeams = d_component_beam_gains.use_twobeams;
 
     user_precision_t shape_flux_I;
@@ -1466,7 +1570,7 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
 
       if (d_components.do_QUV == 1) {
         update_sum_visis_stokesIQUV(iBaseline, iComponent, num_freqs,
-             num_baselines, num_shapes, num_times, beamtype,
+             num_baselines, num_shapes, num_times, beamtype, off_cardinal_dipoles,
              d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
              d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
              d_component_beam_gains.d_ant1_to_baseline_map,
@@ -1479,7 +1583,7 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
              d_sum_visi_YY_real, d_sum_visi_YY_imag);
       } else {
         update_sum_visis_stokesI(iBaseline, iComponent, num_freqs,
-             num_baselines, num_shapes, num_times, beamtype,
+             num_baselines, num_shapes, num_times, beamtype, off_cardinal_dipoles,
              d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
              d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
              d_component_beam_gains.d_ant1_to_baseline_map,
@@ -2171,13 +2275,13 @@ __global__ void kern_calc_autos(components_t d_components,
         user_precision_t flux_U = d_components.extrap_stokesU[extrap_ind];
         user_precision_t flux_V = d_components.extrap_stokesV[extrap_ind];
 
-        apply_beam_gains_stokesIQUV(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
+        apply_beam_gains_stokesIQUV_on_cardinal(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
                                     flux_I, flux_Q, flux_U, flux_V,
                                     visi_component,
                                     &auto_XX, &auto_XY, &auto_YX, &auto_YY);
 
       } else {
-        apply_beam_gains_stokesI(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
+        apply_beam_gains_stokesI_on_cardinal(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
                                  flux_I, visi_component,
                                  &auto_XX, &auto_XY, &auto_YX, &auto_YY);
       }
@@ -2357,7 +2461,7 @@ extern "C" void test_kern_calc_measurement_equation(int num_components,
 
 }
 
-__global__ void kern_apply_beam_gains_stokesIQUV(int num_gains, gpuUserComplex *d_g1xs,
+__global__ void kern_apply_beam_gains_stokesIQUV_on_cardinal(int num_gains, gpuUserComplex *d_g1xs,
           gpuUserComplex *d_D1xs,
           gpuUserComplex *d_D1ys, gpuUserComplex *d_g1ys,
           gpuUserComplex *d_g2xs, gpuUserComplex *d_D2xs,
@@ -2376,7 +2480,7 @@ __global__ void kern_apply_beam_gains_stokesIQUV(int num_gains, gpuUserComplex *
     gpuUserComplex visi_YX;
     gpuUserComplex visi_YY;
 
-    apply_beam_gains_stokesIQUV(d_g1xs[iGain], d_D1xs[iGain],
+    apply_beam_gains_stokesIQUV_on_cardinal(d_g1xs[iGain], d_D1xs[iGain],
              d_D1ys[iGain], d_g1ys[iGain],
              d_g2xs[iGain], d_D2xs[iGain],
              d_D2ys[iGain], d_g2ys[iGain],
@@ -2499,8 +2603,8 @@ extern "C" void test_kern_apply_beam_gains(int num_gains, user_precision_complex
   threads.x = 128;
   grid.x = (int)ceil( (user_precision_t)num_gains / (user_precision_t)threads.x );
 
-  gpuErrorCheckKernel("kern_apply_beam_gains_stokesIQUV",
-                      kern_apply_beam_gains_stokesIQUV, grid, threads,
+  gpuErrorCheckKernel("kern_apply_beam_gains_stokesIQUV_on_cardinal",
+                      kern_apply_beam_gains_stokesIQUV_on_cardinal, grid, threads,
                       num_gains,
                       (gpuUserComplex *)d_g1xs, (gpuUserComplex *)d_D1xs,
                       (gpuUserComplex *)d_D1ys, (gpuUserComplex *)d_g1ys,
@@ -2712,7 +2816,8 @@ extern "C" void test_kern_get_beam_gains(int num_freqs, int num_cross,
 }
 
 __global__ void kern_update_sum_visis_stokesIQUV(int num_freqs,
-     int num_baselines, int num_components, int num_times, int beamtype,
+     int num_baselines, int num_components, int num_times,
+     int beamtype, int off_cardinal_dipoles,
      gpuUserComplex *d_g1xs, gpuUserComplex *d_D1xs,
      gpuUserComplex *d_D1ys, gpuUserComplex *d_g1ys,
      int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map, int use_twobeams,
@@ -2738,7 +2843,7 @@ __global__ void kern_update_sum_visis_stokesIQUV(int num_freqs,
       int flux_ind = num_components*freq_ind + iComponent;
 
       update_sum_visis_stokesIQUV(iBaseline, iComponent, num_freqs,
-             num_baselines, num_components, num_times, beamtype,
+             num_baselines, num_components, num_times, beamtype, off_cardinal_dipoles,
              d_g1xs, d_D1xs,
              d_D1ys, d_g1ys,
              d_ant1_to_baseline_map, d_ant2_to_baseline_map, use_twobeams,
@@ -2756,7 +2861,7 @@ __global__ void kern_update_sum_visis_stokesIQUV(int num_freqs,
 
 extern "C" void test_kern_update_sum_visis(int num_freqs, int num_cross,
           int num_baselines, int num_components, int num_times, int beamtype,
-          int use_twobeams, int num_ants,
+          int use_twobeams, int num_ants, int off_cardinal_dipoles,
           user_precision_complex_t *primay_beam_J00,
           user_precision_complex_t *primay_beam_J01,
           user_precision_complex_t *primay_beam_J10,
@@ -2891,7 +2996,8 @@ extern "C" void test_kern_update_sum_visis(int num_freqs, int num_cross,
 
   gpuErrorCheckKernel("kern_update_sum_visis_stokesIQUV",
                       kern_update_sum_visis_stokesIQUV, grid, threads,
-                      num_freqs, num_baselines, num_components, num_times, beamtype,
+                      num_freqs, num_baselines, num_components, num_times,
+                      beamtype, off_cardinal_dipoles,
                       (gpuUserComplex *)d_gxs, (gpuUserComplex *)d_Dxs,
                       (gpuUserComplex *)d_Dys, (gpuUserComplex *)d_gys,
                       d_ant1_to_baseline_map, d_ant2_to_baseline_map, use_twobeams,
@@ -3176,6 +3282,8 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
           user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
           user_precision_complex_t *Dys, user_precision_complex_t *gys){
 
+  int off_cardinal_dipoles = 0;
+
   int num_components = n_powers + n_curves + n_lists;
 
   user_precision_t *d_us = NULL;
@@ -3419,7 +3527,7 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
                   d_sum_visi_YX_real, d_sum_visi_YX_imag,
                   d_sum_visi_YY_real, d_sum_visi_YY_imag,
                   num_components, num_baselines, num_freqs, num_cross,
-                  num_times, beamtype, comptype);
+                  num_times, beamtype, comptype, off_cardinal_dipoles);
   }
   else if (comptype == SHAPELET) {
     gpuErrorCheckKernel("kern_calc_visi_shapelets",
@@ -3434,7 +3542,7 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
                   d_sum_visi_YY_real, d_sum_visi_YY_imag,
                   d_sbf,  num_components,
                   num_baselines, num_freqs, num_cross,
-                  num_shape_coeffs, num_times, beamtype);
+                  num_shape_coeffs, num_times, beamtype, off_cardinal_dipoles);
   }
 
   ( gpuMemcpy(sum_visi_XX_real, d_sum_visi_XX_real,
