@@ -11,7 +11,7 @@ import numpy.testing as npt
 from astropy.constants import c
 from astropy.wcs import WCS
 import everybeam as eb
-from wodenpy.primary_beam.use_everybeam import load_OSKAR_telescope, load_LOFAR_telescope, get_everybeam_norm, run_everybeam, radec_to_xyz
+from wodenpy.primary_beam.use_everybeam import load_OSKAR_telescope, load_LOFAR_telescope, run_everybeam, radec_to_xyz
 import erfa
 import mwa_hyperbeam
 
@@ -43,7 +43,7 @@ def create_WCS(ra_cent, dec_cent, nside, radec_reso):
 
 
 def plot_jones_on_sky(all_gx, all_Dx, all_Dy, all_gy, wcs, title=False,
-                      show_plot = True):
+                      show_plot = True, ra0=None, dec0=None):
     fig, axs = plt.subplots(4, 4, figsize=(16, 12), layout='constrained', subplot_kw={'projection': wcs})
 
     for row in range(4):
@@ -113,30 +113,45 @@ def plot_everybeam_on_sky(ra0, dec0, observing_time, freq, station_id, telescope
     all_Dy = np.empty(len(ras), dtype=complex)
     all_gy = np.empty(len(ras), dtype=complex)
 
-    dir_itrfs = radec_to_xyz(ras, decs, observing_time)
-    phase_itrf = radec_to_xyz(np.radians(ra0), np.radians(dec0), observing_time)
+    # dir_itrfs = radec_to_xyz(ras, decs, observing_time)
+    # phase_itrf = radec_to_xyz(np.radians(ra0), np.radians(dec0), observing_time)
     
-    norm = get_everybeam_norm(phase_itrf, observing_time, freq, telescope,
-                              station_id=station_id)
+    # norm = get_everybeam_norm(phase_itrf, observing_time, freq, telescope,
+    #                           station_id=station_id)
     
-    ind = 0
-    for dir_itrf in dir_itrfs:
-        response = run_everybeam(dir_itrf, phase_itrf,
-                    observing_time, freq, telescope, station_id=station_id, beam_norms=norm)
+    # ind = 0
+    # for dir_itrf in dir_itrfs:
+    #     response = run_everybeam(dir_itrf, phase_itrf,
+    #                 observing_time, freq, telescope, station_id=station_id,
+    #                 beam_norms=norm)
         
-        all_gx[ind] = response[0,0]
-        all_Dx[ind] = response[0,1]
-        all_Dy[ind] = response[1,0]
-        all_gy[ind] = response[1,1]
+    #     all_gx[ind] = response[0,0]
+    #     all_Dx[ind] = response[0,1]
+    #     all_Dy[ind] = response[1,0]
+    #     all_gy[ind] = response[1,1]
         
-        ind += 1
+    #     ind += 1
         
-    all_gx.shape = (nside, nside)
-    all_Dx.shape = (nside, nside)
-    all_Dy.shape = (nside, nside)
-    all_gy.shape = (nside, nside)
+    # all_gx.shape = (nside, nside)
+    # all_Dx.shape = (nside, nside)
+    # all_Dy.shape = (nside, nside)
+    # all_gy.shape = (nside, nside)
     
-    if show_plot: plot_jones_on_sky(all_gx, all_Dx, all_Dy, all_gy, wcs)
+    # all_jones = run_everybeam(ras, decs,
+    #             np.radians(ra0), np.radians(dec0),
+    #             latitudes, np.radians(long_deg),
+    #             times, freqs,
+    #             telescope,
+    #             station_ids,
+    #             apply_beam_norms=False,
+    #             parallactic_rotate=False)
+    
+    # # all_gx.shape = (nside, nside)
+    # # all_Dx.shape = (nside, nside)
+    # # all_Dy.shape = (nside, nside)
+    # # all_gy.shape = (nside, nside)
+    
+    # if show_plot: plot_jones_on_sky(all_gx, all_Dx, all_Dy, all_gy, wcs)
     
     return all_gx, all_Dx, all_Dy, all_gy, wcs
     
@@ -230,17 +245,24 @@ def read_uvfits(uvfits_name):
     return XX, XY, YX, YY
 
 
-def convert_inst_to_stokes(XX, XY, YX, YY):
+def convert_inst_to_stokes(XX, XY, YX, YY, on_cardinal=True):
     """Converts instrumental polarizations to Stokes parameters"""
     
-    I = 0.5*(XX + YY)
-    Q = 0.5*(XX - YY)
-    U = 0.5*(XY + YX)
-    V = -0.5j*(XY - YX)
+    if on_cardinal:
+        I = 0.5*(XX + YY)
+        Q = 0.5*(XX - YY)
+        U = 0.5*(XY + YX)
+        V = -0.5j*(XY - YX)
+    
+    else:
+        I = 0.5*(XX + YY)
+        Q = -0.5*(XY + YX)
+        U = 0.5*(XX - YY)
+        V = 0.5j*(YX - XY)
     
     return I, Q, U, V
 
-def test_stokes_recovery(pol, beam, atol = 5e-3):
+def test_stokes_recovery(pol, beam, atol = 5e-3, on_cardinal=True):
     
     uvfits_name = f"stokes{pol}_{beam}"
     XX, XY, YX, YY = read_uvfits(f'{uvfits_name}_band01.uvfits')
@@ -248,7 +270,8 @@ def test_stokes_recovery(pol, beam, atol = 5e-3):
     ##pick a random baseline to plot, they should all be the same
     baseline = np.random.randint(0, XX.shape[0])
 
-    recover_I, recover_Q, recover_U, recover_V = convert_inst_to_stokes(XX[baseline], XY[baseline], YX[baseline], YY[baseline])
+    recover_I, recover_Q, recover_U, recover_V = convert_inst_to_stokes(XX[baseline], XY[baseline], YX[baseline], YY[baseline],
+                                                                        on_cardinal=on_cardinal)
     
     ##There are beam leakages so these shouldn't be perfect, but they
     ##should be close enough as we're near beam centre and zenith

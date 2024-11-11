@@ -122,3 +122,5 @@ test_installation/everybeam/hyperbeam_n3000_band01.ms
 test_installation/everybeam/check_positions_everybeam_MWA_band01.ms
 test_installation/everybeam/wut_band01.ms
 test_installation/everybeam/check_positions_everybeam_LOFAR*
+test_installation/everybeam/*.lprof
+test_installation/everybeam/profile_output

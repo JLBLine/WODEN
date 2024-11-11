@@ -27,10 +27,12 @@ from wodenpy.uvfits.wodenpy_uvfits import make_antenna_table, make_baseline_date
 from wodenpy.phase_rotate.remove_phase_track import remove_phase_tracking
 from wodenpy.use_libwoden.shapelets import create_sbf
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
-from wodenpy.skymodel.read_fits_skymodel import read_fits_skymodel_chunks
+from wodenpy.skymodel.read_fits_skymodel import read_fits_skymodel_chunks, calc_everybeam_for_components
 from wodenpy.use_libwoden.skymodel_structs import setup_source_catalogue, Source_Python
-
 import concurrent.futures
+
+from line_profiler import profile, LineProfiler
+from wodenpy.primary_beam.use_everybeam import run_everybeam
 
 ##Constants
 R2D = 180.0 / np.pi
@@ -51,7 +53,6 @@ woden_struct_classes = Woden_Struct_Classes()
 Woden_Settings = woden_struct_classes.Woden_Settings
 Visi_Set = woden_struct_classes.Visi_Set
 Source_Catalogue = woden_struct_classes.Source_Catalogue
-# Source = woden_struct_classes.Source
 
 def _run_run_woden(run_woden, woden_settings : Woden_Settings,
                    visibility_set : Visi_Set, source_catalogue : Source_Catalogue,
@@ -134,7 +135,7 @@ def woden_thread(all_loaded_python_sources : List[List[Source_Python]],
     print(f"Set {round_num} has returned from the GPU after {end-start:.1f} seconds")
     
     return 0
-        
+
 def read_skymodel_thread(thread_id : int, num_threads : int,
                          chunked_skymodel_map_sets: List[Skymodel_Chunk_Map],
                          lsts : np.ndarray, latitudes : np.ndarray,
@@ -177,6 +178,8 @@ def read_skymodel_thread(thread_id : int, num_threads : int,
         Table containing U polarization data (default is False).
     p_table : Table, optional
         Table containing P polarization data (default is False).
+    profile : bool, optional
+        Whether to profile the function (default is False).
     Returns
     =======
     tuple : Tuple[List[Source_Python], int]
@@ -205,6 +208,16 @@ def read_skymodel_thread(thread_id : int, num_threads : int,
         print(f"Thread {thread_id} has no work to do")
         return [], thread_num
     
+    
+    if args.profile:
+        profiler = LineProfiler()
+        ##Add whatever functions that are called in `read_fits_skymodel_chunks`
+        ##here to profile them
+        profiler.add_function(read_fits_skymodel_chunks)
+        profiler.add_function(calc_everybeam_for_components)
+        profiler.add_function(run_everybeam)
+        profiler.enable()
+    
     python_sources = read_fits_skymodel_chunks(args, main_table, shape_table,
                               chunk_maps,
                               args.num_freq_channels, args.num_time_steps,
@@ -218,9 +231,15 @@ def read_skymodel_thread(thread_id : int, num_threads : int,
     
     print(f"Finshed thread {thread_id} in {end-start:.1f} seconds")
     
+    if args.profile:
+        profiler.disable()
+        profile_filename = f"line_profile_{os.getpid()}.lprof"
+        print("Dumping profile to", profile_filename)
+        profiler.dump_stats(profile_filename)
+    
     return python_sources, thread_num
 
-
+@profile
 def main(argv=None):
     """Runs the WODEN simulator, given command line inputs. Does fancy things
     like reading in the sky model and running the GPU code in parallel; the
