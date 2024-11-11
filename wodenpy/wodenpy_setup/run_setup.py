@@ -220,6 +220,9 @@ def get_parser():
     sim_group.add_argument('--remove_phase_tracking', default=False, action='store_true',
         help='By adding this flag, remove the phase tracking of the '
              'visibilities - use this to feed uvfits into the RTS')
+    sim_group.add_argument('--profile', default=False, action='store_true',
+        help='By adding this flag, profile the WODEN code using line_profiler '
+             'Must also run the code via `LINE_PROFILE=1 run_woden.py`')
 
 
     ##Add a number of hidden arguments. This means we can add attributes to
@@ -541,6 +544,14 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
                 args.gauss_dec_point = float(f[0].header['DEC'])
 
             f.close()
+            
+    if args.primary_beam == 'none' and args.beam_ms_path:
+        if not os.path.isdir(args.beam_ms_path):
+            exit('Could not open measurement set specified by user as:\n'
+                 '\t--beam_ms_path={:s}.\n'
+                 'Cannot get required observation settings, exiting now'.format(args.beam_ms_path))
+            
+        array_layout = "from_ms"
             
     eb_args = ['everybeam_OSKAR', 'everybeam_LOFAR', 'everybeam_MWA']
             
