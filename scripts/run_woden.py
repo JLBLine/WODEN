@@ -315,13 +315,14 @@ def main(argv=None):
                                         woden_settings.latitude,
                                         comp_counter,
                                         crop_by_component=crop_by_component)
-    # comp_counter.print_info()
+    max_chunks_per_set=args.num_threads
     
     chunked_skymodel_map_sets = create_skymodel_chunk_map(comp_counter,
                                                       args.chunking_size, woden_settings.num_baselines,
                                                       args.num_freq_channels,
                                                       args.num_time_steps,
                                                       num_threads=args.num_threads,
+                                                      max_chunks_per_set=max_chunks_per_set,
                                                       max_dirs=args.max_sky_directions)
     
     if args.dry_run:

@@ -124,3 +124,8 @@ test_installation/everybeam/wut_band01.ms
 test_installation/everybeam/check_positions_everybeam_LOFAR*
 test_installation/everybeam/*.lprof
 test_installation/everybeam/profile_output
+
+
+examples/LOFAR_LoTSS/*.fits
+examples/LOFAR_LoTSS/*.ms
+examples/LOFAR_LoTSS/*.sh
