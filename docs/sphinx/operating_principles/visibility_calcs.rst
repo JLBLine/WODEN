@@ -1,6 +1,8 @@
 .. _`Thompson, Moran, & Swenson 2017`: https://link.springer.com/book/10.1007/978-3-319-44431-4
 .. _`Line et al. 2020`: https://doi.org/10.1017/pasa.2020.18
 
+.. _visibility calculations:
+
 Visibility Calculations
 ========================
 
@@ -34,7 +36,13 @@ Stokes parameters :math:`\mathcal{S}_I, \mathcal{S}_Q, \mathcal{S}_U, \mathcal{S
 
 Apply Linear Stokes Polarisations and the Primary Beam
 ---------------------------------------------------------
-``WODEN`` simulates dual-linear polarisation antennas, with each antenna/station having it's own primary beam shape. I can define the response of a dual polarisation antenna to direction :math:`l,m` as
+``WODEN`` simulates dual-linear polarisation antennas, with each antenna/station having it's own primary beam shape. Typically, these dipoles are aligned north-south and east-west, 0/90 degrees relative to north. I call these "on-cardinal" dipoles. However, some instruments have dipoles that are aligned 45/135 relative to north. I call these "off-cardinal" dipoles. The relative contributions of the Stokes I,Q,U,V parameters to the measured visibilities are different, and therefore are calculated differently internally to ``WODEN``. They are detailed below.
+
+
+On-cardinal dipoles
+~~~~~~~~~~~~~~~~~~~~
+
+ I can define the response of a dual polarisation antenna to direction :math:`l,m` as
 
 .. math::
    \mathbf{J}(l,m) =
@@ -102,6 +110,99 @@ where :math:`*` denotes a complex conjugate, and :math:`\otimes` an outer produc
    \end{eqnarray*}
 
 For each baseline, frequency, and time step, ``WODEN`` calculates all four linear polarisations as defined above for all directions :math:`l_j,m_j` in the sky model, and then sums over :math:`j`, to produce four full-sky linear Stokes polarisation visibilities per baseline/frequency/time.
+
+As an aside, if we set the gains to 1 and leakages to zero, we see that
+
+.. math::
+   \begin{eqnarray*}
+   V_{XX} = \mathrm{V}_{I} + \mathrm{V}_{Q} \\
+   V_{XY} = \mathrm{V}_{U} + i\mathrm{V}_{V} \\
+   V_{YX} = \mathrm{V}_{U} - i\mathrm{V}_{V} \\
+   V_{YY} = \mathrm{V}_{I} - \mathrm{V}_{Q},
+   \end{eqnarray*}
+
+meaning to recover the Stokes parameters, imaged visibilities have been beam corrected, we can recover the Stokes parameters as
+
+.. math::
+   \begin{eqnarray*}
+   \mathrm{V}_{I} = \dfrac{V_{XX} + V_{YY}}{2} \\
+   \mathrm{V}_{Q} = \dfrac{V_{XX} - V_{YY}}{2} \\
+   \mathrm{V}_{U} = \dfrac{V_{XY} + V_{YX}}{2} \\
+   \mathrm{V}_{V} = \dfrac{V_{XY} - V_{YX}}{2i}.
+   \end{eqnarray*}
+
+Off-cardinal dipoles
+~~~~~~~~~~~~~~~~~~~~~
+Similarly to on-cardinal dipoles, I can define the Jones matrix as
+
+.. math::
+   \mathbf{J}(l,m) =
+   \begin{bmatrix}
+   g_p(l,m) & D_p(l,m) \\
+   D_q(l,m) & g_q(l,m)
+   \end{bmatrix},
+
+where :math:`g` are gain terms, :math:`D` are leakage terms, :math:`p` refers to a 45 degree aligned antenna, and :math:`q` a 135 degree aligned antenna. As noted in Table 4.1 of `Thompson, Moran, & Swenson 2017`_, the combinations of Stokes IQUV parameters measured by each instrumental polarisation are different as compared to 0/90 deg dipoles. This means we need a different mixing matrix:
+
+.. math::
+   \begin{bmatrix}
+   V_{12\,PP}(l,m) \\
+   V_{12\,PQ}(l,m) \\
+   V_{12\,QP}(l,m) \\
+   V_{12\,QQ}(l,m)
+   \end{bmatrix} =
+   \mathbf{J}_1(l,m) \otimes \mathbf{J}_2^*(l,m)
+   \begin{bmatrix}
+   1 & 0 & 1 & 0 \\
+   0 & -1 & 0 & i \\
+   0 & -1 & 0 & -i \\
+   1 & 0 & -1 & 0 \\
+   \end{bmatrix}
+   \begin{bmatrix}
+   V_{12\,I}(l,m) \\
+   V_{12\,Q}(l,m) \\
+   V_{12\,U}(l,m) \\
+   V_{12\,V}(l,m)
+   \end{bmatrix},
+
+where :math:`*` denotes a complex conjugate, and :math:`\otimes` an outer product. Explicitly, each visibility is
+
+.. math::
+   \begin{eqnarray*}
+   \mathrm{V}_{12\,PP} = (g_{1p} g_{2p}^* + D_{1p} D_{2p}^*)\mathrm{V}^{I}_{12} - (g_{1p} D_{2p}^* + D_{1p} g_{2p}^*)\mathrm{V}^{Q}_{12} \\+ (g_{1p} g_{2p}^* - D_{1p} D_{2p}^*)\mathrm{U}^{I}_{12} + i(g_{1p} D_{2p}^* - D_{1p} g_{2p}^*)\mathrm{V}^{I}_{12}
+   \end{eqnarray*}
+.. math::
+   \begin{eqnarray*}
+   \mathrm{V}_{12\,PQ} = (g_{1p} D_{2q}^* + D_{1p} g_{2q}^*)\mathrm{V}^{I}_{12} - (g_{1p} g_{2q}^* + D_{1p} D_{2q}^*)\mathrm{V}^{Q}_{12} \\+ (g_{1p} D_{2q}^* - D_{1p} g_{2q}^*)\mathrm{U}^{I}_{12} + i(g_{1p} g_{2q}^* -D_{1p} D_{2q}^*)\mathrm{V}^{I}_{12}
+   \end{eqnarray*}
+.. math::
+   \begin{eqnarray*}
+   \mathrm{V}_{12\,QP} = (D_{1q} g_{2p}^* + g_{1q} D_{2p}^*)\mathrm{V}^{I}_{12} - (D_{1q} D_{2p}^* + g_{1q} g_{2p}^*)\mathrm{V}^{Q}_{12} \\+ (D_{1q} g_{2p}^* - g_{1q} D_{2p}^*)\mathrm{U}^{I}_{12} + i(D_{1q} D_{2p}^* -g_{1q} g_{2p}^*)\mathrm{V}^{I}_{12} 
+   \end{eqnarray*}
+.. math::
+   \begin{eqnarray*}
+   \mathrm{V}_{12\,QQ} = (D_{1q} D_{2q}^* + g_{1q} g_{2q}^*)\mathrm{V}^{I}_{12}  - (D_{1q} g_{2q}^* + g_{1q} D_{2q}^*)\mathrm{V}^{Q}_{12}  \\+ (D_{1q} D_{2q}^* - g_{1q} g_{2q}^*)\mathrm{U}^{I}_{12} + i(D_{1q} g_{2q}^* -g_{1q} D_{2q}^*)\mathrm{V}^{I}_{12} 
+   \end{eqnarray*}
+
+Internally to the ``WODEN`` code, everything is labelled as XX, XY, YX, YY, but the above equations are used to calculate the visibilities. Again, if we ignore the beam, we see that
+
+.. math::
+   \begin{eqnarray*}
+   \mathrm{V}_{QQ} = \mathrm{V}_{I} + \mathrm{V}_{U} \\
+   \mathrm{V}_{PQ} = -\mathrm{V}_{Q} + i\mathrm{V}_{V} \\
+   \mathrm{V}_{QP} = -\mathrm{V}_{Q} - i\mathrm{V}_{V} \\
+   \mathrm{V}_{QQ} = \mathrm{V}_{I} - \mathrm{V}_{U}
+   \end{eqnarray*}
+
+Rearranging this we see to recover Stokes IQUV visibilities, we obviously need a different set of equations compared to 0/90 deg dipoles. These are
+
+.. math::
+   \begin{eqnarray*}
+   \mathrm{V}_{I} = \frac{\mathrm{V}_{PP} + \mathrm{V}_{QQ}}{2} \\
+   \mathrm{V}_{Q} = -\frac{\mathrm{V}_{PQ} + \mathrm{V}_{QP}}{2} \\
+   \mathrm{V}_{U} = \frac{\mathrm{V}_{PP} - \mathrm{V}_{QQ}}{2} \\
+   \mathrm{V}_{V} = \frac{\mathrm{V}_{QP} - \mathrm{V}_{PQ}}{2i}
+   \end{eqnarray*}
 
 
 Gaussian and Shapelet sources

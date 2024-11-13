@@ -240,15 +240,17 @@ def run_everybeam(ras : np.ndarray, decs : np.ndarray,
     
     all_output_jones = np.zeros((num_stations, num_times, num_freqs, num_coords, 2, 2), dtype=np.complex128)*np.nan
     
+    non_itrf_beams = [eb.MWA, eb.MWALocal]
+    
     if parallactic_rotate:
-        if type(telescope) != eb.MWA or type(telescope) != eb.MWALocal:
+        if type(telescope) not in non_itrf_beams:
             coords = SkyCoord(ras*u.rad, decs*u.rad, frame='icrs')
             location = EarthLocation(lat=current_latitude*u.rad,
                                     lon=current_longitude*u.rad)
     
     for time_ind, time in enumerate(times):
         
-        if type(telescope) == eb.MWA or type(telescope) == eb.MWALocal:
+        if type(telescope) in non_itrf_beams:
             comp_has = j2000_lsts[time_ind] - ras
             azs, els = erfa.hd2ae(comp_has, decs, j2000_latitudes[time_ind])
             zas = np.pi/2 - els
@@ -259,14 +261,15 @@ def run_everybeam(ras : np.ndarray, decs : np.ndarray,
                                                 j2000_latitudes[time_ind])
                 beam_za0 = np.pi/2 - beam_el0
             
-        else:
+        if type(telescope) not in non_itrf_beams:
             phase_itrf = radec_to_xyz(beam_ra0, beam_dec0, time)
             dir_itrfs = radec_to_xyz(ras, decs, time)
             
             if parallactic_rotate:
+                altaz_frame = AltAz(obstime=time, location=location)
                 ncp_t = eb_local_xyz_from_radec(0, np.radians(90), altaz_frame)
                 dir_local = eb_local_xyz_from_radec(ras, decs, altaz_frame)
-                altaz_frame = AltAz(obstime=time, location=location)
+                
         
         time_mjd_secs = time.mjd*3600*24
         
@@ -276,7 +279,7 @@ def run_everybeam(ras : np.ndarray, decs : np.ndarray,
             
             rot_matrix = np.empty((num_coords, 2,2))
             
-            if type(telescope) == eb.MWA or type(telescope) == eb.MWALocal:
+            if type(telescope) in non_itrf_beams:
                 rot_matrix[:,0,0] = np.sin(-para_angles)
                 rot_matrix[:,0,1] = -np.cos(-para_angles)
                 rot_matrix[:,1,0] = -np.cos(-para_angles)
@@ -302,7 +305,7 @@ def run_everybeam(ras : np.ndarray, decs : np.ndarray,
                         norm_jones = telescope.station_response(time_mjd_secs, station_id, freq,
                                                                 beam_az0, beam_za0)
                         
-                    if type(telescope) == eb.MWA or type(telescope) == eb.MWALocal:
+                    if type(telescope) in non_itrf_beams:
                         if parallactic_rotate:
                             ha0 = j2000_lsts[time_ind] - beam_ra0
                             para_angles = erfa.hd2pa(ha0, beam_dec0, j2000_latitudes[time_ind])
@@ -336,7 +339,6 @@ def run_everybeam(ras : np.ndarray, decs : np.ndarray,
                     
                     if type(telescope) == eb.MWA:
                             ##Get the response
-                            print("WE BE DOING THE THINGS")
                             response = telescope.station_response(time_mjd_secs, station_id, freq,
                                                                   ra, dec)
                     elif type(telescope) == eb.MWALocal:

@@ -1158,18 +1158,24 @@ def calc_everybeam_for_components(beam_ra0 : float, beam_dec0 : float, num_compo
         parallactic_rotate = True
         eb_rotate = False
         reorder_jones = True
-    
-    elif type(telescope) == eb.OSKAR:
-        apply_beam_norms = False
-        parallactic_rotate = True
-        eb_rotate = False
-        reorder_jones = False
         
-    elif type(telescope) == eb.LOFAR:
+    else:
         apply_beam_norms = True
         parallactic_rotate = False
         eb_rotate = True
         reorder_jones = False
+    
+    # elif type(telescope) == eb.OSKAR:
+    #     apply_beam_norms = True
+    #     parallactic_rotate = True
+    #     eb_rotate = False
+    #     reorder_jones = False
+        
+    # elif type(telescope) == eb.LOFAR:
+    #     apply_beam_norms = True
+    #     parallactic_rotate = False
+    #     eb_rotate = True
+    #     reorder_jones = False
     
     all_jones = run_everybeam(ras, decs, beam_ra0, beam_dec0,
                               j2000_latitudes, j2000_lsts,

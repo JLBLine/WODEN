@@ -1,5 +1,7 @@
 .. _everybeam insallation page: https://everybeam.readthedocs.io/en/latest/build-instructions.html
 
+.. _`EveryBeam testing`:
+
 EveryBeam Testing and Development
 ======================================
 
@@ -11,8 +13,9 @@ EveryBeam Testing and Development
    test_MWA.ipynb
    test_LOFAR_LBA.ipynb
    test_LOFAR_HBA.ipynb
-   .. test_OSKAR_SKA.ipynb
-   .. test_OSKAR_MWA.ipynb
+   test_OSKAR_MWA.ipynb
+   test_OSKAR_SKA.ipynb
+   
 
 
 Installing EveryBeam
