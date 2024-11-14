@@ -12,6 +12,7 @@
 .. _SHAMFI: https://github.com/JLBLine/SHAMFI
 .. _Tingay et al. 2013: https://doi.org/10.1017/pasa.2012.007
 .. _EveryBeam: https://everybeam.readthedocs.io/en/latest/index.html
+.. _Line et al. 2022: https://joss.theoj.org/papers/10.21105/joss.03676
 
 The WODEN visibility simulator
 =================================
@@ -20,10 +21,12 @@ The WODEN visibility simulator
 
 ``WODEN`` has been written with Stokes polarisations in mind. A fully Stokes IQUV model is propagated through the polarised instrumental response (depending on which primary beam you select), and output into Stokes `XX,XY,YX,YY` polarisations. See :ref:`sky model formats` and :ref:`visibility calculations` for more information.
 
+If you use ``WODEN`` in your research, please cite the JOSS paper `Line et al. 2022`_.
+
 .. note:: From version 2.4 onwards, efforts have been made to incorporate `EveryBeam`_ primary beam models into `WODEN`. The `EveryBeam`_ library allows for multiple primary beam models, using a measurement set as an input. It is CPU-only code, so we sacrifice speed for flexibility in beam models. Efforts to call `EveryBeam`_ more efficiently, and to make a CPU-only version of `WODEN` are underway. See :ref:`EveryBeam testing` for more information.
 
-Documentation
------------------
+.. Documentation
+.. -----------------
 
 .. toctree::
    :maxdepth: 2

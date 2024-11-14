@@ -5,29 +5,35 @@ import astropy.units as u
 import argparse
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 import erfa
-from typing import Union
+from typing import Union, Tuple
 import concurrent.futures
 from line_profiler import profile
 import os
+import astropy
 ##Are we just making online documentation? If so, don't import everybeam
 ##Installing everybeam is non-trivial, so trying to get readthedocs to install
 ##it is a waste of time
 read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 
+class EB_fake:
+    """
+        A fake `everybeam` class so we can build the documentation online
+        in ReadTheDocs without installing `everybeam`, which is non-trivial
+    """
+    def __init__(self):
+        """
+        Just set everything that is ever used to None
+        """
+        self.OSKAR = None
+        self.LOFAR = None
+        self.MWA = None
+        self.MWALocal = None
+        self.load_telescope = None
+        self.Telescope = None
+
 if read_the_docs_build:
-    class EB:
-        def __init__(self):
-            """
-            A fake `everybeam` class so we can build the documentation online
-            in ReadTheDocs without installing `everybeam`, which is non-trivial
-            """
-            self.OSKAR = None
-            self.LOFAR = None
-            self.MWA = None
-            self.MWALocal = None
-            self.load_telescope = None
-            self.Telescope = None
-    eb = EB()
+
+    eb = EB_fake()
 else:
     import everybeam as eb
 
@@ -47,7 +53,7 @@ def radec_to_xyz(ra : float, dec : float, time : Time):
     Args:
         ra (astropy.coordinates.Angle): Right ascension
         dec (astropy.coordinates.Angle): Declination
-        time (float): astropy time instance
+        time float astropy time instance
 
     Returns:
         pointing_xyz (ndarray): NumPy array containing the ITRS X, Y and Z coordinates
@@ -159,11 +165,40 @@ def load_MWA_telescope(ms_path : str, coeff_path : str,
     return telescope
 
 
-def eb_local_xyz_from_radec(ra, dec, altaz_frame, delta_az=(1/2)*np.pi, 
+def eb_local_xyz_from_radec(ra : float, dec : float,
+                            altaz_frame : astropy.coordinates.AltAz,
+                            delta_az : float = (1/2)*np.pi,
                             negative_azimuth=True):
-    """Get the local cartesian coords used by EveryBeam from a given RA, Dec,
-    and AltAz frame. Reversing the azimuth and adding 90 degrees was found
-    to match via trial and error"""
+    """
+    Get the local cartesian coordinates used by EveryBeam from a given RA, Dec, and AltAz frame.
+    This function transforms the given right ascension (RA) and declination (Dec) into local 
+    cartesian coordinates based on the provided AltAz frame. The azimuth is adjusted by reversing 
+    it and adding 90 degrees (or a specified delta) to match the expected coordinates.
+    
+    This function is used to emulate the way the EveryBeam does it's parallactic
+    rotation. `delta_az` is set to π/2 by experiment to match outputs from EveryBeam.
+    Not really needed, as when can use EveryBeam to do the parallactic rotation
+    for everything aside the MWA beam.
+    
+    
+    Parameters
+    -----------
+    ra : float
+        Right ascension in radians.
+    dec : float
+        Declination in radians.
+    altaz_frame : `astropy.coordinates.AltAz`
+        The AltAz frame to transform the coordinates into.
+    delta_az : float, optional
+        The azimuth adjustment in radians. Default is π/2.
+    negative_azimuth : bool, optional
+        If True, the azimuth is reversed before adding the delta. Default is True.
+        
+    Returns
+    --------
+    numpy.ndarray
+        A 3xN array of the local cartesian coordinates.
+    """
     
     coord = SkyCoord(ra=ra*u.rad, dec=dec*u.rad, frame='icrs')
     coord = coord.transform_to(altaz_frame)
@@ -183,29 +218,65 @@ def eb_local_xyz_from_radec(ra, dec, altaz_frame, delta_az=(1/2)*np.pi,
         
     return np.array(updated_coord.cartesian.xyz.transpose())
 
-def eb_north_east(direction, ncp_t):
-    ##taken from EveryBeam station.cc Station::ComputeElementResponse
+def eb_north_east(direction : np.ndarray, ncp_t : np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Compute the north and east vectors given a direction ITRF vector,
+    and the ITRF vector towards the north celestial pole.
+    This function calculates the east vector by taking the cross product of the normal vector (ncp_t) 
+    and the direction vector, and then normalizes it. The north vector is then calculated as the cross 
+    product of the direction vector and the east vector.
     
-    # const vector3r_t east = normalize(cross(ncp_t, direction));
-    # const vector3r_t north = cross(direction, east);
-    # options.east = east;
-    # options.north = north;
+    Translated from EveryBeam station.cc Station::ComputeElementResponse
     
+    const vector3r_t east = normalize(cross(ncp_t, direction));
+    const vector3r_t north = cross(direction, east);
+    options.east = east;
+    options.north = north;
+    
+    Parameters
+    ------------
+    direction : np.ndarray
+        A 3-element array representing the direction vector.
+    ncp_t : np.ndarray
+        A 3-element array representing the normal vector.
+        
+    Returns
+    --------
+    Tuple[np.ndarray, np.ndarray]
+        A tuple containing the north and east vectors as 3-element arrays.
+    """
     east = np.cross(ncp_t, direction)
     east = east/np.linalg.norm(east)
     north = np.cross(direction, east)
     
-    
     return north, east
 
-def calc_everybeam_rotation(direction, north, east):
+def calc_everybeam_rotation(direction : np.ndarray, north : np.ndarray,
+                            east : np.ndarray) -> np.ndarray:
+    """Given an ITRF 3-vector in the direction of interest `direction`,
+    and the associated north and east vectors, calculate the 2x2 rotation 
+    matrix to rotate by parallactic angle.
     
-    ##taken from EveryBeam beamformer.cc BeamFormer::LocalResponse
-    # const vector3r_t e_phi = normalize(cross(direction));
-    # const vector3r_t e_theta = cross(e_phi, direction);
-    # result *= {dot(e_theta, options.north), dot(e_theta, options.east),
-    #            dot(e_phi, options.north), dot(e_phi, options.east)};
+    Translated from EveryBeam beamformer.cc BeamFormer::LocalResponse
+    const vector3r_t e_phi = normalize(cross(direction));
+    const vector3r_t e_theta = cross(e_phi, direction);
+    result *= {dot(e_theta, options.north), dot(e_theta, options.east),
+               dot(e_phi, options.north), dot(e_phi, options.east)};
     
+    Parameters
+    ------------
+    direction : np.ndarray
+        A 3-element array representing the direction ITRF vector.
+    north : np.ndarray
+        A 3-element array representing the north vector.
+    east : np.ndarray
+        A 3-element array representing the east vector.
+        
+    Returns
+    --------
+    np.ndarray
+        A 2x2 rotation matrix.
+    """
     e_phi = np.cross([0.0, 0.0, 1.0], direction)
     e_phi = e_phi/np.linalg.norm(e_phi)
     
@@ -218,20 +289,80 @@ def calc_everybeam_rotation(direction, north, east):
     return rot_matrix
 
 # @profile
-def run_everybeam(ras : np.ndarray, decs : np.ndarray,
-                  beam_ra0 : float, beam_dec0 : float,
-                  j2000_latitudes : np.ndarray, j2000_lsts : np.ndarray,
-                  current_latitude : float, current_longitude : float,
-                  times : np.ndarray, freqs : np.ndarray,
-                  telescope: eb.Telescope,  # type: ignore
-                  station_ids : np.ndarray,
-                  apply_beam_norms : bool = True,
-                  reorder_jones : bool = False,
-                  element_only : bool = False,
-                  eb_rotate : bool = False,
-                  parallactic_rotate : bool = False,
-                  para_angle_offset : float = -np.pi/2) -> np.ndarray:
+
+def run_everybeam(ras: np.ndarray, decs: np.ndarray,
+                  beam_ra0: float, beam_dec0: float,
+                  j2000_latitudes: np.ndarray, j2000_lsts: np.ndarray,
+                  current_latitude: float, current_longitude: float,
+                  times: np.ndarray, freqs: np.ndarray,
+                  telescope: eb.Telescope, # type: ignore
+                  station_ids: np.ndarray,
+                  apply_beam_norms: bool = True,
+                  reorder_jones: bool = False,
+                  element_only: bool = False,
+                  eb_rotate: bool = False,
+                  parallactic_rotate: bool = False,
+                  para_angle_offset: float = 0) -> np.ndarray:
+    """
+    Calculate the Jones matrices for a given set of coordinates, times,
+    frequencies, and station ids using the EveryBeam library.
+    `j2000_latitudes` should be the array latitude as precessed back to J2000,
+    with `j2000_lsts` being the matching LST in J2000. `current_latitude` and
+    `current_longitude` should be latitude and longitude of the array at the
+    time of the observation. `telescope` should be an EveryBeam telescope object.
     
+    
+    Parameters
+    ------------
+    ras : np.ndarray
+        Right ascensions of the coordinates in radians.
+    decs : np.ndarray
+         Declinations of the coordinates in radians.
+    beam_ra0 : float
+        Right ascension of the beam center in radians.
+    beam_dec0 : float
+        Declination of the beam center in radians.
+    j2000_latitudes : np.ndarray
+        Latitudes in J2000 coordinates.
+    j2000_lsts : np.ndarray
+        Local sidereal times in J2000 coordinates.
+    current_latitude : float
+        Current latitude in radians.
+    current_longitude : float
+        Current longitude in radians.
+    times : np.ndarray
+        Array of observation times.
+    freqs : np.ndarray
+        Array of frequencies.
+    telescope : (eb.Telescope):
+        Telescope object from the EveryBeam library.
+    station_ids : np.ndarray
+        Array of station IDs.
+    apply_beam_norms : bool, optional
+        Whether to apply beam normalisation. Defaults to True. Achieved by
+        calculating the beam response at beam centre, and multiplying all
+        Jones by the inverse of this central beam response.
+    reorder_jones : bool, optional
+        Whether to reorder the Jones matrices. Defaults to False. Just rearranges
+        the Jones matrix from [[0,0, 0,1,], [1,0, 1,1]] to [[1,1, 1,0,], [0,1, 0,0]].
+    element_only : bool, optional
+        Whether to use only the element response. Defaults to False. Use this to
+        look at the dipole response only, not the beam formed response.
+    eb_rotate : bool, optional
+        Whether to apply parallactic rotation using EveryBeam. Defaults to False.
+        Should probably be used for everything apart from MWA beams.
+    parallactic_rotate : bool, optional
+        Whether to apply parallactic angle rotation using `wodenpy`. Defaults to False.
+        Should be True for MWA beams if you want rotation. If True for a non-MWA beam,
+        `wodenpy` should match the output as if `eb_rotate` was True.
+    para_angle_offset : float, optional
+        Offset to add to the parallactic angle. Defaults to 0.
+        
+    Returns
+    --------
+    np.ndarray
+        The calculated Jones matrices with shape (num_stations, num_times, num_freqs, num_coords, 2, 2).
+    """
     
     num_stations = len(station_ids)
     num_times = len(times)
@@ -333,19 +464,15 @@ def run_everybeam(ras : np.ndarray, decs : np.ndarray,
                         norm_jones = np.matmul(norm_jones, rot)
                     
                 for coord_ind, (ra, dec) in enumerate(zip(ras, decs)):
-                    # if np.isnan(ra) or np.isnan(dec):
-                    #     pass
-                    # else:
-                    
+                    ##Only MWA uses ra,dec as a direct input
                     if type(telescope) == eb.MWA:
-                            ##Get the response
                             response = telescope.station_response(time_mjd_secs, station_id, freq,
                                                                   ra, dec)
+                    ##Only MWALocal uses az,za as a direct input
                     elif type(telescope) == eb.MWALocal:
-                            ##Get the response
                             response = telescope.station_response(time_mjd_secs, station_id, freq,
                                                                   zas[coord_ind], azs[coord_ind])
-                            
+                    ##Everything else uses ITRF coordinates
                     else:
                         if element_only:
                             response = telescope.element_response(time_mjd_secs, station_id, 0, freq,
@@ -367,14 +494,11 @@ def run_everybeam(ras : np.ndarray, decs : np.ndarray,
                 if apply_beam_norms:
                     ##Each station, time, and freq gets it's own normalisation
                     ##Same 2x2 normalisation for all directions
-                    
                     inv_beam_norms = np.linalg.inv(norm_jones)
                     output_jones = np.einsum('lm,kmn->kln', inv_beam_norms, all_output_jones[station_ind, time_ind, freq_ind, :, :, :])
                     all_output_jones[station_ind, time_ind, freq_ind, :, :, :] = output_jones
                     
     if reorder_jones:
-        
-        
         ##swap all_output_jones[:,:,:,:,0,0] with all_output_jones[:,:,:,:,1,1]
         all_output_jones[:, :, :, :, [0, 1], [0, 1]] = all_output_jones[:, :, :, :, [1, 0], [1, 0]]
         ##swap all_output_jones[:,:,:,:,0,1] with all_output_jones[:,:,:,:,1,0]
@@ -399,8 +523,83 @@ def run_everybeam_thread(num_threads : int, thread_id : int,
                          parallactic_rotate : bool = True,
                          para_angle_offset : float = 0,
                          element_response_model='hamaker',
-                         use_local_mwa : bool = True):
-    """SIGH YOU CAN'T PICKLE AN EVERYBEAM TELESCOPE OBJECT"""
+                         use_local_mwa : bool = True) -> Tuple[np.ndarray, int]:
+    """
+    Thread function called by `run_everybeam_over_threads` to calculate the
+    EveryBeam response in parrallel. Calls `run_everybeam` with a subset of
+    the coordinates; see `run_everybeam` for more details of the parameters.
+    
+    Creates a new EveryBeam telescope object from `ms_path` for each thread.
+    This has to be done because `concurrent.futures.ProcessPoolExecutor` has
+    to pickle the function and all it's arguments, and EveryBeam objects can't
+    be pickled. This is somewhat wasteful but I can't work out a better way
+    to make things parallel.
+    
+    Parameters
+    ------------
+    num_threads : int
+        Number of threads being in call by `run_everybeam_over_threads`.
+    thread_id : int
+        ID of the current thread. Useds to work out what chunk of `ras` and `decs`
+        to process.
+    ms_path : str
+        Path to the measurement set to load the EveryBeam telescope from.
+    ras : np.ndarray
+        Right ascensions of the coordinates in radians.
+    decs : np.ndarray
+         Declinations of the coordinates in radians.
+    beam_ra0 : float
+        Right ascension of the beam center in radians.
+    beam_dec0 : float
+        Declination of the beam center in radians.
+    j2000_latitudes : np.ndarray
+        Latitudes in J2000 coordinates.
+    j2000_lsts : np.ndarray
+        Local sidereal times in J2000 coordinates.
+    current_latitude : float
+        Current latitude in radians.
+    current_longitude : float
+        Current longitude in radians.
+    times : np.ndarray
+        Array of observation times.
+    freqs : np.ndarray
+        Array of frequencies.
+    station_ids : np.ndarray
+        Array of station IDs.
+    apply_beam_norms : bool, optional
+        Whether to apply beam normalisation. Defaults to True. Achieved by
+        calculating the beam response at beam centre, and multiplying all
+        Jones by the inverse of this central beam response.
+    reorder_jones : bool, optional
+        Whether to reorder the Jones matrices. Defaults to False. Just rearranges
+        the Jones matrix from [[0,0, 0,1,], [1,0, 1,1]] to [[1,1, 1,0,], [0,1, 0,0]].
+    element_only : bool, optional
+        Whether to use only the element response. Defaults to False. Use this to
+        look at the dipole response only, not the beam formed response.
+    eb_rotate : bool, optional
+        Whether to apply parallactic rotation using EveryBeam. Defaults to False.
+        Should probably be used for everything apart from MWA beams.
+    parallactic_rotate : bool, optional
+        Whether to apply parallactic angle rotation using `wodenpy`. Defaults to False.
+        Should be True for MWA beams if you want rotation. If True for a non-MWA beam,
+        `wodenpy` should match the output as if `eb_rotate` was True.
+    para_angle_offset : float, optional
+        Offset to add to the parallactic angle. Defaults to 0.
+    element_response_model : str, optional
+        The Everybeam element response model to use. Defaults to 'hamaker'.
+        Avaible options are 'hamaker' (LOFAR), 'skala40_wave' (OSKAR), and 'MWA' (MWA).
+    use_local_mwa : bool, optional
+        Whether to use the local MWA model. Defaults to True. The local MWA model
+        takes za/az instead of RA/Dec.
+        
+    Returns
+    --------
+    Tuple[np.ndarray, int]
+        The calculated Jones matrices with shape
+        (num_stations, num_times, num_freqs, num_coords_in_thread, 2, 2), as
+        well as the thread ID. Use the thread ID to insert this thread output
+        into the correct place in the final Jones matrix.
+    """
     
     telescope = eb.load_telescope(ms_path,
                                   use_differential_beam=use_differential_beam,
@@ -451,6 +650,77 @@ def run_everybeam_over_threads(num_threads : int,
                                use_local_mwa : bool = True,
                                para_angle_offset : float = 0,
                                element_response_model='hamaker'):
+    """
+    Runs `run_everybeam` in parallel over `num_threads` threads, using
+    `concurrent.futures.ProcessPoolExecutor`. See `run_everybeam` for more
+    details of what each parameter does.
+    
+    Creates a new EveryBeam telescope object from `ms_path` for each thread.
+    This has to be done because `concurrent.futures.ProcessPoolExecutor` has
+    to pickle the function and all it's arguments, and EveryBeam objects can't
+    be pickled. This is somewhat wasteful but I can't work out a better way
+    to make things parallel.
+    
+    Parameters
+    ------------
+    num_threads : int
+        Number of threads being in call by `run_everybeam_over_threads`.
+    ms_path : str
+        Path to the measurement set to load the EveryBeam telescope from.
+    ras : np.ndarray
+        Right ascensions of the coordinates in radians.
+    decs : np.ndarray
+         Declinations of the coordinates in radians.
+    beam_ra0 : float
+        Right ascension of the beam center in radians.
+    beam_dec0 : float
+        Declination of the beam center in radians.
+    j2000_latitudes : np.ndarray
+        Latitudes in J2000 coordinates.
+    j2000_lsts : np.ndarray
+        Local sidereal times in J2000 coordinates.
+    current_latitude : float
+        Current latitude in radians.
+    current_longitude : float
+        Current longitude in radians.
+    times : np.ndarray
+        Array of observation times.
+    freqs : np.ndarray
+        Array of frequencies.
+    station_ids : np.ndarray
+        Array of station IDs.
+    apply_beam_norms : bool, optional
+        Whether to apply beam normalisation. Defaults to True. Achieved by
+        calculating the beam response at beam centre, and multiplying all
+        Jones by the inverse of this central beam response.
+    reorder_jones : bool, optional
+        Whether to reorder the Jones matrices. Defaults to False. Just rearranges
+        the Jones matrix from [[0,0, 0,1,], [1,0, 1,1]] to [[1,1, 1,0,], [0,1, 0,0]].
+    element_only : bool, optional
+        Whether to use only the element response. Defaults to False. Use this to
+        look at the dipole response only, not the beam formed response.
+    eb_rotate : bool, optional
+        Whether to apply parallactic rotation using EveryBeam. Defaults to False.
+        Should probably be used for everything apart from MWA beams.
+    parallactic_rotate : bool, optional
+        Whether to apply parallactic angle rotation using `wodenpy`. Defaults to False.
+        Should be True for MWA beams if you want rotation. If True for a non-MWA beam,
+        `wodenpy` should match the output as if `eb_rotate` was True.
+    para_angle_offset : float, optional
+        Offset to add to the parallactic angle. Defaults to 0.
+    element_response_model : str, optional
+        The Everybeam element response model to use. Defaults to 'hamaker'.
+        Avaible options are 'hamaker' (LOFAR), 'skala40_wave' (OSKAR), and 'MWA' (MWA).
+    use_local_mwa : bool, optional
+        Whether to use the local MWA model. Defaults to True. The local MWA model
+        takes za/az instead of RA/Dec.
+        
+    Returns
+    --------
+    np.ndarray
+        The calculated Jones matrices with shape
+        (num_stations, num_times, num_freqs, num_coord, 2, 2)
+    """
     
     with concurrent.futures.ProcessPoolExecutor(max_workers=num_threads) as executor:
         

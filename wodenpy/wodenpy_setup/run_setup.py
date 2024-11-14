@@ -5,11 +5,11 @@ import sys
 import os
 from astropy.io import fits
 import warnings
-from sys import exit
 from casacore.tables import table
 from wodenpy.array_layout.create_array_layout import convert_ecef_to_enh
 import psutil
 import argparse
+from argparse import RawTextHelpFormatter
 
 def get_parser():
     """
@@ -23,9 +23,6 @@ def get_parser():
         The populated argument parser used by `run_woden.py`
 
     """
-    import argparse
-    from argparse import RawTextHelpFormatter
-
     class SmartFormatter(argparse.HelpFormatter):
         """Argparse by default ignores all \n and \t formatters. If you start
         a help class with R| the formatters will be respected."""
@@ -282,9 +279,9 @@ def select_argument_and_check(parser_arg, parser_value,
             parser_arg = metafits_arg
         else:
 
-            error_message = ("ARGS ERROR: args.{:s} has not been set. \n"
-            "Either specify using --{:s} or get from a metafits using "
-            "--metafits_filename\nExiting now as WODEN cannot run").format(parser_string, parser_string)
+            error_message = (f"ARGS ERROR: args {parser_string} has not been set. \n"
+            f"Either specify using --{parser_string} or get from a metafits using "
+            "--metafits_filename\nExiting now as WODEN cannot run")
             if do_exit:
                 sys.exit(error_message)
 

@@ -1,7 +1,7 @@
 import numpy as np
 import sys
 import os
-from typing import Union
+from typing import Union, List
 
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, Component_Info, CompTypes
 from wodenpy.skymodel.chunk_sky_model import Skymodel_Chunk_Map, Components_Map
@@ -11,7 +11,7 @@ from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classe
 from astropy.table import Table, Column
 import erfa
 from astropy.io import fits
-from wodenpy.primary_beam.use_everybeam import run_everybeam, load_MWA_telescope, load_OSKAR_telescope, load_LOFAR_telescope
+from wodenpy.primary_beam.use_everybeam import run_everybeam, load_MWA_telescope, load_OSKAR_telescope, load_LOFAR_telescope, EB_fake
 from sys import exit
 import argparse
 from astropy.time import Time, TimeDelta
@@ -22,20 +22,7 @@ from astropy.time import Time, TimeDelta
 read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 
 if read_the_docs_build:
-    class EB:
-        """A pretend `everybeam` class so we can build the documentation online
-        without having to install `everybeam`, which is non-trivial"""
-        def __init__(self):
-            """
-            A fake `everybeam` class so we can build the documentation online
-            in ReadTheDocs without installing `everybeam`, which is non-trivial
-            """
-            self.OSKAR = None
-            self.LOFAR = None
-            self.MWA = None
-            self.load_telescope = None
-            self.Telescope = None
-    eb = EB()
+    eb = EB_fake()
 else:
     import everybeam as eb
 
@@ -372,7 +359,7 @@ def count_num_list_fluxes(flux_mod_col_name : str, flux_col_prepend : str,
             num_list_fluxes[list_type_inds] += present_fluxes[list_type_inds]
 
 # @profile
-def read_fits_radec_count_components(fits_path : str):
+def read_fits_radec_count_components(fits_path : str) -> Component_Type_Counter:
     """
     Reads a FITS file sky model. Reads just the ra, dec, and counts how many POINT/GAUSS/SHAPE and POWER/CURVE/LIST, consolidating the
     information into a Component_Type_Counter object.
@@ -584,7 +571,7 @@ def read_fits_radec_count_components(fits_path : str):
     return comp_counter
 
 
-def find_all_indexes_of_x_in_y(x : np.ndarray, y : np.ndarray):
+def find_all_indexes_of_x_in_y(x : np.ndarray, y : np.ndarray) -> np.ndarray:
     """
     Given two arrays `x` and `y`, find the indexes of matching elements from `y`
     in `x`.
@@ -1096,47 +1083,46 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
     return
 
 def calc_everybeam_for_components(beam_ra0 : float, beam_dec0 : float, num_components : int,
-                                  components : Components_Python, telescope,
+                                  components : Components_Python, telescope : eb.Telescope, # type: ignore
                                   all_times : np.ndarray, all_freqs : np.ndarray,
                                   j2000_latitudes : np.ndarray, j2000_lsts : np.ndarray,
                                   current_latitude : float, current_longitude : float,
-                                  station_id = np.nan, 
-                                  reorder_jones : bool = False,
-                                  parallactic_rotate : bool = True):
+                                  station_id = np.nan):
     """
     Given a set of components, calculate the Jones matrices for each component
-    at each time and frequency using the EveryBeam `telescope` object.
-    This function is used to calculate the Jones matrices for the components
-    in the sky model, and is run in parallel.
+    at each time and frequency, for all stations specified by station_id,
+    using the EveryBeam `telescope` object. If `station_id` is `np.nan`, calculate
+    a different beam for each station. 
+    
     
     Parameters
     ----------
-    ra0 : float
+    beam_ra0 : float
         The RA of the pointing centre. (radians)
-    dec0 : float
+    beam_dec0 : float
         The Dec of the pointing centre. (radians)
     num_components : int
         The number of components in the sky model.
     components : Components_Python
         The Components_Python object containing the component information.
-    telescope : Telescope
-        The EveryBeam Telescope object.
+    telescope : eb.Telescope
+        The initialised EveryBeam Telescope object.
     all_times : np.ndarray
-        All times for the simulation.
+        All astropy Time objects for the simulation.
     all_freqs : np.ndarray
         All frequencies for the simulation (Hz)
-    reorder_jones : bool, optional
-        Whether to reorder the Jones matrices (swap EW to NS and vice versa),
-        by default True.
+    j2000_latitudes : np.ndarray
+        Latitude of the array as precessed back to J2000. Should be precession
+        based on the times in `all_times`.
+    j2000_lsts : np.ndarray
+        The LSTs matching the precessed latitudes in J2000
+    current_latitude : float
+        The latitude of the array in radians, at the current time frame (time of observation).
+    current_longitude : float
+        The longitude of the array in radians, at the current time frame (time of observation).
     station_id : float, optional
         The station ID to use for the beam calculation. If `np.nan`, calculate
         a different beam for each station, by default np.nan.
-    lsts : np.ndarray, optional
-        The LSTs for each time step, by default False.
-    latitudes : float, optional
-        The latitude for each time step, by default False.
-    parallactic_rotate : bool, optional
-        Whether to apply parallactic rotation to the beam, by default True.
     """
     
     ras = components.ras
@@ -1152,7 +1138,11 @@ def calc_everybeam_for_components(beam_ra0 : float, beam_dec0 : float, num_compo
     else:
         station_ids = [station_id]
         num_beams = 1
-        
+
+    ##The way we call EveryBeam depends on whether we're using MWA or not
+    ##The MWA EveryBeam doesn't have parallactic rotation, and seems to
+    ##come out normalised already. Also comes out with the correct
+    ##polarisation ordering        
     if type(telescope) == eb.MWA or type(telescope) == eb.MWALocal:
         apply_beam_norms = False
         parallactic_rotate = True
@@ -1164,18 +1154,6 @@ def calc_everybeam_for_components(beam_ra0 : float, beam_dec0 : float, num_compo
         parallactic_rotate = False
         eb_rotate = True
         reorder_jones = False
-    
-    # elif type(telescope) == eb.OSKAR:
-    #     apply_beam_norms = True
-    #     parallactic_rotate = True
-    #     eb_rotate = False
-    #     reorder_jones = False
-        
-    # elif type(telescope) == eb.LOFAR:
-    #     apply_beam_norms = True
-    #     parallactic_rotate = False
-    #     eb_rotate = True
-    #     reorder_jones = False
     
     all_jones = run_everybeam(ras, decs, beam_ra0, beam_dec0,
                               j2000_latitudes, j2000_lsts,
@@ -1211,20 +1189,21 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                               j2000_lsts : np.ndarray, j2000_latitudes : np.ndarray,
                               v_table : Table = False, q_table : Table = False,
                               u_table : Table = False, p_table : Table = False,
-                              precision = "double"):
+                              precision = "double") -> List[Source_Python]:
     """
     Uses Tables read from a FITS file and returns a list of populated
     `Source_Python` classes. Uses the maps in `chunked_skymodel_maps` to
     determine which components to read in.
     
-    This function is run in parallel, and Python multiprocessing requires
-    everything to be picklable. This means we can't use ctypes, so we
-    can't use `Woden_Settings`.
+    This function is run in parallel by `run_woden.py`, and Python
+    multiprocessing requires everything to be picklable. This means we can't
+    use ctypes, so we can't use `Woden_Settings`, hence we have to pass in
+    all the relevant information as arguments.
 
     Parameters
     ----------
-    woden_struct_classes : Woden_Struct_Classes
-        A class containing all the ctypes structures with the correct precision, needed for the C/CUDA code.
+    args : argparse.Namespace
+        The args object from `run_woden.py`.
     main_table : Table
         The main Table (with RA,Dec etc) from the FITS file.
     shape_table : Table
@@ -1237,10 +1216,11 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
         Number of time steps in the sky model.
     beamtype : int
         Type of beam used in the sky model.
-    lsts : np.ndarray
-        Array of LST values for each time step in the sky model.
-    latitudes : np.ndarray
-        Latitude of the observation site for all times (changes very slowly with precession)
+    j2000_lsts : np.ndarray
+        The LSTs matching the precessed latitudes in J2000
+    j2000_latitudes : np.ndarray
+        Latitude of the array as precessed back to J2000. Should be precessed
+        for each time step in the simulation.
     v_table : Table, optional
         The Table containing the Stokes V information, by default False.
     q_table : Table, optional
@@ -1254,8 +1234,8 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
 
     Returns
     -------
-    source_catalogue : Union[Source_Catalogue_Float, Source_Catalogue_Double]
-        A source catalogue that can be used by C/CUDA code to calculate visibilities.
+     List[Source_Python]
+        A list of populated `Source_Python` classes.
     """
     
     ##if we have an everybeam primary beam, we will be calculating it
@@ -1309,9 +1289,6 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
         all_freqs = False
         num_beams = 1
         
-    # source_array = len(chunked_skymodel_maps)*woden_struct_classes.Source_Ctypes
-    # source_array = source_array()
-    
     source_array = [Source_Python() for i in range(len(chunked_skymodel_maps))]
         
     ##for each chunk map, create a Source_Float or Source_Double ctype

@@ -4,10 +4,9 @@
 .. _Wayth et al. 2017: https://doi.org/10.1017/pasa.2017.27
 .. _mwa_hyperbeam: https://github.com/MWATelescope/mwa_hyperbeam
 
-Primary Beams
-================
-``WODEN`` has been written to include stationary primary beams. That means the beam is pointed at a constant azimuth / zenith angle during an observation. These are the beam models available at the
-moment:
+GPU Primary Beams
+======================
+``WODEN`` has a number of primary beams implemented in GPU code. All beams detailed here are locked to the instrument frame per simulation run. That means the beam is pointed at a constant azimuth / zenith angle during an observation. For further primary beam options on the CPU, see the :ref:`EveryBeam testing` section.
 
  * **None** - gains of 1.0, leakages 0.0
  * **Gaussian** - a frequency dependent Gaussian beam; FWHM can be set by user

@@ -347,9 +347,6 @@ component into a GAUSSIAN or SHAPELET component, and has been applied in
 @param[in] D2y Beam gain antenna 2 in south-east north-west (135 deg)
 @param[in] g2y Beam leakage antenna 2 from south-east north-west (135 deg)
 @param[in] flux_I Stokes I flux density (Jy)
-@param[in] flux_Q Stokes Q flux density (Jy)
-@param[in] flux_U Stokes U flux density (Jy)
-@param[in] flux_V Stokes V flux density (Jy)
 @param[in] visi_component Complex visibility across antennas 1 and 2
 @param[in,out] visi_XX Output XX instrumental visibility
 @param[in,out] visi_XY Output XY instrumental visibility
@@ -496,6 +493,9 @@ apply the gains - see descriptions for what should be the arguments to them.
 @param[in] num_components Number of COMPONENTs
 @param[in] num_times Number of times in simulation
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
+@param[in] off_cardinal Boolean to indicate if the dipoles are off-cardinal i.e.
+if off_cardinal == 1, then the dipoles are aligned at 45 and 135 degrees,
+if off_cardinal == 0, then the dipoles are aligned at 0 and 90 degrees
 @param[in] *d_gxs Pointer towards array of primary beam J[0,0]
 (north-south gain)
 @param[in] *d_Dxs Pointer towards array of primary beam J[0,1]
@@ -565,6 +565,9 @@ and sum them into real and imaginary XX,XY,YX,YY visibilities arrays
 @param[in] num_components Number of COMPONENTs
 @param[in] num_times Number of times in simulation
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
+@param[in] off_cardinal Boolean to indicate if the dipoles are off-cardinal i.e.
+if off_cardinal == 1, then the dipoles are aligned at 45 and 135 degrees,
+if off_cardinal == 0, then the dipoles are aligned at 0 and 90 degrees
 @param[in] *d_gxs Pointer towards array of primary beam J[0,0]
 (north-south gain)
 @param[in] *d_Dxs Pointer towards array of primary beam J[0,1]
