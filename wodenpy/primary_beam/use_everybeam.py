@@ -59,7 +59,6 @@ def radec_to_xyz(ra : float, dec : float, time : Time):
         pointing_xyz (ndarray): NumPy array containing the ITRS X, Y and Z coordinates
     """
     
-    
     coord = SkyCoord(ra*u.rad, dec*u.rad, frame='icrs')
     coord_itrs = coord.transform_to(ITRS(obstime=time))
     
@@ -391,8 +390,7 @@ def run_everybeam(ras: np.ndarray, decs: np.ndarray,
                 beam_az0, beam_el0 = erfa.hd2ae(beam_ha0, beam_dec0,
                                                 j2000_latitudes[time_ind])
                 beam_za0 = np.pi/2 - beam_el0
-            
-        if type(telescope) not in non_itrf_beams:
+        else:
             phase_itrf = radec_to_xyz(beam_ra0, beam_dec0, time)
             dir_itrfs = radec_to_xyz(ras, decs, time)
             

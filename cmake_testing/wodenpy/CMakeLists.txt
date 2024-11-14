@@ -1,6 +1,7 @@
 add_subdirectory(array_layout)
 add_subdirectory(observational)
 add_subdirectory(phase_rotate)
+add_subdirectory(primary_beam)
 add_subdirectory(skymodel)
 add_subdirectory(uvfits)
 add_subdirectory(use_libwoden)

@@ -22,6 +22,10 @@ coverage run --source=wodenpy.observational.calc_obs -a ../cmake_testing/wodenpy
 ##phase_rotate
 coverage run --source=wodenpy.phase_rotate.remove_phase_track -a ../cmake_testing/wodenpy/phase_rotate/test_remove_phase_tracking.py
 
+##primary_beam
+coverage run --source=wodenpy.primary_beam.use_everybeam -a ../cmake_testing/wodenpy/phase_rotate/test_remove_phase_tracking.py
+coverage run --source=wodenpy.primary_beam.use_everybeam -a ../cmake_testing/wodenpy/primary_beam/test_run_everybeam_over_threads.py
+
 ##skymodel
 coverage run --source=wodenpy.skymodel.woden_skymodel -a ../cmake_testing/wodenpy/skymodel/test_crop_below_horizon.py
 coverage run --source=wodenpy.skymodel.chunk_sky_model -a ../cmake_testing/wodenpy/skymodel/test_create_skymodel_chunk_map.py
@@ -36,6 +40,7 @@ coverage run --source=wodenpy.skymodel.read_yaml_skymodel -a ../cmake_testing/wo
 coverage run --source=wodenpy.skymodel.read_skymodel -a ../cmake_testing/wodenpy/skymodel/test_read_skymodel_chunk.py
 coverage run --source=wodenpy.skymodel.woden_skymodel -a ../cmake_testing/wodenpy/skymodel/test_read_skymodel_chunk.py
 coverage run --source=wodenpy.use_libwoden.beam_settings -a ../cmake_testing/wodenpy/skymodel/test_read_skymodel_chunk.py
+coverage run --source=wodenpy.skymodel.read_fits_skymodel -a ../cmake_testing/wodenpy/skymodel/test_calc_everybeam_for_components.py
 
 ##use_libwoden
 export CMAKE_CURRENT_SOURCE_DIR=../cmake_testing/wodenpy/use_libwoden/
