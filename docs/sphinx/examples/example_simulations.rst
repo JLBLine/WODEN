@@ -19,6 +19,7 @@ The examples are:
    dipole_ampflags
    polarisation_examples.ipynb
    lofar_lotss.ipynb
+   lofar_lba_ncp.ipynb
 
 **Fornax A simulation** - two examples that compare a point/Gaussian model to a shapelet model. This serves as a general introduction on how to simulate an MWA observation using a ``metafits`` file, with a few extra commands. It also serves as a comparison of running with ``woden_float`` and ``woden_double``.
 
@@ -31,5 +32,7 @@ The examples are:
 **Polarisation** - demonstrates how to get create polarised sky models, simulate them, and gives examples of how to inspect the results. 
 
 **LOFAR LoTSS DR2 cutout matching** - demonstrates how to get grab a chunk of the LoTSS DR2 gaussian catalogue, convert to ``WODEN`` format, and simulate it with the LOFAR HBA beam.
+
+**LOFAR LBA NCP** - demonstrates how to simulate the LOFAR LBA beam with a sky model of the North Celestial Pole. Also has a cheeky bit of cross-matching, and discusses how borked plotting images at the NCP can be.
 
 .. warning:: If you have a GPU with small amounts of RAM (say 2GB) some of these simulations won't work to DOUBLE precision, you won't have enough memory. You can add the ``--precision=float`` argument to switch to a lower memory requirement (for the loss of accuracy).

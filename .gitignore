@@ -129,3 +129,9 @@ test_installation/everybeam/profile_output
 examples/LOFAR_LoTSS/*.fits
 examples/LOFAR_LoTSS/*.ms
 examples/LOFAR_LoTSS/*.sh
+
+examples/LOFAR_LBA_NCP/*.fits
+examples/LOFAR_LBA_NCP/*.ms
+examples/LOFAR_LBA_NCP/MWA_phase1
+examples/LOFAR_LBA_NCP/*.ini
+examples/LOFAR_LBA_NCP/*.osm

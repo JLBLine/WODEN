@@ -1318,8 +1318,7 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                                telescope, all_times, all_freqs,
                                j2000_latitudes, j2000_lsts,
                                np.radians(args.latitude), np.radians(args.longitude),
-                               station_id=args.station_id,
-                               parallactic_rotate=parallactic_rotate)
+                               station_id=args.station_id)
             
         if chunk_map.n_gauss > 0:
             add_fits_info_to_source_catalogue(CompTypes.GAUSSIAN,
@@ -1333,8 +1332,7 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                                telescope, all_times, all_freqs,
                                j2000_latitudes, j2000_lsts,
                                np.radians(args.latitude), np.radians(args.longitude),
-                               station_id=args.station_id,
-                               parallactic_rotate=parallactic_rotate)
+                               station_id=args.station_id)
             
         if chunk_map.n_shapes > 0:
             add_fits_info_to_source_catalogue(CompTypes.SHAPELET,
@@ -1348,8 +1346,7 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                                telescope, all_times, all_freqs,
                                j2000_latitudes, j2000_lsts,
                                np.radians(args.latitude), np.radians(args.longitude),
-                               station_id=args.station_id,
-                               parallactic_rotate=parallactic_rotate)
+                               station_id=args.station_id)
             
     ##TODO some kind of consistency check between the chunk_maps and the
     ##sources in the catalogue - make sure we read in the correct information
