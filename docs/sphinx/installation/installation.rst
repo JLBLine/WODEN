@@ -88,7 +88,11 @@ linux-like systems.
 
   $ pip3 install -r requirements_testing.txt
 
-+ **everybeam** - You only need to do this if you want to use EveryBeam primary beams in your simulations. ``WODEN`` will check for the ``everybeam`` Python package at runtime, and run fine if it's missing (unless you ask it to run with EveryBeam, then it will complain). The build instructions for EveryBeam live on the `everybeam insallation page`_. If you follow the instructions there, you'll install a system-wide version. If this isn't suitable for your system, i.e. you're not running in a container, this was may approach. When I ran ``cmake``, I did::
++ **everybeam** - You only need to do this if you want to use EveryBeam primary beams in your simulations. ``WODEN`` will check for the ``everybeam`` Python package at runtime, and run fine if it's missing (unless you ask it to run with EveryBeam, then it will complain). The build instructions for EveryBeam live on the `everybeam insallation page`_. You can follow them with *one important difference* - you need to currently install my branch, as it's the only one that has MWA Python bindings. You can do this by running::
+
+  $ git clone -b mwa_python_wrapper --recursive -j4 https://git.astron.nl/RD/EveryBeam.git
+
+  If you follow the EveryBeam instructions, you'll install a system-wide version. If this isn't suitable for your system, i.e. you're not running in a container, this was may approach. When I ran ``cmake``, I did::
 
   $ cmake .. -DCMAKE_INSTALL_PREFIX=/home/jline/software/installed/ \
      -DBUILD_WITH_PYTHON=ON

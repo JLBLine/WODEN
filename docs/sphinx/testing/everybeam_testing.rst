@@ -20,7 +20,9 @@ EveryBeam Testing and Development
 
 Installing EveryBeam
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The build instructions for EveryBeam live on the `everybeam insallation page`_.
+The build instructions for EveryBeam live on the `everybeam insallation page`_. However, you need to clone my branch as currently it's the only branch with an MWA Python wrapper::
+
+   $ git clone -b mwa_python_wrapper --recursive -j4 https://git.astron.nl/RD/EveryBeam.git
 
 When I ran ``cmake``, I did::
 
