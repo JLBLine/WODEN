@@ -25,6 +25,7 @@ coverage run --source=wodenpy.phase_rotate.remove_phase_track -a ../cmake_testin
 ##primary_beam
 coverage run --source=wodenpy.primary_beam.use_everybeam -a ../cmake_testing/wodenpy/phase_rotate/test_remove_phase_tracking.py
 coverage run --source=wodenpy.primary_beam.use_everybeam -a ../cmake_testing/wodenpy/primary_beam/test_run_everybeam_over_threads.py
+coverage run --source=wodenpy.primary_beam.use_everybeam -a ../cmake_testing/wodenpy/primary_beam/test_run_woden_lofar_para_rotate.py
 
 ##skymodel
 coverage run --source=wodenpy.skymodel.woden_skymodel -a ../cmake_testing/wodenpy/skymodel/test_crop_below_horizon.py

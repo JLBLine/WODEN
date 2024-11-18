@@ -115,7 +115,6 @@ class Test(unittest.TestCase):
         self.run_calc_everybeam_for_components(telescope, lofar_lat, lofar_long,
                                                date, expec_gxs, expec_Dxs,
                                                expec_Dys, expec_gys)
-
     
     def do_MWA_beam(self):
         """Run test using a LOFAR beam. Skip if we can't find the hdf5 file"""
