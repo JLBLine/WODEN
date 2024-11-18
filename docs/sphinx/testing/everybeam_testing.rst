@@ -24,16 +24,18 @@ The build instructions for EveryBeam live on the `everybeam insallation page`_.
 
 When I ran ``cmake``, I did::
 
-   cmake .. -DCMAKE_INSTALL_PREFIX=/home/jack-line/software/install \
+   cmake .. -DCMAKE_INSTALL_PREFIX=/home/jline/software/installed/ \
      -DBUILD_WITH_PYTHON=ON
 
 
-so I would know where the installation went. I also did all of this inside a conda environment, but I think ``cmake`` still found the system Python. Once installed, I had to do::
+so I would know where the installation went. I also did all of this inside a conda environment called ``woden_dev``, but I think ``cmake`` still found the system Python. Once installed, I had to do::
     
-   export PYTHONPATH=/home/jack-line/software/install/lib/python3.12/site-packages:$PYTHONPATH
-   ln -s /home/jack-line/software/install/share/everybeam /home/jack-line/software/anaconda3/envs/everybeam/share/everybeam
+   export PYTHONPATH=$PYTHONPATH:"/home/jline/software/installed/lib/python3.12/site-packages"
+   ln -s /home/jline/software/installed/share/everybeam /home/jline/software/anaconda3/envs/woden_dev/share/everybeam
 
-which let me conda environment see everything it needed to. When I was running notebooks, which don't load stuff from system, only the conda environment, I had to do::
+which let me conda environment see everything it needed to. 
+
+When I was running notebooks, which don't load stuff from system, only the conda environment, I had to do::
 
    conda install -c conda-forge libstdcxx-ng
    conda install hdf5
@@ -53,7 +55,8 @@ Adding new beam models
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 You need to update the following Python functions to add a new EveryBeam model (in general, look for anywhere ``EB_OSKAR`` is already used, and make sure whatever is done with ``EB_OSKAR`` is also done with your new beam model):
 
-- Update the help for ``--primary_beam`` in the parser defined in ``WODEN/wodenpy/wodenpy_setup/run_setup.get_parser`` to show the new option
+- Update the help for ``--primary_beam`` in the parser defined in ``WODEN/wodenpy/wodenpy_setup/run_setup.get_parser`` to show a new recognised beam model. A.k.a add a "my_new_beam" as an accaptable argument to ``--primary_beam``.
+- Add this "my_new_beam" to the ``eb_args`` list in ``WODEN/wodenpy/wodenpy_setup/run_setup.check_args``.
 - Add a new beamtype to the ``BeamTypes`` and ``BeamGroups`` enums in ``WODEN/wodenpy/use_libwoden/beam_settings.py``. You must also update the equivalent ``e_beamtype`` in ``WODEN/include/woden_struct_defs.h``. E.g. MWA already has a value of ``EB_MWA``, so try adding in a new ``EB_YOURBEAM``. If the beam model you add in has off-cardinal dipoles, you should add in to the ``BeamGroups.off_cardinal_beam_values`` list.
 - Make sure your beam model is added to ``woden_settings`` in the ``WODEN/wodenpy/use_libwoden/woden_settings.create_woden_settings`` function.
 - Add a new function to load in the beam model in ``WODEN/wodenpy/primary_beam/use_everybeam.py`` (similar to ``load_OSKAR_telescope`` or ``load_LOFAR_telescope``).

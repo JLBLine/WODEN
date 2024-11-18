@@ -11,6 +11,12 @@
 
 <!-- > Although ``WODEN`` is still very much a great tool for MWA interferomteric simulations, I (Jack Line) am no longer working in astronomy. I'll drop in to advise and/or fix bugs from time to time, but I can't commit to developing new features I'm afraid. If you want new features (or even better, want to write new features), please reach out to the [Epoch of Reionisation group at Curtin University](https://astronomy.curtin.edu.au/research/epoch-of-reionisation/). They should know if anyone is actively working on/using the software. If you end up taking over this project, feel free to delete this message! -->
 
+> New in version 2.4-alpha:
+ - You can now use EveryBeam primary beams in `WODEN`. This allows you to simulate `LOFAR` and `SKA` like instruments.
+ - As a consequence of the above, the sky model reading part of `WODEN` is now multi-threaded. If you want exact behaviour to match, you should run `WODEN` with `--num_threads=1`. 
+ - See the [EveryBeam testing and developing](https://woden.readthedocs.io/en/everybeam/latest/everybeam_testing.html) of the documentation for more information.
+ - You don't have to install `EveryBeam` to run `WODEN` if you're not going to use it, so you can ignore this feature if you're only interested in MWA simulations. `WODEN` will just check if the `EveryBeam` Python library is installed and use it if it is.
+
 > New in version 2.3-alpha:
  - Full polarisation is back! You can now simulate QUV visibilities, and they can be independent to Stokes I. In fact, you can set Stokes I to zero in the sky model, and still enter QUV information.
  - Stokes V can either be a power-law, curved power-law, be a polarisation fraction of Stokes I, or be a list of flux densities.

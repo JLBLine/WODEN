@@ -1,4 +1,5 @@
 .. `Windows Subsystem for Linux 2 (WSL 2)`: https://docs.microsoft.com/en-us/windows/wsl/
+.. _everybeam insallation page: https://everybeam.readthedocs.io/en/latest/build-instructions.html
 
 *************
 Installation
@@ -41,6 +42,7 @@ Dependencies
 - **rust** - https://www.rust-lang.org/tools/install (needed for ``mwa_hyperbeam``)
 - **mwa_hyperbeam** - https://github.com/MWATelescope/mwa_hyperbeam
 - **Python >= 3.8** (as well as a number of Python modules, see below)
+- *Optional* **EveryBeam** - https://everybeam.readthedocs.io/en/latest/build-instructions.html
 
 How to install dependencies
 ****************************
@@ -86,21 +88,22 @@ linux-like systems.
 
   $ pip3 install -r requirements_testing.txt
 
-For completeness, those packages are::
++ **everybeam** - You only need to do this if you want to use EveryBeam primary beams in your simulations. ``WODEN`` will check for the ``everybeam`` Python package at runtime, and run fine if it's missing (unless you ask it to run with EveryBeam, then it will complain). The build instructions for EveryBeam live on the `everybeam insallation page`_. If you follow the instructions there, you'll install a system-wide version. If this isn't suitable for your system, i.e. you're not running in a container, this was may approach. When I ran ``cmake``, I did::
 
-  sphinx_argparse
-  breathe
-  astropy<=6.1.0
-  numpy<=1.26.0
-  pyerfa
-  palpy
-  importlib_resources
-  sphinx-math-dollar
-  matplotlib
-  pyuvdata
-  python-casacore
+  $ cmake .. -DCMAKE_INSTALL_PREFIX=/home/jline/software/installed/ \
+     -DBUILD_WITH_PYTHON=ON
 
-Phew! That's it for now.
+  so I would know where the installation went. I also did all of this inside a conda environment called ``woden_dev``, but I think ``cmake`` still found the system Python. Once installed, I had to do::
+    
+  $ export PYTHONPATH=$PYTHONPATH:"/home/jline/software/installed/lib/python3.12/site-packages"
+  $ ln -s /home/jline/software/installed/share/everybeam /home/jline/software/anaconda3/envs/woden_dev/share/everybeam
+
+  which let me conda environment see everything it needed to. When I was running notebooks, which don't load stuff from system, only the conda environment, I had to do::
+
+  $ conda install -c conda-forge libstdcxx-ng
+  $ conda install hdf5
+
+  for certain things to work.
 
 Compiling ``WODEN`` ``C/CUDA`` code
 **************************************
