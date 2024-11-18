@@ -117,7 +117,7 @@ class Test(unittest.TestCase):
                                                expec_Dys, expec_gys)
     
     def do_MWA_beam(self):
-        """Run test using a LOFAR beam. Skip if we can't find the hdf5 file"""
+        """Run test using an MWA beam. Skip if we can't find the hdf5 file"""
         
         try:
             mwa_coeff = os.environ['MWA_FEE_HDF5']
