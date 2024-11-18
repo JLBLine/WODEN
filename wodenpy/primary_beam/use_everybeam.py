@@ -15,6 +15,10 @@ import astropy
 ##it is a waste of time
 read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 
+
+from wodenpy.wodenpy_setup.run_setup import check_for_library
+have_everybeam = check_for_library('everybeam')
+
 class EB_fake:
     """
         A fake `everybeam` class so we can build the documentation online
@@ -30,12 +34,17 @@ class EB_fake:
         self.MWALocal = None
         self.load_telescope = None
         self.Telescope = None
-
-if read_the_docs_build:
-
-    eb = EB_fake()
-else:
+        
+if have_everybeam:
     import everybeam as eb
+else:
+    eb = EB_fake()
+
+# if read_the_docs_build:
+
+#     eb = EB_fake()
+# else:
+#     import everybeam as eb
 
 ##This call is so we can use it as a type annotation
 woden_struct_classes = Woden_Struct_Classes()

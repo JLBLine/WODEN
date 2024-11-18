@@ -17,6 +17,7 @@ from astropy.coordinates import EarthLocation
 from astropy import units as u
 from astropy.time import Time
 from wodenpy.primary_beam.use_everybeam import run_everybeam_over_threads, run_everybeam
+from wodenpy.wodenpy_setup.run_setup import check_for_library
 
 ##Location of this file; use it to find test measurement sets
 code_dir = os.path.realpath(__file__)
@@ -26,7 +27,7 @@ code_dir = ('/').join(code_dir.split('/')[:-1])
 class Test(unittest.TestCase):
     """Vehicle for running tests"""
     
-    def test_run_everybeam_over_threads(self):
+    def do_test(self):
         """First of all, run `run_everybeam` to get a set of expected values
         for given inputs. Then run `run_everybeam_over_threads` for a number
         of threads, and check the outputs match."""
@@ -35,6 +36,7 @@ class Test(unittest.TestCase):
         arr_long = np.radians(6.867996528)
         date = "2024-07-21T03:35:00"
         ms_path = f'{code_dir}/../../../test_installation/everybeam/lba.MS'
+        
         telescope = load_LOFAR_telescope(ms_path)
         
         location = EarthLocation(lat=arr_latitude*u.rad, 
@@ -100,8 +102,14 @@ class Test(unittest.TestCase):
                                 parallactic_rotate=False)
             
             npt.assert_allclose(serial_jones, parallel_jones, atol=1e-8)
+            
+    def test_run_everybeam_over_threads(self):
+        have_everybeam = check_for_library('everybeam')
+        if have_everybeam:
+            self.do_test()
+        else:
+            print("Skipping test_run_everybeam_over_threads as everybeam not installed")
 
 ##Run the test
 if __name__ == '__main__':
     unittest.main()
-    

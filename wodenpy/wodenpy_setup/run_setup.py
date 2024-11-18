@@ -10,6 +10,8 @@ from wodenpy.array_layout.create_array_layout import convert_ecef_to_enh
 import psutil
 import argparse
 from argparse import RawTextHelpFormatter
+import importlib.util
+from wodenpy.use_libwoden.beam_settings import BeamTypes, BeamGroups
 
 def get_parser():
     """
@@ -376,6 +378,27 @@ def get_antenna_order(tilenames: np.ndarray) -> np.ndarray:
     
     return antenna_order
 
+def check_for_library(libname : str) -> bool:
+    """
+    Check if a library is available for import.
+
+    Parameters
+    ----------
+    libname : str
+        The name of the library to check.
+
+    Returns
+    -------
+    bool
+        True if the library is available, False otherwise.
+    """
+    
+    if importlib.util.find_spec(libname) is not None:
+        have_library = True
+    else:
+        have_library = False
+        
+    return have_library
 
 def check_args(args : argparse.Namespace) -> argparse.Namespace:
     """Check that the combination of arguments parsed will work with the
@@ -551,21 +574,27 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
         array_layout = "from_ms"
             
     eb_args = ['everybeam_OSKAR', 'everybeam_LOFAR', 'everybeam_MWA']
+    have_everybeam = check_for_library('everybeam')
             
     if args.primary_beam in eb_args:
-        if not args.beam_ms_path:
-            exit(f'To use the {args.primary_beam} beam, you must specify a path to the'
-                 ' measurement set using --beam_ms_path. Exiting now as WODEN will fail.')
-            
-        if not os.path.isdir(args.beam_ms_path):
-            exit('Could not open measurement set specified by user as:\n'
-                 '\t--beam_ms_path={:s}.\n'
-                 'Cannot get required observation settings, exiting now'.format(args.beam_ms_path))
-            
-        array_layout = "from_ms"
         
-        if not args.max_sky_directions:
-            args.max_sky_directions = 200
+        if have_everybeam:
+            if not args.beam_ms_path:
+                exit(f'To use the {args.primary_beam} beam, you must specify a path to the'
+                    ' measurement set using --beam_ms_path. Exiting now as WODEN will fail.')
+                
+            if not os.path.isdir(args.beam_ms_path):
+                exit('Could not open measurement set specified by user as:\n'
+                    '\t--beam_ms_path={:s}.\n'
+                    'Cannot get required observation settings, exiting now'.format(args.beam_ms_path))
+                
+            array_layout = "from_ms"
+            
+            if not args.max_sky_directions:
+                args.max_sky_directions = 200
+        else:
+            exit(f'You have requested to use the {args.primary_beam} beam model, but '
+                 'the `everybeam` python package is not installed. Exiting now.')
             
     ##Override metafits and/or load arguments
     args.lowest_channel_freq = select_argument_and_check(args.lowest_channel_freq,

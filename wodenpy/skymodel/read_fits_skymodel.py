@@ -21,10 +21,13 @@ from astropy.time import Time, TimeDelta
 ##it is a waste of time
 read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 
-if read_the_docs_build:
-    eb = EB_fake()
-else:
+from wodenpy.wodenpy_setup.run_setup import check_for_library
+have_everybeam = check_for_library('everybeam')
+
+if have_everybeam:
     import everybeam as eb
+else:
+    eb = EB_fake()
 
 ##This call is so we can use it as a type annotation
 woden_struct_classes = Woden_Struct_Classes()

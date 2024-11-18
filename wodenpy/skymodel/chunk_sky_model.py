@@ -1086,41 +1086,16 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
                 shape_chunk_bin.append(shapelet_chunk_maps[index])
                 new_order.append(index)
             binned_shape_chunks.append(shape_chunk_bin)
-            
-        ##Always shove the shapelet chunks into the last set
-        chunked_skymodel_map_sets[-1, :] = binned_shape_chunks
         
-    # for chunk_ind, chunk_set in enumerate(chunked_skymodel_map_sets):
-    #     for thread_ind, thread_list in enumerate(chunk_set):
-    #         n_p, n_g, n_s, n_c = 0, 0, 0, 0
-    #         for chunk in thread_list:
-                
-    #         #     n_p += chunk.n_points
-    #         #     n_g += chunk.n_gauss
-    #         #     n_s += chunk.n_shapes
-    #         #     n_c += chunk.n_shape_coeffs
-                
-    #         # print(f"Set {chunk_ind} thread {thread_ind} has {n_p} points, {n_g} gauss, {n_s} shape, {n_c} shape coeffs")
-            
-            
-    #             n_p = chunk.n_points
-    #             n_g = chunk.n_gauss
-    #             n_s = chunk.n_shapes
-    #             n_c = chunk.n_shape_coeffs
-                
-    #             print(f"Set {chunk_ind} thread {thread_ind} has {n_p} points, {n_g} gauss, {n_s} shape, {n_c} shape coeffs")
-            
-    #             # if chunk.n_shape_coeffs > 0:
-    #             #     print(chunk.shape_components.power_shape_orig_inds)
-    #     print('---------------------------------------------------------------')
+        ##Always shove the shapelet chunks into the last set    
+        ##On the off chance the binned_shape_chunks is less than the number of threads
+        ##just fill as many as we have
+        chunked_skymodel_map_sets[-1, :len(binned_shape_chunks)] = binned_shape_chunks
         
-    # if num_threads == 1:
-    
     chunked_skymodel_map_sets = reshape_chunked_skymodel_map_sets(chunked_skymodel_map_sets,
                                                                   num_threads, max_chunks_per_set)
     
     return chunked_skymodel_map_sets
-
 
 def reshape_chunked_skymodel_map_sets(chunked_skymodel_map_sets : NDArray[List[Skymodel_Chunk_Map]],  #type: ignore
                                       num_threads : int,

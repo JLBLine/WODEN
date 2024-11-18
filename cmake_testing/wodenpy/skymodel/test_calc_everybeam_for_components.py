@@ -17,6 +17,9 @@ from astropy import units as u
 from astropy.time import Time
 from wodenpy.array_layout.precession import RTS_Precess_LST_Lat_to_J2000
 
+from wodenpy.wodenpy_setup.run_setup import check_for_library
+have_everybeam = check_for_library('everybeam')
+
 ##Location of this file; use it to find test measurement sets
 code_dir = os.path.realpath(__file__)
 code_dir = ('/').join(code_dir.split('/')[:-1])
@@ -32,8 +35,9 @@ class Test(unittest.TestCase):
         given the telescope, array location, date. Test outputs
         against expected values"""
         
+        
         location = EarthLocation(lat=arr_latitude*u.rad, 
-                                 lon=arr_long*u.rad)
+                                lon=arr_long*u.rad)
 
         observing_time = Time(date, scale='utc', location=location)
 
@@ -67,11 +71,11 @@ class Test(unittest.TestCase):
         components.decs = decs
         
         calc_everybeam_for_components(beam_ra0, beam_dec0, num_comps,
-                                  components, telescope,
-                                  all_times, all_freqs,
-                                  j2000_latitudes, j2000_lsts,
-                                  arr_latitude, arr_long,
-                                  station_id=station_id)
+                                components, telescope,
+                                all_times, all_freqs,
+                                j2000_latitudes, j2000_lsts,
+                                arr_latitude, arr_long,
+                                station_id=station_id)
         
         ##I've intention put the central coord at beam centre, so we should
         ##get gains of 1 and leakages of 0
@@ -88,7 +92,7 @@ class Test(unittest.TestCase):
         npt.assert_allclose(components.gys, expec_gys, rtol=1e-5, atol=1e-5)
         
     
-    def test_LOFAR_beam(self):
+    def do_LOFAR_beam(self):
         """Run test using a LOFAR beam"""
         
         lofar_lat = np.radians(52.905329712)
@@ -113,7 +117,7 @@ class Test(unittest.TestCase):
                                                expec_Dys, expec_gys)
 
     
-    def test_MWA_beam(self):
+    def do_MWA_beam(self):
         """Run test using a LOFAR beam. Skip if we can't find the hdf5 file"""
         
         try:
@@ -145,7 +149,7 @@ class Test(unittest.TestCase):
         except KeyError:
             print("MWA_FEE_HDF5 not set. Skipping test on MWA beam as cannot access FEE hdf5 file")
             
-    def test_OSKAR_beam(self):
+    def do_OSKAR_beam(self):
         """Run test using a OSKAR beam"""
         
         mwa_lat = np.radians(-26.703319405555554)
@@ -169,8 +173,18 @@ class Test(unittest.TestCase):
         self.run_calc_everybeam_for_components(telescope, mwa_lat, mwa_long,
                                                 date, expec_gxs, expec_Dxs,
                                                 expec_Dys, expec_gys)
+        
+    def test_all_beams(self):
+        
+        if have_everybeam:
+            self.do_LOFAR_beam()
+            self.do_MWA_beam()
+            self.do_OSKAR_beam()
+            
+        else:
+            print("Skipping test_calc_everybeam_for_components as everybeam not installed")
 
 ##Run the test
 if __name__ == '__main__':
-    unittest.main()
     
+    unittest.main()

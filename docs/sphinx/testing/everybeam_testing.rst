@@ -43,7 +43,7 @@ for certain things to work.
 
 Work still to be done on EveryBeam in WODEN
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-- I've managed to read the antenna locations from a measurement set, needed to calculate ``u,v,w`` coords. But I haven't worked out where the latitude/longitude are stored in the measurement set. At the moment you have to put that in via command line arguments. Something to figure out.
+- I've managed to read the antenna locations from a measurement set, needed to calculate ``u,v,w`` coords. But I haven't worked out where the central latitude/longitude are stored in the measurement set. At the moment you have to put that in via command line arguments. Something to figure out.
 - You can only run one ``WODEN`` frequency band at a time. This is because ``WODEN`` is designed to calculate the beam values on GPU, iteratively band by band. It's not the end of the world but a slight design flaw.
 - Only certain frequencies exists in certain models. This means we don't need to call EveryBeam for every single frequency. So create some kind of cache or map for the existing beam models to save compute.
 - Things are threaded over ``EveryBeam now``, but we still need more optimisation. CPU-only version?
@@ -51,14 +51,11 @@ Work still to be done on EveryBeam in WODEN
 
 Adding new beam models
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-TODO update this, is not true anymore.
-
 You need to update the following Python functions to add a new EveryBeam model (in general, look for anywhere ``EB_OSKAR`` is already used, and make sure whatever is done with ``EB_OSKAR`` is also done with your new beam model):
 
 - Update the help for ``--primary_beam`` in the parser defined in ``WODEN/wodenpy/wodenpy_setup/run_setup.get_parser`` to show the new option
-- Add a new beamtype to the ``BeamTypes`` enum in ``WODEN/wodenpy/use_libwoden/beam_settings``. You must also update the equivalent ``e_beamtype`` in ``WODEN/include/woden_struct_defs.h``. E.g. OSKAR already has a value of ``EB_OSKAR``, so if adding an EveryBeam MWA model, you would add ``EB_MWA``.
-- Make sure your beam model is added to ``woden_settings`` in the ```WODEN/wodenpy/use_libwoden/woden_settings.create_woden_settings``` function.
-- Add your beamtype to the ``eb_beams`` list in ``WODEN/wodenpy/use_libwoden/skymodel_structs.setup_components``
+- Add a new beamtype to the ``BeamTypes`` and ``BeamGroups`` enums in ``WODEN/wodenpy/use_libwoden/beam_settings.py``. You must also update the equivalent ``e_beamtype`` in ``WODEN/include/woden_struct_defs.h``. E.g. MWA already has a value of ``EB_MWA``, so try adding in a new ``EB_YOURBEAM``. If the beam model you add in has off-cardinal dipoles, you should add in to the ``BeamGroups.off_cardinal_beam_values`` list.
+- Make sure your beam model is added to ``woden_settings`` in the ``WODEN/wodenpy/use_libwoden/woden_settings.create_woden_settings`` function.
 - Add a new function to load in the beam model in ``WODEN/wodenpy/primary_beam/use_everybeam.py`` (similar to ``load_OSKAR_telescope`` or ``load_LOFAR_telescope``).
 - In ``WODEN/wodenpy/skymodel/read_fits_skymodel.read_fits_skymodel_chunks``, ensure the new beam model initiated correctly.
 
