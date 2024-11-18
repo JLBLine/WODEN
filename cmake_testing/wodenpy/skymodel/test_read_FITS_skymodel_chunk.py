@@ -18,8 +18,9 @@ from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map, Skymodel
 from wodenpy.use_libwoden.beam_settings import BeamTypes
 from wodenpy.use_libwoden.skymodel_structs import setup_source_catalogue, setup_chunked_source
 import wodenpy.use_libwoden.woden_settings as ws
-
-from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components, Skymodel_Settings
+from wodenpy.skymodel.read_skymodel import create_source_catalogue_from_python_sources, get_skymodel_tables
+from wodenpy.skymodel.read_fits_skymodel import read_fits_skymodel_chunks
+from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components, Skymodel_Settings, Args
 from read_skymodel_common import check_components, check_all_sources, populate_pointgauss_chunk, populate_shapelet_chunk, make_expected_chunks
 from fits_skymodel_common import write_full_test_skymodel_fits
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
@@ -70,7 +71,7 @@ class Test(BaseChunkTest):
         woden_settings.num_time_steps = num_time_steps
         
         woden_settings.do_precession = 1
-        lsts = ws.setup_lsts_and_phase_centre(woden_settings)
+        lsts, latitudes = ws.setup_lsts_and_phase_centre(woden_settings)
         
         # print(lsts)
         
@@ -88,44 +89,32 @@ class Test(BaseChunkTest):
         ##Create a chunking map
         chunked_skymodel_maps = create_skymodel_chunk_map(comp_counter,
                                         max_num_visibilities, num_baselines,
-                                        num_freqs, num_time_steps)
+                                        num_freqs, num_time_steps,
+                                        max_dirs=1e5)
+        
+        chunked_skymodel_maps = chunked_skymodel_maps[0,0]
         
         beamtype = BeamTypes.FEE_BEAM.value
         
-        main_table = Table.read(skymodel_filename, hdu=1)
-        shape_table = Table.read(skymodel_filename, hdu=2)
-        
-        with fits.open(skymodel_filename) as hdus:
-            num_hdus = len(hdus)
-            hdu_names = [hdu.name for hdu in hdus]
-            
-        if 'V_LIST_FLUXES' in hdu_names:
-                v_table = Table.read(skymodel_filename, hdu='V_LIST_FLUXES')
-        else:
-            v_table = False
-            
-        if 'Q_LIST_FLUXES' in hdu_names:
-                q_table = Table.read(skymodel_filename, hdu='Q_LIST_FLUXES')
-        else:
-            q_table = False    
-            
-        if 'U_LIST_FLUXES' in hdu_names:
-                u_table = Table.read(skymodel_filename, hdu='U_LIST_FLUXES')
-        else:
-            u_table = False
-            
-        if 'P_LIST_FLUXES' in hdu_names:
-                p_table = Table.read(skymodel_filename, hdu='P_LIST_FLUXES')
-        else:
-            p_table = False
-            
-        # print("TABLES", type(v_table), type(q_table), type(u_table), type(p_table))
+        args = Args()
+        args.precision = precision
 
-        source_catalogue = read_fits_skymodel.read_fits_skymodel_chunks(woden_struct_classes,
-                                              main_table, shape_table, chunked_skymodel_maps,
-                                              num_freqs, num_time_steps,
-                                              beamtype, lsts, MWA_LAT,
-                                              v_table, q_table, u_table, p_table,)
+        num_beams = 1
+        
+        main_table, shape_table, v_table, q_table, u_table, p_table = get_skymodel_tables(skymodel_filename)
+
+        python_sources = read_fits_skymodel_chunks(args, main_table, shape_table,
+                                                    chunked_skymodel_maps,
+                                                    num_freqs, num_time_steps,
+                                                    beamtype,
+                                                    lsts, latitudes,
+                                                    v_table, q_table,
+                                                    u_table, p_table,
+                                                    args.precision)
+        
+        source_catalogue = create_source_catalogue_from_python_sources(python_sources,
+                                                                       woden_struct_classes,
+                                                                       beamtype, precision)
         
         check_all_sources(expected_chunks, source_catalogue,
                            fits_skymodel=True)

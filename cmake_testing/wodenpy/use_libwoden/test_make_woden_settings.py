@@ -55,6 +55,9 @@ class PretendArgs():
         self.dipamps = False
         
         self.hdf5_beam_path = ""
+        self.station_id = np.nan
+        
+        self.off_cardinal_dipoles = False
         
     def __init__(self):
         self.make_basic_args()
@@ -395,7 +398,30 @@ class Test(unittest.TestCase):
         npt.assert_allclose(mwa_dipole_amps, np.arange(16), atol=1e-8)
         
         
+    def test_off_cardinal_dipoles(self):
+        """Test that the use_dipamp flag gets propagated correctly, and if
+        true, the dipole amplitude array is correctly passed through"""
 
+        ##First up, check that the off_cardinal_dipoles flag off by default
+        self.make_basic_inputs('double')
+        woden_settings = self.call_create_woden_settings()
+        self.check_basic_inputs(woden_settings)
+        self.assertFalse(int(self.data['off_cardinal_dipoles']))
+        
+        ##Next, turn it on via the command line
+        self.make_basic_inputs('double')
+        self.args.off_cardinal_dipoles = True
+        woden_settings = self.call_create_woden_settings()
+        self.check_basic_inputs(woden_settings)
+        self.assertTrue(int(self.data['off_cardinal_dipoles']))
+        
+        ##Next, check it gets switched on given the right primary beam
+        self.make_basic_inputs('double')
+        self.args.primary_beam = 'everybeam_LOFAR'
+        woden_settings = self.call_create_woden_settings()
+        self.check_basic_inputs(woden_settings)
+        self.assertTrue(int(self.data['off_cardinal_dipoles']))
+        
 ##Run the test
 if __name__ == '__main__':
    unittest.main()

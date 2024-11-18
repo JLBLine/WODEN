@@ -6,6 +6,7 @@ import palpy
 from ctypes import Structure
 import argparse
 from typing import Tuple
+from erfa import gd2gc
 
 ##Constants
 R2D = 180.0 / np.pi
@@ -23,6 +24,52 @@ from wodenpy.use_libwoden.array_layout_struct import Array_Layout, setup_array_l
 ##This call is so we can use it as a type annotation
 woden_struct_classes = Woden_Struct_Classes()
 Woden_Settings = woden_struct_classes.Woden_Settings
+
+
+def convert_ecef_to_enh(ecef_X : np.ndarray, ecef_Y : np.ndarray, ecef_Z : np.ndarray,
+                        lon : float, lat : float) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    The array coords in a measurement set seem to be Earth Centred Earth Fixed
+    coords
+    
+    I got the maths to go from ECEF to enh from this site:
+    https://gssc.esa.int/navipedia/index.php/Transformations_between_ECEF_and_ENU_coordinates
+
+    Parameters
+    ----------
+    ecef_X : np.ndarray
+        ECEF X coordinates (metres)
+    ecef_Y : np.ndarray
+        ECEF Y coordinates (metres)
+    ecef_Z : np.ndarray
+        ECEF Z coordinates (metres)
+    lon : float
+        Longitude of the array (radians)
+    lat : float
+        Latitude of the array (radians
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray, np.ndarray]
+        The east, north, and height coordinates
+    """
+                        
+    ##Calculate the ecef xyz of the array position using the geodectic to
+    ##geocentric function
+    arrX, arrY, arrZ = gd2gc(1, lon, lat, 0)
+    
+    ##subtract it from the earth centred coords, as we want enh coords
+    ##centred at the array
+    X = ecef_X - arrX
+    Y = ecef_Y - arrY
+    Z = ecef_Z - arrZ
+    
+    ##convert xyz to enh
+    east = -np.sin(lon)*X + np.cos(lon)*Y
+    north = -np.cos(lon)*np.sin(lat)*X - np.sin(lon)*np.sin(lat)*Y + np.cos(lat)*Z
+    height = np.cos(lon)*np.cos(lat)*X + np.sin(lon)*np.cos(lat)*Y + np.sin(lat)*Z
+    
+    return east, north, height
 
 def enh2xyz(east : float, north : float, height : float, latitude : float) -> Tuple[float, float, float]:
     """

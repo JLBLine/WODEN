@@ -22,11 +22,16 @@ extern void calculate_visibilities(array_layout_t *array_layout,
 int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_sets,
              source_catalogue_t *cropped_sky_models, array_layout_t * array_layout, user_precision_t *sbf) {
 
-  #ifdef DOUBLE_PRECISION
-  printf("WODEN is using DOUBLE precision\n");
-  #else
-  printf("WODEN is using FLOAT precision\n");
-  #endif
+  int verbose = 0;
+
+  if (verbose == 1){
+    #ifdef DOUBLE_PRECISION
+    printf("WODEN is using DOUBLE precision\n");
+    #else
+    printf("WODEN is using FLOAT precision\n");
+    #endif
+  }
+  
 
   //Is everything OK integer
   int status=0;
@@ -44,7 +49,10 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
     //Set the lower frequency edge for this coarse band
     int band_num = woden_settings->band_nums[band];
     double base_band_freq = ((band_num - 1)*woden_settings->coarse_band_width) + woden_settings->base_low_freq;
-    printf("Simulating band %02d with bottom freq %.8e\n",band_num,base_band_freq);
+
+    if (verbose == 1){
+      printf("Simulating band %02d with bottom freq %.8e\n",band_num,base_band_freq);
+    }
 
     woden_settings->base_band_freq = base_band_freq;
 
@@ -72,7 +80,9 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
     calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
                   woden_settings, &visibility_sets[band], sbf);
 
-    printf("GPU calls for band %d finished\n",band_num );
+    if (verbose == 1){
+      printf("GPU calls for band %d finished\n",band_num );
+    }
 
     //Release the CPU MWA FEE beam if required
     if (woden_settings->beamtype == FEE_BEAM || woden_settings->beamtype == FEE_BEAM_INTERP){

@@ -4,7 +4,7 @@ import os
 import subprocess
 from typing import Union
 from wodenpy.array_layout.precession import RTS_Precess_LST_Lat_to_J2000
-
+from wodenpy.use_libwoden.beam_settings import BeamTypes, BeamGroups
 import numpy as np
 import argparse
 
@@ -99,6 +99,8 @@ def create_woden_settings_struct(precision : str = "double"):
         :cvar c_int do_autos:  Boolean of whether to simulate autos or not (0 False, 1 True)
         :cvar c_int use_dipamps:  Boolean of whether to use dipole amplitudes, so have an individual beam per tile  (0 False, 1 True)
         :cvar POINTER(c_double) mwa_dipole_amps: Bespoke MWA dipole amplitudes for each antenna(tile). Should be 2*num_ants*16 long
+        :cvar c_int single_everybeam_station: If using everybeam, add this to say we are only using a single station
+        :cvar c_int off_cardinal_dipoles: Boolean of whether to use off-cardinal dipole equations to apply the beams gains to the Stokes IQUV parameters
         """
         
         _fields_ = [("lst_base", c_double),
@@ -143,7 +145,9 @@ def create_woden_settings_struct(precision : str = "double"):
                     ("mjds", POINTER(c_double)),
                     ("do_autos", c_int),
                     ("use_dipamps", c_int),
-                    ("mwa_dipole_amps", POINTER(c_double))]
+                    ("mwa_dipole_amps", POINTER(c_double)),
+                    ("single_everybeam_station", c_int),
+                    ("off_cardinal_dipoles", c_int)]
         
     return Woden_Settings
 
@@ -221,28 +225,37 @@ def create_woden_settings(woden_settings : Woden_Settings, # type: ignore
                 woden_settings.FEE_ideal_delays[beam*len(delays) + delay_ind] = int(delay)
         
     if args.primary_beam == 'none':
-        woden_settings.beamtype = 0
+        woden_settings.beamtype = BeamTypes.NO_BEAM.value
     
     elif args.primary_beam == 'Gaussian':
-        woden_settings.beamtype = 1
+        woden_settings.beamtype = BeamTypes.GAUSS_BEAM.value
         woden_settings.gauss_beam_FWHM = float(args.gauss_beam_FWHM)
         woden_settings.gauss_beam_ref_freq = float(args.gauss_beam_ref_freq)
         woden_settings.gauss_ra_point = float(args.gauss_ra_point)*D2R
         woden_settings.gauss_dec_point = float(args.gauss_dec_point)*D2R
 
     elif args.primary_beam == 'MWA_FEE':
-        woden_settings.beamtype = 2
+        woden_settings.beamtype = BeamTypes.FEE_BEAM.value
         woden_settings.hdf5_beam_path = create_string_buffer(args.hdf5_beam_path.encode('utf-8'))
         
     elif args.primary_beam == 'EDA2':
-        woden_settings.beamtype = 3
+        woden_settings.beamtype = BeamTypes.ANALY_DIPOLE.value
         
     elif args.primary_beam == 'MWA_FEE_interp':
-        woden_settings.beamtype = 4
+        woden_settings.beamtype = BeamTypes.FEE_BEAM_INTERP.value
         woden_settings.hdf5_beam_path = create_string_buffer(args.hdf5_beam_path.encode('utf-8'))
         
     elif args.primary_beam == 'MWA_analy':
-        woden_settings.beamtype = 5
+        woden_settings.beamtype = BeamTypes.MWA_ANALY.value
+        
+    elif args.primary_beam == 'everybeam_OSKAR':
+        woden_settings.beamtype = BeamTypes.EB_OSKAR.value
+        
+    elif args.primary_beam == 'everybeam_LOFAR':
+        woden_settings.beamtype = BeamTypes.EB_LOFAR.value
+        
+    elif args.primary_beam == 'everybeam_MWA':
+        woden_settings.beamtype = BeamTypes.EB_MWA.value
         
     if args.no_precession:
         woden_settings.do_precession = 0
@@ -257,7 +270,7 @@ def create_woden_settings(woden_settings : Woden_Settings, # type: ignore
     woden_settings.band_nums = (ctypes.c_int*woden_settings.num_bands)()
     
     for ind, band in enumerate(args.band_nums):
-            woden_settings.band_nums[ind] = int(band)
+        woden_settings.band_nums[ind] = int(band)
     
     ##Are we using dipole amplitudes?
     woden_settings.use_dipamps = args.use_MWA_dipamps
@@ -270,9 +283,19 @@ def create_woden_settings(woden_settings : Woden_Settings, # type: ignore
         for ind, amplitude in enumerate(args.dipamps):
                 woden_settings.mwa_dipole_amps[ind] = amplitude
     
+    if np.isnan(args.station_id):
+        woden_settings.single_everybeam_station = 0
+    else:
+        woden_settings.single_everybeam_station = 1
+        
+    if args.off_cardinal_dipoles or woden_settings.beamtype in BeamGroups.off_cardinal_beam_values:
+        woden_settings.off_cardinal_dipoles = 1
+    else:
+        woden_settings.off_cardinal_dipoles = 0
+        
     return woden_settings
     
-def setup_lsts_and_phase_centre(woden_settings : Woden_Settings) -> np.ndarray: # type: ignore
+def setup_lsts_and_phase_centre(woden_settings : Woden_Settings) -> Union[np.ndarray, np.ndarray]: # type: ignore
     """
     Calculate the Local Sidereal Time (LST) for each time step of an observation,
     and set the phase centre coordinates. If `woden_settings.do_precession == True`,
@@ -287,6 +310,10 @@ def setup_lsts_and_phase_centre(woden_settings : Woden_Settings) -> np.ndarray: 
     -------
     lsts : np.ndarray:
         An array of LST values, one for each time step of the observation.
+    latitudes : np.ndarray:
+        An array of latitude values, one for each time step of the observation
+        (these should be the same if precession is not applied, and even if applied
+        there should be tiny differences).
 
     """
 
@@ -350,6 +377,7 @@ def setup_lsts_and_phase_centre(woden_settings : Woden_Settings) -> np.ndarray: 
             woden_settings.latitudes[time_step] = woden_settings.latitude_obs_epoch_base
             if time_step == 0:
                 print("Obs epoch initial LST was {:.10f} deg\n".format(lst_current/D2R) )
-            
+        
+    latitudes = np.ctypeslib.as_array(woden_settings.latitudes, shape=(woden_settings.num_time_steps, ))
     
-    return lsts
+    return lsts, latitudes

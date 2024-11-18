@@ -45,3 +45,6 @@ set_tests_properties(python_test_read_skymodel_chunk PROPERTIES
 
 add_test(python_test_check_columns_fits ${PYTHON_EXECUTABLE}
          ${CMAKE_CURRENT_SOURCE_DIR}/test_check_columns_fits.py)
+
+add_test(python_test_calc_everybeam_for_components ${PYTHON_EXECUTABLE}
+         ${CMAKE_CURRENT_SOURCE_DIR}/test_calc_everybeam_for_components.py)

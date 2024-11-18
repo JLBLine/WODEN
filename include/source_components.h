@@ -139,7 +139,7 @@ component into a GAUSSIAN or SHAPELET component, and has been applied in
 @param[in,out] visi_YX Output YX instrumental visibility
 @param[in,out] visi_YY Output YY instrumental visibility
 */
-__device__ void apply_beam_gains_stokesIQUV(gpuUserComplex g1x, gpuUserComplex D1x,
+__device__ void apply_beam_gains_stokesIQUV_on_cardinal(gpuUserComplex g1x, gpuUserComplex D1x,
           gpuUserComplex D1y, gpuUserComplex g1y,
           gpuUserComplex g2x, gpuUserComplex D2x,
           gpuUserComplex D2y, gpuUserComplex g2y,
@@ -203,7 +203,157 @@ component into a GAUSSIAN or SHAPELET component, and has been applied in
 @param[in,out] visi_YX Output YX instrumental visibility
 @param[in,out] visi_YY Output YY instrumental visibility
 */
-__device__ void apply_beam_gains_stokesI(gpuUserComplex g1x, gpuUserComplex D1x,
+__device__ void apply_beam_gains_stokesI_on_cardinal(gpuUserComplex g1x, gpuUserComplex D1x,
+          gpuUserComplex D1y, gpuUserComplex g1y,
+          gpuUserComplex g2x, gpuUserComplex D2x,
+          gpuUserComplex D2y, gpuUserComplex g2y,
+          user_precision_t flux_I,
+          gpuUserComplex visi_component,
+          gpuUserComplex * visi_XX, gpuUserComplex * visi_XY,
+          gpuUserComplex * visi_YX, gpuUserComplex * visi_YY);
+
+/**
+@brief Given primary beam gains and leakage terms for antenna 1
+`g1x, D1x, D1y, gy` and antenna 2 `g1x, D1x, D1y, gy`,the complex visibility
+phase across those two antennas `visi`, and the Stokes parameters of a source,
+simulate the observed XX,XY,YX,YY instrumental cross-correlated visibilities,
+where 'x' means aligned north-east south-west (45 deg),
+'y' means south-east north-west (135 deg).
+
+@details Performs the following calculations:
+
+\f{eqnarray*}{
+\mathrm{V}^{XX}_{12} = (g_{1x} g_{2x}^{\ast} + D_{1x} D_{2x}^{\ast})\mathrm{V}^{I}_{12}
+                     - (g_{1x} D_{2x}^{\ast} + D_{1x} g_{2x}^{\ast})\mathrm{V}^{Q}_{12} \\
+                     + (g_{1x} g_{2x}^{\ast} - D_{1x} D_{2x}^{\ast})\mathrm{V}^{U}_{12}
+                     + i(g_{1x} D_{2x}^{\ast} - D_{1x} g_{2x}^{\ast})\mathrm{V}^{V}_{12}
+\f}
+
+\f{eqnarray*}{
+\mathrm{V}^{XY}_{12} =
+      (g_{1x} D_{2y}^{\ast} + D_{1x} g_{2y}^{\ast})\mathrm{V}^{I}_{12}
+  -  (g_{1x} g_{2y}^{\ast} + D_{1x} D_{2y}^{\ast})\mathrm{V}^{Q}_{12} \\
+  +   (g_{1x} D_{2y}^{\ast} - D_{1x} g_{2y}^{\ast})\mathrm{V}^{U}_{12}
+  +  i(g_{1x} g_{2y}^{\ast} -D_{1x} D_{2y}^{\ast})\mathrm{V}^{V}_{12}
+\f}
+
+\f{eqnarray*}{
+\mathrm{V}^{YX}_{12} =
+     (D_{1y} g_{2x}^{\ast} + G_{1y} D_{2x}^{\ast})\mathrm{V}^{I}_{12}
+  -  (D_{1y} D_{2x}^{\ast} + g_{1y} g_{2x}^{\ast})\mathrm{V}^{Q}_{12} \\
+  +  (D_{1y} g_{2x}^{\ast} - G_{1y} D_{2x}^{\ast})\mathrm{V}^{U}_{12}
+  +  i(D_{1y} D_{2x}^{\ast} -g_{1y} g_{2x}^{\ast})\mathrm{V}^{V}_{12}
+\f}
+
+\f{eqnarray*}{
+\mathrm{V}^{YY}_{12} =
+     (D_{1y} D_{2y}^{\ast} + G_{1y} g_{2y}^{\ast})\mathrm{V}^{I}_{12}
+  -  (D_{1y} g_{2y}^{\ast} + g_{1y} D_{2y}^{\ast})\mathrm{V}^{Q}_{12} \\
+  +  (D_{1y} D_{2y}^{\ast} - G_{1y} g_{2y}^{\ast})\mathrm{V}^{U}_{12}
+  +  i(D_{1y} g_{2y}^{\ast} -g_{1y} D_{2y}^{\ast})\mathrm{V}^{V}_{12}
+\f}
+
+where \f${\ast}\f$ means complex conjugate, and
+
+\f{eqnarray*}{
+\mathrm{V}_{12} &=& \mathrm{V}_{\mathrm{env}}\exp \left( 2\pi i\left( u_{12}l + v_{12}m + w_{12}(n-1) \right) \right) \\
+\mathrm{V}^{I}_{12} &=& I(l,m) \mathrm{V}_{12} \\
+\mathrm{V}^{Q}_{12} &=& Q(l,m) \mathrm{V}_{12} \\
+\mathrm{V}^{U}_{12} &=& U(l,m) \mathrm{V}_{12} \\
+\mathrm{V}^{V}_{12} &=& V(l,m) \mathrm{V}_{12}
+\f}
+
+where \f$ \mathrm{V}_{\mathrm{env}} \f$ is an visibility envelope that turns a
+component into a GAUSSIAN or SHAPELET component, and has been applied in
+`visi_component`.
+
+@param[in] g1x Beam gain antenna 1 in north-east south-west (45 deg)
+@param[in] D1x Beam leakage antenna 1 from north-east south-west (45 deg)
+@param[in] D1y Beam gain antenna 1 in south-east north-west (135 deg)
+@param[in] g1y Beam leakage antenna 1 from south-east north-west (135 deg)
+@param[in] g2x Beam gain antenna 2 in north-east south-west (45 deg)
+@param[in] D2x Beam leakage antenna 2 from north-east south-west (45 deg)
+@param[in] D2y Beam gain antenna 2 in south-east north-west (135 deg)
+@param[in] g2y Beam leakage antenna 2 from south-east north-west (135 deg)
+@param[in] flux_I Stokes I flux density (Jy)
+@param[in] flux_Q Stokes Q flux density (Jy)
+@param[in] flux_U Stokes U flux density (Jy)
+@param[in] flux_V Stokes V flux density (Jy)
+@param[in] visi_component Complex visibility across antennas 1 and 2
+@param[in,out] visi_XX Output XX instrumental visibility
+@param[in,out] visi_XY Output XY instrumental visibility
+@param[in,out] visi_YX Output YX instrumental visibility
+@param[in,out] visi_YY Output YY instrumental visibility
+*/
+__device__ void apply_beam_gains_stokesIQUV_off_cardinal(gpuUserComplex g1x, gpuUserComplex D1x,
+          gpuUserComplex D1y, gpuUserComplex g1y,
+          gpuUserComplex g2x, gpuUserComplex D2x,
+          gpuUserComplex D2y, gpuUserComplex g2y,
+          user_precision_t flux_I, user_precision_t flux_Q,
+          user_precision_t flux_U, user_precision_t flux_V,
+          gpuUserComplex visi_component,
+          gpuUserComplex * visi_XX, gpuUserComplex * visi_XY,
+          gpuUserComplex * visi_YX, gpuUserComplex * visi_YY);
+
+/**
+@brief Given primary beam gains and leakage terms for antenna 1
+`g1x, D1x, D1y, gy` and antenna 2 `g1x, D1x, D1y, gy`,the complex visibility
+phase across those two antennas `visi`, and the Stokes I parameter of a source,
+simulate the observed XX,XY,YX,YY instrumental cross-correlated visibilities,
+where 'x' means aligned north-east south-west (45 deg),
+'y' means south-east north-west (135 deg).
+
+@details Performs the following calculations:
+
+\f{eqnarray*}{
+\mathrm{V}^{XX}_{12} = (g_{1x} g_{2x}^{\ast} + D_{1x} D_{2x}^{\ast})\mathrm{V}^{I}_{12}
+\f}
+
+\f{eqnarray*}{
+\mathrm{V}^{XY}_{12} =
+      (g_{1x} D_{2y}^{\ast} + D_{1x} g_{2y}^{\ast})\mathrm{V}^{I}_{12}
+\f}
+
+\f{eqnarray*}{
+\mathrm{V}^{YX}_{12} =
+     (D_{1y} g_{2x}^{\ast} + G_{1y} D_{2x}^{\ast})\mathrm{V}^{I}_{12}
+\f}
+
+\f{eqnarray*}{
+\mathrm{V}^{YY}_{12} =
+     (D_{1y} D_{2y}^{\ast} + G_{1y} g_{2y}^{\ast})\mathrm{V}^{I}_{12}
+\f}
+
+where \f${\ast}\f$ means complex conjugate, and
+
+\f{eqnarray*}{
+\mathrm{V}_{12} &=& \mathrm{V}_{\mathrm{env}}\exp \left( 2\pi i\left( u_{12}l + v_{12}m + w_{12}(n-1) \right) \right) \\
+\mathrm{V}^{I}_{12} &=& I(l,m) \mathrm{V}_{12} \\
+\mathrm{V}^{Q}_{12} &=& Q(l,m) \mathrm{V}_{12} \\
+\mathrm{V}^{U}_{12} &=& U(l,m) \mathrm{V}_{12} \\
+\mathrm{V}^{V}_{12} &=& V(l,m) \mathrm{V}_{12}
+\f}
+
+where \f$ \mathrm{V}_{\mathrm{env}} \f$ is an visibility envelope that turns a
+component into a GAUSSIAN or SHAPELET component, and has been applied in
+`visi_component`.
+
+@param[in] g1x Beam gain antenna 1 in north-east south-west (45 deg)
+@param[in] D1x Beam leakage antenna 1 from north-east south-west (45 deg)
+@param[in] D1y Beam gain antenna 1 in south-east north-west (135 deg)
+@param[in] g1y Beam leakage antenna 1 from south-east north-west (135 deg)
+@param[in] g2x Beam gain antenna 2 in north-east south-west (45 deg)
+@param[in] D2x Beam leakage antenna 2 from north-east south-west (45 deg)
+@param[in] D2y Beam gain antenna 2 in south-east north-west (135 deg)
+@param[in] g2y Beam leakage antenna 2 from south-east north-west (135 deg)
+@param[in] flux_I Stokes I flux density (Jy)
+@param[in] visi_component Complex visibility across antennas 1 and 2
+@param[in,out] visi_XX Output XX instrumental visibility
+@param[in,out] visi_XY Output XY instrumental visibility
+@param[in,out] visi_YX Output YX instrumental visibility
+@param[in,out] visi_YY Output YY instrumental visibility
+*/
+__device__ void apply_beam_gains_stokesI_off_cardinal(gpuUserComplex g1x, gpuUserComplex D1x,
           gpuUserComplex D1y, gpuUserComplex g1y,
           gpuUserComplex g2x, gpuUserComplex D2x,
           gpuUserComplex D2y, gpuUserComplex g2y,
@@ -343,6 +493,9 @@ apply the gains - see descriptions for what should be the arguments to them.
 @param[in] num_components Number of COMPONENTs
 @param[in] num_times Number of times in simulation
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
+@param[in] off_cardinal Boolean to indicate if the dipoles are off-cardinal i.e.
+if off_cardinal == 1, then the dipoles are aligned at 45 and 135 degrees,
+if off_cardinal == 0, then the dipoles are aligned at 0 and 90 degrees
 @param[in] *d_gxs Pointer towards array of primary beam J[0,0]
 (north-south gain)
 @param[in] *d_Dxs Pointer towards array of primary beam J[0,1]
@@ -379,8 +532,9 @@ into
 @param[in,out] *d_sum_visi_YY_imag Pointer to array to sum imaginary YY
 visibility into
 */
-__device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent, int num_freqs,
-    int num_baselines, int num_components, int num_times, int beamtype,
+__device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent,
+    int num_freqs, int num_baselines, int num_components, int num_times,
+    int beamtype, int off_cardinal,
     gpuUserComplex *d_gxs, gpuUserComplex *d_Dxs,
     gpuUserComplex *d_Dys, gpuUserComplex *d_gys,
     int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map, int use_twobeams,
@@ -411,6 +565,9 @@ and sum them into real and imaginary XX,XY,YX,YY visibilities arrays
 @param[in] num_components Number of COMPONENTs
 @param[in] num_times Number of times in simulation
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
+@param[in] off_cardinal Boolean to indicate if the dipoles are off-cardinal i.e.
+if off_cardinal == 1, then the dipoles are aligned at 45 and 135 degrees,
+if off_cardinal == 0, then the dipoles are aligned at 0 and 90 degrees
 @param[in] *d_gxs Pointer towards array of primary beam J[0,0]
 (north-south gain)
 @param[in] *d_Dxs Pointer towards array of primary beam J[0,1]
@@ -444,8 +601,9 @@ into
 @param[in,out] *d_sum_visi_YY_imag Pointer to array to sum imaginary YY
 visibility into
 */
-__device__ void update_sum_visis_stokesI(int iBaseline, int iComponent, int num_freqs,
-    int num_baselines, int num_components, int num_times, int beamtype,
+__device__ void update_sum_visis_stokesI(int iBaseline, int iComponent,
+    int num_freqs, int num_baselines, int num_components, int num_times,
+    int beamtype, int off_cardinal,
     gpuUserComplex *d_gxs, gpuUserComplex *d_Dxs,
     gpuUserComplex *d_Dys, gpuUserComplex *d_gys,
     int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map, int use_twobeams,
@@ -802,6 +960,8 @@ simulation
 @param[in] num_times Number of time steps in simulation
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
 @param[in] comptype Component type, either POINT or GAUSSIAN
+@param[in] off_cardinal_dipoles Boolean to specify if the dipoles in the beam are off the cardinal axes
+(45 and 135 degrees) or aligned with north-south and east-west (0 and 90 degrees). Effects what visibilities are calculated. 
 */
 __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            d_beam_gains_t d_component_beam_gains,
@@ -811,7 +971,8 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
            user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
            int num_components, int num_baselines, int num_freqs, int num_cross,
-           int num_times, e_beamtype beamtype, e_component_type comptype);
+           int num_times, e_beamtype beamtype, e_component_type comptype,
+           int off_cardinal_dipoles);
 
 /**
 @brief Kernel to calculate the visibility response to a number `num_shapes` of
@@ -903,6 +1064,8 @@ simulation
 @param[in] num_coeffs Number of shapelet basis functions and coefficents
 @param[in] num_times Number of time steps in simulation
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
+@param[in] off_cardinal_dipoles Boolean to specify if the dipoles in the beam are off the cardinal axes
+(45 and 135 degrees) or aligned with north-south and east-west (0 and 90 degrees). Effects what visibilities are calculated. 
 */
 __global__ void kern_calc_visi_shapelets(components_t d_components,
       d_beam_gains_t d_component_beam_gains,
@@ -915,7 +1078,7 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
       user_precision_t *d_sbf,
       int num_shapes, int num_baselines, int num_freqs, int num_cross,
-      const int num_coeffs, int num_times, e_beamtype beamtype);
+      const int num_coeffs, int num_times, e_beamtype beamtype, int off_cardinal_dipoles);
 
 /**
 @brief Copies the specified type of source components from host memory to device memory.

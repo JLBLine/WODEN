@@ -24,6 +24,7 @@ can be reproduced on the command line using ``script.py --help``.
   python_code/wodenpy/array_layout
   python_code/wodenpy/observational
   python_code/wodenpy/phase_rotate
+  python_code/wodenpy/primary_beam
   python_code/wodenpy/skymodel
   python_code/wodenpy/use_libwoden
   python_code/wodenpy/uvfits

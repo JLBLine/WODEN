@@ -8,7 +8,7 @@ import unittest
 import numpy as np
 
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes
-from wodenpy.skymodel.chunk_sky_model import map_chunk_shapelets, Skymodel_Chunk_Map, create_shape_basis_maps
+from wodenpy.skymodel.chunk_sky_model import map_chunk_shapelets, Skymodel_Chunk_Map, create_shape_basis_maps, find_num_dirs_per_chunk
 
 from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Skymodel_Settings
 
@@ -59,12 +59,19 @@ class Test(BaseChunkTest):
         
         shape_basis_to_orig_comp_index_map, shape_basis_to_comp_type_map, shape_basis_param_index = create_shape_basis_maps(full_comp_counter)
         
-        for chunk_ind in range(num_chunks):
-            chunk_map = map_chunk_shapelets(full_comp_counter,
+        num_threads=1
+        num_shape_dirs = find_num_dirs_per_chunk(full_comp_counter.total_shape_comps, coeffs_per_chunk,
+                                                 num_threads)
+        
+        
+        chunk_maps = map_chunk_shapelets(full_comp_counter,
                                         shape_basis_to_orig_comp_index_map,
                                         shape_basis_to_comp_type_map,
                                         shape_basis_param_index,
-                                        chunk_ind, coeffs_per_chunk)
+                                        coeffs_per_chunk, num_shape_dirs)
+        
+        for chunk_ind, chunk_map in enumerate(chunk_maps):
+            
             
             self.check_shapelet_chunking(chunk_ind, num_coeff_per_shape,
                                          coeffs_per_chunk, num_shapes,

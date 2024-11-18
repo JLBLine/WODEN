@@ -14,15 +14,16 @@ from wodenpy.skymodel import read_skymodel
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes, crop_below_horizon
 from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map, Skymodel_Chunk_Map, increment_flux_type_counters
 from wodenpy.use_libwoden.beam_settings import BeamTypes
-
+from wodenpy.skymodel.read_skymodel import create_source_catalogue_from_python_sources
 from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, _Ctype_Source_Into_Python
-
-from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components, Skymodel_Settings
+from wodenpy.skymodel.read_fits_skymodel import read_fits_skymodel_chunks
+from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components, Skymodel_Settings, Args
 
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 import wodenpy.use_libwoden.woden_settings as ws
 
 from read_skymodel_common import check_components, check_all_sources, populate_pointgauss_chunk, populate_shapelet_chunk, make_expected_chunks
+import binpacking
 
 D2R = np.pi/180.0
 # MWA_LATITUDE = -26.7*D2R
@@ -81,7 +82,7 @@ def make_expected_chunks_text(ra_range, dec_range,
     num_gauss_chunks = int(np.ceil((NUM_FLUX_TYPES*num_crop_comp) / comps_per_chunk))
     num_coeff_chunks = int(np.ceil((NUM_FLUX_TYPES*num_coeff_per_shape*num_crop_comp) / comps_per_chunk))
     
-    expec_skymodel_chunks = []
+    expec_skymodel_chunks = np.empty(num_point_chunks + num_gauss_chunks + num_coeff_chunks, dtype=Expected_Sky_Chunk)
     
     n_powers = num_crop_comp
     n_curves = 0
@@ -99,7 +100,7 @@ def make_expected_chunks_text(ra_range, dec_range,
                             polvalues,
                             fits_skymodel=fits_skymodel)
         
-        expec_skymodel_chunks.append(expec_chunk)
+        expec_skymodel_chunks[chunk_ind] = expec_chunk
         
     for chunk_ind in range(num_gauss_chunks):
         expec_chunk = populate_pointgauss_chunk(CompTypes.GAUSSIAN, chunk_ind,
@@ -111,7 +112,7 @@ def make_expected_chunks_text(ra_range, dec_range,
                             polvalues,
                             fits_skymodel=fits_skymodel)
         
-        expec_skymodel_chunks.append(expec_chunk)
+        expec_skymodel_chunks[num_point_chunks + chunk_ind] = expec_chunk
         
     total_shape_basis = num_coeff_per_shape*num_crop_comp*NUM_FLUX_TYPES
     
@@ -153,17 +154,57 @@ def make_expected_chunks_text(ra_range, dec_range,
         high_ind = low_ind + num_coeff_per_shape
         shape_basis_values[low_ind:high_ind] = range(low_coeff, low_coeff + num_coeff_per_shape)
         
-        # ##this slots in the curved power law components
-        # low_coeff = orig_ind*num_coeff_per_shape*NUM_FLUX_TYPES + num_coeff_per_shape
-        # low_ind = (comp_ind + num_crop_comp)*num_coeff_per_shape
-        # high_ind = low_ind + num_coeff_per_shape
-        # shape_basis_values[low_ind:high_ind] = range(low_coeff, low_coeff + num_coeff_per_shape)
+    ##Need to account for the thread-based chunking reordering the chunk
+    ##to better distribute the work
+    
+    
+    num_shapes_per_comp = []
+    
+    for chunk_ind in range(num_coeff_chunks):
         
-        # ##this slots in the curved list components
-        # low_coeff = orig_ind*num_coeff_per_shape*NUM_FLUX_TYPES + 2*num_coeff_per_shape
-        # low_ind = (comp_ind + 2*num_crop_comp)*num_coeff_per_shape
-        # high_ind = low_ind + num_coeff_per_shape
-        # shape_basis_values[low_ind:high_ind] = range(low_coeff, low_coeff + num_coeff_per_shape)
+        coeff_lower = chunk_ind*comps_per_chunk
+        coeff_higher = (chunk_ind + 1)*comps_per_chunk
+        
+        ##Are there are enough coeffs to fill the chunk?
+        if (total_shape_basis >= coeff_higher):
+            n_shape_coeffs = comps_per_chunk;
+            
+        else:
+            n_shape_coeffs = total_shape_basis % comps_per_chunk
+            
+        basis_inds = np.arange(coeff_lower, coeff_lower+n_shape_coeffs)
+        comp_inds = np.array(np.unique(shape_basis_to_comp_ind[basis_inds]), dtype=int)
+
+        power_inds = np.unique(np.where(shape_comp_ind_to_comp_type[comp_inds] == CompTypes.SHAPE_POWER)[0])
+        # curve_inds = np.unique(np.where(shape_comp_ind_to_comp_type[comp_inds] == CompTypes.SHAPE_CURVE)[0])
+        # list_inds = np.unique(np.where(shape_comp_ind_to_comp_type[comp_inds] == CompTypes.SHAPE_LIST)[0])
+        
+        num_chunk_power = len(power_inds)
+        num_chunk_curve = 0
+        num_chunk_list = 0
+        num_shapes_per_comp .append(num_chunk_power)
+        
+    ##We will have some unedfined number of chunks, so we want to split
+    ##things as evenly as possible in the available number of threads
+    indexed_shape_chunk_sizes = [(i, n_shape) for i,n_shape in enumerate(num_shapes_per_comp)]  # List of (index, value) tuples
+    target_volume = comps_per_chunk  # Set the target volume for each bin
+    # Step 2: Partition the numbers while keeping track of indices using the `to_constant_volume` function
+    binned_shape_chunk_sizes = binpacking.to_constant_volume(indexed_shape_chunk_sizes, target_volume, weight_pos=1)
+    
+    # print(len(binned_shape_chunk_sizes), binned_shape_chunk_sizes)
+    num_threads = 1
+    if len(binned_shape_chunk_sizes) > num_threads:
+        while len(binned_shape_chunk_sizes) > num_threads:
+            # Find the two smallest binned_shape_chunk_sizes and merge them
+            binned_shape_chunk_sizes = sorted(binned_shape_chunk_sizes, key=lambda bin: sum(item[1] for item in bin))  # Sort binned_shape_chunk_sizes by their total sum
+            binned_shape_chunk_sizes[0].extend(binned_shape_chunk_sizes[1])  # Merge the two smallest binned_shape_chunk_sizes
+            binned_shape_chunk_sizes.pop(1)  # Remove the now-empty bin
+
+    shape_comp_chunk_order = []
+
+    for bin_index_size in binned_shape_chunk_sizes:
+        for index, value in bin_index_size:
+            shape_comp_chunk_order.append(index)
         
     for chunk_ind in range(num_coeff_chunks):
         
@@ -209,7 +250,9 @@ def make_expected_chunks_text(ra_range, dec_range,
                             settings,
                             fits_skymodel=fits_skymodel)
         
-        expec_skymodel_chunks.append(expec_chunk)
+        new_ind = np.argsort(shape_comp_chunk_order)[chunk_ind]
+        
+        expec_skymodel_chunks[num_point_chunks + num_gauss_chunks + new_ind] = expec_chunk
         
     ##not doing polarisation in the FITS skymodel format, so go away
     
@@ -458,7 +501,7 @@ class Test(BaseChunkTest):
         woden_settings.num_time_steps = num_time_steps
         
         woden_settings.do_precession = 1
-        lsts = ws.setup_lsts_and_phase_centre(woden_settings)
+        lsts, latitudes = ws.setup_lsts_and_phase_centre(woden_settings)
         
         comp_counter = read_text_skymodel.read_text_radec_count_components(skymodel_filename)
         
@@ -472,13 +515,30 @@ class Test(BaseChunkTest):
         chunked_skymodel_maps = create_skymodel_chunk_map(comp_counter,
                                         max_num_visibilities, num_baselines,
                                         num_freqs, num_time_steps)
+        chunked_skymodel_maps = chunked_skymodel_maps[0,0]
         
         beamtype = BeamTypes.FEE_BEAM.value
+        
+        ##TODO if using everybeam, need args to have correct values
+        args = Args()
+        args.precision = precision
 
-        source_catalogue = read_skymodel.read_skymodel_chunks(woden_struct_classes,
-                                              skymodel_filename, chunked_skymodel_maps,
-                                              num_freqs, num_time_steps,
-                                              beamtype, lsts, MWA_LAT)
+        num_beams = 1
+        
+        main_table, shape_table, v_table, q_table, u_table, p_table = read_skymodel.get_skymodel_tables(skymodel_filename)
+
+        python_sources = read_fits_skymodel_chunks(args, main_table, shape_table,
+                                                    chunked_skymodel_maps,
+                                                    num_freqs, num_time_steps,
+                                                    beamtype,
+                                                    lsts, latitudes,
+                                                    v_table, q_table,
+                                                    u_table, p_table,
+                                                    args.precision)
+        
+        source_catalogue = create_source_catalogue_from_python_sources(python_sources,
+                                                                       woden_struct_classes,
+                                                                       beamtype, precision)
         
         check_all_sources(expected_chunks, source_catalogue)
         

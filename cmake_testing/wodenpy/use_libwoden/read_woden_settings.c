@@ -93,6 +93,9 @@ void read_woden_settings(woden_settings_t *woden_settings)
   fprintf(output_text,"use_dipamps %d\n",
                        woden_settings->use_dipamps);
 
+  fprintf(output_text,"off_cardinal_dipoles %d\n",
+                       woden_settings->off_cardinal_dipoles);
+
 
   if (woden_settings->use_dipamps == 1) {
 

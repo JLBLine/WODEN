@@ -565,7 +565,23 @@ class Test(unittest.TestCase):
         npt.assert_array_equal(dipflags, np.where(args.dipamps == 0)[0])
         npt.assert_allclose(args.dipamps[dipamp_indexes], dipamps_flagged, atol=1e-8)
         
-
+    def test_use_off_cardinal_dipoles(self):
+        """Check `ra.check_args` works correctly for the `--use_MWA_dipflags` and
+        `--use_MWA_dipamps` flags. Make sure it combines the arrays"""
+        
+        ##First, run as normal, and assert that off cardinal dipoles are not used
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append('--primary_beam=None')
+        args = self.run_parser_and_check_args()
+        self.assertEqual(args.off_cardinal_dipoles,False)
+        
+        ##Next, add --off_cardinal_dipoles and check it is set to True
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append('--primary_beam=None')
+        self.inputs.append('--off_cardinal_dipoles')
+        args = self.run_parser_and_check_args()
+        self.assertEqual(args.off_cardinal_dipoles,True)
+        
 ##Run the test
 if __name__ == '__main__':
     unittest.main()

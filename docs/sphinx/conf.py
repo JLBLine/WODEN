@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.abspath('../../wodenpy/'))
 sys.path.insert(0, os.path.abspath('../../wodenpy/array_layout'))
 sys.path.insert(0, os.path.abspath('../../wodenpy/observational'))
 sys.path.insert(0, os.path.abspath('../../wodenpy/phase_rotate'))
+sys.path.insert(0, os.path.abspath('../../wodenpy/primary_beam'))
 sys.path.insert(0, os.path.abspath('../../wodenpy/skymodel'))
 sys.path.insert(0, os.path.abspath('../../wodenpy/use_libwoden'))
 sys.path.insert(0, os.path.abspath('../../wodenpy/uvfits'))
@@ -58,7 +59,7 @@ copyright = '2024, J.L.B. Line'
 author = 'J.L.B. Line'
 
 # The full version, including alpha/beta/rc tags
-release = '2.3'
+release = '2.4'
 
 # -- General configuration ---------------------------------------------------
 
@@ -82,6 +83,12 @@ extensions = [
 ]
 
 nb_execution_mode = "off"
+
+# Enable LaTeX rendering in markdown cells
+myst_enable_extensions = [
+    "amsmath",  # Supports LaTeX math environments like bmatrix
+    "dollarmath"  # Supports $...$ and $$...$$ for inline and block math
+]
 
 todo_include_todos = True
 

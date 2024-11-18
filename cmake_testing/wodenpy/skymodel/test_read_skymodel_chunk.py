@@ -9,7 +9,7 @@ import numpy as np
 import erfa
 
 # ##Code we are testing
-from wodenpy.skymodel.read_skymodel import read_skymodel_chunks, read_radec_count_components
+from wodenpy.skymodel.read_skymodel import read_radec_count_components
 from wodenpy.skymodel import read_fits_skymodel
 from wodenpy.skymodel import read_yaml_skymodel
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes, crop_below_horizon
@@ -17,8 +17,10 @@ from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map, Skymodel
 from wodenpy.use_libwoden.beam_settings import BeamTypes
 
 from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, _Ctype_Source_Into_Python
+from wodenpy.skymodel.read_skymodel import create_source_catalogue_from_python_sources, get_skymodel_tables
+from wodenpy.skymodel.read_fits_skymodel import read_fits_skymodel_chunks
 
-from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components, Skymodel_Settings
+from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Expected_Sky_Chunk, Expected_Components, Skymodel_Settings, Args
 
 from read_skymodel_common import check_components, check_all_sources, populate_pointgauss_chunk, populate_shapelet_chunk, make_expected_chunks
 
@@ -72,7 +74,7 @@ class Test(BaseChunkTest):
         woden_settings.num_time_steps = num_time_steps
         
         woden_settings.do_precession = 1
-        lsts = ws.setup_lsts_and_phase_centre(woden_settings)
+        lsts, latitudes = ws.setup_lsts_and_phase_centre(woden_settings)
         
         settings = Skymodel_Settings(deg_between_comps, num_coeff_per_shape,
                                      num_list_values, comps_per_source,
@@ -106,15 +108,30 @@ class Test(BaseChunkTest):
         chunked_skymodel_maps = create_skymodel_chunk_map(comp_counter,
                                         max_num_visibilities, num_baselines,
                                         num_freqs, num_time_steps)
+        chunked_skymodel_maps = chunked_skymodel_maps[0,0]
         
         
         beamtype = BeamTypes.FEE_BEAM.value
 
-        source_catalogue = read_skymodel_chunks(woden_struct_classes,
-                                                skymodel_filename,
-                                                chunked_skymodel_maps,
-                                                num_freqs, num_time_steps,
-                                                beamtype, lsts, MWA_LAT)
+        args = Args()
+        args.precision = precision
+
+        num_beams = 1
+        
+        main_table, shape_table, v_table, q_table, u_table, p_table = get_skymodel_tables(skymodel_filename)
+
+        python_sources = read_fits_skymodel_chunks(args, main_table, shape_table,
+                                                    chunked_skymodel_maps,
+                                                    num_freqs, num_time_steps,
+                                                    beamtype,
+                                                    lsts, latitudes,
+                                                    v_table, q_table,
+                                                    u_table, p_table,
+                                                    args.precision)
+        
+        source_catalogue = create_source_catalogue_from_python_sources(python_sources,
+                                                                       woden_struct_classes,
+                                                                       beamtype, precision)
         
         check_all_sources(expec_skymodel_chunks, source_catalogue,
                            fits_skymodel=True)
@@ -139,7 +156,7 @@ class Test(BaseChunkTest):
         woden_settings.num_time_steps = num_time_steps
         
         woden_settings.do_precession = 1
-        lsts = ws.setup_lsts_and_phase_centre(woden_settings)
+        lsts, latitudes = ws.setup_lsts_and_phase_centre(woden_settings)
         
         
         ##create a test FITS skymodel to read
@@ -175,15 +192,31 @@ class Test(BaseChunkTest):
         chunked_skymodel_maps = create_skymodel_chunk_map(comp_counter,
                                         max_num_visibilities, num_baselines,
                                         num_freqs, num_time_steps)
+        chunked_skymodel_maps = chunked_skymodel_maps[0,0]
         
         
         beamtype = BeamTypes.FEE_BEAM.value
 
-        source_catalogue = read_skymodel_chunks(woden_struct_classes,
-                                                skymodel_filename,
-                                                chunked_skymodel_maps,
-                                                num_freqs, num_time_steps,
-                                                beamtype, lsts, MWA_LAT)
+        ##TODO if using everybeam, need args to have correct values
+        args = Args()
+        args.precision = precision
+
+        num_beams = 1
+        
+        main_table, shape_table, v_table, q_table, u_table, p_table = get_skymodel_tables(skymodel_filename)
+
+        python_sources = read_fits_skymodel_chunks(args, main_table, shape_table,
+                                                    chunked_skymodel_maps,
+                                                    num_freqs, num_time_steps,
+                                                    beamtype,
+                                                    lsts, latitudes,
+                                                    v_table, q_table,
+                                                    u_table, p_table,
+                                                    args.precision)
+        
+        source_catalogue = create_source_catalogue_from_python_sources(python_sources,
+                                                                       woden_struct_classes,
+                                                                       beamtype, precision)
         
         check_all_sources(expec_skymodel_chunks, source_catalogue)
 
@@ -206,7 +239,7 @@ class Test(BaseChunkTest):
         woden_settings.num_time_steps = num_time_steps
         
         woden_settings.do_precession = 1
-        lsts = ws.setup_lsts_and_phase_centre(woden_settings)
+        lsts, latitudes = ws.setup_lsts_and_phase_centre(woden_settings)
         
         
         ##create a test FITS skymodel to read
@@ -237,15 +270,31 @@ class Test(BaseChunkTest):
         chunked_skymodel_maps = create_skymodel_chunk_map(comp_counter,
                                         max_num_visibilities, num_baselines,
                                         num_freqs, num_time_steps)
+        chunked_skymodel_maps = chunked_skymodel_maps[0,0]
         
         
         beamtype = BeamTypes.FEE_BEAM.value
 
-        source_catalogue = read_skymodel_chunks(woden_struct_classes,
-                                                skymodel_filename,
-                                                chunked_skymodel_maps,
-                                                num_freqs, num_time_steps,
-                                                beamtype, lsts, MWA_LAT)
+        ##TODO if using everybeam, need args to have correct values
+        args = Args()
+        args.precision = precision
+
+        num_beams = 1
+        
+        main_table, shape_table, v_table, q_table, u_table, p_table = get_skymodel_tables(skymodel_filename)
+
+        python_sources = read_fits_skymodel_chunks(args, main_table, shape_table,
+                                                    chunked_skymodel_maps,
+                                                    num_freqs, num_time_steps,
+                                                    beamtype,
+                                                    lsts, latitudes,
+                                                    v_table, q_table,
+                                                    u_table, p_table,
+                                                    args.precision)
+        
+        source_catalogue = create_source_catalogue_from_python_sources(python_sources,
+                                                                       woden_struct_classes,
+                                                                       beamtype, precision)
         
         check_all_sources(expec_skymodel_chunks, source_catalogue)
 

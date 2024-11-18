@@ -20,10 +20,6 @@ __device__ void calc_uvw(double *d_X_diff, double *d_Y_diff,
 
   int xyz_ind = time_ind*num_baselines + mod_baseline;
 
-  // printf("Inputs %d %d %d\n", num_baselines, num_times, num_freqs);
-  //
-  // printf("part 1 %d\n",(int)((float)iBaseline - (float)mod_baseline) );
-
   * u = (sha0*d_X_diff[xyz_ind]) + (cha0*d_Y_diff[xyz_ind]);
   * v = -(sdec0*cha0*d_X_diff[xyz_ind]) + (sdec0*sha0*d_Y_diff[xyz_ind]) + (cdec0*d_Z_diff[xyz_ind]);
   * w = (cdec0*cha0*d_X_diff[xyz_ind]) - (cdec0*sha0*d_Y_diff[xyz_ind]) + (sdec0*d_Z_diff[xyz_ind]);
@@ -129,7 +125,7 @@ __device__ void calc_lmn(double ra0, double sdec0,
   * l = cdec*sdra;
   * m = sdec*cdec0 - cdec*sdec0*cdra;
   * n = sdec*sdec0 + cdec*cdec0*cdra;
-
+  
   //Note we could calculate n this way, which gives exactly zero at the horizon,
   //but anything below the horizon should have a negative n, and this makes n
   //positive everywhere

@@ -75,7 +75,6 @@ test_installation/absolute_accuracy/uvfits
 *ipynb_checkpoints/
 
 *__pycache__/
-*.ms
 *.egg
 *.npz
 
@@ -103,3 +102,36 @@ examples/polarisation/*.fits
 examples/polarisation/*.uvfits
 examples/polarisation/*.ms
 examples/polarisation/eg_array.txt
+
+test_installation/everybeam/*.fits
+test_installation/everybeam/eg_array.txt
+test_installation/everybeam/profile_run_woden_band01.ms
+test_installation/everybeam/profile_run_woden_lofar_band01.ms
+test_installation/everybeam/profile_run_woden_lofar-mwabeam_band01.ms
+test_installation/everybeam/ska_image_test_band01.ms
+
+
+test_installation/everybeam/create_OSKAR-MWA_ms/MWA_phase1
+test_installation/everybeam/create_OSKAR-MWA_ms/MWA_phase1_flags
+test_installation/everybeam/create_OSKAR-MWA_ms/skymodel.osm
+test_installation/everybeam/create_OSKAR-SKA_ms
+
+
+test_installation/everybeam/everybeam_n3000_band01.ms
+test_installation/everybeam/hyperbeam_n3000_band01.ms
+test_installation/everybeam/check_positions_everybeam_MWA_band01.ms
+test_installation/everybeam/wut_band01.ms
+test_installation/everybeam/check_positions_everybeam_LOFAR*
+test_installation/everybeam/*.lprof
+test_installation/everybeam/profile_output
+
+
+examples/LOFAR_LoTSS/*.fits
+examples/LOFAR_LoTSS/*.ms
+examples/LOFAR_LoTSS/*.sh
+
+examples/LOFAR_LBA_NCP/*.fits
+examples/LOFAR_LBA_NCP/*.ms
+examples/LOFAR_LBA_NCP/MWA_phase1
+examples/LOFAR_LBA_NCP/*.ini
+examples/LOFAR_LBA_NCP/*.osm

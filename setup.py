@@ -90,7 +90,7 @@ class BuildPyCommand(_build_py):
 
 setup(
     name = "wodenpy",
-    version = '2.3.0',
+    version = '2.4.0',
     author = "Jack L. B. Line",
     url = "https://github.com/JLBLine/WODEN",
     python_requires=">=3.7",
@@ -109,6 +109,7 @@ setup(
                 'wodenpy.uvfits',
                 'wodenpy.array_layout',
                 'wodenpy.phase_rotate',
+                'wodenpy.primary_beam',
                 'wodenpy.skymodel'],
     scripts=["scripts/run_woden.py",
              "scripts/add_woden_uvfits.py",

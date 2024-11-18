@@ -10,3 +10,5 @@ matplotlib
 pyuvdata
 python-casacore
 myst-nb
+binpacking
+line_profiler

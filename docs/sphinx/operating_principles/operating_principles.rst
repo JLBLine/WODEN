@@ -1,10 +1,10 @@
-``WODEN`` operating principles
+Operating principles
 ===============================
 
 Read on below for ``WODEN`` specifics, including the analytic equations used to transform the sky models into visibilities.
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    visibility_calcs
    skymodel

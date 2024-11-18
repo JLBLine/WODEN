@@ -20,6 +20,9 @@ typedef enum {NO_BEAM, /*!< Do not use a primary beam in the simulation */
               frequencies. Should be using an hdf5 file that has been frequency
               interpolated*/
               MWA_ANALY, /*!< Use an analytic MWA tile primary beam */
+              EB_OSKAR, /*!< Use everybeam with the OSKAR primary beam */
+              EB_LOFAR, /*!< Use everybeam with the LOFAR primary beam */
+              EB_MWA, /*!< Use everybeam with the MWA primary beam */
               }e_beamtype;
 
 typedef enum {POWER_LAW=0, /*!< Power law flux model */
@@ -356,6 +359,9 @@ typedef struct _woden_settings_t {
   int do_autos; /*!< Boolean of whether to simulate autos or not (0 False, 1 True)*/
   int use_dipamps; /*!< Boolean of whether to use dipole amplitudes, so have an individual beam per tile*/
   double *mwa_dipole_amps; /*!< Bespoke MWA dipole amplitudes for each antenna(tile). Should be 2*num_ants*16 long*/
+  int single_everybeam_station; /*!< If using everybeam, add this to say we are only using a single station*/
+  int off_cardinal_dipoles; /*!< Boolean of whether to use off-cardinal dipole equations to
+  apply the beams gains to the Stokes IQUV parameters*/
 
 } woden_settings_t;
 

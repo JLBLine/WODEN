@@ -66,6 +66,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   woden_settings->num_ants = num_beams;
   woden_settings->num_autos = 0;
   woden_settings->do_autos = 0;
+  woden_settings->off_cardinal_dipoles = 0;
 
   user_precision_t *zeroes = calloc(num_components, sizeof(user_precision_t));
 
@@ -508,12 +509,12 @@ int main(void)
     UNITY_BEGIN();
 
     RUN_TEST(test_source_component_common_ConstantDecFEEBeamPoint);
-    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamGauss);
-    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamShapelet);
+    RUN_TEST(test_source_component_common_ConstantDecFEEBeamGauss);
+    RUN_TEST(test_source_component_common_ConstantDecFEEBeamShapelet);
 
-    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpPoint);
-    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpGaussian);
-    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpShapelet);
+    RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpPoint);
+    RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpGaussian);
+    RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpShapelet);
 
     return UNITY_END();
 }

@@ -18,10 +18,42 @@
 
 #include "gpu_macros.h"
 
+extern "C" void copy_CPU_beam_gains_to_GPU(components_t *components,
+  d_beam_gains_t *d_beam_gains, int num_gains) {
+
+
+    gpuMalloc( (void**)&d_beam_gains->d_gxs,
+                      num_gains*sizeof(gpuUserComplex) );
+    gpuMalloc( (void**)&d_beam_gains->d_Dxs,
+                      num_gains*sizeof(gpuUserComplex) );
+    gpuMalloc( (void**)&d_beam_gains->d_Dys,
+                      num_gains*sizeof(gpuUserComplex) );
+    gpuMalloc( (void**)&d_beam_gains->d_gys,
+                      num_gains*sizeof(gpuUserComplex) );
+
+    gpuMemcpy( d_beam_gains->d_gxs,
+               (gpuUserComplex *)components->gxs, num_gains*sizeof(gpuUserComplex),
+                gpuMemcpyHostToDevice );
+
+    gpuMemcpy( d_beam_gains->d_Dxs,
+               (gpuUserComplex *)components->Dxs, num_gains*sizeof(gpuUserComplex),
+                gpuMemcpyHostToDevice );
+
+    gpuMemcpy( d_beam_gains->d_Dys,
+               (gpuUserComplex *)components->Dys, num_gains*sizeof(gpuUserComplex),
+                gpuMemcpyHostToDevice );
+
+    gpuMemcpy( d_beam_gains->d_gys,
+               (gpuUserComplex *)components->gys, num_gains*sizeof(gpuUserComplex),
+                gpuMemcpyHostToDevice );
+}
+
 extern "C" void calculate_visibilities(array_layout_t *array_layout,
   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
   user_precision_t *sbf) {
+
+  int verbose = 0;
 
   //Boolean for if we are using two beams per visibility or assuming all
   //beams are the same
@@ -33,8 +65,24 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     num_beams = woden_settings->num_ants;
   }
 
-  //TODO - once rotation measure has been implemented, this should be set
-  //only if we are using a rotation measure
+  //Default behaviour with everybeam is to use a different beam for each station
+  if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
+    use_twobeams = 1;
+    num_beams = woden_settings->num_ants;
+
+    //However if single_everybeam_station is set, we're only using one beam
+    //for all stations
+    if (woden_settings->single_everybeam_station == 1) {
+      use_twobeams = 0;
+      num_beams = 1;
+    }
+
+  }
+
+  // if (woden_settings->use_dipamps == 1) {
+  //   use_twobeams = 1;
+  //   num_beams = woden_settings->num_ants;
+  // }
 
   const int num_baselines = woden_settings->num_baselines;
   const int num_time_steps = woden_settings->num_time_steps;
@@ -226,10 +274,14 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     // printf("\tsource->n_shape_curves %d\n", source->n_shape_curves);
     // printf("\tsource->n_shape_coeffs %d\n", source->n_shape_coeffs);
 
-    printf("About to copy the chunked source to the GPU\n");
 
+    if (verbose == 1){
+      printf("About to copy the chunked source to the GPU\n");
+    }
     source_t *d_chunked_source = copy_chunked_source_to_GPU(source);
-    printf("Have copied across the chunk to the GPU\n");
+    if (verbose == 1){
+      printf("Have copied across the chunk to the GPU\n");
+    }
 
     //Make sure the temp visis are 0 at the start of each chunk
     for (int visi = 0; visi < num_visis; visi++) {
@@ -245,11 +297,13 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
 
     //TODO setup some kind of logging and have an option to silence all this
     //printed output
-    printf("Processing chunk %d\n", chunk);
-    printf("\tNumber of components in chunk are: P %d G %d S_coeffs %d\n",
-              source->n_points,
-              source->n_gauss,
-              source->n_shape_coeffs );
+    if (verbose == 1){
+      printf("Processing chunk %d\n", chunk);
+      printf("\tNumber of components in chunk are: P %d G %d S_coeffs %d\n",
+                source->n_points,
+                source->n_gauss,
+                source->n_shape_coeffs );
+    }
 
     //ensure d_sum_visi_XX_real are set entirely to zero by copying the host
     //array values, which have been set explictly to zero during chunking
@@ -316,7 +370,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     int num_shapes = source->n_shapes;
 
     if (num_points > 0) {
-      printf("\tDoing point components\n");
+      if (verbose == 1){
+        printf("\tDoing point components\n");
+      }
 
       //Something to store the primary beam gains (all 4 pols) in
       d_beam_gains_t d_point_beam_gains;
@@ -328,19 +384,31 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
         d_point_beam_gains.use_twobeams = 0;
       }
 
-      printf("\tExtrapolating fluxes and beams...\n");
+      //If an everybeam model, already calculated beam gains on the CPU
+      //So just copy them across
+      if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
+        copy_CPU_beam_gains_to_GPU(&source->point_components,
+          &d_point_beam_gains, num_points*num_freqs*num_time_steps*num_beams);
+      }
+      if (verbose == 1){
+        printf("\tExtrapolating fluxes and beams...\n");
+      }
       source_component_common(woden_settings, beam_settings, d_freqs,
                               source, d_chunked_source,
                               &d_point_beam_gains, POINT,
                               d_visibility_set);
-      printf("\tExtrapolating fluxes and beams done.\n");
+      if (verbose == 1){
+        printf("\tExtrapolating fluxes and beams done.\n");
+      }
 
       threads.x = 128;
       threads.y = 1;
       grid.x = (int)ceil( (float)num_cross / (float)threads.x );
       grid.y = 1;
 
-      printf("\tDoing visi kernel...\n");
+      if (verbose == 1){
+        printf("\tDoing visi kernel...\n");
+      }
       gpuErrorCheckKernel("kern_calc_visi_point_or_gauss",
                            kern_calc_visi_point_or_gauss, grid, threads,
                            d_chunked_source->point_components, d_point_beam_gains,
@@ -354,8 +422,11 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                            d_visibility_set->sum_visi_YY_real,
                            d_visibility_set->sum_visi_YY_imag,
                            num_points, num_baselines, num_freqs, num_cross,
-                           num_time_steps, beam_settings->beamtype, POINT);
-      printf("\tVisi kernel done\n");
+                           num_time_steps, beam_settings->beamtype, POINT,
+                           woden_settings->off_cardinal_dipoles);
+      if (verbose == 1){
+        printf("\tVisi kernel done\n");
+      }
 
       free_d_components(d_chunked_source, POINT);
       free_extrapolated_flux_arrays(&d_chunked_source->point_components);
@@ -364,7 +435,9 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     }//if point sources
 
     if (num_gauss > 0) {
-      printf("\tDoing gaussian components\n");
+      if (verbose == 1){
+        printf("\tDoing gaussian components\n");
+      }
 
 
       //Something to store the primary beam gains (all 4 pols) in
@@ -375,6 +448,13 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
         d_gauss_beam_gains.use_twobeams = 1;
       } else {
         d_gauss_beam_gains.use_twobeams = 0;
+      }
+
+      //If an everybeam model, already calculated beam gains on the CPU
+      //So just copy them across
+      if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
+        copy_CPU_beam_gains_to_GPU(&source->gauss_components,
+          &d_gauss_beam_gains, num_gauss*num_freqs*num_time_steps*num_beams);
       }
 
       source_component_common(woden_settings, beam_settings, d_freqs,
@@ -400,7 +480,8 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
                            d_visibility_set->sum_visi_YY_real,
                            d_visibility_set->sum_visi_YY_imag,
                            num_gauss, num_baselines, num_freqs, num_cross,
-                           num_time_steps, beam_settings->beamtype, GAUSSIAN);
+                           num_time_steps, beam_settings->beamtype, GAUSSIAN,
+                           woden_settings->off_cardinal_dipoles);
 
       free_d_components(d_chunked_source, GAUSSIAN);
       free_extrapolated_flux_arrays(&d_chunked_source->gauss_components);
@@ -409,22 +490,23 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     }//if gauss sources
 
     if (num_shapes > 0) {
-      printf("\tDoing shapelet components\n");
+      if (verbose == 1){
+        printf("\tDoing shapelet components\n");
+      }
 
       double *d_lsts=NULL;
       user_precision_t *d_u_shapes = NULL;
       user_precision_t *d_v_shapes = NULL;
 
-      ( gpuMalloc( (void**)&(d_lsts),
-                                          woden_settings->num_time_steps*sizeof(double)) );
-      ( gpuMemcpy( d_lsts, woden_settings->lsts,
+      gpuMalloc( (void**)&(d_lsts), woden_settings->num_time_steps*sizeof(double));
+      gpuMemcpy( d_lsts, woden_settings->lsts,
                              woden_settings->num_time_steps*sizeof(double),
-                             gpuMemcpyHostToDevice) );
+                             gpuMemcpyHostToDevice);
 
-      ( gpuMalloc( (void**)&d_u_shapes,
-            num_shapes*num_baselines*num_time_steps*sizeof(user_precision_t)) );
-      ( gpuMalloc( (void**)&d_v_shapes,
-            num_shapes*num_baselines*num_time_steps*sizeof(user_precision_t)) );
+      gpuMalloc( (void**)&d_u_shapes,
+            num_shapes*num_baselines*num_time_steps*sizeof(user_precision_t));
+      gpuMalloc( (void**)&d_v_shapes,
+            num_shapes*num_baselines*num_time_steps*sizeof(user_precision_t));
 
       //Something to store the primary beam gains (all 4 pols) in
       d_beam_gains_t d_shape_beam_gains;
@@ -434,6 +516,13 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
         d_shape_beam_gains.use_twobeams = 1;
       } else {
         d_shape_beam_gains.use_twobeams = 0;
+      }
+
+      //If an everybeam model, already calculated beam gains on the CPU
+      //So just copy them across
+      if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
+        copy_CPU_beam_gains_to_GPU(&source->shape_components,
+          &d_shape_beam_gains, num_shapes*num_freqs*num_time_steps*num_beams);
       }
 
       source_component_common(woden_settings, beam_settings, d_freqs,
@@ -490,13 +579,12 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
             d_sbf,
             num_shapes, num_baselines, num_freqs, num_cross,
             d_chunked_source->n_shape_coeffs, num_time_steps,
-            beam_settings->beamtype);
+            beam_settings->beamtype, woden_settings->off_cardinal_dipoles);
 
       gpuFree(d_v_shapes);
       gpuFree(d_u_shapes);
       gpuFree(d_lsts);
 
-      printf("Making it to this call here\n");
       free_d_components(d_chunked_source, SHAPELET);
       free_extrapolated_flux_arrays(&d_chunked_source->shape_components);
       free_beam_gains(d_shape_beam_gains, beam_settings->beamtype);

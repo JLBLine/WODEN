@@ -4,14 +4,20 @@ from wodenpy.skymodel.read_text_skymodel import read_text_radec_count_components
 # from wodenpy.use_libwoden.skymodel_structs import Source_Catalogue
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter
 import numpy as np
-from typing import Union
+from typing import Union, List
 import sys
 from astropy.table import Table
 from wodenpy.skymodel.read_text_skymodel import read_full_text_into_fitstable
 from wodenpy.skymodel.read_yaml_skymodel import read_full_yaml_into_fitstable
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
+from wodenpy.use_libwoden.skymodel_structs import Source_Python, Skymodel_Chunk_Map, setup_source_catalogue, copy_python_source_to_ctypes
 from astropy.io import fits
+import argparse
 
+
+##This call is so we can use it as a type annotation
+woden_struct_classes = Woden_Struct_Classes()
+Woden_Settings = woden_struct_classes.Woden_Settings
 
 def read_radec_count_components(skymodel_path : str) -> Component_Type_Counter:
     """
@@ -50,69 +56,45 @@ def read_radec_count_components(skymodel_path : str) -> Component_Type_Counter:
         
     return comp_counter
 
-
-def read_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
-                         skymodel_path : str, chunked_skymodel_maps : list,
-                         num_freqs : int, num_time_steps : int,
-                         beamtype : int,
-                         lsts : np.ndarray, latitude : float,
-                         precision = "double"):
-    """Lazy loads chunks of a sky model at `skymodel_path` into a
-    Source_Catalogue object, as mapped by `chunked_skymodel_maps`. If the
-    sky model isn't already a FITS file, it is converted to one. The
-    resultant can be passed into C/CUDA code to calculate visibilities.
-
+def get_skymodel_tables(skymodel_path : str) -> tuple:
+    """
+    Read the contents of a sky model file into a set of astropy Tables. If the
+    sky model is a .fits file, the tables are read in directly. If the sky model
+    is a .yaml or .txt file, the file is read in an converted into Tables. As
+    the yaml and text formats are deprecated, they never return any polarisation
+    infomration.
+    
     Parameters
     ----------
-    woden_struct_classes : Woden_Struct_Classes
-        This holds all the various ctype structure classes that are equivalent
-        to the C/CUDA structs.
     skymodel_path : str
-        The path to the sky model file.
-    chunked_skymodel_maps : list
-        List of ChunkedSkyModelMap objects, each representing a chunk of the sky model.
-    num_freqs : int
-        Number of frequency channels in the sky model.
-    num_time_steps : int
-        Number of time steps in the sky model.
-    beamtype : int
-        Type of beam used in the sky model.
-    lsts : np.ndarray
-        Array of LST values for each time step in the sky model.
-    latitude : float
-        Latitude of the observation site.
-    precision : str, optional
-        Precision of the source catalogue (either "float" or "double"), by default "double".
-
+        The path to the sky model file. Must end in .fits, .yaml, or .txt.
     Returns
     -------
-    source_catalogue : Union[Source_Catalogue_Float, Source_Catalogue_Double]
-        A source catalogue that can be used by C/CUDA code to calculate visibilities.
+    tuple: 
+        A tuple containing the following elements:
+        - main_table (Table): The main table read from the first HDU.
+        - shape_table (Table or str): The shapelet table if present, otherwise 'no_shape_table'.
+        - v_table (Table or bool): The V_LIST_FLUXES table if present, otherwise False.
+        - q_table (Table or bool): The Q_LIST_FLUXES table if present, otherwise False.
+        - u_table (Table or bool): The U_LIST_FLUXES table if present, otherwise False.
+        - p_table (Table or bool): The P_LIST_FLUXES table if present, otherwise False.
     """
     
-    ##TODO reading all these tables should happen outside of this function
-    ##for small yaml/txt skymodels it's not much overhead, but for large ones
-    ## I/O is gonna be a limiting factor
-    # ##Figure out if our skymodel is supported or not
     if skymodel_path[-5:] == '.fits':
         main_table = Table.read(skymodel_path, hdu=1)
         
-        num_shapelets = 0
-        for chunk_map in chunked_skymodel_maps:
-            num_shapelets += chunk_map.n_shapes
-            
+        has_shapelets = False
+        if 'S' in main_table['COMP_TYPE']:
+            has_shapelets = True
+        
         with fits.open(skymodel_path) as hdus:
             num_hdus = len(hdus)
             hdu_names = [hdu.name for hdu in hdus]
             
-        print('YO', hdu_names)
-    
-        ##Only read in a shape table if there are shapelets
-        if num_shapelets:
-            if 'SHAPELET' in hdu_names:
-                shape_table = Table.read(skymodel_path, hdu='SHAPELET')
-            else:
-                shape_table = Table.read(skymodel_path, hdu=2)
+        if 'SHAPELET' in hdu_names:
+            shape_table = Table.read(skymodel_path, hdu='SHAPELET')
+        elif has_shapelets:
+            shape_table = Table.read(skymodel_path, hdu=2)
         else:
             shape_table = 'no_shape_table'
             
@@ -135,7 +117,7 @@ def read_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
                 p_table = Table.read(skymodel_path, hdu='P_LIST_FLUXES')
         else:
             p_table = False
-    
+            
     elif skymodel_path[-5:] == '.yaml':
         main_table, shape_table = read_full_yaml_into_fitstable(skymodel_path)
         v_table = False
@@ -153,14 +135,63 @@ def read_skymodel_chunks(woden_struct_classes : Woden_Struct_Classes,
     else:
         sys.exit('The filename fed into `wodenpy/read_skymodel/read_skymodel_chunks` was not of a supported file type. Currently supported formats are: .fits, .yaml, .txt')
         
-    source_catalogue = read_fits_skymodel_chunks(woden_struct_classes,
-                              main_table, shape_table,
-                              chunked_skymodel_maps,
-                              num_freqs, num_time_steps, beamtype,
-                              lsts, latitude,
-                              v_table, q_table, u_table, p_table,
-                              precision = precision)
+    return main_table, shape_table, v_table, q_table, u_table, p_table
+
+##just call this here so we can type annotate it
+woden_struct_classes = Woden_Struct_Classes()
+Source_Catalogue = woden_struct_classes.Source_Catalogue
+
+##It makes most sense to have this function withing `wodenpy.use_libwoden.skymodel_structs`
+##but we have to create Woden_Struct_Classes in a module that loads `skymodel_structs` so
+##we ge a circular import. So we have to put it here.
+
+def create_source_catalogue_from_python_sources(python_sources : List[Source_Python],
+                                                woden_struct_classes : Woden_Struct_Classes,
+                                                beamtype : int, precision : str = 'double') -> Source_Catalogue: # type: ignore
     
-    # print("HERE", type(source_catalogue))
+    """
+    Create a Source_Catalogue object from a list of Source_Python objects. This
+    is the main function to convert from the Python source objects to the C
+    source objects. The Source_Catalogue object is a ctypes object that is
+    directly fed into the C/GPU code.
+    
+    Parameters
+    ----------
+    python_sources : list
+        A list of Source_Python objects.
+    woden_struct_classes : Woden_Struct_Classes
+        A Woden_Struct_Classes object that contains the ctypes classes for the
+        Source_Catalogue object.
+    beamtype : int
+        The beam type of the sources. This is used to determine what information
+        needs to be copied from the `Source_Python` objects to the `Source_Catalogue`,
+        e.g. azimuth/altitude, or actual complex beam values etc.
+    precision : str
+        The precision of the source catalogue. Either 'single' or 'double'.
+        Default is 'double'.
+        
+    Returns
+    -------
+    source_catalogue : Source_Catalogue
+        A Source_Catalogue object that contains all of the source information
+        in a format that can be fed directly into the C/GPU code.
+    """
+    
+    num_shapelets = 0
+
+    for python_source in python_sources:
+        num_shapelets += python_source.n_shapes
+        
+    ##setup the source catalogue, which is going to store all of the information
+    ##of each source and be fed straight into C/CUDA
+    source_catalogue = setup_source_catalogue(woden_struct_classes.Source_Ctypes,
+                                              woden_struct_classes.Source_Catalogue,
+                                              len(python_sources), num_shapelets,
+                                              precision = precision)
+        
+    for chunk_ind, python_source in enumerate(python_sources):
+    
+        copy_python_source_to_ctypes(python_source, source_catalogue.sources[chunk_ind],
+                                     beamtype, precision=precision)
         
     return source_catalogue
