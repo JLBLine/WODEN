@@ -72,14 +72,16 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --pr
 RUN wget https://github.com/MWATelescope/mwa_hyperbeam/archive/refs/tags/v${HYPER_VERSION}.tar.gz \
   && tar -xvf v${HYPER_VERSION}.tar.gz \
   && cd mwa_hyperbeam-${HYPER_VERSION} \
-  && /opt/cargo/bin/cargo build --release --features=cuda,cuda-static \
+  && export HYPERBEAM_HIP_ARCH=$HIP_ARCH \
+  && /opt/cargo/bin/cargo build --release --features=hip,hdf5-static \
   && cd /
 
 ## clone the release verion of WODEN and complile the C/CUDA code
 RUN git clone -b $WODEN_TAG https://github.com/JLBLine/WODEN.git \
   && cd WODEN \
   && mkdir build && cd build \
-  && cmake .. -DHBEAM_INC=/mwa_hyperbeam-${HYPER_VERSION}/include/ \
+  && cmake .. -DUSE_HIP=ON -DHIP_ARCH=gfx90a \
+           -DHBEAM_INC=/mwa_hyperbeam-${HYPER_VERSION}/include/ \
            -DHBEAM_LIB=/mwa_hyperbeam-${HYPER_VERSION}/target/release/libmwa_hyperbeam.so \
   && make
   
