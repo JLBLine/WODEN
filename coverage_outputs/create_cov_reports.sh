@@ -29,6 +29,8 @@ coverage run --source=wodenpy.primary_beam.use_everybeam \
          ../cmake_testing/wodenpy/primary_beam/test_run_everybeam_over_threads.py
 coverage run --source=wodenpy.primary_beam.use_everybeam \
          ../cmake_testing/wodenpy/primary_beam/test_run_woden_lofar_para_rotate.py
+coverage run --source=wodenpy.primary_beam.use_everybeam \
+         ../cmake_testing/wodenpy/primary_beam/test_run_fast_everybeam.py
 
 ##skymodel
 coverage run --source=wodenpy.skymodel.woden_skymodel ../cmake_testing/wodenpy/skymodel/test_crop_below_horizon.py

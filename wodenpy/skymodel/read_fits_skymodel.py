@@ -1090,7 +1090,7 @@ def calc_everybeam_for_components(beam_ra0 : float, beam_dec0 : float, num_compo
                                   all_times : np.ndarray, all_freqs : np.ndarray,
                                   j2000_latitudes : np.ndarray, j2000_lsts : np.ndarray,
                                   current_latitude : float, current_longitude : float,
-                                  station_id = np.nan):
+                                  full_accuracy : bool = True, station_id = np.nan):
     """
     Given a set of components, calculate the Jones matrices for each component
     at each time and frequency, for all stations specified by station_id,
@@ -1123,6 +1123,14 @@ def calc_everybeam_for_components(beam_ra0 : float, beam_dec0 : float, num_compo
         The latitude of the array in radians, at the current time frame (time of observation).
     current_longitude : float
         The longitude of the array in radians, at the current time frame (time of observation).
+    full_accuracy : bool, optional
+        Whether to use the full accuracy of the EveryBeam library. Defaults to True.
+        If False, the array factor and element response are calculated separately
+        (the two values that multiply to give the full response). The array factor
+        is only calculated at the middle time and frequency, under the assumption
+        that the range of frequencies and times is small enough that the array factor
+        will not change significantly. Magnitude of the differences vary by
+        frequency and direction so use with caution.
     station_id : float, optional
         The station ID to use for the beam calculation. If `np.nan`, calculate
         a different beam for each station, by default np.nan.
@@ -1164,6 +1172,7 @@ def calc_everybeam_for_components(beam_ra0 : float, beam_dec0 : float, num_compo
                               all_times, all_freqs,
                               telescope,
                               station_ids,
+                              full_accuracy=full_accuracy,
                               apply_beam_norms=apply_beam_norms,
                               reorder_jones=reorder_jones,
                               eb_rotate=eb_rotate,
@@ -1248,7 +1257,10 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
     beam_ra0 = np.radians(args.ra0)
     beam_dec0 = np.radians(args.dec0)
     
-    parallactic_rotate = False
+    if args.fast_everybeam:
+        full_accuracy = False
+    else:
+        full_accuracy = True
     
     if beamtype in BeamGroups.eb_beam_values:
         
@@ -1270,7 +1282,6 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
         
         if beamtype == BeamTypes.EB_MWA.value:
             telescope = load_MWA_telescope(args.beam_ms_path, args.hdf5_beam_path)
-            parallactic_rotate = True
         
         if beamtype == BeamTypes.EB_OSKAR.value:
             telescope = load_OSKAR_telescope(args.beam_ms_path)
@@ -1321,6 +1332,7 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                                telescope, all_times, all_freqs,
                                j2000_latitudes, j2000_lsts,
                                np.radians(args.latitude), np.radians(args.longitude),
+                               full_accuracy=full_accuracy,
                                station_id=args.station_id)
             
         if chunk_map.n_gauss > 0:
@@ -1335,6 +1347,7 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                                telescope, all_times, all_freqs,
                                j2000_latitudes, j2000_lsts,
                                np.radians(args.latitude), np.radians(args.longitude),
+                               full_accuracy=full_accuracy,
                                station_id=args.station_id)
             
         if chunk_map.n_shapes > 0:
@@ -1349,6 +1362,7 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                                telescope, all_times, all_freqs,
                                j2000_latitudes, j2000_lsts,
                                np.radians(args.latitude), np.radians(args.longitude),
+                               full_accuracy=full_accuracy,
                                station_id=args.station_id)
             
     ##TODO some kind of consistency check between the chunk_maps and the

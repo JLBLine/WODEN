@@ -297,7 +297,6 @@ def calc_everybeam_rotation(direction : np.ndarray, north : np.ndarray,
     return rot_matrix
 
 # @profile
-
 def run_everybeam(ras: np.ndarray, decs: np.ndarray,
                   beam_ra0: float, beam_dec0: float,
                   j2000_latitudes: np.ndarray, j2000_lsts: np.ndarray,
@@ -305,6 +304,7 @@ def run_everybeam(ras: np.ndarray, decs: np.ndarray,
                   times: np.ndarray, freqs: np.ndarray,
                   telescope: eb.Telescope, # type: ignore
                   station_ids: np.ndarray,
+                  full_accuracy: bool = True,
                   apply_beam_norms: bool = True,
                   reorder_jones: bool = False,
                   element_only: bool = False,
@@ -346,6 +346,14 @@ def run_everybeam(ras: np.ndarray, decs: np.ndarray,
         Telescope object from the EveryBeam library.
     station_ids : np.ndarray
         Array of station IDs.
+    full_accuracy : bool, optional
+        Whether to use the full accuracy of the EveryBeam library. Defaults to True.
+        If False, the array factor and element response are calculated separately
+        (the two values that multiply to give the full response). The array factor
+        is only calculated at the middle time and frequency, under the assumption
+        that the range of frequencies and times is small enough that the array factor
+        will not change significantly. Magnitude of the differences vary by
+        frequency and direction so use with caution.
     apply_beam_norms : bool, optional
         Whether to apply beam normalisation. Defaults to True. Achieved by
         calculating the beam response at beam centre, and multiplying all
@@ -381,6 +389,16 @@ def run_everybeam(ras: np.ndarray, decs: np.ndarray,
     
     non_itrf_beams = [eb.MWA, eb.MWALocal]
     
+    if not full_accuracy:
+        mid_time = times[len(times)//2]
+        mid_freq = freqs[len(freqs)//2]
+        
+        phase_itrf_mid = radec_to_xyz(beam_ra0, beam_dec0, mid_time)
+        dir_itrfs_mid = radec_to_xyz(ras, decs, mid_time)
+        
+        array_factors = telescope.array_factor(mid_time.mjd*3600*24, station_ids,
+                                            mid_freq, dir_itrfs_mid, phase_itrf_mid)
+    
     if parallactic_rotate:
         if type(telescope) not in non_itrf_beams:
             coords = SkyCoord(ras*u.rad, decs*u.rad, frame='icrs')
@@ -388,7 +406,6 @@ def run_everybeam(ras: np.ndarray, decs: np.ndarray,
                                     lon=current_longitude*u.rad)
     
     for time_ind, time in enumerate(times):
-        
         if type(telescope) in non_itrf_beams:
             comp_has = j2000_lsts[time_ind] - ras
             azs, els = erfa.hd2ae(comp_has, decs, j2000_latitudes[time_ind])
@@ -434,6 +451,9 @@ def run_everybeam(ras: np.ndarray, decs: np.ndarray,
         for station_ind, station_id in enumerate(station_ids):
             for freq_ind, freq in enumerate(freqs):
                 
+                if not full_accuracy:
+                    element_responses = np.zeros((num_coords, 2, 2), dtype=np.complex128)*np.nan
+                
                 if apply_beam_norms:
                     if type(telescope) == eb.MWA:
                         ##Get the response
@@ -459,9 +479,18 @@ def run_everybeam(ras: np.ndarray, decs: np.ndarray,
                             norm_jones = telescope.element_response(time_mjd_secs, station_id, element_id, freq,
                                                                 phase_itrf, rotate=eb_rotate)
                         else:
-                            norm_jones = telescope.station_response(time_mjd_secs, station_id, freq,
+                            if full_accuracy:
+                                norm_jones = telescope.station_response(time_mjd_secs, station_id, freq,
                                                             phase_itrf, phase_itrf, 
                                                             rotate=eb_rotate)
+                            else:
+                                array_factor_norm = telescope.array_factor(mid_time.mjd*3600*24, station_id,
+                                            mid_freq, phase_itrf_mid, phase_itrf_mid)
+                                element_norm = telescope.element_response(time_mjd_secs, station_id, element_id, freq,
+                                                                phase_itrf, rotate=eb_rotate)
+                                norm_jones = np.matmul(array_factor_norm, element_norm)
+                            
+                            
                         if parallactic_rotate:
                             dir_phase_local = eb_local_xyz_from_radec(beam_ra0, beam_dec0, altaz_frame)
                             north, east = eb_north_east(dir_phase_local, ncp_t)
@@ -482,19 +511,31 @@ def run_everybeam(ras: np.ndarray, decs: np.ndarray,
                     ##Everything else uses ITRF coordinates
                     else:
                         if element_only:
-                            response = telescope.element_response(time_mjd_secs, station_id, 0, freq,
+                            response = telescope.element_response(time_mjd_secs, station_id, freq,
                                                                 dir_itrfs[coord_ind], rotate=eb_rotate)
                         else:
-                            response = telescope.station_response(time_mjd_secs, station_id, freq,
-                                                            dir_itrfs[coord_ind], phase_itrf, 
-                                                            rotate=eb_rotate)
-                            
-                    all_output_jones[station_ind, time_ind, freq_ind, coord_ind] = response
+                            if full_accuracy:
+                                response = telescope.station_response(time_mjd_secs, station_id, freq,
+                                                                dir_itrfs[coord_ind], phase_itrf, 
+                                                                rotate=eb_rotate)
+                                all_output_jones[station_ind, time_ind, freq_ind, coord_ind] = response
+                            else:
+                                element_id = 0
+                                element_response = telescope.element_response(time_mjd_secs,
+                                                                station_id, element_id, freq,
+                                                                dir_itrfs[coord_ind],
+                                                                rotate=eb_rotate)
+                                element_responses[coord_ind] = element_response
+                                
+                ##Parallactic angle doesn't change per station or freq, but
+                ##if we are normalising the beam, we want to rotate before we normalise
+                ##So do the rotation now. This also means if we are calculating array
+                ## factor and element response separately, need to multiply them together here
+                if not full_accuracy:
+                    all_output_jones[station_ind, time_ind, freq_ind, :, :, :] = np.einsum('klm,kmn->kln', array_factors[station_ind, :, :, :], element_responses)
                 
                 if parallactic_rotate:
-                    ##Parallactic angle doesn't change per station or freq, but
-                    ##if we are normalising the beam, we want to rotate before we normalise
-                    ##So do the rotation now
+                    
                     rot_jones = np.einsum('klm,kmn->kln', all_output_jones[station_ind, time_ind, freq_ind, :, :, :], rot_matrix)
                     all_output_jones[station_ind, time_ind, freq_ind, :, :, :] = rot_jones
                     
@@ -522,6 +563,7 @@ def run_everybeam_thread(num_threads : int, thread_id : int,
                          current_latitude : float, current_longitude : float,
                          times : np.ndarray, freqs : np.ndarray,
                          station_ids : np.ndarray,
+                         full_accuracy : bool = True,
                          use_differential_beam : bool = True,
                          apply_beam_norms : bool = True,
                          reorder_jones : bool = False,
@@ -573,6 +615,14 @@ def run_everybeam_thread(num_threads : int, thread_id : int,
         Array of frequencies.
     station_ids : np.ndarray
         Array of station IDs.
+    full_accuracy : bool, optional
+        Whether to use the full accuracy of the EveryBeam library. Defaults to True.
+        If False, the array factor and element response are calculated separately
+        (the two values that multiply to give the full response). The array factor
+        is only calculated at the middle time and frequency, under the assumption
+        that the range of frequencies and times is small enough that the array factor
+        will not change significantly. Magnitude of the differences vary by
+        frequency and direction so use with caution.
     apply_beam_norms : bool, optional
         Whether to apply beam normalisation. Defaults to True. Achieved by
         calculating the beam response at beam centre, and multiplying all
@@ -629,6 +679,7 @@ def run_everybeam_thread(num_threads : int, thread_id : int,
                           current_latitude, current_longitude,
                           times, freqs,
                           telescope, station_ids,
+                          full_accuracy=full_accuracy,
                           apply_beam_norms=apply_beam_norms,
                           reorder_jones=reorder_jones,
                           element_only=element_only,
@@ -648,7 +699,8 @@ def run_everybeam_over_threads(num_threads : int,
                                current_latitude : float, current_longitude : float,
                                times : np.ndarray, freqs : np.ndarray,
                                station_ids : np.ndarray,
-                               use_differential_beam : bool = True,
+                               full_accuracy : bool = True,
+                               use_differential_beam : bool = False,
                                apply_beam_norms : bool = True,
                                reorder_jones : bool = False,
                                element_only : bool = False,
@@ -696,6 +748,17 @@ def run_everybeam_over_threads(num_threads : int,
         Array of frequencies.
     station_ids : np.ndarray
         Array of station IDs.
+    full_accuracy : bool, optional
+        Whether to use the full accuracy of the EveryBeam library. Defaults to True.
+        If False, the array factor and element response are calculated separately
+        (the two values that multiply to give the full response). The array factor
+        is only calculated at the middle time and frequency, under the assumption
+        that the range of frequencies and times is small enough that the array factor
+        will not change significantly. Magnitude of the differences vary by
+        frequency and direction so use with caution.
+    use_differential_beam : bool, optional
+        Whether to use the differential beam a.k.a return a "normalised" beam, 
+        as normalised by EveryBeam. by default False
     apply_beam_norms : bool, optional
         Whether to apply beam normalisation. Defaults to True. Achieved by
         calculating the beam response at beam centre, and multiplying all
@@ -741,6 +804,7 @@ def run_everybeam_over_threads(num_threads : int,
                                            current_latitude, current_longitude,
                                            times, freqs,
                                            station_ids,
+                                           full_accuracy=full_accuracy,
                                            use_differential_beam=use_differential_beam,
                                            apply_beam_norms=apply_beam_norms,
                                            reorder_jones=reorder_jones,
