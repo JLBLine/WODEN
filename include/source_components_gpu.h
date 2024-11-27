@@ -1,5 +1,5 @@
 #pragma once
-#include "calculate_visibilities.h"
+#include "calculate_visibilities_gpu.h"
 /*! \file
   Device methods to extrapolate flux densities, assign and apply primary beam
   gains, and visibility responses for different sky model COMPONENT types.
@@ -859,7 +859,7 @@ primary beam values.
 hence should be done iteratively over chunks (this is done inside
 `calculate_visibilities.cu`).
 
-This function uses `fundamental_coords::kern_calc_lmn` to calculate
+This function uses `fundamental_coords_gpu::kern_calc_lmn` to calculate
 \f$l,m,n\f$, and stores the ouputs
 in the `components_t` struct `d_components`. Uses the `d_beam_gains_t` struct
 `d_component_beam_gains` to store the calculated primary beam responses. Each
@@ -995,7 +995,7 @@ table, of order \f$ n_k,n_l \f$ and scaled by the major and minor axis,
 \f$C_{n_k,n_l}\f$ is a scaling coefficient, and \f$ u_{\mathrm{comp}},
 v_{\mathrm{comp}} \f$ are visibility coordinates with the SHAPELET ra,dec as the
 phase centre. These should have been calculated using
-`fundamental_coords::kern_calc_uvw_shapelet`.
+`fundamental_coords_gpu::kern_calc_uvw_shapelet`.
 
 This kernel differs from `kern_calc_visi_point_or_gauss`
 in that each SHAPELET component is built up from multiple shapelet basis

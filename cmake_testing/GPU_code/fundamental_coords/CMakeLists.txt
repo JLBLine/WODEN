@@ -9,13 +9,13 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   ##If using CUDA, not HIP, then we need to set the source files to be
   ##compiled with nvcc
   if(USE_CUDA)
-    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fundamental_coords.cpp
+    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fundamental_coords_gpu.cpp
               PROPERTIES LANGUAGE CUDA)
   endif()
 
   ##Compile a GPU code library
   add_library(fundamental_coordsGPU_${PRECISION} SHARED
-              ${CMAKE_SOURCE_DIR}/src/fundamental_coords.cpp)
+              ${CMAKE_SOURCE_DIR}/src/fundamental_coords_gpu.cpp)
   target_compile_options(fundamental_coordsGPU_${PRECISION} PRIVATE ${GPU_FLAGS})
 
   ##Now loop over the cpu and gpu tests

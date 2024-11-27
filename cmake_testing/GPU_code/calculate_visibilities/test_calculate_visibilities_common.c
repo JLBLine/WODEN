@@ -640,7 +640,7 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
   }
 
   printf("Calling GPU\n");
-  calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
+  calculate_visibilities_gpu(array_layout, cropped_sky_models, beam_settings,
                          woden_settings, visibility_set, sbf);
 
   // for (int visi = 0; visi < woden_settings->num_visis; visi++) {

@@ -1,7 +1,7 @@
 /*! \file
   Primary function to take the simulation settings and sky models generated
   on the host, transfer everything over to the device, run the simulation
-  through the CUDA code, and grab everything back off the device and onto the
+  through the GPU code, and grab everything back off the device and onto the
   host.
   @author J.L.B. Line
 */
@@ -35,7 +35,7 @@ struct
 
       NOTE
 
-      The following attributes *must* be set for `calculate_visibilities` to work:
+      The following attributes *must* be set for `calculate_visibilities_gpu` to work:
 
       array_layout->X_diff_metres
       array_layout->Y_diff_metres
@@ -57,7 +57,7 @@ struct
       visibility_set->allsteps_wavelengths
       visibility_set->channel_frequencies
 
-      The following must be malloc-ed for `calculate_visibilities` to work:
+      The following must be malloc-ed for `calculate_visibilities_gpu` to work:
 
       visibility_set->sum_visi_real
       visibility_set->sum_visi_imag
@@ -76,7 +76,7 @@ struct
       Beyond that, depending on your primary beam settings,
       other attributes may be required.
 */
-extern "C" void calculate_visibilities(array_layout_t * array_layout,
+extern "C" void calculate_visibilities_gpu(array_layout_t * array_layout,
   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
   woden_settings_t *woden_settings,  visibility_set_t *visibility_set,
   user_precision_t *sbf);

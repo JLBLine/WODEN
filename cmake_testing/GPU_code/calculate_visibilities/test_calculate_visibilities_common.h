@@ -24,7 +24,7 @@
 #define POL_FRAC 1.0
 
 //External CUDA code we're linking in
-extern void calculate_visibilities(array_layout_t *array_layout,
+extern void calculate_visibilities_gpu(array_layout_t *array_layout,
   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
   user_precision_t *sbf);

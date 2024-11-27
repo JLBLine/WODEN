@@ -3,9 +3,9 @@
 #include <complex.h>
 #include <math.h>
 #include "gpucomplex.h"
-#include "fundamental_coords.h"
+#include "fundamental_coords_gpu.h"
 #include "constants.h"
-#include "source_components.h"
+#include "source_components_gpu.h"
 #include "woden_struct_defs.h"
 #include "primary_beam_gpu.h"
 #include "woden_precision_defs.h"

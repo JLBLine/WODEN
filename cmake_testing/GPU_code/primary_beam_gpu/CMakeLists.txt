@@ -6,13 +6,13 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS GPU_FLAGS C_COVER_FLAGS)
 
   if(USE_CUDA)
-    set_source_files_properties("${CMAKE_SOURCE_DIR}/src/fundamental_coords.cpp"
+    set_source_files_properties("${CMAKE_SOURCE_DIR}/src/fundamental_coords_gpu.cpp"
               "${CMAKE_SOURCE_DIR}/src/primary_beam_gpu.cpp" PROPERTIES LANGUAGE CUDA)
   endif()
 
   add_library(primary_beam_gpuGPU_${PRECISION} SHARED
               "${CMAKE_SOURCE_DIR}/src/primary_beam_gpu.cpp"
-              "${CMAKE_SOURCE_DIR}/src/fundamental_coords.cpp")
+              "${CMAKE_SOURCE_DIR}/src/fundamental_coords_gpu.cpp")
 
   target_compile_options(primary_beam_gpuGPU_${PRECISION} PRIVATE ${GPU_FLAGS})
 

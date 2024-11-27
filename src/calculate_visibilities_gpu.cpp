@@ -6,10 +6,10 @@
 #include "woden_precision_defs.h"
 #include "gpucomplex.h"
 
-#include "calculate_visibilities.h"
-#include "fundamental_coords.h"
+#include "calculate_visibilities_gpu.h"
+#include "fundamental_coords_gpu.h"
 #include "constants.h"
-#include "source_components.h"
+#include "source_components_gpu.h"
 #include "primary_beam_gpu.h"
 #include "hyperbeam_error.h"
 
@@ -48,7 +48,7 @@ extern "C" void copy_CPU_beam_gains_to_GPU(components_t *components,
                 gpuMemcpyHostToDevice );
 }
 
-extern "C" void calculate_visibilities(array_layout_t *array_layout,
+extern "C" void calculate_visibilities_gpu(array_layout_t *array_layout,
   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
   user_precision_t *sbf) {
