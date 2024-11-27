@@ -3,11 +3,8 @@
 #include <math.h>
 
 #include "constants.h"
-#include "test_uvw_coords.h"
-
-/*Unity needs these calls, stick them here and leave them alone */
-void setUp (void) {} /* Is run before every test, put unit init calls here. */
-void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
+#include "uvw_coords_common.h"
+#include "fundamental_coords_cpu.h"
 
 /*
 CUDA code we are linking in
@@ -23,9 +20,6 @@ extern void test_kern_calc_uv_shapelet(double *X_diff, double *Y_diff, double *Z
                      user_precision_t *u_shapes, user_precision_t *v_shapes,
                      double *lsts, double *ras, double *decs,
                      int num_baselines, int num_times, int num_shapes);
-
-
-double TOL = 1e-11;
 
 /*
 Given the inputs, create simulation settings that woden.c would create
@@ -153,14 +147,14 @@ void check_results(user_precision_t* u_metres_expec, user_precision_t* v_metres_
 
     for (int visi = 0; visi < num_visis; visi++) {
 
-        // printf("%.16f %.16f\n",us_expec[visi], uvw_settings->us[visi]);
-
         TEST_ASSERT_DOUBLE_WITHIN(TOL, u_metres_expec[visi],
                                  uvw_settings->u_metres[visi]);
         TEST_ASSERT_DOUBLE_WITHIN(TOL, v_metres_expec[visi],
                                  uvw_settings->v_metres[visi]);
         TEST_ASSERT_DOUBLE_WITHIN(TOL, w_metres_expec[visi],
                                  uvw_settings->w_metres[visi]);
+
+        // printf("%.16f %.16f\n",us_expec[visi], uvw_settings->us[visi]);
 
         TEST_ASSERT_DOUBLE_WITHIN(TOL, us_expec[visi],
                                  uvw_settings->us[visi]);
@@ -176,7 +170,7 @@ Checking the function fundamental_coords.cu::kern_calc_uvw
 Checks that the wavelength scaling of u,v,w is happening correctly. Set HA=0
 to make checking easier
 */
-void test_kern_calc_uvw_ScalesByWavelength(void){
+void test_calc_uvw_ScalesByWavelength(int do_gpu){
 
     //Setup some observation settings
     double ra0 = 0.0*DD2R;
@@ -205,12 +199,22 @@ void test_kern_calc_uvw_ScalesByWavelength(void){
                     freq_res, base_band_freq,
                     uvw_settings);
 
-    //Run the CUDA code via fundamental_coords::test_kern_calc_uvw
-    test_kern_calc_uvw(uvw_settings->X_diff, uvw_settings->Y_diff, uvw_settings->Z_diff,
+    if (do_gpu == 1) {
+      //Run the CUDA code via fundamental_coords::test_kern_calc_uvw
+      test_kern_calc_uvw(uvw_settings->X_diff, uvw_settings->Y_diff, uvw_settings->Z_diff,
            uvw_settings->u_metres, uvw_settings->v_metres, uvw_settings->w_metres,
            uvw_settings->us, uvw_settings->vs, uvw_settings->ws, uvw_settings->wavelengths,
            dec0, uvw_settings->cha0s, uvw_settings->sha0s,
            num_visis, num_baselines, num_times, num_freqs);
+    } else {
+      double sdec0 = sin(dec0);
+      double cdec0 = cos(dec0);
+      calc_uvw_cpu(uvw_settings->X_diff, uvw_settings->Y_diff, uvw_settings->Z_diff,
+           uvw_settings->u_metres, uvw_settings->v_metres, uvw_settings->w_metres,
+           uvw_settings->us, uvw_settings->vs, uvw_settings->ws, uvw_settings->wavelengths,
+           sdec0, cdec0, uvw_settings->cha0s, uvw_settings->sha0s,
+           num_visis, num_baselines, num_times, num_freqs);
+    }
 
     //Create expected values
     user_precision_t *u_metres_expec = malloc(num_visis*sizeof(user_precision_t));
@@ -257,7 +261,7 @@ Checking the function fundamental_coords.cu::kern_calc_uvw
 Checks that u,v,w coords change with time as expected
 Make checking easier by setting dec phase centre dec0=0.0
 */
-void test_kern_calc_uvw_RotateWithTime(void){
+void test_calc_uvw_RotateWithTime(int do_gpu){
 
     //Setup some observation settings
     double ra0 = 0.0*DD2R;
@@ -287,12 +291,22 @@ void test_kern_calc_uvw_RotateWithTime(void){
                     freq_res, base_band_freq,
                     uvw_settings);
 
-    //Run the CUDA code via fundamental_coords::test_kern_calc_uvw
-    test_kern_calc_uvw(uvw_settings->X_diff, uvw_settings->Y_diff, uvw_settings->Z_diff,
+    if (do_gpu == 1) {
+      //Run the CUDA code via fundamental_coords::test_kern_calc_uvw
+      test_kern_calc_uvw(uvw_settings->X_diff, uvw_settings->Y_diff, uvw_settings->Z_diff,
+            uvw_settings->u_metres, uvw_settings->v_metres, uvw_settings->w_metres,
+            uvw_settings->us, uvw_settings->vs, uvw_settings->ws, uvw_settings->wavelengths,
+            dec0, uvw_settings->cha0s, uvw_settings->sha0s,
+            num_visis, num_baselines, num_times, num_freqs);
+    } else {
+      double sdec0 = sin(dec0);
+      double cdec0 = cos(dec0);
+      calc_uvw_cpu(uvw_settings->X_diff, uvw_settings->Y_diff, uvw_settings->Z_diff,
            uvw_settings->u_metres, uvw_settings->v_metres, uvw_settings->w_metres,
            uvw_settings->us, uvw_settings->vs, uvw_settings->ws, uvw_settings->wavelengths,
-           dec0, uvw_settings->cha0s, uvw_settings->sha0s,
+           sdec0, cdec0, uvw_settings->cha0s, uvw_settings->sha0s,
            num_visis, num_baselines, num_times, num_freqs);
+    }
 
     //Create expected values
     user_precision_t *u_metres_expec = malloc(num_visis*sizeof(user_precision_t));
@@ -337,7 +351,7 @@ Checks that u,v,w coords change with time as expected
 Make checking easier by setting dec phase centre dec0=0.0
 Also checks that results are scaled by wavelength correctly
 */
-void test_kern_calc_uvw_shapelet_RotateWithTime(void){
+void test_calc_uvw_shapelet_RotateWithTime(int do_gpu){
 
     //Setup some observation settings
     double ra0 = 0.0*DD2R;
@@ -374,12 +388,20 @@ void test_kern_calc_uvw_shapelet_RotateWithTime(void){
                     freq_res, base_band_freq,
                     uvw_settings);
 
-     //Run the CUDA code via fundamental_coords::test_kern_calc_uvw_shapelet
-    test_kern_calc_uv_shapelet(uvw_settings->X_diff,
-           uvw_settings->Y_diff, uvw_settings->Z_diff,
-           uvw_settings->us, uvw_settings->vs,
-           uvw_settings->lsts, ras, decs,
-           num_baselines, num_times, num_components);
+    if (do_gpu == 1) {
+
+      //Run the CUDA code via fundamental_coords::test_kern_calc_uvw_shapelet
+      test_kern_calc_uv_shapelet(uvw_settings->X_diff,
+            uvw_settings->Y_diff, uvw_settings->Z_diff,
+            uvw_settings->us, uvw_settings->vs,
+            uvw_settings->lsts, ras, decs,
+            num_baselines, num_times, num_components);
+    } else {
+      calc_uv_shapelet_cpu(uvw_settings->X_diff, uvw_settings->Y_diff, uvw_settings->Z_diff,
+            uvw_settings->us, uvw_settings->vs,
+            uvw_settings->lsts, ras, decs,
+            num_baselines, num_times, num_components);
+    }
 
     //Create expected values
     user_precision_t *us_expec = malloc(num_components*num_baselines*num_times*sizeof(user_precision_t));
@@ -423,15 +445,4 @@ void test_kern_calc_uvw_shapelet_RotateWithTime(void){
 
   free_uvw_settings(uvw_settings);
 
-}
-
-int main(void)
-{
-    UNITY_BEGIN();
-
-    RUN_TEST(test_kern_calc_uvw_ScalesByWavelength);
-    RUN_TEST(test_kern_calc_uvw_RotateWithTime);
-    RUN_TEST(test_kern_calc_uvw_shapelet_RotateWithTime);
-
-    return UNITY_END();
 }

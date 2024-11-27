@@ -1,6 +1,8 @@
 ##Define some constants that are used in all of the testing
 set(FLOAT "float")
 set(DOUBLE "double")
+set(GPU "gpu")
+set(CPU "cpu")
 
 ##Turns on code coverage type outputs for gcc
 # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")

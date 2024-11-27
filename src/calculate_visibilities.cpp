@@ -671,20 +671,19 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
   //that in woden::main
 
   //Free up the GPU memory
-  ( gpuFree(d_freqs) );
-
-  ( gpuFree(d_ws) );
-  ( gpuFree(d_vs) );
-  ( gpuFree(d_us) );
-  ( gpuFree(d_w_metres) );
-  ( gpuFree(d_v_metres) );
-  ( gpuFree(d_u_metres) );
-  ( gpuFree(d_allsteps_wavelengths) );
-  ( gpuFree(d_allsteps_cha0s) );
-  ( gpuFree(d_allsteps_sha0s) );
-  ( gpuFree(d_Z_diff) );
-  ( gpuFree(d_Y_diff) );
-  ( gpuFree(d_X_diff) );
+  gpuFree(d_freqs);
+  gpuFree(d_ws);
+  gpuFree(d_vs);
+  gpuFree(d_us);
+  gpuFree(d_w_metres);
+  gpuFree(d_v_metres);
+  gpuFree(d_u_metres);
+  gpuFree(d_allsteps_wavelengths);
+  gpuFree(d_allsteps_cha0s);
+  gpuFree(d_allsteps_sha0s);
+  gpuFree(d_Z_diff);
+  gpuFree(d_Y_diff);
+  gpuFree(d_X_diff);
 
   if (cropped_sky_models->num_shapelets > 0) {
     ( gpuFree( d_sbf ) );
@@ -700,13 +699,13 @@ extern "C" void calculate_visibilities(array_layout_t *array_layout,
     free(beam_settings->hyper_delays);
   }
 
-  ( gpuFree(d_visibility_set->sum_visi_XX_imag) );
-  ( gpuFree(d_visibility_set->sum_visi_XX_real) );
-  ( gpuFree(d_visibility_set->sum_visi_XY_imag) );
-  ( gpuFree(d_visibility_set->sum_visi_XY_real) );
-  ( gpuFree(d_visibility_set->sum_visi_YX_imag) );
-  ( gpuFree(d_visibility_set->sum_visi_YX_real) );
-  ( gpuFree(d_visibility_set->sum_visi_YY_imag) );
-  ( gpuFree(d_visibility_set->sum_visi_YY_real) );
+  gpuFree(d_visibility_set->sum_visi_XX_imag);
+  gpuFree(d_visibility_set->sum_visi_XX_real);
+  gpuFree(d_visibility_set->sum_visi_XY_imag);
+  gpuFree(d_visibility_set->sum_visi_XY_real);
+  gpuFree(d_visibility_set->sum_visi_YX_imag);
+  gpuFree(d_visibility_set->sum_visi_YX_real);
+  gpuFree(d_visibility_set->sum_visi_YY_imag);
+  gpuFree(d_visibility_set->sum_visi_YY_real);
 
 }

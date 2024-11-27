@@ -2422,18 +2422,15 @@ extern "C" void test_kern_calc_measurement_equation(int num_components,
   double *d_ls = NULL;
   double *d_ms = NULL;
   double *d_ns = NULL;
-  ( gpuMalloc( (void**)&d_ls, num_components*sizeof(double) ));
-  ( gpuMalloc( (void**)&d_ms, num_components*sizeof(double) ));
-  ( gpuMalloc( (void**)&d_ns, num_components*sizeof(double) ));
-  ( gpuMemcpy(d_ls, ls, num_components*sizeof(double),
-                                                      gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_ms, ms, num_components*sizeof(double),
-                                                      gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_ns, ns, num_components*sizeof(double),
-                                                      gpuMemcpyHostToDevice ));
+  gpuMalloc( (void**)&d_ls, num_components*sizeof(double) );
+  gpuMalloc( (void**)&d_ms, num_components*sizeof(double) );
+  gpuMalloc( (void**)&d_ns, num_components*sizeof(double) );
+  gpuMemcpy(d_ls, ls, num_components*sizeof(double), gpuMemcpyHostToDevice );
+  gpuMemcpy(d_ms, ms, num_components*sizeof(double), gpuMemcpyHostToDevice );
+  gpuMemcpy(d_ns, ns, num_components*sizeof(double), gpuMemcpyHostToDevice );
 
   user_precision_complex_t *d_visis = NULL;
-  ( gpuMalloc( (void**)&d_visis, num_baselines*num_components*sizeof(user_precision_complex_t) ));
+  gpuMalloc( (void**)&d_visis, num_baselines*num_components*sizeof(user_precision_complex_t) );
 
   dim3 grid, threads;
 
