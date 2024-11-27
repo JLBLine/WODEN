@@ -439,7 +439,7 @@ def run_everybeam(ras: np.ndarray, decs: np.ndarray,
                 rot_matrix[:,0,1] = -np.cos(-para_angles)
                 rot_matrix[:,1,0] = -np.cos(-para_angles)
                 rot_matrix[:,1,1] = -np.sin(-para_angles)
-            
+                
             else:
                 for dir_ind, dir_itrf in enumerate(dir_itrfs):
                     
@@ -462,16 +462,7 @@ def run_everybeam(ras: np.ndarray, decs: np.ndarray,
                     elif type(telescope) == eb.MWALocal:
                         norm_jones = telescope.station_response(time_mjd_secs, station_id, freq,
                                                                 beam_az0, beam_za0)
-                        
-                    if type(telescope) in non_itrf_beams:
-                        if parallactic_rotate:
-                            ha0 = j2000_lsts[time_ind] - beam_ra0
-                            para_angles = erfa.hd2pa(ha0, beam_dec0, j2000_latitudes[time_ind])
-                            rot = np.empty((2,2))
-                            rot[0,0] = np.sin(-para_angles)
-                            rot[0,1] = -np.cos(-para_angles)
-                            rot[1,0] = -np.cos(-para_angles)
-                            rot[1,1] = -np.sin(-para_angles)
+                        print("norm_jones", norm_jones)
                         
                     else:
                         element_id = 0
@@ -489,14 +480,22 @@ def run_everybeam(ras: np.ndarray, decs: np.ndarray,
                                 element_norm = telescope.element_response(time_mjd_secs, station_id, element_id, freq,
                                                                 phase_itrf, rotate=eb_rotate)
                                 norm_jones = np.matmul(array_factor_norm, element_norm)
-                            
-                            
                         if parallactic_rotate:
                             dir_phase_local = eb_local_xyz_from_radec(beam_ra0, beam_dec0, altaz_frame)
                             north, east = eb_north_east(dir_phase_local, ncp_t)
                             rot = calc_everybeam_rotation(dir_phase_local, north, east)
                
                     if parallactic_rotate:
+                        if type(telescope) in non_itrf_beams:
+                            ha0 = j2000_lsts[time_ind] - beam_ra0
+                            para_angles = erfa.hd2pa(ha0, beam_dec0, j2000_latitudes[time_ind])
+                            rot = np.empty((2,2))
+                            rot[0,0] = np.sin(-para_angles)
+                            rot[0,1] = -np.cos(-para_angles)
+                            rot[1,0] = -np.cos(-para_angles)
+                            rot[1,1] = -np.sin(-para_angles)
+                            # print("rot", rot)
+                        
                         norm_jones = np.matmul(norm_jones, rot)
                     
                 for coord_ind, (ra, dec) in enumerate(zip(ras, decs)):
@@ -504,10 +503,12 @@ def run_everybeam(ras: np.ndarray, decs: np.ndarray,
                     if type(telescope) == eb.MWA:
                             response = telescope.station_response(time_mjd_secs, station_id, freq,
                                                                   ra, dec)
+                            all_output_jones[station_ind, time_ind, freq_ind, coord_ind] = response
                     ##Only MWALocal uses az,za as a direct input
                     elif type(telescope) == eb.MWALocal:
                             response = telescope.station_response(time_mjd_secs, station_id, freq,
                                                                   zas[coord_ind], azs[coord_ind])
+                            all_output_jones[station_ind, time_ind, freq_ind, coord_ind] = response
                     ##Everything else uses ITRF coordinates
                     else:
                         if element_only:
