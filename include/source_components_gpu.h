@@ -1201,6 +1201,8 @@ Otherwise, assume all primary beams are identical
 Currently this is just an index of all antennas. Gets passed to `get_beam_gains_multibeams`
 @param[in] *d_ant2_to_auto_map An index of all primary beams to auto-correlations
 Currently this is just an index of all antennas. Gets passed to `get_beam_gains_multibeams`
+@param[in] off_cardinal_dipoles Boolean to specify if the dipoles in the beam are off the cardinal axes
+(45 and 135 degrees) or aligned with north-south and east-west (0 and 90 degrees). Effects what visibilities are calculated.
 
 */
 __global__ void kern_calc_autos(components_t d_components,
@@ -1218,7 +1220,8 @@ __global__ void kern_calc_autos(components_t d_components,
                                 user_precision_t *d_sum_visi_YY_imag,
                                 int use_twobeams,
                                 int *d_ant1_to_auto_map,
-                                int *d_ant2_to_auto_map);
+                                int *d_ant2_to_auto_map,
+                                int off_cardinal_dipoles);
 
 /**
 @brief Fill the `d_ant1_to_baseline_map` and `d_ant2_to_baseline_map` device arrays

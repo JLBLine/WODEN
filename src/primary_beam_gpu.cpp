@@ -8,7 +8,7 @@
 #include "gpu_macros.h"
 
 //__host__??
-__device__ void twoD_Gaussian(user_precision_t x, user_precision_t y,
+__device__ void twoD_Gaussian_gpu(user_precision_t x, user_precision_t y,
            user_precision_t xo, user_precision_t yo,
            user_precision_t sigma_x, user_precision_t sigma_y,
            user_precision_t cos_theta, user_precision_t sin_theta,
@@ -48,7 +48,7 @@ __global__ void kern_gaussian_beam(double *d_beam_ls, double *d_beam_ms,
     //Convert FWHM into standard dev, and scale for frequency
     user_precision_t std = (fwhm_lm / FWHM_FACTOR) * (user_precision_t)(beam_ref_freq / d_freqs[iFreq]);
 
-    twoD_Gaussian((user_precision_t)d_beam_ls[iLMcoord], (user_precision_t)d_beam_ms[iLMcoord], 0, 0,
+    twoD_Gaussian_gpu((user_precision_t)d_beam_ls[iLMcoord], (user_precision_t)d_beam_ms[iLMcoord], 0, 0,
                std, std, cos_theta, sin_theta, sin_2theta,
                &d_beam_real, &d_beam_imag);
 
@@ -59,7 +59,7 @@ __global__ void kern_gaussian_beam(double *d_beam_ls, double *d_beam_ms,
 }
 
 
-extern "C" void calculate_gaussian_beam(int num_components, int num_time_steps,
+extern "C" void calculate_gaussian_beam_gpu(int num_components, int num_time_steps,
            int num_freqs, user_precision_t ha0,
            user_precision_t sdec0, user_precision_t cdec0,
            user_precision_t fwhm_lm, user_precision_t cos_theta,
@@ -115,7 +115,7 @@ extern "C" void calculate_gaussian_beam(int num_components, int num_time_steps,
   gpuFree( d_beam_has );
 }
 
-__device__ void analytic_dipole(user_precision_t az, user_precision_t za,
+__device__ void analytic_dipole_gpu(user_precision_t az, user_precision_t za,
            user_precision_t wavelength,
            gpuUserComplex * d_beam_X, gpuUserComplex * d_beam_Y) {
 
@@ -169,12 +169,12 @@ __global__ void kern_analytic_dipole_beam(user_precision_t *d_azs,
     gpuUserComplex d_beam_norm_X, d_beam_norm_Y;
     user_precision_t wavelength = VELC / d_freqs[iFreq];
 
-    analytic_dipole(d_azs[iCoord], d_zas[iCoord], wavelength,
+    analytic_dipole_gpu(d_azs[iCoord], d_zas[iCoord], wavelength,
                &d_beam_X, &d_beam_Y);
 
     //Should really calculate this normalisation outside of this kernel - we are
     //massively increasing the number calculations for no reason
-    analytic_dipole(0.0, 0.0, wavelength,
+    analytic_dipole_gpu(0.0, 0.0, wavelength,
                &d_beam_norm_X, &d_beam_norm_Y);
 
     gpuUserComplex normed_X = d_beam_X;
@@ -190,7 +190,7 @@ __global__ void kern_analytic_dipole_beam(user_precision_t *d_azs,
   }
 }
 
-extern "C" void calculate_analytic_dipole_beam(int num_components,
+extern "C" void calculate_analytic_dipole_beam_gpu(int num_components,
      int num_time_steps, int num_freqs,
      user_precision_t *azs, user_precision_t *zas, double *d_freqs,
      gpuUserComplex *d_g1xs, gpuUserComplex *d_g1ys){
@@ -225,7 +225,7 @@ extern "C" void calculate_analytic_dipole_beam(int num_components,
 
 }
 
-__device__ void RTS_MWA_beam(user_precision_t az, user_precision_t za,
+__device__ void RTS_MWA_beam_gpu(user_precision_t az, user_precision_t za,
            double ha, double dec,
            double wavelength, double *d_metre_delays,
            double latitude, int norm,
@@ -360,7 +360,7 @@ __global__ void kern_RTS_analytic_MWA_beam(user_precision_t *d_azs,
 
     double wavelength = VELC / d_freqs[iFreq];
 
-    RTS_MWA_beam(d_azs[iCoord], d_zas[iCoord],
+    RTS_MWA_beam_gpu(d_azs[iCoord], d_zas[iCoord],
              d_beam_has[iCoord], d_beam_decs[iCoord],
              wavelength, d_metre_delays,
              latitude, norm,
@@ -374,7 +374,7 @@ __global__ void kern_RTS_analytic_MWA_beam(user_precision_t *d_azs,
   }
 }
 
-extern "C" void calculate_RTS_MWA_analytic_beam(int num_components,
+extern "C" void calculate_RTS_MWA_analytic_beam_gpu(int num_components,
      int num_time_steps, int num_freqs,
      user_precision_t *azs, user_precision_t *zas, int *delays,
      double latitude, int norm,
@@ -701,7 +701,7 @@ extern "C" void run_hyperbeam_gpu(int num_components,
                  Functions below to be used in unit tests
 *******************************************************************************/
 
-extern "C" void test_RTS_calculate_MWA_analytic_beam(int num_components,
+extern "C" void test_RTS_calculate_MWA_analytic_beam_gpu(int num_components,
      int num_time_steps, int num_freqs,
      user_precision_t *azs, user_precision_t *zas, int *delays,
      double latitude, int norm,
@@ -730,7 +730,7 @@ extern "C" void test_RTS_calculate_MWA_analytic_beam(int num_components,
                       gpuMemcpyHostToDevice) );
 
   //Run
-  calculate_RTS_MWA_analytic_beam(num_components,
+  calculate_RTS_MWA_analytic_beam_gpu(num_components,
        num_time_steps, num_freqs,
        azs, zas, delays, latitude, norm,
        beam_has, beam_decs, d_freqs,
@@ -760,7 +760,7 @@ extern "C" void test_RTS_calculate_MWA_analytic_beam(int num_components,
 
 }
 
-extern "C" void test_analytic_dipole_beam(int num_components,
+extern "C" void test_analytic_dipole_beam_gpu(int num_components,
      int num_time_steps, int num_freqs,
      user_precision_t *azs, user_precision_t *zas, double *freqs,
      user_precision_complex_t *analy_beam_X,
@@ -779,7 +779,7 @@ extern "C" void test_analytic_dipole_beam(int num_components,
   ( gpuMemcpy(d_freqs, freqs, num_freqs*sizeof(double),
                       gpuMemcpyHostToDevice) );
 
-  calculate_analytic_dipole_beam(num_components,
+  calculate_analytic_dipole_beam_gpu(num_components,
       num_time_steps, num_freqs,
       azs, zas, d_freqs,
       (gpuUserComplex *)d_analy_beam_X, (gpuUserComplex *)d_analy_beam_Y);
@@ -859,7 +859,7 @@ extern "C" void test_kern_gaussian_beam(double *beam_ls, double *beam_ms,
 }
 
 
-extern "C" void test_calculate_gaussian_beam(int num_components, int num_time_steps,
+extern "C" void test_calculate_gaussian_beam_gpu(int num_components, int num_time_steps,
      int num_freqs, user_precision_t ha0, user_precision_t sdec0, user_precision_t cdec0,
      user_precision_t fwhm_lm, user_precision_t cos_theta, user_precision_t sin_theta, user_precision_t sin_2theta,
      double beam_ref_freq, double *freqs,
@@ -882,7 +882,7 @@ extern "C" void test_calculate_gaussian_beam(int num_components, int num_time_st
                                    num_freqs*num_beam_hadec*sizeof(user_precision_complex_t)) );
 
 
-  calculate_gaussian_beam(num_components, num_time_steps,
+  calculate_gaussian_beam_gpu(num_components, num_time_steps,
                          num_freqs, ha0, sdec0, cdec0,
                          fwhm_lm, cos_theta, sin_theta, sin_2theta,
                          beam_ref_freq, d_freqs,

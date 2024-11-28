@@ -3,14 +3,10 @@
 #include <math.h>
 #include <complex.h>
 
-#include "constants.h"
-#include "woden_precision_defs.h"
-
-void setUp (void) {} /* Is run before every test, put unit init calls here. */
-void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
+#include "analytic_dipole_beam_common.h"
 
 //External CUDA code we're linking in
-extern void test_analytic_dipole_beam(int num_components,
+extern void test_analytic_dipole_beam_gpu(int num_components,
              int num_time_steps, int num_freqs,
              user_precision_t *azs, user_precision_t *zas, double *freqs,
              user_precision_complex_t *analy_beam_X,
@@ -18,16 +14,16 @@ extern void test_analytic_dipole_beam(int num_components,
 
 
 #ifdef DOUBLE_PRECISION
-  double TOL = 1e-12;
+  #define TOL 1e-12
 #else
-  double TOL = 1e-6;
+  #define TOL 1e-6
 #endif
 
 /*
 Test that the analytic dipole beam code returns the correct values, in the
 correct order, for two time and frequency steps, with 25 directions on the sky
 */
-void test_analytic_dipole_beam_GivesCorrectValues(void) {
+void test_analytic_dipole_beam_GivesCorrectValues(int do_gpu) {
   int num_freqs = 2;
   int num_times = 2;
   int num_az = 5;
@@ -66,11 +62,19 @@ void test_analytic_dipole_beam_GivesCorrectValues(void) {
   user_precision_complex_t *analy_beam_X = malloc(num_beam_values*sizeof(user_precision_complex_t));
   user_precision_complex_t *analy_beam_Y = malloc(num_beam_values*sizeof(user_precision_complex_t));
 
-  //Run the CUDA code
-  test_analytic_dipole_beam(num_components,
-               num_times, num_freqs,
-               azs, zas, freqs,
-               analy_beam_X, analy_beam_Y);
+  if (do_gpu) {
+    //Run the CUDA code
+    test_analytic_dipole_beam_gpu(num_components,
+                 num_times, num_freqs,
+                 azs, zas, freqs,
+                 analy_beam_X, analy_beam_Y);
+  } else {
+    //Run the CPU code
+    calculate_analytic_dipole_beam_cpu(num_components,
+                 num_times, num_freqs,
+                 azs, zas, freqs,
+                 analy_beam_X, analy_beam_Y);
+  }
 
   //Expected real values for the X (north-south) dipole
   double expected_X[100] = { 1.0000000000000, 0.9103665168195,
@@ -145,6 +149,12 @@ void test_analytic_dipole_beam_GivesCorrectValues(void) {
   //Test the arrays make sense. Analytic dipole beam is purely real, so
   //imaginary should be zero.
   for (int ind = 0; ind < num_beam_values; ind++) {
+
+    if (ind < 5) {
+      printf("%d X: %.13f, %.13f\n",ind, expected_X[ind], for_testing_X_re[ind]);
+    }
+
+
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_X[ind], for_testing_X_re[ind]);
     TEST_ASSERT_DOUBLE_WITHIN(TOL, 0.0, for_testing_X_im[ind]);
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expected_Y[ind], for_testing_Y_re[ind]);
@@ -198,14 +208,4 @@ void test_analytic_dipole_beam_GivesCorrectValues(void) {
   free(for_testing_Y_re);
   free(for_testing_X_im);
   free(for_testing_Y_im);
-}
-
-
-
-//Run the test with unity
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_analytic_dipole_beam_GivesCorrectValues);
-    return UNITY_END();
 }

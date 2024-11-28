@@ -2,12 +2,10 @@
 #include <stdlib.h>
 #include <math.h>
 #include <complex.h>
+#include "gaussian_beam_common.h"
 
-#include "constants.h"
-#include "woden_precision_defs.h"
-
-void setUp (void) {} /* Is run before every test, put unit init calls here. */
-void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
+// #include "constants.h"
+// #include "woden_precision_defs.h"
 
 //External CUDA code we're linking in
 extern void test_kern_gaussian_beam(double *beam_ls, double *beam_ms,
@@ -17,9 +15,9 @@ extern void test_kern_gaussian_beam(double *beam_ls, double *beam_ms,
            user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J11);
 
 #ifdef DOUBLE_PRECISION
-  double TOL = 1e-16;
+  #define TOL 1e-16
 #else
-  double TOL = 1e-10;
+  #define TOL 1e-10
 #endif
 
 /*
@@ -32,7 +30,8 @@ void get_1D_gaussian_values(double *beam_ls, double *beam_ms,
                             user_precision_complex_t *primay_beam_J11,
                             double *freqs, double beam_ref_freq,
                             int vary_l, user_precision_t fwhm_lm,
-                            int num_freqs, int num_times, int num_components){
+                            int num_freqs, int num_times, int num_components,
+                            int do_gpu){
 
   // user_precision_t beam_ref_freq = 150e+6;
 
@@ -64,14 +63,22 @@ void get_1D_gaussian_values(double *beam_ls, double *beam_ms,
     freqs[i] = beam_ref_freq + i*freq_inc;
   }
 
-  test_kern_gaussian_beam(beam_ls, beam_ms,
+  if (do_gpu == 1) {
+    test_kern_gaussian_beam(beam_ls, beam_ms,
                           beam_ref_freq, freqs,
                           fwhm_lm, cos_theta, sin_theta, sin_2theta,
                           num_freqs, num_times, num_components,
                           primay_beam_J00, primay_beam_J11);
+  } else {
+    gaussian_beam_from_lm_cpu(beam_ls, beam_ms,
+                          beam_ref_freq, freqs,
+                          fwhm_lm, cos_theta, sin_theta, sin_2theta,
+                          num_components, num_times, num_freqs,
+                          primay_beam_J00, primay_beam_J11);
+  }
 }
 
-void test_GaussBeam_GivesCorrectlValues(void) {
+void test_GaussBeam_GivesCorrectlValues(int do_gpu) {
   int num_freqs = 1;
   int num_times = 1;
   int num_components = 100;
@@ -95,7 +102,8 @@ void test_GaussBeam_GivesCorrectlValues(void) {
                          primay_beam_J00, primay_beam_J11,
                          freqs, beam_ref_freq,
                          vary_l, fwhm_lm,
-                         num_freqs, num_times, num_components);
+                         num_freqs, num_times, num_components,
+                         do_gpu);
 
   for (int i = 0; i < num_components; i++) {
 
@@ -117,7 +125,7 @@ void test_GaussBeam_GivesCorrectlValues(void) {
   free(freqs);
 }
 
-void test_GaussBeam_GivesCorrectmValues(void) {
+void test_GaussBeam_GivesCorrectmValues(int do_gpu) {
   int num_freqs = 1;
   int num_times = 1;
   int num_components = 100;
@@ -141,7 +149,8 @@ void test_GaussBeam_GivesCorrectmValues(void) {
                          primay_beam_J00, primay_beam_J11,
                          freqs, beam_ref_freq,
                          vary_l, fwhm_lm,
-                         num_freqs, num_times, num_components);
+                         num_freqs, num_times, num_components,
+                         do_gpu);
 
   for (int i = 0; i < num_components; i++) {
 
@@ -164,7 +173,7 @@ void test_GaussBeam_GivesCorrectmValues(void) {
 }
 
 
-void test_GaussBeam_GivesCorrectlValuesByFreq(void) {
+void test_GaussBeam_GivesCorrectlValuesByFreq(int do_gpu) {
   int num_freqs = 5;
   int num_times = 1;
   int num_components = 100;
@@ -188,7 +197,8 @@ void test_GaussBeam_GivesCorrectlValuesByFreq(void) {
                          primay_beam_J00, primay_beam_J11,
                          freqs, beam_ref_freq,
                          vary_l, fwhm_lm,
-                         num_freqs, num_times, num_components);
+                         num_freqs, num_times, num_components,
+                         do_gpu);
 
   int beam_ind = 0;
   for (int freq_ind = 0; freq_ind < num_freqs; freq_ind++) {
@@ -215,7 +225,7 @@ void test_GaussBeam_GivesCorrectlValuesByFreq(void) {
   free(freqs);
 }
 
-void test_GaussBeam_GivesCorrectmValuesByFreq(void) {
+void test_GaussBeam_GivesCorrectmValuesByFreq(int do_gpu) {
   int num_freqs = 5;
   int num_times = 1;
   int num_components = 100;
@@ -239,7 +249,8 @@ void test_GaussBeam_GivesCorrectmValuesByFreq(void) {
                          primay_beam_J00, primay_beam_J11,
                          freqs, beam_ref_freq,
                          vary_l, fwhm_lm,
-                         num_freqs, num_times, num_components);
+                         num_freqs, num_times, num_components,
+                         do_gpu);
 
   int beam_ind = 0;
   for (int freq_ind = 0; freq_ind < num_freqs; freq_ind++) {
@@ -264,16 +275,4 @@ void test_GaussBeam_GivesCorrectmValuesByFreq(void) {
   free(primay_beam_J00);
   free(primay_beam_J11);
   free(freqs);
-}
-
-int main(void)
-{
-    UNITY_BEGIN();
-
-    RUN_TEST(test_GaussBeam_GivesCorrectlValues);
-    RUN_TEST(test_GaussBeam_GivesCorrectmValues);
-    RUN_TEST(test_GaussBeam_GivesCorrectlValuesByFreq);
-    RUN_TEST(test_GaussBeam_GivesCorrectmValuesByFreq);
-
-    return UNITY_END();
 }

@@ -486,7 +486,7 @@ __global__ void kern_make_zeros_user_precision(user_precision_t *array, int num_
 
 
 //Allocate space for the extrapolated Stokes parameters
-void malloc_extrapolated_flux_arrays(components_t *d_components, int num_comps,
+extern "C" void malloc_extrapolated_flux_arrays_gpu(components_t *d_components, int num_comps,
                                      int num_freqs){
   d_components->extrap_stokesI = NULL;
   ( gpuMalloc( (void**)&d_components->extrap_stokesI,
@@ -929,437 +929,227 @@ __global__ void kern_print_extrap_fluxes(int freq_ind, int num_extrap_freqs,
   }
 }
 
-
-extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
-                                   double *d_extrap_freqs, int num_extrap_freqs,
-                                   e_component_type comptype){
-
-  components_t d_components;
-  // int n_comps = 0;
-  int n_powers = 0;
-  int n_curves = 0;
-  int n_lists = 0;
-
-  //Choose the right components to extrapolate for
-  if (comptype == POINT) {
-    d_components = d_chunked_source->point_components;
-    // n_comps = d_chunked_source->n_points;
-    n_powers = d_chunked_source->n_point_powers;
-    n_curves = d_chunked_source->n_point_curves;
-    n_lists = d_chunked_source->n_point_lists;
-  }
-  else if (comptype == GAUSSIAN) {
-    d_components = d_chunked_source->gauss_components;
-    // n_comps = d_chunked_source->n_gauss;
-    n_powers = d_chunked_source->n_gauss_powers;
-    n_curves = d_chunked_source->n_gauss_curves;
-    n_lists = d_chunked_source->n_gauss_lists;
-  // } else if (comptype == SHAPELET) {
-  } else {
-    d_components = d_chunked_source->shape_components;
-    // n_comps = d_chunked_source->n_shapes;
-    n_powers = d_chunked_source->n_shape_powers;
-    n_curves = d_chunked_source->n_shape_curves;
-    n_lists = d_chunked_source->n_shape_lists;
-  }
-
+//wrap all flux extrap functions so we can call them from `source_components_common.c`
+//I've done this so if someone is adding funnctionality to `source_components_common.c`,
+//it should be clear where you need to create both a GPU and CPU version of a 
+//particular function
+extern "C" void extrap_power_laws_stokesI_gpu(components_t d_components,
+                                   int n_powers, double *d_extrap_freqs,
+                                   int num_extrap_freqs){
   dim3 grid, threads;
-
   threads.x = 16;
   threads.y = 16;
 
-  //First up, do the POWER_LAW types
+  grid.x = (int)ceilf( (float)n_powers / (float)threads.x );
   grid.y = (int)ceilf( (float)num_extrap_freqs / (float)threads.y );
 
-  if (n_powers > 0) {
-    grid.x = (int)ceilf( (float)n_powers / (float)threads.x );
-    gpuErrorCheckKernel("kern_extrap_power_laws_stokesI",
-                          kern_extrap_power_laws_stokesI, grid, threads,
-                          num_extrap_freqs, d_extrap_freqs,
-                          n_powers, d_components);
-  }
-  //Next up, do the CURVED_POWER_LAW types
-  if (n_curves > 0) {
-    grid.x = (int)ceilf( (float)n_curves / (float)threads.x );
-    gpuErrorCheckKernel("kern_extrap_curved_power_laws_stokesI",
-                      kern_extrap_curved_power_laws_stokesI, grid, threads,
-                      num_extrap_freqs, d_extrap_freqs,
-                      n_curves, d_components);
-  }
-
-  //Finally, do any list flux peeps
-  if (n_lists > 0) {
-    grid.x = (int)ceilf( (float)n_lists / (float)threads.x );
-    gpuErrorCheckKernel("kern_extrap_list_fluxes",
-                        kern_extrap_list_fluxes, grid, threads,
-                        d_components.list_stokesI, d_components.list_freqs,
-                        d_components.num_list_values, d_components.list_start_indexes,
-                        d_components.list_comp_inds,
+  gpuErrorCheckKernel("kern_extrap_power_laws_stokesI",
+                        kern_extrap_power_laws_stokesI, grid, threads,
                         num_extrap_freqs, d_extrap_freqs,
-                        n_lists, d_components.extrap_stokesI);
-  }
+                        n_powers, d_components);
+}
 
-  if (d_components.n_stokesV_power > 0) {
-    // printf("Extrapolating Stokes V power laws\n");
-    grid.x = (int)ceilf( (float)d_components.n_stokesV_power / (float)threads.x );
-    gpuErrorCheckKernel("kern_extrap_power_laws_stokesV",
-                          kern_extrap_power_laws_stokesV, grid, threads,
-                          num_extrap_freqs, d_extrap_freqs,
-                          d_components.n_stokesV_power, d_components);
-  }
+extern "C" void extrap_curved_power_laws_stokesI_gpu(components_t d_components,
+                                   int n_curves, double *d_extrap_freqs,
+                                   int num_extrap_freqs){
+  dim3 grid, threads;
+  threads.x = 16;
+  threads.y = 16;
 
-  if (d_components.n_stokesV_curve > 0) {
-    // printf("Extrapolating Stokes V curved power laws\n");
-    grid.x = (int)ceilf( (float)d_components.n_stokesV_curve / (float)threads.x );
-    gpuErrorCheckKernel("kern_extrap_curved_power_laws_stokesV",
+  grid.y = (int)ceilf( (float)num_extrap_freqs / (float)threads.y );
+  grid.x = (int)ceilf( (float)n_curves / (float)threads.x );
+  gpuErrorCheckKernel("kern_extrap_curved_power_laws_stokesI",
+                    kern_extrap_curved_power_laws_stokesI, grid, threads,
+                    num_extrap_freqs, d_extrap_freqs,
+                    n_curves, d_components);
+}
+
+extern "C" void extrap_list_fluxes_stokesI_gpu(components_t d_components,
+                                   int n_lists, double *d_extrap_freqs,
+                                   int num_extrap_freqs){
+  dim3 grid, threads;
+  threads.x = 16;
+  threads.y = 16;
+
+  grid.y = (int)ceilf( (float)num_extrap_freqs / (float)threads.y );
+  grid.x = (int)ceilf( (float)n_lists / (float)threads.x );
+  gpuErrorCheckKernel("kern_extrap_list_fluxes",
+                       kern_extrap_list_fluxes, grid, threads,
+                       d_components.list_stokesI, d_components.list_freqs,
+                       d_components.num_list_values, d_components.list_start_indexes,
+                       d_components.list_comp_inds,
+                       num_extrap_freqs, d_extrap_freqs,
+                       n_lists, d_components.extrap_stokesI);
+}
+
+extern "C" void extrap_power_laws_stokesV_gpu(components_t d_components,
+                                              double *d_extrap_freqs,
+                                              int num_extrap_freqs){
+  dim3 grid, threads;
+  threads.x = 16;
+  threads.y = 16;
+
+  grid.y = (int)ceilf( (float)num_extrap_freqs / (float)threads.y );
+  grid.x = (int)ceilf( (float)d_components.n_stokesV_power / (float)threads.x );
+  gpuErrorCheckKernel("kern_extrap_power_laws_stokesV",
+                       kern_extrap_power_laws_stokesV, grid, threads,
+                       num_extrap_freqs, d_extrap_freqs,
+                       d_components.n_stokesV_power, d_components);
+}
+
+extern "C" void extrap_curved_power_laws_stokesV_gpu(components_t d_components,
+                                                     double *d_extrap_freqs,
+                                                     int num_extrap_freqs){
+  dim3 grid, threads;
+  threads.x = 16;
+  threads.y = 16;
+
+  grid.y = (int)ceilf( (float)num_extrap_freqs / (float)threads.y );
+  grid.x = (int)ceilf( (float)d_components.n_stokesV_curve / (float)threads.x );
+  gpuErrorCheckKernel("kern_extrap_curved_power_laws_stokesV",
                           kern_extrap_curved_power_laws_stokesV, grid, threads,
                           num_extrap_freqs, d_extrap_freqs,
                           d_components.n_stokesV_curve, d_components);
-  }
+}
 
-  if (d_components.n_stokesV_pol_frac > 0) {
-    // printf("Extrapolating Stokes V polarisation fractions\n");
-    grid.x = (int)ceilf( (float)d_components.n_stokesV_pol_frac / (float)threads.x );
-    gpuErrorCheckKernel("kern_polarisation_fraction_stokesV",
+extern "C" void polarisation_fraction_stokesV_gpu(components_t d_components,
+                                                     double *d_extrap_freqs,
+                                                     int num_extrap_freqs){
+  dim3 grid, threads;
+  threads.x = 16;
+  threads.y = 16;
+
+  grid.y = (int)ceilf( (float)num_extrap_freqs / (float)threads.y );
+  grid.x = (int)ceilf( (float)d_components.n_stokesV_pol_frac / (float)threads.x );
+  gpuErrorCheckKernel("kern_polarisation_fraction_stokesV",
                           kern_polarisation_fraction_stokesV, grid, threads,
                           num_extrap_freqs, d_extrap_freqs,
                           d_components.n_stokesV_pol_frac, d_components);
-  }
+}
 
-  if (d_components.n_stokesV_list > 0) {
-    grid.x = (int)ceilf( (float)d_components.n_stokesV_list / (float)threads.x );
-    // printf("Extrapolating Stokes V list fluxes\n");
-    gpuErrorCheckKernel("kern_extrap_list_fluxes",
-                        kern_extrap_list_fluxes, grid, threads,
-                        d_components.stokesV_list_ref_flux, d_components.stokesV_list_ref_freqs,
-                        d_components.stokesV_num_list_values, d_components.stokesV_list_start_indexes,
-                        d_components.stokesV_list_comp_inds,
+extern "C" void extrap_list_fluxes_stokesV_gpu(components_t d_components,
+                                               double *d_extrap_freqs,
+                                               int num_extrap_freqs){
+  dim3 grid, threads;
+  threads.x = 16;
+  threads.y = 16;
+
+  grid.y = (int)ceilf( (float)num_extrap_freqs / (float)threads.y );
+  grid.x = (int)ceilf( (float)d_components.n_stokesV_list / (float)threads.x );
+  // printf("Extrapolating Stokes V list fluxes\n");
+  gpuErrorCheckKernel("kern_extrap_list_fluxes",
+                      kern_extrap_list_fluxes, grid, threads,
+                      d_components.stokesV_list_ref_flux, d_components.stokesV_list_ref_freqs,
+                      d_components.stokesV_num_list_values, d_components.stokesV_list_start_indexes,
+                      d_components.stokesV_list_comp_inds,
+                      num_extrap_freqs, d_extrap_freqs,
+                      d_components.n_stokesV_list, d_components.extrap_stokesV);
+}
+
+extern "C" void extrap_power_laws_linpol_gpu(components_t d_components,
+                                               double *d_extrap_freqs,
+                                               int num_extrap_freqs){
+  dim3 grid, threads;
+  threads.x = 16;
+  threads.y = 16;
+
+  grid.y = (int)ceilf( (float)num_extrap_freqs / (float)threads.y );
+  grid.x = (int)ceilf( (float)d_components.n_linpol_power / (float)threads.x );
+  gpuErrorCheckKernel("kern_extrap_power_laws_linpol",
+                        kern_extrap_power_laws_linpol, grid, threads,
                         num_extrap_freqs, d_extrap_freqs,
-                        d_components.n_stokesV_list, d_components.extrap_stokesV);
-  }
+                        d_components.n_linpol_power, d_components);
+}
 
-  if (d_components.n_linpol_power > 0) {
-    // printf("Extrapolating linear polarisation power laws\n");
-    grid.x = (int)ceilf( (float)d_components.n_linpol_power / (float)threads.x );
-    gpuErrorCheckKernel("kern_extrap_power_laws_linpol",
-                          kern_extrap_power_laws_linpol, grid, threads,
-                          num_extrap_freqs, d_extrap_freqs,
-                          d_components.n_linpol_power, d_components);
-  }
+extern "C" void extrap_curved_power_laws_linpol_gpu(components_t d_components,
+                                               double *d_extrap_freqs,
+                                               int num_extrap_freqs){
+  dim3 grid, threads;
+  threads.x = 16;
+  threads.y = 16;
 
-  if (d_components.n_linpol_curve > 0) {
-    // printf("Extrapolating linear polarisation curved power laws\n");
-    grid.x = (int)ceilf( (float)d_components.n_linpol_curve / (float)threads.x );
-    gpuErrorCheckKernel("kern_extrap_curved_power_laws_linpol",
-                          kern_extrap_curved_power_laws_linpol, grid, threads,
-                          num_extrap_freqs, d_extrap_freqs,
-                          d_components.n_linpol_curve, d_components);
-  }
-
-  if (d_components.n_linpol_pol_frac > 0) {
-    // printf("Extrapolating linear polarisation polarisation fractions\n");
-    grid.x = (int)ceilf( (float)d_components.n_linpol_pol_frac / (float)threads.x );
-    gpuErrorCheckKernel("kern_polarisation_fraction_linpol",
-                          kern_polarisation_fraction_linpol, grid, threads,
-                          num_extrap_freqs, d_extrap_freqs,
-                          d_components.n_linpol_pol_frac, d_components);
-  }
-
-  if (d_components.n_linpol_list > 0) {
-    // printf("Extrapolating linear polarisation list fluxes\n");
-    grid.x = (int)ceilf( (float)d_components.n_linpol_list / (float)threads.x );
-    gpuErrorCheckKernel("kern_extrap_list_fluxes",
-                        kern_extrap_list_fluxes, grid, threads,
-                        d_components.stokesQ_list_ref_flux, d_components.stokesQ_list_ref_freqs,
-                        d_components.stokesQ_num_list_values, d_components.stokesQ_list_start_indexes,
-                        d_components.stokesQ_list_comp_inds,
+  grid.y = (int)ceilf( (float)num_extrap_freqs / (float)threads.y );
+  grid.x = (int)ceilf( (float)d_components.n_linpol_curve / (float)threads.x );
+  gpuErrorCheckKernel("kern_extrap_curved_power_laws_linpol",
+                        kern_extrap_curved_power_laws_linpol, grid, threads,
                         num_extrap_freqs, d_extrap_freqs,
-                        d_components.n_linpol_list, d_components.extrap_stokesQ);
+                        d_components.n_linpol_curve, d_components);
+}
 
-    grid.x = (int)ceilf( (float)d_components.n_linpol_list / (float)threads.x );
-    gpuErrorCheckKernel("kern_extrap_list_fluxes",
-                        kern_extrap_list_fluxes, grid, threads,
-                        d_components.stokesU_list_ref_flux, d_components.stokesU_list_ref_freqs,
-                        d_components.stokesU_num_list_values, d_components.stokesU_list_start_indexes,
-                        d_components.stokesU_list_comp_inds,
+extern "C" void polarisation_fraction_linpol_gpu(components_t d_components,
+                                               double *d_extrap_freqs,
+                                               int num_extrap_freqs){
+  dim3 grid, threads;
+  threads.x = 16;
+  threads.y = 16;
+
+  grid.y = (int)ceilf( (float)num_extrap_freqs / (float)threads.y );
+  grid.x = (int)ceilf( (float)d_components.n_linpol_pol_frac / (float)threads.x );
+  gpuErrorCheckKernel("kern_polarisation_fraction_linpol",
+                        kern_polarisation_fraction_linpol, grid, threads,
                         num_extrap_freqs, d_extrap_freqs,
-                        d_components.n_linpol_list, d_components.extrap_stokesU);
-  }
+                        d_components.n_linpol_pol_frac, d_components);
+}
 
-  if (d_components.n_linpol_p_list > 0) {
-    // printf("Extrapolating linear polarisation polarisation fractions\n");
-    grid.x = (int)ceilf( (float)d_components.n_linpol_p_list / (float)threads.x );
-    gpuErrorCheckKernel("kern_extrap_list_fluxes",
-                        kern_extrap_list_fluxes, grid, threads,
-                        d_components.linpol_p_list_ref_flux, d_components.linpol_p_list_ref_freqs,
-                        d_components.linpol_p_num_list_values, d_components.linpol_p_list_start_indexes,
-                        d_components.linpol_p_list_comp_inds,
-                        num_extrap_freqs, d_extrap_freqs,
-                        d_components.n_linpol_p_list, d_components.extrap_stokesQ);
-  }
+extern "C" void extrap_list_fluxes_linpol_gpu(components_t d_components,
+                                               double *d_extrap_freqs,
+                                               int num_extrap_freqs){
+  dim3 grid, threads;
+  threads.x = 16;
+  threads.y = 16;
 
+  grid.y = (int)ceilf( (float)num_extrap_freqs / (float)threads.y );
+  grid.x = (int)ceilf( (float)d_components.n_linpol_list / (float)threads.x );
+  gpuErrorCheckKernel("kern_extrap_list_fluxes",
+                      kern_extrap_list_fluxes, grid, threads,
+                      d_components.stokesQ_list_ref_flux, d_components.stokesQ_list_ref_freqs,
+                      d_components.stokesQ_num_list_values, d_components.stokesQ_list_start_indexes,
+                      d_components.stokesQ_list_comp_inds,
+                      num_extrap_freqs, d_extrap_freqs,
+                      d_components.n_linpol_list, d_components.extrap_stokesQ);
 
-  if (d_components.n_linpol_angles > 0) {
-  // printf("Extrapolating linear polarisation polarisation fractions\n");
+  grid.x = (int)ceilf( (float)d_components.n_linpol_list / (float)threads.x );
+  gpuErrorCheckKernel("kern_extrap_list_fluxes",
+                      kern_extrap_list_fluxes, grid, threads,
+                      d_components.stokesU_list_ref_flux, d_components.stokesU_list_ref_freqs,
+                      d_components.stokesU_num_list_values, d_components.stokesU_list_start_indexes,
+                      d_components.stokesU_list_comp_inds,
+                      num_extrap_freqs, d_extrap_freqs,
+                      d_components.n_linpol_list, d_components.extrap_stokesU);
+}
+
+extern "C" void extrap_p_list_fluxes_linpol_gpu(components_t d_components,
+                                                double *d_extrap_freqs,
+                                                int num_extrap_freqs){
+  dim3 grid, threads;
+  threads.x = 16;
+  threads.y = 16;
+
+  grid.y = (int)ceilf( (float)num_extrap_freqs / (float)threads.y );
+  grid.x = (int)ceilf( (float)d_components.n_linpol_p_list / (float)threads.x );
+  gpuErrorCheckKernel("kern_extrap_list_fluxes",
+                      kern_extrap_list_fluxes, grid, threads,
+                      d_components.linpol_p_list_ref_flux, d_components.linpol_p_list_ref_freqs,
+                      d_components.linpol_p_num_list_values, d_components.linpol_p_list_start_indexes,
+                      d_components.linpol_p_list_comp_inds,
+                      num_extrap_freqs, d_extrap_freqs,
+                      d_components.n_linpol_p_list, d_components.extrap_stokesQ);
+}
+
+extern "C" void apply_rotation_measure_gpu(components_t d_components,
+                                                double *d_extrap_freqs,
+                                                int num_extrap_freqs){
+  dim3 grid, threads;
+  threads.x = 16;
+  threads.y = 16;
+
+  grid.y = (int)ceilf( (float)num_extrap_freqs / (float)threads.y );
   grid.x = (int)ceilf( (float)d_components.n_linpol_angles / (float)threads.x );
   gpuErrorCheckKernel("kern_apply_rotation_measure",
                         kern_apply_rotation_measure, grid, threads,
                         num_extrap_freqs, d_extrap_freqs,
                         d_components.n_linpol_angles, d_components);
-  }
-
-//   grid.x = (int)ceilf( (float)25 / (float)threads.x );
-//   grid.y = threads.y = 1;
-//   gpuErrorCheckKernel("kern_print_extrap_fluxes",
-//                         kern_print_extrap_fluxes, grid, threads,
-//                         0, num_extrap_freqs,
-//                         25, d_components);
 }
-
-extern "C" void source_component_common(woden_settings_t *woden_settings,
-           beam_settings_t *beam_settings, double *d_freqs,
-           source_t *chunked_source, source_t *d_chunked_source,
-           d_beam_gains_t *d_component_beam_gains,
-           e_component_type comptype,
-           visibility_set_t *d_visibility_set){
-
-  int verbose = 0;
-
-  //Here we see if we a single primary beam for all (num_beams = 1) or
-  //a primary beam per antenna (num_beams = num_ants)
-  //This can be expanded in the future to have a primary beam per tile
-  //for different options
-  int num_beams;
-  int use_twobeams = 0;
-  if (woden_settings->use_dipamps == 1) {
-    num_beams = woden_settings->num_ants;
-    use_twobeams = 1;
-  } else {
-      num_beams = 1;
-  }
-
-  int num_components = 0;
-  components_t *components = NULL;
-  components_t *d_components = NULL;
-
-  if (comptype == POINT) {
-    num_components = d_chunked_source->n_points;
-    components = &chunked_source->point_components;
-    d_components = &d_chunked_source->point_components;
-  } else if (comptype == GAUSSIAN) {
-    num_components = d_chunked_source->n_gauss;
-    components = &chunked_source->gauss_components;
-    d_components = &d_chunked_source->gauss_components;
-  } else if (comptype == SHAPELET) {
-    num_components = d_chunked_source->n_shapes;
-    components = &chunked_source->shape_components;
-    d_components = &d_chunked_source->shape_components;
-  }
-
-  //Will need this later
-  malloc_extrapolated_flux_arrays(d_components, num_components,
-                                  woden_settings->num_freqs);
-
-  extrapolate_Stokes(d_chunked_source, d_freqs,
-                     woden_settings->num_freqs, comptype);
-
-  int num_gains = d_components->num_primarybeam_values*num_beams;
-  
-  //If we're using an everybeam model, all memory and values have already
-  //been copied to GPU, so no need to allocate here
-  //
-  if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == MWA_ANALY || beam_settings->beamtype == FEE_BEAM_INTERP
-      || beam_settings->beamtype == GAUSS_BEAM || beam_settings->beamtype == ANALY_DIPOLE || beam_settings->beamtype == NO_BEAM) {
-
-    //Only some models would have had leakage terms malloced
-    if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == MWA_ANALY || beam_settings->beamtype == FEE_BEAM_INTERP) {
-      gpuMalloc( (void**)&d_component_beam_gains->d_Dxs,
-                      num_gains*sizeof(gpuUserComplex) );
-      gpuMalloc( (void**)&d_component_beam_gains->d_Dys,
-                      num_gains*sizeof(gpuUserComplex) );
-    }
-    gpuMalloc( (void**)&d_component_beam_gains->d_gxs,
-                      num_gains*sizeof(gpuUserComplex) );
-    gpuMalloc( (void**)&d_component_beam_gains->d_gys,
-                      num_gains*sizeof(gpuUserComplex) );
-
-  }
-  
-  gpuMalloc( (void**)&d_components->ls, num_components*sizeof(double));
-  gpuMalloc( (void**)&d_components->ms, num_components*sizeof(double));
-  gpuMalloc( (void**)&d_components->ns, num_components*sizeof(double));
-
-
-  dim3 grid, threads;
-
-  threads.x = 128;
-  threads.y = 1;
-  threads.z = 1;
-  grid.x = (int)ceil( (float)num_components / (float)threads.x );
-  grid.y = 1;
-  grid.z = 1;
-
-  gpuErrorCheckKernel("kern_calc_lmn",
-                        kern_calc_lmn, grid, threads,
-                        woden_settings->ra0,
-                        woden_settings->sdec0, woden_settings->cdec0,
-                        d_components->ras, d_components->decs,
-                        d_components->ls, d_components->ms, d_components->ns, num_components);
-
-  //If using a gaussian primary beam, calculate beam values for all freqs,
-  //lsts and point component locations
-  if (beam_settings->beamtype == GAUSS_BEAM) {
-
-    //TODO currently hardcoded to have beam position angle = 0.
-    //Should this change with az/za?
-    user_precision_t cos_theta = 1.0;
-    user_precision_t sin_theta = 0.0;
-    user_precision_t sin_2theta = 0.0;
-    user_precision_t fwhm_lm = sin(beam_settings->beam_FWHM_rad);
-
-    if (verbose == 1){
-      printf("\tDoing Gaussian Beam\n");
-    }
-
-    calculate_gaussian_beam(num_components,
-         woden_settings->num_time_steps, woden_settings->num_freqs,
-         beam_settings->gauss_ha, beam_settings->gauss_sdec,
-         beam_settings->gauss_cdec,
-         fwhm_lm, cos_theta, sin_theta, sin_2theta,
-         beam_settings->beam_ref_freq, d_freqs,
-         components->beam_has,
-         components->beam_decs,
-         d_component_beam_gains->d_gxs, d_component_beam_gains->d_gys);
-
-  }// end if beam == GAUSS
-
-  else if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP) {
-
-    if (verbose == 1){
-      if (beam_settings->beamtype == FEE_BEAM_INTERP) {
-        printf("\tDoing the hyperbeam (interpolated)\n");
-      } else {
-        printf("\tDoing the hyperbeam\n");
-      }
-    }
-
-    //Have to reorder the az/za from comp ind, time ind to time ind, comp ind
-    //before feeding into mwa_hyperbeam
-    int num_azza = woden_settings->num_time_steps*num_components;
-    double *reordered_azs = (double *)malloc(num_azza*sizeof(double));
-    double *reordered_zas = (double *)malloc(num_azza*sizeof(double));
-
-    int stripe_new, stripe_old;
-
-    for (int time_ind = 0; time_ind < woden_settings->num_time_steps; time_ind++) {
-      for (int comp_ind = 0; comp_ind < num_components; comp_ind++) {
-        stripe_new = time_ind*num_components + comp_ind;
-        stripe_old = comp_ind*woden_settings->num_time_steps + time_ind;
-        reordered_azs[stripe_new] = (double)components->azs[stripe_old];
-        reordered_zas[stripe_new] = (double)components->zas[stripe_old];
-      }
-    }
-
-    //Always be doing parallatic angle rotation
-    uint8_t parallactic = 1;
-
-    run_hyperbeam_gpu(num_components,
-           woden_settings->num_time_steps, woden_settings->num_freqs,
-           num_beams, parallactic,
-           beam_settings->gpu_fee_beam,
-           reordered_azs, reordered_zas,
-           woden_settings->latitudes,
-           d_component_beam_gains->d_gxs, d_component_beam_gains->d_Dxs,
-           d_component_beam_gains->d_Dys, d_component_beam_gains->d_gys);
-
-    free(reordered_azs);
-    free(reordered_zas);
-  }
-
-  else if (beam_settings->beamtype == ANALY_DIPOLE) {
-    if (verbose == 1){
-      printf("\tDoing analytic_dipole (EDA2 beam)\n");
-    }
-
-    calculate_analytic_dipole_beam(num_components,
-         woden_settings->num_time_steps, woden_settings->num_freqs,
-         components->azs, components->zas, d_freqs,
-         d_component_beam_gains->d_gxs, d_component_beam_gains->d_gys);
-  }
-
-  else if (beam_settings->beamtype == MWA_ANALY) {
-
-    //Always normalise to zenith
-    int norm = 1;
-    if (verbose == 1){
-      printf("\tDoing analytic MWA beam\n");
-    }
-
-    calculate_RTS_MWA_analytic_beam(num_components,
-         woden_settings->num_time_steps, woden_settings->num_freqs,
-         components->azs, components->zas,
-         woden_settings->FEE_ideal_delays, woden_settings->latitude,
-         norm, components->beam_has, components->beam_decs,
-         d_freqs, d_component_beam_gains->d_gxs, d_component_beam_gains->d_Dxs,
-         d_component_beam_gains->d_Dys, d_component_beam_gains->d_gys);
-  }
-
-  //Now we've calculated the beams, we can calculate the auto-correlations,
-  //if so required
-
-  if (woden_settings->do_autos){
-
-    int num_freqs = woden_settings->num_freqs;
-    int num_times = woden_settings->num_time_steps;
-    int num_ants = woden_settings->num_ants;
-    int num_baselines = woden_settings->num_baselines;
-
-    threads.x = 64;
-    threads.y = 2;
-    threads.z = 1;
-    grid.x = (int)ceil( (float)(num_freqs*num_times) / (float)threads.x );
-    grid.y = (int)ceil( (float)(num_ants) / (float)threads.y );
-    grid.z = 1;
-
-    int *d_ant_to_auto_map = NULL;
-
-    if (use_twobeams == 1) {
-      int *ant_to_auto_map = NULL;
-      ant_to_auto_map = (int *)malloc(num_ants*sizeof(int));
-      for (int ant = 0; ant < num_ants; ant++){
-          ant_to_auto_map[ant] = ant;
-      }
-      ( gpuMalloc( (void**)&d_ant_to_auto_map,
-                                    num_ants*sizeof(int) ));
-      ( gpuMemcpy(d_ant_to_auto_map, ant_to_auto_map,
-                                      num_ants*sizeof(int), gpuMemcpyHostToDevice ));
-      free(ant_to_auto_map);
-    }
-
-    gpuErrorCheckKernel("kern_calc_autos",
-                  kern_calc_autos, grid, threads,
-                  *d_components, *d_component_beam_gains,
-                  beam_settings->beamtype,
-                  num_components, num_baselines,
-                  num_freqs, num_times, num_ants,
-                  d_visibility_set->sum_visi_XX_real,
-                  d_visibility_set->sum_visi_XX_imag,
-                  d_visibility_set->sum_visi_XY_real,
-                  d_visibility_set->sum_visi_XY_imag,
-                  d_visibility_set->sum_visi_YX_real,
-                  d_visibility_set->sum_visi_YX_imag,
-                  d_visibility_set->sum_visi_YY_real,
-                  d_visibility_set->sum_visi_YY_imag,
-                  use_twobeams, d_ant_to_auto_map,
-                  d_ant_to_auto_map);
-
-    if (use_twobeams == 1) {
-    (  gpuFree( d_ant_to_auto_map ) );
-    }
-  }
-
-} //END source_component_common
-
 
 __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            d_beam_gains_t d_component_beam_gains,
@@ -2217,7 +2007,8 @@ __global__ void kern_calc_autos(components_t d_components,
                                 user_precision_t *d_sum_visi_YY_imag,
                                 int use_twobeams,
                                 int *d_ant1_to_auto_map,
-                                int *d_ant2_to_auto_map) {
+                                int *d_ant2_to_auto_map,
+                                int off_cardinal_dipoles) {
 
   // Start by computing which baseline we're going to do
   const int iTimeFreq = threadIdx.x + (blockDim.x*blockIdx.x);
@@ -2275,15 +2066,31 @@ __global__ void kern_calc_autos(components_t d_components,
         user_precision_t flux_U = d_components.extrap_stokesU[extrap_ind];
         user_precision_t flux_V = d_components.extrap_stokesV[extrap_ind];
 
-        apply_beam_gains_stokesIQUV_on_cardinal(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
+        if (off_cardinal_dipoles == 1) {
+          apply_beam_gains_stokesIQUV_off_cardinal(g1x, D1x, D1y, g1y,
+                                    g2x, D2x, D2y, g2y,
                                     flux_I, flux_Q, flux_U, flux_V,
                                     visi_component,
                                     &auto_XX, &auto_XY, &auto_YX, &auto_YY);
-
+        } else {
+          apply_beam_gains_stokesIQUV_on_cardinal(g1x, D1x, D1y, g1y,
+                                    g2x, D2x, D2y, g2y,
+                                    flux_I, flux_Q, flux_U, flux_V,
+                                    visi_component,
+                                    &auto_XX, &auto_XY, &auto_YX, &auto_YY);
+        }
       } else {
-        apply_beam_gains_stokesI_on_cardinal(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
+        if (off_cardinal_dipoles == 1) {
+          apply_beam_gains_stokesI_off_cardinal(g1x, D1x, D1y, g1y,
+                                 g2x, D2x, D2y, g2y,
                                  flux_I, visi_component,
                                  &auto_XX, &auto_XY, &auto_YX, &auto_YY);
+        } else {
+          apply_beam_gains_stokesI_on_cardinal(g1x, D1x, D1y, g1y,
+                                 g2x, D2x, D2y, g2y,
+                                 flux_I, visi_component,
+                                 &auto_XX, &auto_XY, &auto_YX, &auto_YY);
+        }
       }
       
       d_sum_visi_XX_real[iAuto] += auto_XX.x;
@@ -2354,7 +2161,7 @@ extern "C" void test_extrap_stokes_all_models(source_t *chunked_source,
   gpuMemcpy(d_extrap_freqs, extrap_freqs,
              num_extrap_freqs*sizeof(double), gpuMemcpyHostToDevice );
 
-  malloc_extrapolated_flux_arrays(&d_chunked_source->point_components,
+  malloc_extrapolated_flux_arrays_gpu(&d_chunked_source->point_components,
                                   d_chunked_source->n_points,
                                   num_extrap_freqs);
 
@@ -3335,7 +3142,7 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
     d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
     malloc_lmn_arrays(d_chunked_source, &components, num_components, comptype);
 
-    malloc_extrapolated_flux_arrays(&d_chunked_source->point_components,
+    malloc_extrapolated_flux_arrays_gpu(&d_chunked_source->point_components,
                                     d_chunked_source->n_points,
                                     num_freqs);
     extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, POINT);
@@ -3362,7 +3169,7 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
     d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
     malloc_lmn_arrays(d_chunked_source, &components, num_components, comptype);
 
-    malloc_extrapolated_flux_arrays(&d_chunked_source->gauss_components,
+    malloc_extrapolated_flux_arrays_gpu(&d_chunked_source->gauss_components,
                                     d_chunked_source->n_gauss,
                                     num_freqs);
     extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, GAUSSIAN);
@@ -3388,7 +3195,7 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
     d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
     malloc_lmn_arrays(d_chunked_source, &components, num_components, comptype);
 
-    malloc_extrapolated_flux_arrays(&d_chunked_source->shape_components,
+    malloc_extrapolated_flux_arrays_gpu(&d_chunked_source->shape_components,
                                     d_chunked_source->n_shapes,
                                     num_freqs);
     extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, SHAPELET);
@@ -3603,6 +3410,8 @@ extern "C" void test_kern_calc_autos(components_t *components, int beamtype,
                                      int num_beams,
                                      visibility_set_t *visibility_set){
 
+  int off_cardinal_dipoles = 0;
+
   int use_twobeams = 0;
   if (num_beams > 1) {
     use_twobeams = 1;
@@ -3757,7 +3566,7 @@ extern "C" void test_kern_calc_autos(components_t *components, int beamtype,
                 d_sum_visi_YX_real, d_sum_visi_YX_imag,
                 d_sum_visi_YY_real, d_sum_visi_YY_imag,
                 use_twobeams, d_ant_to_auto_map,
-                d_ant_to_auto_map);
+                d_ant_to_auto_map, off_cardinal_dipoles);
 
   //Copy outputs onto host so we can check our answers
   ( gpuMemcpy(visibility_set->sum_visi_XX_real,

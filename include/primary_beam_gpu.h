@@ -42,7 +42,7 @@ standard deviations.
 @param[in,out] *d_beam_real Real part of the Gaussian repsonse
 @param[in,out] *d_beam_imag Imaginary part of the Gaussian reponse
 */
-__device__ void twoD_Gaussian(user_precision_t x, user_precision_t y,
+__device__ void twoD_Gaussian_gpu(user_precision_t x, user_precision_t y,
            user_precision_t xo, user_precision_t yo,
            user_precision_t sigma_x, user_precision_t sigma_y,
            user_precision_t cos_theta, user_precision_t sin_theta,
@@ -131,7 +131,7 @@ complex `J[0,0]` response in
 complex `J[1,1]` response in
 
 */
-extern "C" void calculate_gaussian_beam(int num_components, int num_time_steps,
+extern "C" void calculate_gaussian_beam_gpu(int num_components, int num_time_steps,
            int num_freqs, user_precision_t ha0,
            user_precision_t sdec0, user_precision_t cdec0,
            user_precision_t fwhm_lm, user_precision_t cos_theta,
@@ -155,7 +155,7 @@ size on the sky scales with frequency hence the need for `wavelength`
 @param[in,out] d_beam_Y Complex beam value for east-west dipole
 
 */
-__device__ void analytic_dipole(user_precision_t az, user_precision_t za,
+__device__ void analytic_dipole_gpu(user_precision_t az, user_precision_t za,
            user_precision_t wavelength,
            gpuUserComplex * d_beam_X, gpuUserComplex * d_beam_Y);
 
@@ -228,7 +228,7 @@ complex `J[0,0]` response in
 complex `J[1,1]` response in
 
 */
-extern "C" void calculate_analytic_dipole_beam(int num_components,
+extern "C" void calculate_analytic_dipole_beam_gpu(int num_components,
      int num_time_steps, int num_freqs,
      user_precision_t *azs, user_precision_t *zas, double *d_freqs,
      gpuUserComplex *d_primay_beam_J00, gpuUserComplex *d_primay_beam_J11);
@@ -243,7 +243,7 @@ hence needs the ha/dec along with the az/za. The delays added to the
 paths of individual dipoles allow the beam to be 'pointed'. The physical
 length of these paths should be given in `d_metre_delays` (this conversion
 from the delays given in the MWA metafits is handled by
-`primary_beam_gpu::calculate_RTS_MWA_analytic_beam`)
+`primary_beam_gpu::calculate_RTS_MWA_analytic_beam_gpu`)
 
 
 @param[in] az Azimuth to calculate the beam toward (radians)
@@ -261,7 +261,7 @@ steer the beam (metres)
 @param[in,out] *gy The gain for the east-west beam
 
 */
-__device__ void RTS_MWA_beam(user_precision_t az, user_precision_t za,
+__device__ void RTS_MWA_beam_gpu(user_precision_t az, user_precision_t za,
            double ha, double dec,
            double wavelength, double *d_metre_delays,
            double latitude, int norm,
@@ -273,14 +273,14 @@ __device__ void RTS_MWA_beam(user_precision_t az, user_precision_t za,
 `d_azs` and `d_zas` for a given set of delays `d_metre_delays` and frequencies
 `d_freqs`.
 
-@details Kernel calls `primary_beam_gpu::RTS_MWA_beam`. The MWA primary beam
+@details Kernel calls `primary_beam_gpu::RTS_MWA_beam_gpu`. The MWA primary beam
 is stationary on the sky for a given set of delays, so the Azimuth and Zenith
 Angles in `azs,zas` should contain `num_components*num_times` values,
 as the COMPONENTs move through the beam with time. The delays added to the
 paths of individual dipoles allow the beam to be 'pointed'. The physical
 length of these paths should be given in `d_metre_delays` (this conversion
 from the delays given in the MWA metafits is handled by
-`primary_beam_gpu::calculate_RTS_MWA_analytic_beam`)
+`primary_beam_gpu::calculate_RTS_MWA_analytic_beam_gpu`)
 
 When called with `dim3 grid, threads`, kernel should be called with both
 `grid.x` and `grid.y` defined, where:
@@ -326,7 +326,7 @@ with time. The delays added to the paths of individual dipoles allow the beam
 to be 'pointed'. The delays as listed in the metafits (given as `delays`) are
 listed in units of the delay time added internally to the tile (in seconds).
 This function coverts them into a path length (metres), as needed by
-`primary_beam_gpu::RTS_MWA_beam``.
+`primary_beam_gpu::RTS_MWA_beam_gpu``.
 
 @param[in] num_components Number of COMPONENTS the beam is calculated for
 @param[in] num_time_steps Number of time steps being calculated
@@ -345,7 +345,7 @@ This function coverts them into a path length (metres), as needed by
 @param[in,out] *d_gys The gains for the east-west beam
 
 */
-extern "C" void calculate_RTS_MWA_analytic_beam(int num_components,
+extern "C" void calculate_RTS_MWA_analytic_beam_gpu(int num_components,
      int num_time_steps, int num_freqs,
      user_precision_t *azs, user_precision_t *zas, int *delays,
      double latitude, int norm,
