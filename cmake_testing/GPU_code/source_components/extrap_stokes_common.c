@@ -1,26 +1,27 @@
-#include <unity.h>
-#include <stdlib.h>
-#include <math.h>
-#include <complex.h>
-
-#include "constants.h"
-#include "woden_precision_defs.h"
-#include "woden_struct_defs.h"
+#include "extrap_stokes_common.h"
 #include "test_extrap_stokes.h"
 
-#include "common_testing_functions.h"
+//External GPU code we're linking in
+extern source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
 
-void setUp (void) {} /* Is run before every test, put unit init calls here. */
-void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
+extern void malloc_extrapolated_flux_arrays_gpu(components_t *d_components, int num_comps,
+                                     int num_freqs);
 
-//External CUDA code we're linking in
-extern void test_extrap_stokes_all_models(source_t *chunked_source,
-           int num_extrap_freqs, double *extrap_freqs,
-           user_precision_t *extrap_flux_I, user_precision_t *extrap_flux_Q,
-           user_precision_t *extrap_flux_U, user_precision_t *extrap_flux_V);
+extern void free_d_components(source_t *d_chunked_source,
+                                  e_component_type comptype);
 
+extern void free_extrapolated_flux_arrays(components_t *d_components);
 
-// void fill_components_info(components_t *comps)
+extern double * malloc_freqs_gpu(int num_extrap_freqs, double *extrap_freqs);
+
+extern void free_freqs_gpu(double *d_extrap_freqs);
+
+extern void copy_extrapolated_flux_arrays_to_host(source_t *d_chunked_source,
+                                                  int num_extrap_freqs,
+                                                  user_precision_t *extrap_flux_I,
+                                                  user_precision_t *extrap_flux_Q,
+                                                  user_precision_t *extrap_flux_U,
+                                                  user_precision_t *extrap_flux_V);
 
 #ifdef DOUBLE_PRECISION
   double TOL = 1e-11;
@@ -30,8 +31,10 @@ extern void test_extrap_stokes_all_models(source_t *chunked_source,
 
 /*
 Test that the linear SI flux extrapolation code works correctly
+Many input arrays and values are stored in test_extrap_stokes.h
+
 */
-void test_kern_extrap_stokes_GivesCorrectValues(void) {
+void test_extrap_stokes_GivesCorrectValues(int do_gpu) {
 
   source_t *chunked_source = malloc(sizeof(source_t));
 
@@ -44,7 +47,6 @@ void test_kern_extrap_stokes_GivesCorrectValues(void) {
   components_t *comps = &chunked_source->point_components;
 
   //Set up some test condition inputs
-  // int num_extrap_freqs = 25;
   int num_components = chunked_source->n_points;
 
   //Stokes I power laws---------------------------------------------------------
@@ -231,12 +233,27 @@ void test_kern_extrap_stokes_GivesCorrectValues(void) {
   user_precision_t *extrap_flux_U = malloc(num_extrap_freqs*num_components*sizeof(user_precision_t));
   user_precision_t *extrap_flux_V = malloc(num_extrap_freqs*num_components*sizeof(user_precision_t));
   //
-  // //Run the CUDA code
-  test_extrap_stokes_all_models(chunked_source,
-             num_extrap_freqs, extrap_freqs,
-             extrap_flux_I, extrap_flux_Q,
-             extrap_flux_U, extrap_flux_V);
-  //
+  if (do_gpu == 1){
+    source_t *d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
+
+    malloc_extrapolated_flux_arrays_gpu(&d_chunked_source->point_components,
+                                      d_chunked_source->n_points,
+                                      num_extrap_freqs);
+
+    double *d_extrap_freqs = malloc_freqs_gpu(num_extrap_freqs, extrap_freqs);
+
+    extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_extrap_freqs, POINT,
+                       do_gpu);
+
+    copy_extrapolated_flux_arrays_to_host(d_chunked_source, num_extrap_freqs,
+                                          extrap_flux_I, extrap_flux_Q,
+                                          extrap_flux_U, extrap_flux_V);
+
+    free_d_components(d_chunked_source, POINT);
+    free_extrapolated_flux_arrays(&d_chunked_source->point_components);
+    free_freqs_gpu(d_extrap_freqs);
+  }
+  // //
   //Make some expected value arrays
   double *expec_flux_I = malloc(num_extrap_freqs*num_components*sizeof(double));
   double *expec_flux_Q = malloc(num_extrap_freqs*num_components*sizeof(double));
@@ -249,10 +266,10 @@ void test_kern_extrap_stokes_GivesCorrectValues(void) {
 
   for (int i = 0; i < num_extrap_freqs*(num_powers + num_curves + num_lists); i++) {
     //Check the two are within tolerace
-    printf("I %d %.3f %.3f\n", i/num_extrap_freqs, expec_flux_I[i], extrap_flux_I[i] );
-    printf("Q %d %.3f %.3f\n", i/num_extrap_freqs, expec_flux_Q[i], extrap_flux_Q[i] );
-    printf("U %d %.3f %.3f\n", i/num_extrap_freqs, expec_flux_U[i], extrap_flux_U[i] );
-    printf("V %d %.3f %.3f\n", i/num_extrap_freqs, expec_flux_V[i], extrap_flux_V[i] );
+    // printf("I %d %.3f %.3f\n", i/num_extrap_freqs, expec_flux_I[i], extrap_flux_I[i] );
+    // printf("Q %d %.3f %.3f\n", i/num_extrap_freqs, expec_flux_Q[i], extrap_flux_Q[i] );
+    // printf("U %d %.3f %.3f\n", i/num_extrap_freqs, expec_flux_U[i], extrap_flux_U[i] );
+    // printf("V %d %.3f %.3f\n", i/num_extrap_freqs, expec_flux_V[i], extrap_flux_V[i] );
     // printf("%d %.3f %.3f\n",i, expec_flux_V[i], extrap_flux_V[i] );
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_I[i], extrap_flux_I[i]);
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_Q[i], extrap_flux_Q[i]);
@@ -260,17 +277,17 @@ void test_kern_extrap_stokes_GivesCorrectValues(void) {
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_V[i], extrap_flux_V[i]);
   }
 
-  FILE *output_text;
+  // FILE *output_text;
 
-  output_text = fopen("test_extrap_stokes.txt","w");
+  // output_text = fopen("test_extrap_stokes.txt","w");
 
-  for (int i = 0; i < num_extrap_freqs*(num_powers + num_curves + num_lists); i++) {
+  // for (int i = 0; i < num_extrap_freqs*(num_powers + num_curves + num_lists); i++) {
 
-    fprintf(output_text,"%.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f\n", extrap_flux_I[i],
-                      extrap_flux_Q[i], extrap_flux_U[i], extrap_flux_V[i],
-          expec_flux_I[i], expec_flux_Q[i], expec_flux_U[i], expec_flux_V[i]);
+  //   fprintf(output_text,"%.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f\n", extrap_flux_I[i],
+  //                     extrap_flux_Q[i], extrap_flux_U[i], extrap_flux_V[i],
+  //         expec_flux_I[i], expec_flux_Q[i], expec_flux_U[i], expec_flux_V[i]);
 
-  }
+  // }
 
   //Be free my beauties
   free(extrap_flux_I);
@@ -282,12 +299,4 @@ void test_kern_extrap_stokes_GivesCorrectValues(void) {
   free(expec_flux_U);
   free(expec_flux_V);
 
-}
-
-//Run the test with unity
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_kern_extrap_stokes_GivesCorrectValues);
-    return UNITY_END();
 }

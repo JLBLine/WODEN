@@ -1,14 +1,4 @@
-#include <math.h>
-#include <unity.h>
-#include <stdlib.h>
-#include <complex.h>
-
-#include "constants.h"
-#include "woden_struct_defs.h"
-#include "woden_precision_defs.h"
-
-void setUp (void) {} /* Is run before every test, put unit init calls here. */
-void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
+#include "get_beam_gains_common.h"
 
 //External CUDA code we're linking in
 extern void test_kern_get_beam_gains(int num_freqs, int num_cross,
@@ -27,7 +17,7 @@ extern void test_kern_get_beam_gains(int num_freqs, int num_cross,
 Test the __device__ code that grabs the beam gains works correctly
 for all beam types
 */
-void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
+void test_get_beam_gains_ChooseBeams(int beamtype, int do_gpu) {
 
   #ifdef DOUBLE_PRECISION
   printf("WODEN is using DOUBLE precision\n");
@@ -35,13 +25,13 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
   printf("WODEN is using FLOAT precision\n");
   #endif
 
-  int num_baselines = 3.0;
-  int num_times = 2.0;
-  int num_freqs = 2.0;
+  int num_baselines = 3;
+  int num_times = 2;
+  int num_freqs = 2;
 
   int num_visis = num_baselines*num_times*num_freqs;
 
-  int num_components = 4.0;
+  int num_components = 4;
 
   user_precision_complex_t *primay_beam_J00 = malloc(num_freqs*num_times*num_components*sizeof(user_precision_complex_t));
   user_precision_complex_t *primay_beam_J01 = malloc(num_freqs*num_times*num_components*sizeof(user_precision_complex_t));
@@ -82,7 +72,8 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
   int use_twoants = 0;
   int num_ants = 1;
 
-  test_kern_get_beam_gains(num_freqs, num_visis,
+  if (do_gpu == 1) {
+    test_kern_get_beam_gains(num_freqs, num_visis,
           num_baselines, num_components, num_times, beamtype,
           primay_beam_J00, primay_beam_J01,
           primay_beam_J10, primay_beam_J11,
@@ -91,6 +82,9 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
           recover_g2x, recover_D2x,
           recover_D2y, recover_g2y,
           use_twoants, num_ants);
+  }
+
+  
 
   user_precision_t expected_order[] = { 0.00, 0.00, 0.00, 4.00, 4.00, 4.00, 8.00,
                              8.00, 8.00, 12.00, 12.00, 12.00, 1.00, 1.00,
@@ -103,7 +97,7 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
   //These models are real only, and have no leakage terms
   if (beamtype == ANALY_DIPOLE || beamtype == GAUSS_BEAM) {
     for (int output = 0; output < num_visis*num_components; output++) {
-
+      // printf("Expected: %f, Recovered: %f\n", expected_order[output], creal(recover_g1x[output]));
       TEST_ASSERT_EQUAL_FLOAT(expected_order[output], creal(recover_g1x[output]));
       TEST_ASSERT_EQUAL_FLOAT(0.0, creal(recover_D1x[output]));
       TEST_ASSERT_EQUAL_FLOAT(0.0, creal(recover_D1y[output]));
@@ -126,7 +120,7 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
   }
   else if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY) {
     for (int output = 0; output < num_visis*num_components; output++) {
-
+      // printf("Expected: %f, Recovered: %f\n", expected_order[output], creal(recover_g1x[output]));
       TEST_ASSERT_EQUAL_FLOAT(expected_order[output], creal(recover_g1x[output]));
       TEST_ASSERT_EQUAL_FLOAT(expected_order[output], creal(recover_D1x[output]));
       TEST_ASSERT_EQUAL_FLOAT(expected_order[output], creal(recover_D1y[output]));
@@ -150,6 +144,7 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
   //Should only be here if NO_BEAM, which just has gains of 1.0
   else {
     for (int output = 0; output < num_visis*num_components; output++) {
+      // printf("Expected: %f, Recovered: %f\n", 1.0, creal(recover_g1x[output]));
       TEST_ASSERT_EQUAL_FLOAT(1.0, creal(recover_g1x[output]));
       TEST_ASSERT_EQUAL_FLOAT(0.0, creal(recover_D1x[output]));
       TEST_ASSERT_EQUAL_FLOAT(0.0, creal(recover_D1y[output]));
@@ -184,63 +179,4 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
   free(recover_D2y);
   free(recover_g2y);
 
-}
-
-
-/*
-This test checks the correct behaviour when simuating with beamtype=FEE_BEAM
-*/
-void test_kern_get_beam_gains_FEEBeam(void) {
-  test_kern_get_beam_gains_ChooseBeams(FEE_BEAM);
-}
-
-/*
-This test checks the correct behaviour when simuating with beamtype=ANALY_DIPOLE
-*/
-void test_kern_get_beam_gains_AnalyDipoleBeam(void) {
-  test_kern_get_beam_gains_ChooseBeams(ANALY_DIPOLE);
-}
-
-/*
-This test checks the correct behaviour when simuating with beamtype=GAUSS_BEAM
-*/
-void test_kern_get_beam_gains_GaussBeam(void) {
-  test_kern_get_beam_gains_ChooseBeams(GAUSS_BEAM);
-}
-
-/*
-This test checks the correct behaviour when simuating with beamtype=NO_BEAM
-*/
-void test_kern_get_beam_gains_NoBeam(void) {
-  test_kern_get_beam_gains_ChooseBeams(NO_BEAM);
-}
-
-/*
-This test checks the correct behaviour when simuating with beamtype=FEE_BEAM_INTERP
-*/
-void test_kern_get_beam_gains_FEEBeamInterp(void) {
-  test_kern_get_beam_gains_ChooseBeams(FEE_BEAM_INTERP);
-}
-
-/*
-This test checks the correct behaviour when simuating with beamtype=MWA_ANALY
-*/
-void test_kern_get_beam_gains_MWAAnaly(void) {
-  test_kern_get_beam_gains_ChooseBeams(MWA_ANALY);
-}
-
-
-//Run the test with unity
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_kern_get_beam_gains_FEEBeam);
-    RUN_TEST(test_kern_get_beam_gains_AnalyDipoleBeam);
-    RUN_TEST(test_kern_get_beam_gains_GaussBeam);
-    RUN_TEST(test_kern_get_beam_gains_NoBeam);
-    RUN_TEST(test_kern_get_beam_gains_FEEBeamInterp);
-    RUN_TEST(test_kern_get_beam_gains_MWAAnaly);
-
-
-    return UNITY_END();
 }

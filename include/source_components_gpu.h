@@ -1,33 +1,26 @@
-#pragma once
-#include "calculate_visibilities_gpu.h"
 /*! \file
-  Device methods to extrapolate flux densities, assign and apply primary beam
+  GPU methods to extrapolate flux densities, assign and apply primary beam
   gains, and visibility responses for different sky model COMPONENT types.
 */
+#pragma once
+#include "calculate_visibilities_gpu.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <complex.h>
+#include <math.h>
+#include "gpucomplex.h"
+#include "fundamental_coords_gpu.h"
+#include "constants.h"
+#include "source_components_gpu.h"
+#include "woden_struct_defs.h"
+#include "primary_beam_gpu.h"
+#include "woden_precision_defs.h"
+#include "gpu_macros.h"
+// #include "source_components_cpu.h"
+#include "source_components_common.h"
 
-/*!
-A struct to contain primary beam values for a give COMPONENT. `d_gxs,d_Dxs,d_Dys,d_gys`
-should be used when all antennas have the same primary beam, and `d_gxs,d_Dxs,d_Dys,d_gys` used when all primary beams are different.
-*/
-typedef struct _d_beam_gains_t {
 
-  gpuUserComplex *d_gxs = NULL; /*!< Device copy of North-South Beam gain values
-  for all beams, directions, frequencies, and times for these COMPONENTS*/
-  gpuUserComplex *d_Dxs = NULL; /*!< Device copy of North-South Beam leakage values
-  for all beams, directions, frequencies, and times for these COMPONENTS*/
-  gpuUserComplex *d_Dys = NULL; /*!< Device copy of East-West Beam leakage values
-  for all beams, directions, frequencies, and times for these COMPONENTS*/
-  gpuUserComplex *d_gys = NULL; /*!< Device copy of East-West Beam gain values
-  for all beams, directions, frequencies, and times for these COMPONENTS*/
 
-  int *d_ant1_to_baseline_map = NULL; /*!< The index of antenna 1 in all unique pairs of
-antennas. Used to map iBaseline to the correct antenna 1 */
-  int *d_ant2_to_baseline_map = NULL; /*!< The index of antenna 2 in all unique pairs of
-antennas. Used to map iBaseline to the correct antenna 2 */
-  int use_twobeams; /*!< The beam gains were made with unique primary beams so
-  should use two antenna patterns per visibility */
-
-} d_beam_gains_t;
 
 /**
 @brief Calculate the complex exponential phase part of the visibility function
@@ -62,7 +55,7 @@ this yields the correct output visibilities.
 @param[in] iComponent Index for \f$l,m,n\f$
 @return `visi`, a `gpuUserComplex` of the visibility
 */
-__device__ gpuUserComplex calc_measurement_equation(user_precision_t *d_us,
+__device__ gpuUserComplex calc_measurement_equation_gpu(user_precision_t *d_us,
            user_precision_t *d_vs, user_precision_t *d_ws,
            double *d_ls, double *d_ms, double *d_ns,
            const int iBaseline, const int iComponent);
@@ -615,6 +608,18 @@ __device__ void update_sum_visis_stokesI(int iBaseline, int iComponent,
     user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag);
 
 
+/**
+@brief Kernel to set all elements of `array` to zero.
+
+@details Call using something like
+     - dim3 grid, threads;
+     - threads.x = 128;
+     - grid.x = (int)ceil( (float)num_arr / (float)threads.x );
+
+@param[in,out] *array Array to set to zeros
+@param[in] num_arr Number of elements in the array
+*/
+__global__ void kern_make_zeros_user_precision(user_precision_t *array, int num_arr);
 
 /**
 @brief Allocate device memory of extrapolated Stokes arrays int `d_components`
@@ -636,7 +641,7 @@ If do_QUV == 0, only allocate the StokesI array.
 @param[in] num_comps Number of components
 @param[in] num_freqs Number of frequencies
 */
-void malloc_extrapolated_flux_arrays(components_t *d_components, int num_comps,
+extern "C" void malloc_extrapolated_flux_arrays_gpu(components_t *d_components, int num_comps,
                                      int num_freqs);
 
 
@@ -830,81 +835,11 @@ __global__ void kern_extrap_list_fluxes(user_precision_t *list_stokes, double *l
 
 
 /**
-@brief Extrapolate the flux densities of certain spectral model type in a source to a set of frequencies.
-
-@details This function is a wrapper for the various extrapolation functions.
-It will extrapolate all spectral model types for a give component type as specified
-by `comptype`. It will extrapolate to all the frequencies specified in `d_extrap_freqs`,
-and store the results within `d_chunked_source`
-
-
-@param[in,out] d_chunked_source Pointer to the source data.
-@param[in] d_extrap_freqs Pointer to an array of frequencies to extrapolate to.
-@param[in] num_extrap_freqs Number of frequencies in the `d_extrap_freqs` array.
-@param[in] comptype The type of component to extrapolate (e.g. POINT, GAUSSIAN, SHAPELET).
- */
-extern "C" void extrapolate_Stokes(source_t *d_chunked_source,
-                                   double *d_extrap_freqs, int num_extrap_freqs,
-                                   e_component_type comptype);
-
-/**
-@brief Performs necessary calculations that are common to all POINT, GAUSSIAN,
-and SHAPELET component types: calculating the \f$l,m,n\f$ coordinates;
-extrapolating flux densities to given frequencies; calculating
-primary beam values.
-
-@details *chunked_source should be a populated `source_t` struct as filled by
-`chunk_sky_model::create_chunked_sky_models`, and then remapped by
-`chunk_sky_model::remap_source_for_gpu`. The remapping has a memory cost,
-hence should be done iteratively over chunks (this is done inside
-`calculate_visibilities.cu`).
-
-This function uses `fundamental_coords_gpu::kern_calc_lmn` to calculate
-\f$l,m,n\f$, and stores the ouputs
-in the `components_t` struct `d_components`. Uses the `d_beam_gains_t` struct
-`d_component_beam_gains` to store the calculated primary beam responses. Each
-gain and leakage will have
-`num_components*woden_settings->num_time_steps*woden_settings->num_freqs`
-elements of memory allocated in the process.
-
-If the primary beam requested (set via beam_settings->beamtype ) is either
-GAUSS_BEAM or MWA_ANALY, both `chunked_source->components->beam_has` and
-`chunked_source->components->beam_decs`
-need to be set.
-
-If `woden_settings->do_autos` is True, will use `source_components::kern_calc_autos`
-to calculate all the auto-correlations, and stores them in `d_visibility_set`.
-
-
-@param[in] woden_settings Populated `woden_settings_t` struct
-@param[in] beam_settings Populated `beam_settings_t` struct
-@param[in] d_freqs Frequencies to calculate beam responses to (stored on the device)
-@param[in] *chunked_source A populated `source_t` struct as filled by
-`chunk_sky_model::create_chunked_sky_models` and then remapped by
-`chunk_sky_model::remap_source_for_gpu`
-@param[in, out] *d_chunked_source A populated `source_t` struct with device memory
-as filled by `source_components::copy_chunked_source_to_GPU`
-@param[in,out] d_component_beam_gains Pointer to `d_beam_gains_t` struct in
-which to malloc and store results on the device in
-@param[in] comptype Either POINT, GAUSSIAN, SHAPELET - selects which set of
-COMPONENTS stored in `chunked_source` and `chunked_source` to work with
-@param[in] d_visibility_set If `woden_settings->do_autos` is True, use this to store auto
-correlations in. Needs to have device memory allocated. Otherwise, `d_visibility_set`
-is unused, so can just be an empty pointer
-*/
-extern "C" void source_component_common(woden_settings_t *woden_settings,
-           beam_settings_t *beam_settings, double *d_freqs,
-           source_t *chunked_source, source_t *d_chunked_source,
-           d_beam_gains_t *d_component_beam_gains,
-           e_component_type comptype,
-           visibility_set_t *d_visibility_set);
-
-/**
 @brief Kernel to calculate the visibility response to a number `num_components`
 of either POINT or GAUSSIAN COMPONENTs, and sum the outputs to `d_sum_visi_*_real`,
 `d_sum_visi_*_imag`.
 
-@details Uses the functions `extrap_stokes`, `calc_measurement_equation`,
+@details Uses the functions `extrap_stokes`, `calc_measurement_equation_gpu`,
 `update_sum_visis` as detailed above to calculate the visibilities. Sets off
 a thread for each visibility to be calculated, with each thread looping over
 all COMPONENTs. This seems to keep the memory access low enough to be faster
@@ -979,7 +914,7 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
 SHAPELET COMPONENTs, and sum the outputs to `d_sum_visi_*_real`,
 `d_sum_visi_*_imag`.
 
-@details Uses the functions `extrap_stokes`, `calc_measurement_equation`,
+@details Uses the functions `extrap_stokes`, `calc_measurement_equation_gpu`,
 `update_sum_visis` as detailed above to calculate the visibilities. Furthermore
 calculates the visibility envelope \f$\mathrm{V}_{\mathrm{env}}\f$ to convert
 the basic visibility into a SHAPELET:
@@ -1124,7 +1059,7 @@ freed
 @param[in] beamtype An `e_beamtype` describing the primary beam type
 
 */
-extern "C" void free_beam_gains(d_beam_gains_t d_beam_gains, e_beamtype beamtype);
+extern "C" void free_beam_gains_gpu(d_beam_gains_t *d_beam_gains, e_beamtype beamtype);
 
 
 /**
@@ -1136,7 +1071,7 @@ copied across to the GPU is (no empty pointers arrays are copied across)
 
 @param[in,out] *chunked_source A populated `source_t` struct
 */
-source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
+extern "C" source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
 
 /**
 @brief Free device memory of extrapolated Stokes arrays from `d_components`
@@ -1152,7 +1087,7 @@ If do_QUV == 0, only free the StokesI array.
 
 @param[in,out] *d_components A populated `components_t` struct
 */
-void free_extrapolated_flux_arrays(components_t *d_components);
+extern "C" void free_extrapolated_flux_arrays(components_t *d_components);
 
 /**
 @brief Calculate the auto-correlations for all antennas given the fluxes
@@ -1236,5 +1171,50 @@ already have their memory allocated
 @param[in,out] *d_ant2_to_baseline_map Device memory-allocated array of size `((num_ants - 1)*num_ants) / 2`
 
 */
-extern "C" void fill_ant_to_baseline_mapping(int num_ants, int *d_ant1_to_baseline_map,
+extern "C" void fill_ant_to_baseline_mapping_gpu(int num_ants, int *d_ant1_to_baseline_map,
                                                int *d_ant2_to_baseline_map);
+
+
+
+//Wrapper kernels used in unit tests to test __device__ functions externally
+//These are not used in the main code
+
+__global__ void kern_calc_measurement_equation(int num_components, int num_baselines,
+          user_precision_t *d_us, user_precision_t *d_vs, user_precision_t *d_ws,
+          double *d_ls, double *d_ms, double *d_ns, gpuUserComplex *d_visis);
+
+__global__ void kern_apply_beam_gains_stokesIQUV_on_cardinal(int num_gains, gpuUserComplex *d_g1xs,
+          gpuUserComplex *d_D1xs,
+          gpuUserComplex *d_D1ys, gpuUserComplex *d_g1ys,
+          gpuUserComplex *d_g2xs, gpuUserComplex *d_D2xs,
+          gpuUserComplex *d_D2ys, gpuUserComplex *d_g2ys,
+          user_precision_t *d_flux_Is, user_precision_t *d_flux_Qs,
+          user_precision_t *d_flux_Us, user_precision_t *d_flux_Vs,
+          gpuUserComplex *d_visi_components,
+          gpuUserComplex *d_visi_XXs, gpuUserComplex *d_visi_XYs,
+          gpuUserComplex *d_visi_YXs, gpuUserComplex *d_visi_YYs);
+
+__global__ void kern_get_beam_gains(int num_components, int num_baselines,
+           int num_freqs, int num_cross, int num_times, int beamtype,
+           gpuUserComplex *d_g1xs, gpuUserComplex *d_D1xs,
+           gpuUserComplex *d_D1ys, gpuUserComplex *d_g1ys,
+           gpuUserComplex *d_recov_g1x, gpuUserComplex *d_recov_D1x,
+           gpuUserComplex *d_recov_D1y, gpuUserComplex *d_recov_g1y,
+           gpuUserComplex *d_recov_g2x, gpuUserComplex *d_recov_D2x,
+           gpuUserComplex *d_recov_D2y, gpuUserComplex *d_recov_g2y,
+           int use_twobeams, int num_ants,
+           int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map);
+
+__global__ void kern_update_sum_visis_stokesIQUV(int num_freqs,
+     int num_baselines, int num_components, int num_times,
+     int beamtype, int off_cardinal_dipoles,
+     gpuUserComplex *d_g1xs, gpuUserComplex *d_D1xs,
+     gpuUserComplex *d_D1ys, gpuUserComplex *d_g1ys,
+     int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map, int use_twobeams,
+     gpuUserComplex *d_visi_components,
+     user_precision_t *d_flux_I, user_precision_t *d_flux_Q,
+     user_precision_t *d_flux_U, user_precision_t *d_flux_V,
+     user_precision_t *d_sum_visi_XX_real, user_precision_t *d_sum_visi_XX_imag,
+     user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
+     user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
+     user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag);

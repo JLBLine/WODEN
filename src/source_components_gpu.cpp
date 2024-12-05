@@ -1,17 +1,18 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <complex.h>
-#include <math.h>
-#include "gpucomplex.h"
-#include "fundamental_coords_gpu.h"
-#include "constants.h"
+// #include <stdio.h>
+// #include <stdlib.h>
+// #include <complex.h>
+// #include <math.h>
+// #include "gpucomplex.h"
+// #include "fundamental_coords_gpu.h"
+// #include "constants.h"
+// #include "source_components_gpu.h"
+// #include "woden_struct_defs.h"
+// #include "primary_beam_gpu.h"
+// #include "woden_precision_defs.h"
+// #include "gpu_macros.h"
 #include "source_components_gpu.h"
-#include "woden_struct_defs.h"
-#include "primary_beam_gpu.h"
-#include "woden_precision_defs.h"
-#include "gpu_macros.h"
 
-__device__  gpuUserComplex calc_measurement_equation(user_precision_t *d_us,
+__device__  gpuUserComplex calc_measurement_equation_gpu(user_precision_t *d_us,
            user_precision_t *d_vs, user_precision_t *d_ws,
            double *d_ls, double *d_ms, double *d_ns,
            const int iBaseline, const int iComponent){
@@ -24,6 +25,13 @@ __device__  gpuUserComplex calc_measurement_equation(user_precision_t *d_us,
   u = (double)d_us[iBaseline];
   v = (double)d_vs[iBaseline];
   w = (double)d_ws[iBaseline];
+
+  // printf("%d u: %f, v: %f, w: %f\n", iComponent, u, v, w);
+
+  // if (iBaseline == 0) {
+  //   printf("l: %f\n", d_ls[iComponent]);
+  // }
+
 
   l = d_ls[iComponent];
   m = d_ms[iComponent];
@@ -1151,6 +1159,119 @@ extern "C" void apply_rotation_measure_gpu(components_t d_components,
                         d_components.n_linpol_angles, d_components);
 }
 
+extern "C" void malloc_beam_gains_gpu(d_beam_gains_t *d_component_beam_gains,
+                                     int beamtype, int num_gains){
+
+  // gpuMalloc( (void**)&d_component_beam_gains->d_Dxs,
+  //                     num_gains*sizeof(user_precision_complex_t) );
+  // gpuMalloc( (void**)&d_component_beam_gains->d_Dys,
+  //                     num_gains*sizeof(user_precision_complex_t) );
+  
+  // gpuMalloc( (void**)&d_component_beam_gains->d_gxs,
+  //                     num_gains*sizeof(user_precision_complex_t) );
+  // gpuMalloc( (void**)&d_component_beam_gains->d_gys,
+  //                     num_gains*sizeof(user_precision_complex_t) );
+
+  //If we're using an everybeam model, all memory and values have already
+  //been copied to GPU, so no need to allocate here
+  if (beamtype == FEE_BEAM || beamtype == MWA_ANALY || beamtype == FEE_BEAM_INTERP
+      || beamtype == GAUSS_BEAM || beamtype == ANALY_DIPOLE || beamtype == NO_BEAM) {
+
+    //Only some models would have had leakage terms malloced
+    if (beamtype == FEE_BEAM || beamtype == MWA_ANALY || beamtype == FEE_BEAM_INTERP) {
+      gpuMalloc( (void**)&d_component_beam_gains->d_Dxs,
+                      num_gains*sizeof(user_precision_complex_t) );
+      gpuMalloc( (void**)&d_component_beam_gains->d_Dys,
+                      num_gains*sizeof(user_precision_complex_t) );
+    }
+    gpuMalloc( (void**)&d_component_beam_gains->d_gxs,
+                      num_gains*sizeof(user_precision_complex_t) );
+    gpuMalloc( (void**)&d_component_beam_gains->d_gys,
+                      num_gains*sizeof(user_precision_complex_t) );
+
+  }
+}
+
+
+//This purely exists as d_component_beam_gains->d_gxs, d_gys are GPU
+//complexes and can't be included the function definition in a C header
+extern "C" void wrapper_calculate_gaussian_beam_gpu(int num_components,
+                          user_precision_t cos_theta,
+                          user_precision_t sin_theta, user_precision_t sin_2theta,
+                          user_precision_t fwhm_lm,
+                          woden_settings_t *woden_settings,
+                          beam_settings_t *beam_settings,
+                          components_t *components,
+                          d_beam_gains_t *d_component_beam_gains,
+                          double *d_freqs) {
+
+  calculate_gaussian_beam_gpu(num_components,
+         woden_settings->num_time_steps, woden_settings->num_freqs,
+         beam_settings->gauss_ha, beam_settings->gauss_sdec,
+         beam_settings->gauss_cdec,
+         fwhm_lm, cos_theta, sin_theta, sin_2theta,
+         beam_settings->beam_ref_freq, d_freqs,
+         components->beam_has,
+         components->beam_decs,
+         (gpuUserComplex *)d_component_beam_gains->d_gxs,
+         (gpuUserComplex *)d_component_beam_gains->d_gys);
+
+
+  
+}
+
+
+//This purely exists as d_component_beam_gains->d_gxs, d_gys are GPU
+//complexes and can't be included the function definition in a C header
+extern "C" void wrapper_calculate_analytic_dipole_beam_gpu(int num_components,
+                          components_t *components,
+                          d_beam_gains_t *d_component_beam_gains,
+                          double *d_freqs, woden_settings_t *woden_settings) {
+
+  calculate_analytic_dipole_beam_gpu(num_components,
+         woden_settings->num_time_steps, woden_settings->num_freqs,
+         components->azs, components->zas, d_freqs,
+         (gpuUserComplex *)d_component_beam_gains->d_gxs,
+         (gpuUserComplex *)d_component_beam_gains->d_gys);
+
+}
+
+//This purely exists as d_component_beam_gains->d_gxs, d_gys are GPU
+//complexes and can't be included the function definition in a C header
+extern "C" void wrapper_run_hyperbeam_gpu(int num_components,
+                          components_t *components, beam_settings_t *beam_settings,
+                          int num_beams, int parallactic,
+                          double *reordered_azs, double *reordered_zas,
+                          d_beam_gains_t *d_component_beam_gains,
+                          double *d_freqs, woden_settings_t *woden_settings) {
+  run_hyperbeam_gpu(num_components,
+           woden_settings->num_time_steps, woden_settings->num_freqs,
+           num_beams, parallactic,
+           beam_settings->gpu_fee_beam,
+           reordered_azs, reordered_zas,
+           woden_settings->latitudes,
+           (gpuUserComplex *)d_component_beam_gains->d_gxs,
+           (gpuUserComplex *)d_component_beam_gains->d_Dxs,
+           (gpuUserComplex *)d_component_beam_gains->d_Dys,
+           (gpuUserComplex *)d_component_beam_gains->d_gys);
+}
+
+extern "C" void wrapper_calculate_RTS_MWA_analytic_beam_gpu(int num_components,
+                          components_t *components, int norm,
+                          d_beam_gains_t *d_component_beam_gains,
+                          double *d_freqs, woden_settings_t *woden_settings) {
+    calculate_RTS_MWA_analytic_beam_gpu(num_components,
+         woden_settings->num_time_steps, woden_settings->num_freqs,
+         components->azs, components->zas,
+         woden_settings->FEE_ideal_delays, woden_settings->latitude,
+         norm, components->beam_has, components->beam_decs,
+         d_freqs, (gpuUserComplex *)d_component_beam_gains->d_gxs,
+         (gpuUserComplex *)d_component_beam_gains->d_Dxs,
+         (gpuUserComplex *)d_component_beam_gains->d_Dys,
+         (gpuUserComplex *)d_component_beam_gains->d_gys);
+}
+
+
 __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            d_beam_gains_t d_component_beam_gains,
            user_precision_t *d_us, user_precision_t *d_vs, user_precision_t *d_ws,
@@ -1194,11 +1315,11 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
         flux_V = d_components.extrap_stokesV[extrap_ind];
       }
       
-
-
-      visi_comp = calc_measurement_equation(d_us, d_vs, d_ws,
+      visi_comp = calc_measurement_equation_gpu(d_us, d_vs, d_ws,
                              d_components.ls, d_components.ms, d_components.ns,
                              iBaseline, iComponent);
+
+      // printf("iComponent %d d_components.ls[iComponent] %f \n", iComponent, d_components.ls[iComponent]);
 
       if (comptype == GAUSSIAN) {
 
@@ -1224,8 +1345,10 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
       {
         update_sum_visis_stokesIQUV(iBaseline, iComponent, num_freqs,
              num_baselines, num_components, num_times, beamtype, off_cardinal_dipoles,
-             d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
-             d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
+             (gpuUserComplex *)d_component_beam_gains.d_gxs,
+             (gpuUserComplex *)d_component_beam_gains.d_Dxs,
+             (gpuUserComplex *)d_component_beam_gains.d_Dys,
+             (gpuUserComplex *)d_component_beam_gains.d_gys,
              d_component_beam_gains.d_ant1_to_baseline_map,
              d_component_beam_gains.d_ant2_to_baseline_map, use_twobeams,
              visi_comp, flux_I, flux_Q, flux_U, flux_V,
@@ -1236,8 +1359,10 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
       } else {
         update_sum_visis_stokesI(iBaseline, iComponent, num_freqs,
              num_baselines, num_components, num_times, beamtype, off_cardinal_dipoles,
-             d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
-             d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
+             (gpuUserComplex *)d_component_beam_gains.d_gxs,
+             (gpuUserComplex *)d_component_beam_gains.d_Dxs,
+             (gpuUserComplex *)d_component_beam_gains.d_Dys,
+             (gpuUserComplex *)d_component_beam_gains.d_gys,
              d_component_beam_gains.d_ant1_to_baseline_map,
              d_component_beam_gains.d_ant2_to_baseline_map, use_twobeams,
              visi_comp, flux_I,
@@ -1298,7 +1423,7 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
         shape_flux_V = d_components.extrap_stokesV[extrap_ind];
       }
 
-      visi_shape = calc_measurement_equation(d_us, d_vs, d_ws,
+      visi_shape = calc_measurement_equation_gpu(d_us, d_vs, d_ws,
                             d_components.ls, d_components.ms, d_components.ns,
                             iBaseline, iComponent);
 
@@ -1361,8 +1486,10 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       if (d_components.do_QUV == 1) {
         update_sum_visis_stokesIQUV(iBaseline, iComponent, num_freqs,
              num_baselines, num_shapes, num_times, beamtype, off_cardinal_dipoles,
-             d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
-             d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
+             (gpuUserComplex *)d_component_beam_gains.d_gxs,
+             (gpuUserComplex *)d_component_beam_gains.d_Dxs,
+             (gpuUserComplex *)d_component_beam_gains.d_Dys,
+             (gpuUserComplex *)d_component_beam_gains.d_gys,
              d_component_beam_gains.d_ant1_to_baseline_map,
              d_component_beam_gains.d_ant2_to_baseline_map, use_twobeams,
              visi_shape,
@@ -1374,8 +1501,10 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       } else {
         update_sum_visis_stokesI(iBaseline, iComponent, num_freqs,
              num_baselines, num_shapes, num_times, beamtype, off_cardinal_dipoles,
-             d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
-             d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
+             (gpuUserComplex *)d_component_beam_gains.d_gxs,
+             (gpuUserComplex *)d_component_beam_gains.d_Dxs,
+             (gpuUserComplex *)d_component_beam_gains.d_Dys,
+             (gpuUserComplex *)d_component_beam_gains.d_gys,
              d_component_beam_gains.d_ant1_to_baseline_map,
              d_component_beam_gains.d_ant2_to_baseline_map, use_twobeams,
              visi_shape, shape_flux_I,
@@ -1795,7 +1924,7 @@ void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source
   }
 }
 
-source_t * copy_chunked_source_to_GPU(source_t *chunked_source){
+extern "C" source_t * copy_chunked_source_to_GPU(source_t *chunked_source){
 
   source_t *d_chunked_source = (source_t*)malloc(sizeof(source_t));
 
@@ -1830,13 +1959,13 @@ source_t * copy_chunked_source_to_GPU(source_t *chunked_source){
   return d_chunked_source;
 }
 
-void free_extrapolated_flux_arrays(components_t *d_components){
-  ( gpuFree( d_components->extrap_stokesI ) );
+extern "C" void free_extrapolated_flux_arrays(components_t *d_components){
+  gpuFree( d_components->extrap_stokesI );
 
   if (d_components->do_QUV) {
-    ( gpuFree( d_components->extrap_stokesQ ) );
-    ( gpuFree( d_components->extrap_stokesU ) );
-    ( gpuFree( d_components->extrap_stokesV ) );
+    gpuFree( d_components->extrap_stokesQ );
+    gpuFree( d_components->extrap_stokesU );
+    gpuFree( d_components->extrap_stokesV );
   }
 }
 
@@ -1951,7 +2080,7 @@ extern "C" void free_d_components(source_t *d_chunked_source,
     gpuFree(d_components.linpol_curve_comp_inds);
   }
 
-    if (d_components.n_linpol_list > 0) {
+  if (d_components.n_linpol_list > 0) {
     gpuFree(d_components.stokesQ_num_list_values);
     gpuFree(d_components.stokesQ_list_start_indexes);
     gpuFree(d_components.stokesQ_list_comp_inds);
@@ -1979,16 +2108,17 @@ extern "C" void free_d_components(source_t *d_chunked_source,
   }
 }
 
-extern "C" void free_beam_gains(d_beam_gains_t d_beam_gains, e_beamtype beamtype){
+extern "C" void free_beam_gains_gpu(d_beam_gains_t *d_beam_gains, e_beamtype beamtype){
 
-  ( gpuFree( d_beam_gains.d_gxs) );
-  ( gpuFree( d_beam_gains.d_gys) );
+  gpuFree( d_beam_gains->d_gxs );
+  gpuFree( d_beam_gains->d_gys );
+  // gpuFree( d_beam_gains->d_Dxs );
+  // gpuFree( d_beam_gains->d_Dys );
 
   if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY || beamtype == EB_OSKAR || beamtype == EB_LOFAR || beamtype == EB_MWA){
-    ( gpuFree( d_beam_gains.d_Dxs ) );
-    ( gpuFree( d_beam_gains.d_Dys ) );
+    gpuFree( d_beam_gains->d_Dxs );
+    gpuFree( d_beam_gains->d_Dys );
   }
-
 }
 
 //Calculate auto-correlations
@@ -2040,8 +2170,10 @@ __global__ void kern_calc_autos(components_t d_components,
       if (use_twobeams == 1){
         get_beam_gains_multibeams(iBaseline, iComponent, num_freqs,
                 num_baselines, num_components, num_times, beamtype,
-                d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
-                d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
+                (gpuUserComplex *)d_component_beam_gains.d_gxs,
+                (gpuUserComplex *)d_component_beam_gains.d_Dxs,
+                (gpuUserComplex *)d_component_beam_gains.d_Dys,
+                (gpuUserComplex *)d_component_beam_gains.d_gys,
                 d_ant1_to_auto_map, d_ant2_to_auto_map,
                 &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
       }
@@ -2049,8 +2181,10 @@ __global__ void kern_calc_autos(components_t d_components,
         // printf("WE IS ONLY DOING THIS TING\n");
         get_beam_gains(iBaseline, iComponent, num_freqs,
                 num_baselines, num_components, num_times, beamtype,
-                d_component_beam_gains.d_gxs, d_component_beam_gains.d_Dxs,
-                d_component_beam_gains.d_Dys, d_component_beam_gains.d_gys,
+                (gpuUserComplex *)d_component_beam_gains.d_gxs,
+                (gpuUserComplex *)d_component_beam_gains.d_Dxs,
+                (gpuUserComplex *)d_component_beam_gains.d_Dys,
+                (gpuUserComplex *)d_component_beam_gains.d_gys,
                 &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
       }
 
@@ -2109,7 +2243,7 @@ __global__ void kern_calc_autos(components_t d_components,
   }
 }
 
-extern "C" void fill_ant_to_baseline_mapping(int num_ants, int *d_ant1_to_baseline_map,
+extern "C" void fill_ant_to_baseline_mapping_gpu(int num_ants, int *d_ant1_to_baseline_map,
                                                int *d_ant2_to_baseline_map){
 
   int num_baselines = ((num_ants - 1)*num_ants) / 2;
@@ -2134,59 +2268,79 @@ extern "C" void fill_ant_to_baseline_mapping(int num_ants, int *d_ant1_to_baseli
     }
   }
 
-  ( gpuMemcpy(d_ant1_to_baseline_map, ant1_to_baseline_map,
-                                  num_baselines*sizeof(int), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_ant2_to_baseline_map, ant2_to_baseline_map,
-                                  num_baselines*sizeof(int), gpuMemcpyHostToDevice ));
+  gpuMemcpy(d_ant1_to_baseline_map, ant1_to_baseline_map,
+                                  num_baselines*sizeof(int), gpuMemcpyHostToDevice );
+  gpuMemcpy(d_ant2_to_baseline_map, ant2_to_baseline_map,
+                                  num_baselines*sizeof(int), gpuMemcpyHostToDevice );
 
   free(ant1_to_baseline_map);
   free(ant2_to_baseline_map);
 
 }
 
-/*******************************************************************************
-                 Functions below to be used in unit tests
-*******************************************************************************/
+extern "C" void calc_autos_gpu(components_t *d_components,
+                               beam_settings_t *beam_settings,
+                               d_beam_gains_t *d_component_beam_gains,
+                               visibility_set_t *d_visibility_set,
+                               woden_settings_t *woden_settings,
+                               int num_components, int use_twobeams){
+  int num_freqs = woden_settings->num_freqs;
+  int num_times = woden_settings->num_time_steps;
+  int num_ants = woden_settings->num_ants;
+  int num_baselines = woden_settings->num_baselines;
 
-extern "C" void test_extrap_stokes_all_models(source_t *chunked_source,
-           int num_extrap_freqs, double *extrap_freqs,
-           user_precision_t *extrap_flux_I, user_precision_t *extrap_flux_Q,
-           user_precision_t *extrap_flux_U, user_precision_t *extrap_flux_V){
+  dim3 threads, grid;
 
-  source_t *d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
+  threads.x = 64;
+  threads.y = 2;
+  threads.z = 1;
+  grid.x = (int)ceil( (float)(num_freqs*num_times) / (float)threads.x );
+  grid.y = (int)ceil( (float)(num_ants) / (float)threads.y );
+  grid.z = 1;
 
-  double *d_extrap_freqs = NULL;
-  gpuMalloc( (void**)&d_extrap_freqs,
-                                   num_extrap_freqs*sizeof(double) );
-  gpuMemcpy(d_extrap_freqs, extrap_freqs,
-             num_extrap_freqs*sizeof(double), gpuMemcpyHostToDevice );
+  int *d_ant_to_auto_map = NULL;
 
-  malloc_extrapolated_flux_arrays_gpu(&d_chunked_source->point_components,
-                                  d_chunked_source->n_points,
-                                  num_extrap_freqs);
+  if (use_twobeams == 1) {
+    int *ant_to_auto_map = NULL;
+    ant_to_auto_map = (int *)malloc(num_ants*sizeof(int));
+    for (int ant = 0; ant < num_ants; ant++){
+        ant_to_auto_map[ant] = ant;
+    }
+    gpuMalloc( (void**)&d_ant_to_auto_map, num_ants*sizeof(int) );
+    gpuMemcpy(d_ant_to_auto_map, ant_to_auto_map, num_ants*sizeof(int),
+                                                        gpuMemcpyHostToDevice );
+    free(ant_to_auto_map);
+  }
 
-  extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_extrap_freqs, POINT);
+  gpuErrorCheckKernel("kern_calc_autos",
+                kern_calc_autos, grid, threads,
+                *d_components, *d_component_beam_gains,
+                beam_settings->beamtype,
+                num_components, num_baselines,
+                num_freqs, num_times, num_ants,
+                d_visibility_set->sum_visi_XX_real,
+                d_visibility_set->sum_visi_XX_imag,
+                d_visibility_set->sum_visi_XY_real,
+                d_visibility_set->sum_visi_XY_imag,
+                d_visibility_set->sum_visi_YX_real,
+                d_visibility_set->sum_visi_YX_imag,
+                d_visibility_set->sum_visi_YY_real,
+                d_visibility_set->sum_visi_YY_imag,
+                use_twobeams, d_ant_to_auto_map,
+                d_ant_to_auto_map,
+                woden_settings->off_cardinal_dipoles);
 
-
-  components_t d_components = d_chunked_source->point_components;
-
-  gpuMemcpy(extrap_flux_I, d_components.extrap_stokesI,
-            d_chunked_source->n_points*num_extrap_freqs*sizeof(user_precision_t),
-                                                      gpuMemcpyDeviceToHost );
-  gpuMemcpy(extrap_flux_Q, d_components.extrap_stokesQ,
-            d_chunked_source->n_points*num_extrap_freqs*sizeof(user_precision_t),
-                                                      gpuMemcpyDeviceToHost );
-  gpuMemcpy(extrap_flux_U, d_components.extrap_stokesU,
-            d_chunked_source->n_points*num_extrap_freqs*sizeof(user_precision_t),
-                                                      gpuMemcpyDeviceToHost );
-  gpuMemcpy(extrap_flux_V, d_components.extrap_stokesV,
-            d_chunked_source->n_points*num_extrap_freqs*sizeof(user_precision_t),
-                                                      gpuMemcpyDeviceToHost );
-  //
-  gpuFree( d_extrap_freqs );
-  free_extrapolated_flux_arrays(&d_chunked_source->point_components);
+  if (use_twobeams == 1) {
+     gpuFree( d_ant_to_auto_map );
+  }
 }
 
+/*******************************************************************************
+Functions below to be used in unit tests. Unless you want to do separate linking
+and much faffing, it's hard to import any __device__ functions to separate
+test files. So below, we write kernels (__global__) around anything that we want
+to test so we can call them from the test files.
+*******************************************************************************/
 
 __global__ void kern_calc_measurement_equation(int num_components, int num_baselines,
           user_precision_t *d_us, user_precision_t *d_vs, user_precision_t *d_ws,
@@ -2199,70 +2353,13 @@ __global__ void kern_calc_measurement_equation(int num_components, int num_basel
   if(iComponent < num_components && iBaseline < num_baselines) {
 
     gpuUserComplex visi;
-    visi = calc_measurement_equation(d_us, d_vs, d_ws, d_ls, d_ms, d_ns,
+    visi = calc_measurement_equation_gpu(d_us, d_vs, d_ws, d_ls, d_ms, d_ns,
                                      iBaseline, iComponent);
 
     int visi_ind = num_components*iBaseline + iComponent;
     d_visis[visi_ind] = visi;
 
   }
-}
-
-extern "C" void test_kern_calc_measurement_equation(int num_components,
-          int num_baselines,
-          user_precision_t *us, user_precision_t *vs, user_precision_t *ws,
-          double *ls, double *ms, double *ns, user_precision_complex_t *visis){
-
-  user_precision_t *d_us = NULL;
-  user_precision_t *d_vs = NULL;
-  user_precision_t *d_ws = NULL;
-  ( gpuMalloc( (void**)&d_us, num_baselines*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_vs, num_baselines*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_ws, num_baselines*sizeof(user_precision_t) ));
-  ( gpuMemcpy(d_us, us, num_baselines*sizeof(user_precision_t),
-                                                        gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_vs, vs, num_baselines*sizeof(user_precision_t),
-                                                        gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_ws, ws, num_baselines*sizeof(user_precision_t),
-                                                        gpuMemcpyHostToDevice ));
-
-  double *d_ls = NULL;
-  double *d_ms = NULL;
-  double *d_ns = NULL;
-  gpuMalloc( (void**)&d_ls, num_components*sizeof(double) );
-  gpuMalloc( (void**)&d_ms, num_components*sizeof(double) );
-  gpuMalloc( (void**)&d_ns, num_components*sizeof(double) );
-  gpuMemcpy(d_ls, ls, num_components*sizeof(double), gpuMemcpyHostToDevice );
-  gpuMemcpy(d_ms, ms, num_components*sizeof(double), gpuMemcpyHostToDevice );
-  gpuMemcpy(d_ns, ns, num_components*sizeof(double), gpuMemcpyHostToDevice );
-
-  user_precision_complex_t *d_visis = NULL;
-  gpuMalloc( (void**)&d_visis, num_baselines*num_components*sizeof(user_precision_complex_t) );
-
-  dim3 grid, threads;
-
-  threads.x = 16;
-  threads.y = 16;
-  grid.x = (int)ceilf( (float)num_baselines / (float)threads.x );
-  grid.y = (int)ceilf( (float)num_components / (float)threads.y );
-
-  gpuErrorCheckKernel("kern_calc_measurement_equation",
-                      kern_calc_measurement_equation, grid, threads,
-                      num_components, num_baselines,
-                      d_us, d_vs, d_ws,
-                      d_ls, d_ms, d_ns,
-                      (gpuUserComplex*)d_visis );
-
-  ( gpuMemcpy(visis, (user_precision_complex_t*)d_visis, num_components*num_baselines*sizeof(user_precision_complex_t),gpuMemcpyDeviceToHost ));
-
-  ( gpuFree( d_us ) );
-  ( gpuFree( d_vs ) );
-  ( gpuFree( d_ws ) );
-  ( gpuFree( d_ls ) );
-  ( gpuFree( d_ms ) );
-  ( gpuFree( d_ns ) );
-  ( gpuFree(d_visis ) );
-
 }
 
 __global__ void kern_apply_beam_gains_stokesIQUV_on_cardinal(int num_gains, gpuUserComplex *d_g1xs,
@@ -2300,153 +2397,6 @@ __global__ void kern_apply_beam_gains_stokesIQUV_on_cardinal(int num_gains, gpuU
     d_visi_YYs[iGain] = visi_YY;
 
   }
-}
-
-extern "C" void test_kern_apply_beam_gains(int num_gains, user_precision_complex_t *g1xs,
-          user_precision_complex_t *D1xs,
-          user_precision_complex_t *D1ys, user_precision_complex_t *g1ys,
-          user_precision_complex_t *g2xs, user_precision_complex_t *D2xs,
-          user_precision_complex_t *D2ys, user_precision_complex_t *g2ys,
-          user_precision_t *flux_Is, user_precision_t *flux_Qs,
-          user_precision_t *flux_Us, user_precision_t *flux_Vs,
-          user_precision_complex_t *visi_components,
-          user_precision_complex_t *visi_XXs, user_precision_complex_t *visi_XYs,
-          user_precision_complex_t *visi_YXs, user_precision_complex_t *visi_YYs){
-
-  user_precision_complex_t *d_g1xs = NULL;
-  user_precision_complex_t *d_D1xs = NULL;
-  user_precision_complex_t *d_D1ys = NULL;
-  user_precision_complex_t *d_g1ys = NULL;
-  user_precision_complex_t *d_g2xs = NULL;
-  user_precision_complex_t *d_D2xs = NULL;
-  user_precision_complex_t *d_D2ys = NULL;
-  user_precision_complex_t *d_g2ys = NULL;
-  user_precision_t *d_flux_Is = NULL;
-  user_precision_t *d_flux_Qs = NULL;
-  user_precision_t *d_flux_Us = NULL;
-  user_precision_t *d_flux_Vs = NULL;
-  user_precision_complex_t *d_visi_components = NULL;
-  user_precision_complex_t *d_visi_XXs = NULL;
-  user_precision_complex_t *d_visi_XYs = NULL;
-  user_precision_complex_t *d_visi_YXs = NULL;
-  user_precision_complex_t *d_visi_YYs = NULL;
-
-  ( gpuMalloc( (void**)&d_g1xs,
-                                  num_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_D1xs,
-                                  num_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_D1ys,
-                                  num_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_g1ys,
-                                  num_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_g2xs,
-                                  num_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_D2xs,
-                                  num_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_D2ys,
-                                  num_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_g2ys,
-                                  num_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_flux_Is,
-                                          num_gains*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_flux_Qs,
-                                          num_gains*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_flux_Us,
-                                          num_gains*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_flux_Vs,
-                                          num_gains*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_visi_components,
-                                  num_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_visi_XXs,
-                                  num_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_visi_XYs,
-                                  num_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_visi_YXs,
-                                  num_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_visi_YYs,
-                                  num_gains*sizeof(user_precision_complex_t) ));
-
-  ( gpuMemcpy(d_g1xs, g1xs,
-          num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_D1xs, D1xs,
-          num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_D1ys, D1ys,
-          num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_g1ys, g1ys,
-          num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_g2xs, g2xs,
-          num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_D2xs, D2xs,
-          num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_D2ys, D2ys,
-          num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_g2ys, g2ys,
-          num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_visi_components, visi_components,
-          num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_visi_XXs, visi_XXs,
-          num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_visi_XYs, visi_XYs,
-          num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_visi_YXs, visi_YXs,
-          num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_visi_YYs, visi_YYs,
-          num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice ));
-
-  ( gpuMemcpy(d_flux_Is, flux_Is,
-                             num_gains*sizeof(user_precision_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_flux_Qs, flux_Qs,
-                             num_gains*sizeof(user_precision_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_flux_Us, flux_Us,
-                             num_gains*sizeof(user_precision_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_flux_Vs, flux_Vs,
-                             num_gains*sizeof(user_precision_t), gpuMemcpyHostToDevice ));
-
-  dim3 grid, threads;
-
-  threads.x = 128;
-  grid.x = (int)ceil( (user_precision_t)num_gains / (user_precision_t)threads.x );
-
-  gpuErrorCheckKernel("kern_apply_beam_gains_stokesIQUV_on_cardinal",
-                      kern_apply_beam_gains_stokesIQUV_on_cardinal, grid, threads,
-                      num_gains,
-                      (gpuUserComplex *)d_g1xs, (gpuUserComplex *)d_D1xs,
-                      (gpuUserComplex *)d_D1ys, (gpuUserComplex *)d_g1ys,
-                      (gpuUserComplex *)d_g2xs, (gpuUserComplex *)d_D2xs,
-                      (gpuUserComplex *)d_D2ys, (gpuUserComplex *)d_g2ys,
-                      d_flux_Is, d_flux_Qs,
-                      d_flux_Us, d_flux_Vs,
-                      (gpuUserComplex *)d_visi_components,
-                      (gpuUserComplex *)d_visi_XXs, (gpuUserComplex *)d_visi_XYs,
-                      (gpuUserComplex *)d_visi_YXs, (gpuUserComplex *)d_visi_YYs );
-
-  ( gpuMemcpy(visi_XXs, d_visi_XXs,
-           num_gains*sizeof(user_precision_complex_t),gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(visi_XYs, d_visi_XYs,
-           num_gains*sizeof(user_precision_complex_t),gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(visi_YXs, d_visi_YXs,
-           num_gains*sizeof(user_precision_complex_t),gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(visi_YYs, d_visi_YYs,
-           num_gains*sizeof(user_precision_complex_t),gpuMemcpyDeviceToHost ));
-
-  ( gpuFree( d_g1xs ) );
-  ( gpuFree( d_D1xs ) );
-  ( gpuFree( d_D1ys ) );
-  ( gpuFree( d_g1ys ) );
-  ( gpuFree( d_g2xs ) );
-  ( gpuFree( d_D2xs ) );
-  ( gpuFree( d_D2ys ) );
-  ( gpuFree( d_g2ys ) );
-  ( gpuFree( d_flux_Is ) );
-  ( gpuFree( d_flux_Qs ) );
-  ( gpuFree( d_flux_Us ) );
-  ( gpuFree( d_flux_Vs ) );
-  ( gpuFree( d_visi_components ) );
-  ( gpuFree( d_visi_XXs ) );
-  ( gpuFree( d_visi_XYs ) );
-  ( gpuFree( d_visi_YXs ) );
-  ( gpuFree( d_visi_YYs ) );
-
 }
 
 __global__ void kern_get_beam_gains(int num_components, int num_baselines,
@@ -2506,119 +2456,6 @@ __global__ void kern_get_beam_gains(int num_components, int num_baselines,
   }
 }
 
-extern "C" void test_kern_get_beam_gains(int num_freqs, int num_cross,
-          int num_baselines, int num_components, int num_times, int beamtype,
-          user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J01,
-          user_precision_complex_t *primay_beam_J10, user_precision_complex_t *primay_beam_J11,
-          user_precision_complex_t *recover_g1x, user_precision_complex_t *recover_D1x,
-          user_precision_complex_t *recover_D1y, user_precision_complex_t *recover_g1y,
-          user_precision_complex_t *recover_g2x, user_precision_complex_t *recover_D2x,
-          user_precision_complex_t *recover_D2y, user_precision_complex_t *recover_g2y,
-          int use_twobeams, int num_ants){
-
-  user_precision_complex_t *d_recover_g1x = NULL;
-  user_precision_complex_t *d_recover_D1x = NULL;
-  user_precision_complex_t *d_recover_D1y = NULL;
-  user_precision_complex_t *d_recover_g1y = NULL;
-  user_precision_complex_t *d_recover_g2x = NULL;
-  user_precision_complex_t *d_recover_D2x = NULL;
-  user_precision_complex_t *d_recover_D2y = NULL;
-  user_precision_complex_t *d_recover_g2y = NULL;
-
-  user_precision_complex_t *d_g1xs = NULL;
-  user_precision_complex_t *d_D1xs = NULL;
-  user_precision_complex_t *d_D1ys = NULL;
-  user_precision_complex_t *d_g1ys = NULL;
-
-  int num_recover_gains = num_components*num_cross;
-  int num_input_gains = num_freqs*num_times*num_components*num_ants;
-
-  ( gpuMalloc( (void**)&d_recover_g1x, num_recover_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_recover_D1x, num_recover_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_recover_D1y, num_recover_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_recover_g1y, num_recover_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_recover_g2x, num_recover_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_recover_D2x, num_recover_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_recover_D2y, num_recover_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_recover_g2y, num_recover_gains*sizeof(user_precision_complex_t) ));
-
-  ( gpuMalloc( (void**)&d_g1xs, num_input_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_D1xs, num_input_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_D1ys, num_input_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_g1ys, num_input_gains*sizeof(user_precision_complex_t) ));
-
-  ( gpuMemcpy(d_g1xs, primay_beam_J00, num_input_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_D1xs, primay_beam_J01, num_input_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_D1ys, primay_beam_J10, num_input_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_g1ys, primay_beam_J11, num_input_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice ));
-
-  dim3 grid, threads;
-
-  threads.x = 128;
-  grid.x = (int)ceil( (user_precision_t)num_cross / (user_precision_t)threads.x );
-
-  //These are only needed when we're actually grabbing information for two
-  //antennas instead of one
-  int *d_ant1_to_baseline_map = NULL;
-  int *d_ant2_to_baseline_map = NULL;
-
-  if (use_twobeams == 1) {
-
-    ( gpuMalloc( (void**)&d_ant1_to_baseline_map, num_baselines*sizeof(int) ));
-    ( gpuMalloc( (void**)&d_ant2_to_baseline_map, num_baselines*sizeof(int) ));
-
-    //Fill in the indexes of antenna1 and antenna2 for all cross-correlation combos
-    fill_ant_to_baseline_mapping(num_ants, d_ant1_to_baseline_map,
-                                           d_ant2_to_baseline_map);
-  }
-
-  gpuErrorCheckKernel("kern_get_beam_gains",
-                      kern_get_beam_gains, grid, threads,
-                      num_components, num_baselines,
-                      num_freqs, num_cross, num_times, beamtype,
-                      (gpuUserComplex *)d_g1xs,
-                      (gpuUserComplex *)d_D1xs,
-                      (gpuUserComplex *)d_D1ys,
-                      (gpuUserComplex *)d_g1ys,
-                      (gpuUserComplex *)d_recover_g1x, (gpuUserComplex *)d_recover_D1x,
-                      (gpuUserComplex *)d_recover_D1y, (gpuUserComplex *)d_recover_g1y,
-                      (gpuUserComplex *)d_recover_g2x, (gpuUserComplex *)d_recover_D2x,
-                      (gpuUserComplex *)d_recover_D2y, (gpuUserComplex *)d_recover_g2y,
-                      use_twobeams, num_ants,
-                      d_ant1_to_baseline_map, d_ant2_to_baseline_map);
-
-  ( gpuMemcpy(recover_g1x, d_recover_g1x, num_recover_gains*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(recover_D1x, d_recover_D1x, num_recover_gains*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(recover_D1y, d_recover_D1y, num_recover_gains*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(recover_g1y, d_recover_g1y, num_recover_gains*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(recover_g2x, d_recover_g2x, num_recover_gains*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(recover_D2x, d_recover_D2x, num_recover_gains*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(recover_D2y, d_recover_D2y, num_recover_gains*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(recover_g2y, d_recover_g2y, num_recover_gains*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost ));
-
-  ( gpuFree( d_recover_g1x ) );
-  ( gpuFree( d_recover_D1x ) );
-  ( gpuFree( d_recover_D1y ) );
-  ( gpuFree( d_recover_g1y ) );
-  ( gpuFree( d_recover_g2x ) );
-  ( gpuFree( d_recover_D2x ) );
-  ( gpuFree( d_recover_D2y ) );
-  ( gpuFree( d_recover_g2y ) );
-
-  ( gpuFree( d_g1xs ) );
-  ( gpuFree( d_D1xs ) );
-  ( gpuFree( d_D1ys ) );
-  ( gpuFree( d_g1ys ) );
-
-  if (use_twobeams == 1) {
-    // free(ant1_to_baseline_map);
-    // free(ant2_to_baseline_map);
-    ( gpuFree( d_ant1_to_baseline_map ) );
-    ( gpuFree( d_ant2_to_baseline_map ) );
-  }
-
-}
-
 __global__ void kern_update_sum_visis_stokesIQUV(int num_freqs,
      int num_baselines, int num_components, int num_times,
      int beamtype, int off_cardinal_dipoles,
@@ -2660,961 +2497,5 @@ __global__ void kern_update_sum_visis_stokesIQUV(int num_freqs,
              d_sum_visi_YY_real, d_sum_visi_YY_imag);
 
     }
-  }
-}
-
-extern "C" void test_kern_update_sum_visis(int num_freqs, int num_cross,
-          int num_baselines, int num_components, int num_times, int beamtype,
-          int use_twobeams, int num_ants, int off_cardinal_dipoles,
-          user_precision_complex_t *primay_beam_J00,
-          user_precision_complex_t *primay_beam_J01,
-          user_precision_complex_t *primay_beam_J10,
-          user_precision_complex_t *primay_beam_J11,
-          user_precision_complex_t *visi_components,
-          user_precision_t *flux_I, user_precision_t *flux_Q,
-          user_precision_t *flux_U, user_precision_t *flux_V,
-          user_precision_t *sum_visi_XX_real, user_precision_t *sum_visi_XX_imag,
-          user_precision_t *sum_visi_XY_real, user_precision_t *sum_visi_XY_imag,
-          user_precision_t *sum_visi_YX_real, user_precision_t *sum_visi_YX_imag,
-          user_precision_t *sum_visi_YY_real, user_precision_t *sum_visi_YY_imag){
-
-  user_precision_complex_t *d_gxs = NULL;
-  user_precision_complex_t *d_Dxs = NULL;
-  user_precision_complex_t *d_Dys = NULL;
-  user_precision_complex_t *d_gys = NULL;
-  user_precision_complex_t *d_visi_components = NULL;
-
-  //if do_ants, need to malloc more gains
-
-  int num_input_gains = num_freqs*num_times*num_components*num_ants;
-
-  ( gpuMalloc( (void**)&d_gxs,
-                    num_input_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_Dxs,
-                    num_input_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_Dys,
-                    num_input_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_gys,
-                    num_input_gains*sizeof(user_precision_complex_t) ));
-  ( gpuMalloc( (void**)&d_visi_components,
-                    num_cross*sizeof(user_precision_complex_t) ));
-
-  ( gpuMemcpy(d_gxs, primay_beam_J00,
-            num_input_gains*sizeof(user_precision_complex_t),
-            gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_Dxs, primay_beam_J01,
-            num_input_gains*sizeof(user_precision_complex_t),
-            gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_Dys, primay_beam_J10,
-            num_input_gains*sizeof(user_precision_complex_t),
-            gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_gys, primay_beam_J11,
-            num_input_gains*sizeof(user_precision_complex_t),
-            gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_visi_components, visi_components,
-                                     num_cross*sizeof(user_precision_complex_t),
-                                     gpuMemcpyHostToDevice ));
-
-  user_precision_t *d_flux_I = NULL;
-  user_precision_t *d_flux_Q = NULL;
-  user_precision_t *d_flux_U = NULL;
-  user_precision_t *d_flux_V = NULL;
-
-  ( gpuMalloc( (void**)&d_flux_I, num_components*num_times*num_freqs*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_flux_Q, num_components*num_times*num_freqs*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_flux_U, num_components*num_times*num_freqs*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_flux_V, num_components*num_times*num_freqs*sizeof(user_precision_t) ));
-
-  ( gpuMemcpy(d_flux_I, flux_I,
-                    num_components*num_times*num_freqs*sizeof(user_precision_t),    gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_flux_Q, flux_Q,
-                    num_components*num_times*num_freqs*sizeof(user_precision_t),    gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_flux_U, flux_U,
-                    num_components*num_times*num_freqs*sizeof(user_precision_t),    gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_flux_V, flux_V,
-                    num_components*num_times*num_freqs*sizeof(user_precision_t),    gpuMemcpyHostToDevice ));
-
-  user_precision_t *d_sum_visi_XX_real = NULL;
-  user_precision_t *d_sum_visi_XY_real = NULL;
-  user_precision_t *d_sum_visi_YX_real = NULL;
-  user_precision_t *d_sum_visi_YY_real = NULL;
-  user_precision_t *d_sum_visi_XX_imag = NULL;
-  user_precision_t *d_sum_visi_XY_imag = NULL;
-  user_precision_t *d_sum_visi_YX_imag = NULL;
-  user_precision_t *d_sum_visi_YY_imag = NULL;
-
-  ( gpuMalloc( (void**)&d_sum_visi_XX_real,
-                                          num_cross*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_sum_visi_XY_real,
-                                          num_cross*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_sum_visi_YX_real,
-                                          num_cross*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_sum_visi_YY_real,
-                                          num_cross*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_sum_visi_XX_imag,
-                                          num_cross*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_sum_visi_XY_imag,
-                                          num_cross*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_sum_visi_YX_imag,
-                                          num_cross*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_sum_visi_YY_imag,
-                                          num_cross*sizeof(user_precision_t) ));
-  gpuMemcpy(d_sum_visi_XX_real, sum_visi_XX_real,
-                    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-  gpuMemcpy(d_sum_visi_XY_real, sum_visi_XY_real,
-                    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-  gpuMemcpy(d_sum_visi_YX_real, sum_visi_YX_real,
-                    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-  gpuMemcpy(d_sum_visi_YY_real, sum_visi_YY_real,
-                    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-  gpuMemcpy(d_sum_visi_XX_imag, sum_visi_XX_imag,
-                    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-  gpuMemcpy(d_sum_visi_XY_imag, sum_visi_XY_imag,
-                    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-  gpuMemcpy(d_sum_visi_YX_imag, sum_visi_YX_imag,
-                    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-  gpuMemcpy(d_sum_visi_YY_imag, sum_visi_YY_imag,
-                    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-  
-
-
-  //These are only needed when we're actually grabbing information for two
-  //antennas instead of one
-  int *d_ant1_to_baseline_map = NULL;
-  int *d_ant2_to_baseline_map = NULL;
-
-  if (use_twobeams == 1) {
-
-    ( gpuMalloc( (void**)&d_ant1_to_baseline_map, num_baselines*sizeof(int) ));
-    ( gpuMalloc( (void**)&d_ant2_to_baseline_map, num_baselines*sizeof(int) ));
-
-    //Fill in the indexes of antenna1 and antenna2 for all cross-correlation combos
-    fill_ant_to_baseline_mapping(num_ants, d_ant1_to_baseline_map,
-                                           d_ant2_to_baseline_map);
-  }
-
-  dim3 grid, threads;
-
-  threads.x = 128;
-  grid.x = (int)ceil( (user_precision_t)num_cross / (user_precision_t)threads.x );
-
-  gpuErrorCheckKernel("kern_update_sum_visis_stokesIQUV",
-                      kern_update_sum_visis_stokesIQUV, grid, threads,
-                      num_freqs, num_baselines, num_components, num_times,
-                      beamtype, off_cardinal_dipoles,
-                      (gpuUserComplex *)d_gxs, (gpuUserComplex *)d_Dxs,
-                      (gpuUserComplex *)d_Dys, (gpuUserComplex *)d_gys,
-                      d_ant1_to_baseline_map, d_ant2_to_baseline_map, use_twobeams,
-                      (gpuUserComplex *)d_visi_components,
-                      d_flux_I, d_flux_Q, d_flux_U, d_flux_V,
-                      d_sum_visi_XX_real, d_sum_visi_XX_imag,
-                      d_sum_visi_XY_real, d_sum_visi_XY_imag,
-                      d_sum_visi_YX_real, d_sum_visi_YX_imag,
-                      d_sum_visi_YY_real, d_sum_visi_YY_imag );
-
-  ( gpuMemcpy(sum_visi_XX_real, d_sum_visi_XX_real,
-                  num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(sum_visi_XY_real, d_sum_visi_XY_real,
-                  num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(sum_visi_YX_real, d_sum_visi_YX_real,
-                  num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(sum_visi_YY_real, d_sum_visi_YY_real,
-                  num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(sum_visi_XX_imag, d_sum_visi_XX_imag,
-                  num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(sum_visi_XY_imag, d_sum_visi_XY_imag,
-                  num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(sum_visi_YX_imag, d_sum_visi_YX_imag,
-                  num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(sum_visi_YY_imag, d_sum_visi_YY_imag,
-                  num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost ));
-
-  ( gpuFree( d_gxs ) );
-  ( gpuFree( d_Dxs ) );
-  ( gpuFree( d_Dys ) );
-  ( gpuFree( d_gys ) );
-  ( gpuFree( d_visi_components ) );
-  ( gpuFree( d_flux_I ) );
-  ( gpuFree( d_flux_Q ) );
-  ( gpuFree( d_flux_U ) );
-  ( gpuFree( d_flux_V ) );
-  ( gpuFree( d_sum_visi_XX_real ) );
-  ( gpuFree( d_sum_visi_XY_real ) );
-  ( gpuFree( d_sum_visi_YX_real ) );
-  ( gpuFree( d_sum_visi_YY_real ) );
-  ( gpuFree( d_sum_visi_XX_imag ) );
-  ( gpuFree( d_sum_visi_XY_imag ) );
-  ( gpuFree( d_sum_visi_YX_imag ) );
-  ( gpuFree( d_sum_visi_YY_imag ) );
-
-  if (use_twobeams == 1) {
-    ( gpuFree( d_ant1_to_baseline_map ) );
-    ( gpuFree( d_ant2_to_baseline_map ) );
-  }
-
-}
-
-// //just make things zero pls
-// __global__ void kern_make_zeros(user_precision_t *array, int num_arr) {
-
-//   const int iComp = threadIdx.x + (blockDim.x*blockIdx.x);
-
-//   if (iComp < num_arr)
-//   {
-//     array[iComp] = 0.0;
-//   }
-// }
-
-
-extern "C" void test_source_component_common(int num_of_each_flux_type,
-           components_t components,
-           double *freqs, woden_settings_t *woden_settings,
-           beam_settings_t *beam_settings,
-           user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
-           user_precision_complex_t *Dys, user_precision_complex_t *gys,
-           user_precision_t *extrap_flux_I, user_precision_t *extrap_flux_Q,
-           user_precision_t *extrap_flux_U, user_precision_t *extrap_flux_V,
-           double *ls, double *ms, double *ns,
-           e_component_type comptype){
-
-  source_t *chunked_source = (source_t *)malloc(sizeof(source_t));
-
-  int NUM_FLUX_TYPES = 3;
-
-  if (comptype == POINT) {
-    chunked_source->point_components = components;
-    chunked_source->n_points = NUM_FLUX_TYPES*num_of_each_flux_type;
-    chunked_source->n_point_powers = num_of_each_flux_type;
-    chunked_source->n_point_curves = num_of_each_flux_type;
-    chunked_source->n_point_lists = num_of_each_flux_type;
-
-    chunked_source->n_gauss = 0;
-    chunked_source->n_gauss_lists = 0;
-    chunked_source->n_gauss_powers = 0;
-    chunked_source->n_gauss_curves = 0;
-    chunked_source->n_shapes = 0;
-    chunked_source->n_shape_lists = 0;
-    chunked_source->n_shape_powers = 0;
-    chunked_source->n_shape_curves = 0;
-    chunked_source->n_shape_coeffs = 0;
-  }
-  else if (comptype == GAUSSIAN) {
-    chunked_source->gauss_components = components;
-    chunked_source->n_gauss = NUM_FLUX_TYPES*num_of_each_flux_type;
-    chunked_source->n_gauss_powers = num_of_each_flux_type;
-    chunked_source->n_gauss_curves = num_of_each_flux_type;
-    chunked_source->n_gauss_lists = num_of_each_flux_type;
-
-    chunked_source->n_points = 0;
-    chunked_source->n_point_lists = 0;
-    chunked_source->n_point_powers = 0;
-    chunked_source->n_point_curves = 0;
-    chunked_source->n_shapes = 0;
-    chunked_source->n_shape_lists = 0;
-    chunked_source->n_shape_powers = 0;
-    chunked_source->n_shape_curves = 0;
-    chunked_source->n_shape_coeffs = 0;
-  }
-  else if (comptype == SHAPELET) {
-    chunked_source->shape_components = components;
-    chunked_source->n_shapes = NUM_FLUX_TYPES*num_of_each_flux_type;
-    chunked_source->n_shape_powers = num_of_each_flux_type;
-    chunked_source->n_shape_curves = num_of_each_flux_type;
-    chunked_source->n_shape_lists = num_of_each_flux_type;
-    chunked_source->n_shape_coeffs = num_of_each_flux_type;
-
-    chunked_source->n_points = 0;
-    chunked_source->n_point_lists = 0;
-    chunked_source->n_point_powers = 0;
-    chunked_source->n_point_curves = 0;
-    chunked_source->n_gauss = 0;
-    chunked_source->n_gauss_lists = 0;
-    chunked_source->n_gauss_powers = 0;
-    chunked_source->n_gauss_curves = 0;
-
-  }
-
-  source_t *d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
-
-  double *d_freqs = NULL;
-  gpuMalloc( (void**)&d_freqs, woden_settings->num_freqs*sizeof(double) );
-  gpuMemcpy( d_freqs, freqs, woden_settings->num_freqs*sizeof(double), gpuMemcpyHostToDevice) ;
-
-  d_beam_gains_t d_beam_gains;
-  visibility_set_t *d_visibility_set = NULL;
-  woden_settings->do_autos = 0;
-
-  //THIS IS THE GPU CALL ACTUALLY BEING TESTED JEEZUS--------------------------
-  source_component_common(woden_settings, beam_settings, d_freqs,
-       chunked_source, d_chunked_source, &d_beam_gains, comptype,
-       d_visibility_set);
-  //THIS IS THE GPU CALL ACTUALLY BEING TESTED JEEZUS--------------------------
-
-  int num_beam_values = NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*woden_settings->num_time_steps;
-
-  if (woden_settings->use_dipamps == 1) {
-    num_beam_values *= woden_settings->num_ants;
-  }
-
-  ( gpuMemcpy(gxs, (user_precision_complex_t*)d_beam_gains.d_gxs,
-              num_beam_values*sizeof(gpuUserComplex), gpuMemcpyDeviceToHost ));
-
-  ( gpuMemcpy(gys, (user_precision_complex_t*)d_beam_gains.d_gys,
-              num_beam_values*sizeof(gpuUserComplex), gpuMemcpyDeviceToHost ));
-
-  if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP || beam_settings->beamtype == MWA_ANALY) {
-    ( gpuMemcpy(Dxs, (user_precision_complex_t*)d_beam_gains.d_Dxs,
-                num_beam_values*sizeof(gpuUserComplex), gpuMemcpyDeviceToHost ));
-    ( gpuMemcpy(Dys, (user_precision_complex_t*)d_beam_gains.d_Dys,
-                num_beam_values*sizeof(gpuUserComplex), gpuMemcpyDeviceToHost ));
-  }
-
-  //Just a little shorthand so don't have to keep writing out as much in the
-  //memcpy below
-
-  components_t d_components;
-
-  if (comptype == POINT) {
-    d_components = d_chunked_source->point_components;
-  }
-  else if (comptype == GAUSSIAN) {
-    d_components = d_chunked_source->gauss_components;
-  }
-  else {
-    d_components = d_chunked_source->shape_components;
-  }
-
-
-  ( gpuMemcpy(ls, d_components.ls,
-                            NUM_FLUX_TYPES*num_of_each_flux_type*sizeof(double),
-                            gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(ms, d_components.ms,
-                            NUM_FLUX_TYPES*num_of_each_flux_type*sizeof(double),
-                            gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(ns, d_components.ns,
-                            NUM_FLUX_TYPES*num_of_each_flux_type*sizeof(double),
-                            gpuMemcpyDeviceToHost ));
-
-  //until we get RM synthesis working, do this for testing
-  //do this because I don't want to cut out all the memcpying below, laaazy
-  dim3 grid, threads;
-
-  int num_things = NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs;
-
-  threads.x = 128;
-  threads.y = 1;
-  grid.x = (int)ceil( (float)num_things / (float)threads.x );
-  grid.y = 1;
-
-  if (d_components.do_QUV == 0) {
-
-    gpuMalloc( (void**)&d_components.extrap_stokesQ, num_things*sizeof(user_precision_t) );
-    gpuMalloc( (void**)&d_components.extrap_stokesU, num_things*sizeof(user_precision_t) );
-    gpuMalloc( (void**)&d_components.extrap_stokesV, num_things*sizeof(user_precision_t) );
-
-    gpuErrorCheckKernel("kern_make_zeros_user_precision",
-            kern_make_zeros_user_precision, grid, threads,
-            d_components.extrap_stokesQ, num_things);
-    gpuErrorCheckKernel("kern_make_zeros_user_precision",
-              kern_make_zeros_user_precision, grid, threads,
-              d_components.extrap_stokesU, num_things);
-    gpuErrorCheckKernel("kern_make_zeros_user_precision",
-              kern_make_zeros_user_precision, grid, threads,
-              d_components.extrap_stokesV, num_things);
-  }
-
-  ( gpuMemcpy(extrap_flux_I, d_components.extrap_stokesI,
-  NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t),
-                                                      gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(extrap_flux_Q, d_components.extrap_stokesQ,
-  NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t),
-                                                      gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(extrap_flux_U, d_components.extrap_stokesU,
-  NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t),
-                                                      gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(extrap_flux_V, d_components.extrap_stokesV,
-  NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t),
-                                                      gpuMemcpyDeviceToHost ));
-
-  ( gpuFree( d_freqs ) );
-  free_extrapolated_flux_arrays(&d_components);
-  free_d_components(d_chunked_source, comptype);
-  free_beam_gains(d_beam_gains, beam_settings->beamtype);
-}
-
-
-void malloc_lmn_arrays(source_t *d_chunked_source, components_t *components,
-                        int num_components, e_component_type comptype){
-  components_t *d_components=NULL;
-  if (comptype == POINT) {
-    d_components = &d_chunked_source->point_components;
-  } else if (comptype == GAUSSIAN) {
-    d_components = &d_chunked_source->gauss_components;
-  // } else if (comptype == SHAPELET) {
-  } else {
-    d_components = &d_chunked_source->shape_components;
-  }
-
-  ( gpuMalloc( (void**)&d_components->ls,
-                                          num_components*sizeof(double) ) );
-  ( gpuMalloc( (void**)&d_components->ms,
-                                          num_components*sizeof(double) ) );
-  ( gpuMalloc( (void**)&d_components->ns,
-                                          num_components*sizeof(double) ) );
-
-  ( gpuMemcpy(d_components->ls, components->ls, num_components*sizeof(double),
-                                           gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_components->ms, components->ms, num_components*sizeof(double),
-                                           gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_components->ns, components->ns, num_components*sizeof(double),
-                                           gpuMemcpyHostToDevice ));
-
-}
-
-extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
-          int num_baselines, int num_shape_coeffs,
-          int num_freqs, int num_cross, int num_times,
-          e_beamtype beamtype, e_component_type comptype,
-          components_t components, double *extrap_freqs,
-          user_precision_t *us, user_precision_t *vs, user_precision_t *ws,
-          user_precision_t *u_shapes, user_precision_t *v_shapes,
-          user_precision_t *sum_visi_XX_real, user_precision_t *sum_visi_XX_imag,
-          user_precision_t *sum_visi_XY_real, user_precision_t *sum_visi_XY_imag,
-          user_precision_t *sum_visi_YX_real, user_precision_t *sum_visi_YX_imag,
-          user_precision_t *sum_visi_YY_real, user_precision_t *sum_visi_YY_imag,
-          user_precision_t *allsteps_wavelengths, user_precision_t *sbf,
-          user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
-          user_precision_complex_t *Dys, user_precision_complex_t *gys){
-
-  int off_cardinal_dipoles = 0;
-
-  int num_components = n_powers + n_curves + n_lists;
-
-  user_precision_t *d_us = NULL;
-  user_precision_t *d_vs = NULL;
-  user_precision_t *d_ws = NULL;
-  user_precision_t *d_allsteps_wavelengths = NULL;
-
-  ( gpuMalloc( (void**)&d_us, num_cross*sizeof(user_precision_t) ) );
-  ( gpuMalloc( (void**)&d_vs, num_cross*sizeof(user_precision_t) ) );
-  ( gpuMalloc( (void**)&d_ws, num_cross*sizeof(user_precision_t) ) );
-  ( gpuMalloc( (void**)&d_allsteps_wavelengths, num_cross*sizeof(user_precision_t) ) );
-
-  ( gpuMemcpy(d_us, us,
-                             num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_vs, vs,
-                             num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_ws, ws,
-                             num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_allsteps_wavelengths, allsteps_wavelengths,
-                             num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice ));
-
-  //Here are many things that would have been done by source_component_common
-  source_t *chunked_source = (source_t *)malloc(sizeof(source_t));
-
-  double *d_extrap_freqs = NULL;
-  ( gpuMalloc( (void**)&d_extrap_freqs,
-                                   num_freqs*sizeof(double) ));
-  ( gpuMemcpy(d_extrap_freqs, extrap_freqs,
-             num_freqs*sizeof(double), gpuMemcpyHostToDevice ));
-
-  source_t *d_chunked_source = NULL;
-  components_t d_components;
-
-  if (comptype == POINT) {
-
-    chunked_source->point_components = components;
-    chunked_source->n_points = n_powers + n_curves + n_lists;
-    chunked_source->n_point_powers = n_powers;
-    chunked_source->n_point_curves = n_curves;
-    chunked_source->n_point_lists = n_lists;
-
-    chunked_source->n_gauss = 0;
-    chunked_source->n_gauss_lists = 0;
-    chunked_source->n_gauss_powers = 0;
-    chunked_source->n_gauss_curves = 0;
-    chunked_source->n_shapes = 0;
-    chunked_source->n_shape_lists = 0;
-    chunked_source->n_shape_powers = 0;
-    chunked_source->n_shape_curves = 0;
-    chunked_source->n_shape_coeffs = 0;
-
-    d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
-    malloc_lmn_arrays(d_chunked_source, &components, num_components, comptype);
-
-    malloc_extrapolated_flux_arrays_gpu(&d_chunked_source->point_components,
-                                    d_chunked_source->n_points,
-                                    num_freqs);
-    extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, POINT);
-    d_components = d_chunked_source->point_components;
-  }
-  else if (comptype == GAUSSIAN) {
-
-    chunked_source->gauss_components = components;
-    chunked_source->n_gauss = n_powers + n_curves + n_lists;
-    chunked_source->n_gauss_powers = n_powers;
-    chunked_source->n_gauss_curves = n_curves;
-    chunked_source->n_gauss_lists = n_lists;
-
-    chunked_source->n_points = 0;
-    chunked_source->n_point_lists = 0;
-    chunked_source->n_point_powers = 0;
-    chunked_source->n_point_curves = 0;
-    chunked_source->n_shapes = 0;
-    chunked_source->n_shape_lists = 0;
-    chunked_source->n_shape_powers = 0;
-    chunked_source->n_shape_curves = 0;
-    chunked_source->n_shape_coeffs = 0;
-
-    d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
-    malloc_lmn_arrays(d_chunked_source, &components, num_components, comptype);
-
-    malloc_extrapolated_flux_arrays_gpu(&d_chunked_source->gauss_components,
-                                    d_chunked_source->n_gauss,
-                                    num_freqs);
-    extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, GAUSSIAN);
-    d_components = d_chunked_source->gauss_components;
-  }
-  else if (comptype == SHAPELET) {
-    chunked_source->shape_components = components;
-    chunked_source->n_shapes = n_powers + n_curves + n_lists;
-    chunked_source->n_shape_powers = n_powers;
-    chunked_source->n_shape_curves = n_curves;
-    chunked_source->n_shape_lists = n_lists;
-    chunked_source->n_shape_coeffs = num_shape_coeffs;
-
-    chunked_source->n_points = 0;
-    chunked_source->n_point_lists = 0;
-    chunked_source->n_point_powers = 0;
-    chunked_source->n_point_curves = 0;
-    chunked_source->n_gauss = 0;
-    chunked_source->n_gauss_lists = 0;
-    chunked_source->n_gauss_powers = 0;
-    chunked_source->n_gauss_curves = 0;
-
-    d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
-    malloc_lmn_arrays(d_chunked_source, &components, num_components, comptype);
-
-    malloc_extrapolated_flux_arrays_gpu(&d_chunked_source->shape_components,
-                                    d_chunked_source->n_shapes,
-                                    num_freqs);
-    extrapolate_Stokes(d_chunked_source, d_extrap_freqs, num_freqs, SHAPELET);
-    d_components = d_chunked_source->shape_components;
-  }
-
-  //Something to store the primary beam gains (all 4 pols) in
-  d_beam_gains_t d_beam_gains;
-  int num_beam_values = num_components*num_freqs*num_times;
-
-  ( gpuMalloc( (void**)&d_beam_gains.d_gxs,
-                                      num_beam_values*sizeof(gpuUserComplex) ));
-  ( gpuMalloc( (void**)&d_beam_gains.d_Dxs,
-                                      num_beam_values*sizeof(gpuUserComplex) ));
-  ( gpuMalloc( (void**)&d_beam_gains.d_Dys,
-                                      num_beam_values*sizeof(gpuUserComplex) ));
-  ( gpuMalloc( (void**)&d_beam_gains.d_gys,
-                                      num_beam_values*sizeof(gpuUserComplex) ));
-
-  ( gpuMemcpy(d_beam_gains.d_gxs, (gpuUserComplex *)gxs,
-              num_beam_values*sizeof(gpuUserComplex), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_beam_gains.d_Dxs, (gpuUserComplex *)Dxs,
-              num_beam_values*sizeof(gpuUserComplex), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_beam_gains.d_Dys, (gpuUserComplex *)Dys,
-              num_beam_values*sizeof(gpuUserComplex), gpuMemcpyHostToDevice ));
-  ( gpuMemcpy(d_beam_gains.d_gys, (gpuUserComplex *)gys,
-              num_beam_values*sizeof(gpuUserComplex), gpuMemcpyHostToDevice ));
-
-  user_precision_t *d_sum_visi_XX_real = NULL;
-  user_precision_t *d_sum_visi_XY_real = NULL;
-  user_precision_t *d_sum_visi_YX_real = NULL;
-  user_precision_t *d_sum_visi_YY_real = NULL;
-  user_precision_t *d_sum_visi_XX_imag = NULL;
-  user_precision_t *d_sum_visi_XY_imag = NULL;
-  user_precision_t *d_sum_visi_YX_imag = NULL;
-  user_precision_t *d_sum_visi_YY_imag = NULL;
-
-  ( gpuMalloc( (void**)&d_sum_visi_XX_real,
-                                          num_cross*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_sum_visi_XY_real,
-                                          num_cross*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_sum_visi_YX_real,
-                                          num_cross*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_sum_visi_YY_real,
-                                          num_cross*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_sum_visi_XX_imag,
-                                          num_cross*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_sum_visi_XY_imag,
-                                          num_cross*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_sum_visi_YX_imag,
-                                          num_cross*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_sum_visi_YY_imag,
-                                          num_cross*sizeof(user_precision_t) ));
-
-  //Make sure the visis start at zero by copying across host versions, which
-  //should be set to zero already
-  ( gpuMemcpy( d_sum_visi_XX_real, sum_visi_XX_real,
-    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy( d_sum_visi_XY_real, sum_visi_XY_real,
-    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy( d_sum_visi_YX_real, sum_visi_YX_real,
-    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy( d_sum_visi_YY_real, sum_visi_YY_real,
-    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy( d_sum_visi_XX_imag, sum_visi_XX_imag,
-    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy( d_sum_visi_XY_imag, sum_visi_XY_imag,
-    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy( d_sum_visi_YX_imag, sum_visi_YX_imag,
-    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy( d_sum_visi_YY_imag, sum_visi_YY_imag,
-    num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-
-  dim3 grid, threads;
-
-  threads.x = 128;
-  grid.x = (int)ceil( (float)num_cross / (float)threads.x );
-
-  //Shapelets need many many extra things
-
-  user_precision_t *d_sbf=NULL;
-  user_precision_t *d_u_shapes = NULL;
-  user_precision_t *d_v_shapes = NULL;
-
-  if (comptype == SHAPELET) {
-
-    ( gpuMalloc( (void**)&d_u_shapes,
-             num_components*num_baselines*num_times*sizeof(user_precision_t) ) );
-    ( gpuMalloc( (void**)&d_v_shapes,
-             num_components*num_baselines*num_times*sizeof(user_precision_t) ) );
-
-    ( gpuMemcpy(d_u_shapes, u_shapes,
-                 num_components*num_baselines*num_times*sizeof(user_precision_t),
-                                                       gpuMemcpyHostToDevice ));
-    ( gpuMemcpy(d_v_shapes, v_shapes,
-                 num_components*num_baselines*num_times*sizeof(user_precision_t),
-                                                       gpuMemcpyHostToDevice ));
-
-    ( gpuMalloc( (void**)&d_components.shape_coeffs,
-                                                num_shape_coeffs*sizeof(user_precision_t) ));
-    ( gpuMalloc( (void**)&d_components.n1s,
-                                                num_shape_coeffs*sizeof(user_precision_t) ));
-    ( gpuMalloc( (void**)&d_components.n2s,
-                                                num_shape_coeffs*sizeof(user_precision_t) ));
-    ( gpuMalloc( (void**)&d_components.param_indexes,
-                                                num_shape_coeffs*sizeof(user_precision_t) ));
-
-    ( gpuMemcpy(d_components.shape_coeffs,
-                          components.shape_coeffs, num_shape_coeffs*sizeof(user_precision_t),
-                          gpuMemcpyHostToDevice ));
-    ( gpuMemcpy(d_components.n1s,
-                          components.n1s, num_shape_coeffs*sizeof(user_precision_t),
-                          gpuMemcpyHostToDevice ));
-    ( gpuMemcpy(d_components.n2s,
-                          components.n2s, num_shape_coeffs*sizeof(user_precision_t),
-                          gpuMemcpyHostToDevice ));
-    ( gpuMemcpy(d_components.param_indexes,
-                          components.param_indexes, num_shape_coeffs*sizeof(user_precision_t),
-                          gpuMemcpyHostToDevice ));
-    ( gpuMalloc( (void**)&(d_sbf), sbf_N*sbf_L*sizeof(user_precision_t) ));
-    ( gpuMemcpy( d_sbf, sbf, sbf_N*sbf_L*sizeof(user_precision_t),
-                        gpuMemcpyHostToDevice ));
-  }
-
-  if (comptype == POINT || comptype == GAUSSIAN ) {
-
-    gpuErrorCheckKernel("kern_calc_visi_point_or_gauss",
-                  kern_calc_visi_point_or_gauss, grid, threads,
-                  d_components, d_beam_gains,
-                  d_us, d_vs, d_ws,
-                  d_sum_visi_XX_real, d_sum_visi_XX_imag,
-                  d_sum_visi_XY_real, d_sum_visi_XY_imag,
-                  d_sum_visi_YX_real, d_sum_visi_YX_imag,
-                  d_sum_visi_YY_real, d_sum_visi_YY_imag,
-                  num_components, num_baselines, num_freqs, num_cross,
-                  num_times, beamtype, comptype, off_cardinal_dipoles);
-  }
-  else if (comptype == SHAPELET) {
-    gpuErrorCheckKernel("kern_calc_visi_shapelets",
-                  kern_calc_visi_shapelets, grid, threads,
-                  d_components, d_beam_gains,
-                  d_us, d_vs, d_ws,
-                  d_allsteps_wavelengths,
-                  d_u_shapes, d_v_shapes,
-                  d_sum_visi_XX_real, d_sum_visi_XX_imag,
-                  d_sum_visi_XY_real, d_sum_visi_XY_imag,
-                  d_sum_visi_YX_real, d_sum_visi_YX_imag,
-                  d_sum_visi_YY_real, d_sum_visi_YY_imag,
-                  d_sbf,  num_components,
-                  num_baselines, num_freqs, num_cross,
-                  num_shape_coeffs, num_times, beamtype, off_cardinal_dipoles);
-  }
-
-  ( gpuMemcpy(sum_visi_XX_real, d_sum_visi_XX_real,
-                             num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(sum_visi_XY_real, d_sum_visi_XY_real,
-                             num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(sum_visi_YX_real, d_sum_visi_YX_real,
-                             num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(sum_visi_YY_real, d_sum_visi_YY_real,
-                             num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(sum_visi_XX_imag, d_sum_visi_XX_imag,
-                             num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(sum_visi_XY_imag, d_sum_visi_XY_imag,
-                             num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(sum_visi_YX_imag, d_sum_visi_YX_imag,
-                             num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(sum_visi_YY_imag, d_sum_visi_YY_imag,
-                             num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost ));
-
-
-  free_d_components(d_chunked_source, comptype);
-
-  (  gpuFree( d_sum_visi_XX_real ) );
-  (  gpuFree( d_sum_visi_XX_imag ) );
-  (  gpuFree( d_sum_visi_XY_real ) );
-  (  gpuFree( d_sum_visi_XY_imag ) );
-  (  gpuFree( d_sum_visi_YX_real ) );
-  (  gpuFree( d_sum_visi_YX_imag ) );
-  (  gpuFree( d_sum_visi_YY_real ) );
-  (  gpuFree( d_sum_visi_YY_imag ) );
-  (  gpuFree( d_allsteps_wavelengths ) );
-
-
-
-  free_beam_gains(d_beam_gains, beamtype);
-
-  (  gpuFree( d_us ) );
-  (  gpuFree( d_vs ) );
-  (  gpuFree( d_ws ) );
-
-  ( gpuFree( d_extrap_freqs ) );
-
-  if (comptype == POINT) {
-    free_extrapolated_flux_arrays(&d_chunked_source->point_components);
-  }
-  else if (comptype == GAUSSIAN) {
-    free_extrapolated_flux_arrays(&d_chunked_source->gauss_components);
-  }
-  if (comptype == SHAPELET){
-    free_extrapolated_flux_arrays(&d_chunked_source->shape_components);
-    (  gpuFree( d_sbf) );
-    (  gpuFree( d_u_shapes) );
-    (  gpuFree( d_v_shapes) );
-  }
-}
-
-
-extern "C" void test_kern_calc_autos(components_t *components, int beamtype,
-                                     int num_components, int num_baselines,
-                                     int num_freqs, int num_times, int num_ants,
-                                     int num_beams,
-                                     visibility_set_t *visibility_set){
-
-  int off_cardinal_dipoles = 0;
-
-  int use_twobeams = 0;
-  if (num_beams > 1) {
-    use_twobeams = 1;
-  }
-
-  ////malloc on device and copy extrapolated fluxes
-  int num_pb_values = num_beams*num_freqs*num_times*num_components;
-
-  int num_autos = num_ants*num_freqs*num_times;
-  int num_cross = num_baselines*num_freqs*num_times;
-  int num_visis = num_cross + num_autos;
-
-  components_t *d_components = (components_t* )malloc(sizeof(components_t));
-  // components_t d_components;
-
-  ( gpuMalloc( (void**)&d_components->extrap_stokesI,
-              num_components*num_freqs*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_components->extrap_stokesQ,
-              num_components*num_freqs*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_components->extrap_stokesU,
-              num_components*num_freqs*sizeof(user_precision_t) ));
-  ( gpuMalloc( (void**)&d_components->extrap_stokesV,
-              num_components*num_freqs*sizeof(user_precision_t) ));
-
-  d_components->do_QUV = components->do_QUV;
-
-
-  ( gpuMemcpy(d_components->extrap_stokesI,
-         components->extrap_stokesI, num_components*num_freqs*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy(d_components->extrap_stokesQ,
-         components->extrap_stokesQ, num_components*num_freqs*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy(d_components->extrap_stokesU,
-         components->extrap_stokesU, num_components*num_freqs*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy(d_components->extrap_stokesV,
-         components->extrap_stokesV, num_components*num_freqs*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-  //
-  // //malloc on device and copy beam values
-  //
-  d_beam_gains_t *d_component_beam_gains = (d_beam_gains_t* )malloc(sizeof(d_beam_gains_t));
-  // d_beam_gains_t d_component_beam_gains;
-  ( gpuMalloc( (void**)&d_component_beam_gains->d_gxs,
-                                        num_pb_values*sizeof(gpuUserComplex) ));
-  ( gpuMalloc( (void**)&d_component_beam_gains->d_Dxs,
-                                        num_pb_values*sizeof(gpuUserComplex) ));
-  ( gpuMalloc( (void**)&d_component_beam_gains->d_Dys,
-                                        num_pb_values*sizeof(gpuUserComplex) ));
-  ( gpuMalloc( (void**)&d_component_beam_gains->d_gys,
-                                        num_pb_values*sizeof(gpuUserComplex) ));
-
-  ( gpuMemcpy(d_component_beam_gains->d_gxs,
-          (gpuUserComplex* )components->gxs, num_pb_values*sizeof(gpuUserComplex),
-                                                     gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy(d_component_beam_gains->d_Dxs,
-          (gpuUserComplex* )components->Dxs, num_pb_values*sizeof(gpuUserComplex),
-                                                     gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy(d_component_beam_gains->d_Dys,
-          (gpuUserComplex* )components->Dys, num_pb_values*sizeof(gpuUserComplex),
-                                                     gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy(d_component_beam_gains->d_gys,
-          (gpuUserComplex* )components->gys, num_pb_values*sizeof(gpuUserComplex),
-                                                     gpuMemcpyHostToDevice ) );
-
-
-  user_precision_t *d_sum_visi_XX_real;
-  user_precision_t *d_sum_visi_XX_imag;
-  user_precision_t *d_sum_visi_XY_real;
-  user_precision_t *d_sum_visi_XY_imag;
-  user_precision_t *d_sum_visi_YX_real;
-  user_precision_t *d_sum_visi_YX_imag;
-  user_precision_t *d_sum_visi_YY_real;
-  user_precision_t *d_sum_visi_YY_imag;
-
-  ( gpuMalloc( (void**)&d_sum_visi_XX_real,
-                      num_visis*sizeof(user_precision_t) ) );
-  ( gpuMalloc( (void**)&d_sum_visi_XX_imag,
-                      num_visis*sizeof(user_precision_t) ) );
-  ( gpuMalloc( (void**)&d_sum_visi_XY_real,
-                      num_visis*sizeof(user_precision_t) ) );
-  ( gpuMalloc( (void**)&d_sum_visi_XY_imag,
-                      num_visis*sizeof(user_precision_t) ) );
-  ( gpuMalloc( (void**)&d_sum_visi_YX_real,
-                      num_visis*sizeof(user_precision_t) ) );
-  ( gpuMalloc( (void**)&d_sum_visi_YX_imag,
-                      num_visis*sizeof(user_precision_t) ) );
-  ( gpuMalloc( (void**)&d_sum_visi_YY_real,
-                      num_visis*sizeof(user_precision_t) ) );
-  ( gpuMalloc( (void**)&d_sum_visi_YY_imag,
-                      num_visis*sizeof(user_precision_t) ) );
-
-
-  //ensure d_sum_visi_XX_real are set entirely to zero by copying the host
-  //array values, which have been set explictly to zero during chunking
-  ( gpuMemcpy(d_sum_visi_XX_real,
-             visibility_set->sum_visi_XX_real,
-             num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy(d_sum_visi_XX_imag,
-             visibility_set->sum_visi_XX_imag,
-             num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy(d_sum_visi_XY_real,
-             visibility_set->sum_visi_XY_real,
-             num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy(d_sum_visi_XY_imag,
-             visibility_set->sum_visi_XY_imag,
-             num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy(d_sum_visi_YX_real,
-             visibility_set->sum_visi_YX_real,
-             num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy(d_sum_visi_YX_imag,
-             visibility_set->sum_visi_YX_imag,
-             num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy(d_sum_visi_YY_real,
-             visibility_set->sum_visi_YY_real,
-             num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy(d_sum_visi_YY_imag,
-             visibility_set->sum_visi_YY_imag,
-             num_visis*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-
-  dim3 grid, threads;
-
-  threads.x = 64;
-  threads.y = 2;
-  threads.z = 1;
-  grid.x = (int)ceil( (float)(num_freqs*num_times) / (float)threads.x );
-  grid.y = (int)ceil( (float)(num_ants) / (float)threads.y );
-  grid.z = 1;
-
-  int *d_ant_to_auto_map = NULL;
-
-  if (use_twobeams == 1) {
-
-    int *ant_to_auto_map = NULL;
-    ant_to_auto_map = (int *)malloc(num_ants*sizeof(int));
-    for (int ant = 0; ant < num_ants; ant++){
-        ant_to_auto_map[ant] = ant;
-    }
-
-    ( gpuMalloc( (void**)&d_ant_to_auto_map,
-                                    num_ants*sizeof(int) ));
-    ( gpuMemcpy(d_ant_to_auto_map, ant_to_auto_map,
-                                    num_ants*sizeof(int), gpuMemcpyHostToDevice ));
-
-    free(ant_to_auto_map);
-  }
-
-  gpuErrorCheckKernel("kern_calc_autos",
-                kern_calc_autos, grid, threads,
-                *d_components, *d_component_beam_gains,
-                beamtype, num_components, num_baselines,
-                num_freqs, num_times, num_ants,
-                d_sum_visi_XX_real, d_sum_visi_XX_imag,
-                d_sum_visi_XY_real, d_sum_visi_XY_imag,
-                d_sum_visi_YX_real, d_sum_visi_YX_imag,
-                d_sum_visi_YY_real, d_sum_visi_YY_imag,
-                use_twobeams, d_ant_to_auto_map,
-                d_ant_to_auto_map, off_cardinal_dipoles);
-
-  //Copy outputs onto host so we can check our answers
-  ( gpuMemcpy(visibility_set->sum_visi_XX_real,
-                         d_sum_visi_XX_real, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(visibility_set->sum_visi_XY_real,
-                         d_sum_visi_XY_real, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(visibility_set->sum_visi_YX_real,
-                         d_sum_visi_YX_real, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(visibility_set->sum_visi_YY_real,
-                         d_sum_visi_YY_real, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(visibility_set->sum_visi_XX_imag,
-                         d_sum_visi_XX_imag, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(visibility_set->sum_visi_XY_imag,
-                         d_sum_visi_XY_imag, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(visibility_set->sum_visi_YX_imag,
-                         d_sum_visi_YX_imag, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost ));
-  ( gpuMemcpy(visibility_set->sum_visi_YY_imag,
-                         d_sum_visi_YY_imag, num_visis*sizeof(user_precision_t),
-                                                     gpuMemcpyDeviceToHost ));
-
-
-  (  gpuFree( d_components->extrap_stokesI ) );
-  (  gpuFree( d_components->extrap_stokesQ ) );
-  (  gpuFree( d_components->extrap_stokesU ) );
-  (  gpuFree( d_components->extrap_stokesV ) );
-  (  gpuFree( d_component_beam_gains->d_gxs ) );
-  (  gpuFree( d_component_beam_gains->d_Dxs ) );
-  (  gpuFree( d_component_beam_gains->d_Dys ) );
-  (  gpuFree( d_component_beam_gains->d_gys ) );
-
-
-  (  gpuFree( d_sum_visi_XX_real ) );
-  (  gpuFree( d_sum_visi_XX_imag ) );
-  (  gpuFree( d_sum_visi_XY_real ) );
-  (  gpuFree( d_sum_visi_XY_imag ) );
-  (  gpuFree( d_sum_visi_YX_real ) );
-  (  gpuFree( d_sum_visi_YX_imag ) );
-  (  gpuFree( d_sum_visi_YY_real ) );
-  (  gpuFree( d_sum_visi_YY_imag ) );
-
-  if (use_twobeams == 1) {
-    (  gpuFree( d_ant_to_auto_map ) );
   }
 }

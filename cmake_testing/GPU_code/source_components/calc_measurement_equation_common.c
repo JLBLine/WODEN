@@ -1,13 +1,4 @@
-#include <math.h>
-#include <unity.h>
-#include <stdlib.h>
-#include <complex.h>
-
-#include "constants.h"
-#include "woden_precision_defs.h"
-
-void setUp (void) {} /* Is run before every test, put unit init calls here. */
-void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
+#include "calc_measurement_equation_common.h"
 
 // void sincos(float x, float *sin, float *cos);
 void sincos(double x, double *sin, double *cos);
@@ -24,7 +15,7 @@ Setup 10000 u,v,w coords and 3600 l,m,n coords, and send them off to
 kern_calc_measurement_equation to calculate the measurement equation.
 Check against a calculation made with C
 */
-void test_kern_calc_measurement_equation_ComparedToC(void) {
+void test_calc_measurement_equation(int do_gpu) {
 
   // //Set up some test condition inputs
 
@@ -102,9 +93,12 @@ void test_kern_calc_measurement_equation_ComparedToC(void) {
   //Space for outputs
   user_precision_complex_t *visis = malloc(num_baselines*num_components*sizeof(user_precision_complex_t));
 
-  //Run the CUDA code
-  test_kern_calc_measurement_equation(num_components, num_baselines,
-                                      us, vs, ws, ls, ms, ns, visis);
+  if (do_gpu == 1){
+    //Run the GPU code
+    test_kern_calc_measurement_equation(num_components, num_baselines,
+                                        us, vs, ws, ls, ms, ns, visis);
+  }
+  
 
   //Fill values with what should have been found
   int ind = 0;
@@ -155,7 +149,7 @@ void test_kern_calc_measurement_equation_ComparedToC(void) {
 Use a few exact coordinates that should give exact answers, and test
 whether they are within some tolerace
 */
-void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
+void test_calc_measurement_equation_GiveCorrectValues(int do_gpu) {
 
   //These combinations of l,m,n, when paired with u,v,w, result in an
   //a product of 2*pi*(u*l + v*m + w*(n-1)) equal to:
@@ -251,9 +245,11 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
 
     }
 
-    //Run the CUDA code
-    test_kern_calc_measurement_equation(num_components, num_baselines,
+    if (do_gpu == 1){
+      //Run the GPU code
+      test_kern_calc_measurement_equation(num_components, num_baselines,
                                         us, vs, ws, ls, ms, ns, visis);
+    }
 
     for (int baseline = 0; baseline < num_baselines; baseline++) {
 
@@ -296,14 +292,4 @@ void test_kern_calc_measurement_equation_GiveCorrectValues(void) {
   free(ns);
   free(visis);
 
-}
-
-//Run the test with unity
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_kern_calc_measurement_equation_ComparedToC);
-    RUN_TEST(test_kern_calc_measurement_equation_GiveCorrectValues);
-
-    return UNITY_END();
 }

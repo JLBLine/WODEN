@@ -409,3 +409,68 @@ void CPU_extrapolate_fluxes_in_components(components_t *comps, int num_powers,
     }
   }
 }
+
+
+source_t * put_components_into_source(components_t components,
+                                      e_component_type comptype,
+                                      int n_powers, int n_curves, int n_lists,
+                                      int num_shape_coeffs) {
+
+  source_t *chunked_source = (source_t *)malloc(sizeof(source_t));
+  if (comptype == POINT) {
+
+    chunked_source->point_components = components;
+    chunked_source->n_points = n_powers + n_curves + n_lists;
+    chunked_source->n_point_powers = n_powers;
+    chunked_source->n_point_curves = n_curves;
+    chunked_source->n_point_lists = n_lists;
+
+    chunked_source->n_gauss = 0;
+    chunked_source->n_gauss_lists = 0;
+    chunked_source->n_gauss_powers = 0;
+    chunked_source->n_gauss_curves = 0;
+    chunked_source->n_shapes = 0;
+    chunked_source->n_shape_lists = 0;
+    chunked_source->n_shape_powers = 0;
+    chunked_source->n_shape_curves = 0;
+    chunked_source->n_shape_coeffs = 0;
+
+  }
+  else if (comptype == GAUSSIAN) {
+
+    chunked_source->gauss_components = components;
+    chunked_source->n_gauss = n_powers + n_curves + n_lists;
+    chunked_source->n_gauss_powers = n_powers;
+    chunked_source->n_gauss_curves = n_curves;
+    chunked_source->n_gauss_lists = n_lists;
+
+    chunked_source->n_points = 0;
+    chunked_source->n_point_lists = 0;
+    chunked_source->n_point_powers = 0;
+    chunked_source->n_point_curves = 0;
+    chunked_source->n_shapes = 0;
+    chunked_source->n_shape_lists = 0;
+    chunked_source->n_shape_powers = 0;
+    chunked_source->n_shape_curves = 0;
+    chunked_source->n_shape_coeffs = 0;
+  }
+  else if (comptype == SHAPELET) {
+    chunked_source->shape_components = components;
+    chunked_source->n_shapes = n_powers + n_curves + n_lists;
+    chunked_source->n_shape_powers = n_powers;
+    chunked_source->n_shape_curves = n_curves;
+    chunked_source->n_shape_lists = n_lists;
+    chunked_source->n_shape_coeffs = num_shape_coeffs;
+
+    chunked_source->n_points = 0;
+    chunked_source->n_point_lists = 0;
+    chunked_source->n_point_powers = 0;
+    chunked_source->n_point_curves = 0;
+    chunked_source->n_gauss = 0;
+    chunked_source->n_gauss_lists = 0;
+    chunked_source->n_gauss_powers = 0;
+    chunked_source->n_gauss_curves = 0;
+  }
+
+  return chunked_source;
+}

@@ -1,13 +1,4 @@
-#include <math.h>
-#include <unity.h>
-#include <stdlib.h>
-#include <complex.h>
-
-#include "constants.h"
-#include "woden_precision_defs.h"
-
-void setUp (void) {} /* Is run before every test, put unit init calls here. */
-void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
+#include "apply_beam_gains_common.h"
 
 //External CUDA code we're linking in
 extern void test_kern_apply_beam_gains(int num_gains, user_precision_complex_t *g1xs,
@@ -26,7 +17,7 @@ extern void test_kern_apply_beam_gains(int num_gains, user_precision_complex_t *
 /*
 Test that the code applying beam gains to Stokes parameter fluxes works
 */
-void test_kern_apply_beam_gains_GiveCorrectValues(void) {
+void test_apply_beam_gains_GiveCorrectValues(int do_gpu) {
 
   // #ifdef DOUBLE_PRECISION
   // printf("WODEN is using DOUBLE precision\n");
@@ -82,14 +73,15 @@ void test_kern_apply_beam_gains_GiveCorrectValues(void) {
   user_precision_complex_t *visi_YXs = malloc(num_gains*sizeof(user_precision_complex_t));
   user_precision_complex_t *visi_YYs = malloc(num_gains*sizeof(user_precision_complex_t));
 
-  //Run the CUDA code
-  test_kern_apply_beam_gains(num_gains, g1xs, D1xs, D1ys, g1ys,
+  if (do_gpu == 1) {
+    test_kern_apply_beam_gains(num_gains, g1xs, D1xs, D1ys, g1ys,
                                         g1xs, D1xs, D1ys, g1ys,
                                         flux_Is, flux_Qs,
                                         flux_Us, flux_Vs,
                                         visi_components,
                                         visi_XXs, visi_XYs,
                                         visi_YXs, visi_YYs);
+  }
 
   //Expected outputs
   user_precision_t expec_XX_re[] =  {1.0, 1.0, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0,
@@ -139,12 +131,4 @@ void test_kern_apply_beam_gains_GiveCorrectValues(void) {
   free(visi_YXs);
   free(visi_YYs);
 
-}
-
-//Run the test with unity
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_kern_apply_beam_gains_GiveCorrectValues);
-    return UNITY_END();
 }

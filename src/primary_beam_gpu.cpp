@@ -198,14 +198,14 @@ extern "C" void calculate_analytic_dipole_beam_gpu(int num_components,
   int num_beam_azza = num_components * num_time_steps;
 
   user_precision_t *d_azs = NULL;
-  ( gpuMalloc( (void**)&d_azs, num_beam_azza*sizeof(user_precision_t)) );
-  ( gpuMemcpy(d_azs, azs, num_beam_azza*sizeof(user_precision_t),
-                      gpuMemcpyHostToDevice) );
+  gpuMalloc( (void**)&d_azs, num_beam_azza*sizeof(user_precision_t));
+  gpuMemcpy(d_azs, azs, num_beam_azza*sizeof(user_precision_t),
+                      gpuMemcpyHostToDevice);
 
   user_precision_t *d_zas = NULL;
-  ( gpuMalloc( (void**)&d_zas, num_beam_azza*sizeof(user_precision_t)) );
-  ( gpuMemcpy(d_zas, zas, num_beam_azza*sizeof(user_precision_t),
-                      gpuMemcpyHostToDevice) );
+  gpuMalloc( (void**)&d_zas, num_beam_azza*sizeof(user_precision_t));
+  gpuMemcpy(d_zas, zas, num_beam_azza*sizeof(user_precision_t),
+                      gpuMemcpyHostToDevice);
 
   dim3 grid, threads;
   threads.x = 128;
@@ -220,8 +220,8 @@ extern "C" void calculate_analytic_dipole_beam_gpu(int num_components,
              num_time_steps, num_components,
              d_g1xs, d_g1ys);
 
-  ( gpuFree(d_azs) );
-  ( gpuFree(d_zas) );
+  gpuFree(d_azs);
+  gpuFree(d_zas);
 
 }
 

@@ -18,19 +18,26 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
               ${CMAKE_SOURCE_DIR}/src/fundamental_coords_gpu.cpp)
   target_compile_options(fundamental_coordsGPU_${PRECISION} PRIVATE ${GPU_FLAGS})
 
+  ##complile the CPU version of fundamental coords, and link to gcov so we
+  ##can get coverage information
+  add_library(fundamental_coords_cpu_${PRECISION} SHARED ${CMAKE_SOURCE_DIR}/src/fundamental_coords_cpu.c)
+  target_link_libraries(fundamental_coords_cpu_${PRECISION} gcov)
+  target_compile_options(fundamental_coords_cpu_${PRECISION} PRIVATE ${C_COVER_FLAGS})
+
   ##Now loop over the cpu and gpu tests
   foreach(DEVICE IN LISTS CPU GPU)
-    # foreach(DEVICE IN LISTS GPU)
+  # foreach(DEVICE IN LISTS GPU)
+  # foreach(DEVICE IN LISTS CPU)
 
     ##Test l,m,n functions
     add_executable(test_lmn_coords_${DEVICE}_${PRECISION}_app
-                   test_lmn_coords.c
+                   test_lmn_coords_${DEVICE}.c
                    lmn_coords_common.c
-                   ${CMAKE_SOURCE_DIR}/src/fundamental_coords_cpu.c
     )
     target_link_libraries(test_lmn_coords_${DEVICE}_${PRECISION}_app
-                          Unity
+                          Unity gcov
                           fundamental_coordsGPU_${PRECISION}
+                          fundamental_coords_cpu_${PRECISION}
                           ${CC_LINKLIBS}
     )
     target_compile_options(test_lmn_coords_${DEVICE}_${PRECISION}_app PRIVATE ${C_FLAGS})
@@ -40,11 +47,11 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     add_executable(test_uvw_coords_${DEVICE}_${PRECISION}_app
                    test_uvw_coords_${DEVICE}.c
                    uvw_coords_common.c
-                   ${CMAKE_SOURCE_DIR}/src/fundamental_coords_cpu.c
     )
     target_link_libraries(test_uvw_coords_${DEVICE}_${PRECISION}_app
-                          Unity
+                          Unity gcov
                           fundamental_coordsGPU_${PRECISION}
+                          fundamental_coords_cpu_${PRECISION}
                           ${CC_LINKLIBS}
     )
     target_compile_options(test_uvw_coords_${DEVICE}_${PRECISION}_app PRIVATE ${C_FLAGS})

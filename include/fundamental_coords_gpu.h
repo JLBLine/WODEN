@@ -3,9 +3,14 @@
   \f$l,m,n\f$.
 */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include "gpu_macros.h"
+#include <complex.h>
 #include <math.h>
-#include <stdint.h>
+#include "constants.h"
 #include "woden_precision_defs.h"
+#include "woden_struct_defs.h"
 
 /**
 @brief Use the given baseline lengths in local `X,Y,Z` coords, and a given

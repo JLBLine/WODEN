@@ -1,10 +1,11 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include "gpu_macros.h"
-#include <complex.h>
-#include <math.h>
-#include "constants.h"
-#include "woden_precision_defs.h"
+// #include <stdio.h>
+// #include <stdlib.h>
+// #include "gpu_macros.h"
+// #include <complex.h>
+// #include <math.h>
+// #include "constants.h"
+// #include "woden_precision_defs.h"
+#include "fundamental_coords_gpu.h"
 
 __device__ void calc_uvw(double *d_X_diff, double *d_Y_diff,
                          double *d_Z_diff,
@@ -153,6 +154,33 @@ __global__ void kern_calc_lmn(double ra0, double sdec0,
 
   }
 }
+
+
+extern "C" void calc_lmn_for_components_gpu(components_t *d_components,
+                                           int num_components,
+                                           woden_settings_t *woden_settings) {
+  gpuMalloc( (void**)&d_components->ls, num_components*sizeof(double));
+  gpuMalloc( (void**)&d_components->ms, num_components*sizeof(double));
+  gpuMalloc( (void**)&d_components->ns, num_components*sizeof(double));
+
+
+  dim3 grid, threads;
+
+  threads.x = 128;
+  threads.y = 1;
+  threads.z = 1;
+  grid.x = (int)ceil( (float)num_components / (float)threads.x );
+  grid.y = 1;
+  grid.z = 1;
+
+  gpuErrorCheckKernel("kern_calc_lmn",
+                        kern_calc_lmn, grid, threads,
+                        woden_settings->ra0,
+                        woden_settings->sdec0, woden_settings->cdec0,
+                        d_components->ras, d_components->decs,
+                        d_components->ls, d_components->ms, d_components->ns, num_components);
+}
+
 
 /*******************************************************************************
                  Functions below to be used in unit tests

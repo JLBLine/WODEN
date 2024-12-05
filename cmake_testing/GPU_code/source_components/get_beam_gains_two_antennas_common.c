@@ -1,26 +1,4 @@
-#include <math.h>
-#include <unity.h>
-#include <stdlib.h>
-#include <complex.h>
-
-#include "constants.h"
-#include "woden_struct_defs.h"
-#include "woden_precision_defs.h"
-
-void setUp (void) {} /* Is run before every test, put unit init calls here. */
-void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
-
-//External CUDA code we're linking in
-extern void test_kern_get_beam_gains(int num_freqs, int num_cross,
-          int num_baselines, int num_components, int num_times, int beamtype,
-          user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J01,
-          user_precision_complex_t *primay_beam_J10, user_precision_complex_t *primay_beam_J11,
-          user_precision_complex_t *recover_g1x, user_precision_complex_t *recover_D1x,
-          user_precision_complex_t *recover_D1y, user_precision_complex_t *recover_g1y,
-          user_precision_complex_t *recover_g2x, user_precision_complex_t *recover_D2x,
-          user_precision_complex_t *recover_D2y, user_precision_complex_t *recover_g2y,
-          int use_twoants, int num_ants);
-
+#include "get_beam_gains_two_antennas_common.h"
 
 #define UNITY_INCLUDE_FLOAT
 
@@ -28,13 +6,13 @@ extern void test_kern_get_beam_gains(int num_freqs, int num_cross,
 Test the __device__ code that grabs the beam gains works correctly
 for all beam types
 */
-void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
+void test_get_beam_gains_ChooseBeams(int beamtype, int do_gpu) {
 
-  #ifdef DOUBLE_PRECISION
-  printf("WODEN is using DOUBLE precision\n");
-  #else
-  printf("WODEN is using FLOAT precision\n");
-  #endif
+  // #ifdef DOUBLE_PRECISION
+  // printf("WODEN is using DOUBLE precision\n");
+  // #else
+  // printf("WODEN is using FLOAT precision\n");
+  // #endif
 
 
   int num_ants = 3;
@@ -85,16 +63,17 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
   user_precision_complex_t *recover_D2y = malloc(num_visis*num_components*sizeof(user_precision_complex_t));
   user_precision_complex_t *recover_g2y = malloc(num_visis*num_components*sizeof(user_precision_complex_t));
 
-  // //Run the CUDA code
-  test_kern_get_beam_gains(num_freqs, num_visis,
-          num_baselines, num_components, num_times, beamtype,
-          primay_beam_J00, primay_beam_J01,
-          primay_beam_J10, primay_beam_J11,
-          recover_g1x, recover_D1x,
-          recover_D1y, recover_g1y,
-          recover_g2x, recover_D2x,
-          recover_D2y, recover_g2y,
-          use_twoants, num_ants);
+  if (do_gpu == 1) {
+    test_kern_get_beam_gains(num_freqs, num_visis,
+            num_baselines, num_components, num_times, beamtype,
+            primay_beam_J00, primay_beam_J01,
+            primay_beam_J10, primay_beam_J11,
+            recover_g1x, recover_D1x,
+            recover_D1y, recover_g1y,
+            recover_g2x, recover_D2x,
+            recover_D2y, recover_g2y,
+            use_twoants, num_ants);
+  }
 
   //OK we're setting things up to have num_ants slowest changing, then num_times, num_freqs, num_components
   //`kern_get_beam_gains`, which is called by `test_kern_get_beam_gains`, is supposed
@@ -201,42 +180,4 @@ void test_kern_get_beam_gains_ChooseBeams(int beamtype) {
   free(expected_gain1);
   free(expected_gain2);
 
-}
-
-
-
-
-// /*
-// This test checks the correct behaviour when simuating with beamtype=MWA_ANALY
-// */
-// void test_kern_get_beam_gains_MWAAnaly(void) {
-//   test_kern_get_beam_gains_ChooseBeams(MWA_ANALY);
-// }
-
-/*
-This test checks the correct behaviour when simuating with beamtype=FEE_BEAM
-*/
-void test_kern_get_beam_gains_FEEBeam(void) {
-  test_kern_get_beam_gains_ChooseBeams(FEE_BEAM);
-}
-
-
-/*
-This test checks the correct behaviour when simuating with beamtype=FEE_BEAM_INTERP
-*/
-void test_kern_get_beam_gains_FEEBeamInterp(void) {
-  test_kern_get_beam_gains_ChooseBeams(FEE_BEAM_INTERP);
-}
-
-
-//Run the test with unity
-int main(void)
-{
-    UNITY_BEGIN();
-
-    // RUN_TEST(test_kern_get_beam_gains_AnalyDipoleBeam);
-    RUN_TEST(test_kern_get_beam_gains_FEEBeam);
-    RUN_TEST(test_kern_get_beam_gains_FEEBeamInterp);
-    
-    return UNITY_END();
 }

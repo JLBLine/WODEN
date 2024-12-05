@@ -16,18 +16,24 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
 
   target_compile_options(primary_beam_gpuGPU_${PRECISION} PRIVATE ${GPU_FLAGS})
 
+  ##complile the CPU version of the primary beam, and link to gcov so we
+  ##can get coverage information
+  add_library(primary_beam_cpu_${PRECISION} SHARED ${CMAKE_SOURCE_DIR}/src/primary_beam_cpu.c)
+  target_link_libraries(primary_beam_cpu_${PRECISION} gcov)
+  target_compile_options(primary_beam_cpu_${PRECISION} PRIVATE ${C_COVER_FLAGS})
+
   foreach(DEVICE IN LISTS CPU GPU)
 #   foreach(DEVICE IN LISTS GPU)
     ##Test gaussian beam functions
     add_executable(test_gaussian_beam_${DEVICE}_${PRECISION}_app
         test_gaussian_beam_${DEVICE}.c
         gaussian_beam_common.c
-        ${CMAKE_SOURCE_DIR}/src/primary_beam_cpu.c
         ${CMAKE_SOURCE_DIR}/src/fundamental_coords_cpu.c
     )
     target_link_libraries(test_gaussian_beam_${DEVICE}_${PRECISION}_app
-        Unity
+        Unity gcov
         primary_beam_gpuGPU_${PRECISION}
+        primary_beam_cpu_${PRECISION}
         ${CC_LINKLIBS}
     )
     target_compile_options(test_gaussian_beam_${DEVICE}_${PRECISION}_app PRIVATE ${C_FLAGS})
@@ -37,12 +43,12 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     add_executable(test_analytic_dipole_beam_${DEVICE}_${PRECISION}_app
         test_analytic_dipole_beam_${DEVICE}.c
         analytic_dipole_beam_common.c
-        ${CMAKE_SOURCE_DIR}/src/primary_beam_cpu.c
         ${CMAKE_SOURCE_DIR}/src/fundamental_coords_cpu.c
     )
     target_link_libraries(test_analytic_dipole_beam_${DEVICE}_${PRECISION}_app
-        Unity
+        Unity gcov
         primary_beam_gpuGPU_${PRECISION}
+        primary_beam_cpu_${PRECISION}
         ${CC_LINKLIBS}
     )
     target_compile_options(test_analytic_dipole_beam_${DEVICE}_${PRECISION}_app PRIVATE ${C_FLAGS})
@@ -52,17 +58,16 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     add_executable(test_MWA_analytic_${DEVICE}_${PRECISION}_app
         test_MWA_analytic_${DEVICE}.c
         MWA_analytic_common.c
-        ${CMAKE_SOURCE_DIR}/src/primary_beam_cpu.c
         ${CMAKE_SOURCE_DIR}/src/fundamental_coords_cpu.c
     )
     target_link_libraries(test_MWA_analytic_${DEVICE}_${PRECISION}_app
-        Unity
+        Unity gcov
         primary_beam_gpuGPU_${PRECISION}
+        primary_beam_cpu_${PRECISION}
         ${CC_LINKLIBS}
     )
     target_compile_options(test_MWA_analytic_${DEVICE}_${PRECISION}_app PRIVATE ${C_FLAGS})
     add_test(${DEVICE}_test_MWA_analytic_${PRECISION} test_MWA_analytic_${DEVICE}_${PRECISION}_app)
-
 
   endforeach()
   

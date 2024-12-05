@@ -9,14 +9,16 @@
 #include "woden_precision_defs.h"
 #include "shapelet_basis.h"
 #include "common_testing_functions.h"
+#include "source_components_common.h"
 
 //external CUDA code used for testng
 
 extern void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
           int num_baselines, int num_shape_coeffs,
-          int num_freqs, int num_visis, int num_times,
+          int num_freqs, int num_cross, int num_times,
           e_beamtype beamtype, e_component_type comptype,
-          components_t components, double *extrap_freqs,
+          components_t *components,
+          source_t *d_chunked_source, double *d_extrap_freqs,
           user_precision_t *us, user_precision_t *vs, user_precision_t *ws,
           user_precision_t *u_shapes, user_precision_t *v_shapes,
           user_precision_t *sum_visi_XX_real, user_precision_t *sum_visi_XX_imag,
@@ -26,6 +28,19 @@ extern void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
           user_precision_t *allsteps_wavelengths, user_precision_t *sbf,
           user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
           user_precision_complex_t *Dys, user_precision_complex_t *gys);
+
+extern double * malloc_freqs_gpu(int num_extrap_freqs, double *extrap_freqs);
+
+extern source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
+
+extern void free_beam_gains_gpu(d_beam_gains_t *d_beam_gains, e_beamtype beamtype);
+
+extern void free_extrapolated_flux_arrays(components_t *d_components);
+
+extern void free_freqs_gpu(double *d_extrap_freqs);
+
+extern void free_d_components(source_t *d_chunked_source,
+                                  e_component_type comptype);
 
 /*
 Something to hold all the input argument arrays for testing
@@ -103,6 +118,9 @@ Setup some l,m,n coords. HARD CODED TO BE 5 by 5 GRID spanning -0.5 to 0.5
 */
 void create_lmn(components_t components);
 
+void setup_uvw_and_freqs(args_for_testing_t *args_ft, int num_times,
+                         int num_freqs, int num_baselines);
+
 /*
 Basic implementation of the measurement equation to get expected visibilities
 Loops over components, gets expected flux and beam gain and sum
@@ -125,16 +143,18 @@ void test_visi_outputs(int num_visis, int num_powers, int num_curves, int num_li
                        components_t components,
                        e_component_type component_type);
 
-void test_kern_calc_visi_Varylmn(e_beamtype beamtype, e_component_type comptype);
+void test_calc_visi_Varylmn(e_beamtype beamtype, e_component_type comptype, 
+                            int do_gpu);
 
-void test_kern_calc_visi_VarylmnVaryBeam(e_beamtype beamtype,
-                                         e_component_type comptype);
+void test_calc_visi_VarylmnVaryBeam(e_beamtype beamtype, e_component_type comptype,
+                                    int do_gpu);
 
-void test_kern_calc_visi_VarylmnVaryFlux(e_beamtype beamtype,
-                                         e_component_type comptype);
+void test_calc_visi_VarylmnVaryFlux(e_beamtype beamtype, e_component_type comptype, 
+                                    int do_gpu);
 
-void test_kern_calc_visi_VarylmnVaryPAMajMin(e_beamtype beamtype,
-                                             e_component_type comptype);
+void test_calc_visi_VarylmnVaryPAMajMin(e_beamtype beamtype,
+                                        e_component_type comptype, int do_gpu);
 
-void setup_uvw_and_freqs(args_for_testing_t *args_ft, int num_times,
-                         int num_freqs, int num_baselines);
+void test_calc_visi_shape_VarylmnMultipleCoeff(int beamtype, int do_gpu);
+
+

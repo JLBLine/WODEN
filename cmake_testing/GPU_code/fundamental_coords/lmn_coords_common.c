@@ -30,7 +30,7 @@ void test_calc_lmn_GivesCorrectlCoords(int do_gpu){
     double *ms = malloc(num_points*sizeof(double));
     double *ns = malloc(num_points*sizeof(double));
 
-    if (do_gpu){
+    if (do_gpu == 1){
         test_kern_calc_lmn(ra0, dec0, ras, decs, num_points,
                                        ls, ms, ns);
     } else {

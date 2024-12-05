@@ -34,3 +34,10 @@ void CPU_extrapolate_fluxes_in_components(components_t *comps, int num_powers,
   double *extrap_freqs, int num_extrap_freqs,
   double *expec_flux_I, double *expec_flux_Q,
   double *expec_flux_U, double *expec_flux_V);
+
+
+//Stick the components into a source_t struct
+source_t * put_components_into_source(components_t components,
+                                      e_component_type comptype,
+                                      int n_powers, int n_curves, int n_lists,
+                                      int num_shape_coeffs);

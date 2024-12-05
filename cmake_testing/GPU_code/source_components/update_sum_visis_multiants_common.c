@@ -1,30 +1,4 @@
-#include <math.h>
-#include <unity.h>
-#include <stdlib.h>
-#include <complex.h>
-
-#include "constants.h"
-#include "woden_struct_defs.h"
-#include "woden_precision_defs.h"
-
-void setUp (void) {} /* Is run before eVary test, put unit init calls here. */
-void tearDown (void) {} /* Is run after eVary test, put unit clean-up calls here. */
-
-//External CUDA code we're linking in
-extern void test_kern_update_sum_visis(int num_freqs, int num_cross,
-          int num_baselines, int num_components, int num_times, int beamtype,
-          int use_twobeams, int num_ants, int off_cardinal_dipoles,
-          user_precision_complex_t *primay_beam_J00,
-          user_precision_complex_t *primay_beam_J01,
-          user_precision_complex_t *primay_beam_J10,
-          user_precision_complex_t *primay_beam_J11,
-          user_precision_complex_t *visi_components,
-          user_precision_t *flux_I, user_precision_t *flux_Q,
-          user_precision_t *flux_U, user_precision_t *flux_V,
-          user_precision_t *sum_visi_XX_real, user_precision_t *sum_visi_XX_imag,
-          user_precision_t *sum_visi_XY_real, user_precision_t *sum_visi_XY_imag,
-          user_precision_t *sum_visi_YX_real, user_precision_t *sum_visi_YX_imag,
-          user_precision_t *sum_visi_YY_real, user_precision_t *sum_visi_YY_imag);
+#include "update_sum_visis_multiants_common.h"
 
 /*
 Test the __device__ code that updates the summed visibilities by grabbing the
@@ -32,7 +6,7 @@ correct beam gain and mesurement equation, multiplying and summing onto the visi
 Here we keep the component visibilities and fluxes constant and vary the beam gains
 Test works for all primary beam types
 */
-void test_kern_update_sum_visis_VaryGainChooseBeams(int beamtype) {
+void test_update_sum_visis_VaryGainChooseBeams(int beamtype, int do_gpu) {
 
 
   int num_ants = 3;
@@ -104,18 +78,21 @@ void test_kern_update_sum_visis_VaryGainChooseBeams(int beamtype) {
   
   int off_cardinal_dipoles = 0;
 
-  //Run the CUDA code
-  test_kern_update_sum_visis(num_freqs, num_visis,
-          num_baselines, num_components, num_times, beamtype,
-          use_twobeams, num_ants, off_cardinal_dipoles,
-          primay_beam_J00, primay_beam_J01,
-          primay_beam_J10, primay_beam_J11,
-          visi_components,
-          flux_I, flux_Q, flux_U, flux_V,
-          sum_visi_XX_real, sum_visi_XX_imag,
-          sum_visi_XY_real, sum_visi_XY_imag,
-          sum_visi_YX_real, sum_visi_YX_imag,
-          sum_visi_YY_real, sum_visi_YY_imag);
+  if (do_gpu == 1) {
+
+    //Run the CUDA code
+    test_kern_update_sum_visis(num_freqs, num_visis,
+            num_baselines, num_components, num_times, beamtype,
+            use_twobeams, num_ants, off_cardinal_dipoles,
+            primay_beam_J00, primay_beam_J01,
+            primay_beam_J10, primay_beam_J11,
+            visi_components,
+            flux_I, flux_Q, flux_U, flux_V,
+            sum_visi_XX_real, sum_visi_XX_imag,
+            sum_visi_XY_real, sum_visi_XY_imag,
+            sum_visi_YX_real, sum_visi_YX_imag,
+            sum_visi_YY_real, sum_visi_YY_imag);
+  }
 
   //Do a bunch of interesting maths to predict what the outcomes should be
   int *ant1_indexes = malloc(num_ants*sizeof(int));
@@ -251,61 +228,3 @@ void test_kern_update_sum_visis_VaryGainChooseBeams(int beamtype) {
 
 }
 
-/*
-This test checks varying the gain with beamtype=FEE_BEAM
-*/
-void test_kern_update_sum_visis_VaryGainFEEBeam(void) {
-  test_kern_update_sum_visis_VaryGainChooseBeams(FEE_BEAM);
-}
-
-/*
-This test checks varying the measurement equation with beamtype=FEE_BEAM_INTERP
-*/
-void test_kern_update_sum_visis_VaryGainFEEInterpBeam(void) {
-  test_kern_update_sum_visis_VaryGainChooseBeams(FEE_BEAM_INTERP);
-}
-
-// /*
-// This test checks varying the gain with beamtype=ANALY_DIPOLE
-// */
-// void test_kern_update_sum_visis_VaryGainAnalyBeam(void) {
-//   test_kern_update_sum_visis_VaryGainChooseBeams(ANALY_DIPOLE);
-// }
-
-// /*
-// This test checks varying the gain with beamtype=GAUSS_BEAM
-// */
-// void test_kern_update_sum_visis_VaryGainGaussBeam(void) {
-//   test_kern_update_sum_visis_VaryGainChooseBeams(GAUSS_BEAM);
-// }
-
-// /*
-// This test checks varying the gain with beamtype=NO_BEAM
-// */
-// void test_kern_update_sum_visis_VaryGainNoBeam(void) {
-//   test_kern_update_sum_visis_VaryGainChooseBeams(NO_BEAM);
-// }
-
-
-
-// /*
-// This test checks varying the measurement equation with beamtype=MWA_ANALY
-// */
-// void test_kern_update_sum_visis_VaryGainMWAAnaly(void) {
-//   test_kern_update_sum_visis_VaryGainChooseBeams(MWA_ANALY);
-// }
-
-//Run the test with unity
-int main(void)
-{
-    UNITY_BEGIN();
-    //Test while varying beam gain for all beam types
-    RUN_TEST(test_kern_update_sum_visis_VaryGainFEEBeam);
-    RUN_TEST(test_kern_update_sum_visis_VaryGainFEEInterpBeam);
-    // RUN_TEST(test_kern_update_sum_visis_VaryGainAnalyBeam);
-    // RUN_TEST(test_kern_update_sum_visis_VaryGainGaussBeam);
-    // RUN_TEST(test_kern_update_sum_visis_VaryGainNoBeam);
-    // RUN_TEST(test_kern_update_sum_visis_VaryGainMWAAnaly);
-
-    return UNITY_END();
-}

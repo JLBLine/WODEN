@@ -1,4 +1,4 @@
-#include "test_kern_calc_visi_common.h"
+#include "calc_visi_common.h"
 
 int k_n_stokesV_pol_frac = 3;
 int k_n_stokesV_power = 4;
@@ -650,12 +650,140 @@ void test_visi_outputs(int num_visis, int num_powers, int num_curves, int num_li
   }
 }
 
+
+void do_gpu_calc_visi(int n_powers, int n_curves, int n_lists,
+          int num_baselines, int num_shape_coeffs,
+          int num_freqs, int num_cross, int num_times,
+          e_beamtype beamtype,  e_component_type comptype,
+          components_t *components,
+          source_t *chunked_source, 
+          args_for_testing_t *args_ft){
+
+  woden_settings_t *woden_settings = malloc(sizeof(woden_settings_t));
+  woden_settings->do_autos = 0;
+  woden_settings->num_freqs = num_freqs;
+  woden_settings->num_time_steps = num_times;
+  woden_settings->num_baselines = num_baselines;
+  woden_settings->num_cross = num_cross;
+  woden_settings->use_dipamps = 0;
+
+  // d_beam_gains_t *d_beam_gains = malloc(sizeof(d_beam_gains_t));
+  // visibility_set_t *d_visibility_set = NULL;
+  
+
+  source_t *d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
+  double *d_freqs = malloc_freqs_gpu(num_freqs, args_ft->extrap_freqs);
+
+  components_t *d_components;
+  int num_components;
+
+  if (comptype == POINT) {
+    d_components = &d_chunked_source->point_components;
+    num_components = d_chunked_source->n_points;
+  }
+  else if (comptype == GAUSSIAN) {
+    d_components = &d_chunked_source->gauss_components;
+    num_components = d_chunked_source->n_gauss;
+  }
+  else {
+    d_components = &d_chunked_source->shape_components;
+    num_components = d_chunked_source->n_shapes;
+  }
+
+  malloc_extrapolated_flux_arrays_gpu(d_components, num_components, num_freqs);
+  int do_gpu = 1;
+  extrapolate_Stokes(d_chunked_source, d_freqs, num_freqs, comptype, do_gpu);
+
+  test_kern_calc_visi_all(n_powers, n_curves, n_lists, num_baselines, num_shape_coeffs,
+            num_freqs, num_cross, num_times, beamtype, comptype, components,
+            d_chunked_source, d_freqs,
+            args_ft->us, args_ft->vs, args_ft->ws,
+            args_ft->u_shapes, args_ft->v_shapes,
+            args_ft->sum_visi_XX_real, args_ft->sum_visi_XX_imag,
+            args_ft->sum_visi_XY_real, args_ft->sum_visi_XY_imag,
+            args_ft->sum_visi_YX_real, args_ft->sum_visi_YX_imag,
+            args_ft->sum_visi_YY_real, args_ft->sum_visi_YY_imag,
+            args_ft->allsteps_wavelengths, args_ft->sbf,
+            args_ft->primay_beam_J00, args_ft->primay_beam_J01,
+            args_ft->primay_beam_J10, args_ft->primay_beam_J11);
+
+  free_d_components(d_chunked_source, comptype);
+  free_extrapolated_flux_arrays(d_components);
+  free_freqs_gpu(d_freqs);
+
+}
+
+// source_t * put_components_into_source(components_t components,
+//                                       e_component_type comptype,
+//                                       int n_powers, int n_curves, int n_lists,
+//                                       int num_shape_coeffs) {
+
+//   source_t *chunked_source = (source_t *)malloc(sizeof(source_t));
+//   if (comptype == POINT) {
+
+//     chunked_source->point_components = components;
+//     chunked_source->n_points = n_powers + n_curves + n_lists;
+//     chunked_source->n_point_powers = n_powers;
+//     chunked_source->n_point_curves = n_curves;
+//     chunked_source->n_point_lists = n_lists;
+
+//     chunked_source->n_gauss = 0;
+//     chunked_source->n_gauss_lists = 0;
+//     chunked_source->n_gauss_powers = 0;
+//     chunked_source->n_gauss_curves = 0;
+//     chunked_source->n_shapes = 0;
+//     chunked_source->n_shape_lists = 0;
+//     chunked_source->n_shape_powers = 0;
+//     chunked_source->n_shape_curves = 0;
+//     chunked_source->n_shape_coeffs = 0;
+
+//   }
+//   else if (comptype == GAUSSIAN) {
+
+//     chunked_source->gauss_components = components;
+//     chunked_source->n_gauss = n_powers + n_curves + n_lists;
+//     chunked_source->n_gauss_powers = n_powers;
+//     chunked_source->n_gauss_curves = n_curves;
+//     chunked_source->n_gauss_lists = n_lists;
+
+//     chunked_source->n_points = 0;
+//     chunked_source->n_point_lists = 0;
+//     chunked_source->n_point_powers = 0;
+//     chunked_source->n_point_curves = 0;
+//     chunked_source->n_shapes = 0;
+//     chunked_source->n_shape_lists = 0;
+//     chunked_source->n_shape_powers = 0;
+//     chunked_source->n_shape_curves = 0;
+//     chunked_source->n_shape_coeffs = 0;
+//   }
+//   else if (comptype == SHAPELET) {
+//     chunked_source->shape_components = components;
+//     chunked_source->n_shapes = n_powers + n_curves + n_lists;
+//     chunked_source->n_shape_powers = n_powers;
+//     chunked_source->n_shape_curves = n_curves;
+//     chunked_source->n_shape_lists = n_lists;
+//     chunked_source->n_shape_coeffs = num_shape_coeffs;
+
+//     chunked_source->n_points = 0;
+//     chunked_source->n_point_lists = 0;
+//     chunked_source->n_point_powers = 0;
+//     chunked_source->n_point_curves = 0;
+//     chunked_source->n_gauss = 0;
+//     chunked_source->n_gauss_lists = 0;
+//     chunked_source->n_gauss_powers = 0;
+//     chunked_source->n_gauss_curves = 0;
+//   }
+
+//   return chunked_source;
+// }
+
 /*
 Test the __global__ code that calculates visibilities for different type
 of COMPONENTs
 Vary the l,m,n coords but keep all other variables constant
 */
-void test_kern_calc_visi_Varylmn(e_beamtype beamtype, e_component_type comptype) {
+void test_calc_visi_Varylmn(e_beamtype beamtype, e_component_type comptype,
+                            int do_gpu) {
 
   int num_baselines = 10.0;
   int num_times = 5.0;
@@ -754,19 +882,22 @@ void test_kern_calc_visi_Varylmn(e_beamtype beamtype, e_component_type comptype)
     }
   }
   components.do_QUV = 0;
-  test_kern_calc_visi_all(n_powers, n_curves, n_lists, num_baselines, num_coeffs,
-          num_freqs, num_visis, num_times, beamtype, comptype,
-          components, args_ft->extrap_freqs,
-          args_ft->us, args_ft->vs, args_ft->ws,
-          args_ft->u_shapes, args_ft->v_shapes,
-          args_ft->sum_visi_XX_real, args_ft->sum_visi_XX_imag,
-          args_ft->sum_visi_XY_real, args_ft->sum_visi_XY_imag,
-          args_ft->sum_visi_YX_real, args_ft->sum_visi_YX_imag,
-          args_ft->sum_visi_YY_real, args_ft->sum_visi_YY_imag,
-          args_ft->allsteps_wavelengths, args_ft->sbf,
-          args_ft->primay_beam_J00, args_ft->primay_beam_J01,
-          args_ft->primay_beam_J10, args_ft->primay_beam_J11);
-  //
+
+  source_t *chunked_source = put_components_into_source(components, comptype,
+                                                        n_powers, n_curves,
+                                                        n_lists, num_coeffs);
+
+  if (do_gpu == 1){
+
+    do_gpu_calc_visi(n_powers, n_curves, n_lists,
+          num_baselines, num_coeffs,
+          num_freqs, num_visis, num_times,
+          beamtype, comptype, &components,
+          chunked_source,
+          args_ft);
+
+  }
+
   // //Check all results are within 0.1% of expected value
   // // double frac_tol = 1e-3;
   test_visi_outputs(num_visis, n_powers, n_curves, n_lists,
@@ -783,8 +914,8 @@ correct beam gain and mesurement equation, multiplying and summing onto the visi
 Here we keep the component visibilities and beam gains constant and vary the fluxes
 Test works for all primary beam types
 */
-void test_kern_calc_visi_VarylmnVaryFlux(e_beamtype beamtype,
-                                         e_component_type comptype) {
+void test_calc_visi_VarylmnVaryFlux(e_beamtype beamtype, e_component_type comptype,
+                                    int do_gpu) {
 
   int num_baselines = 10.0;
   int num_times = 5.0;
@@ -958,19 +1089,20 @@ void test_kern_calc_visi_VarylmnVaryFlux(e_beamtype beamtype,
   components.linpol_angle_inds = k_linpol_angle_inds;
   components.do_QUV = 1;
 
-  //Run the CUDA code
-  test_kern_calc_visi_all(n_powers, n_curves, n_lists, num_baselines, num_coeffs,
-          num_freqs, num_visis, num_times, beamtype, comptype,
-          components, args_ft->extrap_freqs,
-          args_ft->us, args_ft->vs, args_ft->ws,
-          args_ft->u_shapes, args_ft->v_shapes,
-          args_ft->sum_visi_XX_real, args_ft->sum_visi_XX_imag,
-          args_ft->sum_visi_XY_real, args_ft->sum_visi_XY_imag,
-          args_ft->sum_visi_YX_real, args_ft->sum_visi_YX_imag,
-          args_ft->sum_visi_YY_real, args_ft->sum_visi_YY_imag,
-          args_ft->allsteps_wavelengths, args_ft->sbf,
-          args_ft->primay_beam_J00, args_ft->primay_beam_J01,
-          args_ft->primay_beam_J10, args_ft->primay_beam_J11);
+  source_t *chunked_source = put_components_into_source(components, comptype,
+                                                        n_powers, n_curves,
+                                                        n_lists, num_coeffs);
+
+  if (do_gpu == 1){
+
+    do_gpu_calc_visi(n_powers, n_curves, n_lists,
+          num_baselines, num_coeffs,
+          num_freqs, num_visis, num_times,
+          beamtype, comptype, &components,
+          chunked_source,
+          args_ft);
+
+  }
   //
   // //Check all results are within 0.1% of expected value
   // // double frac_tol = 1e-3;
@@ -987,8 +1119,8 @@ correct beam gain and mesurement equation, multiplying and summing onto the visi
 Here we keep the component visibilities and fluxes constant and vary the beam gains
 Test works for all primary beam types
 */
-void test_kern_calc_visi_VarylmnVaryBeam(e_beamtype beamtype,
-                                         e_component_type comptype) {
+void test_calc_visi_VarylmnVaryBeam(e_beamtype beamtype, e_component_type comptype,
+                                    int do_gpu) {
 
   int num_baselines = 10.0;
   int num_times = 5.0;
@@ -1080,19 +1212,20 @@ void test_kern_calc_visi_VarylmnVaryBeam(e_beamtype beamtype,
   }
   components.do_QUV = 0;
 
-  //Run the CUDA code
-  test_kern_calc_visi_all(n_powers, n_curves, n_lists, num_baselines, num_coeffs,
-          num_freqs, num_visis, num_times, beamtype, comptype,
-          components, args_ft->extrap_freqs,
-          args_ft->us, args_ft->vs, args_ft->ws,
-          args_ft->u_shapes, args_ft->v_shapes,
-          args_ft->sum_visi_XX_real, args_ft->sum_visi_XX_imag,
-          args_ft->sum_visi_XY_real, args_ft->sum_visi_XY_imag,
-          args_ft->sum_visi_YX_real, args_ft->sum_visi_YX_imag,
-          args_ft->sum_visi_YY_real, args_ft->sum_visi_YY_imag,
-          args_ft->allsteps_wavelengths, args_ft->sbf,
-          args_ft->primay_beam_J00, args_ft->primay_beam_J01,
-          args_ft->primay_beam_J10, args_ft->primay_beam_J11);
+  source_t *chunked_source = put_components_into_source(components, comptype,
+                                                        n_powers, n_curves,
+                                                        n_lists, num_coeffs);
+
+  if (do_gpu == 1){
+
+    do_gpu_calc_visi(n_powers, n_curves, n_lists,
+          num_baselines, num_coeffs,
+          num_freqs, num_visis, num_times,
+          beamtype, comptype, &components,
+          chunked_source,
+          args_ft);
+
+  }
   //
   // //Check all results are within 0.1% of expected value
   // // double frac_tol = 1e-3;
@@ -1106,8 +1239,8 @@ void test_kern_calc_visi_VarylmnVaryBeam(e_beamtype beamtype,
 
 
 
-void test_kern_calc_visi_VarylmnVaryPAMajMin(e_beamtype beamtype,
-                                             e_component_type comptype) {
+void test_calc_visi_VarylmnVaryPAMajMin(e_beamtype beamtype, e_component_type comptype,
+                                        int do_gpu) {
 
   int num_baselines = 10.0;
   int num_times = 5.0;
@@ -1196,19 +1329,21 @@ void test_kern_calc_visi_VarylmnVaryPAMajMin(e_beamtype beamtype,
     }
   }
   components.do_QUV = 0;
-  //
-  test_kern_calc_visi_all(n_powers, n_curves, n_lists, num_baselines, num_coeffs,
-          num_freqs, num_visis, num_times, beamtype, comptype,
-          components, args_ft->extrap_freqs,
-          args_ft->us, args_ft->vs, args_ft->ws,
-          args_ft->u_shapes, args_ft->v_shapes,
-          args_ft->sum_visi_XX_real, args_ft->sum_visi_XX_imag,
-          args_ft->sum_visi_XY_real, args_ft->sum_visi_XY_imag,
-          args_ft->sum_visi_YX_real, args_ft->sum_visi_YX_imag,
-          args_ft->sum_visi_YY_real, args_ft->sum_visi_YY_imag,
-          args_ft->allsteps_wavelengths, args_ft->sbf,
-          args_ft->primay_beam_J00, args_ft->primay_beam_J01,
-          args_ft->primay_beam_J10, args_ft->primay_beam_J11);
+
+  source_t *chunked_source = put_components_into_source(components, comptype,
+                                                        n_powers, n_curves,
+                                                        n_lists, num_coeffs);
+
+  if (do_gpu == 1){
+
+    do_gpu_calc_visi(n_powers, n_curves, n_lists,
+          num_baselines, num_coeffs,
+          num_freqs, num_visis, num_times,
+          beamtype, comptype, &components,
+          chunked_source,
+          args_ft);
+
+  }
   //
   // //Check all results are within 0.1% of expected value
   // // double frac_tol = 1e-3;
@@ -1217,4 +1352,134 @@ void test_kern_calc_visi_VarylmnVaryPAMajMin(e_beamtype beamtype,
                     beamtype, args_ft, components, comptype);
 
   free_args_for_testing( args_ft, components, comptype );
+}
+
+//This test varies the shapelet coeff params
+void test_calc_visi_shape_VarylmnMultipleCoeff(int beamtype, int do_gpu) {
+
+  int num_baselines = 10.0;
+  int num_times = 5.0;
+  int num_freqs = 3.0;
+
+  int num_visis = num_baselines*num_times*num_freqs;
+
+  int num_components = 25;
+  int n_powers = num_components;
+  int n_curves = 0;
+  int n_lists = 0;
+  int num_coeffs_per_component = 3;
+
+  int num_coeffs = num_coeffs_per_component*num_components;
+
+  //Container for many arrays to feed the GPU
+  args_for_testing_t *args_ft = malloc(sizeof(args_for_testing_t));
+  //Component information
+  components_t components;
+  //Allocate memory
+  malloc_args_for_testing(args_ft, &components, num_baselines, num_times,
+                          num_freqs, num_components, n_powers, n_curves, n_lists,
+                          num_coeffs, SHAPELET);
+
+  //Setup l,m args that span a decent chunk of sky
+  create_lmn(components);
+
+  int num_beam_values = num_freqs*num_times*num_components;
+
+  //Stick the gains to one everywhere
+  for (int visi = 0; visi < num_beam_values; visi++) {
+    args_ft->primay_beam_J00[visi] = 1.0 + I*0.0;
+    args_ft->primay_beam_J11[visi] = 1.0 + I*0.0;
+
+    if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY ) {
+      args_ft->primay_beam_J01[visi] = 1.0 + I*0.0;
+      args_ft->primay_beam_J10[visi] = 1.0 + I*0.0;
+    }
+    else {
+      args_ft->primay_beam_J01[visi] = 0.0 + I*0.0;
+      args_ft->primay_beam_J10[visi] = 0.0 + I*0.0;
+    }
+  }
+
+  //Just stick Stokes I to 1.0, SI to zero, and reference freqs to 150MHz
+  for (int comp = 0; comp < num_components; comp++) {
+    components.power_ref_stokesI[comp] = 1.0;
+    // components.power_ref_stokesQ[comp] = 0.0;
+    // components.power_ref_stokesU[comp] = 0.0;
+    // components.power_ref_stokesV[comp] = 0.0;
+    components.power_SIs[comp] = 0.0;
+    components.power_ref_freqs[comp] = 150e+6;
+
+    //Set major,minor to 3 arcmins
+    components.pas[comp] = 0.0;
+    components.majors[comp] = 3.0*(DD2R / 60.0);
+    components.minors[comp] = 3.0*(DD2R / 60.0);
+
+    components.power_comp_inds[comp] = comp;
+  }
+
+  //Make up some u,v,w values and scale by wavelength in correct order
+  setup_uvw_and_freqs(args_ft, num_times, num_freqs, num_baselines);
+
+  //Set the shapelet u,v,w same as the measurement equation one (this is not
+  //true in reality but works fine for testing)
+
+  int count = 0;
+
+  for (int comp_step = 0; comp_step < num_components; comp_step++) {
+    for ( int time_step = 0; time_step < num_times; time_step++ ) {
+      for (int baseline = 0; baseline < num_baselines; baseline++) {
+        args_ft->u_shapes[count] = ((baseline + 1)*10);
+        args_ft->v_shapes[count] = ((baseline + 1)*10);
+
+        count ++;
+      }
+    }
+  }
+
+  //Stick a number of coeffs in per component
+  user_precision_t sign;
+  count = 0;
+  for (int comp = 0; comp < num_components; comp++) {
+    for (int coeff = 0; coeff < num_coeffs_per_component; coeff++) {
+
+      if (count % 2 == 0) {
+        sign = 1.0;
+      } else {
+        sign = -1.0;
+      }
+
+      components.n1s[count] = count;
+      components.n2s[count] = count + 1;
+      components.shape_coeffs[count] = sign*1e-3*(coeff + 1);
+      components.param_indexes[count] = comp;
+
+      count ++;
+    }
+  }
+  components.do_QUV = 0;
+
+  e_component_type comptype = SHAPELET;
+
+  source_t *chunked_source = put_components_into_source(components, comptype,
+                                                        n_powers, n_curves,
+                                                        n_lists, num_coeffs);
+
+  if (do_gpu == 1){
+
+    do_gpu_calc_visi(n_powers, n_curves, n_lists,
+          num_baselines, num_coeffs,
+          num_freqs, num_visis, num_times,
+          beamtype, comptype, &components,
+          chunked_source,
+          args_ft);
+
+  }
+  //
+  // //Check all results are within 0.1% of expected value
+  // // double frac_tol = 1e-3;
+  test_visi_outputs(num_visis, n_powers, n_curves, n_lists,
+                    num_baselines, num_freqs, args_ft->extrap_freqs,
+                    beamtype, args_ft, components, SHAPELET);
+
+  free_args_for_testing( args_ft, components, SHAPELET );
 }

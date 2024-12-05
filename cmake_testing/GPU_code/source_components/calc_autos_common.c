@@ -1,44 +1,23 @@
 /*
 Tests that the kernel that calculates auto-correlations is doing it's job
 */
-#include <math.h>
-#include <unity.h>
-#include <stdlib.h>
-#include <complex.h>
-
-#include "constants.h"
-#include "woden_struct_defs.h"
-// #include "shapelet_basis.h"
-// #include "woden_settings.h"
-#include "visibility_set.h"
+#include "calc_autos_common.h"
 
 
 #ifdef DOUBLE_PRECISION
   #ifdef __HIPCC__
-    double TOL = 1e-10;
+    double TOL = 1e-11;
   #else
     double TOL = 1e-12;
   #endif
 #else
-  double TOL = 1e-1;
+  double TOL = 1e-2;
 #endif
-
-void setUp (void) {} /* Is run before every test, put unit init calls here. */
-void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
-
-
-//External CUDA code being linked in
-extern void test_kern_calc_autos(components_t *components, int beamtype,
-                                 int num_components, int num_baselines,
-                                 int num_freqs, int num_times, int num_ants,
-                                 int num_beams,
-                                 visibility_set_t *visibility_set);
-
 
 /*
 For a given beam model, calculate the auto-correlations
 */
-void test_calculate_autos(e_beamtype beamtype) {
+void test_calculate_autos(e_beamtype beamtype, int do_gpu) {
 
   int num_comps = 4;
   int num_times = 2;
@@ -51,10 +30,7 @@ void test_calculate_autos(e_beamtype beamtype) {
   int num_autos = num_ants*num_times*num_freqs;
   int num_visis = num_cross + num_autos;
 
-  int num_pb_values = num_ants*num_freqs*num_times*num_comps;
-
-  double tile_x_gains[3] = {0.0, 0.4, 0.6};
-  double tile_y_gains[3] = {0.2, 0.8, 1.0};
+  int num_pb_values = num_freqs*num_times*num_comps;
 
   components_t *components = malloc(sizeof(components_t));
 
@@ -77,7 +53,7 @@ void test_calculate_autos(e_beamtype beamtype) {
 
   int flux_ind = 0;
   int beam_ind = 0;
-  double flux_value = 1;
+  double flux_value = 0.1;
   double beam_value = 0;
   int auto_stripe;
 
@@ -90,12 +66,11 @@ void test_calculate_autos(e_beamtype beamtype) {
       // expec_XX = 0.0 + 0.0*I;
 
       components->extrap_stokesI[flux_ind] = flux_value;
-      components->extrap_stokesQ[flux_ind] = 0;
-      components->extrap_stokesU[flux_ind] = 0;
-      components->extrap_stokesV[flux_ind] = 0;
+      components->extrap_stokesQ[flux_ind] = flux_value;
+      components->extrap_stokesU[flux_ind] = flux_value;
+      components->extrap_stokesV[flux_ind] = flux_value;
 
-      flux_value ++;
-
+      flux_value += 0.1;
 
     }
   }
@@ -104,69 +79,85 @@ void test_calculate_autos(e_beamtype beamtype) {
   //   printf("%.1f\n",components->extrap_stokesI[i] );
   // }
 
-  user_precision_complex_t expec_I;
+  user_precision_complex_t expec_flux;
 
   user_precision_complex_t gx, Dx, Dy, gy;
 
-  //Beam values change with time as well as antenna, freq, and direction
-  for (int ant = 0; ant < num_ants; ant++) {
-    for (int time = 0; time < num_times; time++) {
-      for (int freq = 0; freq < num_freqs; freq++) {
+  //Beam values also change with time as well as freq and direction
+  for (int time = 0; time < num_times; time++) {
+    for (int freq = 0; freq < num_freqs; freq++) {
 
-        expec_XX = 0.0 + 0.0*I;
-        expec_XY = 0.0 + 0.0*I;
-        expec_YX = 0.0 + 0.0*I;
-        expec_YY = 0.0 + 0.0*I;
+      expec_XX = 0.0 + 0.0*I;
+      expec_XY = 0.0 + 0.0*I;
+      expec_YX = 0.0 + 0.0*I;
+      expec_YY = 0.0 + 0.0*I;
 
-        for (int comp = 0; comp < num_comps; comp++) {
+      for (int comp = 0; comp < num_comps; comp++) {
 
-          gx = tile_x_gains[ant]*(beam_value + 0.2 + 0.2*I);
-          Dx = tile_x_gains[ant]*(beam_value + 0.4 + 0.4*I);
-          Dy = tile_y_gains[ant]*(beam_value + 0.6 + 0.6*I);
-          gy = tile_y_gains[ant]*(beam_value + 0.8 + 0.8*I);
+        gx = beam_value + 0.2 + 0.2*I;
+        Dx = beam_value + 0.4 + 0.4*I;
+        Dy = beam_value + 0.6 + 0.6*I;
+        gy = beam_value + 0.8 + 0.8*I;
 
-          components->gxs[beam_ind] = gx;
-          components->Dxs[beam_ind] = Dx;
-          components->Dys[beam_ind] = Dy;
-          components->gys[beam_ind] = gy;
+        components->gxs[beam_ind] = gx;
+        components->Dxs[beam_ind] = Dx;
+        components->Dys[beam_ind] = Dy;
+        components->gys[beam_ind] = gy;
 
-          flux_ind = num_freqs*comp + freq;
+        flux_ind = num_freqs*comp + freq;
 
-          expec_I = components->extrap_stokesI[flux_ind] + 0*I;
+        expec_flux = components->extrap_stokesI[flux_ind] + 0*I;
 
-          if (beamtype == NO_BEAM) {
-            expec_XX += expec_I;
-            expec_YY += expec_I;
-          }
-
-          //Only MWA models have leakge terms at the moment
-          else if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY) {
-            expec_XX += (gx*conj(gx) + Dx*conj(Dx))*expec_I;
-            expec_XY += (gx*conj(Dy) + conj(gy)*Dx)*expec_I;
-            expec_YX += (Dy*conj(gx) + gy*conj(Dx))*expec_I;
-            expec_YY += (gy*conj(gy) + Dy*conj(Dy))*expec_I;
-          }
-
-          else{
-              expec_XX += (gx*conj(gx))*expec_I;
-              expec_YY += (gy*conj(gy))*expec_I;
-          }
-          beam_value ++;
-          beam_ind ++;
+        if (beamtype == NO_BEAM) {
+          gx = 1 + 0.0*I;
+          Dx = 0 + 0.0*I;
+          Dy = 0 + 0.0*I;
+          gy = 1 + 0.0*I;
         }
 
-        //The extra gain that dipole amplitudes is added here
+        //Only MWA models have leakge terms at the moment
+        else if (beamtype == ANALY_DIPOLE || beamtype == GAUSS_BEAM) {
+            Dx = 0 + 0.0*I;
+            Dy = 0 + 0.0*I;
+        }
+
+        expec_XX += (gx*conj(gx) + Dx*conj(Dx))*expec_flux;
+        expec_XX += (gx*conj(gx) - Dx*conj(Dx))*expec_flux;
+        expec_XX += (gx*conj(Dx) + Dx*conj(gx))*expec_flux;
+        expec_XX += ((0.0 + I*1.0)*expec_flux)*(gx*conj(Dx) - Dx*conj(gx));
+
+        expec_XY += (gx*conj(Dy) + Dx*conj(gy))*expec_flux;
+        expec_XY += (gx*conj(Dy) - Dx*conj(gy))*expec_flux;
+        expec_XY += (gx*conj(gy) + Dx*conj(Dy))*expec_flux;
+        expec_XY += ((0.0 + I*1.0)*expec_flux)* (gx*conj(gy) - Dx*conj(Dy));
+
+        expec_YX += (Dy*conj(gx) + gy*conj(Dx))*expec_flux;
+        expec_YX += (Dy*conj(gx) - gy*conj(Dx))*expec_flux;
+        expec_YX += (Dy*conj(Dx) + gy*conj(gx))*expec_flux;
+        expec_YX += ((0.0 + I*1.0)*expec_flux)* (Dy*conj(Dx) - gy*conj(gx));
+
+        expec_YY += (Dy*conj(Dy) + gy*conj(gy))*expec_flux;
+        expec_YY += (Dy*conj(Dy) - gy*conj(gy))*expec_flux;
+        expec_YY += (Dy*conj(gy) + gy*conj(Dy))*expec_flux;
+        expec_YY += ((0.0 + I*1.0)*expec_flux)* (Dy*conj(gy) - gy*conj(Dy));
+
+        // printf("expec_XX %.1f %.1f\n",creal(expec_XX), cimag(expec_XX) );
+
+        beam_value ++;
+        beam_ind ++;
+
+      }
+
+      for (int ant = 0; ant < num_ants; ant++) {
         auto_stripe = num_ants*num_freqs*time + num_ants*freq + ant;
-        // printf("auto_stripe %d %.1f\n",auto_stripe, creal(expec_XX) );
         expec_XXs[auto_stripe] = expec_XX;
         expec_XYs[auto_stripe] = expec_XY;
         expec_YXs[auto_stripe] = expec_YX;
         expec_YYs[auto_stripe] = expec_YY;
       }
+
     }
   }
-
-  // printf("beam_ind %d %d\n",beam_ind, num_pb_values );
 
   //Setup chunk_visibility_set to hold the visibility outputs of each
   visibility_set_t *visibility_set = setup_visibility_set(num_visis);
@@ -183,12 +174,16 @@ void test_calculate_autos(e_beamtype beamtype) {
     visibility_set->sum_visi_YY_real[visi] = 0;
   }
 
-  components->do_QUV = 0;
-  test_kern_calc_autos(components, beamtype,
-                       num_comps, num_baselines,
-                       num_freqs, num_times, num_ants,
-                       num_ants,
-                       visibility_set);
+  //Doing all testing with identical primary beams so set num_beams to 1
+  int num_beams = 1;
+  components->do_QUV = 1;
+
+  if (do_gpu == 1) {
+    test_kern_calc_autos(components, beamtype,
+                        num_comps, num_baselines,
+                        num_freqs, num_times, num_ants, num_beams,
+                        visibility_set);
+  }
 
   //Function shouldn't touch the cross-correlation part of the output visis
   //so check that everything is zero
@@ -207,10 +202,10 @@ void test_calculate_autos(e_beamtype beamtype) {
 
   for (int autos = 0; autos < num_autos; autos++) {
 
-    // printf("ind XX expec, calc %d %.1f %.1f\n",autos, creal(expec_XXs[autos]), visibility_set->sum_visi_XX_real[num_cross + autos] );
+    // printf("XX expec, calc %.1f %.1f\n",creal(expec_XXs[autos]), visibility_set->sum_visi_XX_real[num_cross + autos] );
     // printf("XY expec, calc %.1f %.1f\n",creal(expec_XYs[autos]), visibility_set->sum_visi_XY_real[num_cross + autos] );
     // printf("YX expec, calc %.1f %.1f\n",creal(expec_YXs[autos]), visibility_set->sum_visi_YX_real[num_cross + autos] );
-    // printf("ind YY expec, calc %d %.1f %.1f\n",autos, creal(expec_YYs[autos]), visibility_set->sum_visi_YY_real[num_cross + autos] );
+    // printf("YY expec, calc %.1f %.1f\n",creal(expec_YYs[autos]), visibility_set->sum_visi_YY_real[num_cross + autos] );
   //
     TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(expec_XXs[autos]),
                       visibility_set->sum_visi_XX_real[num_cross + autos]);
@@ -250,45 +245,4 @@ void test_calculate_autos(e_beamtype beamtype) {
 
   free(expec_XXs);
 
-}
-
-void test_calculate_autos_NoBeam(void) {
-  test_calculate_autos(NO_BEAM);
-}
-
-void test_calculate_autos_GaussBeam(void) {
-  test_calculate_autos(GAUSS_BEAM);
-}
-
-void test_calculate_autos_EDA2Beam(void) {
-  test_calculate_autos(ANALY_DIPOLE);
-}
-
-void test_calculate_autos_MWAAnaly(void) {
-  test_calculate_autos(ANALY_DIPOLE);
-}
-
-void test_calculate_autos_MWAFEE(void) {
-  test_calculate_autos(FEE_BEAM);
-}
-
-void test_calculate_autos_MWAFEEInterp(void) {
-  test_calculate_autos(FEE_BEAM_INTERP);
-}
-
-
-//Run the test with unity
-int main(void)
-{
-    UNITY_BEGIN();
-    //Test with a single SOURCE, single COMPONENT
-
-    // RUN_TEST(test_calculate_autos_NoBeam);
-    // RUN_TEST(test_calculate_autos_GaussBeam);
-    // RUN_TEST(test_calculate_autos_EDA2Beam);
-    // RUN_TEST(test_calculate_autos_MWAAnaly);
-    RUN_TEST(test_calculate_autos_MWAFEE);
-    RUN_TEST(test_calculate_autos_MWAFEEInterp);
-
-    return UNITY_END();
 }
