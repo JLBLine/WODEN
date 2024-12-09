@@ -23,7 +23,6 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
           user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
           user_precision_complex_t *Dys, user_precision_complex_t *gys){
 
-  int off_cardinal_dipoles = 0;
   int num_components = n_powers + n_curves + n_lists;
 
   user_precision_t *d_us = NULL;
@@ -70,63 +69,66 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
 
 
   //Something to store the primary beam gains (all 4 pols) in
-  d_beam_gains_t d_beam_gains;
+  beam_gains_t d_beam_gains;
   int num_beam_values = num_components*num_freqs*num_times;
   d_beam_gains.use_twobeams = 0;
 
-  gpuMalloc( (void**)&d_beam_gains.d_gxs, num_beam_values*sizeof(user_precision_complex_t) );
-  gpuMalloc( (void**)&d_beam_gains.d_Dxs, num_beam_values*sizeof(user_precision_complex_t) );
-  gpuMalloc( (void**)&d_beam_gains.d_Dys, num_beam_values*sizeof(user_precision_complex_t) );
-  gpuMalloc( (void**)&d_beam_gains.d_gys, num_beam_values*sizeof(user_precision_complex_t) );
+  gpuMalloc( (void**)&d_beam_gains.gxs, num_beam_values*sizeof(user_precision_complex_t) );
+  gpuMalloc( (void**)&d_beam_gains.Dxs, num_beam_values*sizeof(user_precision_complex_t) );
+  gpuMalloc( (void**)&d_beam_gains.Dys, num_beam_values*sizeof(user_precision_complex_t) );
+  gpuMalloc( (void**)&d_beam_gains.gys, num_beam_values*sizeof(user_precision_complex_t) );
 
-  gpuMemcpy(d_beam_gains.d_gxs, gxs, num_beam_values*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
-  gpuMemcpy(d_beam_gains.d_Dxs, Dxs, num_beam_values*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
-  gpuMemcpy(d_beam_gains.d_Dys, Dys, num_beam_values*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
-  gpuMemcpy(d_beam_gains.d_gys, gys, num_beam_values*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
+  gpuMemcpy(d_beam_gains.gxs, gxs, num_beam_values*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
+  gpuMemcpy(d_beam_gains.Dxs, Dxs, num_beam_values*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
+  gpuMemcpy(d_beam_gains.Dys, Dys, num_beam_values*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
+  gpuMemcpy(d_beam_gains.gys, gys, num_beam_values*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
 
-  user_precision_t *d_sum_visi_XX_real = NULL;
-  user_precision_t *d_sum_visi_XY_real = NULL;
-  user_precision_t *d_sum_visi_YX_real = NULL;
-  user_precision_t *d_sum_visi_YY_real = NULL;
-  user_precision_t *d_sum_visi_XX_imag = NULL;
-  user_precision_t *d_sum_visi_XY_imag = NULL;
-  user_precision_t *d_sum_visi_YX_imag = NULL;
-  user_precision_t *d_sum_visi_YY_imag = NULL;
+  // user_precision_t *d_sum_visi_XX_real = NULL;
+  // user_precision_t *d_sum_visi_XY_real = NULL;
+  // user_precision_t *d_sum_visi_YX_real = NULL;
+  // user_precision_t *d_sum_visi_YY_real = NULL;
+  // user_precision_t *d_sum_visi_XX_imag = NULL;
+  // user_precision_t *d_sum_visi_XY_imag = NULL;
+  // user_precision_t *d_sum_visi_YX_imag = NULL;
+  // user_precision_t *d_sum_visi_YY_imag = NULL;
 
-  gpuMalloc( (void**)&d_sum_visi_XX_real, num_cross*sizeof(user_precision_t) );
-  gpuMalloc( (void**)&d_sum_visi_XY_real, num_cross*sizeof(user_precision_t) );
-  gpuMalloc( (void**)&d_sum_visi_YX_real, num_cross*sizeof(user_precision_t) );
-  gpuMalloc( (void**)&d_sum_visi_YY_real, num_cross*sizeof(user_precision_t) );
-  gpuMalloc( (void**)&d_sum_visi_XX_imag, num_cross*sizeof(user_precision_t) );
-  gpuMalloc( (void**)&d_sum_visi_XY_imag, num_cross*sizeof(user_precision_t) );
-  gpuMalloc( (void**)&d_sum_visi_YX_imag, num_cross*sizeof(user_precision_t) );
-  gpuMalloc( (void**)&d_sum_visi_YY_imag, num_cross*sizeof(user_precision_t) );
+  visibility_set_t *d_visibility_set = (visibility_set_t *)malloc(sizeof(visibility_set_t));
+
+  gpuMalloc( (void**)&d_visibility_set->sum_visi_XX_real, num_cross*sizeof(user_precision_t) );
+  gpuMalloc( (void**)&d_visibility_set->sum_visi_XY_real, num_cross*sizeof(user_precision_t) );
+  gpuMalloc( (void**)&d_visibility_set->sum_visi_YX_real, num_cross*sizeof(user_precision_t) );
+  gpuMalloc( (void**)&d_visibility_set->sum_visi_YY_real, num_cross*sizeof(user_precision_t) );
+  gpuMalloc( (void**)&d_visibility_set->sum_visi_XX_imag, num_cross*sizeof(user_precision_t) );
+  gpuMalloc( (void**)&d_visibility_set->sum_visi_XY_imag, num_cross*sizeof(user_precision_t) );
+  gpuMalloc( (void**)&d_visibility_set->sum_visi_YX_imag, num_cross*sizeof(user_precision_t) );
+  gpuMalloc( (void**)&d_visibility_set->sum_visi_YY_imag, num_cross*sizeof(user_precision_t) );
 
   //Make sure the visis start at zero by copying across host versions, which
   //should be set to zero already
-  gpuMemcpy( d_sum_visi_XX_real, sum_visi_XX_real,
+  gpuMemcpy( d_visibility_set->sum_visi_XX_real, sum_visi_XX_real,
     num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-  gpuMemcpy( d_sum_visi_XY_real, sum_visi_XY_real,
+  gpuMemcpy( d_visibility_set->sum_visi_XY_real, sum_visi_XY_real,
     num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-  gpuMemcpy( d_sum_visi_YX_real, sum_visi_YX_real,
+  gpuMemcpy( d_visibility_set->sum_visi_YX_real, sum_visi_YX_real,
     num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-  gpuMemcpy( d_sum_visi_YY_real, sum_visi_YY_real,
+  gpuMemcpy( d_visibility_set->sum_visi_YY_real, sum_visi_YY_real,
     num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-  gpuMemcpy( d_sum_visi_XX_imag, sum_visi_XX_imag,
+  gpuMemcpy( d_visibility_set->sum_visi_XX_imag, sum_visi_XX_imag,
     num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-  gpuMemcpy( d_sum_visi_XY_imag, sum_visi_XY_imag,
+  gpuMemcpy( d_visibility_set->sum_visi_XY_imag, sum_visi_XY_imag,
     num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-  gpuMemcpy( d_sum_visi_YX_imag, sum_visi_YX_imag,
+  gpuMemcpy( d_visibility_set->sum_visi_YX_imag, sum_visi_YX_imag,
     num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
-  gpuMemcpy( d_sum_visi_YY_imag, sum_visi_YY_imag,
+  gpuMemcpy( d_visibility_set->sum_visi_YY_imag, sum_visi_YY_imag,
     num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice );
 
-  dim3 grid, threads;
+  //Stick things into the container that the main code uses
+  calc_visi_inouts_t *d_calc_visi_inouts = (calc_visi_inouts_t *)malloc(sizeof(calc_visi_inouts_t));
 
-  threads.x = 128;
-  grid.x = (int)ceil( (float)num_cross / (float)threads.x );
-
-  //Shapelets need many many extra things
+  d_calc_visi_inouts->us = d_us;
+  d_calc_visi_inouts->vs = d_vs;
+  d_calc_visi_inouts->ws = d_ws;
+  d_calc_visi_inouts->allsteps_wavelengths = d_allsteps_wavelengths;
 
   user_precision_t *d_sbf=NULL;
   user_precision_t *d_u_shapes = NULL;
@@ -149,68 +151,69 @@ extern "C" void test_kern_calc_visi_all(int n_powers, int n_curves, int n_lists,
     gpuMalloc( (void**)&(d_sbf), sbf_N*sbf_L*sizeof(user_precision_t) );
     gpuMemcpy( d_sbf, sbf, sbf_N*sbf_L*sizeof(user_precision_t),
                         gpuMemcpyHostToDevice );
+
+    d_calc_visi_inouts->u_shapes = d_u_shapes;
+    d_calc_visi_inouts->v_shapes = d_v_shapes;
+    d_calc_visi_inouts->sbf = d_sbf;
+
   }
+
+  woden_settings_t *woden_settings = (woden_settings_t *)malloc(sizeof(woden_settings_t));
+  woden_settings->num_cross = num_cross;
+  woden_settings->num_baselines = num_baselines;
+  woden_settings->num_time_steps = num_times;
+  woden_settings->num_visis = num_cross;
+  woden_settings->num_freqs = num_freqs;
+
+
 
   if (comptype == POINT || comptype == GAUSSIAN ) {
 
-    gpuErrorCheckKernel("kern_calc_visi_point_or_gauss",
-                  kern_calc_visi_point_or_gauss, grid, threads,
-                  *d_components, d_beam_gains,
-                  d_us, d_vs, d_ws,
-                  d_sum_visi_XX_real, d_sum_visi_XX_imag,
-                  d_sum_visi_XY_real, d_sum_visi_XY_imag,
-                  d_sum_visi_YX_real, d_sum_visi_YX_imag,
-                  d_sum_visi_YY_real, d_sum_visi_YY_imag,
-                  num_components, num_baselines, num_freqs, num_cross,
-                  num_times, beamtype, comptype, off_cardinal_dipoles);
+    calc_visi_point_or_gauss_gpu(*d_components, d_beam_gains,
+                                  d_calc_visi_inouts, d_visibility_set,
+                                  num_components, beamtype, comptype,
+                                  woden_settings);
+
+
   }
   else if (comptype == SHAPELET) {
-    gpuErrorCheckKernel("kern_calc_visi_shapelets",
-                  kern_calc_visi_shapelets, grid, threads,
-                  *d_components, d_beam_gains,
-                  d_us, d_vs, d_ws,
-                  d_allsteps_wavelengths,
-                  d_u_shapes, d_v_shapes,
-                  d_sum_visi_XX_real, d_sum_visi_XX_imag,
-                  d_sum_visi_XY_real, d_sum_visi_XY_imag,
-                  d_sum_visi_YX_real, d_sum_visi_YX_imag,
-                  d_sum_visi_YY_real, d_sum_visi_YY_imag,
-                  d_sbf,  num_components,
-                  num_baselines, num_freqs, num_cross,
-                  num_shape_coeffs, num_times, beamtype, off_cardinal_dipoles);
+      calc_visi_shapelets_gpu(*d_components, d_beam_gains,
+                               d_calc_visi_inouts, d_visibility_set,
+                               num_components, num_shape_coeffs,
+                               beamtype, woden_settings);
   }
 
-  gpuMemcpy(sum_visi_XX_real, d_sum_visi_XX_real,
+  gpuMemcpy(sum_visi_XX_real, d_visibility_set->sum_visi_XX_real,
                              num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost );
-  gpuMemcpy(sum_visi_XY_real, d_sum_visi_XY_real,
+  gpuMemcpy(sum_visi_XY_real, d_visibility_set->sum_visi_XY_real,
                              num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost );
-  gpuMemcpy(sum_visi_YX_real, d_sum_visi_YX_real,
+  gpuMemcpy(sum_visi_YX_real, d_visibility_set->sum_visi_YX_real,
                              num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost );
-  gpuMemcpy(sum_visi_YY_real, d_sum_visi_YY_real,
+  gpuMemcpy(sum_visi_YY_real, d_visibility_set->sum_visi_YY_real,
                              num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost );
-  gpuMemcpy(sum_visi_XX_imag, d_sum_visi_XX_imag,
+  gpuMemcpy(sum_visi_XX_imag, d_visibility_set->sum_visi_XX_imag,
                              num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost );
-  gpuMemcpy(sum_visi_XY_imag, d_sum_visi_XY_imag,
+  gpuMemcpy(sum_visi_XY_imag, d_visibility_set->sum_visi_XY_imag,
                              num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost );
-  gpuMemcpy(sum_visi_YX_imag, d_sum_visi_YX_imag,
+  gpuMemcpy(sum_visi_YX_imag, d_visibility_set->sum_visi_YX_imag,
                              num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost );
-  gpuMemcpy(sum_visi_YY_imag, d_sum_visi_YY_imag,
+  gpuMemcpy(sum_visi_YY_imag, d_visibility_set->sum_visi_YY_imag,
                              num_cross*sizeof(user_precision_t), gpuMemcpyDeviceToHost );
 
-  gpuFree( d_sum_visi_XX_real );
-  gpuFree( d_sum_visi_XX_imag );
-  gpuFree( d_sum_visi_XY_real );
-  gpuFree( d_sum_visi_XY_imag );
-  gpuFree( d_sum_visi_YX_real );
-  gpuFree( d_sum_visi_YX_imag );
-  gpuFree( d_sum_visi_YY_real );
-  gpuFree( d_sum_visi_YY_imag );
+  gpuFree( d_visibility_set->sum_visi_XX_real );
+  gpuFree( d_visibility_set->sum_visi_XY_real );
+  gpuFree( d_visibility_set->sum_visi_YX_real );
+  gpuFree( d_visibility_set->sum_visi_YY_real );
+  gpuFree( d_visibility_set->sum_visi_XX_imag );
+  gpuFree( d_visibility_set->sum_visi_XY_imag );
+  gpuFree( d_visibility_set->sum_visi_YX_imag );
+  gpuFree( d_visibility_set->sum_visi_YY_imag );
   gpuFree( d_allsteps_wavelengths );
 
-  gpuFree( d_beam_gains.d_gxs );
-  gpuFree( d_beam_gains.d_Dxs );
-  gpuFree( d_beam_gains.d_Dys );
-  gpuFree( d_beam_gains.d_gys );
+  gpuFree( d_beam_gains.gxs );
+  gpuFree( d_beam_gains.Dxs );
+  gpuFree( d_beam_gains.Dys );
+  gpuFree( d_beam_gains.gys );
 
   gpuFree( d_us );
   gpuFree( d_vs );

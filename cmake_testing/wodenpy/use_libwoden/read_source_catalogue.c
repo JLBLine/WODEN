@@ -12,6 +12,10 @@ void read_source_catalogue(source_catalogue_t *cropped_sky_models){
   FILE *output_text;
   output_text = fopen("cropped_sky_models.txt","w");
 
+  // printf("cropped_sky_models->num_sources %d\n", cropped_sky_models->num_sources);
+  // printf("C address cropped_sky_models->sources[0].gauss_components.ras %p\n", cropped_sky_models->sources[0].gauss_components.ras);
+  // printf("C address cropped_sky_models->sources[1].gauss_components.ras %p\n", cropped_sky_models->sources[1].gauss_components.ras);
+
   fprintf(output_text, "cropped_sky_models->sources[0].gauss_components.ras[0] %.16f\n", cropped_sky_models->sources[0].gauss_components.ras[0]);
   fprintf(output_text, "cropped_sky_models->sources[0].gauss_components.ras[1] %.16f\n", cropped_sky_models->sources[0].gauss_components.ras[1]);
   fprintf(output_text, "cropped_sky_models->sources[0].gauss_components.ras[2] %.16f\n", cropped_sky_models->sources[0].gauss_components.ras[2]);

@@ -10,38 +10,25 @@ in different test suites, so really just test that the correct CUDA functions
 are launched by calculate_visibilities::calculate_visibilities`
 */
 
-#include <math.h>
-#include <unity.h>
-#include <stdlib.h>
-#include <complex.h>
+#include "calculate_visibilities_mwafeeinterpbeam_common.h"
 
-#include "test_calculate_visibilities_common.h"
-
-//External CUDA code we're linking in
-extern void calculate_visibilities(array_layout_t *array_layout,
-  source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
-  woden_settings_t *woden_settings, visibility_set_t *visibility_set,
-  user_precision_t *sbf);
-
-void setUp (void) {} /* Is run before every test, put unit init calls here. */
-void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
-
-void test_calculate_visibilities_MWAFEEBeam(int n_points, int n_gauss, int n_shapes,
-                                           int num_sources) {
+void test_calculate_visibilities_MWAFEEBeamInterp(int n_points, int n_gauss, int n_shapes,
+                                           int num_sources, int do_gpu) {
 
   source_catalogue_t *cropped_sky_models = make_cropped_sky_models(RA0, -0.46606083776035967,
                                                     n_points, n_gauss, n_shapes,
                                                     num_sources);
 
   woden_settings_t *woden_settings = make_woden_settings(RA0, -0.46606083776035967);
-  woden_settings->beamtype = FEE_BEAM;
+  woden_settings->beamtype = FEE_BEAM_INTERP;
+  woden_settings->do_gpu = do_gpu;
 
   int delays[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
   // int delays[16] = {2,4,6,8,2,4,6,8,2,4,6,8,2,4,6,8};
   woden_settings->FEE_ideal_delays = delays;
-
+  
   beam_settings_t *beam_settings = malloc(sizeof(beam_settings_t));
-  beam_settings->beamtype = FEE_BEAM;
+  beam_settings->beamtype = FEE_BEAM_INTERP;
 
   visibility_set_t *visibility_set = test_calculate_visibilities(cropped_sky_models,
                                           beam_settings, woden_settings, RA0, -0.46606083776035967,
@@ -52,7 +39,7 @@ void test_calculate_visibilities_MWAFEEBeam(int n_points, int n_gauss, int n_sha
   //on u,v,w. So need a different tolerance here
   //The accuracy we get depends on whether we are float or double
   #ifdef DOUBLE_PRECISION
-    double TOL = 1e-9;
+    double TOL = 3e-9;
   #else
     double TOL = 1e-5;
   #endif
@@ -63,14 +50,14 @@ void test_calculate_visibilities_MWAFEEBeam(int n_points, int n_gauss, int n_sha
   double _Complex gain2x, leak2x, leak2y, gain2y;
 
   //These are beam values taken from the double version of the beam
-  gain1x = 0.877503615222 + I*-0.479570021294;
-  leak1x = -0.000194011282 + I*-0.000034485292;
-  leak1y = -0.000202113303 + I*-0.000027368942;
-  gain1y = 0.877752206962 + I*-0.479114874769;
-  gain2x = -0.071903981807 + I*0.041648775167;
-  leak2x = 0.000032362088 + I*-0.000191146794;
-  leak2y = 0.005000391879 + I*-0.002406349296;
-  gain2y = -0.056871066138 + I*0.024991212027;
+  gain1x = 0.947431083057 + I*0.319959908285;
+  leak1x = -0.000246714867 + I*-0.000016523331;
+  leak1y = -0.000249894393 + I*-0.000011798344;
+  gain1y = 0.947019358550 + I*0.321176485103;
+  gain2x = -0.198505432118 + I*-0.037188871831;
+  leak2x = -0.001189280798 + I*-0.000248382900;
+  leak2y = 0.011616550617 + I*0.003414333525;
+  gain2y = -0.137450706771 + I*-0.040789246826;
   
   test_comp_phase_centre_allgains(visibility_set, num_comps,
                                   gain1x, leak1x, leak1y, gain1y,
@@ -107,143 +94,117 @@ void test_calculate_visibilities_MWAFEEBeam(int n_points, int n_gauss, int n_sha
 }
 
 //Test with a single SOURCE, single COMPONENT
-void test_calculate_visibilities_MWAFEEBeam_OneSource_SinglePoint(void) {
+void test_calculate_visibilities_MWAFEEBeamInterp_OneSource_SinglePoint(int do_gpu) {
   int n_points = 1;
   int n_gauss = 0;
   int n_shapes = 0;
   int num_sources = 1;
-  test_calculate_visibilities_MWAFEEBeam(n_points, n_gauss, n_shapes, num_sources);
+  test_calculate_visibilities_MWAFEEBeamInterp(n_points, n_gauss, n_shapes, num_sources,
+                                          do_gpu);
 }
 
-void test_calculate_visibilities_MWAFEEBeam_OneSource_SingleGauss(void) {
+void test_calculate_visibilities_MWAFEEBeamInterp_OneSource_SingleGauss(int do_gpu) {
   int n_points = 0;
   int n_gauss = 1;
   int n_shapes = 0;
   int num_sources = 1;
-  test_calculate_visibilities_MWAFEEBeam(n_points, n_gauss, n_shapes, num_sources);
+  test_calculate_visibilities_MWAFEEBeamInterp(n_points, n_gauss, n_shapes, num_sources,
+                                          do_gpu);
 
 }
 
-void test_calculate_visibilities_MWAFEEBeam_OneSource_SingleShape(void) {
+void test_calculate_visibilities_MWAFEEBeamInterp_OneSource_SingleShape(int do_gpu) {
   int n_points = 0;
   int n_gauss = 0;
   int n_shapes = 1;
   int num_sources = 1;
-  test_calculate_visibilities_MWAFEEBeam(n_points, n_gauss, n_shapes, num_sources);
+  test_calculate_visibilities_MWAFEEBeamInterp(n_points, n_gauss, n_shapes, num_sources,
+                                          do_gpu);
 }
 
-void test_calculate_visibilities_MWAFEEBeam_OneSource_SingleAll(void) {
+void test_calculate_visibilities_MWAFEEBeamInterp_OneSource_SingleAll(int do_gpu) {
   int n_points = 1;
   int n_gauss = 1;
   int n_shapes = 1;
   int num_sources = 1;
-  test_calculate_visibilities_MWAFEEBeam(n_points, n_gauss, n_shapes, num_sources);
+  test_calculate_visibilities_MWAFEEBeamInterp(n_points, n_gauss, n_shapes, num_sources,
+                                          do_gpu);
 }
 
 
 //Test with a three SOURCEs, single COMPONENT
-void test_calculate_visibilities_MWAFEEBeam_ThreeSource_SinglePoint(void) {
+void test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_SinglePoint(int do_gpu) {
   int n_points = 1;
   int n_gauss = 0;
   int n_shapes = 0;
   int num_sources = 3;
-  test_calculate_visibilities_MWAFEEBeam(n_points, n_gauss, n_shapes, num_sources);
+  test_calculate_visibilities_MWAFEEBeamInterp(n_points, n_gauss, n_shapes, num_sources,
+                                          do_gpu);
 
 }
 
-void test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleGauss(void) {
+void test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_SingleGauss(int do_gpu) {
   int n_points = 0;
   int n_gauss = 1;
   int n_shapes = 0;
   int num_sources = 3;
-  test_calculate_visibilities_MWAFEEBeam(n_points, n_gauss, n_shapes, num_sources);
+  test_calculate_visibilities_MWAFEEBeamInterp(n_points, n_gauss, n_shapes, num_sources,
+                                          do_gpu);
 }
 
-void test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleShape(void) {
+void test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_SingleShape(int do_gpu) {
   int n_points = 0;
   int n_gauss = 0;
   int n_shapes = 1;
   int num_sources = 3;
-  test_calculate_visibilities_MWAFEEBeam(n_points, n_gauss, n_shapes, num_sources);
+  test_calculate_visibilities_MWAFEEBeamInterp(n_points, n_gauss, n_shapes, num_sources,
+                                          do_gpu);
 }
 
-void test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleAll(void) {
+void test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_SingleAll(int do_gpu) {
   int n_points = 1;
   int n_gauss = 1;
   int n_shapes = 1;
   int num_sources = 3;
-  test_calculate_visibilities_MWAFEEBeam(n_points, n_gauss, n_shapes, num_sources);
+  test_calculate_visibilities_MWAFEEBeamInterp(n_points, n_gauss, n_shapes, num_sources,
+                                          do_gpu);
 }
 
 
 //Test with three SOURCEs, three COPMONENTs
-void test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreePoint(void) {
+void test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_ThreePoint(int do_gpu) {
   int n_points = 5;
   int n_gauss = 0;
   int n_shapes = 0;
   int num_sources = 3;
-  test_calculate_visibilities_MWAFEEBeam(n_points, n_gauss, n_shapes, num_sources);
+  test_calculate_visibilities_MWAFEEBeamInterp(n_points, n_gauss, n_shapes, num_sources,
+                                          do_gpu);
 
 }
 
-void test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeGauss(void) {
+void test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_ThreeGauss(int do_gpu) {
   int n_points = 0;
   int n_gauss = 5;
   int n_shapes = 0;
   int num_sources = 3;
-  test_calculate_visibilities_MWAFEEBeam(n_points, n_gauss, n_shapes, num_sources);
+  test_calculate_visibilities_MWAFEEBeamInterp(n_points, n_gauss, n_shapes, num_sources,
+                                          do_gpu);
 }
 
-void test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeShape(void) {
+void test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_ThreeShape(int do_gpu) {
   int n_points = 0;
   int n_gauss = 0;
   int n_shapes = 5;
   int num_sources = 3;
-  test_calculate_visibilities_MWAFEEBeam(n_points, n_gauss, n_shapes, num_sources);
+  test_calculate_visibilities_MWAFEEBeamInterp(n_points, n_gauss, n_shapes, num_sources,
+                                          do_gpu);
 }
 
-void test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeAll(void) {
+void test_calculate_visibilities_MWAFEEBeamInterp_ThreeSource_ThreeAll(int do_gpu) {
   int n_points = 5;
   int n_gauss = 5;
   int n_shapes = 5;
   int num_sources = 3;
-  test_calculate_visibilities_MWAFEEBeam(n_points, n_gauss, n_shapes, num_sources);
-}
-
-
-
-// Run the test with unity
-int main(void)
-{
-    UNITY_BEGIN();
-
-    char* mwa_fee_hdf5 = getenv("MWA_FEE_HDF5");
-
-    if (mwa_fee_hdf5) {
-      printf("MWA_FEE_HDF5: %s\n", mwa_fee_hdf5 );
-
-        //Test with a single SOURCE, single COMPONENT
-        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SinglePoint);
-        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleGauss);
-        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleShape);
-        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleAll);
-
-        // //Test with three SOURCEs, single COPMONENT
-        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SinglePoint);
-        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleGauss);
-        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleShape);
-        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleAll);
-
-        // //Test with three SOURCEs, three COPMONENTs
-        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreePoint);
-        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeGauss);
-        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeShape);
-        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeAll);
-
-    }
-    else {
-      printf("MWA_FEE_HDF5 not found - not running test_calculate_visibilities_MWAFEEBeam tests");
-    }
-
-    return UNITY_END();
+  test_calculate_visibilities_MWAFEEBeamInterp(n_points, n_gauss, n_shapes, num_sources,
+                                          do_gpu);
 }

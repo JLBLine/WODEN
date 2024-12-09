@@ -8,7 +8,7 @@
 #include "source_components_common.h"
 
 extern "C" void copy_outputs_source_component_common_gpu(int num_of_each_flux_type,
-           source_t *d_chunked_source, d_beam_gains_t *d_beam_gains,
+           source_t *d_chunked_source, beam_gains_t *d_beam_gains,
            woden_settings_t *woden_settings,
            beam_settings_t *beam_settings,
            user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
@@ -26,16 +26,16 @@ extern "C" void copy_outputs_source_component_common_gpu(int num_of_each_flux_ty
     num_beam_values *= woden_settings->num_ants;
   }
 
-  gpuMemcpy(gxs, (user_precision_complex_t*)d_beam_gains->d_gxs,
+  gpuMemcpy(gxs, (user_precision_complex_t*)d_beam_gains->gxs,
               num_beam_values*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost );
 
-  gpuMemcpy(gys, (user_precision_complex_t*)d_beam_gains->d_gys,
+  gpuMemcpy(gys, (user_precision_complex_t*)d_beam_gains->gys,
               num_beam_values*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost );
 
   if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP || beam_settings->beamtype == MWA_ANALY) {
-    gpuMemcpy(Dxs, (user_precision_complex_t*)d_beam_gains->d_Dxs,
+    gpuMemcpy(Dxs, (user_precision_complex_t*)d_beam_gains->Dxs,
                 num_beam_values*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost );
-    gpuMemcpy(Dys, (user_precision_complex_t*)d_beam_gains->d_Dys,
+    gpuMemcpy(Dys, (user_precision_complex_t*)d_beam_gains->Dys,
                 num_beam_values*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost );
   }
 

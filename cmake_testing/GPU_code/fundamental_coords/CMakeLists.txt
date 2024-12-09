@@ -10,12 +10,16 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   ##compiled with nvcc
   if(USE_CUDA)
     set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fundamental_coords_gpu.cpp
-              PROPERTIES LANGUAGE CUDA)
+                                 lmn_coords_common_gpu.cpp
+                                 uvw_coords_common_gpu.cpp
+                                 PROPERTIES LANGUAGE CUDA)
   endif()
 
   ##Compile a GPU code library
   add_library(fundamental_coordsGPU_${PRECISION} SHARED
-              ${CMAKE_SOURCE_DIR}/src/fundamental_coords_gpu.cpp)
+              ${CMAKE_SOURCE_DIR}/src/fundamental_coords_gpu.cpp
+              lmn_coords_common_gpu.cpp
+              uvw_coords_common_gpu.cpp)
   target_compile_options(fundamental_coordsGPU_${PRECISION} PRIVATE ${GPU_FLAGS})
 
   ##complile the CPU version of fundamental coords, and link to gcov so we

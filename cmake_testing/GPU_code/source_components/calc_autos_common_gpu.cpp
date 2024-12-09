@@ -52,24 +52,24 @@ extern "C" void test_kern_calc_autos(components_t *components, int beamtype,
   //
   // //malloc on device and copy beam values
   //
-  d_beam_gains_t *d_component_beam_gains = (d_beam_gains_t* )malloc(sizeof(d_beam_gains_t));
-  // d_beam_gains_t d_component_beam_gains;
-  gpuMalloc( (void**)&d_component_beam_gains->d_gxs,
+  beam_gains_t *d_component_beam_gains = (beam_gains_t* )malloc(sizeof(beam_gains_t));
+  // beam_gains_t d_component_beam_gains;
+  gpuMalloc( (void**)&d_component_beam_gains->gxs,
                                 num_pb_values*sizeof(user_precision_complex_t) );
-  gpuMalloc( (void**)&d_component_beam_gains->d_Dxs,
+  gpuMalloc( (void**)&d_component_beam_gains->Dxs,
                                 num_pb_values*sizeof(user_precision_complex_t) );
-  gpuMalloc( (void**)&d_component_beam_gains->d_Dys,
+  gpuMalloc( (void**)&d_component_beam_gains->Dys,
                                 num_pb_values*sizeof(user_precision_complex_t) );
-  gpuMalloc( (void**)&d_component_beam_gains->d_gys,
+  gpuMalloc( (void**)&d_component_beam_gains->gys,
                                 num_pb_values*sizeof(user_precision_complex_t) );
 
-  gpuMemcpy(d_component_beam_gains->d_gxs, components->gxs,
+  gpuMemcpy(d_component_beam_gains->gxs, components->gxs,
                 num_pb_values*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
-  gpuMemcpy(d_component_beam_gains->d_Dxs, components->Dxs,
+  gpuMemcpy(d_component_beam_gains->Dxs, components->Dxs,
                 num_pb_values*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
-  gpuMemcpy(d_component_beam_gains->d_Dys, components->Dys,
+  gpuMemcpy(d_component_beam_gains->Dys, components->Dys,
                 num_pb_values*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
-  gpuMemcpy(d_component_beam_gains->d_gys, components->gys,
+  gpuMemcpy(d_component_beam_gains->gys, components->gys,
                 num_pb_values*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
 
 
@@ -179,10 +179,10 @@ extern "C" void test_kern_calc_autos(components_t *components, int beamtype,
   gpuFree( d_components->extrap_stokesQ );
   gpuFree( d_components->extrap_stokesU );
   gpuFree( d_components->extrap_stokesV );
-  gpuFree( d_component_beam_gains->d_gxs );
-  gpuFree( d_component_beam_gains->d_Dxs );
-  gpuFree( d_component_beam_gains->d_Dys );
-  gpuFree( d_component_beam_gains->d_gys );
+  gpuFree( d_component_beam_gains->gxs );
+  gpuFree( d_component_beam_gains->Dxs );
+  gpuFree( d_component_beam_gains->Dys );
+  gpuFree( d_component_beam_gains->gys );
 
 
   gpuFree( d_sum_visi_XX_real );

@@ -255,7 +255,7 @@ void test_source_component_common_ConstantDecChooseBeams_multiant(int beamtype, 
                                       num_powers, num_curves, num_lists,
                                       num_of_each_flux_type);
 
-  d_beam_gains_t *d_beam_gains = malloc(sizeof(d_beam_gains_t));
+  beam_gains_t *d_beam_gains = malloc(sizeof(beam_gains_t));
   visibility_set_t *d_visibility_set = NULL;
   woden_settings->do_autos = 0;
 

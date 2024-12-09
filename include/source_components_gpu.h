@@ -864,7 +864,7 @@ defined, where:
  - grid.x * threads.x >= `num_visi`
 
 @param[in] d_components d_components Pointer to a populated `components_t` struct as filled by `source_components::source_component_common`
-@param[in] d_component_beam_gains Pointer to a populated `d_beam_gains_t` struct as filled by `source_components::source_component_common`
+@param[in] d_component_beam_gains Pointer to a populated `beam_gains_t` struct as filled by `source_components::source_component_common`
 @param[in] *d_us Visibility coord \f$u\f$ for every baseline, frequency, and time
 step in the simulation (wavelengths)
 @param[in] *d_vs Visibility coord \f$v\f$ for every baseline, frequency, and time
@@ -899,7 +899,7 @@ simulation
 (45 and 135 degrees) or aligned with north-south and east-west (0 and 90 degrees). Effects what visibilities are calculated. 
 */
 __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
-           d_beam_gains_t d_component_beam_gains,
+           beam_gains_t d_component_beam_gains,
            user_precision_t *d_us, user_precision_t *d_vs, user_precision_t *d_ws,
            user_precision_t *d_sum_visi_XX_real, user_precision_t *d_sum_visi_XX_imag,
            user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
@@ -960,7 +960,7 @@ defined, where:
  - grid.x * threads.x >= `num_visi`
 
 @param[in] d_components d_components Pointer to a populated `components_t` struct as filled by `source_components::source_component_common`
-@param[in] d_component_beam_gains Pointer to a populated `d_beam_gains_t` struct as filled by `source_components::source_component_common`
+@param[in] d_component_beam_gains Pointer to a populated `beam_gains_t` struct as filled by `source_components::source_component_common`
 @param[in] *d_us Visibility coord \f$u\f$ for every baseline, frequency, and time
 step in the simulation (wavelengths)
 @param[in] *d_vs Visibility coord \f$v\f$ for every baseline, frequency, and time
@@ -1003,7 +1003,7 @@ simulation
 (45 and 135 degrees) or aligned with north-south and east-west (0 and 90 degrees). Effects what visibilities are calculated. 
 */
 __global__ void kern_calc_visi_shapelets(components_t d_components,
-      d_beam_gains_t d_component_beam_gains,
+      beam_gains_t d_component_beam_gains,
       user_precision_t *d_us, user_precision_t *d_vs, user_precision_t *d_ws,
       user_precision_t *d_allsteps_wavelengths,
       user_precision_t *d_u_shapes, user_precision_t *d_v_shapes,
@@ -1054,12 +1054,12 @@ primary beam `beamtype`.
 @details Only certain primary beam models have leakage terms, so need
 to know the `beamtype` to free the correct locations.
 
-@param[in,out] d_beam_gains A `d_beam_gains_t` with device memory to be
+@param[in,out] d_beam_gains A `beam_gains_t` with device memory to be
 freed
 @param[in] beamtype An `e_beamtype` describing the primary beam type
 
 */
-extern "C" void free_beam_gains_gpu(d_beam_gains_t *d_beam_gains, e_beamtype beamtype);
+extern "C" void free_beam_gains_gpu(beam_gains_t *d_beam_gains, e_beamtype beamtype);
 
 
 /**
@@ -1106,7 +1106,7 @@ and grid.y defined, where:
  - grid.y * threads.y >= `num_ants`
 
 @param[in] d_components d_components Pointer to a populated `components_t` struct as filled by `source_components::source_component_common`
-@param[in] d_component_beam_gains Pointer to a populated `d_beam_gains_t` struct as filled by `source_components::source_component_common`
+@param[in] d_component_beam_gains Pointer to a populated `beam_gains_t` struct as filled by `source_components::source_component_common`
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
 @param[in] num_components Number of components in `d_components`
 @param[in] num_baselines Number of baselines for one time, one frequency step
@@ -1141,7 +1141,7 @@ Currently this is just an index of all antennas. Gets passed to `get_beam_gains_
 
 */
 __global__ void kern_calc_autos(components_t d_components,
-                                d_beam_gains_t d_component_beam_gains,
+                                beam_gains_t d_component_beam_gains,
                                 int beamtype,
                                 int num_components, int num_baselines,
                                 int num_freqs, int num_times, int num_ants,
@@ -1218,3 +1218,20 @@ __global__ void kern_update_sum_visis_stokesIQUV(int num_freqs,
      user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
      user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
      user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag);
+
+
+extern "C" void calc_visi_point_or_gauss_gpu(components_t d_components,
+                                        beam_gains_t d_component_beam_gains,
+                                        calc_visi_inouts_t *d_calc_visi_inouts,
+                                        visibility_set_t *d_visibility_set,
+                                        int num_components, e_beamtype beamtype,
+                                        e_component_type comptype,
+                                        woden_settings_t *woden_settings);
+
+extern "C" void calc_visi_shapelets_gpu(components_t d_components,
+                                        beam_gains_t d_component_beam_gains,
+                                        calc_visi_inouts_t *d_calc_visi_inouts,
+                                        visibility_set_t *d_visibility_set,
+                                        int num_shapes, int num_shape_coeffs,
+                                        e_beamtype beamtype,
+                                        woden_settings_t *woden_settings);

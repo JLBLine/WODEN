@@ -58,6 +58,7 @@ class PretendArgs():
         self.station_id = np.nan
         
         self.off_cardinal_dipoles = False
+        self.cpu_mode = False
         
     def __init__(self):
         self.make_basic_args()
@@ -421,6 +422,23 @@ class Test(unittest.TestCase):
         woden_settings = self.call_create_woden_settings()
         self.check_basic_inputs(woden_settings)
         self.assertTrue(int(self.data['off_cardinal_dipoles']))
+        
+    def test_cpu_mode(self):
+        """Test that the `cpu_mode` flag gets propagated correctly and sets
+        the `do_gpu` flag correctly"""
+
+        ##First up, check that the off_cardinal_dipoles flag off by default
+        self.make_basic_inputs('double')
+        woden_settings = self.call_create_woden_settings()
+        self.check_basic_inputs(woden_settings)
+        self.assertTrue(int(self.data['do_gpu']))
+        
+        ##Next, turn it on via the command line
+        self.make_basic_inputs('double')
+        self.args.cpu_mode = True
+        woden_settings = self.call_create_woden_settings()
+        self.check_basic_inputs(woden_settings)
+        self.assertFalse(int(self.data['do_gpu']))
         
 ##Run the test
 if __name__ == '__main__':

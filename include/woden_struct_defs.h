@@ -216,13 +216,13 @@ typedef struct _source_t {
   components_t shape_components; /*!< `components_t` holding component
   information for all SHAPELET COMPONENTs in this SOURCE.*/
 
-  //Device versions
-  components_t d_point_components; /*!< `components_t` holding component
-  information for all POINT COMPONENTs in this SOURCE.*/
-  components_t d_gauss_components; /*!< `components_t` holding component
-  information for all GAUSSIAN COMPONENTs in this SOURCE.*/
-  components_t d_shape_components; /*!< `components_t` holding component
-  information for all SHAPELET COMPONENTs in this SOURCE.*/
+  // //Device versions
+  // components_t d_point_components; /*!< `components_t` holding component
+  // information for all POINT COMPONENTs in this SOURCE.*/
+  // components_t d_gauss_components; /*!< `components_t` holding component
+  // information for all GAUSSIAN COMPONENTs in this SOURCE.*/
+  // components_t d_shape_components; /*!< `components_t` holding component
+  // information for all SHAPELET COMPONENTs in this SOURCE.*/
 
 } source_t;
 
@@ -362,6 +362,7 @@ typedef struct _woden_settings_t {
   int single_everybeam_station; /*!< If using everybeam, add this to say we are only using a single station*/
   int off_cardinal_dipoles; /*!< Boolean of whether to use off-cardinal dipole equations to
   apply the beams gains to the Stokes IQUV parameters*/
+  int do_gpu; /*!< Boolean of whether to use the GPU or not (0 False, 1 True)*/
 
 } woden_settings_t;
 
@@ -386,3 +387,59 @@ typedef struct _array_layout_t {
     double lst_base; /*!< Local sidereal time of the first time step (radians)*/
 
 } array_layout_t;
+
+/**
+Bleh
+
+*/
+typedef struct _calc_visi_inouts_t {
+  double *X_diff;
+  double *Y_diff;
+  double *Z_diff;
+  double *allsteps_sha0s;
+  double *allsteps_cha0s;
+  user_precision_t *allsteps_wavelengths;
+
+  user_precision_t *u_metres;
+  user_precision_t *v_metres;
+  user_precision_t *w_metres;
+  user_precision_t *us;
+  user_precision_t *vs;
+  user_precision_t *ws;
+  double *freqs;
+  
+  //If we a different primary beam for each antenna, setup the baseline
+  //to anetenna mapping arrays
+  int *ant1_to_baseline_map;
+  int *ant2_to_baseline_map;
+
+  //Shapelet specific stuff. Only gets malloced/used if we have shapelets
+  user_precision_t *sbf;
+  user_precision_t *u_shapes;
+  user_precision_t *v_shapes;
+
+} calc_visi_inouts_t;
+
+
+/*!
+A struct to contain primary beam values
+*/
+typedef struct _beam_gains_t {
+
+  int *ant1_to_baseline_map; /*!< The index of antenna 1 in all unique pairs of
+antennas. Used to map iBaseline to the correct antenna 1 */
+  int *ant2_to_baseline_map; /*!< The index of antenna 2 in all unique pairs of
+antennas. Used to map iBaseline to the correct antenna 2 */
+  int use_twobeams; /*!< The beam gains were made with unique primary beams so
+  should use two antenna patterns per visibility */
+
+  user_precision_complex_t *gxs; /*!< North-South Beam gain values
+  for all beams, directions, frequencies, and times for these COMPONENTS*/
+  user_precision_complex_t *Dxs; /*!< North-South Beam leakage values
+  for all beams, directions, frequencies, and times for these COMPONENTS*/
+  user_precision_complex_t *Dys; /*!< East-West Beam leakage values
+  for all beams, directions, frequencies, and times for these COMPONENTS*/
+  user_precision_complex_t *gys; /*!< East-West Beam gain values
+  for all beams, directions, frequencies, and times for these COMPONENTS*/
+
+} beam_gains_t;

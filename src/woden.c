@@ -12,15 +12,11 @@
 #include "primary_beam.h"
 #include "visibility_set.h"
 #include "hyperbeam_error.h"
-
-//Main GPU executable to link in
-extern void calculate_visibilities_gpu(array_layout_t *array_layout,
-  source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
-  woden_settings_t *woden_settings, visibility_set_t *visibility_set,
-  user_precision_t *sbf);
+#include "calculate_visibilities_common.h"
 
 int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_sets,
-             source_catalogue_t *cropped_sky_models, array_layout_t * array_layout, user_precision_t *sbf) {
+             source_catalogue_t *cropped_sky_models, array_layout_t * array_layout,
+             user_precision_t *sbf) {
 
   int verbose = 0;
 
@@ -76,12 +72,12 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
       }
     }
 
-    //Launch the GPU code
-    calculate_visibilities_gpu(array_layout, cropped_sky_models, beam_settings,
+    //Launch the GPU or CPU code
+    calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
                   woden_settings, &visibility_sets[band], sbf);
 
     if (verbose == 1){
-      printf("GPU calls for band %d finished\n",band_num );
+      printf("Calls for band %d finished\n",band_num );
     }
 
     //Release the CPU MWA FEE beam if required

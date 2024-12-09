@@ -60,7 +60,34 @@ __global__ void kern_calc_uvw(double *d_X_diff, double *d_Y_diff,
   }
 }
 
-__global__ void set_auto_uvw_to_zero(int num_cross, int num_autos,
+extern "C" void calc_uvw_gpu(double *d_X_diff, double *d_Y_diff, double *d_Z_diff,
+                             user_precision_t *d_u_metres,
+                             user_precision_t *d_v_metres, user_precision_t *d_w_metres,
+                             user_precision_t *d_us, user_precision_t *d_vs,
+                             user_precision_t *d_ws, user_precision_t *d_allsteps_wavelengths,
+                             double *d_allsteps_cha0s, double *d_allsteps_sha0s,
+                             woden_settings_t *woden_settings){
+  
+    dim3 grid, threads;
+
+    threads.x = 128;
+    threads.y = 1;
+    grid.x = (int)ceil( (float)woden_settings->num_cross / (float)threads.x );
+    grid.y = 1;
+
+    gpuErrorCheckKernel("kern_calc_uvw",
+            kern_calc_uvw, grid, threads,
+            d_X_diff, d_Y_diff, d_Z_diff,
+            d_u_metres, d_v_metres, d_w_metres,
+            d_us, d_vs, d_ws, d_allsteps_wavelengths,
+            woden_settings->sdec0,
+            woden_settings->cdec0,
+            d_allsteps_cha0s, d_allsteps_sha0s,
+            woden_settings->num_cross, woden_settings->num_baselines,
+            woden_settings->num_time_steps, woden_settings->num_freqs);
+}
+
+__global__ void kern_set_auto_uvw_to_zero(int num_cross, int num_autos,
                                      user_precision_t *d_u,
                                      user_precision_t *d_v,
                                      user_precision_t *d_w) {
@@ -73,8 +100,25 @@ __global__ void set_auto_uvw_to_zero(int num_cross, int num_autos,
     d_v[num_cross + iAuto] = 0.0;
     d_w[num_cross + iAuto] = 0.0;
   }
-  
 }
+
+extern "C" void set_auto_uvw_to_zero_gpu(int num_cross, int num_autos,
+                                     user_precision_t *d_u,
+                                     user_precision_t *d_v,
+                                     user_precision_t *d_w) {
+
+  dim3 grid, threads;
+
+  threads.x = 128;
+  threads.y = 1;
+  grid.x = (int)ceil( (float)num_autos / (float)threads.x );
+  grid.y = 1;
+
+  gpuErrorCheckKernel("kern_set_auto_uvw_to_zero",
+            kern_set_auto_uvw_to_zero, grid, threads,
+            num_cross, num_autos, d_u, d_v, d_w);
+}
+
 
 /*TODO: this might be faster to just loop over the inside the kernel? */
 __global__ void kern_calc_uv_shapelet(double *d_X_diff,
@@ -101,6 +145,7 @@ __global__ void kern_calc_uv_shapelet(double *d_X_diff,
 
     user_precision_t u_shape = (sha0*d_X_diff[xyz_ind]) + (cha0*d_Y_diff[xyz_ind]);
     user_precision_t v_shape = -(sdec0*cha0*d_X_diff[xyz_ind]) + (sdec0*sha0*d_Y_diff[xyz_ind]) + (cdec0*d_Z_diff[xyz_ind]);
+    // printf("iBaseline iComponet u_shape v_shape: %d %d %f %f\n", iBaseline, iComponent, u_shape, v_shape);
 
     int stripe = num_baselines*num_times*iComponent + time_ind*num_baselines + mod_baseline;
 
@@ -108,6 +153,49 @@ __global__ void kern_calc_uv_shapelet(double *d_X_diff,
     d_v_shapes[stripe] = v_shape;
   }
 }
+
+extern "C" void calc_uv_shapelet_gpu(user_precision_t *d_u_shapes, user_precision_t *d_v_shapes,
+                                    int num_shapes,
+                                    double *d_X_diff, double *d_Y_diff, double *d_Z_diff,
+                                    double *d_ras, double *d_decs,
+                                    woden_settings_t *woden_settings) {
+
+
+  int num_baselines = woden_settings->num_baselines;
+  int num_time_steps = woden_settings->num_time_steps;
+
+  double *d_lsts=NULL;
+
+  gpuMalloc( (void**)&(d_lsts), woden_settings->num_time_steps*sizeof(double));
+  gpuMemcpy( d_lsts, woden_settings->lsts,
+                          woden_settings->num_time_steps*sizeof(double),
+                          gpuMemcpyHostToDevice);
+
+  dim3 grid, threads;
+
+  if (num_shapes == 1) {
+    threads.x = 128;
+    threads.y = 1;
+    grid.x = (int)ceil( (float)(num_baselines*num_time_steps) / (float)threads.x );
+    grid.y = 1;
+  }
+  else {
+    threads.x = 64;
+    threads.y = 2;
+    grid.x = (int)ceil( (float)(num_baselines*num_time_steps) / (float)threads.x );
+    grid.y = (int)ceil( ((float)num_shapes) / ((float)threads.y) );
+  }
+
+  //Extra set of coords, centred on sky location of each shapelet source
+  gpuErrorCheckKernel("kern_calc_uv_shapelet",
+                        kern_calc_uv_shapelet, grid, threads,
+                        d_X_diff, d_Y_diff, d_Z_diff,
+                        d_u_shapes, d_v_shapes, d_lsts,
+                        d_ras, d_decs, num_baselines, num_time_steps, num_shapes);
+
+  gpuFree(d_lsts);
+}
+
 
 __device__ void calc_lmn(double ra0, double sdec0,
                          double cdec0,
@@ -181,238 +269,82 @@ extern "C" void calc_lmn_for_components_gpu(components_t *d_components,
                         d_components->ls, d_components->ms, d_components->ns, num_components);
 }
 
+// extern "C" void test_kern_calc_uv_shapelet(double *X_diff,
+//                      double *Y_diff, double *Z_diff,
+//                      user_precision_t *u_shapes, user_precision_t *v_shapes,
+//                      double *lsts,
+//                      double *ras, double *decs,
+//                      int num_baselines, int num_times, int num_shapes) {
 
-/*******************************************************************************
-                 Functions below to be used in unit tests
-*******************************************************************************/
+//   double *d_X_diff = NULL;
+//   double *d_Y_diff = NULL;
+//   double *d_Z_diff = NULL;
 
-extern "C" void test_kern_calc_lmn(double ra0, double dec0,
-                                   double *ras, double *decs, int num_coords,
-                                   double * ls, double * ms, double * ns) {
+//   ( gpuMalloc( (void**)&d_X_diff,
+//                                     num_times*num_baselines*sizeof(double) ) );
+//   ( gpuMemcpy( d_X_diff, X_diff,
+//             num_times*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
+//   ( gpuMalloc( (void**)&d_Y_diff,
+//                                     num_times*num_baselines*sizeof(double) ) );
+//   ( gpuMemcpy( d_Y_diff, Y_diff,
+//             num_times*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
+//   ( gpuMalloc( (void**)&d_Z_diff,
+//                                     num_times*num_baselines*sizeof(double) ) );
+//   ( gpuMemcpy( d_Z_diff, Z_diff,
+//             num_times*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
 
-  double *d_ls = NULL;
-  ( gpuMalloc( (void**)&d_ls, num_coords*sizeof(double) ) );
+//   double *d_lsts = NULL;
+//   double *d_ras = NULL;
+//   double *d_decs = NULL;
+//   ( gpuMalloc( (void**)&d_lsts, num_times*sizeof(double) ) );
+//   ( gpuMemcpy( d_lsts, lsts,
+//                       num_times*sizeof(double), gpuMemcpyHostToDevice ) );
+//   ( gpuMalloc( (void**)&d_ras, num_shapes*sizeof(double) ) );
+//   ( gpuMemcpy( d_ras, ras,
+//                       num_shapes*sizeof(double), gpuMemcpyHostToDevice ) );
+//   ( gpuMalloc( (void**)&d_decs, num_shapes*sizeof(double) ) );
+//   ( gpuMemcpy( d_decs, decs,
+//                       num_shapes*sizeof(double), gpuMemcpyHostToDevice ) );
 
-  double *d_ms = NULL;
-  ( gpuMalloc( (void**)&d_ms, num_coords*sizeof(double) ) );
+//   user_precision_t *d_u_shapes = NULL;
+//   user_precision_t *d_v_shapes = NULL;
 
-  double *d_ns = NULL;
-  ( gpuMalloc( (void**)&d_ns, num_coords*sizeof(double) ) );
+//   ( gpuMalloc( (void**)&d_u_shapes,
+//                 num_shapes*num_baselines*num_times*sizeof(user_precision_t) ) );
+//   ( gpuMalloc( (void**)&d_v_shapes,
+//                 num_shapes*num_baselines*num_times*sizeof(user_precision_t) ) );
 
+//   dim3 grid, threads;
 
-  double *d_ras = NULL;
-  ( gpuMalloc( (void**)&d_ras, num_coords*sizeof(double) ) );
-  ( gpuMemcpy(d_ras, ras,
-                           num_coords*sizeof(double), gpuMemcpyHostToDevice ) );
+//   threads.x = 64;
+//   grid.x = (int)ceilf( (float)(num_baselines*num_times) / (float)threads.x );
 
-  double *d_decs = NULL;
-  ( gpuMalloc( (void**)&d_decs, num_coords*sizeof(double) ) );
-  ( gpuMemcpy(d_decs, decs,
-                           num_coords*sizeof(double), gpuMemcpyHostToDevice ) );
+//   threads.y = 2;
+//   grid.y = (int)ceilf( (float)num_shapes / (float)threads.y );
 
-  dim3 grid, threads;
+//   gpuErrorCheckKernel("kern_calc_uv_shapelet",
+//           kern_calc_uv_shapelet, grid, threads,
+//           d_X_diff, d_Y_diff, d_Z_diff,
+//           d_u_shapes, d_v_shapes,
+//           d_lsts, d_ras, d_decs,
+//           num_baselines, num_times, num_shapes);
 
-  threads.x = 128;
-  grid.x = (int)ceil( (float)num_coords / (float)threads.x );
+//   ( gpuMemcpy(u_shapes, d_u_shapes,
+//                    num_shapes*num_baselines*num_times*sizeof(user_precision_t),
+//                                                     gpuMemcpyDeviceToHost) );
+//   ( gpuMemcpy(v_shapes, d_v_shapes,
+//                    num_shapes*num_baselines*num_times*sizeof(user_precision_t),
+//                                                     gpuMemcpyDeviceToHost) );
 
-  gpuErrorCheckKernel("kern_calc_lmn",
-          kern_calc_lmn, grid, threads,
-          ra0, sin(dec0), cos(dec0),
-          d_ras, d_decs, d_ls, d_ms, d_ns,
-          num_coords);
+//   ( gpuFree(d_u_shapes) );
+//   ( gpuFree(d_v_shapes) );
 
-  ( gpuMemcpy(ls, d_ls,
-                             num_coords*sizeof(double),gpuMemcpyDeviceToHost) );
-  ( gpuMemcpy(ms, d_ms,
-                             num_coords*sizeof(double),gpuMemcpyDeviceToHost) );
-  ( gpuMemcpy(ns, d_ns,
-                             num_coords*sizeof(double),gpuMemcpyDeviceToHost) );
+//   ( gpuFree(d_lsts) );
+//   ( gpuFree(d_ras) );
+//   ( gpuFree(d_decs) );
 
-  ( gpuFree(d_ls) );
-  ( gpuFree(d_ms) );
-  ( gpuFree(d_ns) );
+//   ( gpuFree(d_X_diff) );
+//   ( gpuFree(d_Y_diff) );
+//   ( gpuFree(d_Z_diff) );
 
-  ( gpuFree(d_ras) );
-  ( gpuFree(d_decs) );
-
-}
-
-extern "C" void test_kern_calc_uvw(double *X_diff,
-   double *Y_diff, double *Z_diff,
-   user_precision_t *u_metres, user_precision_t *v_metres, user_precision_t *w_metres,
-   user_precision_t *us, user_precision_t *vs, user_precision_t *ws,
-   user_precision_t *wavelengths,
-   double dec0, double *cha0s, double *sha0s,
-   int num_cross, int num_baselines, int num_times, int num_freqs) {
-
-  double *d_X_diff = NULL;
-  double *d_Y_diff = NULL;
-  double *d_Z_diff = NULL;
-
-  ( gpuMalloc( (void**)&d_X_diff,
-                            num_times*num_baselines*sizeof(double) ) );
-  ( gpuMemcpy( d_X_diff, X_diff,
-    num_times*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
-  ( gpuMalloc( (void**)&d_Y_diff,
-                            num_times*num_baselines*sizeof(double) ) );
-  ( gpuMemcpy( d_Y_diff, Y_diff,
-    num_times*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
-  ( gpuMalloc( (void**)&d_Z_diff,
-                            num_times*num_baselines*sizeof(double) ) );
-  ( gpuMemcpy( d_Z_diff, Z_diff,
-    num_times*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
-
-  double *d_sha0s = NULL;
-  double *d_cha0s = NULL;
-  user_precision_t *d_wavelengths = NULL;
-  ( gpuMalloc( (void**)&d_sha0s,
-                                         num_cross*sizeof(double) ) );
-  ( gpuMemcpy( d_sha0s, sha0s,
-                 num_cross*sizeof(double), gpuMemcpyHostToDevice ) );
-  ( gpuMalloc( (void**)&d_cha0s,
-                                         num_cross*sizeof(double) ) );
-  ( gpuMemcpy( d_cha0s, cha0s,
-                 num_cross*sizeof(double), gpuMemcpyHostToDevice ) );
-  ( gpuMalloc( (void**)&d_wavelengths,
-                                         num_cross*sizeof(user_precision_t) ) );
-  ( gpuMemcpy( d_wavelengths, wavelengths,
-                 num_cross*sizeof(user_precision_t), gpuMemcpyHostToDevice ) );
-
-  user_precision_t *d_u_metres = NULL;
-  user_precision_t *d_v_metres = NULL;
-  user_precision_t *d_w_metres = NULL;
-  user_precision_t *d_us = NULL;
-  user_precision_t *d_vs = NULL;
-  user_precision_t *d_ws = NULL;
-
-  ( gpuMalloc( (void**)&d_u_metres, num_cross*sizeof(user_precision_t) ) );
-  ( gpuMalloc( (void**)&d_v_metres, num_cross*sizeof(user_precision_t) ) );
-  ( gpuMalloc( (void**)&d_w_metres, num_cross*sizeof(user_precision_t) ) );
-  ( gpuMalloc( (void**)&d_us, num_cross*sizeof(user_precision_t) ) );
-  ( gpuMalloc( (void**)&d_vs, num_cross*sizeof(user_precision_t) ) );
-  ( gpuMalloc( (void**)&d_ws, num_cross*sizeof(user_precision_t) ) );
-
-  dim3 grid, threads;
-
-  threads.x = 128;
-  grid.x = (int)ceil( (float)num_cross / (float)threads.x );
-
-  gpuErrorCheckKernel("kern_calc_uvw",
-          kern_calc_uvw, grid, threads,
-          d_X_diff, d_Y_diff, d_Z_diff,
-          d_u_metres, d_v_metres, d_w_metres,
-          d_us, d_vs, d_ws, d_wavelengths,
-          sin(dec0), cos(dec0),
-          d_cha0s, d_sha0s,
-          num_cross, num_baselines, num_times, num_freqs);
-
-  ( gpuMemcpy(us, d_us,
-                   num_cross*sizeof(user_precision_t),gpuMemcpyDeviceToHost) );
-  ( gpuMemcpy(vs, d_vs,
-                   num_cross*sizeof(user_precision_t),gpuMemcpyDeviceToHost) );
-  ( gpuMemcpy(ws, d_ws,
-                   num_cross*sizeof(user_precision_t),gpuMemcpyDeviceToHost) );
-
-  ( gpuMemcpy(u_metres, d_u_metres,
-                   num_cross*sizeof(user_precision_t),gpuMemcpyDeviceToHost) );
-  ( gpuMemcpy(v_metres, d_v_metres,
-                   num_cross*sizeof(user_precision_t),gpuMemcpyDeviceToHost) );
-  ( gpuMemcpy(w_metres, d_w_metres,
-                   num_cross*sizeof(user_precision_t),gpuMemcpyDeviceToHost) );
-
-  ( gpuFree(d_us) );
-  ( gpuFree(d_vs) );
-  ( gpuFree(d_ws) );
-
-  ( gpuFree(d_u_metres) );
-  ( gpuFree(d_v_metres) );
-  ( gpuFree(d_w_metres) );
-
-  ( gpuFree(d_sha0s) );
-  ( gpuFree(d_cha0s) );
-
-  ( gpuFree(d_X_diff) );
-  ( gpuFree(d_Y_diff) );
-  ( gpuFree(d_Z_diff) );
-
-}
-
-extern "C" void test_kern_calc_uv_shapelet(double *X_diff,
-                     double *Y_diff, double *Z_diff,
-                     user_precision_t *u_shapes, user_precision_t *v_shapes,
-                     double *lsts,
-                     double *ras, double *decs,
-                     int num_baselines, int num_times, int num_shapes) {
-
-  double *d_X_diff = NULL;
-  double *d_Y_diff = NULL;
-  double *d_Z_diff = NULL;
-
-  ( gpuMalloc( (void**)&d_X_diff,
-                                    num_times*num_baselines*sizeof(double) ) );
-  ( gpuMemcpy( d_X_diff, X_diff,
-            num_times*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
-  ( gpuMalloc( (void**)&d_Y_diff,
-                                    num_times*num_baselines*sizeof(double) ) );
-  ( gpuMemcpy( d_Y_diff, Y_diff,
-            num_times*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
-  ( gpuMalloc( (void**)&d_Z_diff,
-                                    num_times*num_baselines*sizeof(double) ) );
-  ( gpuMemcpy( d_Z_diff, Z_diff,
-            num_times*num_baselines*sizeof(double), gpuMemcpyHostToDevice ) );
-
-  double *d_lsts = NULL;
-  double *d_ras = NULL;
-  double *d_decs = NULL;
-  ( gpuMalloc( (void**)&d_lsts, num_times*sizeof(double) ) );
-  ( gpuMemcpy( d_lsts, lsts,
-                      num_times*sizeof(double), gpuMemcpyHostToDevice ) );
-  ( gpuMalloc( (void**)&d_ras, num_shapes*sizeof(double) ) );
-  ( gpuMemcpy( d_ras, ras,
-                      num_shapes*sizeof(double), gpuMemcpyHostToDevice ) );
-  ( gpuMalloc( (void**)&d_decs, num_shapes*sizeof(double) ) );
-  ( gpuMemcpy( d_decs, decs,
-                      num_shapes*sizeof(double), gpuMemcpyHostToDevice ) );
-
-  user_precision_t *d_u_shapes = NULL;
-  user_precision_t *d_v_shapes = NULL;
-
-  ( gpuMalloc( (void**)&d_u_shapes,
-                num_shapes*num_baselines*num_times*sizeof(user_precision_t) ) );
-  ( gpuMalloc( (void**)&d_v_shapes,
-                num_shapes*num_baselines*num_times*sizeof(user_precision_t) ) );
-
-  dim3 grid, threads;
-
-  threads.x = 64;
-  grid.x = (int)ceilf( (float)(num_baselines*num_times) / (float)threads.x );
-
-  threads.y = 2;
-  grid.y = (int)ceilf( (float)num_shapes / (float)threads.y );
-
-  gpuErrorCheckKernel("kern_calc_uv_shapelet",
-          kern_calc_uv_shapelet, grid, threads,
-          d_X_diff, d_Y_diff, d_Z_diff,
-          d_u_shapes, d_v_shapes,
-          d_lsts, d_ras, d_decs,
-          num_baselines, num_times, num_shapes);
-
-  ( gpuMemcpy(u_shapes, d_u_shapes,
-                   num_shapes*num_baselines*num_times*sizeof(user_precision_t),
-                                                    gpuMemcpyDeviceToHost) );
-  ( gpuMemcpy(v_shapes, d_v_shapes,
-                   num_shapes*num_baselines*num_times*sizeof(user_precision_t),
-                                                    gpuMemcpyDeviceToHost) );
-
-  ( gpuFree(d_u_shapes) );
-  ( gpuFree(d_v_shapes) );
-
-  ( gpuFree(d_lsts) );
-  ( gpuFree(d_ras) );
-  ( gpuFree(d_decs) );
-
-  ( gpuFree(d_X_diff) );
-  ( gpuFree(d_Y_diff) );
-  ( gpuFree(d_Z_diff) );
-
-}
+// }

@@ -18,6 +18,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
               source_component_common_common_gpu.cpp
               calc_visi_common_gpu.cpp
               update_sum_visis_common_gpu.cpp
+              calc_autos_common_gpu.cpp
               PROPERTIES LANGUAGE CUDA)
   endif()
 
@@ -32,7 +33,8 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
               get_beam_gains_common_gpu.cpp
               source_component_common_common_gpu.cpp
               calc_visi_common_gpu.cpp
-              update_sum_visis_common_gpu.cpp)
+              update_sum_visis_common_gpu.cpp
+              calc_autos_common_gpu.cpp)
   target_compile_options(source_componentsGPU_${PRECISION} PRIVATE ${GPU_FLAGS})
 
   ##complile the CPU version of the source_components, and link to gcov so we

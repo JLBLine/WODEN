@@ -10,18 +10,10 @@ in different test suites, so really just test that the correct CUDA functions
 are launched by calculate_visibilities::calculate_visibilities`
 */
 
-#include <math.h>
-#include <unity.h>
-#include <stdlib.h>
-#include <complex.h>
-#include "test_calculate_visibilities_common.h"
-#include "hyperbeam_error.h"
+#include "calculate_visibilities_common_common.h"
+#include "calculate_visibilities_common.h"
+// #include "hyperbeam_error.h"
 
-// //External CUDA code we're linking in
-// extern void calculate_visibilities(array_layout_t *array_layout,
-//   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
-//   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
-//   user_precision_t *sbf);
 
 //Just two LSTs to check things change with time
 double lsts[] = {0.0, M_PI / 4};
@@ -59,17 +51,11 @@ void populate_components(components_t *comps, int n_comps,
   //No matter what, always have one POWER_LAW source
   comps->power_ref_freqs = malloc(sizeof(double));
   comps->power_ref_stokesI = malloc(sizeof(user_precision_t));
-  // comps->power_ref_stokesQ = malloc(sizeof(user_precision_t));
-  // comps->power_ref_stokesU = malloc(sizeof(user_precision_t));
-  // comps->power_ref_stokesV = malloc(sizeof(user_precision_t));
   comps->power_SIs = malloc(sizeof(user_precision_t));
   comps->power_comp_inds = malloc(sizeof(int));
 
   comps->power_ref_freqs[0] = REF_FREQ;
   comps->power_ref_stokesI[0] = STOKESI;
-  // comps->power_ref_stokesQ[0] = 0.0;
-  // comps->power_ref_stokesU[0] = 0.0;
-  // comps->power_ref_stokesV[0] = 0.0;
   comps->power_SIs[0] = 0.0;
   comps->power_comp_inds[0] = 0;
 
@@ -541,6 +527,7 @@ void test_uvw(visibility_set_t *visibility_set,  double *lsts,
                               visibility_set->vs_metres[visi]);
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_w[visi],
                               visibility_set->ws_metres[visi]);
+    // printf("YAY\n");
 
   }
 
@@ -639,8 +626,8 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
     }
   }
 
-  printf("Calling GPU\n");
-  calculate_visibilities_gpu(array_layout, cropped_sky_models, beam_settings,
+  // printf("Calling calculate_visibilities\n");
+  calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
                          woden_settings, visibility_set, sbf);
 
   // for (int visi = 0; visi < woden_settings->num_visis; visi++) {
@@ -655,7 +642,7 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
   //               visibility_set->sum_visi_YY_imag[visi]);
   // }
 
-  printf("GPU has finished\n");
+  // printf("calculate_visibilities has finished\n");
 
   //Be free my pretties!
   if (cropped_sky_models->num_shapelets > 0) {
@@ -784,10 +771,8 @@ void test_comp_phase_centre_twogains(visibility_set_t *visibility_set,
     //         visibility_set->sum_visi_YY_imag[visi],
     //         visibility_set->sum_visi_YY_real[visi] );
 
-    // printf("Expec GAIN %.16f %.16f\n", expec_gainsxx[visi],
+    // printf("Expec GAIN %.16f %.16f\n", creal(expec_xx[visi]),
     //                             visibility_set->sum_visi_XX_real[visi] );
-
-
 
     TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(expec_xx[visi]),
                               visibility_set->sum_visi_XX_real[visi]);
@@ -819,8 +804,8 @@ void test_comp_phase_centre_twogains(visibility_set_t *visibility_set,
             // visibility_set->sum_visi_YY_imag[num_cross + visi],
             // visibility_set->sum_visi_YY_real[num_cross + visi] );
 
-    // printf("Expec GAIN %.16f %.16f\n", expec_gainsxx[visi],
-    //                             visibility_set->sum_visi_XX_real[visi] );
+    printf("Expec GAIN %.16f %.16f\n", creal(expec_xx[visi]),
+                                visibility_set->sum_visi_XX_real[visi] );
 
     TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(expec_xx[visi]),
                               visibility_set->sum_visi_XX_real[num_cross + visi]);

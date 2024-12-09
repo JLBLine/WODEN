@@ -1,10 +1,13 @@
 #pragma once
-#include "woden_precision_defs.h"
 #include <unity.h>
 #include <stdlib.h>
 #include <math.h>
 
 #include "constants.h"
+#include "uvw_coords_common.h"
+#include "woden_struct_defs.h"
+#include "woden_precision_defs.h"
+#include "fundamental_coords_cpu.h"
 
 #define TOL 1e-11
 

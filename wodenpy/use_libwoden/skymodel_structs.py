@@ -426,9 +426,6 @@ def create_source_struct(Components_Ctypes : Components_Ctypes): # type: ignore
         :cvar Components_Ctypes_Double point_components: `Components_Ctypes` holding component information for all POINT COMPONENTs in this SOURCE
         :cvar Components_Ctypes_Double gauss_components: `Components_Ctypes` holding component information for all GAUSSIAN COMPONENTs in this SOURCE
         :cvar Components_Ctypes_Double shape_components: `Components_Ctypes` holding component information for all SHAPELET COMPONENTs in this SOURCE
-        :cvar Components_Ctypes_Double d_point_components: `Components_Ctypes` holding component information on the device for all POINT COMPONENTs in this SOURCE
-        :cvar Components_Ctypes_Double d_gauss_components: `Components_Ctypes` holding component information on the device for all GAUSSIAN COMPONENTs in this SOURCE
-        :cvar Components_Ctypes_Double d_shape_components: `Components_Ctypes` holding component information on the device for all SHAPELET COMPONENTs in this SOURCE
         
         """
         
@@ -451,9 +448,6 @@ def create_source_struct(Components_Ctypes : Components_Ctypes): # type: ignore
             ("point_components",  Components_Ctypes),
             ("gauss_components",  Components_Ctypes),
             ("shape_components",  Components_Ctypes),
-            ("d_point_components",  Components_Ctypes),
-            ("d_gauss_components",  Components_Ctypes),
-            ("d_shape_components",  Components_Ctypes),
         ]
         
     return Source_Ctypes
@@ -555,9 +549,7 @@ def setup_source_catalogue(Source_Ctypes : Source_Ctypes, Source_Catalogue : Sou
     
     source_catalogue = Source_Catalogue()
     
-    source_array = num_sources*Source_Ctypes
-        
-    source_catalogue.sources = source_array()
+    source_catalogue.sources = (num_sources*Source_Ctypes)()
     source_catalogue.num_sources = num_sources
     source_catalogue.num_shapelets = num_shapelets
     

@@ -10,6 +10,8 @@
 #include "shapelet_basis.h"
 #include "visibility_set.h"
 #include "shapelet_basis.h"
+#include "hyperbeam_error.h"
+// #include "calculate_visibilities_common.h"
 
 #define NUM_ANTS 3
 #define NUM_BASELINES 3
@@ -23,11 +25,11 @@
 // #define STOKESI 1.0
 #define POL_FRAC 1.0
 
-//External CUDA code we're linking in
-extern void calculate_visibilities_gpu(array_layout_t *array_layout,
-  source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
-  woden_settings_t *woden_settings, visibility_set_t *visibility_set,
-  user_precision_t *sbf);
+// //External CUDA code we're linking in
+// extern void calculate_visibilities_gpu(array_layout_t *array_layout,
+//   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
+//   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
+//   user_precision_t *sbf);
 
 source_catalogue_t * make_cropped_sky_models(double ra0, double dec0,
                                              int n_points, int n_gauss,

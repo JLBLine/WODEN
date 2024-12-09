@@ -4,7 +4,7 @@
 //External CUDA code we're linking in
 extern void copy_outputs_source_component_common_gpu(int num_of_each_flux_type,
            source_t *d_chunked_source,
-           d_beam_gains_t *d_beam_gains,
+           beam_gains_t *d_beam_gains,
            woden_settings_t *woden_settings,
            beam_settings_t *beam_settings,
            user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
@@ -22,14 +22,14 @@ extern void free_d_components(source_t *d_chunked_source,
 
 extern void free_extrapolated_flux_arrays(components_t *d_components);
 
-extern void free_beam_gains_gpu(d_beam_gains_t *d_beam_gains, e_beamtype beamtype);
+extern void free_beam_gains_gpu(beam_gains_t *d_beam_gains, e_beamtype beamtype);
 
 extern source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
 
 extern void malloc_extrapolated_flux_arrays_gpu(components_t *d_components, int num_comps,
                                         int num_freqs);
 
-extern void malloc_beam_gains_gpu(d_beam_gains_t *d_component_beam_gains,
+extern void malloc_beam_gains_gpu(beam_gains_t *d_component_beam_gains,
                                      int beamtype, int num_gains);
 
 extern void calc_lmn_for_components_gpu(components_t *d_components,
@@ -404,7 +404,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
   }
 
-  d_beam_gains_t *d_beam_gains = malloc(sizeof(d_beam_gains_t));
+  beam_gains_t *d_beam_gains = malloc(sizeof(beam_gains_t));
   visibility_set_t *d_visibility_set = NULL;
   woden_settings->do_autos = 0;
 

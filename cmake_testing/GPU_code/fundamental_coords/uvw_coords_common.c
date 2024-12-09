@@ -1,22 +1,17 @@
-#include <unity.h>
-#include <stdlib.h>
-#include <math.h>
-
-#include "constants.h"
 #include "uvw_coords_common.h"
-#include "fundamental_coords_cpu.h"
+#include <unity.h>
+
 
 /*
 CUDA code we are linking in
 */
-extern void test_kern_calc_uvw(double *X_diff, double *Y_diff, double *Z_diff,
+extern void test_calc_uvw_gpu(double *X_diff, double *Y_diff, double *Z_diff,
    user_precision_t *u_metres, user_precision_t *v_metres, user_precision_t *w_metres,
    user_precision_t *us, user_precision_t *vs, user_precision_t *ws,
-   user_precision_t *wavelengths,
-   double dec0, double *cha0s, double *sha0s,
-   int num_visis, int num_baselines, int num_times, int num_freqs);
+   user_precision_t *wavelengths, double *cha0s, double *sha0s,
+   woden_settings_t *woden_settings);
 
-extern void test_kern_calc_uv_shapelet(double *X_diff, double *Y_diff, double *Z_diff,
+extern void test_calc_uv_shapelet_gpu(double *X_diff, double *Y_diff, double *Z_diff,
                      user_precision_t *u_shapes, user_precision_t *v_shapes,
                      double *lsts, double *ras, double *decs,
                      int num_baselines, int num_times, int num_shapes);
@@ -165,6 +160,25 @@ void check_results(user_precision_t* u_metres_expec, user_precision_t* v_metres_
     }
 }
 
+
+woden_settings_t * make_woden_settings(int num_cross, int num_baselines,
+                                      int num_times, int num_freqs,
+                                      double ra0, double dec0){
+
+  woden_settings_t *woden_settings;
+  woden_settings = malloc(sizeof(woden_settings_t));
+  woden_settings->ra0 = ra0;
+  woden_settings->dec0 = dec0;
+  woden_settings->sdec0 = sin(dec0);
+  woden_settings->cdec0 = cos(dec0);
+  woden_settings->num_cross = num_cross;
+  woden_settings->num_baselines = num_baselines;
+  woden_settings->num_time_steps = num_times;
+  woden_settings->num_freqs = num_freqs;
+
+  return woden_settings;
+}
+
 /*
 Checking the function fundamental_coords.cu::kern_calc_uvw
 Checks that the wavelength scaling of u,v,w is happening correctly. Set HA=0
@@ -199,13 +213,16 @@ void test_calc_uvw_ScalesByWavelength(int do_gpu){
                     freq_res, base_band_freq,
                     uvw_settings);
 
+    woden_settings_t *woden_settings = make_woden_settings(num_visis, num_baselines,
+                                                          num_times, num_freqs, ra0, dec0);
+    
     if (do_gpu == 1) {
-      //Run the CUDA code via fundamental_coords::test_kern_calc_uvw
-      test_kern_calc_uvw(uvw_settings->X_diff, uvw_settings->Y_diff, uvw_settings->Z_diff,
+      //Run the GPU code via fundamental_coords::test_calc_uvw_gpu
+      test_calc_uvw_gpu(uvw_settings->X_diff, uvw_settings->Y_diff, uvw_settings->Z_diff,
            uvw_settings->u_metres, uvw_settings->v_metres, uvw_settings->w_metres,
            uvw_settings->us, uvw_settings->vs, uvw_settings->ws, uvw_settings->wavelengths,
-           dec0, uvw_settings->cha0s, uvw_settings->sha0s,
-           num_visis, num_baselines, num_times, num_freqs);
+           uvw_settings->cha0s, uvw_settings->sha0s,
+           woden_settings);
     } else {
       double sdec0 = sin(dec0);
       double cdec0 = cos(dec0);
@@ -291,13 +308,16 @@ void test_calc_uvw_RotateWithTime(int do_gpu){
                     freq_res, base_band_freq,
                     uvw_settings);
 
+    woden_settings_t *woden_settings = make_woden_settings(num_visis, num_baselines,
+                                                          num_times, num_freqs, ra0, dec0);
+    
     if (do_gpu == 1) {
-      //Run the CUDA code via fundamental_coords::test_kern_calc_uvw
-      test_kern_calc_uvw(uvw_settings->X_diff, uvw_settings->Y_diff, uvw_settings->Z_diff,
-            uvw_settings->u_metres, uvw_settings->v_metres, uvw_settings->w_metres,
-            uvw_settings->us, uvw_settings->vs, uvw_settings->ws, uvw_settings->wavelengths,
-            dec0, uvw_settings->cha0s, uvw_settings->sha0s,
-            num_visis, num_baselines, num_times, num_freqs);
+      //Run the GPU code via fundamental_coords::test_calc_uvw_gpu
+      test_calc_uvw_gpu(uvw_settings->X_diff, uvw_settings->Y_diff, uvw_settings->Z_diff,
+           uvw_settings->u_metres, uvw_settings->v_metres, uvw_settings->w_metres,
+           uvw_settings->us, uvw_settings->vs, uvw_settings->ws, uvw_settings->wavelengths,
+           uvw_settings->cha0s, uvw_settings->sha0s,
+           woden_settings);
     } else {
       double sdec0 = sin(dec0);
       double cdec0 = cos(dec0);
@@ -390,8 +410,8 @@ void test_calc_uvw_shapelet_RotateWithTime(int do_gpu){
 
     if (do_gpu == 1) {
 
-      //Run the CUDA code via fundamental_coords::test_kern_calc_uvw_shapelet
-      test_kern_calc_uv_shapelet(uvw_settings->X_diff,
+      //Run the CUDA code via fundamental_coords::test_calc_uvw_gpu_shapelet
+      test_calc_uv_shapelet_gpu(uvw_settings->X_diff,
             uvw_settings->Y_diff, uvw_settings->Z_diff,
             uvw_settings->us, uvw_settings->vs,
             uvw_settings->lsts, ras, decs,

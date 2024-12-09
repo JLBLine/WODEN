@@ -205,6 +205,9 @@ def get_parser():
              ' flag to include auto-correlations.')
 
     sim_group = parser.add_argument_group('SIMULATOR OPTIONS')
+    sim_group.add_argument('--cpu_mode', default=False, action='store_true',
+        help='Switch to CPU only mode. By default, WODEN will attempt to use '
+             'a GPU. Add this flag to force CPU only mode')
     sim_group.add_argument('--num_threads', default=0, type=int,
         help='Number of threads to run the sky model reading / EveryBeam calculations on. '
              'Defaults to the number of physical cores on the machine. Add to set a specific number '

@@ -1,10 +1,5 @@
 #include "lmn_coords_common.h"
 
-//External CUDA code we're linking in
-extern void test_kern_calc_lmn(double ra0, double dec0,
-                               double *ras, double *decs, int num_coords,
-                               double * ls, double * ms, double * ns);
-
 // //Tolerance used for testing
 #define TOL 1e-15
 
@@ -30,9 +25,17 @@ void test_calc_lmn_GivesCorrectlCoords(int do_gpu){
     double *ms = malloc(num_points*sizeof(double));
     double *ns = malloc(num_points*sizeof(double));
 
+    woden_settings_t *woden_settings = malloc(sizeof(woden_settings_t));
+    woden_settings->ra0 = ra0;
+    woden_settings->dec0 = dec0;
+    woden_settings->sdec0 = sin(dec0);
+    woden_settings->cdec0 = cos(dec0);
+
     if (do_gpu == 1){
-        test_kern_calc_lmn(ra0, dec0, ras, decs, num_points,
-                                       ls, ms, ns);
+        // test_kern_calc_lmn(ra0, dec0, ras, decs, num_points,
+        //                                ls, ms, ns);
+        test_calc_lmn_for_components_gpu(ls, ms, ns, ras, decs,
+                                         num_points, woden_settings);
     } else {
         calc_lmn_cpu(ra0, sin(dec0), cos(dec0), ras, decs, ls, ms, ns, num_points);
     }
@@ -82,9 +85,17 @@ void test_calc_lmn_GivesCorrectmCoords(int do_gpu){
     double *ms = malloc(num_points*sizeof(double));
     double *ns = malloc(num_points*sizeof(double));
 
-    if (do_gpu){
-        test_kern_calc_lmn(ra0, dec0, ras, decs, num_points,
-                                       ls, ms, ns);
+    woden_settings_t *woden_settings = malloc(sizeof(woden_settings_t));
+    woden_settings->ra0 = ra0;
+    woden_settings->dec0 = dec0;
+    woden_settings->sdec0 = sin(dec0);
+    woden_settings->cdec0 = cos(dec0);
+
+    if (do_gpu == 1){
+        // test_kern_calc_lmn(ra0, dec0, ras, decs, num_points,
+        //                                ls, ms, ns);
+        test_calc_lmn_for_components_gpu(ls, ms, ns, ras, decs,
+                                         num_points, woden_settings);
     } else {
         calc_lmn_cpu(ra0, sin(dec0), cos(dec0), ras, decs, ls, ms, ns, num_points);
     }
@@ -107,5 +118,4 @@ void test_calc_lmn_GivesCorrectmCoords(int do_gpu){
     free(ls);
     free(ms);
     free(ns);
-
 }

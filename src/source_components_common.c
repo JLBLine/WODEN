@@ -128,7 +128,7 @@ void extrapolate_Stokes(source_t *d_chunked_source, double *d_extrap_freqs,
 void source_component_common(woden_settings_t *woden_settings,
            beam_settings_t *beam_settings, double *d_freqs,
            source_t *chunked_source, source_t *d_chunked_source,
-           d_beam_gains_t *d_component_beam_gains,
+           beam_gains_t *d_component_beam_gains,
            e_component_type comptype,
            visibility_set_t *d_visibility_set){
 

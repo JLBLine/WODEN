@@ -100,7 +100,7 @@ def create_woden_settings_struct(precision : str = "double"):
         :cvar c_int use_dipamps:  Boolean of whether to use dipole amplitudes, so have an individual beam per tile  (0 False, 1 True)
         :cvar POINTER(c_double) mwa_dipole_amps: Bespoke MWA dipole amplitudes for each antenna(tile). Should be 2*num_ants*16 long
         :cvar c_int single_everybeam_station: If using everybeam, add this to say we are only using a single station
-        :cvar c_int off_cardinal_dipoles: Boolean of whether to use off-cardinal dipole equations to apply the beams gains to the Stokes IQUV parameters
+        :cvar c_int off_cardinal_dipoles: Boolean of whether to use off-cardinal dipole equations to apply the beams gains to the Stokes IQUV parameters:cvar :cvar c_int use_gpu: Boolean of whether to use the GPU or not (0 False, 1 True)
         """
         
         _fields_ = [("lst_base", c_double),
@@ -147,7 +147,8 @@ def create_woden_settings_struct(precision : str = "double"):
                     ("use_dipamps", c_int),
                     ("mwa_dipole_amps", POINTER(c_double)),
                     ("single_everybeam_station", c_int),
-                    ("off_cardinal_dipoles", c_int)]
+                    ("off_cardinal_dipoles", c_int),
+                    ("do_gpu", c_int)]
         
     return Woden_Settings
 
@@ -292,6 +293,11 @@ def create_woden_settings(woden_settings : Woden_Settings, # type: ignore
         woden_settings.off_cardinal_dipoles = 1
     else:
         woden_settings.off_cardinal_dipoles = 0
+        
+    if args.cpu_mode:
+        woden_settings.do_gpu = 0
+    else:
+        woden_settings.do_gpu = 1
         
     return woden_settings
     

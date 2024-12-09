@@ -90,6 +90,36 @@ __global__ void kern_calc_uvw(double *d_X_diff, double *d_Y_diff,
            double *d_cha0s, double *d_sha0s,
            int num_cross, int num_baselines, int num_times, int num_freqs);
 
+/**
+@brief This is just a wrapper to launch `kern_calc_uvw` to calculate `u,v,w` coords
+on the GPU. Wrapper means we can call this function from the CPU. All arrays
+should be initialised and filled on the GPU before calling this function.
+
+@param[in] d_X_diff Baseline lengths in the `X` direction (metres)
+@param[in] d_Y_diff Baseline lengths in the `Y` direction (metres)
+@param[in] d_Z_diff Baseline lengths in the `Z` direction (metres)
+@param[in,out] d_u_metres Output `u` coords (metres)
+@param[in,out] d_v_metres Output `v` coords (metres)
+@param[in,out] d_w_metres Output `w` coords (metres)
+@param[in,out] d_u Output `u` coord (wavelengths)
+@param[in,out] d_v Output `v` coord (wavelengths)
+@param[in,out] d_w Output `w` coord (wavelengths)
+@param[in] d_wavelengths Wavelengths for all baselines, frequencies, and time
+steps (metres)
+@param[in] d_cha0s Cosine of the hour angle of the phase centre for all
+baselines, frequencies, and time steps
+@param[in] d_sha0s Sine of the hour angle of the phase centre for all
+baselines, frequencies, and time steps
+@param[in] woden_settings Struct containing simulation settings
+*/
+extern "C" void calc_uvw_gpu(double *d_X_diff, double *d_Y_diff, double *d_Z_diff,
+                             user_precision_t *d_u_metres,
+                             user_precision_t *d_v_metres, user_precision_t *d_w_metres,
+                             user_precision_t *d_us, user_precision_t *d_vs,
+                             user_precision_t *d_ws, user_precision_t *d_allsteps_wavelengths,
+                             double *d_allsteps_cha0s, double *d_allsteps_sha0s,
+                             woden_settings_t *woden_settings);
+
 
 /**
 @brief The SHAPELET visibility envelope calculation uses a `u,v` coordinate
@@ -128,6 +158,33 @@ __global__ void kern_calc_uv_shapelet(double *d_X_diff,
       user_precision_t *d_u_shapes, user_precision_t *d_v_shapes,
       double *d_lsts, double *d_ras, double *d_decs,
       const int num_baselines, const int num_times, const int num_shapes);
+
+
+/**
+@brief This is just a wrapper to launch `kern_calc_uv_shapelet` to calculate
+`u,v` coords on the GPU. Wrapper means we can call this function from the CPU.
+
+@details All `d_*` arrays should be initialised and filled on the GPU before calling this.
+The function will copy `woden_settings->lsts` to the GPU, use it, then free it.
+Must also have `woden_settings->num_baselines`, `woden_settings->num_time_steps`
+intialised.
+
+@param[in,out] d_u_shapes Output `u` coords with various phase centres for SHAPELET components (wavelengths)
+@param[in,out] d_v_shapes Output `v` coords with various phase centres for SHAPELET components (wavelengths)
+@param[in] num_shapes Number of SHAPELET COMPONENTs
+@param[in] d_X_diff Baseline lengths in the `X` direction (metres)
+@param[in] d_Y_diff Baseline lengths in the `Y` direction (metres)
+@param[in] d_Z_diff Baseline lengths in the `Z` direction (metres)
+@param[in] d_ras Array of SHAPELET Right Ascensions (radians)
+@param[in] d_decs Array of SHAPELET Declinations (radians)
+@param[in] woden_settings Struct containing simulation settings
+ */
+extern "C" void calc_uv_shapelet_gpu(user_precision_t *d_u_shapes, user_precision_t *d_v_shapes,
+                                    int num_shapes,
+                                    double *d_X_diff, double *d_Y_diff, double *d_Z_diff,
+                                    double *d_ras, double *d_decs,
+                                    woden_settings_t *woden_settings);
+
 
 /**
 @brief Calculate interferometric \f$l,m,n\f$ image coords for a given RA,Dec
@@ -176,13 +233,33 @@ __global__ void kern_calc_lmn(double ra0, double sdec0,
 
 
 /**
-@brief Internally to WODEN C/CUDA, all cross-correlations are stored first,
-then the autos after. All autos have zero length, so use this function to
-set all autos uvw to zero.
+@brief Calculates the \f$l,m,n\f$ image coords for an intialised `d_components`
+struct. Assumes d_components->ras, d_components->decs have been allocated
+and set on the device.
 
-@details `num_cross` is the number of cross-correlations, so fill any uvw after
-this by adding `iAuto = threadIdx.x + (blockDim.x*blockIdx.x)`, meaning you
-should run this kernel with `grid.x` set, where:
+@details Runs `kern_calc_lmn` using d_components->ras, d_components->decs and
+woden_settings->ra0, woden_settings->sdec0, woden_settings->cdec0 as inputs.
+This function allocates device memory for `d_components->ls`, `d_components->ms`,
+and `d_components->ns`, and puts the results in these arrays.
+
+ @param[in,out] d_components Initialised `components_t` struct containing the
+ ra and dec arrays
+ @param[in] num_components Number of RA,Dec coords in `d_components`
+ @param[in] woden_settings Woden settings struct containing the phase centre
+*/
+extern "C" void calc_lmn_for_components_gpu(components_t *d_components,
+                                           int num_components,
+                                           woden_settings_t *woden_settings);
+
+
+/**
+ @brief Internally to WODEN C/GPU, all cross-correlations are stored first,
+ then the autos after. All autos have zero length, so use this function to
+ set all autos uvw to zero.
+
+ @details `num_cross` is the number of cross-correlations, so fill any uvw after
+ this by adding `iAuto = threadIdx.x + (blockDim.x*blockIdx.x)`, meaning you
+ should run this kernel with `grid.x` set, where:
   - grid.x * threads.x >= `num_autos`
 
  @param[in] num_cross Number of cross-correlations
@@ -191,7 +268,27 @@ should run this kernel with `grid.x` set, where:
  @param[in,out] d_v v coords
  @param[in,out] d_w w coords
 */
-__global__ void set_auto_uvw_to_zero(int num_cross, int num_autos,
+__global__ void kern_set_auto_uvw_to_zero(int num_cross, int num_autos,
+                                     user_precision_t *d_u,
+                                     user_precision_t *d_v,
+                                     user_precision_t *d_w);
+
+
+/**
+ @brief This is just a wrapper to launch `kern_set_auto_uvw_to_zero` to set
+ all auto-correlations to zero. Wrapper means we can call this function from
+ the CPU.
+
+ @details All `d_*` arrays should be initialised and filled on the GPU before
+ calling this.
+
+ @param[in] num_cross Number of cross-correlations
+ @param[in] num_autos Number of auto-correlations
+ @param[in,out] d_u u coords
+ @param[in,out] d_v v coords
+ @param[in,out] d_w w coords
+*/
+extern "C" void set_auto_uvw_to_zero_gpu(int num_cross, int num_autos,
                                      user_precision_t *d_u,
                                      user_precision_t *d_v,
                                      user_precision_t *d_w);

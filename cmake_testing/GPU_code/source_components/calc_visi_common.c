@@ -667,7 +667,7 @@ void do_gpu_calc_visi(int n_powers, int n_curves, int n_lists,
   woden_settings->num_cross = num_cross;
   woden_settings->use_dipamps = 0;
 
-  // d_beam_gains_t *d_beam_gains = malloc(sizeof(d_beam_gains_t));
+  // beam_gains_t *d_beam_gains = malloc(sizeof(beam_gains_t));
   // visibility_set_t *d_visibility_set = NULL;
   
 

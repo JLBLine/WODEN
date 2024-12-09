@@ -33,7 +33,7 @@ extern double * malloc_freqs_gpu(int num_extrap_freqs, double *extrap_freqs);
 
 extern source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
 
-extern void free_beam_gains_gpu(d_beam_gains_t *d_beam_gains, e_beamtype beamtype);
+extern void free_beam_gains_gpu(beam_gains_t *d_beam_gains, e_beamtype beamtype);
 
 extern void free_extrapolated_flux_arrays(components_t *d_components);
 

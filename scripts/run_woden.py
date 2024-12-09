@@ -352,6 +352,7 @@ def main(argv=None):
         with concurrent.futures.ProcessPoolExecutor(max_workers=num_threads) as executor:
         
             gpu_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+            # gpu_executor = concurrent.futures.ProcessPoolExecutor(max_workers=1)
             gpu_calc = None  # To store the future of the calculation thread
 
             # Loop through multiple rounds of data reading and calculation
