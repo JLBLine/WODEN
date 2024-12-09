@@ -1,4 +1,4 @@
-#include "primary_beam.h"
+#include "beam_settings.h"
 #include <complex.h>
 #include <math.h>
 

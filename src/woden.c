@@ -9,7 +9,7 @@
 #include "woden_struct_defs.h"
 
 // #include "shapelet_basis.h"
-#include "primary_beam.h"
+#include "beam_settings.h"
 #include "visibility_set.h"
 #include "hyperbeam_error.h"
 #include "calculate_visibilities_common.h"

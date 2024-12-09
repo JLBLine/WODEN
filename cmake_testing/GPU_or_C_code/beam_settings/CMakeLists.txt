@@ -5,7 +5,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   ##Set the flags depending on the precision
   DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
 
-  add_library(primary_beam_${PRECISION} SHARED "${CMAKE_SOURCE_DIR}/src/primary_beam.c")
+  add_library(primary_beam_${PRECISION} SHARED "${CMAKE_SOURCE_DIR}/src/beam_settings.c")
   target_link_libraries(primary_beam_${PRECISION} gcov)
   target_compile_options(primary_beam_${PRECISION} PRIVATE ${C_COVER_FLAGS})
 

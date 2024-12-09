@@ -52,11 +52,8 @@ if (NOT DEFINED ${PYTHON_EXECUTABLE})
     set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
 endif()
 
-## Test C code
-add_subdirectory(C_code)
-
-## Test CUDA code
-add_subdirectory(GPU_code)
+## Test GPU/C code
+add_subdirectory(GPU_or_C_code)
 
 ## Test python library
 add_subdirectory(wodenpy)

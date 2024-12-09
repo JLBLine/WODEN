@@ -3,7 +3,7 @@
 #include <math.h>
 
 #include "constants.h"
-#include "primary_beam.h"
+#include "beam_settings.h"
 #include "woden_struct_defs.h"
 #include "woden_precision_defs.h"
 
