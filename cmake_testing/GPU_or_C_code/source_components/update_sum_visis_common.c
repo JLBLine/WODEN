@@ -1,30 +1,54 @@
 #include "update_sum_visis_common.h"
 
+
 void setUp (void) {} /* Is run before eVary test, put unit init calls here. */
 void tearDown (void) {} /* Is run after eVary test, put unit clean-up calls here. */
 
-// #include <stdio.h>
 
-// #if defined (__NVCC__) || defined (__HIPCC__)
+void test_update_sum_visis_cpu(int num_freqs, int num_cross,
+          int num_baselines, int num_components, int num_times, int beamtype,
+          int use_twobeams, int num_ants, int off_cardinal_dipoles,
+          user_precision_complex_t *g1xs, user_precision_complex_t *D1xs,
+          user_precision_complex_t *D1ys, user_precision_complex_t *g1ys,
+          user_precision_complex_t *visi_components,
+          user_precision_t *flux_I, user_precision_t *flux_Q,
+          user_precision_t *flux_U, user_precision_t *flux_V,
+          user_precision_t *sum_visi_XX_real, user_precision_t *sum_visi_XX_imag,
+          user_precision_t *sum_visi_XY_real, user_precision_t *sum_visi_XY_imag,
+          user_precision_t *sum_visi_YX_real, user_precision_t *sum_visi_YX_imag,
+          user_precision_t *sum_visi_YY_real, user_precision_t *sum_visi_YY_imag){
 
-// #define __GPU__
+  int *ant1_to_baseline_map = malloc(num_baselines*sizeof(int));
+  int *ant2_to_baseline_map = malloc(num_baselines*sizeof(int));
 
-//Do some ridiculous exercise to work out what the tolerance should be tested to
-//Depends on whether using NVIDIA or AMD, and if double float or double precision
-// #ifdef __HIPCC__
-//   #ifdef DOUBLE_PRECISION
-//     double TOL = 1e-10;
-//   #else
-//     double TOL = 1e-10;
-//   #endif
-// #else
-//   #ifdef DOUBLE_PRECISION
-//     double TOL = 1e-12;
-//   #else
-//     double TOL = 1e-12;
-//   #endif
-// #endif
+  fill_ant_to_baseline_mapping_cpu(num_ants, ant1_to_baseline_map, ant2_to_baseline_map);
 
+  for (int iBaseline = 0; iBaseline < num_cross; iBaseline++) {
+    int time_ind = (int)floorf( (user_precision_t)iBaseline / ((user_precision_t)num_baselines * (user_precision_t)num_freqs));
+    int freq_ind = (int)floorf( ((user_precision_t)iBaseline - ((user_precision_t)time_ind*(user_precision_t)num_baselines * (user_precision_t)num_freqs)) / (user_precision_t)num_baselines);
+
+    for (int iComponent = 0; iComponent < num_components; iComponent++) {
+
+      //There is a flux for every frequnecy and component
+      int flux_ind = num_components*freq_ind + iComponent;
+
+      update_sum_visis_stokesIQUV_cpu(iBaseline, iComponent, num_freqs,
+             num_baselines, num_components, num_times, beamtype, off_cardinal_dipoles,
+             g1xs, D1xs, D1ys, g1ys,
+             ant1_to_baseline_map, ant2_to_baseline_map, use_twobeams,
+             visi_components[iBaseline],
+             flux_I[flux_ind], flux_Q[flux_ind],
+             flux_U[flux_ind], flux_V[flux_ind],
+             sum_visi_XX_real, sum_visi_XX_imag,
+             sum_visi_XY_real, sum_visi_XY_imag,
+             sum_visi_YX_real, sum_visi_YX_imag,
+             sum_visi_YY_real, sum_visi_YY_imag);
+
+    }
+  }
+  free(ant1_to_baseline_map);
+  free(ant2_to_baseline_map);
+}
 
 /*
 Test the __device__ code that updates the summed visibilities by grabbing the
@@ -100,6 +124,18 @@ void test_update_sum_visis_VaryGainChooseBeams(int beamtype, int do_gpu) {
 
   if (do_gpu == 1) {
     test_kern_update_sum_visis(num_freqs, num_visis,
+          num_baselines, num_components, num_times, beamtype,
+          use_twoants, num_ants, off_cardinal_dipoles,
+          primay_beam_J00, primay_beam_J01,
+          primay_beam_J10, primay_beam_J11,
+          visi_components,
+          flux_I, flux_Q, flux_U, flux_V,
+          sum_visi_XX_real, sum_visi_XX_imag,
+          sum_visi_XY_real, sum_visi_XY_imag,
+          sum_visi_YX_real, sum_visi_YX_imag,
+          sum_visi_YY_real, sum_visi_YY_imag);
+  } else {
+    test_update_sum_visis_cpu(num_freqs, num_visis,
           num_baselines, num_components, num_times, beamtype,
           use_twoants, num_ants, off_cardinal_dipoles,
           primay_beam_J00, primay_beam_J01,
@@ -282,6 +318,18 @@ void test_update_sum_visis_VaryFluxesChooseBeams(int beamtype, int do_gpu) {
           sum_visi_XY_real, sum_visi_XY_imag,
           sum_visi_YX_real, sum_visi_YX_imag,
           sum_visi_YY_real, sum_visi_YY_imag);
+  } else {
+    test_update_sum_visis_cpu(num_freqs, num_visis,
+          num_baselines, num_components, num_times, beamtype,
+          use_twoants, num_ants, off_cardinal_dipoles,
+          primay_beam_J00, primay_beam_J01,
+          primay_beam_J10, primay_beam_J11,
+          visi_components,
+          flux_I, flux_Q, flux_U, flux_V,
+          sum_visi_XX_real, sum_visi_XX_imag,
+          sum_visi_XY_real, sum_visi_XY_imag,
+          sum_visi_YX_real, sum_visi_YX_imag,
+          sum_visi_YY_real, sum_visi_YY_imag);
   }
 
   user_precision_t *expected_order = malloc(num_visis*sizeof(user_precision_t));
@@ -438,6 +486,18 @@ void test_update_sum_visis_VaryVisiChooseBeams(int beamtype, int do_gpu) {
 
   if (do_gpu == 1) {
     test_kern_update_sum_visis(num_freqs, num_visis,
+          num_baselines, num_components, num_times, beamtype,
+          use_twoants, num_ants, off_cardinal_dipoles,
+          primay_beam_J00, primay_beam_J01,
+          primay_beam_J10, primay_beam_J11,
+          visi_components,
+          flux_I, flux_Q, flux_U, flux_V,
+          sum_visi_XX_real, sum_visi_XX_imag,
+          sum_visi_XY_real, sum_visi_XY_imag,
+          sum_visi_YX_real, sum_visi_YX_imag,
+          sum_visi_YY_real, sum_visi_YY_imag);
+  }else {
+    test_update_sum_visis_cpu(num_freqs, num_visis,
           num_baselines, num_components, num_times, beamtype,
           use_twoants, num_ants, off_cardinal_dipoles,
           primay_beam_J00, primay_beam_J01,

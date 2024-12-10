@@ -82,7 +82,7 @@ void calculate_component_visis(e_component_type comptype,
       printf("\tVisi kernel done\n");
     }
 
-    free_extrapolated_flux_arrays(&d_components);
+    free_extrapolated_flux_arrays_gpu(&d_components);
     free_d_components(d_chunked_source, comptype);
     free_beam_gains_gpu(&d_beam_gains, beam_settings->beamtype);
   }
@@ -320,110 +320,6 @@ void calculate_visibilities(array_layout_t *array_layout,
       calculate_component_visis(SHAPELET, d_calc_visi_inouts, woden_settings,
                                  beam_settings, source, d_chunked_source,
                                  d_visibility_set, num_beams, use_twobeams, do_gpu);
-
-
-
-
-
-  //     if (verbose == 1){
-  //       printf("\tDoing shapelet components\n");
-  //     }
-
-  //     double *d_lsts=NULL;
-  //     user_precision_t *d_u_shapes = NULL;
-  //     user_precision_t *d_v_shapes = NULL;
-
-  //     gpuMalloc( (void**)&(d_lsts), woden_settings->num_time_steps*sizeof(double));
-  //     gpuMemcpy( d_lsts, woden_settings->lsts,
-  //                            woden_settings->num_time_steps*sizeof(double),
-  //                            gpuMemcpyHostToDevice);
-
-  //     gpuMalloc( (void**)&d_u_shapes,
-  //           num_shapes*num_baselines*num_time_steps*sizeof(user_precision_t));
-  //     gpuMalloc( (void**)&d_v_shapes,
-  //           num_shapes*num_baselines*num_time_steps*sizeof(user_precision_t));
-
-  //     //Something to store the primary beam gains (all 4 pols) in
-  //     d_beam_gains_t d_shape_beam_gains;
-  //     if (use_twobeams == 1) {
-  //       d_shape_beam_gains.d_ant1_to_baseline_map = d_ant1_to_baseline_map;
-  //       d_shape_beam_gains.d_ant2_to_baseline_map = d_ant2_to_baseline_map;
-  //       d_shape_beam_gains.use_twobeams = 1;
-  //     } else {
-  //       d_shape_beam_gains.use_twobeams = 0;
-  //     }
-
-  //     //If an everybeam model, already calculated beam gains on the CPU
-  //     //So just copy them across
-  //     if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
-  //       copy_CPU_beam_gains_to_GPU(&source->shape_components,
-  //         &d_shape_beam_gains, num_shapes*num_freqs*num_time_steps*num_beams);
-  //     }
-
-  //     source_component_common(woden_settings, beam_settings, d_freqs,
-  //                             source, d_chunked_source,
-  //                             &d_shape_beam_gains, SHAPELET,
-  //                             d_visibility_set);
-
-
-  //     if (num_shapes == 1) {
-  //       threads.x = 128;
-  //       threads.y = 1;
-  //       grid.x = (int)ceil( (float)(num_baselines*num_time_steps) / (float)threads.x );
-  //       grid.y = 1;
-  //     }
-  //     else {
-  //       threads.x = 64;
-  //       threads.y = 2;
-  //       grid.x = (int)ceil( (float)(num_baselines*num_time_steps) / (float)threads.x );
-  //       grid.y = (int)ceil( ((float)num_shapes) / ((float)threads.y) );
-  //     }
-
-  //     //Extra set of coords, centred on sky location of each shapelet source
-  //     gpuErrorCheckKernel("kern_calc_uv_shapelet",
-  //                           kern_calc_uv_shapelet, grid, threads,
-  //                           d_X_diff, d_Y_diff, d_Z_diff,
-  //                           d_u_shapes, d_v_shapes, d_lsts,
-  //                           d_chunked_source->shape_components.ras,
-  //                           d_chunked_source->shape_components.decs,
-  //                           num_baselines, num_time_steps, num_shapes);
-
-  //     //Splitting over visibilities, but looping over shapelet coeffs inside
-  //     //the kernel
-  //     //Splitting over visibilities, but looping over shapelet coeffs inside
-  //     //the kernel
-  //     threads.x = 128;
-  //     threads.y = 1;
-  //     grid.x = (int)ceil( (float)num_cross / (float)threads.x );
-  //     grid.y = 1;
-
-  //     gpuErrorCheckKernel("kern_calc_visi_shapelets",
-  //           kern_calc_visi_shapelets, grid, threads,
-  //           d_chunked_source->shape_components, d_shape_beam_gains,
-  //           d_us, d_vs, d_ws,
-  //           d_allsteps_wavelengths,
-  //           d_u_shapes, d_v_shapes,
-  //           d_visibility_set->sum_visi_XX_real,
-  //           d_visibility_set->sum_visi_XX_imag,
-  //           d_visibility_set->sum_visi_XY_real,
-  //           d_visibility_set->sum_visi_XY_imag,
-  //           d_visibility_set->sum_visi_YX_real,
-  //           d_visibility_set->sum_visi_YX_imag,
-  //           d_visibility_set->sum_visi_YY_real,
-  //           d_visibility_set->sum_visi_YY_imag,
-  //           d_sbf,
-  //           num_shapes, num_baselines, num_freqs, num_cross,
-  //           d_chunked_source->n_shape_coeffs, num_time_steps,
-  //           beam_settings->beamtype, woden_settings->off_cardinal_dipoles);
-
-  //     gpuFree(d_v_shapes);
-  //     gpuFree(d_u_shapes);
-  //     gpuFree(d_lsts);
-
-  //     free_d_components(d_chunked_source, SHAPELET);
-  //     free_extrapolated_flux_arrays(&d_chunked_source->shape_components);
-  //     free_beam_gains_gpu(d_shape_beam_gains, beam_settings->beamtype);
-
     }//if shapelet
 
     if (do_gpu == 1){

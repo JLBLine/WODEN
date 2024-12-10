@@ -6,6 +6,7 @@
 #include "constants.h"
 #include "woden_struct_defs.h"
 #include "woden_precision_defs.h"
+#include "source_components_cpu.h"
 
 //External CUDA code we're linking in
 extern void test_kern_get_beam_gains(int num_freqs, int num_cross,

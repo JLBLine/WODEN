@@ -132,7 +132,7 @@ component into a GAUSSIAN or SHAPELET component, and has been applied in
 @param[in,out] visi_YX Output YX instrumental visibility
 @param[in,out] visi_YY Output YY instrumental visibility
 */
-__device__ void apply_beam_gains_stokesIQUV_on_cardinal(gpuUserComplex g1x, gpuUserComplex D1x,
+__device__ void apply_beam_gains_stokesIQUV_on_cardinal_gpu(gpuUserComplex g1x, gpuUserComplex D1x,
           gpuUserComplex D1y, gpuUserComplex g1y,
           gpuUserComplex g2x, gpuUserComplex D2x,
           gpuUserComplex D2y, gpuUserComplex g2y,
@@ -278,7 +278,7 @@ component into a GAUSSIAN or SHAPELET component, and has been applied in
 @param[in,out] visi_YX Output YX instrumental visibility
 @param[in,out] visi_YY Output YY instrumental visibility
 */
-__device__ void apply_beam_gains_stokesIQUV_off_cardinal(gpuUserComplex g1x, gpuUserComplex D1x,
+__device__ void apply_beam_gains_stokesIQUV_off_cardinal_gpu(gpuUserComplex g1x, gpuUserComplex D1x,
           gpuUserComplex D1y, gpuUserComplex g1y,
           gpuUserComplex g2x, gpuUserComplex D2x,
           gpuUserComplex D2y, gpuUserComplex g2y,
@@ -399,7 +399,7 @@ If `beamtype == NO_BEAM`, set `g1x = g1y = g2x = g2y = 1` and
 @param[in,out] *g2y Beam leakage antenna 2 from east-west
 
 */
-__device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
+__device__ void get_beam_gains_gpu(int iBaseline, int iComponent, int num_freqs,
            int num_baselines, int num_components, int num_times, int beamtype,
            gpuUserComplex *d_gxs, gpuUserComplex *d_Dxs,
            gpuUserComplex *d_Dys, gpuUserComplex *d_gys,
@@ -458,7 +458,7 @@ antennas. Used to map iBaseline to the correct antenna 2
 @param[in,out] *g2y Beam leakage antenna 2 from east-west
 
 */
-__device__ void get_beam_gains_multibeams(int iBaseline, int iComponent, int num_freqs,
+__device__ void get_beam_gains_multibeams_gpu(int iBaseline, int iComponent, int num_freqs,
            int num_baselines, int num_components, int num_times, int beamtype,
            gpuUserComplex *d_gxs, gpuUserComplex *d_Dxs,
            gpuUserComplex *d_Dys, gpuUserComplex *d_gys,
@@ -476,7 +476,7 @@ COMPONENT Stokes parameters to create instrumental XX,XY,YX,YY visibilities,
 and sum them into real and imaginary XX,XY,YX,YY visibilities arrays
 `d_sim_visi_*_real` and `d_sim_visi_*_imag`.
 
-@details Uses `get_beam_gains` and `apply_beam_gains` as described above to
+@details Uses `get_beam_gains_gpu` and `apply_beam_gains` as described above to
 apply the gains - see descriptions for what should be the arguments to them.
 
 @param[in] iBaseline Index of which baseline, freq, and time we are on
@@ -525,7 +525,7 @@ into
 @param[in,out] *d_sum_visi_YY_imag Pointer to array to sum imaginary YY
 visibility into
 */
-__device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent,
+__device__ void update_sum_visis_stokesIQUV_gpu(int iBaseline, int iComponent,
     int num_freqs, int num_baselines, int num_components, int num_times,
     int beamtype, int off_cardinal,
     gpuUserComplex *d_gxs, gpuUserComplex *d_Dxs,
@@ -547,7 +547,7 @@ COMPONENT Stokes I parameter to create instrumental XX,XY,YX,YY visibilities,
 and sum them into real and imaginary XX,XY,YX,YY visibilities arrays
 `d_sim_visi_*_real` and `d_sim_visi_*_imag`.
 
-@details Uses `get_beam_gains` or `get_beam_gains_multibeams`,
+@details Uses `get_beam_gains_gpu` or `get_beam_gains_multibeams_gpu`,
  and `apply_beam_gains` as described above to apply the gains -
  see descriptions for what should be the arguments to them.
 
@@ -659,13 +659,13 @@ reference flux density `d_ref_fluxes[iFluxComp]`, and `spectral index d_SIs[iFlu
 @param[in] iFreq Index of which frequency to extrapolate to
 @param[in,out] *extrap_flux Pointer to extrapolated flux (Jy)
 */
-__device__ void extrap_stokes_power_law(user_precision_t *d_ref_fluxes,
+__device__ void extrap_stokes_power_law_gpu(user_precision_t *d_ref_fluxes,
            user_precision_t *d_SIs,
            double *d_extrap_freqs, int iFluxComp, int iFreq,
            user_precision_t * extrap_flux);
 
 /**
-@brief Kernel to run `extrap_stokes_power_law` for all Stokes I components in `d_components`.
+@brief Kernel to run `extrap_stokes_power_law_gpu` for all Stokes I components in `d_components`.
 
 @details Fills the array `d_components.extrap_stokesI` with the extrapolated Stokes I flux densities.
 
@@ -678,7 +678,7 @@ __global__ void kern_extrap_power_laws_stokesI(int num_extrap_freqs, double *d_e
                                        int num_comps, components_t d_components);
 
 /**
-@brief Kernel to run `extrap_stokes_power_law` for all Stokes V components in `d_components`.
+@brief Kernel to run `extrap_stokes_power_law_gpu` for all Stokes V components in `d_components`.
 
 @details Fills the array `d_components.extrap_stokesV` with the extrapolated Stokes V flux densities.
 
@@ -691,7 +691,7 @@ __global__ void kern_extrap_power_laws_stokesV(int num_extrap_freqs, double *d_e
                                        int num_comps, components_t d_components);
 
 /**
-@brief Kernel to run `extrap_stokes_power_law` for all linear polarisation components in `d_components`.
+@brief Kernel to run `extrap_stokes_power_law_gpu` for all linear polarisation components in `d_components`.
 
 @details Temporarily fills the array `d_components.extrap_stokesQ` with the extrapolated linear polarisation flux densities. The intention is to the use `kern_apply_rotation_measure` after the fact, which will use `d_components.extrap_stokesQ` as input flux, do rotations, and then fill `d_components.extrap_stokesU` and `d_components.extrap_stokesV`.
 
@@ -720,13 +720,13 @@ curvature `q` param `spectral index d_qs[iFluxComp]` to calculate the flux densi
 @param[in] iFreq Index of which frequency to extrapolate to
 @param[in,out] *extrap_flux Pointer to extrapolated flux (Jy)
 */
-__device__ void extrap_stokes_curved_power_law(user_precision_t *d_ref_fluxes,
+__device__ void extrap_stokes_curved_power_law_gpu(user_precision_t *d_ref_fluxes,
            user_precision_t *d_SIs, user_precision_t *d_qs,
            double *d_extrap_freqs, int iFluxComp, int iFreq,
            user_precision_t * extrap_flux);
 
 /**
-@brief Kernel to run `extrap_stokes_curved_power_law` for all Stokes I components in `d_components`.
+@brief Kernel to run `extrap_stokes_curved_power_law_gpu` for all Stokes I components in `d_components`.
 
 @details Fills the array `d_components.extrap_stokesI` with the extrapolated Stokes I flux densities.
 
@@ -740,7 +740,7 @@ __global__ void kern_extrap_curved_power_laws_stokesI(int num_extrap_freqs, doub
 
 
 /**
-@brief Kernel to run `extrap_stokes_curved_power_law` for all Stokes I components in `d_components`.
+@brief Kernel to run `extrap_stokes_curved_power_law_gpu` for all Stokes I components in `d_components`.
 
 @details Fills the array `d_components.extrap_stokesV` with the extrapolated Stokes V flux densities.
 
@@ -753,7 +753,7 @@ __global__ void kern_extrap_curved_power_laws_stokesV(int num_extrap_freqs, doub
                                        int num_comps, components_t d_components);
 
 /**
-@brief Kernel to run `extrap_stokes_curved_power_law` for all linear polarisation components in `d_components`.
+@brief Kernel to run `extrap_stokes_curved_power_law_gpu` for all linear polarisation components in `d_components`.
 
 @details Temporarily fills the array `d_components.extrap_stokesQ` with the extrapolated linear polarisation flux densities. The intention is to the use `kern_apply_rotation_measure` after the fact, which will use `d_components.extrap_stokesQ` as input flux, do rotations, and then fill `d_components.extrap_stokesU` and `d_components.extrap_stokesV`.
 
@@ -806,7 +806,7 @@ frequency.
 @param[in] iFreq The index of the frequency component to extrapolate.
 @param[in,out]  extrap_flux The extrapolated flux.
  */
-__device__ void extrap_stokes_list_fluxes(user_precision_t *list_stokes,
+__device__ void extrap_stokes_list_fluxes_gpu(user_precision_t *list_stokes,
            double *list_freqs, int *arr_num_list_values, int *list_start_indexes,
            double *d_extrap_freqs, int iFluxComp, int iFreq,
            user_precision_t * extrap_flux);
@@ -814,7 +814,7 @@ __device__ void extrap_stokes_list_fluxes(user_precision_t *list_stokes,
 /**
 @brief Extrapolates list-type spectral model fluxes to given frequencies.
 
-@details Fills `extrap_stokes` with the extrapolated stokes flux densities. Runs the function `extrap_stokes_list_fluxes`. 
+@details Fills `extrap_stokes` with the extrapolated stokes flux densities. Runs the function `extrap_stokes_list_fluxes_gpu`. 
 
 @param[in] list_stokes Array containing all the list-fluxes used for the extrapolation.
 @param[in] list_freqs Array containing all the list-frequencies used for the extrapolation; must match order of `list_stokes`.
@@ -1087,7 +1087,7 @@ If do_QUV == 0, only free the StokesI array.
 
 @param[in,out] *d_components A populated `components_t` struct
 */
-extern "C" void free_extrapolated_flux_arrays(components_t *d_components);
+extern "C" void free_extrapolated_flux_arrays_gpu(components_t *d_components);
 
 /**
 @brief Calculate the auto-correlations for all antennas given the fluxes
@@ -1133,9 +1133,9 @@ time step in the simulation
 @param[in] use_twobeams If True, use a two primary beams per visibility.
 Otherwise, assume all primary beams are identical
 @param[in] *d_ant1_to_auto_map An index of all primary beams to auto-correlations
-Currently this is just an index of all antennas. Gets passed to `get_beam_gains_multibeams`
+Currently this is just an index of all antennas. Gets passed to `get_beam_gains_multibeams_gpu`
 @param[in] *d_ant2_to_auto_map An index of all primary beams to auto-correlations
-Currently this is just an index of all antennas. Gets passed to `get_beam_gains_multibeams`
+Currently this is just an index of all antennas. Gets passed to `get_beam_gains_multibeams_gpu`
 @param[in] off_cardinal_dipoles Boolean to specify if the dipoles in the beam are off the cardinal axes
 (45 and 135 degrees) or aligned with north-south and east-west (0 and 90 degrees). Effects what visibilities are calculated.
 

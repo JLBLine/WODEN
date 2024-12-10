@@ -1,15 +1,3 @@
-// #include <stdio.h>
-// #include <stdlib.h>
-// #include <complex.h>
-// #include <math.h>
-// #include "gpucomplex.h"
-// #include "fundamental_coords_gpu.h"
-// #include "constants.h"
-// #include "source_components_gpu.h"
-// #include "woden_struct_defs.h"
-// #include "primary_beam_gpu.h"
-// #include "woden_precision_defs.h"
-// #include "gpu_macros.h"
 #include "source_components_gpu.h"
 
 __device__  gpuUserComplex calc_measurement_equation_gpu(user_precision_t *d_us,
@@ -47,7 +35,7 @@ __device__  gpuUserComplex calc_measurement_equation_gpu(user_precision_t *d_us,
   return visi;
 }
 
-__device__ void apply_beam_gains_stokesIQUV_on_cardinal(gpuUserComplex g1x, gpuUserComplex D1x,
+__device__ void apply_beam_gains_stokesIQUV_on_cardinal_gpu(gpuUserComplex g1x, gpuUserComplex D1x,
           gpuUserComplex D1y, gpuUserComplex g1y,
           gpuUserComplex g2x, gpuUserComplex D2x,
           gpuUserComplex D2y, gpuUserComplex g2y,
@@ -101,7 +89,7 @@ __device__ void apply_beam_gains_stokesIQUV_on_cardinal(gpuUserComplex g1x, gpuU
 
 }
 
-__device__ void apply_beam_gains_stokesIQUV_off_cardinal(gpuUserComplex g1x, gpuUserComplex D1x,
+__device__ void apply_beam_gains_stokesIQUV_off_cardinal_gpu(gpuUserComplex g1x, gpuUserComplex D1x,
           gpuUserComplex D1y, gpuUserComplex g1y,
           gpuUserComplex g2x, gpuUserComplex D2x,
           gpuUserComplex D2y, gpuUserComplex g2y,
@@ -155,7 +143,7 @@ __device__ void apply_beam_gains_stokesIQUV_off_cardinal(gpuUserComplex g1x, gpu
 
 }
 
-__device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
+__device__ void get_beam_gains_gpu(int iBaseline, int iComponent, int num_freqs,
            int num_baselines, int num_components, int num_times, int beamtype,
            gpuUserComplex *d_gxs, gpuUserComplex *d_Dxs,
            gpuUserComplex *d_Dys, gpuUserComplex *d_gys,
@@ -204,10 +192,10 @@ __device__ void get_beam_gains(int iBaseline, int iComponent, int num_freqs,
     * D2y = d_Dys[beam_ind];
   }
 
-} //end __device__ get_beam_gains
+} //end __device__ get_beam_gains_gpu
 
 
-__device__ void get_beam_gains_multibeams(int iBaseline, int iComponent, int num_freqs,
+__device__ void get_beam_gains_multibeams_gpu(int iBaseline, int iComponent, int num_freqs,
            int num_baselines, int num_components, int num_times, int beamtype,
            gpuUserComplex *d_gxs, gpuUserComplex *d_Dxs,
            gpuUserComplex *d_Dys, gpuUserComplex *d_gys,
@@ -265,7 +253,7 @@ __device__ void get_beam_gains_multibeams(int iBaseline, int iComponent, int num
     * D2y = d_Dys[beam2];
   }
 
-} //end __device__ get_beam_gains_multibeams
+} //end __device__ get_beam_gains_multibeams_gpu
 
 __device__ void apply_beam_gains_stokesI_on_cardinal(gpuUserComplex g1x, gpuUserComplex D1x,
           gpuUserComplex D1y, gpuUserComplex g1y,
@@ -337,7 +325,7 @@ __device__ void apply_beam_gains_stokesI_off_cardinal(gpuUserComplex g1x, gpuUse
 
 }
 
-__device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent,
+__device__ void update_sum_visis_stokesIQUV_gpu(int iBaseline, int iComponent,
     int num_freqs, int num_baselines, int num_components, int num_times,
     int beamtype, int off_cardinal_dipoles,
     gpuUserComplex *d_gxs, gpuUserComplex *d_Dxs,
@@ -361,7 +349,7 @@ __device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent,
     gpuUserComplex g2y;
 
     if (use_twobeams == 1){
-      get_beam_gains_multibeams(iBaseline, iComponent, num_freqs,
+      get_beam_gains_multibeams_gpu(iBaseline, iComponent, num_freqs,
                num_baselines, num_components, num_times, beamtype,
                d_gxs, d_Dxs,
                d_Dys, d_gys,
@@ -369,7 +357,7 @@ __device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent,
                &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
     }
     else {
-      get_beam_gains(iBaseline, iComponent, num_freqs,
+      get_beam_gains_gpu(iBaseline, iComponent, num_freqs,
                num_baselines, num_components, num_times, beamtype,
                d_gxs, d_Dxs,
                d_Dys, d_gys,
@@ -389,11 +377,11 @@ __device__ void update_sum_visis_stokesIQUV(int iBaseline, int iComponent,
     // printf("iComponent IQUV: %d %f %f %f %f\n", iComponent, flux_I, flux_Q, flux_U, flux_V);
 
     if (off_cardinal_dipoles == 1) {
-      apply_beam_gains_stokesIQUV_off_cardinal(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
+      apply_beam_gains_stokesIQUV_off_cardinal_gpu(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
                     flux_I, flux_Q, flux_U, flux_V,
                     visi_component, &visi_XX, &visi_XY, &visi_YX, &visi_YY);
     } else {
-      apply_beam_gains_stokesIQUV_on_cardinal(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
+      apply_beam_gains_stokesIQUV_on_cardinal_gpu(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
                     flux_I, flux_Q, flux_U, flux_V,
                     visi_component, &visi_XX, &visi_XY, &visi_YX, &visi_YY);
     }
@@ -444,7 +432,7 @@ __device__ void update_sum_visis_stokesI(int iBaseline, int iComponent,
     gpuUserComplex g2y;
 
     if (use_twobeams == 1){
-      get_beam_gains_multibeams(iBaseline, iComponent, num_freqs,
+      get_beam_gains_multibeams_gpu(iBaseline, iComponent, num_freqs,
                num_baselines, num_components, num_times, beamtype,
                d_gxs, d_Dxs,
                d_Dys, d_gys,
@@ -452,7 +440,7 @@ __device__ void update_sum_visis_stokesI(int iBaseline, int iComponent,
                &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
     }
     else {
-      get_beam_gains(iBaseline, iComponent, num_freqs,
+      get_beam_gains_gpu(iBaseline, iComponent, num_freqs,
                num_baselines, num_components, num_times, beamtype,
                d_gxs, d_Dxs,
                d_Dys, d_gys,
@@ -509,21 +497,21 @@ __global__ void kern_make_zeros_user_precision(user_precision_t *array, int num_
 extern "C" void malloc_extrapolated_flux_arrays_gpu(components_t *d_components, int num_comps,
                                      int num_freqs){
   d_components->extrap_stokesI = NULL;
-  ( gpuMalloc( (void**)&d_components->extrap_stokesI,
-                                   num_comps*num_freqs*sizeof(user_precision_t) ));
+  gpuMalloc( (void**)&d_components->extrap_stokesI,
+                                   num_comps*num_freqs*sizeof(user_precision_t) );
 
   if (d_components->do_QUV == 1)
   {
       // printf("Doing full polarisation\n");
       d_components->extrap_stokesQ = NULL;
-      ( gpuMalloc( (void**)&d_components->extrap_stokesQ,
-                                      num_comps*num_freqs*sizeof(user_precision_t) ));
+      gpuMalloc( (void**)&d_components->extrap_stokesQ,
+                                      num_comps*num_freqs*sizeof(user_precision_t) );
       d_components->extrap_stokesU = NULL;
-      ( gpuMalloc( (void**)&d_components->extrap_stokesU,
-                                      num_comps*num_freqs*sizeof(user_precision_t) ));
+      gpuMalloc( (void**)&d_components->extrap_stokesU,
+                                      num_comps*num_freqs*sizeof(user_precision_t) );
       d_components->extrap_stokesV = NULL;
-      ( gpuMalloc( (void**)&d_components->extrap_stokesV,
-                                      num_comps*num_freqs*sizeof(user_precision_t) ));
+      gpuMalloc( (void**)&d_components->extrap_stokesV,
+                                      num_comps*num_freqs*sizeof(user_precision_t) );
 
       //set everything to zero at not every component has to have full polarisation
 
@@ -549,7 +537,7 @@ extern "C" void malloc_extrapolated_flux_arrays_gpu(components_t *d_components, 
   }
 }
 
-__device__ void extrap_stokes_power_law(user_precision_t *d_ref_fluxes,
+__device__ void extrap_stokes_power_law_gpu(user_precision_t *d_ref_fluxes,
            user_precision_t *d_SIs,
            double *d_extrap_freqs, int iFluxComp, int iFreq,
            user_precision_t * extrap_flux){
@@ -570,7 +558,7 @@ __global__ void kern_extrap_power_laws_stokesI(int num_extrap_freqs, double *d_e
 
     user_precision_t flux_I;
 
-    extrap_stokes_power_law(d_components.power_ref_stokesI,
+    extrap_stokes_power_law_gpu(d_components.power_ref_stokesI,
                             d_components.power_SIs,
                             d_extrap_freqs,
                             iFluxComp, iFreq, &flux_I);
@@ -592,7 +580,7 @@ __global__ void kern_extrap_power_laws_stokesV(int num_extrap_freqs, double *d_e
 
     user_precision_t flux_V;
 
-    extrap_stokes_power_law(d_components.stokesV_power_ref_flux,
+    extrap_stokes_power_law_gpu(d_components.stokesV_power_ref_flux,
                             d_components.stokesV_power_SIs,
                             d_extrap_freqs,
                             iFluxComp, iFreq, &flux_V);
@@ -614,7 +602,7 @@ __global__ void kern_extrap_power_laws_linpol(int num_extrap_freqs, double *d_ex
 
     user_precision_t flux_linpol;
 
-    extrap_stokes_power_law(d_components.linpol_power_ref_flux,
+    extrap_stokes_power_law_gpu(d_components.linpol_power_ref_flux,
                             d_components.linpol_power_SIs,
                             d_extrap_freqs,
                             iFluxComp, iFreq, &flux_linpol);
@@ -626,7 +614,7 @@ __global__ void kern_extrap_power_laws_linpol(int num_extrap_freqs, double *d_ex
   }
 }
 
-__device__ void extrap_stokes_curved_power_law(user_precision_t *d_ref_fluxes,
+__device__ void extrap_stokes_curved_power_law_gpu(user_precision_t *d_ref_fluxes,
            user_precision_t *d_SIs, user_precision_t *d_qs,
            double *d_extrap_freqs, int iFluxComp, int iFreq,
            user_precision_t * extrap_flux){
@@ -656,7 +644,7 @@ __global__ void kern_extrap_curved_power_laws_stokesI(int num_extrap_freqs, doub
 
     user_precision_t flux_I;
 
-    extrap_stokes_curved_power_law(d_components.curve_ref_stokesI,
+    extrap_stokes_curved_power_law_gpu(d_components.curve_ref_stokesI,
                             d_components.curve_SIs, d_components.curve_qs, 
                             d_extrap_freqs,
                             iFluxComp, iFreq,
@@ -681,7 +669,7 @@ __global__ void kern_extrap_curved_power_laws_stokesV(int num_extrap_freqs, doub
 
     user_precision_t flux_V;
 
-    extrap_stokes_curved_power_law(d_components.stokesV_curve_ref_flux,
+    extrap_stokes_curved_power_law_gpu(d_components.stokesV_curve_ref_flux,
                             d_components.stokesV_curve_SIs,
                             d_components.stokesV_curve_qs, 
                             d_extrap_freqs, iFluxComp, iFreq, &flux_V);
@@ -705,7 +693,7 @@ __global__ void kern_extrap_curved_power_laws_linpol(int num_extrap_freqs, doubl
 
     user_precision_t flux_linpol;
 
-    extrap_stokes_curved_power_law(d_components.linpol_curve_ref_flux,
+    extrap_stokes_curved_power_law_gpu(d_components.linpol_curve_ref_flux,
                             d_components.linpol_curve_SIs,
                             d_components.linpol_curve_qs, 
                             d_extrap_freqs, iFluxComp, iFreq, &flux_linpol);
@@ -756,7 +744,7 @@ __global__ void kern_polarisation_fraction_linpol(int num_extrap_freqs,
   }
 }
 
-__device__ user_precision_t calc_gradient_extrap_list(user_precision_t *list_fluxes,
+__device__ user_precision_t calc_gradient_extrap_list_gpu(user_precision_t *list_fluxes,
           double *list_freqs, double desired_freq, int low_ind_1, int low_ind_2) {
 
   user_precision_t gradient;
@@ -793,7 +781,7 @@ __device__ user_precision_t calc_gradient_extrap_list(user_precision_t *list_flu
 }
 
 
-__device__ void extrap_stokes_list_fluxes(user_precision_t *list_stokes,
+__device__ void extrap_stokes_list_fluxes_gpu(user_precision_t *list_stokes,
            double *list_freqs, int *arr_num_list_values, int *list_start_indexes,
            double *d_extrap_freqs, int iFluxComp, int iFreq,
            user_precision_t * extrap_flux){
@@ -862,7 +850,7 @@ __device__ void extrap_stokes_list_fluxes(user_precision_t *list_stokes,
     }
   }
 
-  * extrap_flux = calc_gradient_extrap_list(list_stokes,
+  * extrap_flux = calc_gradient_extrap_list_gpu(list_stokes,
             list_freqs, d_extrap_freq,
             list_start_ind + low_ind_1, list_start_ind + low_ind_2);
 
@@ -892,7 +880,7 @@ __global__ void kern_extrap_list_fluxes(user_precision_t *list_stokes, double *l
     int iComponent = list_comp_inds[iFluxComp];
     int extrap_ind = num_extrap_freqs*iComponent + iFreq;
 
-    extrap_stokes_list_fluxes(list_stokes, list_freqs, num_list_values,
+    extrap_stokes_list_fluxes_gpu(list_stokes, list_freqs, num_list_values,
                               list_start_indexes, d_extrap_freqs,
                               iFluxComp, iFreq,
                               &extrap_flux);
@@ -1361,7 +1349,7 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
 
       if (d_components.do_QUV == 1)
       {
-        update_sum_visis_stokesIQUV(iBaseline, iComponent, num_freqs,
+        update_sum_visis_stokesIQUV_gpu(iBaseline, iComponent, num_freqs,
              num_baselines, num_components, num_times, beamtype, off_cardinal_dipoles,
              (gpuUserComplex *)d_component_beam_gains.gxs,
              (gpuUserComplex *)d_component_beam_gains.Dxs,
@@ -1542,7 +1530,7 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       visi_shape = visi_shape*V_envelop;
 
       if (d_components.do_QUV == 1) {
-        update_sum_visis_stokesIQUV(iBaseline, iComponent, num_freqs,
+        update_sum_visis_stokesIQUV_gpu(iBaseline, iComponent, num_freqs,
              num_baselines, num_shapes, num_times, beamtype, off_cardinal_dipoles,
              (gpuUserComplex *)d_component_beam_gains.gxs,
              (gpuUserComplex *)d_component_beam_gains.Dxs,
@@ -2049,7 +2037,7 @@ extern "C" source_t * copy_chunked_source_to_GPU(source_t *chunked_source){
   return d_chunked_source;
 }
 
-extern "C" void free_extrapolated_flux_arrays(components_t *d_components){
+extern "C" void free_extrapolated_flux_arrays_gpu(components_t *d_components){
   gpuFree( d_components->extrap_stokesI );
 
   if (d_components->do_QUV) {
@@ -2245,7 +2233,7 @@ __global__ void kern_calc_autos(components_t d_components,
 
     //Set up iBaseline to be a cross-pol of the correct time
     //and frequency step, that also correpsonds to the correct antenna
-    //get_beam_gains and get_beam_gains_multibeams will use this to access the
+    //get_beam_gains_gpu and get_beam_gains_multibeams_gpu will use this to access the
     //correct beam gains.
     int iBaseline = num_baselines*num_freqs*time_ind + num_baselines*freq_ind + iAnt;
 
@@ -2258,7 +2246,7 @@ __global__ void kern_calc_autos(components_t d_components,
     for (int iComponent = 0; iComponent < num_components; iComponent++) {
 
       if (use_twobeams == 1){
-        get_beam_gains_multibeams(iBaseline, iComponent, num_freqs,
+        get_beam_gains_multibeams_gpu(iBaseline, iComponent, num_freqs,
                 num_baselines, num_components, num_times, beamtype,
                 (gpuUserComplex *)d_component_beam_gains.gxs,
                 (gpuUserComplex *)d_component_beam_gains.Dxs,
@@ -2269,7 +2257,7 @@ __global__ void kern_calc_autos(components_t d_components,
       }
       else {
         // printf("WE IS ONLY DOING THIS TING\n");
-        get_beam_gains(iBaseline, iComponent, num_freqs,
+        get_beam_gains_gpu(iBaseline, iComponent, num_freqs,
                 num_baselines, num_components, num_times, beamtype,
                 (gpuUserComplex *)d_component_beam_gains.gxs,
                 (gpuUserComplex *)d_component_beam_gains.Dxs,
@@ -2291,13 +2279,13 @@ __global__ void kern_calc_autos(components_t d_components,
         user_precision_t flux_V = d_components.extrap_stokesV[extrap_ind];
 
         if (off_cardinal_dipoles == 1) {
-          apply_beam_gains_stokesIQUV_off_cardinal(g1x, D1x, D1y, g1y,
+          apply_beam_gains_stokesIQUV_off_cardinal_gpu(g1x, D1x, D1y, g1y,
                                     g2x, D2x, D2y, g2y,
                                     flux_I, flux_Q, flux_U, flux_V,
                                     visi_component,
                                     &auto_XX, &auto_XY, &auto_YX, &auto_YY);
         } else {
-          apply_beam_gains_stokesIQUV_on_cardinal(g1x, D1x, D1y, g1y,
+          apply_beam_gains_stokesIQUV_on_cardinal_gpu(g1x, D1x, D1y, g1y,
                                     g2x, D2x, D2y, g2y,
                                     flux_I, flux_Q, flux_U, flux_V,
                                     visi_component,
@@ -2474,7 +2462,7 @@ __global__ void kern_apply_beam_gains_stokesIQUV_on_cardinal(int num_gains, gpuU
     gpuUserComplex visi_YX;
     gpuUserComplex visi_YY;
 
-    apply_beam_gains_stokesIQUV_on_cardinal(d_g1xs[iGain], d_D1xs[iGain],
+    apply_beam_gains_stokesIQUV_on_cardinal_gpu(d_g1xs[iGain], d_D1xs[iGain],
              d_D1ys[iGain], d_g1ys[iGain],
              d_g2xs[iGain], d_D2xs[iGain],
              d_D2ys[iGain], d_g2ys[iGain],
@@ -2520,14 +2508,14 @@ __global__ void kern_get_beam_gains(int num_components, int num_baselines,
       gpuUserComplex g2y;
 
       if (use_twobeams == 1) {
-        get_beam_gains_multibeams(iBaseline, iComponent, num_freqs,
+        get_beam_gains_multibeams_gpu(iBaseline, iComponent, num_freqs,
                  num_baselines, num_components, num_times, beamtype,
                  d_g1xs, d_D1xs,
                  d_D1ys, d_g1ys,
                  d_ant1_to_baseline_map, d_ant2_to_baseline_map,
                  &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
       } else {
-        get_beam_gains(iBaseline, iComponent, num_freqs,
+        get_beam_gains_gpu(iBaseline, iComponent, num_freqs,
                  num_baselines, num_components, num_times, beamtype,
                  d_g1xs, d_D1xs,
                  d_D1ys, d_g1ys,
@@ -2576,7 +2564,7 @@ __global__ void kern_update_sum_visis_stokesIQUV(int num_freqs,
       //There is a flux for every frequnecy and component
       int flux_ind = num_components*freq_ind + iComponent;
 
-      update_sum_visis_stokesIQUV(iBaseline, iComponent, num_freqs,
+      update_sum_visis_stokesIQUV_gpu(iBaseline, iComponent, num_freqs,
              num_baselines, num_components, num_times, beamtype, off_cardinal_dipoles,
              d_g1xs, d_D1xs,
              d_D1ys, d_g1ys,

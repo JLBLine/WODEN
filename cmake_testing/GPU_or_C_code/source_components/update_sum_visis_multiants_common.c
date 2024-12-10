@@ -6,7 +6,7 @@ correct beam gain and mesurement equation, multiplying and summing onto the visi
 Here we keep the component visibilities and fluxes constant and vary the beam gains
 Test works for all primary beam types
 */
-void test_update_sum_visis_VaryGainChooseBeams(int beamtype, int do_gpu) {
+void test_update_sum_visis_multiants_VaryGainChooseBeams(int beamtype, int do_gpu) {
 
 
   int num_ants = 3;
@@ -92,6 +92,18 @@ void test_update_sum_visis_VaryGainChooseBeams(int beamtype, int do_gpu) {
             sum_visi_XY_real, sum_visi_XY_imag,
             sum_visi_YX_real, sum_visi_YX_imag,
             sum_visi_YY_real, sum_visi_YY_imag);
+  } else {
+    test_update_sum_visis_cpu(num_freqs, num_visis,
+          num_baselines, num_components, num_times, beamtype,
+          use_twobeams, num_ants, off_cardinal_dipoles,
+          primay_beam_J00, primay_beam_J01,
+          primay_beam_J10, primay_beam_J11,
+          visi_components,
+          flux_I, flux_Q, flux_U, flux_V,
+          sum_visi_XX_real, sum_visi_XX_imag,
+          sum_visi_XY_real, sum_visi_XY_imag,
+          sum_visi_YX_real, sum_visi_YX_imag,
+          sum_visi_YY_real, sum_visi_YY_imag);
   }
 
   //Do a bunch of interesting maths to predict what the outcomes should be

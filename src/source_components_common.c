@@ -1,128 +1,146 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <complex.h>
-#include <math.h>
-// #include "gpucomplex.h"
-// #include "fundamental_coords_gpu.h"
-// #include "source_components_gpu.h"
-// #include "primary_beam_gpu.h"
-
-// #include "gpu_macros.h"
-
 #include "source_components_common.h"
 #include "source_components_cpu.h"
 
-void extrapolate_Stokes(source_t *d_chunked_source, double *d_extrap_freqs,
+//NOTE this works as both a CPU and GPU function. Anything with `mem` at the
+//front means you either need host or device memory for that variable. E.g.
+//if `do_gpu == 1` then `mem_chunked_source` must be in device memory.
+//chunked_source and extrap_freqs MUST be in GPU memory
+//The thinking of calling the GPU/CPU code from the same function, is that
+//for future developers, you can tell where you're going to have to develop
+//both CPU/GPU code.
+void extrapolate_Stokes(source_t *mem_chunked_source, double *mem_extrap_freqs,
                         int num_extrap_freqs, e_component_type comptype,
                         int do_gpu){
 
-  components_t d_components;
+  components_t mem_components;
   // int n_comps = 0;
   int n_powers = 0;
   int n_curves = 0;
   int n_lists = 0;
 
-  //Choose the right components to extrapolate for
+  //Choose the right mem_components to extrapolate for
   if (comptype == POINT) {
-    d_components = d_chunked_source->point_components;
-    // n_comps = d_chunked_source->n_points;
-    n_powers = d_chunked_source->n_point_powers;
-    n_curves = d_chunked_source->n_point_curves;
-    n_lists = d_chunked_source->n_point_lists;
+    mem_components = mem_chunked_source->point_components;
+    n_powers = mem_chunked_source->n_point_powers;
+    n_curves = mem_chunked_source->n_point_curves;
+    n_lists = mem_chunked_source->n_point_lists;
   }
   else if (comptype == GAUSSIAN) {
-    d_components = d_chunked_source->gauss_components;
-    // n_comps = d_chunked_source->n_gauss;
-    n_powers = d_chunked_source->n_gauss_powers;
-    n_curves = d_chunked_source->n_gauss_curves;
-    n_lists = d_chunked_source->n_gauss_lists;
-  // } else if (comptype == SHAPELET) {
+    mem_components = mem_chunked_source->gauss_components;
+    n_powers = mem_chunked_source->n_gauss_powers;
+    n_curves = mem_chunked_source->n_gauss_curves;
+    n_lists = mem_chunked_source->n_gauss_lists;
   } else {
-    d_components = d_chunked_source->shape_components;
-    // n_comps = d_chunked_source->n_shapes;
-    n_powers = d_chunked_source->n_shape_powers;
-    n_curves = d_chunked_source->n_shape_curves;
-    n_lists = d_chunked_source->n_shape_lists;
+    mem_components = mem_chunked_source->shape_components;
+    n_powers = mem_chunked_source->n_shape_powers;
+    n_curves = mem_chunked_source->n_shape_curves;
+    n_lists = mem_chunked_source->n_shape_lists;
   }
 
   if (n_powers > 0) {
     if (do_gpu == 1) {
-      extrap_power_laws_stokesI_gpu(d_components, n_powers, d_extrap_freqs, num_extrap_freqs);
+      extrap_power_laws_stokesI_gpu(mem_components, n_powers, mem_extrap_freqs, num_extrap_freqs);
+    } else {
+      extrap_power_laws_stokesI_cpu(mem_components, n_powers, mem_extrap_freqs, num_extrap_freqs);
     }
   }
   //Next up, do the CURVED_POWER_LAW types
   if (n_curves > 0) {
     if (do_gpu == 1) {
-      extrap_curved_power_laws_stokesI_gpu(d_components, n_curves, d_extrap_freqs, num_extrap_freqs);
+      extrap_curved_power_laws_stokesI_gpu(mem_components, n_curves, mem_extrap_freqs, num_extrap_freqs);
+    } else {
+      extrap_curved_power_laws_stokesI_cpu(mem_components, n_curves, mem_extrap_freqs, num_extrap_freqs);
     }
   }
 
   //Finally, do any list flux peeps
   if (n_lists > 0) {
     if (do_gpu == 1) {
-      extrap_list_fluxes_stokesI_gpu(d_components, n_lists, d_extrap_freqs, num_extrap_freqs);
+      extrap_list_fluxes_stokesI_gpu(mem_components, n_lists, mem_extrap_freqs, num_extrap_freqs);
+    } else {
+      extrap_list_fluxes_stokesI_cpu(mem_components, n_lists, mem_extrap_freqs, num_extrap_freqs);
     }
   }
 
-  if (d_components.n_stokesV_power > 0) {
+  if (mem_components.n_stokesV_power > 0) {
     if (do_gpu == 1) {
-      extrap_power_laws_stokesV_gpu(d_components, d_extrap_freqs, num_extrap_freqs);
+      extrap_power_laws_stokesV_gpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
+    } else {
+      extrap_power_laws_stokesV_cpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
     }
   }
 
-  if (d_components.n_stokesV_curve > 0) {
+  if (mem_components.n_stokesV_curve > 0) {
     if (do_gpu == 1) {
-      extrap_curved_power_laws_stokesV_gpu(d_components, d_extrap_freqs, num_extrap_freqs);
+      extrap_curved_power_laws_stokesV_gpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
+    } else {
+      extrap_curved_power_laws_stokesV_cpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
     }
   }
 
-  if (d_components.n_stokesV_pol_frac > 0) {
+  if (mem_components.n_stokesV_pol_frac > 0) {
     if (do_gpu == 1) {
-      polarisation_fraction_stokesV_gpu(d_components, d_extrap_freqs, num_extrap_freqs);
+      polarisation_fraction_stokesV_gpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
+    } else {
+      polarisation_fraction_stokesV_cpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
     }
   }
 
-  if (d_components.n_stokesV_list > 0) {
+  if (mem_components.n_stokesV_list > 0) {
     if (do_gpu == 1) {
-      extrap_list_fluxes_stokesV_gpu(d_components, d_extrap_freqs, num_extrap_freqs);
+      extrap_list_fluxes_stokesV_gpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
+    } else {
+      extrap_list_fluxes_stokesV_cpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
     }
   }
 
-  if (d_components.n_linpol_power > 0) {
+  if (mem_components.n_linpol_power > 0) {
     if (do_gpu == 1) {
-      extrap_power_laws_linpol_gpu(d_components, d_extrap_freqs, num_extrap_freqs);
+      extrap_power_laws_linpol_gpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
+    } else {
+      extrap_power_laws_linpol_cpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
     }
   }
 
-  if (d_components.n_linpol_curve > 0) {
+  if (mem_components.n_linpol_curve > 0) {
     if (do_gpu == 1) {
-      extrap_curved_power_laws_linpol_gpu(d_components, d_extrap_freqs, num_extrap_freqs);
+      extrap_curved_power_laws_linpol_gpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
+    } else {
+      extrap_curved_power_laws_linpol_cpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
     }
   }
 
-  if (d_components.n_linpol_pol_frac > 0) {
+  if (mem_components.n_linpol_pol_frac > 0) {
     if (do_gpu == 1) {
-      polarisation_fraction_linpol_gpu(d_components, d_extrap_freqs, num_extrap_freqs);
+      polarisation_fraction_linpol_gpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
+    } else {
+      polarisation_fraction_linpol_cpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
     }
   }
 
-  if (d_components.n_linpol_list > 0) {
+  if (mem_components.n_linpol_list > 0) {
     if (do_gpu == 1) {
-      extrap_list_fluxes_linpol_gpu(d_components, d_extrap_freqs, num_extrap_freqs);
+      extrap_list_fluxes_linpol_gpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
+    } else {
+      extrap_list_fluxes_linpol_cpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
     }
   }
 
-  if (d_components.n_linpol_p_list > 0) {
+  if (mem_components.n_linpol_p_list > 0) {
     if (do_gpu == 1) {
-      extrap_p_list_fluxes_linpol_gpu(d_components, d_extrap_freqs, num_extrap_freqs);
+      extrap_p_list_fluxes_linpol_gpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
+    } else {
+      extrap_p_list_fluxes_linpol_cpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
     }
   }
-
-  if (d_components.n_linpol_angles > 0) {
+  if (mem_components.n_linpol_angles > 0) {
     if (do_gpu == 1) {
-      apply_rotation_measure_gpu(d_components, d_extrap_freqs, num_extrap_freqs);
+      apply_rotation_measure_gpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
+    } else {
+      apply_rotation_measure_cpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
     }
   }
+  // printf("CPU inside %.3f\n", mem_components.extrap_stokesQ[0]);
 }
 
 void source_component_common(woden_settings_t *woden_settings,
@@ -132,7 +150,7 @@ void source_component_common(woden_settings_t *woden_settings,
            e_component_type comptype,
            visibility_set_t *d_visibility_set){
 
-  int do_gpu = 1;
+  int do_gpu = woden_settings->do_gpu;
   int verbose = 0;
 
   //Here we see if we a single primary beam for all (num_beams = 1) or
@@ -281,3 +299,17 @@ void source_component_common(woden_settings_t *woden_settings,
     }
   }
 } //END source_component_common
+
+void fill_ant_to_baseline_mapping_cpu(int num_ants, int *ant1_to_baseline_map,
+                                      int *ant2_to_baseline_map){
+
+  // int num_baselines = ((num_ants - 1)*num_ants) / 2;
+  int cross_index = 0;
+  for (int ant1 = 0; ant1 < num_ants; ant1++) {
+    for (int ant2 = ant1+1; ant2 < num_ants; ant2++) {
+      ant1_to_baseline_map[cross_index] = ant1;
+      ant2_to_baseline_map[cross_index] = ant2;
+      cross_index++;
+    }
+  }
+}

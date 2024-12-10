@@ -7,6 +7,7 @@
 #include "woden_struct_defs.h"
 #include "visibility_set.h"
 
+
 //External CUDA code being linked in
 extern void test_kern_calc_autos(components_t *components, int beamtype,
                                  int num_components, int num_baselines,

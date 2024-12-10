@@ -81,6 +81,14 @@ void test_apply_beam_gains_GiveCorrectValues(int do_gpu) {
                                         visi_components,
                                         visi_XXs, visi_XYs,
                                         visi_YXs, visi_YYs);
+  } else {
+    apply_beam_gains_stokesIQUV_on_cardinal_arrays_cpu(num_gains, g1xs, D1xs, D1ys, g1ys,
+                                        g1xs, D1xs, D1ys, g1ys,
+                                        flux_Is, flux_Qs,
+                                        flux_Us, flux_Vs,
+                                        visi_components,
+                                        visi_XXs, visi_XYs,
+                                        visi_YXs, visi_YYs);
   }
 
   //Expected outputs

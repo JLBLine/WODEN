@@ -10,7 +10,7 @@ extern void malloc_extrapolated_flux_arrays_gpu(components_t *d_components, int 
 extern void free_d_components(source_t *d_chunked_source,
                                   e_component_type comptype);
 
-extern void free_extrapolated_flux_arrays(components_t *d_components);
+extern void free_extrapolated_flux_arrays_gpu(components_t *d_components);
 
 extern double * malloc_freqs_gpu(int num_extrap_freqs, double *extrap_freqs);
 
@@ -250,9 +250,38 @@ void test_extrap_stokes_GivesCorrectValues(int do_gpu) {
                                           extrap_flux_U, extrap_flux_V);
 
     free_d_components(d_chunked_source, POINT);
-    free_extrapolated_flux_arrays(&d_chunked_source->point_components);
+    free_extrapolated_flux_arrays_gpu(&d_chunked_source->point_components);
     free_freqs_gpu(d_extrap_freqs);
+  } else {
+    
+    malloc_extrapolated_flux_arrays_cpu(&chunked_source->point_components,
+                                      chunked_source->n_points,
+                                      num_extrap_freqs);
+
+    extrapolate_Stokes(chunked_source, extrap_freqs, num_extrap_freqs, POINT,
+                       do_gpu);
+
+    //copy results into output arrays to be consistent with GPU test above
+
+    // printf("CPU outside %.3f\n", chunked_source->point_components.extrap_stokesI[0]);
+    for (int i = 0; i < num_extrap_freqs*num_components; i++) {
+      
+      extrap_flux_I[i] = chunked_source->point_components.extrap_stokesI[i];
+
+      if (chunked_source->point_components.do_QUV == 1)
+      {
+        extrap_flux_Q[i] = chunked_source->point_components.extrap_stokesQ[i];
+        extrap_flux_U[i] = chunked_source->point_components.extrap_stokesU[i];
+        extrap_flux_V[i] = chunked_source->point_components.extrap_stokesV[i];
+      }
+    }
+
+    free_extrapolated_flux_arrays_cpu(&chunked_source->point_components);
   }
+
+  
+
+
   // //
   //Make some expected value arrays
   double *expec_flux_I = malloc(num_extrap_freqs*num_components*sizeof(double));
@@ -266,11 +295,32 @@ void test_extrap_stokes_GivesCorrectValues(int do_gpu) {
 
   for (int i = 0; i < num_extrap_freqs*(num_powers + num_curves + num_lists); i++) {
     //Check the two are within tolerace
+
+    // if (fabs(expec_flux_I[i] - extrap_flux_I[i]) > TOL) {
+    //   printf("I %d %.3f %.3f\n", i/num_extrap_freqs, expec_flux_I[i], extrap_flux_I[i] );
+    // }
+
+    // if (fabs(expec_flux_Q[i] - extrap_flux_Q[i]) > TOL) {
+    //   printf("Q %d %.3f %.3f\n", i/num_extrap_freqs, expec_flux_Q[i], extrap_flux_Q[i] );
+    // }
+
+    // if (fabs(expec_flux_V[i] - extrap_flux_V[i]) > TOL) {
+    //   printf("V %d %.3f %.3f\n", i/num_extrap_freqs, expec_flux_V[i], extrap_flux_V[i] );
+    // }
+
+    // if (i == 0) {
+    //   printf("I %d %.3f %.3f\n", i, expec_flux_I[i], extrap_flux_I[i] );
+    //   printf("Q %d %.3f %.3f\n", i, expec_flux_Q[i], extrap_flux_Q[i] );
+    //   printf("U %d %.3f %.3f\n", i, expec_flux_U[i], extrap_flux_U[i] );
+    //   printf("V %d %.3f %.3f\n", i, expec_flux_V[i], extrap_flux_V[i] );
+    // }
+
     // printf("I %d %.3f %.3f\n", i/num_extrap_freqs, expec_flux_I[i], extrap_flux_I[i] );
     // printf("Q %d %.3f %.3f\n", i/num_extrap_freqs, expec_flux_Q[i], extrap_flux_Q[i] );
     // printf("U %d %.3f %.3f\n", i/num_extrap_freqs, expec_flux_U[i], extrap_flux_U[i] );
     // printf("V %d %.3f %.3f\n", i/num_extrap_freqs, expec_flux_V[i], extrap_flux_V[i] );
     // printf("%d %.3f %.3f\n",i, expec_flux_V[i], extrap_flux_V[i] );
+
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_I[i], extrap_flux_I[i]);
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_Q[i], extrap_flux_Q[i]);
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_U[i], extrap_flux_U[i]);

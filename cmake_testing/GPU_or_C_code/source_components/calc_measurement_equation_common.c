@@ -97,6 +97,9 @@ void test_calc_measurement_equation(int do_gpu) {
     //Run the GPU code
     test_kern_calc_measurement_equation(num_components, num_baselines,
                                         us, vs, ws, ls, ms, ns, visis);
+  } else {
+      calc_measurement_equation_arrays_cpu(num_baselines, num_components,
+                                        us, vs, ws, ls, ms, ns, visis);
   }
   
 
@@ -248,6 +251,9 @@ void test_calc_measurement_equation_GiveCorrectValues(int do_gpu) {
     if (do_gpu == 1){
       //Run the GPU code
       test_kern_calc_measurement_equation(num_components, num_baselines,
+                                        us, vs, ws, ls, ms, ns, visis);
+    } else {
+      calc_measurement_equation_arrays_cpu(num_baselines, num_components,
                                         us, vs, ws, ls, ms, ns, visis);
     }
 

@@ -6,5 +6,6 @@
 #include "constants.h"
 #include "woden_struct_defs.h"
 #include "woden_precision_defs.h"
+#include "source_components_cpu.h"
 
 void test_get_beam_gains_ChooseBeams(int beamtype, int do_gpu);

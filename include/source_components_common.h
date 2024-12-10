@@ -2,6 +2,10 @@
 #include "constants.h"
 #include "woden_struct_defs.h"
 #include "woden_precision_defs.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <complex.h>
+#include <math.h>
 
 void source_component_common(woden_settings_t *woden_settings,
            beam_settings_t *beam_settings, double *d_freqs,
@@ -10,9 +14,12 @@ void source_component_common(woden_settings_t *woden_settings,
            e_component_type comptype,
            visibility_set_t *d_visibility_set);
 
-void extrapolate_Stokes(source_t *d_chunked_source, double *d_extrap_freqs,
+void extrapolate_Stokes(source_t *mem_chunked_source, double *mem_extrap_freqs,
                         int num_extrap_freqs, e_component_type comptype,
                         int do_gpu);
+
+void fill_ant_to_baseline_mapping_cpu(int num_ants, int *ant1_to_baseline_map,
+                                      int *ant2_to_baseline_map);
 
 //Put all the GPU code we are linking in here
 //Only include this file in the final executable if we are compiling for GPU?
