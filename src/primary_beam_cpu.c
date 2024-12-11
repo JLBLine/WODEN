@@ -428,420 +428,221 @@ void calculate_RTS_MWA_analytic_beam_cpu(int num_components,
 //   }
 // }
 
-
-// extern "C" void run_hyperbeam_gpu(int num_components,
-//            int num_time_steps, int num_freqs,
-//            int num_beams, uint8_t parallactic,
-//            struct FEEBeamGpu *gpu_fee_beam,
-//            double *azs, double *zas,
-//            double *latitudes,
-//            user_precision_complex_t *d_gxs,
-//            user_precision_complex_t *d_Dxs,
-//            user_precision_complex_t *d_Dys,
-//            user_precision_complex_t *d_gys){
-
-//   //Always do things in IAU order
-//   int iau_order = 1;
-
-//   int num_azza = num_components * num_time_steps;
-//   int num_beam_values = num_azza * num_freqs * num_beams;
-
-//   //If doing parallactic rotation, call hyperbeam for each time step, meaning
-//   //we need less memory
-//   double *d_jones = NULL;
-
-//   if (parallactic) {
-//     ( gpuMalloc( (void**)&(d_jones),
-//                       2*MAX_POLS*num_beam_values*sizeof(double)) );
-//   } else {
-//     ( gpuMalloc( (void**)&(d_jones),
-//                       2*MAX_POLS*num_beam_values*num_time_steps*sizeof(double)) );
-//   }
-
-//   int32_t status = 0;
-
-//   //This is used for the remapping below
-//   dim3 grid, threads;
-
-//   threads.x = 32;
-//   threads.z = 2;
-
-//   grid.x = (int)ceil( (float)num_components / (float)threads.x );
-//   grid.z = (int)ceil( (float)num_freqs / (float)threads.z );
-
-//   if (num_beams > 1) {
-//     threads.y = 2;
-//     grid.y = (int)ceil( (float)num_beams / (float)threads.y );
-//   } else {
-//     grid.y = threads.y = 1;
-//   }
-
-//   // int num_tiles = num_beams;
-//   int num_unique_fee_freqs = get_num_unique_fee_freqs(gpu_fee_beam);
-//   // int num_unique_fee_tiles = get_num_unique_fee_tiles(gpu_fee_beam);
-
-//   //Get host pointers to the tile and freq maps
-//   const int *tile_map;
-//   const int *freq_map;
-
-//   tile_map = get_fee_tile_map(gpu_fee_beam);
-//   freq_map = get_fee_freq_map(gpu_fee_beam);
-
-//   //Copy the tile and freq maps to the GPU
-//   int32_t *d_tile_map = NULL;
-//   ( gpuMalloc( (void**)&(d_tile_map),
-//                       num_beams*sizeof(int32_t) ) );
-//   int32_t *d_freq_map = NULL;
-//   ( gpuMalloc( (void**)&(d_freq_map),
-//                       num_freqs*sizeof(int32_t) ) );
-
-//   ( gpuMemcpy(d_tile_map, tile_map,
-//             num_beams*sizeof(int32_t), gpuMemcpyHostToDevice ) );
-//   ( gpuMemcpy(d_freq_map, freq_map,
-//             num_freqs*sizeof(int32_t), gpuMemcpyHostToDevice ) );
-
-//   if (parallactic) {
-//     //The latitude of the array should change with time if we are precessing
-//     //it back to J2000. This means we have to call hyperbeam for as many time
-//     //steps as we have. Supply chunks of az, za, and d_jones via pointer
-//     //arithmatic
-//     int increment;
-//     for (int time_ind = 0; time_ind < num_time_steps; time_ind++) {
-
-//       //The size of the increment depends on the number of unique
-//       //frequencies - 
-//       increment = time_ind*num_components;
-
-//       status = fee_calc_jones_gpu_device(gpu_fee_beam,
-//                       (uint32_t)num_components,
-//                       azs + increment, zas + increment,
-//                       &latitudes[time_ind],
-//                       iau_order,
-//                       (double *)d_jones);
-
-//       gpuErrorCheckKernel("kern_map_hyperbeam_gains",
-//                             kern_map_hyperbeam_gains, grid, threads,
-//                             num_components, num_time_steps, num_freqs, num_beams,
-//                             time_ind, num_unique_fee_freqs,
-//                             d_jones, d_tile_map, d_freq_map,
-//                             parallactic,
-//                             d_gxs,
-//                             d_Dxs,
-//                             d_Dys,
-//                             d_gys);
-//     }
-//   }
-//   else {
-//     status = fee_calc_jones_gpu_device(gpu_fee_beam,
-//                     (uint32_t)num_azza,
-//                     azs, zas,
-//                     NULL,
-//                     iau_order,
-//                     (double *)d_jones);
-
-//     for (int iTime = 0; iTime < num_time_steps; iTime++) {
-
-//       gpuErrorCheckKernel("kern_map_hyperbeam_gains",
-//                             kern_map_hyperbeam_gains, grid, threads,
-//                             num_components, num_time_steps, num_freqs, num_beams,
-//                             iTime, num_unique_fee_freqs,
-//                             d_jones, d_tile_map, d_freq_map,
-//                             parallactic,
-//                             d_gxs,
-//                             d_Dxs,
-//                             d_Dys,
-//                             d_gys);
-//     }
-
-//   }
-
-//   if (status != 0) {
-//     handle_hyperbeam_error(__FILE__, __LINE__, "fee_calc_jones_gpu_device");
-//     // printf("Something went wrong running fee_calc_jones_gpu_device\n");
-//   }
-
-//   ( gpuFree(d_jones) );
-
-// }
-
-// /*******************************************************************************
-//                  Functions below to be used in unit tests
-// *******************************************************************************/
-
-// extern "C" void test_RTS_calculate_MWA_analytic_beam(int num_components,
-//      int num_time_steps, int num_freqs,
-//      user_precision_t *azs, user_precision_t *zas, int *delays,
-//      double latitude, int norm,
-//      double *beam_has, double *beam_decs, double *freqs,
-//      user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
-//      user_precision_complex_t *Dys, user_precision_complex_t *gys) {
-
-//   //Allocate space for beam gains
-//   user_precision_complex_t *d_gxs = NULL;
-//   user_precision_complex_t *d_Dxs = NULL;
-//   user_precision_complex_t *d_Dys = NULL;
-//   user_precision_complex_t *d_gys = NULL;
-
-//   ( gpuMalloc( (void**)&d_gxs,
-//     num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
-//   ( gpuMalloc( (void**)&d_Dxs,
-//     num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
-//   ( gpuMalloc( (void**)&d_Dys,
-//     num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
-//   ( gpuMalloc( (void**)&d_gys,
-//     num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
-
-//   double *d_freqs = NULL;
-//   ( gpuMalloc( (void**)&d_freqs, num_freqs*sizeof(double)) );
-//   ( gpuMemcpy(d_freqs, freqs, num_freqs*sizeof(double),
-//                       gpuMemcpyHostToDevice) );
-
-//   //Run
-//   calculate_RTS_MWA_analytic_beam(num_components,
-//        num_time_steps, num_freqs,
-//        azs, zas, delays, latitude, norm,
-//        beam_has, beam_decs, d_freqs,
-//        (user_precision_complex_t*)d_gxs, (user_precision_complex_t*)d_Dxs,
-//        (user_precision_complex_t*)d_Dys, (user_precision_complex_t*)d_gys);
-
-//   ( gpuMemcpy(gxs, d_gxs,
-//        num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
-//        gpuMemcpyDeviceToHost) );
-//   ( gpuMemcpy(Dxs, d_Dxs,
-//        num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
-//        gpuMemcpyDeviceToHost) );
-//   ( gpuMemcpy(Dys, d_Dys,
-//        num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
-//        gpuMemcpyDeviceToHost) );
-//   ( gpuMemcpy(gys, d_gys,
-//        num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
-//        gpuMemcpyDeviceToHost) );
-
-//   ( gpuFree(d_gxs) );
-//   ( gpuFree(d_Dxs) );
-//   ( gpuFree(d_Dys) );
-//   ( gpuFree(d_gys) );
-
-//   ( gpuFree(d_freqs) );
-
-
-// }
-
-// extern "C" void test_analytic_dipole_beam(int num_components,
-//      int num_time_steps, int num_freqs,
-//      user_precision_t *azs, user_precision_t *zas, double *freqs,
-//      user_precision_complex_t *analy_beam_X,
-//      user_precision_complex_t *analy_beam_Y) {
-
-//   user_precision_complex_t *d_analy_beam_X = NULL;
-//   ( gpuMalloc( (void**)&d_analy_beam_X,
-//     num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
-
-//   user_precision_complex_t *d_analy_beam_Y = NULL;
-//   ( gpuMalloc( (void**)&d_analy_beam_Y,
-//      num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
-
-//   double *d_freqs = NULL;
-//   ( gpuMalloc( (void**)&d_freqs, num_freqs*sizeof(double)) );
-//   ( gpuMemcpy(d_freqs, freqs, num_freqs*sizeof(double),
-//                       gpuMemcpyHostToDevice) );
-
-//   calculate_analytic_dipole_beam(num_components,
-//       num_time_steps, num_freqs,
-//       azs, zas, d_freqs,
-//       (user_precision_complex_t *)d_analy_beam_X, (user_precision_complex_t *)d_analy_beam_Y);
-
-//   ( gpuMemcpy(analy_beam_X, d_analy_beam_X,
-//              num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
-//              gpuMemcpyDeviceToHost) );
-//   ( gpuMemcpy(analy_beam_Y, d_analy_beam_Y,
-//              num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
-//              gpuMemcpyDeviceToHost) );
-
-//   ( gpuFree(d_analy_beam_X) );
-//   ( gpuFree(d_analy_beam_Y) );
-//   ( gpuFree(d_freqs) );
-
-// }
-
-// extern "C" void test_kern_gaussian_beam(double *beam_ls, double *beam_ms,
-//            double beam_ref_freq, double *freqs,
-//            user_precision_t fwhm_lm, user_precision_t cos_theta, user_precision_t sin_theta, user_precision_t sin_2theta,
-//            int num_freqs, int num_time_steps, int num_components,
-//            user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J11) {
-
-//   int num_beam_hadec = num_components * num_time_steps;
-
-//   double *d_beam_ls = NULL;
-//   ( gpuMalloc( (void**)&d_beam_ls, num_beam_hadec*sizeof(double)) );
-//   ( gpuMemcpy(d_beam_ls, beam_ls,
-//                            num_beam_hadec*sizeof(double), gpuMemcpyHostToDevice ) );
-
-//   double *d_beam_ms = NULL;
-//   ( gpuMalloc( (void**)&d_beam_ms, num_beam_hadec*sizeof(double)) );
-//   ( gpuMemcpy(d_beam_ms, beam_ms,
-//                            num_beam_hadec*sizeof(double), gpuMemcpyHostToDevice ) );
-
-//   double *d_freqs = NULL;
-//   ( gpuMalloc( (void**)&d_freqs, num_freqs*sizeof(double) ) );
-//   ( gpuMemcpy(d_freqs, freqs,
-//                            num_freqs*sizeof(double), gpuMemcpyHostToDevice ) );
-
-//   user_precision_complex_t *d_g1xs = NULL;
-//   ( gpuMalloc( (void**)&d_g1xs,
-//                                    num_freqs*num_beam_hadec*sizeof(user_precision_complex_t)) );
-
-//   user_precision_complex_t *d_g1ys = NULL;
-//   ( gpuMalloc( (void**)&d_g1ys,
-//                                    num_freqs*num_beam_hadec*sizeof(user_precision_complex_t)) );
-
-//   dim3 grid, threads;
-
-//   threads.x = 16;
-//   grid.x = (int)ceil( (float)num_beam_hadec / (float)threads.x );
-
-//   threads.y = 16;
-//   grid.y = (int)ceil( (float)num_freqs / (float)threads.y );
-
-//   gpuErrorCheckKernel("kern_gaussian_beam",
-//                         kern_gaussian_beam, grid, threads,
-//                         d_beam_ls, d_beam_ms,
-//                         beam_ref_freq, d_freqs,
-//                         fwhm_lm, cos_theta, sin_theta, sin_2theta,
-//                         num_freqs, num_time_steps, num_components,
-//                         (user_precision_complex_t *)d_g1xs,
-//                         (user_precision_complex_t *)d_g1ys);
-
-//   ( gpuMemcpy(primay_beam_J00, d_g1xs,
-//                  num_freqs*num_beam_hadec*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost) );
-//   ( gpuMemcpy(primay_beam_J11, d_g1ys,
-//                  num_freqs*num_beam_hadec*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost) );
-
-//   ( gpuFree(d_beam_ls ) );
-//   ( gpuFree(d_beam_ms ) );
-//   ( gpuFree(d_freqs ) );
-//   ( gpuFree(d_g1xs ) );
-//   ( gpuFree(d_g1ys ) );
-
-// }
-
-
-// extern "C" void test_calculate_gaussian_beam(int num_components, int num_time_steps,
-//      int num_freqs, user_precision_t ha0, user_precision_t sdec0, user_precision_t cdec0,
-//      user_precision_t fwhm_lm, user_precision_t cos_theta, user_precision_t sin_theta, user_precision_t sin_2theta,
-//      double beam_ref_freq, double *freqs,
-//      double *beam_has, double *beam_decs,
-//      user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J11) {
-
-//   int num_beam_hadec = num_components * num_time_steps;
-
-//   double *d_freqs = NULL;
-//   ( gpuMalloc( (void**)&d_freqs, num_freqs*sizeof(double) ) );
-//   ( gpuMemcpy(d_freqs, freqs,
-//                            num_freqs*sizeof(double), gpuMemcpyHostToDevice ) );
-
-//   user_precision_complex_t *d_g1xs = NULL;
-//   ( gpuMalloc( (void**)&d_g1xs,
-//                                    num_freqs*num_beam_hadec*sizeof(user_precision_complex_t)) );
-
-//   user_precision_complex_t *d_g1ys = NULL;
-//   ( gpuMalloc( (void**)&d_g1ys,
-//                                    num_freqs*num_beam_hadec*sizeof(user_precision_complex_t)) );
-
-
-//   calculate_gaussian_beam(num_components, num_time_steps,
-//                          num_freqs, ha0, sdec0, cdec0,
-//                          fwhm_lm, cos_theta, sin_theta, sin_2theta,
-//                          beam_ref_freq, d_freqs,
-//                          beam_has, beam_decs,
-//                          (user_precision_complex_t *)d_g1xs,
-//                          (user_precision_complex_t *)d_g1ys);
-
-//   ( gpuMemcpy(primay_beam_J00, d_g1xs,
-//                  num_freqs*num_beam_hadec*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost) );
-//   ( gpuMemcpy(primay_beam_J11, d_g1ys,
-//                  num_freqs*num_beam_hadec*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost) );
-
-//   ( gpuFree(d_freqs ) );
-//   ( gpuFree(d_g1xs ) );
-//   ( gpuFree(d_g1ys ) );
-
-// }
-
-// extern "C" void test_run_hyperbeam_gpu(int num_components,
-//            int num_time_steps, int num_freqs, int num_ants,
-//            uint8_t parallatic,
-//            struct FEEBeamGpu *gpu_fee_beam,
-//            double *azs, double *zas,
-//            double *latitudes,
-//            user_precision_complex_t *primay_beam_J00,
-//            user_precision_complex_t *primay_beam_J01,
-//            user_precision_complex_t *primay_beam_J10,
-//            user_precision_complex_t *primay_beam_J11){
-//   uint32_t num_azza = num_components * num_time_steps;
-//   int num_beam_values = num_azza * num_freqs * num_ants;
-
-//   user_precision_complex_t *d_gxs = NULL;
-//   user_precision_complex_t *d_Dxs = NULL;
-//   user_precision_complex_t *d_Dys = NULL;
-//   user_precision_complex_t *d_gys = NULL;
-
-//   ( gpuMalloc( (void**)&d_gxs,
-//                       num_beam_values*sizeof(user_precision_complex_t)) );
-//   ( gpuMalloc( (void**)&d_Dxs,
-//                       num_beam_values*sizeof(user_precision_complex_t)) );
-//   ( gpuMalloc( (void**)&d_Dys,
-//                       num_beam_values*sizeof(user_precision_complex_t)) );
-//   ( gpuMalloc( (void**)&d_gys,
-//                       num_beam_values*sizeof(user_precision_complex_t)) );
-
-//   double *reordered_azs = (double *)malloc(num_azza*sizeof(double));
-//   double *reordered_zas = (double *)malloc(num_azza*sizeof(double));
-
-//   int stripe_new, stripe_old;
-
-//   for (int time_ind = 0; time_ind < num_time_steps; time_ind++) {
-//     for (int comp_ind = 0; comp_ind < num_components; comp_ind++) {
-//       stripe_new = time_ind*num_components + comp_ind;
-//       stripe_old = comp_ind*num_time_steps + time_ind;
-//       reordered_azs[stripe_new] = azs[stripe_old];
-//       reordered_zas[stripe_new] = zas[stripe_old];
-//     }
-//   }
-
-//   run_hyperbeam_gpu(num_components,
-//              num_time_steps, num_freqs, num_ants,
-//              parallatic,
-//              gpu_fee_beam,
-//              reordered_azs, reordered_zas,
-//              latitudes,
-//              (user_precision_complex_t *)d_gxs,
-//              (user_precision_complex_t *)d_Dxs,
-//              (user_precision_complex_t *)d_Dys,
-//              (user_precision_complex_t *)d_gys);
-
-//   ( gpuMemcpy( primay_beam_J00, d_gxs,
-//                       num_beam_values*sizeof(user_precision_complex_t),
-//                       gpuMemcpyDeviceToHost) );
-
-//   ( gpuMemcpy( primay_beam_J01, d_Dxs,
-//                       num_beam_values*sizeof(user_precision_complex_t),
-//                       gpuMemcpyDeviceToHost) );
-
-//   ( gpuMemcpy( primay_beam_J10, d_Dys,
-//                       num_beam_values*sizeof(user_precision_complex_t),
-//                       gpuMemcpyDeviceToHost) );
-
-//   ( gpuMemcpy( primay_beam_J11, d_gys,
-//                       num_beam_values*sizeof(user_precision_complex_t),
-//                       gpuMemcpyDeviceToHost) );
-
-//   ( gpuFree(d_gxs) );
-//   ( gpuFree(d_Dxs) );
-//   ( gpuFree(d_Dys) );
-//   ( gpuFree(d_gys) );
-
-//   free(reordered_azs);
-//   free(reordered_zas);
-
-// }
+// Helper function to check if a value already exists in the array
+// Source: Adapted with assistance from ChatGPT (OpenAI), 2024.
+bool is_present(double *arr, int size, double value, double epsilon) {
+    for (int i = 0; i < size; i++) {
+        if (fabs(arr[i] - value) < epsilon) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Function to find unique values in an array
+// Source: Adapted with assistance from ChatGPT (OpenAI), 2024.
+int find_unique(double *input, int n, double *output, double epsilon) {
+    int unique_count = 0;
+    for (int i = 0; i < n; i++) {
+        if (!is_present(output, unique_count, input[i], epsilon)) {
+            output[unique_count++] = input[i];
+        }
+    }
+    return unique_count;
+}
+
+
+void map_hyperbeam_gains_cpu(double *jones, int num_beams, int beam_ind,
+                             int num_time_steps, int time_ind,
+                             int num_freqs, int unq_freq_ind,
+                             int num_components, 
+                             int *freq_map,
+                             user_precision_complex_t *gxs,
+                             user_precision_complex_t *Dxs,
+                             user_precision_complex_t *Dys,
+                             user_precision_complex_t *gys){
+
+  //loop over all freq mapping indexes; if the freq_map matches the unq_freq_ind,
+  //fill the outputs with the jones values
+
+  for (int freq_map_ind = 0; freq_map_ind < num_freqs; freq_map_ind++) {
+    if (freq_map[freq_map_ind] == unq_freq_ind) {
+      for (int iComponent = 0; iComponent < num_components; iComponent++) {
+
+        int gain_ind =  num_time_steps*num_freqs*num_components*beam_ind + num_freqs*time_ind*num_components + (num_components*freq_map_ind) + iComponent;
+
+        gxs[gain_ind] = jones[2*MAX_POLS*iComponent + 0] + I*jones[2*MAX_POLS*iComponent + 1];
+        Dxs[gain_ind] = jones[2*MAX_POLS*iComponent + 2] + I*jones[2*MAX_POLS*iComponent + 3];
+        Dys[gain_ind] = jones[2*MAX_POLS*iComponent + 4] + I*jones[2*MAX_POLS*iComponent + 5];
+        gys[gain_ind] = jones[2*MAX_POLS*iComponent + 6] + I*jones[2*MAX_POLS*iComponent + 7];
+      }
+    }
+  }
+  // current_ind = iTime*num_components*num_tiles + hyper_ind + iComponent;
+  // new_ind =  num_times*num_freqs*num_components*iTile + num_freqs*iTime*num_components + (num_components*iFreq) + iComponent;
+}
+
+
+void run_hyperbeam_cpu(int num_components,
+           int num_time_steps, int num_freqs,
+           int num_beams, uint8_t parallactic,
+           double *freqs, struct FEEBeam *fee_beam,
+           uint32_t *hyper_delays, int num_amps, double *amps,
+           double *azs, double *zas,
+           double *latitudes,
+           user_precision_complex_t *gxs,
+           user_precision_complex_t *Dxs,
+           user_precision_complex_t *Dys,
+           user_precision_complex_t *gys){
+
+  //Always do things in IAU order
+  int iau_order = 1;
+
+  //Always norm to zenith
+  uint8_t norm_to_zenith = 1;
+
+  // int num_azza = num_components * num_time_steps;
+  // // int num_beam_values = num_azza * num_freqs * num_beams;
+  // int num_beam_values = num_azza * num_beams;
+
+  //First thing to do is find the unique frequencies in the input freqs
+  //The GPU code has a helper function `get_num_unique_fee_freqs`, but the CPU
+  //code does not. So do it ourselves here (there might be caching so we 
+  //miiiiiight not be getting a compete speed up doing this, but still worth doing)
+
+  //First, find the closest availble frequencies to the ones we want using
+  //the hyperbeam `fee_closest_freq` function
+  double *closest_freqs = malloc(num_freqs*sizeof(double));
+  //Get the closest frequencies to the ones we want
+  for (int iFreq = 0; iFreq < num_freqs; iFreq++) {
+    closest_freqs[iFreq] = fee_closest_freq(fee_beam, freqs[iFreq]);
+    // printf("Closest freq. to %.2f MHz: %.2f MHz\n", freqs[iFreq]/1e6, closest_freqs[iFreq]/1e6);
+  }
+
+  //Next, find all unique avaible frequencies
+  double *unique_freqs = malloc(num_freqs*sizeof(double));
+  int num_unique_fee_freqs = find_unique(closest_freqs, num_freqs, unique_freqs, 1);
+
+  //Now make a map of all the frequencies we want to the unique ones
+  //We can use this to map calculated gains to output arrays
+  int *freq_map = malloc(num_freqs*sizeof(int));
+  for (int iFreq = 0; iFreq < num_freqs; iFreq++) {
+    for (int iUnique = 0; iUnique < num_unique_fee_freqs; iUnique++) {
+      if (closest_freqs[iFreq] == unique_freqs[iUnique]) {
+        freq_map[iFreq] = iUnique;
+        // printf("We haz done the thing %d\n", freq_map[iFreq]);
+        // break;
+      }
+    }
+  }
+
+  // for (int iFreq = 0; iFreq < num_freqs; iFreq++) {
+  //   printf("Freq %.2f MHz maps to unique index %d freq %.2f\n", freqs[iFreq], freq_map[iFreq], unique_freqs[freq_map[iFreq]]);
+  // }
+
+
+  // printf("num_unique: %d\n", num_unique);
+
+  //In CPU version, we'll be looping over tile, time (if parallactic rotating),
+  //and frequencies, so we only need to pass enough memory to calculate all
+  //directions. If not doing parallelactic rotation, we can just pass all
+  //directions for all times at once (as the latitude isn't changing with time)
+  //so we need more memory
+  double *jones = NULL;
+  if (parallactic == 1) {
+    jones = malloc(2*MAX_POLS*num_components*sizeof(double));
+  } else {
+    jones = malloc(2*MAX_POLS*num_components*num_time_steps*sizeof(double));
+  }
+
+  int32_t status = 0;
+
+  //To be as efficient as possible, we'd want to make something like this
+  //hyperbeam GPU function, so we on'y unique combos of dipole amplitudes.
+  //For now I think research applications will have unique dipole amplitudes
+  //per tile, so probably not going to have any effect
+  // tile_map = get_fee_tile_map(fee_beam);
+
+  int amp_increment;
+  int azza_increment;
+
+  for (int tile_ind = 0; tile_ind < num_beams; tile_ind++) {
+    // printf("HERE Tile %d, %d\n", tile_ind, parallactic);
+    //Which tile we are calculating dictates which amplitudes to use
+    //32 because there are 16 dipoles, and we have 2 polarisations
+    amp_increment = tile_ind*32;
+
+    for (int unq_freq_ind = 0; unq_freq_ind < num_unique_fee_freqs; unq_freq_ind++) {
+      // printf("HERE Freq %d\n", unq_freq_ind);
+
+      if (parallactic == 1) {
+        //The latitude of the array should change with time if we are precessing
+        //it back to J2000. This means we have to call hyperbeam for as many time
+        //steps as we have. Supply chunks of az, za, and jones via pointer
+        //arithmatic
+        
+        for (int time_ind = 0; time_ind < num_time_steps; time_ind++) {
+          // printf("HERE Time %d\n", time_ind);
+          //How far through the time steps we are dictates which az,za to use
+          azza_increment = time_ind*num_components;
+
+          status = fee_calc_jones_array(fee_beam,(uint32_t)num_components,
+                              azs + azza_increment, zas + azza_increment,
+                              (uint32_t)unique_freqs[unq_freq_ind],
+                              hyper_delays, amps + amp_increment,
+                              (uint32_t)num_amps,
+                              norm_to_zenith,
+                              &latitudes[time_ind],
+                              iau_order, jones);
+
+          // printf("Time %d Freq %d %.3e %.3e\n", time_ind, unq_freq_ind, jones[0], jones[1]);
+
+          map_hyperbeam_gains_cpu(jones, num_beams, tile_ind,
+                             num_time_steps, time_ind,
+                             num_freqs, unq_freq_ind,
+                             num_components, freq_map,
+                             gxs, Dxs, Dys, gys);
+
+          
+        
+        }//end time loop
+
+      } else {
+        //By setting latitude to a NULL, it tells the hyperbeam code to not
+        //do any parallactic rotation
+        double *current_latitude = NULL;
+        fee_calc_jones_array(fee_beam,(uint32_t)(num_components*num_time_steps),
+                            azs, zas, (uint32_t)unique_freqs[unq_freq_ind],
+                            hyper_delays, amps + amp_increment, (uint32_t)num_amps,
+                            norm_to_zenith, current_latitude ,
+                            iau_order, jones);
+        //gain mapping function works per time step, so we need to loop over
+        int gain_increment;
+        for (int time_ind = 0; time_ind < num_time_steps; time_ind++) {
+            //How far through the time steps we are dictates which az,za to use
+            gain_increment = 2*MAX_POLS*time_ind*num_components;
+
+            // printf("gain_increment %d\n", gain_increment);
+
+            map_hyperbeam_gains_cpu(jones + gain_increment, num_beams, tile_ind,
+                              num_time_steps, time_ind,
+                              num_freqs, unq_freq_ind,
+                              num_components, freq_map,
+                              gxs, Dxs, Dys, gys);
+
+        }//end time loop
+      } //end parallactic if else
+    } //end freq loop
+  } //end tile loop
+
+  if (status != 0) {
+    handle_hyperbeam_error(__FILE__, __LINE__, "fee_calc_jones_array");
+    // printf("Something went wrong running fee_calc_jones_array\n");
+  }
+
+  // ( gpuFree(jones) );
+
+  free(closest_freqs);
+  free(jones);
+
+}

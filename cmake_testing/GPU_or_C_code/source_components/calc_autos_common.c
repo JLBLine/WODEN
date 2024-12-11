@@ -4,20 +4,59 @@ Tests that the kernel that calculates auto-correlations is doing it's job
 #include "calc_autos_common.h"
 
 
-#ifdef DOUBLE_PRECISION
-  #ifdef __HIPCC__
-    double TOL = 1e-11;
-  #else
-    double TOL = 1e-12;
-  #endif
-#else
-  double TOL = 1e-2;
-#endif
+void test_calc_autos_cpu(components_t *components, int beamtype,
+                                     int num_components, int num_baselines,
+                                     int num_freqs, int num_times, int num_ants,
+                                     int num_beams,
+                                     visibility_set_t *visibility_set){
+
+  beam_gains_t component_beam_gains;
+  component_beam_gains.gxs = components->gxs;
+  component_beam_gains.Dxs = components->Dxs;
+  component_beam_gains.Dys = components->Dys;
+  component_beam_gains.gys = components->gys;
+
+  int off_cardinal_dipoles = 0;
+
+  int use_twobeams = 0;
+  if (num_beams > 1) {
+    use_twobeams = 1;
+  }
+
+  // printf("NO explosions\n");
+
+  int *ant_to_auto_map = malloc(num_ants*sizeof(int));
+  for (int ant = 0; ant < num_ants; ant++){
+    ant_to_auto_map[ant] = ant;
+  }
+
+  calc_autos_cpu(*components, component_beam_gains,
+                  beamtype, num_components, num_baselines,
+                  num_freqs, num_times, num_ants,
+                  visibility_set->sum_visi_XX_real, visibility_set->sum_visi_XX_imag,
+                  visibility_set->sum_visi_XY_real, visibility_set->sum_visi_XY_imag,
+                  visibility_set->sum_visi_YX_real, visibility_set->sum_visi_YX_imag,
+                  visibility_set->sum_visi_YY_real, visibility_set->sum_visi_YY_imag,
+                  use_twobeams, ant_to_auto_map, ant_to_auto_map,
+                  off_cardinal_dipoles);
+
+  free(ant_to_auto_map);
+}
 
 /*
 For a given beam model, calculate the auto-correlations
 */
 void test_calculate_autos(e_beamtype beamtype, int do_gpu) {
+
+  #ifdef DOUBLE_PRECISION
+    #ifdef __HIPCC__
+      double TOL = 1e-11;
+    #else
+      double TOL = 1e-12;
+    #endif
+  #else
+    double TOL = 1e-2;
+  #endif
 
   int num_comps = 4;
   int num_times = 2;
@@ -180,6 +219,11 @@ void test_calculate_autos(e_beamtype beamtype, int do_gpu) {
 
   if (do_gpu == 1) {
     test_kern_calc_autos(components, beamtype,
+                        num_comps, num_baselines,
+                        num_freqs, num_times, num_ants, num_beams,
+                        visibility_set);
+  } else {
+    test_calc_autos_cpu(components, beamtype,
                         num_comps, num_baselines,
                         num_freqs, num_times, num_ants, num_beams,
                         visibility_set);

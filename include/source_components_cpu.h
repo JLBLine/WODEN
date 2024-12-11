@@ -69,6 +69,15 @@ void calc_measurement_equation_arrays_cpu(int num_cross, int num_components,
            user_precision_t *us, user_precision_t *vs, user_precision_t *ws,
            double *ls, double *ms, double *ns, user_precision_complex_t *visis);
 
+
+void apply_beam_gains_stokesI_on_cardinal_cpu(user_precision_complex_t g1x, user_precision_complex_t D1x,
+          user_precision_complex_t D1y, user_precision_complex_t g1y,
+          user_precision_complex_t g2x, user_precision_complex_t D2x,
+          user_precision_complex_t D2y, user_precision_complex_t g2y,
+          user_precision_t flux_I, user_precision_complex_t visi_component,
+          user_precision_complex_t * visi_XX, user_precision_complex_t * visi_XY,
+          user_precision_complex_t * visi_YX, user_precision_complex_t * visi_YY);
+
 /**
 @brief Given primary beam gains and leakage terms for antenna 1
 `g1x, D1x, D1y, gy` and antenna 2 `g1x, D1x, D1y, gy`,the complex visibility
@@ -193,6 +202,13 @@ void apply_beam_gains_stokesIQUV_on_cardinal_arrays_cpu(int num_gains,
           user_precision_complex_t *visi_XXs, user_precision_complex_t *visi_XYs,
           user_precision_complex_t *visi_YXs, user_precision_complex_t *visi_YYs);
 
+void apply_beam_gains_stokesI_off_cardinal_cpu(user_precision_complex_t g1x, user_precision_complex_t D1x,
+          user_precision_complex_t D1y, user_precision_complex_t g1y,
+          user_precision_complex_t g2x, user_precision_complex_t D2x,
+          user_precision_complex_t D2y, user_precision_complex_t g2y,
+          user_precision_t flux_I, user_precision_complex_t visi_component,
+          user_precision_complex_t * visi_XX, user_precision_complex_t * visi_XY,
+          user_precision_complex_t * visi_YX, user_precision_complex_t * visi_YY);
 
 void apply_beam_gains_stokesIQUV_off_cardinal_cpu(user_precision_complex_t g1x, user_precision_complex_t D1x,
           user_precision_complex_t D1y, user_precision_complex_t g1y,
@@ -305,3 +321,16 @@ void update_sum_visis_stokesIQUV_cpu(int iBaseline, int iComponent,
     user_precision_t *sum_visi_XY_real, user_precision_t *sum_visi_XY_imag,
     user_precision_t *sum_visi_YX_real, user_precision_t *sum_visi_YX_imag,
     user_precision_t *sum_visi_YY_real, user_precision_t *sum_visi_YY_imag);
+
+void calc_autos_cpu(components_t components, beam_gains_t component_beam_gains,
+                    int beamtype, int num_components, int num_baselines,
+                    int num_freqs, int num_times, int num_ants,
+                    user_precision_t *sum_visi_XX_real, user_precision_t *sum_visi_XX_imag,
+                    user_precision_t *sum_visi_XY_real, user_precision_t *sum_visi_XY_imag,
+                    user_precision_t *sum_visi_YX_real, user_precision_t *sum_visi_YX_imag,
+                    user_precision_t *sum_visi_YY_real, user_precision_t *sum_visi_YY_imag,
+                    int use_twobeams, int *ant1_to_auto_map, int *ant2_to_auto_map,
+                    int off_cardinal_dipoles);
+
+void malloc_beam_gains_cpu(beam_gains_t *component_beam_gains,
+                           int beamtype, int num_gains);

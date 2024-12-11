@@ -3,8 +3,8 @@
 
 //External CUDA code we're linking in
 extern void copy_outputs_source_component_common_gpu(int num_of_each_flux_type,
-           source_t *d_chunked_source,
-           beam_gains_t *d_beam_gains,
+           source_t *mem_chunked_source,
+           beam_gains_t *mem_beam_gains,
            woden_settings_t *woden_settings,
            beam_settings_t *beam_settings,
            user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
@@ -17,26 +17,104 @@ extern void copy_outputs_source_component_common_gpu(int num_of_each_flux_type,
 extern double * malloc_freqs_gpu(int num_extrap_freqs, double *extrap_freqs);
 extern void free_freqs_gpu(double *d_extrap_freqs);
 
-extern void free_d_components(source_t *d_chunked_source,
+extern void free_components_gpu(source_t *mem_chunked_source,
                                   e_component_type comptype);
 
-extern void free_extrapolated_flux_arrays(components_t *d_components);
+extern void free_extrapolated_flux_arrays_gpu(components_t *mem_components);
 
-extern void free_beam_gains_gpu(beam_gains_t *d_beam_gains, e_beamtype beamtype);
+extern void free_beam_gains_gpu(beam_gains_t *mem_beam_gains, e_beamtype beamtype);
 
 extern source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
 
-extern void malloc_extrapolated_flux_arrays_gpu(components_t *d_components, int num_comps,
+extern void malloc_extrapolated_flux_arrays_gpu(components_t *mem_components, int num_comps,
                                         int num_freqs);
 
 extern void malloc_beam_gains_gpu(beam_gains_t *d_component_beam_gains,
                                      int beamtype, int num_gains);
 
-extern void calc_lmn_for_components_gpu(components_t *d_components,
+extern void calc_lmn_for_components_gpu(components_t *mem_components,
                                         int num_components,
                                         woden_settings_t *woden_settings);
 
-double TOL;
+//Match how we copy outputs from the GPU version so the testing is consistent
+void copy_outputs_source_component_common_cpu(int num_of_each_flux_type,
+           source_t *mem_chunked_source, beam_gains_t *mem_beam_gains,
+           woden_settings_t *woden_settings,
+           beam_settings_t *beam_settings,
+           user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
+           user_precision_complex_t *Dys, user_precision_complex_t *gys,
+           user_precision_t *extrap_flux_I, user_precision_t *extrap_flux_Q,
+           user_precision_t *extrap_flux_U, user_precision_t *extrap_flux_V,
+           double *ls, double *ms, double *ns,
+           e_component_type comptype){
+  int NUM_FLUX_TYPES = 3;
+
+  int num_beam_values = NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*woden_settings->num_time_steps;
+
+  if (woden_settings->use_dipamps == 1) {
+    num_beam_values *= woden_settings->num_ants;
+  }
+
+  // for (int i = 0; i < num_beam_values; i++) {
+  //   printf("gxs %d %.3e %.3e\n", i, creal(mem_beam_gains->gxs[i]), cimag(mem_beam_gains->gxs[i]));
+  // }
+
+  memcpy(gxs, mem_beam_gains->gxs, num_beam_values*sizeof(user_precision_complex_t));
+  memcpy(gys, mem_beam_gains->gys, num_beam_values*sizeof(user_precision_complex_t));
+
+  if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP || beam_settings->beamtype == MWA_ANALY) {
+    memcpy(Dxs, mem_beam_gains->Dxs, num_beam_values*sizeof(user_precision_complex_t));
+    memcpy(Dys, mem_beam_gains->Dys, num_beam_values*sizeof(user_precision_complex_t));
+  }
+
+  // Just a little shorthand so don't have to keep writing out as much in the
+  // memcpy below
+
+  components_t components;
+
+  if (comptype == POINT) {
+    components = mem_chunked_source->point_components;
+  }
+  else if (comptype == GAUSSIAN) {
+    components = mem_chunked_source->gauss_components;
+  }
+  else {
+    components = mem_chunked_source->shape_components;
+  }
+
+
+  memcpy(ls, components.ls, NUM_FLUX_TYPES*num_of_each_flux_type*sizeof(double));
+  memcpy(ms, components.ms, NUM_FLUX_TYPES*num_of_each_flux_type*sizeof(double));
+  memcpy(ns, components.ns, NUM_FLUX_TYPES*num_of_each_flux_type*sizeof(double));
+
+  // int num_things = NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs;
+
+  // if (d_components.do_QUV == 0) {
+
+  //   gpuMalloc( (void**)&d_components.extrap_stokesQ, num_things*sizeof(user_precision_t) );
+  //   gpuMalloc( (void**)&d_components.extrap_stokesU, num_things*sizeof(user_precision_t) );
+  //   gpuMalloc( (void**)&d_components.extrap_stokesV, num_things*sizeof(user_precision_t) );
+
+  //   gpuErrorCheckKernel("kern_make_zeros_user_precision",
+  //           kern_make_zeros_user_precision, grid, threads,
+  //           d_components.extrap_stokesQ, num_things);
+  //   gpuErrorCheckKernel("kern_make_zeros_user_precision",
+  //             kern_make_zeros_user_precision, grid, threads,
+  //             d_components.extrap_stokesU, num_things);
+  //   gpuErrorCheckKernel("kern_make_zeros_user_precision",
+  //             kern_make_zeros_user_precision, grid, threads,
+  //             d_components.extrap_stokesV, num_things);
+  // }
+
+  memcpy(extrap_flux_I, components.extrap_stokesI,
+         NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t));
+  memcpy(extrap_flux_Q, components.extrap_stokesQ,
+         NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t));
+  memcpy(extrap_flux_U, components.extrap_stokesU,
+         NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t));
+  memcpy(extrap_flux_V, components.extrap_stokesV,
+         NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t));
+}
 
 /*
 Test that l,m,n and beam values are calculated correctly by `source_component_common`
@@ -47,6 +125,8 @@ test millions of scenarios here, so stick with Dec=0
 void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa_fee_hdf5,
                                                          e_component_type comptype,
                                                          int do_gpu) {
+
+  double TOL;
 
   //Set up some test condition inputs
   int num_times = 3;
@@ -80,7 +160,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   woden_settings->latitude = -0.46606083776035967;
   woden_settings->use_dipamps = 0;
   woden_settings->num_ants = 1;
-  // woden_settings->num_ants = 1;
+  woden_settings->do_gpu = do_gpu;
 
   woden_settings->latitudes = malloc(num_times*sizeof(double));
   for (int i = 0; i < num_times; i++)
@@ -404,50 +484,70 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
   }
 
-  beam_gains_t *d_beam_gains = malloc(sizeof(beam_gains_t));
-  visibility_set_t *d_visibility_set = NULL;
   woden_settings->do_autos = 0;
+
+  beam_gains_t *mem_beam_gains = malloc(sizeof(beam_gains_t));
+  source_t *mem_chunked_source = NULL;
+  double *mem_freqs = NULL;
+  
+  //Visibility set not used in this test, but is an argument to the function
+  //It's needed when calculating auto-correlations. Test needs to be 
+  //expanded to test auto-correlations
+  visibility_set_t *mem_visibility_set = NULL;
 
   if (do_gpu == 1) {
     //Run the CUDA code
     
-    source_t *d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
-    double *d_freqs = malloc_freqs_gpu(num_freqs, freqs);
-
-    components_t *d_components;
+    mem_chunked_source = copy_chunked_source_to_GPU(chunked_source);
+    mem_freqs = malloc_freqs_gpu(num_freqs, freqs);
+    components_t *mem_components;
 
     if (comptype == POINT) {
-      d_components = &d_chunked_source->point_components;
+      mem_components = &mem_chunked_source->point_components;
     }
     else if (comptype == GAUSSIAN) {
-      d_components = &d_chunked_source->gauss_components;
+      mem_components = &mem_chunked_source->gauss_components;
     }
     else {
-      d_components = &d_chunked_source->shape_components;
+      mem_components = &mem_chunked_source->shape_components;
     }
 
     // int num_beams = 1;
-    // int num_gains = d_components->num_primarybeam_values*num_beams;
-    // malloc_beam_gains_gpu(d_beam_gains, beam_settings->beamtype, num_gains);
-    // calc_lmn_for_components_gpu(d_components, num_components, woden_settings);
+    // int num_gains = mem_components->num_primarybeam_values*num_beams;
+    // malloc_beam_gains_gpu(mem_beam_gains, beam_settings->beamtype, num_gains);
+    // calc_lmn_for_components_gpu(mem_components, num_components, woden_settings);
 
-    source_component_common(woden_settings, beam_settings, d_freqs,
-       chunked_source, d_chunked_source, d_beam_gains, comptype,
-       d_visibility_set);
+    source_component_common(woden_settings, beam_settings, mem_freqs,
+       chunked_source, mem_chunked_source, mem_beam_gains, comptype,
+       mem_visibility_set);
 
     copy_outputs_source_component_common_gpu(num_of_each_flux_type,
-           d_chunked_source, d_beam_gains,
+           mem_chunked_source, mem_beam_gains,
            woden_settings, beam_settings,
            gxs, Dxs, Dys, gys,
            extrap_flux_I, extrap_flux_Q, extrap_flux_U, extrap_flux_V,
            ls, ms, ns, comptype);
 
     
-    free_extrapolated_flux_arrays(d_components);
-    free_d_components(d_chunked_source, comptype);
-    free_beam_gains_gpu(d_beam_gains, beam_settings->beamtype);
-    free_freqs_gpu(d_freqs);
+    free_extrapolated_flux_arrays_gpu(mem_components);
+    free_components_gpu(mem_chunked_source, comptype);
+    free_beam_gains_gpu(mem_beam_gains, beam_settings->beamtype);
+    free_freqs_gpu(mem_freqs);
 
+  } else{
+    mem_chunked_source = chunked_source;
+    mem_freqs = freqs;
+
+    source_component_common(woden_settings, beam_settings, mem_freqs,
+       chunked_source, mem_chunked_source, mem_beam_gains, comptype,
+       mem_visibility_set);
+
+    copy_outputs_source_component_common_cpu(num_of_each_flux_type,
+           mem_chunked_source, mem_beam_gains,
+           woden_settings, beam_settings,
+           gxs, Dxs, Dys, gys,
+           extrap_flux_I, extrap_flux_Q, extrap_flux_U, extrap_flux_V,
+           ls, ms, ns, comptype);
   }
 
   double l_expected[9] = {-1.0, -sqrt(3)/2.0, -sqrt(2)/2.0, -0.5,

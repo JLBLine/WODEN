@@ -3,6 +3,8 @@
 #include "woden_struct_defs.h"
 #include "common_testing_functions.h"
 #include "source_components_common.h"
+// #include "source_components_cpu.h"
+#include <string.h>
 #include <mwa_hyperbeam.h>
 #include "hyperbeam_error.h"
 

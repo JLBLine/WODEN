@@ -104,7 +104,7 @@ stored in `d_primay_beam_J00, d_primay_beam_J11`, where `00` refers to the
 north-south polarisation, `11` the east-west polarisation, in order of time,
 frequency, COMPONENT. This function uses the beam centre pointing `ha0, dec0`
 to calculate an \f$l,m\f$ coord system in which to calculate the Gaussian beam,
-using `kern_gaussian_beam`.
+using `gaussian_beam_from_lm_cpu`.
 
 @param[in] num_components Number of COMPONENTS the beam is calculated for
 @param[in] num_time_steps Number of time steps being calculated
@@ -126,13 +126,15 @@ complex `J[0,0]` response in
 complex `J[1,1]` response in
 
 */
-void gaussian_beam_from_lm_cpu(double *beam_ls, double *beam_ms,
-                      double beam_ref_freq, double *freqs,
-                      user_precision_t fwhm_lm, user_precision_t cos_theta,
-                      user_precision_t sin_theta, user_precision_t sin_2theta,
-                      int num_components, int num_time_steps, int num_freqs,
-                      user_precision_complex_t *g1xs,
-                      user_precision_complex_t *g1ys);
+void calculate_gaussian_beam_cpu(int num_components, int num_time_steps,
+           int num_freqs, user_precision_t ha0,
+           user_precision_t sdec0, user_precision_t cdec0,
+           user_precision_t fwhm_lm, user_precision_t cos_theta,
+           user_precision_t sin_theta, user_precision_t sin_2theta,
+           double beam_ref_freq, double *freqs,
+           double *beam_has, double *beam_decs,
+           user_precision_complex_t *g1xs,
+           user_precision_complex_t *g1ys);
 
 /**
 @brief Calculate the beam response of a north-south (X) and east-west (Y)
@@ -265,50 +267,52 @@ void calculate_RTS_MWA_analytic_beam_cpu(int num_components,
 
 
 
-// /**
-// @brief Calculate the FEE MWA primary beam model to a set of sky directions
-// `azs` and `zas` for a given initialised `mwa_hyperbeam` device beam object
-// `*gpu_fee_beam`. NOTE that the azs, zas need to increment by component
-// (fastest changing), then time (slowest changing). This is the OPPOSITE
-// of what happens for all other functions, but is needed for pointer arithmatic
-// that must be done to feed things into `mwa_hyperbeam` efficiently. Soz boz.
+/**
+@brief Calculate the FEE MWA primary beam model to a set of sky directions
+`azs` and `zas` for a given initialised `mwa_hyperbeam` device beam object
+`*gpu_fee_beam`. NOTE that the azs, zas need to increment by component
+(fastest changing), then time (slowest changing). This is the OPPOSITE
+of what happens for all other functions, but is needed for pointer arithmatic
+that must be done to feed things into `mwa_hyperbeam` efficiently. Soz boz.
 
-// @details Calls `mwa_hyperbeam::fee_calc_jones_gpu_device` to calculate the beam
-// responses on the device. This function requires an initialised
-// `struct FEEBeamGpu *gpu_fee_beam` object (initialised using
-// `mwa_hyperbeam::new_gpu_fee_beam`), which in turn needs a
-// `struct FEEBeam *fee_beam` (initialised using `mwa_hyperbeam::new_fee_beam`).
-// Running these functions gathers the spherical harmnoic coefficients for the
-// requested frequencies, as well as the delays to point the beam. If these aren't
-// setup correctly, this will fall flat on it's face.
+@details Calls `mwa_hyperbeam::fee_calc_jones_gpu_device` to calculate the beam
+responses on the device. This function requires an initialised
+`struct FEEBeam *gpu_fee_beam` object (initialised using
+`mwa_hyperbeam::new_gpu_fee_beam`), which in turn needs a
+`struct FEEBeam *fee_beam` (initialised using `mwa_hyperbeam::new_fee_beam`).
+Running these functions gathers the spherical harmnoic coefficients for the
+requested frequencies, as well as the delays to point the beam. If these aren't
+setup correctly, this will fall flat on it's face.
 
-// Once the beam repsonses have been calculated, split them up into the `WODEN`
-// d_primay_beam_J* arrays using the kernel `primary_beam_gpu::kern_map_hyperbeam_gains`.
+Once the beam repsonses have been calculated, split them up into the `WODEN`
+d_primay_beam_J* arrays using the kernel `primary_beam_gpu::kern_map_hyperbeam_gains`.
 
-// @param[in] num_components Number of COMPONENTS the beam is calculated for
-// @param[in] num_time_steps Number of time steps being calculated
-// @param[in] num_freqs Number of frequencies being calculated
-// @param[in] num_beams How many primary beams are being simulated. If making all
-// primary beams the same, set to 1, otherwise number of antennas(tiles).
-// @param[in] parallactic Whether to rotate by parallactic angle or not
-// @param[in] *gpu_fee_beam An initialised `mwa_hyperbeam` `struct FEEBeamGpu`
-// @param[in] *azs Array of Azimuth angles to calculate the beam towards (radians)
-// @param[in] *zas Array of Zenith Angles to calculate the beam towards (radians)
-// @param[in] *latitudes The latitude of the array for each time step (radians); this
-// can be NULL is parallactic = 0
-// @param[in,out] *d_primay_beam_J00 The gains for the north-south beam
-// @param[in,out] *d_primay_beam_J01 The leakages for the north-south beam
-// @param[in,out] *d_primay_beam_J10 The leakages for the east-west beam
-// @param[in,out] *d_primay_beam_J11 The gains for the east-west beam
+@param[in] num_components Number of COMPONENTS the beam is calculated for
+@param[in] num_time_steps Number of time steps being calculated
+@param[in] num_freqs Number of frequencies being calculated
+@param[in] num_beams How many primary beams are being simulated. If making all
+primary beams the same, set to 1, otherwise number of antennas(tiles).
+@param[in] parallactic Whether to rotate by parallactic angle or not
+@param[in] *fee_beam An initialised `mwa_hyperbeam` `struct fee_beam`
+@param[in] *azs Array of Azimuth angles to calculate the beam towards (radians)
+@param[in] *zas Array of Zenith Angles to calculate the beam towards (radians)
+@param[in] *latitudes The latitude of the array for each time step (radians); this
+can be NULL is parallactic = 0
+@param[in,out] *gxs The gains for the north-south beam
+@param[in,out] *Dxs The leakages for the north-south beam
+@param[in,out] *Dys The leakages for the east-west beam
+@param[in,out] *gys The gains for the east-west beam
 
-// */
-// extern "C" void run_hyperbeam_gpu(int num_components,
-//            int num_time_steps, int num_freqs,
-//            int num_beams, uint8_t parallactic,
-//            struct FEEBeamGpu *gpu_fee_beam,
-//            double *azs, double *zas,
-//            double *latitudes,
-//            gpuUserComplex *d_primay_beam_J00,
-//            gpuUserComplex *d_primay_beam_J01,
-//            gpuUserComplex *d_primay_beam_J10,
-//            gpuUserComplex *d_primay_beam_J11);
+*/
+void run_hyperbeam_cpu(int num_components,
+           int num_time_steps, int num_freqs,
+           int num_beams, uint8_t parallactic,
+           double *freqs, struct FEEBeam *fee_beam,
+           uint32_t *hyper_delays, int num_amps, double *amps,
+           double *azs, double *zas,
+           double *latitudes,
+           user_precision_complex_t *gxs,
+           user_precision_complex_t *Dxs,
+           user_precision_complex_t *Dys,
+           user_precision_complex_t *gys);
+

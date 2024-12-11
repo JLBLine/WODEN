@@ -196,7 +196,7 @@ component into a GAUSSIAN or SHAPELET component, and has been applied in
 @param[in,out] visi_YX Output YX instrumental visibility
 @param[in,out] visi_YY Output YY instrumental visibility
 */
-__device__ void apply_beam_gains_stokesI_on_cardinal(gpuUserComplex g1x, gpuUserComplex D1x,
+__device__ void apply_beam_gains_stokesI_on_cardinal_gpu(gpuUserComplex g1x, gpuUserComplex D1x,
           gpuUserComplex D1y, gpuUserComplex g1y,
           gpuUserComplex g2x, gpuUserComplex D2x,
           gpuUserComplex D2y, gpuUserComplex g2y,
@@ -346,7 +346,7 @@ component into a GAUSSIAN or SHAPELET component, and has been applied in
 @param[in,out] visi_YX Output YX instrumental visibility
 @param[in,out] visi_YY Output YY instrumental visibility
 */
-__device__ void apply_beam_gains_stokesI_off_cardinal(gpuUserComplex g1x, gpuUserComplex D1x,
+__device__ void apply_beam_gains_stokesI_off_cardinal_gpu(gpuUserComplex g1x, gpuUserComplex D1x,
           gpuUserComplex D1y, gpuUserComplex g1y,
           gpuUserComplex g2x, gpuUserComplex D2x,
           gpuUserComplex D2y, gpuUserComplex g2y,
@@ -1043,7 +1043,7 @@ freed
  SHAPELET
 
 */
-extern "C" void free_d_components(source_t *d_chunked_source,
+extern "C" void free_components_gpu(source_t *d_chunked_source,
                                   e_component_type comptype);
 
 

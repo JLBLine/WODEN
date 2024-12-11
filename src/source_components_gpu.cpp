@@ -255,7 +255,7 @@ __device__ void get_beam_gains_multibeams_gpu(int iBaseline, int iComponent, int
 
 } //end __device__ get_beam_gains_multibeams_gpu
 
-__device__ void apply_beam_gains_stokesI_on_cardinal(gpuUserComplex g1x, gpuUserComplex D1x,
+__device__ void apply_beam_gains_stokesI_on_cardinal_gpu(gpuUserComplex g1x, gpuUserComplex D1x,
           gpuUserComplex D1y, gpuUserComplex g1y,
           gpuUserComplex g2x, gpuUserComplex D2x,
           gpuUserComplex D2y, gpuUserComplex g2y,
@@ -290,7 +290,7 @@ __device__ void apply_beam_gains_stokesI_on_cardinal(gpuUserComplex g1x, gpuUser
 
 }
 
-__device__ void apply_beam_gains_stokesI_off_cardinal(gpuUserComplex g1x, gpuUserComplex D1x,
+__device__ void apply_beam_gains_stokesI_off_cardinal_gpu(gpuUserComplex g1x, gpuUserComplex D1x,
           gpuUserComplex D1y, gpuUserComplex g1y,
           gpuUserComplex g2x, gpuUserComplex D2x,
           gpuUserComplex D2y, gpuUserComplex g2y,
@@ -453,11 +453,11 @@ __device__ void update_sum_visis_stokesI(int iBaseline, int iComponent,
     gpuUserComplex visi_YY;
 
     if (off_cardinal_dipoles == 1) {
-      apply_beam_gains_stokesI_off_cardinal(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
+      apply_beam_gains_stokesI_off_cardinal_gpu(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
                                            flux_I, visi_component,
                                            &visi_XX, &visi_XY, &visi_YX, &visi_YY);
     } else {
-      apply_beam_gains_stokesI_on_cardinal(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
+      apply_beam_gains_stokesI_on_cardinal_gpu(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
                                            flux_I, visi_component,
                                            &visi_XX, &visi_XY, &visi_YX, &visi_YY);
     }
@@ -1161,16 +1161,6 @@ extern "C" void apply_rotation_measure_gpu(components_t d_components,
 
 extern "C" void malloc_beam_gains_gpu(beam_gains_t *d_component_beam_gains,
                                      int beamtype, int num_gains){
-
-  // gpuMalloc( (void**)&d_component_beam_gains->Dxs,
-  //                     num_gains*sizeof(user_precision_complex_t) );
-  // gpuMalloc( (void**)&d_component_beam_gains->Dys,
-  //                     num_gains*sizeof(user_precision_complex_t) );
-  
-  // gpuMalloc( (void**)&d_component_beam_gains->gxs,
-  //                     num_gains*sizeof(user_precision_complex_t) );
-  // gpuMalloc( (void**)&d_component_beam_gains->gys,
-  //                     num_gains*sizeof(user_precision_complex_t) );
 
   //If we're using an everybeam model, all memory and values have already
   //been copied to GPU, so no need to allocate here
@@ -2049,7 +2039,7 @@ extern "C" void free_extrapolated_flux_arrays_gpu(components_t *d_components){
 
 
 
-extern "C" void free_d_components(source_t *d_chunked_source,
+extern "C" void free_components_gpu(source_t *d_chunked_source,
                                   e_component_type comptype){
   components_t d_components;
   int n_powers = 0;
@@ -2293,12 +2283,12 @@ __global__ void kern_calc_autos(components_t d_components,
         }
       } else {
         if (off_cardinal_dipoles == 1) {
-          apply_beam_gains_stokesI_off_cardinal(g1x, D1x, D1y, g1y,
+          apply_beam_gains_stokesI_off_cardinal_gpu(g1x, D1x, D1y, g1y,
                                  g2x, D2x, D2y, g2y,
                                  flux_I, visi_component,
                                  &auto_XX, &auto_XY, &auto_YX, &auto_YY);
         } else {
-          apply_beam_gains_stokesI_on_cardinal(g1x, D1x, D1y, g1y,
+          apply_beam_gains_stokesI_on_cardinal_gpu(g1x, D1x, D1y, g1y,
                                  g2x, D2x, D2y, g2y,
                                  flux_I, visi_component,
                                  &auto_XX, &auto_XY, &auto_YX, &auto_YY);

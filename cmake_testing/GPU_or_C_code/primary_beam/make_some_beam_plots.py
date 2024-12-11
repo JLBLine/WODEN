@@ -180,17 +180,33 @@ call('mkdir -p plots', shell=True)
 
 if __name__ == "__main__":
 
-    for freq in [200e+6]:
+    # for freq in [200e+6]:
+    #     ##Ran code with three very similar freqs, all freqs should
+    #     ##lie withing a frequency band of the model so be identical
+    #     plot_freqs = [freq-40e+4, freq, freq + 40e+3]
+        
+    #     for delay_name in ['zenith']:
+
+    #         filename = f"../../../build/cmake_testing/CUDA_code/primary_beam_cuda/hyperbeam_{delay_name}_{int(freq/1e+6)}_two_ants_rot_double.txt"
+    #         print(filename)
+    #         azs, zas, gx, Dx, Dy, gy, freqs = load_data(filename)
+    #         plot_jones_square(azs, zas, gx, Dx, Dy, gy, 
+    #                         plot_freqs, filename, 
+    #                         tag=f'hyperbeam_rot_{delay_name}_two_ants',
+    #                         num_times=2, num_freqs=3, nside=51, num_tiles=2)
+    
+    
+    for freq in [100e+6]:
         ##Ran code with three very similar freqs, all freqs should
         ##lie withing a frequency band of the model so be identical
         plot_freqs = [freq-40e+4, freq, freq + 40e+3]
         
         for delay_name in ['zenith']:
 
-            filename = f"../../../build/cmake_testing/CUDA_code/primary_beam_cuda/hyperbeam_{delay_name}_{int(freq/1e+6)}_two_ants_rot_double.txt"
+            filename = f"../../../build/cmake_testing/GPU_or_C_code/primary_beam/hyperbeam_{delay_name}_{int(freq/1e+6)}_double.txt"
             print(filename)
             azs, zas, gx, Dx, Dy, gy, freqs = load_data(filename)
             plot_jones_square(azs, zas, gx, Dx, Dy, gy, 
                             plot_freqs, filename, 
-                            tag=f'hyperbeam_rot_{delay_name}_two_ants',
-                            num_times=2, num_freqs=3, nside=51, num_tiles=2)
+                            tag=f'hyperbeam_{delay_name}',
+                            num_times=2, num_freqs=3, nside=51, num_tiles=1)

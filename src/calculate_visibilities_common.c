@@ -83,7 +83,7 @@ void calculate_component_visis(e_component_type comptype,
     }
 
     free_extrapolated_flux_arrays_gpu(&d_components);
-    free_d_components(d_chunked_source, comptype);
+    free_components_gpu(d_chunked_source, comptype);
     free_beam_gains_gpu(&d_beam_gains, beam_settings->beamtype);
   }
 }

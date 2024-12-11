@@ -144,11 +144,11 @@ void extrapolate_Stokes(source_t *mem_chunked_source, double *mem_extrap_freqs,
 }
 
 void source_component_common(woden_settings_t *woden_settings,
-           beam_settings_t *beam_settings, double *d_freqs,
-           source_t *chunked_source, source_t *d_chunked_source,
-           beam_gains_t *d_component_beam_gains,
+           beam_settings_t *beam_settings, double *mem_freqs,
+           source_t *chunked_source, source_t *mem_chunked_source,
+           beam_gains_t *mem_component_beam_gains,
            e_component_type comptype,
-           visibility_set_t *d_visibility_set){
+           visibility_set_t *mem_visibility_set){
 
   int do_gpu = woden_settings->do_gpu;
   int verbose = 0;
@@ -168,32 +168,41 @@ void source_component_common(woden_settings_t *woden_settings,
 
   int num_components = 0;
   components_t *components = NULL;
-  components_t *d_components = NULL;
+  components_t *mem_components = NULL;
 
   if (comptype == POINT) {
-    num_components = d_chunked_source->n_points;
+    num_components = mem_chunked_source->n_points;
     components = &chunked_source->point_components;
-    d_components = &d_chunked_source->point_components;
+    mem_components = &mem_chunked_source->point_components;
   } else if (comptype == GAUSSIAN) {
-    num_components = d_chunked_source->n_gauss;
+    num_components = mem_chunked_source->n_gauss;
     components = &chunked_source->gauss_components;
-    d_components = &d_chunked_source->gauss_components;
+    mem_components = &mem_chunked_source->gauss_components;
   } else if (comptype == SHAPELET) {
-    num_components = d_chunked_source->n_shapes;
+    num_components = mem_chunked_source->n_shapes;
     components = &chunked_source->shape_components;
-    d_components = &d_chunked_source->shape_components;
+    mem_components = &mem_chunked_source->shape_components;
   }
 
+  int num_gains = mem_components->num_primarybeam_values*num_beams;
   if (do_gpu == 1) {
-    malloc_extrapolated_flux_arrays_gpu(d_components, num_components,
-                                     woden_settings->num_freqs);
-    extrapolate_Stokes(d_chunked_source, d_freqs,
-                     woden_settings->num_freqs, comptype, do_gpu);
-
-    int num_gains = d_components->num_primarybeam_values*num_beams;
-    malloc_beam_gains_gpu(d_component_beam_gains, beam_settings->beamtype, num_gains);
-    calc_lmn_for_components_gpu(d_components, num_components, woden_settings);
+    malloc_extrapolated_flux_arrays_gpu(mem_components, num_components,
+                                        woden_settings->num_freqs);
+    // extrapolate_Stokes(mem_chunked_source, mem_freqs,
+    //                  woden_settings->num_freqs, comptype, do_gpu);
+    malloc_beam_gains_gpu(mem_component_beam_gains, beam_settings->beamtype, num_gains);
+    calc_lmn_for_components_gpu(mem_components, num_components, woden_settings);
+  } else {
+    printf("WE be doing the memorying\n");
+    malloc_extrapolated_flux_arrays_cpu(mem_components, num_components,
+                                        woden_settings->num_freqs);
+    malloc_beam_gains_cpu(mem_component_beam_gains, beam_settings->beamtype, num_gains);
+    calc_lmn_for_components_cpu(mem_components, num_components, woden_settings);
+    
   }
+
+  extrapolate_Stokes(mem_chunked_source, mem_freqs,
+                     woden_settings->num_freqs, comptype, do_gpu);
 
   //If using a gaussian primary beam, calculate beam values for all freqs,
   //lsts and point component locations
@@ -214,7 +223,19 @@ void source_component_common(woden_settings_t *woden_settings,
       wrapper_calculate_gaussian_beam_gpu(num_components, cos_theta, sin_theta,
                                           sin_2theta, fwhm_lm, woden_settings,
                                           beam_settings, components,
-                                          d_component_beam_gains, d_freqs);
+                                          mem_component_beam_gains, mem_freqs);
+    } else {
+      calculate_gaussian_beam_cpu(num_components, woden_settings->num_time_steps,
+                                  woden_settings->num_freqs,
+                                  beam_settings->gauss_ha,
+                                  beam_settings->gauss_sdec,
+                                  beam_settings->gauss_cdec,
+                                  fwhm_lm, cos_theta, sin_theta, sin_2theta,
+                                  beam_settings->beam_ref_freq, mem_freqs,
+                                  components->beam_has,
+                                  components->beam_decs,
+                                  mem_component_beam_gains->gxs,
+                                  mem_component_beam_gains->gys);
     }
 
   }// end if beam == GAUSS
@@ -253,8 +274,8 @@ void source_component_common(woden_settings_t *woden_settings,
       wrapper_run_hyperbeam_gpu(num_components, components, beam_settings,
                           num_beams, parallactic,
                           reordered_azs, reordered_zas,
-                          d_component_beam_gains,
-                          d_freqs, woden_settings);
+                          mem_component_beam_gains,
+                          mem_freqs, woden_settings);
     }
     free(reordered_azs);
     free(reordered_zas);
@@ -266,7 +287,12 @@ void source_component_common(woden_settings_t *woden_settings,
     }
     if (do_gpu == 1){
       wrapper_calculate_analytic_dipole_beam_gpu(num_components, components,
-                          d_component_beam_gains, d_freqs, woden_settings);
+                          mem_component_beam_gains, mem_freqs, woden_settings);
+    } else {
+      calculate_analytic_dipole_beam_cpu(num_components,
+                woden_settings->num_time_steps, woden_settings->num_freqs,
+                mem_components->azs, mem_components->zas, mem_freqs,
+                mem_component_beam_gains->gxs, mem_component_beam_gains->gys);
     }
   }
 
@@ -279,8 +305,17 @@ void source_component_common(woden_settings_t *woden_settings,
 
     if (do_gpu == 1) {
       wrapper_calculate_RTS_MWA_analytic_beam_gpu(num_components,
-                          components, norm, d_component_beam_gains,
-                          d_freqs, woden_settings);
+                          components, norm, mem_component_beam_gains,
+                          mem_freqs, woden_settings);
+    } else {
+      calculate_RTS_MWA_analytic_beam_cpu(num_components,
+            woden_settings->num_time_steps, woden_settings->num_freqs,
+            mem_components->azs, mem_components->zas, 
+            woden_settings->FEE_ideal_delays,
+            woden_settings->latitude, norm,
+            components->beam_has, components->beam_decs, mem_freqs,
+            mem_component_beam_gains->gxs, mem_component_beam_gains->Dxs,
+            mem_component_beam_gains->Dys, mem_component_beam_gains->gys);
     }
   }
 
@@ -293,10 +328,14 @@ void source_component_common(woden_settings_t *woden_settings,
     }
 
     if (do_gpu == 1){
-      calc_autos_gpu(d_components, beam_settings, d_component_beam_gains,
-                     d_visibility_set, woden_settings, num_components,
+      calc_autos_gpu(mem_components, beam_settings, mem_component_beam_gains,
+                     mem_visibility_set, woden_settings, num_components,
                      use_twobeams);
-    }
+    } //else {
+    //   calc_autos_cpu(mem_components, beam_settings, mem_component_beam_gains,
+    //                  mem_visibility_set, woden_settings, num_components,
+    //                  use_twobeams);
+    // }
   }
 } //END source_component_common
 

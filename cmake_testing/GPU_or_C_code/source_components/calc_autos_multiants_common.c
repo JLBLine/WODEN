@@ -4,20 +4,20 @@ Tests that the kernel that calculates auto-correlations is doing it's job
 #include "calc_autos_multiants_common.h"
 
 
-#ifdef DOUBLE_PRECISION
-  #ifdef __HIPCC__
-    double TOL = 1e-10;
-  #else
-    double TOL = 1e-12;
-  #endif
-#else
-  double TOL = 1e-1;
-#endif
-
 /*
 For a given beam model, calculate the auto-correlations
 */
 void test_calculate_autos_multiants(e_beamtype beamtype, int do_gpu) {
+
+  #ifdef DOUBLE_PRECISION
+    #ifdef __HIPCC__
+      double TOL = 1e-10;
+    #else
+      double TOL = 1e-12;
+    #endif
+  #else
+    double TOL = 1e-1;
+  #endif
 
   int num_comps = 4;
   int num_times = 2;
@@ -168,6 +168,11 @@ void test_calculate_autos_multiants(e_beamtype beamtype, int do_gpu) {
                         num_comps, num_baselines,
                         num_freqs, num_times, num_ants,
                         num_ants,
+                        visibility_set);
+  } else {
+    test_calc_autos_cpu(components, beamtype,
+                        num_comps, num_baselines,
+                        num_freqs, num_times, num_ants, num_ants,
                         visibility_set);
   }
 

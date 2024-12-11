@@ -1,10 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-// #include "gpu_macros.h"
-#include <complex.h>
-#include <math.h>
-#include "constants.h"
-#include "woden_precision_defs.h"
+#include "fundamental_coords_cpu.h"
 
 
 void calc_uvw_cpu(double *X_diff, double *Y_diff, double *Z_diff,
@@ -69,6 +63,17 @@ void calc_lmn_cpu(double ra0, double sdec0, double cdec0,
     ns[iComponent] = sdec*sdec0 + cdec*cdec0*cdra;
 
   }
+}
+
+void calc_lmn_for_components_cpu(components_t *components, int num_components,
+                                           woden_settings_t *woden_settings) {
+  components->ls = malloc(num_components*sizeof(double));
+  components->ms = malloc(num_components*sizeof(double));
+  components->ns = malloc(num_components*sizeof(double));
+
+  calc_lmn_cpu(woden_settings->ra0, woden_settings->sdec0, woden_settings->cdec0,
+               components->ras, components->decs,
+               components->ls, components->ms, components->ns, num_components);
 }
 
 void set_auto_uvw_to_zero(int num_cross, int num_autos,

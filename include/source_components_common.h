@@ -2,6 +2,7 @@
 #include "constants.h"
 #include "woden_struct_defs.h"
 #include "woden_precision_defs.h"
+#include "primary_beam_cpu.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <complex.h>
@@ -27,7 +28,7 @@ void fill_ant_to_baseline_mapping_cpu(int num_ants, int *ant1_to_baseline_map,
 #if !defined (__NVCC__) && !defined (__HIPCC__)
 
 extern void malloc_extrapolated_flux_arrays_gpu(components_t *d_components, int num_comps,
-                                        int num_freqs);
+                                                int num_freqs);
 
 extern void extrap_power_laws_stokesI_gpu(components_t d_components,
                                    int n_powers, double *d_extrap_freqs,

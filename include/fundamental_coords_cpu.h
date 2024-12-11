@@ -3,9 +3,13 @@
   \f$l,m,n\f$ on the CPU.
 */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <complex.h>
 #include <math.h>
-#include <stdint.h>
+#include "constants.h"
 #include "woden_precision_defs.h"
+#include "woden_struct_defs.h"
 
 /**
 @brief Calculate the \f$u,v,w\f$ in metres and in wavelengths for multiple
@@ -97,6 +101,10 @@ and phase centre
 void calc_lmn_cpu(double ra0, double sdec0, double cdec0, 
                   double *ras, double *decs,
                   double *ls, double *ms, double *ns, int num_components);
+
+
+void calc_lmn_for_components_cpu(components_t *components, int num_components,
+                                           woden_settings_t *woden_settings);
 
 /**
 @brief Internally to WODEN , all cross-correlations are stored first,

@@ -48,6 +48,39 @@ void calc_measurement_equation_arrays_cpu(int num_cross, int num_components,
   }
 }
 
+
+void apply_beam_gains_stokesI_on_cardinal_cpu(user_precision_complex_t g1x, user_precision_complex_t D1x,
+          user_precision_complex_t D1y, user_precision_complex_t g1y,
+          user_precision_complex_t g2x, user_precision_complex_t D2x,
+          user_precision_complex_t D2y, user_precision_complex_t g2y,
+          user_precision_t flux_I, user_precision_complex_t visi_component,
+          user_precision_complex_t * visi_XX, user_precision_complex_t * visi_XY,
+          user_precision_complex_t * visi_YX, user_precision_complex_t * visi_YY) {
+
+  //Conjugate the second beam gains
+  user_precision_complex_t g2x_conj = conj(g2x);
+  user_precision_complex_t D2x_conj = conj(D2x);
+  user_precision_complex_t D2y_conj = conj(D2y);
+  user_precision_complex_t g2y_conj = conj(g2y);
+
+  user_precision_complex_t visi_I = (flux_I + I*0.0)*visi_component;
+  user_precision_complex_t this_XX;
+  user_precision_complex_t this_XY;
+  user_precision_complex_t this_YX;
+  user_precision_complex_t this_YY;
+
+  this_XX = (g1x*g2x_conj + D1x*D2x_conj)*visi_I;
+  this_XY = (g1x*D2y_conj + D1x*g2y_conj)*visi_I;
+  this_YX = (D1y*g2x_conj + g1y*D2x_conj)*visi_I;
+  this_YY = (D1y*D2y_conj + g1y*g2y_conj)*visi_I;
+
+  * visi_XX = this_XX;
+  * visi_XY = this_XY;
+  * visi_YX = this_YX;
+  * visi_YY = this_YY;
+
+}
+
 void apply_beam_gains_stokesIQUV_on_cardinal_cpu(user_precision_complex_t g1x, user_precision_complex_t D1x,
           user_precision_complex_t D1y, user_precision_complex_t g1y,
           user_precision_complex_t g2x, user_precision_complex_t D2x,
@@ -128,6 +161,40 @@ void apply_beam_gains_stokesIQUV_on_cardinal_arrays_cpu(int num_gains,
     visi_YXs[gain] = this_YX;
     visi_YYs[gain] = this_YY;
   }
+}
+
+void apply_beam_gains_stokesI_off_cardinal_cpu(user_precision_complex_t g1x, user_precision_complex_t D1x,
+          user_precision_complex_t D1y, user_precision_complex_t g1y,
+          user_precision_complex_t g2x, user_precision_complex_t D2x,
+          user_precision_complex_t D2y, user_precision_complex_t g2y,
+          user_precision_t flux_I, user_precision_complex_t visi_component,
+          user_precision_complex_t * visi_XX, user_precision_complex_t * visi_XY,
+          user_precision_complex_t * visi_YX, user_precision_complex_t * visi_YY) {
+
+  //Conjugate the second beam gains
+  user_precision_complex_t g2x_conj = conj(g2x);
+  user_precision_complex_t D2x_conj = conj(D2x);
+  user_precision_complex_t D2y_conj = conj(D2y);
+  user_precision_complex_t g2y_conj = conj(g2y);
+
+  //Create the Stokes visibilities
+  user_precision_complex_t visi_I = (flux_I + I*0.0)*visi_component;
+
+  user_precision_complex_t this_XX;
+  user_precision_complex_t this_XY;
+  user_precision_complex_t this_YX;
+  user_precision_complex_t this_YY;
+
+  this_XX = (g1x*g2x_conj + D1x*D2x_conj)*visi_I;
+  this_XY = (g1x*D2y_conj + D1x*g2y_conj)*visi_I;
+  this_YX = (D1y*g2x_conj + g1y*D2x_conj)*visi_I;
+  this_YY = (D1y*D2y_conj + g1y*g2y_conj)*visi_I;
+
+  * visi_XX = this_XX;
+  * visi_XY = this_XY;
+  * visi_YX = this_YX;
+  * visi_YY = this_YY;
+
 }
 
 void apply_beam_gains_stokesIQUV_off_cardinal_cpu(user_precision_complex_t g1x, user_precision_complex_t D1x,
@@ -211,8 +278,6 @@ void apply_beam_gains_stokesIQUV_off_cardinal_arrays_cpu(int num_gains,
     visi_YYs[gain] = this_YY;
   }
 }
-
-
 
 void malloc_extrapolated_flux_arrays_cpu(components_t *components, int num_comps,
                                      int num_freqs){
@@ -859,4 +924,125 @@ void update_sum_visis_stokesIQUV_cpu(int iBaseline, int iComponent,
     //   printf("Visibilities: %.3e %.3e %.3e %.3e\n", visi_XX.x, visi_XX.y,
     //                         sum_visi_XX_real[iBaseline], sum_visi_XX_imag[iBaseline]);
     // }
+}
+
+void calc_autos_cpu(components_t components, beam_gains_t component_beam_gains,
+                    int beamtype, int num_components, int num_baselines,
+                    int num_freqs, int num_times, int num_ants,
+                    user_precision_t *sum_visi_XX_real, user_precision_t *sum_visi_XX_imag,
+                    user_precision_t *sum_visi_XY_real, user_precision_t *sum_visi_XY_imag,
+                    user_precision_t *sum_visi_YX_real, user_precision_t *sum_visi_YX_imag,
+                    user_precision_t *sum_visi_YY_real, user_precision_t *sum_visi_YY_imag,
+                    int use_twobeams, int *ant1_to_auto_map, int *ant2_to_auto_map,
+                    int off_cardinal_dipoles){
+
+  for (int iAnt = 0; iAnt < num_ants; iAnt++) {
+    for (int iTimeFreq = 0; iTimeFreq < num_times*num_freqs; iTimeFreq++) {
+
+    int time_ind = (int)floorf( (float)iTimeFreq / (float)num_freqs);
+    int freq_ind = iTimeFreq - time_ind*num_freqs;
+
+    //Set up iBaseline to be a cross-pol of the correct time
+    //and frequency step, that also correpsonds to the correct antenna
+    //get_beam_gains_gpu and get_beam_gains_multibeams_gpu will use this to access the
+    //correct beam gains.
+    int iBaseline = num_baselines*num_freqs*time_ind + num_baselines*freq_ind + iAnt;
+
+    int num_visis = num_baselines*num_freqs*num_times;
+    int iAuto = num_visis + num_ants*num_freqs*time_ind + num_ants*freq_ind + iAnt;
+
+    user_precision_complex_t auto_XX, auto_XY, auto_YX, auto_YY;
+    user_precision_complex_t g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y;
+
+      for (int iComponent = 0; iComponent < num_components; iComponent++) {
+
+        if (use_twobeams == 1){
+          get_beam_gains_multibeams_cpu(iBaseline, iComponent, num_freqs,
+                  num_baselines, num_components, num_times, beamtype,
+                  component_beam_gains.gxs, component_beam_gains.Dxs,
+                  component_beam_gains.Dys, component_beam_gains.gys,
+                  ant1_to_auto_map, ant2_to_auto_map,
+                  &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
+        }
+        else {
+          // printf("WE IS ONLY DOING THIS TING\n");
+          get_beam_gains_cpu(iBaseline, iComponent, num_freqs,
+                  num_baselines, num_components, num_times, beamtype,
+                  component_beam_gains.gxs, component_beam_gains.Dxs,
+                  component_beam_gains.Dys, component_beam_gains.gys,
+                  &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
+        }
+
+        user_precision_complex_t visi_component = 1 + I*0.0;
+
+        int extrap_ind = num_freqs*iComponent + freq_ind;
+
+        user_precision_t flux_I = components.extrap_stokesI[extrap_ind];
+
+        if (components.do_QUV == 1) {
+          user_precision_t flux_Q = components.extrap_stokesQ[extrap_ind];
+          user_precision_t flux_U = components.extrap_stokesU[extrap_ind];
+          user_precision_t flux_V = components.extrap_stokesV[extrap_ind];
+
+          if (off_cardinal_dipoles == 1) {
+            apply_beam_gains_stokesIQUV_off_cardinal_cpu(g1x, D1x, D1y, g1y,
+                                      g2x, D2x, D2y, g2y,
+                                      flux_I, flux_Q, flux_U, flux_V,
+                                      visi_component,
+                                      &auto_XX, &auto_XY, &auto_YX, &auto_YY);
+          } else {
+            apply_beam_gains_stokesIQUV_on_cardinal_cpu(g1x, D1x, D1y, g1y,
+                                      g2x, D2x, D2y, g2y,
+                                      flux_I, flux_Q, flux_U, flux_V,
+                                      visi_component,
+                                      &auto_XX, &auto_XY, &auto_YX, &auto_YY);
+          }
+        } else {
+          if (off_cardinal_dipoles == 1) {
+            apply_beam_gains_stokesI_off_cardinal_cpu(g1x, D1x, D1y, g1y,
+                                  g2x, D2x, D2y, g2y,
+                                  flux_I, visi_component,
+                                  &auto_XX, &auto_XY, &auto_YX, &auto_YY);
+          } else {
+            apply_beam_gains_stokesI_on_cardinal_cpu(g1x, D1x, D1y, g1y,
+                                  g2x, D2x, D2y, g2y,
+                                  flux_I, visi_component,
+                                  &auto_XX, &auto_XY, &auto_YX, &auto_YY);
+          }
+        }
+        
+        sum_visi_XX_real[iAuto] += creal(auto_XX);
+        sum_visi_XX_imag[iAuto] += cimag(auto_XX);
+
+        sum_visi_XY_real[iAuto] += creal(auto_XY);
+        sum_visi_XY_imag[iAuto] += cimag(auto_XY);
+
+        sum_visi_YX_real[iAuto] += creal(auto_YX);
+        sum_visi_YX_imag[iAuto] += cimag(auto_YX);
+
+        sum_visi_YY_real[iAuto] += creal(auto_YY);
+        sum_visi_YY_imag[iAuto] += cimag(auto_YY);
+      }
+    }
+  }
+}
+
+
+void malloc_beam_gains_cpu(beam_gains_t *component_beam_gains,
+                           int beamtype, int num_gains){
+
+  //If we're using an everybeam model, all memory and values have already
+  //been sorted, so no need to allocated them here
+  if (beamtype == FEE_BEAM || beamtype == MWA_ANALY || beamtype == FEE_BEAM_INTERP
+      || beamtype == GAUSS_BEAM || beamtype == ANALY_DIPOLE || beamtype == NO_BEAM) {
+
+    //Only some models would have had leakage terms malloced
+    if (beamtype == FEE_BEAM || beamtype == MWA_ANALY || beamtype == FEE_BEAM_INTERP) {
+      component_beam_gains->Dxs = malloc(num_gains*sizeof(user_precision_complex_t));
+      component_beam_gains->Dys = malloc(num_gains*sizeof(user_precision_complex_t));
+    }
+    component_beam_gains->gxs = malloc(num_gains*sizeof(user_precision_complex_t));
+    component_beam_gains->gys = malloc(num_gains*sizeof(user_precision_complex_t));
+
+  }
 }
