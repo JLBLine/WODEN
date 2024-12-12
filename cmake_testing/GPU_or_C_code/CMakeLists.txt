@@ -1,6 +1,6 @@
 add_subdirectory(beam_settings)
 add_subdirectory(calculate_visibilities)
 add_subdirectory(fundamental_coords)
-add_subdirectory(primary_beam_gpu)
+add_subdirectory(primary_beam)
 add_subdirectory(source_components)
 add_subdirectory(visibility_set)

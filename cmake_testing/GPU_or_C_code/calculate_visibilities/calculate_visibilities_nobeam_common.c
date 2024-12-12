@@ -37,7 +37,7 @@ void test_comp_phase_centre_nobeam(int num_comps,
   predict_inst_stokes(num_comps, gain, leak, leak, gain, gain, leak, leak, gain,
                         &xx, &xy, &yx, &yy);
 
-  // printf("%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n", creal(xx), cimag(xx),
+  // printf("predict %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n", creal(xx), cimag(xx),
   //          creal(xy), cimag(xy), creal(yx), cimag(yx), creal(yy), cimag(yy));
 
   // //First up check that the cross-correlations are as expected
@@ -91,6 +91,9 @@ void test_comp_phase_centre_nobeam(int num_comps,
 void test_calculate_visibilities_NoBeam(int n_points, int n_gauss, int n_shapes,
                                         int num_sources, int do_gpu) {
 
+  int num_comps = (n_points + n_gauss + n_shapes)*num_sources;
+  visibility_set_t *visibility_set;
+
   source_catalogue_t *cropped_sky_models = make_cropped_sky_models(RA0, -0.46606083776035967,
                                                     n_points, n_gauss, n_shapes,
                                                     num_sources);
@@ -104,11 +107,11 @@ void test_calculate_visibilities_NoBeam(int n_points, int n_gauss, int n_shapes,
 
   // printf("We have this many visis %d %d %d\n",woden_settings->num_visis,woden_settings->num_autos,woden_settings->num_cross );
 
-  visibility_set_t *visibility_set = test_calculate_visibilities(cropped_sky_models,
+  visibility_set = test_calculate_visibilities(cropped_sky_models,
                                           beam_settings, woden_settings, RA0, -0.46606083776035967,
                                           beam_settings->beamtype);
 
-  int num_comps = (n_points + n_gauss + n_shapes)*num_sources;
+  
   test_comp_phase_centre_nobeam(num_comps, visibility_set, woden_settings);
 
   free_visi_set_inputs(visibility_set);

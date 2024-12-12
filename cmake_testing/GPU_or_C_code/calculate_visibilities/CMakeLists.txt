@@ -30,14 +30,19 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     ##Quite a large number of C depenecies here so stick em in a library
     add_library(calculate_visibilities_CPUdepends_${PRECISION} SHARED
                 ${CMAKE_SOURCE_DIR}/src/calculate_visibilities_common.c
+                ${CMAKE_SOURCE_DIR}/src/calculate_visibilities_cpu.c
                 ${CMAKE_SOURCE_DIR}/src/source_components_common.c
                 ${CMAKE_SOURCE_DIR}/src/visibility_set.c
-                ${CMAKE_SOURCE_DIR}/src/shapelet_basis.c)
+                ${CMAKE_SOURCE_DIR}/src/shapelet_basis.c
+                ${CMAKE_SOURCE_DIR}/src/source_components_cpu.c
+                ${CMAKE_SOURCE_DIR}/src/fundamental_coords_cpu.c
+                ${CMAKE_SOURCE_DIR}/src/primary_beam_cpu.c)
     target_link_libraries(calculate_visibilities_CPUdepends_${PRECISION} gcov)
     target_compile_options(calculate_visibilities_CPUdepends_${PRECISION} PRIVATE ${C_COVER_FLAGS})
 
-    # foreach(DEVICE IN LISTS CPU GPU)
-    foreach(DEVICE IN LISTS GPU)
+    foreach(DEVICE IN LISTS CPU GPU)
+    # foreach(DEVICE IN LISTS GPU)
+    # foreach(DEVICE IN LISTS CPU)
         ##Test the main calculate_visibilities function using no primary beam
         add_executable(test_calculate_visibilities_nobeam_${DEVICE}_${PRECISION}_app
             test_calculate_visibilities_nobeam_${DEVICE}.c
@@ -89,7 +94,6 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
         add_test(${DEVICE}_test_calculate_visibilities_edabeam_${PRECISION}
                 test_calculate_visibilities_edabeam_${DEVICE}_${PRECISION}_app)
 
-            ##Test the main calculate_visibilities function using no primary beam
         add_executable(test_calculate_visibilities_mwafeebeam_${DEVICE}_${PRECISION}_app
             test_calculate_visibilities_mwafeebeam_${DEVICE}.c
             calculate_visibilities_mwafeebeam_common.c

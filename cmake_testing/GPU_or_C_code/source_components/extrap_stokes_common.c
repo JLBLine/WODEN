@@ -7,7 +7,7 @@ extern source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
 extern void malloc_extrapolated_flux_arrays_gpu(components_t *d_components, int num_comps,
                                      int num_freqs);
 
-extern void free_d_components(source_t *d_chunked_source,
+extern void free_components_gpu(source_t *d_chunked_source,
                                   e_component_type comptype);
 
 extern void free_extrapolated_flux_arrays_gpu(components_t *d_components);
@@ -249,7 +249,7 @@ void test_extrap_stokes_GivesCorrectValues(int do_gpu) {
                                           extrap_flux_I, extrap_flux_Q,
                                           extrap_flux_U, extrap_flux_V);
 
-    free_d_components(d_chunked_source, POINT);
+    free_components_gpu(d_chunked_source, POINT);
     free_extrapolated_flux_arrays_gpu(&d_chunked_source->point_components);
     free_freqs_gpu(d_extrap_freqs);
   } else {

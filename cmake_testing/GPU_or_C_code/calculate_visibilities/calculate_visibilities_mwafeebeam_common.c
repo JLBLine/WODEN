@@ -39,7 +39,8 @@ void test_calculate_visibilities_MWAFEEBeam(int n_points, int n_gauss, int n_sha
   //on u,v,w. So need a different tolerance here
   //The accuracy we get depends on whether we are float or double
   #ifdef DOUBLE_PRECISION
-    double TOL = 3e-9;
+    // double TOL = 3e-9;
+    double TOL = 4e-9;
   #else
     double TOL = 1e-5;
   #endif

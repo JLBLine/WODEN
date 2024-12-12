@@ -981,6 +981,10 @@ void test_comp_phase_centre_allgains_multiants(visibility_set_t *visibility_set,
 
         out_ind = time*woden_settings->num_freqs*num_baselines + freq*num_baselines + baseline;
 
+        // printf("predict %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n",
+        //        creal(xx), cimag(xx), creal(xy), cimag(xy),
+        //        creal(yx), cimag(yx), creal(yy), cimag(yy));
+
         TEST_ASSERT_DOUBLE_WITHIN(tol, creal(xx), visibility_set->sum_visi_XX_real[out_ind]);
         TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(xx), visibility_set->sum_visi_XX_imag[out_ind]);
         TEST_ASSERT_DOUBLE_WITHIN(tol, creal(xy), visibility_set->sum_visi_XY_real[out_ind]);

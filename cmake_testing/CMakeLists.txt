@@ -8,14 +8,14 @@ set(CPU "cpu")
 # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
 
 ##Flags to make C code compile in WODEN float or double modes
-set(FLOAT_C_FLAGS -Wall -g )
-set(DOUBLE_C_FLAGS -Wall -g -DDOUBLE_PRECISION)
+set(FLOAT_C_FLAGS -Wall -g -lm )
+set(DOUBLE_C_FLAGS -Wall -g -lm -DDOUBLE_PRECISION)
 
 ##Flags to make C code compile in WODEN float or double modes,
 ##and to create code coverage reports. Only need these flags on the things
 ##we want to cover with tracking
-set(FLOAT_C_COVER_FLAGS -coverage -g -Wall)
-set(DOUBLE_C_COVER_FLAGS -coverage -g -Wall -DDOUBLE_PRECISION)
+set(FLOAT_C_COVER_FLAGS -coverage -g -lm -Wall)
+set(DOUBLE_C_COVER_FLAGS -coverage -g -lm -Wall -DDOUBLE_PRECISION)
 
 if(USE_CUDA)
   ##Flags to make CUDA code compile in WODEN float or double modes
@@ -55,8 +55,8 @@ endif()
 ## Test GPU/C code
 add_subdirectory(GPU_or_C_code)
 
-## Test python library
+# ## Test python library
 add_subdirectory(wodenpy)
 
-## Test python scripts
+# ## Test python scripts
 add_subdirectory(scripts)

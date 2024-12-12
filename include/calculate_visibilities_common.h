@@ -5,14 +5,11 @@
 
 #include "woden_precision_defs.h"
 #include "woden_struct_defs.h"
-// #include "gpucomplex.h"
-
-// #include "calculate_visibilities_gpu.h"
-// #include "fundamental_coords_gpu.h"
 #include "constants.h"
-// #include "calculate_visibilities_gpu.h"
+
+#include "calculate_visibilities_cpu.h"
 #include "source_components_common.h"
-// #include "primary_beam_gpu.h"
+#include "source_components_cpu.h"
 #include "hyperbeam_error.h"
 #include "visibility_set.h"
 
@@ -58,9 +55,9 @@ extern void set_auto_uvw_to_zero_gpu(int num_cross, int num_autos,
                               user_precision_t *d_u, user_precision_t *d_v,
                               user_precision_t *d_w);
 
-extern void free_extrapolated_flux_arrays(components_t *d_components);
+extern void free_extrapolated_flux_arrays_gpu(components_t *d_components);
 
-extern void free_d_components(source_t *d_chunked_source, e_component_type comptype);
+extern void free_components_gpu(source_t *d_chunked_source, e_component_type comptype);
 
 extern void free_beam_gains_gpu(beam_gains_t *d_beam_gains, e_beamtype beamtype);
 

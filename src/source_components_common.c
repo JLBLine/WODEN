@@ -193,7 +193,6 @@ void source_component_common(woden_settings_t *woden_settings,
     malloc_beam_gains_gpu(mem_component_beam_gains, beam_settings->beamtype, num_gains);
     calc_lmn_for_components_gpu(mem_components, num_components, woden_settings);
   } else {
-    printf("WE be doing the memorying\n");
     malloc_extrapolated_flux_arrays_cpu(mem_components, num_components,
                                         woden_settings->num_freqs);
     malloc_beam_gains_cpu(mem_component_beam_gains, beam_settings->beamtype, num_gains);
@@ -359,11 +358,24 @@ void source_component_common(woden_settings_t *woden_settings,
       calc_autos_gpu(mem_components, beam_settings, mem_component_beam_gains,
                      mem_visibility_set, woden_settings, num_components,
                      use_twobeams);
-    } //else {
-    //   calc_autos_cpu(mem_components, beam_settings, mem_component_beam_gains,
-    //                  mem_visibility_set, woden_settings, num_components,
-    //                  use_twobeams);
-    // }
+    } else {
+      int *ant_to_auto_map = malloc(woden_settings->num_ants*sizeof(int));
+      for (int ant = 0; ant < woden_settings->num_ants; ant++){
+        ant_to_auto_map[ant] = ant;
+      }
+
+      calc_autos_cpu(*mem_components, *mem_component_beam_gains,
+                  beam_settings->beamtype, num_components,  woden_settings->num_baselines,
+                  woden_settings->num_freqs, woden_settings->num_time_steps,
+                  woden_settings->num_ants,
+                  mem_visibility_set->sum_visi_XX_real, mem_visibility_set->sum_visi_XX_imag,
+                  mem_visibility_set->sum_visi_XY_real, mem_visibility_set->sum_visi_XY_imag,
+                  mem_visibility_set->sum_visi_YX_real, mem_visibility_set->sum_visi_YX_imag,
+                  mem_visibility_set->sum_visi_YY_real, mem_visibility_set->sum_visi_YY_imag,
+                  use_twobeams, ant_to_auto_map, ant_to_auto_map,
+                  woden_settings->off_cardinal_dipoles);
+      free(ant_to_auto_map);
+    }
   }
 } //END source_component_common
 
