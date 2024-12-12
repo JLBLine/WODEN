@@ -569,8 +569,7 @@ void run_hyperbeam_cpu(int num_components,
   for (int tile_ind = 0; tile_ind < num_beams; tile_ind++) {
     // printf("HERE Tile %d, %d\n", tile_ind, parallactic);
     //Which tile we are calculating dictates which amplitudes to use
-    //32 because there are 16 dipoles, and we have 2 polarisations
-    amp_increment = tile_ind*32;
+    amp_increment = tile_ind*num_amps;
 
     for (int unq_freq_ind = 0; unq_freq_ind < num_unique_fee_freqs; unq_freq_ind++) {
       // printf("HERE Freq %d\n", unq_freq_ind);

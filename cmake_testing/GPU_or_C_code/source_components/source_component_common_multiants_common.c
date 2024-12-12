@@ -47,6 +47,7 @@ void test_source_component_common_ConstantDecChooseBeams_multiant(int beamtype, 
   woden_settings->num_autos = 0;
   woden_settings->do_autos = 0;
   woden_settings->off_cardinal_dipoles = 0;
+  woden_settings->do_gpu = do_gpu;
 
   user_precision_t *zeroes = calloc(num_components, sizeof(user_precision_t));
 
@@ -150,6 +151,10 @@ void test_source_component_common_ConstantDecChooseBeams_multiant(int beamtype, 
       }
 
       TEST_ASSERT_EQUAL(0, status);
+    } else {
+      //Gotta set this for CPU beam as it has to be passed everytime in CPU
+      //hyperbeam version
+      woden_settings->mwa_dipole_amps = amps;
     }
   }
 
@@ -255,50 +260,126 @@ void test_source_component_common_ConstantDecChooseBeams_multiant(int beamtype, 
                                       num_powers, num_curves, num_lists,
                                       num_of_each_flux_type);
 
-  beam_gains_t *d_beam_gains = malloc(sizeof(beam_gains_t));
-  visibility_set_t *d_visibility_set = NULL;
+  // beam_gains_t *d_beam_gains = malloc(sizeof(beam_gains_t));
+  // visibility_set_t *d_visibility_set = NULL;
   woden_settings->do_autos = 0;
 
-  if (do_gpu == 1) {
-    //Run the GPU code
+  // if (do_gpu == 1) {
+  //   //Run the GPU code
     
-    source_t *d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
-    double *d_freqs = malloc_freqs_gpu(num_freqs, freqs);
+  //   // source_t *d_chunked_source = copy_chunked_source_to_GPU(chunked_source);
+  //   // double *d_freqs = malloc_freqs_gpu(num_freqs, freqs);
 
-    components_t *d_components;
+  //   // components_t *d_components;
+
+  //   // if (comptype == POINT) {
+  //   //   d_components = &d_chunked_source->point_components;
+  //   // }
+  //   // else if (comptype == GAUSSIAN) {
+  //   //   d_components = &d_chunked_source->gauss_components;
+  //   // }
+  //   // else {
+  //   //   d_components = &d_chunked_source->shape_components;
+  //   // }
+
+  //   // // int num_beams = 1;
+  //   // // int num_gains = d_components->num_primarybeam_values*num_beams;
+  //   // // malloc_beam_gains_gpu(d_beam_gains, beam_settings->beamtype, num_gains);
+  //   // // calc_lmn_for_components_gpu(d_components, num_components, woden_settings);
+
+  //   // source_component_common(woden_settings, beam_settings, d_freqs,
+  //   //    chunked_source, d_chunked_source, d_beam_gains, comptype,
+  //   //    d_visibility_set);
+
+  //   // copy_outputs_source_component_common_gpu(num_of_each_flux_type,
+  //   //        d_chunked_source, d_beam_gains,
+  //   //        woden_settings, beam_settings,
+  //   //        gxs, Dxs, Dys, gys,
+  //   //        extrap_flux_I, extrap_flux_Q, extrap_flux_U, extrap_flux_V,
+  //   //        ls, ms, ns, comptype);
+
+    
+  //   // free_extrapolated_flux_arrays_gpu(d_components);
+  //   // free_components_gpu(d_chunked_source, comptype);
+  //   // free_beam_gains_gpu(d_beam_gains, beam_settings->beamtype);
+  //   // free_freqs_gpu(d_freqs);
+
+  // }
+  beam_gains_t *mem_beam_gains = malloc(sizeof(beam_gains_t));
+  source_t *mem_chunked_source = NULL;
+  double *mem_freqs = NULL;
+  
+  //Visibility set not used in this test, but is an argument to the function
+  //It's needed when calculating auto-correlations. Test needs to be 
+  //expanded to test auto-correlations
+  visibility_set_t *mem_visibility_set = NULL;
+
+  if (do_gpu == 1) {
+    //Run the CUDA code
+    
+    mem_chunked_source = copy_chunked_source_to_GPU(chunked_source);
+    mem_freqs = malloc_freqs_gpu(num_freqs, freqs);
+    components_t *mem_components;
 
     if (comptype == POINT) {
-      d_components = &d_chunked_source->point_components;
+      mem_components = &mem_chunked_source->point_components;
     }
     else if (comptype == GAUSSIAN) {
-      d_components = &d_chunked_source->gauss_components;
+      mem_components = &mem_chunked_source->gauss_components;
     }
     else {
-      d_components = &d_chunked_source->shape_components;
+      mem_components = &mem_chunked_source->shape_components;
     }
 
     // int num_beams = 1;
-    // int num_gains = d_components->num_primarybeam_values*num_beams;
-    // malloc_beam_gains_gpu(d_beam_gains, beam_settings->beamtype, num_gains);
-    // calc_lmn_for_components_gpu(d_components, num_components, woden_settings);
+    // int num_gains = mem_components->num_primarybeam_values*num_beams;
+    // malloc_beam_gains_gpu(mem_beam_gains, beam_settings->beamtype, num_gains);
+    // calc_lmn_for_components_gpu(mem_components, num_components, woden_settings);
 
-    source_component_common(woden_settings, beam_settings, d_freqs,
-       chunked_source, d_chunked_source, d_beam_gains, comptype,
-       d_visibility_set);
+    source_component_common(woden_settings, beam_settings, mem_freqs,
+       chunked_source, mem_chunked_source, mem_beam_gains, comptype,
+       mem_visibility_set);
 
     copy_outputs_source_component_common_gpu(num_of_each_flux_type,
-           d_chunked_source, d_beam_gains,
+           mem_chunked_source, mem_beam_gains,
            woden_settings, beam_settings,
            gxs, Dxs, Dys, gys,
            extrap_flux_I, extrap_flux_Q, extrap_flux_U, extrap_flux_V,
            ls, ms, ns, comptype);
 
     
-    free_extrapolated_flux_arrays(d_components);
-    free_d_components(d_chunked_source, comptype);
-    free_beam_gains_gpu(d_beam_gains, beam_settings->beamtype);
-    free_freqs_gpu(d_freqs);
+    free_extrapolated_flux_arrays_gpu(mem_components);
+    free_components_gpu(mem_chunked_source, comptype);
+    free_beam_gains_gpu(mem_beam_gains, beam_settings->beamtype);
+    free_freqs_gpu(mem_freqs);
 
+  } else{
+    mem_chunked_source = chunked_source;
+    mem_freqs = freqs;
+
+    //Aight so this is somewhat hacky. But for the GPU version of hyperbeam,
+    //you set the beam frequencies in the call to `new_gpu_fee_beam`. This
+    //doesn't happen in the CPU version, and we pass `mem_freqs` to the CPU
+    //version. In the test above, and the saved expected values, we set the
+    //beam freqs to {150e+6, 150e+6} when beamtype is FEE_BEAM. So here, 
+    //we just change mem_freqs to match. Fortunately, we generate the expected
+    //extrapolated fluxes based on `mem_freqs`, so just changing this here
+    //makes things work.
+    if (beamtype == FEE_BEAM){
+      mem_freqs[0] = 150e+6;
+      mem_freqs[1] = 150e+6;
+    }
+
+    source_component_common(woden_settings, beam_settings, mem_freqs,
+       chunked_source, mem_chunked_source, mem_beam_gains, comptype,
+       mem_visibility_set);
+
+    copy_outputs_source_component_common_cpu(num_of_each_flux_type,
+           mem_chunked_source, mem_beam_gains,
+           woden_settings, beam_settings,
+           gxs, Dxs, Dys, gys,
+           extrap_flux_I, extrap_flux_Q, extrap_flux_U, extrap_flux_V,
+           ls, ms, ns, comptype);
   }
 
   double l_expected[9] = {-1.0, -sqrt(3)/2.0, -sqrt(2)/2.0, -0.5,

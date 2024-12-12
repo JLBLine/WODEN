@@ -308,6 +308,18 @@ void get_beam_gains_multibeams_cpu(int iBaseline, int iComponent, int num_freqs,
            user_precision_complex_t * g2x, user_precision_complex_t * D2x,
            user_precision_complex_t * D2y, user_precision_complex_t * g2y);
 
+void update_sum_visis_stokesI_cpu(int iBaseline, int iComponent,
+    int num_freqs, int num_baselines, int num_components, int num_times,
+    int beamtype, int off_cardinal_dipoles,
+    user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
+    user_precision_complex_t *Dys, user_precision_complex_t *gys,
+    int *ant1_to_baseline_map, int *ant2_to_baseline_map, int use_twobeams,
+    user_precision_complex_t visi_component, user_precision_t flux_I,
+    user_precision_t *sum_visi_XX_real, user_precision_t *sum_visi_XX_imag,
+    user_precision_t *sum_visi_XY_real, user_precision_t *sum_visi_XY_imag,
+    user_precision_t *sum_visi_YX_real, user_precision_t *sum_visi_YX_imag,
+    user_precision_t *sum_visi_YY_real, user_precision_t *sum_visi_YY_imag);
+
 void update_sum_visis_stokesIQUV_cpu(int iBaseline, int iComponent,
     int num_freqs, int num_baselines, int num_components, int num_times,
     int beamtype, int off_cardinal_dipoles,
@@ -322,6 +334,25 @@ void update_sum_visis_stokesIQUV_cpu(int iBaseline, int iComponent,
     user_precision_t *sum_visi_YX_real, user_precision_t *sum_visi_YX_imag,
     user_precision_t *sum_visi_YY_real, user_precision_t *sum_visi_YY_imag);
 
+void malloc_beam_gains_cpu(beam_gains_t *component_beam_gains,
+                           int beamtype, int num_gains);
+
+void calc_visi_point_or_gauss_cpu(components_t components,
+                                  beam_gains_t component_beam_gains,
+                                  calc_visi_inouts_t *calc_visi_inouts,
+                                  visibility_set_t *visibility_set, 
+                                  int num_components, e_beamtype beamtype,
+                                  e_component_type comptype,
+                                  woden_settings_t *woden_settings);
+
+void calc_visi_shapelets_cpu(components_t components,
+                             beam_gains_t component_beam_gains,
+                             calc_visi_inouts_t *calc_visi_inouts,
+                             visibility_set_t *visibility_set,
+                             int num_shapes, int num_shape_coeffs,
+                             e_beamtype beamtype,
+                             woden_settings_t *woden_settings);
+
 void calc_autos_cpu(components_t components, beam_gains_t component_beam_gains,
                     int beamtype, int num_components, int num_baselines,
                     int num_freqs, int num_times, int num_ants,
@@ -331,6 +362,3 @@ void calc_autos_cpu(components_t components, beam_gains_t component_beam_gains,
                     user_precision_t *sum_visi_YY_real, user_precision_t *sum_visi_YY_imag,
                     int use_twobeams, int *ant1_to_auto_map, int *ant2_to_auto_map,
                     int off_cardinal_dipoles);
-
-void malloc_beam_gains_cpu(beam_gains_t *component_beam_gains,
-                           int beamtype, int num_gains);

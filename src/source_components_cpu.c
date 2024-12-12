@@ -842,6 +842,86 @@ void get_beam_gains_multibeams_cpu(int iBaseline, int iComponent, int num_freqs,
 
 } //end __device__ get_beam_gains_multibeams_cpu
 
+void update_sum_visis_stokesI_cpu(int iBaseline, int iComponent,
+    int num_freqs, int num_baselines, int num_components, int num_times,
+    int beamtype, int off_cardinal_dipoles,
+    user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
+    user_precision_complex_t *Dys, user_precision_complex_t *gys,
+    int *ant1_to_baseline_map, int *ant2_to_baseline_map, int use_twobeams,
+    user_precision_complex_t visi_component,  user_precision_t flux_I,
+    user_precision_t *sum_visi_XX_real, user_precision_t *sum_visi_XX_imag,
+    user_precision_t *sum_visi_XY_real, user_precision_t *sum_visi_XY_imag,
+    user_precision_t *sum_visi_YX_real, user_precision_t *sum_visi_YX_imag,
+    user_precision_t *sum_visi_YY_real, user_precision_t *sum_visi_YY_imag){
+
+    user_precision_complex_t g1x;
+    user_precision_complex_t D1x;
+    user_precision_complex_t D1y;
+    user_precision_complex_t g1y;
+    user_precision_complex_t g2x;
+    user_precision_complex_t D2x;
+    user_precision_complex_t D2y;
+    user_precision_complex_t g2y;
+
+    if (use_twobeams == 1){
+      get_beam_gains_multibeams_cpu(iBaseline, iComponent, num_freqs,
+               num_baselines, num_components, num_times, beamtype,
+               gxs, Dxs,
+               Dys, gys,
+               ant1_to_baseline_map, ant2_to_baseline_map,
+               &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
+    }
+    else {
+      get_beam_gains_cpu(iBaseline, iComponent, num_freqs,
+               num_baselines, num_components, num_times, beamtype,
+               gxs, Dxs,
+               Dys, gys,
+               &g1x, &D1x, &D1y, &g1y, &g2x, &D2x, &D2y, &g2y);
+    }
+
+    // if (iBaseline == 0){
+    //   printf("Beam gains: %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f\n", g1x.x, g1x.y, D1x.x, D1x.y, D1y.x, D1y.y, g1y.x, g1y.y);
+    //   printf("Beam gains: %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f\n", g2x.x, g2x.y, D2x.x, D2x.y, D2y.x, D2y.y, g2y.x, g2y.y);
+    // }
+
+    user_precision_complex_t visi_XX;
+    user_precision_complex_t visi_XY;
+    user_precision_complex_t visi_YX;
+    user_precision_complex_t visi_YY;
+
+    // printf("iComponent IQUV: %d %f %f %f %f\n", iComponent, flux_I, flux_Q, flux_U, flux_V);
+
+    if (off_cardinal_dipoles == 1) {
+      apply_beam_gains_stokesI_off_cardinal_cpu(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
+                    flux_I, visi_component, &visi_XX, &visi_XY, &visi_YX, &visi_YY);
+    } else {
+      apply_beam_gains_stokesI_on_cardinal_cpu(g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y,
+                    flux_I, visi_component, &visi_XX, &visi_XY, &visi_YX, &visi_YY);
+    }
+
+    // if (iBaseline == 0){
+    //   printf("Visibilities: %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f\n", visi_XX.x, visi_XX.y, visi_XY.x, visi_XY.y,
+    //     visi_YX.x, visi_YX.y, visi_YY.x, visi_YY.y);
+    // }
+
+    sum_visi_XX_real[iBaseline] += creal(visi_XX);
+    sum_visi_XX_imag[iBaseline] += cimag(visi_XX);
+
+    sum_visi_XY_real[iBaseline] += creal(visi_XY);
+    sum_visi_XY_imag[iBaseline] += cimag(visi_XY);
+
+    sum_visi_YX_real[iBaseline] += creal(visi_YX);
+    sum_visi_YX_imag[iBaseline] += cimag(visi_YX);
+
+    sum_visi_YY_real[iBaseline] += creal(visi_YY);
+    sum_visi_YY_imag[iBaseline] += cimag(visi_YY);
+
+    // if (iBaseline == 0){
+    //   printf("Visibilities: %.3e %.3e %.3e %.3e\n", visi_XX.x, visi_XX.y,
+    //                         sum_visi_XX_real[iBaseline], sum_visi_XX_imag[iBaseline]);
+    // }
+}
+
 void update_sum_visis_stokesIQUV_cpu(int iBaseline, int iComponent,
     int num_freqs, int num_baselines, int num_components, int num_times,
     int beamtype, int off_cardinal_dipoles,
@@ -1044,5 +1124,261 @@ void malloc_beam_gains_cpu(beam_gains_t *component_beam_gains,
     component_beam_gains->gxs = malloc(num_gains*sizeof(user_precision_complex_t));
     component_beam_gains->gys = malloc(num_gains*sizeof(user_precision_complex_t));
 
+  }
+}
+
+
+void calc_visi_point_or_gauss_cpu(components_t components,
+                                  beam_gains_t component_beam_gains,
+                                  calc_visi_inouts_t *calc_visi_inouts,
+                                  visibility_set_t *visibility_set, 
+                                  int num_components, e_beamtype beamtype,
+                                  e_component_type comptype,
+                                  woden_settings_t *woden_settings) {
+
+  int num_freqs = woden_settings->num_freqs;
+  int num_cross = woden_settings->num_cross;
+  int num_baselines = woden_settings->num_baselines;
+  int num_times = woden_settings->num_time_steps;
+  int off_cardinal_dipoles = woden_settings->off_cardinal_dipoles;
+
+  for (int iBaseline = 0; iBaseline < num_cross; iBaseline++) {
+
+    int use_twobeams = component_beam_gains.use_twobeams;
+
+    user_precision_t flux_I;
+    user_precision_t flux_Q;
+    user_precision_t flux_U;
+    user_precision_t flux_V;
+
+    user_precision_complex_t visi_comp;
+    user_precision_complex_t V_envelop;
+
+    user_precision_t pa, sinpa, cospa, u, v, x, y, invsig_x, invsig_y;
+
+    //Find out what time and freq index this baseline corresponds to
+    int time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
+    int freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+
+    for (int iComponent = 0; iComponent < num_components; iComponent++) {
+      int extrap_ind = num_freqs*iComponent + freq_ind;
+      // printf("INSIDE KERN components.extrap_stokesI %p\n", components.extrap_stokesI);
+
+      flux_I = components.extrap_stokesI[extrap_ind];
+      if (components.do_QUV == 1) {
+        flux_Q = components.extrap_stokesQ[extrap_ind];
+        flux_U = components.extrap_stokesU[extrap_ind];
+        flux_V = components.extrap_stokesV[extrap_ind];
+      }
+
+      // if (iBaseline == 0 && components.do_QUV == 1) {
+      //   printf("Fluxes %.3e %.3e %.3e %.3e\n", flux_I, flux_Q, flux_U, flux_V);
+      // }
+      
+      visi_comp = calc_measurement_equation_cpu(calc_visi_inouts->us[iBaseline],
+                                                calc_visi_inouts->vs[iBaseline],
+                                                calc_visi_inouts->ws[iBaseline],
+                                                components.ls[iComponent],
+                                                components.ms[iComponent],
+                                                components.ns[iComponent]);
+
+      // if (iBaseline == 0 && components.do_QUV == 0) {
+      //   printf("visi_comp %.3e %.3e flux_I %.3e\n", creal(visi_comp), cimag(visi_comp), flux_I );
+      // }
+      // printf("iComponent %d components.ls[iComponent] %f \n", iComponent, components.ls[iComponent]);
+
+      if (comptype == GAUSSIAN) {
+
+        V_envelop = 1.0 + I*0.0;
+
+        pa = components.pas[iComponent];
+        sinpa = sin(pa);
+        cospa = cos(pa);
+        u = calc_visi_inouts->us[iBaseline];
+        v = calc_visi_inouts->vs[iBaseline];
+
+        x =  cospa*v + sinpa*u; // major axis
+        y = -sinpa*v + cospa*u; // minor axis
+        invsig_x = components.majors[iComponent];
+        invsig_y = components.minors[iComponent];
+
+        V_envelop = exp( -0.5 * ( x*x*invsig_x*invsig_x*M_PI_2_2_LN_2 + y*y*invsig_y*invsig_y*M_PI_2_2_LN_2 )) + I*0.0;
+        visi_comp = visi_comp*V_envelop;
+
+      }
+
+      // if (iBaseline == 0){
+      //   printf("Visibilities: %.3e %.3e\n", creal(visi_comp), cimag(visi_comp));
+      // }
+
+      if (components.do_QUV == 1)
+      {
+        update_sum_visis_stokesIQUV_cpu(iBaseline, iComponent, num_freqs,
+             num_baselines, num_components, num_times, beamtype, off_cardinal_dipoles,
+             component_beam_gains.gxs, component_beam_gains.Dxs,
+             component_beam_gains.Dys, component_beam_gains.gys,
+             component_beam_gains.ant1_to_baseline_map,
+             component_beam_gains.ant2_to_baseline_map, use_twobeams,
+             visi_comp, flux_I, flux_Q, flux_U, flux_V,
+             visibility_set->sum_visi_XX_real, visibility_set->sum_visi_XX_imag,
+             visibility_set->sum_visi_XY_real, visibility_set->sum_visi_XY_imag,
+             visibility_set->sum_visi_YX_real, visibility_set->sum_visi_YX_imag,
+             visibility_set->sum_visi_YY_real, visibility_set->sum_visi_YY_imag);
+      } else {
+        update_sum_visis_stokesI_cpu(iBaseline, iComponent, num_freqs,
+             num_baselines, num_components, num_times, beamtype, off_cardinal_dipoles,
+             component_beam_gains.gxs, component_beam_gains.Dxs,
+             component_beam_gains.Dys, component_beam_gains.gys,
+             component_beam_gains.ant1_to_baseline_map,
+             component_beam_gains.ant2_to_baseline_map, use_twobeams,
+             visi_comp, flux_I,
+             visibility_set->sum_visi_XX_real, visibility_set->sum_visi_XX_imag,
+             visibility_set->sum_visi_XY_real, visibility_set->sum_visi_XY_imag,
+             visibility_set->sum_visi_YX_real, visibility_set->sum_visi_YX_imag,
+             visibility_set->sum_visi_YY_real, visibility_set->sum_visi_YY_imag);
+      }
+    }
+  }
+}
+
+
+void calc_visi_shapelets_cpu(components_t components,
+                             beam_gains_t component_beam_gains,
+                             calc_visi_inouts_t *calc_visi_inouts,
+                             visibility_set_t *visibility_set,
+                             int num_shapes, int num_shape_coeffs,
+                             e_beamtype beamtype,
+                             woden_settings_t *woden_settings) {
+  int num_freqs = woden_settings->num_freqs;
+  int num_cross = woden_settings->num_cross;
+  int num_baselines = woden_settings->num_baselines;
+  int num_times = woden_settings->num_time_steps;
+  int off_cardinal_dipoles = woden_settings->off_cardinal_dipoles;
+
+  for (int iBaseline = 0; iBaseline < num_cross; iBaseline++) {
+    int use_twobeams = component_beam_gains.use_twobeams;
+
+    user_precision_t shape_flux_I;
+    user_precision_t shape_flux_Q;
+    user_precision_t shape_flux_U;
+    user_precision_t shape_flux_V;
+    user_precision_complex_t visi_shape;
+
+    int mobaseline = iBaseline - num_baselines*floorf((float)iBaseline / (float)num_baselines);
+
+    //Find out what time and freq index this baseline corresponds to
+    int time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
+    int freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+
+    for (int iCoeff = 0; iCoeff < num_shape_coeffs; iCoeff++) {
+
+      //We have multiple coefficients per SHAPELET component - reference
+      //them via this array. We chunk over coeffs so might have any
+      //number of components here
+      int iComponent = components.param_indexes[iCoeff];
+      int extrap_ind = num_freqs*iComponent + freq_ind;
+
+      // if (iBaseline == 0) {
+      //   printf("iComponent %d iCoeff %d extrap_ind %d\n", iComponent, iCoeff, extrap_ind);
+      // }
+      // printf("components.extrap_stokesI %p\n", components.extrap_stokesI);
+
+      shape_flux_I = components.extrap_stokesI[extrap_ind];
+
+      if (components.do_QUV == 1) {
+        shape_flux_Q = components.extrap_stokesQ[extrap_ind];
+        shape_flux_U = components.extrap_stokesU[extrap_ind];
+        shape_flux_V = components.extrap_stokesV[extrap_ind];
+      }
+
+      visi_shape = calc_measurement_equation_cpu(calc_visi_inouts->us[iBaseline],
+                                                calc_visi_inouts->vs[iBaseline],
+                                                calc_visi_inouts->ws[iBaseline],
+                                                components.ls[iComponent],
+                                                components.ms[iComponent],
+                                                components.ns[iComponent]);
+
+      user_precision_t pa = components.pas[iComponent];
+      user_precision_t sinpa = sin(pa);
+      user_precision_t cospa = cos(pa);
+
+      int uv_stripe = num_baselines*num_times*iComponent + time_ind*num_baselines + mobaseline;
+
+      user_precision_t u_shape = calc_visi_inouts->u_shapes[uv_stripe] / calc_visi_inouts->allsteps_wavelengths[iBaseline];
+      user_precision_t v_shape = calc_visi_inouts->v_shapes[uv_stripe] / calc_visi_inouts->allsteps_wavelengths[iBaseline];
+
+      user_precision_t x = (cospa*v_shape + sinpa*u_shape); // major axis
+      user_precision_t y = (-sinpa*v_shape + cospa*u_shape); // minor axis
+
+      //Scales the FWHM to std to match basis functions, and account for the
+      //basis functions being stored with beta = 1.0
+      //Basis functions have been stored in such a way that x is in the same
+      //direction as on sky, but y is opposite, so include negative here
+      user_precision_t const_x = (components.majors[iComponent]*SQRT_M_PI_2_2_LN_2)/sbf_dx;
+      user_precision_t const_y = -(components.minors[iComponent]*SQRT_M_PI_2_2_LN_2)/sbf_dx;
+
+      // I^(n1+n2) = Ipow_lookup[(n1+n2) % 4]
+      user_precision_complex_t Ipow_lookup[] = { 1.0 + I*0.0,
+                                                 0.0 + I*1.0,
+                                                -1.0 + I*0.0,
+                                                 0.0 + I*-1.0 };
+
+      user_precision_t xlow, xhigh, ylow, yhigh, u_value, v_value, f_hat, *sbf_n;
+
+      // find the indices in the basis functions for u*beta_u and v*beta_v
+
+      user_precision_t xpos = x*const_x + sbf_c;
+      user_precision_t ypos = y*const_y + sbf_c;
+
+      int xindex = (int)floor(xpos);
+      int yindex = (int)floor(ypos);
+      //
+      int n1 = (int)components.n1s[iCoeff];
+      int n2 = (int)components.n2s[iCoeff];
+
+      f_hat = components.shape_coeffs[iCoeff];
+
+      sbf_n = &calc_visi_inouts->sbf[n1*sbf_L];
+      xlow  = sbf_n[xindex];
+      xhigh = sbf_n[xindex+1];
+      u_value = xlow + (xhigh-xlow)*(xpos-xindex);
+
+      sbf_n = &calc_visi_inouts->sbf[n2*sbf_L];
+      ylow  = sbf_n[yindex];
+      yhigh = sbf_n[yindex+1];
+      v_value = ylow + (yhigh-ylow)*(ypos-yindex);
+
+      // accumulate the intensity model for baseline pair (u,v)
+      user_precision_complex_t V_envelop = 0.0 + I*0.0;
+      V_envelop = V_envelop + Ipow_lookup[(n1+n2) % 4] * f_hat * u_value*v_value;
+
+      visi_shape = visi_shape*V_envelop;
+
+      if (components.do_QUV == 1) {
+        update_sum_visis_stokesIQUV_cpu(iBaseline, iComponent, num_freqs,
+             num_baselines, num_shapes, num_times, beamtype, off_cardinal_dipoles,
+             component_beam_gains.gxs, component_beam_gains.Dxs,
+             component_beam_gains.Dys, component_beam_gains.gys,
+             component_beam_gains.ant1_to_baseline_map,
+             component_beam_gains.ant2_to_baseline_map, use_twobeams,
+             visi_shape, shape_flux_I, shape_flux_Q, shape_flux_U, shape_flux_V,
+             visibility_set->sum_visi_XX_real, visibility_set->sum_visi_XX_imag,
+             visibility_set->sum_visi_XY_real, visibility_set->sum_visi_XY_imag,
+             visibility_set->sum_visi_YX_real, visibility_set->sum_visi_YX_imag,
+             visibility_set->sum_visi_YY_real, visibility_set->sum_visi_YY_imag);
+      } else {
+        update_sum_visis_stokesI_cpu(iBaseline, iComponent, num_freqs,
+             num_baselines, num_shapes, num_times, beamtype, off_cardinal_dipoles,
+             component_beam_gains.gxs, component_beam_gains.Dxs,
+             component_beam_gains.Dys, component_beam_gains.gys,
+             component_beam_gains.ant1_to_baseline_map,
+             component_beam_gains.ant2_to_baseline_map, use_twobeams,
+             visi_shape, shape_flux_I,
+             visibility_set->sum_visi_XX_real, visibility_set->sum_visi_XX_imag,
+             visibility_set->sum_visi_XY_real, visibility_set->sum_visi_XY_imag,
+             visibility_set->sum_visi_YX_real, visibility_set->sum_visi_YX_imag,
+             visibility_set->sum_visi_YY_real, visibility_set->sum_visi_YY_imag);
+      }
+    }
   }
 }

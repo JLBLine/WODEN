@@ -4,6 +4,7 @@
 #include "woden_precision_defs.h"
 #include <math.h>
 #include <unity.h>
+#include <string.h>
 
 //Linear interpolation between list flux values - go through the list
 //and find out which points the desired frequency lies between, and then
@@ -41,3 +42,14 @@ source_t * put_components_into_source(components_t components,
                                       e_component_type comptype,
                                       int n_powers, int n_curves, int n_lists,
                                       int num_shape_coeffs);
+
+void copy_outputs_source_component_common_cpu(int num_of_each_flux_type,
+           source_t *mem_chunked_source, beam_gains_t *mem_beam_gains,
+           woden_settings_t *woden_settings,
+           beam_settings_t *beam_settings,
+           user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
+           user_precision_complex_t *Dys, user_precision_complex_t *gys,
+           user_precision_t *extrap_flux_I, user_precision_t *extrap_flux_Q,
+           user_precision_t *extrap_flux_U, user_precision_t *extrap_flux_V,
+           double *ls, double *ms, double *ns,
+           e_component_type comptype);

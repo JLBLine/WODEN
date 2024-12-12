@@ -594,7 +594,7 @@ into
 @param[in,out] *d_sum_visi_YY_imag Pointer to array to sum imaginary YY
 visibility into
 */
-__device__ void update_sum_visis_stokesI(int iBaseline, int iComponent,
+__device__ void update_sum_visis_stokesI_gpu(int iBaseline, int iComponent,
     int num_freqs, int num_baselines, int num_components, int num_times,
     int beamtype, int off_cardinal,
     gpuUserComplex *d_gxs, gpuUserComplex *d_Dxs,
@@ -1235,3 +1235,8 @@ extern "C" void calc_visi_shapelets_gpu(components_t d_components,
                                         int num_shapes, int num_shape_coeffs,
                                         e_beamtype beamtype,
                                         woden_settings_t *woden_settings);
+
+
+
+extern "C" void malloc_beam_gains_gpu(beam_gains_t *d_component_beam_gains,
+                                     int beamtype, int num_gains);

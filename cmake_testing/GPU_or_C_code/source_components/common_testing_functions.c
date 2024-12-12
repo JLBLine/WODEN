@@ -474,3 +474,75 @@ source_t * put_components_into_source(components_t components,
 
   return chunked_source;
 }
+
+//Match how we copy outputs from the GPU version so the testing is consistent
+void copy_outputs_source_component_common_cpu(int num_of_each_flux_type,
+           source_t *mem_chunked_source, beam_gains_t *mem_beam_gains,
+           woden_settings_t *woden_settings,
+           beam_settings_t *beam_settings,
+           user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
+           user_precision_complex_t *Dys, user_precision_complex_t *gys,
+           user_precision_t *extrap_flux_I, user_precision_t *extrap_flux_Q,
+           user_precision_t *extrap_flux_U, user_precision_t *extrap_flux_V,
+           double *ls, double *ms, double *ns,
+           e_component_type comptype){
+  int NUM_FLUX_TYPES = 3;
+
+  int num_beam_values = NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*woden_settings->num_time_steps;
+
+  if (woden_settings->use_dipamps == 1) {
+    num_beam_values *= woden_settings->num_ants;
+  }
+
+  // for (int i = 0; i < num_beam_values; i++) {
+  //   printf("gxs %d %.3e %.3e\n", i, creal(mem_beam_gains->gxs[i]), cimag(mem_beam_gains->gxs[i]));
+  // }
+
+  memcpy(gxs, mem_beam_gains->gxs, num_beam_values*sizeof(user_precision_complex_t));
+  memcpy(gys, mem_beam_gains->gys, num_beam_values*sizeof(user_precision_complex_t));
+
+  if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP || beam_settings->beamtype == MWA_ANALY) {
+    memcpy(Dxs, mem_beam_gains->Dxs, num_beam_values*sizeof(user_precision_complex_t));
+    memcpy(Dys, mem_beam_gains->Dys, num_beam_values*sizeof(user_precision_complex_t));
+  }
+
+  // Just a little shorthand so don't have to keep writing out as much in the
+  // memcpy below
+
+  components_t components;
+
+  if (comptype == POINT) {
+    components = mem_chunked_source->point_components;
+  }
+  else if (comptype == GAUSSIAN) {
+    components = mem_chunked_source->gauss_components;
+  }
+  else {
+    components = mem_chunked_source->shape_components;
+  }
+
+
+  memcpy(ls, components.ls, NUM_FLUX_TYPES*num_of_each_flux_type*sizeof(double));
+  memcpy(ms, components.ms, NUM_FLUX_TYPES*num_of_each_flux_type*sizeof(double));
+  memcpy(ns, components.ns, NUM_FLUX_TYPES*num_of_each_flux_type*sizeof(double));
+
+  memcpy(extrap_flux_I, components.extrap_stokesI,
+         NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t));
+
+  if (components.do_QUV == 1) {
+    memcpy(extrap_flux_Q, components.extrap_stokesQ,
+           NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t));
+    memcpy(extrap_flux_U, components.extrap_stokesU,
+           NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t));
+    memcpy(extrap_flux_V, components.extrap_stokesV,
+           NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t));
+  } else {
+    //so in the real code, if components.do_QUV == 0, we never touch the components.extrap_stokesQ,U,V
+    //arrays. In this test code though, we blindly test against them, so we need to zero them out
+    for (int i = 0; i < NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs; i++) {
+      extrap_flux_Q[i] = 0.0;
+      extrap_flux_U[i] = 0.0;
+      extrap_flux_V[i] = 0.0;
+    }
+  }
+}

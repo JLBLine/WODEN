@@ -76,9 +76,9 @@ int main(void)
     RUN_TEST(test_source_component_common_ConstantDecNoBeamGaussian_cpu);
     RUN_TEST(test_source_component_common_ConstantDecNoBeamShapelet_cpu);
 
-    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamPoint_cpu);
-    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamGauss_cpu);
-    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamShapelet_cpu);
+    RUN_TEST(test_source_component_common_ConstantDecFEEBeamPoint_cpu);
+    RUN_TEST(test_source_component_common_ConstantDecFEEBeamGauss_cpu);
+    RUN_TEST(test_source_component_common_ConstantDecFEEBeamShapelet_cpu);
 
     RUN_TEST(test_source_component_common_ConstantDecAnalyBeamPoint_cpu);
     RUN_TEST(test_source_component_common_ConstantDecAnalyBeamGaussian_cpu);
@@ -88,9 +88,9 @@ int main(void)
     RUN_TEST(test_source_component_common_ConstantDecGaussBeamGaussian_cpu);
     RUN_TEST(test_source_component_common_ConstantDecGaussBeamShapelet_cpu);
 
-    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpPoint_cpu);
-    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpGaussian_cpu);
-    // RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpShapelet_cpu);
+    RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpPoint_cpu);
+    RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpGaussian_cpu);
+    RUN_TEST(test_source_component_common_ConstantDecFEEBeamInterpShapelet_cpu);
  
     RUN_TEST(test_source_component_common_ConstantDecMWAAnalyPoint_cpu);
     RUN_TEST(test_source_component_common_ConstantDecMWAAnalyGaussian_cpu);

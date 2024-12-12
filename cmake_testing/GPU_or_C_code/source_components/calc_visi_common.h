@@ -10,6 +10,7 @@
 #include "shapelet_basis.h"
 #include "common_testing_functions.h"
 #include "source_components_common.h"
+#include "source_components_cpu.h"
 
 //external CUDA code used for testng
 
@@ -35,11 +36,11 @@ extern source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
 
 extern void free_beam_gains_gpu(beam_gains_t *d_beam_gains, e_beamtype beamtype);
 
-extern void free_extrapolated_flux_arrays(components_t *d_components);
+extern void free_extrapolated_flux_arrays_gpu(components_t *d_components);
 
 extern void free_freqs_gpu(double *d_extrap_freqs);
 
-extern void free_d_components(source_t *d_chunked_source,
+extern void free_components_gpu(source_t *d_chunked_source,
                                   e_component_type comptype);
 
 /*

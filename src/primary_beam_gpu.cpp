@@ -540,14 +540,6 @@ __global__ void kern_map_hyperbeam_gains(int num_components,
     d_beam_J11.x = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 6];
     d_beam_J11.y = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 7];
 
-    // if (iComponent==0) {
-    //   printf("hyper_ind: %d iTime %d iTile %d iFreq %d current_ind: %d gx %.3f %3f\n", hyper_ind, iTime, iTile, iFreq, current_ind,
-    //                                                                                    d_jones[2*MAX_POLS*current_ind + 0],
-    //                                                                                    d_jones[2*MAX_POLS*current_ind + 1]);
-    //   printf("hyper_ind: %d iTime %d iTile %d iFreq %d current_ind: %d gy %.3f %3f\n", hyper_ind, iTime, iTile, iFreq, current_ind,
-    //                                                                                    d_jones[2*MAX_POLS*current_ind + 6],
-    //                                                                                    d_jones[2*MAX_POLS*current_ind + 7]);
-    // }
 
     //Get an index to split into the WODEN style containers
     int new_ind =  num_times*num_freqs*num_components*iTile + num_freqs*iTime*num_components + (num_components*iFreq) + iComponent;

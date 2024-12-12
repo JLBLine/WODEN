@@ -409,7 +409,7 @@ __device__ void update_sum_visis_stokesIQUV_gpu(int iBaseline, int iComponent,
     // }
 }
 
-__device__ void update_sum_visis_stokesI(int iBaseline, int iComponent,
+__device__ void update_sum_visis_stokesI_gpu(int iBaseline, int iComponent,
     int num_freqs, int num_baselines, int num_components, int num_times,
     int beamtype, int off_cardinal_dipoles,
     gpuUserComplex *d_gxs, gpuUserComplex *d_Dxs,
@@ -1229,7 +1229,7 @@ extern "C" void wrapper_calculate_analytic_dipole_beam_gpu(int num_components,
 //This purely exists as d_component_beam_gains->gxs, d_gys are GPU
 //complexes and can't be included the function definition in a C header
 extern "C" void wrapper_run_hyperbeam_gpu(int num_components,
-                          components_t *components, beam_settings_t *beam_settings,
+                          beam_settings_t *beam_settings,
                           int num_beams, int parallactic,
                           double *reordered_azs, double *reordered_zas,
                           beam_gains_t *d_component_beam_gains,
@@ -1353,7 +1353,7 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
              d_sum_visi_YX_real, d_sum_visi_YX_imag,
              d_sum_visi_YY_real, d_sum_visi_YY_imag);
       } else {
-        update_sum_visis_stokesI(iBaseline, iComponent, num_freqs,
+        update_sum_visis_stokesI_gpu(iBaseline, iComponent, num_freqs,
              num_baselines, num_components, num_times, beamtype, off_cardinal_dipoles,
              (gpuUserComplex *)d_component_beam_gains.gxs,
              (gpuUserComplex *)d_component_beam_gains.Dxs,
@@ -1535,7 +1535,7 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
              d_sum_visi_YX_real, d_sum_visi_YX_imag,
              d_sum_visi_YY_real, d_sum_visi_YY_imag);
       } else {
-        update_sum_visis_stokesI(iBaseline, iComponent, num_freqs,
+        update_sum_visis_stokesI_gpu(iBaseline, iComponent, num_freqs,
              num_baselines, num_shapes, num_times, beamtype, off_cardinal_dipoles,
              (gpuUserComplex *)d_component_beam_gains.gxs,
              (gpuUserComplex *)d_component_beam_gains.Dxs,

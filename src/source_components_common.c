@@ -271,11 +271,39 @@ void source_component_common(woden_settings_t *woden_settings,
     uint8_t parallactic = 1;
 
     if (do_gpu == 1){
-      wrapper_run_hyperbeam_gpu(num_components, components, beam_settings,
-                          num_beams, parallactic,
-                          reordered_azs, reordered_zas,
-                          mem_component_beam_gains,
-                          mem_freqs, woden_settings);
+      wrapper_run_hyperbeam_gpu(num_components, beam_settings,
+                                num_beams, parallactic,
+                                reordered_azs, reordered_zas,
+                                mem_component_beam_gains,
+                                mem_freqs, woden_settings);
+    } else {
+      //Righto, so the CPU and GPU versions of hyperbeam have different APIs.
+      //When you initiate the GPU, you pass in the delays and amplitudes
+      //once, and then call the beam for as many directions as you want.
+      //With the CPU version, you pass in the delays and amplitudes each time
+      //you call for all directions. So we need to work out how many amplitudes
+      //we have here; 16 for a single beam, because for a single beam we're
+      //doing the perfect amp == 1 case, so we can pass the same amplitudes
+      //for both polarisations. For two beams, a.k.a every tile has it's own
+      //set of amplitude, we need 32 amplitudes, 16 for each polarisation.
+      int num_amps;
+      if (use_twobeams == 0) {
+        num_amps = 16;
+      } else {
+        num_amps = 32;
+      }
+
+      run_hyperbeam_cpu(num_components, woden_settings->num_time_steps,
+                        woden_settings->num_freqs, num_beams,
+                        parallactic, mem_freqs, beam_settings->fee_beam,
+                        beam_settings->hyper_delays,
+                        num_amps, woden_settings->mwa_dipole_amps,
+                        reordered_azs, reordered_zas,
+                        woden_settings->latitudes,
+                        mem_component_beam_gains->gxs, mem_component_beam_gains->Dxs,
+                        mem_component_beam_gains->Dys, mem_component_beam_gains->gys);
+                      
+
     }
     free(reordered_azs);
     free(reordered_zas);

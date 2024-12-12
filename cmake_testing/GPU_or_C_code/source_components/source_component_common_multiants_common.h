@@ -23,10 +23,10 @@ extern void copy_outputs_source_component_common_gpu(int num_of_each_flux_type,
 extern double * malloc_freqs_gpu(int num_extrap_freqs, double *extrap_freqs);
 extern void free_freqs_gpu(double *d_extrap_freqs);
 
-extern void free_d_components(source_t *d_chunked_source,
+extern void free_components_gpu(source_t *d_chunked_source,
                                   e_component_type comptype);
 
-extern void free_extrapolated_flux_arrays(components_t *d_components);
+extern void free_extrapolated_flux_arrays_gpu(components_t *d_components);
 
 extern void free_beam_gains_gpu(beam_gains_t *d_beam_gains, e_beamtype beamtype);
 

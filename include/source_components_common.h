@@ -105,7 +105,7 @@ extern void wrapper_calculate_analytic_dipole_beam_gpu(int num_components,
                           double *d_freqs, woden_settings_t *woden_settings);
 
 extern void wrapper_run_hyperbeam_gpu(int num_components,
-                          components_t *components, beam_settings_t *beam_settings,
+                          beam_settings_t *beam_settings,
                           int num_beams, int parallactic,
                           double *reordered_azs, double *reordered_zas,
                           beam_gains_t *d_component_beam_gains,

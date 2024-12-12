@@ -101,7 +101,7 @@ extern "C" void copy_outputs_source_component_common_gpu(int num_of_each_flux_ty
 
 //   free_extrapolated_flux_arrays(&d_components);
 //   free_beam_gains_gpu(*d_beam_gains, beam_settings->beamtype);
-//   free_d_components(d_chunked_source, comptype);
+//   free_components_gpu(d_chunked_source, comptype);
 
 
 }
