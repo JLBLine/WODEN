@@ -1073,6 +1073,9 @@ copied across to the GPU is (no empty pointers arrays are copied across)
 */
 extern "C" source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
 
+extern "C" void copy_CPU_beam_gains_to_GPU(components_t *components,
+  beam_gains_t *d_beam_gains, int num_gains);
+
 /**
 @brief Free device memory of extrapolated Stokes arrays from `d_components`
 

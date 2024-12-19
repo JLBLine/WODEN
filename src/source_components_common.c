@@ -1,5 +1,6 @@
 #include "source_components_common.h"
 #include "source_components_cpu.h"
+#include <string.h>
 
 //NOTE this works as both a CPU and GPU function. Anything with `mem` at the
 //front means you either need host or device memory for that variable. E.g.
@@ -164,6 +165,19 @@ void source_component_common(woden_settings_t *woden_settings,
     use_twobeams = 1;
   } else {
       num_beams = 1;
+  }
+
+  //Default behaviour with everybeam is to use a different beam for each station
+  if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
+    use_twobeams = 1;
+    num_beams = woden_settings->num_ants;
+
+    //However if single_everybeam_station is set, we're only using one beam
+    //for all stations
+    if (woden_settings->single_everybeam_station == 1) {
+      use_twobeams = 0;
+      num_beams = 1;
+    }
   }
 
   int num_components = 0;
@@ -343,6 +357,26 @@ void source_component_common(woden_settings_t *woden_settings,
             components->beam_has, components->beam_decs, mem_freqs,
             mem_component_beam_gains->gxs, mem_component_beam_gains->Dxs,
             mem_component_beam_gains->Dys, mem_component_beam_gains->gys);
+    }
+  }
+
+  //If an everybeam model, already calculated beam gains on the CPU
+  //So just copy them across
+  //TODO move this to source_components_common
+  else if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
+    int num_gains = num_components*woden_settings->num_freqs*woden_settings->num_time_steps*num_beams;
+    if (do_gpu == 1){
+      copy_CPU_beam_gains_to_GPU(components, mem_component_beam_gains, num_gains);  
+    } else {
+      //It seems wasteful to copy across the beam gains, but `components` was created
+      //on the python side, where the memory freeing is handled (hopefully) by
+      //the garbage collector. By copying here, we can free the beam gains on
+      //the C side regardless of whether we generate the beam gains in C or Python.
+      memcpy(mem_component_beam_gains->gxs, components->gxs, num_gains*sizeof(user_precision_complex_t));
+      memcpy(mem_component_beam_gains->Dxs, components->Dxs, num_gains*sizeof(user_precision_complex_t));
+      memcpy(mem_component_beam_gains->Dys, components->Dys, num_gains*sizeof(user_precision_complex_t));
+      memcpy(mem_component_beam_gains->gys, components->gys, num_gains*sizeof(user_precision_complex_t));
+
     }
   }
 

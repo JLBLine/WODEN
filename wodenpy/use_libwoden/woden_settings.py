@@ -69,7 +69,6 @@ def create_woden_settings_struct(precision : str = "double"):
         :cvar c_double base_low_freq:  The lowest fine channel frequency of band 1
         :cvar c_int num_time_steps:  Number of time steps to simulate
         :cvar c_double time_res:  Time resolution of simulation (seconds)
-        :cvar POINTER(c_char) cat_filename:  Path to WODEN-style sky model
         :cvar c_int num_bands:  Number of coarse frequency bands to simulate 
         :cvar POINTER(c_int) band_nums:  Which number coarse bands to simulate (e.g 1,4,6) 
         :cvar c_int sky_crop_type:  Whether to crop sky models by SOURCE or COMPONENT 
@@ -116,7 +115,6 @@ def create_woden_settings_struct(precision : str = "double"):
                     ("base_low_freq", c_double),
                     ("num_time_steps", c_int),
                     ("time_res", c_double),
-                    ("cat_filename", POINTER(c_char)),
                     ("num_bands", c_int),
                     ("band_nums", POINTER(c_int)),
                     ("sky_crop_type", c_int),
@@ -199,8 +197,6 @@ def create_woden_settings(woden_settings : Woden_Settings, # type: ignore
     
     woden_settings.num_time_steps = args.num_time_steps
     woden_settings.time_res = args.time_res
-    
-    woden_settings.cat_filename = create_string_buffer(args.cat_filename.encode('utf-8'))
     
     woden_settings.jd_date = jd_date
     

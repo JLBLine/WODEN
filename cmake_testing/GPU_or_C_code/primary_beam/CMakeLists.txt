@@ -6,24 +6,20 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS GPU_FLAGS C_COVER_FLAGS)
 
   if(USE_CUDA)
-    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fundamental_coords_gpu.cpp
-              ${CMAKE_SOURCE_DIR}/src/primary_beam_gpu.cpp
-              MWA_analytic_common_gpu.cpp
-              analytic_dipole_beam_common_gpu.cpp
-              run_hyperbeam_common_gpu.cpp
-              gaussian_beam_common_gpu.cpp
-              PROPERTIES LANGUAGE CUDA)
+    set_source_files_properties(MWA_analytic_common_gpu.cpp
+                                analytic_dipole_beam_common_gpu.cpp
+                                run_hyperbeam_common_gpu.cpp
+                                gaussian_beam_common_gpu.cpp
+                                PROPERTIES LANGUAGE CUDA)
   endif()
 
-  add_library(primary_beam_gpuGPU_${PRECISION} SHARED
-              ${CMAKE_SOURCE_DIR}/src/primary_beam_gpu.cpp
-              ${CMAKE_SOURCE_DIR}/src/fundamental_coords_gpu.cpp
+  add_library(primary_beam_GPU_${PRECISION} SHARED
               MWA_analytic_common_gpu.cpp
               analytic_dipole_beam_common_gpu.cpp
               gaussian_beam_common_gpu.cpp
               run_hyperbeam_common_gpu.cpp)
 
-  target_compile_options(primary_beam_gpuGPU_${PRECISION} PRIVATE ${GPU_FLAGS})
+  target_compile_options(primary_beam_GPU_${PRECISION} PRIVATE ${GPU_FLAGS})
 
   ##complile the CPU version of the primary beam, and link to gcov so we
   ##can get coverage information
@@ -44,8 +40,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_gaussian_beam_${DEVICE}_${PRECISION}_app
         Unity gcov
-        primary_beam_gpuGPU_${PRECISION}
-        primary_beam_cpu_${PRECISION}
+        primary_beam_GPU_${PRECISION}
+        calculate_visibilities_CPU_${PRECISION}
+        calculate_visibilities_GPU_${PRECISION}
         ${CC_LINKLIBS}
     )
     target_compile_options(test_gaussian_beam_${DEVICE}_${PRECISION}_app PRIVATE ${C_FLAGS})
@@ -59,8 +56,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_analytic_dipole_beam_${DEVICE}_${PRECISION}_app
         Unity gcov
-        primary_beam_gpuGPU_${PRECISION}
-        primary_beam_cpu_${PRECISION}
+        primary_beam_GPU_${PRECISION}
+        calculate_visibilities_CPU_${PRECISION}
+        calculate_visibilities_GPU_${PRECISION}
         ${CC_LINKLIBS}
     )
     target_compile_options(test_analytic_dipole_beam_${DEVICE}_${PRECISION}_app PRIVATE ${C_FLAGS})
@@ -74,8 +72,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_MWA_analytic_${DEVICE}_${PRECISION}_app
         Unity gcov
-        primary_beam_gpuGPU_${PRECISION}
-        primary_beam_cpu_${PRECISION}
+        primary_beam_GPU_${PRECISION}
+        calculate_visibilities_CPU_${PRECISION}
+        calculate_visibilities_GPU_${PRECISION}
         ${CC_LINKLIBS}
     )
     target_compile_options(test_MWA_analytic_${DEVICE}_${PRECISION}_app PRIVATE ${C_FLAGS})
@@ -88,8 +87,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_run_hyperbeam_${DEVICE}_${PRECISION}_app
         Unity
-        primary_beam_gpuGPU_${PRECISION}
-        primary_beam_cpu_${PRECISION}
+        primary_beam_GPU_${PRECISION}
+        calculate_visibilities_CPU_${PRECISION}
+        calculate_visibilities_GPU_${PRECISION}
         ${CC_LINKLIBS}
         # "-L/usr/local/mwa_hyperbeam -lmwa_hyperbeam"
     )
@@ -103,8 +103,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_run_hyperbeam_interp_${DEVICE}_${PRECISION}_app
         Unity
-        primary_beam_gpuGPU_${PRECISION}
-        primary_beam_cpu_${PRECISION}
+        primary_beam_GPU_${PRECISION}
+        calculate_visibilities_CPU_${PRECISION}
+        calculate_visibilities_GPU_${PRECISION}
         ${CC_LINKLIBS}
         # "-L/usr/local/mwa_hyperbeam -lmwa_hyperbeam"
     )
@@ -118,13 +119,14 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_run_hyperbeam_multi_antennas_${DEVICE}_${PRECISION}_app
         Unity
-        primary_beam_gpuGPU_${PRECISION}
-        primary_beam_cpu_${PRECISION}
+        primary_beam_GPU_${PRECISION}
+        calculate_visibilities_CPU_${PRECISION}
+        calculate_visibilities_GPU_${PRECISION}
         ${CC_LINKLIBS}
         # "-L/usr/local/mwa_hyperbeam -lmwa_hyperbeam"
     )
     target_compile_options(test_run_hyperbeam_multi_antennas_${DEVICE}_${PRECISION}_app PRIVATE ${C_FLAGS})
     add_test(${DEVICE}_test_run_hyperbeam_multi_antennas_${PRECISION} test_run_hyperbeam_multi_antennas_${DEVICE}_${PRECISION}_app)
-
+    
   endforeach()
 endforeach()

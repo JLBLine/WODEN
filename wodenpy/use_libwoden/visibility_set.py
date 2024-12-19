@@ -208,17 +208,29 @@ def load_visibility_set(visibility_set=None,num_baselines=None,num_freq_channels
 
     ##Righto, this converts from the ctype POINTER into a numpy array
     ##This is grabbing all the lovely things calculated by the GPU
-    us_metres = np.ctypeslib.as_array(visibility_set.us_metres, shape=(num_visi,))
-    vs_metres = np.ctypeslib.as_array(visibility_set.vs_metres, shape=(num_visi,))
-    ws_metres = np.ctypeslib.as_array(visibility_set.ws_metres, shape=(num_visi,))
-    visi_XX_real = np.ctypeslib.as_array(visibility_set.sum_visi_XX_real, shape=(num_visi,))
-    visi_XX_imag = np.ctypeslib.as_array(visibility_set.sum_visi_XX_imag, shape=(num_visi,))
-    visi_XY_real = np.ctypeslib.as_array(visibility_set.sum_visi_XY_real, shape=(num_visi,))
-    visi_XY_imag = np.ctypeslib.as_array(visibility_set.sum_visi_XY_imag, shape=(num_visi,))
-    visi_YX_real = np.ctypeslib.as_array(visibility_set.sum_visi_YX_real, shape=(num_visi,))
-    visi_YX_imag = np.ctypeslib.as_array(visibility_set.sum_visi_YX_imag, shape=(num_visi,))
-    visi_YY_real = np.ctypeslib.as_array(visibility_set.sum_visi_YY_real, shape=(num_visi,))
-    visi_YY_imag = np.ctypeslib.as_array(visibility_set.sum_visi_YY_imag, shape=(num_visi,))
+    # us_metres = np.ctypeslib.as_array(visibility_set.us_metres, shape=(num_visi,))
+    # vs_metres = np.ctypeslib.as_array(visibility_set.vs_metres, shape=(num_visi,))
+    # ws_metres = np.ctypeslib.as_array(visibility_set.ws_metres, shape=(num_visi,))
+    # visi_XX_real = np.ctypeslib.as_array(visibility_set.sum_visi_XX_real, shape=(num_visi,))
+    # visi_XX_imag = np.ctypeslib.as_array(visibility_set.sum_visi_XX_imag, shape=(num_visi,))
+    # visi_XY_real = np.ctypeslib.as_array(visibility_set.sum_visi_XY_real, shape=(num_visi,))
+    # visi_XY_imag = np.ctypeslib.as_array(visibility_set.sum_visi_XY_imag, shape=(num_visi,))
+    # visi_YX_real = np.ctypeslib.as_array(visibility_set.sum_visi_YX_real, shape=(num_visi,))
+    # visi_YX_imag = np.ctypeslib.as_array(visibility_set.sum_visi_YX_imag, shape=(num_visi,))
+    # visi_YY_real = np.ctypeslib.as_array(visibility_set.sum_visi_YY_real, shape=(num_visi,))
+    # visi_YY_imag = np.ctypeslib.as_array(visibility_set.sum_visi_YY_imag, shape=(num_visi,))
+    
+    us_metres = visibility_set.us_metres
+    vs_metres = visibility_set.vs_metres
+    ws_metres = visibility_set.ws_metres
+    visi_XX_real = visibility_set.sum_visi_XX_real
+    visi_XX_imag = visibility_set.sum_visi_XX_imag
+    visi_XY_real = visibility_set.sum_visi_XY_real
+    visi_XY_imag = visibility_set.sum_visi_XY_imag
+    visi_YX_real = visibility_set.sum_visi_YX_real
+    visi_YX_imag = visibility_set.sum_visi_YX_imag
+    visi_YY_real = visibility_set.sum_visi_YY_real
+    visi_YY_imag = visibility_set.sum_visi_YY_imag
 
     ##If doing auto-correlations, need some mapping arrays so we can
     ##shove the correct data into the correct spots

@@ -12,16 +12,24 @@ void calculate_component_visis(e_component_type comptype,
 
   int verbose = 0;
 
+  if (verbose == 1){
+    printf("Starting calculate_component_visis\n");
+  }
+
   int num_components;
   components_t mem_components;
+  // components_t *components;
   if (comptype == POINT){
     mem_components = mem_chunked_source->point_components;
+    // components = &source->point_components;
     num_components = mem_chunked_source->n_points;
   } else if (comptype == GAUSSIAN){
     mem_components = mem_chunked_source->gauss_components;
+    // components = &source->gauss_components;
     num_components = mem_chunked_source->n_gauss;
   } else {
     mem_components = mem_chunked_source->shape_components;
+    // components = &source->shape_components;
     num_components = mem_chunked_source->n_shapes;
   }
 
@@ -36,20 +44,7 @@ void calculate_component_visis(e_component_type comptype,
   } else {
     mem_beam_gains->use_twobeams = 0;
   }
-  //If an everybeam model, already calculated beam gains on the CPU
-  //So just copy them across
-  if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
-    if (do_gpu == 1){
-      copy_CPU_beam_gains_to_GPU(&mem_components, mem_beam_gains,
-        num_components*woden_settings->num_freqs*woden_settings->num_time_steps*num_beams);
-    } else {
-      mem_beam_gains->gxs = mem_components.gxs;
-      mem_beam_gains->Dxs = mem_components.Dxs;
-      mem_beam_gains->Dys = mem_components.Dys;
-      mem_beam_gains->gys = mem_components.gys;
-    }
-    
-  }
+
   if (verbose == 1){
     printf("\tExtrapolating fluxes and beams...\n");
   }
@@ -109,11 +104,15 @@ void calculate_component_visis(e_component_type comptype,
     free_extrapolated_flux_arrays_gpu(&mem_components);
     free_components_gpu(mem_chunked_source, comptype);
     free_beam_gains_gpu(mem_beam_gains, beam_settings->beamtype);
+    free(mem_beam_gains);
   } else {
 
     free_components_cpu(&mem_components);
     free_beam_gains_cpu(mem_beam_gains, beam_settings->beamtype);
     free(mem_beam_gains);
+  }
+  if (verbose == 1){
+    printf("Finished calculate_component_visis\n");
   }
 }
 
@@ -241,21 +240,6 @@ void calculate_visibilities(array_layout_t *array_layout,
   for (int chunk = 0; chunk < cropped_sky_models->num_sources; chunk++) {
     source_t *source = &cropped_sky_models->sources[chunk];
 
-  //   // printf("\tsource->n_comps %d\n", source->n_comps);
-  //   // printf("\tsource->n_points %d\n", source->n_points);
-  //   // printf("\tsource->n_point_lists %d\n", source->n_point_lists);
-  //   // printf("\tsource->n_point_powers %d\n", source->n_point_powers);
-  //   // printf("\tsource->n_point_curves %d\n", source->n_point_curves);
-  //   // printf("\tsource->n_gauss %d\n", source->n_gauss);
-  //   // printf("\tsource->n_gauss_lists %d\n", source->n_gauss_lists);
-  //   // printf("\tsource->n_gauss_powers %d\n", source->n_gauss_powers);
-  //   // printf("\tsource->n_gauss_curves %d\n", source->n_gauss_curves);
-  //   // printf("\tsource->n_shapes %d\n", source->n_shapes);
-  //   // printf("\tsource->n_shape_lists %d\n", source->n_shape_lists);
-  //   // printf("\tsource->n_shape_powers %d\n", source->n_shape_powers);
-  //   // printf("\tsource->n_shape_curves %d\n", source->n_shape_curves);
-  //   // printf("\tsource->n_shape_coeffs %d\n", source->n_shape_coeffs);
-
     source_t *mem_chunked_source;
     //If doing GPU, we have to copy contents across to GPU mem
     if (do_gpu == 1) {
@@ -270,18 +254,6 @@ void calculate_visibilities(array_layout_t *array_layout,
     } else {
       mem_chunked_source = source;
     }
-
-    //Make sure the temp visis are 0 at the start of each chunk
-    // for (int visi = 0; visi < num_visis; visi++) {
-    //   chunk_visibility_set->sum_visi_XX_real[visi] = 0;
-    //   chunk_visibility_set->sum_visi_XX_imag[visi] = 0;
-    //   chunk_visibility_set->sum_visi_XY_real[visi] = 0;
-    //   chunk_visibility_set->sum_visi_XY_imag[visi] = 0;
-    //   chunk_visibility_set->sum_visi_YX_real[visi] = 0;
-    //   chunk_visibility_set->sum_visi_YX_imag[visi] = 0;
-    //   chunk_visibility_set->sum_visi_YY_real[visi] = 0;
-    //   chunk_visibility_set->sum_visi_YY_imag[visi] = 0;
-    // }
 
     set_visi_set_to_zero_cpu(chunk_visibility_set, num_visis);
 
@@ -431,19 +403,10 @@ void calculate_visibilities(array_layout_t *array_layout,
         chunk_visibility_set->sum_visi_YX_imag[visi] = mem_visibility_set->sum_visi_YX_imag[visi];
         chunk_visibility_set->sum_visi_YY_real[visi] = mem_visibility_set->sum_visi_YY_real[visi];
         chunk_visibility_set->sum_visi_YY_imag[visi] = mem_visibility_set->sum_visi_YY_imag[visi];
+        // if (visi == 0){
+        // printf("CPU %.3f %.3f\n", chunk_visibility_set->us_metres[visi], chunk_visibility_set->sum_visi_XX_real[visi]);
+        // }
       }
-
-
-      // memcpy(chunk_visibility_set->us_metres, mem_calc_visi_inouts->u_metres,
-      //        num_visis*sizeof(user_precision_t));
-      // memcpy(chunk_visibility_set->vs_metres, mem_calc_visi_inouts->v_metres,
-      //         num_visis*sizeof(user_precision_t));
-      // memcpy(chunk_visibility_set->ws_metres, mem_calc_visi_inouts->w_metres,
-      //         num_visis*sizeof(user_precision_t));
-
-      // chunk_visibility_set->us_metres = mem_calc_visi_inouts->u_metres;
-      // chunk_visibility_set->vs_metres = mem_calc_visi_inouts->v_metres;
-      // chunk_visibility_set->ws_metres = mem_calc_visi_inouts->w_metres;
     }
 
     //add to visiblity_set
@@ -451,25 +414,9 @@ void calculate_visibilities(array_layout_t *array_layout,
       //if the first chunk then initialise our values, and copy across
       //the u,v,w coords
       if (chunk == 0) {
-        //ensure temp visi's are 0.0
-        // visibility_set->sum_visi_XX_real[visi] = 0;
-        // visibility_set->sum_visi_XX_imag[visi] = 0;
-        // visibility_set->sum_visi_XY_real[visi] = 0;
-        // visibility_set->sum_visi_XY_imag[visi] = 0;
-        // visibility_set->sum_visi_YX_real[visi] = 0;
-        // visibility_set->sum_visi_YX_imag[visi] = 0;
-        // visibility_set->sum_visi_YY_real[visi] = 0;
-        // visibility_set->sum_visi_YY_imag[visi] = 0;
-
         visibility_set->us_metres[visi] = chunk_visibility_set->us_metres[visi];
         visibility_set->vs_metres[visi] = chunk_visibility_set->vs_metres[visi];
         visibility_set->ws_metres[visi] = chunk_visibility_set->ws_metres[visi];
-
-        // visibility_set->us_metres[visi] = mem_calc_visi_inouts->u_metres[visi];
-        // visibility_set->vs_metres[visi] = mem_calc_visi_inouts->v_metres[visi];
-        // visibility_set->ws_metres[visi] = mem_calc_visi_inouts->w_metres[visi];
-
-        // printf("WE IS DOING THE THING %.5f\n", chunk_visibility_set->us_metres[visi]);
       }
 
       //add each chunk of components to visibility set

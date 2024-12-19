@@ -8,25 +8,25 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS GPU_FLAGS C_COVER_FLAGS)
 
   if(USE_CUDA)
-    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/source_components_gpu.cpp
-              ${CMAKE_SOURCE_DIR}/src/fundamental_coords_gpu.cpp
-              ${CMAKE_SOURCE_DIR}/src/primary_beam_gpu.cpp
-              extrap_stokes_common_gpu.cpp
-              calc_measurement_equation_common_gpu.cpp
-              apply_beam_gains_common_gpu.cpp
-              get_beam_gains_common_gpu.cpp
-              source_component_common_common_gpu.cpp
-              calc_visi_common_gpu.cpp
-              update_sum_visis_common_gpu.cpp
-              calc_autos_common_gpu.cpp
-              PROPERTIES LANGUAGE CUDA)
+    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fundamental_coords_gpu.cpp
+                                ${CMAKE_SOURCE_DIR}/src/primary_beam_gpu.cpp
+                                ${CMAKE_SOURCE_DIR}/src/source_components_gpu.cpp
+                                extrap_stokes_common_gpu.cpp
+                                calc_measurement_equation_common_gpu.cpp
+                                apply_beam_gains_common_gpu.cpp
+                                get_beam_gains_common_gpu.cpp
+                                source_component_common_common_gpu.cpp
+                                calc_visi_common_gpu.cpp
+                                update_sum_visis_common_gpu.cpp
+                                calc_autos_common_gpu.cpp
+                                PROPERTIES LANGUAGE CUDA)
   endif()
 
   ##compile GPU versions of the code
-  add_library(source_componentsGPU_${PRECISION} SHARED
-              ${CMAKE_SOURCE_DIR}/src/source_components_gpu.cpp
+  add_library(source_components_GPU_${PRECISION} SHARED
               ${CMAKE_SOURCE_DIR}/src/fundamental_coords_gpu.cpp
               ${CMAKE_SOURCE_DIR}/src/primary_beam_gpu.cpp
+              ${CMAKE_SOURCE_DIR}/src/source_components_gpu.cpp
               extrap_stokes_common_gpu.cpp
               calc_measurement_equation_common_gpu.cpp
               apply_beam_gains_common_gpu.cpp
@@ -35,17 +35,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
               calc_visi_common_gpu.cpp
               update_sum_visis_common_gpu.cpp
               calc_autos_common_gpu.cpp)
-  target_compile_options(source_componentsGPU_${PRECISION} PRIVATE ${GPU_FLAGS})
-
-  ##complile the CPU version of the source_components, and link to gcov so we
-  ##can get coverage information
-  add_library(source_components_cpu_${PRECISION} SHARED
-              ${CMAKE_SOURCE_DIR}/src/source_components_cpu.c
-              ${CMAKE_SOURCE_DIR}/src/source_components_common.c
-              ${CMAKE_SOURCE_DIR}/src/fundamental_coords_cpu.c
-              ${CMAKE_SOURCE_DIR}/src/primary_beam_cpu.c)
-  target_link_libraries(source_components_cpu_${PRECISION} gcov)
-  target_compile_options(source_components_cpu_${PRECISION} PRIVATE ${C_COVER_FLAGS})
+  target_compile_options(source_components_GPU_${PRECISION} PRIVATE ${GPU_FLAGS})
 
   ##----------------------------------------------------------------------------
   ##Now to add the tests in
@@ -61,8 +51,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_calc_measurement_equation_${DEVICE}_${PRECISION}_app
       Unity gcov
-      source_componentsGPU_${PRECISION}
-      source_components_cpu_${PRECISION}
+      source_components_GPU_${PRECISION}
+      calculate_visibilities_CPU_${PRECISION}
+      calculate_visibilities_GPU_${PRECISION}
       ${CC_LINKLIBS}
     )
     target_compile_options(test_calc_measurement_equation_${DEVICE}_${PRECISION}_app
@@ -76,8 +67,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_apply_beam_gains_${DEVICE}_${PRECISION}_app
       Unity gcov
-      source_componentsGPU_${PRECISION}
-      source_components_cpu_${PRECISION}
+      source_components_GPU_${PRECISION}
+      calculate_visibilities_CPU_${PRECISION}
+        calculate_visibilities_GPU_${PRECISION}
       ${CC_LINKLIBS}
     )
     target_compile_options(test_apply_beam_gains_${DEVICE}_${PRECISION}_app
@@ -93,8 +85,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_extrap_stokes_${DEVICE}_${PRECISION}_app
       Unity gcov
-      source_componentsGPU_${PRECISION}
-      source_components_cpu_${PRECISION}
+      source_components_GPU_${PRECISION}
+      calculate_visibilities_CPU_${PRECISION}
+        calculate_visibilities_GPU_${PRECISION}
       ${CC_LINKLIBS}
     )
     target_compile_options(test_extrap_stokes_${DEVICE}_${PRECISION}_app
@@ -110,8 +103,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_get_beam_gains_${DEVICE}_${PRECISION}_app
       Unity gcov
-      source_componentsGPU_${PRECISION}
-      source_components_cpu_${PRECISION}
+      source_components_GPU_${PRECISION}
+      calculate_visibilities_CPU_${PRECISION}
+        calculate_visibilities_GPU_${PRECISION}
       ${CC_LINKLIBS}
     )
     target_compile_options(test_get_beam_gains_${DEVICE}_${PRECISION}_app
@@ -126,8 +120,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_get_beam_gains_two_antennas_${DEVICE}_${PRECISION}_app
       Unity gcov
-      source_componentsGPU_${PRECISION}
-      source_components_cpu_${PRECISION}
+      source_components_GPU_${PRECISION}
+      calculate_visibilities_CPU_${PRECISION}
+        calculate_visibilities_GPU_${PRECISION}
       ${CC_LINKLIBS}
     )
     target_compile_options(test_get_beam_gains_two_antennas_${DEVICE}_${PRECISION}_app
@@ -142,8 +137,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_update_sum_visis_${DEVICE}_${PRECISION}_app
       Unity gcov
-      source_componentsGPU_${PRECISION}
-      source_components_cpu_${PRECISION}
+      source_components_GPU_${PRECISION}
+      calculate_visibilities_CPU_${PRECISION}
+        calculate_visibilities_GPU_${PRECISION}
       ${CC_LINKLIBS}
     )
     target_compile_options(test_update_sum_visis_${DEVICE}_${PRECISION}_app
@@ -160,8 +156,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_update_sum_visis_multiants_${DEVICE}_${PRECISION}_app
       Unity gcov
-      source_componentsGPU_${PRECISION}
-      source_components_cpu_${PRECISION}
+      source_components_GPU_${PRECISION}
+      calculate_visibilities_CPU_${PRECISION}
+        calculate_visibilities_GPU_${PRECISION}
       ${CC_LINKLIBS}
     )
     target_compile_options(test_update_sum_visis_multiants_${DEVICE}_${PRECISION}_app
@@ -177,8 +174,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_calc_autos_${DEVICE}_${PRECISION}_app
       Unity gcov
-      source_componentsGPU_${PRECISION}
-      source_components_cpu_${PRECISION}
+      source_components_GPU_${PRECISION}
+      calculate_visibilities_CPU_${PRECISION}
+        calculate_visibilities_GPU_${PRECISION}
       ${CC_LINKLIBS}
     )
     target_compile_options(test_calc_autos_${DEVICE}_${PRECISION}_app
@@ -195,8 +193,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_calc_autos_multiants_${DEVICE}_${PRECISION}_app
       Unity gcov
-      source_componentsGPU_${PRECISION}
-      source_components_cpu_${PRECISION}
+      source_components_GPU_${PRECISION}
+      calculate_visibilities_CPU_${PRECISION}
+        calculate_visibilities_GPU_${PRECISION}
       ${CC_LINKLIBS}
     )
     target_compile_options(test_calc_autos_multiants_${DEVICE}_${PRECISION}_app
@@ -212,8 +211,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_source_component_common_${DEVICE}_${PRECISION}_app
       Unity gcov
-      source_componentsGPU_${PRECISION}
-      source_components_cpu_${PRECISION}
+      source_components_GPU_${PRECISION}
+      calculate_visibilities_CPU_${PRECISION}
+        calculate_visibilities_GPU_${PRECISION}
       ${CC_LINKLIBS}
     )
     target_compile_options(test_source_component_common_${DEVICE}_${PRECISION}_app
@@ -229,16 +229,15 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_source_component_common_multiants_${DEVICE}_${PRECISION}_app
       Unity gcov
-      source_componentsGPU_${PRECISION}
-      source_components_cpu_${PRECISION}
+      source_components_GPU_${PRECISION}
+      calculate_visibilities_CPU_${PRECISION}
+        calculate_visibilities_GPU_${PRECISION}
       ${CC_LINKLIBS}
     )
     target_compile_options(test_source_component_common_multiants_${DEVICE}_${PRECISION}_app
                         PRIVATE ${C_FLAGS})
     add_test(${DEVICE}_test_source_component_common_multiants_${PRECISION}
           test_source_component_common_multiants_${DEVICE}_${PRECISION}_app)
-
-
 
     add_executable(test_calc_visi_point_${DEVICE}_${PRECISION}_app
       test_calc_visi_point_${DEVICE}.c
@@ -248,8 +247,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_calc_visi_point_${DEVICE}_${PRECISION}_app
       Unity gcov
-      source_componentsGPU_${PRECISION}
-      source_components_cpu_${PRECISION}
+      source_components_GPU_${PRECISION}
+      calculate_visibilities_CPU_${PRECISION}
+        calculate_visibilities_GPU_${PRECISION}
       ${CC_LINKLIBS}
     )
     target_compile_options(test_calc_visi_point_${DEVICE}_${PRECISION}_app
@@ -265,8 +265,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_calc_visi_gauss_${DEVICE}_${PRECISION}_app
       Unity gcov
-      source_componentsGPU_${PRECISION}
-      source_components_cpu_${PRECISION}
+      source_components_GPU_${PRECISION}
+      calculate_visibilities_CPU_${PRECISION}
+      calculate_visibilities_GPU_${PRECISION}
       ${CC_LINKLIBS}
     )
     target_compile_options(test_calc_visi_gauss_${DEVICE}_${PRECISION}_app
@@ -282,8 +283,9 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     )
     target_link_libraries(test_calc_visi_shape_${DEVICE}_${PRECISION}_app
       Unity gcov
-      source_componentsGPU_${PRECISION}
-      source_components_cpu_${PRECISION}
+      source_components_GPU_${PRECISION}
+      calculate_visibilities_CPU_${PRECISION}
+        calculate_visibilities_GPU_${PRECISION}
       ${CC_LINKLIBS}
     )
     target_compile_options(test_calc_visi_shape_${DEVICE}_${PRECISION}_app

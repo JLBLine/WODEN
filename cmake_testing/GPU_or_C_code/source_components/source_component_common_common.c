@@ -36,85 +36,8 @@ extern void calc_lmn_for_components_gpu(components_t *mem_components,
                                         int num_components,
                                         woden_settings_t *woden_settings);
 
-// //Match how we copy outputs from the GPU version so the testing is consistent
-// void copy_outputs_source_component_common_cpu(int num_of_each_flux_type,
-//            source_t *mem_chunked_source, beam_gains_t *mem_beam_gains,
-//            woden_settings_t *woden_settings,
-//            beam_settings_t *beam_settings,
-//            user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
-//            user_precision_complex_t *Dys, user_precision_complex_t *gys,
-//            user_precision_t *extrap_flux_I, user_precision_t *extrap_flux_Q,
-//            user_precision_t *extrap_flux_U, user_precision_t *extrap_flux_V,
-//            double *ls, double *ms, double *ns,
-//            e_component_type comptype){
-//   int NUM_FLUX_TYPES = 3;
-
-//   int num_beam_values = NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*woden_settings->num_time_steps;
-
-//   if (woden_settings->use_dipamps == 1) {
-//     num_beam_values *= woden_settings->num_ants;
-//   }
-
-//   // for (int i = 0; i < num_beam_values; i++) {
-//   //   printf("gxs %d %.3e %.3e\n", i, creal(mem_beam_gains->gxs[i]), cimag(mem_beam_gains->gxs[i]));
-//   // }
-
-//   memcpy(gxs, mem_beam_gains->gxs, num_beam_values*sizeof(user_precision_complex_t));
-//   memcpy(gys, mem_beam_gains->gys, num_beam_values*sizeof(user_precision_complex_t));
-
-//   if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP || beam_settings->beamtype == MWA_ANALY) {
-//     memcpy(Dxs, mem_beam_gains->Dxs, num_beam_values*sizeof(user_precision_complex_t));
-//     memcpy(Dys, mem_beam_gains->Dys, num_beam_values*sizeof(user_precision_complex_t));
-//   }
-
-//   // Just a little shorthand so don't have to keep writing out as much in the
-//   // memcpy below
-
-//   components_t components;
-
-//   if (comptype == POINT) {
-//     components = mem_chunked_source->point_components;
-//   }
-//   else if (comptype == GAUSSIAN) {
-//     components = mem_chunked_source->gauss_components;
-//   }
-//   else {
-//     components = mem_chunked_source->shape_components;
-//   }
-
-
-//   memcpy(ls, components.ls, NUM_FLUX_TYPES*num_of_each_flux_type*sizeof(double));
-//   memcpy(ms, components.ms, NUM_FLUX_TYPES*num_of_each_flux_type*sizeof(double));
-//   memcpy(ns, components.ns, NUM_FLUX_TYPES*num_of_each_flux_type*sizeof(double));
-
-//   // int num_things = NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs;
-
-//   // if (d_components.do_QUV == 0) {
-
-//   //   gpuMalloc( (void**)&d_components.extrap_stokesQ, num_things*sizeof(user_precision_t) );
-//   //   gpuMalloc( (void**)&d_components.extrap_stokesU, num_things*sizeof(user_precision_t) );
-//   //   gpuMalloc( (void**)&d_components.extrap_stokesV, num_things*sizeof(user_precision_t) );
-
-//   //   gpuErrorCheckKernel("kern_make_zeros_user_precision",
-//   //           kern_make_zeros_user_precision, grid, threads,
-//   //           d_components.extrap_stokesQ, num_things);
-//   //   gpuErrorCheckKernel("kern_make_zeros_user_precision",
-//   //             kern_make_zeros_user_precision, grid, threads,
-//   //             d_components.extrap_stokesU, num_things);
-//   //   gpuErrorCheckKernel("kern_make_zeros_user_precision",
-//   //             kern_make_zeros_user_precision, grid, threads,
-//   //             d_components.extrap_stokesV, num_things);
-//   // }
-
-//   memcpy(extrap_flux_I, components.extrap_stokesI,
-//          NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t));
-//   memcpy(extrap_flux_Q, components.extrap_stokesQ,
-//          NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t));
-//   memcpy(extrap_flux_U, components.extrap_stokesU,
-//          NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t));
-//   memcpy(extrap_flux_V, components.extrap_stokesV,
-//          NUM_FLUX_TYPES*num_of_each_flux_type*woden_settings->num_freqs*sizeof(user_precision_t));
-// }
+extern void copy_CPU_beam_gains_to_GPU(components_t *components,
+                                       beam_gains_t *d_beam_gains, int num_gains);
 
 /*
 Test that l,m,n and beam values are calculated correctly by `source_component_common`
@@ -494,7 +417,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   woden_settings->do_autos = 0;
 
   beam_gains_t *mem_beam_gains = malloc(sizeof(beam_gains_t));
-  source_t *mem_chunked_source = NULL;
+  source_t *mem_chunked_source = malloc(sizeof(source_t));
   double *mem_freqs = NULL;
   
   //Visibility set not used in this test, but is an argument to the function
@@ -502,12 +425,42 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   //expanded to test auto-correlations
   visibility_set_t *mem_visibility_set = NULL;
 
+
+
+  //the everybeam gains are calculated in python, and transferred across
+  //to the C code. So define some gains here; just make them the index of
+  //the gain.
+ 
+  components_t *chunk_components;
+  if (comptype == POINT) {
+    chunk_components = &chunked_source->point_components;
+  }
+  else if (comptype == GAUSSIAN) {
+    chunk_components = &chunked_source->gauss_components;
+  }
+  else {
+    chunk_components = &chunked_source->shape_components;
+  }
+
+  if (beamtype == EB_MWA || beamtype == EB_LOFAR || beamtype == EB_OSKAR) {
+    chunk_components->gxs = malloc(num_beam_values*sizeof(user_precision_complex_t));
+    chunk_components->Dxs = malloc(num_beam_values*sizeof(user_precision_complex_t));
+    chunk_components->Dys = malloc(num_beam_values*sizeof(user_precision_complex_t));
+    chunk_components->gys = malloc(num_beam_values*sizeof(user_precision_complex_t));
+
+    for (int i = 0; i < num_beam_values; i++) {
+      chunk_components->gxs[i] = i + I*i;
+      chunk_components->Dxs[i] = i + I*i;
+      chunk_components->Dys[i] = i + I*i;
+      chunk_components->gys[i] = i + I*i;
+    }
+  }
+
   if (do_gpu == 1) {
     //Run the CUDA code
-    
+    components_t *mem_components;
     mem_chunked_source = copy_chunked_source_to_GPU(chunked_source);
     mem_freqs = malloc_freqs_gpu(num_freqs, freqs);
-    components_t *mem_components;
 
     if (comptype == POINT) {
       mem_components = &mem_chunked_source->point_components;
@@ -518,11 +471,12 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     else {
       mem_components = &mem_chunked_source->shape_components;
     }
+    
 
-    // int num_beams = 1;
-    // int num_gains = mem_components->num_primarybeam_values*num_beams;
-    // malloc_beam_gains_gpu(mem_beam_gains, beam_settings->beamtype, num_gains);
-    // calc_lmn_for_components_gpu(mem_components, num_components, woden_settings);
+    if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
+      copy_CPU_beam_gains_to_GPU(chunk_components, mem_beam_gains,
+                                 num_beam_values);
+    }
 
     source_component_common(woden_settings, beam_settings, mem_freqs,
        chunked_source, mem_chunked_source, mem_beam_gains, comptype,
@@ -536,14 +490,21 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
            ls, ms, ns, comptype);
 
     
+    free_beam_gains_gpu(mem_beam_gains, beam_settings->beamtype);
     free_extrapolated_flux_arrays_gpu(mem_components);
     free_components_gpu(mem_chunked_source, comptype);
-    free_beam_gains_gpu(mem_beam_gains, beam_settings->beamtype);
     free_freqs_gpu(mem_freqs);
 
   } else{
     mem_chunked_source = chunked_source;
     mem_freqs = freqs;
+
+    if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
+      mem_beam_gains->gxs = chunk_components->gxs;
+      mem_beam_gains->Dxs = chunk_components->Dxs;
+      mem_beam_gains->Dys = chunk_components->Dys;
+      mem_beam_gains->gys = chunk_components->gys;
+    }
 
     //Aight so this is somewhat hacky. But for the GPU version of hyperbeam,
     //you set the beam frequencies in the call to `new_gpu_fee_beam`. This
@@ -765,8 +726,29 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
     }
   }
+  else if (beamtype == EB_LOFAR || beamtype == EB_MWA || beamtype == EB_OSKAR) {
 
-
+    #ifdef DOUBLE_PRECISION
+      TOL = 1e-12;
+    #else
+      TOL = 1e-7;
+    #endif
+    for (int output = 0; output < num_beam_values; output++) {
+      // printf("%d %.8f %.8f %.8f %.8f %.8f %.8f %.8f %.8f\n", output, creal(gxs[output]), cimag(gxs[output]),
+      //         creal(Dxs[output]), cimag(Dxs[output]),
+      //         creal(Dys[output]), cimag(Dys[output]),
+      //         creal(gys[output]), cimag(gys[output]) );
+      //All values should just equal the index in the array
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, output, creal(gxs[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, output, cimag(gxs[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, output, creal(Dxs[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, output, cimag(Dxs[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, output, creal(Dys[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, output, cimag(Dys[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, output, creal(gys[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, output, cimag(gys[output]));
+    }
+  }
   else if (beamtype == NO_BEAM) {
     //Don't need to check beam values for NO_BEAM, these values are set by
     //the function `source_components::get_beam_gains` which is called later
@@ -803,6 +785,12 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   }
 
   //Be free my beauties
+  if (beamtype == EB_MWA || beamtype == EB_LOFAR || beamtype == EB_LOFAR) {
+    free(chunk_components->gxs);
+    free(chunk_components->Dxs);
+    free(chunk_components->Dys);
+    free(chunk_components->gys);
+  }
   free(zeroes);
   free(decs);
   free(gxs);
@@ -895,5 +883,32 @@ This test checks source_component_common with beamtype=MWA_ANALY
 void test_source_component_common_ConstantDecMWAAnaly(e_component_type comptype,
                                                        int do_gpu) {
   test_source_component_common_ConstantDecChooseBeams(MWA_ANALY, " ",
+                                                      comptype, do_gpu);
+}
+
+/*
+This test checks source_component_common with beamtype=EB_MWA
+*/
+void test_source_component_common_ConstantDecEveryBeamMWA(e_component_type comptype,
+                                                       int do_gpu) {
+  test_source_component_common_ConstantDecChooseBeams(EB_MWA, " ",
+                                                      comptype, do_gpu);
+}
+
+/*
+This test checks source_component_common with beamtype=EB_LOFAR
+*/
+void test_source_component_common_ConstantDecEveryBeamLOFAR(e_component_type comptype,
+                                                       int do_gpu) {
+  test_source_component_common_ConstantDecChooseBeams(EB_LOFAR, " ",
+                                                      comptype, do_gpu);
+}
+
+/*
+This test checks source_component_common with beamtype=EB_MWA
+*/
+void test_source_component_common_ConstantDecEveryBeamOSKAR(e_component_type comptype,
+                                                       int do_gpu) {
+  test_source_component_common_ConstantDecChooseBeams(EB_OSKAR, " ",
                                                       comptype, do_gpu);
 }

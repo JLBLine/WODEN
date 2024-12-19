@@ -89,6 +89,9 @@ extern void calc_lmn_for_components_gpu(components_t *d_components,
                                         int num_components,
                                         woden_settings_t *woden_settings);
 
+extern void copy_CPU_beam_gains_to_GPU(components_t *components,
+  beam_gains_t *d_beam_gains, int num_gains);
+
 extern void wrapper_calculate_gaussian_beam_gpu(int num_components,
                           user_precision_t cos_theta,
                           user_precision_t sin_theta, user_precision_t sin_2theta,

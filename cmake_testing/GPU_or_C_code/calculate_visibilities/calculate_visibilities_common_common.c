@@ -552,6 +552,35 @@ void test_uvw(visibility_set_t *visibility_set,  double *lsts,
   free(expec_w);
 }
 
+void free_beam_gains(source_catalogue_t *cropped_sky_models) {
+
+  int num_sources = cropped_sky_models->num_sources;
+  int n_points = cropped_sky_models->sources[0].n_points;
+  int n_gauss = cropped_sky_models->sources[0].n_gauss;
+  int n_shapes = cropped_sky_models->sources[0].n_shapes;
+
+  for (int source_ind = 0; source_ind < num_sources; source_ind++) {
+    if (n_points > 0) {
+      free(cropped_sky_models->sources[source_ind].point_components.gxs);
+      free(cropped_sky_models->sources[source_ind].point_components.Dxs);
+      free(cropped_sky_models->sources[source_ind].point_components.Dys);
+      free(cropped_sky_models->sources[source_ind].point_components.gys);
+    }
+    if (n_gauss > 0) {
+      free(cropped_sky_models->sources[source_ind].gauss_components.gxs);
+      free(cropped_sky_models->sources[source_ind].gauss_components.Dxs);
+      free(cropped_sky_models->sources[source_ind].gauss_components.Dys);
+      free(cropped_sky_models->sources[source_ind].gauss_components.gys);
+    }
+    if (n_shapes > 0) {
+      free(cropped_sky_models->sources[source_ind].shape_components.gxs);
+      free(cropped_sky_models->sources[source_ind].shape_components.Dxs);
+      free(cropped_sky_models->sources[source_ind].shape_components.Dys);
+      free(cropped_sky_models->sources[source_ind].shape_components.gys);
+    }
+  }
+}
+
 /*
 Pump many many many settings into the function we are trying to test
 Checkthe u,v,w are correct and return the visibility_set for further testing
@@ -643,6 +672,11 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
   // }
 
   // printf("calculate_visibilities has finished\n");
+
+  if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_MWA ||
+      beam_settings->beamtype == EB_OSKAR){
+        free_beam_gains(cropped_sky_models);
+      }
 
   //Be free my pretties!
   if (cropped_sky_models->num_shapelets > 0) {

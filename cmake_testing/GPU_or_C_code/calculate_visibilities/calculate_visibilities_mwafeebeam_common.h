@@ -18,3 +18,6 @@ void test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreePoint(int do_gpu);
 void test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeGauss(int do_gpu);
 void test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeShape(int do_gpu);
 void test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeAll(int do_gpu);
+
+void test_calculate_visibilities_MWAFEEBeam(int n_points, int n_gauss, int n_shapes,
+                                           int num_sources, int do_gpu);

@@ -36,8 +36,8 @@ void read_woden_settings(woden_settings_t *woden_settings)
                        woden_settings->num_time_steps);
   fprintf(output_text,"time_res %.12f\n",
                        woden_settings->time_res);
-  fprintf(output_text,"cat_filename %s\n",
-                       woden_settings->cat_filename);
+  // fprintf(output_text,"cat_filename %s\n",
+  //                      woden_settings->cat_filename);
 
   fprintf(output_text,"jd_date %.12f\n",
                        woden_settings->jd_date);

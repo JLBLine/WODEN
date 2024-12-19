@@ -24,7 +24,6 @@ class PretendArgs():
     def make_basic_args(self):
         self.ra0 = 0.0
         self.dec0 = -26.7
-        self.cat_filename = 'srclist_of_dreams.txt'
         self.chunking_size = 1e+10
         self.coarse_band_width = 1.28e+6
         self.sky_crop_components = True
@@ -126,7 +125,6 @@ class Test(unittest.TestCase):
         self.assertAlmostEqual(self.args.dec0*D2R, float(data['dec0']), delta=delta)
         self.assertEqual(self.args.num_freq_channels, int(data['num_freqs']))
         self.assertEqual(self.args.num_time_steps, int(data['num_time_steps']))
-        self.assertEqual(self.args.cat_filename, data['cat_filename'])
         self.assertEqual(self.args.time_res, float(data['time_res']))
         self.assertEqual(self.args.freq_res, float(data['frequency_resolution']))
         self.assertEqual(self.args.chunking_size, float(data['chunking_size']))

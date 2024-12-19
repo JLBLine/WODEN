@@ -1,4 +1,5 @@
 #include "common_testing_functions.h"
+#include <complex.h>
 
 //Takes selected indexes and does the linear interpolation between them
 double calc_gradient_extrap_list(user_precision_t *list_fluxes,
@@ -501,7 +502,9 @@ void copy_outputs_source_component_common_cpu(int num_of_each_flux_type,
   memcpy(gxs, mem_beam_gains->gxs, num_beam_values*sizeof(user_precision_complex_t));
   memcpy(gys, mem_beam_gains->gys, num_beam_values*sizeof(user_precision_complex_t));
 
-  if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP || beam_settings->beamtype == MWA_ANALY) {
+  if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP ||
+      beam_settings->beamtype == MWA_ANALY || beam_settings->beamtype == EB_OSKAR ||
+      beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_MWA) {
     memcpy(Dxs, mem_beam_gains->Dxs, num_beam_values*sizeof(user_precision_complex_t));
     memcpy(Dys, mem_beam_gains->Dys, num_beam_values*sizeof(user_precision_complex_t));
   }

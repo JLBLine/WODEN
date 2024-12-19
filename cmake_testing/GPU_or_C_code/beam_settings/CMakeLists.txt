@@ -4,11 +4,6 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
 
   ##Set the flags depending on the precision
   DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
-
-  add_library(primary_beam_${PRECISION} SHARED "${CMAKE_SOURCE_DIR}/src/beam_settings.c")
-  target_link_libraries(primary_beam_${PRECISION} gcov)
-  target_compile_options(primary_beam_${PRECISION} PRIVATE ${C_COVER_FLAGS})
-
   ##----------------------------------------------------------------------------
   ##Begin adding tests
   ##----------------------------------------------------------------------------
@@ -17,9 +12,13 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
   add_executable(test_fill_primary_beam_settings_${PRECISION}_app
       test_fill_primary_beam_settings.c
   )
+  ##In the link below, we link against the testing GPU library, even though we don't
+  ##call it. This is because the CPU library has references to the GPU library,
+  ##and it will poop the bed if it can't find them
   target_link_libraries(test_fill_primary_beam_settings_${PRECISION}_app
       Unity gcov
-      primary_beam_${PRECISION}
+      calculate_visibilities_CPU_${PRECISION}
+      calculate_visibilities_GPU_${PRECISION}
       ${CC_LINKLIBS}
   )
   ##Compile using the -DDOUBLE_PRECISION flag if needed

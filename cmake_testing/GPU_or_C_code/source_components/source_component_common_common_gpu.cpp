@@ -30,7 +30,9 @@ extern "C" void copy_outputs_source_component_common_gpu(int num_of_each_flux_ty
 
   gpuMemcpy(gys, d_beam_gains->gys, num_beam_values*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost );
 
-  if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP || beam_settings->beamtype == MWA_ANALY) {
+  if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP ||
+      beam_settings->beamtype == MWA_ANALY || beam_settings->beamtype == EB_OSKAR ||
+      beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_MWA) {
     gpuMemcpy(Dxs, d_beam_gains->Dxs, num_beam_values*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost );
     gpuMemcpy(Dys, d_beam_gains->Dys, num_beam_values*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost );
   }

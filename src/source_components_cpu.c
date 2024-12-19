@@ -1,6 +1,7 @@
 #define _GNU_SOURCE  // Enable GNU extensions
 #include <math.h>
 #include "source_components_cpu.h"
+// #include <omp.h>
 
 //_GNU_SOURCE above means we enable GNU extensions, which includes sincos
 //function. sincos is in theory faster than sin and cos separately
@@ -108,25 +109,65 @@ void apply_beam_gains_stokesIQUV_on_cardinal_cpu(user_precision_complex_t g1x, u
   user_precision_complex_t this_YX;
   user_precision_complex_t this_YY;
 
-  this_XX = (g1x*g2x_conj + D1x*D2x_conj)*visi_I;
-  this_XX += (g1x*g2x_conj - D1x*D2x_conj)*visi_Q;
-  this_XX += (g1x*D2x_conj + D1x*g2x_conj)*visi_U;
-  this_XX += ((0.0 + I*1.0)*visi_V)*(g1x*D2x_conj - D1x*g2x_conj);
+  user_precision_complex_t temp1 = g1x*g2x_conj;
+  user_precision_complex_t temp2 = D1x*D2x_conj;
+  user_precision_complex_t temp3 = g1x*D2x_conj;
+  user_precision_complex_t temp4 = D1x*g2x_conj;
 
-  this_XY = (g1x*D2y_conj + D1x*g2y_conj)*visi_I;
-  this_XY += (g1x*D2y_conj - D1x*g2y_conj)*visi_Q;
-  this_XY += (g1x*g2y_conj + D1x*D2y_conj)*visi_U;
-  this_XY += ((0.0 + I*1.0)*visi_V)*(g1x*g2y_conj - D1x*D2y_conj);
+  this_XX = (temp1 + temp2)*visi_I;
+  this_XX += (temp1 - temp2)*visi_Q;
+  this_XX += (temp3 + temp4)*visi_U;
+  this_XX += ((0.0 + I*1.0)*visi_V)*(temp3 - temp4);
 
-  this_YX = (D1y*g2x_conj + g1y*D2x_conj)*visi_I;
-  this_YX += (D1y*g2x_conj - g1y*D2x_conj)*visi_Q;
-  this_YX += (D1y*D2x_conj + g1y*g2x_conj)*visi_U;
-  this_YX += ((0.0 + I*1.0)*visi_V)*(D1y*D2x_conj - g1y*g2x_conj);
+  temp1 = g1x*D2y_conj;
+  temp2 = D1x*g2y_conj;
+  temp3 = g1x*g2y_conj;
+  temp4 = D1x*D2y_conj;
 
-  this_YY = (D1y*D2y_conj + g1y*g2y_conj)*visi_I;
-  this_YY += (D1y*D2y_conj - g1y*g2y_conj)*visi_Q;
-  this_YY += (D1y*g2y_conj + g1y*D2y_conj)*visi_U;
-  this_YY += ((0.0 + I*1.0)*visi_V)*(D1y*g2y_conj - g1y*D2y_conj);
+  this_XY = (temp1 + temp2)*visi_I;
+  this_XY += (temp1 - temp2)*visi_Q;
+  this_XY += (temp3 + temp4)*visi_U;
+  this_XY += ((0.0 + I*1.0)*visi_V)*(temp3 - temp4);
+
+  temp1 = D1y*g2x_conj;
+  temp2 = g1y*D2x_conj;
+  temp3 = D1y*D2x_conj;
+  temp4 = g1y*g2x_conj;
+
+  this_YX = (temp1 + temp2)*visi_I;
+  this_YX += (temp1 - temp2)*visi_Q;
+  this_YX += (temp3 + temp4)*visi_U;
+  this_YX += ((0.0 + I*1.0)*visi_V)*(temp3 - temp4);
+
+  temp1 = D1y*D2y_conj;
+  temp2 = g1y*g2y_conj;
+  temp3 = D1y*g2y_conj;
+  temp4 = g1y*D2y_conj;
+
+  this_YY = (temp1 + temp2)*visi_I;
+  this_YY += (temp1 - temp2)*visi_Q;
+  this_YY += (temp3 + temp4)*visi_U;
+  this_YY += ((0.0 + I*1.0)*visi_V)*(temp3 - temp4);
+
+  // this_XX = (g1x*g2x_conj + D1x*D2x_conj)*visi_I;
+  // this_XX += (g1x*g2x_conj - D1x*D2x_conj)*visi_Q;
+  // this_XX += (g1x*D2x_conj + D1x*g2x_conj)*visi_U;
+  // this_XX += ((0.0 + I*1.0)*visi_V)*(g1x*D2x_conj - D1x*g2x_conj);
+
+  // this_XY = (g1x*D2y_conj + D1x*g2y_conj)*visi_I;
+  // this_XY += (g1x*D2y_conj - D1x*g2y_conj)*visi_Q;
+  // this_XY += (g1x*g2y_conj + D1x*D2y_conj)*visi_U;
+  // this_XY += ((0.0 + I*1.0)*visi_V)*(g1x*g2y_conj - D1x*D2y_conj);
+
+  // this_YX = (D1y*g2x_conj + g1y*D2x_conj)*visi_I;
+  // this_YX += (D1y*g2x_conj - g1y*D2x_conj)*visi_Q;
+  // this_YX += (D1y*D2x_conj + g1y*g2x_conj)*visi_U;
+  // this_YX += ((0.0 + I*1.0)*visi_V)*(D1y*D2x_conj - g1y*g2x_conj);
+
+  // this_YY = (D1y*D2y_conj + g1y*g2y_conj)*visi_I;
+  // this_YY += (D1y*D2y_conj - g1y*g2y_conj)*visi_Q;
+  // this_YY += (D1y*g2y_conj + g1y*D2y_conj)*visi_U;
+  // this_YY += ((0.0 + I*1.0)*visi_V)*(D1y*g2y_conj - g1y*D2y_conj);
 
   * visi_XX = this_XX;
   * visi_XY = this_XY;
@@ -134,6 +175,7 @@ void apply_beam_gains_stokesIQUV_on_cardinal_cpu(user_precision_complex_t g1x, u
   * visi_YY = this_YY;
 
 }
+
 
 void apply_beam_gains_stokesIQUV_on_cardinal_arrays_cpu(int num_gains,
           user_precision_complex_t *g1xs, user_precision_complex_t *D1xs,
@@ -1111,20 +1153,14 @@ void calc_autos_cpu(components_t components, beam_gains_t component_beam_gains,
 void malloc_beam_gains_cpu(beam_gains_t *component_beam_gains,
                            int beamtype, int num_gains){
 
-  //If we're using an everybeam model, all memory and values have already
-  //been sorted, so no need to allocated them here
-  if (beamtype == FEE_BEAM || beamtype == MWA_ANALY || beamtype == FEE_BEAM_INTERP
-      || beamtype == GAUSS_BEAM || beamtype == ANALY_DIPOLE || beamtype == NO_BEAM) {
-
-    //Only some models would have had leakage terms malloced
-    if (beamtype == FEE_BEAM || beamtype == MWA_ANALY || beamtype == FEE_BEAM_INTERP) {
-      component_beam_gains->Dxs = malloc(num_gains*sizeof(user_precision_complex_t));
-      component_beam_gains->Dys = malloc(num_gains*sizeof(user_precision_complex_t));
-    }
-    component_beam_gains->gxs = malloc(num_gains*sizeof(user_precision_complex_t));
-    component_beam_gains->gys = malloc(num_gains*sizeof(user_precision_complex_t));
-
+  //Only some models have leakage terms
+  if (beamtype == FEE_BEAM || beamtype == MWA_ANALY || beamtype == FEE_BEAM_INTERP ||
+      beamtype == EB_LOFAR || beamtype == EB_OSKAR || beamtype == EB_MWA) {
+    component_beam_gains->Dxs = malloc(num_gains*sizeof(user_precision_complex_t));
+    component_beam_gains->Dys = malloc(num_gains*sizeof(user_precision_complex_t));
   }
+  component_beam_gains->gxs = malloc(num_gains*sizeof(user_precision_complex_t));
+  component_beam_gains->gys = malloc(num_gains*sizeof(user_precision_complex_t));
 }
 
 
@@ -1142,26 +1178,49 @@ void calc_visi_point_or_gauss_cpu(components_t components,
   int num_times = woden_settings->num_time_steps;
   int off_cardinal_dipoles = woden_settings->off_cardinal_dipoles;
 
+  int use_twobeams = component_beam_gains.use_twobeams;
+
+  user_precision_t flux_I;
+  user_precision_t flux_Q;
+  user_precision_t flux_U;
+  user_precision_t flux_V;
+
+  user_precision_complex_t visi_comp;
+  user_precision_complex_t V_envelop;
+
+  user_precision_t pa, sinpa, cospa, u, v, x, y, invsig_x, invsig_y;
+
+  int time_ind;
+  int freq_ind;
+  int extrap_ind;
+
+  // int num_threads = 8;
+  // omp_set_num_threads(num_threads);
+  // #pragma omp parallel for collapse(2)
+  // #pragma omp parallel for
   for (int iBaseline = 0; iBaseline < num_cross; iBaseline++) {
-
-    int use_twobeams = component_beam_gains.use_twobeams;
-
-    user_precision_t flux_I;
-    user_precision_t flux_Q;
-    user_precision_t flux_U;
-    user_precision_t flux_V;
-
-    user_precision_complex_t visi_comp;
-    user_precision_complex_t V_envelop;
-
-    user_precision_t pa, sinpa, cospa, u, v, x, y, invsig_x, invsig_y;
-
-    //Find out what time and freq index this baseline corresponds to
-    int time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
-    int freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+    time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
+    freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
 
     for (int iComponent = 0; iComponent < num_components; iComponent++) {
-      int extrap_ind = num_freqs*iComponent + freq_ind;
+    // int use_twobeams = component_beam_gains.use_twobeams;
+
+    // user_precision_t flux_I;
+    // user_precision_t flux_Q;
+    // user_precision_t flux_U;
+    // user_precision_t flux_V;
+
+    // user_precision_complex_t visi_comp;
+    // user_precision_complex_t V_envelop;
+
+    // user_precision_t pa, sinpa, cospa, u, v, x, y, invsig_x, invsig_y;
+
+      //Find out what time and freq index this baseline corresponds to
+      // time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
+      // freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+
+    
+      extrap_ind = num_freqs*iComponent + freq_ind;
       // printf("INSIDE KERN components.extrap_stokesI %p\n", components.extrap_stokesI);
 
       flux_I = components.extrap_stokesI[extrap_ind];

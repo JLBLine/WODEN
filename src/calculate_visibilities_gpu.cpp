@@ -16,34 +16,8 @@
 
 //Helpful C code we are also using
 #include "visibility_set.h"
-
 #include "gpu_macros.h"
 
-extern "C" void copy_CPU_beam_gains_to_GPU(components_t *components,
-  beam_gains_t *d_beam_gains, int num_gains) {
-
-
-    gpuMalloc( (void**)&d_beam_gains->gxs,
-                      num_gains*sizeof(user_precision_complex_t) );
-    gpuMalloc( (void**)&d_beam_gains->Dxs,
-                      num_gains*sizeof(user_precision_complex_t) );
-    gpuMalloc( (void**)&d_beam_gains->Dys,
-                      num_gains*sizeof(user_precision_complex_t) );
-    gpuMalloc( (void**)&d_beam_gains->gys,
-                      num_gains*sizeof(user_precision_complex_t) );
-
-    gpuMemcpy( d_beam_gains->gxs, components->gxs,
-               num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
-
-    gpuMemcpy( d_beam_gains->Dxs, components->Dxs,
-               num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
-
-    gpuMemcpy( d_beam_gains->Dys, components->Dys,
-               num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
-
-    gpuMemcpy( d_beam_gains->gys, components->gys,
-               num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
-}
 
 extern "C" calc_visi_inouts_t * create_calc_visi_inouts_gpu(array_layout_t *array_layout,
         visibility_set_t *visibility_set, visibility_set_t *d_visibility_set,

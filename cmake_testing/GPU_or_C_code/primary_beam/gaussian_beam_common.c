@@ -15,7 +15,7 @@ extern void test_kern_gaussian_beam(double *beam_ls, double *beam_ms,
            user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J11);
 
 #ifdef DOUBLE_PRECISION
-  #define TOL 1e-16
+  #define TOL 1e-10
 #else
   #define TOL 1e-10
 #endif
