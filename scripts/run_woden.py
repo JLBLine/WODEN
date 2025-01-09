@@ -13,7 +13,7 @@ from typing import Union, Tuple, List
 from astropy.table import Table
 from astropy.io import fits
 from wodenpy.use_libwoden.beam_settings import BeamTypes
-from wodenpy.use_libwoden.woden_settings import create_woden_settings, setup_lsts_and_phase_centre
+from wodenpy.use_libwoden.woden_settings import fill_woden_settings_python, setup_lsts_and_phase_centre, Woden_Settings_Python, convert_woden_settings_to_ctypes
 from wodenpy.use_libwoden.visibility_set import setup_visi_set_array, load_visibility_set
 from wodenpy.wodenpy_setup.run_setup import get_parser, check_args, get_code_version
 from wodenpy.use_libwoden.use_libwoden import load_in_woden_library
@@ -21,8 +21,8 @@ from wodenpy.observational.calc_obs import get_uvfits_date_and_position_constant
 from wodenpy.skymodel.woden_skymodel import crop_below_horizon
 from wodenpy.skymodel.read_skymodel import get_skymodel_tables, read_radec_count_components, create_source_catalogue_from_python_sources
 from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map, reshape_chunked_skymodel_map_sets, Skymodel_Chunk_Map
-from wodenpy.array_layout.create_array_layout import calc_XYZ_diffs, enh2xyz
-from wodenpy.use_libwoden.array_layout_struct import Array_Layout
+from wodenpy.array_layout.create_array_layout import calc_XYZ_diffs, enh2xyz, Array_Layout_Python, convert_array_layout_to_ctypes
+from wodenpy.use_libwoden.array_layout_struct import Array_Layout_Ctypes
 from wodenpy.uvfits.wodenpy_uvfits import make_antenna_table, make_baseline_date_arrays, create_uvfits
 from wodenpy.phase_rotate.remove_phase_track import remove_phase_tracking
 from wodenpy.use_libwoden.shapelets import create_sbf
@@ -58,256 +58,7 @@ Woden_Settings = woden_struct_classes.Woden_Settings
 Visi_Set = woden_struct_classes.Visi_Set
 Source_Catalogue = woden_struct_classes.Source_Catalogue
 
-def _run_run_woden(run_woden, woden_settings : Woden_Settings,
-                   visibility_set : Visi_Set, source_catalogue : Source_Catalogue,
-                   array_layout : Array_Layout, sbf : np.ndarray):
-    """This is silly, but for profiling purposes, we need to wrap the `run_woden`
-    C/GPU function in another function so it's easy to pick out when profiling.
-    We can search for just `_run_run_woden` in the profiling output to see how
-    long we're spending on the GPU (just searching for `run_woden` doesn't
-    seem to work, at least in `yappi`.)
-    """
-    
-    run_woden(woden_settings, visibility_set, source_catalogue, array_layout,
-                  sbf)
-    
-    
-class Woden_Settings_Python(object):
-    def __init__(self):
-        self.lst_base = None
-        self.lst_obs_epoch_base = None
-        self.ra0 = None
-        self.dec0 = None
-        self.sdec0 = None
-        self.cdec0 = None
-        self.num_baselines = None
-        self.num_ants = None
-        self.num_freqs = None
-        self.frequency_resolution = None
-        self.base_low_freq = None
-        self.num_time_steps = None
-        self.time_res = None
-        self.cat_filename = None
-        self.num_bands = None
-        self.band_nums = None
-        self.sky_crop_type = None
-        self.beamtype = None
-        self.gauss_beam_FWHM = None
-        self.gauss_beam_ref_freq = None
-        self.chunking_size = None
-        self.hdf5_beam_path = None
-        self.jd_date = None
-        self.array_layout_file = None
-        self.array_layout_file_path = None
-        self.latitude = None
-        self.latitude_obs_epoch_base = None
-        self.longitude = None
-        self.FEE_ideal_delays = None
-        self.coarse_band_width = None
-        self.gauss_ra_point = None
-        self.gauss_dec_point = None
-        self.num_cross = None
-        self.num_autos = None
-        self.num_visis = None
-        self.base_band_freq = None
-        self.do_precession = None
-        self.lsts = None
-        self.latitudes = None
-        self.mjds = None
-        self.do_autos = None
-        self.use_dipamps = None
-        self.mwa_dipole_amps = None
-        self.single_everybeam_station = None
-        self.off_cardinal_dipoles = None
-        self.do_gpu = None
-    
-    
-def convert_woden_settings_to_python(woden_settings_ctypes : Woden_Settings):
-    
-    woden_settings_python = Woden_Settings_Python()
-    
-    woden_settings_python.lst_base = woden_settings_ctypes.lst_base
-    woden_settings_python.lst_obs_epoch_base = woden_settings_ctypes.lst_obs_epoch_base
-    woden_settings_python.ra0 = woden_settings_ctypes.ra0
-    woden_settings_python.dec0 = woden_settings_ctypes.dec0
-    woden_settings_python.sdec0 = woden_settings_ctypes.sdec0
-    woden_settings_python.cdec0 = woden_settings_ctypes.cdec0
-    woden_settings_python.num_baselines = woden_settings_ctypes.num_baselines
-    woden_settings_python.num_ants = woden_settings_ctypes.num_ants
-    woden_settings_python.num_freqs = woden_settings_ctypes.num_freqs
-    woden_settings_python.frequency_resolution = woden_settings_ctypes.frequency_resolution
-    woden_settings_python.base_low_freq = woden_settings_ctypes.base_low_freq
-    woden_settings_python.num_time_steps = woden_settings_ctypes.num_time_steps
-    woden_settings_python.time_res = woden_settings_ctypes.time_res
-    woden_settings_python.num_bands = woden_settings_ctypes.num_bands
-    woden_settings_python.beamtype = woden_settings_ctypes.beamtype
-    woden_settings_python.gauss_beam_FWHM = woden_settings_ctypes.gauss_beam_FWHM
-    woden_settings_python.gauss_beam_ref_freq = woden_settings_ctypes.gauss_beam_ref_freq
-    woden_settings_python.chunking_size = woden_settings_ctypes.chunking_size
-    woden_settings_python.jd_date = woden_settings_ctypes.jd_date
-    woden_settings_python.latitude = woden_settings_ctypes.latitude
-    woden_settings_python.latitude_obs_epoch_base = woden_settings_ctypes.latitude_obs_epoch_base
-    woden_settings_python.longitude = woden_settings_ctypes.longitude
-    woden_settings_python.coarse_band_width = woden_settings_ctypes.coarse_band_width
-    woden_settings_python.gauss_ra_point = woden_settings_ctypes.gauss_ra_point
-    woden_settings_python.gauss_dec_point = woden_settings_ctypes.gauss_dec_point
-    woden_settings_python.num_cross = woden_settings_ctypes.num_cross
-    woden_settings_python.num_autos = woden_settings_ctypes.num_autos
-    woden_settings_python.num_visis = woden_settings_ctypes.num_visis
-    woden_settings_python.base_band_freq = woden_settings_ctypes.base_band_freq
-    woden_settings_python.do_precession = woden_settings_ctypes.do_precession
-    woden_settings_python.do_autos = woden_settings_ctypes.do_autos
-    woden_settings_python.use_dipamps = woden_settings_ctypes.use_dipamps
-    woden_settings_python.single_everybeam_station = woden_settings_ctypes.single_everybeam_station
-    woden_settings_python.off_cardinal_dipoles = woden_settings_ctypes.off_cardinal_dipoles
-    woden_settings_python.do_gpu = woden_settings_ctypes.do_gpu
-    
-    woden_settings_python.mjds = np.ctypeslib.as_array(woden_settings_ctypes.mjds, shape=(woden_settings_ctypes.num_time_steps,))
-    woden_settings_python.latitudes = np.ctypeslib.as_array(woden_settings_ctypes.latitudes, shape=(woden_settings_ctypes.num_time_steps,))
-    woden_settings_python.lsts = np.ctypeslib.as_array(woden_settings_ctypes.lsts, shape=(woden_settings_ctypes.num_time_steps,))
-    woden_settings_python.band_nums = np.ctypeslib.as_array(woden_settings_ctypes.band_nums, shape=(woden_settings_ctypes.num_bands,))
-    
-    if woden_settings_ctypes.beamtype == BeamTypes.FEE_BEAM.value or \
-        woden_settings_ctypes.beamtype == BeamTypes.FEE_BEAM_INTERP.value or \
-        woden_settings_ctypes.beamtype == BeamTypes.MWA_ANALY.value:
-    
-        woden_settings_python.FEE_ideal_delays = np.ctypeslib.as_array(woden_settings_ctypes.FEE_ideal_delays, shape=(16,))
-        woden_settings_python.hdf5_beam_path = string_at(woden_settings_ctypes.hdf5_beam_path).decode('utf-8')
-    
-    if woden_settings_ctypes.use_dipamps:
-        woden_settings_python.mwa_dipole_amps = np.ctypeslib.as_array(woden_settings_ctypes.mwa_dipole_amps, shape=(32*woden_settings_ctypes.num_ants,))
-    
-    return woden_settings_python
 
-def convert_woden_settings_to_ctypes(woden_settings_python : Woden_Settings_Python,
-                                     woden_settings_ctypes : Woden_Settings) -> Woden_Settings:
-    
-    woden_settings_ctypes.lst_base = woden_settings_python.lst_base
-    woden_settings_ctypes.lst_obs_epoch_base = woden_settings_python.lst_obs_epoch_base
-    
-    # if woden_settings_python.lst_base is None:
-    #     pass
-    # else:
-        
-    # if woden_settings_python.lst_obs_epoch_base is None:
-    #     pass
-    # else:
-        
-        
-    woden_settings_ctypes.ra0 = woden_settings_python.ra0
-    woden_settings_ctypes.dec0 = woden_settings_python.dec0
-    woden_settings_ctypes.sdec0 = woden_settings_python.sdec0
-    woden_settings_ctypes.cdec0 = woden_settings_python.cdec0
-    woden_settings_ctypes.num_baselines = woden_settings_python.num_baselines
-    woden_settings_ctypes.num_ants = woden_settings_python.num_ants
-    woden_settings_ctypes.num_freqs = woden_settings_python.num_freqs
-    woden_settings_ctypes.frequency_resolution = woden_settings_python.frequency_resolution
-    woden_settings_ctypes.base_low_freq = woden_settings_python.base_low_freq
-    woden_settings_ctypes.num_time_steps = woden_settings_python.num_time_steps
-    woden_settings_ctypes.time_res = woden_settings_python.time_res
-    woden_settings_ctypes.num_bands = woden_settings_python.num_bands
-    woden_settings_ctypes.beamtype = woden_settings_python.beamtype
-    woden_settings_ctypes.gauss_beam_FWHM = woden_settings_python.gauss_beam_FWHM
-    woden_settings_ctypes.gauss_beam_ref_freq = woden_settings_python.gauss_beam_ref_freq
-    woden_settings_ctypes.chunking_size = woden_settings_python.chunking_size
-    woden_settings_ctypes.jd_date = woden_settings_python.jd_date
-    woden_settings_ctypes.latitude = woden_settings_python.latitude
-    woden_settings_ctypes.latitude_obs_epoch_base = woden_settings_python.latitude_obs_epoch_base
-    woden_settings_ctypes.longitude = woden_settings_python.longitude
-    woden_settings_ctypes.coarse_band_width = woden_settings_python.coarse_band_width
-    woden_settings_ctypes.gauss_ra_point = woden_settings_python.gauss_ra_point
-    woden_settings_ctypes.gauss_dec_point = woden_settings_python.gauss_dec_point
-    woden_settings_ctypes.num_cross = woden_settings_python.num_cross
-    woden_settings_ctypes.num_autos = woden_settings_python.num_autos
-    woden_settings_ctypes.num_visis = woden_settings_python.num_visis
-    woden_settings_ctypes.base_band_freq = woden_settings_python.base_band_freq
-    woden_settings_ctypes.do_precession = woden_settings_python.do_precession
-    woden_settings_ctypes.do_autos = woden_settings_python.do_autos
-    woden_settings_ctypes.use_dipamps = woden_settings_python.use_dipamps
-    woden_settings_ctypes.single_everybeam_station = woden_settings_python.single_everybeam_station
-    woden_settings_ctypes.off_cardinal_dipoles = woden_settings_python.off_cardinal_dipoles
-    woden_settings_ctypes.do_gpu = woden_settings_python.do_gpu
-    
-    woden_settings_ctypes.mjds = woden_settings_python.mjds.ctypes.data_as(POINTER(c_double))
-    woden_settings_ctypes.latitudes = woden_settings_python.latitudes.ctypes.data_as(POINTER(c_double))
-    woden_settings_ctypes.lsts = woden_settings_python.lsts.ctypes.data_as(POINTER(c_double))
-    woden_settings_ctypes.band_nums = woden_settings_python.band_nums.ctypes.data_as(POINTER(c_int))
-    
-    if woden_settings_ctypes.beamtype == BeamTypes.FEE_BEAM.value or \
-        woden_settings_ctypes.beamtype == BeamTypes.FEE_BEAM_INTERP.value or \
-        woden_settings_ctypes.beamtype == BeamTypes.MWA_ANALY.value:
-    
-        woden_settings_ctypes.FEE_ideal_delays = woden_settings_python.FEE_ideal_delays.ctypes.data_as(POINTER(c_int))
-        woden_settings_ctypes.hdf5_beam_path = create_string_buffer(woden_settings_python.hdf5_beam_path.encode('utf-8'))
-    
-    if woden_settings_ctypes.use_dipamps:
-        woden_settings_ctypes.mwa_dipole_amps = woden_settings_python.mwa_dipole_amps.ctypes.data_as(POINTER(c_double))
-    
-    # woden_settings_python.array_layout_file = woden_settings_ctypes.array_layout_file
-    # woden_settings_python.array_layout_file_path = woden_settings_ctypes.array_layout_file_path
-    
-    # woden_settings_python.hdf5_beam_path = woden_settings_ctypes.hdf5_beam_path
-    # woden_settings_python.sky_crop_type = woden_settings_ctypes.sky_crop_type
-    
-    return woden_settings_ctypes
-
-
-class Array_Layout_Python(object):
-    def __init__(self):
-        self.ant_X = None
-        self.ant_Y = None
-        self.ant_Z = None
-        self.X_diff_metres = None
-        self.Y_diff_metres = None
-        self.Z_diff_metres = None
-        self.ant_east = None
-        self.ant_north = None
-        self.ant_height = None
-        self.latitude = None
-        self.num_baselines = None
-        self.num_tiles = None
-        self.lst_base = None
-        
-def convert_array_layout_to_python(array_layout_ctypes : Array_Layout, num_times : int):
-    array_layout_python = Array_Layout_Python()
-    
-    # array_layout_python.ant_X = np.ctypeslib.as_array(array_layout_ctypes.ant_X, shape=(array_layout_ctypes.num_tiles,))
-    # array_layout_python.ant_Y = np.ctypeslib.as_array(array_layout_ctypes.ant_Y, shape=(array_layout_ctypes.num_tiles,))
-    # array_layout_python.ant_Z = np.ctypeslib.as_array(array_layout_ctypes.ant_Z, shape=(array_layout_ctypes.num_tiles,))
-    
-    
-    num_diffs = array_layout_ctypes.num_baselines * num_times
-    
-    array_layout_python.X_diff_metres = np.ctypeslib.as_array(array_layout_ctypes.X_diff_metres, shape=(num_diffs,))
-    array_layout_python.Y_diff_metres = np.ctypeslib.as_array(array_layout_ctypes.Y_diff_metres, shape=(num_diffs,))
-    array_layout_python.Z_diff_metres = np.ctypeslib.as_array(array_layout_ctypes.Z_diff_metres, shape=(num_diffs,))
-    
-    array_layout_python.latitude = array_layout_ctypes.latitude
-    array_layout_python.num_baselines = array_layout_ctypes.num_baselines
-    array_layout_python.num_tiles = array_layout_ctypes.num_tiles
-    array_layout_python.lst_base = array_layout_ctypes.lst_base
-    
-    return array_layout_python
-
-def convert_array_layout_to_ctypes(array_layout_python : Array_Layout_Python,
-                                   array_layout_ctypes : Array_Layout) -> Array_Layout:
-    
-    # array_layout_ctypes.ant_X = array_layout_python.ant_X.ctypes.data_as(POINTER(c_double))
-    # array_layout_ctypes.ant_Y = array_layout_python.ant_Y.ctypes.data_as(POINTER(c_double))
-    # array_layout_ctypes.ant_Z = array_layout_python.ant_Z.ctypes.data_as(POINTER(c_double))
-    array_layout_ctypes.X_diff_metres = array_layout_python.X_diff_metres.ctypes.data_as(POINTER(c_double))
-    array_layout_ctypes.Y_diff_metres = array_layout_python.Y_diff_metres.ctypes.data_as(POINTER(c_double))
-    array_layout_ctypes.Z_diff_metres = array_layout_python.Z_diff_metres.ctypes.data_as(POINTER(c_double))
-    
-    array_layout_ctypes.latitude = array_layout_python.latitude
-    array_layout_ctypes.num_baselines = array_layout_python.num_baselines
-    array_layout_ctypes.num_tiles = array_layout_python.num_tiles
-    array_layout_ctypes.lst_base = array_layout_python.lst_base
-    
-    return array_layout_ctypes
-    
-    
-    
 class Visi_Set_Python(object):
     def __init__(self):
         self.us_metres = None
@@ -351,7 +102,7 @@ def woden_thread(all_loaded_python_sources : List[List[Source_Python]],
         A pointer to the WODEN GPU function to be run.
     woden_settings : Woden_Settings
         The WODEN settings to be used.
-    array_layout : Array_Layout
+    array_layout : Array_Layout_Ctypes
         The array layout to be used.
     woden_struct_classes : Woden_Struct_Classes
         The WODEN struct classes to be used
@@ -387,7 +138,7 @@ def woden_thread(all_loaded_python_sources : List[List[Source_Python]],
                                               woden_settings.num_visis,
                                               precision=precision)
     
-    array_layout = Array_Layout()
+    array_layout = Array_Layout_Ctypes()
     array_layout = convert_array_layout_to_ctypes(array_layout_python, array_layout)
     
     sbf = create_sbf(precision=precision)
@@ -398,10 +149,6 @@ def woden_thread(all_loaded_python_sources : List[List[Source_Python]],
         print(f"Sending set {round_num} to CPU")
     start = time()
             
-    #Run the GPU code in a wrapper function so we can easily profile it
-    # _run_run_woden(run_woden, woden_settings, visibility_set,
-    #                source_catalogue, array_layout, sbf)
-    
     run_woden(woden_settings, visibility_set, source_catalogue, array_layout,
                   sbf)
     
@@ -459,7 +206,7 @@ def woden_multithread(thread_ind : int,
         A pointer to the WODEN GPU function to be run.
     woden_settings : Woden_Settings
         The WODEN settings to be used.
-    array_layout : Array_Layout
+    array_layout : Array_Layout_Ctypes
         The array layout to be used.
     woden_struct_classes : Woden_Struct_Classes
         The WODEN struct classes to be used
@@ -510,7 +257,7 @@ def woden_multithread(thread_ind : int,
                                               woden_settings.num_visis,
                                               precision=precision)
     
-    array_layout = Array_Layout()
+    array_layout = Array_Layout_Ctypes()
     array_layout = convert_array_layout_to_ctypes(array_layout_python, array_layout)
     
     sbf = create_sbf(precision=precision)
@@ -547,20 +294,6 @@ def woden_multithread(thread_ind : int,
         visi_sets_python[band_ind].sum_visi_YX_imag += np.ctypeslib.as_array(visibility_set[band_ind].sum_visi_YX_imag, shape=(woden_settings_python.num_visis,))
         visi_sets_python[band_ind].sum_visi_YY_real += np.ctypeslib.as_array(visibility_set[band_ind].sum_visi_YY_real, shape=(woden_settings_python.num_visis,))
         visi_sets_python[band_ind].sum_visi_YY_imag += np.ctypeslib.as_array(visibility_set[band_ind].sum_visi_YY_imag, shape=(woden_settings_python.num_visis,))
-        
-        # maybe_visi_set_python[band_ind].us_metres = deepcopy(np.ctypeslib.as_array(visibility_set[band_ind].us_metres, shape=(woden_settings_python.num_visis,)))
-        # maybe_visi_set_python[band_ind].vs_metres = deepcopy(np.ctypeslib.as_array(visibility_set[band_ind].vs_metres, shape=(woden_settings_python.num_visis,)))
-        # maybe_visi_set_python[band_ind].ws_metres = deepcopy(np.ctypeslib.as_array(visibility_set[band_ind].ws_metres, shape=(woden_settings_python.num_visis,)))
-        
-        # maybe_visi_set_python[band_ind].sum_visi_XX_real = deepcopy(np.ctypeslib.as_array(visibility_set[band_ind].sum_visi_XX_real, shape=(woden_settings_python.num_visis,)))
-        # maybe_visi_set_python[band_ind].sum_visi_XX_imag = deepcopy(np.ctypeslib.as_array(visibility_set[band_ind].sum_visi_XX_imag, shape=(woden_settings_python.num_visis,)))
-        # maybe_visi_set_python[band_ind].sum_visi_XY_real = deepcopy(np.ctypeslib.as_array(visibility_set[band_ind].sum_visi_XY_real, shape=(woden_settings_python.num_visis,)))
-        # maybe_visi_set_python[band_ind].sum_visi_XY_imag = deepcopy(np.ctypeslib.as_array(visibility_set[band_ind].sum_visi_XY_imag, shape=(woden_settings_python.num_visis,)))
-        # maybe_visi_set_python[band_ind].sum_visi_YX_real = deepcopy(np.ctypeslib.as_array(visibility_set[band_ind].sum_visi_YX_real, shape=(woden_settings_python.num_visis,)))
-        # maybe_visi_set_python[band_ind].sum_visi_YX_imag = deepcopy(np.ctypeslib.as_array(visibility_set[band_ind].sum_visi_YX_imag, shape=(woden_settings_python.num_visis,)))
-        # maybe_visi_set_python[band_ind].sum_visi_YY_real = deepcopy(np.ctypeslib.as_array(visibility_set[band_ind].sum_visi_YY_real, shape=(woden_settings_python.num_visis,)))
-        # maybe_visi_set_python[band_ind].sum_visi_YY_imag = deepcopy(np.ctypeslib.as_array(visibility_set[band_ind].sum_visi_YY_imag, shape=(woden_settings_python.num_visis,)))
-        
         
     # return visi_sets_python, thread_ind
     return visi_sets_python, thread_ind
@@ -712,79 +445,6 @@ def run_cpu_mode(num_threads, num_rounds, chunked_skymodel_map_sets,
                     
     return visi_sets_python
 
-# def run_cpu_mode_alt(num_threads, num_rounds, chunked_skymodel_map_sets,
-#                  lsts, latitudes, args, beamtype,
-#                  main_table, shape_table, v_table, q_table, u_table, p_table,
-#                  woden_settings_python, array_layout_python, visi_sets_python):
-    
-#     num_pols = 8
-#     num_bands = woden_settings_python.num_bands
-#     num_visis = woden_settings_python.num_visis
-#     visi_sums = multiprocessing.Array('d', [0] * num_threads * num_pols * num_visis * num_bands)
-    
-#     with ProcessPoolExecutor(max_workers=num_threads) as sky_model_executor, ProcessPoolExecutor(max_workers=num_threads) as visi_executor:
-#         futures_sky_model_exec = []  # To hold futures for executor1
-#         futures_visi_exec = []  # To hold futures for executor2
-
-        
-#         for round_num in range(num_rounds):
-#             for thread_num in range(num_threads):  # Split input into chunks
-#                 futures_sky_model_exec.append(sky_model_executor.submit(read_skymodel_thread,
-#                                                 thread_num + round_num * num_threads,
-#                                                 num_threads, chunked_skymodel_map_sets,
-#                                                 lsts, latitudes,
-#                                                 args, beamtype,
-#                                                 main_table, shape_table,
-#                                                 v_table, q_table, u_table, p_table))
-
-#         # Process pipeline
-#         while futures_sky_model_exec or futures_visi_exec:
-#             # Collect completed tasks from executor1 and submit to executor2
-#             ready_executor1 = [fut for fut in futures_sky_model_exec if fut.done()]
-#             for future in ready_executor1:
-#                 futures_sky_model_exec.remove(future)
-#                 try:
-#                     python_sources, thread_num, round_num = future.result()
-#                     # print(f"executor1 produced: {intermediate_result}")
-#                     futures_visi_exec.append(visi_executor.submit(woden_multithread, thread_num,
-#                                                 [python_sources],
-#                                                 [thread_num],
-#                                                 round_num,
-#                                                 woden_settings_python,
-#                                                 array_layout_python, 
-#                                                 visi_sets_python[thread_num, :],
-#                                                 beamtype,
-#                                                 args.precision))
-#                 except Exception as e:
-#                     print(f"sky_model_executor task failed: {e}")
-
-#             # Collect completed tasks from executor2
-#             ready_executor2 = [fut for fut in futures_visi_exec if fut.done()]
-#             for future in ready_executor2:
-#                 futures_visi_exec.remove(future)
-#                 try:
-#                     visi_set_python, thread_num = future.result()
-#                     visi_sets_python[thread_num, :] = visi_set_python
-                    
-#                     with visi_sums.get_lock():  # Synchronize updates to the shared array
-#                         for band_ind in range(num_bands):
-#                             stripe = band_ind*num_bands*num_pols*num_visis + num_pols*num_visis*thread_num
-                        
-#                             visi_sums[stripe+0*num_visis:stripe+1*num_visis] += visi_set_python[band_ind].sum_visi_XX_real
-#                             visi_sums[stripe+1*num_visis:stripe+2*num_visis] += visi_set_python[band_ind].sum_visi_XX_imag
-#                             visi_sums[stripe+2*num_visis:stripe+3*num_visis] += visi_set_python[band_ind].sum_visi_XY_real
-#                             visi_sums[stripe+3*num_visis:stripe+4*num_visis] += visi_set_python[band_ind].sum_visi_XY_imag
-#                             visi_sums[stripe+4*num_visis:stripe+5*num_visis] += visi_set_python[band_ind].sum_visi_YX_real
-#                             visi_sums[stripe+5*num_visis:stripe+6*num_visis] += visi_set_python[band_ind].sum_visi_YX_imag
-#                             visi_sums[stripe+6*num_visis:stripe+7*num_visis] += visi_set_python[band_ind].sum_visi_YY_real
-#                             visi_sums[stripe+7*num_visis:stripe+8*num_visis] += visi_set_python[band_ind].sum_visi_YY_imag
-                    
-#                 except Exception as e:
-#                     print(f"visi_executor task failed: {e}", thread_num)
-
-#     return visi_sets_python
-
-
 def run_gpu_mode(num_threads, num_rounds, chunked_skymodel_map_sets,
                  lsts, latitudes, args, beamtype,
                  main_table, shape_table, v_table, q_table, u_table, p_table,
@@ -886,17 +546,13 @@ def main(argv=None):
     else:
         num_visis = args.num_time_steps*args.num_freq_channels*num_baselines
 
-    ##populates a ctype equivalent of woden_settings struct to pass
-    ##to the C library
-    woden_settings = create_woden_settings(woden_struct_classes.Woden_Settings(),
-                                            args, jd_date, lst_deg)
+    woden_settings_python = fill_woden_settings_python(args, jd_date, lst_deg)
     
     ##fill the lst and mjds fields, precessing if necessary
-    lsts, latitudes = setup_lsts_and_phase_centre(woden_settings)
+    lsts, latitudes = setup_lsts_and_phase_centre(woden_settings_python)
     
-
     ##calculate the array layout
-    array_layout = calc_XYZ_diffs(woden_settings, args)
+    array_layout_python = calc_XYZ_diffs(woden_settings_python, args)
 
     # ##read in and chunk the sky model=======================================
     print("Doing the initial reading/mapping of sky model into chunks")
@@ -910,22 +566,20 @@ def main(argv=None):
     if args.sky_crop_sources:
         crop_by_component = False
         
-    comp_counter = crop_below_horizon(woden_settings.lsts[0],
-                                        woden_settings.latitude,
+    comp_counter = crop_below_horizon(woden_settings_python.lsts[0],
+                                        woden_settings_python.latitude,
                                         comp_counter,
                                         crop_by_component=crop_by_component)
     max_chunks_per_set=args.num_threads
     
     chunked_skymodel_map_sets = create_skymodel_chunk_map(comp_counter,
-                                                      args.chunking_size, woden_settings.num_baselines,
+                                                      args.chunking_size,
+                                                      woden_settings_python.num_baselines,
                                                       args.num_freq_channels,
                                                       args.num_time_steps,
                                                       num_threads=args.num_threads,
                                                       max_chunks_per_set=max_chunks_per_set,
                                                       max_dirs=args.max_sky_directions)
-    
-    woden_settings_python = convert_woden_settings_to_python(woden_settings)
-    array_layout_python = convert_array_layout_to_python(array_layout, woden_settings.num_time_steps)
     
     if args.dry_run:
         ##User only wants to check whether the arguments would have worked or not
@@ -975,7 +629,7 @@ def main(argv=None):
         
         if args.cpu_mode:
             run_cpu_mode(num_threads, num_rounds, chunked_skymodel_map_sets,
-                 lsts, latitudes, args, woden_settings.beamtype,
+                 lsts, latitudes, args, woden_settings_python.beamtype,
                  main_table, shape_table, v_table, q_table, u_table, p_table,
                  woden_settings_python, array_layout_python, visi_sets_python)
             # run_cpu_mode_alt(num_threads, num_rounds, chunked_skymodel_map_sets,
@@ -984,7 +638,7 @@ def main(argv=None):
             #      woden_settings_python, array_layout_python, visi_sets_python)
         else:
             run_gpu_mode(num_threads, num_rounds, chunked_skymodel_map_sets,
-                 lsts, latitudes, args, woden_settings.beamtype,
+                 lsts, latitudes, args, woden_settings_python.beamtype,
                  main_table, shape_table, v_table, q_table, u_table, p_table,
                  woden_settings_python, array_layout_python, visi_sets_python[0], 
                  run_woden, woden_struct_classes)

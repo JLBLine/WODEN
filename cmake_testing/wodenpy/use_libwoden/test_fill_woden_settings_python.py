@@ -10,16 +10,13 @@ from wodenpy.wodenpy_setup import run_setup
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 import numpy.testing as npt
 
-##annoying path hack to find where the C library is
-test_dir = os.environ['CMAKE_CURRENT_SOURCE_DIR'] + "/../../../build/cmake_testing/wodenpy/use_libwoden/"
-
 code_dir = os.path.realpath(__file__)
 code_dir = ('/').join(code_dir.split('/')[:-1])
 
 D2R = np.pi/180.0
 
 class PretendArgs():
-    """Function `ws.create_woden_settings` takes an arg class out of argparse as an
+    """Function `ws.fill_woden_settings_python` takes an arg class out of argparse as an
     input. Write a dummy one here to feed in and test"""
     def make_basic_args(self):
         self.ra0 = 0.0
@@ -67,19 +64,6 @@ class Test(unittest.TestCase):
     """Test the `rw.write_json` function, which writes an input file to feed
     into the WODEN executable"""
     
-    
-    def read_in_C_functions(self):
-        """Read in the C library function that reads the ctypes woden_settings
-        structure and writes the content to a text file"""
-        
-        woden_struct_classes = Woden_Struct_Classes(self.precision)
-        self.woden_settings = woden_struct_classes.Woden_Settings()
-        
-        ## Read in the C library for float version
-        libwoden = ctypes.cdll.LoadLibrary(f"{test_dir}/libread_woden_settings_{self.precision}.so")
-        self.read_woden_settings = libwoden.read_woden_settings
-        self.read_woden_settings.argtypes = [ctypes.POINTER(woden_struct_classes.Woden_Settings)]
-        
     def make_basic_inputs(self, precision):
         """Make some basis input arguments for `rw.write_json`"""
         self.jd_date = 2458647.044583333
@@ -89,71 +73,38 @@ class Test(unittest.TestCase):
         self.args.precision = precision
         self.precision = precision
         
-        ##load in the C library
-        self.read_in_C_functions()
-        
-    def read_C_output_textfile(self):
-        
-        output_dict = {}
-        
-        with open('woden_settings.txt', 'r') as infile:
-            for line in infile.read().split('\n'):
-                if line == '':
-                    pass
-                else:
-                    output_dict[line.split()[0]] = line.split()[1]
-            
-        return output_dict
-
     def check_basic_inputs(self, woden_settings):
-        """Run C code that reads in the woden_settings struct and prints
-        out the contents to a text file"""
+        """Check the basic outputs are set correctly"""
 
         if self.args.precision == 'float':
-            # print("Checking the FLOAT")
-            # self.read_woden_settings_float(woden_settings)
             delta = 1e-8
         else:
-            # print("Checking the DOUBLE")
-            # self.read_woden_settings_double(woden_settings)
             delta = 1e-12
             
-        self.read_woden_settings(woden_settings)
-        data = self.read_C_output_textfile()
-
-        self.assertAlmostEqual(self.args.ra0*D2R, float(data['ra0']), delta=delta)
-        self.assertAlmostEqual(self.args.dec0*D2R, float(data['dec0']), delta=delta)
-        self.assertEqual(self.args.num_freq_channels, int(data['num_freqs']))
-        self.assertEqual(self.args.num_time_steps, int(data['num_time_steps']))
-        self.assertEqual(self.args.time_res, float(data['time_res']))
-        self.assertEqual(self.args.freq_res, float(data['frequency_resolution']))
-        self.assertEqual(self.args.chunking_size, float(data['chunking_size']))
-        self.assertEqual(self.jd_date, float(data['jd_date']))
-        self.assertAlmostEqual(self.lst*D2R, float(data['lst_base']), delta=delta)
-        self.assertAlmostEqual(self.lst*D2R, float(data['lst_obs_epoch_base']), delta=delta)
-        self.assertEqual(self.args.lowest_channel_freq, float(data['base_low_freq']))
-        self.assertAlmostEqual(self.args.latitude*D2R, float(data['latitude']), delta=delta)
-        self.assertAlmostEqual(self.args.latitude*D2R, float(data['latitude_obs_epoch_base']), delta=delta)
-        self.assertEqual(self.args.coarse_band_width, float(data['coarse_band_width']))
-
-        self.assertEqual(len(self.args.band_nums), int(data['num_bands']))
+        self.assertAlmostEqual(self.args.ra0*D2R, woden_settings.ra0, delta=delta)
+        self.assertAlmostEqual(self.args.dec0*D2R, woden_settings.dec0, delta=delta)
+        self.assertEqual(self.args.num_freq_channels, woden_settings.num_freqs)
+        self.assertEqual(self.args.num_time_steps, woden_settings.num_time_steps)
+        self.assertEqual(self.args.time_res, woden_settings.time_res)
+        self.assertEqual(self.args.freq_res, woden_settings.frequency_resolution)
+        self.assertEqual(self.args.chunking_size, woden_settings.chunking_size)
+        self.assertEqual(self.jd_date, woden_settings.jd_date)
+        self.assertAlmostEqual(self.lst*D2R, woden_settings.lst_base, delta=delta)
+        self.assertAlmostEqual(self.lst*D2R, woden_settings.lst_obs_epoch_base, delta=delta)
+        self.assertEqual(self.args.lowest_channel_freq, woden_settings.base_low_freq)
+        self.assertAlmostEqual(self.args.latitude*D2R, woden_settings.latitude, delta=delta)
+        self.assertAlmostEqual(self.args.latitude*D2R, woden_settings.latitude_obs_epoch_base, delta=delta)
+        self.assertEqual(self.args.coarse_band_width, woden_settings.coarse_band_width)
+        self.assertEqual(len(self.args.band_nums), woden_settings.num_bands)
         
-        ##Loop through the output band numbers and stick into a list
-        written_bands = []
-        for key in data.keys():
-            if key[:7] == 'bandnum':
-                written_bands.append(int(data[key]))
-                
-        ##Check it matches
-        self.assertEqual(self.args.band_nums, written_bands)
+        npt.assert_allclose(self.args.band_nums, woden_settings.band_nums, atol=1e-8)
         
-        self.data = data
+        # self.data = data
 
-    def call_create_woden_settings(self):
+    def call_fill_woden_settings_python(self):
         """Calls the function under test"""
-        woden_settings = ws.create_woden_settings(self.woden_settings,
-                                 args=self.args,
-                                 lst=self.lst, jd_date=self.jd_date)
+        woden_settings = ws.fill_woden_settings_python(args=self.args,
+                                   lst=self.lst, jd_date=self.jd_date)
         return woden_settings
     
 
@@ -162,7 +113,7 @@ class Test(unittest.TestCase):
         
         for precision in ['float', 'double']:
             self.make_basic_inputs(precision)
-            woden_settings = self.call_create_woden_settings()
+            woden_settings = self.call_fill_woden_settings_python()
             self.check_basic_inputs(woden_settings)
         
     def test_write_gaussian_beam(self):
@@ -176,7 +127,7 @@ class Test(unittest.TestCase):
             self.args.gauss_ra_point = 60.0
             self.args.gauss_dec_point = -10.0
             
-        def check_gauss_outputs():
+        def check_gauss_outputs(woden_settings):
             ##Check the extra arguments have resulting in correct outputs
             ##Optional arguments should now exists
             
@@ -185,17 +136,17 @@ class Test(unittest.TestCase):
             else:
                 delta = 1e-10
                 
-            self.assertEqual(1, int(self.data['beamtype']))
+            self.assertEqual(1, woden_settings.beamtype)
             self.assertAlmostEqual(self.args.gauss_ra_point,
-                             float(self.data['gauss_ra_point'])/D2R,
+                             woden_settings.gauss_ra_point/D2R,
                              delta=delta)
             self.assertAlmostEqual(self.args.gauss_dec_point,
-                             float(self.data['gauss_dec_point'])/D2R,
+                             woden_settings.gauss_dec_point/D2R,
                              delta=delta)
             self.assertAlmostEqual(self.args.gauss_beam_FWHM,
-                             float(self.data['gauss_beam_FWHM']), delta=delta)
+                             woden_settings.gauss_beam_FWHM, delta=delta)
             self.assertEqual(self.args.gauss_beam_ref_freq,
-                             float(self.data['gauss_beam_ref_freq']))
+                             woden_settings.gauss_beam_ref_freq)
 
 
         for precision in ['float', 'double']:
@@ -203,23 +154,21 @@ class Test(unittest.TestCase):
             self.make_basic_inputs(precision)
             add_extra_gauss_args()
             
-            ##This runs `create_woden_settings`
-            woden_settings = self.call_create_woden_settings()
+            ##This runs `fill_woden_settings_python`
+            woden_settings = self.call_fill_woden_settings_python()
 
             ##This passes woden_settings into C code which write contents to a text
             ## file, reads in that text file, and checks the outputs make sense
             self.check_basic_inputs(woden_settings)
-            check_gauss_outputs()
+            check_gauss_outputs(woden_settings)
 
-    def check_mwa_beam_delays(self):
+    def check_mwa_beam_delays(self, woden_settings):
         
         ##turn string of list into an actual list
         FEE_delays = [int(delay) for delay in self.args.MWA_FEE_delays.strip("[]").split(',')]
         
         # ##Check the extra arguments have resulting in correct outputs
-        c_delays =  [int(float(delay)) for delay in self.data['FEE_ideal_delays'].split(',')]
-        
-        self.assertEqual(FEE_delays, c_delays)
+        npt.assert_array_equal(FEE_delays, woden_settings.FEE_ideal_delays)
 
     def test_write_MWA_FEE_beam(self):
         """Test that the MWA FEE primary beam options work correctly"""
@@ -231,9 +180,9 @@ class Test(unittest.TestCase):
             self.args.MWA_FEE_delays = "[0,2,4,6,0,2,4,6,0,2,4,6,0,2,4,6]"
             
         def check_MWAFEE_outputs():
-            self.assertEqual(2, int(self.data['beamtype']))
-            self.assertEqual(self.args.hdf5_beam_path, self.data['hdf5_beam_path'])
-            self.check_mwa_beam_delays()
+            self.assertEqual(2, woden_settings.beamtype)
+            self.assertEqual(self.args.hdf5_beam_path, woden_settings.hdf5_beam_path)
+            self.check_mwa_beam_delays(woden_settings)
             
         for precision in ['float', 'double']:
             
@@ -242,8 +191,8 @@ class Test(unittest.TestCase):
             self.make_basic_inputs(precision)
             add_extra_MWAFEE_args()
             
-            ##This runs `create_woden_settings`
-            woden_settings = self.call_create_woden_settings()
+            ##This runs `fill_woden_settings_python`
+            woden_settings = self.call_fill_woden_settings_python()
 
             ##This passes woden_settings into C code which write contents to a text
             ## file, reads in that text file, and checks the outputs make sense
@@ -260,9 +209,9 @@ class Test(unittest.TestCase):
             self.args.MWA_FEE_delays = "[0,2,4,6,0,2,4,6,0,2,4,6,0,2,4,6]"
             
         def check_MWAFEE_outputs():
-            self.assertEqual(4, int(self.data['beamtype']))
-            self.assertEqual(self.args.hdf5_beam_path, self.data['hdf5_beam_path'])
-            self.check_mwa_beam_delays()
+            self.assertEqual(4, woden_settings.beamtype)
+            self.assertEqual(self.args.hdf5_beam_path, woden_settings.hdf5_beam_path)
+            self.check_mwa_beam_delays(woden_settings)
             
         
         for precision in ['float', 'double']:
@@ -270,8 +219,8 @@ class Test(unittest.TestCase):
             self.make_basic_inputs(precision)
             add_extra_MWAFEE_args()
             
-            ##This runs `create_woden_settings`
-            woden_settings = self.call_create_woden_settings()
+            ##This runs `fill_woden_settings_python`
+            woden_settings = self.call_fill_woden_settings_python()
 
             ##This passes woden_settings into C code which write contents to a text
             ## file, reads in that text file, and checks the outputs make sense
@@ -287,16 +236,16 @@ class Test(unittest.TestCase):
             self.args.MWA_FEE_delays = "[0,2,4,6,0,2,4,6,0,2,4,6,0,2,4,6]"
             
         def check_MWAanaly_outputs():
-            self.assertEqual(5, int(self.data['beamtype']))
-            self.check_mwa_beam_delays()
+            self.assertEqual(5, woden_settings.beamtype)
+            self.check_mwa_beam_delays(woden_settings)
             
         for precision in ['float', 'double']:
             ##This makes fake args with double precision
             self.make_basic_inputs(precision)
             add_extra_MWAanaly_args()
             
-            ##This runs `create_woden_settings`
-            woden_settings = self.call_create_woden_settings()
+            ##This runs `fill_woden_settings_python`
+            woden_settings = self.call_fill_woden_settings_python()
 
             ##This passes woden_settings into C code which write contents to a text
             ## file, reads in that text file, and checks the outputs make sense
@@ -311,13 +260,13 @@ class Test(unittest.TestCase):
             self.make_basic_inputs(precision)
             self.args.primary_beam = 'EDA2'
             
-            ##This runs `create_woden_settings`
-            woden_settings = self.call_create_woden_settings()
+            ##This runs `fill_woden_settings_python`
+            woden_settings = self.call_fill_woden_settings_python()
 
             ##This passes woden_settings into C code which write contents to a text
             ## file, reads in that text file, and checks the outputs make sense
             self.check_basic_inputs(woden_settings)
-            self.assertEqual(3, int(self.data['beamtype']))
+            self.assertEqual(3, woden_settings.beamtype)
 
     def test_write_do_autos(self):
         """Test that doing autos gets swithced on. No need to check for
@@ -327,18 +276,18 @@ class Test(unittest.TestCase):
         self.make_basic_inputs('double')
         self.args.do_autos = True
         
-        ##This runs `create_woden_settings`
-        woden_settings = self.call_create_woden_settings()
+        ##This runs `fill_woden_settings_python`
+        woden_settings = self.call_fill_woden_settings_python()
         
         ##This passes woden_settings into C code which write contents to a text
         ## file, reads in that text file, and checks the outputs make sense
         self.check_basic_inputs(woden_settings)
-        self.assertTrue(int(self.data['do_autos']))
+        self.assertTrue(woden_settings.do_autos)
         
         self.args.do_autos = False
-        woden_settings = self.call_create_woden_settings()
+        woden_settings = self.call_fill_woden_settings_python()
         self.check_basic_inputs(woden_settings)
-        self.assertFalse(int(self.data['do_autos']))
+        self.assertFalse(woden_settings.do_autos)
 
 
         
@@ -350,18 +299,18 @@ class Test(unittest.TestCase):
         self.make_basic_inputs('double')
         self.args.no_precession = False
         
-        ##This runs `create_woden_settings`
-        woden_settings = self.call_create_woden_settings()
+        ##This runs `fill_woden_settings_python`
+        woden_settings = self.call_fill_woden_settings_python()
         
         ##This passes woden_settings into C code which write contents to a text
         ## file, reads in that text file, and checks the outputs make sense
         self.check_basic_inputs(woden_settings)
-        self.assertTrue(int(self.data['do_precession']))
+        self.assertTrue(woden_settings.do_precession)
         
         self.args.no_precession = True
-        woden_settings = self.call_create_woden_settings()
+        woden_settings = self.call_fill_woden_settings_python()
         self.check_basic_inputs(woden_settings)
-        self.assertFalse(int(self.data['do_precession']))
+        self.assertFalse(woden_settings.do_precession)
         
     def test_use_dipamps(self):
         """Test that the use_dipamp flag gets propagated correctly, and if
@@ -371,30 +320,31 @@ class Test(unittest.TestCase):
         self.make_basic_inputs('double')
         # self.args.no_precession = False
         
-        ##This runs `create_woden_settings`
-        woden_settings = self.call_create_woden_settings()
+        ##This runs `fill_woden_settings_python`
+        woden_settings = self.call_fill_woden_settings_python()
         
         ##This passes woden_settings into C code which write contents to a text
         ## file, reads in that text file, and checks the outputs make sense
         self.check_basic_inputs(woden_settings)
         
         ##check it defaults to False
-        self.assertFalse(int(self.data['use_dipamps']))
+        self.assertFalse(woden_settings.use_dipamps)
         
         
         ##Now ask for some dipole amps, provide some (as would happen using
         # run_setup.check_args) and check things are propagated correctly
         self.args.use_MWA_dipamps = True
         self.args.dipamps = np.arange(16)
-        ##This runs `create_woden_settings`
-        woden_settings = self.call_create_woden_settings()
+        ##This runs `fill_woden_settings_python`
+        woden_settings = self.call_fill_woden_settings_python()
         
         self.check_basic_inputs(woden_settings)
         ##check it we have a True flag
-        self.assertTrue(int(self.data['use_dipamps']))
+        self.assertTrue(woden_settings.use_dipamps)
         
-        mwa_dipole_amps = np.array([float(amp) for amp in self.data['mwa_dipole_amps'].split(',')])
-        npt.assert_allclose(mwa_dipole_amps, np.arange(16), atol=1e-8)
+        # mwa_dipole_amps = np.array([float(amp) for amp in self.data['mwa_dipole_amps'].split(',')])
+        # npt.assert_allclose(mwa_dipole_amps, np.arange(16), atol=1e-8)
+        npt.assert_allclose(woden_settings.mwa_dipole_amps, np.arange(16), atol=1e-8)
         
         
     def test_off_cardinal_dipoles(self):
@@ -403,23 +353,23 @@ class Test(unittest.TestCase):
 
         ##First up, check that the off_cardinal_dipoles flag off by default
         self.make_basic_inputs('double')
-        woden_settings = self.call_create_woden_settings()
+        woden_settings = self.call_fill_woden_settings_python()
         self.check_basic_inputs(woden_settings)
-        self.assertFalse(int(self.data['off_cardinal_dipoles']))
+        self.assertFalse(woden_settings.off_cardinal_dipoles)
         
         ##Next, turn it on via the command line
         self.make_basic_inputs('double')
         self.args.off_cardinal_dipoles = True
-        woden_settings = self.call_create_woden_settings()
+        woden_settings = self.call_fill_woden_settings_python()
         self.check_basic_inputs(woden_settings)
-        self.assertTrue(int(self.data['off_cardinal_dipoles']))
+        self.assertTrue(woden_settings.off_cardinal_dipoles)
         
         ##Next, check it gets switched on given the right primary beam
         self.make_basic_inputs('double')
         self.args.primary_beam = 'everybeam_LOFAR'
-        woden_settings = self.call_create_woden_settings()
+        woden_settings = self.call_fill_woden_settings_python()
         self.check_basic_inputs(woden_settings)
-        self.assertTrue(int(self.data['off_cardinal_dipoles']))
+        self.assertTrue(woden_settings.off_cardinal_dipoles)
         
     def test_cpu_mode(self):
         """Test that the `cpu_mode` flag gets propagated correctly and sets
@@ -427,16 +377,16 @@ class Test(unittest.TestCase):
 
         ##First up, check that the off_cardinal_dipoles flag off by default
         self.make_basic_inputs('double')
-        woden_settings = self.call_create_woden_settings()
+        woden_settings = self.call_fill_woden_settings_python()
         self.check_basic_inputs(woden_settings)
-        self.assertTrue(int(self.data['do_gpu']))
+        self.assertTrue(woden_settings.do_gpu)
         
         ##Next, turn it on via the command line
         self.make_basic_inputs('double')
         self.args.cpu_mode = True
-        woden_settings = self.call_create_woden_settings()
+        woden_settings = self.call_fill_woden_settings_python()
         self.check_basic_inputs(woden_settings)
-        self.assertFalse(int(self.data['do_gpu']))
+        self.assertFalse(woden_settings.do_gpu)
         
 ##Run the test
 if __name__ == '__main__':

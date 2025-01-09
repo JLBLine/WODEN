@@ -335,7 +335,9 @@ class Test(BaseChunkTest):
         
         precision = 'double'
         woden_struct_classes = Woden_Struct_Classes(precision)
-        woden_settings = woden_struct_classes.Woden_Settings()
+        woden_settings = ws.Woden_Settings_Python()
+        woden_settings.ra0 = 0.0
+        woden_settings.dec0 = MWA_LAT
         
         woden_settings.time_res = 1.0
         woden_settings.latitude = -0.46606083776035967
@@ -346,6 +348,7 @@ class Test(BaseChunkTest):
         
         woden_settings.jd_date = 2457278.201145833
         woden_settings.num_time_steps = num_time_steps
+        
         
         woden_settings.do_precession = 1
         lsts, latitudes = ws.setup_lsts_and_phase_centre(woden_settings)

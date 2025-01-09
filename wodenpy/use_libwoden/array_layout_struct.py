@@ -8,7 +8,7 @@ from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classe
 
 VELC = 299792458.0
 
-class Array_Layout(Structure):
+class Array_Layout_Ctypes(Structure):
     """
     A ctypes structure representing the layout of an array of antennas.
 
@@ -45,7 +45,7 @@ class Array_Layout(Structure):
 woden_struct_classes = Woden_Struct_Classes()
 Woden_Settings = woden_struct_classes.Woden_Settings
     
-def setup_array_layout(woden_settings : Woden_Settings, args : argparse.Namespace) -> Array_Layout: #type: ignore
+def setup_array_layout_ctypes(woden_settings : Woden_Settings, args : argparse.Namespace) -> Array_Layout_Ctypes: #type: ignore
     """Given the populated Woden_Settings struct and the command line arguments, set up the `array_layout` struct, and fill it with the correct values, as well as doing the equivalent of a "malloc" for the arrays:
      - array_layout.ant_X
      - array_layout.ant_Y
@@ -64,11 +64,11 @@ def setup_array_layout(woden_settings : Woden_Settings, args : argparse.Namespac
 
     Returns
     -------
-    array_layout : Array_Layout
-        Initialised Array_Layout struct.
+    array_layout : Array_Layout_Ctypes
+        Initialised Array_Layout_Ctypes struct.
     """
 
-    array_layout = Array_Layout()
+    array_layout = Array_Layout_Ctypes()
 
     array_layout.num_tiles = args.num_antennas
     woden_settings.num_ants = args.num_antennas
@@ -91,18 +91,10 @@ def setup_array_layout(woden_settings : Woden_Settings, args : argparse.Namespac
     woden_settings.num_autos = num_autos
     woden_settings.num_visis = num_cross + num_autos
     
-    # num_ants_array = args.num_antennas*c_double
-    # array_layout.ant_east = num_ants_array()
-    # array_layout.ant_north = num_ants_array()
-    # array_layout.ant_heigh = num_ants_array()
-
-    # ##TODO copy across the contents of args.east, args.north, args.height
-
     num_timesants_array = (woden_settings.num_time_steps*args.num_antennas)*c_double
     array_layout.ant_X = num_timesants_array()
     array_layout.ant_Y = num_timesants_array()
     array_layout.ant_Z = num_timesants_array()
-
 
     diffs_array = (woden_settings.num_time_steps*array_layout.num_baselines)*c_double
     array_layout.X_diff_metres = diffs_array()
