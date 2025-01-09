@@ -260,3 +260,13 @@ and run it like::
   ${MYSOFTWARE}/woden-2.3-setonix.sif run_woden.py --help
 
 .. warning:: EVERYTHING on the internet will tell you to use the ``--rocm`` flag. This WILL NOT WORK with the Setonix based image, because of shenanigans. So leave it be.
+
+Updating ``astropy`` IERS
+############################
+
+If you're working on a cluster, often you won't have access to the internet. If you try and a recent date, you'll likely need to update the IERS data. This normally happens automatically, but obviously without internet you're cooked. If you're using a singularity image, I've included a little helper script, which you can launch on the head node (which will have internet) and then ``astropy`` will store a new IERS file in a location it thinks is sensible (which should be accessible to the compute nodes). You can run it like this::
+
+  $ apptainer shell --home=/path/to/cluster/home /path/to/sing_file/woden-2.5-80.sif
+  $ Apptainer> python3 /WODEN/docker/fetch_iers_data.py
+
+Note here I'm using ``apptainer``, but you can swap ``singularity`` in for ``apptainer``. It just depends on what system you're using. Also note that you need to change ``/path/to/cluster/home`` and ``/path/to/sing_file`` to the appropriate locations, but leave ``/WODEN/docker/fetch_iers_data.py`` as is, as it's in the image.

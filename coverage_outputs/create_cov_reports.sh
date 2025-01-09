@@ -1,12 +1,18 @@
 ##Delete any old reports hanging around
-rm coverage.xml *.gcov .coverage
+rm coverage.xml *.gcov *.gcno *.gcda coverage.info #.coverage
 
-##Use the ctest C code outputs and run gcov over them for codecov
-gcov ../build/cmake_testing/C_code/primary_beam/CMakeFiles/primary_beam_float.dir/__/__/__/src/primary_beam.c.gcda \
-    ../build/cmake_testing/C_code/visibility_set/CMakeFiles/visibility_set_float.dir/__/__/__/src/visibility_set.c.gcda
+##Use the ctest C code outputs and run gcov over them. Converts them into
+##something that codecov can read
 
-##Run the python tests using python 'coverage'
-##Can be grabbed with 'pip install coverage'
+cov_src_dir=../build/cmake_testing/GPU_or_C_code/CMakeFiles/calculate_visibilities_CPU_float.dir/__/__/src
+
+for file in ${cov_src_dir}/*.gcda; do
+    fileroot=$(basename $file .gcda)
+    gcov ${cov_src_dir}/${fileroot}.gcda ${cov_src_dir}/${fileroot}.gcno
+done
+
+# ##Run the python tests using python 'coverage'
+# ##Can be grabbed with 'pip install coverage'
 
 ##array_layout
 coverage run --source=wodenpy.array_layout.create_array_layout ../cmake_testing/wodenpy/array_layout/test_calc_XYZ_diffs.py
@@ -76,7 +82,7 @@ coverage run --source=wodenpy.use_libwoden.use_libwoden ../cmake_testing/scripts
 coverage run --source=woden_uv2ms ../cmake_testing/scripts/woden_uv2ms/test_woden_uv2ms.py
 coverage run --source=add_instrumental_effects_woden ../cmake_testing/scripts/add_instrumental_effects_woden/test_add_instrumental_effects_woden.py
 
-##convert output to something that codecov accepts
+#convert output to something that codecov accepts
 coverage combine
 coverage xml
 
@@ -84,3 +90,12 @@ coverage xml
 rm WODEN_array_layout.txt *.uvfits *.json \
     example.txt test_load_data.dat test_full_skymodel* \
     woden_settings.txt *.so *.png *.npz 
+
+
+##Use this to create two local reports, one for C and one for python
+##Only uncomment if you want to see the reports locally without pushing to codecov
+
+lcov --capture --directory ${cov_src_dir} --output-file coverage.info
+genhtml coverage.info --output-directory C_coverage
+coverage html -d python_coverage
+

@@ -173,16 +173,9 @@ def convert_woden_settings_to_python(woden_settings_ctypes : Woden_Settings):
     
         woden_settings_python.FEE_ideal_delays = np.ctypeslib.as_array(woden_settings_ctypes.FEE_ideal_delays, shape=(16,))
         woden_settings_python.hdf5_beam_path = string_at(woden_settings_ctypes.hdf5_beam_path).decode('utf-8')
-        print('PYTHON TRANSLATED IT TO', woden_settings_python.hdf5_beam_path)
     
     if woden_settings_ctypes.use_dipamps:
         woden_settings_python.mwa_dipole_amps = np.ctypeslib.as_array(woden_settings_ctypes.mwa_dipole_amps, shape=(32*woden_settings_ctypes.num_ants,))
-    
-    # woden_settings_python.array_layout_file = woden_settings_ctypes.array_layout_file
-    # woden_settings_python.array_layout_file_path = woden_settings_ctypes.array_layout_file_path
-    # woden_settings_python.band_nums = woden_settings_ctypes.band_nums
-    # woden_settings_python.hdf5_beam_path = woden_settings_ctypes.hdf5_beam_path
-    # woden_settings_python.sky_crop_type = woden_settings_ctypes.sky_crop_type
     
     return woden_settings_python
 
@@ -673,7 +666,8 @@ def read_skymodel_thread(thread_id : int, num_threads : int,
         print("Dumping profile to", profile_filename)
         profiler.dump_stats(profile_filename)
     
-    return python_sources, thread_num, set_ind
+    # return python_sources, thread_num, set_ind
+    return python_sources, thread_num
 
 def run_cpu_mode(num_threads, num_rounds, chunked_skymodel_map_sets,
                  lsts, latitudes, args, beamtype,
@@ -695,7 +689,8 @@ def run_cpu_mode(num_threads, num_rounds, chunked_skymodel_map_sets,
             all_loaded_python_sources = []
             all_loaded_sources_orders = []
             for future in concurrent.futures.as_completed(future_data_sky):
-                python_sources, order, round_num = future.result()
+                # python_sources, order, _ = future.result()
+                python_sources, order = future.result()
                 all_loaded_python_sources.append(python_sources)
                 all_loaded_sources_orders.append(order)
                 
@@ -815,7 +810,8 @@ def run_gpu_mode(num_threads, num_rounds, chunked_skymodel_map_sets,
             all_loaded_python_sources = []
             all_loaded_sources_orders = []
             for future in concurrent.futures.as_completed(future_data_sky):
-                python_sources, order, _ = future.result()
+                # python_sources, order, _ = future.result()
+                python_sources, order = future.result()
                 all_loaded_python_sources.append(python_sources)
                 all_loaded_sources_orders.append(order)
                 
@@ -952,8 +948,6 @@ def main(argv=None):
         ##Something to hold all visibility outputs for all threads, for all bands
         visi_sets_python = [[Visi_Set_Python() for _ in range(len(args.band_nums))] for _ in range(num_visi_threads)]
         visi_sets_python = np.array(visi_sets_python)
-        
-        print("DIS", visi_sets_python.shape)
         
         ##initialise to zeros
         for thread_ind in range(num_visi_threads):
