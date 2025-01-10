@@ -75,6 +75,101 @@ height = [376.803, 375.005, 376.351, 375.76, 376.476,
           368.26, 367.95, 365.15, 370.3, 368.75, 365.99, 367.88, 370.54, 365.39,
           366.17, 365.88]
 
+
+east_ms = [-1.50306139e+02, -9.58861392e+01, -8.90331391e+01, -7.92191387e+01,
+ -8.74611383e+01, -1.02846138e+02, -9.38671381e+01, -1.48851137e+02,
+ -1.33460140e+02, -1.40388139e+02, -1.24188140e+02, -9.34101397e+01,
+ -7.83561397e+01, -8.39971395e+01, -7.75091393e+01, -1.76527140e+02,
+ -2.41411364e+01, -2.43231372e+01, -4.10101378e+01, -5.50481379e+01,
+ -6.53721384e+01, -7.05961388e+01, -6.05781389e+01, -5.11971390e+01,
+ -6.85111393e+01, -6.05791393e+01, -7.14061396e+01, -4.60611393e+01,
+ -5.36771395e+01, -2.31801389e+01, -5.56181398e+01, -1.54211393e+01,
+ -5.60811332e+01,  1.76945874e+02, -2.22311312e+01,  9.12878753e+01,
+    1.53178883e+02, -6.81031271e+01, -1.18558126e+02, -8.80371332e+01,
+ -1.05802137e+02, -9.90511376e+01, -8.23661375e+01, -8.00621379e+01,
+ -7.56411383e+01, -7.15381378e+01, -6.30881375e+01, -5.12121372e+01,
+ -1.96501136e+02, -1.98715132e+02, -2.84978120e+02, -3.88673126e+02,
+ -4.53207127e+02, -4.69338136e+02, -3.65045136e+02, -3.70129139e+02,
+ -1.60986151e+02, -1.28567142e+02, -7.02921402e+01, -7.92521403e+01,
+ -1.04462140e+02, -1.00693140e+02, -3.95973143e+02, -2.64068144e+02,
+    3.25619864e+02,  1.72903864e+02, -3.03614012e+00, -4.70751399e+01,
+ -5.66621403e+01, -3.42261425e+01,  4.96058499e+01,  8.43588506e+01,
+ -5.18567154e+02, -4.90464153e+02, -5.76078145e+02, -5.86196124e+02,
+ -6.53988134e+02, -6.85548137e+02, -1.08012113e+03, -1.02659115e+03,
+ -3.34279196e+02, -2.27672165e+02, -1.74238160e+02, -2.57473164e+02,
+ -1.95539159e+02, -2.50168158e+02, -3.01217157e+02, -8.89992172e+02,
+    7.15871814e+02,  2.87544847e+02,  2.37788840e+02,  2.27356838e+02,
+    6.09218385e+01, -5.93951612e+01,  3.47028329e+01,  4.93814166e-01,
+    8.39421832e+02,  1.17676884e+03,  1.31308885e+03,  5.55600862e+02,
+    5.71019858e+02,  4.88335855e+02,  5.28076850e+02,  3.80547845e+02,
+    1.10041887e+03,  1.20060889e+03,  4.98107883e+02,  3.00671874e+02,
+    3.70126874e+02,  5.43802876e+02,  5.06271872e+02,  5.23205869e+02,
+    6.53252915e+02,  4.42468907e+02, -5.93221070e+01,  3.65438888e+01,
+    2.32320887e+02,  2.57462887e+02,  3.25166885e+02,  3.25579885e+02,
+ -4.12978111e+02, -1.42419111e+02, -4.80791094e+02, -5.76054093e+02,
+ -6.74542102e+02, -6.31924118e+02, -6.33758121e+02, -5.69061117e+02]
+
+north_ms = [  265.85893427,   270.23293651,   266.06593679,   258.47593719,
+    248.49693685,   244.13293622,   242.32393659,   220.31593433,
+    282.65593496,   275.54293468,   284.89893534,   281.40293661,
+    282.88393723,   277.607937,     272.68193726,   289.94793319,
+    201.59093945,   222.39793944,   235.21493876,   237.56293818,
+    250.85793776,   259.44693755,   263.72093796,   264.59093834,
+    271.14793763,   271.94993796,   278.86293751,   273.28993855,
+    276.31293824,   263.73893949,   284.32993816,   273.91493981,
+    124.84593814,   -43.3320523,     77.04993952,   -80.52005582,
+  -259.88405327,   -22.31606236,   -39.82806443,   125.24193683,
+    217.2249361,    230.20693638,   229.38193706,   238.17293716,
+    247.04693734,   235.97393751,   229.03193785,   221.92993834,
+    189.83993237,    95.19493228,  -196.13607128,   -43.97707553,
+    -15.88807818,   185.23192115,   183.14292544,   266.52892523,
+    573.25193382,   350.53893516,   294.07593756,   297.30393719,
+    300.95893615,   288.94093631,   371.19692416,   389.31892959,
+    203.65295379,   193.63994753,   292.88594032,   287.51393851,
+    295.96693812,   351.09293904,   536.20394247,   519.1859439,
+    632.54791912,   604.61292027,   415.05291676,  -101.48508364,
+    142.29991357,   212.21291227,    87.06289609,   574.57189826,
+  1660.77492667,   898.17393107,   781.68293327,   892.04992984,
+    762.93793239,   731.75393015,   704.37092805,  1088.18490385,
+  1405.30496982,   618.30995224,   768.4579502,    819.76894977,
+    815.29994294,   810.57493799,   950.28694186,  1412.40494044,
+    990.27197488,   858.67698873,   553.41699432,   244.52996323,
+    359.25496386,   425.02496047,   539.2389621,    652.90895605,
+    151.80498558,  -443.20501031,  -264.54903913,   -48.90704723,
+    -38.37004438,   -91.10703726,    -3.1710388,     75.5389619,
+ -1037.70503277,  -835.26104142,  -505.28706202,  -405.00505808,
+  -357.84605003,  -366.408049,    -318.46304622,  -306.2620462,
+  -409.01507654,  -420.21606543,  -817.27907931,  -863.73708322,
+  -638.82608727,  -245.06208552,  -169.31708559,  -257.61508294]
+
+
+height_ms = [754.01098587, 754.28499028, 754.30899087, 754.29099173, 754.33899112,
+ 754.2579899, 754.26999064, 754.21398631, 754.00198713, 754.01798661,
+ 754.04998787, 754.25399041, 754.25299162, 754.2999912, 754.29799177,
+ 753.62298356, 753.80499663, 753.87199646, 753.96099501, 754.12299385,
+ 754.23899291, 754.26599242, 754.17999321, 754.09999397, 754.23599251,
+ 754.20399315, 754.25199222, 754.06599433, 754.08999369, 753.94799626,
+ 754.18099347, 753.90999683, 753.80299456, 752.00501478, 753.35099766,
+ 752.76000805, 753.47601437, 753.17499462, 753.05399063, 754.03099195,
+ 754.25498985, 754.25999031, 754.26999168, 754.2699918, 754.2549921,
+ 754.23899251, 754.20999325, 754.07799427, 754.16098264, 754.02398313,
+ 751.90097815, 752.3719686, 752.11096314, 751.7519604, 752.73896892,
+ 752.23996792, 751.77298282, 753.56998705, 754.1919922, 754.19599145,
+ 754.04998936, 754.15698976, 751.51496507, 752.32197571, 750.94502517,
+ 752.03201277, 753.8919977, 754.11499415, 754.1559933, 753.97599474,
+ 753.18100028, 753.31400324, 749.60395321, 749.9069557, 750.37395005,
+ 752.21195288, 751.46194562, 751.23594255, 754.00891123, 751.03891215,
+ 748.06796098, 750.69397508, 751.21698027, 750.49197269, 751.09297866,
+ 750.79697442, 750.51397045, 747.38091966, 751.60204852, 752.13401912,
+ 752.805014, 752.74801278, 753.00099923, 752.16998944, 753.27499613,
+ 750.68199007, 749.69606154, 749.12209002, 747.35410331, 749.28404365,
+ 749.5090441, 749.96703688, 749.78903932, 751.25102647, 746.06508879,
+ 745.32810118, 750.22004256, 751.61802492, 751.34003051, 749.81204506,
+ 749.80304138, 749.6130422, 748.0710607, 749.25104206, 749.91299876,
+ 751.03400587, 752.26202152, 752.22102364, 752.02902882, 752.12802877,
+ 750.9689692, 750.50299137, 752.71996656, 752.52195911, 752.33994948,
+ 752.54395017, 752.61594948, 752.24595539]
+
 names = ['Tile051', 'Tile052', 'Tile053', 'Tile054',
          'Tile055', 'Tile056', 'Tile057',
 'Tile058', 'Tile071', 'Tile072', 'Tile073', 'Tile074', 'Tile075', 'Tile076', 
@@ -335,11 +430,16 @@ class Test(unittest.TestCase):
         ##Check the primary_beam has been selected and that `run_setup.check_args` fails
         args = self.assert_check_args_errors()
         self.assertEqual(beam_name, args.primary_beam)
+        
+        
+        self.inputs.append('--hdf5_beam_path=nuthin')
+        self.assert_check_args_errors()
 
         ##Set the path to the hdf5 file. Just point it at a text file.
         ##TODO - have `check_args` actually test reading the hdf5 file. At the
         ##mo just tests that the file exists
         ##This should still fail because we have no delays set
+        self.inputs.pop(-1)
         self.inputs.append('--hdf5_beam_path={:s}/example_array_layout.txt'.format(code_dir))
         self.assert_check_args_errors()
 
@@ -357,6 +457,12 @@ class Test(unittest.TestCase):
         self.inputs.append(f'--primary_beam={beam_name}')
         self.inputs.append("--metafits_filename={:s}/1202815152_metafits_ppds.fits".format(code_dir))
         args = self.assert_check_args_errors()
+        
+        
+        ##This time, set the environment variable to a non-existant file.
+        ##Should faiul
+        os.environ[beam_env_var] = 'this_aint_real'
+        self.assert_check_args_errors()
 
         ##This time, set the environment variable to the hdf5 file. Should
         ##pass (just use a file we know exists somewhere)
@@ -549,6 +655,17 @@ class Test(unittest.TestCase):
         """Check `ra.check_args` works correctly for the `--use_MWA_dipflags` and
         `--use_MWA_dipamps` flags. Make sure it combines the arrays"""
         
+        # self.make_required_args()
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append('--use_MWA_dipflags')
+        self.inputs.append('--use_MWA_dipamps')
+        self.inputs.append('--primary_beam=MWA_FEE')
+        self.inputs.append('--MWA_FEE_delays=0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0')
+        
+        ##should error if we don't give it a metafits file
+        self.assert_check_args_errors()
+        
+        ##reset args. give it a metafits file without Delay column, should error
         self.make_required_args()
         self.inputs.append('--use_MWA_dipflags')
         self.inputs.append('--use_MWA_dipamps')
@@ -581,6 +698,129 @@ class Test(unittest.TestCase):
         self.inputs.append('--off_cardinal_dipoles')
         args = self.run_parser_and_check_args()
         self.assertEqual(args.off_cardinal_dipoles,True)
+        
+    def test_use_everybeam_MWA(self):
+        """Check `ra.check_args` works correctly for the `--primary_beam=everybeam_MWA`"""
+        
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append('--primary_beam=everybeam_MWA')
+        ##check it errors as we haven't provided a measurement set or
+        ##path to hdf5
+        self.assert_check_args_errors()
+        
+        ##check it errors with bad path to hdf5
+        self.inputs.append('--hdf5_beam_path=hdf5_beam_path')
+        self.assert_check_args_errors()
+        
+        ##reset input args
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append('--primary_beam=everybeam_MWA')
+        ms_path = "lsjkhdgfkjhsdgfkajsdh"
+        self.inputs.append(f'--beam_ms_path={ms_path}')
+        self.assert_check_args_errors()
+        
+        ##reset input args
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append('--primary_beam=everybeam_MWA')
+        ms_path = f"{code_dir}/../../../test_installation/everybeam/MWA-single-timeslot.ms"
+        self.inputs.append(f'--beam_ms_path={ms_path}')
+        
+        ##This should still error, as we haven't set --band_nums, which
+        ##can't be set to more than one value when using everybeam
+        self.assert_check_args_errors()
+        self.inputs.append(f'--band_nums=1')
+        
+        ##we need to get rid of the --array_layout flag, as it will
+        ##override reading the measurement set array layout
+        for ind, arg in enumerate(self.inputs):
+            if arg.startswith('--array_layout'):
+                self.inputs.pop(ind)
+                break
+        
+        args = self.run_parser_and_check_args()
+        
+        self.assertTrue(np.allclose(east_ms, args.east, atol=1e-5))
+        self.assertTrue(np.allclose(north_ms, args.north, atol=1e-5))
+        self.assertTrue(np.allclose(height_ms, args.height, atol=1e-5))
+        
+    def test_bad_primary_beam(self):
+        """Check `ra.check_args` works correctly for the `--primary_beam=nonsense`"""
+        
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append('--primary_beam=nonsense')
+        self.assert_check_args_errors()
+        
+    def test_bad_no_beam_ms_path(self):
+        """Check things fail if using no primary beam, but trying to get the
+        array layout from a measurement set"""
+        
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append('--primary_beam=none')
+        self.inputs.append('--beam_ms_path=lkjsdfsjhfkjshdf')
+        self.assert_check_args_errors()
+        
+        ##now put in a proper path to the ms and check all good
+        self.inputs.pop(-1)
+        ms_path = f"{code_dir}/../../../test_installation/everybeam/MWA-single-timeslot.ms"
+        self.inputs.append(f'--beam_ms_path={ms_path}')
+        self.run_parser_and_check_args()
+        
+    def test_num_freq_chans(self):
+        """Check that the number of frequency channels is read in correctly"""
+        
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append('--num_freq_channels=128')
+        args = self.run_parser_and_check_args()
+        self.assertEqual(128, args.num_freq_channels)
+        
+    def test_bad_band_nums(self):
+        """Check that the band numbers fail if non-sensical"""
+        
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append('--band_nums=kjhasdkjahsd')
+        self.assert_check_args_errors()
+        
+    def test_wrong_length_delays(self):
+        """Check that the delays fail if the wrong length"""
+        
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append('--MWA_FEE_delays=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15')
+        self.assert_check_args_errors()
+        
+    def test_bad_precision(self):
+        """Check that the precision defaults to double if nonsense is given"""
+        
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append('--precision=yo_momma')
+        args = self.run_parser_and_check_args()
+        
+        self.assertEqual(args.precision, 'double')
+        
+    def test_bad_beam_index(self):
+        """Check that the beam index fails if too large"""
+        
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append('--primary_beam=everybeam_MWA')
+        self.inputs.append('--band_nums=1')
+        ms_path = f"{code_dir}/../../../test_installation/everybeam/MWA-single-timeslot.ms"
+        self.inputs.append(f'--beam_ms_path={ms_path}')
+        self.inputs.append('--station_id=9393')
+        ##we need to get rid of the --array_layout flag, as it will
+        ##override reading the measurement set array layout
+        for ind, arg in enumerate(self.inputs):
+            if arg.startswith('--array_layout'):
+                self.inputs.pop(ind)
+                break
+        self.assert_check_args_errors()
+        
+    def test_bad_enh_text_file(self):
+        """Check that the enhancement text file fails if it doesn't exist"""
+        
+        self.make_minimum_required_args_without_metafits()
+        for ind, arg in enumerate(self.inputs):
+            if arg.startswith('--array_layout'):
+                self.inputs[ind] = f'--array_layout=non_existent_file.txt'
+        self.assert_check_args_errors()
         
 ##Run the test
 if __name__ == '__main__':

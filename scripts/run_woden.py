@@ -370,7 +370,6 @@ def read_skymodel_thread(thread_id : int, num_threads : int,
         print(f"Thread {thread_id} has no work to do")
         return [], thread_num
     
-    
     if args.profile:
         profiler = LineProfiler()
         ##Add whatever functions that are called in `read_fits_skymodel_chunks`
@@ -632,10 +631,6 @@ def main(argv=None):
                  lsts, latitudes, args, woden_settings_python.beamtype,
                  main_table, shape_table, v_table, q_table, u_table, p_table,
                  woden_settings_python, array_layout_python, visi_sets_python)
-            # run_cpu_mode_alt(num_threads, num_rounds, chunked_skymodel_map_sets,
-            #      lsts, latitudes, args, woden_settings.beamtype,
-            #      main_table, shape_table, v_table, q_table, u_table, p_table,
-            #      woden_settings_python, array_layout_python, visi_sets_python)
         else:
             run_gpu_mode(num_threads, num_rounds, chunked_skymodel_map_sets,
                  lsts, latitudes, args, woden_settings_python.beamtype,
@@ -651,10 +646,7 @@ def main(argv=None):
         visi_sets_python_combined = visi_sets_python[0, :]
         
         for thread_ind in range(1, num_visi_threads):
-            # visi_set_thread = visi_sets_python[thread_ind, :]
             for band_ind in range(len(args.band_nums)):
-                # visi_set = visi_set_thread[thread_ind, band_ind]
-                # visi_set_combined = visi_sets_python_combined[0, band_ind]
                 
                 visi_sets_python_combined[band_ind].sum_visi_XX_real += visi_sets_python[thread_ind, band_ind].sum_visi_XX_real
                 visi_sets_python_combined[band_ind].sum_visi_XX_imag += visi_sets_python[thread_ind, band_ind].sum_visi_XX_imag
@@ -664,9 +656,6 @@ def main(argv=None):
                 visi_sets_python_combined[band_ind].sum_visi_YX_imag += visi_sets_python[thread_ind, band_ind].sum_visi_YX_imag
                 visi_sets_python_combined[band_ind].sum_visi_YY_real += visi_sets_python[thread_ind, band_ind].sum_visi_YY_real
                 visi_sets_python_combined[band_ind].sum_visi_YY_imag += visi_sets_python[thread_ind, band_ind].sum_visi_YY_imag
-                
-                
-        # print("CMON", visi_sets_python_combined[0].us_metres)
         
         ##I think we want to X,Y,Z to be in the current frame for writing
         ##out to the uvfits, so calculate again
@@ -676,13 +665,6 @@ def main(argv=None):
         XYZ_array[:,0] = X
         XYZ_array[:,1] = Y
         XYZ_array[:,2] = Z
-
-        ##If we were to grab them out of the code used in the simulation,
-        ##need to do this
-        # expec_num = woden_settings.num_time_steps*args.num_antennas
-        # XYZ_array[:,0] = np.ctypeslib.as_array(array_layout.ant_X, shape=(expec_num, ))[:args.num_antennas]
-        # XYZ_array[:,1] = np.ctypeslib.as_array(array_layout.ant_Y, shape=(expec_num, ))[:args.num_antennas]
-        # XYZ_array[:,2] = np.ctypeslib.as_array(array_layout.ant_Z, shape=(expec_num, ))[:args.num_antennas]
 
         ##Get the central frequency channels, used in the uvfits header
         central_freq_chan = int(np.floor(args.num_freq_channels / 2.0))

@@ -101,7 +101,7 @@ def get_parser():
             "\t\t spherical harmonics interpolated over frequency\n"
             "\t - Gaussian (Analytic symmetric Gaussian)\n"
             "\t\t see --gauss_beam_FWHM and\n"
-            "\t\t and --gauss_beam_ref_freq for\nfine control)\n"
+            "\t\t and --gauss_beam_ref_freq for fine control)\n"
             "\t - EDA2 (Analytic dipole with a ground mesh) \n"
             "\t - MWA_analy (MWA analytic model)\n"
             "\t - everybeam_OSKAR (requires an OSKAR measurement set via --beam_ms_path)\n"
@@ -329,7 +329,6 @@ def select_correct_enh(args):
     elif args.array_layout == "from_ms":
         ##TODO work out how to get the lat/lon of the array from the measurement set
         with table(args.beam_ms_path + '/ANTENNA') as t: 
-        
             num_ants = len(t)
             args.num_antennas = num_ants
             ant_locations = np.array([t.getcell('POSITION', ant) for ant in range(num_ants)])
@@ -629,7 +628,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
 
     args.array_layout = select_argument_and_check(args.array_layout, args.array_layout,
                                   array_layout, "array_layout")
-
+    
     ##TODO change this from MWA_FEE_delays to MWA_delays (or allow both via
     ##some argparse magic)
     ##If the user has manually specified some MWA FEE delays, ensure they

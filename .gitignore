@@ -9,6 +9,7 @@ docs/doxygen/xml/*
 docs/sphinx/_build
 docs/sphinx/_build/*
 
+examples/FornaxA/*.ms
 examples/FornaxA/data
 examples/FornaxA/images
 examples/MWA_EoR1/data
@@ -39,6 +40,8 @@ docs/sphinx/operating_principles/MWAanaly_jones.png
 
 coverage_outputs/htmlcov
 coverage_outputs/*.gcov
+coverage_outputs/*.gcda
+coverage_outputs/*.gcno
 coverage_outputs/*.xml
 coverage_outputs/codecov
 coverage_outputs/.coverage
@@ -135,3 +138,9 @@ examples/LOFAR_LBA_NCP/*.ms
 examples/LOFAR_LBA_NCP/MWA_phase1
 examples/LOFAR_LBA_NCP/*.ini
 examples/LOFAR_LBA_NCP/*.osm
+
+coverage_outputs/out
+coverage_outputs/C_coverage
+coverage_outputs/python_coverage
+
+*callgrind*

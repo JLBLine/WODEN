@@ -10,10 +10,6 @@ import concurrent.futures
 from line_profiler import profile
 import os
 import astropy
-##Are we just making online documentation? If so, don't import everybeam
-##Installing everybeam is non-trivial, so trying to get readthedocs to install
-##it is a waste of time
-read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
 
 
 from wodenpy.wodenpy_setup.run_setup import check_for_library
@@ -39,12 +35,6 @@ if have_everybeam:
     import everybeam as eb
 else:
     eb = EB_fake()
-
-# if read_the_docs_build:
-
-#     eb = EB_fake()
-# else:
-#     import everybeam as eb
 
 ##This call is so we can use it as a type annotation
 woden_struct_classes = Woden_Struct_Classes()
@@ -379,6 +369,8 @@ def run_everybeam(ras: np.ndarray, decs: np.ndarray,
     np.ndarray
         The calculated Jones matrices with shape (num_stations, num_times, num_freqs, num_coords, 2, 2).
     """
+    
+    # print("YO MR WHITE", type(telescope))
     
     num_stations = len(station_ids)
     num_times = len(times)
