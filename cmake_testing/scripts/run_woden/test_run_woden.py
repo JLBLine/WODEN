@@ -126,7 +126,7 @@ class Test(unittest.TestCase):
             
         self.num_time_steps = 1
         self.num_freq_channels = 16
-        # self.int_jd = 2458647.0
+        # self.jd_midnight = 2458646.5
         # self.gitlabel = 'as987has'
         self.XYZ_array = np.zeros(self.num_antennas*3)
         self.XYZ_array.shape = (self.num_antennas, 3)

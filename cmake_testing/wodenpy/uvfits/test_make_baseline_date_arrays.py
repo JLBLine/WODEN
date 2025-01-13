@@ -25,12 +25,15 @@ class Test(unittest.TestCase):
                                         259, 260, 515, 516, 772, 258, 259,
                                         260, 515, 516, 772])
 
+        ##These numbers we made when we used to take the floor of the JD date
+        ##This was fixed to find the midnight of the obs, which always ends in 0.5
+        ##Hence the +0.5
         expected_dates = np.array([0.04459490726, 0.04459490726, 0.04459490726,
                                    0.04459490726, 0.04459490726, 0.04459490726,
                                    0.04461805541, 0.04461805541, 0.04461805541,
                                    0.04461805541, 0.04461805541, 0.04461805541,
                                    0.04464120356, 0.04464120356, 0.04464120356,
-                                   0.04464120356, 0.04464120356, 0.04464120356])
+                                   0.04464120356, 0.04464120356, 0.04464120356]) + 0.5
 
         ##Check the outputs are within 1e-10 of expected values
         self.assertTrue(np.allclose(expected_baselines, baselines_array, atol=1e-10))
@@ -69,7 +72,7 @@ class Test(unittest.TestCase):
                                    0.04464120356, 0.04464120356, 0.04464120356,
                                    0.04464120356, 0.04464120356, 0.04464120356,
                                    0.04464120356, 0.04464120356, 0.04464120356,
-                                   0.04464120356])
+                                   0.04464120356]) + 0.5
 
         ##Check the outputs are within 1e-10 of expected values
         self.assertTrue(np.allclose(expected_baselines, baselines_array, atol=1e-10))

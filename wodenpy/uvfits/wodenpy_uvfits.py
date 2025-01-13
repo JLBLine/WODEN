@@ -180,7 +180,7 @@ def create_uvfits(v_container=None,freq_cent=None,
                   longitude=None, latitude=None, array_height=None,
                   telescope_name=None,
                   baselines_array=None, date_array=None,
-                  int_jd=None, hdu_ant=None, gitlabel=False,
+                  jd_midnight=None, hdu_ant=None, gitlabel=False,
                   IAU_order=False, comment=False):
     """
     Takes visibility data read in from WODEN binary files, predefined
@@ -232,8 +232,8 @@ def create_uvfits(v_container=None,freq_cent=None,
         Baseline coding needed for 'BASELINE' array
     date_array : float array
         Fractional julian date array to put in 'DATE' array (days)
-    int_jd : int
-        Integer julian date to put in the header as 'PZERO4'
+    jd_midnight : int
+        JD date at midnight of the observation; goes into header value 'PZERO4'
     hdu_ant : `astropy.io.fits.hdu.table.BinTableHDU`
         Populated uvfits antenna table
     gitlabel : string
@@ -298,7 +298,7 @@ def create_uvfits(v_container=None,freq_cent=None,
     uvhdu.header['PSCAL3'] = 1.0
     uvhdu.header['PZERO3'] = 0.0
     uvhdu.header['PSCAL4'] = 1.0
-    uvhdu.header['PZERO4'] = float(int_jd)
+    uvhdu.header['PZERO4'] = float(jd_midnight)
     uvhdu.header['PSCAL5'] = 1.0
     uvhdu.header['PZERO5'] = 0.0
     uvhdu.header['PSCAL6'] = 1.0
@@ -420,10 +420,10 @@ def make_baseline_date_arrays(num_antennas, date, num_time_steps, time_res,
                 template_baselines[baseline_ind] = RTS_encode_baseline(b1+1, b2+1)
                 baseline_ind += 1
 
-    ##Calculate the Julian date, which get's split up into the header (int_jd)
+    ##Calculate the Julian date, which get's split up into the header (jd_midnight)
     ##and DATE array (float_jd)
     ##array in the
-    int_jd, float_jd = calc_jdcal(date)
+    jd_midnight, float_jd = calc_jdcal(date)
 
     ##Need an array the length of number of baselines worth of the fractional jd date
     float_jd_array = np.ones(num_baselines)*float_jd

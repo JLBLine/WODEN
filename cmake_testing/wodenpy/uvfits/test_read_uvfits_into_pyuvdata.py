@@ -29,7 +29,7 @@ class Test(unittest.TestCase):
         self.num_baselines = int(((self.num_antennas - 1)*self.num_antennas) / 2)
         self.num_time_steps = 2
         self.num_freq_channels = 3
-        self.int_jd = 2458647.0
+        self.jd_midnight = 2458646.5
         self.gitlabel = 'as987has'
         self.XYZ_array = np.arange(self.num_antennas*3)
         self.XYZ_array.shape = (self.num_antennas, 3)
@@ -75,7 +75,7 @@ class Test(unittest.TestCase):
         ##Repeat the baseline pairs for as many timesteps as necessary
         baselines_array = np.tile(baselines, self.num_time_steps)
 
-        date_array = np.ones(self.num_time_steps*self.num_baselines)*0.04458333319
+        date_array = np.ones(self.num_time_steps*self.num_baselines)*0.54458333319
         ##Add a second of time onto the second half of the date array
         date_array[self.num_baselines:] += (1 / (24.0*60.0*60.0))
 
@@ -83,7 +83,7 @@ class Test(unittest.TestCase):
                   central_freq_chan=self.central_freq_chan,
                   ra_point=self.ra_point, dec_point=self.dec_point,
                   output_uvfits_name=self.output_uvfits_name,
-                  int_jd=self.int_jd, gitlabel=self.gitlabel,
+                  jd_midnight=self.jd_midnight, gitlabel=self.gitlabel,
                   v_container=v_container,
                   uu=uu, vv=vv, ww=ww,
                   baselines_array=baselines_array, date_array=date_array,

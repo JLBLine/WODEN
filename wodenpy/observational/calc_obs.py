@@ -19,8 +19,9 @@ def calc_jdcal(date):
 
     Returns
     -------
-    jd_day : float
-        floor of the julian date
+    jd_midnight : float
+        midnight value of the julian date, which is the UVFITS standard
+        to go into the header
     jd_fraction : float
         remaining fraction of the julian date
 
@@ -28,13 +29,16 @@ def calc_jdcal(date):
 
     t = Time(date)
     jd = t.jd
-
-    jd_day = np.floor(jd)
-    jd_fraction = (jd - jd_day)
+    
+    ##Get the midnight value of the julian date
+    midnight = Time(t.datetime.date().isoformat())
+    jd_midnight = midnight.jd
+    
+    jd_fraction = (jd - jd_midnight)
 
     ##The header of the uvdata file takes the integer, and
-    ##then the fraction goes into the data array for PTYPE5
-    return jd_day, jd_fraction
+    ##then the fraction goes into the data array for PTYPE4
+    return jd_midnight, jd_fraction
 
 def get_uvfits_date_and_position_constants(latitude=None,longitude=None,
                                            date=None,height=None):

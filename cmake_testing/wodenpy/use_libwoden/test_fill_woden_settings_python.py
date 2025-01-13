@@ -66,7 +66,7 @@ class Test(unittest.TestCase):
     
     def make_basic_inputs(self, precision):
         """Make some basis input arguments for `rw.write_json`"""
-        self.jd_date = 2458647.044583333
+        self.jd_date = 2458646.544583333
         # self.json_name = json_name
         self.lst = 10.0
         self.args = PretendArgs()

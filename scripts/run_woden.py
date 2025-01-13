@@ -523,8 +523,8 @@ def main(argv=None):
     lst_deg, gst0_deg, degpdy, ut1utc = get_uvfits_date_and_position_constants(latitude=args.latitude, longitude=args.longitude,
                         height=args.array_height, date=args.date)
 
-    int_jd, float_jd = calc_jdcal(args.date)
-    jd_date = int_jd + float_jd
+    jd_midnight, float_jd = calc_jdcal(args.date)
+    jd_date = jd_midnight + float_jd
 
     ##Check the uvfits prepend to make sure we end in .uvfits
     output_uvfits_prepend = args.output_uvfits_prepend
@@ -716,7 +716,7 @@ def main(argv=None):
                           uu=uus, vv=vvs, ww=wws, baselines_array=baselines_array,
                           date_array=date_array,
                           central_freq_chan=central_freq_chan,
-                          ch_width=args.freq_res, int_jd=int_jd,
+                          ch_width=args.freq_res, jd_midnight=jd_midnight,
                           hdu_ant=hdu_ant, gitlabel=gitlabel,
                           longitude=args.longitude, latitude=args.latitude,
                           array_height=args.array_height,
