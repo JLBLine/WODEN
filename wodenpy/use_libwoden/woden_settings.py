@@ -7,7 +7,8 @@ from wodenpy.array_layout.precession import RTS_Precess_LST_Lat_to_J2000
 from wodenpy.use_libwoden.beam_settings import BeamTypes, BeamGroups
 import numpy as np
 import argparse
-
+from logging import Logger
+from wodenpy.wodenpy_setup.woden_logger import simple_logger
 from ctypes import c_double, c_float, c_int, POINTER, c_ulong, c_char, create_string_buffer, c_uint, c_long, c_uint64
 
 D2R = np.pi/180.0
@@ -148,7 +149,9 @@ def create_woden_settings_struct(precision : str = "double"):
         :cvar c_int use_dipamps:  Boolean of whether to use dipole amplitudes, so have an individual beam per tile  (0 False, 1 True)
         :cvar POINTER(c_double) mwa_dipole_amps: Bespoke MWA dipole amplitudes for each antenna(tile). Should be 2*num_ants*16 long
         :cvar c_int single_everybeam_station: If using everybeam, add this to say we are only using a single station
-        :cvar c_int off_cardinal_dipoles: Boolean of whether to use off-cardinal dipole equations to apply the beams gains to the Stokes IQUV parameters:cvar :cvar c_int use_gpu: Boolean of whether to use the GPU or not (0 False, 1 True)
+        :cvar c_int off_cardinal_dipoles: Boolean of whether to use off-cardinal dipole equations to apply the beams gains to the Stokes IQUV parameters
+        :cvar c_int use_gpu: Boolean of whether to use the GPU or not (0 False, 1 True)
+        :cvar c_int verbose: Boolean of whether to do verbose logging or not (0 False, 1 True)
         """
         
         _fields_ = [("lst_base", c_double),
@@ -195,7 +198,8 @@ def create_woden_settings_struct(precision : str = "double"):
                     ("mwa_dipole_amps", POINTER(c_double)),
                     ("single_everybeam_station", c_int),
                     ("off_cardinal_dipoles", c_int),
-                    ("do_gpu", c_int)]
+                    ("do_gpu", c_int),
+                    ("verbose", c_int)]
         
     return Woden_Settings
 
@@ -203,7 +207,7 @@ def create_woden_settings_struct(precision : str = "double"):
 Woden_Settings = create_woden_settings_struct()
     
 def fill_woden_settings_python(args : argparse.Namespace,
-                               jd_date : float, lst : float) -> Woden_Settings_Python:  ## type: ignore
+                               jd_date : float, lst : float):
     """Given the parsed and checked arguments in `args`, populate a
     `woden_settings` ctypes.Structure that can be passed into
     libwoden_float.so or libwoden_double.so, depending on the desired
@@ -264,7 +268,6 @@ def fill_woden_settings_python(args : argparse.Namespace,
         
         delays = np.array(args.MWA_FEE_delays.strip('[]').split(','))
         num_delays = len(delays)*num_beams
-        # woden_settings.FEE_ideal_delays = (ctypes.c_int*num_delays)()
         woden_settings.FEE_ideal_delays = np.empty(num_delays, dtype=np.int32)
         
         for delay_ind, delay in enumerate(delays):
@@ -283,7 +286,6 @@ def fill_woden_settings_python(args : argparse.Namespace,
 
     elif args.primary_beam == 'MWA_FEE':
         woden_settings.beamtype = BeamTypes.FEE_BEAM.value
-        # woden_settings.hdf5_beam_path = create_string_buffer(args.hdf5_beam_path.encode('utf-8'))
         woden_settings.hdf5_beam_path = args.hdf5_beam_path
         
     elif args.primary_beam == 'EDA2':
@@ -315,11 +317,6 @@ def fill_woden_settings_python(args : argparse.Namespace,
     woden_settings.chunking_size = int(args.chunking_size)
     
     woden_settings.num_bands = len(args.band_nums)
-    # woden_settings.band_nums = (ctypes.c_int*woden_settings.num_bands)()
-    
-    # for ind, band in enumerate(args.band_nums):
-    #     woden_settings.band_nums[ind] = int(band)
-    
     woden_settings.band_nums = np.array(args.band_nums, dtype=np.int32)
     
     ##Are we using dipole amplitudes?
@@ -327,13 +324,9 @@ def fill_woden_settings_python(args : argparse.Namespace,
     
     ##If so, populate the array
     if args.use_MWA_dipamps:
-        ##Assign le-memory
-        # woden_settings.mwa_dipole_amps = (ctypes.c_double*len(args.dipamps))()
-        # ##again, this is ctypes, so we need to populate it with a loop
-        # for ind, amplitude in enumerate(args.dipamps):
-        #         woden_settings.mwa_dipole_amps[ind] = amplitude
-        
         woden_settings.mwa_dipole_amps = args.dipamps.astype(np.float64)
+    else:
+        woden_settings.mwa_dipole_amps = np.ones(16, dtype=np.float64)
     
     if np.isnan(args.station_id):
         woden_settings.single_everybeam_station = 0
@@ -350,9 +343,12 @@ def fill_woden_settings_python(args : argparse.Namespace,
     else:
         woden_settings.do_gpu = 1
         
+    woden_settings.verbose = args.verbose
+        
     return woden_settings
     
-def setup_lsts_and_phase_centre(woden_settings_python : Woden_Settings_Python) -> Union[np.ndarray, np.ndarray]: # type: ignore
+def setup_lsts_and_phase_centre(woden_settings_python : Woden_Settings_Python,
+                                logger : Logger = False) -> Union[np.ndarray, np.ndarray]: # type: ignore
     """
     Calculate the Local Sidereal Time (LST) for each time step of an observation,
     and set the phase centre coordinates. If `woden_settings.do_precession == True`,
@@ -373,13 +369,15 @@ def setup_lsts_and_phase_centre(woden_settings_python : Woden_Settings_Python) -
         there should be tiny differences).
 
     """
+    
+    if not logger:
+        logger = simple_logger()
 
     ##Used for calculating l,m,n for components
     woden_settings_python.sdec0 = np.sin(woden_settings_python.dec0)
     woden_settings_python.cdec0 = np.cos(woden_settings_python.dec0)
 
-    print("Setting phase centre RA,DEC {:.5f}deg {:.5f}deg".format(woden_settings_python.ra0/DD2R, woden_settings_python.dec0/DD2R))
-
+    logger.info("Setting phase centre RA,DEC {:.5f}deg {:.5f}deg".format(woden_settings_python.ra0/DD2R, woden_settings_python.dec0/DD2R))
     
     ##Calculate all lsts for this observation
     ##Used in some python calcs later, and by the C code, so store a ctypes
@@ -420,10 +418,10 @@ def setup_lsts_and_phase_centre(woden_settings_python : Woden_Settings_Python) -
             woden_settings_python.latitudes[time_step] = latitude_J2000
 
             if (time_step == 0):
-                print("Obs epoch initial LST was {:.10f} deg".format(lst_current/D2R) )
-                print("Setting initial J2000 LST to {:.10f} deg".format(lst_J2000/D2R) )
-                print("Setting initial mjd to {:.10f}".format(woden_settings_python.mjds[time_step]) )
-                print("After precession initial latitude of the array is {:.10f} deg".format(latitude_J2000/D2R) )
+                logger.info("Obs epoch initial LST was {:.10f} deg".format(lst_current/D2R) )
+                logger.info("Setting initial J2000 LST to {:.10f} deg".format(lst_J2000/D2R) )
+                logger.info("Setting initial mjd to {:.10f}".format(woden_settings_python.mjds[time_step]) )
+                logger.info("After precession initial latitude of the array is {:.10f} deg".format(latitude_J2000/D2R) )
                 woden_settings_python.lst_base = lst_J2000
                 woden_settings_python.latitude = latitude_J2000
     
@@ -433,7 +431,7 @@ def setup_lsts_and_phase_centre(woden_settings_python : Woden_Settings_Python) -
             woden_settings_python.lsts[time_step] = lst_current
             woden_settings_python.latitudes[time_step] = woden_settings_python.latitude_obs_epoch_base
             if time_step == 0:
-                print("Obs epoch initial LST was {:.10f} deg\n".format(lst_current/D2R) )
+                logger.info("Obs epoch initial LST was {:.10f} deg".format(lst_current/D2R) )
         
     latitudes = np.ctypeslib.as_array(woden_settings_python.latitudes, shape=(woden_settings_python.num_time_steps, ))
     
@@ -444,14 +442,6 @@ def convert_woden_settings_to_ctypes(woden_settings_python : Woden_Settings_Pyth
     
     woden_settings_ctypes.lst_base = woden_settings_python.lst_base
     woden_settings_ctypes.lst_obs_epoch_base = woden_settings_python.lst_obs_epoch_base
-    
-    # if woden_settings_python.lst_base is None:
-    #     pass
-    # else:
-        
-    # if woden_settings_python.lst_obs_epoch_base is None:
-    #     pass
-    # else:
         
     woden_settings_ctypes.ra0 = woden_settings_python.ra0
     woden_settings_ctypes.dec0 = woden_settings_python.dec0
@@ -505,9 +495,9 @@ def convert_woden_settings_to_ctypes(woden_settings_python : Woden_Settings_Pyth
         woden_settings_ctypes.beamtype == BeamTypes.FEE_BEAM_INTERP.value:
         woden_settings_ctypes.hdf5_beam_path = create_string_buffer(woden_settings_python.hdf5_beam_path.encode('utf-8'))
     
-    if woden_settings_ctypes.use_dipamps:
-        woden_settings_ctypes.mwa_dipole_amps = woden_settings_python.mwa_dipole_amps.ctypes.data_as(POINTER(c_double))
+    # if woden_settings_ctypes.use_dipamps:
+    woden_settings_ctypes.mwa_dipole_amps = woden_settings_python.mwa_dipole_amps.ctypes.data_as(POINTER(c_double))
     
-    # woden_settings_python.sky_crop_type = woden_settings_ctypes.sky_crop_type
+    woden_settings_ctypes.verbose = woden_settings_python.verbose
     
     return woden_settings_ctypes

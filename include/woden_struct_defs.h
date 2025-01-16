@@ -362,6 +362,7 @@ typedef struct _woden_settings_t {
   int off_cardinal_dipoles; /*!< Boolean of whether to use off-cardinal dipole equations to
   apply the beams gains to the Stokes IQUV parameters*/
   int do_gpu; /*!< Boolean of whether to use the GPU or not (0 False, 1 True)*/
+  int verbose; /*!< Boolean of whether to print out verbose information or not (0 False, 1 True)*/
 
 } woden_settings_t;
 

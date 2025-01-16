@@ -10,10 +10,11 @@ void calculate_component_visis(e_component_type comptype,
                                int num_beams, int use_twobeams,
                                int do_gpu) {
 
-  int verbose = 0;
+  // char log_buffer[128];
+  // int log_len = sizeof log_buffer;
 
-  if (verbose == 1){
-    printf("Starting calculate_component_visis\n");
+  if (woden_settings->verbose == 1){
+    log_message("Starting calculate_component_visis");
   }
 
   int num_components;
@@ -45,8 +46,8 @@ void calculate_component_visis(e_component_type comptype,
     mem_beam_gains->use_twobeams = 0;
   }
 
-  if (verbose == 1){
-    printf("\tExtrapolating fluxes and beams...\n");
+  if (woden_settings->verbose == 1){
+    log_message("\tExtrapolating fluxes and beams...");
   }
   source_component_common(woden_settings, beam_settings,
                           mem_calc_visi_inouts->freqs,
@@ -62,9 +63,9 @@ void calculate_component_visis(e_component_type comptype,
     mem_components = mem_chunked_source->shape_components;
   }
 
-  if (verbose == 1){
-    printf("\tExtrapolating fluxes and beams done.\n");
-    printf("\tDoing visi kernel...\n");
+  if (woden_settings->verbose == 1){
+    log_message("\tExtrapolating fluxes and beams done.");
+    log_message("\tDoing visi kernel...");
   }
   
   if (comptype == POINT || comptype == GAUSSIAN){
@@ -96,8 +97,8 @@ void calculate_component_visis(e_component_type comptype,
                               beam_settings->beamtype, woden_settings);
     }
   } //end else it's a shapelet
-  if (verbose == 1){
-      printf("\tVisi kernel done\n");
+  if (woden_settings->verbose == 1){
+      log_message("\tVisi kernel done");
     }
  
   if (do_gpu == 1){
@@ -111,8 +112,8 @@ void calculate_component_visis(e_component_type comptype,
     free_beam_gains_cpu(mem_beam_gains, beam_settings->beamtype);
     free(mem_beam_gains);
   }
-  if (verbose == 1){
-    printf("Finished calculate_component_visis\n");
+  if (woden_settings->verbose == 1){
+    log_message("Finished calculate_component_visis");
   }
 }
 
@@ -122,9 +123,8 @@ void calculate_visibilities(array_layout_t *array_layout,
   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
   user_precision_t *sbf) {
 
-    // printf("WE IS DOING THE THING\n");
-
-  int verbose = 0;
+  char log_buffer[128];
+  int log_len = sizeof log_buffer;
 
   //Boolean for if we are using two beams per visibility or assuming all
   //beams are the same
@@ -200,19 +200,11 @@ void calculate_visibilities(array_layout_t *array_layout,
 
     uint32_t num_amps;
 
-    //32 means we have amplitudes for both X and Y
     if (use_twobeams == 0) {
       num_amps = 16;
-      double mwa_dipole_amps[16] = {1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,
-                                    1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0};
-      woden_settings->mwa_dipole_amps = mwa_dipole_amps;
-      printf("HIP needs this printf otherwise it doesnt work\n");
 
     } else {
       num_amps = 32;
-      //woden_settings->mwa_dipole_amps should already have been set so
-      //leave it alone
-      //TODO set this outside of calculate_visibilities
     }
 
     uint8_t norm_to_zenith = 1;
@@ -230,7 +222,7 @@ void calculate_visibilities(array_layout_t *array_layout,
 
       if (status != 0) {
         // handle_hyperbeam_error(__FILE__, __LINE__, "new_gpu_fee_beam");
-        printf("Something went wrong launching new_gpu_fee_beam\n");
+        log_message("WARNING - Something went wrong launching new_gpu_fee_beam");
       }
     }
   }
@@ -243,12 +235,12 @@ void calculate_visibilities(array_layout_t *array_layout,
     source_t *mem_chunked_source;
     //If doing GPU, we have to copy contents across to GPU mem
     if (do_gpu == 1) {
-      if (verbose == 1){
-        printf("About to copy the chunked source to the GPU\n");
+      if (woden_settings->verbose == 1){
+        log_message("About to copy the chunked source to the GPU");
       }
       mem_chunked_source = copy_chunked_source_to_GPU(source);
-      if (verbose == 1){
-        printf("Have copied across the chunk to the GPU\n");
+      if (woden_settings->verbose == 1){
+        log_message("Have copied across the chunk to the GPU");
       }
     //If doing CPU, we can just use the source directly
     } else {
@@ -259,12 +251,16 @@ void calculate_visibilities(array_layout_t *array_layout,
 
     //TODO setup some kind of logging and have an option to silence all this
     //printed output
-    if (verbose == 1){
-      printf("Processing chunk %d\n", chunk);
-      printf("\tNumber of components in chunk are: P %d G %d S_coeffs %d\n",
-                source->n_points,
-                source->n_gauss,
-                source->n_shape_coeffs );
+    if (woden_settings->verbose == 1){
+      snprintf(log_buffer, log_len, "Processing chunk %d", chunk);
+      log_message(log_buffer);
+
+      snprintf(log_buffer, log_len,
+              "\tNumber of components in chunk are: P %d G %d S_coeffs %d",
+              source->n_points,
+              source->n_gauss,
+              source->n_shape_coeffs );
+      log_message(log_buffer);
     }
 
     if (do_gpu == 1) {
@@ -328,8 +324,8 @@ void calculate_visibilities(array_layout_t *array_layout,
     int num_shapes = source->n_shapes;
 
     if (num_points > 0) {
-      if (verbose == 1){
-        printf("\tDoing point components\n");
+      if (woden_settings->verbose == 1){
+        log_message("\tDoing point components");
       }
       //The zero in this input is number of shaelet coefficients, as obviously
       //there are none for point sources
@@ -337,19 +333,11 @@ void calculate_visibilities(array_layout_t *array_layout,
                                beam_settings, source, mem_chunked_source,
                                mem_visibility_set, num_beams, use_twobeams, do_gpu);
 
-      // printf("CPU inside %.3f\n", mem_visibility_set->sum_visi_XX_real[0]);
-      // printf("CPU inside %.3f\n", mem_visibility_set->sum_visi_XX_imag[0]);
-      // printf("CPU inside %.3f\n", mem_visibility_set->sum_visi_XY_real[0]);
-      // printf("CPU inside %.3f\n", mem_visibility_set->sum_visi_XY_imag[0]);
-      // printf("CPU inside %.3f\n", mem_visibility_set->sum_visi_YX_real[0]);
-      // printf("CPU inside %.3f\n", mem_visibility_set->sum_visi_YX_imag[0]);
-      // printf("CPU inside %.3f\n", mem_visibility_set->sum_visi_YY_real[0]);
-      // printf("CPU inside %.3f\n", mem_visibility_set->sum_visi_YY_imag[0]);
     }//if point sources
 
     if (num_gauss > 0) {
-      if (verbose == 1){
-        printf("\tDoing Gaussian components\n");
+      if (woden_settings->verbose == 1){
+        log_message("\tDoing Gaussian components");
       }
       calculate_component_visis(GAUSSIAN, mem_calc_visi_inouts, woden_settings,
                                beam_settings, source, mem_chunked_source,
@@ -357,8 +345,8 @@ void calculate_visibilities(array_layout_t *array_layout,
     }//if gauss sources
 
     if (num_shapes > 0) {
-      if (verbose == 1){
-        printf("\tDoing shapelet components\n");
+      if (woden_settings->verbose == 1){
+        log_message("\tDoing shapelet components");
       }
 
       if (do_gpu == 1) {
@@ -390,8 +378,6 @@ void calculate_visibilities(array_layout_t *array_layout,
                                 chunk_visibility_set, num_visis);
     } else {
       for (int visi = 0; visi < num_visis; visi++) {
-        // // printf("wut %.1f\n", mem_calc_visi_inouts->w_metres[visi]);
-        // printf("wut2 %.1f\n", chunk_visibility_set->ws_metres[visi]);
         chunk_visibility_set->us_metres[visi] = mem_calc_visi_inouts->u_metres[visi];
         chunk_visibility_set->vs_metres[visi] = mem_calc_visi_inouts->v_metres[visi];
         chunk_visibility_set->ws_metres[visi] = mem_calc_visi_inouts->w_metres[visi];
@@ -403,9 +389,6 @@ void calculate_visibilities(array_layout_t *array_layout,
         chunk_visibility_set->sum_visi_YX_imag[visi] = mem_visibility_set->sum_visi_YX_imag[visi];
         chunk_visibility_set->sum_visi_YY_real[visi] = mem_visibility_set->sum_visi_YY_real[visi];
         chunk_visibility_set->sum_visi_YY_imag[visi] = mem_visibility_set->sum_visi_YY_imag[visi];
-        // if (visi == 0){
-        // printf("CPU %.3f %.3f\n", chunk_visibility_set->us_metres[visi], chunk_visibility_set->sum_visi_XX_real[visi]);
-        // }
       }
     }
 

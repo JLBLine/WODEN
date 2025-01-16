@@ -9,6 +9,7 @@ set(CPU "cpu")
 
 ##Flags to make C code compile in WODEN float or double modes
 set(FLOAT_C_FLAGS -Wall -g -lm )
+# set(DOUBLE_C_FLAGS -O3 -march=native -Wall -g -lm -DDOUBLE_PRECISION)
 set(DOUBLE_C_FLAGS -Wall -g -lm -DDOUBLE_PRECISION)
 
 ##Flags to make C code compile in WODEN float or double modes,

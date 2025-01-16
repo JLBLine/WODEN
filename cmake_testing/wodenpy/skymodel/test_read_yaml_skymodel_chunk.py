@@ -27,8 +27,6 @@ from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classe
 from wodenpy.skymodel.read_fits_skymodel import read_fits_skymodel_chunks
 
 D2R = np.pi/180.0
-# MWA_LATITUDE = -26.7*D2R
-
 MWA_LAT = -26.703319405555554*D2R
 
 ##for now, WODEN has three flux types: power law, curved power law, and list

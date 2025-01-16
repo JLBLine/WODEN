@@ -90,7 +90,7 @@ class BuildPyCommand(_build_py):
 
 setup(
     name = "wodenpy",
-    version = '2.4.0',
+    version = '2.5.0',
     author = "Jack L. B. Line",
     url = "https://github.com/JLBLine/WODEN",
     python_requires=">=3.7",

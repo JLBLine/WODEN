@@ -30,15 +30,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     target_compile_options(calculate_visibilities_GPU_${PRECISION} PRIVATE ${GPU_FLAGS})
 
     add_library(calculate_visibilities_CPU_${PRECISION} SHARED
-        ${CMAKE_SOURCE_DIR}/src/beam_settings.c
-        ${CMAKE_SOURCE_DIR}/src/calculate_visibilities_common.c
-        ${CMAKE_SOURCE_DIR}/src/calculate_visibilities_cpu.c
-        ${CMAKE_SOURCE_DIR}/src/source_components_common.c
-        ${CMAKE_SOURCE_DIR}/src/source_components_cpu.c
-        ${CMAKE_SOURCE_DIR}/src/visibility_set.c
-        ${CMAKE_SOURCE_DIR}/src/shapelet_basis.c
-        ${CMAKE_SOURCE_DIR}/src/fundamental_coords_cpu.c
-        ${CMAKE_SOURCE_DIR}/src/primary_beam_cpu.c)
+                ${CSOURCES})
     target_link_libraries(calculate_visibilities_CPU_${PRECISION} gcov ${CC_LINKLIBS})
     target_compile_options(calculate_visibilities_CPU_${PRECISION} PRIVATE ${C_COVER_FLAGS})
 

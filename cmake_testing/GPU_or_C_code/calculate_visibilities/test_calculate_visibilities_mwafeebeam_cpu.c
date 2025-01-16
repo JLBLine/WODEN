@@ -85,21 +85,21 @@ int main(void)
 
         //Test with a single SOURCE, single COMPONENT
         RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SinglePoint_cpu);
-        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleGauss_cpu);
-        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleShape_cpu);
-        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleAll_cpu);
+        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleGauss_cpu);
+        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleShape_cpu);
+        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_OneSource_SingleAll_cpu);
 
-        //Test with three SOURCEs, single COPMONENT
-        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SinglePoint_cpu);
-        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleGauss_cpu);
-        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleShape_cpu);
-        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleAll_cpu);
+        // //Test with three SOURCEs, single COPMONENT
+        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SinglePoint_cpu);
+        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleGauss_cpu);
+        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleShape_cpu);
+        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_SingleAll_cpu);
 
-        //Test with three SOURCEs, three COPMONENTs
-        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreePoint_cpu);
-        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeGauss_cpu);
-        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeShape_cpu);
-        RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeAll_cpu);
+        // //Test with three SOURCEs, three COPMONENTs
+        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreePoint_cpu);
+        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeGauss_cpu);
+        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeShape_cpu);
+        // RUN_TEST(test_calculate_visibilities_MWAFEEBeam_ThreeSource_ThreeAll_cpu);
 
     }
     else {

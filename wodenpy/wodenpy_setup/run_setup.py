@@ -12,6 +12,9 @@ import argparse
 from argparse import RawTextHelpFormatter
 import importlib.util
 from wodenpy.use_libwoden.beam_settings import BeamTypes, BeamGroups
+import time
+from pathlib import Path
+import logging
 
 def get_parser():
     """
@@ -220,9 +223,6 @@ def get_parser():
     sim_group.add_argument('--precision', default='double',
         help='What precision to run WODEN at. Options are "double" or "float". '
              'Defaults to "double"')
-    sim_group.add_argument('--no_tidy', default=False, action='store_true',
-        help='Defaults to deleting output binary files from woden and json '
-             'files. Add this flag to not delete those files')
     sim_group.add_argument('--chunking_size', type=float, default=1e10,
         help='The chunk size to break up the point sources into for processing '
              '- defaults to 1e10')
@@ -232,7 +232,17 @@ def get_parser():
     sim_group.add_argument('--remove_phase_tracking', default=False, action='store_true',
         help='By adding this flag, remove the phase tracking of the '
              'visibilities - use this to feed uvfits into the RTS')
-    sim_group.add_argument('--profile', default=False, action='store_true',
+    
+    
+    
+    logging_group = parser.add_argument_group('LOGGING OPTIONS')
+    logging_group.add_argument('--verbose', default=False, action='store_true',
+        help='Add to increase the verbosity of the logging. Extra information '
+             'will be prefaced with DEBUG')
+    logging_group.add_argument('--save_log', default=False, action='store_true',
+        help='By default, WODEN just logs to stdout. Add this flag to save a '
+             'log file to disk')
+    logging_group.add_argument('--profile', default=False, action='store_true',
         help='By adding this flag, profile the WODEN code using line_profiler '
              'Must also run the code via `LINE_PROFILE=1 run_woden.py`')
 
@@ -848,6 +858,33 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     if args.num_threads == 0:
         args.num_threads = psutil.cpu_count(logical=False)
         
+    ##Check that the uvfits prepend doesn't end in uvfits, as we tack that on
+    ##the end ourselves
+    output_uvfits_prepend = args.output_uvfits_prepend
+    if output_uvfits_prepend[-7:] == '.uvfits':
+        args.output_uvfits_prepend = output_uvfits_prepend[-7:]
+        
+    ##Check that the output directory exists, if not make it
+    uvfits_path = Path(args.output_uvfits_prepend)
+    output_dir = uvfits_path.parent.absolute()
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        
+    if args.verbose:
+        args.log_level = logging.DEBUG
+    else:
+        args.log_level = logging.INFO
+        
+    if args.save_log:
+        
+        run_time = time.localtime()
+        log_time = time.strftime("%Y_%m_%d_%H_%M_%S", run_time)
+        
+        band_num_string = ",".join(f"{num:02}" for num in args.band_nums)
+        
+        args.log_file_name = Path(f"woden_{log_time}_{args.output_uvfits_prepend}_band{band_num_string}.log")
+    else:
+        args.log_file_name = False
         
     return args
 
@@ -873,6 +910,6 @@ def get_code_version():
         except AttributeError:
             version = "No git describe nor __version__ avaible"
     
-    print(f"You are using WODEN commit: {version}")
+    # print(f"You are using WODEN commit: {version}")
 
     return version

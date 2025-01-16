@@ -29,6 +29,8 @@ from wodenpy.uvfits import wodenpy_uvfits
 import run_woden as rw
 import numpy.testing as npt
 
+from multiprocessing import Manager, set_start_method
+
 def get_lon(inputs, lon):
     """Every time they update astropy, the exact values of LST seems to change
     This is worrying and annoying as hell. So here I come up with a way to 
@@ -175,12 +177,20 @@ class Test(unittest.TestCase):
         args.append("--telescope_name=test")
         args.append("--no_precession")
         args.append("--num_threads=1")
+        args.append("--save_log")
+        
+        ##Miiiiight give us a speed up on Linux??
+        try:
+            set_start_method("forkserver")  # Alternatives: "spawn" or "forkserver"
+        except RuntimeError:
+            # Start method is already set in some environments like Jupyter
+            pass
 
         rw.main(args)
         
         self.check_uvfits_contents("test_run_woden_band01.uvfits")
         
-        ##do it again in CPU mode
+        # ##do it again in CPU mode
         args.append("--cpu_mode")
         rw.main(args)
         self.check_uvfits_contents("test_run_woden_band01.uvfits")
@@ -282,7 +292,6 @@ class Test(unittest.TestCase):
         args.append("--no_precession")
         args.append("--do_autos")
         args.append("--num_threads=3")
-        # args.append("--num_threads=3")
 
         rw.main(args)
         
@@ -327,4 +336,4 @@ class Test(unittest.TestCase):
 
 ##Run the test
 if __name__ == '__main__':
-   unittest.main()
+    unittest.main()

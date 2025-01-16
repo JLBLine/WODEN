@@ -3,6 +3,8 @@ import erfa
 from enum import Enum, auto
 from typing import Union, Tuple
 import os
+from logging import Logger
+from wodenpy.wodenpy_setup.woden_logger import simple_logger
 
 D2R = np.pi / 180.0
 
@@ -588,65 +590,70 @@ class Component_Type_Counter():
                                + self.num_lin_shape_pol_fracs + self.num_lin_shape_lists \
                                + self.num_lin_shape_p_lists
             
+    def info_string(self):
+        """Return a string with the total counts of all components"""
         
+        info_string = "Total Point components: {}\n".format(self.total_point_comps)
+        info_string += "\tPoint Stokes I power-laws: {}\n".format(self.num_point_flux_powers)
+        info_string += "\tPoint Stokes I curved power-laws: {}\n".format(self.num_point_flux_curves)
+        info_string += "\tPoint Stokes I listed fluxes: {}\n".format(self.num_point_flux_lists)
+        if self.num_lin_point > 0:
+            info_string += "\tPoint Linear Pol power-laws: {}\n".format(self.num_lin_point_powers)
+            info_string += "\tPoint Linear Pol curved power-laws: {}\n".format(self.num_lin_point_curves)
+            info_string += "\tPoint Linear Pol polarisation fraction: {}\n".format(self.num_lin_point_pol_fracs)
+            info_string += "\tPoint Linear Pol Q/U listed fluxes: {}\n".format(self.num_lin_point_lists)
+            info_string += "\tPoint Linear Pol P listed fluxes: {}\n".format(self.num_lin_point_p_lists)
+        if self.num_v_point > 0:
+            info_string += "\tPoint Stokes V power-laws: {}\n".format(self.num_v_point_powers)
+            info_string += "\tPoint Stokes V curved power-laws: {}\n".format(self.num_v_point_curves)
+            info_string += "\tPoint Stokes V polarisation fraction: {}\n".format(self.num_v_point_pol_fracs)
+            info_string += "\tPoint Stokes V listed fluxes: {}\n".format(self.num_v_point_lists)
+        
+        info_string += "Total Gaussian components: {}\n".format(self.total_gauss_comps)
+        info_string += "\tGauss Stokes I power-laws: {}\n".format(self.num_gauss_flux_powers)
+        info_string += "\tGauss Stokes I curved power-laws: {}\n".format(self.num_gauss_flux_curves)
+        info_string += "\tGauss Stokes I listed fluxes: {}\n".format(self.num_gauss_flux_lists)
+        if self.num_lin_gauss > 0:
+            info_string += "\tGauss Linear Pol power-laws: {}\n".format(self.num_lin_gauss_powers)
+            info_string += "\tGauss Linear Pol curved power-laws: {}\n".format(self.num_lin_gauss_curves)
+            info_string += "\tGauss Linear Pol polarisation fraction: {}\n".format(self.num_lin_gauss_pol_fracs)
+            info_string += "\tGauss Linear Pol Q/U listed fluxes: {}\n".format(self.num_lin_gauss_lists)
+            info_string += "\tGauss Linear Pol P listed fluxes: {}\n".format(self.num_lin_gauss_p_lists)
+        if self.num_v_gauss > 0:
+            info_string += "\tGauss Stokes V power-laws: {}\n".format(self.num_v_gauss_powers)
+            info_string += "\tGauss Stokes V curved power-laws: {}\n".format(self.num_v_gauss_curves)
+            info_string += "\tGauss Stokes V polarisation fraction: {}\n".format(self.num_v_gauss_pol_fracs)
+            info_string += "\tGauss Stokes V listed fluxes: {}\n".format(self.num_v_gauss_lists)
+        info_string += "Total Shapelet components: {}\n".format(self.total_shape_comps)
+        info_string += "\tTotal Shapelet basis: {}\n".format(self.total_shape_basis)
+        info_string += "\tShape Stokes I power-laws: {}\n".format(self.num_shape_flux_powers)
+        info_string += "\tShape Stokes I curved power-laws: {}\n".format(self.num_shape_flux_curves)
+        info_string += "\tShape Stokes I listed fluxes: {}\n".format(self.num_shape_flux_lists)
+        if self.num_lin_shape > 0:
+            info_string += "\tShape Linear Pol power-laws: {}\n".format(self.num_lin_shape_powers)
+            info_string += "\tShape Linear Pol curved power-laws: {}\n".format(self.num_lin_shape_curves)
+            info_string += "\tShape Linear Pol polarisation fraction: {}\n".format(self.num_lin_shape_pol_fracs)
+            info_string += "\tShape Linear Pol Q/U listed fluxes: {}\n".format(self.num_lin_shape_lists)
+            info_string += "\tShape Linear Pol P listed fluxes: {}\n".format(self.num_lin_shape_p_lists)
+        if self.num_v_shape > 0:
+            info_string += "\tShape Stokes V power-laws: {}\n".format(self.num_v_shape_powers)
+            info_string += "\tShape Stokes V curved power-laws: {}\n".format(self.num_v_shape_curves)
+            info_string += "\tShape Stokes V polarisation fraction: {}\n".format(self.num_v_shape_pol_fracs)
+            info_string += "\tShape Stokes V listed fluxes: {}".format(self.num_v_shape_lists)
+            
+        return info_string
         
     def print_info(self):
         """Print out the totals of everything
         """
+        print(self.info_string())
         
-        print("Total Point components", self.total_point_comps)
-        print("\tPoint Stokes I power-laws", self.num_point_flux_powers)
-        print("\tPoint Stokes I curved power-laws", self.num_point_flux_curves)
-        print("\tPoint Stokes I listed fluxes", self.num_point_flux_lists)
-        if self.num_lin_point > 0:
-            print("\tPoint Linear Pol power-laws", self.num_lin_point_powers)
-            print("\tPoint Linear Pol curved power-laws", self.num_lin_point_curves)
-            print("\tPoint Linear Pol polarisation fraction", self.num_lin_point_pol_fracs)
-            print("\tPoint Linear Pol Q/U listed fluxes", self.num_lin_point_lists)
-            print("\tPoint Linear Pol P listed fluxes", self.num_lin_point_p_lists)
-        if self.num_v_point > 0:
-            print("\tPoint Stokes V power-laws", self.num_v_point_powers)
-            print("\tPoint Stokes V curved power-laws", self.num_v_point_curves)
-            print("\tPoint Stokes V polarisation fraction", self.num_v_point_pol_fracs)
-            print("\tPoint Stokes V listed fluxes", self.num_v_point_lists)
-        
-        print("Total Gaussian components", self.total_gauss_comps)
-        print("\tGauss Stokes I power-laws", self.num_gauss_flux_powers)
-        print("\tGauss Stokes I curved power-laws", self.num_gauss_flux_curves)
-        print("\tGauss Stokes I listed fluxes", self.num_gauss_flux_lists)
-        if self.num_lin_gauss > 0:
-            print("\tGauss Linear Pol power-laws", self.num_lin_gauss_powers)
-            print("\tGauss Linear Pol curved power-laws", self.num_lin_gauss_curves)
-            print("\tGauss Linear Pol polarisation fraction", self.num_lin_gauss_pol_fracs)
-            print("\tGauss Linear Pol Q/U listed fluxes", self.num_lin_gauss_lists)
-            print("\tGauss Linear Pol P listed fluxes", self.num_lin_gauss_p_lists)
-        if self.num_v_gauss > 0:
-            print("\tGauss Stokes V power-laws", self.num_v_gauss_powers)
-            print("\tGauss Stokes V curved power-laws", self.num_v_gauss_curves)
-            print("\tGauss Stokes V polarisation fraction", self.num_v_gauss_pol_fracs)
-            print("\tGauss Stokes V listed fluxes", self.num_v_gauss_lists)
-        
-        print("Total Shapelet components", self.total_shape_comps)
-        print("\tTotal Shapelet basis", self.total_shape_basis)
-        print("\tShape Stokes I power-laws", self.num_shape_flux_powers)
-        print("\tShape Stokes I curved power-laws", self.num_shape_flux_curves)
-        print("\tShape Stokes I listed fluxes", self.num_shape_flux_lists)
-        if self.num_lin_shape > 0:
-            print("\tShape Linear Pol power-laws", self.num_lin_shape_powers)
-            print("\tShape Linear Pol curved power-laws", self.num_lin_shape_curves)
-            print("\tShape Linear Pol polarisation fraction", self.num_lin_shape_pol_fracs)
-            print("\tShape Linear Pol Q/U listed fluxes", self.num_lin_shape_lists)
-            print("\tShape Linear Pol P listed fluxes", self.num_lin_shape_p_lists)
-        if self.num_v_shape > 0:
-            print("\tShape Stokes V power-laws", self.num_v_shape_powers)
-            print("\tShape Stokes V curved power-laws", self.num_v_shape_curves)
-            print("\tShape Stokes V polarisation fraction", self.num_v_shape_pol_fracs)
-            print("\tShape Stokes V listed fluxes", self.num_v_shape_lists)
         
         
 # @profile
 def crop_below_horizon(lst : float, latitude : float,
                        comp_counter : Component_Type_Counter, 
+                       logger : Logger=False,
                        crop_by_component=True) -> Component_Type_Counter:
     """
     Crop a `Component_Type_Counter` to only include components above the horizon,
@@ -685,7 +692,9 @@ def crop_below_horizon(lst : float, latitude : float,
     is returned.
 
     """
-    
+    if not logger:
+        logger = simple_logger()
+        
     ##Want numpy arrays to do maths with
     if type(comp_counter.comp_ras) == list:
         comp_counter.comp_ras = np.array(comp_counter.comp_ras)
@@ -705,7 +714,7 @@ def crop_below_horizon(lst : float, latitude : float,
     include_flags = np.zeros(comp_counter.total_comps)
     above_horizon = np.where(comp_els >= 0)[0]
     
-    print(f"Have read in {comp_counter.total_comps} components")
+    logger.info(f"Have read in {comp_counter.total_comps} components")
     
     ##If crop by COMPONENT, just include everything above the horizon
     if crop_by_component:
@@ -746,7 +755,7 @@ def crop_below_horizon(lst : float, latitude : float,
     ##re-total everything now we have changed the sizes
     comp_counter.total_components()
 
-    print(f"After cropping there are {comp_counter.total_comps} components")
+    logger.info(f"After cropping there are {comp_counter.total_comps} components")
     
     ##free some memory explicitly as these can be big arrays
     del include_flags

@@ -4,11 +4,14 @@
 import numpy as np
 import sys
 import os
+import importlib_resources
+import wodenpy
 from time import time
 import argparse
 from queue import Queue
 from threading import Thread
 from ctypes import POINTER, c_double, c_float, c_int, create_string_buffer, string_at
+import ctypes
 from typing import Union, Tuple, List
 from astropy.table import Table
 from astropy.io import fits
@@ -16,7 +19,7 @@ from wodenpy.use_libwoden.beam_settings import BeamTypes
 from wodenpy.use_libwoden.woden_settings import fill_woden_settings_python, setup_lsts_and_phase_centre, Woden_Settings_Python, convert_woden_settings_to_ctypes
 from wodenpy.use_libwoden.visibility_set import setup_visi_set_array, load_visibility_set
 from wodenpy.wodenpy_setup.run_setup import get_parser, check_args, get_code_version
-from wodenpy.use_libwoden.use_libwoden import load_in_woden_library
+from wodenpy.use_libwoden.use_libwoden import load_in_woden_library, load_in_run_woden
 from wodenpy.observational.calc_obs import get_uvfits_date_and_position_constants, calc_jdcal
 from wodenpy.skymodel.woden_skymodel import crop_below_horizon
 from wodenpy.skymodel.read_skymodel import get_skymodel_tables, read_radec_count_components, create_source_catalogue_from_python_sources
@@ -30,13 +33,15 @@ from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classe
 from wodenpy.skymodel.read_fits_skymodel import read_fits_skymodel_chunks, calc_everybeam_for_components
 from wodenpy.use_libwoden.skymodel_structs import setup_source_catalogue, Source_Python
 import concurrent.futures
-# import multiprocessing
+from logging import Logger
+import logging
 from concurrent.futures import ProcessPoolExecutor, as_completed
-
 from line_profiler import profile, LineProfiler
 from wodenpy.primary_beam.use_everybeam import run_everybeam
-
+from wodenpy.wodenpy_setup.woden_logger import main_logging_config, get_logger_from_queue, get_log_callback
+from multiprocessing import Manager, set_start_method
 from copy import deepcopy
+
 
 ##Constants
 R2D = 180.0 / np.pi
@@ -72,112 +77,8 @@ class Visi_Set_Python(object):
         self.sum_visi_YX_imag = None
         self.sum_visi_YY_real = None
         self.sum_visi_YY_imag = None
-
-def woden_thread(all_loaded_python_sources : List[List[Source_Python]],
-                 all_loaded_sources_orders : List[int], round_num : int,
-                 run_woden, woden_settings_python : Woden_Settings_Python,
-                 array_layout_python : Array_Layout_Python,
-                 visi_sets_python : List[Visi_Set_Python],
-                 woden_struct_classes : Woden_Struct_Classes,
-                 beamtype : int,
-                 precision : str = "double"):
-    """
-    This function runs WODEN C/GPU code on a separate thread, processing source catalogues from a queue until the queue is empty.
-    
-    Parameters
-    ----------
-    all_loaded_python_sources : List[List[Source_Python]]
-        A list of lists of `Source_Python` to be processed, as ouput by `read_skymodel_thread`,
-        where each list of `Source_Python` matches a chunk_map in `chunked_skymodel_map_set`.
-        Each entry is a list itself as the Shapelet chunking can result in multiple sources
-        per thread per round, as the chunking happens by sky direction as well as number of
-        shapelet coefficients.
-    all_loaded_sources_orders : List[int]
-        The order of the sources in `all_loaded_python_sources` as matched to `chunked_skymodel_map_set`;
-        orders also output by `read_skymodel_thread` (different threads finish in different times so
-        the order of the sources in `all_loaded_python_sources` may not match the order of the chunk_maps)
-    round_num : int
-        The round number of the processing
-    run_woden : _NamedFuncPointer
-        A pointer to the WODEN GPU function to be run.
-    woden_settings : Woden_Settings
-        The WODEN settings to be used.
-    array_layout : Array_Layout_Ctypes
-        The array layout to be used.
-    woden_struct_classes : Woden_Struct_Classes
-        The WODEN struct classes to be used
-    sbf : np.ndarray
-        The shapelet basis function array
-    beamtype : int
-        The value of the type of beam being used, e.g. BeamTypes.FEE_BEAM.value
-    """
-    python_sources = []
-    
-    ##grab all the python sources, and reorder/flatten them to match the order of
-    ##chunked_skymodel_maps. Not actually sure we need to do this, but if we
-    ##change this order it'll mean we have to change the order of a bunch of
-    ##tests. I don't think it costs much, and saves a bunch of developing time
-    ordering = np.argsort(all_loaded_sources_orders)
-    for order in ordering:
-        sources = all_loaded_python_sources[order]
-        for source in sources:
-            python_sources.append(source)
-            
-    # print("THIS LENGTH", len(python_sources))
-    
-    ##Create a ctypes Source_Catalogue from the python sources to feed the GPU
-    source_catalogue = create_source_catalogue_from_python_sources(python_sources,
-                                                                   woden_struct_classes,
-                                                                   beamtype, precision)
-    
-    woden_settings = woden_struct_classes.Woden_Settings()
-    woden_settings = convert_woden_settings_to_ctypes(woden_settings_python, woden_settings)
-    
-    visibility_set = setup_visi_set_array(woden_struct_classes.Visi_Set,
-                                              woden_settings.num_bands,
-                                              woden_settings.num_visis,
-                                              precision=precision)
-    
-    array_layout = Array_Layout_Ctypes()
-    array_layout = convert_array_layout_to_ctypes(array_layout_python, array_layout)
-    
-    sbf = create_sbf(precision=precision)
-    
-    if woden_settings.do_gpu:
-        print(f"Sending set {round_num} to GPU")
-    else:
-        print(f"Sending set {round_num} to CPU")
-    start = time()
-            
-    run_woden(woden_settings, visibility_set, source_catalogue, array_layout,
-                  sbf)
-    
-    
-    end = time()
-    
-    if woden_settings.do_gpu:
-        print(f"Set {round_num} has returned from the GPU after {end-start:.1f} seconds")
-    else:
-        print(f"Set {round_num} has returned from the CPU after {end-start:.1f} seconds")
-    
-    for set_ind in range(woden_settings_python.num_bands):
-        visi_set = visi_sets_python[set_ind]
-        visi_set.us_metres = deepcopy(np.ctypeslib.as_array(visibility_set[set_ind].us_metres, shape=(woden_settings_python.num_visis,)))
-        visi_set.vs_metres = deepcopy(np.ctypeslib.as_array(visibility_set[set_ind].vs_metres, shape=(woden_settings_python.num_visis,)))
-        visi_set.ws_metres = deepcopy(np.ctypeslib.as_array(visibility_set[set_ind].ws_metres, shape=(woden_settings_python.num_visis,)))
-        visi_set.sum_visi_XX_real += np.ctypeslib.as_array(visibility_set[set_ind].sum_visi_XX_real, shape=(woden_settings_python.num_visis,))
-        visi_set.sum_visi_XX_imag += np.ctypeslib.as_array(visibility_set[set_ind].sum_visi_XX_imag, shape=(woden_settings_python.num_visis,))
-        visi_set.sum_visi_XY_real += np.ctypeslib.as_array(visibility_set[set_ind].sum_visi_XY_real, shape=(woden_settings_python.num_visis,))
-        visi_set.sum_visi_XY_imag += np.ctypeslib.as_array(visibility_set[set_ind].sum_visi_XY_imag, shape=(woden_settings_python.num_visis,))
-        visi_set.sum_visi_YX_real += np.ctypeslib.as_array(visibility_set[set_ind].sum_visi_YX_real, shape=(woden_settings_python.num_visis,))
-        visi_set.sum_visi_YX_imag += np.ctypeslib.as_array(visibility_set[set_ind].sum_visi_YX_imag, shape=(woden_settings_python.num_visis,))
-        visi_set.sum_visi_YY_real += np.ctypeslib.as_array(visibility_set[set_ind].sum_visi_YY_real, shape=(woden_settings_python.num_visis,))
-        visi_set.sum_visi_YY_imag += np.ctypeslib.as_array(visibility_set[set_ind].sum_visi_YY_imag, shape=(woden_settings_python.num_visis,))
         
-    return visi_sets_python
-
-
-def woden_multithread(thread_ind : int,
+def woden_multithread(thread_ind : int, queue : Queue,
                       all_loaded_python_sources : List[List[Source_Python]],
                       all_loaded_sources_orders : List[int], round_num : int,
                       woden_settings_python : Woden_Settings_Python,
@@ -186,7 +87,7 @@ def woden_multithread(thread_ind : int,
                       beamtype : int,
                       precision : str = "double"):
     """
-    This function runs WODEN C/GPU code on a separate thread, processing source catalogues from a queue until the queue is empty.
+    This function runs WODEN CPU code on a separate thread, processing source catalogues from a queue until the queue is empty.
     
     Parameters
     ----------
@@ -219,9 +120,21 @@ def woden_multithread(thread_ind : int,
     woden_struct_classes = Woden_Struct_Classes(precision)
     
     ##Depending on what precision was selected by the user, load in the
-    ##C/CUDA library and return the `run_woden` function
-    run_woden = load_in_woden_library(woden_struct_classes)
+    # ##C/CUDA library and return the `run_woden` function
+    # run_woden = load_in_woden_library(woden_struct_classes)
     
+    logger = get_logger_from_queue(queue)
+    woden_lib_path = importlib_resources.files(wodenpy).joinpath(f"libwoden_{woden_struct_classes.precision}.so")
+    woden_lib = ctypes.cdll.LoadLibrary(woden_lib_path)
+    ##We only want to set the log callback if we are in verbose mode, as
+    ##libwoden only setup to pass things to logger if it is in verbose mode
+    ##If we set the log callback when not in verbose mode, the 'listener'
+    ##will be listening to nothing, and everything will hang
+    if woden_settings_python.verbose:
+        c_log_callback = get_log_callback(logger)
+        woden_lib.set_log_callback(c_log_callback)
+    
+    run_woden = load_in_run_woden(woden_lib, woden_struct_classes)
     
     python_sources = []
     
@@ -235,17 +148,12 @@ def woden_multithread(thread_ind : int,
         for source in sources:
             python_sources.append(source)
             
-    # ##We only use one GPU, so send all the sources to the GPU
-    # if woden_settings_python.do_gpu:
-    #     sources_to_use = python_sources
-    # ##otherwise, only send the sources to the CPU that are meant for this thread
-    # else:
-    #     sources_to_use = [python_sources[thread_ind]]
-    
-    sources_to_use = python_sources
+    if len(python_sources) == 0:
+        logger.warning(f"Visibility processing thread {thread_ind} has no work to do")
+        return visi_sets_python, thread_ind
     
     ##Create a ctypes Source_Catalogue from the python sources to feed the GPU
-    source_catalogue = create_source_catalogue_from_python_sources(sources_to_use,
+    source_catalogue = create_source_catalogue_from_python_sources(python_sources,
                                                                    woden_struct_classes,
                                                                    beamtype, precision)
     
@@ -262,26 +170,16 @@ def woden_multithread(thread_ind : int,
     
     sbf = create_sbf(precision=precision)
     
-    if woden_settings.do_gpu:
-        print(f"Sending Sky {thread_ind} set {round_num} to GPU")
-    else:
-        print(f"Sending Sky {thread_ind} set {round_num} to CPU")
+    logger.info(f"Sending Sky set {round_num} thread {thread_ind} to CPU")
     start = time()
             
     run_woden(woden_settings, visibility_set, source_catalogue, array_layout,
                   sbf)
     end = time()
     
-    if woden_settings.do_gpu:
-        print(f"Sky {thread_ind} Set {round_num} has returned from the GPU after {end-start:.1f} seconds")
-    else:
-        print(f"Sky {thread_ind} Set {round_num} has returned from the CPU after {end-start:.1f} seconds")
+    logger.info(f"Set {round_num} thread {thread_ind} has returned from the CPU after {end-start:.1f} seconds")
         
-        
-    # maybe_visi_set_python = [Visi_Set_Python() for band in range(woden_settings_python.num_bands)]
-    
     for band_ind in range(woden_settings_python.num_bands):
-        # visi_set = visi_sets_python[band_ind]
         visi_sets_python[band_ind].us_metres = deepcopy(np.ctypeslib.as_array(visibility_set[band_ind].us_metres, shape=(woden_settings_python.num_visis,)))
         visi_sets_python[band_ind].vs_metres = deepcopy(np.ctypeslib.as_array(visibility_set[band_ind].vs_metres, shape=(woden_settings_python.num_visis,)))
         visi_sets_python[band_ind].ws_metres = deepcopy(np.ctypeslib.as_array(visibility_set[band_ind].ws_metres, shape=(woden_settings_python.num_visis,)))
@@ -295,10 +193,9 @@ def woden_multithread(thread_ind : int,
         visi_sets_python[band_ind].sum_visi_YY_real += np.ctypeslib.as_array(visibility_set[band_ind].sum_visi_YY_real, shape=(woden_settings_python.num_visis,))
         visi_sets_python[band_ind].sum_visi_YY_imag += np.ctypeslib.as_array(visibility_set[band_ind].sum_visi_YY_imag, shape=(woden_settings_python.num_visis,))
         
-    # return visi_sets_python, thread_ind
-    return visi_sets_python, thread_ind
+    return visi_sets_python, thread_ind, round_num
 
-def read_skymodel_thread(thread_id : int, num_threads : int,
+def read_skymodel_thread(thread_id : int, num_threads : int, queue : Queue,
                          chunked_skymodel_map_sets: List[Skymodel_Chunk_Map],
                          lsts : np.ndarray, latitudes : np.ndarray,
                          args : argparse.Namespace,
@@ -353,6 +250,8 @@ def read_skymodel_thread(thread_id : int, num_threads : int,
     set_ind = thread_id // num_threads
     thread_num = thread_id % num_threads
     
+    logger = get_logger_from_queue(queue, args.log_level)
+    
     start = time()
     
     chunk_maps = chunked_skymodel_map_sets[set_ind][thread_num]
@@ -364,10 +263,10 @@ def read_skymodel_thread(thread_id : int, num_threads : int,
         n_s += chunk_map.n_shapes
         n_c += chunk_map.n_shape_coeffs
         
-    print(f"From Set {set_ind} thread num {thread_num} reading {n_p} points, {n_g} gauss, {n_s} shape, {n_c} shape coeffs using thread id {thread_id}")
+    logger.debug(f"From sky set {set_ind} thread num {thread_num} reading {n_p} points, {n_g} gauss, {n_s} shape, {n_c} shape coeffs using thread id {thread_id}")
                 
     if len(chunk_maps) == 0:
-        print(f"Thread {thread_id} has no work to do")
+        logger.warning(f"Sky model reading thread {thread_id} has no work to do")
         return [], thread_num
     
     if args.profile:
@@ -390,28 +289,183 @@ def read_skymodel_thread(thread_id : int, num_threads : int,
     
     end = time()
     
-    print(f"Finshed sky reading thread {thread_id} in {end-start:.1f} seconds")
+    logger.debug(f"Finshed sky set {set_ind} thread num {thread_num} in {end-start:.1f} seconds")
     
     if args.profile:
         profiler.disable()
         profile_filename = f"line_profile_{os.getpid()}.lprof"
-        print("Dumping profile to", profile_filename)
+        logger.debug("Dumping profile to", profile_filename)
         profiler.dump_stats(profile_filename)
     
-    # return python_sources, thread_num, set_ind
     return python_sources, thread_num
+
+
+def sum_components_in_chunked_skymodel_map_sets(chunked_skymodel_map_sets):
+    """
+    Sums the number of components in a list of `Skymodel_Chunk_Map` types.
+    
+    Parameters
+    ==========
+    chunked_skymodel_map_sets : List[Skymodel_Chunk_Map]
+        A list of chunked skymodel map sets.
+    
+    Returns
+    =======
+    int : The total number of components in the list of `Skymodel_Chunk_Map` types.
+    
+    
+    """
+    
+    n_points, n_gauss, n_shapes, n_shape_coeffs = 0, 0, 0, 0
+    for chunk_map_set in chunked_skymodel_map_sets:
+        for chunk_maps in chunk_map_set:
+            if len(chunk_maps) > 0:
+                for chunk_map in chunk_maps:
+                
+                    n_points += chunk_map.n_points
+                    n_gauss += chunk_map.n_gauss
+                    n_shapes += chunk_map.n_shapes
+                    n_shape_coeffs += chunk_map.n_shape_coeffs
+        
+    return n_points, n_gauss, n_shapes, n_shape_coeffs
+
+def woden_thread(queue : Queue,
+                 all_loaded_python_sources : List[List[Source_Python]],
+                 all_loaded_sources_orders : List[int], round_num : int,
+                 run_woden, woden_settings_python : Woden_Settings_Python,
+                 array_layout_python : Array_Layout_Python,
+                 visi_sets_python : List[Visi_Set_Python],
+                 woden_struct_classes : Woden_Struct_Classes,
+                 beamtype : int, args : argparse.Namespace):
+    """
+    This function runs WODEN C/GPU code on a separate thread, processing source catalogues from a queue until the queue is empty.
+    
+    Parameters
+    ----------
+    all_loaded_python_sources : List[List[Source_Python]]
+        A list of lists of `Source_Python` to be processed, as ouput by `read_skymodel_thread`,
+        where each list of `Source_Python` matches a chunk_map in `chunked_skymodel_map_set`.
+        Each entry is a list itself as the Shapelet chunking can result in multiple sources
+        per thread per round, as the chunking happens by sky direction as well as number of
+        shapelet coefficients.
+    all_loaded_sources_orders : List[int]
+        The order of the sources in `all_loaded_python_sources` as matched to `chunked_skymodel_map_set`;
+        orders also output by `read_skymodel_thread` (different threads finish in different times so
+        the order of the sources in `all_loaded_python_sources` may not match the order of the chunk_maps)
+    round_num : int
+        The round number of the processing
+    run_woden : _NamedFuncPointer
+        A pointer to the WODEN GPU function to be run.
+    woden_settings : Woden_Settings
+        The WODEN settings to be used.
+    array_layout : Array_Layout_Ctypes
+        The array layout to be used.
+    woden_struct_classes : Woden_Struct_Classes
+        The WODEN struct classes to be used
+    sbf : np.ndarray
+        The shapelet basis function array
+    beamtype : int
+        The value of the type of beam being used, e.g. BeamTypes.FEE_BEAM.value
+    """
+    
+    logger = get_logger_from_queue(queue, args.log_level)
+    woden_lib_path = importlib_resources.files(wodenpy).joinpath(f"libwoden_{woden_struct_classes.precision}.so")
+    woden_lib = ctypes.cdll.LoadLibrary(woden_lib_path)
+    ##We only want to set the log callback if we are in verbose mode, as
+    ##libwoden only setup to pass things to logger if it is in verbose mode
+    ##If we set the log callback when not in verbose mode, the 'listener'
+    ##will be listening to nothing, and everything will hang
+    if woden_settings_python.verbose:
+        c_log_callback = get_log_callback(logger)
+        woden_lib.set_log_callback(c_log_callback)
+    
+    run_woden = load_in_run_woden(woden_lib, woden_struct_classes)
+    
+    python_sources = []
+    
+    ##grab all the python sources, and reorder/flatten them to match the order of
+    ##chunked_skymodel_maps. Not actually sure we need to do this, but if we
+    ##change this order it'll mean we have to change the order of a bunch of
+    ##tests. I don't think it costs much, and saves a bunch of developing time
+    ordering = np.argsort(all_loaded_sources_orders)
+    for order in ordering:
+        sources = all_loaded_python_sources[order]
+        for source in sources:
+            python_sources.append(source)
+            
+    ##Create a ctypes Source_Catalogue from the python sources to feed the GPU
+    source_catalogue = create_source_catalogue_from_python_sources(python_sources,
+                                                                   woden_struct_classes,
+                                                                   beamtype, args.precision)
+    
+    woden_settings = woden_struct_classes.Woden_Settings()
+    woden_settings = convert_woden_settings_to_ctypes(woden_settings_python, woden_settings)
+    
+    visibility_set = setup_visi_set_array(woden_struct_classes.Visi_Set,
+                                              woden_settings.num_bands,
+                                              woden_settings.num_visis,
+                                              precision=args.precision)
+    
+    array_layout = Array_Layout_Ctypes()
+    array_layout = convert_array_layout_to_ctypes(array_layout_python, array_layout)
+    
+    sbf = create_sbf(precision=args.precision)
+    
+    logger.info(f"Sending sky set {round_num} to GPU")
+    start = time()
+            
+    run_woden(woden_settings, visibility_set, source_catalogue, array_layout,
+                  sbf)
+    
+    end = time()
+    
+    logger.info(f"Set {round_num} has returned from the GPU after {end-start:.1f} seconds")
+    
+    for band_num in range(woden_settings_python.num_bands):
+        visi_set = visi_sets_python[band_num]
+        ting = np.ctypeslib.as_array(visibility_set[band_num].sum_visi_XX_real, shape=(woden_settings_python.num_visis,))
+        visi_set.us_metres = deepcopy(np.ctypeslib.as_array(visibility_set[band_num].us_metres, shape=(woden_settings_python.num_visis,)))
+        visi_set.vs_metres = deepcopy(np.ctypeslib.as_array(visibility_set[band_num].vs_metres, shape=(woden_settings_python.num_visis,)))
+        visi_set.ws_metres = deepcopy(np.ctypeslib.as_array(visibility_set[band_num].ws_metres, shape=(woden_settings_python.num_visis,)))
+        visi_set.sum_visi_XX_real += np.ctypeslib.as_array(visibility_set[band_num].sum_visi_XX_real, shape=(woden_settings_python.num_visis,))
+        visi_set.sum_visi_XX_imag += np.ctypeslib.as_array(visibility_set[band_num].sum_visi_XX_imag, shape=(woden_settings_python.num_visis,))
+        visi_set.sum_visi_XY_real += np.ctypeslib.as_array(visibility_set[band_num].sum_visi_XY_real, shape=(woden_settings_python.num_visis,))
+        visi_set.sum_visi_XY_imag += np.ctypeslib.as_array(visibility_set[band_num].sum_visi_XY_imag, shape=(woden_settings_python.num_visis,))
+        visi_set.sum_visi_YX_real += np.ctypeslib.as_array(visibility_set[band_num].sum_visi_YX_real, shape=(woden_settings_python.num_visis,))
+        visi_set.sum_visi_YX_imag += np.ctypeslib.as_array(visibility_set[band_num].sum_visi_YX_imag, shape=(woden_settings_python.num_visis,))
+        visi_set.sum_visi_YY_real += np.ctypeslib.as_array(visibility_set[band_num].sum_visi_YY_real, shape=(woden_settings_python.num_visis,))
+        visi_set.sum_visi_YY_imag += np.ctypeslib.as_array(visibility_set[band_num].sum_visi_YY_imag, shape=(woden_settings_python.num_visis,))
+        
+    return visi_sets_python, round_num
 
 def run_cpu_mode(num_threads, num_rounds, chunked_skymodel_map_sets,
                  lsts, latitudes, args, beamtype,
                  main_table, shape_table, v_table, q_table, u_table, p_table,
-                 woden_settings_python, array_layout_python, visi_sets_python):
+                 woden_settings_python, array_layout_python, visi_sets_python,
+                 queue):
+    
+    ##This logger code is duplicated in the GPU mode, but there is something about
+    ##the persitance of the `c_log_callback` (which allows the C code to write
+    ##to the logger) that means if I stick this in a function elsewhere
+    ##nothing works. So just duplicate it here
+    logger = get_logger_from_queue(queue, args.log_level)
+    # c_log_callback = get_log_callback(logger)
+    # woden_lib_path = importlib_resources.files(wodenpy).joinpath(f"libwoden_{woden_struct_classes.precision}.so")
+    # woden_lib = ctypes.cdll.LoadLibrary(woden_lib_path)
+    # woden_lib.set_log_callback(c_log_callback)
+    # run_woden = load_in_run_woden(woden_lib, woden_struct_classes)
+    
+    total_n_points, total_n_gauss, total_n_shapes, total_n_shape_coeffs = sum_components_in_chunked_skymodel_map_sets(chunked_skymodel_map_sets)
+    total_comps = total_n_points + total_n_gauss + total_n_shapes + total_n_shape_coeffs
     
     with ProcessPoolExecutor(max_workers=num_threads) as sky_model_executor, ProcessPoolExecutor(max_workers=num_threads) as visi_executor:
         
         # # Loop through multiple rounds of data reading and calculation
         for round_num in range(num_rounds):
-            future_data_sky = [sky_model_executor.submit(read_skymodel_thread, i + round_num * num_threads,
-                                        num_threads, chunked_skymodel_map_sets,
+            logger.info(f"Reading set {round_num} sky models")
+            future_data_sky = [sky_model_executor.submit(read_skymodel_thread,
+                                        i + round_num * num_threads, num_threads,
+                                        queue, chunked_skymodel_map_sets,
                                         lsts, latitudes,
                                         args, beamtype,
                                         main_table, shape_table,
@@ -427,7 +481,7 @@ def run_cpu_mode(num_threads, num_rounds, chunked_skymodel_map_sets,
                 all_loaded_sources_orders.append(order)
                 
                 
-            future_data_visi = [visi_executor.submit(woden_multithread, i,
+            future_data_visi = [visi_executor.submit(woden_multithread, i, queue,
                                         [all_loaded_python_sources[i]], #all_loaded_python_sources
                                         [i], #all_loaded_sources_orders
                                         round_num,
@@ -438,28 +492,54 @@ def run_cpu_mode(num_threads, num_rounds, chunked_skymodel_map_sets,
                                         args.precision)
                                 for i in range(num_threads)]
             
+            completed = 0
+            
             for future in concurrent.futures.as_completed(future_data_visi):
-                visi_set_python, thread_ind = future.result()
+                visi_set_python, thread_ind, completed_round = future.result()
                 visi_sets_python[thread_ind, :] = visi_set_python
+                
+                completed += 1
+                
+                if completed == num_threads:
+                
+                    done_n_points, done_n_gauss, done_n_shapes, done_n_shape_coeffs = sum_components_in_chunked_skymodel_map_sets(chunked_skymodel_map_sets[:completed_round + 1])
+                    done_comps = done_n_points + done_n_gauss + done_n_shapes + done_n_shape_coeffs
+                    logger.info(f"Have completed {done_comps} of {total_comps} components calcs ({(done_comps/total_comps)*100:.1f}%)")
                     
     return visi_sets_python
+
 
 def run_gpu_mode(num_threads, num_rounds, chunked_skymodel_map_sets,
                  lsts, latitudes, args, beamtype,
                  main_table, shape_table, v_table, q_table, u_table, p_table,
                  woden_settings_python, array_layout_python, visi_sets_python, 
-                 run_woden, woden_struct_classes):
+                 queue, woden_struct_classes):
+    
+    logger = get_logger_from_queue(queue, args.log_level)
+    woden_lib_path = importlib_resources.files(wodenpy).joinpath(f"libwoden_{woden_struct_classes.precision}.so")
+    woden_lib = ctypes.cdll.LoadLibrary(woden_lib_path)
+    
+    if args.verbose:
+        c_log_callback = get_log_callback(logger, args.log_level)
+        woden_lib.set_log_callback(c_log_callback)
+        
+    run_woden = load_in_run_woden(woden_lib, woden_struct_classes)
+    
+    total_n_points, total_n_gauss, total_n_shapes, total_n_shape_coeffs = sum_components_in_chunked_skymodel_map_sets(chunked_skymodel_map_sets)
+    total_comps = total_n_points + total_n_gauss + total_n_shapes + total_n_shape_coeffs
     
     with concurrent.futures.ProcessPoolExecutor(max_workers=num_threads) as sky_model_executor:
         
         visi_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         gpu_calc = None  # To store the future of the calculation thread
         
-
     # # Loop through multiple rounds of data reading and calculation
         for round_num in range(num_rounds):
-            future_data_sky = [sky_model_executor.submit(read_skymodel_thread, i + round_num * num_threads,
-                                        num_threads, chunked_skymodel_map_sets,
+            
+            logger.info(f"Reading set {round_num} sky models")
+            future_data_sky = [sky_model_executor.submit(read_skymodel_thread,
+                                        i + round_num * num_threads, num_threads,
+                                        queue, chunked_skymodel_map_sets,
                                         lsts, latitudes,
                                         args, beamtype,
                                         main_table, shape_table,
@@ -469,31 +549,46 @@ def run_gpu_mode(num_threads, num_rounds, chunked_skymodel_map_sets,
             all_loaded_python_sources = []
             all_loaded_sources_orders = []
             for future in concurrent.futures.as_completed(future_data_sky):
-                # python_sources, order, _ = future.result()
                 python_sources, order = future.result()
                 all_loaded_python_sources.append(python_sources)
                 all_loaded_sources_orders.append(order)
                 
-                
+            
             
             # Wait for previous calculation to complete (if there was one)
             if gpu_calc is not None:
-                visi_sets_python = gpu_calc.result()
+                visi_sets_python, completed_round = gpu_calc.result()
+                done_n_points, done_n_gauss, done_n_shapes, done_n_shape_coeffs = sum_components_in_chunked_skymodel_map_sets(chunked_skymodel_map_sets[:completed_round + 1])
+                done_comps = done_n_points + done_n_gauss + done_n_shapes + done_n_shape_coeffs
+                
+                logger.info(f"Have completed {done_comps} of {total_comps} components calcs ({(done_comps/total_comps)*100:.1f}%)")
+                # logger.debug(f"\t{done_n_points} of {total_n_points} points\n"
+                #              f"\t{done_n_gauss} of {total_n_gauss} gauss\n"
+                #              f"\t{done_n_shapes} of {total_n_shapes} shapelets\n"
+                #              f"\t{done_n_shape_coeffs} of {total_n_shape_coeffs} shape coeffs")
 
-            gpu_calc = visi_executor.submit(woden_thread,
-                                        all_loaded_python_sources,
-                                        all_loaded_sources_orders,
-                                        round_num,
-                                        run_woden, woden_settings_python,
-                                        array_layout_python, 
-                                        visi_sets_python,
-                                        woden_struct_classes, 
-                                        beamtype,
-                                        args.precision)
+            gpu_calc = visi_executor.submit(woden_thread, queue,
+                                            all_loaded_python_sources,
+                                            all_loaded_sources_orders,
+                                            round_num,
+                                            run_woden, woden_settings_python,
+                                            array_layout_python, 
+                                            visi_sets_python,
+                                            woden_struct_classes, 
+                                            beamtype,
+                                            args)
             
         # # Wait for the final calculation to complete
         if gpu_calc is not None:
-            visi_sets_python = gpu_calc.result()
+            visi_sets_python, completed_round = gpu_calc.result()
+            done_n_points, done_n_gauss, done_n_shapes, done_n_shape_coeffs = sum_components_in_chunked_skymodel_map_sets(chunked_skymodel_map_sets[:completed_round + 1])
+            done_comps = done_n_points + done_n_gauss + done_n_shapes + done_n_shape_coeffs
+            
+            logger.info(f"Have completed {done_comps} of {total_comps} components calcs ({(done_comps/total_comps)*100:.1f}%)")
+            # # logger.debug(f"\t{done_n_points} of {total_n_points} points\n"
+            # #                  f"\t{done_n_gauss} of {total_n_gauss} gauss\n"
+            # #                  f"\t{done_n_shapes} of {total_n_shapes} shapelets\n"
+            # #                  f"\t{done_n_shape_coeffs} of {total_n_shape_coeffs} shape coeffs")
             
     return visi_sets_python
 
@@ -510,219 +605,254 @@ def main(argv=None):
         Will be parsed from the command line if run in main script. Can be
         passed in explicitly for easy testing
     """
+    
+    ##Do everythings inside a manager so we can use a queue to pass logging
+    ##things to. Necessary for when we start doing multithreading
+    
     ##Grab the parser and parse some args
     parser = get_parser()
     args = parser.parse_args(argv)
-    
     ##Check that the input arguments make sense
     args = check_args(args)
     
-    ##Find out what git/release version we are using, and where the code lives
-    gitlabel = get_code_version()
-
-    lst_deg, gst0_deg, degpdy, ut1utc = get_uvfits_date_and_position_constants(latitude=args.latitude, longitude=args.longitude,
-                        height=args.array_height, date=args.date)
-
-    jd_midnight, float_jd = calc_jdcal(args.date)
-    jd_date = jd_midnight + float_jd
-
-    ##Check the uvfits prepend to make sure we end in .uvfits
-    output_uvfits_prepend = args.output_uvfits_prepend
-    if output_uvfits_prepend[-7:] == '.uvfits': output_uvfits_prepend = output_uvfits_prepend[-7:]
-
-    ##Generate the woden_struct_classes, which are used to mimic the C
-    ##structs. Must be made dynamically, as the precision can change
-    woden_struct_classes = Woden_Struct_Classes(args.precision)
-    
-    ##Depending on what precision was selected by the user, load in the
-    ##C/CUDA library and return the `run_woden` function
-    run_woden = load_in_woden_library(woden_struct_classes)
-    
-    num_baselines = int(((args.num_antennas - 1)*args.num_antennas) / 2)
-
-    if args.do_autos:
-        num_visis = args.num_time_steps*args.num_freq_channels*(num_baselines + args.num_antennas)
-    else:
-        num_visis = args.num_time_steps*args.num_freq_channels*num_baselines
-
-    woden_settings_python = fill_woden_settings_python(args, jd_date, lst_deg)
-    
-    ##fill the lst and mjds fields, precessing if necessary
-    lsts, latitudes = setup_lsts_and_phase_centre(woden_settings_python)
-    
-    ##calculate the array layout
-    array_layout_python = calc_XYZ_diffs(woden_settings_python, args)
-
-    # ##read in and chunk the sky model=======================================
-    print("Doing the initial reading/mapping of sky model into chunks")
-    t_before = time()
-    
-    comp_counter = read_radec_count_components(args.cat_filename)
-    t_after = time()
-    print(f"Mapping took {(t_after - t_before)/60.0:.1f} mins")
-    
-    crop_by_component = True
-    if args.sky_crop_sources:
-        crop_by_component = False
+    with Manager() as manager:
+        ##Find out what git/release version we are using, and where the code lives
+        gitlabel = get_code_version()
         
-    comp_counter = crop_below_horizon(woden_settings_python.lsts[0],
-                                        woden_settings_python.latitude,
-                                        comp_counter,
-                                        crop_by_component=crop_by_component)
-    max_chunks_per_set=args.num_threads
+        log_queue = manager.Queue()
+        
+        listener, handlers = main_logging_config(log_queue, gitlabel, args.log_level, args.log_file_name)
+        
+        main_logger = get_logger_from_queue(log_queue, args.log_level)
     
-    chunked_skymodel_map_sets = create_skymodel_chunk_map(comp_counter,
-                                                      args.chunking_size,
-                                                      woden_settings_python.num_baselines,
-                                                      args.num_freq_channels,
-                                                      args.num_time_steps,
-                                                      num_threads=args.num_threads,
-                                                      max_chunks_per_set=max_chunks_per_set,
-                                                      max_dirs=args.max_sky_directions)
-    
-    if args.dry_run:
-        ##User only wants to check whether the arguments would have worked or not
-        pass
-    else:
-        ##Create the shapelet basis functions
-        sbf = create_sbf(precision=args.precision)
+        # ##Furthermore, we do everything inside a try block, which allows us
+        # ##to do a `finally` at the end to close the logging properly
+        try:    
 
-        ##Create an array of visibility_sets, which get fed into run_woden
-        ##and store the output visibilities
-        visi_set_array = setup_visi_set_array(woden_struct_classes.Visi_Set,
-                                              len(args.band_nums), num_visis,
-                                              precision=args.precision)
-        
-        if woden_settings_python.do_gpu:
-            num_visi_threads = 1
-        else:
-            num_visi_threads = args.num_threads
-        
-        ##Something to hold all visibility outputs for all threads, for all bands
-        visi_sets_python = [[Visi_Set_Python() for _ in range(len(args.band_nums))] for _ in range(num_visi_threads)]
-        visi_sets_python = np.array(visi_sets_python)
-        
-        ##initialise to zeros
-        for thread_ind in range(num_visi_threads):
-            for band_ind in range(len(args.band_nums)):
-                visi_sets_python[thread_ind, band_ind].sum_visi_XX_real = np.zeros(num_visis)
-                visi_sets_python[thread_ind, band_ind].sum_visi_XX_imag = np.zeros(num_visis)
-                visi_sets_python[thread_ind, band_ind].sum_visi_XY_real = np.zeros(num_visis)
-                visi_sets_python[thread_ind, band_ind].sum_visi_XY_imag = np.zeros(num_visis)
-                visi_sets_python[thread_ind, band_ind].sum_visi_YX_real = np.zeros(num_visis)
-                visi_sets_python[thread_ind, band_ind].sum_visi_YX_imag = np.zeros(num_visis)
-                visi_sets_python[thread_ind, band_ind].sum_visi_YY_real = np.zeros(num_visis)
-                visi_sets_python[thread_ind, band_ind].sum_visi_YY_imag = np.zeros(num_visis)
+            lst_deg, gst0_deg, degpdy, ut1utc = get_uvfits_date_and_position_constants(latitude=args.latitude, longitude=args.longitude,
+                                height=args.array_height, date=args.date)
+
+            jd_midnight, float_jd = calc_jdcal(args.date)
+            jd_date = jd_midnight + float_jd
+
+            ##Generate the woden_struct_classes, which are used to mimic the C
+            ##structs. Must be made dynamically, as the precision can change
+            woden_struct_classes = Woden_Struct_Classes(args.precision)
             
+            num_baselines = int(((args.num_antennas - 1)*args.num_antennas) / 2)
 
-        ###---------------------------------------------------------------------
-        ### heavy lifting area - here we setup running the sky model reading
-        ### and running CPU/GPU code at the same time. Means we can limit the
-        ### absolute amount of RAM used, and save time doing IO at the same
-        ### time as compute
-        
-        num_threads = args.num_threads
-        
-        num_rounds = len(chunked_skymodel_map_sets)
-        main_table, shape_table, v_table, q_table, u_table, p_table = get_skymodel_tables(args.cat_filename)
-        
-        if args.cpu_mode:
-            run_cpu_mode(num_threads, num_rounds, chunked_skymodel_map_sets,
-                 lsts, latitudes, args, woden_settings_python.beamtype,
-                 main_table, shape_table, v_table, q_table, u_table, p_table,
-                 woden_settings_python, array_layout_python, visi_sets_python)
-        else:
-            run_gpu_mode(num_threads, num_rounds, chunked_skymodel_map_sets,
-                 lsts, latitudes, args, woden_settings_python.beamtype,
-                 main_table, shape_table, v_table, q_table, u_table, p_table,
-                 woden_settings_python, array_layout_python, visi_sets_python[0], 
-                 run_woden, woden_struct_classes)
+            if args.do_autos:
+                num_visis = args.num_time_steps*args.num_freq_channels*(num_baselines + args.num_antennas)
+            else:
+                num_visis = args.num_time_steps*args.num_freq_channels*num_baselines
+
+            woden_settings_python = fill_woden_settings_python(args, jd_date, lst_deg)
             
-        
-        
-        ### we've now calculated all the visibilities
-        ###---------------------------------------------------------------------
-        
-        visi_sets_python_combined = visi_sets_python[0, :]
-        
-        for thread_ind in range(1, num_visi_threads):
-            for band_ind in range(len(args.band_nums)):
+            ##fill the lst and mjds fields, precessing if necessary
+            lsts, latitudes = setup_lsts_and_phase_centre(woden_settings_python, main_logger)
+            
+            ##calculate the array layout
+            array_layout_python = calc_XYZ_diffs(woden_settings_python, args)
+
+            # ##read in and chunk the sky model=======================================
+            main_logger.info("Doing the initial mapping of sky model")
+            t_before = time()
+            
+            comp_counter = read_radec_count_components(args.cat_filename)
+            t_after = time()
+            main_logger.info(f"Sky model mapping took {(t_after - t_before)/60.0:.1f} mins")
+            
+            crop_by_component = True
+            if args.sky_crop_sources:
+                crop_by_component = False
                 
-                visi_sets_python_combined[band_ind].sum_visi_XX_real += visi_sets_python[thread_ind, band_ind].sum_visi_XX_real
-                visi_sets_python_combined[band_ind].sum_visi_XX_imag += visi_sets_python[thread_ind, band_ind].sum_visi_XX_imag
-                visi_sets_python_combined[band_ind].sum_visi_XY_real += visi_sets_python[thread_ind, band_ind].sum_visi_XY_real
-                visi_sets_python_combined[band_ind].sum_visi_XY_imag += visi_sets_python[thread_ind, band_ind].sum_visi_XY_imag
-                visi_sets_python_combined[band_ind].sum_visi_YX_real += visi_sets_python[thread_ind, band_ind].sum_visi_YX_real
-                visi_sets_python_combined[band_ind].sum_visi_YX_imag += visi_sets_python[thread_ind, band_ind].sum_visi_YX_imag
-                visi_sets_python_combined[band_ind].sum_visi_YY_real += visi_sets_python[thread_ind, band_ind].sum_visi_YY_real
-                visi_sets_python_combined[band_ind].sum_visi_YY_imag += visi_sets_python[thread_ind, band_ind].sum_visi_YY_imag
-        
-        ##I think we want to X,Y,Z to be in the current frame for writing
-        ##out to the uvfits, so calculate again
-        X,Y,Z = enh2xyz(args.east, args.north, args.height, args.latitude*D2R)
-        ##X,Y,Z are stored in a 2D array in units of seconds in the uvfits file
-        XYZ_array = np.empty((args.num_antennas,3))
-        XYZ_array[:,0] = X
-        XYZ_array[:,1] = Y
-        XYZ_array[:,2] = Z
-
-        ##Get the central frequency channels, used in the uvfits header
-        central_freq_chan = int(np.floor(args.num_freq_channels / 2.0))
-        ##Useful number
-        num_baselines = int(((args.num_antennas - 1)*args.num_antennas) / 2)
-
-        ##Loop over coarse frequency band and convert visibilities output
-        ##from woden.c into uvfits files
-        for band_ind, band in enumerate(args.band_nums):
-
-            output_uvfits_name = output_uvfits_prepend + '_band%02d.uvfits' %band
-
-            band_low_freq = args.lowest_channel_freq + (band - 1)*args.coarse_band_width
-            central_freq_chan_value = band_low_freq + central_freq_chan*args.freq_res
-
-            uus,vvs,wws,v_container = load_visibility_set(visibility_set=visi_sets_python_combined[band_ind],
-                                                num_baselines=num_baselines,
-                                                num_freq_channels=args.num_freq_channels,
-                                                num_time_steps=args.num_time_steps,
-                                                precision=args.precision,
-                                                do_autos=args.do_autos,
-                                                num_ants=args.num_antennas)
+            comp_counter = crop_below_horizon(woden_settings_python.lsts[0],
+                                                woden_settings_python.latitude,
+                                                comp_counter, main_logger,
+                                                crop_by_component=crop_by_component)
             
-            # print("THE FINAL FORM", uus)
+            main_logger.debug(comp_counter.info_string())
+            
+            max_chunks_per_set=args.num_threads
+            chunked_skymodel_map_sets = create_skymodel_chunk_map(comp_counter,
+                                                            args.chunking_size,
+                                                            woden_settings_python.num_baselines,
+                                                            args.num_freq_channels,
+                                                            args.num_time_steps,
+                                                            num_threads=args.num_threads,
+                                                            max_chunks_per_set=max_chunks_per_set,
+                                                            max_dirs=args.max_sky_directions)
+            
+            if args.dry_run:
+                ##User only wants to check whether the arguments would have worked or not
+                main_logger.info("As --dry-run was selected, exiting now before calculating visibilities")
+            else:
+                ##Create the shapelet basis functions
+                sbf = create_sbf(precision=args.precision)
 
-            if args.remove_phase_tracking:
-                frequencies = band_low_freq + np.arange(args.num_freq_channels)*args.freq_res
+                ##Create an array of visibility_sets, which get fed into run_woden
+                ##and store the output visibilities
+                visi_set_array = setup_visi_set_array(woden_struct_classes.Visi_Set,
+                                                    len(args.band_nums), num_visis,
+                                                    precision=args.precision)
+                
+                if woden_settings_python.do_gpu:
+                    num_visi_threads = 1
+                else:
+                    num_visi_threads = args.num_threads
+                
+                ##Something to hold all visibility outputs for all threads, for all bands
+                visi_sets_python = [[Visi_Set_Python() for _ in range(len(args.band_nums))] for _ in range(num_visi_threads)]
+                visi_sets_python = np.array(visi_sets_python)
+                
+                ##initialise to zeros
+                for thread_ind in range(num_visi_threads):
+                    for band_ind in range(len(args.band_nums)):
+                        visi_sets_python[thread_ind, band_ind].sum_visi_XX_real = np.zeros(num_visis)
+                        visi_sets_python[thread_ind, band_ind].sum_visi_XX_imag = np.zeros(num_visis)
+                        visi_sets_python[thread_ind, band_ind].sum_visi_XY_real = np.zeros(num_visis)
+                        visi_sets_python[thread_ind, band_ind].sum_visi_XY_imag = np.zeros(num_visis)
+                        visi_sets_python[thread_ind, band_ind].sum_visi_YX_real = np.zeros(num_visis)
+                        visi_sets_python[thread_ind, band_ind].sum_visi_YX_imag = np.zeros(num_visis)
+                        visi_sets_python[thread_ind, band_ind].sum_visi_YY_real = np.zeros(num_visis)
+                        visi_sets_python[thread_ind, band_ind].sum_visi_YY_imag = np.zeros(num_visis)
+                    
 
-                v_container = remove_phase_tracking(frequencies=frequencies,
-                                          wws_seconds=wws,
-                                          num_time_steps=args.num_time_steps,
-                                          v_container=v_container,
-                                          num_baselines=num_baselines)
+                ###---------------------------------------------------------------------
+                ### heavy lifting area - here we setup running the sky model reading
+                ### and running CPU/GPU code at the same time. Means we can limit the
+                ### absolute amount of RAM used, and save time doing IO at the same
+                ### time as compute
+                
+                num_threads = args.num_threads
+                
+                num_rounds = len(chunked_skymodel_map_sets)
+                main_table, shape_table, v_table, q_table, u_table, p_table = get_skymodel_tables(args.cat_filename)
+                
+                if args.cpu_mode:
+                    main_logger.info(f"Running in CPU mode with {args.num_threads} threads.\n"
+                                        f"There are {num_rounds} sets of sky models to run")
+                    run_cpu_mode(num_threads, num_rounds, chunked_skymodel_map_sets,
+                        lsts, latitudes, args, woden_settings_python.beamtype,
+                        main_table, shape_table, v_table, q_table, u_table, p_table,
+                        woden_settings_python, array_layout_python, visi_sets_python,
+                        log_queue)
+                else:
+                    main_logger.info(f"Running in GPU mode\n"
+                                        f"Will use {args.num_threads} threads to read sky model contents\n"
+                                        f"There are {num_rounds} sets of sky models to run")
+                    run_gpu_mode(num_threads, num_rounds, chunked_skymodel_map_sets,
+                        lsts, latitudes, args, woden_settings_python.beamtype,
+                        main_table, shape_table, v_table, q_table, u_table, p_table,
+                        woden_settings_python, array_layout_python, visi_sets_python[0],
+                        log_queue, woden_struct_classes)
+                
+                
+                ### we've now calculated all the visibilities
+                ###---------------------------------------------------------------------
+                
+                visi_sets_python_combined = visi_sets_python[0, :]
+                
+                for thread_ind in range(1, num_visi_threads):
+                    for band_ind in range(len(args.band_nums)):
+                        
+                        visi_sets_python_combined[band_ind].sum_visi_XX_real += visi_sets_python[thread_ind, band_ind].sum_visi_XX_real
+                        visi_sets_python_combined[band_ind].sum_visi_XX_imag += visi_sets_python[thread_ind, band_ind].sum_visi_XX_imag
+                        visi_sets_python_combined[band_ind].sum_visi_XY_real += visi_sets_python[thread_ind, band_ind].sum_visi_XY_real
+                        visi_sets_python_combined[band_ind].sum_visi_XY_imag += visi_sets_python[thread_ind, band_ind].sum_visi_XY_imag
+                        visi_sets_python_combined[band_ind].sum_visi_YX_real += visi_sets_python[thread_ind, band_ind].sum_visi_YX_real
+                        visi_sets_python_combined[band_ind].sum_visi_YX_imag += visi_sets_python[thread_ind, band_ind].sum_visi_YX_imag
+                        visi_sets_python_combined[band_ind].sum_visi_YY_real += visi_sets_python[thread_ind, band_ind].sum_visi_YY_real
+                        visi_sets_python_combined[band_ind].sum_visi_YY_imag += visi_sets_python[thread_ind, band_ind].sum_visi_YY_imag
+                
+                ##I think we want to X,Y,Z to be in the current frame for writing
+                ##out to the uvfits, so calculate again
+                X,Y,Z = enh2xyz(args.east, args.north, args.height, args.latitude*D2R)
+                ##X,Y,Z are stored in a 2D array in units of seconds in the uvfits file
+                XYZ_array = np.empty((args.num_antennas,3))
+                XYZ_array[:,0] = X
+                XYZ_array[:,1] = Y
+                XYZ_array[:,2] = Z
 
-            hdu_ant = make_antenna_table(XYZ_array=XYZ_array,telescope_name=args.telescope_name,
-                          num_antennas=args.num_antennas, freq_cent=central_freq_chan_value,
-                          date=args.date, gst0_deg=gst0_deg, degpdy=degpdy,
-                          ut1utc=ut1utc, longitude=args.longitude, latitude=args.latitude,
-                          array_height=args.array_height,
-                          ant_names=args.ant_names)
+                ##Get the central frequency channels, used in the uvfits header
+                central_freq_chan = int(np.floor(args.num_freq_channels / 2.0))
+                ##Useful number
+                num_baselines = int(((args.num_antennas - 1)*args.num_antennas) / 2)
 
-            baselines_array, date_array = make_baseline_date_arrays(args.num_antennas,
-                                          args.date, args.num_time_steps, args.time_res,
-                                          do_autos=args.do_autos)
+                ##Loop over coarse frequency band and convert visibilities output
+                ##from woden.c into uvfits files
+                for band_ind, band in enumerate(args.band_nums):
 
-            create_uvfits(v_container=v_container, freq_cent=central_freq_chan_value,
-                          ra_point=args.ra0, dec_point=args.dec0,
-                          output_uvfits_name=output_uvfits_name,
-                          uu=uus, vv=vvs, ww=wws, baselines_array=baselines_array,
-                          date_array=date_array,
-                          central_freq_chan=central_freq_chan,
-                          ch_width=args.freq_res, jd_midnight=jd_midnight,
-                          hdu_ant=hdu_ant, gitlabel=gitlabel,
-                          longitude=args.longitude, latitude=args.latitude,
-                          array_height=args.array_height,
-                          telescope_name=args.telescope_name,
-                          IAU_order=args.IAU_order,
-                          comment=args.command)
+                    output_uvfits_name = args.output_uvfits_prepend + '_band%02d.uvfits' %band
+
+                    band_low_freq = args.lowest_channel_freq + (band - 1)*args.coarse_band_width
+                    central_freq_chan_value = band_low_freq + central_freq_chan*args.freq_res
+
+                    uus,vvs,wws,v_container = load_visibility_set(visibility_set=visi_sets_python_combined[band_ind],
+                                                        num_baselines=num_baselines,
+                                                        num_freq_channels=args.num_freq_channels,
+                                                        num_time_steps=args.num_time_steps,
+                                                        precision=args.precision,
+                                                        do_autos=args.do_autos,
+                                                        num_ants=args.num_antennas)
+                    
+                    # print("THE FINAL FORM", uus)
+
+                    if args.remove_phase_tracking:
+                        frequencies = band_low_freq + np.arange(args.num_freq_channels)*args.freq_res
+
+                        v_container = remove_phase_tracking(frequencies=frequencies,
+                                                wws_seconds=wws,
+                                                num_time_steps=args.num_time_steps,
+                                                v_container=v_container,
+                                                num_baselines=num_baselines)
+
+                    hdu_ant = make_antenna_table(XYZ_array=XYZ_array,telescope_name=args.telescope_name,
+                                num_antennas=args.num_antennas, freq_cent=central_freq_chan_value,
+                                date=args.date, gst0_deg=gst0_deg, degpdy=degpdy,
+                                ut1utc=ut1utc, longitude=args.longitude, latitude=args.latitude,
+                                array_height=args.array_height,
+                                ant_names=args.ant_names)
+
+                    baselines_array, date_array = make_baseline_date_arrays(args.num_antennas,
+                                                args.date, args.num_time_steps, args.time_res,
+                                                do_autos=args.do_autos)
+
+                    create_uvfits(v_container=v_container, freq_cent=central_freq_chan_value,
+                                ra_point=args.ra0, dec_point=args.dec0,
+                                output_uvfits_name=output_uvfits_name,
+                                uu=uus, vv=vvs, ww=wws, baselines_array=baselines_array,
+                                date_array=date_array,
+                                central_freq_chan=central_freq_chan,
+                                ch_width=args.freq_res, jd_midnight=jd_midnight,
+                                hdu_ant=hdu_ant, gitlabel=gitlabel,
+                                longitude=args.longitude, latitude=args.latitude,
+                                array_height=args.array_height,
+                                telescope_name=args.telescope_name,
+                                IAU_order=args.IAU_order,
+                                comment=args.command)
+                    
+            main_logger.info("WODEN is done. Closing logging handlers. S'later")
+            
+            
+            for handler in handlers:
+                handler.flush()
+        
+        
+        except Exception as e:
+            # main_logger.exception("Summing is deaded")
+            print("Logging listener is deaded")
+                
+        finally:
+            
+            for handler in handlers:
+                handler.flush()
+        
+            listener.stop()
+            
+            # Close handlers to avoid ResourceWarnings
+            for handler in handlers:
+                handler.close()
 
 if __name__ == "__main__":
     main()

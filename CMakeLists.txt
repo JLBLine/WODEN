@@ -72,7 +72,7 @@ if(HBEAM_LIB)
 endif()
 
 ##Set the linkers for the C code
-set(CC_LINKLIBS "-lm -pthread ${HDF5_LIB} ${HBEAM_LIB}") #
+set(CC_LINKLIBS "-lm -pthread ${HDF5_LIB} ${HBEAM_LIB}")
 
 ##All the WODEN header dirs are in include dir
 include_directories("${CMAKE_SOURCE_DIR}/include" ${HBEAM_INC})
@@ -143,7 +143,13 @@ elseif(TARGET_GROUP STREQUAL debug)
     ##Add the total WODEN library, linking in the CUDA code
     add_library(woden_float SHARED src/woden.c ${CSOURCES})
     target_link_libraries(woden_float PUBLIC wodenGPU_float ${CC_LINKLIBS})
-    target_compile_options(woden_float PRIVATE -O3 -Wall)
+    target_compile_options(woden_float PRIVATE -O0 -Wall)
+
+    ##Copy things into the wodenpy dir, which means everything is found when
+    ##you do a pip install
+    add_custom_command(TARGET woden_float POST_BUILD
+                  COMMAND ${CMAKE_COMMAND} -E copy "libwoden_float.so"
+                  "${CMAKE_CURRENT_LIST_DIR}/wodenpy/libwoden_float.so")
 
     ##Do it for the double code now---------------------------------------------
     ##Generate library for the CUDA code
@@ -161,7 +167,7 @@ elseif(TARGET_GROUP STREQUAL debug)
     ##Add the total WODEN library, linking in the CUDA code
     add_library(woden_double SHARED src/woden.c ${CSOURCES})
     target_link_libraries(woden_double PUBLIC wodenGPU_double ${CC_LINKLIBS})
-    target_compile_options(woden_double PRIVATE -O3 -g -Wall -DDOUBLE_PRECISION)
+    target_compile_options(woden_double PRIVATE -O0 -g -Wall -DDOUBLE_PRECISION)
 
     ##Copy things into the wodenpy dir, which means everything is found when
     ##you do a pip install

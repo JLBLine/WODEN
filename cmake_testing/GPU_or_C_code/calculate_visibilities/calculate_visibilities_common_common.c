@@ -476,6 +476,13 @@ woden_settings_t * make_woden_settings(double ra0, double dec0) {
     woden_settings->do_autos = 0;
     woden_settings->use_dipamps = 0;
 
+    woden_settings->mwa_dipole_amps = malloc(16*sizeof(double));
+    for (int i = 0; i < 16; i++) {
+      woden_settings->mwa_dipole_amps[i] = 1.0;
+    }
+
+    woden_settings->verbose = 0;
+
     return woden_settings;
 }
 

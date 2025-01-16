@@ -1125,8 +1125,6 @@ def reshape_chunked_skymodel_map_sets(chunked_skymodel_map_sets : NDArray[List[S
     new_num_sets = int(np.ceil(num_sets*num_threads / max_chunks_per_set))
     num_chunk_per_thread = int(max_chunks_per_set // num_threads)
     
-    # print("HIYA", num_sets, new_num_sets, num_chunk_per_thread)
-    
     new_chunked_skymodel_map_sets = np.empty((new_num_sets, num_threads), dtype=object)
     
     for new_set_ind in range(new_num_sets):

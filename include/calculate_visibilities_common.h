@@ -12,6 +12,7 @@
 #include "source_components_cpu.h"
 #include "hyperbeam_error.h"
 #include "visibility_set.h"
+#include "logger.h"
 
 //On link the external GPU functions if we're not compiling for CPU
 //Having this here means

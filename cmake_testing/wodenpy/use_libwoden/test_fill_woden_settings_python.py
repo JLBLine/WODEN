@@ -55,6 +55,7 @@ class PretendArgs():
         
         self.off_cardinal_dipoles = False
         self.cpu_mode = False
+        self.verbose = False
         
     def __init__(self):
         self.make_basic_args()
