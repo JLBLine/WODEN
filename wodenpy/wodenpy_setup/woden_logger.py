@@ -4,6 +4,8 @@ from ctypes import CDLL, CFUNCTYPE, c_char_p
 import ctypes
 import importlib_resources
 import wodenpy
+from multiprocessing import Process
+from logging.handlers import QueueHandler, QueueListener
 
 class MultiLineFormatter(logging.Formatter):
     """Multi-line formatter for logging messages. Means that the indentation
@@ -26,6 +28,47 @@ class MultiLineFormatter(logging.Formatter):
         indent = ' ' * self.get_header_length(record)
         head, *trailing = super().format(record).splitlines(True)
         return head + ''.join(indent + line for line in trailing)
+    
+    
+def listener_configurer(log_file):
+    root = logging.getLogger()
+    
+    formatter = MultiLineFormatter("%(asctime)s - %(levelname)s - %(message)s",
+                                   '%Y-%m-%d %H:%M:%S')
+    
+    stream_handler = logging.StreamHandler()
+    # stream_handler.setLevel(logging_level)
+    stream_handler.setFormatter(formatter)
+    handles = [stream_handler]
+    
+    if log_file:
+        file_handler = logging.FileHandler(log_file, mode='w')
+        # file_handler.setLevel(logging_level)
+        file_handler.setFormatter(formatter)
+        handles.append(file_handler)
+    
+    for handle in handles:
+        root.addHandler(handle)
+    
+
+# This is the listener process top-level loop: wait for logging events
+# (LogRecords)on the queue and handle them, quit when you get a None for a
+# LogRecord.
+def listener_process(queue, configurer, log_file=False):
+    configurer(log_file)
+    while True:
+        try:
+            record = queue.get()
+            if record is None:  # We send this as a sentinel to tell the listener to quit.
+                break
+            logger = logging.getLogger(record.name)
+            logger.handle(record)  # No level or filter logic applied - just do it!
+        except Exception as e:
+            # import sys, traceback
+            # print('Whoops! Problem:', file=sys.stderr)
+            # traceback.print_exc(file=sys.stderr)
+            
+            exit(e)
 
 
 # Main logging configuration
@@ -49,8 +92,8 @@ def main_logging_config(queue, gitlabel, logging_level = logging.DEBUG, log_file
         handles.append(file_handler)
         
     listener = logging.handlers.QueueListener(queue, *handles)
-        
     listener.start()
+    
     
     logger = get_logger_from_queue(queue)
     
@@ -72,14 +115,34 @@ def main_logging_config(queue, gitlabel, logging_level = logging.DEBUG, log_file
     return listener, handles
 
 def get_logger_from_queue(queue, logging_level = logging.DEBUG):
-    # Configure the worker logger to send messages to the queue
-    handler = logging.handlers.QueueHandler(queue)
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging_level)
-    root_logger.handlers.clear()  # Clear existing handlers to avoid duplication
-    root_logger.addHandler(handler)
     
-    return logging.getLogger(__name__)
+    if queue == False:
+        logger = simple_logger(logging_level)
+    
+    else:
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging_level)
+        logger.handlers.clear()
+        handler = QueueHandler(queue)
+        logger.addHandler(handler)
+    
+    return logger
+    
+def set_logger_header(logger, gitlabel):
+    logo_string = rf"""
+                 )  (              )  
+     (  (     ( /(  )\ )        ( /(  
+     )\))(   ')\())(()/(   (    )\()) 
+    ((_)()\ )((_)\  /(_))  )\  ((_)\  
+    _(())\_)() ((_)(_))_  ((_)  _((_) 
+    \ \((_)/ // _ \ |   \ | __|| \| | 
+     \ \/\/ /| (_) || |) || _| | .` | 
+      \_/\_/  \___/ |___/ |___||_|\_| 
+      
+    You are using wodenpy version/git hash: {gitlabel}
+    """
+    
+    logger.info(logo_string)
 
 
 def get_log_callback(logger, logging_level = logging.DEBUG):

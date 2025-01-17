@@ -177,22 +177,22 @@ class Test(unittest.TestCase):
         args.append("--telescope_name=test")
         args.append("--no_precession")
         args.append("--num_threads=1")
-        args.append("--save_log")
+        # args.append("--save_log")
         
-        ##Miiiiight give us a speed up on Linux??
-        try:
-            set_start_method("forkserver")  # Alternatives: "spawn" or "forkserver"
-        except RuntimeError:
-            # Start method is already set in some environments like Jupyter
-            pass
+        # ##Miiiiight give us a speed up on Linux??
+        # try:
+        #     set_start_method("forkserver")  # Alternatives: "spawn" or "forkserver"
+        # except RuntimeError:
+        #     # Start method is already set in some environments like Jupyter
+        #     pass
 
-        rw.main(args)
+        rw.main(args, False)
         
         self.check_uvfits_contents("test_run_woden_band01.uvfits")
         
         # ##do it again in CPU mode
         args.append("--cpu_mode")
-        rw.main(args)
+        rw.main(args, False)
         self.check_uvfits_contents("test_run_woden_band01.uvfits")
         
 
@@ -222,13 +222,13 @@ class Test(unittest.TestCase):
         args.append("--precision=float")
         args.append("--num_threads=1")
 
-        rw.main(args)
+        rw.main(args, False)
         
         self.check_uvfits_contents("test_run_woden_band01.uvfits")
         
         ##do it again in CPU mode
         args.append("--cpu_mode")
-        rw.main(args)
+        rw.main(args, False)
         self.check_uvfits_contents("test_run_woden_band01.uvfits")
     
     def test_nobeam_phase_centre_float_autos(self):
@@ -257,13 +257,13 @@ class Test(unittest.TestCase):
         args.append("--do_autos")
         args.append("--num_threads=1")
 
-        rw.main(args)
+        rw.main(args, False)
         
         self.check_uvfits_contents("test_run_woden_band01.uvfits")
         
         ##do it again in CPU mode
         args.append("--cpu_mode")
-        rw.main(args)
+        rw.main(args, False)
         self.check_uvfits_contents("test_run_woden_band01.uvfits")
         
         
@@ -293,7 +293,7 @@ class Test(unittest.TestCase):
         args.append("--do_autos")
         args.append("--num_threads=3")
 
-        rw.main(args)
+        rw.main(args, False)
         
         self.check_uvfits_contents("test_run_woden_band01.uvfits")
         self.check_uvfits_contents("test_run_woden_band02.uvfits")
@@ -301,7 +301,7 @@ class Test(unittest.TestCase):
         
         ##do it again in CPU mode
         args.append("--cpu_mode")
-        rw.main(args)
+        rw.main(args, False)
         self.check_uvfits_contents("test_run_woden_band01.uvfits")
         self.check_uvfits_contents("test_run_woden_band02.uvfits")
         self.check_uvfits_contents("test_run_woden_band03.uvfits")
@@ -332,7 +332,7 @@ class Test(unittest.TestCase):
         args.append("--num_threads=1")
         args.append("--profile")
 
-        rw.main(args)
+        rw.main(args, False)
 
 ##Run the test
 if __name__ == '__main__':

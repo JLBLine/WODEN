@@ -16,6 +16,15 @@
 int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_sets,
              source_catalogue_t *cropped_sky_models, array_layout_t * array_layout,
              user_precision_t *sbf) {
+  
+
+  // if (woden_settings->do_gpu) {
+  //   log_message("Will be using the GPU");
+  // } else {
+  //   log_message("Will be using only the CPU");
+  // }
+
+  
 
   //Setup a buffer on the stack to hold log messages
   //Things made on the stack don't have to be freed
@@ -28,7 +37,7 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
     log_message("WODEN is using DOUBLE precision");
     #else
     // printf("WODEN is using FLOAT precision\n");
-    log_message("WODEN is using FLOAT precision\n");
+    log_message("WODEN is using FLOAT precision");
     #endif
   }
   
@@ -96,6 +105,6 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
       free_fee_beam(beam_settings->fee_beam);
     }
   }//band loop
-
+  // log_message("run_woden.c is ending");
   return status;
 }//run_woden
