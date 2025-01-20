@@ -867,6 +867,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     ##Check that the output directory exists, if not make it
     uvfits_path = Path(args.output_uvfits_prepend)
     output_dir = uvfits_path.parent.absolute()
+    uvfits_name = uvfits_path.name
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
         
@@ -882,7 +883,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
         
         band_num_string = ",".join(f"{num:02}" for num in args.band_nums)
         
-        args.log_file_name = Path(f"woden_{log_time}_{args.output_uvfits_prepend}_band{band_num_string}.log")
+        args.log_file_name = Path(f"{output_dir}/woden_{log_time}_{uvfits_name}_band{band_num_string}.log")
     else:
         args.log_file_name = False
         

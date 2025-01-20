@@ -170,7 +170,7 @@ def woden_multithread(thread_ind : int, queue : Queue,
     if len(python_sources) == 0:
         # logger.warning(f"Visibility processing thread {thread_ind} has no work to do")
         print(f"Visibility processing thread {thread_ind} has no work to do")
-        return visi_sets_python, thread_ind
+        return visi_sets_python, thread_ind, round_num
     
     ##Create a ctypes Source_Catalogue from the python sources to feed the GPU
     source_catalogue = create_source_catalogue_from_python_sources(python_sources,

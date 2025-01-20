@@ -6,6 +6,7 @@ import importlib_resources
 import wodenpy
 from multiprocessing import Process
 from logging.handlers import QueueHandler, QueueListener
+import sys
 
 class MultiLineFormatter(logging.Formatter):
     """Multi-line formatter for logging messages. Means that the indentation
@@ -36,7 +37,7 @@ def listener_configurer(log_file):
     formatter = MultiLineFormatter("%(asctime)s - %(levelname)s - %(message)s",
                                    '%Y-%m-%d %H:%M:%S')
     
-    stream_handler = logging.StreamHandler()
+    stream_handler = logging.StreamHandler(sys.stdout)
     # stream_handler.setLevel(logging_level)
     stream_handler.setFormatter(formatter)
     handles = [stream_handler]
