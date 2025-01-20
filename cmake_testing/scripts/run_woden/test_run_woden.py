@@ -29,7 +29,9 @@ from wodenpy.uvfits import wodenpy_uvfits
 import run_woden as rw
 import numpy.testing as npt
 
-from multiprocessing import Manager, set_start_method
+# from multiprocessing import Manager, set_start_method
+
+from subprocess import call
 
 def get_lon(inputs, lon):
     """Every time they update astropy, the exact values of LST seems to change
@@ -333,7 +335,37 @@ class Test(unittest.TestCase):
         args.append("--profile")
 
         rw.main(args, False)
+        
+    def test_woden_on_command_line_for_logger(self):
+        
+        self.expec_values(autos=True)
+        
+        args = []
+        args.append("--band_nums=1,2,3")
+        args.append("--lowest_channel_freq=180e6")
+        args.append("--coarse_band_width=1.28e+6")
+        args.append("--freq_res=80e+3")
+        args.append("--num_time_steps=1")
+        args.append("--time_res=1e-16")
+        args.append("--ra0=0.0")
+        args.append("--dec0=0.0")
+        args.append("--date=2000-01-01T12:00:00")
+        args.append("--array_height=0.0")
+        args.append(f"--longitude={self.longitude}")
+        args.append(f"--latitude=0.0")
+        args.append(f"--cat_filename={code_dir}/simple_sky.txt")
+        args.append("--output_uvfits_prepend=test_run_woden")
+        args.append("--primary_beam=none")
+        args.append(f"--array_layout={code_dir}/simple_array.txt")
+        args.append("--telescope_name=test")
+        args.append("--no_precession")
+        args.append("--do_autos")
+        args.append("--num_threads=3")
+        args.append("--save_log")
+        args.append("--verbose")
 
+        rw.main(args, True)
+        
 ##Run the test
 if __name__ == '__main__':
     unittest.main()

@@ -70,50 +70,6 @@ def listener_process(queue, configurer, log_file=False):
             
             exit(e)
 
-
-# Main logging configuration
-def main_logging_config(queue, gitlabel, logging_level = logging.DEBUG, log_file = False):
-    # Configure the main logger to consume messages from the queue
-    
-    stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(logging_level)
-    
-    # formatter = MultiLineFormatter("%(message)s")
-    formatter = MultiLineFormatter("%(asctime)s - %(levelname)s - %(message)s",
-                                          '%Y-%m-%d %H:%M:%S')
-    
-    stream_handler.setFormatter(formatter)
-    handles = [stream_handler]
-    
-    if log_file:
-        file_handler = logging.FileHandler(log_file, mode='w')
-        file_handler.setLevel(logging_level)
-        file_handler.setFormatter(formatter)
-        handles.append(file_handler)
-        
-    listener = logging.handlers.QueueListener(queue, *handles)
-    listener.start()
-    
-    
-    logger = get_logger_from_queue(queue)
-    
-    logo_string = rf"""
-                 )  (              )  
-     (  (     ( /(  )\ )        ( /(  
-     )\))(   ')\())(()/(   (    )\()) 
-    ((_)()\ )((_)\  /(_))  )\  ((_)\  
-    _(())\_)() ((_)(_))_  ((_)  _((_) 
-    \ \((_)/ // _ \ |   \ | __|| \| | 
-     \ \/\/ /| (_) || |) || _| | .` | 
-      \_/\_/  \___/ |___/ |___||_|\_| 
-      
-    You are using wodenpy version/git hash: {gitlabel}
-    """
-    
-    logger.info(logo_string)
-    
-    return listener, handles
-
 def get_logger_from_queue(queue, logging_level = logging.DEBUG):
     
     if queue == False:

@@ -7,6 +7,8 @@ model `cropped_src`
 
 #include "constants.h"
 #include "woden_struct_defs.h"
+#include "stdlib.h"
+#include "logger.h"
 
 /**
 @brief Given the settings specified in `woden_settings`, populate a

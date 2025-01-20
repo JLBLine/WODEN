@@ -76,7 +76,7 @@ void calc_lmn_for_components_cpu(components_t *components, int num_components,
                components->ls, components->ms, components->ns, num_components);
 }
 
-void set_auto_uvw_to_zero(int num_cross, int num_autos,
+void set_auto_uvw_to_zero_cpu(int num_cross, int num_autos,
                           user_precision_t *us, user_precision_t *vs,
                           user_precision_t *ws) {
 

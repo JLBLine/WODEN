@@ -288,34 +288,31 @@ void calculate_visibilities(array_layout_t *array_layout,
                    woden_settings->num_cross, woden_settings->num_baselines,
                    woden_settings->num_time_steps, woden_settings->num_freqs);
 
-      // printf("WE IS DOING THE THING %.5f\n", mem_calc_visi_inouts->u_metres[num_visis-1]);
     }
 
-    // printf("do_autos num_visis num_cross %d %d %d\n", woden_settings->do_autos, woden_settings->num_visis, woden_settings->num_cross);
+    int num_autos = num_visis - num_cross;
 
     //Set auto-correlation uvw to zero if doing autos
     if (woden_settings->do_autos == 1){
       if (do_gpu == 1) {
 
-        set_auto_uvw_to_zero_gpu(num_cross, num_visis,
+        set_auto_uvw_to_zero_gpu(num_cross, num_autos,
                               mem_calc_visi_inouts->us, mem_calc_visi_inouts->vs,
                               mem_calc_visi_inouts->ws);
 
-        set_auto_uvw_to_zero_gpu(num_cross, num_visis,
+        set_auto_uvw_to_zero_gpu(num_cross, num_autos,
                               mem_calc_visi_inouts->u_metres,
                               mem_calc_visi_inouts->v_metres,
                               mem_calc_visi_inouts->w_metres);
       } else {
-        for (int auto_ind = num_cross; auto_ind < num_visis; auto_ind++) {
-          // printf("setting %d to zero out of %d %d\n", auto_ind, num_visis, num_cross);
-          mem_calc_visi_inouts->us[auto_ind] = 0.0;
-          mem_calc_visi_inouts->vs[auto_ind] = 0.0;
-          mem_calc_visi_inouts->ws[auto_ind] = 0.0;
+        set_auto_uvw_to_zero_cpu(num_cross, num_autos,
+                              mem_calc_visi_inouts->us, mem_calc_visi_inouts->vs,
+                              mem_calc_visi_inouts->ws);
 
-          mem_calc_visi_inouts->u_metres[auto_ind] = 0.0;
-          mem_calc_visi_inouts->v_metres[auto_ind] = 0.0;
-          mem_calc_visi_inouts->w_metres[auto_ind] = 0.0;
-        }
+        set_auto_uvw_to_zero_cpu(num_cross, num_autos,
+                              mem_calc_visi_inouts->u_metres,
+                              mem_calc_visi_inouts->v_metres,
+                              mem_calc_visi_inouts->w_metres);
       }
     }
 

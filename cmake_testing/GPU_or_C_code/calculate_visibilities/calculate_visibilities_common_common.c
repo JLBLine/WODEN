@@ -481,7 +481,7 @@ woden_settings_t * make_woden_settings(double ra0, double dec0) {
       woden_settings->mwa_dipole_amps[i] = 1.0;
     }
 
-    woden_settings->verbose = 0;
+    woden_settings->verbose = 1;
 
     return woden_settings;
 }

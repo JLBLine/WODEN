@@ -19,7 +19,7 @@ from wodenpy.use_libwoden.beam_settings import BeamTypes
 from wodenpy.use_libwoden.woden_settings import fill_woden_settings_python, setup_lsts_and_phase_centre, Woden_Settings_Python, convert_woden_settings_to_ctypes
 from wodenpy.use_libwoden.visibility_set import setup_visi_set_array, load_visibility_set
 from wodenpy.wodenpy_setup.run_setup import get_parser, check_args, get_code_version
-from wodenpy.use_libwoden.use_libwoden import load_in_woden_library, load_in_run_woden
+from wodenpy.use_libwoden.use_libwoden import load_in_run_woden
 from wodenpy.observational.calc_obs import get_uvfits_date_and_position_constants, calc_jdcal
 from wodenpy.skymodel.woden_skymodel import crop_below_horizon
 from wodenpy.skymodel.read_skymodel import get_skymodel_tables, read_radec_count_components, create_source_catalogue_from_python_sources

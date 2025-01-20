@@ -7,7 +7,7 @@ import logging
 import logging.handlers
 from ctypes import CDLL, CFUNCTYPE, c_char_p
 import ctypes
-from wodenpy.wodenpy_setup.woden_logger import main_logging_config, get_logger_from_queue, get_log_callback, listener_process, listener_configurer
+from wodenpy.wodenpy_setup.woden_logger import get_logger_from_queue, get_log_callback, listener_process, listener_configurer
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from multiprocessing import Manager, set_start_method
 from multiprocessing import Process, Queue

@@ -31,6 +31,7 @@ woden_settings_t * make_woden_settings(){
   woden_settings->gauss_beam_ref_freq = 100e+6;
   woden_settings->num_time_steps = 3;
   woden_settings->latitude = MWA_LAT_RAD;
+  woden_settings->verbose = 1;
 
   return woden_settings;
 }
@@ -82,6 +83,18 @@ void test_fill_primary_beam_settings(woden_settings_t *woden_settings) {
 
   else if (woden_settings->beamtype == ANALY_DIPOLE) {
     TEST_ASSERT_EQUAL_INT(ANALY_DIPOLE, beam_settings->beamtype );
+  }
+
+  else if (woden_settings->beamtype == EB_OSKAR) {
+    TEST_ASSERT_EQUAL_INT(EB_OSKAR, beam_settings->beamtype );
+  }
+
+  else if (woden_settings->beamtype == EB_LOFAR) {
+    TEST_ASSERT_EQUAL_INT(EB_LOFAR, beam_settings->beamtype );
+  }
+
+  else if (woden_settings->beamtype == EB_MWA) {
+    TEST_ASSERT_EQUAL_INT(EB_MWA, beam_settings->beamtype );
   }
 
   else {
@@ -163,6 +176,42 @@ void test_fill_primary_beam_settingsMWAAnalyBeam(void) {
 
 }
 
+/*
+Test `fill_primary_beam_settings` when `beamtype = MWA_ANALY`
+*/
+void test_fill_primary_beam_settingsEverybeamOSKAR(void) {
+
+  woden_settings_t *woden_settings = make_woden_settings();
+  woden_settings->beamtype = EB_OSKAR;
+
+  test_fill_primary_beam_settings(woden_settings);
+
+}
+
+/*
+Test `fill_primary_beam_settings` when `beamtype = MWA_ANALY`
+*/
+void test_fill_primary_beam_settingsEverybeamLOFAR(void) {
+
+  woden_settings_t *woden_settings = make_woden_settings();
+  woden_settings->beamtype = EB_LOFAR;
+
+  test_fill_primary_beam_settings(woden_settings);
+
+}
+
+/*
+Test `fill_primary_beam_settings` when `beamtype = MWA_ANALY`
+*/
+void test_fill_primary_beam_settingsEverybeamMWA(void) {
+
+  woden_settings_t *woden_settings = make_woden_settings();
+  woden_settings->beamtype = EB_MWA;
+
+  test_fill_primary_beam_settings(woden_settings);
+
+}
+
 
 //Run test using unity
 int main(void)
@@ -175,6 +224,9 @@ int main(void)
     RUN_TEST(test_fill_primary_beam_settingsEDA2Beam);
     RUN_TEST(test_fill_primary_beam_settingsNoBeam);
     RUN_TEST(test_fill_primary_beam_settingsMWAFEEInterpBeam);
+    RUN_TEST(test_fill_primary_beam_settingsEverybeamOSKAR);
+    RUN_TEST(test_fill_primary_beam_settingsEverybeamLOFAR);
+    RUN_TEST(test_fill_primary_beam_settingsEverybeamMWA);
 
     return UNITY_END();
 }

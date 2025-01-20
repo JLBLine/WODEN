@@ -120,6 +120,6 @@ this by adding `num_autos` worth of zeros
  @param[in,out] vs v coords
  @param[in,out] ws w coords
 */
-void set_auto_uvw_to_zero(int num_cross, int num_autos,
+void set_auto_uvw_to_zero_cpu(int num_cross, int num_autos,
                           user_precision_t *us, user_precision_t *vs,
                           user_precision_t *ws);
