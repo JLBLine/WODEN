@@ -198,12 +198,11 @@ void source_component_common(woden_settings_t *woden_settings,
     mem_components = &mem_chunked_source->shape_components;
   }
 
-  int num_gains = mem_components->num_primarybeam_values*num_beams;
+  // int num_gains = mem_components->num_primarybeam_values*num_beams;
+  int num_gains = num_components*woden_settings->num_time_steps*woden_settings->num_freqs*num_beams;
   if (do_gpu == 1) {
     malloc_extrapolated_flux_arrays_gpu(mem_components, num_components,
                                         woden_settings->num_freqs);
-    // extrapolate_Stokes(mem_chunked_source, mem_freqs,
-    //                  woden_settings->num_freqs, comptype, do_gpu);
     malloc_beam_gains_gpu(mem_component_beam_gains, beam_settings->beamtype, num_gains);
     calc_lmn_for_components_gpu(mem_components, num_components, woden_settings);
   } else {

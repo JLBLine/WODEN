@@ -177,7 +177,7 @@ void apply_beam_gains_stokesIQUV_on_cardinal_cpu(user_precision_complex_t g1x, u
 }
 
 
-void apply_beam_gains_stokesIQUV_on_cardinal_arrays_cpu(int num_gains,
+void apply_beam_gains_arrays_cpu(int num_gains,
           user_precision_complex_t *g1xs, user_precision_complex_t *D1xs,
           user_precision_complex_t *D1ys, user_precision_complex_t *g1ys,
           user_precision_complex_t *g2xs, user_precision_complex_t *D2xs,
@@ -186,17 +186,40 @@ void apply_beam_gains_stokesIQUV_on_cardinal_arrays_cpu(int num_gains,
           user_precision_t *flux_Us, user_precision_t *flux_Vs,
           user_precision_complex_t *visi_components,
           user_precision_complex_t *visi_XXs, user_precision_complex_t *visi_XYs,
-          user_precision_complex_t *visi_YXs, user_precision_complex_t *visi_YYs){
+          user_precision_complex_t *visi_YXs, user_precision_complex_t *visi_YYs,
+          int off_cardinal_dipoles, int do_QUV){
 
   user_precision_complex_t this_XX, this_XY, this_YX, this_YY;
 
   for (int gain = 0; gain < num_gains; gain++)
   {
 
-    apply_beam_gains_stokesIQUV_on_cardinal_cpu(g1xs[gain], D1xs[gain],
+    if (do_QUV == 1) {
+      if (off_cardinal_dipoles == 1) {
+        apply_beam_gains_stokesIQUV_off_cardinal_cpu(g1xs[gain], D1xs[gain],
           D1ys[gain], g1ys[gain], g2xs[gain], D2xs[gain], D2ys[gain], g2ys[gain],
           flux_Is[gain], flux_Qs[gain], flux_Us[gain], flux_Vs[gain],
           visi_components[gain], &this_XX, &this_XY, &this_YX, &this_YY);
+      } else {
+        apply_beam_gains_stokesIQUV_on_cardinal_cpu(g1xs[gain], D1xs[gain],
+          D1ys[gain], g1ys[gain], g2xs[gain], D2xs[gain], D2ys[gain], g2ys[gain],
+          flux_Is[gain], flux_Qs[gain], flux_Us[gain], flux_Vs[gain],
+          visi_components[gain], &this_XX, &this_XY, &this_YX, &this_YY);
+      }
+    } else {
+      if (off_cardinal_dipoles == 1) {
+        apply_beam_gains_stokesI_off_cardinal_cpu(g1xs[gain], D1xs[gain],
+          D1ys[gain], g1ys[gain], g2xs[gain], D2xs[gain], D2ys[gain], g2ys[gain],
+          flux_Is[gain],
+          visi_components[gain], &this_XX, &this_XY, &this_YX, &this_YY);
+      } else {
+        apply_beam_gains_stokesI_on_cardinal_cpu(g1xs[gain], D1xs[gain],
+          D1ys[gain], g1ys[gain], g2xs[gain], D2xs[gain], D2ys[gain], g2ys[gain],
+          flux_Is[gain],
+          visi_components[gain], &this_XX, &this_XY, &this_YX, &this_YY);
+          // printf("%d XX: %f + %f i\n", gain, creal(this_XX), cimag(this_XX));
+      }
+    }
     
     visi_XXs[gain] = this_XX;
     visi_XYs[gain] = this_XY;
@@ -291,34 +314,6 @@ void apply_beam_gains_stokesIQUV_off_cardinal_cpu(user_precision_complex_t g1x, 
   * visi_YX = this_YX;
   * visi_YY = this_YY;
 
-}
-
-void apply_beam_gains_stokesIQUV_off_cardinal_arrays_cpu(int num_gains,
-          user_precision_complex_t *g1xs, user_precision_complex_t *D1xs,
-          user_precision_complex_t *D1ys, user_precision_complex_t *g1ys,
-          user_precision_complex_t *g2xs, user_precision_complex_t *D2xs,
-          user_precision_complex_t *D2ys, user_precision_complex_t *g2ys,
-          user_precision_t *flux_Is, user_precision_t *flux_Qs,
-          user_precision_t *flux_Us, user_precision_t *flux_Vs,
-          user_precision_complex_t *visi_components,
-          user_precision_complex_t *visi_XXs, user_precision_complex_t *visi_XYs,
-          user_precision_complex_t *visi_YXs, user_precision_complex_t *visi_YYs){
-
-  user_precision_complex_t this_XX, this_XY, this_YX, this_YY;
-
-  for (int gain = 0; gain < num_gains; gain++)
-  {
-
-    apply_beam_gains_stokesIQUV_off_cardinal_cpu(g1xs[gain], D1xs[gain],
-          D1ys[gain], g1ys[gain], g2xs[gain], D2xs[gain], D2ys[gain], g2ys[gain],
-          flux_Is[gain], flux_Qs[gain], flux_Us[gain], flux_Vs[gain],
-          visi_components[gain], &this_XX, &this_XY, &this_YX, &this_YY);
-    
-    visi_XXs[gain] = this_XX;
-    visi_XYs[gain] = this_XY;
-    visi_YXs[gain] = this_YX;
-    visi_YYs[gain] = this_YY;
-  }
 }
 
 void malloc_extrapolated_flux_arrays_cpu(components_t *components, int num_comps,

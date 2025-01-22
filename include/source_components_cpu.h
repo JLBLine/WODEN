@@ -160,17 +160,45 @@ void apply_beam_gains_stokesIQUV_on_cardinal_cpu(user_precision_complex_t g1x, u
           user_precision_complex_t * visi_XX, user_precision_complex_t * visi_XY,
           user_precision_complex_t * visi_YX, user_precision_complex_t * visi_YY);
 
+void apply_beam_gains_stokesI_off_cardinal_cpu(user_precision_complex_t g1x, user_precision_complex_t D1x,
+          user_precision_complex_t D1y, user_precision_complex_t g1y,
+          user_precision_complex_t g2x, user_precision_complex_t D2x,
+          user_precision_complex_t D2y, user_precision_complex_t g2y,
+          user_precision_t flux_I, user_precision_complex_t visi_component,
+          user_precision_complex_t * visi_XX, user_precision_complex_t * visi_XY,
+          user_precision_complex_t * visi_YX, user_precision_complex_t * visi_YY);
+
+void apply_beam_gains_stokesIQUV_off_cardinal_cpu(user_precision_complex_t g1x, user_precision_complex_t D1x,
+          user_precision_complex_t D1y, user_precision_complex_t g1y,
+          user_precision_complex_t g2x, user_precision_complex_t D2x,
+          user_precision_complex_t D2y, user_precision_complex_t g2y,
+          user_precision_t flux_I, user_precision_t flux_Q,
+          user_precision_t flux_U, user_precision_t flux_V,
+          user_precision_complex_t visi_component,
+          user_precision_complex_t * visi_XX, user_precision_complex_t * visi_XY,
+          user_precision_complex_t * visi_YX, user_precision_complex_t * visi_YY);
+
 
 /**
 @brief Given primary beam gains and leakage terms for antenna 1
 `g1xs, D1xs, D1ys, g1ys` and antenna 2 `g2x, D2x, D2y, g2ys`, the complex visibility
 across those two antennas `visi`, and the Stokes parameters `flux*`,
-simulate the observed XX,XY,YX,YY instrumental cross-correlated visibilities,
-where 'x' means aligned north-south, 'y' means east-west.
+calculate the observed XX,XY,YX,YY instrumental cross-correlated visibilities.
 
-@details Calls `apply_beam_gains_stokesIQUV_on_cardinal_cpu` for `num_gains`
-visibilities, storing the results in the `visi_XXs`, `visi_XYs`, `visi_YXs`,
-and `visi_YYs` arrays.
+If `off_cardinal_dipoles` is set to 1, the off-cardinal terms are calculated, 
+where we label north-east south-west (45 deg) aligned dipoles as 'x' and
+south-east north-west (135 deg) as 'y'.
+
+If `off_cardinal_dipoles` is set to 0, the on-cardinal terms are calculated, 
+meaning 'x' is aligned north-south, 'y' aligned east-west.
+
+If `do_QUV` is set to 1, the Q,U,V arrays are used to calculate XX,XY,YX,YY.
+If `do_QUV` is set to 0, only I array is used to calculate XX,XY,YX,YY. Just
+pass NULL pointers for Q,U,V arrays if `do_QUV` is set to 0.
+
+@details Calls either `apply_beam_gains_stokesIQUV_off_cardinal_cpu`, 
+`apply_beam_gains_stokesIQUV_on_cardinal_cpu`, `apply_beam_gains_stokesI_off_cardinal_cpu`,
+or `apply_beam_gains_stokesI_on_cardinal_cpu`, depending on the boolean flags provided.
 
 @param[in] num_gains Number of gains
 @param[in] *g1xs Pointer to beam gain antenna 1 in north-south
@@ -190,8 +218,10 @@ and `visi_YYs` arrays.
 @param[in,out] *visi_XYs Pointer to output XY instrumental visibility
 @param[in,out] *visi_YXs Pointer to output YX instrumental visibility
 @param[in,out] *visi_YYs Pointer to output YY instrumental visibility
+@param[in] off_cardinal_dipoles Flag to calculate off-cardinal dipoles
+@param[in] do_QUV Flag to include Stokes QUV in visibility calculations
 */
-void apply_beam_gains_stokesIQUV_on_cardinal_arrays_cpu(int num_gains,
+void apply_beam_gains_arrays_cpu(int num_gains,
           user_precision_complex_t *g1xs, user_precision_complex_t *D1xs,
           user_precision_complex_t *D1ys, user_precision_complex_t *g1ys,
           user_precision_complex_t *g2xs, user_precision_complex_t *D2xs,
@@ -200,36 +230,9 @@ void apply_beam_gains_stokesIQUV_on_cardinal_arrays_cpu(int num_gains,
           user_precision_t *flux_Us, user_precision_t *flux_Vs,
           user_precision_complex_t *visi_components,
           user_precision_complex_t *visi_XXs, user_precision_complex_t *visi_XYs,
-          user_precision_complex_t *visi_YXs, user_precision_complex_t *visi_YYs);
+          user_precision_complex_t *visi_YXs, user_precision_complex_t *visi_YYs,
+          int off_cardinal_dipoles, int do_QUV);
 
-void apply_beam_gains_stokesI_off_cardinal_cpu(user_precision_complex_t g1x, user_precision_complex_t D1x,
-          user_precision_complex_t D1y, user_precision_complex_t g1y,
-          user_precision_complex_t g2x, user_precision_complex_t D2x,
-          user_precision_complex_t D2y, user_precision_complex_t g2y,
-          user_precision_t flux_I, user_precision_complex_t visi_component,
-          user_precision_complex_t * visi_XX, user_precision_complex_t * visi_XY,
-          user_precision_complex_t * visi_YX, user_precision_complex_t * visi_YY);
-
-void apply_beam_gains_stokesIQUV_off_cardinal_cpu(user_precision_complex_t g1x, user_precision_complex_t D1x,
-          user_precision_complex_t D1y, user_precision_complex_t g1y,
-          user_precision_complex_t g2x, user_precision_complex_t D2x,
-          user_precision_complex_t D2y, user_precision_complex_t g2y,
-          user_precision_t flux_I, user_precision_t flux_Q,
-          user_precision_t flux_U, user_precision_t flux_V,
-          user_precision_complex_t visi_component,
-          user_precision_complex_t * visi_XX, user_precision_complex_t * visi_XY,
-          user_precision_complex_t * visi_YX, user_precision_complex_t * visi_YY);
-
-void apply_beam_gains_stokesIQUV_off_cardinal_arrays_cpu(int num_gains,
-          user_precision_complex_t *g1xs, user_precision_complex_t *D1xs,
-          user_precision_complex_t *D1ys, user_precision_complex_t *g1ys,
-          user_precision_complex_t *g2xs, user_precision_complex_t *D2xs,
-          user_precision_complex_t *D2ys, user_precision_complex_t *g2ys,
-          user_precision_t *flux_Is, user_precision_t *flux_Qs,
-          user_precision_t *flux_Us, user_precision_t *flux_Vs,
-          user_precision_complex_t *visi_components,
-          user_precision_complex_t *visi_XXs, user_precision_complex_t *visi_XYs,
-          user_precision_complex_t *visi_YXs, user_precision_complex_t *visi_YYs);
 
 void malloc_extrapolated_flux_arrays_cpu(components_t *components, int num_comps,
                                      int num_freqs);

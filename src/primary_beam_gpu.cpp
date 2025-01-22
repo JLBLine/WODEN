@@ -544,7 +544,7 @@ __global__ void kern_map_hyperbeam_gains(int num_components,
     //Get an index to split into the WODEN style containers
     int new_ind =  num_times*num_freqs*num_components*iTile + num_freqs*iTime*num_components + (num_components*iFreq) + iComponent;
 
-    // printf("new_ind: %d %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f\n", new_ind,
+    // printf("Le what new_ind: %d %.8f %.8f %.8f %.8f %.8f %.8f %.8f %.8f\n", new_ind,
     //                                   (user_precision_t)d_jones[2*MAX_POLS*current_ind + 0],
     //                                   (user_precision_t)d_jones[2*MAX_POLS*current_ind + 1],
     //                                   (user_precision_t)d_jones[2*MAX_POLS*current_ind + 2],

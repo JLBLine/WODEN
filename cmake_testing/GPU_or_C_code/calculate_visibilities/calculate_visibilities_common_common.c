@@ -588,6 +588,21 @@ void free_beam_gains(source_catalogue_t *cropped_sky_models) {
   }
 }
 
+void fill_array_layout(array_layout_t *array_layout) {
+  array_layout->X_diff_metres = malloc(NUM_TIME_STEPS*NUM_BASELINES*sizeof(double));
+  array_layout->Y_diff_metres = malloc(NUM_TIME_STEPS*NUM_BASELINES*sizeof(double));
+  array_layout->Z_diff_metres = malloc(NUM_TIME_STEPS*NUM_BASELINES*sizeof(double));
+
+  for (int time_ind = 0; time_ind < NUM_TIME_STEPS; time_ind++) {
+      for (int baseline = 0; baseline < NUM_BASELINES; baseline++) {
+        int time_off = time_ind*NUM_BASELINES;
+        array_layout->X_diff_metres[time_off + baseline] = (baseline + 1) * 100;
+        array_layout->Y_diff_metres[time_off + baseline] = (baseline + 1) * 100;
+        array_layout->Z_diff_metres[time_off + baseline] = 0.0;
+      }
+  }
+}
+
 /*
 Pump many many many settings into the function we are trying to test
 Checkthe u,v,w are correct and return the visibility_set for further testing
@@ -603,19 +618,7 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
 
   array_layout_t *array_layout = malloc(sizeof(array_layout_t));
 
-  array_layout->X_diff_metres = malloc(NUM_TIME_STEPS*NUM_BASELINES*sizeof(double));
-  array_layout->Y_diff_metres = malloc(NUM_TIME_STEPS*NUM_BASELINES*sizeof(double));
-  array_layout->Z_diff_metres = malloc(NUM_TIME_STEPS*NUM_BASELINES*sizeof(double));
-
-  for (int time_ind = 0; time_ind < NUM_TIME_STEPS; time_ind++) {
-      for (int baseline = 0; baseline < NUM_BASELINES; baseline++) {
-        int time_off = time_ind*NUM_BASELINES;
-        array_layout->X_diff_metres[time_off + baseline] = (baseline + 1) * 100;
-        array_layout->Y_diff_metres[time_off + baseline] = (baseline + 1) * 100;
-        array_layout->Z_diff_metres[time_off + baseline] = 0.0;
-      }
-  }
-
+  fill_array_layout(array_layout);
 
 
   user_precision_t *sbf = NULL;
@@ -845,8 +848,8 @@ void test_comp_phase_centre_twogains(visibility_set_t *visibility_set,
             // visibility_set->sum_visi_YY_imag[num_cross + visi],
             // visibility_set->sum_visi_YY_real[num_cross + visi] );
 
-    printf("Expec GAIN %.16f %.16f\n", creal(expec_xx[visi]),
-                                visibility_set->sum_visi_XX_real[visi] );
+    // printf("Expec GAIN %.16f %.16f\n", creal(expec_xx[visi]),
+    //                             visibility_set->sum_visi_XX_real[visi] );
 
     TEST_ASSERT_DOUBLE_WITHIN(TOL, creal(expec_xx[visi]),
                               visibility_set->sum_visi_XX_real[num_cross + visi]);

@@ -1186,8 +1186,8 @@ __global__ void kern_calc_measurement_equation(int num_components, int num_basel
           user_precision_t *d_us, user_precision_t *d_vs, user_precision_t *d_ws,
           double *d_ls, double *d_ms, double *d_ns, gpuUserComplex *d_visis);
 
-__global__ void kern_apply_beam_gains_stokesIQUV_on_cardinal(int num_gains, gpuUserComplex *d_g1xs,
-          gpuUserComplex *d_D1xs,
+__global__ void kern_apply_beam_gains(int num_gains,
+          gpuUserComplex *d_g1xs, gpuUserComplex *d_D1xs,
           gpuUserComplex *d_D1ys, gpuUserComplex *d_g1ys,
           gpuUserComplex *d_g2xs, gpuUserComplex *d_D2xs,
           gpuUserComplex *d_D2ys, gpuUserComplex *d_g2ys,
@@ -1195,7 +1195,8 @@ __global__ void kern_apply_beam_gains_stokesIQUV_on_cardinal(int num_gains, gpuU
           user_precision_t *d_flux_Us, user_precision_t *d_flux_Vs,
           gpuUserComplex *d_visi_components,
           gpuUserComplex *d_visi_XXs, gpuUserComplex *d_visi_XYs,
-          gpuUserComplex *d_visi_YXs, gpuUserComplex *d_visi_YYs);
+          gpuUserComplex *d_visi_YXs, gpuUserComplex *d_visi_YYs, 
+          int off_cardinal_dipoles, int do_QUV);
 
 __global__ void kern_get_beam_gains(int num_components, int num_baselines,
            int num_freqs, int num_cross, int num_times, int beamtype,

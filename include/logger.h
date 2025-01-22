@@ -1,5 +1,12 @@
 #include <stdio.h>
 
+#ifndef __logger_h__
+#define __logger_h__
+
+#ifdef __cplusplus
+  extern "C" {
+#endif
+
 /**
  @typedef log_callback_t
  @brief A function pointer type for log callback functions.
@@ -31,3 +38,9 @@ void set_log_callback(log_callback_t callback);
 
 */
 void log_message(const char *message);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // __logger_h__

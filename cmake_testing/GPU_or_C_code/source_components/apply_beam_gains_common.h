@@ -8,4 +8,4 @@
 #include "source_components_common.h"
 #include "source_components_cpu.h"
 
-void test_apply_beam_gains_GiveCorrectValues(int do_gpu);
+void test_apply_beam_gains_GiveCorrectValues(int do_gpu, int off_cardinal, int full_pol);

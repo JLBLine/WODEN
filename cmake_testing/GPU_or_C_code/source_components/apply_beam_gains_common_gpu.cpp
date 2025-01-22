@@ -16,7 +16,8 @@ extern "C" void test_kern_apply_beam_gains(int num_gains, user_precision_complex
           user_precision_t *flux_Us, user_precision_t *flux_Vs,
           user_precision_complex_t *visi_components,
           user_precision_complex_t *visi_XXs, user_precision_complex_t *visi_XYs,
-          user_precision_complex_t *visi_YXs, user_precision_complex_t *visi_YYs){
+          user_precision_complex_t *visi_YXs, user_precision_complex_t *visi_YYs,
+          int off_cardinal, int full_pol){
 
   user_precision_complex_t *d_g1xs = NULL;
   user_precision_complex_t *d_D1xs = NULL;
@@ -112,8 +113,8 @@ extern "C" void test_kern_apply_beam_gains(int num_gains, user_precision_complex
   threads.x = 128;
   grid.x = (int)ceil( (user_precision_t)num_gains / (user_precision_t)threads.x );
 
-  gpuErrorCheckKernel("kern_apply_beam_gains_stokesIQUV_on_cardinal",
-                      kern_apply_beam_gains_stokesIQUV_on_cardinal, grid, threads,
+  gpuErrorCheckKernel("kern_apply_beam_gains",
+                      kern_apply_beam_gains, grid, threads,
                       num_gains,
                       (gpuUserComplex *)d_g1xs, (gpuUserComplex *)d_D1xs,
                       (gpuUserComplex *)d_D1ys, (gpuUserComplex *)d_g1ys,
@@ -123,7 +124,8 @@ extern "C" void test_kern_apply_beam_gains(int num_gains, user_precision_complex
                       d_flux_Us, d_flux_Vs,
                       (gpuUserComplex *)d_visi_components,
                       (gpuUserComplex *)d_visi_XXs, (gpuUserComplex *)d_visi_XYs,
-                      (gpuUserComplex *)d_visi_YXs, (gpuUserComplex *)d_visi_YYs );
+                      (gpuUserComplex *)d_visi_YXs, (gpuUserComplex *)d_visi_YYs,
+                      off_cardinal, full_pol);
 
   gpuMemcpy(visi_XXs, d_visi_XXs,
            num_gains*sizeof(user_precision_complex_t),gpuMemcpyDeviceToHost );

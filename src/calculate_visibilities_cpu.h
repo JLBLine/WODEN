@@ -7,12 +7,8 @@
 #include "woden_struct_defs.h"
 #include "constants.h"
 
-// #include "calculate_visibilities_cpu.h"
-// #include "fundamental_coords_cpu.h"
-
 #include "source_components_common.h"
-// #include "primary_beam_cpu.h"
-// #include "hyperbeam_error.h"
+#include "hyperbeam_error.h"
 
 //Helpful C code we are also using
 #include "visibility_set.h"

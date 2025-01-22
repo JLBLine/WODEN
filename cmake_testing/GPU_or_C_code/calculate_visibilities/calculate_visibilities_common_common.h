@@ -25,12 +25,6 @@
 // #define STOKESI 1.0
 #define POL_FRAC 1.0
 
-// //External CUDA code we're linking in
-// extern void calculate_visibilities_gpu(array_layout_t *array_layout,
-//   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
-//   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
-//   user_precision_t *sbf);
-
 source_catalogue_t * make_cropped_sky_models(double ra0, double dec0,
                                              int n_points, int n_gauss,
                                              int n_shapes,
@@ -42,6 +36,8 @@ woden_settings_t * make_woden_settings(double ra0, double dec0);
 
 void test_uvw(visibility_set_t *visibility_set,  double *lsts,
               double ra0, double dec0, woden_settings_t *woden_settings);
+
+void fill_array_layout(array_layout_t *array_layout);
 
 visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_models,
                                  beam_settings_t *beam_settings,

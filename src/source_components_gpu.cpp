@@ -462,9 +462,10 @@ __device__ void update_sum_visis_stokesI_gpu(int iBaseline, int iComponent,
                                            &visi_XX, &visi_XY, &visi_YX, &visi_YY);
     }
 
-    // if (iBaseline == 1912) {
+    // if (iBaseline == 0) {
     //   printf("Beam gains: %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f\n", g1x.x, g1x.y, D1x.x, D1x.y, D1y.x, D1y.y, g1y.x, g1y.y);
-    //   printf("Beam gains: %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f\n", g2x.x, g2x.y, D2x.x, D2x.y, D2y.x, D2y.y, g2y.x, g2y.y);
+    //   // printf("Beam gains: %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f\n", g2x.x, g2x.y, D2x.x, D2x.y, D2y.x, D2y.y, g2y.x, g2y.y);
+    //   printf("Other bits %.4f %.4f %.4f\n", flux_I, visi_component.x, visi_component.y);
     // }
 
     d_sum_visi_XX_real[iBaseline] += visi_XX.x;
@@ -2461,8 +2462,8 @@ __global__ void kern_calc_measurement_equation(int num_components, int num_basel
   }
 }
 
-__global__ void kern_apply_beam_gains_stokesIQUV_on_cardinal(int num_gains, gpuUserComplex *d_g1xs,
-          gpuUserComplex *d_D1xs,
+__global__ void kern_apply_beam_gains(int num_gains,
+          gpuUserComplex *d_g1xs, gpuUserComplex *d_D1xs,
           gpuUserComplex *d_D1ys, gpuUserComplex *d_g1ys,
           gpuUserComplex *d_g2xs, gpuUserComplex *d_D2xs,
           gpuUserComplex *d_D2ys, gpuUserComplex *d_g2ys,
@@ -2470,7 +2471,8 @@ __global__ void kern_apply_beam_gains_stokesIQUV_on_cardinal(int num_gains, gpuU
           user_precision_t *d_flux_Us, user_precision_t *d_flux_Vs,
           gpuUserComplex *d_visi_components,
           gpuUserComplex *d_visi_XXs, gpuUserComplex *d_visi_XYs,
-          gpuUserComplex *d_visi_YXs, gpuUserComplex *d_visi_YYs) {
+          gpuUserComplex *d_visi_YXs, gpuUserComplex *d_visi_YYs, 
+          int off_cardinal_dipoles, int do_QUV) {
 
   const int iGain = threadIdx.x + (blockDim.x*blockIdx.x);
   if (iGain < num_gains) {
@@ -2480,15 +2482,49 @@ __global__ void kern_apply_beam_gains_stokesIQUV_on_cardinal(int num_gains, gpuU
     gpuUserComplex visi_YX;
     gpuUserComplex visi_YY;
 
-    apply_beam_gains_stokesIQUV_on_cardinal_gpu(d_g1xs[iGain], d_D1xs[iGain],
-             d_D1ys[iGain], d_g1ys[iGain],
-             d_g2xs[iGain], d_D2xs[iGain],
-             d_D2ys[iGain], d_g2ys[iGain],
-             d_flux_Is[iGain], d_flux_Qs[iGain],
-             d_flux_Us[iGain], d_flux_Vs[iGain],
-             d_visi_components[iGain],
-             &visi_XX, &visi_XY,
-             &visi_YX, &visi_YY);
+    if (do_QUV == 1) {
+      if (off_cardinal_dipoles == 1){
+        apply_beam_gains_stokesIQUV_off_cardinal_gpu(d_g1xs[iGain], d_D1xs[iGain],
+              d_D1ys[iGain], d_g1ys[iGain],
+              d_g2xs[iGain], d_D2xs[iGain],
+              d_D2ys[iGain], d_g2ys[iGain],
+              d_flux_Is[iGain], d_flux_Qs[iGain],
+              d_flux_Us[iGain], d_flux_Vs[iGain],
+              d_visi_components[iGain],
+              &visi_XX, &visi_XY,
+              &visi_YX, &visi_YY);
+      } else {
+        apply_beam_gains_stokesIQUV_on_cardinal_gpu(d_g1xs[iGain], d_D1xs[iGain],
+              d_D1ys[iGain], d_g1ys[iGain],
+              d_g2xs[iGain], d_D2xs[iGain],
+              d_D2ys[iGain], d_g2ys[iGain],
+              d_flux_Is[iGain], d_flux_Qs[iGain],
+              d_flux_Us[iGain], d_flux_Vs[iGain],
+              d_visi_components[iGain],
+              &visi_XX, &visi_XY,
+              &visi_YX, &visi_YY);
+      }
+    } else {
+      if (off_cardinal_dipoles == 1){
+        apply_beam_gains_stokesI_off_cardinal_gpu(d_g1xs[iGain], d_D1xs[iGain],
+              d_D1ys[iGain], d_g1ys[iGain],
+              d_g2xs[iGain], d_D2xs[iGain],
+              d_D2ys[iGain], d_g2ys[iGain],
+              d_flux_Is[iGain],
+              d_visi_components[iGain],
+              &visi_XX, &visi_XY,
+              &visi_YX, &visi_YY);
+      } else {
+        apply_beam_gains_stokesI_on_cardinal_gpu(d_g1xs[iGain], d_D1xs[iGain],
+              d_D1ys[iGain], d_g1ys[iGain],
+              d_g2xs[iGain], d_D2xs[iGain],
+              d_D2ys[iGain], d_g2ys[iGain],
+              d_flux_Is[iGain],
+              d_visi_components[iGain],
+              &visi_XX, &visi_XY,
+              &visi_YX, &visi_YY);
+      }
+    }
 
     d_visi_XXs[iGain] = visi_XX;
     d_visi_XYs[iGain] = visi_XY;
