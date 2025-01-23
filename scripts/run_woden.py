@@ -168,8 +168,8 @@ def woden_multithread(thread_ind : int, queue : Queue,
             python_sources.append(source)
             
     if len(python_sources) == 0:
-        # logger.warning(f"Visibility processing thread {thread_ind} has no work to do")
-        print(f"Visibility processing thread {thread_ind} has no work to do")
+        logger.warning(f"Visibility processing thread {thread_ind} has no work to do")
+        # print(f"Visibility processing thread {thread_ind} has no work to do")
         return visi_sets_python, thread_ind, round_num
     
     ##Create a ctypes Source_Catalogue from the python sources to feed the GPU
@@ -601,7 +601,11 @@ def main(argv=None, do_logging=True):
     
     main_logger.debug(comp_counter.info_string())
     
-    max_chunks_per_set=args.num_threads
+    if args.cpu_mode:
+        max_chunks_per_set=args.num_threads
+    else:
+        max_chunks_per_set=32
+        
     chunked_skymodel_map_sets = create_skymodel_chunk_map(comp_counter,
                                                     args.chunking_size,
                                                     woden_settings_python.num_baselines,
@@ -609,7 +613,8 @@ def main(argv=None, do_logging=True):
                                                     args.num_time_steps,
                                                     num_threads=args.num_threads,
                                                     max_chunks_per_set=max_chunks_per_set,
-                                                    max_dirs=args.max_sky_directions)
+                                                    max_dirs=args.max_sky_directions,
+                                                    beamtype_value=woden_settings_python.beamtype)
     
     if args.dry_run:
         ##User only wants to check whether the arguments would have worked or not

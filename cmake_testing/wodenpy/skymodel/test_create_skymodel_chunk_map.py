@@ -15,7 +15,7 @@ from wodenpy.skymodel import read_yaml_skymodel
 # import wodenpy
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes
 from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map, Skymodel_Chunk_Map
-
+from wodenpy.use_libwoden.beam_settings import BeamTypes
 from common_skymodel_test import fill_comp_counter_for_chunking, Expec_Counter, BaseChunkTest, Skymodel_Settings
 
 import binpacking
@@ -53,12 +53,14 @@ class Test(BaseChunkTest):
         
         comp_counter.print_info()
         
-        
+        beamtype_value = BeamTypes.EB_MWA.value
+        # beamtype_value = 0
         ##Run the code we are testing!
         chunked_skymodel_counters = create_skymodel_chunk_map(comp_counter,
                                         max_num_visibilities, num_baselines,
                                         num_freqs, num_time_steps,
-                                        max_chunks_per_set=1e5)
+                                        max_chunks_per_set=1e5,
+                                        beamtype_value=beamtype_value)
         
         # print("DIS", chunked_skymodel_counters.shape)
         # print("DIS", len(chunked_skymodel_counters[0,0]), chunked_skymodel_counters[0,0])
@@ -122,7 +124,12 @@ class Test(BaseChunkTest):
                 
             ##We will have some unedfined number of chunks, so we want to split
             ##things as evenly as possible in the available number of threads
-            indexed_shape_chunk_sizes = [(i, n_shape) for i,n_shape in enumerate(num_shapes_per_comp)]  # List of (index, value) tuples
+            
+            indexed_shape_chunk_sizes = [(i, n_shape) for i,n_shape in enumerate(num_shapes_per_comp)]
+            # if beamtype_value in BeamGroups.eb_beam_values:
+            #     indexed_shape_chunk_sizes = [(i, n_shape) for i,n_shape in enumerate(num_shapes_per_comp)]
+            # else:
+            #     indexed_shape_chunk_sizes = [(i, n_shape) for i,n_shape in enumerate(num_shapes_per_comp)]
             target_volume = comps_per_chunk  # Set the target volume for each bin
 
             # Step 2: Partition the numbers while keeping track of indices using the `to_constant_volume` function

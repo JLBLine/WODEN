@@ -7,6 +7,7 @@ import binpacking
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes
 from numpy.typing import NDArray
 from typing import List
+from wodenpy.use_libwoden.beam_settings import BeamTypes, BeamGroups
     
 NUM_FLUX_TYPES = 3
     
@@ -919,7 +920,8 @@ def find_num_dirs_per_chunk(num_directions : int, max_directions_per_chunk : int
 def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
                               max_num_visibilities : int, num_baselines : int,
                               num_freqs : int, num_time_steps : int,
-                              num_threads : int = 1, max_dirs : int = 0,
+                              num_threads : int = 1, beamtype_value : int = BeamTypes.EB_MWA.value,
+                              max_dirs : int = 0,
                               max_chunks_per_set : int = 64,
                               text_file=False) -> NDArray[List[Skymodel_Chunk_Map]]: #type: ignore
                               
@@ -1048,8 +1050,6 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
         chunk_map = map_chunk_pointgauss(comp_counter, chunk_ind,
                                          int(num_gauss_dirs),
                                          gaussian_source = True)
-        # chunked_skymodel_maps.append(chunk_map)
-        
         set_ind = chunk_ind // num_threads + num_point_sets
         thread_ind = chunk_ind % num_threads
         chunked_skymodel_map_sets[set_ind][thread_ind] = [chunk_map]
@@ -1057,11 +1057,25 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
     ##need some extra mapping arrays to be able to grab the SHAPELET component
     ##that matches each basis function
     shape_basis_to_orig_comp_index_map, shape_basis_to_comp_type_map, shape_basis_param_index = create_shape_basis_maps(comp_counter)
-    num_shape_dirs = find_num_dirs_per_chunk(comp_counter.total_shape_comps, max_dirs_per_chunk,
-                            num_threads)
     
     ##Only do all the shapelet faffing if we actually have shapelets
     if comp_counter.total_shape_basis > 0:
+        ##When doing everybeam, the limiting calculation is each beam value,
+        ##so most efficient to chunk over the number of directions. Hence
+        ##we try and optimise over `total_shape_comps` here
+        if beamtype_value in BeamGroups.eb_beam_values:
+            num_shape_dirs = find_num_dirs_per_chunk(comp_counter.total_shape_comps,
+                                                     max_dirs_per_chunk,
+                                                     num_threads)
+            num_shape_calcs = num_shape_dirs
+        ##For everything else, the limiting calculation is the number of
+        ##shapelet coefficients, so optimise over `total_shape_basis`
+        else:
+            num_shape_calcs = find_num_dirs_per_chunk(comp_counter.total_shape_basis,
+                                                    max_coeffs_per_chunk,
+                                                    num_threads)
+            num_shape_dirs = comp_counter.total_shape_comps
+        
         shapelet_chunk_maps = map_chunk_shapelets(comp_counter,
                                             shape_basis_to_orig_comp_index_map,
                                             shape_basis_to_comp_type_map,
@@ -1069,15 +1083,14 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
                                             max_coeffs_per_chunk,
                                             num_shape_dirs)
         
-        ##We will have some unedfined number of chunks, so we want to split
-        ##things as evenly as possible in the available number of threads
-        indexed_shape_chunk_sizes = [(i, chunk_map.n_shapes) for i,chunk_map in enumerate(shapelet_chunk_maps)]  # List of (index, value) tuples
-        target_volume = num_shape_dirs  # Set the target volume for each bin
+        if beamtype_value in BeamGroups.eb_beam_values:
+            indexed_shape_chunk_sizes = [(i, chunk_map.n_shapes) for i,chunk_map in enumerate(shapelet_chunk_maps)]  # List of (index, value) tuples
+        else:
+            indexed_shape_chunk_sizes = [(i, chunk_map.n_shape_coeffs) for i,chunk_map in enumerate(shapelet_chunk_maps)]  # List of (index, value) tuples
+        target_volume = num_shape_calcs  # Set the target volume for each bin
 
         # Step 2: Partition the numbers while keeping track of indices using the `to_constant_volume` function
         binned_shape_chunk_sizes = binpacking.to_constant_volume(indexed_shape_chunk_sizes, target_volume, weight_pos=1)
-        
-        # print(len(binned_shape_chunk_sizes), binned_shape_chunk_sizes)
         
         if len(binned_shape_chunk_sizes) > num_threads:
             while len(binned_shape_chunk_sizes) > num_threads:
@@ -1085,7 +1098,6 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
                 binned_shape_chunk_sizes = sorted(binned_shape_chunk_sizes, key=lambda bin: sum(item[1] for item in bin))  # Sort binned_shape_chunk_sizes by their total sum
                 binned_shape_chunk_sizes[0].extend(binned_shape_chunk_sizes[1])  # Merge the two smallest binned_shape_chunk_sizes
                 binned_shape_chunk_sizes.pop(1)  # Remove the now-empty bin
-
 
         new_order = []
         binned_shape_chunks = []            
@@ -1128,7 +1140,6 @@ def reshape_chunked_skymodel_map_sets(chunked_skymodel_map_sets : NDArray[List[S
     NDArray[List[Skymodel_Chunk_Map]]:
         A 2D array of shape (num_sets, num_threads) where each element is a list of `Skymodel_Chunk_Map` objects.
     """
-    
     
     num_sets, _ = chunked_skymodel_map_sets.shape
     new_num_sets = int(np.ceil(num_sets*num_threads / max_chunks_per_set))
