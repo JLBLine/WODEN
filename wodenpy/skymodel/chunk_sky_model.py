@@ -985,6 +985,15 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
     if max_coeffs_per_chunk < 1: max_coeffs_per_chunk = 1
     if max_dirs_per_chunk < 1: max_dirs_per_chunk = 1
     
+    ##We want to balance the number of shapelet coefficients per chunk,
+    ##as when doing CPU mode, each chunk goes to a different thread. Check
+    ##here that we're not going to have one thread doing a lot more work
+    ##than the others, by lowering the maximum number of coefficients per
+    ##chunk if necessary
+    balance_coeffs = int(np.ceil(comp_counter.total_shape_basis / num_threads))
+    if balance_coeffs < max_coeffs_per_chunk:
+        max_coeffs_per_chunk = balance_coeffs
+    
     ##chunks numbers for each type of component
     if comp_counter.total_point_comps:
         num_point_dirs = find_num_dirs_per_chunk(comp_counter.total_point_comps, max_dirs_per_chunk,
