@@ -7,6 +7,8 @@ import wodenpy
 from multiprocessing import Process
 from logging.handlers import QueueHandler, QueueListener
 import sys
+from wodenpy.use_libwoden.beam_settings import BeamTypes, BeamGroups
+import numpy as np
 
 class MultiLineFormatter(logging.Formatter):
     """Multi-line formatter for logging messages. Means that the indentation
@@ -65,10 +67,6 @@ def listener_process(queue, configurer, log_file=False):
             logger = logging.getLogger(record.name)
             logger.handle(record)  # No level or filter logic applied - just do it!
         except Exception as e:
-            # import sys, traceback
-            # print('Whoops! Problem:', file=sys.stderr)
-            # traceback.print_exc(file=sys.stderr)
-            
             exit(e)
 
 def get_logger_from_queue(queue, logging_level = logging.DEBUG):
@@ -125,3 +123,67 @@ def simple_logger(logging_level = logging.DEBUG):
                         format='%(asctime)s - %(levelname)s - %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
     return logger
+
+
+def _mwa_beam_settings_string(logger, woden_settings, args):
+    
+    out_string = "Using MWA primary beam via hyperbeam with the following parameters:\n" \
+                    f"\thdf5 file: { woden_settings.hdf5_beam_path}\n" \
+                    f"\tdelays: {woden_settings.FEE_ideal_delays}"
+    if args.use_MWA_dipamps:
+        out_string += f"\n\twill use dipole amplitudes from given metafits file"
+    else:
+        out_string += "\n\tsetting all dipole amplitudes to 1.0"
+    
+    if args.use_MWA_dipflags:
+        out_string += f"\n\twill use dipole flags from given metafits file"
+    else:
+        out_string += "\n\twill not flag any dipoles"
+        
+    if args.use_MWA_dipamps or args.use_MWA_dipflags:
+        out_string += f"\n\tmetafits file: {args.metafits_path}"
+            
+    return out_string
+
+def log_chosen_beamtype(logger, woden_settings, args):
+    
+    if woden_settings.beamtype == BeamTypes.NO_BEAM.value:
+        logger.info("No primary beam selected, no beam attenuation will be applied.")
+        
+    elif woden_settings.beamtype == BeamTypes.GAUSS_BEAM.value:
+        logger.info("Using Gaussian primary beam with the following parameters:\n"
+                    f"\tLocked to pointing: HA {np.degrees(woden_settings.lst_base - woden_settings.gauss_ra_point):.1f} deg, "
+                    f"Dec {np.degrees(woden_settings.gauss_dec_point)} deg\n"
+                    f"\tFWHM: {woden_settings.gauss_beam_FWHM} at "
+                    f"reference frequency: {woden_settings.gauss_beam_ref_freq/1e+6} MHz")
+    elif woden_settings.beamtype == BeamTypes.FEE_BEAM.value:
+       mwa_beam_string = _mwa_beam_settings_string(logger, woden_settings, args)
+       logger.info(mwa_beam_string)
+       
+    elif woden_settings.beamtype == BeamTypes.FEE_BEAM_INTERP.value:
+        mwa_beam_string = _mwa_beam_settings_string(logger, woden_settings, args)
+        logger.info(mwa_beam_string)
+        
+    elif woden_settings.beamtype == BeamTypes.ANALY_DIPOLE.value:
+        logger.info("Using an analytical dipole primary beam (a.k.a each element is an MWA dipole e.g. EDA2 array).")
+
+    elif woden_settings.beamtype == BeamTypes.MWA_ANALY.value:
+        logger.info("Using MWA analytic primary beam with:\n" \
+                    f"\tdelays: {woden_settings.FEE_ideal_delays}")
+
+    elif woden_settings.beamtype == BeamTypes.EB_OSKAR.value:
+        logger.info("Will run with EveryBeam OSKAR primary beam, based on this measurement set:\n"
+                    f"\t{args.beam_ms_path}")
+
+    elif woden_settings.beamtype == BeamTypes.EB_LOFAR.value:
+        logger.info("Will run with EveryBeam LOFAR primary beam, based on this measurement set:\n"
+                    f"\t{args.beam_ms_path}")
+
+    elif woden_settings.beamtype == BeamTypes.EB_MWA.value:
+        logger.info("Will run with EveryBeam MWA primary beam, based on this measurement set:\n"
+                    f"\t{args.beam_ms_path}")
+    
+    else:
+        logger.error("Primary beam type not recognised. This shouldn't be possible "
+                     "if you've used wodenpy.woden_setup.run_setup.check_args().")
+

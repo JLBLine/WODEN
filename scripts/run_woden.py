@@ -38,7 +38,7 @@ import logging
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from line_profiler import profile, LineProfiler
 from wodenpy.primary_beam.use_everybeam import run_everybeam
-from wodenpy.wodenpy_setup.woden_logger import get_logger_from_queue, get_log_callback, listener_configurer, listener_process, set_logger_header,simple_logger
+from wodenpy.wodenpy_setup.woden_logger import get_logger_from_queue, get_log_callback, listener_configurer, listener_process, set_logger_header, simple_logger, log_chosen_beamtype
 from multiprocessing import Manager, set_start_method
 from copy import deepcopy
 import multiprocessing
@@ -433,6 +433,10 @@ def run_multithread_processing(num_threads, num_rounds, chunked_skymodel_map_set
                         done_n_points, done_n_gauss, done_n_shapes, done_n_shape_coeffs = sum_components_in_chunked_skymodel_map_sets(chunked_skymodel_map_sets[:completed_round + 1])
                         done_comps = done_n_points + done_n_gauss + done_n_shapes + done_n_shape_coeffs
                         logger.info(f"Have completed {done_comps} of {total_comps} components calcs ({(done_comps/total_comps)*100:.1f}%)")
+                        logger.debug(f"\t{done_n_points} of {total_n_points} points\n"
+                                 f"\t{done_n_gauss} of {total_n_gauss} gauss\n"
+                                 f"\t{done_n_shapes} of {total_n_shapes} shapelets\n"
+                                 f"\t{done_n_shape_coeffs} of {total_n_shape_coeffs} shape coeffs")
                     
     else:
                     
@@ -471,10 +475,10 @@ def run_multithread_processing(num_threads, num_rounds, chunked_skymodel_map_set
                     done_comps = done_n_points + done_n_gauss + done_n_shapes + done_n_shape_coeffs
                     
                     logger.info(f"Have completed {done_comps} of {total_comps} components calcs ({(done_comps/total_comps)*100:.1f}%)")
-                    # logger.debug(f"\t{done_n_points} of {total_n_points} points\n"
-                    #              f"\t{done_n_gauss} of {total_n_gauss} gauss\n"
-                    #              f"\t{done_n_shapes} of {total_n_shapes} shapelets\n"
-                    #              f"\t{done_n_shape_coeffs} of {total_n_shape_coeffs} shape coeffs")
+                    logger.debug(f"\t{done_n_points} of {total_n_points} points\n"
+                                 f"\t{done_n_gauss} of {total_n_gauss} gauss\n"
+                                 f"\t{done_n_shapes} of {total_n_shapes} shapelets\n"
+                                 f"\t{done_n_shape_coeffs} of {total_n_shape_coeffs} shape coeffs")
 
                 gpu_calc = visi_executor.submit(woden_multithread, 0, queue,
                                                     all_loaded_python_sources,
@@ -493,10 +497,10 @@ def run_multithread_processing(num_threads, num_rounds, chunked_skymodel_map_set
                 done_comps = done_n_points + done_n_gauss + done_n_shapes + done_n_shape_coeffs
                 
                 logger.info(f"Have completed {done_comps} of {total_comps} components calcs ({(done_comps/total_comps)*100:.1f}%)")
-                # # logger.debug(f"\t{done_n_points} of {total_n_points} points\n"
-                # #                  f"\t{done_n_gauss} of {total_n_gauss} gauss\n"
-                # #                  f"\t{done_n_shapes} of {total_n_shapes} shapelets\n"
-                # #                  f"\t{done_n_shape_coeffs} of {total_n_shape_coeffs} shape coeffs")
+                logger.debug(f"\t{done_n_points} of {total_n_points} points\n"
+                                 f"\t{done_n_gauss} of {total_n_gauss} gauss\n"
+                                 f"\t{done_n_shapes} of {total_n_shapes} shapelets\n"
+                                 f"\t{done_n_shape_coeffs} of {total_n_shape_coeffs} shape coeffs")
         
         logger.info("Finished all rounds of processing")
                     
@@ -573,7 +577,10 @@ def main(argv=None, do_logging=True):
     lsts, latitudes = setup_lsts_and_phase_centre(woden_settings_python, main_logger)
     
     ##calculate the array layout
-    array_layout_python = calc_XYZ_diffs(woden_settings_python, args)
+    array_layout_python = calc_XYZ_diffs(woden_settings_python, args, main_logger)
+    
+    ##report what beam type we are using
+    log_chosen_beamtype(main_logger, woden_settings_python, args)
 
     # ##read in and chunk the sky model=======================================
     main_logger.info("Doing the initial mapping of sky model")

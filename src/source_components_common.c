@@ -1,6 +1,7 @@
 #include "source_components_common.h"
 #include "source_components_cpu.h"
 #include <string.h>
+#include "logger.h"
 
 //NOTE this works as both a CPU and GPU function. Anything with `mem` at the
 //front means you either need host or device memory for that variable. E.g.
@@ -141,7 +142,6 @@ void extrapolate_Stokes(source_t *mem_chunked_source, double *mem_extrap_freqs,
       apply_rotation_measure_cpu(mem_components, mem_extrap_freqs, num_extrap_freqs);
     }
   }
-  // printf("CPU inside %.3f\n", mem_components.extrap_stokesQ[0]);
 }
 
 void source_component_common(woden_settings_t *woden_settings,
@@ -152,7 +152,6 @@ void source_component_common(woden_settings_t *woden_settings,
            visibility_set_t *mem_visibility_set){
 
   int do_gpu = woden_settings->do_gpu;
-  int verbose = 0;
 
   //Here we see if we a single primary beam for all (num_beams = 1) or
   //a primary beam per antenna (num_beams = num_ants)
@@ -227,8 +226,8 @@ void source_component_common(woden_settings_t *woden_settings,
     user_precision_t sin_2theta = 0.0;
     user_precision_t fwhm_lm = sin(beam_settings->beam_FWHM_rad);
 
-    if (verbose == 1){
-      printf("\tDoing Gaussian Beam\n");
+    if (woden_settings->verbose == 1){
+      log_message("\tDoing Gaussian Beam");
     }
 
     if (do_gpu == 1){
@@ -254,11 +253,11 @@ void source_component_common(woden_settings_t *woden_settings,
 
   else if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP) {
 
-    if (verbose == 1){
+    if (woden_settings->verbose == 1){
       if (beam_settings->beamtype == FEE_BEAM_INTERP) {
-        printf("\tDoing the hyperbeam (interpolated)\n");
+        log_message("\tDoing the hyperbeam (interpolated)");
       } else {
-        printf("\tDoing the hyperbeam\n");
+        log_message("\tDoing the hyperbeam");
       }
     }
 
@@ -322,8 +321,8 @@ void source_component_common(woden_settings_t *woden_settings,
   }
 
   else if (beam_settings->beamtype == ANALY_DIPOLE) {
-    if (verbose == 1){
-      printf("\tDoing analytic_dipole (EDA2 beam)\n");
+    if (woden_settings->verbose == 1){
+      log_message("\tDoing analytic_dipole (EDA2 beam)");
     }
     if (do_gpu == 1){
       wrapper_calculate_analytic_dipole_beam_gpu(num_components, components,
@@ -339,8 +338,8 @@ void source_component_common(woden_settings_t *woden_settings,
   else if (beam_settings->beamtype == MWA_ANALY) {
     //Always normalise to zenith
     int norm = 1;
-    if (verbose == 1){
-      printf("\tDoing analytic MWA beam\n");
+    if (woden_settings->verbose == 1){
+      log_message("\tDoing analytic MWA beam");
     }
 
     if (do_gpu == 1) {
@@ -363,6 +362,9 @@ void source_component_common(woden_settings_t *woden_settings,
   //So just copy them across
   //TODO move this to source_components_common
   else if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
+    if (woden_settings->verbose == 1){
+      log_message("\tDoing an EveryBeam beam");
+    }
     int num_gains = num_components*woden_settings->num_freqs*woden_settings->num_time_steps*num_beams;
     if (do_gpu == 1){
       copy_CPU_beam_gains_to_GPU(components, mem_component_beam_gains, num_gains);  
@@ -383,8 +385,8 @@ void source_component_common(woden_settings_t *woden_settings,
   //if so required
 
   if (woden_settings->do_autos){
-    if (verbose == 1){
-      printf("\tCalculating auto-correlations\n");
+    if (woden_settings->verbose == 1){
+      log_message("\tCalculating auto-correlations");
     }
 
     if (do_gpu == 1){

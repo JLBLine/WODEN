@@ -903,7 +903,6 @@ def get_code_version():
     git_dict = retrieve_gitdict()
     if git_dict:
         version = git_dict['describe']
-
     else:
         ##If doing testing with pip install -e, __version__ will not exists
         try:
@@ -911,6 +910,4 @@ def get_code_version():
         except AttributeError:
             version = "No git describe nor __version__ avaible"
     
-    # print(f"You are using WODEN commit: {version}")
-
     return version

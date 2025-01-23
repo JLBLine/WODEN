@@ -45,6 +45,7 @@ coverage_outputs/*.gcno
 coverage_outputs/*.xml
 coverage_outputs/codecov
 coverage_outputs/.coverage
+coverage_outputs/.coverage.*
 
 test_installation/*/data
 test_installation/*/images

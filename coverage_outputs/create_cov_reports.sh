@@ -66,7 +66,8 @@ if [ "$do_python" = "True" ]; then
     ##run_setup
     coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/test_argument_inputs.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/test_get_code_version.py
-    coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/test_make_logger.py
+    # coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/test_make_logger.py
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/test_log_chosen_beamtype.py
 
     ##scripts
     coverage run --source=add_woden_uvfits ../cmake_testing/scripts/add_woden_uvfits/test_add_woden_uvfits.py

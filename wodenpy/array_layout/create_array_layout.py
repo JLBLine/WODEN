@@ -8,6 +8,8 @@ import argparse
 from typing import Tuple
 from erfa import gd2gc
 from ctypes import POINTER, c_double, c_int
+from wodenpy.wodenpy_setup.woden_logger import simple_logger
+from logging import Logger
 
 ##Constants
 R2D = 180.0 / np.pi
@@ -289,7 +291,8 @@ def setup_array_layout_python(woden_settings_python : Woden_Settings_Python,
 
 
 def calc_XYZ_diffs(woden_settings_python : Woden_Settings_Python,
-                   args : argparse.Namespace) -> Array_Layout_Python:
+                   args : argparse.Namespace, 
+                   logger : Logger = False) -> Array_Layout_Python:
     """
     Populates an Array_Layout_Ctypes class with the instrument layout, given the command
     line arguments. Calculates the differences in X, Y, and Z coordinates
@@ -307,6 +310,9 @@ def calc_XYZ_diffs(woden_settings_python : Woden_Settings_Python,
     array_layout
     - An instance of the Structure class containing the X, Y, and Z differences between all pairs of antennas in the array at each time step.
     """
+    
+    if logger == False:
+        logger = simple_logger()
 
     array_layout = setup_array_layout_python(woden_settings_python, args)
 
@@ -328,8 +334,10 @@ def calc_XYZ_diffs(woden_settings_python : Woden_Settings_Python,
             array_layout.ant_Z[st_offset + i] = z
 
     if woden_settings_python.do_precession:
-        print("We are precessing the array")
+        logger.info("Precessing array layout to J2000")
         array_layout = RTS_PrecessXYZtoJ2000(array_layout, woden_settings_python)
+    else:
+        logger.info("Not precessing the array layout to J2000")
 
     for time_step in range(woden_settings_python.num_time_steps):
 
