@@ -98,6 +98,35 @@ def set_logger_header(logger, gitlabel):
     """
     
     logger.info(logo_string)
+    
+def summarise_input_args(logger, args):
+    # logger.info("Input arguments:")
+    # for arg in vars(args):
+    #     logger.info(f"\t{arg}: {getattr(args, arg)}")
+    
+    input_str = "Input arguments after parsing:"
+    
+    input_str += f"\n\tArray central latitude: {args.latitude:.3f} deg"
+    input_str += f"\n\tArray central longitude: {args.longitude:.3f} deg"
+    input_str += f"\n\tArray central height: {args.array_height:.3f} m"
+    input_str += f"\n\tLowest channel frequency: {args.lowest_channel_freq/1e+6:.3f} MHz"
+    input_str += f"\n\tChannel frequency resolution: {args.freq_res/1e+3:.3f} kHz"
+    input_str += f"\n\tCoarse band bandwidth: {args.coarse_band_width/1e+6:.3f} MHz"
+    input_str += f"\n\tNum channels per coarse band: {args.num_freq_channels}"
+    input_str += f"\n\tStart date: {args.date}"
+    input_str += f"\n\tTime resolution: {args.time_res} (s)"
+    input_str += f"\n\tNum time steps: {args.num_time_steps}"
+    
+    if args.array_layout == "from_the_metafits":
+        input_str += f"\n\tHave read {args.num_antennas} antenna positions from metafits file: {args.metafits_path}"
+    elif args.array_layout == "from_ms":
+        input_str += f"\n\tHave read {args.num_antennas} antenna positions from measurement set: {args.beam_ms_path}"
+    else:
+        input_str += f"\n\tHave read {args.num_antennas} antenna positions from array layout file: {args.array_layout}"
+    
+    logger.info(input_str)
+    
+    
 
 
 def get_log_callback(logger, logging_level = logging.DEBUG):

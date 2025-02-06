@@ -15,6 +15,8 @@ from wodenpy.use_libwoden.beam_settings import BeamTypes, BeamGroups
 import time
 from pathlib import Path
 import logging
+from astropy.time import Time
+from astropy import units as u
 
 def get_parser():
     """
@@ -587,11 +589,34 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
 
             f.close()
             
-    if args.primary_beam == 'none' and args.beam_ms_path:
+    elif args.beam_ms_path:
         if not os.path.isdir(args.beam_ms_path):
             exit('Could not open measurement set specified by user as:\n'
                  '\t--beam_ms_path={:s}.\n'
                  'Cannot get required observation settings, exiting now'.format(args.beam_ms_path))
+            
+        with table(args.beam_ms_path) as ms:
+            
+            first_time_mjd = ms.getcol("TIME_CENTROID")[0]
+            time_res = ms.getcol("INTERVAL")[0]
+            
+            times = ms.getcol("TIME")
+            num_time_steps = np.unique(times).size
+            
+            date = Time((first_time_mjd - time_res/2.0)*u.s, format='mjd')
+            date = date.datetime.strftime('%Y-%m-%dT%H:%M:%S')
+            
+        with table(f"{args.beam_ms_path}/SPECTRAL_WINDOW") as spw:
+    
+            # Get frequency resolution
+            freq_res = spw.getcol("RESOLUTION")[0][0]
+            num_frequencies = spw.getcol("NUM_CHAN")[0]
+            
+            ##TODO subtract half a freq res from the lowest channel freq??
+            lowest_channel_freq = spw.getcol("CHAN_FREQ")[0][0]
+            highest_channel_freq = spw.getcol("CHAN_FREQ")[0][-1]
+            
+            args.coarse_band_width = num_frequencies*freq_res
             
         array_layout = "from_ms"
             

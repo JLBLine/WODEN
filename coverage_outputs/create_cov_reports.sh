@@ -89,11 +89,10 @@ rm WODEN_array_layout.txt *.uvfits *.json \
     example.txt test_load_data.dat test_full_skymodel* \
     woden_settings.txt *.so *.png *.npz  *.lprof *.log
 
-
 ##Use this to create two local reports, one for C and one for python
 ##Only uncomment if you want to see the reports locally without pushing to codecov
 
-# lcov --capture --directory ${cov_src_dir} --output-file coverage.info
-# genhtml coverage.info --output-directory C_coverage
-# coverage html -d python_coverage
+lcov --capture --directory ${cov_src_dir} --output-file coverage.info
+genhtml coverage.info --output-directory C_coverage
+coverage html -d python_coverage
 

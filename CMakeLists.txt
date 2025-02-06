@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.21)
 
-##Need to find CUDA compiler
+set(WODEN_VERSION 2.5)
+
 include(CheckLanguage)
-# check_language(CUDA)
 
 option(USE_HIP "Enable the GPU acceleration for AMD GPUs." OFF)
 ##default to using CUDA to be somewhat backwards compatible
@@ -14,7 +14,7 @@ endif()
 
 if(USE_CUDA)
     message("USING CUDA : USE_CUDA=ON")
-    project(woden VERSION 2.3 LANGUAGES CXX C CUDA)
+    project(woden VERSION ${WODEN_VERSION} LANGUAGES CXX C CUDA)
 
     ##Sets the -std=c++11 nvcc compiler flag I think
     set(CMAKE_CUDA_STANDARD 11)
@@ -29,11 +29,10 @@ if(USE_CUDA)
         message("INFO : CUDAARCHS was set to $ENV{CUDAARCHS}, so now CMAKE_CUDA_ARCHITECTURES is set to ${CMAKE_CUDA_ARCHITECTURES}")
     endif()
     
-
 elseif(USE_HIP)
     message("DEBUG : USE_HIP=ON")
 
-    project(woden VERSION 2.3 LANGUAGES CXX C HIP)
+    project(woden VERSION ${WODEN_VERSION} LANGUAGES CXX C HIP)
     
     set(CMAKE_CXX_COMPILER hipcc)
     add_definitions("-D__HIP_PLATFORM_AMD__ -D__HIPCC__")
@@ -48,28 +47,95 @@ elseif(USE_HIP)
 
 endif()
 
-##Try and find the hyperbeam library
+##Find the source codes
+file(GLOB CSOURCES "src/*.c")
+file(GLOB GPUSOURCES "src/*.cpp")
+
+##because of HIP, we use .cpp for GPU code. Here, use .cc for c++
+##Specify the language to the compiler
+file(GLOB CXXSOURCES "src/*.cc")
+set_source_files_properties( ${CXXSOURCES} PROPERTIES LANGUAGE CXX)
+
+if(USE_CUDA)
+    set_source_files_properties( ${GPUSOURCES} PROPERTIES LANGUAGE CUDA)
+endif()
+
+include_directories("src/")
+
+##Try and find the hyperbeam library--------------------------------------------
 set(HINTS_HBEAM_INC "/usr/local/include/;${HBEAM_ROOT}/;")
 set(HINTS_HBEAM_LIB "/usr/local/lib/;${HBEAM_ROOT}")
 
 find_path(HBEAM_INC mwa_hyperbeam.h HINTS ${HINTS_HBEAM_INC})
 find_library(HBEAM_LIB mwa_hyperbeam HINTS ${HINTS_HBEAM_LIB} REQUIRED)
 
-##Find the source codes
-file(GLOB CSOURCES "src/*.c")
-file(GLOB GPUSOURCES "src/*.cpp")
-
-if(USE_CUDA)
-    set_source_files_properties( ${GPUSOURCES} PROPERTIES LANGUAGE CUDA)
-endif()
-
-
-include_directories("src/")
-
 if(HBEAM_LIB)
   message(STATUS "HBEAM include path: ${HBEAM_INC}")
   message(STATUS "HBEAM library path: ${HBEAM_LIB}")
 endif()
+
+
+
+##Look for EveryBeam------------------------------------------------------------
+##Finding of EveryBeam and casacore shamelessly stolen from WSClean CMake
+##if it's not there; set a flag so we can not include it during compilation
+
+set(HINTS_EVERYBEAM "/usr/local/lib/;${EBEAM_INSTALL}")
+
+find_package(EveryBeam NO_MODULE QUIET HINTS ${HINTS_EVERYBEAM})
+
+
+if(${EVERYBEAM_FOUND})
+    # include_directories(${EVERYBEAM_INCLUDE_DIRS})
+    add_definitions(-DHAVE_EVERYBEAM)
+    message(STATUS "EveryBeam library found.")
+
+    ## Only look for casacore if we have EveryBeam
+    set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake_casacore)
+    set(CASACORE_MAKE_REQUIRED_EXTERNALS_OPTIONAL TRUE)
+    find_package(Casacore REQUIRED COMPONENTS casa ms tables measures fits)
+
+    if(${CASACORE_FOUND})
+        # include_directories(${CASACORE_INCLUDE_DIRS})
+        message(STATUS "Casacore library found.")
+
+        ## Now we have to find some aocommon headers because of course we do
+        set(HINTS_AOCOM "${EBEAM_ROOT}/external/aocommon/include/aocommon/")
+        message(STATUS "Looking for aocommon in ${HINTS_AOCOM}")
+        find_path(AOCOM_INC matrix2x2.h HINTS ${HINTS_AOCOM})
+
+        if(AOCOM_INC)
+            message(STATUS "AOCOMMON include path found: ${AOCOM_INC}")
+            get_filename_component(AOCOM_BASE ${AOCOM_INC} DIRECTORY)
+            message(STATUS "AOCOM_BASE: ${AOCOM_BASE}")
+            add_definitions(-DHAVE_EVERYBEAM)
+        else(AOCOM_INC)
+            message(
+              STATUS
+                "Path to aocommon include not found. WODEN needs it to use the EveryBeam library. Building without EveryBeam."
+            )
+        endif(AOCOM_INC)
+
+
+
+    else(${CASACORE_FOUND})
+      message(
+        STATUS
+          "Casacore not found. WODEN needs to link to it to use the EveryBeam library. Building without EveryBeam."
+      )
+      set(CASACORE_LIBRARIES "")
+    endif(${CASACORE_FOUND})
+
+
+else(${EVERYBEAM_FOUND})
+  message(
+    STATUS
+      "EveryBeam library not found: WODEN will not be compiled against the EveryBeam library. So no LOFAR for you."
+  )
+  set(EVERYBEAM_LIB "")
+endif(${EVERYBEAM_FOUND})
+
+
 
 ##Set the linkers for the C code
 set(CC_LINKLIBS "-lm -pthread ${HDF5_LIB} ${HBEAM_LIB}")
@@ -82,6 +148,22 @@ set(TARGET_GROUP production CACHE STRING "Group to build")
 
 ##If making production code
 if(TARGET_GROUP STREQUAL production)
+
+    if(${EVERYBEAM_FOUND})
+        add_library(use_everybeam SHARED
+            ${CXXSOURCES}
+            ${CMAKE_SOURCE_DIR}/src/logger.c
+            )
+        target_link_libraries(use_everybeam gcov ${EVERYBEAM_LIB} ${CASACORE_LIBRARIES})
+
+        target_include_directories(use_everybeam PRIVATE
+                        ${EVERYBEAM_INCLUDE_DIRS}
+                        ${AOCOM_BASE}
+                        ${CASACORE_INCLUDE_DIRS})
+        target_compile_options(use_everybeam PRIVATE -O3 -Wall)
+
+    endif(${EVERYBEAM_FOUND})
+
     ##Do it for the float code first--------------------------------------------
     ##Generate library for the CUDA code
     add_library(wodenGPU_float SHARED ${GPUSOURCES})
@@ -95,6 +177,9 @@ if(TARGET_GROUP STREQUAL production)
     ##Add the total WODEN library, linking in the CUDA code
     add_library(woden_float SHARED src/woden.c ${CSOURCES})
     target_link_libraries(woden_float PUBLIC wodenGPU_float ${CC_LINKLIBS})
+    if(${EVERYBEAM_FOUND})
+        target_link_libraries(woden_float PUBLIC use_everybeam)
+    endif(${EVERYBEAM_FOUND})
     target_compile_options(woden_float PRIVATE -O3 -Wall)
 
     ##Copy things into the wodenpy dir, which means everything is found when
@@ -118,6 +203,9 @@ if(TARGET_GROUP STREQUAL production)
     ##Add the total WODEN library, linking in the CUDA code
     add_library(woden_double SHARED src/woden.c ${CSOURCES})
     target_link_libraries(woden_double PUBLIC wodenGPU_double ${CC_LINKLIBS})
+    if(${EVERYBEAM_FOUND})
+        target_link_libraries(woden_double PUBLIC use_everybeam)
+    endif(${EVERYBEAM_FOUND})
     target_compile_options(woden_double PRIVATE -O3 -Wall -DDOUBLE_PRECISION)
 
     ##Copy things into the wodenpy dir, which means everything is found when

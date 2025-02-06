@@ -15,7 +15,7 @@ import ctypes
 from typing import Union, Tuple, List
 from astropy.table import Table
 from astropy.io import fits
-from wodenpy.use_libwoden.beam_settings import BeamTypes
+from wodenpy.use_libwoden.beam_settings import BeamTypes, BeamGroups
 from wodenpy.use_libwoden.woden_settings import fill_woden_settings_python, setup_lsts_and_phase_centre, Woden_Settings_Python, convert_woden_settings_to_ctypes
 from wodenpy.use_libwoden.visibility_set import setup_visi_set_array, load_visibility_set
 from wodenpy.wodenpy_setup.run_setup import get_parser, check_args, get_code_version
@@ -38,7 +38,7 @@ import logging
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from line_profiler import profile, LineProfiler
 from wodenpy.primary_beam.use_everybeam import run_everybeam
-from wodenpy.wodenpy_setup.woden_logger import get_logger_from_queue, get_log_callback, listener_configurer, listener_process, set_logger_header, simple_logger, log_chosen_beamtype
+from wodenpy.wodenpy_setup.woden_logger import get_logger_from_queue, get_log_callback, listener_configurer, listener_process, set_logger_header, simple_logger, log_chosen_beamtype, summarise_input_args
 from multiprocessing import Manager, set_start_method
 from copy import deepcopy
 import multiprocessing
@@ -97,7 +97,7 @@ def woden_multithread(thread_ind : int, queue : Queue,
                       array_layout_python : Array_Layout_Python,
                       visi_sets_python : List[Visi_Set_Python],
                       beamtype : int, logging_level : int = logging.DEBUG,
-                      precision : str = "double"):
+                      precision : str = "double", profile = False) -> Tuple[List[Visi_Set_Python], int, int]:
     """
     This function runs WODEN CPU code on a separate thread, processing source catalogues from a queue until the queue is empty.
     
@@ -134,7 +134,7 @@ def woden_multithread(thread_ind : int, queue : Queue,
     else:
         device = 'CPU'
     
-    
+
     
     woden_struct_classes = Woden_Struct_Classes(precision)
     
@@ -154,6 +154,13 @@ def woden_multithread(thread_ind : int, queue : Queue,
     woden_lib.set_log_callback(c_log_callback)
     
     run_woden = load_in_run_woden(woden_lib, woden_struct_classes)
+    
+    # if profile:
+    #     profiler = LineProfiler()
+    #     ##Add whatever functions that are called in `read_fits_skymodel_chunks`
+    #     ##here to profile them
+    #     profiler.add_function(run_woden)
+    #     profiler.enable()
     
     python_sources = []
     
@@ -222,6 +229,12 @@ def woden_multithread(thread_ind : int, queue : Queue,
         visi_sets_python[band_ind].sum_visi_YX_imag += np.ctypeslib.as_array(visibility_set[band_ind].sum_visi_YX_imag, shape=(woden_settings_python.num_visis,))
         visi_sets_python[band_ind].sum_visi_YY_real += np.ctypeslib.as_array(visibility_set[band_ind].sum_visi_YY_real, shape=(woden_settings_python.num_visis,))
         visi_sets_python[band_ind].sum_visi_YY_imag += np.ctypeslib.as_array(visibility_set[band_ind].sum_visi_YY_imag, shape=(woden_settings_python.num_visis,))
+        
+    # if profile:
+    #     profiler.disable()
+    #     profile_filename = f"wod_woden_multithread_{os.getpid()}_{round_num:04d}.lprof"
+    #     # logger.info("Dumping profile to", profile_filename)
+    #     profiler.dump_stats(profile_filename)
         
     return visi_sets_python, thread_ind, round_num
 
@@ -322,11 +335,14 @@ def read_skymodel_thread(thread_id : int, num_threads : int, queue : Queue,
     
     end = time()
     
-    logger.debug(f"Finshed sky set {set_ind} reading thread num {thread_num} in {end-start:.1f} seconds")
+    if beamtype in BeamGroups.eb_beam_values:
+        logger.info(f"Finshed sky set {set_ind} reading thread num {thread_num} in {end-start:.1f} seconds")
+    else:
+        logger.debug(f"Finshed sky set {set_ind} reading thread num {thread_num} in {end-start:.1f} seconds")
     
     if args.profile:
         profiler.disable()
-        profile_filename = f"line_profile_{os.getpid()}.lprof"
+        profile_filename = f"wod_read_skymodel_thread_{os.getpid()}_{set_ind:04d}.lprof"
         # logger.info("Dumping profile to", profile_filename)
         profiler.dump_stats(profile_filename)
     
@@ -417,7 +433,8 @@ def run_multithread_processing(num_threads, num_rounds, chunked_skymodel_map_set
                                             woden_settings_python,
                                             array_layout_python, 
                                             visi_sets_python[i, :],
-                                            beamtype, args.log_level, args.precision)
+                                            beamtype, args.log_level,
+                                            args.precision, args.profile)
                                     for i in range(num_visi_threads)]
                 
                 completed = 0
@@ -487,7 +504,8 @@ def run_multithread_processing(num_threads, num_rounds, chunked_skymodel_map_set
                                                     woden_settings_python,
                                                     array_layout_python, 
                                                     visi_sets_python[0,:],
-                                                    beamtype, args.log_level, args.precision)
+                                                    beamtype, args.log_level,
+                                                    args.precision, args.profile)
                 
             # # Wait for the final calculation to complete
             if gpu_calc is not None:
@@ -503,7 +521,7 @@ def run_multithread_processing(num_threads, num_rounds, chunked_skymodel_map_set
                                  f"\t{done_n_shape_coeffs} of {total_n_shape_coeffs} shape coeffs")
         
         logger.info("Finished all rounds of processing")
-                    
+        
     return visi_sets_python
 
 @profile
@@ -553,6 +571,7 @@ def main(argv=None, do_logging=True):
         main_logger = simple_logger()
     
     set_logger_header(main_logger, gitlabel)
+    summarise_input_args(main_logger, args)
 
     lst_deg, gst0_deg, degpdy, ut1utc = get_uvfits_date_and_position_constants(latitude=args.latitude, longitude=args.longitude,
                         height=args.array_height, date=args.date)
@@ -772,11 +791,8 @@ def main(argv=None, do_logging=True):
     
     
     woden_end = time()
-    
     time_passed = timedelta(seconds=woden_end - woden_start)
-    
     main_logger.info(f"Full run took {time_passed}")
-    
     main_logger.info("WODEN is done. Closing logging handlers. S'later")
     
     if do_logging:

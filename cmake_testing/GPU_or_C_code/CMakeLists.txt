@@ -1,7 +1,22 @@
 
-##To make coverage reporting more straight forward, compile all the C code
+##To make coverage reporting more straight forward, compile all the code
 ##into one big ol' library here. The link any tests against this library. As
 ##we call all our tests in serial, each test should just add to the coverage
+
+##Currently, the C++ code we use is always double, so only need to 
+##compile one library. DO that first
+
+add_library(use_everybeam SHARED
+            ${CXXSOURCES}
+            ${CMAKE_SOURCE_DIR}/src/logger.c
+            )
+target_link_libraries(use_everybeam gcov ${EVERYBEAM_LIB} ${CASACORE_LIBRARIES})
+
+target_include_directories(use_everybeam PRIVATE
+                           ${EVERYBEAM_INCLUDE_DIRS}
+                           ${AOCOM_BASE}
+                           ${CASACORE_INCLUDE_DIRS})
+target_compile_options(use_everybeam PRIVATE -coverage -g -Wall)
 
 ##Infact, to make things neater, also compile the GPU code into one library
 ##Rather than having a library for each ctest dir
@@ -40,6 +55,7 @@ endforeach()
 
 add_subdirectory(beam_settings)
 add_subdirectory(calculate_visibilities)
+add_subdirectory(call_everybeam)
 add_subdirectory(fundamental_coords)
 add_subdirectory(logger)
 add_subdirectory(primary_beam)
