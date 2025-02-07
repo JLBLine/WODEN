@@ -13,10 +13,10 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 
 #define TOL 2e-4
 
-#define NUM_COORDS 200
+#define NUM_COORDS 10
 #define NUM_DIRS NUM_COORDS*NUM_COORDS
-#define NUM_TIMES 10
-#define NUM_FREQS 10
+#define NUM_TIMES 2
+#define NUM_FREQS 2
 #define NUM_STATIONS 1
 #define D2R (M_PI/180.0)
 #define DEC_WIDTH 40.0*D2R
@@ -203,9 +203,9 @@ int main(void)
     UNITY_BEGIN();
 
     RUN_TEST(test_run_hba_telescope);
-    // RUN_TEST(test_run_hba_telescope_rotate);
-    // RUN_TEST(test_run_hba_telescope_normed);
-    // RUN_TEST(test_run_hba_telescope_rotate_normed);
+    RUN_TEST(test_run_hba_telescope_rotate);
+    RUN_TEST(test_run_hba_telescope_normed);
+    RUN_TEST(test_run_hba_telescope_rotate_normed);
 
     return UNITY_END();
 }

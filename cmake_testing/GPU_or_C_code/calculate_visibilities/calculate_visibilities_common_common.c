@@ -482,6 +482,7 @@ woden_settings_t * make_woden_settings(double ra0, double dec0) {
     }
 
     woden_settings->verbose = 1;
+    woden_settings->off_cardinal_dipoles = 0;
 
     return woden_settings;
 }

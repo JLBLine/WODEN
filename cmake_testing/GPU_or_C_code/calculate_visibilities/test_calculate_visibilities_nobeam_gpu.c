@@ -77,7 +77,7 @@ void test_calculate_visibilities_NoBeam_ThreeSource_FiveAll_gpu(void) {
 int main(void)
 {
     UNITY_BEGIN();
-    // //Test with a single SOURCE, single COMPONENT
+    //Test with a single SOURCE, single COMPONENT
     RUN_TEST(test_calculate_visibilities_NoBeam_OneSource_SinglePoint_gpu);
     RUN_TEST(test_calculate_visibilities_NoBeam_OneSource_SingleGauss_gpu);
     RUN_TEST(test_calculate_visibilities_NoBeam_OneSource_SingleShape_gpu);
