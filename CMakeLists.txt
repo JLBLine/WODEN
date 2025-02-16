@@ -154,7 +154,7 @@ if(TARGET_GROUP STREQUAL production)
             ${CXXSOURCES}
             ${CMAKE_SOURCE_DIR}/src/logger.c
             )
-        target_link_libraries(use_everybeam gcov ${EVERYBEAM_LIB} ${CASACORE_LIBRARIES})
+        target_link_libraries(use_everybeam ${EVERYBEAM_LIB} ${CASACORE_LIBRARIES})
 
         target_include_directories(use_everybeam PRIVATE
                         ${EVERYBEAM_INCLUDE_DIRS}
@@ -177,10 +177,11 @@ if(TARGET_GROUP STREQUAL production)
     ##Add the total WODEN library, linking in the CUDA code
     add_library(woden_float SHARED src/woden.c ${CSOURCES})
     target_link_libraries(woden_float PUBLIC wodenGPU_float ${CC_LINKLIBS})
+    target_compile_options(woden_float PRIVATE -O3 -Wall)
     if(${EVERYBEAM_FOUND})
         target_link_libraries(woden_float PUBLIC use_everybeam)
+        target_compile_options(woden_float PRIVATE -DHAVE_EVERYBEAM)
     endif(${EVERYBEAM_FOUND})
-    target_compile_options(woden_float PRIVATE -O3 -Wall)
 
     ##Copy things into the wodenpy dir, which means everything is found when
     ##you do a pip install
@@ -203,10 +204,12 @@ if(TARGET_GROUP STREQUAL production)
     ##Add the total WODEN library, linking in the CUDA code
     add_library(woden_double SHARED src/woden.c ${CSOURCES})
     target_link_libraries(woden_double PUBLIC wodenGPU_double ${CC_LINKLIBS})
+    target_compile_options(woden_double PRIVATE -O3 -Wall -DDOUBLE_PRECISION)
+
     if(${EVERYBEAM_FOUND})
         target_link_libraries(woden_double PUBLIC use_everybeam)
+        target_compile_options(woden_double PRIVATE -DHAVE_EVERYBEAM)
     endif(${EVERYBEAM_FOUND})
-    target_compile_options(woden_double PRIVATE -O3 -Wall -DDOUBLE_PRECISION)
 
     ##Copy things into the wodenpy dir, which means everything is found when
     ##you do a pip install
@@ -214,6 +217,16 @@ if(TARGET_GROUP STREQUAL production)
                   COMMAND ${CMAKE_COMMAND} -E copy "libwoden_double.so"
                   "${CMAKE_CURRENT_LIST_DIR}/wodenpy/libwoden_double.so")
 
+    if($EVERYBEAM_FOUND)
+        message(STATUS "Copying EveryBeam library to wodenpy directory")
+    else($EVERYBEAM_FOUND)
+        message(STATUS "EveryBeam not found, so creating a dummy library for wodenpy. This is just a text file telling wodenpy that EveryBeam is not available.")
+        file(WRITE "${CMAKE_BINARY_DIR}/libuse_everybeam.so" "False\n")
+    endif($EVERYBEAM_FOUND)
+
+    add_custom_command(TARGET woden_double POST_BUILD
+                  COMMAND ${CMAKE_COMMAND} -E copy "libuse_everybeam.so"
+                  "${CMAKE_CURRENT_LIST_DIR}/wodenpy/libuse_everybeam.so")
 
 ##If debugging build
 elseif(TARGET_GROUP STREQUAL debug)

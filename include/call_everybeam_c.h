@@ -12,6 +12,9 @@ extern "C" {
 // define a struct here that will hold a pointer to the C++ class.
 typedef struct Telescope Telescope;
 
+// Function to check the telescope type of a Measurement Set
+char* check_ms_telescope_type(const char *ms_path);
+
 // Function to create a new Telescope instance
 Telescope* load_everybeam_telescope(int * status, const char *ms_path,
                                     const char *element_response_model,
@@ -31,6 +34,7 @@ void run_lofar_beam(Telescope *telescope,
                                int num_times, double *mjd_sec_times,
                                int num_freqs, double *freqs,
                                bool apply_beam_norms, bool rotate,
+                               bool element_only,
                                double _Complex * jones);
 
 int load_and_run_lofar_beam(const char *ms_path,
@@ -43,7 +47,24 @@ int load_and_run_lofar_beam(const char *ms_path,
                             int num_times, double *mjd_sec_times,
                             int num_freqs, double *freqs,
                             bool apply_beam_norms, bool rotate,
+                            bool element_only,
                             double _Complex * jones);
+
+
+
+int load_and_run_mwa_beam(const char *ms_path,
+                          const char *element_response_model,
+                          const char *coeff_path,
+                          int num_stations, int *station_idxs,
+                          int num_dirs,
+                          double ra0, double dec0,
+                          double *azs, double *zas,
+                          double *para_angles,
+                          int num_times, double *mjd_sec_times,
+                          int num_freqs, double *freqs,
+                          bool apply_beam_norms, bool rotate,
+                          bool element_only,
+                          double _Complex * jones);
 
 #ifdef __cplusplus
 }

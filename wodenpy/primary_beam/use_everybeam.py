@@ -10,6 +10,13 @@ import concurrent.futures
 from line_profiler import profile
 import os
 import astropy
+import wodenpy
+import importlib_resources
+from wodenpy.use_libwoden.skymodel_structs import c_double_complex
+from ctypes import c_char_p, c_int, c_double, POINTER, c_bool
+import ctypes
+from wodenpy.wodenpy_setup.woden_logger import simple_logger
+from logging import Logger
 
 
 from wodenpy.wodenpy_setup.run_setup import check_for_library
@@ -286,21 +293,385 @@ def calc_everybeam_rotation(direction : np.ndarray, north : np.ndarray,
     
     return rot_matrix
 
-# @profile
-def run_everybeam(ras: np.ndarray, decs: np.ndarray,
+# # @profile
+# def run_everybeam(ras: np.ndarray, decs: np.ndarray,
+#                   beam_ra0: float, beam_dec0: float,
+#                   j2000_latitudes: np.ndarray, j2000_lsts: np.ndarray,
+#                   current_latitude: float, current_longitude: float,
+#                   times: np.ndarray, freqs: np.ndarray,
+#                   telescope: eb.Telescope, # type: ignore
+#                   station_ids: np.ndarray,
+#                   full_accuracy: bool = True,
+#                   apply_beam_norms: bool = True,
+#                   reorder_jones: bool = False,
+#                   element_only: bool = False,
+#                   eb_rotate: bool = False,
+#                   parallactic_rotate: bool = False,
+#                   para_angle_offset: float = 0) -> np.ndarray:
+#     """
+#     Calculate the Jones matrices for a given set of coordinates, times,
+#     frequencies, and station ids using the EveryBeam library.
+#     `j2000_latitudes` should be the array latitude as precessed back to J2000,
+#     with `j2000_lsts` being the matching LST in J2000. `current_latitude` and
+#     `current_longitude` should be latitude and longitude of the array at the
+#     time of the observation. `telescope` should be an EveryBeam telescope object.
+    
+    
+#     Parameters
+#     ------------
+#     ras : np.ndarray
+#         Right ascensions of the coordinates in radians.
+#     decs : np.ndarray
+#          Declinations of the coordinates in radians.
+#     beam_ra0 : float
+#         Right ascension of the beam center in radians.
+#     beam_dec0 : float
+#         Declination of the beam center in radians.
+#     j2000_latitudes : np.ndarray
+#         Latitudes in J2000 coordinates.
+#     j2000_lsts : np.ndarray
+#         Local sidereal times in J2000 coordinates.
+#     current_latitude : float
+#         Current latitude in radians.
+#     current_longitude : float
+#         Current longitude in radians.
+#     times : np.ndarray
+#         Array of observation times.
+#     freqs : np.ndarray
+#         Array of frequencies.
+#     telescope : (eb.Telescope):
+#         Telescope object from the EveryBeam library.
+#     station_ids : np.ndarray
+#         Array of station IDs.
+#     full_accuracy : bool, optional
+#         Whether to use the full accuracy of the EveryBeam library. Defaults to True.
+#         If False, the array factor and element response are calculated separately
+#         (the two values that multiply to give the full response). The array factor
+#         is only calculated at the middle time and frequency, under the assumption
+#         that the range of frequencies and times is small enough that the array factor
+#         will not change significantly. Magnitude of the differences vary by
+#         frequency and direction so use with caution.
+#     apply_beam_norms : bool, optional
+#         Whether to apply beam normalisation. Defaults to True. Achieved by
+#         calculating the beam response at beam centre, and multiplying all
+#         Jones by the inverse of this central beam response.
+#     reorder_jones : bool, optional
+#         Whether to reorder the Jones matrices. Defaults to False. Just rearranges
+#         the Jones matrix from [[0,0, 0,1,], [1,0, 1,1]] to [[1,1, 1,0,], [0,1, 0,0]].
+#     element_only : bool, optional
+#         Whether to use only the element response. Defaults to False. Use this to
+#         look at the dipole response only, not the beam formed response.
+#     eb_rotate : bool, optional
+#         Whether to apply parallactic rotation using EveryBeam. Defaults to False.
+#         Should probably be used for everything apart from MWA beams.
+#     parallactic_rotate : bool, optional
+#         Whether to apply parallactic angle rotation using `wodenpy`. Defaults to False.
+#         Should be True for MWA beams if you want rotation. If True for a non-MWA beam,
+#         `wodenpy` should match the output as if `eb_rotate` was True.
+#     para_angle_offset : float, optional
+#         Offset to add to the parallactic angle. Defaults to 0.
+        
+#     Returns
+#     --------
+#     np.ndarray
+#         The calculated Jones matrices with shape (num_stations, num_times, num_freqs, num_coords, 2, 2).
+#     """
+    
+#     # print("YO MR WHITE", type(telescope))
+    
+#     num_stations = len(station_ids)
+#     num_times = len(times)
+#     num_freqs = len(freqs)
+#     num_coords = len(ras)
+    
+#     all_output_jones = np.zeros((num_stations, num_times, num_freqs, num_coords, 2, 2), dtype=np.complex128)*np.nan
+    
+#     non_itrf_beams = [eb.MWA, eb.MWALocal]
+    
+#     if not full_accuracy:
+#         mid_time = times[len(times)//2]
+#         mid_freq = freqs[len(freqs)//2]
+        
+#         phase_itrf_mid = radec_to_xyz(beam_ra0, beam_dec0, mid_time)
+#         dir_itrfs_mid = radec_to_xyz(ras, decs, mid_time)
+        
+#         array_factors = telescope.array_factor(mid_time.mjd*3600*24, station_ids,
+#                                             mid_freq, dir_itrfs_mid, phase_itrf_mid)
+    
+#     if parallactic_rotate:
+#         if type(telescope) not in non_itrf_beams:
+#             coords = SkyCoord(ras*u.rad, decs*u.rad, frame='icrs')
+#             location = EarthLocation(lat=current_latitude*u.rad,
+#                                     lon=current_longitude*u.rad)
+    
+#     for time_ind, time in enumerate(times):
+#         if type(telescope) in non_itrf_beams:
+#             comp_has = j2000_lsts[time_ind] - ras
+#             azs, els = erfa.hd2ae(comp_has, decs, j2000_latitudes[time_ind])
+#             zas = np.pi/2 - els
+            
+#             if parallactic_rotate:
+#                 beam_ha0 = j2000_lsts[time_ind] - beam_ra0
+#                 beam_az0, beam_el0 = erfa.hd2ae(beam_ha0, beam_dec0,
+#                                                 j2000_latitudes[time_ind])
+#                 beam_za0 = np.pi/2 - beam_el0
+#         else:
+#             phase_itrf = radec_to_xyz(beam_ra0, beam_dec0, time)
+#             # print("EBpy phase_itrf", phase_itrf)
+#             dir_itrfs = radec_to_xyz(ras, decs, time)
+#             # for i, diri in enumerate(dir_itrfs):
+#                 # print("EBpy dir_itrfs", ras[i], decs[i],  diri)
+            
+#             if parallactic_rotate:
+#                 altaz_frame = AltAz(obstime=time, location=location)
+#                 ncp_t = eb_local_xyz_from_radec(0, np.radians(90), altaz_frame)
+#                 dir_local = eb_local_xyz_from_radec(ras, decs, altaz_frame)
+                
+        
+#         time_mjd_secs = time.mjd*3600*24
+        
+#         if parallactic_rotate:
+#             has = j2000_lsts[time_ind] - ras
+#             para_angles = erfa.hd2pa(has, decs, j2000_latitudes[time_ind])
+            
+#             rot_matrix = np.empty((num_coords, 2,2))
+            
+#             if type(telescope) in non_itrf_beams:
+#                 rot_matrix[:,0,0] = np.sin(-para_angles)
+#                 rot_matrix[:,0,1] = -np.cos(-para_angles)
+#                 rot_matrix[:,1,0] = -np.cos(-para_angles)
+#                 rot_matrix[:,1,1] = -np.sin(-para_angles)
+                
+#             else:
+#                 for dir_ind, dir_itrf in enumerate(dir_itrfs):
+                    
+#                     dir_az = dir_local[dir_ind]
+#                     north, east = eb_north_east(dir_az, ncp_t)
+#                     rot = calc_everybeam_rotation(dir_az, north, east)
+#                     rot_matrix[dir_ind] = rot
+                
+#         for station_ind, station_id in enumerate(station_ids):
+#             for freq_ind, freq in enumerate(freqs):
+                
+#                 if not full_accuracy:
+#                     element_responses = np.zeros((num_coords, 2, 2), dtype=np.complex128)*np.nan
+                
+#                 if apply_beam_norms:
+#                     if type(telescope) == eb.MWA:
+#                         ##Get the response
+#                         norm_jones = telescope.station_response(time_mjd_secs, station_id, freq,
+#                                                                 beam_ra0, beam_dec0)
+#                     elif type(telescope) == eb.MWALocal:
+#                         norm_jones = telescope.station_response(time_mjd_secs, station_id, freq,
+#                                                                 beam_az0, beam_za0)
+#                         print("norm_jones", norm_jones)
+                        
+#                     else:
+#                         element_id = 0
+#                         if element_only:
+#                             norm_jones = telescope.element_response(time_mjd_secs, station_id, element_id, freq,
+#                                                                 phase_itrf, rotate=eb_rotate)
+#                         else:
+#                             if full_accuracy:
+#                                 norm_jones = telescope.station_response(time_mjd_secs, station_id, freq,
+#                                                             phase_itrf, phase_itrf, 
+#                                                             rotate=eb_rotate)
+#                             else:
+#                                 array_factor_norm = telescope.array_factor(mid_time.mjd*3600*24, station_id,
+#                                             mid_freq, phase_itrf_mid, phase_itrf_mid)
+#                                 element_norm = telescope.element_response(time_mjd_secs, station_id, element_id, freq,
+#                                                                 phase_itrf, rotate=eb_rotate)
+#                                 norm_jones = np.matmul(array_factor_norm, element_norm)
+#                         if parallactic_rotate:
+#                             dir_phase_local = eb_local_xyz_from_radec(beam_ra0, beam_dec0, altaz_frame)
+#                             north, east = eb_north_east(dir_phase_local, ncp_t)
+#                             rot = calc_everybeam_rotation(dir_phase_local, north, east)
+               
+#                     if parallactic_rotate:
+#                         if type(telescope) in non_itrf_beams:
+#                             ha0 = j2000_lsts[time_ind] - beam_ra0
+#                             para_angles = erfa.hd2pa(ha0, beam_dec0, j2000_latitudes[time_ind])
+#                             rot = np.empty((2,2))
+#                             rot[0,0] = np.sin(-para_angles)
+#                             rot[0,1] = -np.cos(-para_angles)
+#                             rot[1,0] = -np.cos(-para_angles)
+#                             rot[1,1] = -np.sin(-para_angles)
+                            
+                            
+#                             print("rot", rot)
+                        
+#                         norm_jones = np.matmul(norm_jones, rot)
+                    
+#                 for coord_ind, (ra, dec) in enumerate(zip(ras, decs)):
+#                     ##Only MWA uses ra,dec as a direct input
+#                     if type(telescope) == eb.MWA:
+#                             response = telescope.station_response(time_mjd_secs, station_id, freq,
+#                                                                   ra, dec)
+#                             all_output_jones[station_ind, time_ind, freq_ind, coord_ind] = response
+#                     ##Only MWALocal uses az,za as a direct input
+#                     elif type(telescope) == eb.MWALocal:
+#                             response = telescope.station_response(time_mjd_secs, station_id, freq,
+#                                                                   zas[coord_ind], azs[coord_ind])
+#                             all_output_jones[station_ind, time_ind, freq_ind, coord_ind] = response
+#                     ##Everything else uses ITRF coordinates
+#                     else:
+#                         if element_only:
+#                             response = telescope.element_response(time_mjd_secs, station_id, freq,
+#                                                                 dir_itrfs[coord_ind], rotate=eb_rotate)
+#                         else:
+#                             if full_accuracy:
+#                                 response = telescope.station_response(time_mjd_secs, station_id, freq,
+#                                                                 dir_itrfs[coord_ind], phase_itrf, 
+#                                                                 rotate=eb_rotate)
+#                                 all_output_jones[station_ind, time_ind, freq_ind, coord_ind] = response
+#                             else:
+#                                 element_id = 0
+#                                 element_response = telescope.element_response(time_mjd_secs,
+#                                                                 station_id, element_id, freq,
+#                                                                 dir_itrfs[coord_ind],
+#                                                                 rotate=eb_rotate)
+#                                 element_responses[coord_ind] = element_response
+                                
+#                 ##Parallactic angle doesn't change per station or freq, but
+#                 ##if we are normalising the beam, we want to rotate before we normalise
+#                 ##So do the rotation now. This also means if we are calculating array
+#                 ## factor and element response separately, need to multiply them together here
+#                 if not full_accuracy:
+#                     all_output_jones[station_ind, time_ind, freq_ind, :, :, :] = np.einsum('klm,kmn->kln', array_factors[station_ind, :, :, :], element_responses)
+                
+#                 if parallactic_rotate:
+                    
+#                     rot_jones = np.einsum('klm,kmn->kln', all_output_jones[station_ind, time_ind, freq_ind, :, :, :], rot_matrix)
+#                     all_output_jones[station_ind, time_ind, freq_ind, :, :, :] = rot_jones
+                    
+#                 if apply_beam_norms:
+#                     ##Each station, time, and freq gets it's own normalisation
+#                     ##Same 2x2 normalisation for all directions
+#                     inv_beam_norms = np.linalg.inv(norm_jones)
+#                     output_jones = np.einsum('lm,kmn->kln', inv_beam_norms, all_output_jones[station_ind, time_ind, freq_ind, :, :, :])
+#                     all_output_jones[station_ind, time_ind, freq_ind, :, :, :] = output_jones
+                    
+#     if reorder_jones:
+#         ##swap all_output_jones[:,:,:,:,0,0] with all_output_jones[:,:,:,:,1,1]
+#         all_output_jones[:, :, :, :, [0, 1], [0, 1]] = all_output_jones[:, :, :, :, [1, 0], [1, 0]]
+#         ##swap all_output_jones[:,:,:,:,0,1] with all_output_jones[:,:,:,:,1,0]
+#         all_output_jones[:, :, :, :, [0, 1], [1, 0]] = all_output_jones[:, :, :, :, [1, 0], [0, 1]]
+                    
+#     return all_output_jones
+
+
+def check_ms_telescope_type_matches_element_response(ms_path : str,
+                                                     element_response_model : str,
+                                                     logger : Logger = False) -> str:
+    
+    
+    if not logger:
+        logger = simple_logger()
+    
+    # woden_lib = importlib_resources.files(wodenpy).joinpath(f"libwoden_double.so")
+    # woden_lib = ctypes.cdll.LoadLibrary("/home/jack-line/software/WODEN_dev/build/libuse_everybeam.so")
+    woden_lib = ctypes.cdll.LoadLibrary("/home/jack-line/software/WODEN_dev/build/cmake_testing/GPU_or_C_code/libuse_everybeam.so")
+    
+    check_ms_telescope_type = woden_lib.check_ms_telescope_type
+    check_ms_telescope_type.argtypes = [c_char_p]
+    check_ms_telescope_type.restype = c_char_p
+    
+    ms_path_ctypes = ctypes.c_char_p(ms_path.encode('utf-8'))
+    
+    telescope_type = check_ms_telescope_type(ms_path_ctypes).decode('utf-8')
+    
+    use_element_response_model = False
+    
+    if telescope_type == 'MWA':
+        if element_response_model == 'default':
+            use_element_response_model = "MWA"
+        else:
+            if element_response_model != 'MWA':
+                logger.warning(f"Measurement set telescope type is MWA, but element_response_model was set to {element_response_model}. Changing to 'MWA'")
+                use_element_response_model = "MWA"
+            else:
+                use_element_response_model = element_response_model
+                
+    elif telescope_type == 'LOFAR':
+        if element_response_model == 'default':
+            use_element_response_model = "hamaker"
+        else:
+            if element_response_model not in ['hamaker', 'hamakerlba', 'lobes']:
+                logger.warning(f"Measurement set telescope type is LOFAR, but "
+                               f"element_response_model was set to {element_response_model}, "
+                               "which is not one of ['hamaker', 'hamakerlba','lobes']. "
+                               "Defaulting to 'hamaker'")
+                use_element_response_model = "hamaker"
+            else:
+                use_element_response_model = element_response_model
+                
+    elif telescope_type == 'OSKAR':
+        if element_response_model == 'default':
+            use_element_response_model = "skala40_wave"
+        else:
+            if element_response_model != 'skala40_wave':
+                logger.warning(f"Measurement set telescope type is OSKAR, but element_response_model "
+                               f"was set to {element_response_model}. Changing to 'skala40_wave'")
+                use_element_response_model = "skala40_wave"
+            else:
+                use_element_response_model = element_response_model
+    else:
+        use_element_response_model = element_response_model
+        exit_message = f"Measurement set telescope type is {telescope_type}"
+        exit_message += "WODEN currently supports LOFAR, MWA, OSKAR EveryBeam."
+        exit_message += "Cannot proceed as unknown behaviour will happen in C++ code. "
+        exit_message += "Exiting now."
+        logger.error(exit_message)
+        exit(exit_message)
+        
+    
+    return telescope_type, use_element_response_model
+
+
+def convert_common_args_to_everybeam_args(ms_path : str, coeff_path : str,
+                                          element_response_model : str,
+                                          station_idxs : np.ndarray,
+                                          freqs : np.ndarray,
+                                          mjd_sec_times : np.ndarray):
+    
+    num_stations = len(station_idxs)
+    num_times = len(mjd_sec_times)
+    num_freqs = len(freqs)
+                                          
+    mjd_sec_times_ctypes = (ctypes.c_double * num_times)()
+    for i in range(num_times):
+        mjd_sec_times_ctypes[i] = mjd_sec_times[i]
+        
+    freqs_ctypes = (ctypes.c_double * num_freqs)()
+    for i in range(num_freqs):
+        freqs_ctypes[i] = freqs[i]
+    
+    station_idxs_ctypes = (ctypes.c_int * num_stations)()
+    for i in range(num_stations):
+        station_idxs_ctypes[i] = station_idxs[i]
+    
+    
+    ms_path_ctypes = ctypes.c_char_p(ms_path.encode('utf-8'))
+    element_response_model_ctypes = ctypes.c_char_p(element_response_model.encode('utf-8'))
+    coeff_path_ctypes = ctypes.c_char_p(coeff_path.encode('utf-8'))
+    
+    return ms_path_ctypes, coeff_path_ctypes, element_response_model_ctypes, station_idxs_ctypes, freqs_ctypes, mjd_sec_times_ctypes
+
+def run_everybeam(ms_path : str, coeff_path : str,
+                  ras: np.ndarray, decs: np.ndarray,
                   beam_ra0: float, beam_dec0: float,
                   j2000_latitudes: np.ndarray, j2000_lsts: np.ndarray,
                   current_latitude: float, current_longitude: float,
                   times: np.ndarray, freqs: np.ndarray,
-                  telescope: eb.Telescope, # type: ignore
                   station_ids: np.ndarray,
-                  full_accuracy: bool = True,
+                  element_response_model='default',
                   apply_beam_norms: bool = True,
                   reorder_jones: bool = False,
                   element_only: bool = False,
                   eb_rotate: bool = False,
                   parallactic_rotate: bool = False,
-                  para_angle_offset: float = 0) -> np.ndarray:
+                  para_angle_offset: float = 0,
+                  logger : Logger = False) -> np.ndarray:
     """
     Calculate the Jones matrices for a given set of coordinates, times,
     frequencies, and station ids using the EveryBeam library.
@@ -370,182 +741,47 @@ def run_everybeam(ras: np.ndarray, decs: np.ndarray,
         The calculated Jones matrices with shape (num_stations, num_times, num_freqs, num_coords, 2, 2).
     """
     
-    # print("YO MR WHITE", type(telescope))
+    if not logger:
+        logger = simple_logger()
+        
+    telescope_type, checked_element_response_model = check_ms_telescope_type_matches_element_response(ms_path,
+                                                                           element_response_model,
+                                                                           logger)
+    
+    telescope_type = "MWA"
     
     num_stations = len(station_ids)
     num_times = len(times)
     num_freqs = len(freqs)
     num_coords = len(ras)
     
-    all_output_jones = np.zeros((num_stations, num_times, num_freqs, num_coords, 2, 2), dtype=np.complex128)*np.nan
+    # all_output_jones = np.zeros((num_stations, num_times, num_freqs, num_coords, 2, 2), dtype=np.complex128)*np.nan
     
-    non_itrf_beams = [eb.MWA, eb.MWALocal]
+    # non_itrf_beams = [eb.MWA, eb.MWALocal]
     
-    if not full_accuracy:
-        mid_time = times[len(times)//2]
-        mid_freq = freqs[len(freqs)//2]
-        
-        phase_itrf_mid = radec_to_xyz(beam_ra0, beam_dec0, mid_time)
-        dir_itrfs_mid = radec_to_xyz(ras, decs, mid_time)
-        
-        array_factors = telescope.array_factor(mid_time.mjd*3600*24, station_ids,
-                                            mid_freq, dir_itrfs_mid, phase_itrf_mid)
+    mjd_sec_times = np.array([time.mjd * 86400.0 for time in times])
     
-    if parallactic_rotate:
-        if type(telescope) not in non_itrf_beams:
-            coords = SkyCoord(ras*u.rad, decs*u.rad, frame='icrs')
-            location = EarthLocation(lat=current_latitude*u.rad,
-                                    lon=current_longitude*u.rad)
+    if telescope_type == 'MWA':
+        jones = run_mwa_beam(ms_path, element_response_model,
+                   coeff_path, station_ids,
+                   beam_ra0, beam_dec0,
+                   ras, decs, mjd_sec_times,
+                   j2000_lsts, j2000_latitudes,
+                   freqs, apply_beam_norms, parallactic_rotate,
+                   element_only)
+        
+    elif telescope_type == 'LOFAR':
+        jones = run_lofar_beam(ms_path, element_response_model,
+                               coeff_path, 
+                               station_ids,
+                               beam_ra0, beam_dec0,
+                               ras, decs, mjd_sec_times,
+                               freqs, apply_beam_norms, eb_rotate, element_only)
+        
+    else:
+        jones = False
     
-    for time_ind, time in enumerate(times):
-        if type(telescope) in non_itrf_beams:
-            comp_has = j2000_lsts[time_ind] - ras
-            azs, els = erfa.hd2ae(comp_has, decs, j2000_latitudes[time_ind])
-            zas = np.pi/2 - els
-            
-            if parallactic_rotate:
-                beam_ha0 = j2000_lsts[time_ind] - beam_ra0
-                beam_az0, beam_el0 = erfa.hd2ae(beam_ha0, beam_dec0,
-                                                j2000_latitudes[time_ind])
-                beam_za0 = np.pi/2 - beam_el0
-        else:
-            phase_itrf = radec_to_xyz(beam_ra0, beam_dec0, time)
-            dir_itrfs = radec_to_xyz(ras, decs, time)
-            
-            if parallactic_rotate:
-                altaz_frame = AltAz(obstime=time, location=location)
-                ncp_t = eb_local_xyz_from_radec(0, np.radians(90), altaz_frame)
-                dir_local = eb_local_xyz_from_radec(ras, decs, altaz_frame)
-                
-        
-        time_mjd_secs = time.mjd*3600*24
-        
-        if parallactic_rotate:
-            has = j2000_lsts[time_ind] - ras
-            para_angles = erfa.hd2pa(has, decs, j2000_latitudes[time_ind])
-            
-            rot_matrix = np.empty((num_coords, 2,2))
-            
-            if type(telescope) in non_itrf_beams:
-                rot_matrix[:,0,0] = np.sin(-para_angles)
-                rot_matrix[:,0,1] = -np.cos(-para_angles)
-                rot_matrix[:,1,0] = -np.cos(-para_angles)
-                rot_matrix[:,1,1] = -np.sin(-para_angles)
-                
-            else:
-                for dir_ind, dir_itrf in enumerate(dir_itrfs):
-                    
-                    dir_az = dir_local[dir_ind]
-                    north, east = eb_north_east(dir_az, ncp_t)
-                    rot = calc_everybeam_rotation(dir_az, north, east)
-                    rot_matrix[dir_ind] = rot
-                
-        for station_ind, station_id in enumerate(station_ids):
-            for freq_ind, freq in enumerate(freqs):
-                
-                if not full_accuracy:
-                    element_responses = np.zeros((num_coords, 2, 2), dtype=np.complex128)*np.nan
-                
-                if apply_beam_norms:
-                    if type(telescope) == eb.MWA:
-                        ##Get the response
-                        norm_jones = telescope.station_response(time_mjd_secs, station_id, freq,
-                                                                beam_ra0, beam_dec0)
-                    elif type(telescope) == eb.MWALocal:
-                        norm_jones = telescope.station_response(time_mjd_secs, station_id, freq,
-                                                                beam_az0, beam_za0)
-                        print("norm_jones", norm_jones)
-                        
-                    else:
-                        element_id = 0
-                        if element_only:
-                            norm_jones = telescope.element_response(time_mjd_secs, station_id, element_id, freq,
-                                                                phase_itrf, rotate=eb_rotate)
-                        else:
-                            if full_accuracy:
-                                norm_jones = telescope.station_response(time_mjd_secs, station_id, freq,
-                                                            phase_itrf, phase_itrf, 
-                                                            rotate=eb_rotate)
-                            else:
-                                array_factor_norm = telescope.array_factor(mid_time.mjd*3600*24, station_id,
-                                            mid_freq, phase_itrf_mid, phase_itrf_mid)
-                                element_norm = telescope.element_response(time_mjd_secs, station_id, element_id, freq,
-                                                                phase_itrf, rotate=eb_rotate)
-                                norm_jones = np.matmul(array_factor_norm, element_norm)
-                        if parallactic_rotate:
-                            dir_phase_local = eb_local_xyz_from_radec(beam_ra0, beam_dec0, altaz_frame)
-                            north, east = eb_north_east(dir_phase_local, ncp_t)
-                            rot = calc_everybeam_rotation(dir_phase_local, north, east)
-               
-                    if parallactic_rotate:
-                        if type(telescope) in non_itrf_beams:
-                            ha0 = j2000_lsts[time_ind] - beam_ra0
-                            para_angles = erfa.hd2pa(ha0, beam_dec0, j2000_latitudes[time_ind])
-                            rot = np.empty((2,2))
-                            rot[0,0] = np.sin(-para_angles)
-                            rot[0,1] = -np.cos(-para_angles)
-                            rot[1,0] = -np.cos(-para_angles)
-                            rot[1,1] = -np.sin(-para_angles)
-                            # print("rot", rot)
-                        
-                        norm_jones = np.matmul(norm_jones, rot)
-                    
-                for coord_ind, (ra, dec) in enumerate(zip(ras, decs)):
-                    ##Only MWA uses ra,dec as a direct input
-                    if type(telescope) == eb.MWA:
-                            response = telescope.station_response(time_mjd_secs, station_id, freq,
-                                                                  ra, dec)
-                            all_output_jones[station_ind, time_ind, freq_ind, coord_ind] = response
-                    ##Only MWALocal uses az,za as a direct input
-                    elif type(telescope) == eb.MWALocal:
-                            response = telescope.station_response(time_mjd_secs, station_id, freq,
-                                                                  zas[coord_ind], azs[coord_ind])
-                            all_output_jones[station_ind, time_ind, freq_ind, coord_ind] = response
-                    ##Everything else uses ITRF coordinates
-                    else:
-                        if element_only:
-                            response = telescope.element_response(time_mjd_secs, station_id, freq,
-                                                                dir_itrfs[coord_ind], rotate=eb_rotate)
-                        else:
-                            if full_accuracy:
-                                response = telescope.station_response(time_mjd_secs, station_id, freq,
-                                                                dir_itrfs[coord_ind], phase_itrf, 
-                                                                rotate=eb_rotate)
-                                all_output_jones[station_ind, time_ind, freq_ind, coord_ind] = response
-                            else:
-                                element_id = 0
-                                element_response = telescope.element_response(time_mjd_secs,
-                                                                station_id, element_id, freq,
-                                                                dir_itrfs[coord_ind],
-                                                                rotate=eb_rotate)
-                                element_responses[coord_ind] = element_response
-                                
-                ##Parallactic angle doesn't change per station or freq, but
-                ##if we are normalising the beam, we want to rotate before we normalise
-                ##So do the rotation now. This also means if we are calculating array
-                ## factor and element response separately, need to multiply them together here
-                if not full_accuracy:
-                    all_output_jones[station_ind, time_ind, freq_ind, :, :, :] = np.einsum('klm,kmn->kln', array_factors[station_ind, :, :, :], element_responses)
-                
-                if parallactic_rotate:
-                    
-                    rot_jones = np.einsum('klm,kmn->kln', all_output_jones[station_ind, time_ind, freq_ind, :, :, :], rot_matrix)
-                    all_output_jones[station_ind, time_ind, freq_ind, :, :, :] = rot_jones
-                    
-                if apply_beam_norms:
-                    ##Each station, time, and freq gets it's own normalisation
-                    ##Same 2x2 normalisation for all directions
-                    inv_beam_norms = np.linalg.inv(norm_jones)
-                    output_jones = np.einsum('lm,kmn->kln', inv_beam_norms, all_output_jones[station_ind, time_ind, freq_ind, :, :, :])
-                    all_output_jones[station_ind, time_ind, freq_ind, :, :, :] = output_jones
-                    
-    if reorder_jones:
-        ##swap all_output_jones[:,:,:,:,0,0] with all_output_jones[:,:,:,:,1,1]
-        all_output_jones[:, :, :, :, [0, 1], [0, 1]] = all_output_jones[:, :, :, :, [1, 0], [1, 0]]
-        ##swap all_output_jones[:,:,:,:,0,1] with all_output_jones[:,:,:,:,1,0]
-        all_output_jones[:, :, :, :, [0, 1], [1, 0]] = all_output_jones[:, :, :, :, [1, 0], [0, 1]]
-                    
-    return all_output_jones
+    return jones
 
 
 def run_everybeam_thread(num_threads : int, thread_id : int,
@@ -649,13 +885,8 @@ def run_everybeam_thread(num_threads : int, thread_id : int,
         (num_stations, num_times, num_freqs, num_coords_in_thread, 2, 2), as
         well as the thread ID. Use the thread ID to insert this thread output
         into the correct place in the final Jones matrix.
+        
     """
-    
-    telescope = eb.load_telescope(ms_path,
-                                  use_differential_beam=use_differential_beam,
-                                  coeff_path=coeff_path,
-                                  element_response_model=element_response_model,
-                                  use_local_mwa=use_local_mwa)
     
     num_coords = len(ras)
     coords_per_thread = int(np.ceil(num_coords / num_threads))
@@ -665,19 +896,19 @@ def run_everybeam_thread(num_threads : int, thread_id : int,
     
     print(f"Thread {thread_id} processing coords {low_coord} to {high_coord}")
     
-    jones = run_everybeam(ras[low_coord:high_coord],
-                          decs[low_coord:high_coord],
-                          ra0, dec0,
-                          j2000_latitudes, j2000_lsts,
-                          current_latitude, current_longitude,
-                          times, freqs,
-                          telescope, station_ids,
-                          full_accuracy=full_accuracy,
-                          apply_beam_norms=apply_beam_norms,
-                          reorder_jones=reorder_jones,
-                          element_only=element_only,
-                          eb_rotate=eb_rotate,
-                          parallactic_rotate=parallactic_rotate)
+    jones = run_everybeam(ms_path, coeff_path,
+                  ras[low_coord:high_coord],
+                  decs[low_coord:high_coord],
+                  ra0, dec0, j2000_latitudes, j2000_lsts,
+                  current_latitude, current_longitude,
+                  times, freqs,
+                  station_ids,
+                  element_response_model=element_response_model,
+                  apply_beam_norms=apply_beam_norms,
+                  parallactic_rotate=parallactic_rotate,
+                  reorder_jones=reorder_jones,
+                  element_only=element_only,
+                  eb_rotate=eb_rotate)
     
     print(f"Thread {thread_id} finished")
     
@@ -833,3 +1064,193 @@ def run_everybeam_over_threads(num_threads : int,
         all_jones[:, :, :, low_coord:high_coord, :, :] = jones_chunk
     
     return all_jones
+
+
+
+
+def run_lofar_beam(ms_path : str, element_response_model : bool,
+                   coeff_path : str,
+                   station_idxs : np.ndarray,
+                   beam_ra0 : float, beam_dec0 : float,
+                   ras : np.ndarray, decs : np.ndarray,
+                   mjd_sec_times : np.ndarray,
+                   freqs : np.ndarray,
+                   apply_beam_norms : bool, rotate : bool,
+                   element_only : bool = False):
+    
+    # lib_path = importlib_resources.files(wodenpy).joinpath(f"libwoden_{args.precision}.so")
+    
+    woden_lib = importlib_resources.files(wodenpy).joinpath(f"libwoden_double.so")
+    woden_lib = ctypes.cdll.LoadLibrary("/home/jack-line/software/WODEN_dev/build/cmake_testing/GPU_or_C_code/libuse_everybeam.so")
+    # woden_lib = ctypes.cdll.LoadLibrary("/home/jack-line/software/WODEN_dev/build/libuse_everybeam.so")
+    
+    load_and_run_lofar_beam = woden_lib.load_and_run_lofar_beam
+    
+    num_stations = len(station_idxs)
+    num_dirs = len(ras)
+    num_freqs = len(freqs)
+    num_times = len(mjd_sec_times)
+    
+    ras_ctypes = (ctypes.c_double * num_dirs)()
+    decs_ctypes = (ctypes.c_double * num_dirs)()
+    for i in range(num_dirs):
+        ras_ctypes[i] = ras[i]
+        decs_ctypes[i] = decs[i]
+        
+    mjd_sec_times_ctypes = (ctypes.c_double * num_times)()
+    for i in range(num_times):
+        mjd_sec_times_ctypes[i] = mjd_sec_times[i]
+        
+    freqs_ctypes = (ctypes.c_double * num_freqs)()
+    for i in range(num_freqs):
+        freqs_ctypes[i] = freqs[i]
+    
+    station_idxs_ctypes = (ctypes.c_int * num_stations)()
+    for i in range(num_stations):
+        station_idxs_ctypes[i] = station_idxs[i]
+    
+    
+    ms_path_ctypes = ctypes.c_char_p(ms_path.encode('utf-8'))
+    element_response_model_ctypes = ctypes.c_char_p(element_response_model.encode('utf-8'))
+    coeff_path_ctypes = ctypes.c_char_p(coeff_path.encode('utf-8'))
+    
+    jones = ((num_stations*num_times*num_freqs*num_dirs*4)*c_double_complex)()
+    
+    load_and_run_lofar_beam.argtypes = [c_char_p, c_char_p, c_char_p,
+                                        c_int, POINTER(c_int),
+                                        c_int, c_double, c_double,
+                                        POINTER(c_double), POINTER(c_double),
+                                        c_int, POINTER(c_double),
+                                        c_int, POINTER(c_double),
+                                        c_bool, c_bool, c_bool,
+                                        POINTER(c_double_complex)]
+    
+    load_and_run_lofar_beam(ms_path_ctypes,
+                            element_response_model_ctypes,
+                            coeff_path_ctypes,
+                            num_stations, station_idxs_ctypes,
+                            num_dirs,
+                            beam_ra0, beam_dec0,
+                            ras_ctypes, decs_ctypes,
+                            num_times, mjd_sec_times_ctypes,
+                            num_freqs, freqs_ctypes,
+                            apply_beam_norms, rotate, element_only,
+                            jones)
+    
+    # print(jones)
+    
+    jones_py = np.ctypeslib.as_array(jones, shape=(num_stations*num_times*num_freqs*num_dirs*4))
+    jones_py = jones_py['real'] + 1j*jones_py['imag']
+    
+    jones_py = jones_py.reshape(num_stations, num_times, num_freqs, num_dirs, 2, 2)
+    
+    
+    return jones_py
+
+
+
+def run_mwa_beam(ms_path : str, element_response_model : bool,
+                   coeff_path : str,
+                   station_idxs : np.ndarray,
+                   beam_ra0 : float, beam_dec0 : float,
+                   ras : np.ndarray, decs : np.ndarray,
+                   mjd_sec_times : np.ndarray,
+                   j2000_lsts : np.ndarray, j2000_latitudes : np.ndarray,
+                   freqs : np.ndarray,
+                   apply_beam_norms : bool, rotate : bool,
+                   element_only : bool = False):
+    
+    num_stations = len(station_idxs)
+    num_dirs = len(ras)
+    num_freqs = len(freqs)
+    num_times = len(mjd_sec_times)
+    
+    
+    azs = np.empty(num_dirs*num_times)
+    zas = np.empty(num_dirs*num_times)
+    para_angles = np.empty(num_dirs*num_times)
+    
+    for comp_ind in range(num_dirs):
+        comp_has = j2000_lsts - ras[comp_ind]
+        these_azs, these_els = erfa.hd2ae(comp_has, decs[comp_ind], j2000_latitudes)
+        these_zas = np.pi/2 - these_els
+        
+        these_para_angles = erfa.hd2pa(comp_has, decs[comp_ind], j2000_latitudes)
+    
+        azs[comp_ind*num_times:(comp_ind+1)*num_times] = these_azs
+        zas[comp_ind*num_times:(comp_ind+1)*num_times] = these_zas
+        para_angles[comp_ind*num_times:(comp_ind+1)*num_times] = these_para_angles
+        
+    woden_path = importlib_resources.files(wodenpy).joinpath(f"libuse_everybeam.so")
+    woden_lib = ctypes.cdll.LoadLibrary(woden_path)
+    load_and_run_mwa_beam = woden_lib.load_and_run_mwa_beam
+    
+    zas_ctypes = (ctypes.c_double*(num_dirs*num_times))()
+    azs_ctypes = (ctypes.c_double*(num_dirs*num_times))()
+    para_angles_ctypes = (ctypes.c_double*(num_dirs*num_times))()
+    for i in range(num_dirs*num_times):
+        zas_ctypes[i] = zas[i]
+        azs_ctypes[i] = azs[i]
+        para_angles_ctypes[i] = para_angles[i]
+        
+    # mjd_sec_times_ctypes = (ctypes.c_double * num_times)()
+    # for i in range(num_times):
+    #     mjd_sec_times_ctypes[i] = mjd_sec_times[i]
+        
+    # freqs_ctypes = (ctypes.c_double * num_freqs)()
+    # for i in range(num_freqs):
+    #     freqs_ctypes[i] = freqs[i]
+    
+    # station_idxs_ctypes = (ctypes.c_int * num_stations)()
+    # for i in range(num_stations):
+    #     station_idxs_ctypes[i] = station_idxs[i]
+    
+    
+    # ms_path_ctypes = ctypes.c_char_p(ms_path.encode('utf-8'))
+    # element_response_model_ctypes = ctypes.c_char_p(element_response_model.encode('utf-8'))
+    # coeff_path_ctypes = ctypes.c_char_p(coeff_path.encode('utf-8'))
+    
+    ms_path_ctypes, coeff_path_ctypes, \
+    element_response_model_ctypes, \
+    station_idxs_ctypes, freqs_ctypes, \
+    mjd_sec_times_ctypes = convert_common_args_to_everybeam_args(ms_path, 
+                                    coeff_path, element_response_model,
+                                    station_idxs, freqs, mjd_sec_times)
+    
+    jones = ((num_stations*num_times*num_freqs*num_dirs*4)*c_double_complex)()
+    
+    load_and_run_mwa_beam.argtypes = [c_char_p, c_char_p, c_char_p,
+                                        c_int, POINTER(c_int),
+                                        c_int, c_double, c_double,
+                                        POINTER(c_double), POINTER(c_double),
+                                        POINTER(c_double),
+                                        c_int, POINTER(c_double),
+                                        c_int, POINTER(c_double),
+                                        c_bool, c_bool, c_bool,
+                                        POINTER(c_double_complex)]
+    
+    load_and_run_mwa_beam(ms_path_ctypes,
+                            element_response_model_ctypes,
+                            coeff_path_ctypes,
+                            num_stations, station_idxs_ctypes,
+                            num_dirs,
+                            beam_ra0, beam_dec0,
+                            azs_ctypes, zas_ctypes,
+                            para_angles_ctypes,
+                            num_times, mjd_sec_times_ctypes,
+                            num_freqs, freqs_ctypes,
+                            apply_beam_norms, rotate, element_only,
+                            jones)
+    
+    # print(jones)
+    
+    jones_py = np.ctypeslib.as_array(jones, shape=(num_stations*num_times*num_freqs*num_dirs*4))
+    jones_py = jones_py['real'] + 1j*jones_py['imag']
+    
+    jones_py = jones_py.reshape(num_stations, num_times, num_freqs, num_dirs, 2, 2)
+    # print(jones_py.shape)
+    
+    # print(jones_py[0,0,0,:5,0,0])
+    
+    
+    return jones_py
