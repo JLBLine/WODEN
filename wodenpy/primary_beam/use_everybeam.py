@@ -568,9 +568,10 @@ def check_ms_telescope_type_matches_element_response(ms_path : str,
     if not logger:
         logger = simple_logger()
     
-    # woden_lib = importlib_resources.files(wodenpy).joinpath(f"libwoden_double.so")
+    woden_path = importlib_resources.files(wodenpy).joinpath(f"libuse_everybeam.so")
+    woden_lib = ctypes.cdll.LoadLibrary(woden_path)
     # woden_lib = ctypes.cdll.LoadLibrary("/home/jack-line/software/WODEN_dev/build/libuse_everybeam.so")
-    woden_lib = ctypes.cdll.LoadLibrary("/home/jack-line/software/WODEN_dev/build/cmake_testing/GPU_or_C_code/libuse_everybeam.so")
+    # woden_lib = ctypes.cdll.LoadLibrary("/home/jack-line/software/WODEN_dev/build/cmake_testing/GPU_or_C_code/libuse_everybeam.so")
     
     check_ms_telescope_type = woden_lib.check_ms_telescope_type
     check_ms_telescope_type.argtypes = [c_char_p]
@@ -748,7 +749,7 @@ def run_everybeam(ms_path : str, coeff_path : str,
                                                                            element_response_model,
                                                                            logger)
     
-    telescope_type = "MWA"
+    # telescope_type = "MWA"
     
     num_stations = len(station_ids)
     num_times = len(times)
@@ -1078,11 +1079,11 @@ def run_lofar_beam(ms_path : str, element_response_model : bool,
                    apply_beam_norms : bool, rotate : bool,
                    element_only : bool = False):
     
-    # lib_path = importlib_resources.files(wodenpy).joinpath(f"libwoden_{args.precision}.so")
+    woden_path = importlib_resources.files(wodenpy).joinpath(f"libuse_everybeam.so")
+    woden_lib = ctypes.cdll.LoadLibrary(woden_path)
     
-    woden_lib = importlib_resources.files(wodenpy).joinpath(f"libwoden_double.so")
-    woden_lib = ctypes.cdll.LoadLibrary("/home/jack-line/software/WODEN_dev/build/cmake_testing/GPU_or_C_code/libuse_everybeam.so")
-    # woden_lib = ctypes.cdll.LoadLibrary("/home/jack-line/software/WODEN_dev/build/libuse_everybeam.so")
+    # woden_lib = ctypes.cdll.LoadLibrary("/home/jack-line/software/WODEN_dev/build/cmake_testing/GPU_or_C_code/libuse_everybeam.so")
+    # woden_lib = ctypes.cdll.LoadLibrary("/home/jack-line/software/WODEN_dev/build/cmake_testing/GPU_or_C_code/libuse_everybeam.so")
     
     load_and_run_lofar_beam = woden_lib.load_and_run_lofar_beam
     
@@ -1183,6 +1184,9 @@ def run_mwa_beam(ms_path : str, element_response_model : bool,
         
     woden_path = importlib_resources.files(wodenpy).joinpath(f"libuse_everybeam.so")
     woden_lib = ctypes.cdll.LoadLibrary(woden_path)
+    
+    # woden_lib = ctypes.cdll.LoadLibrary("/home/jack-line/software/WODEN_dev/build/cmake_testing/GPU_or_C_code/libuse_everybeam.so")
+    
     load_and_run_mwa_beam = woden_lib.load_and_run_mwa_beam
     
     zas_ctypes = (ctypes.c_double*(num_dirs*num_times))()
@@ -1192,23 +1196,6 @@ def run_mwa_beam(ms_path : str, element_response_model : bool,
         zas_ctypes[i] = zas[i]
         azs_ctypes[i] = azs[i]
         para_angles_ctypes[i] = para_angles[i]
-        
-    # mjd_sec_times_ctypes = (ctypes.c_double * num_times)()
-    # for i in range(num_times):
-    #     mjd_sec_times_ctypes[i] = mjd_sec_times[i]
-        
-    # freqs_ctypes = (ctypes.c_double * num_freqs)()
-    # for i in range(num_freqs):
-    #     freqs_ctypes[i] = freqs[i]
-    
-    # station_idxs_ctypes = (ctypes.c_int * num_stations)()
-    # for i in range(num_stations):
-    #     station_idxs_ctypes[i] = station_idxs[i]
-    
-    
-    # ms_path_ctypes = ctypes.c_char_p(ms_path.encode('utf-8'))
-    # element_response_model_ctypes = ctypes.c_char_p(element_response_model.encode('utf-8'))
-    # coeff_path_ctypes = ctypes.c_char_p(coeff_path.encode('utf-8'))
     
     ms_path_ctypes, coeff_path_ctypes, \
     element_response_model_ctypes, \

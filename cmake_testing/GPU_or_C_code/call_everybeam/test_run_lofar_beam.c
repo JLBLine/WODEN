@@ -11,38 +11,37 @@
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
-#define TOL 2e-4
+#define TOL 5e-5
 
-#define NUM_COORDS 10
+#define NUM_COORDS 5
 #define NUM_DIRS NUM_COORDS*NUM_COORDS
 #define NUM_TIMES 2
 #define NUM_FREQS 2
-#define NUM_STATIONS 1
+#define NUM_STATIONS 2
 #define D2R (M_PI/180.0)
-#define DEC_WIDTH 40.0*D2R
-#define RA0 0.0
-#define DEC0 89.9*D2R
-#define LOW_RA 0.0
-#define LOW_DEC 49.5*D2R-DEC_WIDTH
-// #define LOW_DEC 90.0*D2R-DEC_WIDTH
+#define PATCH_WIDTH 40.0*D2R
+#define RA0_HBA 123.4002825*D2R
+#define DEC0_HBA 48.21738361*D2R
 #define LOW_FREQ 160e+6
-#define FREQ_INC 1e+6
+#define FREQ_INC 50e+6
+#define TIME_RES 3*3600.0
+#define MJD_HBA 4929192872.0
 
 void make_radec(double * ras, double * decs) {
   
 
-  double ra_inc = (2*M_PI) / (NUM_COORDS-1);
-  double dec_inc = DEC_WIDTH / (NUM_COORDS-1);
+  double ra_inc = PATCH_WIDTH / (NUM_COORDS - 1);
+  double dec_inc = PATCH_WIDTH / (NUM_COORDS - 1);
 
   double ra, dec;
 
   for (int rai = 0; rai < NUM_COORDS; rai++) {
     for (int deci = 0; deci < NUM_COORDS; deci++) {
-      ra = LOW_RA + rai * ra_inc;
-      dec = LOW_DEC + deci * dec_inc;
-      
-      ras[rai*NUM_COORDS + deci] = ra;
-      decs[rai*NUM_COORDS + deci] = dec;
+      ra = RA0_HBA - PATCH_WIDTH + rai * ra_inc;
+      dec = DEC0_HBA - PATCH_WIDTH + deci * dec_inc;
+
+      ras[rai * NUM_COORDS + deci] = ra;
+      decs[rai * NUM_COORDS + deci] = dec;
 
       // printf("ra: %.2f, dec: %.2f\n", ra/D2R, dec/D2R);
 
@@ -52,11 +51,9 @@ void make_radec(double * ras, double * decs) {
 
 
 void do_run_lofar_beam(const char *ms_path, bool apply_beam_norms,
-                       bool rotate, double _Complex * jones) {
+                       bool rotate, bool element_only, double _Complex * jones) {
 
-  bool use_channel_frequency = true;
   const char coeff_path[] = "";
-  bool use_local_mwa = false;
   const char element_response_model[] = "hamaker";
 
   int eb_status = 0;
@@ -70,7 +67,7 @@ void do_run_lofar_beam(const char *ms_path, bool apply_beam_norms,
   // int num_times = 1;
   double mjd_sec_times[NUM_TIMES]; //= {4891507200.006634};
   for (int timei = 0; timei < NUM_TIMES; timei++) {
-    mjd_sec_times[timei] = 4891507200.006634 + timei*10.0;
+    mjd_sec_times[timei] = MJD_HBA + timei*TIME_RES;
   }
 
   // int num_freqs = 1;
@@ -89,24 +86,14 @@ void do_run_lofar_beam(const char *ms_path, bool apply_beam_norms,
 
   make_radec(ras, decs);
 
-  // double phase_itrfs[3] = {-7.52862235e-04, -1.24382456e-03,  9.99998943e-01};
+  eb_status = load_and_run_lofar_beam(ms_path, element_response_model,
+                          coeff_path,
+                          NUM_STATIONS, station_idxs,
+                          NUM_DIRS, RA0_HBA, DEC0_HBA, ras, decs,
+                          NUM_TIMES, mjd_sec_times, NUM_FREQS, freqs,
+                          apply_beam_norms, rotate, element_only, jones);
 
-  //Never use the LOFAR beam normalisation as we don't understand it
-  bool use_differential_beam = false;
-
-  //Test that the correct arguments load up fine
-  Telescope *telescope = load_everybeam_telescope(&eb_status, ms_path, element_response_model,
-                                                  use_differential_beam, use_channel_frequency,
-                                                  coeff_path, use_local_mwa);
-  // TEST_ASSERT_EQUAL_INT(0, eb_status);
-
-  run_lofar_beam(telescope, NUM_STATIONS, station_idxs,
-                 NUM_DIRS, RA0, DEC0, ras, decs,
-                 NUM_TIMES, mjd_sec_times, NUM_FREQS, freqs,
-                 apply_beam_norms, rotate, jones);
-
-  destroy_everybeam_telescope(telescope);
-
+  TEST_ASSERT_EQUAL_INT(0, eb_status);
 }
 
 void check_beam_values(double _Complex *jones, const double *expected_values) {
@@ -136,11 +123,12 @@ void test_run_hba_telescope(void) {
   const char ms_path[] = "../../../../test_installation/everybeam/LOFAR_HBA_MOCK.ms";
   bool apply_beam_norms = false;
   bool rotate = false;
+  bool element_only = false;
 
   double _Complex *jones = malloc(4*NUM_DIRS*NUM_TIMES*NUM_FREQS*NUM_STATIONS*sizeof(double _Complex));
 
   do_run_lofar_beam(ms_path, apply_beam_norms,
-                    rotate, jones);
+                    rotate, element_only, jones);
 
   check_beam_values(jones, lofar_hba_jones);
 
@@ -152,11 +140,12 @@ void test_run_hba_telescope_rotate(void) {
   const char ms_path[] = "../../../../test_installation/everybeam/LOFAR_HBA_MOCK.ms";
   bool apply_beam_norms = false;
   bool rotate = true;
+  bool element_only = false;
 
   double _Complex *jones = malloc(4*NUM_DIRS*NUM_TIMES*NUM_FREQS*NUM_STATIONS*sizeof(double _Complex));
 
   do_run_lofar_beam(ms_path, apply_beam_norms,
-                    rotate, jones);
+                    rotate, element_only, jones);
 
   check_beam_values(jones, lofar_hba_jones_rotate);
 
@@ -168,11 +157,12 @@ void test_run_hba_telescope_normed(void) {
   const char ms_path[] = "../../../../test_installation/everybeam/LOFAR_HBA_MOCK.ms";
   bool apply_beam_norms = true;
   bool rotate = false;
+  bool element_only = false;
 
   double _Complex *jones = malloc(4*NUM_DIRS*NUM_TIMES*NUM_FREQS*NUM_STATIONS*sizeof(double _Complex));
 
   do_run_lofar_beam(ms_path, apply_beam_norms,
-                    rotate, jones);
+                    rotate, element_only, jones);
 
   check_beam_values(jones, lofar_hba_jones_normed);
 
@@ -184,13 +174,31 @@ void test_run_hba_telescope_rotate_normed(void) {
   const char ms_path[] = "../../../../test_installation/everybeam/LOFAR_HBA_MOCK.ms";
   bool apply_beam_norms = true;
   bool rotate = true;
+  bool element_only = false;
 
   double _Complex *jones = malloc(4*NUM_DIRS*NUM_TIMES*NUM_FREQS*NUM_STATIONS*sizeof(double _Complex));
 
   do_run_lofar_beam(ms_path, apply_beam_norms,
-                    rotate, jones);
+                    rotate, element_only, jones);
 
   check_beam_values(jones, lofar_hba_jones_rotate_normed);
+
+  free(jones);
+}
+
+void test_run_hba_telescope_element_only(void) {
+
+  const char ms_path[] = "../../../../test_installation/everybeam/LOFAR_HBA_MOCK.ms";
+  bool apply_beam_norms = false;
+  bool rotate = false;
+  bool element_only = true;
+
+  double _Complex *jones = malloc(4*NUM_DIRS*NUM_TIMES*NUM_FREQS*NUM_STATIONS*sizeof(double _Complex));
+
+  do_run_lofar_beam(ms_path, apply_beam_norms,
+                    rotate, element_only, jones);
+
+  // check_beam_values(jones, lofar_hba_element);
 
   free(jones);
 }
@@ -206,6 +214,7 @@ int main(void)
     RUN_TEST(test_run_hba_telescope_rotate);
     RUN_TEST(test_run_hba_telescope_normed);
     RUN_TEST(test_run_hba_telescope_rotate_normed);
+    // RUN_TEST(test_run_hba_telescope_element_only);
 
     return UNITY_END();
 }
