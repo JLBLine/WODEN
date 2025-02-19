@@ -217,12 +217,12 @@ if(TARGET_GROUP STREQUAL production)
                   COMMAND ${CMAKE_COMMAND} -E copy "libwoden_double.so"
                   "${CMAKE_CURRENT_LIST_DIR}/wodenpy/libwoden_double.so")
 
-    if($EVERYBEAM_FOUND)
+    if(${EVERYBEAM_FOUND})
         message(STATUS "Copying EveryBeam library to wodenpy directory")
-    else($EVERYBEAM_FOUND)
+    else(${EVERYBEAM_FOUND})
         message(STATUS "EveryBeam not found, so creating a dummy library for wodenpy. This is just a text file telling wodenpy that EveryBeam is not available.")
         file(WRITE "${CMAKE_BINARY_DIR}/libuse_everybeam.so" "False\n")
-    endif($EVERYBEAM_FOUND)
+    endif(${EVERYBEAM_FOUND})
 
     add_custom_command(TARGET woden_double POST_BUILD
                   COMMAND ${CMAKE_COMMAND} -E copy "libuse_everybeam.so"

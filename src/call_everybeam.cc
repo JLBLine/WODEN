@@ -167,7 +167,7 @@ extern "C" void run_lofar_beam(Telescope *telescope,
                                int num_times, double *mjd_sec_times,
                                int num_freqs, double *freqs,
                                bool apply_beam_norms, bool rotate,
-                               bool element_only,
+                               bool element_only, bool iau_order,
                                double _Complex * jones) {
 
   std::vector<vector3r_t> direction_itrfs(num_dirs);
@@ -225,8 +225,6 @@ extern "C" void run_lofar_beam(Telescope *telescope,
 
         for (int ci = 0; ci < num_dirs; ci++) {
           direction = direction_itrfs[ci];
-
-
           //The mtx argument is a thread lock method. Lock is necessary to
           // prevent Response from being used simultaneously by different 
           //threads. This is because casacore::Direction is not thread-safe,
@@ -243,11 +241,17 @@ extern "C" void run_lofar_beam(Telescope *telescope,
             // std::printf("response[0] after: %.8f\n", response[0].real());
           }
 
-          jones[jones_index + 0] = {response[0].real(), response[0].imag()};
-          jones[jones_index + 1] = {response[1].real(), response[1].imag()};
-          jones[jones_index + 2] = {response[2].real(), response[2].imag()};
-          jones[jones_index + 3] = {response[3].real(), response[3].imag()};
-
+          if (iau_order){
+            jones[jones_index + 0] = {response[3].real(), response[3].imag()};
+            jones[jones_index + 1] = {response[2].real(), response[2].imag()};
+            jones[jones_index + 2] = {response[1].real(), response[1].imag()};
+            jones[jones_index + 3] = {response[0].real(), response[0].imag()};
+          } else {
+            jones[jones_index + 0] = {response[0].real(), response[0].imag()};
+            jones[jones_index + 1] = {response[1].real(), response[1].imag()};
+            jones[jones_index + 2] = {response[2].real(), response[2].imag()};
+            jones[jones_index + 3] = {response[3].real(), response[3].imag()};
+          }
         }
       }
     }
@@ -265,7 +269,7 @@ extern "C" int load_and_run_lofar_beam(const char *ms_path,
                                        int num_times, double *mjd_sec_times,
                                        int num_freqs, double *freqs,
                                        bool apply_beam_norms, bool rotate,
-                                       bool element_only,
+                                       bool element_only,  bool iau_order,
                                        double _Complex * jones) {
 
   int status = 0;
@@ -280,7 +284,8 @@ extern "C" int load_and_run_lofar_beam(const char *ms_path,
   run_lofar_beam(telescope, num_stations, station_idxs,
                  num_dirs, ra0, dec0, ras, decs,
                  num_times, mjd_sec_times, num_freqs, freqs,
-                 apply_beam_norms, rotate, element_only, jones);
+                 apply_beam_norms, rotate, element_only, iau_order,
+                 jones);
 
   destroy_everybeam_telescope(telescope);
 
@@ -301,13 +306,6 @@ extern "C" void run_mwa_beam(Telescope *telescope,
                                bool element_only, bool iau_order,
                                double _Complex * jones) {
 
-  // std::vector<vector3r_t> direction_itrfs(num_dirs);
-  // vector3r_t direction, phase_itrf; //, phase_itrf, station_itrf;
-
-  // bool do_para_rotate = true;
-
-  // aocommon::MC2x2 response, rot_mat, rotated; //, response;
-
   double freq, mjd_time, az, za, para_angle;
 
   BeamMode beammode = element_only ? BeamMode::kElement : BeamMode::kFull;
@@ -325,7 +323,7 @@ extern "C" void run_mwa_beam(Telescope *telescope,
 
     for (int fi = 0; fi < num_freqs; fi++) {
       freq = freqs[fi];
-      std::printf("DOING freq: %.3e\n", freq);
+      // std::printf("DOING freq: %.3e\n", freq);
       for (int si = 0; si < num_stations; si++) {
         int station_idx = station_idxs[si];
 
@@ -343,51 +341,13 @@ extern "C" void run_mwa_beam(Telescope *telescope,
 
           if (rotate) {
 
-            // rot_mat[0] = {(float)sin(-para_angle), 0};
-            // rot_mat[1] = {-(float)cos(-para_angle), 0};
-            // rot_mat[2] = {-(float)cos(-para_angle), 0};
-            // rot_mat[3] = {-(float)sin(-para_angle), 0};
-
             rot_mat[0] = sin(-para_angle);
             rot_mat[1] = -cos(-para_angle);
             rot_mat[2] = -cos(-para_angle);
             rot_mat[3] = -sin(-para_angle);
 
-            // if (ci == 1250) {
-            //   std::printf("buffer: %.5f %.5f, %.5f %.5f, %.5f %.5f, %.5f %.5f\n",
-            //                                       buffer[0].real(), buffer[0].imag(),
-            //                                       buffer[1].real(), buffer[1].imag(),
-            //                                       buffer[2].real(), buffer[2].imag(),
-            //                                       buffer[3].real(), buffer[3].imag());
-
-            //   std::printf("rot_mat: %.5f %.5f, %.5f %.5f, %.5f %.5f, %.5f %.5f\n",
-            //                                       rot_mat[0].real(), rot_mat[0].imag(),
-            //                                       rot_mat[1].real(), rot_mat[1].imag(),
-            //                                       rot_mat[2].real(), rot_mat[2].imag(),
-            //                                       rot_mat[3].real(), rot_mat[3].imag());
-            // }
-
-            
-
             aocommon::Matrix2x2::ATimesB(rotated, buffer, rot_mat);
 
-            // if (ci == 1250) {
-            //   std::printf("rotated: %.5f %.5f, %.5f %.5f, %.5f %.5f, %.5f %.5f\n",
-            //                                         rotated[0].real(), rotated[0].imag(),
-            //                                         rotated[1].real(), rotated[1].imag(),
-            //                                         rotated[2].real(), rotated[2].imag(),
-            //                                         rotated[3].real(), rotated[3].imag());
-
-            //   std::complex<float> ting;
-            //   ting = buffer[0] * rot_mat[1] + buffer[1] * rot_mat[3];
-
-
-            //   std::printf("buffer[0]: %.5f %.5f\n", buffer[0].real(), buffer[0].imag());
-
-
-            //   std::printf("ting: %.5f %.5f\n", ting.real(), ting.imag());
-
-            // }
             buffer[0] = rotated[0]; 
             buffer[1] = rotated[1];
             buffer[2] = rotated[2];
@@ -397,12 +357,6 @@ extern "C" void run_mwa_beam(Telescope *telescope,
 
 
           int jones_index = 4*(si*num_times*num_freqs*num_dirs + ti*num_freqs*num_dirs + fi*num_dirs + ci);
-
-          // std::printf("buffer: %.5f %.5f, %.5f %.5f, %.5f %.5f, %.5f %.5f\n",
-          //                                         buffer[0].real(), buffer[0].imag(),
-          //                                         buffer[1].real(), buffer[1].imag(),
-          //                                         buffer[2].real(), buffer[2].imag(),
-          //                                         buffer[3].real(), buffer[3].imag());
 
           if (iau_order){
             jones[jones_index + 0] = {buffer[3].real(), buffer[3].imag()};
@@ -415,18 +369,11 @@ extern "C" void run_mwa_beam(Telescope *telescope,
             jones[jones_index + 2] = {buffer[2].real(), buffer[2].imag()};
             jones[jones_index + 3] = {buffer[3].real(), buffer[3].imag()};
           }
-
-          
-
         }
       }
     }
   }
 }
-
-
-
-
 
 extern "C" int load_and_run_mwa_beam(const char *ms_path,
                                      const char *element_response_model,

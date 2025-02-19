@@ -34,7 +34,7 @@ void run_lofar_beam(Telescope *telescope,
                                int num_times, double *mjd_sec_times,
                                int num_freqs, double *freqs,
                                bool apply_beam_norms, bool rotate,
-                               bool element_only,
+                               bool element_only, bool iau_order,
                                double _Complex * jones);
 
 int load_and_run_lofar_beam(const char *ms_path,
@@ -47,7 +47,7 @@ int load_and_run_lofar_beam(const char *ms_path,
                             int num_times, double *mjd_sec_times,
                             int num_freqs, double *freqs,
                             bool apply_beam_norms, bool rotate,
-                            bool element_only,
+                            bool element_only, bool iau_order,
                             double _Complex * jones);
 
 
@@ -63,7 +63,7 @@ int load_and_run_mwa_beam(const char *ms_path,
                           int num_times, double *mjd_sec_times,
                           int num_freqs, double *freqs,
                           bool apply_beam_norms, bool rotate,
-                          bool element_only, bool ia_order,
+                          bool element_only, bool iau_order,
                           double _Complex * jones);
 
 #ifdef __cplusplus

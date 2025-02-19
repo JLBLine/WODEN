@@ -89,6 +89,8 @@ test_installation/list_fluxes
 .vscode
 
 wodenpy/libwoden*.so
+wodenpy/libuse_everybeam.so
+wodenpy/wodenpy_gitinfo.txt
 
 *.uvfits
 *images*
@@ -147,3 +149,4 @@ coverage_outputs/python_coverage
 *callgrind*
 
 woden_dev
+cmake_testing/GPU_or_C_code/call_everybeam/plots

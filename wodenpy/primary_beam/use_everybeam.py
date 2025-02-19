@@ -769,7 +769,7 @@ def run_everybeam(ms_path : str, coeff_path : str,
                    ras, decs, mjd_sec_times,
                    j2000_lsts, j2000_latitudes,
                    freqs, apply_beam_norms, parallactic_rotate,
-                   element_only)
+                   reorder_jones, element_only)
         
     elif telescope_type == 'LOFAR':
         jones = run_lofar_beam(ms_path, element_response_model,
@@ -1159,6 +1159,7 @@ def run_mwa_beam(ms_path : str, element_response_model : bool,
                    j2000_lsts : np.ndarray, j2000_latitudes : np.ndarray,
                    freqs : np.ndarray,
                    apply_beam_norms : bool, rotate : bool,
+                   iau_order : bool = True,
                    element_only : bool = False):
     
     num_stations = len(station_idxs)
@@ -1213,7 +1214,7 @@ def run_mwa_beam(ms_path : str, element_response_model : bool,
                                         POINTER(c_double),
                                         c_int, POINTER(c_double),
                                         c_int, POINTER(c_double),
-                                        c_bool, c_bool, c_bool,
+                                        c_bool, c_bool, c_bool, c_bool,
                                         POINTER(c_double_complex)]
     
     load_and_run_mwa_beam(ms_path_ctypes,
@@ -1227,6 +1228,7 @@ def run_mwa_beam(ms_path : str, element_response_model : bool,
                             num_times, mjd_sec_times_ctypes,
                             num_freqs, freqs_ctypes,
                             apply_beam_norms, rotate, element_only,
+                            iau_order,
                             jones)
     
     # print(jones)

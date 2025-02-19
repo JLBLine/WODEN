@@ -4,21 +4,12 @@
 #include <complex.h>
 #include <math.h>
 #include "call_everybeam_c.h"
-// #include "mwa_jones_values.h"
 
 #include "woden_precision_defs.h"
 #include "woden_struct_defs.h"
 
-// #include "run_hyperbeam_common.h"
-// #include <mwa_hyperbeam.h>
 #include "azza_para_nside051.h"
 #include "test_run_mwa_beam.h"
-
-// #include "erfa.h"
-
-// nside051_azs
-
-// extern void learn_cpp(double _Complex *jones, int num_coords);
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
@@ -43,12 +34,11 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 #define MWA_LONG 116.67081523611111
 
 
-void do_run_mwa_beam(const char *ms_path, bool apply_beam_norms,
+void do_run_mwa_beam(const char *ms_path, bool apply_beam_norms, bool iau_order,
                        bool rotate, bool element_only, double _Complex * jones) {
 
   const char coeff_path[] = "/home/jack-line/software/mwa_beam_files/mwa_full_embedded_element_pattern.h5";
   const char element_response_model[] = "MWA";
-  bool iau_order = true;
 
   int eb_status = 0;
 
@@ -66,20 +56,6 @@ void do_run_mwa_beam(const char *ms_path, bool apply_beam_norms,
 
   // int num_stations = 1;
   int station_idxs[NUM_STATIONS] = {0};
-
-
-  // double ras[NUM_DIRS];
-  // double decs[NUM_DIRS];
-
-  // make_radec(ras, decs);
-
-  // double para_angles[NUM_TIMES*NUM_DIRS];
-
-  // for (int timei = 0; timei < NUM_TIMES; timei++) {
-  //   for (int diri = 0; diri < NUM_DIRS; diri++) {
-  //     para_angles[diri*NUM_TIMES + timei] = 0.0;
-  //   }
-  // }
 
   //Iternally, the load_and_run_mwa_beam function expects za,az,para
   //to have time fastest changing, then direction. So do a cheeky reorder
@@ -108,19 +84,6 @@ void do_run_mwa_beam(const char *ms_path, bool apply_beam_norms,
   TEST_ASSERT_EQUAL_INT(0, eb_status);
 
   FILE *beam_values_out;
-  // char buff[0x100];
-
-  // #ifdef DOUBLE_PRECISION
-  // if (rotate == 1) {
-  //   snprintf(buff, sizeof(buff), "%s_rot_double.txt", outname);
-  // } else {
-  //   snprintf(buff, sizeof(buff), "%s_double.txt", outname);
-  // }
-
-  // #else
-  //     snprintf(buff, sizeof(buff), "%s_float.txt", outname);
-  // #endif
-  // //
   beam_values_out = fopen("mwa_everybeam_values.txt","w");
 
   int num_components = NUM_DIRS;
@@ -172,17 +135,18 @@ void check_against_hyperbeam_values(double _Complex *jones,
   }
 }
 
-void test_run_mwa_telescope(void) {
+void test_run_mwa_telescope_rotate_iau(void) {
 
   const char ms_path[] = "../../../../test_installation/everybeam/MWA-single-timeslot.ms";
   bool apply_beam_norms = false;
   bool rotate = true;
   bool element_only = false;
+  bool iau_order = true;
 
   double _Complex *jones = malloc(4*NUM_DIRS*NUM_TIMES*NUM_FREQS*NUM_STATIONS*sizeof(double _Complex));
 
   //This calcs all the different freqs and times
-  do_run_mwa_beam(ms_path, apply_beam_norms,
+  do_run_mwa_beam(ms_path, apply_beam_norms, iau_order,
                     rotate, element_only, jones);
 
   int stripe = 0;
@@ -216,8 +180,24 @@ void test_run_mwa_telescope(void) {
   free(jones);
 }
 
+void test_run_mwa_telescope_norotate_noiau(void) {
 
+  const char ms_path[] = "../../../../test_installation/everybeam/MWA-single-timeslot.ms";
+  bool apply_beam_norms = false;
+  bool rotate = false;
+  bool element_only = false;
+  bool iau_order = false;
 
+  double _Complex *jones = malloc(4*NUM_DIRS*NUM_TIMES*NUM_FREQS*NUM_STATIONS*sizeof(double _Complex));
+
+  //This calcs all the different freqs and times
+  do_run_mwa_beam(ms_path, apply_beam_norms, iau_order,
+                    rotate, element_only, jones);
+
+  check_against_hyperbeam_values(jones, hyper_jones_100_time0_norotate);
+
+  free(jones);
+}
 
 
 //Run test using unity
@@ -225,7 +205,8 @@ int main(void)
 {
     UNITY_BEGIN();
 
-    RUN_TEST(test_run_mwa_telescope);
+    RUN_TEST(test_run_mwa_telescope_rotate_iau);
+    RUN_TEST(test_run_mwa_telescope_norotate_noiau);
 
     return UNITY_END();
 }
