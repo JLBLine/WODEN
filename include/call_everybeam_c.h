@@ -27,15 +27,15 @@ Telescope* load_everybeam_telescope(int * status, const char *ms_path,
 void destroy_everybeam_telescope(Telescope* telescope);
 
 void run_lofar_beam(Telescope *telescope,
-                               int num_stations, int *station_idxs,
-                               int num_dirs,
-                               double ra0, double dec0,
-                               double *ras, double *decs,
-                               int num_times, double *mjd_sec_times,
-                               int num_freqs, double *freqs,
-                               bool apply_beam_norms, bool rotate,
-                               bool element_only, bool iau_order,
-                               double _Complex * jones);
+                    int num_stations, int *station_idxs,
+                    int num_dirs,
+                    double ra0, double dec0,
+                    double *ras, double *decs,
+                    int num_times, double *mjd_sec_times,
+                    int num_freqs, double *freqs,
+                    bool apply_beam_norms, bool parallactic_rotate,
+                    bool element_only, bool iau_order,
+                    double _Complex * jones);
 
 int load_and_run_lofar_beam(const char *ms_path,
                             const char *element_response_model,
@@ -46,23 +46,31 @@ int load_and_run_lofar_beam(const char *ms_path,
                             double *ras, double *decs,
                             int num_times, double *mjd_sec_times,
                             int num_freqs, double *freqs,
-                            bool apply_beam_norms, bool rotate,
+                            bool apply_beam_norms, bool parallactic_rotate,
                             bool element_only, bool iau_order,
                             double _Complex * jones);
 
-
+void run_mwa_beam(Telescope *telescope,
+                  int num_stations, int *station_idxs,
+                  int num_dirs,
+                  double *azs, double *zas,
+                  double *para_angles,
+                  int num_times, double *mjd_sec_times,
+                  int num_freqs, double *freqs,
+                  bool apply_beam_norms, bool parallactic_rotate,
+                  bool element_only, bool iau_order,
+                  double _Complex * jones);
 
 int load_and_run_mwa_beam(const char *ms_path,
                           const char *element_response_model,
                           const char *coeff_path,
                           int num_stations, int *station_idxs,
                           int num_dirs,
-                          double ra0, double dec0,
                           double *azs, double *zas,
                           double *para_angles,
                           int num_times, double *mjd_sec_times,
                           int num_freqs, double *freqs,
-                          bool apply_beam_norms, bool rotate,
+                          bool apply_beam_norms, bool parallactic_rotate,
                           bool element_only, bool iau_order,
                           double _Complex * jones);
 

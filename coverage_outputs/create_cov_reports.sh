@@ -11,6 +11,13 @@ for file in ${cov_src_dir}/*.gcda; do
     gcov ${cov_src_dir}/${fileroot}.gcda ${cov_src_dir}/${fileroot}.gcno
 done
 
+eb_src_dir=../build/cmake_testing/GPU_or_C_code/CMakeFiles/use_everybeam.dir/__/__/src
+
+for file in ${eb_src_dir}/call_everybeam*.gcda; do
+    fileroot=$(basename $file .gcda)
+    gcov ${eb_src_dir}/${fileroot}.gcda ${cov_src_dir}/${fileroot}.gcno
+done
+
 do_python=True
 
 if [ "$do_python" = "True" ]; then
@@ -32,11 +39,9 @@ if [ "$do_python" = "True" ]; then
     coverage run --source=wodenpy ../cmake_testing/wodenpy/phase_rotate/test_remove_phase_tracking.py
 
     ##primary_beam
-    coverage run --source=wodenpy ../cmake_testing/wodenpy/skymodel/test_calc_everybeam_for_components.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_everybeam_over_threads.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_everybeam_over_threads_MWA.py
-    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_woden_lofar_para_rotate.py
-    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_fast_everybeam.py
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_check_ms_telescope_type_matches_element_response.py
 
     ##skymodel
     coverage run --source=wodenpy ../cmake_testing/wodenpy/skymodel/test_crop_below_horizon.py
@@ -92,7 +97,16 @@ rm WODEN_array_layout.txt *.uvfits *.json \
 ##Use this to create two local reports, one for C and one for python
 ##Only uncomment if you want to see the reports locally without pushing to codecov
 
-lcov --capture --directory ${cov_src_dir} --output-file coverage.info
+lcov --gcov-tool gcov-12 --capture --directory ${cov_src_dir} --output-file coverage.info
+lcov --gcov-tool gcov-12  --capture --directory ${eb_src_dir} --output-file eb_coverage.info
+lcov --extract eb_coverage.info 'src/*'  --output-file filtered_coverage.info
+lcov --add-tracefile coverage.info --add-tracefile filtered_coverage.info --output-file merged_coverage.info
+mv merged_coverage.info coverage.info
+rm eb_coverage.info filtered_coverage.info
+
 genhtml coverage.info --output-directory C_coverage
-coverage html -d python_coverage
+
+if [ "$do_python" = "True" ]; then
+    coverage html -d python_coverage
+fi
 

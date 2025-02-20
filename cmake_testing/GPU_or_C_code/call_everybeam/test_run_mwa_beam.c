@@ -8,15 +8,17 @@
 #include "woden_precision_defs.h"
 #include "woden_struct_defs.h"
 
-#include "azza_para_nside051.h"
+#include "azza_para_nside031.h"
 #include "test_run_mwa_beam.h"
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
+//Set testing tolerance to 1e-5. Only stored to a precision of 1e-5
+//in the hyperbeam values, so this is as good as we can do
 #define TOL 1e-5
 
-#define NUM_COORDS 51
+#define NUM_COORDS 31
 #define NUM_DIRS NUM_COORDS*NUM_COORDS
 #define NUM_TIMES 2
 #define NUM_FREQS 3
@@ -35,7 +37,8 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 
 
 void do_run_mwa_beam(const char *ms_path, bool apply_beam_norms, bool iau_order,
-                       bool rotate, bool element_only, double _Complex * jones) {
+                       bool rotate, bool element_only, bool write_text,
+                       double _Complex * jones) {
 
   const char coeff_path[] = "/home/jack-line/software/mwa_beam_files/mwa_full_embedded_element_pattern.h5";
   const char element_response_model[] = "MWA";
@@ -65,47 +68,56 @@ void do_run_mwa_beam(const char *ms_path, bool apply_beam_norms, bool iau_order,
   double zas[NUM_TIMES*NUM_DIRS];
   for (int timei = 0; timei < NUM_TIMES; timei++) {
     for (int diri = 0; diri < NUM_DIRS; diri++) {
-      para_angles[diri*NUM_TIMES + timei] = nside051_paras[timei*NUM_DIRS + diri];
-      azs[diri*NUM_TIMES + timei] = nside051_azs[timei*NUM_DIRS + diri];
-      zas[diri*NUM_TIMES + timei] = nside051_zas[timei*NUM_DIRS + diri];
+      para_angles[diri*NUM_TIMES + timei] = nside031_paras[timei*NUM_DIRS + diri];
+      azs[diri*NUM_TIMES + timei] = nside031_azs[timei*NUM_DIRS + diri];
+      zas[diri*NUM_TIMES + timei] = nside031_zas[timei*NUM_DIRS + diri];
     }
   }
 
   eb_status = load_and_run_mwa_beam(ms_path, element_response_model,
                           coeff_path,
                           NUM_STATIONS, station_idxs,
-                          NUM_DIRS, RA0_MWA, DEC0_MWA,
-                          azs, zas, 
-                          para_angles,
+                          NUM_DIRS, azs, zas, para_angles,
                           NUM_TIMES, mjd_sec_times, NUM_FREQS, freqs,
                           apply_beam_norms, rotate, element_only, iau_order,
                           jones);
 
   TEST_ASSERT_EQUAL_INT(0, eb_status);
 
-  FILE *beam_values_out;
-  beam_values_out = fopen("mwa_everybeam_values.txt","w");
+  if (write_text) {
+    
+    FILE *beam_values_out;
+    beam_values_out = fopen("mwa_everybeam_values.txt","w");
 
-  int num_components = NUM_DIRS;
-  int num_freqs = NUM_FREQS;
-  int num_times = NUM_TIMES;
+    int num_components = NUM_DIRS;
+    int num_freqs = NUM_FREQS;
+    int num_times = NUM_TIMES;
 
-  for (int time = 0; time < num_times; time ++) {
-    for (int freq = 0; freq < num_freqs; freq ++) {
-      for (int comp = 0; comp < num_components; comp ++) {
+    for (int time = 0; time < num_times; time ++) {
+      for (int freq = 0; freq < num_freqs; freq ++) {
+        for (int comp = 0; comp < num_components; comp ++) {
 
-        // int beam_ind = num_freqs*time*num_components + num_components*freq + comp;
-        int beam_ind = 4*(num_freqs*time*num_components + num_components*freq + comp);
-        int coord_ind = comp*num_times + time;
+          // int beam_ind = num_freqs*time*num_components + num_components*freq + comp;
+          int beam_ind = 4*(num_freqs*time*num_components + num_components*freq + comp);
+          int coord_ind = comp*num_times + time;
 
-        fprintf(beam_values_out,"%.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.1f\n",
-         nside051_azs[coord_ind], nside051_zas[coord_ind],
-         creal(jones[beam_ind + 0]), cimag(jones[beam_ind + 0]),
-         creal(jones[beam_ind + 1]), cimag(jones[beam_ind + 1]),
-         creal(jones[beam_ind + 2]), cimag(jones[beam_ind + 2]),
-         creal(jones[beam_ind + 3]), cimag(jones[beam_ind + 3]),
-         freqs[freq] );
+          fprintf(beam_values_out,"%.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.1f\n",
+          nside031_azs[coord_ind], nside031_zas[coord_ind],
+          creal(jones[beam_ind + 0]), cimag(jones[beam_ind + 0]),
+          creal(jones[beam_ind + 1]), cimag(jones[beam_ind + 1]),
+          creal(jones[beam_ind + 2]), cimag(jones[beam_ind + 2]),
+          creal(jones[beam_ind + 3]), cimag(jones[beam_ind + 3]),
+          freqs[freq] );
 
+          if (beam_ind == 5749) {
+              printf("Az: %.12f Za: %.12f\n", nside031_azs[coord_ind], nside031_zas[coord_ind]);
+              printf("Jones: %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f\n",
+              creal(jones[beam_ind + 0]), cimag(jones[beam_ind + 0]),
+              creal(jones[beam_ind + 1]), cimag(jones[beam_ind + 1]),
+              creal(jones[beam_ind + 2]), cimag(jones[beam_ind + 2]),
+              creal(jones[beam_ind + 3]), cimag(jones[beam_ind + 3]));
+          }
+        }
       }
     }
   }
@@ -142,12 +154,13 @@ void test_run_mwa_telescope_rotate_iau(void) {
   bool rotate = true;
   bool element_only = false;
   bool iau_order = true;
+  bool write_text = true;
 
   double _Complex *jones = malloc(4*NUM_DIRS*NUM_TIMES*NUM_FREQS*NUM_STATIONS*sizeof(double _Complex));
 
   //This calcs all the different freqs and times
   do_run_mwa_beam(ms_path, apply_beam_norms, iau_order,
-                    rotate, element_only, jones);
+                    rotate, element_only, write_text, jones);
 
   int stripe = 0;
   int time_ind = 0;
@@ -187,12 +200,13 @@ void test_run_mwa_telescope_norotate_noiau(void) {
   bool rotate = false;
   bool element_only = false;
   bool iau_order = false;
+  bool write_text = false;
 
   double _Complex *jones = malloc(4*NUM_DIRS*NUM_TIMES*NUM_FREQS*NUM_STATIONS*sizeof(double _Complex));
 
   //This calcs all the different freqs and times
   do_run_mwa_beam(ms_path, apply_beam_norms, iau_order,
-                    rotate, element_only, jones);
+                    rotate, element_only, write_text, jones);
 
   check_against_hyperbeam_values(jones, hyper_jones_100_time0_norotate);
 
@@ -205,8 +219,9 @@ int main(void)
 {
     UNITY_BEGIN();
 
-    RUN_TEST(test_run_mwa_telescope_rotate_iau);
     RUN_TEST(test_run_mwa_telescope_norotate_noiau);
+    RUN_TEST(test_run_mwa_telescope_rotate_iau);
+    
 
     return UNITY_END();
 }

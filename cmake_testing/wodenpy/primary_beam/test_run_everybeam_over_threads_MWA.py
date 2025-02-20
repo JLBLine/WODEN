@@ -10,9 +10,7 @@ import unittest
 import numpy as np
 import numpy.testing as npt
 
-from wodenpy.skymodel.read_fits_skymodel import calc_everybeam_for_components
 from wodenpy.use_libwoden.skymodel_structs import Components_Python
-from wodenpy.primary_beam.use_everybeam import load_LOFAR_telescope, load_MWA_telescope, load_OSKAR_telescope
 from astropy.coordinates import EarthLocation
 from astropy import units as u
 from astropy.time import Time
@@ -38,7 +36,6 @@ class Test(unittest.TestCase):
         ms_path = f'{code_dir}/../../../test_installation/everybeam/MWA-single-timeslot.ms'
         
         coeff_path=os.environ['MWA_FEE_HDF5']
-        telescope = load_MWA_telescope(ms_path, coeff_path=coeff_path)
         
         location = EarthLocation(lat=arr_latitude*u.rad, 
                                  lon=arr_long*u.rad)
@@ -73,28 +70,26 @@ class Test(unittest.TestCase):
         
         ##check the code runs when we manually add normalisation, even
         ##though EveryBeam already seems to normalise the MWA beam
-        serial_jones =  run_everybeam(ras, decs, beam_ra0, beam_dec0,
+        serial_jones =  run_everybeam(ms_path, coeff_path,
+                                ras, decs, beam_ra0, beam_dec0,
                                 j2000_latitudes, j2000_lsts,
                                 arr_latitude, arr_long,
                                 all_times, all_freqs,
-                                telescope,
                                 station_ids,
                                 apply_beam_norms=True,
-                                reorder_jones=True,
+                                iau_order=True,
                                 element_only=False,
-                                eb_rotate=False,
                                 parallactic_rotate=True)
         
-        serial_jones =  run_everybeam(ras, decs, beam_ra0, beam_dec0,
+        serial_jones =  run_everybeam(ms_path, coeff_path,
+                                ras, decs, beam_ra0, beam_dec0,
                                 j2000_latitudes, j2000_lsts,
                                 arr_latitude, arr_long,
                                 all_times, all_freqs,
-                                telescope,
                                 station_ids,
                                 apply_beam_norms=False,
-                                reorder_jones=True,
+                                iau_order=True,
                                 element_only=False,
-                                eb_rotate=False,
                                 parallactic_rotate=True)
         
         for num_threads in [1, 3, 4, 8]:
@@ -106,11 +101,9 @@ class Test(unittest.TestCase):
                                 arr_latitude, arr_long,
                                 all_times, all_freqs,
                                 station_ids,
-                                use_differential_beam=False,
                                 apply_beam_norms=False,
-                                reorder_jones=True,
+                                iau_order=True,
                                 element_only=False,
-                                eb_rotate=False,
                                 parallactic_rotate=True)
             
             npt.assert_allclose(serial_jones, parallel_jones, atol=1e-8)

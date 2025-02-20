@@ -30,7 +30,7 @@ from wodenpy.uvfits.wodenpy_uvfits import make_antenna_table, make_baseline_date
 from wodenpy.phase_rotate.remove_phase_track import remove_phase_tracking
 from wodenpy.use_libwoden.shapelets import create_sbf
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
-from wodenpy.skymodel.read_fits_skymodel import read_fits_skymodel_chunks, calc_everybeam_for_components
+from wodenpy.skymodel.read_fits_skymodel import read_fits_skymodel_chunks
 from wodenpy.use_libwoden.skymodel_structs import setup_source_catalogue, Source_Python
 import concurrent.futures
 from logging import Logger
@@ -320,7 +320,6 @@ def read_skymodel_thread(thread_id : int, num_threads : int, queue : Queue,
         ##Add whatever functions that are called in `read_fits_skymodel_chunks`
         ##here to profile them
         profiler.add_function(read_fits_skymodel_chunks)
-        profiler.add_function(calc_everybeam_for_components)
         profiler.add_function(run_everybeam)
         profiler.enable()
     

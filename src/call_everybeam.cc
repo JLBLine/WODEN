@@ -166,7 +166,7 @@ extern "C" void run_lofar_beam(Telescope *telescope,
                                double *ras, double *decs,
                                int num_times, double *mjd_sec_times,
                                int num_freqs, double *freqs,
-                               bool apply_beam_norms, bool rotate,
+                               bool apply_beam_norms, bool parallactic_rotate,
                                bool element_only, bool iau_order,
                                double _Complex * jones) {
 
@@ -186,7 +186,7 @@ extern "C" void run_lofar_beam(Telescope *telescope,
 
     PhasedArrayPoint& phased_array_point =
           static_cast<PhasedArrayPoint&>(*point_response);
-    phased_array_point.SetParalacticRotation(rotate);
+    phased_array_point.SetParalacticRotation(parallactic_rotate);
 
     everybeam::coords::ItrfConverter itrf_converter(mjd_time);
 
@@ -268,7 +268,7 @@ extern "C" int load_and_run_lofar_beam(const char *ms_path,
                                        double *ras, double *decs,
                                        int num_times, double *mjd_sec_times,
                                        int num_freqs, double *freqs,
-                                       bool apply_beam_norms, bool rotate,
+                                       bool apply_beam_norms, bool parallactic_rotate,
                                        bool element_only,  bool iau_order,
                                        double _Complex * jones) {
 
@@ -284,7 +284,7 @@ extern "C" int load_and_run_lofar_beam(const char *ms_path,
   run_lofar_beam(telescope, num_stations, station_idxs,
                  num_dirs, ra0, dec0, ras, decs,
                  num_times, mjd_sec_times, num_freqs, freqs,
-                 apply_beam_norms, rotate, element_only, iau_order,
+                 apply_beam_norms, parallactic_rotate, element_only, iau_order,
                  jones);
 
   destroy_everybeam_telescope(telescope);
@@ -297,12 +297,11 @@ extern "C" int load_and_run_lofar_beam(const char *ms_path,
 extern "C" void run_mwa_beam(Telescope *telescope,
                                int num_stations, int *station_idxs,
                                int num_dirs,
-                               double ra0, double dec0,
                                double *azs, double *zas,
                                double *para_angles,
                                int num_times, double *mjd_sec_times,
                                int num_freqs, double *freqs,
-                               bool apply_beam_norms, bool rotate,
+                               bool apply_beam_norms, bool parallactic_rotate,
                                bool element_only, bool iau_order,
                                double _Complex * jones) {
 
@@ -339,7 +338,7 @@ extern "C" void run_mwa_beam(Telescope *telescope,
                                   za, az, freq,
                                   station_idx, field);
 
-          if (rotate) {
+          if (parallactic_rotate) {
 
             rot_mat[0] = sin(-para_angle);
             rot_mat[1] = -cos(-para_angle);
@@ -380,12 +379,11 @@ extern "C" int load_and_run_mwa_beam(const char *ms_path,
                                      const char *coeff_path,
                                      int num_stations, int *station_idxs,
                                      int num_dirs,
-                                     double ra0, double dec0,
                                      double *azs, double *zas,
                                      double *para_angles,
                                      int num_times, double *mjd_sec_times,
                                      int num_freqs, double *freqs,
-                                     bool apply_beam_norms, bool rotate,
+                                     bool apply_beam_norms, bool parallactic_rotate,
                                      bool element_only, bool iau_order,
                                      double _Complex * jones) {
 
@@ -399,9 +397,9 @@ extern "C" int load_and_run_mwa_beam(const char *ms_path,
                                                   coeff_path, use_local_mwa);
 
   run_mwa_beam(telescope, num_stations, station_idxs,
-                 num_dirs, ra0, dec0, azs, zas, para_angles,
+                 num_dirs, azs, zas, para_angles,
                  num_times, mjd_sec_times, num_freqs, freqs,
-                 apply_beam_norms, rotate, element_only, iau_order,
+                 apply_beam_norms, parallactic_rotate, element_only, iau_order,
                  jones);
 
   destroy_everybeam_telescope(telescope);

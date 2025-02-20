@@ -11,23 +11,9 @@ from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classe
 from astropy.table import Table, Column
 import erfa
 from astropy.io import fits
-from wodenpy.primary_beam.use_everybeam import run_everybeam, load_MWA_telescope, load_OSKAR_telescope, load_LOFAR_telescope, EB_fake
 from sys import exit
 import argparse
 from astropy.time import Time, TimeDelta
-
-##Are we just making online documentation? If so, don't import everybeam
-##Installing everybeam is non-trivial, so trying to get readthedocs to install
-##it is a waste of time
-read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
-
-from wodenpy.wodenpy_setup.run_setup import check_for_library
-have_everybeam = check_for_library('everybeam')
-
-if have_everybeam:
-    import everybeam as eb
-else:
-    eb = EB_fake()
 
 ##This call is so we can use it as a type annotation
 woden_struct_classes = Woden_Struct_Classes()
@@ -1085,114 +1071,7 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
         
     return
 
-def calc_everybeam_for_components(beam_ra0 : float, beam_dec0 : float, num_components : int,
-                                  components : Components_Python, telescope : eb.Telescope, # type: ignore
-                                  all_times : np.ndarray, all_freqs : np.ndarray,
-                                  j2000_latitudes : np.ndarray, j2000_lsts : np.ndarray,
-                                  current_latitude : float, current_longitude : float,
-                                  full_accuracy : bool = True, station_id = np.nan):
-    """
-    Given a set of components, calculate the Jones matrices for each component
-    at each time and frequency, for all stations specified by station_id,
-    using the EveryBeam `telescope` object. If `station_id` is `np.nan`, calculate
-    a different beam for each station. 
-    
-    
-    Parameters
-    ----------
-    beam_ra0 : float
-        The RA of the pointing centre. (radians)
-    beam_dec0 : float
-        The Dec of the pointing centre. (radians)
-    num_components : int
-        The number of components in the sky model.
-    components : Components_Python
-        The Components_Python object containing the component information.
-    telescope : eb.Telescope
-        The initialised EveryBeam Telescope object.
-    all_times : np.ndarray
-        All astropy Time objects for the simulation.
-    all_freqs : np.ndarray
-        All frequencies for the simulation (Hz)
-    j2000_latitudes : np.ndarray
-        Latitude of the array as precessed back to J2000. Should be precession
-        based on the times in `all_times`.
-    j2000_lsts : np.ndarray
-        The LSTs matching the precessed latitudes in J2000
-    current_latitude : float
-        The latitude of the array in radians, at the current time frame (time of observation).
-    current_longitude : float
-        The longitude of the array in radians, at the current time frame (time of observation).
-    full_accuracy : bool, optional
-        Whether to use the full accuracy of the EveryBeam library. Defaults to True.
-        If False, the array factor and element response are calculated separately
-        (the two values that multiply to give the full response). The array factor
-        is only calculated at the middle time and frequency, under the assumption
-        that the range of frequencies and times is small enough that the array factor
-        will not change significantly. Magnitude of the differences vary by
-        frequency and direction so use with caution.
-    station_id : float, optional
-        The station ID to use for the beam calculation. If `np.nan`, calculate
-        a different beam for each station, by default np.nan.
-    """
-    
-    ras = components.ras
-    decs = components.decs
 
-    ##If station_id is nan, we want to calculate a different beam for each station
-    ##other functions should have done the correct amount of memory allocation
-    ##for this
-    if np.isnan(station_id):
-        num_beams = telescope.nr_stations
-        station_ids = np.arange(num_beams)
-    ##othewise, we want a single beam, and we are choosing the station `station_id`
-    else:
-        station_ids = [station_id]
-        num_beams = 1
-
-    ##The way we call EveryBeam depends on whether we're using MWA or not
-    ##The MWA EveryBeam doesn't have parallactic rotation, and seems to
-    ##come out normalised already. Also comes out with the correct
-    ##polarisation ordering        
-    if type(telescope) == eb.MWA or type(telescope) == eb.MWALocal:
-        apply_beam_norms = False
-        parallactic_rotate = True
-        eb_rotate = False
-        reorder_jones = True
-        
-    else:
-        apply_beam_norms = True
-        parallactic_rotate = False
-        eb_rotate = True
-        reorder_jones = False
-    
-    all_jones = run_everybeam(ras, decs, beam_ra0, beam_dec0,
-                              j2000_latitudes, j2000_lsts,
-                              current_latitude, current_longitude,
-                              all_times, all_freqs,
-                              telescope,
-                              station_ids,
-                              full_accuracy=full_accuracy,
-                              apply_beam_norms=apply_beam_norms,
-                              reorder_jones=reorder_jones,
-                              eb_rotate=eb_rotate,
-                              parallactic_rotate=parallactic_rotate)
-    
-    ##all_jones comes out as shape (num_beams, num_times, num_freqs, num_components, 2, 2)
-    ##WODEN wants this to be flat. I've intentionally made the shape so we can just
-    ##use the flatten call
-    
-    gxs = all_jones[:,:,:,:, 0,0]
-    Dxs = all_jones[:,:,:,:, 0,1]
-    Dys = all_jones[:,:,:,:, 1,0]
-    gys = all_jones[:,:,:,:, 1,1]
-    
-    components.gxs = gxs.flatten()
-    components.Dxs = Dxs.flatten()
-    components.Dys = Dys.flatten()
-    components.gys = gys.flatten()
-    
-# @profile
 def read_fits_skymodel_chunks(args : argparse.Namespace,
                               main_table : Table, shape_table : Table,
                               chunked_skymodel_maps : list,
@@ -1249,61 +1128,11 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
      List[Source_Python]
         A list of populated `Source_Python` classes.
     """
-    
-    ##if we have an everybeam primary beam, we will be calculating it
-    ##as we load in the sky model, as it happens on the CPU. So need to set
-    ##some extra arguments here
-    
-    beam_ra0 = np.radians(args.ra0)
-    beam_dec0 = np.radians(args.dec0)
-    
-    if args.fast_everybeam:
-        full_accuracy = False
-    else:
-        full_accuracy = True
-    
-    if beamtype in BeamGroups.eb_beam_values:
-        
-        # if beamtype == BeamTypes.EB_MWA.value:
-        #     obs_time = Time("2000-01-01T00:00:00", scale='utc')
-        # else:
-        obs_time = Time(args.date, scale='utc')
-        
-        all_times = []
-        
-        for time_step in range(args.num_time_steps):
-            time_current = obs_time + TimeDelta((time_step + 0.5)*args.time_res, format='sec')
-            all_times.append(time_current)
-        
-        band_num = args.band_nums[0]
-        
-        base_band_freq = ((band_num - 1)*float(args.coarse_band_width)) + args.lowest_channel_freq
-        all_freqs = base_band_freq + np.arange(args.num_freq_channels)*args.freq_res
-        
-        if beamtype == BeamTypes.EB_MWA.value:
-            telescope = load_MWA_telescope(args.beam_ms_path, args.hdf5_beam_path)
-        
-        if beamtype == BeamTypes.EB_OSKAR.value:
-            telescope = load_OSKAR_telescope(args.beam_ms_path)
-            
-        if beamtype == BeamTypes.EB_LOFAR.value:
-            telescope = load_LOFAR_telescope(args.beam_ms_path)
-            
-        ##Default for station_id is to be np.nan and to use a unique beam for each station
-        if np.isnan(args.station_id):
-            num_beams = args.num_antennas
-        ##If it's set, we only use one beam
-        else:
-            num_beams = 1
-            
-    else:
-        beam_norms = False
-        telescope = False
-        all_times = False
-        all_freqs = False
-        num_beams = 1
-        
     source_array = [Source_Python() for i in range(len(chunked_skymodel_maps))]
+    
+    ##Will be used in future if calculating primary beam values via Python
+    ##If a different beam patter per station, afjust num_beams accordingly
+    num_beams = 1
         
     ##for each chunk map, create a Source_Float or Source_Double ctype
     ##struct, and "malloc" the right amount of arrays to store required infor
@@ -1325,15 +1154,9 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                                       beamtype, j2000_lsts, j2000_latitudes,
                                       v_table, q_table, u_table, p_table)
             
-            if beamtype in BeamGroups.eb_beam_values:
-                
-                calc_everybeam_for_components(beam_ra0, beam_dec0, chunk_map.n_points,
-                               source_array[chunk_ind].point_components,
-                               telescope, all_times, all_freqs,
-                               j2000_latitudes, j2000_lsts,
-                               np.radians(args.latitude), np.radians(args.longitude),
-                               full_accuracy=full_accuracy,
-                               station_id=args.station_id)
+            ##NOTE this is where you would calculate beam values if you were
+            ##doing it via Python. Future place for pyuvbeam
+            ##The values would end up in source_array[chunk_ind].point_components.gxs
             
         if chunk_map.n_gauss > 0:
             add_fits_info_to_source_catalogue(CompTypes.GAUSSIAN,
@@ -1341,29 +1164,12 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                                       source_array[chunk_ind], chunk_map,
                                       beamtype, j2000_lsts, j2000_latitudes,
                                       v_table, q_table, u_table, p_table)
-            if beamtype in BeamGroups.eb_beam_values:
-                calc_everybeam_for_components(beam_ra0, beam_dec0, chunk_map.n_gauss,
-                               source_array[chunk_ind].gauss_components,
-                               telescope, all_times, all_freqs,
-                               j2000_latitudes, j2000_lsts,
-                               np.radians(args.latitude), np.radians(args.longitude),
-                               full_accuracy=full_accuracy,
-                               station_id=args.station_id)
-            
         if chunk_map.n_shapes > 0:
             add_fits_info_to_source_catalogue(CompTypes.SHAPELET,
                                       main_table, shape_table,
                                       source_array[chunk_ind], chunk_map,
                                       beamtype, j2000_lsts, j2000_latitudes,
                                       v_table, q_table, u_table, p_table)
-            if beamtype in BeamGroups.eb_beam_values:
-                calc_everybeam_for_components(beam_ra0, beam_dec0, chunk_map.n_shapes,
-                               source_array[chunk_ind].shape_components,
-                               telescope, all_times, all_freqs,
-                               j2000_latitudes, j2000_lsts,
-                               np.radians(args.latitude), np.radians(args.longitude),
-                               full_accuracy=full_accuracy,
-                               station_id=args.station_id)
             
     ##TODO some kind of consistency check between the chunk_maps and the
     ##sources in the catalogue - make sure we read in the correct information

@@ -682,11 +682,13 @@ def setup_components(chunk_map: Skymodel_Chunk_Map,
         components.azs = np.empty(n_comps*num_times, dtype=np_precision)
         components.zas = np.empty(n_comps*num_times, dtype=np_precision)
         
-    if beamtype in BeamGroups.eb_beam_values:
-        components.gxs = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
-        components.Dxs = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
-        components.Dys = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
-        components.gys = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
+    ##NOTE: use this to calculate beam values in Python
+    ##Needs to be done in future for pyuvbeam
+    # if beamtype in BeamGroups.eb_beam_values:
+    #     components.gxs = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
+    #     components.Dxs = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
+    #     components.Dys = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
+    #     components.gys = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
         
     ##now do the polarisation thingies------------------------------------------
     
@@ -918,28 +920,29 @@ def copy_python_components_to_ctypes(python_comps: Components_Python,
     
     ctypes_comps.num_primarybeam_values = python_comps.num_primarybeam_values
     ##things to hold the beam gain
-    
-    if beamtype in BeamGroups.eb_beam_values:
-        num_gains = len(python_comps.gxs)
+
+    ##NOTE: this needs to happen when calculating beam values in Python    
+    # if beamtype in BeamGroups.eb_beam_values:
+    #     num_gains = len(python_comps.gxs)
         
-        complex_num_beams = c_user_precision_complex*num_gains
+    #     complex_num_beams = c_user_precision_complex*num_gains
             
-        ctypes_comps.gxs = complex_num_beams()
-        ctypes_comps.Dxs = complex_num_beams()
-        ctypes_comps.Dys = complex_num_beams()
-        ctypes_comps.gys = complex_num_beams()
+    #     ctypes_comps.gxs = complex_num_beams()
+    #     ctypes_comps.Dxs = complex_num_beams()
+    #     ctypes_comps.Dys = complex_num_beams()
+    #     ctypes_comps.gys = complex_num_beams()
         
-        ##Actually iterate over the complex beam gains, as the ctypes complex
-        ##object is actually a bespoke class
-        for beam_ind in range(num_gains):
-            ctypes_comps.gxs[beam_ind].real = python_comps.gxs[beam_ind].real
-            ctypes_comps.gxs[beam_ind].imag = python_comps.gxs[beam_ind].imag
-            ctypes_comps.Dxs[beam_ind].real = python_comps.Dxs[beam_ind].real
-            ctypes_comps.Dxs[beam_ind].imag = python_comps.Dxs[beam_ind].imag
-            ctypes_comps.Dys[beam_ind].real = python_comps.Dys[beam_ind].real
-            ctypes_comps.Dys[beam_ind].imag = python_comps.Dys[beam_ind].imag
-            ctypes_comps.gys[beam_ind].real = python_comps.gys[beam_ind].real
-            ctypes_comps.gys[beam_ind].imag = python_comps.gys[beam_ind].imag
+    #     ##Actually iterate over the complex beam gains, as the ctypes complex
+    #     ##object is actually a bespoke class
+    #     for beam_ind in range(num_gains):
+    #         ctypes_comps.gxs[beam_ind].real = python_comps.gxs[beam_ind].real
+    #         ctypes_comps.gxs[beam_ind].imag = python_comps.gxs[beam_ind].imag
+    #         ctypes_comps.Dxs[beam_ind].real = python_comps.Dxs[beam_ind].real
+    #         ctypes_comps.Dxs[beam_ind].imag = python_comps.Dxs[beam_ind].imag
+    #         ctypes_comps.Dys[beam_ind].real = python_comps.Dys[beam_ind].real
+    #         ctypes_comps.Dys[beam_ind].imag = python_comps.Dys[beam_ind].imag
+    #         ctypes_comps.gys[beam_ind].real = python_comps.gys[beam_ind].real
+    #         ctypes_comps.gys[beam_ind].imag = python_comps.gys[beam_ind].imag
         
     ctypes_comps.n_stokesV_pol_frac = 0
     ctypes_comps.n_stokesV_power = 0
