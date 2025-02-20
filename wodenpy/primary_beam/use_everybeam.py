@@ -124,7 +124,6 @@ def run_everybeam(ms_path : str, coeff_path : str,
                   ras: np.ndarray, decs: np.ndarray,
                   beam_ra0: float, beam_dec0: float,
                   j2000_latitudes: np.ndarray, j2000_lsts: np.ndarray,
-                  current_latitude: float, current_longitude: float,
                   times: np.ndarray, freqs: np.ndarray,
                   station_ids: np.ndarray,
                   element_response_model='default',
@@ -137,9 +136,7 @@ def run_everybeam(ms_path : str, coeff_path : str,
     Calculate the Jones matrices for a given set of coordinates, times,
     frequencies, and station ids using the EveryBeam library.
     `j2000_latitudes` should be the array latitude as precessed back to J2000,
-    with `j2000_lsts` being the matching LST in J2000. `current_latitude` and
-    `current_longitude` should be latitude and longitude of the array at the
-    time of the observation. `telescope` should be an EveryBeam telescope object.
+    with `j2000_lsts` being the matching LST in J2000. 
     
     
     Parameters
@@ -156,10 +153,6 @@ def run_everybeam(ms_path : str, coeff_path : str,
         Latitudes in J2000 coordinates.
     j2000_lsts : np.ndarray
         Local sidereal times in J2000 coordinates.
-    current_latitude : float
-        Current latitude in radians.
-    current_longitude : float
-        Current longitude in radians.
     times : np.ndarray
         Array of observation times.
     freqs : np.ndarray
@@ -231,7 +224,6 @@ def run_everybeam_thread(num_threads : int, thread_id : int,
                          ras : np.ndarray, decs : np.ndarray,
                          ra0 : float, dec0 : float,
                          j2000_latitudes : np.ndarray, j2000_lsts : np.ndarray,
-                         current_latitude : float, current_longitude : float,
                          times : np.ndarray, freqs : np.ndarray,
                          station_ids : np.ndarray,
                          full_accuracy : bool = True,
@@ -273,10 +265,6 @@ def run_everybeam_thread(num_threads : int, thread_id : int,
         Latitudes in J2000 coordinates.
     j2000_lsts : np.ndarray
         Local sidereal times in J2000 coordinates.
-    current_latitude : float
-        Current latitude in radians.
-    current_longitude : float
-        Current longitude in radians.
     times : np.ndarray
         Array of observation times.
     freqs : np.ndarray
@@ -331,7 +319,6 @@ def run_everybeam_thread(num_threads : int, thread_id : int,
                   ras[low_coord:high_coord],
                   decs[low_coord:high_coord],
                   ra0, dec0, j2000_latitudes, j2000_lsts,
-                  current_latitude, current_longitude,
                   times, freqs,
                   station_ids,
                   element_response_model=element_response_model,
@@ -350,7 +337,6 @@ def run_everybeam_over_threads(num_threads : int,
                                ras : np.ndarray, decs : np.ndarray,
                                ra0 : float, dec0 : float,
                                j2000_latitudes : np.ndarray, j2000_lsts : np.ndarray,
-                               current_latitude : float, current_longitude : float,
                                times : np.ndarray, freqs : np.ndarray,
                                station_ids : np.ndarray,
                                full_accuracy : bool = True,
@@ -389,10 +375,6 @@ def run_everybeam_over_threads(num_threads : int,
         Latitudes in J2000 coordinates.
     j2000_lsts : np.ndarray
         Local sidereal times in J2000 coordinates.
-    current_latitude : float
-        Current latitude in radians.
-    current_longitude : float
-        Current longitude in radians.
     times : np.ndarray
         Array of observation times.
     freqs : np.ndarray
@@ -443,7 +425,6 @@ def run_everybeam_over_threads(num_threads : int,
                                            ras, decs,
                                            ra0, dec0,
                                            j2000_latitudes, j2000_lsts,
-                                           current_latitude, current_longitude,
                                            times, freqs,
                                            station_ids,
                                            full_accuracy=full_accuracy,
