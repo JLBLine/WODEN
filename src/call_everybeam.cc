@@ -241,6 +241,13 @@ extern "C" void run_lofar_beam(Telescope *telescope,
             // std::printf("response[0] after: %.8f\n", response[0].real());
           }
 
+          // std::printf("%d %d %d %d: %.5f %.5f, %.5f %.5f, %.5f %.5f, %.5f %.5f\n",
+          //                               si, ti, fi, ci,
+          //                               response[0].real(), response[0].imag(),
+          //                               response[1].real(), response[1].imag(),
+          //                               response[2].real(), response[2].imag(),
+          //                               response[3].real(), response[3].imag());
+
           if (iau_order){
             jones[jones_index + 0] = {response[3].real(), response[3].imag()};
             jones[jones_index + 1] = {response[2].real(), response[2].imag()};
@@ -318,7 +325,7 @@ extern "C" void run_mwa_beam(Telescope *telescope,
 
     std::unique_ptr<PointResponse> point_response = telescope->GetPointResponse(mjd_time);
 
-    everybeam::coords::ItrfConverter itrf_converter(mjd_time);
+    // everybeam::coords::ItrfConverter itrf_converter(mjd_time);
 
     for (int fi = 0; fi < num_freqs; fi++) {
       freq = freqs[fi];
@@ -331,6 +338,12 @@ extern "C" void run_mwa_beam(Telescope *telescope,
           az = azs[ ci*num_times + ti];
           za = zas[ ci*num_times + ti];
           para_angle = para_angles[ ci*num_times + ti];
+
+          // std::printf("s%d t%d f%d c%d this %d: az, za, para %.8f, %.8f, %.8f\n",
+          //           si, ti, fi, ci, ci*num_times + ti,
+          //           az, za, para_angle);
+          // std::printf("s%d t%d f%d c%d : time %.4f, freq %.1e, station %d\n",
+          //           si, ti, fi, ci, mjd_time, freq, station_idx);
 
           //wtf is the fieled number
           int field = 0;
@@ -353,8 +366,6 @@ extern "C" void run_mwa_beam(Telescope *telescope,
             buffer[3] = rotated[3];
           }
 
-
-
           int jones_index = 4*(si*num_times*num_freqs*num_dirs + ti*num_freqs*num_dirs + fi*num_dirs + ci);
 
           if (iau_order){
@@ -368,6 +379,13 @@ extern "C" void run_mwa_beam(Telescope *telescope,
             jones[jones_index + 2] = {buffer[2].real(), buffer[2].imag()};
             jones[jones_index + 3] = {buffer[3].real(), buffer[3].imag()};
           }
+
+          // std::printf("s%d t%d f%d c%d: %.10f %.10f, %.10f %.10f, %.10f %.10f, %.10f %.10f\n",
+          //           si, ti, fi, ci,
+          //           __real__ jones[jones_index + 0], __imag__ jones[jones_index + 0],
+          //           __real__ jones[jones_index + 1], __imag__ jones[jones_index + 1],
+          //           __real__ jones[jones_index + 2], __imag__ jones[jones_index + 2],
+          //           __real__ jones[jones_index + 3], __imag__ jones[jones_index + 3]);
         }
       }
     }

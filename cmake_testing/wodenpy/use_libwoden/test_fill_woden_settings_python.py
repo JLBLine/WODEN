@@ -56,6 +56,7 @@ class PretendArgs():
         self.off_cardinal_dipoles = False
         self.cpu_mode = False
         self.verbose = False
+        self.no_beam_normalisation = False
         
     def __init__(self):
         self.make_basic_args()
@@ -388,6 +389,23 @@ class Test(unittest.TestCase):
         woden_settings = self.call_fill_woden_settings_python()
         self.check_basic_inputs(woden_settings)
         self.assertFalse(woden_settings.do_gpu)
+        
+    def test_no_beam_norm(self):
+        """Test that the `no_beam_normalistion` option gets propagated
+        and sets the `normalise_primary_beam` flag correctly"""
+
+        ##First up, check that the off_cardinal_dipoles flag off by default
+        self.make_basic_inputs('double')
+        woden_settings = self.call_fill_woden_settings_python()
+        self.check_basic_inputs(woden_settings)
+        self.assertTrue(woden_settings.normalise_primary_beam)
+        
+        ##Next, turn it on via the command line
+        self.make_basic_inputs('double')
+        self.args.no_beam_normalisation = True
+        woden_settings = self.call_fill_woden_settings_python()
+        self.check_basic_inputs(woden_settings)
+        self.assertFalse(woden_settings.normalise_primary_beam)
         
 ##Run the test
 if __name__ == '__main__':

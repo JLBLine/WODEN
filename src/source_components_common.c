@@ -1,5 +1,7 @@
 #include "source_components_common.h"
 #include "source_components_cpu.h"
+#include "calculate_visibilities_cpu.h"
+#include "call_everybeam_c.h"
 #include <string.h>
 #include "logger.h"
 
@@ -144,6 +146,7 @@ void extrapolate_Stokes(source_t *mem_chunked_source, double *mem_extrap_freqs,
   }
 }
 
+//TODO get cpu_freqs in here as well so can always pass to everybeam
 void source_component_common(woden_settings_t *woden_settings,
            beam_settings_t *beam_settings, double *mem_freqs,
            source_t *chunked_source, source_t *mem_chunked_source,
@@ -167,7 +170,7 @@ void source_component_common(woden_settings_t *woden_settings,
   }
 
   //Default behaviour with everybeam is to use a different beam for each station
-  if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
+  if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR) {
     use_twobeams = 1;
     num_beams = woden_settings->num_ants;
 
@@ -358,28 +361,120 @@ void source_component_common(woden_settings_t *woden_settings,
     }
   }
 
-  //If an everybeam model, already calculated beam gains on the CPU
-  //So just copy them across
-  //TODO move this to source_components_common
-  else if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
-    if (woden_settings->verbose == 1){
-      log_message("\tDoing an EveryBeam beam");
+  else if (beam_settings->beamtype == EB_MWA || beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR) {
+
+
+    beam_gains_t *eb_beam_gains = malloc(sizeof(beam_gains_t));
+    malloc_beam_gains_cpu(eb_beam_gains, beam_settings->beamtype, num_gains);
+
+    int eb_status;
+    
+    int station_idxs[num_beams];
+    for (int beam = 0; beam < num_beams; beam++){
+      station_idxs[beam] = beam;
     }
-    int num_gains = num_components*woden_settings->num_freqs*woden_settings->num_time_steps*num_beams;
+
+    double mjd_sec_times[woden_settings->num_time_steps];
+
+    for (int timei = 0; timei < woden_settings->num_time_steps; timei++) {
+      mjd_sec_times[timei] = woden_settings->mjds[timei]*86400.0;
+    }
+
+    bool apply_beam_norms = woden_settings->normalise_primary_beam;
+    bool rotate = true;
+    bool element_only = false;
+    bool iau_order = true;
+
+    int num_times = woden_settings->num_time_steps;
+    int num_freqs = woden_settings->num_freqs;
+
+    double _Complex *jones = malloc(MAX_POLS*num_components*num_times*num_freqs*num_beams*sizeof(double _Complex));
+
+    if (beam_settings->beamtype == EB_MWA) {
+      //MWA beam is already normalised to zenith
+
+      double para_angles[num_components*num_times];
+      double azs[num_components*num_times];
+      double zas[num_components*num_times];
+
+      for (int comp = 0; comp < num_components*num_times; comp++) {
+        para_angles[comp] = (double)components->para_angles[comp];
+        azs[comp] = (double)components->azs[comp];
+        zas[comp] = (double)components->zas[comp];
+      }
+
+      // printf("AFTER MAPPING %.5f %.5f\n", azs[0], mem_components->azs[0] );
+
+      apply_beam_norms = false;
+      eb_status = load_and_run_mwa_beam(woden_settings->beam_ms_path, "MWA",
+                          woden_settings->hdf5_beam_path,
+                          num_beams, station_idxs, num_components,
+                          azs, zas, para_angles,
+                          num_times, mjd_sec_times,
+                          num_freqs, mem_freqs,
+                          apply_beam_norms, rotate, element_only, iau_order,
+                          jones);
+    }
+
+    for (int station = 0; station < num_beams; station ++) {
+      for (int time = 0; time < num_times; time ++) {
+        for (int freq = 0; freq < num_freqs; freq ++) {
+          for (int comp = 0; comp < num_components; comp ++) {
+
+          int beam_ind = (num_freqs*num_times*num_components*station + num_freqs*num_components*time + num_components*freq + comp);
+
+          int jones_index = 4*beam_ind;
+
+          eb_beam_gains->gxs[beam_ind] = (user_precision_complex_t)jones[jones_index + 0];
+          eb_beam_gains->Dxs[beam_ind] = (user_precision_complex_t)jones[jones_index + 1];
+          eb_beam_gains->Dys[beam_ind] = (user_precision_complex_t)jones[jones_index + 2];
+          eb_beam_gains->gys[beam_ind] = (user_precision_complex_t)jones[jones_index + 3];
+          
+
+          }
+        }
+      }
+    }
+
     if (do_gpu == 1){
-      copy_CPU_beam_gains_to_GPU(components, mem_component_beam_gains, num_gains);  
+      copy_CPU_beam_gains_to_GPU_beam_gains(eb_beam_gains, mem_component_beam_gains, num_gains);  
     } else {
-      //It seems wasteful to copy across the beam gains, but `components` was created
-      //on the python side, where the memory freeing is handled (hopefully) by
-      //the garbage collector. By copying here, we can free the beam gains on
-      //the C side regardless of whether we generate the beam gains in C or Python.
-      memcpy(mem_component_beam_gains->gxs, components->gxs, num_gains*sizeof(user_precision_complex_t));
-      memcpy(mem_component_beam_gains->Dxs, components->Dxs, num_gains*sizeof(user_precision_complex_t));
-      memcpy(mem_component_beam_gains->Dys, components->Dys, num_gains*sizeof(user_precision_complex_t));
-      memcpy(mem_component_beam_gains->gys, components->gys, num_gains*sizeof(user_precision_complex_t));
+      //It seems wasteful to copy across the beam gains, but `mem_component_beam_gains`
+      //memory allocation is handled elsewhere, so this is cleaner in terms of
+      //memory management.
+      memcpy(mem_component_beam_gains->gxs, eb_beam_gains->gxs, num_gains*sizeof(user_precision_complex_t));
+      memcpy(mem_component_beam_gains->Dxs, eb_beam_gains->Dxs, num_gains*sizeof(user_precision_complex_t));
+      memcpy(mem_component_beam_gains->Dys, eb_beam_gains->Dys, num_gains*sizeof(user_precision_complex_t));
+      memcpy(mem_component_beam_gains->gys, eb_beam_gains->gys, num_gains*sizeof(user_precision_complex_t));
 
     }
+    
+    free_beam_gains_cpu(eb_beam_gains, beam_settings->beamtype);
+    free(jones);
   }
+
+  //If a pyuvbeam model, already calculated beam gains on the CPU
+  //So just copy them across
+  //NOTE add this back in when doing pyuvbeam
+  // else if (some pyuvbeam thing) {
+  //   if (woden_settings->verbose == 1){
+  //     log_message("\tDoing a pyuvbeam");
+  //   }
+  //   int num_gains = num_components*woden_settings->num_freqs*woden_settings->num_time_steps*num_beams;
+  //   if (do_gpu == 1){
+  //     copy_CPU_beam_gains_to_GPU(components, mem_component_beam_gains, num_gains);  
+  //   } else {
+  //     //It seems wasteful to copy across the beam gains, but `components` was created
+  //     //on the python side, where the memory freeing is handled (hopefully) by
+  //     //the garbage collector. By copying here, we can free the beam gains on
+  //     //the C side regardless of whether we generate the beam gains in C or Python.
+  //     memcpy(mem_component_beam_gains->gxs, components->gxs, num_gains*sizeof(user_precision_complex_t));
+  //     memcpy(mem_component_beam_gains->Dxs, components->Dxs, num_gains*sizeof(user_precision_complex_t));
+  //     memcpy(mem_component_beam_gains->Dys, components->Dys, num_gains*sizeof(user_precision_complex_t));
+  //     memcpy(mem_component_beam_gains->gys, components->gys, num_gains*sizeof(user_precision_complex_t));
+
+  //   }
+  // }
 
   //Now we've calculated the beams, we can calculate the auto-correlations,
   //if so required

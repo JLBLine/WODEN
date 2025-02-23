@@ -126,16 +126,25 @@ def get_parser():
     tel_group.add_argument('--beam_ms_path', default=False,
                            help='When using any `everybeam` primary beam option, '
                                 'must provide a path to the measurement set')
-    tel_group.add_argument('--fast_everybeam', default=False, action='store_true',
-                           help='When using any `everybeam` primary beam option, '
-                                'calculate the array factor and element response '
-                                'separately. Only calculate the array factor for '
-                                'the central time and frequency step. This is '
-                                'less accurate (mostly ~1%% difference to '
-                                'full calculation) but should give up to 10%% speedup. '
-                                'On average 1%% difference holds over a bandwidth of 1MHz '
-                                'and time range of 2 minutes, but difference '
-                                'can be up to 10%% for some frequencies and times. ')
+    tel_group.add_argument('--no_beam_normalisation', default=False,
+                           action='store_true',
+                           help='When using an `everybeam` primary beam option, '
+                                'do not normalise the primary beam to the beam ' 
+                                'centre. By default, WODEN calculated the beam response '
+                                'at the beam centre, and multiplies all beam values '
+                                'by the inverse of this value. Add this option to switch '
+                                'that off.')
+    
+    # tel_group.add_argument('--fast_everybeam', default=False, action='store_true',
+    #                        help='When using any `everybeam` primary beam option, '
+    #                             'calculate the array factor and element response '
+    #                             'separately. Only calculate the array factor for '
+    #                             'the central time and frequency step. This is '
+    #                             'less accurate (mostly ~1%% difference to '
+    #                             'full calculation) but should give up to 10%% speedup. '
+    #                             'On average 1%% difference holds over a bandwidth of 1MHz '
+    #                             'and time range of 2 minutes, but difference '
+    #                             'can be up to 10%% for some frequencies and times. ')
     tel_group.add_argument('--station_id', default=np.nan, type=int,
                            help='When using any `everybeam` primary beam option, '
                                 'default is to simulate a unique beam per station.'

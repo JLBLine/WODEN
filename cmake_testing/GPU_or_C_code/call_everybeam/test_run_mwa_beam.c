@@ -40,7 +40,11 @@ void do_run_mwa_beam(const char *ms_path, bool apply_beam_norms, bool iau_order,
                        bool rotate, bool element_only, bool write_text,
                        double _Complex * jones) {
 
-  const char coeff_path[] = "/home/jack-line/software/mwa_beam_files/mwa_full_embedded_element_pattern.h5";
+  // const char coeff_path[] = "/home/jack-line/software/mwa_beam_files/mwa_full_embedded_element_pattern.h5";
+
+  char* coeff_path = getenv("MWA_FEE_HDF5");
+
+  // getenv
   const char element_response_model[] = "MWA";
 
   int eb_status = 0;

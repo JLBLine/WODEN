@@ -139,7 +139,7 @@ void calculate_visibilities(array_layout_t *array_layout,
   int do_gpu = woden_settings->do_gpu;
 
   //Default behaviour with everybeam is to use a different beam for each station
-  if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
+  if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR) {
     use_twobeams = 1;
     num_beams = woden_settings->num_ants;
 

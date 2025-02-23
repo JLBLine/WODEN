@@ -81,3 +81,13 @@ void test_comp_phase_centre_allgains_multiants(visibility_set_t *visibility_set,
                                 double *antx_mult, double *anty_mult, int num_ants,
                                 woden_settings_t *woden_settings,
                                 double tol);
+
+void test_comp_phase_centre_allgains_diffants(visibility_set_t *visibility_set,
+                                int num_comps, 
+                                double _Complex *gain1x, double _Complex *leak1x,
+                                double _Complex *leak1y, double _Complex *gain1y,
+                                double _Complex *gain2x, double _Complex *leak2x,
+                                double _Complex *leak2y, double _Complex *gain2y,
+                                int num_ants,
+                                woden_settings_t *woden_settings,
+                                double tol);

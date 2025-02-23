@@ -17,59 +17,61 @@ void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
 
+const char ms_path[] = "../../../../test_installation/everybeam/MWA-single-timeslot.ms";
+
 //Test with a single SOURCE, single COMPONENT
 void test_calculate_visibilities_EveryBeamMWA_OneSource_SinglePoint_cpu(void) {
-  test_calculate_visibilities_EveryBeam_OneSource_SinglePoint(0, EB_MWA);
+  test_calculate_visibilities_EveryBeam_OneSource_SinglePoint(0, EB_MWA, ms_path);
 }
 
 void test_calculate_visibilities_EveryBeamMWA_OneSource_SingleGauss_cpu(void) {
-  test_calculate_visibilities_EveryBeam_OneSource_SingleGauss(0, EB_MWA);
+  test_calculate_visibilities_EveryBeam_OneSource_SingleGauss(0, EB_MWA, ms_path);
 
 }
 
 void test_calculate_visibilities_EveryBeamMWA_OneSource_SingleShape_cpu(void) {
-  test_calculate_visibilities_EveryBeam_OneSource_SingleShape(0, EB_MWA);
+  test_calculate_visibilities_EveryBeam_OneSource_SingleShape(0, EB_MWA, ms_path);
 }
 
 void test_calculate_visibilities_EveryBeamMWA_OneSource_SingleAll_cpu(void) {
-  test_calculate_visibilities_EveryBeam_OneSource_SingleAll(0, EB_MWA);
+  test_calculate_visibilities_EveryBeam_OneSource_SingleAll(0, EB_MWA, ms_path);
 }
 
 
 //Test with a three SOURCEs, single COMPONENT
 void test_calculate_visibilities_EveryBeamMWA_ThreeSource_SinglePoint_cpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_SinglePoint(0, EB_MWA);
+  test_calculate_visibilities_EveryBeam_ThreeSource_SinglePoint(0, EB_MWA, ms_path);
 
 }
 
 void test_calculate_visibilities_EveryBeamMWA_ThreeSource_SingleGauss_cpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_SingleGauss(0, EB_MWA);
+  test_calculate_visibilities_EveryBeam_ThreeSource_SingleGauss(0, EB_MWA, ms_path);
 }
 
 void test_calculate_visibilities_EveryBeamMWA_ThreeSource_SingleShape_cpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_SingleShape(0, EB_MWA);
+  test_calculate_visibilities_EveryBeam_ThreeSource_SingleShape(0, EB_MWA, ms_path);
 }
 
 void test_calculate_visibilities_EveryBeamMWA_ThreeSource_SingleAll_cpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_SingleAll(0, EB_MWA);
+  test_calculate_visibilities_EveryBeam_ThreeSource_SingleAll(0, EB_MWA, ms_path);
 }
 
 //Test with three SOURCEs, three COPMONENTs
 void test_calculate_visibilities_EveryBeamMWA_ThreeSource_FivePoint_cpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_FivePoint(0, EB_MWA);
+  test_calculate_visibilities_EveryBeam_ThreeSource_FivePoint(0, EB_MWA, ms_path);
 
 }
 
 void test_calculate_visibilities_EveryBeamMWA_ThreeSource_FiveGauss_cpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_FiveGauss(0, EB_MWA);
+  test_calculate_visibilities_EveryBeam_ThreeSource_FiveGauss(0, EB_MWA, ms_path);
 }
 
 void test_calculate_visibilities_EveryBeamMWA_ThreeSource_FiveShape_cpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_FiveShape(0, EB_MWA);
+  test_calculate_visibilities_EveryBeam_ThreeSource_FiveShape(0, EB_MWA, ms_path);
 }
 
 void test_calculate_visibilities_EveryBeamMWA_ThreeSource_FiveAll_cpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_FiveAll(0, EB_MWA);
+  test_calculate_visibilities_EveryBeam_ThreeSource_FiveAll(0, EB_MWA, ms_path);
 }
 
 
@@ -83,13 +85,13 @@ int main(void)
     RUN_TEST(test_calculate_visibilities_EveryBeamMWA_OneSource_SingleShape_cpu);
     RUN_TEST(test_calculate_visibilities_EveryBeamMWA_OneSource_SingleAll_cpu);
 
-    //Test with three SOURCEs, single COPMONENT
+    // //Test with three SOURCEs, single COPMONENT
     RUN_TEST(test_calculate_visibilities_EveryBeamMWA_ThreeSource_SinglePoint_cpu);
     RUN_TEST(test_calculate_visibilities_EveryBeamMWA_ThreeSource_SingleGauss_cpu);
     RUN_TEST(test_calculate_visibilities_EveryBeamMWA_ThreeSource_SingleShape_cpu);
     RUN_TEST(test_calculate_visibilities_EveryBeamMWA_ThreeSource_SingleAll_cpu);
 
-    //Test with three SOURCEs, five COPMONENTs
+    // // Test with three SOURCEs, five COPMONENTs
     RUN_TEST(test_calculate_visibilities_EveryBeamMWA_ThreeSource_FivePoint_cpu);
     RUN_TEST(test_calculate_visibilities_EveryBeamMWA_ThreeSource_FiveGauss_cpu);
     RUN_TEST(test_calculate_visibilities_EveryBeamMWA_ThreeSource_FiveShape_cpu);

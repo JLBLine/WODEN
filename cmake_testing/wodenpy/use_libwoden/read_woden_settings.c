@@ -99,6 +99,9 @@ void read_woden_settings(woden_settings_t *woden_settings)
   fprintf(output_text,"do_gpu %d\n",
                        woden_settings->do_gpu);
 
+  fprintf(output_text,"normalise_primary_beam %d\n",
+                       woden_settings->normalise_primary_beam);
+
 
   if (woden_settings->use_dipamps == 1) {
 

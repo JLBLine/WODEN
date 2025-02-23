@@ -75,6 +75,7 @@ class Woden_Settings_Python(object):
         self.single_everybeam_station = None
         self.off_cardinal_dipoles = None
         self.do_gpu = None
+        self.normalise_primary_beam = None
 
 def create_woden_settings_struct(precision : str = "double"):
     """Creates a `Woden_Settings` class structured equivalently to a `woden_settings_t`
@@ -152,6 +153,8 @@ def create_woden_settings_struct(precision : str = "double"):
         :cvar c_int off_cardinal_dipoles: Boolean of whether to use off-cardinal dipole equations to apply the beams gains to the Stokes IQUV parameters
         :cvar c_int use_gpu: Boolean of whether to use the GPU or not (0 False, 1 True)
         :cvar c_int verbose: Boolean of whether to do verbose logging or not (0 False, 1 True)
+        :cvar c_int normalise_primary_beam: Boolean of whether to normalise the primary beam (0 False, 1 True)
+        :cvar POINTER(c_char) beam_ms_path:  Path to the beam model MS file for everybeam simulations
         """
         
         _fields_ = [("lst_base", c_double),
@@ -199,7 +202,9 @@ def create_woden_settings_struct(precision : str = "double"):
                     ("single_everybeam_station", c_int),
                     ("off_cardinal_dipoles", c_int),
                     ("do_gpu", c_int),
-                    ("verbose", c_int)]
+                    ("verbose", c_int),
+                    ("normalise_primary_beam", c_int),
+                    ("beam_ms_path", POINTER(c_char))]
         
     return Woden_Settings
 
@@ -328,7 +333,11 @@ def fill_woden_settings_python(args : argparse.Namespace,
     else:
         woden_settings.mwa_dipole_amps = np.ones(16, dtype=np.float64)
     
-    if np.isnan(args.station_id):
+    ##Only ever need one beam for everybeam MWA, as we have no way of passing
+    ##different ampltiudes for each tile currently
+    if args.primary_beam == 'everybeam_MWA':
+        woden_settings.single_everybeam_station = 1
+    elif np.isnan(args.station_id):
         woden_settings.single_everybeam_station = 0
     else:
         woden_settings.single_everybeam_station = 1
@@ -344,6 +353,13 @@ def fill_woden_settings_python(args : argparse.Namespace,
         woden_settings.do_gpu = 1
         
     woden_settings.verbose = args.verbose
+    
+    if args.no_beam_normalisation:
+        woden_settings.normalise_primary_beam = 0
+    else:
+        woden_settings.normalise_primary_beam = 1
+        
+    woden_settings.beam_ms_path = args.beam_ms_path
         
     return woden_settings
     
@@ -492,12 +508,17 @@ def convert_woden_settings_to_ctypes(woden_settings_python : Woden_Settings_Pyth
         woden_settings_ctypes.FEE_ideal_delays = woden_settings_python.FEE_ideal_delays.ctypes.data_as(POINTER(c_int))
         
     if woden_settings_ctypes.beamtype == BeamTypes.FEE_BEAM.value or \
-        woden_settings_ctypes.beamtype == BeamTypes.FEE_BEAM_INTERP.value:
+        woden_settings_ctypes.beamtype == BeamTypes.FEE_BEAM_INTERP.value or \
+        woden_settings_ctypes.beamtype == BeamTypes.EB_MWA.value:
         woden_settings_ctypes.hdf5_beam_path = create_string_buffer(woden_settings_python.hdf5_beam_path.encode('utf-8'))
+        
+    if woden_settings_ctypes.beamtype in BeamGroups.eb_beam_values:
+        woden_settings_ctypes.beam_ms_path = woden_settings_python.beam_ms_path.encode('utf-8')
     
     # if woden_settings_ctypes.use_dipamps:
     woden_settings_ctypes.mwa_dipole_amps = woden_settings_python.mwa_dipole_amps.ctypes.data_as(POINTER(c_double))
     
     woden_settings_ctypes.verbose = woden_settings_python.verbose
+    woden_settings_ctypes.normalise_primary_beam = woden_settings_python.normalise_primary_beam
     
     return woden_settings_ctypes

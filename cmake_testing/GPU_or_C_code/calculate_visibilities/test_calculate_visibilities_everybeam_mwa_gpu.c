@@ -16,60 +16,61 @@ are launched by calculate_visibilities::calculate_visibilities`
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
 
+const char ms_path[] = "../../../../test_installation/everybeam/MWA-single-timeslot.ms";
 
 //Test with a single SOURCE, single COMPONENT
 void test_calculate_visibilities_EveryBeamMWA_OneSource_SinglePoint_gpu(void) {
-  test_calculate_visibilities_EveryBeam_OneSource_SinglePoint(1, EB_MWA);
+  test_calculate_visibilities_EveryBeam_OneSource_SinglePoint(1, EB_MWA, ms_path);
 }
 
 void test_calculate_visibilities_EveryBeamMWA_OneSource_SingleGauss_gpu(void) {
-  test_calculate_visibilities_EveryBeam_OneSource_SingleGauss(1, EB_MWA);
+  test_calculate_visibilities_EveryBeam_OneSource_SingleGauss(1, EB_MWA, ms_path);
 
 }
 
 void test_calculate_visibilities_EveryBeamMWA_OneSource_SingleShape_gpu(void) {
-  test_calculate_visibilities_EveryBeam_OneSource_SingleShape(1, EB_MWA);
+  test_calculate_visibilities_EveryBeam_OneSource_SingleShape(1, EB_MWA, ms_path);
 }
 
 void test_calculate_visibilities_EveryBeamMWA_OneSource_SingleAll_gpu(void) {
-  test_calculate_visibilities_EveryBeam_OneSource_SingleAll(1, EB_MWA);
+  test_calculate_visibilities_EveryBeam_OneSource_SingleAll(1, EB_MWA, ms_path);
 }
 
 
 //Test with a three SOURCEs, single COMPONENT
 void test_calculate_visibilities_EveryBeamMWA_ThreeSource_SinglePoint_gpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_SinglePoint(1, EB_MWA);
+  test_calculate_visibilities_EveryBeam_ThreeSource_SinglePoint(1, EB_MWA, ms_path);
 
 }
 
 void test_calculate_visibilities_EveryBeamMWA_ThreeSource_SingleGauss_gpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_SingleGauss(1, EB_MWA);
+  test_calculate_visibilities_EveryBeam_ThreeSource_SingleGauss(1, EB_MWA, ms_path);
 }
 
 void test_calculate_visibilities_EveryBeamMWA_ThreeSource_SingleShape_gpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_SingleShape(1, EB_MWA);
+  test_calculate_visibilities_EveryBeam_ThreeSource_SingleShape(1, EB_MWA, ms_path);
 }
 
 void test_calculate_visibilities_EveryBeamMWA_ThreeSource_SingleAll_gpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_SingleAll(1, EB_MWA);
+  test_calculate_visibilities_EveryBeam_ThreeSource_SingleAll(1, EB_MWA, ms_path);
 }
 
 //Test with three SOURCEs, three COPMONENTs
 void test_calculate_visibilities_EveryBeamMWA_ThreeSource_FivePoint_gpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_FivePoint(1, EB_MWA);
+  test_calculate_visibilities_EveryBeam_ThreeSource_FivePoint(1, EB_MWA, ms_path);
 
 }
 
 void test_calculate_visibilities_EveryBeamMWA_ThreeSource_FiveGauss_gpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_FiveGauss(1, EB_MWA);
+  test_calculate_visibilities_EveryBeam_ThreeSource_FiveGauss(1, EB_MWA, ms_path);
 }
 
 void test_calculate_visibilities_EveryBeamMWA_ThreeSource_FiveShape_gpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_FiveShape(1, EB_MWA);
+  test_calculate_visibilities_EveryBeam_ThreeSource_FiveShape(1, EB_MWA, ms_path);
 }
 
 void test_calculate_visibilities_EveryBeamMWA_ThreeSource_FiveAll_gpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_FiveAll(1, EB_MWA);
+  test_calculate_visibilities_EveryBeam_ThreeSource_FiveAll(1, EB_MWA, ms_path);
 }
 
 

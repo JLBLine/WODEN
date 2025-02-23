@@ -37,6 +37,7 @@ void populate_components(components_t *comps, int n_comps,
   comps->beam_decs = malloc(n_comps*NUM_TIME_STEPS*sizeof(double));
   comps->azs = malloc(n_comps*NUM_TIME_STEPS*sizeof(user_precision_t));
   comps->zas = malloc(n_comps*NUM_TIME_STEPS*sizeof(user_precision_t));
+  comps->para_angles = malloc(n_comps*NUM_TIME_STEPS*sizeof(user_precision_t));
 
   comps->majors = malloc(n_comps*sizeof(user_precision_t));
   comps->minors = malloc(n_comps*sizeof(user_precision_t));
@@ -348,6 +349,7 @@ void free_components(components_t comps, int num_comps) {
   free(comps.beam_decs);
   free(comps.azs);
   free(comps.zas);
+  free(comps.para_angles);
 
   free(comps.majors);
   free(comps.minors);
@@ -483,6 +485,7 @@ woden_settings_t * make_woden_settings(double ra0, double dec0) {
 
     woden_settings->verbose = 1;
     woden_settings->off_cardinal_dipoles = 0;
+    woden_settings->normalise_primary_beam = 1;
 
     return woden_settings;
 }
@@ -684,10 +687,11 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
 
   // printf("calculate_visibilities has finished\n");
 
-  if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_MWA ||
-      beam_settings->beamtype == EB_OSKAR){
-        free_beam_gains(cropped_sky_models);
-      }
+  //TODO will need something like this when doing pyuvbeam
+  // if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_MWA ||
+  //     beam_settings->beamtype == EB_OSKAR){
+  //       free_beam_gains(cropped_sky_models);
+  // }
 
   //Be free my pretties!
   if (cropped_sky_models->num_shapelets > 0) {
@@ -743,6 +747,11 @@ void predict_inst_stokes(int num_comps, double _Complex g1x, double _Complex D1x
   * yx += (D1y*g2x_conj - g1y*D2x_conj)*stokesQ;
   * yx += (D1y*D2x_conj + g1y*g2x_conj)*stokesU;
   * yx += ((0.0 + I*1.0)*stokesV)* (D1y*D2x_conj - g1y*g2x_conj);
+   
+  // printf("D1y, g1y %f %f, %f %f\n", creal(D1y), cimag(D1y), creal(g1y), cimag(g1y));
+  // printf("g2x_conj, D2x_conj %f %f, %f %f\n", creal(g2x_conj), cimag(g2x_conj), creal(D2x_conj), cimag(D2x_conj));
+  // printf("stokesI,Q,U,V %f %f %f %f\n", creal(stokesI), creal(stokesQ), creal(stokesU), creal(stokesV));
+  // printf("yx %f %f\n", creal(*yx), cimag(*yx));
 
   * yy = (D1y*D2y_conj + g1y*g2y_conj)*stokesI;
   * yy += (D1y*D2y_conj - g1y*g2y_conj)*stokesQ;
@@ -1061,6 +1070,136 @@ void test_comp_phase_centre_allgains_multiants(visibility_set_t *visibility_set,
                                            g1x_mult*gain2x, g1x_mult*leak2x, g1y_mult*leak2y, g1y_mult*gain2y,
                                       &xx, &xy, &yx, &yy);
           }
+
+  
+          out_ind = num_cross + time*woden_settings->num_freqs*num_ants + freq*num_ants + ant;
+
+          TEST_ASSERT_DOUBLE_WITHIN(tol, creal(xx), visibility_set->sum_visi_XX_real[out_ind]);
+          TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(xx), visibility_set->sum_visi_XX_imag[out_ind]);
+          TEST_ASSERT_DOUBLE_WITHIN(tol, creal(xy), visibility_set->sum_visi_XY_real[out_ind]);
+          TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(xy), visibility_set->sum_visi_XY_imag[out_ind]);
+          TEST_ASSERT_DOUBLE_WITHIN(tol, creal(yx), visibility_set->sum_visi_YX_real[out_ind]);
+          TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(yx), visibility_set->sum_visi_YX_imag[out_ind]);
+          TEST_ASSERT_DOUBLE_WITHIN(tol, creal(yy), visibility_set->sum_visi_YY_real[out_ind]);
+          TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(yy), visibility_set->sum_visi_YY_imag[out_ind]);
+        }
+      }
+    }
+  }
+
+
+  free(ant1_to_baseline_map);
+  free(ant2_to_baseline_map);
+}
+
+
+
+void test_comp_phase_centre_allgains_diffants(visibility_set_t *visibility_set,
+                                int num_comps, 
+                                double _Complex *gain1x, double _Complex *leak1x,
+                                double _Complex *leak1y, double _Complex *gain1y,
+                                double _Complex *gain2x, double _Complex *leak2x,
+                                double _Complex *leak2y, double _Complex *gain2y,
+                                int num_ants,
+                                woden_settings_t *woden_settings,
+                                double tol) {
+
+  int num_cross = woden_settings->num_cross;
+
+  int num_baselines = ((num_ants - 1)*num_ants) / 2;
+
+  int *ant1_to_baseline_map = NULL;
+  int *ant2_to_baseline_map = NULL;
+
+  ant1_to_baseline_map = (int *)malloc(num_baselines*sizeof(int));
+  ant2_to_baseline_map = (int *)malloc(num_baselines*sizeof(int));
+
+  //These functions only do cross correlations, so create all combos of antennas
+  //that make up all the crosses
+  int cross_index = 0;
+  for (int ant1 = 0; ant1 < num_ants-1; ant1++)
+  {
+    for (int ant2 = ant1 + 1; ant2 < num_ants; ant2++)
+    {
+      ant1_to_baseline_map[cross_index] = ant1;
+      ant2_to_baseline_map[cross_index] = ant2;
+
+      cross_index += 1;
+    }
+  }
+
+  
+  double _Complex xx, xy, yx, yy;
+  double _Complex g1x, D1x, D1y, g1y, g2x, D2x, D2y, g2y;
+
+  int out_ind = 0;
+
+  for (int freq = 0; freq < woden_settings->num_freqs; freq ++) {
+    for (int baseline = 0; baseline < num_baselines; baseline ++) {
+
+      for (int time = 0; time < NUM_TIME_STEPS; time++)
+      {
+
+        g1x = gain1x[num_ants*time + ant1_to_baseline_map[baseline]];
+        D1x = leak1x[num_ants*time + ant1_to_baseline_map[baseline]];
+        D1y = leak1y[num_ants*time + ant1_to_baseline_map[baseline]];
+        g1y = gain2y[num_ants*time + ant1_to_baseline_map[baseline]];
+
+        g2x = gain2x[num_ants*time + ant2_to_baseline_map[baseline]];
+        D2x = leak2x[num_ants*time + ant2_to_baseline_map[baseline]];
+        D2y = leak2y[num_ants*time + ant2_to_baseline_map[baseline]];
+        g2y = gain2y[num_ants*time + ant2_to_baseline_map[baseline]];
+
+        predict_inst_stokes(num_comps, g1x, D1x, D1y, g1y,
+                                       g2x, D2x, D2y, g2y,
+                                       &xx, &xy, &yx, &yy);
+
+        out_ind = time*woden_settings->num_freqs*num_baselines + freq*num_baselines + baseline;
+
+        // printf("predict %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n",
+        //        creal(xx), cimag(xx), creal(xy), cimag(xy),
+        //        creal(yx), cimag(yx), creal(yy), cimag(yy));
+        // printf("store %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n",
+        //        visibility_set->sum_visi_XX_real[out_ind],
+        //        visibility_set->sum_visi_XX_imag[out_ind],
+        //        visibility_set->sum_visi_XY_real[out_ind],
+        //        visibility_set->sum_visi_XY_imag[out_ind],
+        //        visibility_set->sum_visi_YX_real[out_ind],
+        //        visibility_set->sum_visi_YX_imag[out_ind],
+        //        visibility_set->sum_visi_YY_real[out_ind],
+        //        visibility_set->sum_visi_YY_imag[out_ind]);
+
+        TEST_ASSERT_DOUBLE_WITHIN(tol, creal(xx), visibility_set->sum_visi_XX_real[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(xx), visibility_set->sum_visi_XX_imag[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, creal(xy), visibility_set->sum_visi_XY_real[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(xy), visibility_set->sum_visi_XY_imag[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, creal(yx), visibility_set->sum_visi_YX_real[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(yx), visibility_set->sum_visi_YX_imag[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, creal(yy), visibility_set->sum_visi_YY_real[out_ind]);
+        TEST_ASSERT_DOUBLE_WITHIN(tol, cimag(yy), visibility_set->sum_visi_YY_imag[out_ind]);
+      }
+    }
+  }
+
+  if (woden_settings->do_autos == 1){
+
+
+    for (int freq = 0; freq < woden_settings->num_freqs; freq ++) {
+      for (int ant = 0; ant < num_ants; ant ++) {
+        for (int time = 0; time < NUM_TIME_STEPS; time++) {
+          g1x = gain1x[num_ants*time + ant];
+          D1x = leak1x[num_ants*time + ant];
+          D1y = leak1y[num_ants*time + ant];
+          g1y = gain2y[num_ants*time + ant];
+
+          g2x = gain2x[num_ants*time + ant];
+          D2x = leak2x[num_ants*time + ant];
+          D2y = leak2y[num_ants*time + ant];
+          g2y = gain2y[num_ants*time + ant];
+
+          predict_inst_stokes(num_comps, g1x, D1x, D1y, g1y,
+                                       g2x, D2x, D2y, g2y,
+                                       &xx, &xy, &yx, &yy);
 
   
           out_ind = num_cross + time*woden_settings->num_freqs*num_ants + freq*num_ants + ant;

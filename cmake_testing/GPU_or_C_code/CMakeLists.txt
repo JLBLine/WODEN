@@ -41,12 +41,12 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
                 ${CMAKE_SOURCE_DIR}/src/primary_beam_gpu.cpp
                 ${CMAKE_SOURCE_DIR}/src/source_components_gpu.cpp
                 ${CMAKE_SOURCE_DIR}/src/calculate_visibilities_gpu.cpp)
-
     target_compile_options(calculate_visibilities_GPU_${PRECISION} PRIVATE ${GPU_FLAGS})
 
     add_library(calculate_visibilities_CPU_${PRECISION} SHARED
                 ${CSOURCES})
-    target_link_libraries(calculate_visibilities_CPU_${PRECISION} gcov ${CC_LINKLIBS})
+    target_link_libraries(calculate_visibilities_CPU_${PRECISION}
+                          gcov ${CC_LINKLIBS} use_everybeam)
     target_compile_options(calculate_visibilities_CPU_${PRECISION} PRIVATE ${C_COVER_FLAGS})
 
     

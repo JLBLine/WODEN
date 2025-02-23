@@ -36,7 +36,7 @@ extern void calc_lmn_for_components_gpu(components_t *mem_components,
                                         int num_components,
                                         woden_settings_t *woden_settings);
 
-extern void copy_CPU_beam_gains_to_GPU(components_t *components,
+extern void copy_CPU_component_gains_to_GPU_beam_gains(components_t *components,
                                        beam_gains_t *d_beam_gains, int num_gains);
 
 /*
@@ -474,7 +474,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     
 
     if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
-      copy_CPU_beam_gains_to_GPU(chunk_components, mem_beam_gains,
+      copy_CPU_component_gains_to_GPU_beam_gains(chunk_components, mem_beam_gains,
                                  num_beam_values);
     }
 

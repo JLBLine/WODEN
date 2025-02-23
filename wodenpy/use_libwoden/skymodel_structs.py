@@ -106,8 +106,9 @@ def create_components_struct(precision="double"):
         :cvar POINTER(user_precision_t) minors: GAUSSIAN/SHAPELET minor axis (beta2, radians)
         :cvar POINTER(user_precision_t) pas: GAUSSIAN/SHAPELET position angles (radians)
         :cvar POINTER(user_precision_t) param_indexes: An index value to match each coeff, n1, and n2 to the correct ra, dec, major, minor, pa for a SHAPELET
-        :cvar POINTER(user_precision_t) azs: SHAPELET source azimuth angles for all time steps
-        :cvar POINTER(user_precision_t) zas: SHAPELET source zenith angles for all time steps
+        :cvar POINTER(user_precision_t) azs: Azimuth angles for all time steps
+        :cvar POINTER(user_precision_t) zas: Zenith angles for all time steps
+        :cvar POINTER(user_precision_t) para_angles: Parallactic angles for all time steps
         :cvar POINTER(double) beam_has: Hour angle of COMPONENTs for all time steps, used for beam calculations
         :cvar POINTER(double) beam_decs: Declinations of COMPONENTs for all time steps, used for beam calculations
         :cvar POINTER(int) num_primarybeam_values: Number of beam calculations needed for COMPONENTs
@@ -196,6 +197,7 @@ def create_components_struct(precision="double"):
                     ##Specific to observation settings for these COMPONENTs
                     ("azs", POINTER(c_user_precision)),
                     ("zas", POINTER(c_user_precision)),
+                    ("para_angles", POINTER(c_user_precision)),
                     ("beam_has", POINTER(c_double)),
                     ("beam_decs", POINTER(c_double)),
                     ("num_primarybeam_values", c_int),
@@ -319,6 +321,7 @@ class Components_Python(object):
         self.param_indexes = None
         self.azs = None
         self.zas = None
+        self.para_angles = None
         self.beam_has = None
         self.beam_decs = None
         self.num_primarybeam_values = None

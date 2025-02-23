@@ -2028,7 +2028,7 @@ extern "C" source_t * copy_chunked_source_to_GPU(source_t *chunked_source){
   return d_chunked_source;
 }
 
-extern "C" void copy_CPU_beam_gains_to_GPU(components_t *components,
+extern "C" void copy_CPU_component_gains_to_GPU_beam_gains(components_t *components,
   beam_gains_t *d_beam_gains, int num_gains) {
 
 
@@ -2053,6 +2053,34 @@ extern "C" void copy_CPU_beam_gains_to_GPU(components_t *components,
                num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
 
     gpuMemcpy( d_beam_gains->gys, components->gys,
+               num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
+}
+
+extern "C" void copy_CPU_beam_gains_to_GPU_beam_gains(beam_gains_t *beam_gains,
+  beam_gains_t *d_beam_gains, int num_gains) {
+
+
+    gpuMalloc( (void**)&d_beam_gains->gxs,
+                      num_gains*sizeof(user_precision_complex_t) );
+    gpuMalloc( (void**)&d_beam_gains->Dxs,
+                      num_gains*sizeof(user_precision_complex_t) );
+    gpuMalloc( (void**)&d_beam_gains->Dys,
+                      num_gains*sizeof(user_precision_complex_t) );
+    gpuMalloc( (void**)&d_beam_gains->gys,
+                      num_gains*sizeof(user_precision_complex_t) );
+
+    // printf("Copying beam gains to GPU %p %p\n", components->gxs, d_beam_gains->gxs);
+
+    gpuMemcpy( d_beam_gains->gxs, beam_gains->gxs,
+               num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
+
+    gpuMemcpy( d_beam_gains->Dxs, beam_gains->Dxs,
+               num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
+
+    gpuMemcpy( d_beam_gains->Dys, beam_gains->Dys,
+               num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
+
+    gpuMemcpy( d_beam_gains->gys, beam_gains->gys,
                num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
 }
 

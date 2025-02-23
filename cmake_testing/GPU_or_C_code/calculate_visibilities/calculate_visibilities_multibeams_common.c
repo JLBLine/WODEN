@@ -33,7 +33,7 @@ void test_calculate_visibilities_MWAFEEBeamInterp(int n_points, int n_gauss, int
                     0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
   //These are the amplitudes for the dipoles, as read in from metafits
-    // I believe that they have X - east-west, Y - north-south
+  // I believe that they have X - east-west, Y - north-south
   double amps[96] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2,
     0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4,

@@ -85,8 +85,9 @@ typedef struct _components_t {
   to the correct ra, dec, major, minor, pa for a SHAPELET */
 
   //Specific to observation settings for these COMPONENTs
-  user_precision_t *azs; /*!< SHAPELET source azimuth angles for all time steps */
-  user_precision_t *zas; /*!< SHAPELET source zenith angles for all time steps */
+  user_precision_t *azs; /*!< Azimuth angles for all time steps */
+  user_precision_t *zas; /*!< Zenith angles for all time steps */
+  user_precision_t *para_angles; /*!< Parallactic angles for all time steps */
   double *beam_has; /*!< Hour angle of COMPONENTs for all time steps, used for
    beam calculations */
   double *beam_decs; /*!< Declinations of COMPONENTs for all time steps, used for
@@ -363,6 +364,8 @@ typedef struct _woden_settings_t {
   apply the beams gains to the Stokes IQUV parameters*/
   int do_gpu; /*!< Boolean of whether to use the GPU or not (0 False, 1 True)*/
   int verbose; /*!< Boolean of whether to print out verbose information or not (0 False, 1 True)*/
+  int normalise_primary_beam; /*!< Boolean of whether to normalise the primary beam (0 False, 1 True) */
+  const char* beam_ms_path; /*!< Path to a measurement set for EveryBeam */
 
 } woden_settings_t;
 
