@@ -3,6 +3,7 @@
 
 void calculate_component_visis(e_component_type comptype,
                                calc_visi_inouts_t *mem_calc_visi_inouts,
+                               double *cpu_channel_freqs,
                                woden_settings_t *woden_settings,
                                beam_settings_t *beam_settings,
                                source_t *source, source_t *mem_chunked_source,
@@ -49,7 +50,7 @@ void calculate_component_visis(e_component_type comptype,
   if (woden_settings->verbose == 1){
     log_message("\tExtrapolating fluxes and beams...");
   }
-  source_component_common(woden_settings, beam_settings,
+  source_component_common(woden_settings, beam_settings, cpu_channel_freqs,
                           mem_calc_visi_inouts->freqs,
                           source, mem_chunked_source,
                           mem_beam_gains, comptype,
@@ -326,9 +327,11 @@ void calculate_visibilities(array_layout_t *array_layout,
       }
       //The zero in this input is number of shaelet coefficients, as obviously
       //there are none for point sources
-      calculate_component_visis(POINT, mem_calc_visi_inouts, woden_settings,
-                               beam_settings, source, mem_chunked_source,
-                               mem_visibility_set, num_beams, use_twobeams, do_gpu);
+      calculate_component_visis(POINT, mem_calc_visi_inouts,
+                                visibility_set->channel_frequencies,
+                                woden_settings,
+                                beam_settings, source, mem_chunked_source,
+                                mem_visibility_set, num_beams, use_twobeams, do_gpu);
 
     }//if point sources
 
@@ -336,9 +339,11 @@ void calculate_visibilities(array_layout_t *array_layout,
       if (woden_settings->verbose == 1){
         log_message("\tDoing Gaussian components");
       }
-      calculate_component_visis(GAUSSIAN, mem_calc_visi_inouts, woden_settings,
-                               beam_settings, source, mem_chunked_source,
-                               mem_visibility_set, num_beams, use_twobeams, do_gpu);
+      calculate_component_visis(GAUSSIAN, mem_calc_visi_inouts,
+                                visibility_set->channel_frequencies,
+                                woden_settings,
+                                beam_settings, source, mem_chunked_source,
+                                mem_visibility_set, num_beams, use_twobeams, do_gpu);
     }//if gauss sources
 
     if (num_shapes > 0) {
@@ -365,9 +370,11 @@ void calculate_visibilities(array_layout_t *array_layout,
                              woden_settings->num_time_steps, num_shapes);
       }
 
-      calculate_component_visis(SHAPELET, mem_calc_visi_inouts, woden_settings,
-                                 beam_settings, source, mem_chunked_source,
-                                 mem_visibility_set, num_beams, use_twobeams, do_gpu);
+      calculate_component_visis(SHAPELET, mem_calc_visi_inouts,
+                                visibility_set->channel_frequencies,
+                                woden_settings,
+                                beam_settings, source, mem_chunked_source,
+                                mem_visibility_set, num_beams, use_twobeams, do_gpu);
     }//if shapelet
 
     if (do_gpu == 1){

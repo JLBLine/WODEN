@@ -9,11 +9,12 @@
 #include <math.h>
 
 void source_component_common(woden_settings_t *woden_settings,
-           beam_settings_t *beam_settings, double *d_freqs,
-           source_t *chunked_source, source_t *d_chunked_source,
-           beam_gains_t *d_component_beam_gains,
+           beam_settings_t *beam_settings,
+           double *cpu_freqs, double *mem_freqs,
+           source_t *chunked_source, source_t *mem_chunked_source,
+           beam_gains_t *mem_component_beam_gains,
            e_component_type comptype,
-           visibility_set_t *d_visibility_set);
+           visibility_set_t *mem_visibility_set);
 
 void extrapolate_Stokes(source_t *mem_chunked_source, double *mem_extrap_freqs,
                         int num_extrap_freqs, e_component_type comptype,

@@ -15,12 +15,17 @@ are launched by calculate_visibilities::calculate_visibilities`
 #include "calculate_visibilities_everybeam_common.h"
 
 #define MWA_RA0 0.75723171
-#define MWA_DEC0 -0.46606084
+#define MWA_DEC0 -0.46606083776035967
 double MWA_mjds[] ={56428.45056713, 56428.57556713};
 double MWA_lsts[] ={0.75723171, 1.54478021};
 double MWA_azs[] ={0.00000000, 4.52781227};
 double MWA_zas[] ={0.00000000, 0.69969735};
 double MWA_para_angles[] ={0.00000000, 1.75537303};
+
+#define LOFAR_RA0 2.15374123
+#define LOFAR_DEC0 0.84155210
+double LOFAR_mjds[] ={57050.84349547, 57050.96849547};
+double LOFAR_lsts[] ={1.36655619, 2.15410469};
 
 void set_azza_para(source_catalogue_t *cropped_sky_models,
                     int n_points, int n_gauss, int n_shapes, int num_sources,
@@ -98,6 +103,12 @@ void set_mjds(woden_settings_t *woden_settings, int beamtype){
         woden_settings->mjds[time_ind] = MWA_mjds[time_ind];
       }
     }
+
+    else if (beamtype == EB_LOFAR) {
+      for (int time_ind = 0; time_ind < NUM_TIME_STEPS; time_ind++) {
+        woden_settings->mjds[time_ind] = LOFAR_mjds[time_ind];
+      }
+    }
 }
 
 
@@ -106,11 +117,30 @@ void test_calculate_visibilities_EveryBeam(int n_points, int n_gauss, int n_shap
                                            int num_sources, int do_gpu, int beamtype,
                                            const char *beam_ms_path) {
 
-  source_catalogue_t *cropped_sky_models = make_cropped_sky_models(RA0, -0.46606083776035967,
+
+  double ra0, dec0;
+
+  if (beamtype == EB_MWA) {
+    ra0 = MWA_RA0;
+    dec0 = MWA_DEC0;
+  } else if (beamtype == EB_LOFAR) {
+    ra0 = LOFAR_RA0;
+    dec0 = LOFAR_DEC0;
+  }
+
+
+  // source_catalogue_t *cropped_sky_models = make_cropped_sky_models(RA0, -0.46606083776035967,
+  //                                                   n_points, n_gauss, n_shapes,
+  //                                                   num_sources);
+
+  // woden_settings_t *woden_settings = make_woden_settings(RA0, -0.46606083776035967);
+
+  source_catalogue_t *cropped_sky_models = make_cropped_sky_models(RA0, dec0,
                                                     n_points, n_gauss, n_shapes,
                                                     num_sources);
 
-  woden_settings_t *woden_settings = make_woden_settings(RA0, -0.46606083776035967);
+  woden_settings_t *woden_settings = make_woden_settings(RA0, dec0);
+
   woden_settings->beamtype = beamtype;
   woden_settings->do_gpu = do_gpu;
   woden_settings->use_dipamps = 0;
@@ -142,7 +172,7 @@ void test_calculate_visibilities_EveryBeam(int n_points, int n_gauss, int n_shap
 
   visibility_set = test_calculate_visibilities(cropped_sky_models,
                                                beam_settings, woden_settings, RA0,
-                                               -0.46606083776035967,
+                                               dec0,
                                                beam_settings->beamtype);
 
   // printf("WODEN settings %d %d %d\n",woden_settings->num_time_steps,
@@ -180,7 +210,7 @@ void test_calculate_visibilities_EveryBeam(int n_points, int n_gauss, int n_shap
   // -0.8775036335 0.4795700312, 0.0001940064 0.0000344838, 0.0002021146 0.0000273663, -0.8777521849 0.4791148901
   // -0.0692513958 0.0402538478, -0.0234183073 0.0134399701, 0.0233655237 -0.0105750393, -0.0530412868 0.0235209484
   
-
+  //MWA EveryBeam is locked to zenith, so beam values vary depending on where things are pointing
   if (beamtype == EB_MWA) {
     double _Complex gain1x_mwa[NUM_ANTS*NUM_TIME_STEPS] = {-0.8775036335 + 0.4795700312*I, -0.8775036335 + 0.4795700312*I, -0.8775036335 + 0.4795700312*I,
                                                           -0.0692513958 + 0.0402538478*I, -0.0692513958 + 0.0402538478*I, -0.0692513958 + 0.0402538478*I};
@@ -221,26 +251,20 @@ void test_calculate_visibilities_EveryBeam(int n_points, int n_gauss, int n_shap
       gain2y[gain_ind] = gain2y_mwa[gain_ind];
     }
 
+  //We normalise the other EveryBeams to the phase centre, so they're all one here
   } else {
 
-    double _Complex gain1x_lofar[NUM_ANTS*NUM_TIME_STEPS] = {0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I}; 
-    double _Complex leak1x_lofar[NUM_ANTS*NUM_TIME_STEPS] = {0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I}; 
-    double _Complex leak1y_lofar[NUM_ANTS*NUM_TIME_STEPS] = {0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I}; 
-    double _Complex gain1y_lofar[NUM_ANTS*NUM_TIME_STEPS] = {0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I}; 
-    double _Complex gain2x_lofar[NUM_ANTS*NUM_TIME_STEPS] = {0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I}; 
-    double _Complex leak2x_lofar[NUM_ANTS*NUM_TIME_STEPS] = {0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I}; 
-    double _Complex leak2y_lofar[NUM_ANTS*NUM_TIME_STEPS] = {0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I}; 
-    double _Complex gain2y_lofar[NUM_ANTS*NUM_TIME_STEPS] = {0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I,0.0+0.0*I}; 
-
     for (int gain_ind = 0; gain_ind < NUM_ANTS*NUM_TIME_STEPS; gain_ind++) {
-      gain1x[gain_ind] = gain1x_lofar[gain_ind];
-      leak1x[gain_ind] = leak1x_lofar[gain_ind];
-      leak1y[gain_ind] = leak1y_lofar[gain_ind];
-      gain1y[gain_ind] = gain1y_lofar[gain_ind];
-      gain2x[gain_ind] = gain2x_lofar[gain_ind];
-      leak2x[gain_ind] = leak2x_lofar[gain_ind];
-      leak2y[gain_ind] = leak2y_lofar[gain_ind];
-      gain2y[gain_ind] = gain2y_lofar[gain_ind];
+
+      gain1x[gain_ind] = 1.0 + 0.0*I;
+      leak1x[gain_ind] = 0.0 + 0.0*I;
+      leak1y[gain_ind] = 0.0 + 0.0*I;
+      gain1y[gain_ind] = 1.0 + 0.0*I;
+      gain2x[gain_ind] = 1.0 + 0.0*I;
+      leak2x[gain_ind] = 0.0 + 0.0*I;
+      leak2y[gain_ind] = 0.0 + 0.0*I;
+      gain2y[gain_ind] = 1.0 + 0.0*I;
+
     }
   }
 
@@ -248,9 +272,6 @@ void test_calculate_visibilities_EveryBeam(int n_points, int n_gauss, int n_shap
                                 gain1x, leak1x, leak1y, gain1y,
                                 gain2x, leak2x, leak2y, gain2y,
                                 NUM_ANTS, woden_settings, TOL);
-
-
-
 
   free_visi_set_inputs(visibility_set);
   free_visi_set_outputs(visibility_set);
@@ -262,15 +283,15 @@ void test_calculate_visibilities_EveryBeam(int n_points, int n_gauss, int n_shap
   woden_settings->num_visis = woden_settings->num_cross + woden_settings->num_autos;
 
   // test_calculate_visibilities frees up the sky model, so we need to remake it
-  cropped_sky_models = make_cropped_sky_models(RA0, -0.46606083776035967,
-                                                    n_points, n_gauss, n_shapes,
-                                                    num_sources);
+  cropped_sky_models = make_cropped_sky_models(RA0, dec0,
+                                               n_points, n_gauss, n_shapes,
+                                               num_sources);
   set_azza_para(cropped_sky_models, n_points, n_gauss, n_shapes, num_sources,
                 beamtype);
 
   // printf("We have this many visis %d %d %d\n",woden_settings->num_visis,woden_settings->num_autos,woden_settings->num_cross );
   visibility_set = test_calculate_visibilities(cropped_sky_models,
-                                          beam_settings, woden_settings, RA0, -0.46606083776035967,
+                                          beam_settings, woden_settings, RA0, dec0,
                                           beam_settings->beamtype);
 
   test_comp_phase_centre_allgains_diffants(visibility_set, num_comps, 

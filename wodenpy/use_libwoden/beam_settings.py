@@ -48,7 +48,8 @@ class BeamGroups:
     
     eb_beam_values = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value, BeamTypes.EB_MWA.value]
     azza_beam_values = [BeamTypes.MWA_ANALY.value, BeamTypes.FEE_BEAM.value,
-                        BeamTypes.FEE_BEAM_INTERP.value, BeamTypes.ANALY_DIPOLE.value]
+                        BeamTypes.FEE_BEAM_INTERP.value, BeamTypes.ANALY_DIPOLE.value,
+                        BeamTypes.EB_MWA.value]
     hadec_beam_values = [BeamTypes.GAUSS_BEAM.value, BeamTypes.MWA_ANALY.value]
     off_cardinal_beam_values = [BeamTypes.EB_LOFAR.value]
         

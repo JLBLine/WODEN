@@ -18,13 +18,12 @@ def print_variables(ms_path, prepend, latitude, longitude):
     with table(ms_path + "::FIELD") as field_subtable:
         phase_dir = field_subtable.getcol('PHASE_DIR')
     
-    
-    
-    
     RA0 = np.squeeze(phase_dir)[0]
     if RA0 < 0:
         RA0 += 2*np.pi
     DEC0 = np.squeeze(phase_dir)[1]
+    
+    print("pointing", np.degrees(RA0), np.degrees(DEC0))
 
 
     with table(ms_path) as ms:
@@ -96,3 +95,7 @@ def print_variables(ms_path, prepend, latitude, longitude):
 if __name__ == "__main__":
     ms_path = "../../../test_installation/everybeam/MWA-single-timeslot.ms"
     print_variables(ms_path, "MWA", np.radians(LATITUDE_MWA), np.radians(LONGITUDE_MWA))
+    
+    
+    ms_path = "../../../test_installation/everybeam/LOFAR_HBA_MOCK.ms"
+    print_variables(ms_path, "LOFAR", np.radians(LATITUDE_LOFAR), np.radians(LONGITUDE_LOFAR))

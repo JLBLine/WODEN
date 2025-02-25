@@ -469,8 +469,8 @@ woden_settings_t * make_woden_settings(double ra0, double dec0) {
     //Make the fine channel width insanely small so beam changes little
     //with frequency - that way we can test for just one gain value per time
     woden_settings->frequency_resolution = 1e-6;
-    woden_settings->latitude = -0.46606083776035967;
-    double latitudes[] = {-0.46606083776035967, -0.46606083776035967};
+    woden_settings->latitude = dec0;
+    double latitudes[] = {dec0, dec0};
     woden_settings->latitudes = latitudes;
 
     woden_settings->lsts = lsts;
@@ -513,8 +513,8 @@ void test_uvw(visibility_set_t *visibility_set,  double *lsts,
       for (int baseline = 0; baseline < NUM_BASELINES; baseline++) {
         xy_length = (baseline + 1) * 100;
         expec_u[index] = (cos(ha0) + sin(ha0))*xy_length;
-        expec_v[index] = xy_length * sin(-0.46606083776035967)*(-cos(ha0) + sin(ha0));
-        expec_w[index] = xy_length * cos(-0.46606083776035967)*(cos(ha0) - sin(ha0));
+        expec_v[index] = xy_length * sin(dec0)*(-cos(ha0) + sin(ha0));
+        expec_w[index] = xy_length * cos(dec0)*(cos(ha0) - sin(ha0));
 
         index ++;
       }

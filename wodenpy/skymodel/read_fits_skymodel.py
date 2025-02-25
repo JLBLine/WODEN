@@ -842,12 +842,19 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
             comp_azs, comp_els = erfa.hd2ae(comp_has, source_components.decs[new_comp_ind],
                                             latitudes)
             
+            if beamtype == BeamTypes.EB_MWA.value:
+                para_angles = erfa.hd2pa(comp_has, source_components.decs[new_comp_ind],
+                                         latitudes)
+            
             ##OK these ctype arrays cannot be sliced, so let's increment
             ##over them at a snail's pace
             for time_ind in range(num_time_steps):
                 azza_low = new_comp_ind*num_time_steps
                 source_components.azs[azza_low + time_ind] = comp_azs[time_ind]
                 source_components.zas[azza_low + time_ind] = np.pi/2 - comp_els[time_ind]
+                
+                if beamtype == BeamTypes.EB_MWA.value:
+                    source_components.para_angles[azza_low + time_ind] = para_angles[time_ind]
     
     ##now handle flux related things    
     ##always shove things into the source as power, curve, list

@@ -78,18 +78,42 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   woden_settings->num_freqs = num_freqs;
   woden_settings->num_time_steps = num_times;
   woden_settings->ra0 = ra0;
+  woden_settings->dec0 = dec0;
   woden_settings->sdec0 = sin(dec0);
   woden_settings->cdec0 = cos(dec0);
   woden_settings->latitude = -0.46606083776035967;
   woden_settings->use_dipamps = 0;
   woden_settings->num_ants = 1;
   woden_settings->do_gpu = do_gpu;
+  woden_settings->verbose = 1;
 
   woden_settings->latitudes = malloc(num_times*sizeof(double));
+  woden_settings->mjds = malloc(num_times*sizeof(double));
   for (int i = 0; i < num_times; i++)
   {
     woden_settings->latitudes[i] = -0.46606083776035967;
+    woden_settings->mjds[i] = 56428.45056713;
   }
+
+  woden_settings->single_everybeam_station = 1;
+  if (beamtype == EB_MWA) {
+    
+    woden_settings->normalise_primary_beam = 0;
+    woden_settings->beam_ms_path = "../../../../test_installation/everybeam/MWA-single-timeslot.ms";
+    woden_settings->hdf5_beam_path = mwa_fee_hdf5;
+  } 
+  
+  if (beamtype == EB_LOFAR) {
+    woden_settings->beam_ms_path = "../../../../test_installation/everybeam/LOFAR_HBA_MOCK.ms";
+    woden_settings->normalise_primary_beam = 1;
+  }
+
+  if (beamtype == EB_OSKAR) {
+    woden_settings->beam_ms_path = "../../../../test_installation/everybeam/create_OSKAR-SKA_ms/OSKAR-SKA-layout.ms";
+    woden_settings->normalise_primary_beam = 1;
+  }
+
+
   
 
   woden_settings->beamtype = beamtype;
@@ -225,6 +249,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   components.decs = decs;
   components.azs = azs;
   components.zas = zas;
+  components.para_angles = para_angles;
   components.beam_has = beam_has;
   components.beam_decs = beam_decs;
 
@@ -426,35 +451,35 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   visibility_set_t *mem_visibility_set = NULL;
 
 
-
-  //the everybeam gains are calculated in python, and transferred across
-  //to the C code. So define some gains here; just make them the index of
-  //the gain.
+  //TODO modify/use this when we do pyuvbeam
+  // //the everybeam gains are calculated in python, and transferred across
+  // //to the C code. So define some gains here; just make them the index of
+  // //the gain.
  
-  components_t *chunk_components;
-  if (comptype == POINT) {
-    chunk_components = &chunked_source->point_components;
-  }
-  else if (comptype == GAUSSIAN) {
-    chunk_components = &chunked_source->gauss_components;
-  }
-  else {
-    chunk_components = &chunked_source->shape_components;
-  }
+  // components_t *chunk_components;
+  // if (comptype == POINT) {
+  //   chunk_components = &chunked_source->point_components;
+  // }
+  // else if (comptype == GAUSSIAN) {
+  //   chunk_components = &chunked_source->gauss_components;
+  // }
+  // else {
+  //   chunk_components = &chunked_source->shape_components;
+  // }
 
-  if (beamtype == EB_MWA || beamtype == EB_LOFAR || beamtype == EB_OSKAR) {
-    chunk_components->gxs = malloc(num_beam_values*sizeof(user_precision_complex_t));
-    chunk_components->Dxs = malloc(num_beam_values*sizeof(user_precision_complex_t));
-    chunk_components->Dys = malloc(num_beam_values*sizeof(user_precision_complex_t));
-    chunk_components->gys = malloc(num_beam_values*sizeof(user_precision_complex_t));
+  // if (beamtype == EB_MWA || beamtype == EB_LOFAR || beamtype == EB_OSKAR) {
+  //   chunk_components->gxs = malloc(num_beam_values*sizeof(user_precision_complex_t));
+  //   chunk_components->Dxs = malloc(num_beam_values*sizeof(user_precision_complex_t));
+  //   chunk_components->Dys = malloc(num_beam_values*sizeof(user_precision_complex_t));
+  //   chunk_components->gys = malloc(num_beam_values*sizeof(user_precision_complex_t));
 
-    for (int i = 0; i < num_beam_values; i++) {
-      chunk_components->gxs[i] = i + I*i;
-      chunk_components->Dxs[i] = i + I*i;
-      chunk_components->Dys[i] = i + I*i;
-      chunk_components->gys[i] = i + I*i;
-    }
-  }
+  //   for (int i = 0; i < num_beam_values; i++) {
+  //     chunk_components->gxs[i] = i + I*i;
+  //     chunk_components->Dxs[i] = i + I*i;
+  //     chunk_components->Dys[i] = i + I*i;
+  //     chunk_components->gys[i] = i + I*i;
+  //   }
+  // }
 
   if (do_gpu == 1) {
     //Run the CUDA code
@@ -473,12 +498,13 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     }
     
 
-    if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
-      copy_CPU_component_gains_to_GPU_beam_gains(chunk_components, mem_beam_gains,
-                                 num_beam_values);
-    }
+    //TODO modify/use this when we do pyuvbeam
+    // if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
+    //   copy_CPU_component_gains_to_GPU_beam_gains(chunk_components, mem_beam_gains,
+    //                              num_beam_values);
+    // }
 
-    source_component_common(woden_settings, beam_settings, mem_freqs,
+    source_component_common(woden_settings, beam_settings, freqs, mem_freqs,
        chunked_source, mem_chunked_source, mem_beam_gains, comptype,
        mem_visibility_set);
 
@@ -499,12 +525,13 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     mem_chunked_source = chunked_source;
     mem_freqs = freqs;
 
-    if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
-      mem_beam_gains->gxs = chunk_components->gxs;
-      mem_beam_gains->Dxs = chunk_components->Dxs;
-      mem_beam_gains->Dys = chunk_components->Dys;
-      mem_beam_gains->gys = chunk_components->gys;
-    }
+    //TODO modify/use this when we do pyuvbeam
+    // if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR  || beam_settings->beamtype == EB_MWA) {
+    //   mem_beam_gains->gxs = chunk_components->gxs;
+    //   mem_beam_gains->Dxs = chunk_components->Dxs;
+    //   mem_beam_gains->Dys = chunk_components->Dys;
+    //   mem_beam_gains->gys = chunk_components->gys;
+    // }
 
     //Aight so this is somewhat hacky. But for the GPU version of hyperbeam,
     //you set the beam frequencies in the call to `new_gpu_fee_beam`. This
@@ -519,7 +546,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
       mem_freqs[1] = 150e+6;
     }
 
-    source_component_common(woden_settings, beam_settings, mem_freqs,
+    source_component_common(woden_settings, beam_settings, freqs, mem_freqs,
        chunked_source, mem_chunked_source, mem_beam_gains, comptype,
        mem_visibility_set);
 
@@ -726,29 +753,171 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
     }
   }
-  else if (beamtype == EB_LOFAR || beamtype == EB_MWA || beamtype == EB_OSKAR) {
+  else if (beamtype == EB_MWA) {
 
     #ifdef DOUBLE_PRECISION
-      TOL = 1e-12;
+      TOL = 1e-7;
     #else
       TOL = 1e-7;
     #endif
+
+    // printf("eb_mwa_gx_real[] = {");
+    // for (int output = 0; output < num_beam_values; output++) {
+    //   printf("%.8f, ", creal(gxs[output]));
+    // }
+    // printf("}\n\n");
+
+    // printf("eb_mwa_gx_imag[] = {");
+    // for (int output = 0; output < num_beam_values; output++) {
+    //   printf("%.8f, ", cimag(gxs[output]));
+    // }
+    // printf("}\n\n");
+
+    // printf("eb_mwa_Dx_real[] = {");
+    // for (int output = 0; output < num_beam_values; output++) {
+    //   printf("%.8f, ", creal(Dxs[output]));
+    // }
+    // printf("}\n\n");
+
+    // printf("eb_mwa_Dx_imag[] = {");
+    // for (int output = 0; output < num_beam_values; output++) {
+    //   printf("%.8f, ", cimag(Dxs[output]));
+    // }
+    // printf("}\n\n");
+
+    // printf("eb_mwa_Dy_real[] = {");
+    // for (int output = 0; output < num_beam_values; output++) {
+    //   printf("%.8f, ", creal(Dys[output]));
+    // }
+    // printf("}\n\n");
+
+    // printf("eb_mwa_Dy_imag[] = {");
+    // for (int output = 0; output < num_beam_values; output++) {
+    //   printf("%.8f, ", cimag(Dys[output]));
+    // }
+    // printf("}\n\n");
+
+    // printf("eb_mwa_gy_real[] = {");
+    // for (int output = 0; output < num_beam_values; output++) {
+    //   printf("%.8f, ", creal(gys[output]));
+    // }
+    // printf("}\n\n");
+
+    // printf("eb_mwa_gy_imag[] = {");
+    // for (int output = 0; output < num_beam_values; output++) {
+    //   printf("%.8f, ", cimag(gys[output]));
+    // }
+    // printf("}\n\n");
+
+
     for (int output = 0; output < num_beam_values; output++) {
       // printf("%d %.8f %.8f %.8f %.8f %.8f %.8f %.8f %.8f\n", output, creal(gxs[output]), cimag(gxs[output]),
       //         creal(Dxs[output]), cimag(Dxs[output]),
       //         creal(Dys[output]), cimag(Dys[output]),
       //         creal(gys[output]), cimag(gys[output]) );
       //All values should just equal the index in the array
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, output, creal(gxs[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, output, cimag(gxs[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, output, creal(Dxs[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, output, cimag(Dxs[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, output, creal(Dys[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, output, cimag(Dys[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, output, creal(gys[output]));
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, output, cimag(gys[output]));
+
+
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, eb_mwa_gx_real[output], creal(gxs[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, eb_mwa_gx_imag[output], cimag(gxs[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, eb_mwa_Dx_real[output], creal(Dxs[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, eb_mwa_Dx_imag[output], cimag(Dxs[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, eb_mwa_Dy_real[output], creal(Dys[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, eb_mwa_Dy_imag[output], cimag(Dys[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, eb_mwa_gy_real[output], creal(gys[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, eb_mwa_gy_imag[output], cimag(gys[output]));
+
+
+      //TODO modify/use this when we do pyuvbeam
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, output, creal(gxs[output]));
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, output, cimag(gxs[output]));
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, output, creal(Dxs[output]));
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, output, cimag(Dxs[output]));
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, output, creal(Dys[output]));
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, output, cimag(Dys[output]));
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, output, creal(gys[output]));
+      // TEST_ASSERT_DOUBLE_WITHIN(TOL, output, cimag(gys[output]));
     }
   }
+
+  else if (beamtype == EB_LOFAR) {
+
+    #ifdef DOUBLE_PRECISION
+      TOL = 1e-7;
+    #else
+      TOL = 1e-7;
+    #endif
+
+    // printf("double eb_lofar_gx_real[] = {");
+    // for (int output = 0; output < num_beam_values; output++) {
+    //   printf("%.8f, ", creal(gxs[output]));
+    // }
+    // printf("}\n\n");
+
+    // printf("double eb_lofar_gx_imag[] = {");
+    // for (int output = 0; output < num_beam_values; output++) {
+    //   printf("%.8f, ", cimag(gxs[output]));
+    // }
+    // printf("}\n\n");
+
+    // printf("double eb_lofar_Dx_real[] = {");
+    // for (int output = 0; output < num_beam_values; output++) {
+    //   printf("%.8f, ", creal(Dxs[output]));
+    // }
+    // printf("}\n\n");
+
+    // printf("double eb_lofar_Dx_imag[] = {");
+    // for (int output = 0; output < num_beam_values; output++) {
+    //   printf("%.8f, ", cimag(Dxs[output]));
+    // }
+    // printf("}\n\n");
+
+    // printf("double eb_lofar_Dy_real[] = {");
+    // for (int output = 0; output < num_beam_values; output++) {
+    //   printf("%.8f, ", creal(Dys[output]));
+    // }
+    // printf("}\n\n");
+
+    // printf("double eb_lofar_Dy_imag[] = {");
+    // for (int output = 0; output < num_beam_values; output++) {
+    //   printf("%.8f, ", cimag(Dys[output]));
+    // }
+    // printf("}\n\n");
+
+    // printf("double eb_lofar_gy_real[] = {");
+    // for (int output = 0; output < num_beam_values; output++) {
+    //   printf("%.8f, ", creal(gys[output]));
+    // }
+    // printf("}\n\n");
+
+    // printf("double eb_lofar_gy_imag[] = {");
+    // for (int output = 0; output < num_beam_values; output++) {
+    //   printf("%.8f, ", cimag(gys[output]));
+    // }
+    // printf("}\n\n");
+
+
+    for (int output = 0; output < num_beam_values; output++) {
+      // printf("%d %.8f %.8f %.8f %.8f %.8f %.8f %.8f %.8f\n", output, creal(gxs[output]), cimag(gxs[output]),
+      //         creal(Dxs[output]), cimag(Dxs[output]),
+      //         creal(Dys[output]), cimag(Dys[output]),
+      //         creal(gys[output]), cimag(gys[output]) );
+      //All values should just equal the index in the array
+
+
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, eb_lofar_gx_real[output], creal(gxs[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, eb_lofar_gx_imag[output], cimag(gxs[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, eb_lofar_Dx_real[output], creal(Dxs[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, eb_lofar_Dx_imag[output], cimag(Dxs[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, eb_lofar_Dy_real[output], creal(Dys[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, eb_lofar_Dy_imag[output], cimag(Dys[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, eb_lofar_gy_real[output], creal(gys[output]));
+      TEST_ASSERT_DOUBLE_WITHIN(TOL, eb_lofar_gy_imag[output], cimag(gys[output]));
+
+    }
+  }
+
+
   else if (beamtype == NO_BEAM) {
     //Don't need to check beam values for NO_BEAM, these values are set by
     //the function `source_components::get_beam_gains` which is called later
@@ -784,13 +953,14 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
 
   }
 
-  //Be free my beauties
-  if (beamtype == EB_MWA || beamtype == EB_LOFAR || beamtype == EB_LOFAR) {
-    free(chunk_components->gxs);
-    free(chunk_components->Dxs);
-    free(chunk_components->Dys);
-    free(chunk_components->gys);
-  }
+  //TODO modify/use this when we do pyuvbeam
+  // //Be free my beauties
+  // if (beamtype == EB_MWA || beamtype == EB_LOFAR || beamtype == EB_LOFAR) {
+  //   free(chunk_components->gxs);
+  //   free(chunk_components->Dxs);
+  //   free(chunk_components->Dys);
+  //   free(chunk_components->gys);
+  // }
   free(zeroes);
   free(decs);
   free(gxs);
@@ -806,6 +976,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   free(curve_comp_inds);
   free(list_comp_inds);
   free(woden_settings->latitudes);
+  free(woden_settings->mjds);
 
 }
 
@@ -891,9 +1062,19 @@ This test checks source_component_common with beamtype=EB_MWA
 */
 void test_source_component_common_ConstantDecEveryBeamMWA(e_component_type comptype,
                                                        int do_gpu) {
-  test_source_component_common_ConstantDecChooseBeams(EB_MWA, " ",
-                                                      comptype, do_gpu);
+
+  char* mwa_fee_hdf5 = getenv("MWA_FEE_HDF5");
+
+  if (mwa_fee_hdf5) {
+    printf("MWA_FEE_HDF5: %s\n", mwa_fee_hdf5 );
+    test_source_component_common_ConstantDecChooseBeams(EB_MWA, mwa_fee_hdf5,
+                                                        comptype, do_gpu);
+  }
+  else {
+    printf("MWA_FEE_HDF5 not found - not running EB MWA beam test\n");
+  }
 }
+
 
 /*
 This test checks source_component_common with beamtype=EB_LOFAR

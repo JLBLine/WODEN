@@ -118,7 +118,7 @@ def summarise_input_args(logger, args):
     input_str += f"\n\tNum time steps: {args.num_time_steps}"
     
     if args.array_layout == "from_the_metafits":
-        input_str += f"\n\tHave read {args.num_antennas} antenna positions from metafits file: {args.metafits_path}"
+        input_str += f"\n\tHave read {args.num_antennas} antenna positions from metafits file: {args.metafits_filename}"
     elif args.array_layout == "from_ms":
         input_str += f"\n\tHave read {args.num_antennas} antenna positions from measurement set: {args.beam_ms_path}"
     else:

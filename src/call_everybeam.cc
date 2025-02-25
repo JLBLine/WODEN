@@ -258,7 +258,14 @@ extern "C" void run_lofar_beam(Telescope *telescope,
             jones[jones_index + 1] = {response[1].real(), response[1].imag()};
             jones[jones_index + 2] = {response[2].real(), response[2].imag()};
             jones[jones_index + 3] = {response[3].real(), response[3].imag()};
+
           }
+          // std::printf("s%d t%d f%d c%d: %.10f %.10f, %.10f %.10f, %.10f %.10f, %.10f %.10f\n",
+          //   si, ti, fi, ci,
+          //   __real__ jones[jones_index + 0], __imag__ jones[jones_index + 0],
+          //   __real__ jones[jones_index + 1], __imag__ jones[jones_index + 1],
+          //   __real__ jones[jones_index + 2], __imag__ jones[jones_index + 2],
+          //   __real__ jones[jones_index + 3], __imag__ jones[jones_index + 3]);
         }
       }
     }
@@ -404,6 +411,8 @@ extern "C" int load_and_run_mwa_beam(const char *ms_path,
                                      bool apply_beam_norms, bool parallactic_rotate,
                                      bool element_only, bool iau_order,
                                      double _Complex * jones) {
+
+  // std::printf("Loading MWA beam\n");
 
   int status = 0;
   bool use_differential_beam = false;

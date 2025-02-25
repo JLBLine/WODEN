@@ -148,7 +148,8 @@ void extrapolate_Stokes(source_t *mem_chunked_source, double *mem_extrap_freqs,
 
 //TODO get cpu_freqs in here as well so can always pass to everybeam
 void source_component_common(woden_settings_t *woden_settings,
-           beam_settings_t *beam_settings, double *mem_freqs,
+           beam_settings_t *beam_settings,
+           double *cpu_freqs, double *mem_freqs,
            source_t *chunked_source, source_t *mem_chunked_source,
            beam_gains_t *mem_component_beam_gains,
            e_component_type comptype,
@@ -362,7 +363,15 @@ void source_component_common(woden_settings_t *woden_settings,
   }
 
   else if (beam_settings->beamtype == EB_MWA || beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR) {
-
+    if (woden_settings->verbose == 1){
+      if (beam_settings->beamtype == EB_MWA) {
+        log_message("\tDoing EveryBeam MWA beam");
+      } else if (beam_settings->beamtype == EB_LOFAR) {
+        log_message("\tDoing EveryBeam LOFAR beam");
+      } else {
+        log_message("\tDoing EveryBeam OSKAR beam");
+      }
+    }
 
     beam_gains_t *eb_beam_gains = malloc(sizeof(beam_gains_t));
     malloc_beam_gains_cpu(eb_beam_gains, beam_settings->beamtype, num_gains);
@@ -391,7 +400,7 @@ void source_component_common(woden_settings_t *woden_settings,
     double _Complex *jones = malloc(MAX_POLS*num_components*num_times*num_freqs*num_beams*sizeof(double _Complex));
 
     if (beam_settings->beamtype == EB_MWA) {
-      //MWA beam is already normalised to zenith
+      
 
       double para_angles[num_components*num_times];
       double azs[num_components*num_times];
@@ -403,17 +412,37 @@ void source_component_common(woden_settings_t *woden_settings,
         zas[comp] = (double)components->zas[comp];
       }
 
-      // printf("AFTER MAPPING %.5f %.5f\n", azs[0], mem_components->azs[0] );
-
+      //MWA beam is already normalised to zenith
       apply_beam_norms = false;
       eb_status = load_and_run_mwa_beam(woden_settings->beam_ms_path, "MWA",
                           woden_settings->hdf5_beam_path,
                           num_beams, station_idxs, num_components,
                           azs, zas, para_angles,
                           num_times, mjd_sec_times,
-                          num_freqs, mem_freqs,
+                          num_freqs, cpu_freqs,
                           apply_beam_norms, rotate, element_only, iau_order,
                           jones);
+    }
+
+    if (beam_settings->beamtype == EB_LOFAR) {
+
+      //TODO get this beam_ra0, beam_dec0 into woden_settings.
+      //Either have it set by original measurement set, or locked to phase
+      //centre by manually fiddling the base measurement set.
+      double beam_ra0 = woden_settings->ra0;
+      double beam_dec0 = woden_settings->dec0;
+
+      load_and_run_lofar_beam(woden_settings->beam_ms_path,
+                              "hamaker", " ",
+                              num_beams, station_idxs, num_components,
+                              beam_ra0, beam_dec0,
+                              components->ras, components->decs,
+                              num_times, mjd_sec_times,
+                              num_freqs, cpu_freqs,
+                              woden_settings->normalise_primary_beam,
+                              rotate, element_only, iau_order,
+                              jones);
+
     }
 
     for (int station = 0; station < num_beams; station ++) {

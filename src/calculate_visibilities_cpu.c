@@ -114,29 +114,3 @@ void free_beam_gains_cpu(beam_gains_t *beam_gains, e_beamtype beamtype){
     free(beam_gains->Dys );
   }
 }
-
-// void copy_component_gains_to_beam_gains_cpu(components_t *components,
-//                                             beam_gains_t *beam_gains, int num_gains) {
-
-
-//     gpuMalloc( (void**)&d_beam_gains->gxs,
-//                       num_gains*sizeof(user_precision_complex_t) );
-//     gpuMalloc( (void**)&d_beam_gains->Dxs,
-//                       num_gains*sizeof(user_precision_complex_t) );
-//     gpuMalloc( (void**)&d_beam_gains->Dys,
-//                       num_gains*sizeof(user_precision_complex_t) );
-//     gpuMalloc( (void**)&d_beam_gains->gys,
-//                       num_gains*sizeof(user_precision_complex_t) );
-
-//     gpuMemcpy( d_beam_gains->gxs, components->gxs,
-//                num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
-
-//     gpuMemcpy( d_beam_gains->Dxs, components->Dxs,
-//                num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
-
-//     gpuMemcpy( d_beam_gains->Dys, components->Dys,
-//                num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
-
-//     gpuMemcpy( d_beam_gains->gys, components->gys,
-//                num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
-// }

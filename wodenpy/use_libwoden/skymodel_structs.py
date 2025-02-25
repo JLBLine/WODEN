@@ -685,6 +685,9 @@ def setup_components(chunk_map: Skymodel_Chunk_Map,
         components.azs = np.empty(n_comps*num_times, dtype=np_precision)
         components.zas = np.empty(n_comps*num_times, dtype=np_precision)
         
+    if beamtype == BeamTypes.EB_MWA.value:
+        components.para_angles = np.empty(n_comps*num_times, dtype=np_precision)
+        
     ##NOTE: use this to calculate beam values in Python
     ##Needs to be done in future for pyuvbeam
     # if beamtype in BeamGroups.eb_beam_values:
@@ -916,6 +919,10 @@ def copy_python_components_to_ctypes(python_comps: Components_Python,
     if beamtype in BeamGroups.azza_beam_values:
         ctypes_comps.azs = python_comps.azs.ctypes.data_as(POINTER(c_user_precision))
         ctypes_comps.zas = python_comps.zas.ctypes.data_as(POINTER(c_user_precision))
+        
+    if beamtype == BeamTypes.EB_MWA.value:
+        ctypes_comps.para_angles = python_comps.para_angles.ctypes.data_as(POINTER(c_user_precision))
+        # print("WE DID THIS MOTHER HUCKER", python_comps.para_angles, python_comps.azs, python_comps.zas)
         
     if beamtype in BeamGroups.hadec_beam_values:
         ctypes_comps.beam_has = python_comps.beam_has.ctypes.data_as(POINTER(c_double))

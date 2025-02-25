@@ -337,6 +337,7 @@ def fill_woden_settings_python(args : argparse.Namespace,
     ##different ampltiudes for each tile currently
     if args.primary_beam == 'everybeam_MWA':
         woden_settings.single_everybeam_station = 1
+        woden_settings.hdf5_beam_path = args.hdf5_beam_path
     elif np.isnan(args.station_id):
         woden_settings.single_everybeam_station = 0
     else:
@@ -360,7 +361,7 @@ def fill_woden_settings_python(args : argparse.Namespace,
         woden_settings.normalise_primary_beam = 1
         
     woden_settings.beam_ms_path = args.beam_ms_path
-        
+    
     return woden_settings
     
 def setup_lsts_and_phase_centre(woden_settings_python : Woden_Settings_Python,
@@ -513,7 +514,7 @@ def convert_woden_settings_to_ctypes(woden_settings_python : Woden_Settings_Pyth
         woden_settings_ctypes.hdf5_beam_path = create_string_buffer(woden_settings_python.hdf5_beam_path.encode('utf-8'))
         
     if woden_settings_ctypes.beamtype in BeamGroups.eb_beam_values:
-        woden_settings_ctypes.beam_ms_path = woden_settings_python.beam_ms_path.encode('utf-8')
+        woden_settings_ctypes.beam_ms_path = create_string_buffer(woden_settings_python.beam_ms_path.encode('utf-8'))
     
     # if woden_settings_ctypes.use_dipamps:
     woden_settings_ctypes.mwa_dipole_amps = woden_settings_python.mwa_dipole_amps.ctypes.data_as(POINTER(c_double))

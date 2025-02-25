@@ -57,6 +57,7 @@ class PretendArgs():
         self.cpu_mode = False
         self.verbose = False
         self.no_beam_normalisation = False
+        self.beam_ms_path = ""
         
     def __init__(self):
         self.make_basic_args()
