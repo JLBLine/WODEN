@@ -630,7 +630,11 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
         array_layout = "from_ms"
             
     eb_args = ['everybeam_OSKAR', 'everybeam_LOFAR', 'everybeam_MWA']
-    have_everybeam = check_for_library('everybeam')
+    # have_everybeam = check_for_library('everybeam')
+    
+    ##TODO - need to check this via compilation flags internal to libwoden
+    ##So need a wrapper around a ctypes function internal to libwoden
+    have_everybeam = True
             
     if args.primary_beam in eb_args:
         
