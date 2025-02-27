@@ -29,3 +29,4 @@ void test_calculate_visibilities_EveryBeam_ThreeSource_FiveShape(int do_gpu, int
                                                                   const char *beam_ms_path);
 void test_calculate_visibilities_EveryBeam_ThreeSource_FiveAll(int do_gpu, int beamtype, 
                                                                   const char *beam_ms_path);
+void profile_lofar_everybeam(int do_gpu, int beamtype, const char *beam_ms_path);

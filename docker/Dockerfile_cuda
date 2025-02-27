@@ -47,10 +47,12 @@ RUN apt-get update -y && \
 RUN wget -q ftp://ftp.astron.nl/outgoing/Measures/WSRT_Measures.ztar \
     && tar -xf WSRT_Measures.ztar -C /var/lib/casacore/data/
 
+
+RUN mkdir -p /everybeam_install
 RUN git clone -b $EVERYBEAM_TAG --recursive -j4 https://git.astron.nl/RD/EveryBeam.git \
   && cd EveryBeam \
   && mkdir -p build && cd build \
-  && cmake .. -DBUILD_WITH_PYTHON=ON \
+  && cmake .. -DCMAKE_INSTALL_PREFIX=/everybeam_install \
   && make \
   && make install
 
@@ -72,6 +74,8 @@ RUN git clone -b $WODEN_TAG https://github.com/JLBLine/WODEN.git \
   && mkdir build && cd build \
   && cmake .. -DHBEAM_INC=/mwa_hyperbeam-${HYPER_VERSION}/include/ \
            -DHBEAM_LIB=/mwa_hyperbeam-${HYPER_VERSION}/target/release/libmwa_hyperbeam.so \
+           -DEBEAM_INSTALL=/everybeam_install/ \
+           -DEBEAM_ROOT=/EveryBeam/ \
   && make
   
 ##Now do the pip install

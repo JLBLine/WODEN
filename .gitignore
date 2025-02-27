@@ -110,6 +110,9 @@ examples/polarisation/*.ms
 examples/polarisation/eg_array.txt
 
 test_installation/everybeam/*.fits
+test_installation/everybeam/pointed_HBA.ms
+test_installation/everybeam/pointed_LBA.ms
+test_installation/everybeam/LOFAR_LBA_MOCK.ms
 test_installation/everybeam/eg_array.txt
 test_installation/everybeam/profile_run_woden_band01.ms
 test_installation/everybeam/profile_run_woden_lofar_band01.ms

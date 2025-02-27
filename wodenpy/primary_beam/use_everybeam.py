@@ -17,12 +17,49 @@ from ctypes import c_char_p, c_int, c_double, POINTER, c_bool
 import ctypes
 from wodenpy.wodenpy_setup.woden_logger import simple_logger
 from logging import Logger
+from casacore.tables import table, taql
 
 
 ##This call is so we can use it as a type annotation
 woden_struct_classes = Woden_Struct_Classes()
 Source_Catalogue = woden_struct_classes.Source_Catalogue
 Woden_Settings = woden_struct_classes.Woden_Settings
+
+
+def get_num_stations(ms_path : str) -> int:
+    
+    with table(ms_path + '/ANTENNA') as t: 
+        num_stations = len(t)
+        
+    return num_stations
+
+def create_filtered_ms(ms_path : str, new_ms_path : str, ra0 : float, dec0 : float):
+    
+    ##First up, read in original MS, and filter it to only have 
+    ## the first time and frequency channel
+    with table(ms_path, readonly=True) as ms:
+        time_col = ms.getcol("TIME")
+        ddid_col = ms.getcol("DATA_DESC_ID")
+
+        first_time = time_col[0]  # First timestamp
+        first_ddid = ddid_col[0]  # First frequency channel
+
+        # Use TaQL (Table Query Language) to select the subset efficiently
+        query = f"SELECT * FROM {ms_path} WHERE TIME = {first_time} AND DATA_DESC_ID = {first_ddid}"
+        filtered_ms = taql(query)
+        
+        filtered_ms.copy(new_ms_path, deep=True)
+        
+        filtered_ms.close()
+        
+    with table(new_ms_path+'::FIELD', readonly=False) as field_table:
+        
+        delay_dir = field_table.getcol('DELAY_DIR')
+        print(delay_dir.shape)
+        
+        field_table.putcol('DELAY_DIR', np.array([[[ra0, dec0]]]))
+        field_table.putcol('LOFAR_TILE_BEAM_DIR', np.array([[[ra0, dec0]]]))
+        field_table.putcol('REFERENCE_DIR', np.array([[[ra0, dec0]]]))
 
 def check_ms_telescope_type_matches_element_response(ms_path : str,
                                                      element_response_model : str = 'default',

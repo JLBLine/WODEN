@@ -111,9 +111,9 @@ extern "C" Telescope* load_everybeam_telescope(int * status,  const char *ms_pat
     options.element_response_model =
         everybeam::ElementResponseModel::kHamakerLba;
   }
-  // else if (element_response_tmp == "LOBES") {
-  //   options.element_response_model = everybeam::ElementResponseModel::kLOBES;
-  // }
+  else if (element_response_tmp == "LOBES") {
+    options.element_response_model = everybeam::ElementResponseModel::kLOBES;
+  }
   // else if (element_response_tmp == "LWA") {
   //   options.element_response_model = everybeam::ElementResponseModel::kLwa;
   // }
@@ -258,7 +258,6 @@ extern "C" void run_lofar_beam(Telescope *telescope,
             jones[jones_index + 1] = {response[1].real(), response[1].imag()};
             jones[jones_index + 2] = {response[2].real(), response[2].imag()};
             jones[jones_index + 3] = {response[3].real(), response[3].imag()};
-
           }
           // std::printf("s%d t%d f%d c%d: %.10f %.10f, %.10f %.10f, %.10f %.10f, %.10f %.10f\n",
           //   si, ti, fi, ci,

@@ -197,6 +197,23 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
 endforeach()
 
 
+DEFINE_COMP_FLAGS(DOUBLE C_FLAGS GPU_FLAGS C_COVER_FLAGS)
+
+add_executable(profile_lofar_everybeam
+    make_exe_to_profile_lofar_everybeam.c
+    calculate_visibilities_everybeam_common.c
+    calculate_visibilities_common_common.c
+)
+target_link_libraries(profile_lofar_everybeam
+    calculate_visibilities_CPU_double
+    calculate_visibilities_GPU_double
+    ${CC_LINKLIBS}
+    Unity gcov
+)
+target_compile_options(profile_lofar_everybeam
+                  PRIVATE ${C_FLAGS})
+
+
         
 
 # Emergency code for testing ctest environment
