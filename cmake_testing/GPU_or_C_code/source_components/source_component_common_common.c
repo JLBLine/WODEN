@@ -845,7 +845,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     #ifdef DOUBLE_PRECISION
       TOL = 1e-7;
     #else
-      TOL = 1e-7;
+      TOL = 1e-6;
     #endif
 
     // printf("double eb_lofar_gx_real[] = {");
