@@ -8,7 +8,6 @@ import importlib_resources
 import wodenpy
 from time import time
 import argparse
-from queue import Queue
 from threading import Thread
 from ctypes import POINTER, c_double, c_float, c_int, create_string_buffer, string_at
 import ctypes
@@ -38,7 +37,7 @@ import logging
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from line_profiler import profile, LineProfiler
 from wodenpy.primary_beam.use_everybeam import run_everybeam
-from wodenpy.wodenpy_setup.woden_logger import get_logger_from_queue, get_log_callback, listener_configurer, listener_process, set_logger_header, simple_logger, log_chosen_beamtype, summarise_input_args
+from wodenpy.wodenpy_setup.woden_logger import get_log_callback, set_logger_header, simple_logger, log_chosen_beamtype, summarise_input_args, set_woden_logger
 from multiprocessing import Manager, set_start_method
 from copy import deepcopy
 import multiprocessing
@@ -91,28 +90,30 @@ class Visi_Set_Python(object):
         self.sum_visi_YY_real = None
         self.sum_visi_YY_imag = None
         
-def woden_multithread(thread_ind : int, queue : Queue,
-                      all_loaded_python_sources : List[List[Source_Python]],
-                      all_loaded_sources_orders : List[int], round_num : int,
-                      woden_settings_python : Woden_Settings_Python,
-                      array_layout_python : Array_Layout_Python,
-                      visi_sets_python : List[Visi_Set_Python],
-                      beamtype : int, logging_level : int = logging.DEBUG,
-                      precision : str = "double", profile = False) -> Tuple[List[Visi_Set_Python], int, int]:
+def woden_worker(thread_ind : int, 
+                all_loaded_python_sources : List[List[Source_Python]],
+                all_loaded_sources_orders : List[int], round_num : int,
+                woden_settings_python : Woden_Settings_Python,
+                array_layout_python : Array_Layout_Python,
+                visi_sets_python : List[Visi_Set_Python],
+                beamtype : int, logging_level : int = logging.DEBUG,
+                precision : str = "double", 
+                logger : Logger = False,
+                profile = False) -> Tuple[List[Visi_Set_Python], int, int]:
     """
     This function runs WODEN CPU code on a separate thread, processing source catalogues from a queue until the queue is empty.
     
     Parameters
     ----------
     all_loaded_python_sources : List[List[Source_Python]]
-        A list of lists of `Source_Python` to be processed, as ouput by `read_skymodel_thread`,
+        A list of lists of `Source_Python` to be processed, as ouput by `read_skymodel_worker`,
         where each list of `Source_Python` matches a chunk_map in `chunked_skymodel_map_set`.
         Each entry is a list itself as the Shapelet chunking can result in multiple sources
         per thread per round, as the chunking happens by sky direction as well as number of
         shapelet coefficients.
     all_loaded_sources_orders : List[int]
         The order of the sources in `all_loaded_python_sources` as matched to `chunked_skymodel_map_set`;
-        orders also output by `read_skymodel_thread` (different threads finish in different times so
+        orders also output by `read_skymodel_worker` (different threads finish in different times so
         the order of the sources in `all_loaded_python_sources` may not match the order of the chunk_maps)
     round_num : int
         The round number of the processing
@@ -137,33 +138,20 @@ def woden_multithread(thread_ind : int, queue : Queue,
         else:
             device = 'CPU'
         
-
-        
         woden_struct_classes = Woden_Struct_Classes(precision)
         
         ##Depending on what precision was selected by the user, load in the
         # ##C/CUDA library and return the `run_woden` function
         # run_woden = load_in_woden_library(woden_struct_classes)
         
-        logger = get_logger_from_queue(queue, logging_level)
         woden_lib_path = importlib_resources.files(wodenpy).joinpath(f"libwoden_{woden_struct_classes.precision}.so")
         woden_lib = ctypes.cdll.LoadLibrary(woden_lib_path)
-        ##We only want to set the log callback if we are in verbose mode, as
-        ##libwoden only setup to pass things to logger if it is in verbose mode
-        ##If we set the log callback when not in verbose mode, the 'listener'
-        ##will be listening to nothing, and everything will hang
-        # if woden_settings_python.verbose:
+        
+        ##This lets the WODEN C/C++/GPU code write to the logger
         c_log_callback = get_log_callback(logger, logging_level)
         woden_lib.set_log_callback(c_log_callback)
         
         run_woden = load_in_run_woden(woden_lib, woden_struct_classes)
-        
-        # if profile:
-        #     profiler = LineProfiler()
-        #     ##Add whatever functions that are called in `read_fits_skymodel_chunks`
-        #     ##here to profile them
-        #     profiler.add_function(run_woden)
-        #     profiler.enable()
         
         python_sources = []
         
@@ -235,22 +223,23 @@ def woden_multithread(thread_ind : int, queue : Queue,
             
         # if profile:
         #     profiler.disable()
-        #     profile_filename = f"wod_woden_multithread_{os.getpid()}_{round_num:04d}.lprof"
+        #     profile_filename = f"wod_woden_worker_{os.getpid()}_{round_num:04d}.lprof"
         #     # logger.info("Dumping profile to", profile_filename)
         #     profiler.dump_stats(profile_filename)
             
         return visi_sets_python, thread_ind, round_num
     except Exception as e:
-        return f"woden_multithread: {e}\n{traceback.format_exc()}"
+        return f"woden_worker: {e}\n{traceback.format_exc()}"
 
-def read_skymodel_thread(thread_id : int, num_threads : int, queue : Queue,
+def read_skymodel_worker(thread_id : int, num_threads : int, 
                          chunked_skymodel_map_sets: List[Skymodel_Chunk_Map],
                          lsts : np.ndarray, latitudes : np.ndarray,
                          args : argparse.Namespace,
                          beamtype : int,
                          main_table : Table, shape_table : Table,
                          v_table : Table = False, q_table : Table = False,
-                         u_table : Table = False, p_table : Table = False) -> Tuple[List[Source_Python], int]:
+                         u_table : Table = False, p_table : Table = False,
+                         logger : Logger = False) -> Tuple[List[Source_Python], int]:
     """
     Reads a list of `Skymodel_Chunk_Map` types in `chunked_skymodel_map_sets`
     from the given astropy tables, into a list of `Source_Python` types.
@@ -295,11 +284,12 @@ def read_skymodel_thread(thread_id : int, num_threads : int, queue : Queue,
         match the order of recovered data to the order of the chunked maps.
     
     """
+    if not logger:
+        logger = simple_logger(args.log_level)
+    
     try:
         set_ind = thread_id // num_threads
         thread_num = thread_id % num_threads
-        
-        logger = get_logger_from_queue(queue, args.log_level)
         
         start = time()
         
@@ -347,13 +337,13 @@ def read_skymodel_thread(thread_id : int, num_threads : int, queue : Queue,
         
         if args.profile:
             profiler.disable()
-            profile_filename = f"wod_read_skymodel_thread_{os.getpid()}_{set_ind:04d}.lprof"
+            profile_filename = f"wod_read_skymodel_worker_{os.getpid()}_{set_ind:04d}.lprof"
             # logger.info("Dumping profile to", profile_filename)
             profiler.dump_stats(profile_filename)
             
         return python_sources, thread_num
     except Exception as e:
-        return f"read_skymodel_thread: {e}\n{traceback.format_exc()}"
+        return f"read_skymodel_worker: {e}\n{traceback.format_exc()}"
 
 
 def sum_components_in_chunked_skymodel_map_sets(chunked_skymodel_map_sets):
@@ -399,156 +389,204 @@ def get_future_result(future, logger):
         sys.exit(msg)
     
 
-def run_multithread_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
+def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                  lsts, latitudes, args, beamtype,
                  main_table, shape_table, v_table, q_table, u_table, p_table,
                  woden_settings_python, array_layout_python, visi_sets_python,
-                 queue):
+                 logger = False, serial_mode = False):
     
-    ##This logger code is duplicated in the GPU mode, but there is something about
-    ##the persitance of the `c_log_callback` (which allows the C code to write
-    ##to the logger) that means if I stick this in a function elsewhere
-    ##nothing works. So just duplicate it here
-    logger = get_logger_from_queue(queue, args.log_level)
-    
+    if not logger:
+        logger = simple_logger(args.log_level)
+        
     total_n_points, total_n_gauss, total_n_shapes, total_n_shape_coeffs = sum_components_in_chunked_skymodel_map_sets(chunked_skymodel_map_sets)
     total_comps = total_n_points + total_n_gauss + total_n_shapes + total_n_shape_coeffs
     
-    if args.cpu_mode:
-        num_visi_threads = num_threads
-        device = 'CPU'
+    
+    if serial_mode:
+        for round_num in range(num_rounds):
+            
+            logger.info(f"Reading set {round_num} sky models")
+            
+            all_loaded_python_sources = []
+            all_loaded_sources_orders = []
+            
+            for i in range(num_threads):
+                python_sources, order = read_skymodel_worker(i + round_num * num_threads,
+                                                            num_threads, 
+                                                            chunked_skymodel_map_sets,
+                                                            lsts, latitudes,
+                                                            args, beamtype,
+                                                            main_table, shape_table,
+                                                            v_table, q_table, u_table, p_table,
+                                                            logger)
+            
+                all_loaded_python_sources.append(python_sources)
+                all_loaded_sources_orders.append(order)
+                
+            visi_set_python, _, completed_round = woden_worker(0, 
+                                                               all_loaded_python_sources,
+                                                               all_loaded_sources_orders,
+                                                               round_num,
+                                                               woden_settings_python,
+                                                               array_layout_python, 
+                                                               visi_sets_python[0,:],
+                                                               beamtype, args.log_level,
+                                                               args.precision,
+                                                               profile=args.profile,
+                                                               logger=logger)
+                
+            
+            visi_sets_python[0, :] = visi_set_python
+            done_n_points, done_n_gauss, done_n_shapes, done_n_shape_coeffs = sum_components_in_chunked_skymodel_map_sets(chunked_skymodel_map_sets[:completed_round + 1])
+            done_comps = done_n_points + done_n_gauss + done_n_shapes + done_n_shape_coeffs
+            
+            logger.info(f"Have completed {done_comps} of {total_comps} components calcs ({(done_comps/total_comps)*100:.1f}%)")
+            logger.debug(f"\t{done_n_points} of {total_n_points} points\n"
+                        f"\t{done_n_gauss} of {total_n_gauss} gauss\n"
+                        f"\t{done_n_shapes} of {total_n_shapes} shapelets\n"
+                        f"\t{done_n_shape_coeffs} of {total_n_shape_coeffs} shape coeffs")
     else:
-        num_visi_threads = 1
-        device = 'GPU'
-        
-    # logger.info(f"Running WODEN with {num_threads} threads for sky model reading and {num_visi_threads} threads for visibility processing")
     
-    if device == 'CPU':
     
-        with ProcessPoolExecutor(max_workers=num_threads) as sky_model_executor, ProcessPoolExecutor(max_workers=num_visi_threads) as visi_executor:
+        if args.cpu_mode:
+            num_visi_threads = num_threads
+            device = 'CPU'
+        else:
+            num_visi_threads = 1
+            device = 'GPU'
+            
+        # logger.info(f"Running WODEN with {num_threads} threads for sky model reading and {num_visi_threads} threads for visibility processing")
         
+        if device == 'CPU':
+        
+            with ProcessPoolExecutor(max_workers=num_threads) as sky_model_executor, ProcessPoolExecutor(max_workers=num_visi_threads) as visi_executor:
+            
+                # # Loop through multiple rounds of data reading and calculation
+                for round_num in range(num_rounds):
+                    logger.info(f"Reading set {round_num} sky models")
+                    future_data_sky = [sky_model_executor.submit(read_skymodel_worker,
+                                                i + round_num * num_threads, num_threads,
+                                                chunked_skymodel_map_sets,
+                                                lsts, latitudes,
+                                                args, beamtype,
+                                                main_table, shape_table,
+                                                v_table, q_table, u_table, p_table,
+                                                logger)
+                                        for i in range(num_threads)]
+                    
+                    all_loaded_python_sources = [0]*num_threads
+                    all_loaded_sources_orders = [0]*num_threads
+                    for future in future_data_sky:
+                        python_sources, order = get_future_result(future, logger)
+                        
+                        all_loaded_python_sources[order] = python_sources
+                        all_loaded_sources_orders[order] = order
+                        
+                    future_data_visi = [visi_executor.submit(woden_worker, i,
+                                                [all_loaded_python_sources[i]], #all_loaded_python_sources
+                                                [all_loaded_sources_orders[i]], #all_loaded_sources_orders
+                                                round_num,
+                                                woden_settings_python,
+                                                array_layout_python, 
+                                                visi_sets_python[i, :],
+                                                beamtype, args.log_level,
+                                                args.precision, logger,
+                                                args.profile)
+                                        for i in range(num_visi_threads)]
+                    
+                    completed = 0
+                    
+                    for future in concurrent.futures.as_completed(future_data_visi):
+                        visi_set_python, thread_ind, completed_round = get_future_result(future, logger)
+                        
+                        visi_sets_python[thread_ind, :] = visi_set_python
+                        
+                        completed += 1
+                        
+                        if completed == num_visi_threads:
+                        
+                            done_n_points, done_n_gauss, done_n_shapes, done_n_shape_coeffs = sum_components_in_chunked_skymodel_map_sets(chunked_skymodel_map_sets[:completed_round + 1])
+                            done_comps = done_n_points + done_n_gauss + done_n_shapes + done_n_shape_coeffs
+                            logger.info(f"Have completed {done_comps} of {total_comps} components calcs ({(done_comps/total_comps)*100:.1f}%)")
+                            logger.debug(f"\t{done_n_points} of {total_n_points} points\n"
+                                    f"\t{done_n_gauss} of {total_n_gauss} gauss\n"
+                                    f"\t{done_n_shapes} of {total_n_shapes} shapelets\n"
+                                    f"\t{done_n_shape_coeffs} of {total_n_shape_coeffs} shape coeffs")
+                        
+        else:
+                        
+            with concurrent.futures.ProcessPoolExecutor(max_workers=num_threads) as sky_model_executor:
+                
+                visi_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+                gpu_calc = None  # To store the future of the calculation thread
+                
             # # Loop through multiple rounds of data reading and calculation
-            for round_num in range(num_rounds):
-                logger.info(f"Reading set {round_num} sky models")
-                future_data_sky = [sky_model_executor.submit(read_skymodel_thread,
-                                            i + round_num * num_threads, num_threads,
-                                            queue, chunked_skymodel_map_sets,
-                                            lsts, latitudes,
-                                            args, beamtype,
-                                            main_table, shape_table,
-                                            v_table, q_table, u_table, p_table)
-                                    for i in range(num_threads)]
-                
-                all_loaded_python_sources = [0]*num_threads
-                all_loaded_sources_orders = [0]*num_threads
-                for future in future_data_sky:
-                    python_sources, order = get_future_result(future, logger)
+                for round_num in range(num_rounds):
                     
-                    all_loaded_python_sources[order] = python_sources
-                    all_loaded_sources_orders[order] = order
+                    logger.info(f"Reading set {round_num} sky models")
+                    future_data_sky = [sky_model_executor.submit(read_skymodel_worker,
+                                                i + round_num * num_threads, num_threads,
+                                                chunked_skymodel_map_sets,
+                                                lsts, latitudes,
+                                                args, beamtype,
+                                                main_table, shape_table,
+                                                v_table, q_table, u_table, p_table, 
+                                                logger)
+                                        for i in range(num_threads)]
                     
-                future_data_visi = [visi_executor.submit(woden_multithread, i, queue,
-                                            [all_loaded_python_sources[i]], #all_loaded_python_sources
-                                            [all_loaded_sources_orders[i]], #all_loaded_sources_orders
-                                            round_num,
-                                            woden_settings_python,
-                                            array_layout_python, 
-                                            visi_sets_python[i, :],
-                                            beamtype, args.log_level,
-                                            args.precision, args.profile)
-                                    for i in range(num_visi_threads)]
-                
-                completed = 0
-                
-                for future in concurrent.futures.as_completed(future_data_visi):
-                    visi_set_python, thread_ind, completed_round = get_future_result(future, logger)
-                    
-                    visi_sets_python[thread_ind, :] = visi_set_python
-                    
-                    completed += 1
-                    
-                    if completed == num_visi_threads:
-                    
+                    all_loaded_python_sources = []
+                    all_loaded_sources_orders = []
+                    for future in concurrent.futures.as_completed(future_data_sky):
+                        python_sources, order = get_future_result(future, logger)
+                        all_loaded_python_sources.append(python_sources)
+                        all_loaded_sources_orders.append(order)
+                        
+                    # Wait for previous calculation to complete (if there was one)
+                    if gpu_calc is not None:
+                        # visi_set_python, _, completed_round = gpu_calc.result()
+                        visi_set_python, _, completed_round = get_future_result(gpu_calc, logger)
+                        
+                        visi_sets_python[0, :] = visi_set_python
                         done_n_points, done_n_gauss, done_n_shapes, done_n_shape_coeffs = sum_components_in_chunked_skymodel_map_sets(chunked_skymodel_map_sets[:completed_round + 1])
                         done_comps = done_n_points + done_n_gauss + done_n_shapes + done_n_shape_coeffs
+                        
                         logger.info(f"Have completed {done_comps} of {total_comps} components calcs ({(done_comps/total_comps)*100:.1f}%)")
                         logger.debug(f"\t{done_n_points} of {total_n_points} points\n"
-                                 f"\t{done_n_gauss} of {total_n_gauss} gauss\n"
-                                 f"\t{done_n_shapes} of {total_n_shapes} shapelets\n"
-                                 f"\t{done_n_shape_coeffs} of {total_n_shape_coeffs} shape coeffs")
+                                    f"\t{done_n_gauss} of {total_n_gauss} gauss\n"
+                                    f"\t{done_n_shapes} of {total_n_shapes} shapelets\n"
+                                    f"\t{done_n_shape_coeffs} of {total_n_shape_coeffs} shape coeffs")
+
+                    gpu_calc = visi_executor.submit(woden_worker, 0,
+                                                        all_loaded_python_sources,
+                                                        all_loaded_sources_orders,
+                                                        round_num,
+                                                        woden_settings_python,
+                                                        array_layout_python, 
+                                                        visi_sets_python[0,:],
+                                                        beamtype, args.log_level,
+                                                        args.precision, logger,
+                                                        args.profile)
                     
-    else:
-                    
-        with concurrent.futures.ProcessPoolExecutor(max_workers=num_threads) as sky_model_executor:
-            
-            visi_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-            gpu_calc = None  # To store the future of the calculation thread
-            
-        # # Loop through multiple rounds of data reading and calculation
-            for round_num in range(num_rounds):
-                
-                logger.info(f"Reading set {round_num} sky models")
-                future_data_sky = [sky_model_executor.submit(read_skymodel_thread,
-                                            i + round_num * num_threads, num_threads,
-                                            queue, chunked_skymodel_map_sets,
-                                            lsts, latitudes,
-                                            args, beamtype,
-                                            main_table, shape_table,
-                                            v_table, q_table, u_table, p_table)
-                                    for i in range(num_threads)]
-                
-                all_loaded_python_sources = []
-                all_loaded_sources_orders = []
-                for future in concurrent.futures.as_completed(future_data_sky):
-                    python_sources, order = get_future_result(future, logger)
-                    all_loaded_python_sources.append(python_sources)
-                    all_loaded_sources_orders.append(order)
-                    
-                # Wait for previous calculation to complete (if there was one)
+                # # Wait for the final calculation to complete
                 if gpu_calc is not None:
                     # visi_set_python, _, completed_round = gpu_calc.result()
                     visi_set_python, _, completed_round = get_future_result(gpu_calc, logger)
-                    
                     visi_sets_python[0, :] = visi_set_python
                     done_n_points, done_n_gauss, done_n_shapes, done_n_shape_coeffs = sum_components_in_chunked_skymodel_map_sets(chunked_skymodel_map_sets[:completed_round + 1])
                     done_comps = done_n_points + done_n_gauss + done_n_shapes + done_n_shape_coeffs
                     
                     logger.info(f"Have completed {done_comps} of {total_comps} components calcs ({(done_comps/total_comps)*100:.1f}%)")
                     logger.debug(f"\t{done_n_points} of {total_n_points} points\n"
-                                 f"\t{done_n_gauss} of {total_n_gauss} gauss\n"
-                                 f"\t{done_n_shapes} of {total_n_shapes} shapelets\n"
-                                 f"\t{done_n_shape_coeffs} of {total_n_shape_coeffs} shape coeffs")
-
-                gpu_calc = visi_executor.submit(woden_multithread, 0, queue,
-                                                    all_loaded_python_sources,
-                                                    all_loaded_sources_orders,
-                                                    round_num,
-                                                    woden_settings_python,
-                                                    array_layout_python, 
-                                                    visi_sets_python[0,:],
-                                                    beamtype, args.log_level,
-                                                    args.precision, args.profile)
-                
-            # # Wait for the final calculation to complete
-            if gpu_calc is not None:
-                # visi_set_python, _, completed_round = gpu_calc.result()
-                visi_set_python, _, completed_round = get_future_result(gpu_calc, logger)
-                visi_sets_python[0, :] = visi_set_python
-                done_n_points, done_n_gauss, done_n_shapes, done_n_shape_coeffs = sum_components_in_chunked_skymodel_map_sets(chunked_skymodel_map_sets[:completed_round + 1])
-                done_comps = done_n_points + done_n_gauss + done_n_shapes + done_n_shape_coeffs
-                
-                logger.info(f"Have completed {done_comps} of {total_comps} components calcs ({(done_comps/total_comps)*100:.1f}%)")
-                logger.debug(f"\t{done_n_points} of {total_n_points} points\n"
-                                 f"\t{done_n_gauss} of {total_n_gauss} gauss\n"
-                                 f"\t{done_n_shapes} of {total_n_shapes} shapelets\n"
-                                 f"\t{done_n_shape_coeffs} of {total_n_shape_coeffs} shape coeffs")
-        
+                                    f"\t{done_n_gauss} of {total_n_gauss} gauss\n"
+                                    f"\t{done_n_shapes} of {total_n_shapes} shapelets\n"
+                                    f"\t{done_n_shape_coeffs} of {total_n_shape_coeffs} shape coeffs")
+            
         logger.info("Finished all rounds of processing")
         
     return visi_sets_python
 
 @profile
-def main(argv=None, do_logging=True):
+def main(argv=None):
     """Runs the WODEN simulator, given command line inputs. Does fancy things
     like reading in the sky model and running the GPU code in parallel; the
     sky model lazy load allows us to simulate sky models that cannot fit into
@@ -561,15 +599,6 @@ def main(argv=None, do_logging=True):
         passed in explicitly for easy testing
     """
     
-    # try:
-    #     set_start_method("forkserver")  # Alternatives: "spawn" or "forkserver"
-    # except RuntimeError:
-    #     # Start method is already set in some environments like Jupyter
-    #     pass
-    
-    ##Do everythings inside a manager so we can use a queue to pass logging
-    ##things to. Necessary for when we start doing multithreading
-    
     woden_start = time()
     
     ##Grab the parser and parse some args
@@ -581,17 +610,12 @@ def main(argv=None, do_logging=True):
     ##Find out what git/release version we are using, and where the code lives
     gitlabel = get_code_version()
     
-    if do_logging:
-        log_queue = multiprocessing.Manager().Queue(-1)
-        listener = multiprocessing.Process(target=listener_process,
-                                        args=(log_queue, listener_configurer,
-                                                args.log_file_name))
-        listener.start()
-        main_logger = get_logger_from_queue(log_queue, args.log_level)
+    if args.num_threads == 1:
+        serial_mode = True
     else:
-        log_queue = False
-        listener = False
-        main_logger = simple_logger()
+        serial_mode = False
+
+    main_logger = set_woden_logger(args.log_level, args.log_file_name)
     
     set_logger_header(main_logger, gitlabel)
     summarise_input_args(main_logger, args)
@@ -643,17 +667,24 @@ def main(argv=None, do_logging=True):
     
     main_logger.debug(comp_counter.info_string())
     
+    if serial_mode:
+        num_threads = 1
+    else:
+        num_threads = args.num_threads
+    
     if args.cpu_mode:
-        max_chunks_per_set=args.num_threads
+        max_chunks_per_set=num_threads
     else:
         max_chunks_per_set=32
+        
+    # max_chunks_per_set=args.num_threads*3
         
     chunked_skymodel_map_sets = create_skymodel_chunk_map(comp_counter,
                                                     args.chunking_size,
                                                     woden_settings_python.num_baselines,
                                                     args.num_freq_channels,
                                                     args.num_time_steps,
-                                                    num_threads=args.num_threads,
+                                                    num_threads=num_threads,
                                                     max_chunks_per_set=max_chunks_per_set,
                                                     max_dirs=args.max_sky_directions,
                                                     beamtype_value=woden_settings_python.beamtype)
@@ -675,7 +706,7 @@ def main(argv=None, do_logging=True):
                                             len(args.band_nums), num_visis,
                                             precision=args.precision)
         
-        if woden_settings_python.do_gpu:
+        if woden_settings_python.do_gpu or serial_mode:
             num_visi_threads = 1
         else:
             num_visi_threads = args.num_threads
@@ -706,25 +737,31 @@ def main(argv=None, do_logging=True):
         ### absolute amount of RAM used, and save time doing IO at the same
         ### time as compute
         
-        num_threads = args.num_threads
+        # num_threads = args.num_threads
         
         num_rounds = len(chunked_skymodel_map_sets)
         main_table, shape_table, v_table, q_table, u_table, p_table = get_skymodel_tables(args.cat_filename)
         
         msg = ""
-        if args.cpu_mode:
-            msg = f"Running in CPU mode with {num_threads} threads"
+        
+        if serial_mode:
+            para_mode = "serial"
         else:
-            msg = f"Running in GPU mode.\nWill read sky model using {num_threads} threads"
+            para_mode = "parallel"
+        
+        if args.cpu_mode:
+            msg = f"Running in {para_mode} on CPU mode with {num_threads} threads"
+        else:
+            msg = f"Running in {para_mode} on GPU.\nWill read sky model using {num_threads} threads"
         msg += f"\nThere are {num_rounds} sets of sky models to run"
         
         main_logger.info(msg)
         
-        run_multithread_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
+        run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
             lsts, latitudes, args, woden_settings_python.beamtype,
             main_table, shape_table, v_table, q_table, u_table, p_table,
             woden_settings_python, array_layout_python, visi_sets_python,
-            log_queue)
+            main_logger, serial_mode)
             
         ### we've now calculated all the visibilities
         ###---------------------------------------------------------------------
@@ -774,8 +811,6 @@ def main(argv=None, do_logging=True):
                                                 do_autos=args.do_autos,
                                                 num_ants=args.num_antennas)
             
-            # print("THE FINAL FORM", uus)
-
             if args.remove_phase_tracking:
                 frequencies = band_low_freq + np.arange(args.num_freq_channels)*args.freq_res
 
@@ -813,11 +848,7 @@ def main(argv=None, do_logging=True):
     woden_end = time()
     time_passed = timedelta(seconds=woden_end - woden_start)
     main_logger.info(f"Full run took {time_passed}")
-    main_logger.info("WODEN is done. Closing logging handlers. S'later")
-    
-    if do_logging:
-        log_queue.put_nowait(None)
-        listener.join()
+    main_logger.info("WODEN is done. Closing the log. S'later")
     
 if __name__ == "__main__":
     main()
