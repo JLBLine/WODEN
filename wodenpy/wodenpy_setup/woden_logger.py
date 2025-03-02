@@ -31,57 +31,7 @@ class MultiLineFormatter(logging.Formatter):
         indent = ' ' * self.get_header_length(record)
         head, *trailing = super().format(record).splitlines(True)
         return head + ''.join(indent + line for line in trailing)
-    
-    
-def listener_configurer(log_file):
-    root = logging.getLogger()
-    
-    formatter = MultiLineFormatter("%(asctime)s - %(levelname)s - %(message)s",
-                                   '%Y-%m-%d %H:%M:%S')
-    
-    stream_handler = logging.StreamHandler(sys.stdout)
-    # stream_handler.setLevel(logging_level)
-    stream_handler.setFormatter(formatter)
-    handles = [stream_handler]
-    
-    if log_file:
-        file_handler = logging.FileHandler(log_file, mode='w')
-        # file_handler.setLevel(logging_level)
-        file_handler.setFormatter(formatter)
-        handles.append(file_handler)
-    
-    for handle in handles:
-        root.addHandler(handle)
-    
 
-# This is the listener process top-level loop: wait for logging events
-# (LogRecords)on the queue and handle them, quit when you get a None for a
-# LogRecord.
-def listener_process(queue, configurer, log_file=False):
-    configurer(log_file)
-    while True:
-        try:
-            record = queue.get()
-            if record is None:  # We send this as a sentinel to tell the listener to quit.
-                break
-            logger = logging.getLogger(record.name)
-            logger.handle(record)  # No level or filter logic applied - just do it!
-        except Exception as e:
-            exit(e)
-
-def get_logger_from_queue(queue, logging_level = logging.DEBUG):
-    
-    if queue == False:
-        logger = simple_logger(logging_level)
-    
-    else:
-        logger = logging.getLogger(__name__)
-        logger.setLevel(logging_level)
-        logger.handlers.clear()
-        handler = QueueHandler(queue)
-        logger.addHandler(handler)
-    
-    return logger
     
 def set_logger_header(logger, gitlabel):
     logo_string = rf"""
@@ -126,9 +76,6 @@ def summarise_input_args(logger, args):
     
     logger.info(input_str)
     
-    
-
-
 def get_log_callback(logger, logging_level = logging.DEBUG):
     LogCallbackType = CFUNCTYPE(None, c_char_p)
 
@@ -143,6 +90,28 @@ def get_log_callback(logger, logging_level = logging.DEBUG):
     c_log_callback = LogCallbackType(log_callback)
     
     return c_log_callback
+
+def set_woden_logger(logging_level = logging.DEBUG, log_file = False):
+    """WODEN main logger"""
+    
+    formatter = MultiLineFormatter("%(asctime)s - %(levelname)s - %(message)s",
+                                   '%Y-%m-%d %H:%M:%S')
+    
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging_level)
+    
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging_level)
+    stream_handler.setFormatter(formatter)
+    logger.addHandler(stream_handler)
+    
+    if log_file:
+        file_handler = logging.FileHandler(log_file, 'w+')
+        file_handler.setFormatter(formatter)
+        file_handler.setLevel(logging_level)
+        logger.addHandler(file_handler)
+    
+    return logger
 
 def simple_logger(logging_level = logging.DEBUG):
     """Use this to set a default logger for wodenpy functions when

@@ -376,7 +376,7 @@ void source_component_common(woden_settings_t *woden_settings,
     beam_gains_t *eb_beam_gains = malloc(sizeof(beam_gains_t));
     malloc_beam_gains_cpu(eb_beam_gains, beam_settings->beamtype, num_gains);
 
-    int eb_status;
+    int eb_status = 0;
     
     int station_idxs[num_beams];
     for (int beam = 0; beam < num_beams; beam++){
@@ -414,14 +414,22 @@ void source_component_common(woden_settings_t *woden_settings,
 
       //MWA beam is already normalised to zenith
       apply_beam_norms = false;
-      eb_status = load_and_run_mwa_beam(woden_settings->beam_ms_path, "MWA",
-                          woden_settings->hdf5_beam_path,
-                          num_beams, station_idxs, num_components,
-                          azs, zas, para_angles,
-                          num_times, mjd_sec_times,
-                          num_freqs, cpu_freqs,
-                          apply_beam_norms, rotate, element_only, iau_order,
-                          jones);
+      // eb_status = load_and_run_mwa_beam(woden_settings->beam_ms_path, "MWA",
+      //                     woden_settings->hdf5_beam_path,
+      //                     num_beams, station_idxs, num_components,
+      //                     azs, zas, para_angles,
+      //                     num_times, mjd_sec_times,
+      //                     num_freqs, cpu_freqs,
+      //                     apply_beam_norms, rotate, element_only, iau_order,
+      //                     jones);
+
+      run_mwa_beam(beam_settings->everybeam_telescope,
+                    num_beams, station_idxs, num_components,
+                    azs, zas, para_angles,
+                    num_times, mjd_sec_times,
+                    num_freqs, cpu_freqs,
+                    apply_beam_norms, rotate, element_only, iau_order,
+                    jones);
     }
 
     if (beam_settings->beamtype == EB_LOFAR) {
@@ -432,17 +440,31 @@ void source_component_common(woden_settings_t *woden_settings,
       double beam_ra0 = woden_settings->ra0;
       double beam_dec0 = woden_settings->dec0;
 
-      load_and_run_lofar_beam(woden_settings->beam_ms_path,
-                              "hamaker", " ",
-                              num_beams, station_idxs, num_components,
-                              beam_ra0, beam_dec0,
-                              components->ras, components->decs,
-                              num_times, mjd_sec_times,
-                              num_freqs, cpu_freqs,
-                              woden_settings->normalise_primary_beam,
-                              rotate, element_only, iau_order,
-                              jones);
+      // eb_status = load_and_run_lofar_beam(woden_settings->beam_ms_path,
+      //                         "hamaker", " ",
+      //                         num_beams, station_idxs, num_components,
+      //                         beam_ra0, beam_dec0,
+      //                         components->ras, components->decs,
+      //                         num_times, mjd_sec_times,
+      //                         num_freqs, cpu_freqs,
+      //                         woden_settings->normalise_primary_beam,
+      //                         rotate, element_only, iau_order,
+      //                         jones);
 
+      run_lofar_beam(beam_settings->everybeam_telescope,
+                     num_beams, station_idxs, num_components,
+                     beam_ra0, beam_dec0,
+                     components->ras, components->decs,
+                     num_times, mjd_sec_times,
+                     num_freqs, cpu_freqs,
+                     woden_settings->normalise_primary_beam,
+                     rotate, element_only, iau_order,
+                     jones);
+
+    }
+
+    if (eb_status != 0) {
+      log_message("WARNING - Something went wrong runnng the EveryBeam telescope");
     }
 
     for (int station = 0; station < num_beams; station ++) {

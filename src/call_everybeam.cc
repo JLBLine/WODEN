@@ -67,7 +67,7 @@ extern "C" Telescope* load_everybeam_telescope(int * status,  const char *ms_pat
                                                bool use_channel_frequency,
                                                const char *coeff_path,
                                                bool use_local_mwa) {
-
+  char message[256];
   std::string data_column = "DATA";
 
   BeamNormalisationMode beam_normalisation_mode =
@@ -135,8 +135,6 @@ extern "C" Telescope* load_everybeam_telescope(int * status,  const char *ms_pat
   else {
     * status = 1;
 
-    char message[128];
-
     sprintf(message, "ERROR: Requested EveryBeam element response model '%s' not recognised. ", element_response_model);
     log_message(message);
 
@@ -144,10 +142,17 @@ extern "C" Telescope* load_everybeam_telescope(int * status,  const char *ms_pat
 
   }
 
+  // sprintf(message, "Attempting to read telescope from '%s'. ", ms_path);
+  // log_message(message);
+
   options.data_column_name = "DATA";
   options.beam_normalisation_mode = beam_normalisation_mode;
   options.use_channel_frequency = use_channel_frequency;
-  options.coeff_path = coeff_path;
+  if (element_response_tmp == "MWA") {
+    options.coeff_path = coeff_path;
+  } else {
+    options.coeff_path = "";
+  }
   options.use_local_mwa = use_local_mwa;
 
 

@@ -228,6 +228,36 @@ void calculate_visibilities(array_layout_t *array_layout,
     }
   }
 
+  if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_MWA || beam_settings->beamtype == EB_OSKAR) {
+    int eb_status = 0;
+
+    const char *element_response_model;
+    bool use_differential_beam = false;
+    bool use_channel_frequency = true;
+    bool use_local_mwa = true;
+
+    if (beam_settings->beamtype == EB_LOFAR) {
+      element_response_model = "hamaker";
+    } else if (beam_settings->beamtype == EB_MWA) {
+      element_response_model = "MWA";
+    } else {
+      element_response_model = "skala40_wave";
+    }
+
+    beam_settings->everybeam_telescope =  load_everybeam_telescope(&eb_status, 
+                                               woden_settings->beam_ms_path,
+                                               element_response_model,
+                                               use_differential_beam,
+                                               use_channel_frequency,
+                                               woden_settings->hdf5_beam_path,
+                                               use_local_mwa);
+
+    if (eb_status != 0) {
+      log_message("WARNING - Something went wrong loading the EveryBeam telescope");
+    }
+
+  }
+
   //Iterate through all sky model chunks, calculated visibilities are
   //added to chunk_visibility_set, and then summed onto visibility_set
   for (int chunk = 0; chunk < cropped_sky_models->num_sources; chunk++) {
@@ -419,6 +449,19 @@ void calculate_visibilities(array_layout_t *array_layout,
     }//visi loop
 
   } //chunk loop
+
+
+  if (beam_settings->beamtype == FEE_BEAM || beam_settings->beamtype == FEE_BEAM_INTERP){
+    free(beam_settings->hyper_delays);
+    if (do_gpu == 1) {
+      free_gpu_fee_beam(beam_settings->gpu_fee_beam);
+    }
+  }
+
+  if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_MWA || beam_settings->beamtype == EB_OSKAR) {
+    destroy_everybeam_telescope(beam_settings->everybeam_telescope);
+  }
+
 
   //Free the chunk_visibility_set
   free_visi_set_outputs(chunk_visibility_set);

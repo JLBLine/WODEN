@@ -5,6 +5,7 @@
 #include "constants.h"
 #include "woden_precision_defs.h"
 #include <mwa_hyperbeam.h>
+#include "call_everybeam_c.h"
 
 //Different
 typedef enum {POINT=0, /*!< Point source type component */
@@ -262,6 +263,8 @@ typedef struct _beam_settings_t {
 
     double base_middle_freq; /*!< The frequency at the middle of the base coarse band */
     uint32_t *hyper_delays; /*!< MWA FEE delays in a format that hyperbeam likes */
+
+    struct Telescope *everybeam_telescope; /*!< Loaded Everybeam Telescope object */
 
 
 } beam_settings_t;

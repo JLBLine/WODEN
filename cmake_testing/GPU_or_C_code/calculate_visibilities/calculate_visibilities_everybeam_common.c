@@ -456,9 +456,9 @@ void test_calculate_visibilities_EveryBeam_ThreeSource_FiveAll(int do_gpu, int b
 }
 
 void profile_lofar_everybeam(int do_gpu, int beamtype, const char *beam_ms_path) {
-  int n_points = 25;
-  int n_gauss = 25;
-  int n_shapes = 25;
+  int n_points = 200;
+  int n_gauss = 200;
+  int n_shapes = 10;
   int num_sources = 3;
   test_calculate_visibilities_EveryBeam(n_points, n_gauss, n_shapes,
                                         num_sources, do_gpu, beamtype,

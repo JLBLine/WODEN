@@ -215,6 +215,37 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     }
   }
 
+  if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_MWA || beam_settings->beamtype == EB_OSKAR) {
+    int eb_status = 0;
+  
+    const char *element_response_model;
+    bool use_differential_beam = false;
+    bool use_channel_frequency = true;
+    bool use_local_mwa = true;
+  
+    if (beam_settings->beamtype == EB_LOFAR) {
+      element_response_model = "hamaker";
+    } else if (beam_settings->beamtype == EB_MWA) {
+      element_response_model = "MWA";
+    } else {
+      element_response_model = "skala40_wave";
+    }
+  
+    beam_settings->everybeam_telescope =  load_everybeam_telescope(&eb_status, 
+                                                woden_settings->beam_ms_path,
+                                                element_response_model,
+                                                use_differential_beam,
+                                                use_channel_frequency,
+                                                woden_settings->hdf5_beam_path,
+                                                use_local_mwa);
+  
+    if (eb_status != 0) {
+      log_message("WARNING - Something went wrong loading the EveryBeam telescope");
+    }
+
+  }
+
+
   else if (beamtype == MWA_ANALY) {
     //Zenith pointing is your friend
     int delays[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -951,6 +982,10 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_U[i], extrap_flux_U[i]);
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_V[i], extrap_flux_V[i]);
 
+  }
+
+  if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_MWA || beam_settings->beamtype == EB_OSKAR) {
+    destroy_everybeam_telescope(beam_settings->everybeam_telescope);
   }
 
   //TODO modify/use this when we do pyuvbeam
