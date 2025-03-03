@@ -328,6 +328,8 @@ class Test(unittest.TestCase):
 
         rw.main(args)
         
+        call("rm *.lprof", shell=True)
+        
     def test_woden_on_command_line_for_logger(self):
         
         self.expec_values(autos=True)

@@ -228,6 +228,7 @@ void calculate_visibilities(array_layout_t *array_layout,
     }
   }
 
+  #if defined(HAVE_EVERYBEAM)
   if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_MWA || beam_settings->beamtype == EB_OSKAR) {
     int eb_status = 0;
 
@@ -255,8 +256,8 @@ void calculate_visibilities(array_layout_t *array_layout,
     if (eb_status != 0) {
       log_message("WARNING - Something went wrong loading the EveryBeam telescope");
     }
-
   }
+  #endif
 
   //Iterate through all sky model chunks, calculated visibilities are
   //added to chunk_visibility_set, and then summed onto visibility_set
@@ -458,9 +459,11 @@ void calculate_visibilities(array_layout_t *array_layout,
     }
   }
 
+  #if defined(HAVE_EVERYBEAM)
   if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_MWA || beam_settings->beamtype == EB_OSKAR) {
     destroy_everybeam_telescope(beam_settings->everybeam_telescope);
   }
+  #endif
 
 
   //Free the chunk_visibility_set

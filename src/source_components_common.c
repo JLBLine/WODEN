@@ -362,6 +362,8 @@ void source_component_common(woden_settings_t *woden_settings,
     }
   }
 
+  //Only include this code if we've passed the -DHAVE_EVERYBEAM compilation flag
+  #if defined(HAVE_EVERYBEAM)
   else if (beam_settings->beamtype == EB_MWA || beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR) {
     if (woden_settings->verbose == 1){
       if (beam_settings->beamtype == EB_MWA) {
@@ -414,14 +416,6 @@ void source_component_common(woden_settings_t *woden_settings,
 
       //MWA beam is already normalised to zenith
       apply_beam_norms = false;
-      // eb_status = load_and_run_mwa_beam(woden_settings->beam_ms_path, "MWA",
-      //                     woden_settings->hdf5_beam_path,
-      //                     num_beams, station_idxs, num_components,
-      //                     azs, zas, para_angles,
-      //                     num_times, mjd_sec_times,
-      //                     num_freqs, cpu_freqs,
-      //                     apply_beam_norms, rotate, element_only, iau_order,
-      //                     jones);
 
       run_mwa_beam(beam_settings->everybeam_telescope,
                     num_beams, station_idxs, num_components,
@@ -439,17 +433,6 @@ void source_component_common(woden_settings_t *woden_settings,
       //centre by manually fiddling the base measurement set.
       double beam_ra0 = woden_settings->ra0;
       double beam_dec0 = woden_settings->dec0;
-
-      // eb_status = load_and_run_lofar_beam(woden_settings->beam_ms_path,
-      //                         "hamaker", " ",
-      //                         num_beams, station_idxs, num_components,
-      //                         beam_ra0, beam_dec0,
-      //                         components->ras, components->decs,
-      //                         num_times, mjd_sec_times,
-      //                         num_freqs, cpu_freqs,
-      //                         woden_settings->normalise_primary_beam,
-      //                         rotate, element_only, iau_order,
-      //                         jones);
 
       run_lofar_beam(beam_settings->everybeam_telescope,
                      num_beams, station_idxs, num_components,
@@ -503,6 +486,7 @@ void source_component_common(woden_settings_t *woden_settings,
     free_beam_gains_cpu(eb_beam_gains, beam_settings->beamtype);
     free(jones);
   }
+  #endif //end if defined(HAVE_EVERYBEAM)
 
   //If a pyuvbeam model, already calculated beam gains on the CPU
   //So just copy them across

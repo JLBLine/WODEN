@@ -3,12 +3,19 @@ import os
 import unittest
 import numpy as np
 import numpy.testing as npt
+import importlib_resources
 
 code_dir = os.path.realpath(__file__)
 code_dir = ('/').join(code_dir.split('/')[:-1])
 
 # ##Code we are testing
 from wodenpy.wodenpy_setup import run_setup
+
+from wodenpy.use_libwoden.use_libwoden import check_for_everybeam
+
+
+woden_lib_path = importlib_resources.files('wodenpy').joinpath('libwoden_double.so')
+HAVE_EVERYBEAM = check_for_everybeam(woden_lib_path)
 
 ##some expected values
 east = [-5.55600e+01, 1.77467e+02, -2.17100e+01, 9.18090e+01, 1.53700e+02,
@@ -700,48 +707,63 @@ class Test(unittest.TestCase):
         self.assertEqual(args.off_cardinal_dipoles,True)
         
     def test_use_everybeam_MWA(self):
-        """Check `ra.check_args` works correctly for the `--primary_beam=everybeam_MWA`"""
+        """Check `ra.check_args` works correctly for the `--primary_beam=everybeam_MWA`
         
-        self.make_minimum_required_args_without_metafits()
-        self.inputs.append('--primary_beam=everybeam_MWA')
-        ##check it errors as we haven't provided a measurement set or
-        ##path to hdf5
-        self.assert_check_args_errors()
+        However, can only run these tests if we have EveryBeam. If not, we
+        expect and error, so adjust the test accordingly
+        """
         
-        ##check it errors with bad path to hdf5
-        self.inputs.append('--hdf5_beam_path=hdf5_beam_path')
-        self.assert_check_args_errors()
+        if HAVE_EVERYBEAM:
         
-        ##reset input args
-        self.make_minimum_required_args_without_metafits()
-        self.inputs.append('--primary_beam=everybeam_MWA')
-        ms_path = "lsjkhdgfkjhsdgfkajsdh"
-        self.inputs.append(f'--beam_ms_path={ms_path}')
-        self.assert_check_args_errors()
-        
-        ##reset input args
-        self.make_minimum_required_args_without_metafits()
-        self.inputs.append('--primary_beam=everybeam_MWA')
-        ms_path = f"{code_dir}/../../../test_installation/everybeam/MWA-single-timeslot.ms"
-        self.inputs.append(f'--beam_ms_path={ms_path}')
-        
-        ##This should still error, as we haven't set --band_nums, which
-        ##can't be set to more than one value when using everybeam
-        self.assert_check_args_errors()
-        self.inputs.append(f'--band_nums=1')
-        
-        ##we need to get rid of the --array_layout flag, as it will
-        ##override reading the measurement set array layout
-        for ind, arg in enumerate(self.inputs):
-            if arg.startswith('--array_layout'):
-                self.inputs.pop(ind)
-                break
-        
-        args = self.run_parser_and_check_args()
-        
-        self.assertTrue(np.allclose(east_ms, args.east, atol=1e-5))
-        self.assertTrue(np.allclose(north_ms, args.north, atol=1e-5))
-        self.assertTrue(np.allclose(height_ms, args.height, atol=1e-5))
+            self.make_minimum_required_args_without_metafits()
+            self.inputs.append('--primary_beam=everybeam_MWA')
+            ##check it errors as we haven't provided a measurement set or
+            ##path to hdf5
+            self.assert_check_args_errors()
+            
+            ##check it errors with bad path to hdf5
+            self.inputs.append('--hdf5_beam_path=hdf5_beam_path')
+            self.assert_check_args_errors()
+            
+            ##reset input args
+            self.make_minimum_required_args_without_metafits()
+            self.inputs.append('--primary_beam=everybeam_MWA')
+            ms_path = "lsjkhdgfkjhsdgfkajsdh"
+            self.inputs.append(f'--beam_ms_path={ms_path}')
+            self.assert_check_args_errors()
+            
+            ##reset input args
+            self.make_minimum_required_args_without_metafits()
+            self.inputs.append('--primary_beam=everybeam_MWA')
+            ms_path = f"{code_dir}/../../../test_installation/everybeam/MWA-single-timeslot.ms"
+            self.inputs.append(f'--beam_ms_path={ms_path}')
+            
+            ##This should still error, as we haven't set --band_nums, which
+            ##can't be set to more than one value when using everybeam
+            self.assert_check_args_errors()
+            self.inputs.append(f'--band_nums=1')
+            
+            ##we need to get rid of the --array_layout flag, as it will
+            ##override reading the measurement set array layout
+            for ind, arg in enumerate(self.inputs):
+                if arg.startswith('--array_layout'):
+                    self.inputs.pop(ind)
+                    break
+            
+            args = self.run_parser_and_check_args()
+            
+            self.assertTrue(np.allclose(east_ms, args.east, atol=1e-5))
+            self.assertTrue(np.allclose(north_ms, args.north, atol=1e-5))
+            self.assertTrue(np.allclose(height_ms, args.height, atol=1e-5))
+            
+        ##If we don't have EveryBeam, we expect an error when someone asks
+        ##for it
+        else:
+            self.make_minimum_required_args_without_metafits()
+            self.inputs.append('--primary_beam=everybeam_MWA')
+            ##check it errors as we haven't provided a measurement set or
+            ##path to hdf5
+            self.assert_check_args_errors()
         
     def test_bad_primary_beam(self):
         """Check `ra.check_args` works correctly for the `--primary_beam=nonsense`"""
@@ -754,16 +776,18 @@ class Test(unittest.TestCase):
         """Check things fail if using no primary beam, but trying to get the
         array layout from a measurement set"""
         
-        self.make_minimum_required_args_without_metafits()
-        self.inputs.append('--primary_beam=none')
-        self.inputs.append('--beam_ms_path=lkjsdfsjhfkjshdf')
-        self.assert_check_args_errors()
+        if HAVE_EVERYBEAM:
         
-        ##now put in a proper path to the ms and check all good
-        self.inputs.pop(-1)
-        ms_path = f"{code_dir}/../../../test_installation/everybeam/MWA-single-timeslot.ms"
-        self.inputs.append(f'--beam_ms_path={ms_path}')
-        self.run_parser_and_check_args()
+            self.make_minimum_required_args_without_metafits()
+            self.inputs.append('--primary_beam=none')
+            self.inputs.append('--beam_ms_path=lkjsdfsjhfkjshdf')
+            self.assert_check_args_errors()
+            
+            ##now put in a proper path to the ms and check all good
+            self.inputs.pop(-1)
+            ms_path = f"{code_dir}/../../../test_installation/everybeam/MWA-single-timeslot.ms"
+            self.inputs.append(f'--beam_ms_path={ms_path}')
+            self.run_parser_and_check_args()
         
     def test_num_freq_chans(self):
         """Check that the number of frequency channels is read in correctly"""
@@ -799,19 +823,21 @@ class Test(unittest.TestCase):
     def test_bad_beam_index(self):
         """Check that the beam index fails if too large"""
         
-        self.make_minimum_required_args_without_metafits()
-        self.inputs.append('--primary_beam=everybeam_MWA')
-        self.inputs.append('--band_nums=1')
-        ms_path = f"{code_dir}/../../../test_installation/everybeam/MWA-single-timeslot.ms"
-        self.inputs.append(f'--beam_ms_path={ms_path}')
-        self.inputs.append('--station_id=9393')
-        ##we need to get rid of the --array_layout flag, as it will
-        ##override reading the measurement set array layout
-        for ind, arg in enumerate(self.inputs):
-            if arg.startswith('--array_layout'):
-                self.inputs.pop(ind)
-                break
-        self.assert_check_args_errors()
+        if HAVE_EVERYBEAM:
+        
+            self.make_minimum_required_args_without_metafits()
+            self.inputs.append('--primary_beam=everybeam_MWA')
+            self.inputs.append('--band_nums=1')
+            ms_path = f"{code_dir}/../../../test_installation/everybeam/MWA-single-timeslot.ms"
+            self.inputs.append(f'--beam_ms_path={ms_path}')
+            self.inputs.append('--station_id=9393')
+            ##we need to get rid of the --array_layout flag, as it will
+            ##override reading the measurement set array layout
+            for ind, arg in enumerate(self.inputs):
+                if arg.startswith('--array_layout'):
+                    self.inputs.pop(ind)
+                    break
+            self.assert_check_args_errors()
         
     def test_bad_enh_text_file(self):
         """Check that the enhancement text file fails if it doesn't exist"""

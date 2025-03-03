@@ -57,3 +57,13 @@ def load_in_run_woden(woden_lib,
                             sbf_pointer]
     
     return run_woden
+
+def check_for_everybeam(woden_lib_path) -> bool:
+    
+    woden_lib = ctypes.cdll.LoadLibrary(woden_lib_path)
+    
+    check_for_everybeam_compilation = woden_lib.check_for_everybeam_compilation
+    
+    check_for_everybeam_compilation.restype = ctypes.c_bool
+    
+    return check_for_everybeam_compilation()

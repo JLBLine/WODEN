@@ -113,69 +113,73 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
         add_test(${DEVICE}_test_calculate_visibilities_mwaanalybeam_${PRECISION}
                 test_calculate_visibilities_mwaanalybeam_${DEVICE}_${PRECISION}_app)
 
-        add_executable(test_calculate_visibilities_multibeams_${DEVICE}_${PRECISION}_app
-            test_calculate_visibilities_multibeams_${DEVICE}.c
+        add_executable(test_calculate_visibilities_multimwafeebeams_${DEVICE}_${PRECISION}_app
+            test_calculate_visibilities_multimwafeebeams_${DEVICE}.c
             calculate_visibilities_multibeams_common.c
             calculate_visibilities_common_common.c
         )
-        target_link_libraries(test_calculate_visibilities_multibeams_${DEVICE}_${PRECISION}_app
+        target_link_libraries(test_calculate_visibilities_multimwafeebeams_${DEVICE}_${PRECISION}_app
             calculate_visibilities_CPU_${PRECISION}
             calculate_visibilities_GPU_${PRECISION}
             ${CC_LINKLIBS}
             Unity gcov
         )
-        target_compile_options(test_calculate_visibilities_multibeams_${DEVICE}_${PRECISION}_app
+        target_compile_options(test_calculate_visibilities_multimwafeebeams_${DEVICE}_${PRECISION}_app
                                                                     PRIVATE ${C_FLAGS})
-        add_test(${DEVICE}_test_calculate_visibilities_multibeams_${PRECISION}
-                test_calculate_visibilities_multibeams_${DEVICE}_${PRECISION}_app)
+        add_test(${DEVICE}_test_calculate_visibilities_multimwafeebeams_${PRECISION}
+                test_calculate_visibilities_multimwafeebeams_${DEVICE}_${PRECISION}_app)
 
-        add_executable(test_calculate_visibilities_everybeam_mwa_${DEVICE}_${PRECISION}_app
-            test_calculate_visibilities_everybeam_mwa_${DEVICE}.c
-            calculate_visibilities_everybeam_common.c
-            calculate_visibilities_common_common.c
-        )
-        target_link_libraries(test_calculate_visibilities_everybeam_mwa_${DEVICE}_${PRECISION}_app
-            calculate_visibilities_CPU_${PRECISION}
-            calculate_visibilities_GPU_${PRECISION}
-            ${CC_LINKLIBS}
-            Unity gcov
-        )
-        target_compile_options(test_calculate_visibilities_everybeam_mwa_${DEVICE}_${PRECISION}_app
-                                                                    PRIVATE ${C_FLAGS})
-        add_test(${DEVICE}_test_calculate_visibilities_everybeam_mwa_${PRECISION}
-                test_calculate_visibilities_everybeam_mwa_${DEVICE}_${PRECISION}_app)
 
-        add_executable(test_calculate_visibilities_everybeam_lofar_${DEVICE}_${PRECISION}_app
-            test_calculate_visibilities_everybeam_lofar_${DEVICE}.c
-            calculate_visibilities_everybeam_common.c
-            calculate_visibilities_common_common.c
-        )
-        target_link_libraries(test_calculate_visibilities_everybeam_lofar_${DEVICE}_${PRECISION}_app
-            calculate_visibilities_CPU_${PRECISION}
-            calculate_visibilities_GPU_${PRECISION}
-            ${CC_LINKLIBS}
-            Unity gcov
-        )
-        target_compile_options(test_calculate_visibilities_everybeam_lofar_${DEVICE}_${PRECISION}_app
-                                                                    PRIVATE ${C_FLAGS})
-        add_test(${DEVICE}_test_calculate_visibilities_everybeam_lofar_${PRECISION}
-                test_calculate_visibilities_everybeam_lofar_${DEVICE}_${PRECISION}_app)
+        if (USE_EVERYBEAM)
 
-        # add_executable(test_calculate_visibilities_everybeam_oskar_${DEVICE}_${PRECISION}_app
-        #     test_calculate_visibilities_everybeam_oskar_${DEVICE}.c
-        #     calculate_visibilities_everybeam_common.c
-        #     calculate_visibilities_common_common.c
-        # )
-        # target_link_libraries(test_calculate_visibilities_everybeam_oskar_${DEVICE}_${PRECISION}_app
-        #     calculate_visibilities_CPU_${PRECISION}
-        #     calculate_visibilities_GPU_${PRECISION}
-        #     ${CC_LINKLIBS}
-        #     Unity gcov
-        # )
-        # target_compile_options(test_calculate_visibilities_everybeam_oskar_${DEVICE}_${PRECISION}_app
-        #                                                             PRIVATE ${C_FLAGS})
-        # add_test(${DEVICE}_test_calculate_visibilities_everybeam_oskar_${PRECISION}
-        #         test_calculate_visibilities_everybeam_oskar_${DEVICE}_${PRECISION}_app)
+            add_executable(test_calculate_visibilities_everybeam_mwa_${DEVICE}_${PRECISION}_app
+                test_calculate_visibilities_everybeam_mwa_${DEVICE}.c
+                calculate_visibilities_everybeam_common.c
+                calculate_visibilities_common_common.c
+            )
+            target_link_libraries(test_calculate_visibilities_everybeam_mwa_${DEVICE}_${PRECISION}_app
+                calculate_visibilities_CPU_${PRECISION}
+                calculate_visibilities_GPU_${PRECISION}
+                ${CC_LINKLIBS}
+                Unity gcov
+            )
+            target_compile_options(test_calculate_visibilities_everybeam_mwa_${DEVICE}_${PRECISION}_app
+                                                                        PRIVATE ${C_FLAGS})
+            add_test(${DEVICE}_test_calculate_visibilities_everybeam_mwa_${PRECISION}
+                    test_calculate_visibilities_everybeam_mwa_${DEVICE}_${PRECISION}_app)
+
+            add_executable(test_calculate_visibilities_everybeam_lofar_${DEVICE}_${PRECISION}_app
+                test_calculate_visibilities_everybeam_lofar_${DEVICE}.c
+                calculate_visibilities_everybeam_common.c
+                calculate_visibilities_common_common.c
+            )
+            target_link_libraries(test_calculate_visibilities_everybeam_lofar_${DEVICE}_${PRECISION}_app
+                calculate_visibilities_CPU_${PRECISION}
+                calculate_visibilities_GPU_${PRECISION}
+                ${CC_LINKLIBS}
+                Unity gcov
+            )
+            target_compile_options(test_calculate_visibilities_everybeam_lofar_${DEVICE}_${PRECISION}_app
+                                                                        PRIVATE ${C_FLAGS})
+            add_test(${DEVICE}_test_calculate_visibilities_everybeam_lofar_${PRECISION}
+                    test_calculate_visibilities_everybeam_lofar_${DEVICE}_${PRECISION}_app)
+
+            # add_executable(test_calculate_visibilities_everybeam_oskar_${DEVICE}_${PRECISION}_app
+            #     test_calculate_visibilities_everybeam_oskar_${DEVICE}.c
+            #     calculate_visibilities_everybeam_common.c
+            #     calculate_visibilities_common_common.c
+            # )
+            # target_link_libraries(test_calculate_visibilities_everybeam_oskar_${DEVICE}_${PRECISION}_app
+            #     calculate_visibilities_CPU_${PRECISION}
+            #     calculate_visibilities_GPU_${PRECISION}
+            #     ${CC_LINKLIBS}
+            #     Unity gcov
+            # )
+            # target_compile_options(test_calculate_visibilities_everybeam_oskar_${DEVICE}_${PRECISION}_app
+            #                                                             PRIVATE ${C_FLAGS})
+            # add_test(${DEVICE}_test_calculate_visibilities_everybeam_oskar_${PRECISION}
+            #         test_calculate_visibilities_everybeam_oskar_${DEVICE}_${PRECISION}_app)
+        endif(USE_EVERYBEAM)
 
     endforeach()
     ##Add an executable to profile the code when calling hyperbeam, but
@@ -197,21 +201,23 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
 endforeach()
 
 
-DEFINE_COMP_FLAGS(DOUBLE C_FLAGS GPU_FLAGS C_COVER_FLAGS)
+if (USE_EVERYBEAM)
+    DEFINE_COMP_FLAGS(DOUBLE C_FLAGS GPU_FLAGS C_COVER_FLAGS)
 
-add_executable(profile_lofar_everybeam
-    make_exe_to_profile_lofar_everybeam.c
-    calculate_visibilities_everybeam_common.c
-    calculate_visibilities_common_common.c
-)
-target_link_libraries(profile_lofar_everybeam
-    calculate_visibilities_CPU_double
-    calculate_visibilities_GPU_double
-    ${CC_LINKLIBS}
-    Unity gcov
-)
-target_compile_options(profile_lofar_everybeam
-                  PRIVATE ${C_FLAGS})
+    add_executable(profile_lofar_everybeam
+        make_exe_to_profile_lofar_everybeam.c
+        calculate_visibilities_everybeam_common.c
+        calculate_visibilities_common_common.c
+    )
+    target_link_libraries(profile_lofar_everybeam
+        calculate_visibilities_CPU_double
+        calculate_visibilities_GPU_double
+        ${CC_LINKLIBS}
+        Unity gcov
+    )
+    target_compile_options(profile_lofar_everybeam
+                    PRIVATE ${C_FLAGS})
+endif(USE_EVERYBEAM)
 
 
         

@@ -118,22 +118,14 @@ void test_calculate_visibilities_EveryBeam(int n_points, int n_gauss, int n_shap
                                            const char *beam_ms_path) {
 
 
-  double ra0, dec0;
+  double dec0;
 
   if (beamtype == EB_MWA) {
-    ra0 = MWA_RA0;
     dec0 = MWA_DEC0;
   } else if (beamtype == EB_LOFAR) {
-    ra0 = LOFAR_RA0;
     dec0 = LOFAR_DEC0;
   }
 
-
-  // source_catalogue_t *cropped_sky_models = make_cropped_sky_models(RA0, -0.46606083776035967,
-  //                                                   n_points, n_gauss, n_shapes,
-  //                                                   num_sources);
-
-  // woden_settings_t *woden_settings = make_woden_settings(RA0, -0.46606083776035967);
 
   source_catalogue_t *cropped_sky_models = make_cropped_sky_models(RA0, dec0,
                                                     n_points, n_gauss, n_shapes,

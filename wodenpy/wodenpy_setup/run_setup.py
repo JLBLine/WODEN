@@ -17,6 +17,8 @@ from pathlib import Path
 import logging
 from astropy.time import Time
 from astropy import units as u
+import importlib_resources
+from wodenpy.use_libwoden.use_libwoden import check_for_everybeam
 
 def get_parser():
     """
@@ -455,6 +457,11 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     ##Preserve the command line arguments so we can stick them in the uvfits    
     args.command = ""
     for arg in sys.argv: args.command += f" {arg}"
+    
+    if args.precision not in ['double', 'float']:
+        print(f"Arg --precision={args.precision} is not valid. Should be either"
+              "'double' or 'float'. Setting to 'double'")
+        args.precision='double'
 
     if args.primary_beam not in ['MWA_FEE', 'Gaussian', 'EDA2', 'none', 'None',
                                  'MWA_FEE_interp', 'MWA_analy',
@@ -531,6 +538,32 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
                 exit('To use EveryBeam MWA, either --hdf5_beam_path or environment\n'
                      'variable MWA_FEE_HDF5 must point towards the file\n'
                      'mwa_full_embedded_element_pattern.h5. Exiting now as WODEN will fail.')
+                
+    eb_args = ['everybeam_OSKAR', 'everybeam_LOFAR', 'everybeam_MWA']
+    
+    woden_lib_path = importlib_resources.files(wodenpy).joinpath(f"libwoden_{args.precision}.so")
+    have_everybeam = check_for_everybeam(woden_lib_path)
+            
+    if args.primary_beam in eb_args:
+        
+        if have_everybeam:
+            if not args.beam_ms_path:
+                exit(f'ERROR: To use the {args.primary_beam} beam, you must specify a path to the'
+                     ' measurement set using --beam_ms_path. Exiting now as WODEN will fail.')
+                
+            if not os.path.isdir(args.beam_ms_path):
+                exit('ERROR: Could not open measurement set specified by user as:\n'
+                    '\t--beam_ms_path={:s}.\n'
+                    'Cannot get required observation settings, exiting now'.format(args.beam_ms_path))
+                
+            array_layout = "from_ms"
+            
+            if not args.max_sky_directions:
+                args.max_sky_directions = 200
+        else:
+            exit(f'ERROR: You have requested to use the {args.primary_beam} beam model, but '
+                 f'{woden_lib_path} was compiled without the everybeam library. '
+                 'Exiting now as WODEN will fail.')
                 
     ##variables that will be filled by metafits if reading a metafits
     ##set them as False here for testing later on
@@ -629,33 +662,6 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
             
         array_layout = "from_ms"
             
-    eb_args = ['everybeam_OSKAR', 'everybeam_LOFAR', 'everybeam_MWA']
-    # have_everybeam = check_for_library('everybeam')
-    
-    ##TODO - need to check this via compilation flags internal to libwoden
-    ##So need a wrapper around a ctypes function internal to libwoden
-    have_everybeam = True
-            
-    if args.primary_beam in eb_args:
-        
-        if have_everybeam:
-            if not args.beam_ms_path:
-                exit(f'To use the {args.primary_beam} beam, you must specify a path to the'
-                    ' measurement set using --beam_ms_path. Exiting now as WODEN will fail.')
-                
-            if not os.path.isdir(args.beam_ms_path):
-                exit('Could not open measurement set specified by user as:\n'
-                    '\t--beam_ms_path={:s}.\n'
-                    'Cannot get required observation settings, exiting now'.format(args.beam_ms_path))
-                
-            array_layout = "from_ms"
-            
-            if not args.max_sky_directions:
-                args.max_sky_directions = 200
-        else:
-            exit(f'You have requested to use the {args.primary_beam} beam model, but '
-                 'the `everybeam` python package is not installed. Exiting now.')
-            
     ##Override metafits and/or load arguments
     args.lowest_channel_freq = select_argument_and_check(args.lowest_channel_freq,
                                   float(args.lowest_channel_freq),
@@ -741,11 +747,6 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
 
         if args.gauss_beam_ref_freq: args.gauss_beam_ref_freq = float(args.gauss_beam_ref_freq)
         if args.gauss_beam_FWHM: args.gauss_beam_FWHM = float(args.gauss_beam_FWHM)
-
-    if args.precision not in ['double', 'float']:
-        print(f"Arg --precision={args.precision} is not valid. Should be either"
-              "'double' or 'float'. Setting to 'double'")
-        args.precision='double'
 
     ##Either read the array layout from a file or use what was in the metafits
     select_correct_enh(args)

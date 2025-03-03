@@ -126,17 +126,20 @@ int main(void)
     RUN_TEST(test_source_component_common_ConstantDecMWAAnalyGaussian_cpu);
     RUN_TEST(test_source_component_common_ConstantDecMWAAnalyShapelet_cpu);
 
-    RUN_TEST(test_source_component_common_ConstantDecEveryBeamMWAPoint_cpu);
-    RUN_TEST(test_source_component_common_ConstantDecEveryBeamMWAGaussian_cpu);
-    RUN_TEST(test_source_component_common_ConstantDecEveryBeamMWAShapelet_cpu);
+    #if defined(HAVE_EVERYBEAM)
 
-    RUN_TEST(test_source_component_common_ConstantDecEveryBeamLOFARPoint_cpu);
-    RUN_TEST(test_source_component_common_ConstantDecEveryBeamLOFARGaussian_cpu);
-    RUN_TEST(test_source_component_common_ConstantDecEveryBeamLOFARShapelet_cpu);
+      RUN_TEST(test_source_component_common_ConstantDecEveryBeamMWAPoint_cpu);
+      RUN_TEST(test_source_component_common_ConstantDecEveryBeamMWAGaussian_cpu);
+      RUN_TEST(test_source_component_common_ConstantDecEveryBeamMWAShapelet_cpu);
 
-    // RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARPoint_cpu);
-    // RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARGaussian_cpu);
-    // RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARShapelet_cpu);
+      RUN_TEST(test_source_component_common_ConstantDecEveryBeamLOFARPoint_cpu);
+      RUN_TEST(test_source_component_common_ConstantDecEveryBeamLOFARGaussian_cpu);
+      RUN_TEST(test_source_component_common_ConstantDecEveryBeamLOFARShapelet_cpu);
+
+      // RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARPoint_cpu);
+      // RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARGaussian_cpu);
+      // RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARShapelet_cpu);
+    #endif
 
 
     return UNITY_END();

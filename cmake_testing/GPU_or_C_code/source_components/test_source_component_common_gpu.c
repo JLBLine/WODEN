@@ -126,17 +126,19 @@ int main(void)
     RUN_TEST(test_source_component_common_ConstantDecMWAAnalyGaussian_gpu);
     RUN_TEST(test_source_component_common_ConstantDecMWAAnalyShapelet_gpu);
 
-    RUN_TEST(test_source_component_common_ConstantDecEveryBeamMWAPoint_gpu);
-    RUN_TEST(test_source_component_common_ConstantDecEveryBeamMWAGaussian_gpu);
-    RUN_TEST(test_source_component_common_ConstantDecEveryBeamMWAShapelet_gpu);
+    #if defined(USE_EVERYBEAM)
+      RUN_TEST(test_source_component_common_ConstantDecEveryBeamMWAPoint_gpu);
+      RUN_TEST(test_source_component_common_ConstantDecEveryBeamMWAGaussian_gpu);
+      RUN_TEST(test_source_component_common_ConstantDecEveryBeamMWAShapelet_gpu);
 
-    RUN_TEST(test_source_component_common_ConstantDecEveryBeamLOFARPoint_gpu);
-    RUN_TEST(test_source_component_common_ConstantDecEveryBeamLOFARGaussian_gpu);
-    RUN_TEST(test_source_component_common_ConstantDecEveryBeamLOFARShapelet_gpu);
+      RUN_TEST(test_source_component_common_ConstantDecEveryBeamLOFARPoint_gpu);
+      RUN_TEST(test_source_component_common_ConstantDecEveryBeamLOFARGaussian_gpu);
+      RUN_TEST(test_source_component_common_ConstantDecEveryBeamLOFARShapelet_gpu);
 
-    // RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARPoint_gpu);
-    // RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARGaussian_gpu);
-    // RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARShapelet_gpu);
+      // RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARPoint_gpu);
+      // RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARGaussian_gpu);
+      // RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARShapelet_gpu);
+    #endif
 
     return UNITY_END();
 }

@@ -116,10 +116,6 @@ def create_components_struct(precision="double"):
         :cvar POINTER(user_precision_complex_t) Dxs: North-South Beam leakage values for all directions, frequencies, and times for these COMPONENT
         :cvar POINTER(user_precision_complex_t) Dys: East-West Beam leakage values for all directions, frequencies, and times  for these COMPONENT
         :cvar POINTER(user_precision_complex_t) gys: East-West Beam gain values for all directions, frequencies, and times  for these COMPONENT
-        :cvar POINTER(user_precision_complex_t) gxs_ants: North-South Beam gain values for all directions, frequencies, times, and ants for these COMPONENT
-        :cvar POINTER(user_precision_complex_t) Dxs_ants: North-South Beam leakage values for all directions, frequencies, times, and ants for these COMPONENT
-        :cvar POINTER(user_precision_complex_t) Dys_ants: East-West Beam leakage values for all directions, frequencies, times, and ants  for these COMPONENT
-        :cvar POINTER(user_precision_complex_t) gys_ants: East-West Beam gain values for all directions, frequencies, times, and ants  for these COMPONENT
         :cvar POINTER(double) ls: Device memory l cosine direction coords for these COMPONENTs
         :cvar POINTER(double) ms: Device memory m cosine direction coords for these COMPONENTs
         :cvar POINTER(double) ns: Device memory n cosine direction coords for these COMPONENTs
@@ -206,10 +202,6 @@ def create_components_struct(precision="double"):
                     ("Dxs", POINTER(c_user_precision_complex)),
                     ("Dys", POINTER(c_user_precision_complex)),
                     ("gys", POINTER(c_user_precision_complex)),
-                    ("gxs_ants", POINTER(c_user_precision)),
-                    ("Dxs_ants", POINTER(c_user_precision)),
-                    ("Dys_ants", POINTER(c_user_precision)),
-                    ("gys_ants", POINTER(c_user_precision)),
                     ##used to hold l,m,n coords on the GPU
                     ("ls", POINTER(c_double)),
                     ("ms", POINTER(c_double)),
