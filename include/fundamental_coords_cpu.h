@@ -83,7 +83,7 @@ void calc_uv_shapelet_cpu(double *X_diff, double *Y_diff, double *Z_diff,
       const int num_baselines, const int num_times, const int num_shapes);
 
 /**
-@brief Calculate interferometric \f$l,m,n\f$ image coords for a given RA,Dec
+@brief Calculate interferometric \f$l,m,n\f$ image coords for a given set of RA,Dec
 and phase centre
 
 @details Here it is assumed the phase centre is not changing with time
@@ -91,18 +91,33 @@ and phase centre
 @param[in] ra0 Right Ascension of the phase centre (radians)
 @param[in] sdec0 Sine of Declination of the phase centre
 @param[in] cdec0 Cosine of Declination of the phase centre
-@param[in] ra Right Ascension (radians)
-@param[in] dec Declination (radians)
-@param[in] ls Output \f$l\f$ coodinate
-@param[in] ms Output \f$m\f$ coodinate
-@param[in] ns Output \f$n\f$ coodinate
+@param[in] ras Array ofRight Ascension (radians)
+@param[in] decs Array of Declination (radians)
+@param[in] ls Output \f$l\f$ coodinates
+@param[in] ms Output \f$m\f$ coodinates
+@param[in] ns Output \f$n\f$ coodinates
+@param[in] num_components Number of RA,Dec coords
 
 */
 void calc_lmn_cpu(double ra0, double sdec0, double cdec0, 
                   double *ras, double *decs,
                   double *ls, double *ms, double *ns, int num_components);
 
+/**
+@brief Calculates the \f$l,m,n\f$ coords for an intialised `components`
+struct. Assumes components->ras, components->decs have been allocated
+and set on the device.
 
+@details Runs `calc_lmn_cpu` using components->ras, components->decs and
+woden_settings->ra0, woden_settings->sdec0, woden_settings->cdec0 as inputs.
+This function allocates device memory for `components->ls`, `components->ms`,
+and `components->ns`, and puts the results in these arrays.
+
+ @param[in,out] components Initialised `components_t` struct containing the
+ ra and dec arrays
+ @param[in] num_components Number of RA,Dec coords in `components`
+ @param[in] woden_settings Woden settings struct containing the phase centre
+*/
 void calc_lmn_for_components_cpu(components_t *components, int num_components,
                                            woden_settings_t *woden_settings);
 

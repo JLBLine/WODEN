@@ -1198,22 +1198,6 @@ void calc_visi_point_or_gauss_cpu(components_t components,
     freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
 
     for (int iComponent = 0; iComponent < num_components; iComponent++) {
-    // int use_twobeams = component_beam_gains.use_twobeams;
-
-    // user_precision_t flux_I;
-    // user_precision_t flux_Q;
-    // user_precision_t flux_U;
-    // user_precision_t flux_V;
-
-    // user_precision_complex_t visi_comp;
-    // user_precision_complex_t V_envelop;
-
-    // user_precision_t pa, sinpa, cospa, u, v, x, y, invsig_x, invsig_y;
-
-      //Find out what time and freq index this baseline corresponds to
-      // time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
-      // freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
-
     
       extrap_ind = num_freqs*iComponent + freq_ind;
       // printf("INSIDE KERN components.extrap_stokesI %p\n", components.extrap_stokesI);
@@ -1224,10 +1208,6 @@ void calc_visi_point_or_gauss_cpu(components_t components,
         flux_U = components.extrap_stokesU[extrap_ind];
         flux_V = components.extrap_stokesV[extrap_ind];
       }
-
-      // if (iBaseline == 0 && components.do_QUV == 1) {
-      //   printf("Fluxes %.3e %.3e %.3e %.3e\n", flux_I, flux_Q, flux_U, flux_V);
-      // }
       
       visi_comp = calc_measurement_equation_cpu(calc_visi_inouts->us[iBaseline],
                                                 calc_visi_inouts->vs[iBaseline],
@@ -1235,11 +1215,6 @@ void calc_visi_point_or_gauss_cpu(components_t components,
                                                 components.ls[iComponent],
                                                 components.ms[iComponent],
                                                 components.ns[iComponent]);
-
-      // if (iBaseline == 0 && components.do_QUV == 0) {
-      //   printf("visi_comp %.3e %.3e flux_I %.3e\n", creal(visi_comp), cimag(visi_comp), flux_I );
-      // }
-      // printf("iComponent %d components.ls[iComponent] %f \n", iComponent, components.ls[iComponent]);
 
       if (comptype == GAUSSIAN) {
 
@@ -1260,10 +1235,6 @@ void calc_visi_point_or_gauss_cpu(components_t components,
         visi_comp = visi_comp*V_envelop;
 
       }
-
-      // if (iBaseline == 0){
-      //   printf("Visibilities: %.3e %.3e\n", creal(visi_comp), cimag(visi_comp));
-      // }
 
       if (components.do_QUV == 1)
       {

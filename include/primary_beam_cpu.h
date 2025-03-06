@@ -1,5 +1,5 @@
 /*! \file
-  Device methods to calculate perfect Gaussian and Analytic Dipole primary beam
+  Host methods to calculate perfect Gaussian and Analytic Dipole primary beam
   responses. Currently, the analytic dipole is fixed to being an MWA dipole.
   Both models assume there is no leakage and beams are purely real.
 */
@@ -72,7 +72,7 @@ frequency, COMPONENT.
 @param[in] sin_theta Sine of the rotation angle
 @param[in] sin_2theta Sine of two times the rotation angle
 @param[in] num_freqs Number of frequencies being calculated
-@param[in] num_times Number of time steps being calculated
+@param[in] num_time_steps Number of time steps being calculated
 @param[in] num_components Number of COMPONENTS the beam is calculated for
 @param[in,out] *g1xs array to store the beam Jones
 complex `J[0,0]` response in
@@ -120,9 +120,9 @@ using `gaussian_beam_from_lm_cpu`.
 @param[in] *freqs Array of frequencies to calculate beam at (Hz)
 @param[in] *beam_has Array of Hour Angles to calculate the beam toward
 @param[in] *beam_decs Array of Declinations to calculate the beam toward
-@param[in,out] *d_primay_beam_J00 Device array to store the beam Jones
+@param[in,out] *g1xs Device array to store the beam Jones
 complex `J[0,0]` response in
-@param[in,out] *d_primay_beam_J11 Device array to store the beam Jones
+@param[in,out] *g1ys Device array to store the beam Jones
 complex `J[1,1]` response in
 
 */
@@ -293,11 +293,15 @@ d_primay_beam_J* arrays using the kernel `primary_beam_gpu::kern_map_hyperbeam_g
 @param[in] num_beams How many primary beams are being simulated. If making all
 primary beams the same, set to 1, otherwise number of antennas(tiles).
 @param[in] parallactic Whether to rotate by parallactic angle or not
+@param[in] *freqs Array of frequencies to calculate beam at (Hz)
 @param[in] *fee_beam An initialised `mwa_hyperbeam` `struct fee_beam`
+@param[in] *hyper_delays MWA beam delays (as found in metafits file) 
 @param[in] *azs Array of Azimuth angles to calculate the beam towards (radians)
 @param[in] *zas Array of Zenith Angles to calculate the beam towards (radians)
 @param[in] *latitudes The latitude of the array for each time step (radians); this
-can be NULL is parallactic = 0
+can be NULL if parallactic = 0
+@param[in] num_amps Number of MWA dipole amplitudes to use
+@param[in] *amps Bespoke MWA dipole amplitudes for each antenna(tile). Should be 2*num_ants*16 long
 @param[in,out] *gxs The gains for the north-south beam
 @param[in,out] *Dxs The leakages for the north-south beam
 @param[in,out] *Dys The leakages for the east-west beam

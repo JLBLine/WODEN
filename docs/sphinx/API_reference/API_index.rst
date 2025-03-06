@@ -96,6 +96,7 @@ are designed to minimise the amount of code dupilcation between the ``C`` and
 
   CPU_code/fundamental_coords_cpu
   CPU_code/primary_beam_cpu
+  CPU_code/source_components_cpu
 
 ``GPU`` code
 **************

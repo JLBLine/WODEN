@@ -357,16 +357,15 @@ __device__ void apply_beam_gains_stokesI_off_cardinal_gpu(gpuUserComplex g1x, gp
 
 /**
 @brief Given the type of primary beam simulated `beamtype`, select the beam
-gains and leakages from the arrays `d_primay_beam_J*` that match the indexes
+gains and leakages from the arrays `d_g*, d_D*` that match the indexes
 `iBaseline`, `iComponent`. NOTE that currently, primary beams are assumed
 to be the same for all recieving elements, and so this function only takes in
 one set of primary beam arrays.
 
 @details This function is built to return the correct beam gain for a given
 component on the sky, at a given time, at a given frequency, for a given baseline.
-The 4 arrays `d_primay_beam_J00`, `d_primay_beam_J01`, `d_primay_beam_J10`,
-`d_primay_beam_J11` should contain the primary beam settings for all times,
-all frequencies, and COPMONENTs on the sky, and so should be
+The 4 arrays `d_gxs`, `d_Dxs`, `d_Dys`,`d_gys` should contain the primary beam
+values for all times, all frequencies, and COPMONENTs on the sky, and so should be
 `num_freqs*num_components*num_times` long. The order elements should increment
 through COMPONENT (fastest changing), freqeuncy, and time (slowest changing).
 `iBaseline` is a combined index of baseline, frequency, and time.
@@ -410,17 +409,14 @@ __device__ void get_beam_gains_gpu(int iBaseline, int iComponent, int num_freqs,
 
 /**
 @brief Given the type of primary beam simulated `beamtype`, select the beam
-gains and leakages from the arrays `d_primay_beam_J*` that match the indexes
+gains and leakages from the arrays `d_g*, d_D*` that match the indexes
 `iBaseline`, `iComponent`. This function assumes the primary beams are different
 for every antenna, so returns different values for each antenna. 
 
-@todo Currently this is only set up to work with the MWA_FEE and MWA_FEE_INTERP
-primary beams
-
 @details This function is built to return the correct beam gain for a given
 component on the sky, at a given time, at a given frequency, for a given baseline.
-The 4 arrays `d_primay_beam_J00`, `d_primay_beam_J01`, `d_primay_beam_J10`,
-`d_primay_beam_J11` should contain the primary beam settings for all antennas,
+The 4 arrays  `d_gxs`, `d_Dxs`, `d_Dys`,`d_gys`
+should contain the primary beam settings for all antennas,
 all times, all frequencies, and COPMONENTs on the sky, and so should be
 `num_ants*num_freqs*num_components*num_times` long. The order elements should increment
 through COMPONENT (fastest changing), freqeuncy, time, and antenna (slowest changing).
@@ -693,7 +689,7 @@ __global__ void kern_extrap_power_laws_stokesV(int num_extrap_freqs, double *d_e
 /**
 @brief Kernel to run `extrap_stokes_power_law_gpu` for all linear polarisation components in `d_components`.
 
-@details Temporarily fills the array `d_components.extrap_stokesQ` with the extrapolated linear polarisation flux densities. The intention is to the use `kern_apply_rotation_measure` after the fact, which will use `d_components.extrap_stokesQ` as input flux, do rotations, and then fill `d_components.extrap_stokesU` and `d_components.extrap_stokesV`.
+@details Temporarily fills the array `d_components.extrap_stokesQ` with the extrapolated linear polarisation flux densities. The intention is to the use `kern_apply_rotation_measure` after the fact, which will use `d_components.extrap_stokesQ` as input flux, do rotations, and then fill `d_components.extrap_stokesQ` and `d_components.extrap_stokesU`.
 
 @param[in] num_extrap_freqs The number of frequencies to extrapolate to.
 @param[in] d_extrap_freqs Pointer to an array of frequencies to extrapolate to on the device.
@@ -812,7 +808,10 @@ __device__ void extrap_stokes_list_fluxes_gpu(user_precision_t *list_stokes,
            user_precision_t * extrap_flux);
 
 /**
-@brief Extrapolates list-type spectral model fluxes to given frequencies.
+@brief Extrapolates list-type spectral model fluxes to given frequencies. To be clear,
+`list_stokes` and `list_freqs` are arrays of flux densities and frequencies, respectively,
+for `num_comps` number of components. Each component can have any number of flux and freq
+entries, given by `num_list_values`. 
 
 @details Fills `extrap_stokes` with the extrapolated stokes flux densities. Runs the function `extrap_stokes_list_fluxes_gpu`. 
 
@@ -837,10 +836,11 @@ __global__ void kern_extrap_list_fluxes(user_precision_t *list_stokes, double *l
 /**
 @brief Kernel to calculate the visibility response to a number `num_components`
 of either POINT or GAUSSIAN COMPONENTs, and sum the outputs to `d_sum_visi_*_real`,
-`d_sum_visi_*_imag`.
+`d_sum_visi_*_imag`. Assumes all fluxes have been extrapolated to the requested
+frequencies.
 
-@details Uses the functions `extrap_stokes`, `calc_measurement_equation_gpu`,
-`update_sum_visis` as detailed above to calculate the visibilities. Sets off
+@details Uses the functions `calc_measurement_equation_gpu` and
+`update_sum_visis_stokes*gpu` as detailed above to calculate the visibilities. Sets off
 a thread for each visibility to be calculated, with each thread looping over
 all COMPONENTs. This seems to keep the memory access low enough to be faster
 than having a second dimension over COMPONENT. Specify if you want POINT or
@@ -1101,11 +1101,10 @@ extern "C" void free_extrapolated_flux_arrays_gpu(components_t *d_components);
 already calculated in `d_components` and beam gains in `d_component_beam_gains`.
 Stores the outputs at the end of `d_sum_visi*`, after the cross-correlations.
 
-@details Currently, the primary beam for all antennas (or what the MWA calls
-tiles) are identical. So `d_component_beam_gains` should have gains for
-one primary beam. This function then just does the dot product of the
-component fluxes and beam gains to produce linear stokes polarisation
-auto-correlations.
+@details `d_component_beam_gains` should have gains for
+as many antennas (a.k.a stations/tiles) as detailed by `num_ants`.
+This function then just does the dot product of the component fluxes and beam gains specific
+to each baseline.
 
 When called with `dim3 grid, threads`, kernel should be called with `grid.x`
 and grid.y defined, where:

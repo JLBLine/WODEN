@@ -101,14 +101,14 @@ should be initialised and filled on the GPU before calling this function.
 @param[in,out] d_u_metres Output `u` coords (metres)
 @param[in,out] d_v_metres Output `v` coords (metres)
 @param[in,out] d_w_metres Output `w` coords (metres)
-@param[in,out] d_u Output `u` coord (wavelengths)
-@param[in,out] d_v Output `v` coord (wavelengths)
-@param[in,out] d_w Output `w` coord (wavelengths)
-@param[in] d_wavelengths Wavelengths for all baselines, frequencies, and time
+@param[in,out] d_us Output `u` coord (wavelengths)
+@param[in,out] d_vs Output `v` coord (wavelengths)
+@param[in,out] d_ws Output `w` coord (wavelengths)
+@param[in] d_allsteps_wavelengths Wavelengths for all baselines, frequencies, and time
 steps (metres)
-@param[in] d_cha0s Cosine of the hour angle of the phase centre for all
+@param[in] d_allsteps__cha0s Cosine of the hour angle of the phase centre for all
 baselines, frequencies, and time steps
-@param[in] d_sha0s Sine of the hour angle of the phase centre for all
+@param[in] d_allsteps__sha0s Sine of the hour angle of the phase centre for all
 baselines, frequencies, and time steps
 @param[in] woden_settings Struct containing simulation settings
 */
