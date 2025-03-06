@@ -106,9 +106,9 @@ should be initialised and filled on the GPU before calling this function.
 @param[in,out] d_ws Output `w` coord (wavelengths)
 @param[in] d_allsteps_wavelengths Wavelengths for all baselines, frequencies, and time
 steps (metres)
-@param[in] d_allsteps__cha0s Cosine of the hour angle of the phase centre for all
+@param[in] d_allsteps_cha0s Cosine of the hour angle of the phase centre for all
 baselines, frequencies, and time steps
-@param[in] d_allsteps__sha0s Sine of the hour angle of the phase centre for all
+@param[in] d_allsteps_sha0s Sine of the hour angle of the phase centre for all
 baselines, frequencies, and time steps
 @param[in] woden_settings Struct containing simulation settings
 */

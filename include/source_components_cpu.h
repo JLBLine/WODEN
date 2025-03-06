@@ -810,7 +810,7 @@ and sum them into real and imaginary XX,XY,YX,YY visibilities arrays
 @param[in] num_components Number of COMPONENTs
 @param[in] num_times Number of times in simulation
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
-@param[in] off_cardinal Boolean to indicate if the dipoles are off-cardinal i.e.
+@param[in] off_cardinal_dipoles Boolean to indicate if the dipoles are off-cardinal i.e.
 if off_cardinal == 1, then the dipoles are aligned at 45 and 135 degrees,
 if off_cardinal == 0, then the dipoles are aligned at 0 and 90 degrees
 @param[in] *gxs Pointer towards array of primary beam J[0,0]
@@ -876,7 +876,7 @@ apply the gains - see descriptions for what should be the arguments to them.
 @param[in] num_components Number of COMPONENTs
 @param[in] num_times Number of times in simulation
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
-@param[in] off_cardinal Boolean to indicate if the dipoles are off-cardinal i.e.
+@param[in] off_cardinal_dipoles Boolean to indicate if the dipoles are off-cardinal i.e.
 if off_cardinal == 1, then the dipoles are aligned at 45 and 135 degrees,
 if off_cardinal == 0, then the dipoles are aligned at 0 and 90 degrees
 @param[in] *gxs Pointer towards array of primary beam J[0,0]
@@ -950,8 +950,8 @@ void malloc_beam_gains_cpu(beam_gains_t *component_beam_gains,
 /**
  * @brief Calculate the visibility response to a number `num_components`
 of either POINT or GAUSSIAN COMPONENTs, and sum the outputs to `sum_visi_*_real`,
-`sum_visi_*_imag`. Assumes all fluxes have been extrapolated to the requested
-frequencies.
+`sum_visi_*_imag` in `visibility_set`. Assumes all fluxes have been
+extrapolated to the requested frequencies.
 
 @details Uses the functions `calc_measurement_equation_cpu` and `update_sum_visis_stokesI*_cpu`
 as detailed above to calculate the visibilities in serial on the CPU.
@@ -989,12 +989,13 @@ void calc_visi_point_or_gauss_cpu(components_t components,
 /**
 @brief the visibility response to a number `num_shapes` of
 SHAPELET COMPONENTs, and sum the outputs to `sum_visi_*_real`,
-`sum_visi_*_imag`.
+`sum_visi_*_imag` in `visibility_set`. Assumes all fluxes have been
+extrapolated to the requested frequencies.
 
 @details Uses the functions `calc_measurement_equation_cpu` and `update_sum_visis_stokesI*_cpu`
-as detailed above to calculate the visibilities in serial on the CPU. Furthermore
-calculates the visibility envelope \f$\mathrm{V}_{\mathrm{env}}\f$ to convert
-the basic visibility into a SHAPELET:
+as detailed in `calc_visi_point_or_gauss_cpu` to calculate the visibilities in
+serial on the CPU. Furthermore calculates the visibility envelope
+\f$\mathrm{V}_{\mathrm{env}}\f$ to convert the basic visibility into a SHAPELET:
 
 \f{eqnarray*}{
 \mathrm{V}_{\mathrm{env}} &=& \sum^{n_k +n_l < n_\mathrm{max}}_{k,l} C_{n_k,n_l} B_{n_k,n_l}(k_x,k_y)\\
@@ -1009,7 +1010,7 @@ v_{\mathrm{comp}} \f$ are visibility coordinates with the SHAPELET ra,dec as the
 phase centre. These should have been calculated using
 `fundamental_coords_gpu::kern_calc_uvw_shapelet`.
 
-This kernel differs from `calc_visi_point_or_gauss_cpu`
+This differs from `calc_visi_point_or_gauss_cpu`
 in that each SHAPELET component is built up from multiple shapelet basis
 functions, and so the kernel (and sometimes the sky model) is split over the
 shapelet basis functions, meaning multiple basis function calculations will

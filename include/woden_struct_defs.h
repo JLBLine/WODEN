@@ -275,7 +275,7 @@ typedef struct _visibility_set_t {
   frequency steps, and baselines (radians)*/
   user_precision_t *allsteps_wavelengths; /*!< Wavelengths for all time steps,
   frequency steps, and baselines (metres)*/
-  double *channel_frequencies; /*!< Frequencies for a frequency steps (Hz)*/
+  double *channel_frequencies; /*!< Frequencies for all frequency steps (Hz)*/
 
   user_precision_t *sum_visi_XX_real; /*!< Real values for XX polarisation for all time
   steps, frequency steps, and baselines */
@@ -385,34 +385,48 @@ typedef struct _array_layout_t {
 } array_layout_t;
 
 /**
-Bleh
+Struct to contain the various inputs needed for many functions used by
+`calculate_visibilities`.
 
 */
 typedef struct _calc_visi_inouts_t {
-  double *X_diff;
-  double *Y_diff;
-  double *Z_diff;
-  double *allsteps_sha0s;
-  double *allsteps_cha0s;
-  user_precision_t *allsteps_wavelengths;
+  double *X_diff; /*!< The length of all baselines in \f$X\f$ (metres).
+    Only used when processing on GPU, as already exists in `array_layout_t`.
+    Easier to copy everythng into one struct*/
+  double *Y_diff; /*!< The length of all baselines in \f$Y\f$ (metres).
+    Only used when processing on GPU, as already exists in `array_layout_t`.
+    Easier to copy everythng into one struct*/
+  double *Z_diff; /*!< The length of all baselines in \f$Z\f$ (metres).
+    Only used when processing on GPU, as already exists in `array_layout_t`.
+    Easier to copy everythng into one struct*/
+  double *allsteps_sha0s; /*!< Sine of hour angle of phase centre for all
+  time steps, frequency steps, and baselines*/
+  double *allsteps_cha0s; /*!< Cosine of hour angle of phase centre for all
+  time steps, frequency steps, and baselines*/
+  user_precision_t *allsteps_wavelengths; /*!< Wavelengths for all time steps,
+  frequency steps, and baselines (metres)*/
 
-  user_precision_t *u_metres;
-  user_precision_t *v_metres;
-  user_precision_t *w_metres;
-  user_precision_t *us;
-  user_precision_t *vs;
-  user_precision_t *ws;
-  double *freqs;
+  user_precision_t *u_metres; /*< Array of `u` coords (metres)*/
+  user_precision_t *v_metres; /*< Array of `v` coords (metres)*/
+  user_precision_t *w_metres; /*< Array of `w` coords (metres)*/
+  user_precision_t *us; /*< Array of `u` coord (wavelengths)*/
+  user_precision_t *vs; /*< Array of `v` coord (wavelengths)*/
+  user_precision_t *ws; /*< Array of `w` coord (wavelengths)*/
+  double *freqs; /*!< Frequencies for all frequency steps (Hz)*/
   
-  //If we a different primary beam for each antenna, setup the baseline
+  //If we have a different primary beam for each antenna, setup the baseline
   //to anetenna mapping arrays
-  int *ant1_to_baseline_map;
-  int *ant2_to_baseline_map;
+  int *ant1_to_baseline_map; /*!< The index of antenna 1 in all unique pairs of
+antennas. Used to map iBaseline to the correct antenna 1 */
+  int *ant2_to_baseline_map; /*!< The index of antenna 2 in all unique pairs of
+antennas. Used to map iBaseline to the correct antenna 2 */
 
   //Shapelet specific stuff. Only gets malloced/used if we have shapelets
-  user_precision_t *sbf;
-  user_precision_t *u_shapes;
-  user_precision_t *v_shapes;
+  user_precision_t *sbf; /*!< Array of shapelet basis functions as created by shapelet_basis::create_sbf */
+  user_precision_t *u_shapes; /*!<Output `u` coords with various phase centres for
+SHAPELET components (metres) */
+  user_precision_t *v_shapes; /*!<Output `v` coords with various phase centres for
+SHAPELET components (metres) */
 
 } calc_visi_inouts_t;
 

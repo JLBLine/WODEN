@@ -895,8 +895,9 @@ simulation
 @param[in] num_times Number of time steps in simulation
 @param[in] beamtype Beam type see `woden_struct_defs.e_beamtype`
 @param[in] comptype Component type, either POINT or GAUSSIAN
-@param[in] off_cardinal_dipoles Boolean to specify if the dipoles in the beam are off the cardinal axes
-(45 and 135 degrees) or aligned with north-south and east-west (0 and 90 degrees). Effects what visibilities are calculated. 
+@param[in] off_cardinal_dipoles Boolean to indicate if the dipoles are off-cardinal i.e.
+if off_cardinal == 1, then the dipoles are aligned at 45 and 135 degrees,
+if off_cardinal == 0, then the dipoles are aligned at 0 and 90 degrees
 */
 __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            beam_gains_t d_component_beam_gains,
@@ -1073,9 +1074,35 @@ copied across to the GPU is (no empty pointers arrays are copied across)
 */
 extern "C" source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
 
-extern "C" void copy_CPU_component_gains_to_GPU_beam_gains(components_t *components,
-  beam_gains_t *d_beam_gains, int num_gains);
 
+
+/**
+ * @brief Copies component gains from CPU to GPU beam gains. This function
+ * transfers the component gains stored in the CPU memory to the 
+ * GPU memory, specifically to the beam gains structure. It is used to ensure 
+ * that the GPU has the necessary data to perform computations involving beam gains.
+ * 
+ * @details Specifically, these member arrays `gxs, Dxs, Dys, gys` have memory allocated
+ * on GPU in `d_beam_gains` and are copied from the `components` CPU memory.
+ *
+ * @param components Pointer to the components structure containing the gains on the CPU.
+ * @param d_beam_gains Pointer to the beam gains structure on the GPU where the gains will be copied.
+ * @param num_gains The number of gains to be copied from the CPU to the GPU.
+ */
+extern "C" void copy_CPU_component_gains_to_GPU_beam_gains(components_t *components,
+                beam_gains_t *d_beam_gains, int num_gains);
+
+
+/**
+ * @brief Copies beam gains data from CPU memory to GPU memory.
+ * 
+ * @details Specifically, these member arrays `gxs, Dxs, Dys, gys` have memory allocated
+ * on GPU in `d_beam_gains` and are copied from the `beam_gains` CPU memory.
+ *
+ * @param beam_gains Pointer to the beam gains data in CPU memory.
+ * @param d_beam_gains Pointer to the beam gains data in GPU memory.
+ * @param num_gains The number of beam gains to copy.
+ */
 extern "C" void copy_CPU_beam_gains_to_GPU_beam_gains(beam_gains_t *beam_gains,
   beam_gains_t *d_beam_gains, int num_gains);
 
@@ -1181,14 +1208,138 @@ extern "C" void fill_ant_to_baseline_mapping_gpu(int num_ants, int *d_ant1_to_ba
                                                int *d_ant2_to_baseline_map);
 
 
+/**
+ * @brief Calculate the visibility response to a number `num_components`
+of either POINT or GAUSSIAN COMPONENTs, and sum the outputs to `sum_visi_*_real`,
+`sum_visi_*_imag` in `d_visibility_set`. Assumes all fluxes have been
+extrapolated to the requested frequencies.
+
+@details Runs `kern_calc_visi_point_or_gauss`.
+
+The code is almost exactly the same for POINT or GAUSSIANs, except when
+running with a Gaussian, a visiblity envelope is calculated as
+
+\f{eqnarray*}{
+\mathrm{V}_{\mathrm{env}}&=& \exp\left( -\frac{\pi^2}{4\ln(2)} \left( k_x^2\theta_{\mathrm{maj}}^2 + k_y^2\theta_{\mathrm{min}}^2\right) \right) \\
+k_x &=&  \cos(\phi_{PAj})v + \sin(\phi_{PAj})u \\
+k_y &=& -\sin(\phi_{PAj})v + \cos(\phi_{PAj})u
+\f}
+
+where \f$ \theta_{\mathrm{maj}}, \theta_{\mathrm{min}}, \phi_{PA} \f$ are the
+major axis, minor axis, and position angle. The visiblity equation is multipled
+by this envelope to modify from a POINT source into a GAUSSIAN
+ *
+@param[in] d_components components Pointer to a populated `components_t` struct as filled by `source_components::source_component_common`
+@param[in] d_component_beam_gains Pointer to a populated `beam_gains_t` struct as filled by `source_components::source_component_common`
+@param d_calc_visi_inouts The input/output parameters for visibility calculation.
+@param d_visibility_set The visibility set to update with the results.
+@param num_components The number of components.
+@param beamtype Beam type, see `woden_struct_defs.e_beamtype`
+@param comptype Component type, either POINT or GAUSSIAN
+@param woden_settings The filled WODEN settings struct
+ */
+extern "C" void calc_visi_point_or_gauss_gpu(components_t d_components,
+                                        beam_gains_t d_component_beam_gains,
+                                        calc_visi_inouts_t *d_calc_visi_inouts,
+                                        visibility_set_t *d_visibility_set,
+                                        int num_components, e_beamtype beamtype,
+                                        e_component_type comptype,
+                                        woden_settings_t *woden_settings);
+
+/**
+@brief the visibility response to a number `num_shapes` of
+SHAPELET COMPONENTs, and sum the outputs to `sum_visi_*_real`,
+`sum_visi_*_imag` in `d_visibility_set`. Assumes all fluxes have been
+extrapolated to the requested frequencies.
+
+@details Uses the functions `calc_measurement_equation_cpu` and `update_sum_visis_stokesI*_cpu`
+as detailed in `calc_visi_point_or_gauss_cpu` to calculate the visibilities in
+serial on the CPU. Furthermore calculates the visibility envelope
+\f$\mathrm{V}_{\mathrm{env}}\f$ to convert the basic visibility into a SHAPELET:
+
+\f{eqnarray*}{
+\mathrm{V}_{\mathrm{env}} &=& \sum^{n_k +n_l < n_\mathrm{max}}_{k,l} C_{n_k,n_l} B_{n_k,n_l}(k_x,k_y)\\
+k_x &=& \frac{\pi}{\sqrt{2\ln(2)}} \left[\cos(\phi_{PA})v_{\mathrm{comp}} + \sin(\phi_{PA})u_{\mathrm{comp}} \right] \\
+k_y &=& \frac{\pi}{\sqrt{2\ln(2)}} \left[-\sin(\phi_{PA})v_{\mathrm{comp}} + \cos(\phi_{PA})u_{\mathrm{comp}} \right]
+\f}
+
+where \f$ B_{n_k,n_l} \f$ is a stored 2D shapelet basis function from a look up
+table, of order \f$ n_k,n_l \f$ and scaled by the major and minor axis,
+\f$C_{n_k,n_l}\f$ is a scaling coefficient, and \f$ u_{\mathrm{comp}},
+v_{\mathrm{comp}} \f$ are visibility coordinates with the SHAPELET ra,dec as the
+phase centre. These should have been calculated using
+`fundamental_coords_gpu::kern_calc_uvw_shapelet`.
+
+This differs from `calc_visi_point_or_gauss_gpu`
+in that each SHAPELET component is built up from multiple shapelet basis
+functions, and so the kernel (and sometimes the sky model) is split over the
+shapelet basis functions, meaning multiple basis function calculations will
+use the same COMPONENT \f$l,m,n\f$. The array `components.param_indexes` is
+used to match the basis function information `components.n1s`, `components.n2s`,
+`components.shape_coeffs` to the COPMONENT information (e.g. `components.ls`).
+
+A further difference is that the shapelet \f$ u_{\mathrm{comp}},
+v_{\mathrm{comp}} \f$ used in the visibility envelope equation should
+be stored in metres only - for every baseline (fastest
+changing), every time step, and every SHAPELET component (slowest changing).
+They will be scaled by wavelength inside the kernel, as memory costs
+become prohibitive to store for every wavelength as well. The visibility \f$u,v,w\f$
+are stored for every baseline, wavelength, and time step.
+
+`sbf` is the shapelet basis function lookup table, and should have been
+generated with `create_sbf`
+ *
+@param[in] d_components components Pointer to a populated `components_t` struct as filled by `source_components::source_component_common`
+@param[in] d_component_beam_gains Pointer to a populated `beam_gains_t` struct as filled by `source_components::source_component_common`
+@param d_calc_visi_inouts The input/output parameters for visibility calculation.
+@param d_visibility_set The visibility set to update.
+@param num_shapes The number of shapelets.
+@param num_shape_coeffs The number of shapelet coefficients.
+@param beamtype The type of beam.
+@param woden_settings The WODEN settings.
+ */
+extern "C" void calc_visi_shapelets_gpu(components_t d_components,
+                                        beam_gains_t d_component_beam_gains,
+                                        calc_visi_inouts_t *d_calc_visi_inouts,
+                                        visibility_set_t *d_visibility_set,
+                                        int num_shapes, int num_shape_coeffs,
+                                        e_beamtype beamtype,
+                                        woden_settings_t *woden_settings);
+
+
+/**
+ * @brief Allocate memory for beam gains on GPU.
+ * 
+ * @details Allocates the following memory:
+  - `d_component_beam_gains->Dxs`
+  - `d_component_beam_gains->Dys`
+  - `d_component_beam_gains->gxs`
+  - `d_component_beam_gains->gys`
+
+  depending on what beamtype is given, the leakgages may or may not be allocated.
+ *
+ * @param d_component_beam_gains The beam gains struct to allocate memory in
+ * @param beamtype The type of beam.
+ * @param num_gains The number of gains.
+ */
+extern "C" void malloc_beam_gains_gpu(beam_gains_t *d_component_beam_gains,
+                                     int beamtype, int num_gains);
+
 
 //Wrapper kernels used in unit tests to test __device__ functions externally
 //These are not used in the main code
 
+/**
+ @brief Wrapper kernel to test `calc_measurement_equation_gpu` in unit tests. 
+*/
 __global__ void kern_calc_measurement_equation(int num_components, int num_baselines,
           user_precision_t *d_us, user_precision_t *d_vs, user_precision_t *d_ws,
           double *d_ls, double *d_ms, double *d_ns, gpuUserComplex *d_visis);
 
+/**
+ * @brief Wrapper kernel to test `apply_beam_gains_stokesI*_off_cardinal_gpu`
+ * and `apply_beam_gains_stokesI*_on_cardinal_gpu` in unit tests.
+ */
 __global__ void kern_apply_beam_gains(int num_gains,
           gpuUserComplex *d_g1xs, gpuUserComplex *d_D1xs,
           gpuUserComplex *d_D1ys, gpuUserComplex *d_g1ys,
@@ -1201,6 +1352,10 @@ __global__ void kern_apply_beam_gains(int num_gains,
           gpuUserComplex *d_visi_YXs, gpuUserComplex *d_visi_YYs, 
           int off_cardinal_dipoles, int do_QUV);
 
+/**
+ * @brief Wrapper kernel to test `get_beam_gains_gpu` and
+ * `get_beam_gains_multibeams_gpu` in unit tests.
+ */
 __global__ void kern_get_beam_gains(int num_components, int num_baselines,
            int num_freqs, int num_cross, int num_times, int beamtype,
            gpuUserComplex *d_g1xs, gpuUserComplex *d_D1xs,
@@ -1212,6 +1367,9 @@ __global__ void kern_get_beam_gains(int num_components, int num_baselines,
            int use_twobeams, int num_ants,
            int *d_ant1_to_baseline_map, int *d_ant2_to_baseline_map);
 
+/**
+ * @brief Wrapper kernel to test `update_sum_visis_stokesIQUV_gpu` in unit tests.
+ */
 __global__ void kern_update_sum_visis_stokesIQUV(int num_freqs,
      int num_baselines, int num_components, int num_times,
      int beamtype, int off_cardinal_dipoles,
@@ -1227,23 +1385,3 @@ __global__ void kern_update_sum_visis_stokesIQUV(int num_freqs,
      user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag);
 
 
-extern "C" void calc_visi_point_or_gauss_gpu(components_t d_components,
-                                        beam_gains_t d_component_beam_gains,
-                                        calc_visi_inouts_t *d_calc_visi_inouts,
-                                        visibility_set_t *d_visibility_set,
-                                        int num_components, e_beamtype beamtype,
-                                        e_component_type comptype,
-                                        woden_settings_t *woden_settings);
-
-extern "C" void calc_visi_shapelets_gpu(components_t d_components,
-                                        beam_gains_t d_component_beam_gains,
-                                        calc_visi_inouts_t *d_calc_visi_inouts,
-                                        visibility_set_t *d_visibility_set,
-                                        int num_shapes, int num_shape_coeffs,
-                                        e_beamtype beamtype,
-                                        woden_settings_t *woden_settings);
-
-
-
-extern "C" void malloc_beam_gains_gpu(beam_gains_t *d_component_beam_gains,
-                                     int beamtype, int num_gains);
