@@ -65,27 +65,27 @@ def print_variables(ms_path, prepend, latitude, longitude):
     
     
     
-    element_response_model = 'MWA'
-    coeff_path = '/home/jack-line/software/mwa_beam_files/mwa_full_embedded_element_pattern.h5'
-    apply_beam_norms = False
-    rotate = True
-    element_only = False
+    # element_response_model = 'MWA'
+    # coeff_path = '/home/jack-line/software/mwa_beam_files/mwa_full_embedded_element_pattern.h5'
+    # apply_beam_norms = False
+    # rotate = True
+    # element_only = False
     
-    mjd_sec_times  = np.array([time.mjd*24*3600 for time in times])
+    # mjd_sec_times  = np.array([time.mjd*24*3600 for time in times])
     
-    freqs = [1.2e+8]
-    station_ids = [0]
+    # freqs = [1.2e+8]
+    # station_ids = [0]
     
-    new_jones = run_mwa_beam(ms_path, element_response_model,
-                               coeff_path, 
-                               station_ids,
-                               [RA0], [DEC0],
-                               mjd_sec_times,
-                               lsts, [latitude]*2,
-                               freqs,
-                               apply_beam_norms=apply_beam_norms,
-                               parallactic_rotate=rotate,
-                               iau_order=True, element_only=element_only)
+    # new_jones = run_mwa_beam(ms_path, element_response_model,
+    #                            coeff_path, 
+    #                            station_ids,
+    #                            [RA0], [DEC0],
+    #                            mjd_sec_times,
+    #                            lsts, [latitude]*2,
+    #                            freqs,
+    #                            apply_beam_norms=apply_beam_norms,
+    #                            parallactic_rotate=rotate,
+    #                            iau_order=True, element_only=element_only)
     
     # print(new_jones)
     
@@ -96,6 +96,9 @@ if __name__ == "__main__":
     ms_path = "../../../test_installation/everybeam/MWA-single-timeslot.ms"
     print_variables(ms_path, "MWA", np.radians(LATITUDE_MWA), np.radians(LONGITUDE_MWA))
     
-    
     ms_path = "../../../test_installation/everybeam/LOFAR_HBA_MOCK.ms"
     print_variables(ms_path, "LOFAR", np.radians(LATITUDE_LOFAR), np.radians(LONGITUDE_LOFAR))
+    
+    ms_path = "../../../test_installation/everybeam/create_OSKAR-SKA_ms/OSKAR-SKA-layout.ms"
+    print_variables(ms_path, "SKA", np.radians(LATITUDE_MWA), np.radians(LONGITUDE_MWA))
+    

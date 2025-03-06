@@ -155,6 +155,8 @@ def create_woden_settings_struct(precision : str = "double"):
         :cvar c_int verbose: Boolean of whether to do verbose logging or not (0 False, 1 True)
         :cvar c_int normalise_primary_beam: Boolean of whether to normalise the primary beam (0 False, 1 True)
         :cvar POINTER(c_char) beam_ms_path:  Path to the beam model MS file for everybeam simulations
+        :cvar c_double eb_beam_ra0:  Right ascension to lock the EveryBeam primary beam centre to (radians)
+        :cvar c_double eb_beam_dec0:  Declination to lock the EveryBeam primary beam centre to (radians)
         """
         
         _fields_ = [("lst_base", c_double),
@@ -204,7 +206,9 @@ def create_woden_settings_struct(precision : str = "double"):
                     ("do_gpu", c_int),
                     ("verbose", c_int),
                     ("normalise_primary_beam", c_int),
-                    ("beam_ms_path", POINTER(c_char))]
+                    ("beam_ms_path", POINTER(c_char)),
+                    ("eb_beam_ra0", c_double),
+                    ("eb_beam_dec0", c_double),]
         
     return Woden_Settings
 
@@ -312,6 +316,10 @@ def fill_woden_settings_python(args : argparse.Namespace,
     elif args.primary_beam == 'everybeam_MWA':
         woden_settings.beamtype = BeamTypes.EB_MWA.value
         
+    if woden_settings.beamtype in BeamGroups.eb_beam_values:
+        woden_settings.eb_beam_ra0 = float(args.eb_ra_point)*D2R
+        woden_settings.eb_beam_dec0 = float(args.eb_dec_point)*D2R
+        
     if args.no_precession:
         woden_settings.do_precession = 0
     else:
@@ -360,7 +368,10 @@ def fill_woden_settings_python(args : argparse.Namespace,
     else:
         woden_settings.normalise_primary_beam = 1
         
-    woden_settings.beam_ms_path = args.beam_ms_path
+    if args.pointed_ms_file_name:
+        woden_settings.beam_ms_path = args.pointed_ms_file_name.as_posix()
+    else:
+        woden_settings.beam_ms_path = args.beam_ms_path
     
     return woden_settings
     
@@ -394,7 +405,7 @@ def setup_lsts_and_phase_centre(woden_settings_python : Woden_Settings_Python,
     woden_settings_python.sdec0 = np.sin(woden_settings_python.dec0)
     woden_settings_python.cdec0 = np.cos(woden_settings_python.dec0)
 
-    logger.info("Setting phase centre RA,DEC {:.5f}deg {:.5f}deg".format(woden_settings_python.ra0/DD2R, woden_settings_python.dec0/DD2R))
+    # logger.info("Setting phase centre RA,DEC {:.5f}deg {:.5f}deg".format(woden_settings_python.ra0/DD2R, woden_settings_python.dec0/DD2R))
     
     ##Calculate all lsts for this observation
     ##Used in some python calcs later, and by the C code, so store a ctypes
@@ -409,7 +420,7 @@ def setup_lsts_and_phase_centre(woden_settings_python : Woden_Settings_Python,
     woden_settings_python.mjds = np.empty(woden_settings_python.num_time_steps, dtype=np.float64)
     
     mjd = woden_settings_python.jd_date - 2400000.5
-
+    
     for time_step in range(woden_settings_python.num_time_steps):
         
         ##Add on the angle accrued by current time step to the base LST
@@ -515,6 +526,8 @@ def convert_woden_settings_to_ctypes(woden_settings_python : Woden_Settings_Pyth
         
     if woden_settings_ctypes.beamtype in BeamGroups.eb_beam_values:
         woden_settings_ctypes.beam_ms_path = create_string_buffer(woden_settings_python.beam_ms_path.encode('utf-8'))
+        woden_settings_ctypes.eb_beam_ra0 = woden_settings_python.eb_beam_ra0
+        woden_settings_ctypes.eb_beam_dec0 = woden_settings_python.eb_beam_dec0
     
     # if woden_settings_ctypes.use_dipamps:
     woden_settings_ctypes.mwa_dipole_amps = woden_settings_python.mwa_dipole_amps.ctypes.data_as(POINTER(c_double))

@@ -18,6 +18,7 @@ import ctypes
 from wodenpy.wodenpy_setup.woden_logger import simple_logger
 from logging import Logger
 from casacore.tables import table, taql
+from wodenpy.use_libwoden.beam_settings import BeamTypes
 
 
 ##This call is so we can use it as a type annotation
@@ -33,8 +34,13 @@ def get_num_stations(ms_path : str) -> int:
         
     return num_stations
 
-def create_filtered_ms(ms_path : str, new_ms_path : str, ra0 : float, dec0 : float):
+def create_filtered_ms(ms_path : str, new_ms_path : str,
+                       ra0 : float, dec0 : float):
     
+    ##Find out telescope type
+    with table(ms_path + "/OBSERVATION", ack=False) as tb:
+        telescope_name = tb.getcol("TELESCOPE_NAME")[0]  # Get first entry
+        
     ##First up, read in original MS, and filter it to only have 
     ## the first time and frequency channel
     with table(ms_path, readonly=True) as ms:
@@ -54,12 +60,11 @@ def create_filtered_ms(ms_path : str, new_ms_path : str, ra0 : float, dec0 : flo
         
     with table(new_ms_path+'::FIELD', readonly=False) as field_table:
         
-        delay_dir = field_table.getcol('DELAY_DIR')
-        print(delay_dir.shape)
-        
         field_table.putcol('DELAY_DIR', np.array([[[ra0, dec0]]]))
-        field_table.putcol('LOFAR_TILE_BEAM_DIR', np.array([[[ra0, dec0]]]))
         field_table.putcol('REFERENCE_DIR', np.array([[[ra0, dec0]]]))
+        
+        if telescope_name == "LOFAR":
+            field_table.putcol('LOFAR_TILE_BEAM_DIR', np.array([[[ra0, dec0]]]))
 
 def check_ms_telescope_type_matches_element_response(ms_path : str,
                                                      element_response_model : str = 'default',
@@ -242,7 +247,17 @@ def run_everybeam(ms_path : str, coeff_path : str,
         
     elif telescope_type == 'LOFAR':
         jones = run_lofar_beam(ms_path, checked_element_response_model,
-                               coeff_path, station_ids,
+                               station_ids,
+                               beam_ra0, beam_dec0,
+                               ras, decs, mjd_sec_times, freqs,
+                               apply_beam_norms=apply_beam_norms,
+                               parallactic_rotate=parallactic_rotate,
+                               iau_order=iau_order,
+                               element_only=element_only)
+        
+    elif telescope_type == 'OSKAR':
+        jones = run_oskar_beam(ms_path, checked_element_response_model,
+                               station_ids,
                                beam_ra0, beam_dec0,
                                ras, decs, mjd_sec_times, freqs,
                                apply_beam_norms=apply_beam_norms,
@@ -251,7 +266,8 @@ def run_everybeam(ms_path : str, coeff_path : str,
                                element_only=element_only)
         
     else:
-        jones = False
+        logger.error("Unknown telescope type. Exiting now.")
+        exit()
     
     return jones
 
@@ -498,11 +514,7 @@ def run_everybeam_over_threads(num_threads : int,
     
     return all_jones
 
-
-
-
 def run_lofar_beam(ms_path : str, element_response_model : bool,
-                   coeff_path : str,
                    station_idxs : np.ndarray,
                    beam_ra0 : float, beam_dec0 : float,
                    ras : np.ndarray, decs : np.ndarray,
@@ -544,11 +556,10 @@ def run_lofar_beam(ms_path : str, element_response_model : bool,
     
     ms_path_ctypes = ctypes.c_char_p(ms_path.encode('utf-8'))
     element_response_model_ctypes = ctypes.c_char_p(element_response_model.encode('utf-8'))
-    coeff_path_ctypes = ctypes.c_char_p(coeff_path.encode('utf-8'))
     
     jones = ((num_stations*num_times*num_freqs*num_dirs*4)*c_double_complex)()
     
-    load_and_run_lofar_beam.argtypes = [c_char_p, c_char_p, c_char_p,
+    load_and_run_lofar_beam.argtypes = [c_char_p, c_char_p,
                                         c_int, POINTER(c_int),
                                         c_int, c_double, c_double,
                                         POINTER(c_double), POINTER(c_double),
@@ -559,7 +570,6 @@ def run_lofar_beam(ms_path : str, element_response_model : bool,
     
     load_and_run_lofar_beam(ms_path_ctypes,
                             element_response_model_ctypes,
-                            coeff_path_ctypes,
                             num_stations, station_idxs_ctypes,
                             num_dirs,
                             beam_ra0, beam_dec0,
@@ -580,6 +590,80 @@ def run_lofar_beam(ms_path : str, element_response_model : bool,
     
     return jones_py
 
+def run_oskar_beam(ms_path : str, element_response_model : bool,
+                   station_idxs : np.ndarray,
+                   beam_ra0 : float, beam_dec0 : float,
+                   ras : np.ndarray, decs : np.ndarray,
+                   mjd_sec_times : np.ndarray,
+                   freqs : np.ndarray,
+                   apply_beam_norms : bool,
+                   parallactic_rotate : bool,
+                   iau_order : bool = True,
+                   element_only : bool = False):
+    
+    woden_path = importlib_resources.files(wodenpy).joinpath(f"libuse_everybeam.so")
+    woden_lib = ctypes.cdll.LoadLibrary(woden_path)
+    
+    load_and_run_oskar_beam = woden_lib.load_and_run_oskar_beam
+    
+    num_stations = len(station_idxs)
+    num_dirs = len(ras)
+    num_freqs = len(freqs)
+    num_times = len(mjd_sec_times)
+    
+    ras_ctypes = (ctypes.c_double * num_dirs)()
+    decs_ctypes = (ctypes.c_double * num_dirs)()
+    for i in range(num_dirs):
+        ras_ctypes[i] = ras[i]
+        decs_ctypes[i] = decs[i]
+        
+    mjd_sec_times_ctypes = (ctypes.c_double * num_times)()
+    for i in range(num_times):
+        mjd_sec_times_ctypes[i] = mjd_sec_times[i]
+        
+    freqs_ctypes = (ctypes.c_double * num_freqs)()
+    for i in range(num_freqs):
+        freqs_ctypes[i] = freqs[i]
+    
+    station_idxs_ctypes = (ctypes.c_int * num_stations)()
+    for i in range(num_stations):
+        station_idxs_ctypes[i] = station_idxs[i]
+    
+    
+    ms_path_ctypes = ctypes.c_char_p(ms_path.encode('utf-8'))
+    element_response_model_ctypes = ctypes.c_char_p(element_response_model.encode('utf-8'))
+    
+    jones = ((num_stations*num_times*num_freqs*num_dirs*4)*c_double_complex)()
+    
+    load_and_run_oskar_beam.argtypes = [c_char_p, c_char_p, 
+                                        c_int, POINTER(c_int),
+                                        c_int, c_double, c_double,
+                                        POINTER(c_double), POINTER(c_double),
+                                        c_int, POINTER(c_double),
+                                        c_int, POINTER(c_double),
+                                        c_bool, c_bool, c_bool, c_bool,
+                                        POINTER(c_double_complex)]
+    
+    load_and_run_oskar_beam(ms_path_ctypes,
+                            element_response_model_ctypes,
+                            num_stations, station_idxs_ctypes,
+                            num_dirs,
+                            beam_ra0, beam_dec0,
+                            ras_ctypes, decs_ctypes,
+                            num_times, mjd_sec_times_ctypes,
+                            num_freqs, freqs_ctypes,
+                            apply_beam_norms, parallactic_rotate,
+                            element_only, iau_order,
+                            jones)
+    
+    # print(jones)
+    
+    jones_py = np.ctypeslib.as_array(jones, shape=(num_stations*num_times*num_freqs*num_dirs*4))
+    jones_py = jones_py['real'] + 1j*jones_py['imag']
+    
+    jones_py = jones_py.reshape(num_stations, num_times, num_freqs, num_dirs, 2, 2)
+    
+    return jones_py
 
 
 def run_mwa_beam(ms_path : str, element_response_model : bool,

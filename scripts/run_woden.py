@@ -23,7 +23,7 @@ from wodenpy.observational.calc_obs import get_uvfits_date_and_position_constant
 from wodenpy.skymodel.woden_skymodel import crop_below_horizon
 from wodenpy.skymodel.read_skymodel import get_skymodel_tables, read_radec_count_components, create_source_catalogue_from_python_sources
 from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map, reshape_chunked_skymodel_map_sets, Skymodel_Chunk_Map
-from wodenpy.array_layout.create_array_layout import calc_XYZ_diffs, enh2xyz, Array_Layout_Python, convert_array_layout_to_ctypes
+from wodenpy.array_layout.create_array_layout import calc_XYZ_diffs, enh2xyz, Array_Layout_Python, convert_array_layout_to_ctypes, setup_array_layout_python
 from wodenpy.use_libwoden.array_layout_struct import Array_Layout_Ctypes
 from wodenpy.uvfits.wodenpy_uvfits import make_antenna_table, make_baseline_date_arrays, create_uvfits
 from wodenpy.phase_rotate.remove_phase_track import remove_phase_tracking
@@ -43,6 +43,7 @@ from copy import deepcopy
 import multiprocessing
 from datetime import timedelta
 import traceback
+import shutil
 
 # ##Miiiiight give us a speed up on Linux??
 # try:
@@ -220,12 +221,6 @@ def woden_worker(thread_ind : int,
             visi_sets_python[band_ind].sum_visi_YX_imag += np.ctypeslib.as_array(visibility_set[band_ind].sum_visi_YX_imag, shape=(woden_settings_python.num_visis,))
             visi_sets_python[band_ind].sum_visi_YY_real += np.ctypeslib.as_array(visibility_set[band_ind].sum_visi_YY_real, shape=(woden_settings_python.num_visis,))
             visi_sets_python[band_ind].sum_visi_YY_imag += np.ctypeslib.as_array(visibility_set[band_ind].sum_visi_YY_imag, shape=(woden_settings_python.num_visis,))
-            
-        # if profile:
-        #     profiler.disable()
-        #     profile_filename = f"wod_woden_worker_{os.getpid()}_{round_num:04d}.lprof"
-        #     # logger.info("Dumping profile to", profile_filename)
-        #     profiler.dump_stats(profile_filename)
             
         return visi_sets_python, thread_ind, round_num
     except Exception as e:
@@ -601,14 +596,24 @@ def main(argv=None):
     
     woden_start = time()
     
+    ##Find out what git/release version we are using, and where the code lives
+    gitlabel = get_code_version()
+    
+    if not argv:
+        argv = sys.argv[1:]
+
+    if '--version' in argv:
+        print(f"You are using wodenpy version/git hash: {gitlabel}")
+        sys.exit()
+    
     ##Grab the parser and parse some args
     parser = get_parser()
     args = parser.parse_args(argv)
+    
+    
+    
     ##Check that the input arguments make sense
     args = check_args(args)
-    
-    ##Find out what git/release version we are using, and where the code lives
-    gitlabel = get_code_version()
     
     if args.num_threads == 1:
         serial_mode = True
@@ -642,8 +647,13 @@ def main(argv=None):
     ##fill the lst and mjds fields, precessing if necessary
     lsts, latitudes = setup_lsts_and_phase_centre(woden_settings_python, main_logger)
     
+    ##Precessing the array can be expensive if there are 1000s of time steps
+    ##so only calculate it if we need to
+    if args.dry_run:
+        array_layout_python = setup_array_layout_python(woden_settings_python, args)
+    else:
     ##calculate the array layout
-    array_layout_python = calc_XYZ_diffs(woden_settings_python, args, main_logger)
+        array_layout_python = calc_XYZ_diffs(woden_settings_python, args, main_logger)
     
     ##report what beam type we are using
     log_chosen_beamtype(main_logger, woden_settings_python, args)
@@ -844,6 +854,12 @@ def main(argv=None):
                         telescope_name=args.telescope_name,
                         IAU_order=args.IAU_order,
                         comment=args.command)
+            
+    if args.pointed_ms_file_name and not args.dry_run:
+        main_logger.info(f"Deleting {args.pointed_ms_file_name}...")
+        shutil.rmtree(args.pointed_ms_file_name)
+        main_logger.info(f"Done")
+        
             
     woden_end = time()
     time_passed = timedelta(seconds=woden_end - woden_start)

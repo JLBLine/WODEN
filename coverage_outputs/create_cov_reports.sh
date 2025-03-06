@@ -71,7 +71,7 @@ if [ "$do_python" = "True" ]; then
     ##run_setup
     coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/test_argument_inputs.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/test_get_code_version.py
-    coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/test_make_logger.py
+    # coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/test_make_logger.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/test_log_chosen_beamtype.py
 
     ##scripts
@@ -90,9 +90,9 @@ fi
 
 
 ##delete things that were written out by running tests
-rm WODEN_array_layout.txt *.uvfits *.json \
+rm -r WODEN_array_layout.txt *.uvfits *.json \
     example.txt test_load_data.dat test_full_skymodel* \
-    woden_settings.txt *.so *.png *.npz  *.lprof *.log
+    woden_settings.txt *.so *.png *.npz  *.lprof *.log *.ms
 
 ##Use this to create two local reports, one for C and one for python
 ##Only uncomment if you want to see the reports locally without pushing to codecov

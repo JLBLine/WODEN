@@ -357,6 +357,8 @@ typedef struct _woden_settings_t {
   int verbose; /*!< Boolean of whether to print out verbose information or not (0 False, 1 True)*/
   int normalise_primary_beam; /*!< Boolean of whether to normalise the primary beam (0 False, 1 True) */
   const char* beam_ms_path; /*!< Path to a measurement set for EveryBeam */
+  double eb_beam_ra0; /*!< Right ascension to lock the EveryBeam primary beam centre to (radians) */
+  double eb_beam_dec0; /*!< Declination to lock the EveryBeam primary beam centre to (radians) */
 
 } woden_settings_t;
 

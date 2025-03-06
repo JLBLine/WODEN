@@ -72,4 +72,16 @@ foreach(PRECISION IN LISTS DOUBLE)
   add_test(CXX_test_run_mwa_beam_${PRECISION}
           test_run_mwa_beam_${PRECISION}_app)
 
+  add_executable(test_run_oskar_beam_${PRECISION}_app
+                 test_run_oskar_beam.c
+  )
+  target_link_libraries(test_run_oskar_beam_${PRECISION}_app
+      Unity gcov
+      use_everybeam
+  )
+  target_compile_options(test_run_oskar_beam_${PRECISION}_app
+                                                          PRIVATE ${C_FLAGS})
+  add_test(CXX_test_run_oskar_beam_${PRECISION}
+          test_run_oskar_beam_${PRECISION}_app)
+
 endforeach()

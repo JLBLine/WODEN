@@ -35,7 +35,6 @@ void do_run_lofar_beam(const char *ms_path, bool apply_beam_norms,
                        bool rotate, bool element_only, bool iau_order,
                        double _Complex * jones) {
 
-  const char coeff_path[] = "";
   const char element_response_model[] = "hamaker";
 
   int eb_status = 0;
@@ -54,7 +53,6 @@ void do_run_lofar_beam(const char *ms_path, bool apply_beam_norms,
   int station_idxs[NUM_STATIONS] = {0, 9};
 
   eb_status = load_and_run_lofar_beam(ms_path, element_response_model,
-                          coeff_path,
                           NUM_STATIONS, station_idxs,
                           NUM_DIRS, RA0_LBA, DEC0_LBA, ras, decs,
                           NUM_TIMES, mjd_sec_times, NUM_FREQS, freqs,
@@ -92,7 +90,7 @@ void test_run_lba_telescope_rotate(void) {
   bool apply_beam_norms = false;
   bool rotate = true;
   bool element_only = false;
-  bool iau_order = false;
+  bool iau_order = true;
 
   double _Complex *jones = malloc(4*NUM_DIRS*NUM_TIMES*NUM_FREQS*NUM_STATIONS*sizeof(double _Complex));
 
@@ -110,7 +108,7 @@ void test_run_lba_telescope_rotate_normed(void) {
   bool apply_beam_norms = true;
   bool rotate = true;
   bool element_only = false;
-  bool iau_order = false;
+  bool iau_order = true;
 
   double _Complex *jones = malloc(4*NUM_DIRS*NUM_TIMES*NUM_FREQS*NUM_STATIONS*sizeof(double _Complex));
 
@@ -128,7 +126,7 @@ void test_run_lba_telescope_reordered(void) {
   bool apply_beam_norms = false;
   bool rotate = false;
   bool element_only = false;
-  bool iau_order = true;
+  bool iau_order = false;
 
   double _Complex *jones = malloc(4*NUM_DIRS*NUM_TIMES*NUM_FREQS*NUM_STATIONS*sizeof(double _Complex));
 

@@ -164,7 +164,7 @@ extern "C" void destroy_everybeam_telescope(Telescope* telescope) {
   delete telescope;
 }
 
-extern "C" void run_lofar_beam(Telescope *telescope,
+extern "C" void run_phased_array_beam(Telescope *telescope,
                                int num_stations, int *station_idxs,
                                int num_dirs,
                                double ra0, double dec0,
@@ -239,13 +239,6 @@ extern "C" void run_lofar_beam(Telescope *telescope,
 
           int jones_index = 4*(si*num_times*num_freqs*num_dirs + ti*num_freqs*num_dirs + fi*num_dirs + ci);
 
-          if (apply_beam_norms) {
-            // std::printf("response[0] before: %.8f\n", response[0].real());
-            aocommon::MC2x2::ATimesB(normed, norm, response);
-            response = normed; 
-            // std::printf("response[0] after: %.8f\n", response[0].real());
-          }
-
           // std::printf("%d %d %d %d: %.5f %.5f, %.5f %.5f, %.5f %.5f, %.5f %.5f\n",
           //                               si, ti, fi, ci,
           //                               response[0].real(), response[0].imag(),
@@ -253,16 +246,30 @@ extern "C" void run_lofar_beam(Telescope *telescope,
           //                               response[2].real(), response[2].imag(),
           //                               response[3].real(), response[3].imag());
 
+          if (apply_beam_norms) {
+            // std::printf("response[0] before: %.8f\n", response[0].real());
+            aocommon::MC2x2::ATimesB(normed, norm, response);
+            response = normed; 
+            // std::printf("response[0] after: %.8f\n", response[0].real());
+          }
+
+          // std::printf("normed %d %d %d %d: %.5f %.5f, %.5f %.5f, %.5f %.5f, %.5f %.5f\n",
+          //                               si, ti, fi, ci,
+          //                               response[0].real(), response[0].imag(),
+          //                               response[1].real(), response[1].imag(),
+          //                               response[2].real(), response[2].imag(),
+          //                               response[3].real(), response[3].imag());
+
           if (iau_order){
-            jones[jones_index + 0] = {response[3].real(), response[3].imag()};
-            jones[jones_index + 1] = {response[2].real(), response[2].imag()};
-            jones[jones_index + 2] = {response[1].real(), response[1].imag()};
-            jones[jones_index + 3] = {response[0].real(), response[0].imag()};
-          } else {
             jones[jones_index + 0] = {response[0].real(), response[0].imag()};
             jones[jones_index + 1] = {response[1].real(), response[1].imag()};
             jones[jones_index + 2] = {response[2].real(), response[2].imag()};
             jones[jones_index + 3] = {response[3].real(), response[3].imag()};
+          } else {
+            jones[jones_index + 0] = {response[3].real(), response[3].imag()};
+            jones[jones_index + 1] = {response[2].real(), response[2].imag()};
+            jones[jones_index + 2] = {response[1].real(), response[1].imag()};
+            jones[jones_index + 3] = {response[0].real(), response[0].imag()};
           }
           // std::printf("s%d t%d f%d c%d: %.10f %.10f, %.10f %.10f, %.10f %.10f, %.10f %.10f\n",
           //   si, ti, fi, ci,
@@ -279,7 +286,6 @@ extern "C" void run_lofar_beam(Telescope *telescope,
 
 extern "C" int load_and_run_lofar_beam(const char *ms_path,
                                        const char *element_response_model,
-                                       const char *coeff_path,
                                        int num_stations, int *station_idxs,
                                        int num_dirs,
                                        double ra0, double dec0,
@@ -294,12 +300,46 @@ extern "C" int load_and_run_lofar_beam(const char *ms_path,
   bool use_differential_beam = false;
   bool use_channel_frequency = true;
   bool use_local_mwa = true;
+  const char *coeff_path = "";
   
   Telescope *telescope = load_everybeam_telescope(&status, ms_path, element_response_model,
                                                   use_differential_beam, use_channel_frequency,
                                                   coeff_path, use_local_mwa);
 
-  run_lofar_beam(telescope, num_stations, station_idxs,
+  run_phased_array_beam(telescope, num_stations, station_idxs,
+                 num_dirs, ra0, dec0, ras, decs,
+                 num_times, mjd_sec_times, num_freqs, freqs,
+                 apply_beam_norms, parallactic_rotate, element_only, iau_order,
+                 jones);
+
+  destroy_everybeam_telescope(telescope);
+
+  return status;
+}
+
+extern "C" int load_and_run_oskar_beam(const char *ms_path,
+                                       const char *element_response_model,
+                                       int num_stations, int *station_idxs,
+                                       int num_dirs,
+                                       double ra0, double dec0,
+                                       double *ras, double *decs,
+                                       int num_times, double *mjd_sec_times,
+                                       int num_freqs, double *freqs,
+                                       bool apply_beam_norms, bool parallactic_rotate,
+                                       bool element_only,  bool iau_order,
+                                       double _Complex * jones) {
+
+  int status = 0;
+  bool use_differential_beam = false;
+  bool use_channel_frequency = true;
+  bool use_local_mwa = true;
+  const char *coeff_path = "";
+
+  Telescope *telescope = load_everybeam_telescope(&status, ms_path, element_response_model,
+                                                  use_differential_beam, use_channel_frequency,
+                                                  coeff_path, use_local_mwa);
+
+  run_phased_array_beam(telescope, num_stations, station_idxs,
                  num_dirs, ra0, dec0, ras, decs,
                  num_times, mjd_sec_times, num_freqs, freqs,
                  apply_beam_norms, parallactic_rotate, element_only, iau_order,

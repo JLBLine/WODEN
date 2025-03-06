@@ -27,6 +27,11 @@ double MWA_para_angles[] ={0.00000000, 1.75537303};
 double LOFAR_mjds[] ={57050.84349547, 57050.96849547};
 double LOFAR_lsts[] ={1.36655619, 2.15410469};
 
+#define SKA_RA0 0.00000000
+#define SKA_DEC0 -0.52359878
+double SKA_mjds[] ={60512.84237269, 60512.96737269};
+double SKA_lsts[] ={4.36691696, 5.15446548};
+
 void set_azza_para(source_catalogue_t *cropped_sky_models,
                     int n_points, int n_gauss, int n_shapes, int num_sources,
                     int beamtype){
@@ -109,6 +114,12 @@ void set_mjds(woden_settings_t *woden_settings, int beamtype){
         woden_settings->mjds[time_ind] = LOFAR_mjds[time_ind];
       }
     }
+
+    else {
+      for (int time_ind = 0; time_ind < NUM_TIME_STEPS; time_ind++) {
+        woden_settings->mjds[time_ind] = SKA_mjds[time_ind];
+      }
+    }
 }
 
 
@@ -124,6 +135,8 @@ void test_calculate_visibilities_EveryBeam(int n_points, int n_gauss, int n_shap
     dec0 = MWA_DEC0;
   } else if (beamtype == EB_LOFAR) {
     dec0 = LOFAR_DEC0;
+  } else {
+    dec0 = SKA_DEC0;
   }
 
 
@@ -141,6 +154,8 @@ void test_calculate_visibilities_EveryBeam(int n_points, int n_gauss, int n_shap
   woden_settings->beam_ms_path = beam_ms_path;
   woden_settings->hdf5_beam_path = getenv("MWA_FEE_HDF5");
   woden_settings->off_cardinal_dipoles = 0;
+  woden_settings->eb_beam_ra0 = RA0;
+  woden_settings->eb_beam_dec0 = dec0;
 
   if (beamtype == EB_MWA) {
     woden_settings->single_everybeam_station = 1;

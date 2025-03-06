@@ -59,6 +59,10 @@ class PretendArgs():
         self.no_beam_normalisation = False
         self.beam_ms_path = ""
         
+        self.pointed_ms_file_name = False
+        self.eb_ra_point = 0.0
+        self.eb_dec_point = -26.7
+        
     def __init__(self):
         self.make_basic_args()
 
@@ -368,11 +372,13 @@ class Test(unittest.TestCase):
         self.assertTrue(woden_settings.off_cardinal_dipoles)
         
         ##Next, check it gets switched on given the right primary beam
-        self.make_basic_inputs('double')
-        self.args.primary_beam = 'everybeam_LOFAR'
-        woden_settings = self.call_fill_woden_settings_python()
-        self.check_basic_inputs(woden_settings)
-        self.assertTrue(woden_settings.off_cardinal_dipoles)
+        ##Example of when it might be turned on auto-magically; for now,
+        ##only turned on if requested by the user
+        # self.make_basic_inputs('double')
+        # self.args.primary_beam = 'everybeam_LOFAR'
+        # woden_settings = self.call_fill_woden_settings_python()
+        # self.check_basic_inputs(woden_settings)
+        # self.assertTrue(woden_settings.off_cardinal_dipoles)
         
     def test_cpu_mode(self):
         """Test that the `cpu_mode` flag gets propagated correctly and sets

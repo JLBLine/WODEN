@@ -426,23 +426,18 @@ void source_component_common(woden_settings_t *woden_settings,
                     jones);
     }
 
-    if (beam_settings->beamtype == EB_LOFAR) {
+    if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR) {
 
-      //TODO get this beam_ra0, beam_dec0 into woden_settings.
-      //Either have it set by original measurement set, or locked to phase
-      //centre by manually fiddling the base measurement set.
-      double beam_ra0 = woden_settings->ra0;
-      double beam_dec0 = woden_settings->dec0;
-
-      run_lofar_beam(beam_settings->everybeam_telescope,
-                     num_beams, station_idxs, num_components,
-                     beam_ra0, beam_dec0,
-                     components->ras, components->decs,
-                     num_times, mjd_sec_times,
-                     num_freqs, cpu_freqs,
-                     woden_settings->normalise_primary_beam,
-                     rotate, element_only, iau_order,
-                     jones);
+      run_phased_array_beam(beam_settings->everybeam_telescope,
+                            num_beams, station_idxs, num_components,
+                            woden_settings->eb_beam_ra0,
+                            woden_settings->eb_beam_dec0,
+                            components->ras, components->decs,
+                            num_times, mjd_sec_times,
+                            num_freqs, cpu_freqs,
+                            woden_settings->normalise_primary_beam,
+                            rotate, element_only, iau_order,
+                            jones);
 
     }
 

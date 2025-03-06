@@ -26,7 +26,7 @@ Telescope* load_everybeam_telescope(int * status, const char *ms_path,
 // Function to delete a Telescope instance
 void destroy_everybeam_telescope(Telescope* telescope);
 
-void run_lofar_beam(Telescope *telescope,
+void run_phased_array_beam(Telescope *telescope,
                     int num_stations, int *station_idxs,
                     int num_dirs,
                     double ra0, double dec0,
@@ -39,7 +39,18 @@ void run_lofar_beam(Telescope *telescope,
 
 int load_and_run_lofar_beam(const char *ms_path,
                             const char *element_response_model,
-                            const char *coeff_path,
+                            int num_stations, int *station_idxs,
+                            int num_dirs,
+                            double ra0, double dec0,
+                            double *ras, double *decs,
+                            int num_times, double *mjd_sec_times,
+                            int num_freqs, double *freqs,
+                            bool apply_beam_norms, bool parallactic_rotate,
+                            bool element_only, bool iau_order,
+                            double _Complex * jones);
+
+int load_and_run_oskar_beam(const char *ms_path,
+                            const char *element_response_model,
                             int num_stations, int *station_idxs,
                             int num_dirs,
                             double ra0, double dec0,

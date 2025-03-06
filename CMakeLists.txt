@@ -85,8 +85,6 @@ find_package(EveryBeam NO_MODULE QUIET HINTS ${HINTS_EVERYBEAM})
 set(USE_EVERYBEAM FALSE)
 
 if(${EVERYBEAM_FOUND})
-    # include_directories(${EVERYBEAM_INCLUDE_DIRS})
-    # add_definitions(-DHAVE_EVERYBEAM)
     message(STATUS "EveryBeam library found.")
 
     ## Only look for casacore if we have EveryBeam

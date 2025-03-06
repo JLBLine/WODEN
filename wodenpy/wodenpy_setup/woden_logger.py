@@ -56,6 +56,7 @@ def summarise_input_args(logger, args):
     
     input_str = "Input arguments after parsing:"
     
+    input_str += f"\n\tPhase centre: {args.ra0:.5f}, {args.dec0:.5f} deg"
     input_str += f"\n\tArray central latitude: {args.latitude:.3f} deg"
     input_str += f"\n\tArray central longitude: {args.longitude:.3f} deg"
     input_str += f"\n\tArray central height: {args.array_height:.3f} m"
@@ -73,6 +74,8 @@ def summarise_input_args(logger, args):
         input_str += f"\n\tHave read {args.num_antennas} antenna positions from measurement set: {args.beam_ms_path}"
     else:
         input_str += f"\n\tHave read {args.num_antennas} antenna positions from array layout file: {args.array_layout}"
+        
+    input_str += f"\n\tWill write outputs to: {args.output_dir}"
     
     logger.info(input_str)
     
@@ -100,7 +103,7 @@ def set_woden_logger(logging_level = logging.DEBUG, log_file = False):
     logger = logging.getLogger(__name__)
     logger.setLevel(logging_level)
     
-    stream_handler = logging.StreamHandler()
+    stream_handler = logging.StreamHandler(sys.stdout)
     stream_handler.setLevel(logging_level)
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
@@ -139,8 +142,34 @@ def _mwa_beam_settings_string(logger, woden_settings, args):
         out_string += "\n\twill not flag any dipoles"
         
     if args.use_MWA_dipamps or args.use_MWA_dipflags:
-        out_string += f"\n\tmetafits file: {args.metafits_path}"
+        out_string += f"\n\tmetafits file: {args.metafits_filename}"
             
+    return out_string
+
+def _everybeam_settings_string(logger, woden_settings, args):
+    
+    if woden_settings.beamtype == BeamTypes.EB_OSKAR.value:
+        beam = "OSKAR"
+    elif woden_settings.beamtype == BeamTypes.EB_LOFAR.value:
+        beam = "LOFAR"
+    elif woden_settings.beamtype == BeamTypes.EB_MWA.value:
+        beam = "MWA"
+    
+    out_string = f"Will run with EveryBeam {beam} primary beam, based on this measurement set:\n"
+    out_string +=  f"\t{args.beam_ms_path}\n"
+    
+    if beam == "MWA":
+        out_string += f"Using the following hdf5 file:\n"
+        out_string += f"\t{woden_settings.hdf5_beam_path}\n"
+        
+    if args.pointed_ms_file_name:
+        out_string += f"Created the following minimal MS to point the beam:\n"
+        out_string += f"\t{args.pointed_ms_file_name}\n"
+        
+    if beam == "LOFAR" or beam == "OSKAR":
+        out_string += f"Primary beam is pointed at RA,Dec = {args.eb_ra_point}, {args.eb_dec_point} deg\n"
+        
+
     return out_string
 
 def log_chosen_beamtype(logger, woden_settings, args):
@@ -154,11 +183,8 @@ def log_chosen_beamtype(logger, woden_settings, args):
                     f"Dec {np.degrees(woden_settings.gauss_dec_point)} deg\n"
                     f"\tFWHM: {woden_settings.gauss_beam_FWHM} at "
                     f"reference frequency: {woden_settings.gauss_beam_ref_freq/1e+6} MHz")
-    elif woden_settings.beamtype == BeamTypes.FEE_BEAM.value:
-       mwa_beam_string = _mwa_beam_settings_string(logger, woden_settings, args)
-       logger.info(mwa_beam_string)
-       
-    elif woden_settings.beamtype == BeamTypes.FEE_BEAM_INTERP.value:
+
+    elif woden_settings.beamtype == BeamTypes.FEE_BEAM_INTERP.value or woden_settings.beamtype == BeamTypes.FEE_BEAM.value:
         mwa_beam_string = _mwa_beam_settings_string(logger, woden_settings, args)
         logger.info(mwa_beam_string)
         
@@ -169,18 +195,10 @@ def log_chosen_beamtype(logger, woden_settings, args):
         logger.info("Using MWA analytic primary beam with:\n" \
                     f"\tdelays: {woden_settings.FEE_ideal_delays}")
 
-    elif woden_settings.beamtype == BeamTypes.EB_OSKAR.value:
-        logger.info("Will run with EveryBeam OSKAR primary beam, based on this measurement set:\n"
-                    f"\t{args.beam_ms_path}")
+    elif woden_settings.beamtype in BeamGroups.eb_beam_values:
+        eb_beam_string = _everybeam_settings_string(logger, woden_settings, args)
+        logger.info(eb_beam_string)
 
-    elif woden_settings.beamtype == BeamTypes.EB_LOFAR.value:
-        logger.info("Will run with EveryBeam LOFAR primary beam, based on this measurement set:\n"
-                    f"\t{args.beam_ms_path}")
-
-    elif woden_settings.beamtype == BeamTypes.EB_MWA.value:
-        logger.info("Will run with EveryBeam MWA primary beam, based on this measurement set:\n"
-                    f"\t{args.beam_ms_path}")
-    
     else:
         logger.error("Primary beam type not recognised. This shouldn't be possible "
                      "if you've used wodenpy.woden_setup.run_setup.check_args().")

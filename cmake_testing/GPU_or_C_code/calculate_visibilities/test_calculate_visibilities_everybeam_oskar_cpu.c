@@ -19,57 +19,57 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 
 //Test with a single SOURCE, single COMPONENT
 void test_calculate_visibilities_EveryBeamOSKAR_OneSource_SinglePoint_cpu(void) {
-  test_calculate_visibilities_EveryBeam_OneSource_SinglePoint(0, EB_OSKAR);
+  test_calculate_visibilities_EveryBeam_OneSource_SinglePoint(0, EB_OSKAR, "../../../../test_installation/everybeam/create_OSKAR-SKA_ms/OSKAR-SKA-layout.ms");
 }
 
 void test_calculate_visibilities_EveryBeamOSKAR_OneSource_SingleGauss_cpu(void) {
-  test_calculate_visibilities_EveryBeam_OneSource_SingleGauss(0, EB_OSKAR);
+  test_calculate_visibilities_EveryBeam_OneSource_SingleGauss(0, EB_OSKAR, "../../../../test_installation/everybeam/create_OSKAR-SKA_ms/OSKAR-SKA-layout.ms");
 
 }
 
 void test_calculate_visibilities_EveryBeamOSKAR_OneSource_SingleShape_cpu(void) {
-  test_calculate_visibilities_EveryBeam_OneSource_SingleShape(0, EB_OSKAR);
+  test_calculate_visibilities_EveryBeam_OneSource_SingleShape(0, EB_OSKAR, "../../../../test_installation/everybeam/create_OSKAR-SKA_ms/OSKAR-SKA-layout.ms");
 }
 
 void test_calculate_visibilities_EveryBeamOSKAR_OneSource_SingleAll_cpu(void) {
-  test_calculate_visibilities_EveryBeam_OneSource_SingleAll(0, EB_OSKAR);
+  test_calculate_visibilities_EveryBeam_OneSource_SingleAll(0, EB_OSKAR, "../../../../test_installation/everybeam/create_OSKAR-SKA_ms/OSKAR-SKA-layout.ms");
 }
 
 
 //Test with a three SOURCEs, single COMPONENT
 void test_calculate_visibilities_EveryBeamOSKAR_ThreeSource_SinglePoint_cpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_SinglePoint(0, EB_OSKAR);
+  test_calculate_visibilities_EveryBeam_ThreeSource_SinglePoint(0, EB_OSKAR, "../../../../test_installation/everybeam/create_OSKAR-SKA_ms/OSKAR-SKA-layout.ms");
 
 }
 
 void test_calculate_visibilities_EveryBeamOSKAR_ThreeSource_SingleGauss_cpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_SingleGauss(0, EB_OSKAR);
+  test_calculate_visibilities_EveryBeam_ThreeSource_SingleGauss(0, EB_OSKAR, "../../../../test_installation/everybeam/create_OSKAR-SKA_ms/OSKAR-SKA-layout.ms");
 }
 
 void test_calculate_visibilities_EveryBeamOSKAR_ThreeSource_SingleShape_cpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_SingleShape(0, EB_OSKAR);
+  test_calculate_visibilities_EveryBeam_ThreeSource_SingleShape(0, EB_OSKAR, "../../../../test_installation/everybeam/create_OSKAR-SKA_ms/OSKAR-SKA-layout.ms");
 }
 
 void test_calculate_visibilities_EveryBeamOSKAR_ThreeSource_SingleAll_cpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_SingleAll(0, EB_OSKAR);
+  test_calculate_visibilities_EveryBeam_ThreeSource_SingleAll(0, EB_OSKAR, "../../../../test_installation/everybeam/create_OSKAR-SKA_ms/OSKAR-SKA-layout.ms");
 }
 
 //Test with three SOURCEs, three COPMONENTs
 void test_calculate_visibilities_EveryBeamOSKAR_ThreeSource_FivePoint_cpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_FivePoint(0, EB_OSKAR);
+  test_calculate_visibilities_EveryBeam_ThreeSource_FivePoint(0, EB_OSKAR, "../../../../test_installation/everybeam/create_OSKAR-SKA_ms/OSKAR-SKA-layout.ms");
 
 }
 
 void test_calculate_visibilities_EveryBeamOSKAR_ThreeSource_FiveGauss_cpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_FiveGauss(0, EB_OSKAR);
+  test_calculate_visibilities_EveryBeam_ThreeSource_FiveGauss(0, EB_OSKAR, "../../../../test_installation/everybeam/create_OSKAR-SKA_ms/OSKAR-SKA-layout.ms");
 }
 
 void test_calculate_visibilities_EveryBeamOSKAR_ThreeSource_FiveShape_cpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_FiveShape(0, EB_OSKAR);
+  test_calculate_visibilities_EveryBeam_ThreeSource_FiveShape(0, EB_OSKAR, "../../../../test_installation/everybeam/create_OSKAR-SKA_ms/OSKAR-SKA-layout.ms");
 }
 
 void test_calculate_visibilities_EveryBeamOSKAR_ThreeSource_FiveAll_cpu(void) {
-  test_calculate_visibilities_EveryBeam_ThreeSource_FiveAll(0, EB_OSKAR);
+  test_calculate_visibilities_EveryBeam_ThreeSource_FiveAll(0, EB_OSKAR, "../../../../test_installation/everybeam/create_OSKAR-SKA_ms/OSKAR-SKA-layout.ms");
 }
 
 

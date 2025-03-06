@@ -4,6 +4,8 @@ import unittest
 import numpy as np
 import numpy.testing as npt
 import importlib_resources
+import shutil
+from casacore.tables import table
 
 code_dir = os.path.realpath(__file__)
 code_dir = ('/').join(code_dir.split('/')[:-1])
@@ -257,6 +259,23 @@ class Test(unittest.TestCase):
         arguments needed to pass onto WODEN. Other arguments either have
         defaults or are optional"""
         self.make_required_args()
+
+        self.inputs.append('--num_time_steps=16')
+        self.inputs.append('--time_res=8.0')
+        self.inputs.append('--freq_res=40e+3')
+        self.inputs.append('--array_layout={:s}/example_array_layout.txt'.format(code_dir))
+        self.inputs.append('--lowest_channel_freq=160e+6')
+        self.inputs.append('--date="2019-06-12T13:04:12"')
+        
+    def make_required_args(self):
+        """These are arguments that if missing, the parser itself should fail"""
+        self.inputs = ['--ra0=0.0', '--dec0=-26.7', '--cat_filename=srclist.txt']
+
+    def make_minimum_required_args_minus_radec(self):
+        """When not passing a metafits file, these are the minimum set of
+        arguments needed to pass onto WODEN. Other arguments either have
+        defaults or are optional"""
+        self.inputs = ['--cat_filename=srclist.txt']
 
         self.inputs.append('--num_time_steps=16')
         self.inputs.append('--time_res=8.0')
@@ -737,10 +756,6 @@ class Test(unittest.TestCase):
             self.inputs.append('--primary_beam=everybeam_MWA')
             ms_path = f"{code_dir}/../../../test_installation/everybeam/MWA-single-timeslot.ms"
             self.inputs.append(f'--beam_ms_path={ms_path}')
-            
-            ##This should still error, as we haven't set --band_nums, which
-            ##can't be set to more than one value when using everybeam
-            self.assert_check_args_errors()
             self.inputs.append(f'--band_nums=1')
             
             ##we need to get rid of the --array_layout flag, as it will
@@ -847,6 +862,134 @@ class Test(unittest.TestCase):
             if arg.startswith('--array_layout'):
                 self.inputs[ind] = f'--array_layout=non_existent_file.txt'
         self.assert_check_args_errors()
+        
+    def check_ms_pointing(self, ms_path, ra0, dec0):
+        with table(ms_path+'::FIELD') as field_table:
+        
+            delay_dir = np.squeeze(field_table.getcol('DELAY_DIR'))
+            ref_dir = np.squeeze(field_table.getcol('REFERENCE_DIR'))
+            
+            self.assertAlmostEqual(delay_dir[0], ra0, 6)
+            self.assertAlmostEqual(delay_dir[1], dec0, 6)
+            self.assertAlmostEqual(ref_dir[0], ra0, 6)
+            self.assertAlmostEqual(ref_dir[1], dec0, 6)
+        
+        
+        
+    def test_read_radec_from_MS(self):
+        """Check `ra.check_args` works correctly for the `--primary_beam=everybeam_MWA`
+        
+        However, can only run these tests if we have EveryBeam. If not, we
+        expect and error, so adjust the test accordingly
+        """
+        
+        if HAVE_EVERYBEAM:
+        
+            self.make_minimum_required_args_minus_radec()
+            self.inputs.append('--primary_beam=everybeam_MWA')
+            ms_path = f"{code_dir}/../../../test_installation/everybeam/MWA-single-timeslot.ms"
+            self.inputs.append(f'--beam_ms_path={ms_path}')
+            self.inputs.append(f'--band_nums=1')
+            
+            ##we need to get rid of the --array_layout flag, as it will
+            ##override reading the measurement set array layout
+            for ind, arg in enumerate(self.inputs):
+                if arg.startswith('--array_layout'):
+                    self.inputs.pop(ind)
+                    break
+            
+            args = self.run_parser_and_check_args()
+            
+            ##That's right, for some reason, the MWA-single-timeslot.ms set,
+            ##which is zenith pointed, has a phase centre of 124.999995, -42.75
+            self.assertAlmostEqual(args.ra0, 124.999995, 6)
+            self.assertAlmostEqual(args.dec0, -42.75, 6)
+            
+            self.assertAlmostEqual(args.eb_ra_point, 124.999995, 6)
+            self.assertAlmostEqual(args.eb_dec_point, -42.75, 6)
+            
+            ##Now check we can override the defaults
+            self.inputs.append('--ra0=0.0')
+            args = self.run_parser_and_check_args()
+            
+            self.assertAlmostEqual(args.ra0, 0.0, 6)
+            self.assertAlmostEqual(args.dec0, -42.75, 6)
+            
+            self.assertAlmostEqual(args.eb_ra_point, 124.999995, 6)
+            self.assertAlmostEqual(args.eb_dec_point, -42.75, 6)
+            
+            ##Now check we can override the defaults
+            self.inputs.append('--dec0=-26.7')
+            args = self.run_parser_and_check_args()
+            
+            self.assertAlmostEqual(args.ra0, 0.0, 6)
+            self.assertAlmostEqual(args.dec0, -26.7, 6)
+            
+            self.assertAlmostEqual(args.eb_ra_point, 124.999995, 6)
+            self.assertAlmostEqual(args.eb_dec_point, -42.75, 6)
+            
+            ##NOTE changing the MWA everybeam pointing won't actually change
+            ##the MWA beam direction, as that's controlled by the delays
+            ##But it would change the direction of a LOFAR beam, and the
+            ##code tested here is same for LOFAR. Just had the paths to the MWA
+            ##measurement sets handy here so roll with it
+            self.inputs.append('--eb_point_to_phase')
+            args = self.run_parser_and_check_args()
+            
+            self.assertAlmostEqual(args.ra0, 0.0, 6)
+            self.assertAlmostEqual(args.dec0, -26.7, 6)
+            
+            self.assertAlmostEqual(args.eb_ra_point, 0.0, 6)
+            self.assertAlmostEqual(args.eb_dec_point, -26.7, 6)
+            
+            self.check_ms_pointing("pointed_output_band01.ms", 0.0, np.radians(-26.7))
+            
+            self.inputs.append('--eb_ra_point=20.5')
+            args = self.run_parser_and_check_args()
+            
+            self.assertAlmostEqual(args.ra0, 0.0, 6)
+            self.assertAlmostEqual(args.dec0, -26.7, 6)
+            
+            self.assertAlmostEqual(args.eb_ra_point, 20.5, 6)
+            self.assertAlmostEqual(args.eb_dec_point, -26.7, 6)
+            
+            self.check_ms_pointing("pointed_output_band01.ms", np.radians(20.5), np.radians(-26.7))
+            
+            self.inputs.append('--eb_dec_point=-53.7')
+            args = self.run_parser_and_check_args()
+            
+            self.assertAlmostEqual(args.ra0, 0.0, 6)
+            self.assertAlmostEqual(args.dec0, -26.7, 6)
+            
+            self.assertAlmostEqual(args.eb_ra_point, 20.5, 6)
+            self.assertAlmostEqual(args.eb_dec_point, -53.7, 6)
+            
+            self.check_ms_pointing("pointed_output_band01.ms", np.radians(20.5), np.radians(-53.7))
+            
+            shutil.rmtree("pointed_output_band01.ms")
+            
+    def test_read_inputs_from_metafits(self):
+        
+        # ##First double check it fails without ra,dec
+        
+        self.inputs = ['--cat_filename=srclist.txt']
+        self.inputs.append('--array_layout={:s}/example_array_layout.txt'.format(code_dir))
+        self.assert_check_args_errors()
+        
+        ##Now check it works with the metafits file
+        self.inputs.append("--metafits_filename={:s}/1202815152_metafits_ppds.fits".format(code_dir))
+        
+        args = self.run_parser_and_check_args()
+        
+        self.assertAlmostEqual(args.ra0, 54.75681779724241, 6)
+        self.assertAlmostEqual(args.dec0, -39.48422590285089, 6)
+        
+        self.assertAlmostEqual(args.lowest_channel_freq, 169595000.0, 2)
+        self.assertAlmostEqual(args.num_time_steps, 240, 2)
+        self.assertAlmostEqual(args.freq_res, 10000.0, 2)
+        self.assertAlmostEqual(args.time_res, 0.5, 2)
+        self.assertEqual("2018-02-16T11:18:54", args.date)
+            
         
 ##Run the test
 if __name__ == '__main__':
