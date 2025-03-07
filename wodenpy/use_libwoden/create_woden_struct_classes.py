@@ -1,3 +1,5 @@
+"""A central Class to dynamically create the classes for the WODEN data structures,
+based on the required precision."""
 from wodenpy.use_libwoden.skymodel_structs import create_components_struct, create_source_struct, create_source_catalogue_struct, setup_source_catalogue
 from wodenpy.use_libwoden.woden_settings import create_woden_settings_struct
 from wodenpy.use_libwoden.visibility_set import create_visi_set_struct

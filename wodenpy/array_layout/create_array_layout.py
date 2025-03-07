@@ -1,3 +1,5 @@
+"""Functions to create the array layout for the simulation, precess it, 
+and convert it to the correct format for the C functions."""
 import numpy as np
 import sys
 import os
@@ -22,8 +24,6 @@ SOLAR2SIDEREAL = 1.00274
 DS2R = 7.2722052166430399038487115353692196393452995355905e-5
 
 from wodenpy.use_libwoden.woden_settings import Woden_Settings_Python
-
-# from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 from wodenpy.use_libwoden.array_layout_struct import Array_Layout_Ctypes
 
 ##This call is so we can use it as a type annotation
@@ -31,6 +31,38 @@ from wodenpy.use_libwoden.array_layout_struct import Array_Layout_Ctypes
 # Woden_Settings = woden_struct_classes.Woden_Settings
 
 class Array_Layout_Python(object):
+    """
+    A class to represent the layout of an array in Python.
+
+    Attributes
+    ----------
+    ant_X : None
+        Antenna X coordinates (metres).
+    ant_Y : None
+        Antenna Y coordinates (metres).
+    ant_Z : None
+        Antenna Z coordinates (metres).
+    X_diff_metres : None
+        The difference in X coordinates (metres).
+    Y_diff_metres : None
+        The difference in Y coordinates (metres).
+    Z_diff_metres : None
+        The difference in Z coordinates (metres).
+    ant_east : None
+        Antenna east coordinates (metres)
+    ant_north : None
+        Antenna north coordinates (metres)
+    ant_height : None
+        Antenna height coordinates (metres)
+    latitude : None
+        The latitude of the array (radians).
+    num_baselines : None
+        The number of baselines.
+    num_tiles : None
+        The number of tiles.
+    lst_base : None
+        The base of the local sidereal time.
+    """
     def __init__(self):
         self.ant_X = None
         self.ant_Y = None
@@ -300,10 +332,12 @@ def calc_XYZ_diffs(woden_settings_python : Woden_Settings_Python,
 
     Parameters
     ----------
-    woden_settings: Woden_Settings
+    woden_settings_python: Woden_Settings_Python
         An populated Woden_Settings instance
     args: argparse.Namespace
         The command line arguments checked by `wodenpy.wodenpy_setup.check_args`
+    logger: Logger
+        A logger instance to log messages
 
     Returns
     -------

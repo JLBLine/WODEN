@@ -1,3 +1,5 @@
+"""Contains an old RTS function to precess the LST and latitude from the
+current time to J2000."""
 import numpy as np
 import erfa
 import palpy

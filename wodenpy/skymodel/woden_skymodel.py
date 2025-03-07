@@ -1,3 +1,6 @@
+"""Functions/Classes to read in a sky model file, count the number of components,
+discard components below the horizon, and model reference fluxes to 200MHz"""
+
 import numpy as np
 import erfa
 from enum import Enum, auto
@@ -667,6 +670,9 @@ def crop_below_horizon(lst : float, latitude : float,
         The array latitude (in radians).
     comp_counter : Component_Type_Counter
         An object containing information about the components in the sky model.
+    logger : Logger, optional
+        A logger object for logging information. Default is False, in which case
+        a basic logger is made to log to instead.
     crop_by_component : bool, optional
         If True, crop components individually. If False, crop sources as a whole.
         Default is True.

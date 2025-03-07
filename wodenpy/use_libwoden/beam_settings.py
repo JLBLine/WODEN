@@ -1,3 +1,7 @@
+"""Classes to match the BeamTypes enum in libwoden, and to group beam types for WODEN.
+Beam group are useful to calculate associated values for specific beam types,
+e.g. azimuth/altitude, hour angle/declination, etc.
+"""
 from enum import Enum, auto
 
 class BeamTypes(Enum):

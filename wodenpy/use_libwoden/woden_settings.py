@@ -1,3 +1,6 @@
+"""Functions/Classes to create and populate a `Woden_Settings` class structured equivalently
+to a `woden_settings_t` struct in the C/C++/GPU code. Created dynamically based on the
+required precision."""
 import ctypes 
 import sys
 import os
@@ -28,6 +31,9 @@ def command(cmd):
     subprocess.call(cmd,shell=True)
     
 class Woden_Settings_Python(object):
+    """A class structured equivalently to a `woden_settings_t` struct, used by
+    the C/C++/GPU code in libwoden_float.so or libwoden_double.so. Retain a
+    copy of the settings in Python for easy access and manipulation."""
     def __init__(self):
         self.lst_base = None
         self.lst_obs_epoch_base = None
@@ -384,8 +390,11 @@ def setup_lsts_and_phase_centre(woden_settings_python : Woden_Settings_Python,
 
     Parameters
     ----------
-    woden_settings : Woden_Settings
+    woden_settings_python : Woden_Settings_Python
         A populated Woden_Settings object containing the observation parameters.
+    logger : Logger, optional
+        A logger object for logging messages, by default False. If False, a
+        simple logger is created.
 
     Returns
     -------
@@ -466,7 +475,20 @@ def setup_lsts_and_phase_centre(woden_settings_python : Woden_Settings_Python,
     return lsts, latitudes
 
 def convert_woden_settings_to_ctypes(woden_settings_python : Woden_Settings_Python,
-                                     woden_settings_ctypes : Woden_Settings) -> Woden_Settings: #type: ignore
+                                     woden_settings_ctypes: Woden_Settings) -> Woden_Settings: #type: ignore
+    """
+    Converts Woden settings from a Python object to a ctypes object.
+    Parameters
+    ----------
+    woden_settings_python : Woden_Settings_Python
+        The Woden settings in Python object format.
+    woden_settings_ctypes : Woden_Settings
+        The Woden settings in ctypes object format to be populated.
+    Returns
+    -------
+    Woden_Settings
+        The populated Woden settings in ctypes object format.
+    """
     
     woden_settings_ctypes.lst_base = woden_settings_python.lst_base
     woden_settings_ctypes.lst_obs_epoch_base = woden_settings_python.lst_obs_epoch_base

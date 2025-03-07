@@ -16,7 +16,7 @@ from astropy.table import Table
 from astropy.io import fits
 from wodenpy.use_libwoden.beam_settings import BeamTypes, BeamGroups
 from wodenpy.use_libwoden.woden_settings import fill_woden_settings_python, setup_lsts_and_phase_centre, Woden_Settings_Python, convert_woden_settings_to_ctypes
-from wodenpy.use_libwoden.visibility_set import setup_visi_set_array, load_visibility_set
+from wodenpy.use_libwoden.visibility_set import setup_visi_set_array, load_visibility_set, Visi_Set_Python
 from wodenpy.wodenpy_setup.run_setup import get_parser, check_args, get_code_version
 from wodenpy.use_libwoden.use_libwoden import load_in_run_woden
 from wodenpy.observational.calc_obs import get_uvfits_date_and_position_constants, calc_jdcal
@@ -38,23 +38,11 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from line_profiler import profile, LineProfiler
 from wodenpy.primary_beam.use_everybeam import run_everybeam
 from wodenpy.wodenpy_setup.woden_logger import get_log_callback, set_logger_header, simple_logger, log_chosen_beamtype, summarise_input_args, set_woden_logger
-from multiprocessing import Manager, set_start_method
 from copy import deepcopy
 import multiprocessing
 from datetime import timedelta
 import traceback
 import shutil
-
-# ##Miiiiight give us a speed up on Linux??
-# try:
-#     print("WE BE DOING A FORKSERVER")
-#     set_start_method("forkserver")  # Alternatives: "spawn" or "forkserver"
-# except RuntimeError:
-#     # Start method is already set in some environments like Jupyter
-#     pass
-
-# import faulthandler
-# faulthandler.enable()
 
 ##Constants
 R2D = 180.0 / np.pi
@@ -76,21 +64,6 @@ Woden_Settings = woden_struct_classes.Woden_Settings
 Visi_Set = woden_struct_classes.Visi_Set
 Source_Catalogue = woden_struct_classes.Source_Catalogue
 
-
-class Visi_Set_Python(object):
-    def __init__(self):
-        self.us_metres = None
-        self.vs_metres = None
-        self.ws_metres = None
-        self.sum_visi_XX_real = None
-        self.sum_visi_XX_imag = None
-        self.sum_visi_XY_real = None
-        self.sum_visi_XY_imag = None
-        self.sum_visi_YX_real = None
-        self.sum_visi_YX_imag = None
-        self.sum_visi_YY_real = None
-        self.sum_visi_YY_imag = None
-        
 def woden_worker(thread_ind : int, 
                 all_loaded_python_sources : List[List[Source_Python]],
                 all_loaded_sources_orders : List[int], round_num : int,
@@ -814,12 +787,12 @@ def main(argv=None):
             central_freq_chan_value = band_low_freq + central_freq_chan*args.freq_res
 
             uus,vvs,wws,v_container = load_visibility_set(visibility_set=visi_sets_python_combined[band_ind],
-                                                num_baselines=num_baselines,
-                                                num_freq_channels=args.num_freq_channels,
-                                                num_time_steps=args.num_time_steps,
-                                                precision=args.precision,
-                                                do_autos=args.do_autos,
-                                                num_ants=args.num_antennas)
+                                                          num_baselines=num_baselines,
+                                                          num_freq_channels=args.num_freq_channels,
+                                                          num_time_steps=args.num_time_steps,
+                                                          precision=args.precision,
+                                                          do_autos=args.do_autos,
+                                                          num_ants=args.num_antennas)
             
             if args.remove_phase_tracking:
                 frequencies = band_low_freq + np.arange(args.num_freq_channels)*args.freq_res

@@ -1,4 +1,4 @@
-
+"""Functions to help chop large sky models into smaller chunks for processing"""
 import numpy as np
 import sys
 import os
@@ -947,6 +947,8 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
         The number of instataneous baselines in the observation.
     num_freqs: int
         The number of frequency channels in the observation.
+    beamtype_value: int
+        The type of beam to use for the calculation (default EB_MWA).
     num_time_steps: int
         The number of time steps in the observation.
     num_threads: int

@@ -1,3 +1,5 @@
+"""Functions for setting up the logger for wodenpy."""
+
 import logging
 import logging.handlers
 from ctypes import CDLL, CFUNCTYPE, c_char_p
@@ -9,6 +11,7 @@ from logging.handlers import QueueHandler, QueueListener
 import sys
 from wodenpy.use_libwoden.beam_settings import BeamTypes, BeamGroups
 import numpy as np
+import argparse
 
 class MultiLineFormatter(logging.Formatter):
     """Multi-line formatter for logging messages. Means that the indentation
@@ -33,7 +36,22 @@ class MultiLineFormatter(logging.Formatter):
         return head + ''.join(indent + line for line in trailing)
 
     
-def set_logger_header(logger, gitlabel):
+def set_logger_header(logger : logging.Logger, gitlabel : str):
+    """
+    Writes a snazzy header to the logger, including the version or git hash label.
+
+    Parameters
+    ----------
+    logger : logging.Logger
+        The logger instance to which the header will be added.
+    gitlabel : str
+        The version or git hash label to be included in the header.
+
+    Returns
+    -------
+    """
+
+    
     logo_string = rf"""
                  )  (              )  
      (  (     ( /(  )\ )        ( /(  
@@ -49,10 +67,54 @@ def set_logger_header(logger, gitlabel):
     
     logger.info(logo_string)
     
-def summarise_input_args(logger, args):
-    # logger.info("Input arguments:")
-    # for arg in vars(args):
-    #     logger.info(f"\t{arg}: {getattr(args, arg)}")
+def summarise_input_args(logger : logging.Logger, args : argparse.Namespace):
+    """
+    Summarises and logs the input arguments after parsing.
+    
+    Parameters
+    ----------
+    logger : logging.Logger
+        The logger instance used to log the summarized input arguments.
+    args : argparse.Namespace
+        The parsed input arguments containing various configuration parameters.
+    Attributes of args
+    ------------------
+    ra0 : float
+        Right ascension of the phase center in degrees.
+    dec0 : float
+        Declination of the phase center in degrees.
+    latitude : float
+        Central latitude of the array in degrees.
+    longitude : float
+        Central longitude of the array in degrees.
+    array_height : float
+        Height of the array center in meters.
+    lowest_channel_freq : float
+        Lowest channel frequency in Hz.
+    freq_res : float
+        Frequency resolution in Hz.
+    coarse_band_width : float
+        Coarse band bandwidth in Hz.
+    num_freq_channels : int
+        Number of frequency channels per coarse band.
+    date : str
+        Start date of the observation.
+    time_res : float
+        Time resolution in seconds.
+    num_time_steps : int
+        Number of time steps.
+    array_layout : str
+        Source of the array layout information.
+    num_antennas : int
+        Number of antennas.
+    metafits_filename : str
+        Filename of the metafits file (if applicable).
+    beam_ms_path : str
+        Path to the measurement set (if applicable).
+    output_dir : str
+        Directory where outputs will be written.
+    """
+    
     
     input_str = "Input arguments after parsing:"
     
@@ -79,7 +141,21 @@ def summarise_input_args(logger, args):
     
     logger.info(input_str)
     
-def get_log_callback(logger, logging_level = logging.DEBUG):
+def get_log_callback(logger: logging.Logger, logging_level: int = logging.DEBUG):
+    """
+    Creates a C callback function that logs messages using the provided Python logger.
+    Parameters
+    ----------
+    logger : logging.Logger
+        The Python logger instance to use for logging messages.
+    logging_level : int, optional
+        The logging level to use (default is logging.DEBUG).
+    Returns
+    -------
+    CFUNCTYPE
+        A C callback function that logs messages using the provided Python logger.
+    """
+    
     LogCallbackType = CFUNCTYPE(None, c_char_p)
 
     # Define the Python logging function for libwoden C library
@@ -94,8 +170,24 @@ def get_log_callback(logger, logging_level = logging.DEBUG):
     
     return c_log_callback
 
-def set_woden_logger(logging_level = logging.DEBUG, log_file = False):
-    """WODEN main logger"""
+def set_woden_logger(logging_level: int = logging.DEBUG, log_file: str = False) -> logging.Logger:
+    """
+    Sets up a logger for WODEN with a specified logging level and optional log file.
+    
+    Parameters
+    ----------
+    logging_level : int, optional
+        The logging level to set for the logger (default is logging.DEBUG).
+        Accepted values are logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, logging.CRITICAL.
+    log_file : str, optional
+        The file path to log to. If False, logging to a file is disabled (default is False).
+        
+    Returns
+    -------
+    logger : logging.Logger
+        Configured logger instance.
+    """
+    
     
     formatter = MultiLineFormatter("%(asctime)s - %(levelname)s - %(message)s",
                                    '%Y-%m-%d %H:%M:%S')
@@ -116,9 +208,23 @@ def set_woden_logger(logging_level = logging.DEBUG, log_file = False):
     
     return logger
 
-def simple_logger(logging_level = logging.DEBUG):
-    """Use this to set a default logger for wodenpy functions when
-    the user doesn't provide one. Basically useful for unit tests."""
+def simple_logger(logging_level: int = logging.DEBUG):
+    """
+    Use this to set a default logger for wodenpy functions when the user doesn't provide one.
+    Basically useful for unit tests.
+    
+    Parameters
+    ----------
+    logging_level : int, optional
+        The logging level to use for the logger. Default is logging.DEBUG.
+        Accepted values are logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, logging.CRITICAL.
+        
+    Returns
+    -------
+    logger : logging.Logger
+        Configured logger instance.
+    """
+    
     logger = logging.getLogger(__name__)
     logging.basicConfig(level=logging_level,
                         format='%(asctime)s - %(levelname)s - %(message)s',
@@ -126,7 +232,24 @@ def simple_logger(logging_level = logging.DEBUG):
     return logger
 
 
-def _mwa_beam_settings_string(logger, woden_settings, args):
+def _mwa_beam_settings_string(logger: logging.Logger, woden_settings: object, args: argparse.Namespace) -> str:
+    """
+    Generate a string describing the MWA primary beam settings.
+    
+    Parameters
+    ----------
+    logger : logging.Logger
+        The logger instance to use for logging messages.
+    woden_settings : object
+        An object containing WODEN settings, including the path to the hdf5 beam file and FEE ideal delays.
+    args : argparse.Namespace
+        Command-line arguments containing flags and filenames for MWA dipole amplitudes and flags.
+        
+    Returns
+    -------
+    str
+        A formatted string describing the MWA primary beam settings.
+    """
     
     out_string = "Using MWA primary beam via hyperbeam with the following parameters:\n" \
                     f"\thdf5 file: { woden_settings.hdf5_beam_path}\n" \
@@ -146,7 +269,24 @@ def _mwa_beam_settings_string(logger, woden_settings, args):
             
     return out_string
 
-def _everybeam_settings_string(logger, woden_settings, args):
+def _everybeam_settings_string(logger: logging.Logger, woden_settings: object, args: argparse.Namespace) -> str:
+    """
+    Generates a string describing the settings for the EveryBeam primary beam.
+    
+    Parameters
+    ----------
+    logger : logging.Logger
+        The logger instance to use for logging messages.
+    woden_settings : object
+        An object containing the WODEN settings, including the beam type and paths.
+    args : argparse.Namespace
+        The command-line arguments, including paths and pointing information.
+        
+    Returns
+    -------
+    str
+        A formatted string describing the EveryBeam primary beam settings.
+    """
     
     if woden_settings.beamtype == BeamTypes.EB_OSKAR.value:
         beam = "OSKAR"
@@ -172,7 +312,21 @@ def _everybeam_settings_string(logger, woden_settings, args):
 
     return out_string
 
-def log_chosen_beamtype(logger, woden_settings, args):
+def log_chosen_beamtype(logger: logging.Logger, woden_settings: object,
+                        args : argparse.Namespace):
+    """
+    Logs information about the chosen beam type based on the provided settings.
+    
+    Parameters
+    ----------
+    logger : logging.Logger
+        The logger instance used to log the information.
+    woden_settings : wodenpy.use_libwoden.woden_settings.Woden_Settings_Python
+        An object containing the settings for WODEN, including the beam type and related parameters.
+    args : object
+        Additional arguments that may be required for logging specific beam types.
+    
+    """
     
     if woden_settings.beamtype == BeamTypes.NO_BEAM.value:
         logger.info("No primary beam selected, no beam attenuation will be applied.")

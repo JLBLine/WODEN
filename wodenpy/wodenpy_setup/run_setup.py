@@ -1,3 +1,7 @@
+"""Functions to parse arguments from the command line, check validity of
+arguments, and read relevant information from linked files, all for `run_woden.py`
+"""
+
 import wodenpy
 from wodenpy.wodenpy_setup.git_helper import retrieve_gitdict
 import numpy as np
@@ -303,9 +307,9 @@ def get_parser():
     
     return parser
 
-def select_argument_and_check(parser_arg, parser_value,
-                              metafits_arg, parser_string,
-                              do_exit=True):
+def select_argument_and_check(parser_arg : bool, parser_value : bool,
+                              metafits_arg : bool, parser_string : str,
+                              do_exit : bool = True):
     """Some arguments taken from the argparse.parser should override settings
     from the metafits if present. If the parser argument `parser_arg` is
     defined (i.e. not False), update it to equal `parser_value`. If not defined,
@@ -440,28 +444,6 @@ def get_antenna_order(tilenames: np.ndarray) -> np.ndarray:
     antenna_order[np.arange(1, 2*len(order), 2)] = 2*order + 1
     
     return antenna_order
-
-def check_for_library(libname : str) -> bool:
-    """
-    Check if a library is available for import.
-
-    Parameters
-    ----------
-    libname : str
-        The name of the library to check.
-
-    Returns
-    -------
-    bool
-        True if the library is available, False otherwise.
-    """
-    
-    if importlib.util.find_spec(libname) is not None:
-        have_library = True
-    else:
-        have_library = False
-        
-    return have_library
 
 def check_args(args : argparse.Namespace) -> argparse.Namespace:
     """Check that the combination of arguments parsed will work with the

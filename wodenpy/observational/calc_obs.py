@@ -1,3 +1,4 @@
+"""Functions for calculating observational parameters based on date and location."""
 from astropy.time import Time, TimeDelta
 import numpy as np
 from astropy.coordinates import EarthLocation

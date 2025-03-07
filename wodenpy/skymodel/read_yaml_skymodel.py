@@ -1,3 +1,6 @@
+"""Functions to read in the mwa_hyperdrive yaml sky model format and
+convert it to the LoBES-style FITS sky model format."""
+
 import numpy as np
 import sys
 import os

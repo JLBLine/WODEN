@@ -1,3 +1,7 @@
+"""Functions and Classes to setup the source catalogue and components. Eventually
+these things are passed to the C/C++/GPU code, so many functions here to set up
+the data structures, and convert from Python native to ctypes types."""
+
 import ctypes 
 import importlib_resources
 import numpy as np
@@ -524,11 +528,26 @@ def setup_source_catalogue(Source_Ctypes : Source_Ctypes, Source_Catalogue : Sou
                            num_sources : int, num_shapelets : int,
                            precision = "double") -> Source_Catalogue: # type: ignore
     """
-    Creates a `Source_Catalogue` with the specified number of sources and shapelets.
-    Sets source_catalogue.sources an array of `Source_Ctypes` objects of length `num_sources`
+    Setups a `Source_Catalogue` with the specified number of sources and shapelets.
+    Sets source_catalogue.sources as an array of `Source_Ctypes` objects of length `num_sources`
+    
+    As `Source_Ctypes`/`Source_Catalogue` are created dynamically based on
+    the `precision`, this function takes them as arguments rather than creating
+    them within the function.
+    
+    These classes should be created once via
+    `wodenpy.use_libwoden.create_woden_struct_classes.Woden_Struct_Classes`
+    and called from there e.g.
+    
+    woden_struct_classes = Woden_Struct_Classes()
+    Source_Catalogue = woden_struct_classes.Source_Catalogue 
     
     Parameters
     ------------
+    Source_Ctypes: Source_Ctypes
+        The Source_Ctypes class structured equivalent to a `source_t` struct.
+    Source_Catalogue: Source_Catalogue
+        The Source_Catalogue class structured equivalent to a `source_catalogue_t` struct.
     num_sources: int
         The number of sources in the catalogue.
     num_shapelets: int

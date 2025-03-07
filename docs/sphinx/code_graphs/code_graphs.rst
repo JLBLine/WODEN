@@ -1,7 +1,7 @@
 Call Graphs
 -------------------
 
-Ok, here is an attempt to map out the structure of ``WODEN``. I used to have a static mapper for the Python side, but it's no longer functional (``pyan3``). So I'm leaving that for now. There must be a way to use ``doxygen`` but I can't crack it just yet. 
+Ok, here is an attempt to map out the structure of ``WODEN``. I used to have a static mapper for the Python side, but it's no longer functional (``pyan3``). So I'm leaving that for now. There must be a way to use ``doxygen`` (which I use for the C/C++/GPU code) but I can't get it working. 
 
 
 .. Python Call Graphs

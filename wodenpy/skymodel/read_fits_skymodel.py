@@ -1,3 +1,10 @@
+"""Functions to read in a LoBES/hyperdrive/WODEN FITS sky model file.
+Functionality includes:
+- Checking that the FITS file contains all the necessary information to be read in correctly.
+- Counting the number of components of each type and their properties.
+- Reading the FITS file sky model and storing the information in a Component_Type_Counter object.
+- Given chunk maps, reading specific component information to facilitate lazy-loading."""
+
 import numpy as np
 import sys
 import os

@@ -1,3 +1,4 @@
+"""Ctypes class to match the struct `array_layout_t`, for passing to libwoden*.so"""
 from ctypes import POINTER, c_double, c_int, Structure
 
 class Array_Layout_Ctypes(Structure):
