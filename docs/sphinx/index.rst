@@ -39,7 +39,6 @@ If you use ``WODEN`` in your research, please cite the JOSS paper `Line et al. 2
 
    operating_principles/operating_principles
    testing/testing
-   .. testing/everybeam_testing
    
 .. toctree::
    :maxdepth: 2

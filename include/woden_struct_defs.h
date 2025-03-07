@@ -406,12 +406,12 @@ typedef struct _calc_visi_inouts_t {
   user_precision_t *allsteps_wavelengths; /*!< Wavelengths for all time steps,
   frequency steps, and baselines (metres)*/
 
-  user_precision_t *u_metres; /*< Array of `u` coords (metres)*/
-  user_precision_t *v_metres; /*< Array of `v` coords (metres)*/
-  user_precision_t *w_metres; /*< Array of `w` coords (metres)*/
-  user_precision_t *us; /*< Array of `u` coord (wavelengths)*/
-  user_precision_t *vs; /*< Array of `v` coord (wavelengths)*/
-  user_precision_t *ws; /*< Array of `w` coord (wavelengths)*/
+  user_precision_t *u_metres; /*!< Array of `u` coords (metres)*/
+  user_precision_t *v_metres; /*!< Array of `v` coords (metres)*/
+  user_precision_t *w_metres; /*!< Array of `w` coords (metres)*/
+  user_precision_t *us; /*!< Array of `u` coord (wavelengths)*/
+  user_precision_t *vs; /*!< Array of `v` coord (wavelengths)*/
+  user_precision_t *ws; /*!< Array of `w` coord (wavelengths)*/
   double *freqs; /*!< Frequencies for all frequency steps (Hz)*/
   
   //If we have a different primary beam for each antenna, setup the baseline
