@@ -9,7 +9,6 @@ from ctypes import CDLL, CFUNCTYPE, c_char_p
 import ctypes
 from wodenpy.wodenpy_setup.woden_logger import get_log_callback, set_woden_logger
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from multiprocessing import Manager, set_start_method
 from multiprocessing import Process, Queue
 import multiprocessing
 import concurrent.futures
@@ -147,7 +146,7 @@ class Test(unittest.TestCase):
                           "DEBUG - libwoden: We be running in C and the number is 10",
                           ]
             
-        # self.assertEqual(outputs[:4], expected_start)
+        self.assertEqual(outputs[:4], expected_start)
         
         ##The next three things are run in parallel, so might plop
         ##out in any order. Just assert they exist in the outputs

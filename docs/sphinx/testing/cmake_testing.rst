@@ -112,7 +112,9 @@ function.
 
 The sections below give an outline of the tests performed in each directory.
 
-``wodenpy`` code tests:
+``wodenpy`` tests
+~~~~~~~~~~~~~~~~~~~~
+These tests are for the ``python`` module in ``WODEN/wodenpy``. They test the ``python`` code using the ``pytest`` library, and are run using the ``ctest`` command. The tests are located in the ``WODEN/cmake_testing/wodenpy`` directory.
 
 .. toctree::
    :maxdepth: 1
@@ -120,30 +122,29 @@ The sections below give an outline of the tests performed in each directory.
    cmake_testing/wodenpy/array_layout
    cmake_testing/wodenpy/observational
    cmake_testing/wodenpy/phase_rotate
+   cmake_testing/wodenpy/primary_beam
    cmake_testing/wodenpy/skymodel
    cmake_testing/wodenpy/use_libwoden
    cmake_testing/wodenpy/uvfits
    cmake_testing/wodenpy/wodenpy_setup
 
-``C`` code tests:
+
+``GPU_or_C_code`` tests
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Tests in some of these sections test code that has both ``C`` and ``GPU`` versions; by using the same test code for both, we can ensure the ``C`` and ``GPU`` versions are consistent. The tests are located in the ``WODEN/cmake_testing/GPU_or_C_code`` directory.
 
 .. toctree::
    :maxdepth: 1
-
    cmake_testing/primary_beam
    cmake_testing/visibility_set
-
-``GPU`` code tests:
-
-.. toctree::
-   :maxdepth: 1
-
    cmake_testing/calculate_visibilities
    cmake_testing/fundamental_coords
    cmake_testing/primary_beam_gpu
    cmake_testing/source_components
 
-``script`` code tests:
+``script`` code:
+~~~~~~~~~~~~~~~~~~~~~~~~~
+These integration tests check the major ``python`` scripts as working as expected. The tests are located in the ``WODEN/cmake_testing/scripts`` directory.
 
 .. toctree::
    :maxdepth: 1
@@ -153,5 +154,3 @@ The sections below give an outline of the tests performed in each directory.
    cmake_testing/scripts/concat_woden_uvfits
    cmake_testing/scripts/run_woden
    cmake_testing/scripts/woden_uv2ms
-
-.. note:: To be able to test ``GPU`` functions that are designed to work solely in GPU memory, it's necessary to write wrapper functions that allocate GPU memory, pass the data into the ``GPU`` code to be tested, and then copy the results back into host memory. I've kept these 'intermediate' test functions inside the ``*.cpp`` files that contain the code being tested, as it's not straight forward / performance degrading to have them in separate files. On casual inspection it looks like there are many functions in the ``*.cpp`` files I haven't written tests for, but the extra functions are there *because* of testing. Sigh.

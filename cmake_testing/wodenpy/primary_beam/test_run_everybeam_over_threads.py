@@ -35,8 +35,6 @@ class Test(unittest.TestCase):
         date = "2024-07-21T03:35:00"
         ms_path = f'{code_dir}/../../../test_installation/everybeam/lba.MS'
         
-        # telescope = load_LOFAR_telescope(ms_path)
-        
         location = EarthLocation(lat=arr_latitude*u.rad, 
                                  lon=arr_long*u.rad)
 

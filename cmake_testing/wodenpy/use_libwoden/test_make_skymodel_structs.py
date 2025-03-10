@@ -31,12 +31,6 @@ class Test(unittest.TestCase):
         self.read_source_catalogue = libwoden.read_source_catalogue
         self.read_source_catalogue.argtypes = [ctypes.POINTER(self.woden_struct_classes.Source_Catalogue)]
         
-        # ## Read in the C library for double version
-        # libwoden_double = ctypes.cdll.LoadLibrary(f"{test_dir}/libread_source_catalogue_double.so")
-        # self.read_source_catalogue_double = libwoden_double.read_source_catalogue
-        # self.read_source_catalogue_double.argtypes = [ctypes.POINTER(ws.source_catalogue_Double)]
-
-    
     def read_C_output_textfile(self):
         
         output_dict = {}

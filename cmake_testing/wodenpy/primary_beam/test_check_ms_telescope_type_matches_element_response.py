@@ -82,13 +82,6 @@ class Test(unittest.TestCase):
     def test_it_errors_with_bad_MS(self):
         """Check we get an error if we give it a bad MS"""
         
-        # ms_path = f'{code_dir}/../../../test_installation/everybeam/LOFAR_HBA_MOCK.ms'
-        
-        # with self.assertRaises(ValueError):
-        #     check_ms_telescope_type_matches_element_response(ms_path, "wibbly")
-        
-        ##Make a bad MS by creating a WODEN uvfits and converting to MS
-        
         cmd = "run_woden.py"
         
         cmd += f" --band_nums=1 "

@@ -68,18 +68,6 @@ class Test(unittest.TestCase):
         all_freqs = np.array([100e+6])
         station_ids = np.array([0,10])
         
-        # ##check the code runs when we manually add normalisation, even
-        # ##though EveryBeam already seems to normalise the MWA beam
-        # serial_jones =  run_everybeam(ms_path, coeff_path,
-        #                         ras, decs, beam_ra0, beam_dec0,
-        #                         j2000_latitudes, j2000_lsts,
-        #                         all_times, all_freqs,
-        #                         station_ids,
-        #                         apply_beam_norms=True,
-        #                         iau_order=True,
-        #                         element_only=False,
-        #                         parallactic_rotate=True)
-        
         serial_jones =  run_everybeam(ms_path, coeff_path,
                                 ras, decs, beam_ra0, beam_dec0,
                                 j2000_latitudes, j2000_lsts,
