@@ -9,13 +9,14 @@ import os
 import unittest
 import numpy as np
 import numpy.testing as npt
-
+import wodenpy
 from wodenpy.use_libwoden.skymodel_structs import Components_Python
 from astropy.coordinates import EarthLocation
 from astropy import units as u
 from astropy.time import Time
 from wodenpy.primary_beam.use_everybeam import run_everybeam_over_threads, run_everybeam
-from wodenpy.wodenpy_setup.run_setup import check_for_library
+from wodenpy.use_libwoden.use_libwoden import check_for_everybeam
+import importlib_resources
 
 ##Location of this file; use it to find test measurement sets
 code_dir = os.path.realpath(__file__)
@@ -94,7 +95,8 @@ class Test(unittest.TestCase):
             npt.assert_allclose(serial_jones, parallel_jones, atol=1e-8)
             
     def test_run_everybeam_over_threads(self):
-        have_everybeam = check_for_library('everybeam')
+        woden_lib_path = importlib_resources.files(wodenpy).joinpath(f"libwoden_double.so")
+        have_everybeam = check_for_everybeam(woden_lib_path)
         if have_everybeam:
             self.do_test()
         else:

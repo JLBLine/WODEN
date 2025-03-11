@@ -164,6 +164,69 @@ extern "C" void destroy_everybeam_telescope(Telescope* telescope) {
   delete telescope;
 }
 
+void print_arr(const char* name, double _Complex *jones, int offset, int num_times, int num_freqs,
+               int num_dirs, int num_ants, int num_baselines, int *ant_to_baseline_map) {
+
+  double _Complex arr[num_times*num_baselines];
+
+  for (int ant = 0; ant < num_ants; ant++) {
+    for (int time = 0; time < num_times; time++) {
+      int ind = num_ants*time + ant;
+      int jones_index = 4*(ant*num_times*num_freqs*num_dirs + time*num_freqs*num_dirs ); 
+
+      // std::printf("THIS %d %d %d %d %d\n", baseline, time, si, ind, jones_index);
+
+      arr[ind] = jones[jones_index + offset];
+      // std::printf("jones_index: %d, offset: %d, ind: %d, %.5f + %.5f*I\n", jones_index, offset, ind, __real__ arr[ind], __imag__ arr[ind]);
+      // std::printf("arr: %d %.5f + %.5f*I\n", ind, __real__ arr[ind], __imag__ arr[ind]);
+    }
+  }
+
+  std::printf("double _Complex %s[NUM_ANTS*NUM_TIME_STEPS] = {", name);
+  for (int gain = 0; gain < num_times*num_ants; gain++) {
+    std::printf("%.10f + %.10f*I, ", __real__ arr[gain], __imag__ arr[gain]);
+  }
+  std::printf("};\n");
+}
+
+void print_gains_from_jones(int num_times, int num_freqs,
+                            int num_dirs, int num_ants,
+                            double _Complex * jones){
+
+  int num_baselines = ((num_ants - 1)*num_ants) / 2;
+
+  int *ant1_to_baseline_map = NULL;
+  int *ant2_to_baseline_map = NULL;
+
+  ant1_to_baseline_map = (int *)malloc(num_baselines*sizeof(int));
+  ant2_to_baseline_map = (int *)malloc(num_baselines*sizeof(int));
+
+  //These functions only do cross correlations, so create all combos of antennas
+  //that make up all the crosses
+  int cross_index = 0;
+  for (int ant1 = 0; ant1 < num_ants-1; ant1++)
+  {
+    for (int ant2 = ant1 + 1; ant2 < num_ants; ant2++)
+    {
+      ant1_to_baseline_map[cross_index] = ant1;
+      ant2_to_baseline_map[cross_index] = ant2;
+
+      cross_index += 1;
+    }
+  }
+  
+  print_arr("gxs", jones, 0, num_times, num_freqs,
+            num_dirs, num_ants, num_baselines, ant1_to_baseline_map);
+  print_arr("Dxs", jones, 1, num_times, num_freqs,
+            num_dirs, num_ants, num_baselines, ant1_to_baseline_map);
+  print_arr("Dys", jones, 2, num_times, num_freqs,
+            num_dirs, num_ants, num_baselines, ant1_to_baseline_map);
+  print_arr("gys", jones, 3, num_times, num_freqs,
+            num_dirs, num_ants, num_baselines, ant1_to_baseline_map);
+  
+}
+
+
 extern "C" void run_phased_array_beam(Telescope *telescope,
                                int num_stations, int *station_idxs,
                                int num_dirs,
@@ -271,7 +334,7 @@ extern "C" void run_phased_array_beam(Telescope *telescope,
             jones[jones_index + 2] = {response[1].real(), response[1].imag()};
             jones[jones_index + 3] = {response[0].real(), response[0].imag()};
           }
-          // std::printf("s%d t%d f%d c%d: %.10f %.10f, %.10f %.10f, %.10f %.10f, %.10f %.10f\n",
+          // std::printf("s%d t%d f%d c%d: %.10f + %.10f*I, %.10f + %.10f*I, %.10f + %.10f*I, %.10f + %.10f*I\n",
           //   si, ti, fi, ci,
           //   __real__ jones[jones_index + 0], __imag__ jones[jones_index + 0],
           //   __real__ jones[jones_index + 1], __imag__ jones[jones_index + 1],
@@ -281,6 +344,10 @@ extern "C" void run_phased_array_beam(Telescope *telescope,
       }
     }
   }
+  // print_gains_from_jones(num_times, num_freqs,
+  //                        num_dirs, num_stations,
+  //                        jones);
+
 }
 
 

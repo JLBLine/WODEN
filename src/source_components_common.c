@@ -435,7 +435,7 @@ void source_component_common(woden_settings_t *woden_settings,
                             components->ras, components->decs,
                             num_times, mjd_sec_times,
                             num_freqs, cpu_freqs,
-                            woden_settings->normalise_primary_beam,
+                            apply_beam_norms,
                             rotate, element_only, iau_order,
                             jones);
 

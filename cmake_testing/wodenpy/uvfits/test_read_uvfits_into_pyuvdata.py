@@ -49,7 +49,7 @@ class Test(unittest.TestCase):
                       telescope_name=self.telescope_name,
                       num_antennas=self.num_antennas, freq_cent=self.freq_cent,
                       date=self.date, gst0_deg=self.gst0_deg,
-                      degpdy=self.degpdy,
+                      degpdy=self.degpdy, ut1utc=self.ut1utc,
                       longitude=self.longitude, latitude=self.latitude,
                       array_height=self.array_height)
 

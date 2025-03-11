@@ -46,33 +46,32 @@ void test_fill_primary_beam_settings(woden_settings_t *woden_settings) {
   beam_settings_t *beam_settings = fill_primary_beam_settings(woden_settings,
                                                               lsts);
 
-  //Both the Gaussian Beam or analytic MWA Beam need the HA/Dec coords for
-  //all directions, so test both of those here
-  if (woden_settings->beamtype == GAUSS_BEAM || woden_settings->beamtype == MWA_ANALY) {
+  //Only GAUSS_BEAM should have these things set
+  if (woden_settings->beamtype == GAUSS_BEAM) {
+    TEST_ASSERT_EQUAL_INT(GAUSS_BEAM, beam_settings->beamtype );
 
-    //Only GAUSS_BEAM should have these things set
-    if (woden_settings->beamtype == GAUSS_BEAM) {
-      TEST_ASSERT_EQUAL_INT(GAUSS_BEAM, beam_settings->beamtype );
+    //Check major settings are copied across / calculated
+    TEST_ASSERT_EQUAL_FLOAT(woden_settings->gauss_beam_FWHM * DD2R,
+                            beam_settings->beam_FWHM_rad );
+    TEST_ASSERT_EQUAL_DOUBLE(woden_settings->gauss_beam_ref_freq,
+                              beam_settings->beam_ref_freq );
 
-      //Check major settings are copied across / calculated
-      TEST_ASSERT_EQUAL_FLOAT(woden_settings->gauss_beam_FWHM * DD2R,
-                              beam_settings->beam_FWHM_rad );
-      TEST_ASSERT_EQUAL_DOUBLE(woden_settings->gauss_beam_ref_freq,
-                               beam_settings->beam_ref_freq );
-
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, sin(woden_settings->gauss_dec_point),
-                              beam_settings->gauss_sdec );
-      TEST_ASSERT_DOUBLE_WITHIN(TOL, cos(woden_settings->gauss_dec_point),
-                              beam_settings->gauss_cdec );
-      TEST_ASSERT_EQUAL_DOUBLE(woden_settings->lst_base - woden_settings->gauss_ra_point,
-                              beam_settings->gauss_ha );
-    } else {
-      TEST_ASSERT_EQUAL_INT(MWA_ANALY, beam_settings->beamtype );
-    }
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, sin(woden_settings->gauss_dec_point),
+                            beam_settings->gauss_sdec );
+    TEST_ASSERT_DOUBLE_WITHIN(TOL, cos(woden_settings->gauss_dec_point),
+                            beam_settings->gauss_cdec );
+    TEST_ASSERT_EQUAL_DOUBLE(woden_settings->lst_base - woden_settings->gauss_ra_point,
+                            beam_settings->gauss_ha );
 
   }
   //For everything else, just check that the beamtype has been copied from
   //woden_settings to beam_settings
+
+  else if (woden_settings->beamtype == MWA_ANALY) {
+    TEST_ASSERT_EQUAL_INT(MWA_ANALY, beam_settings->beamtype );
+
+  }
+  
   else if (woden_settings->beamtype == FEE_BEAM){
     TEST_ASSERT_EQUAL_INT(FEE_BEAM, beam_settings->beamtype );
   }

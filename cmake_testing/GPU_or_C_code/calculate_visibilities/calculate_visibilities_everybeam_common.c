@@ -122,8 +122,6 @@ void set_mjds(woden_settings_t *woden_settings, int beamtype){
     }
 }
 
-
-
 void test_calculate_visibilities_EveryBeam(int n_points, int n_gauss, int n_shapes,
                                            int num_sources, int do_gpu, int beamtype,
                                            const char *beam_ms_path) {
@@ -154,8 +152,9 @@ void test_calculate_visibilities_EveryBeam(int n_points, int n_gauss, int n_shap
   woden_settings->beam_ms_path = beam_ms_path;
   woden_settings->hdf5_beam_path = getenv("MWA_FEE_HDF5");
   woden_settings->off_cardinal_dipoles = 0;
-  woden_settings->eb_beam_ra0 = RA0;
+  woden_settings->eb_beam_ra0 = RA0 - DD2R;
   woden_settings->eb_beam_dec0 = dec0;
+  woden_settings->normalise_primary_beam = 1;
 
   if (beamtype == EB_MWA) {
     woden_settings->single_everybeam_station = 1;
@@ -205,79 +204,83 @@ void test_calculate_visibilities_EveryBeam(int n_points, int n_gauss, int n_shap
     double TOL = 3e-2;
   #endif
 
-  double _Complex *gain1x = malloc(NUM_ANTS*NUM_TIME_STEPS*sizeof(double _Complex));
-  double _Complex *leak1x = malloc(NUM_ANTS*NUM_TIME_STEPS*sizeof(double _Complex));
-  double _Complex *leak1y = malloc(NUM_ANTS*NUM_TIME_STEPS*sizeof(double _Complex));
-  double _Complex *gain1y = malloc(NUM_ANTS*NUM_TIME_STEPS*sizeof(double _Complex));
-  double _Complex *gain2x = malloc(NUM_ANTS*NUM_TIME_STEPS*sizeof(double _Complex));
-  double _Complex *leak2x = malloc(NUM_ANTS*NUM_TIME_STEPS*sizeof(double _Complex));
-  double _Complex *leak2y = malloc(NUM_ANTS*NUM_TIME_STEPS*sizeof(double _Complex));
-  double _Complex *gain2y = malloc(NUM_ANTS*NUM_TIME_STEPS*sizeof(double _Complex));
+  double _Complex *expec_gainx = malloc(NUM_ANTS*NUM_TIME_STEPS*sizeof(double _Complex));
+  double _Complex *expec_leakx = malloc(NUM_ANTS*NUM_TIME_STEPS*sizeof(double _Complex));
+  double _Complex *expec_leaky = malloc(NUM_ANTS*NUM_TIME_STEPS*sizeof(double _Complex));
+  double _Complex *expec_gainy = malloc(NUM_ANTS*NUM_TIME_STEPS*sizeof(double _Complex));
 
   // -0.8775036335 0.4795700312, 0.0001940064 0.0000344838, 0.0002021146 0.0000273663, -0.8777521849 0.4791148901
   // -0.0692513958 0.0402538478, -0.0234183073 0.0134399701, 0.0233655237 -0.0105750393, -0.0530412868 0.0235209484
   
   //MWA EveryBeam is locked to zenith, so beam values vary depending on where things are pointing
   if (beamtype == EB_MWA) {
-    double _Complex gain1x_mwa[NUM_ANTS*NUM_TIME_STEPS] = {-0.8775036335 + 0.4795700312*I, -0.8775036335 + 0.4795700312*I, -0.8775036335 + 0.4795700312*I,
+    double _Complex gxs_mwa[NUM_ANTS*NUM_TIME_STEPS] = {-0.8775036335 + 0.4795700312*I, -0.8775036335 + 0.4795700312*I, -0.8775036335 + 0.4795700312*I,
                                                           -0.0692513958 + 0.0402538478*I, -0.0692513958 + 0.0402538478*I, -0.0692513958 + 0.0402538478*I};
 
-    double _Complex leak1x_mwa[NUM_ANTS*NUM_TIME_STEPS] = {0.0001940064 + 0.0000344838*I, 0.0001940064 + 0.0000344838*I, 0.0001940064 + 0.0000344838*I,
+    double _Complex Dxs_mwa[NUM_ANTS*NUM_TIME_STEPS] = {0.0001940064 + 0.0000344838*I, 0.0001940064 + 0.0000344838*I, 0.0001940064 + 0.0000344838*I,
                                                           -0.0234183073 + 0.0134399701*I, -0.0234183073 + 0.0134399701*I, -0.0234183073 + 0.0134399701*I};
 
-    double _Complex leak1y_mwa[NUM_ANTS*NUM_TIME_STEPS] = {0.0002021146 + 0.0000273663*I, 0.0002021146 + 0.0000273663*I, 0.0002021146 + 0.0000273663*I,
+    double _Complex Dys_mwa[NUM_ANTS*NUM_TIME_STEPS] = {0.0002021146 + 0.0000273663*I, 0.0002021146 + 0.0000273663*I, 0.0002021146 + 0.0000273663*I,
                                                            0.0233655237 - 0.0105750393*I, 0.0233655237 - 0.0105750393*I, 0.0233655237 - 0.0105750393*I};
 
-    double _Complex gain1y_mwa[NUM_ANTS*NUM_TIME_STEPS] = {-0.8777521849 + 0.4791148901*I, -0.8777521849 + 0.4791148901*I, -0.8777521849 + 0.4791148901*I,
+    double _Complex gys_mwa[NUM_ANTS*NUM_TIME_STEPS] = {-0.8777521849 + 0.4791148901*I, -0.8777521849 + 0.4791148901*I, -0.8777521849 + 0.4791148901*I,
                                                           -0.0530412868 + 0.0235209484*I, -0.0530412868 + 0.0235209484*I, -0.0530412868 + 0.0235209484*I};
-
-
-    double _Complex gain2x_mwa[NUM_ANTS*NUM_TIME_STEPS] = {-0.8775036335 + 0.4795700312*I, -0.8775036335 + 0.4795700312*I, -0.8775036335 + 0.4795700312*I,
-                                                          -0.0692513958 + 0.0402538478*I, -0.0692513958 + 0.0402538478*I, -0.0692513958 + 0.0402538478*I};
-
-    double _Complex leak2x_mwa[NUM_ANTS*NUM_TIME_STEPS] = {0.0001940064 + 0.0000344838*I, 0.0001940064 + 0.0000344838*I, 0.0001940064 + 0.0000344838*I,
-                                                          -0.0234183073 + 0.0134399701*I, -0.0234183073 + 0.0134399701*I, -0.0234183073 + 0.0134399701*I};
-
-    double _Complex leak2y_mwa[NUM_ANTS*NUM_TIME_STEPS] = {0.0002021146 + 0.0000273663*I, 0.0002021146 + 0.0000273663*I, 0.0002021146 + 0.0000273663*I,
-                                                           0.0233655237 - 0.0105750393*I, 0.0233655237 - 0.0105750393*I, 0.0233655237 - 0.0105750393*I};
-
-    double _Complex gain2y_mwa[NUM_ANTS*NUM_TIME_STEPS] = {-0.8777521849 + 0.4791148901*I, -0.8777521849 + 0.4791148901*I, -0.8777521849 + 0.4791148901*I,
-                                                          -0.0530412868 + 0.0235209484*I, -0.0530412868 + 0.0235209484*I, -0.0530412868 + 0.0235209484*I};
-
-
-
     for (int gain_ind = 0; gain_ind < NUM_ANTS*NUM_TIME_STEPS; gain_ind++) {
-      gain1x[gain_ind] = gain1x_mwa[gain_ind];
-      leak1x[gain_ind] = leak1x_mwa[gain_ind];
-      leak1y[gain_ind] = leak1y_mwa[gain_ind];
-      gain1y[gain_ind] = gain1y_mwa[gain_ind];
+      expec_gainx[gain_ind] = gxs_mwa[gain_ind];
+      expec_leakx[gain_ind] = Dxs_mwa[gain_ind];
+      expec_leaky[gain_ind] = Dys_mwa[gain_ind];
+      expec_gainy[gain_ind] = gys_mwa[gain_ind];
 
-      gain2x[gain_ind] = gain2x_mwa[gain_ind];
-      leak2x[gain_ind] = leak2x_mwa[gain_ind];
-      leak2y[gain_ind] = leak2y_mwa[gain_ind];
-      gain2y[gain_ind] = gain2y_mwa[gain_ind];
     }
 
   //We normalise the other EveryBeams to the phase centre, so they're all one here
-  } else {
+  } else if (beamtype == EB_LOFAR) {
+
+    double _Complex gxs_lofar[NUM_ANTS*NUM_TIME_STEPS] = {0.7890886973 + -0.0007822585*I, 0.7890645712 + -0.0006363356*I, 0.5740544114 + -0.0004572933*I,
+                                                    0.5302808837 + -0.0005594725*I, 0.5304586333 + -0.0009421803*I, 2.2908607380 + -0.0040391421*I};
+
+    double _Complex Dxs_lofar[NUM_ANTS*NUM_TIME_STEPS] = {0.0142538948 + -0.0000307587*I, 0.0142534621 + -0.0000281222*I, 0.0103695733 + -0.0000203572*I,
+                                                    0.0104804987 + -0.0000276144*I, 0.0104839998 + -0.0000351838*I, 0.0452766390 + -0.0001513574*I};
+
+    double _Complex Dys_lofar[NUM_ANTS*NUM_TIME_STEPS] = {-0.0116992357 + 0.0000037154*I, -0.0116988765 + 0.0000015522*I, -0.0085110799 + 0.0000010455*I,
+                                                    -0.0107561224 + -0.0000095649*I, -0.0107597429 + -0.0000018091*I, -0.0464674726 + -0.0000084174*I};
+
+    double _Complex gys_lofar[NUM_ANTS*NUM_TIME_STEPS] = {0.7938761810 + -0.0008156168*I, 0.7938519139 + -0.0006688077*I, 0.5775372637 + -0.0004808828*I,
+                                                    0.5338289758 + -0.0005919146*I, 0.5340078939 + -0.0009771928*I, 2.3061887244 + -0.0041901488*I};
+
 
     for (int gain_ind = 0; gain_ind < NUM_ANTS*NUM_TIME_STEPS; gain_ind++) {
-
-      gain1x[gain_ind] = 1.0 + 0.0*I;
-      leak1x[gain_ind] = 0.0 + 0.0*I;
-      leak1y[gain_ind] = 0.0 + 0.0*I;
-      gain1y[gain_ind] = 1.0 + 0.0*I;
-      gain2x[gain_ind] = 1.0 + 0.0*I;
-      leak2x[gain_ind] = 0.0 + 0.0*I;
-      leak2y[gain_ind] = 0.0 + 0.0*I;
-      gain2y[gain_ind] = 1.0 + 0.0*I;
-
+      expec_gainx[gain_ind] = gxs_lofar[gain_ind];
+      expec_leakx[gain_ind] = Dxs_lofar[gain_ind];
+      expec_leaky[gain_ind] = Dys_lofar[gain_ind];
+      expec_gainy[gain_ind] = gys_lofar[gain_ind];
     }
+
+  } else {
+    double _Complex gxs_oskar[NUM_ANTS*NUM_TIME_STEPS] = {1.0592501418 + -0.0124013387*I, 1.0583441460 + -0.0094384205*I, 1.0609604439 + -0.0006131539*I,
+                                                          1.0401339976 + 0.0118783756*I, 1.0391701685 + 0.0135437693*I, 1.0398477908 + 0.0146351146*I};
+
+    double _Complex Dxs_oskar[NUM_ANTS*NUM_TIME_STEPS] = {-0.0083413516 + 0.0000465002*I, -0.0083334832 + 0.0000231529*I, -0.0083540150 + -0.0000464244*I,
+                                                          -0.0130903130 + -0.0004361606*I, -0.0130764745 + -0.0004568921*I, -0.0130855069 + -0.0004708017*I};
+
+    double _Complex Dys_oskar[NUM_ANTS*NUM_TIME_STEPS] = {0.0092953280 + -0.0001676934*I, 0.0092875564 + -0.0001416831*I, 0.0093110013 + -0.0000643514*I,
+                                                          0.0076253644 + -0.0012037931*I, 0.0076206350 + -0.0011903459*I, 0.0076267774 + -0.0011832643*I};
+
+    double _Complex gys_oskar[NUM_ANTS*NUM_TIME_STEPS] = {1.0593393599 + -0.0124588684*I, 1.0584328219 + -0.0094957071*I, 1.0610502723 + -0.0006697961*I,
+                                                          1.0604574958 + 0.0104804413*I, 1.0594770754 + 0.0121800614*I, 1.0601700299 + 0.0132915015*I};
+
+    for (int gain_ind = 0; gain_ind < NUM_ANTS*NUM_TIME_STEPS; gain_ind++) {
+      expec_gainx[gain_ind] = gxs_oskar[gain_ind];
+      expec_leakx[gain_ind] = Dxs_oskar[gain_ind];
+      expec_leaky[gain_ind] = Dys_oskar[gain_ind];
+      expec_gainy[gain_ind] = gys_oskar[gain_ind];
+    }
+
   }
 
   test_comp_phase_centre_allgains_diffants(visibility_set, num_comps, 
-                                gain1x, leak1x, leak1y, gain1y,
-                                gain2x, leak2x, leak2y, gain2y,
+                                expec_gainx, expec_leakx,
+                                expec_leaky, expec_gainy,
                                 NUM_ANTS, woden_settings, TOL);
 
   free_visi_set_inputs(visibility_set);
@@ -302,21 +305,18 @@ void test_calculate_visibilities_EveryBeam(int n_points, int n_gauss, int n_shap
                                           beam_settings->beamtype);
 
   test_comp_phase_centre_allgains_diffants(visibility_set, num_comps, 
-                                gain1x, leak1x, leak1y, gain1y,
-                                gain2x, leak2x, leak2y, gain2y,
+                                expec_gainx, expec_leakx,
+                                expec_leaky, expec_gainy,
                                 NUM_ANTS, woden_settings, TOL);
 
   free_visi_set_inputs(visibility_set);
   free_visi_set_outputs(visibility_set);
 
-  free(gain1x);
-  free(leak1x);
-  free(leak1y);
-  free(gain1y);
-  free(gain2x);
-  free(leak2x);
-  free(leak2y);
-  free(gain2y);
+  free(expec_gainx);
+  free(expec_leakx);
+  free(expec_leaky);
+  free(expec_gainy);
+
   free(beam_settings);
   free(woden_settings->mjds);
   free(woden_settings);

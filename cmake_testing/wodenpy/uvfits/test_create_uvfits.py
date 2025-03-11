@@ -267,7 +267,9 @@ class Test(unittest.TestCase):
                       num_antennas=self.num_antennas, freq_cent=self.freq_cent,
                       date=self.date,
                       longitude=self.longitude, latitude=self.latitude,
-                      array_height=self.array_height)
+                      array_height=self.array_height,
+                      gst0_deg=self.gst0_deg, ut1utc=self.ut1utc,
+                      degpdy=self.degpdy)
 
         ##Make unequal inputs to create failure
         self.v_container = np.zeros((10, 1, 1, 16, 4, 3))
@@ -287,7 +289,9 @@ class Test(unittest.TestCase):
                       v_container=self.v_container,
                       uu=self.uu, vv=self.vv, ww=self.ww,
                       baselines_array=self.baselines_array, date_array=self.date_array,
-                      hdu_ant=self.ant_table)
+                      hdu_ant=self.ant_table, longitude=self.longitude,
+                      latitude=self.latitude, array_height=self.array_height,
+                      telescope_name=self.telescope_name)
         ##Check the error string is as expected
         expec_fail_string = ("run_woden.create_uvfits: The first dimension of the arrays:\n"
                             "v_container, uu, vv, ww, baselines_array, date_array\n"

@@ -153,3 +153,5 @@ coverage_outputs/python_coverage
 
 woden_dev
 cmake_testing/GPU_or_C_code/call_everybeam/plots
+
+check_documentation/docstring_issues.txt
