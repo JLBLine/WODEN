@@ -81,38 +81,39 @@ void test_MWA_analytic_beam_nside101(int do_gpu) {
        gxs, Dxs, Dys, gys);
   }
 
-  
+  if (do_gpu && TOL == 1e-8) {
 
-  // FILE *output_text;
+    FILE *output_text;
 
-  // char filename[100];
-  // sprintf(filename, "MWA_analy_gains_azza%02d.txt", num_components);
+    char filename[100];
+    sprintf(filename, "MWA_analy_gains_azza%02d.txt", num_components);
 
-  // output_text = fopen(filename,"w");
+    output_text = fopen(filename,"w");
 
-  // int count = 0;
+    int count = 0;
 
-  // for (int time = 0; time < num_times; time ++) {
-  //   for (int freq = 0; freq < num_freqs; freq ++) {
-  //     for (int comp = 0; comp < num_components; comp ++) {
+    for (int time = 0; time < num_times; time ++) {
+      for (int freq = 0; freq < num_freqs; freq ++) {
+        for (int comp = 0; comp < num_components; comp ++) {
 
-  //       int beam_ind = num_freqs*time*num_components + num_components*freq + comp;
-  //       int coord_ind = comp*num_times + time;
+          int beam_ind = num_freqs*time*num_components + num_components*freq + comp;
+          int coord_ind = comp*num_times + time;
 
-  //       fprintf(output_text,"%.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.1f\n",
-  //        all_azs[coord_ind], all_zas[coord_ind],
-  //        creal(gxs[beam_ind]), cimag(gxs[beam_ind]),
-  //        creal(Dxs[beam_ind]), cimag(Dxs[beam_ind]),
-  //        creal(Dys[beam_ind]), cimag(Dys[beam_ind]),
-  //        creal(gys[beam_ind]), cimag(gys[beam_ind]),
-  //        freqs[freq] );
+          fprintf(output_text,"%.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.1f\n",
+          all_azs[coord_ind], all_zas[coord_ind],
+          creal(gxs[beam_ind]), cimag(gxs[beam_ind]),
+          creal(Dxs[beam_ind]), cimag(Dxs[beam_ind]),
+          creal(Dys[beam_ind]), cimag(Dys[beam_ind]),
+          creal(gys[beam_ind]), cimag(gys[beam_ind]),
+          freqs[freq] );
 
-  //        count ++;
-  //     }
-  //   }
-  // }
-  // fflush(output_text);
-  // fclose(output_text);
+          count ++;
+        }
+      }
+    }
+    fflush(output_text);
+    fclose(output_text);
+  }
 
   for (int ind = 0; ind < num_beam_values; ind++) {
 

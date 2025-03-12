@@ -159,21 +159,6 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq, user_precision_t *delays,
 
   double TOL = 1e-6;
 
-  // int num_big_diffs = 0;
-
-  // // // Check the values are within TOLerance
-  // for (int comp = 0; comp < num_azza; comp++) {
-  //
-  //   // printf("%d %d %.16f %.16f\n",comp, num_azza, expected[2*MAX_POLS*comp+0], creal(primay_beam_J00[comp]) );
-  //
-  //   // printf("%.2e\n",fabs(expected[2*MAX_POLS*comp+0] - creal(primay_beam_J00[comp])) );
-  //
-  //   // if (fabs(expected[2*MAX_POLS*comp+0] - creal(primay_beam_J00[comp])) > TOL) {
-  //   //   num_big_diffs += 1;
-  //   //   printf("%d %.5f %.12f %.16f %.16f\n",comp, azs[comp], zas[comp], expected[2*MAX_POLS*comp+0], creal(primay_beam_J00[comp]) );
-  //   // }
-  //
-
   for (int time = 0; time < num_times; time ++) {
     for (int freq = 0; freq < num_freqs; freq ++) {
       for (int comp = 0; comp < num_components; comp ++) {
@@ -218,56 +203,48 @@ void test_hyperbeam_VaryFreqVaryPointing(double freq, user_precision_t *delays,
     }
   }
 
-  FILE *beam_values_out;
-  char buff[0x100];
+  if (do_gpu){
+    FILE *beam_values_out;
+    char buff[0x100];
 
-  #ifdef DOUBLE_PRECISION
-  if (rotate == 1) {
-    snprintf(buff, sizeof(buff), "%s_rot_double.txt", outname);
-  } else {
-    snprintf(buff, sizeof(buff), "%s_double.txt", outname);
-  }
+    #ifdef DOUBLE_PRECISION
+    if (rotate == 1) {
+      snprintf(buff, sizeof(buff), "%s_rot_double.txt", outname);
+    } else {
+      snprintf(buff, sizeof(buff), "%s_double.txt", outname);
+    }
 
-  #else
-      snprintf(buff, sizeof(buff), "%s_float.txt", outname);
-  #endif
-  //
-  beam_values_out = fopen(buff,"w");
+    #else
+        snprintf(buff, sizeof(buff), "%s_float.txt", outname);
+    #endif
+    //
+    beam_values_out = fopen(buff,"w");
 
-  // for (int comp = 0; comp < num_azza; comp++) {
-  //   fprintf(beam_values_out, "%.16f %.16f %.16f %.16f %.16f %.16f %.16f %.16f %.16f %.16f %.6e\n",
-  //   azs[comp], zas[comp],
-  //   creal(primay_beam_J00[comp]), cimag(primay_beam_J00[comp]),
-  //   creal(primay_beam_J01[comp]), cimag(primay_beam_J01[comp]),
-  //   creal(primay_beam_J10[comp]), cimag(primay_beam_J10[comp]),
-  //   creal(primay_beam_J11[comp]), cimag(primay_beam_J11[comp]),
-  //   freq);
-  // }
 
-  for (int time = 0; time < num_times; time ++) {
-    for (int freq = 0; freq < num_freqs; freq ++) {
-      for (int comp = 0; comp < num_components; comp ++) {
+    for (int time = 0; time < num_times; time ++) {
+      for (int freq = 0; freq < num_freqs; freq ++) {
+        for (int comp = 0; comp < num_components; comp ++) {
 
-        int beam_ind = num_freqs*time*num_components + num_components*freq + comp;
-        int coord_ind = comp*num_times + time;
+          int beam_ind = num_freqs*time*num_components + num_components*freq + comp;
+          int coord_ind = comp*num_times + time;
 
-        fprintf(beam_values_out,"%.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.1d\n",
-         azs[coord_ind], zas[coord_ind],
-         creal(primay_beam_J00[beam_ind]), cimag(primay_beam_J00[beam_ind]),
-         creal(primay_beam_J01[beam_ind]), cimag(primay_beam_J01[beam_ind]),
-         creal(primay_beam_J10[beam_ind]), cimag(primay_beam_J10[beam_ind]),
-         creal(primay_beam_J11[beam_ind]), cimag(primay_beam_J11[beam_ind]),
-         freqs_hz[freq] );
+          fprintf(beam_values_out,"%.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f %.1d\n",
+          azs[coord_ind], zas[coord_ind],
+          creal(primay_beam_J00[beam_ind]), cimag(primay_beam_J00[beam_ind]),
+          creal(primay_beam_J01[beam_ind]), cimag(primay_beam_J01[beam_ind]),
+          creal(primay_beam_J10[beam_ind]), cimag(primay_beam_J10[beam_ind]),
+          creal(primay_beam_J11[beam_ind]), cimag(primay_beam_J11[beam_ind]),
+          freqs_hz[freq] );
 
+        }
       }
     }
+    fflush(beam_values_out);
+    fclose(beam_values_out);
   }
 
   free(azs);
   free(zas);
-
-  fflush(beam_values_out);
-  fclose(beam_values_out);
 
   free(primay_beam_J00);
   free(primay_beam_J01);

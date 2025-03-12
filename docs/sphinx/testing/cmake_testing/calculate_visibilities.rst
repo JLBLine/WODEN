@@ -203,3 +203,7 @@ each station. If we left it locked to the phase centre, the beam response would
 gains of 1 and leakage of zero. Use stored beam gain values to calculate 
 expected visibilities to compare results against.
 
+.. ``make_exe_to_profile_lofar_everybeam.c``
+.. **********************************************
+.. This creates an executable that can be used to profile the EveryBeam LOFAR beam model.
+.. It calculates visibilities for 200 

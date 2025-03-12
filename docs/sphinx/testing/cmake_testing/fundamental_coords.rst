@@ -1,13 +1,16 @@
 ``fundamental_coords``
 =========================
-Tests for the functions in ``WODEN/src/fundamental_coords.cu``.
+Tests for the functions in ``WODEN/src/fundamental_coords_cpu.c`` and
+``WODEN/src/fundamental_coords_gpu.cpp``. These functions calculate ``lmn``
+and ``uvw`` coordinates, on the cpu and gpu respectively. The same tests are
+run on both the cpu and gpu code, to ensure consistency.
 
-test_lmn_coords.c
+``test_lmn_coords*.c``
 *********************************
-This runs ``fundamental_coords::test_kern_calc_lmn``, which tests
-``fundamental_coords::kern_calc_lmn``, which calculates *l,m,n* coords.
+This either runs ``fundamental_coords_cpu.c::calc_lmn_cpu`` or
+``fundamental_coords_gpu.cpp::calc_lmn_for_components_gpu``, which calculate *l,m,n* coords.
 
-This runs two control tests, both that generate analytically predictable
+We run two control tests, both that generate analytically predictable
 outcomes. Both set the phase centre to *RA*:math:`_{\textrm{phase}}`, *Dec*:math:`_{\textrm{phase}}` = :math:`0^\circ, 0^\circ`. One
 test holds *Dec* = :math:`0^\circ`, and varies *RA*, the other holds
 *RA* = :math:`0^\circ`, and varies *Dec*.  Under these settings the following
@@ -109,25 +112,25 @@ of outputs. Note that this function is entirely 64-bit whether in FLOAT or
 DOUBLE compile mode. The absolute tolerance for outputs vs expectation tabled
 above is 1e-15 (this function is a good 'un).
 
-test_uvw_coords.c
+test_uvw_coords*.c
 *********************************
-This runs both ``fundamental_coords::test_kern_calc_uvw`` as well as
-``fundamental_coords::test_kern_calc_uvw_shapelet``, which in turn test
-``fundamental_coords::kern_calc_uvw``,
-``fundamental_coords::kern_calc_uvw_shapelet`` respectively.
+This runs either ``fundamental_coords_gpu.cpp::calc_uvw_gpu`` and 
+``fundamental_coords_gpu.cpp::calc_uv_shapelet_gpu``, or 
+``fundamental_coords_cpu.c::calc_uvw_cpu`` and
+``fundamental_coords_cpu.c::calc_uv_shapelet_cpu``.
 
-Both kernels calculate *u,v,w* coords in slightly different circumstances.
-``kern_calc_uvw`` calculates *u,v,w* coords towards a specified *RA,Dec* phase centre,
+Both functions calculate *u,v,w* coords in slightly different circumstances.
+``calc_uvw`` calculates *u,v,w* coords towards a specified *RA,Dec* phase centre,
 for a given set of baseline lengths :math:`X_{\mathrm{diff}}, Y_{\mathrm{diff}}, Z_{\mathrm{diff}}`,
 for a number of LSTs and frequencies (meaning *u,v,w* change with time and frequency).
 
-``kern_calc_uvw_shapelet`` calculates a number of *u,v* coordinate systems,
+``calc_uv_shapelet`` calculates a number of *u,v* coordinate systems,
 each centred on a different SHAPELET component, and does *not* scale by wavelength;
 everything remains in metres. This is to save on memory, at the cost of
 having to divide by wavelength inside kernels at later times.
 
-Both kernels are tested for scaling as changing by time, and
-``fundamental_coords::kern_calc_uvw`` is tested to change with wavelength. To generate
+Both functions are tested for scaling as changing by time, and
+``calc_uvw`` is tested to change with wavelength. To generate
 analytically predictable outcomes, the phase centre is again set to
 *RA*:math:`_{\textrm{phase}}`, *Dec*:math:`_{\textrm{phase}}` = :math:`0^\circ, 0^\circ`.
 Under these conditions, the following is true:
@@ -142,8 +145,5 @@ Under these conditions, the following is true:
 
 where :math:`H_{\textrm{phase}}` is the hour angle of the phase centre. These tests
 check that this holds true over multiple time and frequency steps. In the case
-of ``kern_calc_uvw_shapelet``, this is checked for each SHAPELET component,
-making sure that the outputs are ordered as expected. Both the FLOAT and DOUBLE
-versions are tested within a tolerance of 1e-16 (this test compares the ``CUDA``
-code to the ``C`` code calculation of the above equations, so they agree
-very nicely).
+of ``calc_uvw_shapelet``, this is checked for each SHAPELET component,
+making sure that the outputs are ordered as expected. 

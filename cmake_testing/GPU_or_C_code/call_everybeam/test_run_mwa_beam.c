@@ -225,7 +225,6 @@ int main(void)
 
     RUN_TEST(test_run_mwa_telescope_norotate_noiau);
     RUN_TEST(test_run_mwa_telescope_rotate_iau);
-    
 
     return UNITY_END();
 }

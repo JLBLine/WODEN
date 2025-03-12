@@ -353,45 +353,45 @@ values that are stored in test_RTS_FEE_beam.h
 */
 void test_hyperbeam_100MHz_zenith_multiant(int do_gpu) {
   check_for_env_and_run_test(100e+6, zenith_delays, zenith_100,
-                             zenith_100_rot, "hyperbeam_zenith_100", do_gpu);
+                             zenith_100_rot, "hyperbeam_zenith_100_multiants", do_gpu);
 }
 
 void test_hyperbeam_150MHz_zenith_multiant(int do_gpu) {
   check_for_env_and_run_test(150e+6, zenith_delays, zenith_150,
-                             zenith_150_rot, "hyperbeam_zenith_150", do_gpu);
+                             zenith_150_rot, "hyperbeam_zenith_150_multiants", do_gpu);
 }
 
 void test_hyperbeam_200MHz_zenith_multiant(int do_gpu) {
   check_for_env_and_run_test(200e+6, zenith_delays, zenith_200,
-                             zenith_200_rot, "hyperbeam_zenith_200_two_ants", do_gpu);
+                             zenith_200_rot, "hyperbeam_zenith_200_multiants", do_gpu);
 }
 
 void test_hyperbeam_100MHz_off_zenith1_multiant(int do_gpu) {
   check_for_env_and_run_test(100e+6, off_zenith1_delays, offzen1_100,
-                             offzen1_100_rot, "hyperbeam_offzen1_100", do_gpu);
+                             offzen1_100_rot, "hyperbeam_offzen1_100_multiants", do_gpu);
 }
 
 void test_hyperbeam_150MHz_off_zenith1_multiant(int do_gpu) {
   check_for_env_and_run_test(150e+6, off_zenith1_delays, offzen1_150,
-                             offzen1_150_rot, "hyperbeam_offzen1_150", do_gpu);
+                             offzen1_150_rot, "hyperbeam_offzen1_150_multiants", do_gpu);
 }
 
 void test_hyperbeam_200MHz_off_zenith1_multiant(int do_gpu) {
   check_for_env_and_run_test(200e+6, off_zenith1_delays, offzen1_200,
-                             offzen1_200_rot, "hyperbeam_offzen1_200", do_gpu);
+                             offzen1_200_rot, "hyperbeam_offzen1_200_multiants", do_gpu);
 }
 
 void test_hyperbeam_100MHz_off_zenith2_multiant(int do_gpu) {
   check_for_env_and_run_test(100e+6, off_zenith2_delays, offzen2_100,
-                             offzen2_100_rot, "hyperbeam_offzen2_100", do_gpu);
+                             offzen2_100_rot, "hyperbeam_offzen2_100_multiants", do_gpu);
 }
 
 void test_hyperbeam_150MHz_off_zenith2_multiant(int do_gpu) {
   check_for_env_and_run_test(150e+6, off_zenith2_delays, offzen2_150,
-                             offzen2_150_rot, "hyperbeam_offzen2_150", do_gpu);
+                             offzen2_150_rot, "hyperbeam_offzen2_150_multiants", do_gpu);
 }
 
 void test_hyperbeam_200MHz_off_zenith2_multiant(int do_gpu) {
   check_for_env_and_run_test(200e+6, off_zenith2_delays, offzen2_200,
-                             offzen2_200_rot, "hyperbeam_offzen2_200", do_gpu);
+                             offzen2_200_rot, "hyperbeam_offzen2_200_multiants", do_gpu);
 }

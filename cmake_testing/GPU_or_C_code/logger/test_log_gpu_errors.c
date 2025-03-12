@@ -7,19 +7,6 @@
 
 extern void try_to_memcpy_to_null_pointer_gpu(double *cpu_array, int num_elements);
 
-// static jmp_buf jump_buffer; // Define the jump buffer.
-// static int mock_exit_called = 0; // Track whether exit was called.
-// static int mock_exit_status = 0;
-
-// void exit(int status) {
-//     mock_exit_called = 1;
-//     mock_exit_status = status;
-//     longjmp(jump_buffer, 1); // Use setjmp/longjmp to bypass actual exit.
-// }
-
-
-
-// #include "hyperbeam_error.h"
 
 void setUp (void) {} /* Is run before every test, put unit init calls here. */
 void tearDown (void) {} /* Is run after every test, put unit clean-up calls here. */
