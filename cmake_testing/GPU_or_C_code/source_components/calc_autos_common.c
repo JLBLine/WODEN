@@ -154,7 +154,7 @@ void test_calculate_autos(e_beamtype beamtype, int do_gpu) {
           gy = 1 + 0.0*I;
         }
 
-        //Only MWA models have leakge terms at the moment
+        //The two models have zero leakage
         else if (beamtype == ANALY_DIPOLE || beamtype == GAUSS_BEAM) {
             Dx = 0 + 0.0*I;
             Dy = 0 + 0.0*I;

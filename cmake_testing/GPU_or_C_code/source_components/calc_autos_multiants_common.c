@@ -118,18 +118,19 @@ void test_calculate_autos_multiants(e_beamtype beamtype, int do_gpu) {
             expec_YY += expec_I;
           }
 
-          //Only MWA models have leakge terms at the moment
-          else if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY) {
+          else if (beamtype == GAUSS_BEAM || beamtype == ANALY_DIPOLE) {
+            expec_XX += (gx*conj(gx))*expec_I;
+            expec_YY += (gy*conj(gy))*expec_I;
+          }
+
+          else {
             expec_XX += (gx*conj(gx) + Dx*conj(Dx))*expec_I;
             expec_XY += (gx*conj(Dy) + conj(gy)*Dx)*expec_I;
             expec_YX += (Dy*conj(gx) + gy*conj(Dx))*expec_I;
             expec_YY += (gy*conj(gy) + Dy*conj(Dy))*expec_I;
           }
 
-          else{
-              expec_XX += (gx*conj(gx))*expec_I;
-              expec_YY += (gy*conj(gy))*expec_I;
-          }
+          
           beam_value ++;
           beam_ind ++;
         }

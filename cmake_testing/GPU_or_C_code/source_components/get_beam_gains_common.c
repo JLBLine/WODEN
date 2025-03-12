@@ -71,24 +71,18 @@ void test_get_beam_gains_ChooseBeams(int beamtype, int do_gpu) {
   user_precision_complex_t *primay_beam_J10 = malloc(num_freqs*num_times*num_components*sizeof(user_precision_complex_t));
   user_precision_complex_t *primay_beam_J11 = malloc(num_freqs*num_times*num_components*sizeof(user_precision_complex_t));
 
-  //All models apart from NO_BEAM should have gains set other than 1.0
+  //Set all gains and leakages to count
+  //Even though some models have no leakage, the get_beam_gains function
+  //should only read the leakage if it's needed, so doesn't matter if we set
+  //it for all models mn b
   int count = 0;
-  if (beamtype != NO_BEAM) {
-    for (int visi = 0; visi < num_components*num_times*num_freqs; visi++) {
-      primay_beam_J00[visi] = count + I*0.0;
-      primay_beam_J11[visi] = count + I*0.0;
-      count ++ ;
-    }
-  }
-
-  //Only MWA beams have cross-pols
-  count = 0;
-  if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY) {
-    for (int visi = 0; visi < num_components*num_times*num_freqs; visi++) {
-      primay_beam_J01[visi] = count + I*0.0;
-      primay_beam_J10[visi] = count + I*0.0;
-      count ++ ;
-    }
+  
+  for (int visi = 0; visi < num_components*num_times*num_freqs; visi++) {
+    primay_beam_J00[visi] = count + I*0.0;
+    primay_beam_J11[visi] = count + I*0.0;
+    primay_beam_J01[visi] = count + I*0.0;
+    primay_beam_J10[visi] = count + I*0.0;
+    count ++ ;
   }
 
   user_precision_complex_t *recover_g1x = malloc(num_visis*num_components*sizeof(user_precision_complex_t));
@@ -160,7 +154,33 @@ void test_get_beam_gains_ChooseBeams(int beamtype, int do_gpu) {
 
     }
   }
-  else if (beamtype == FEE_BEAM || beamtype == FEE_BEAM_INTERP || beamtype == MWA_ANALY) {
+
+   //No beam should be gains of 1.0, leakage of zero
+  else if (beamtype == NO_BEAM) {
+    for (int output = 0; output < num_visis*num_components; output++) {
+      // printf("Expected: %f, Recovered: %f\n", 1.0, creal(recover_g1x[output]));
+      TEST_ASSERT_EQUAL_FLOAT(1.0, creal(recover_g1x[output]));
+      TEST_ASSERT_EQUAL_FLOAT(0.0, creal(recover_D1x[output]));
+      TEST_ASSERT_EQUAL_FLOAT(0.0, creal(recover_D1y[output]));
+      TEST_ASSERT_EQUAL_FLOAT(1.0, creal(recover_g1y[output]));
+      TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(recover_g1x[output]));
+      TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(recover_D1x[output]));
+      TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(recover_D1y[output]));
+      TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(recover_g1y[output]));
+
+      TEST_ASSERT_EQUAL_FLOAT(1.0, creal(recover_g2x[output]));
+      TEST_ASSERT_EQUAL_FLOAT(0.0, creal(recover_D2x[output]));
+      TEST_ASSERT_EQUAL_FLOAT(0.0, creal(recover_D2y[output]));
+      TEST_ASSERT_EQUAL_FLOAT(1.0, creal(recover_g2y[output]));
+      TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(recover_g2x[output]));
+      TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(recover_D2x[output]));
+      TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(recover_D2y[output]));
+      TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(recover_g2y[output]));
+    }
+  }
+
+  //All other beams should have gains and leakages
+  else {
     for (int output = 0; output < num_visis*num_components; output++) {
       // printf("Expected: %f, Recovered: %f\n", expected_order[output], creal(recover_g1x[output]));
       TEST_ASSERT_EQUAL_FLOAT(expected_order[output], creal(recover_g1x[output]));
@@ -181,29 +201,6 @@ void test_get_beam_gains_ChooseBeams(int beamtype, int do_gpu) {
       TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(recover_D2y[output]));
       TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(recover_g2y[output]));
 
-    }
-  }
-  //Should only be here if NO_BEAM, which just has gains of 1.0
-  else {
-    for (int output = 0; output < num_visis*num_components; output++) {
-      // printf("Expected: %f, Recovered: %f\n", 1.0, creal(recover_g1x[output]));
-      TEST_ASSERT_EQUAL_FLOAT(1.0, creal(recover_g1x[output]));
-      TEST_ASSERT_EQUAL_FLOAT(0.0, creal(recover_D1x[output]));
-      TEST_ASSERT_EQUAL_FLOAT(0.0, creal(recover_D1y[output]));
-      TEST_ASSERT_EQUAL_FLOAT(1.0, creal(recover_g1y[output]));
-      TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(recover_g1x[output]));
-      TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(recover_D1x[output]));
-      TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(recover_D1y[output]));
-      TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(recover_g1y[output]));
-
-      TEST_ASSERT_EQUAL_FLOAT(1.0, creal(recover_g2x[output]));
-      TEST_ASSERT_EQUAL_FLOAT(0.0, creal(recover_D2x[output]));
-      TEST_ASSERT_EQUAL_FLOAT(0.0, creal(recover_D2y[output]));
-      TEST_ASSERT_EQUAL_FLOAT(1.0, creal(recover_g2y[output]));
-      TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(recover_g2x[output]));
-      TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(recover_D2x[output]));
-      TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(recover_D2y[output]));
-      TEST_ASSERT_EQUAL_FLOAT(0.0, cimag(recover_g2y[output]));
     }
   }
 

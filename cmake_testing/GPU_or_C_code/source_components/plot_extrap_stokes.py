@@ -8,7 +8,7 @@ if __name__ == '__main__':
     ##read in the data output by ctest - obviously need to run ctest first!
 
 
-    ctest_data = np.loadtxt("../../../build/cmake_testing/GPU_code/source_components/test_extrap_stokes.txt")
+    ctest_data = np.loadtxt("../../../build/cmake_testing/GPU_or_C_code/source_components/test_extrap_stokes.txt")
 
     
 

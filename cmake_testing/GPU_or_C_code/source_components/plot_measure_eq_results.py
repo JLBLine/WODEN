@@ -85,8 +85,8 @@ def plot_offsets(data, label, fig, axs):
 if __name__ == '__main__':
 
     ##Load up the data, assuming you built everthing in ../../build
-    data_float = np.loadtxt('../../build/cmake_testing/source_components/measurement_eq_outcomes_float.txt')
-    data_double = np.loadtxt('../../build/cmake_testing/source_components/measurement_eq_outcomes_double.txt')
+    data_float = np.loadtxt('../../../build/cmake_testing/GPU_or_C_code/source_components/measurement_eq_outcomes_float.txt')
+    data_double = np.loadtxt('../../../build/cmake_testing/GPU_or_C_code/source_components/measurement_eq_outcomes_double.txt')
 
     ##Make the fig, axs
     fig, axs  = plt.subplots(1,2, figsize=(8.5,5.5))

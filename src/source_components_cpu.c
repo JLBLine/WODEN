@@ -862,7 +862,7 @@ void get_beam_gains_multibeams_cpu(int iBaseline, int iComponent, int num_freqs,
 
   }
 
-  //Only MWA models have leakge terms at the moment
+  //These models have no leakage terms
   if (beamtype == NO_BEAM || beamtype == GAUSS_BEAM || beamtype == ANALY_DIPOLE) {
     * D1x = 0.0 + I*0.0;
     * D2x = 0.0 + I*0.0;

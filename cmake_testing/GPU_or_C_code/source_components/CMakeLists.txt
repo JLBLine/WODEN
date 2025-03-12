@@ -113,22 +113,22 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     add_test(${DEVICE}_test_get_beam_gains_${PRECISION}
           test_get_beam_gains_${DEVICE}_${PRECISION}_app)
 
-    add_executable(test_get_beam_gains_two_antennas_${DEVICE}_${PRECISION}_app
-      test_get_beam_gains_two_antennas_${DEVICE}.c
-      get_beam_gains_two_antennas_common.c
+    add_executable(test_get_beam_gains_multiants_${DEVICE}_${PRECISION}_app
+      test_get_beam_gains_multiants_${DEVICE}.c
+      get_beam_gains_multiants_common.c
       common_testing_functions.c
     )
-    target_link_libraries(test_get_beam_gains_two_antennas_${DEVICE}_${PRECISION}_app
+    target_link_libraries(test_get_beam_gains_multiants_${DEVICE}_${PRECISION}_app
       Unity gcov
       source_components_GPU_${PRECISION}
       calculate_visibilities_CPU_${PRECISION}
         calculate_visibilities_GPU_${PRECISION}
       ${CC_LINKLIBS}
     )
-    target_compile_options(test_get_beam_gains_two_antennas_${DEVICE}_${PRECISION}_app
+    target_compile_options(test_get_beam_gains_multiants_${DEVICE}_${PRECISION}_app
                         PRIVATE ${C_FLAGS})
-    add_test(${DEVICE}_test_get_beam_gains_two_antennas_${PRECISION}
-          test_get_beam_gains_two_antennas_${DEVICE}_${PRECISION}_app)
+    add_test(${DEVICE}_test_get_beam_gains_multiants_${PRECISION}
+          test_get_beam_gains_multiants_${DEVICE}_${PRECISION}_app)
 
     add_executable(test_update_sum_visis_${DEVICE}_${PRECISION}_app
       test_update_sum_visis_${DEVICE}.c

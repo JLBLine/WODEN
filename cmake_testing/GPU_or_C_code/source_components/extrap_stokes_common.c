@@ -327,17 +327,17 @@ void test_extrap_stokes_GivesCorrectValues(int do_gpu) {
     TEST_ASSERT_DOUBLE_WITHIN(TOL, expec_flux_V[i], extrap_flux_V[i]);
   }
 
-  // FILE *output_text;
+  FILE *output_text;
 
-  // output_text = fopen("test_extrap_stokes.txt","w");
+  output_text = fopen("test_extrap_stokes.txt","w");
 
-  // for (int i = 0; i < num_extrap_freqs*(num_powers + num_curves + num_lists); i++) {
+  for (int i = 0; i < num_extrap_freqs*(num_powers + num_curves + num_lists); i++) {
 
-  //   fprintf(output_text,"%.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f\n", extrap_flux_I[i],
-  //                     extrap_flux_Q[i], extrap_flux_U[i], extrap_flux_V[i],
-  //         expec_flux_I[i], expec_flux_Q[i], expec_flux_U[i], expec_flux_V[i]);
+    fprintf(output_text,"%.12f %.12f %.12f %.12f %.12f %.12f %.12f %.12f\n", extrap_flux_I[i],
+                      extrap_flux_Q[i], extrap_flux_U[i], extrap_flux_V[i],
+          expec_flux_I[i], expec_flux_Q[i], expec_flux_U[i], expec_flux_V[i]);
 
-  // }
+  }
 
   //Be free my beauties
   free(extrap_flux_I);

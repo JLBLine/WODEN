@@ -1,16 +1,18 @@
 ``source_components``
 =========================
-Tests for the functions in ``WODEN/src/source_components.cu``. These functions
-calculate visibilities for the different COMPONENT types, as well as calling
-the various beam models to be applied to the visibilities.
+Tests for the functions in ``src/source_components_common.c``,
+``src/source_components_cpu.c`` and ``src/source_components_gpu.cpp`` These functions
+run calculations common to all COMPONENT types, namely calculating ``lmn`` coordinates,
+extrapolating Stokes flux densities, calculating primary beam gains,
+visibility calculations, and calculating auto-correlations.
+
+As always, all CPU and GPU functions are run through the same tests to ensure
+consistency between the two.
 
 
-test_apply_beam_gains.c
+test_apply_beam_gains*.c
 ************************************
-This calls ``source_components::test_kern_apply_beam_gains``, which tests
-``source_components::kern_apply_beam_gains``. This kernel applies
-beam gain and leakage terms to Stokes visibilities to create linear Stokes
-polarisation visibilities via:
+This calls ``source_components_gpu.cpp::kern_apply_beam_gains`` or ``source_components_cpu.c::apply_beam_gains_arrays_cpu``. These functions apply beam gain and leakage terms to Stokes visibilities to create linear Stokes polarisation visibilities via:
 
 .. math::
 
@@ -271,17 +273,15 @@ little precision.
      - -4,16
      - -4,0
 
-test_calc_measurement_equation.c
+test_calc_measurement_equation*.c
 ************************************
-This calls ``source_components::test_kern_calc_measurement_equation``, which
-calls ``source_components::kern_calc_measurement_equation``, which in turn
-is testing the device code ``source_components::calc_measurement_equation``
-(which is used internally in ``WODEN`` in another kernel that calls multiple
-device functions, so I had to write a new kernel to test it alone.)
+This calls ``source_components_gpu.cpp::kern_calc_measurement_equation`` or
+``source_components_cpu.c::calc_measurement_equation_arrays_cpu``.
+These functions calculate the phase-tracking measurement equation for a visibility, given the baseline coordinates and the source coordinates.
 
-The following methodology is also written up the JOSS paper (TODO link JOSS
-paper once it's accepted), where it's used in a sky model + array layout through
-to visibility end-to-end version. Here we directly test the fuction above.
+The following methodology is also written up in the JOSS ``WODEN`` paper where
+it's used in a sky model + array layout through to visibility end-to-end version.
+Here we directly test the functions above.
 
 ``calc_measurement_equation`` calculates the phase-tracking measurement equation:
 
@@ -539,6 +539,10 @@ as a different symbol, with the FLOAT in blue and DOUBLE in orange.
 .. image:: measure_eq_results.png
   :width: 800
 
+You can create this plot for yourself after running ``ctest`` via
+running ``python plot_measure_eq_results.py`` in
+``cmake_testing/GPU_or_C_code/source_components``.
+
 You can see as you increase baseline length, a general trend of increasing error
 is seen. Note these are the absolute differences plotted here, to work on a log10
 scale. For the DOUBLE results, it's close to 50% a negative or positive offset
@@ -549,19 +553,15 @@ precision fails to truthfully report large fractional numbers.
 
 As a second test, I setup 10,000 *u,v,w* ranging from -1000 to 1000 wavelengths,
 and 3600 *l,m,n* coordinates that span the entire sky, and run them through
-``source_components::test_kern_calc_measurement_equation`` and check they
-equal the equivalent measurement equation as calculated by ``C`` in 64 bit precisions.
-This checks the kernel works for a range of input coordinates.
-I assert the ``CUDA`` outputs must be within an absolute tolerance of 1e-7 for
-the FLOAT code, and 1e-15 for the DOUBLE code.
+and check they equal the equivalent measurement equation as calculated by an 
+equivalent test function.
 
-   .. TODO One day, could add in estimation of effect on calibration
-
-test_extrap_stokes.c
+test_extrap_stokes*.c
 ************************************
-This calls ``source_components::test_extrap_stokes_all_models``, which
-calls ``source_components::extrapolate_Stokes``, which handles extrapolating
-a the flux density of component to a given set of frequencies. This covers
+This calls ``source_components_common::extrapolate_Stokes``, which calls
+many many different functions in ``source_components_cpu.c`` or 
+``source_components_gpu.cpp``. ``extrapolate_Stokes`` handles extrapolating
+the flux density of component to a given set of frequencies. This covers
 all types of flux behaviours. Currently that POWER_LAW, CURVED_POWER_LAW,
 and LIST types for Stokes I, and POWER_LAW, CURVED_POWER_LAW, POLARISATION FRACTION, LIST,
 for linear and circular polarisation. Linear polarisation also has a P_LIST type,
@@ -575,14 +575,12 @@ For the LIST flux types, each list has a random number of entries, as well
 as each list entry begin given a random flux. Every component is also assigned
 random polarisation model for linear and circular polarisation.
 
-The values are copied into a ``source_t`` struct, passed through the ``CUDA``
-code, and extrapolated to 100 frequencies between 50 and 300 MHz. The outputs
-are tested against equivalent ``C`` functions in double precision. The
-``woden_double`` code is tested to an absolute precision of 1e-11 Jy, with the
-``woden_float`` a 9e-4 Jy precision (note some of the extrapolated fluxes
-are of order 1e3).
+The values are copied into a ``source_t`` struct, passed into functions being tested,
+and extrapolated to 100 frequencies between 50 and 300 MHz. The outputs
+are tested against equivalent ``C`` functions in double precision. 
 
-To visualise the Stokes I results, run ``WODEN/cmake_testing/source_components/test_extrap_stokes.py``,
+To visualise the Stokes I results, run
+``WODEN/cmake_testing/source_components/test_extrap_stokes.py``,
 which will produce the following plots. The plots only show the Stokes I outputs,
 but all Stokes values are tested against the ``C`` test code.
 
@@ -600,7 +598,7 @@ to be within 100 to 200 MHz so they should all curve in these plots):
 Finally, for the LIST type components. Note here, the black line is the information
 contained in the sky model, the little orange crosses are a ``python``
 implementation of the linear interpolation between points to double check
-everything, and the cyan squares are what is output by the ``CUDA`` code.
+everything, and the cyan squares are what is output by the ``GPU`` code.
 
 .. note::
 
@@ -609,22 +607,19 @@ everything, and the cyan squares are what is output by the ``CUDA`` code.
 .. image:: test_extrap_list_laws.png
   :width: 800
 
-To visualise the full Stokes result for each component, run `plot_extrap_stokes.py`. An example of a Stokes I ``power_law``, Stokes Q/U ``polarisation fraction``, and Stokes V ``curved_power_law`` is:
+To visualise the full Stokes result for each component, run ``plot_extrap_stokes.py``. An example of a Stokes I ``power_law``, Stokes Q/U ``polarisation fraction``, and Stokes V ``curved_power_law`` is:
 
 .. image:: eg_fluxes_comp02.png
    :width: 500pt
 
 test_get_beam_gains.c
 ************************************
-This calls ``source_components::test_kern_get_beam_gains``, which
-calls ``source_components::kern_get_beam_gains``, which in turn is testing the
-device code ``source_components::get_beam_gains``. This function handles grabbing
+This calls ``source_components_gpu.cpp::test_kern_get_beam_gains`` or
+``source_components_cpu.c::get_beam_gains_cpu``. These functions handle grabbing
 the pre-calculated beam gains for a specific beam model, time, and frequency
-(assuming the beam gains have already been calculated). ``kern_get_beam_gains``
-is setup to call ``get_beam_gains`` for multiple inputs and recover them into a
-set of output arrays.
+(assuming the beam gains have already been calculated). 
 
-Beam gain calculations are stored in ``primay_beam_J*`` arrays, including
+In the test, mock beam gains are stored in ``primay_beam_J*`` arrays, including
 all frequency and time steps, as well as all directions on the sky. This test
 sets all real entries in the four ``primay_beam_J*`` beam gain arrays to the
 value of their index. In this way, we can easily predict the expected value
@@ -635,18 +630,16 @@ This test runs with two time steps, two frequency steps, three baselines,
 and four beam models. Three different outcomes are expected given the beam model:
 
  - ANALY_DIPOLE, GAUSS_BEAM: The values of the gains are tested to match the expected index. The leakage terms are tested to be zero as the models have no leakage terms
- - FEE_BEAM, FEE_BEAM_INTERP, MWA_ANALY: Both the beam gain and leakage terms are tested as these models include leakage terms
  - NO_BEAM: The gain terms are tested to be 1.0, and leakage to be 0.0
-
-Both FLOAT and DOUBLE code are tested to a 32 bit accuracy here as these are
-simple numbers that require little precision.
+ - All other beam models: Both the beam gain and leakage terms are tested as these models include leakage terms
+ 
 
 test_source_component_common.c
 ************************************
-This calls ``source_components::test_source_component_common``, which
+This calls ``source_components_common.c::source_component_common``, which
 calls ``source_components::source_component_common``. ``source_component_common``
 is run by all visibility calculation functions (the functions
-``kern_calc_visi_point``, ``kern_calc_visi_gauss``, ``kern_calc_visi_shape``).
+``calc_visi_point*``, ``calc_visi_gauss*``, ``calc_visi_shape*``).
 It handles calculating the *l,m,n* coordinates and beam response for all
 COMPONENTs in a sky model, regardless of the type of COMPONENT.
 
@@ -665,52 +658,24 @@ keep the test clean.
 
 For each primary beam type, I run the 9 COMPONENTs through the test, and check
 the calcualted *l,m,n* are correct, and check that the calculated beam values
-match a set of expected values, which are stored in ``test_source_component_common.h``. As with previous tests varying the primary beam, I check that leakage terms
+match a set of expected values, which are stored in ``test_source_component_common.h``.
+As with previous tests varying the primary beam, I check that leakage terms
 should be zero when the model doesn't include them.
-
-The absolute tolerance values used for the different beam models, for the two
-different precisions are shown in the table below. Note I've only stored the
-expected values for some of the beams to 1e-7 accuracy, as the absolute
-accuracy of these functions beam functions is tested elsewhere. The
-GAUSS_BEAM values are calculated analytically in the same test as
-described in :ref:`test_gaussian_beam.c`.
-
-.. list-table::
-   :widths: 25 25 25
-   :header-rows: 1
-
-   * - Beam type
-     - FLOAT tolerance
-     - DOUBLE tolerance
-   * - GAUSS_BEAM
-     - 1e-7
-     - 1e-12
-   * - ANALY_DIPOLE
-     - 1e-6
-     - 1e-7
-   * - FEE_BEAM
-     - 1e-7
-     - 1e-7
-   * - FEE_BEAM_INTERP
-     - 1e-7
-     - 1e-7
-   * - MWA_ANALY
-     - 1e-7
-     - 1e-12
 
 Of the nine components tested, 3 are given POWER_LAW, 3 are CURVED_POWER_LAW, and
 3 are LIST flux styles. Similarly to ``test_extrap_stokes.c``, each component
 is given a random set of parameters, and compared to a C version of the functions
 to extrapolate the Stokes parameters. Again, all components are also give both
-linear and circular polarisation models. The ``woden_double`` code is tested to
-an absolute precision of 1e-12 Jy, with the ``woden_float`` a 4e-4 Jy precision
-(note some of the extrapolated fluxes are of order 1e3).
+linear and circular polarisation models. 
 
-test_kern_calc_visi_point.c
+This test has to create many many input values to run through the function, so
+is as much of an integration test as a unit test on ``source_component_common``.
+
+test_calc_visi_point*.c
 ************************************
-This calls ``source_components::test_kern_calc_visi_all``, which in turn
-calls ``source_components::kern_calc_visi_point_or_gauss`` (in this case
-being used for POINT components). This kernel calculates
+This calls ``source_components_gpu.cpp::calc_visi_point_or_gauss_gpu``
+of ``source_components_cpu.c::calc_visi_point_or_gauss_cpu`` (in this case
+being used for POINT components). These functions calculate
 the visibility response for POINT COMPONENTs for a number of sky directions, for
 all time and frequency steps, and all baselines.
 
@@ -735,59 +700,55 @@ Overall, I run three groups of tests here:
  - Varying the beam gains with frequency and keeping the flux densities constant at 1.0. As the beam can vary with time, frequency, and direction on sky, I assign each beam gain a different value. As *num_freqs*num_times*num_components* = 375, I set the real of all beam gains to :math:`\frac{1}{375}(B_{\mathrm{ind}} + 1)`, where :math:`B_{\mathrm{ind}}` is the beam value index. This way we get a unique value between 0 and 1 for all beam gains, allowing us to test time/frequency is handled correctly by the function under test
 
 Each set of tests is run for all six primary beam types, so a total of 18 tests
-are called. Each test calls ``kern_calc_visi_point``, which should calculate
+are called. Each test calls ``calc_visi_point_or_gauss*``, which should calculate
 the measurement equation for all baselines, time steps, frequency steps, and COMPONENTs.
 It should also sum over COMPONENTs to get the resultant visibility for each
 baseline, time, and freq. To test the outputs, I have created equivalent ``C``
-functions at 64 bit precision in ``test_kern_calc_visi_common.c`` to calculate
-the measurement equation for the given inputs. For all visibilities, for the FLOAT version
-I assert the ``CUDA`` code output must match the ``C`` code output to
-within an fractional tolerance of 7e-5 to the ``C`` value, for both the real and
-imaginary parts. For the DOUBLE code, the fractional tolerance is 1e-13. I've
-switched to fractional tolerance here as the range of magnitudes covered by
-these visibilities means a small absolute tolernace will fail a large magnitude
-visibility when it reports a value that is correct to 1e-11%.
+functions at 64 bit precision in ``calc_visi_common.c`` to calculate
+the measurement equation for the given inputs. Now that we are testing CPU
+code, it's a little bit chicken and egg testing the CPU code (which is ``C`` code)
+itself against a stripped down version here in testing. However, if the test code,
+GPU code, and CPU code all agree, either we've made the same bug happen three
+times in three separate implementations, or we're correct. Let's give ourselves
+the benefit of the doubt.
 
-test_kern_calc_visi_gauss.c
+Note in this tests, I've switched to fractional tolerance here as the range of
+magnitudes covered by these visibilities means a small absolute tolerance will
+fail a large magnitude visibility when it reports a value that is correct to 1e-11%.
+
+test_calc_visi_gauss*.c
 ************************************
-This calls ``source_components::test_kern_calc_visi_all``, which in turn
-calls ``source_components::kern_calc_visi_point_or_gauss`` (in this case
-being used for GAUSSIAN components). This kernel calculates
+This calls ``source_components_gpu.cpp::calc_visi_point_or_gauss_gpu``
+of ``source_components_cpu.c::calc_visi_point_or_gauss_cpu``  (in this case
+being used for GAUSSIAN components). These functions calculate
 the visibility response for GAUSSIAN COMPONENTs for a number of sky directions, for
 all time and frequency steps, and all baselines.
 
-This runs all tests as described by :ref:`test_kern_calc_visi_point.c`, plus a
+This runs all tests as described by :ref:`test_calc_visi_gauss*.c`, plus a
 fourth set of tests that varies the position angle, major, and minor axis of the
 input GAUSSIAN components, for a total of 24 tests. Again, I have ``C`` code to
-test the ``CUDA`` code against. I assert the ``CUDA`` code output must match the
-``C`` code output to within an fractional tolerance of 7e-5 to the ``C`` value,
-for both the real and imaginary parts. For the DOUBLE code, the fractional
-tolerance is 1e-12.
+test the ``CPU/GPU`` code against. The Gaussian calculations are given a bigger
+tolerance than the POINT calculations, as the Gaussian envelope that the
+visibilities are multiplied by adds more precision error.
 
-test_kern_calc_visi_shape.c
+test_calc_visi_shape*.c
 ************************************
-This calls ``source_components::test_kern_calc_visi_all``, which
-calls ``source_components::kern_calc_visi_shape``. This kernel calculates
+This calls ``source_components_gpu.cpp::calc_visi_shapelets_gpu`` or. 
+``source_components_cpu.c::calc_visi_shapelets_cpu``. These functions calculate
 the visibility response for SHAPELET COMPONENTs for a number of sky directions, for
 all time and frequency steps, and all baselines.
 
-This runs all tests as described by :ref:`test_kern_calc_visi_gauss.c`, plus a
+This runs all tests as described by :ref:`test_calc_visi_gauss*.c`, plus a
 fifth set of tests that gives multiple shapelet basis function parameters to the
 input SHAPELET components, for a total of 30 tests. Again, I have ``C`` code
-to test the ``CUDA`` code against.
+to test the ``CPU/GPU`` code against.
 
-The final 5th test really pushes the FLOAT code hard, as the range of magnitudes
-of the visibilities is large. As a result, FLOAT code is tested to to within a
-fractional tolerance of 5e-3 to the ``C`` values (which happens mostly when
-the expected value is around 1e-5 Jy, so a fractional offset of 5e-3 is an
-absolute offset of 5e-8 Jy), for both the real and imaginary parts.
-For the DOUBLE code, the fractional tolerance is 1e-12.
 
-test_update_sum_visis.c
+test_update_sum_visis*.c
 ************************************
-This calls ``source_components::test_kern_update_sum_visis``, which in turn calls
-``source_components::kern_update_sum_visis``. This kernel gathers pre-calculated
-primary beam values, unpolarised visibilities, Stokes flux densities, and
+This calls ``source_components_gpu.cpp::kern_update_sum_visis_stokesIQUV`` or
+``source_components_cpu.c::update_sum_visis_stokesIQUV_cpu``. These functions 
+gather pre-calculated primary beam values, unpolarised visibilities, Stokes flux densities, and
 combines them all into linear polarisation Stokes visibilities. It then
 sums all COMPONENTs together onto the final set of linear polarisation
 visibilities.
@@ -805,43 +766,51 @@ three sets of tests consist of:
 Each set of tests is run for all primary beam types, for a total of 18 tests.
 The different beam models have different expected values depending on whether
 they include leakage terms or not. Note this test actually doesn't test with
-Stokes QUV, but it's used in an integration test in ``test_calculate_visibilities.c``
-with full polarisation.
+Stokes QUV, it sets QUV to zero. But it's used in an integration test in
+``test_calculate_visibilities.c`` with full polarisation.
 
-test_kern_calc_autos.c
+test_calc_autos*.c
 ************************************
-This calls ``source_components::test_kern_calc_autos``, which in turn calls
-``source_components::kern_calc_autos``. This kernel gathers pre-calculated
+This calls ``source_components_gpu.cpp::kern_calc_autos`` or
+``source_components_cpu.c::calc_autos_cpu``. This functions gather pre-calculated
 primary beam values, and Stokes flux densities, and performs a dot-product
 to calculate the auto-correlations of all antennas, for all time steps.
 
 This test runs by creating full Stokes IQUV model of 4 components, extrapolated
 to three frequencies and two time steps. Complex beam gains are generated for all
 directions, times, and frequencies. The auto-correlation calculation is then
-performed by ``C`` code, which the outputs of the GPU code are tested against.
+performed by separate ``C`` code, which the outputs of the CPU/GPU code are tested against.
 
 As some primary beam models are real only, and only some have leakage, the
 function is tested for all beam model types separately, with the expected
 outcomes calculated accordingly.
 
-The ``woden_double`` code is tested to an absolute precision of 1e-12 Jy,
-with the ``woden_float`` a 1e-2 Jy precision as compared to the ``C`` code
-(note some of the resultant fluxes are >1000 Jy, hence the large absolute
-error. You should probably just always use the double precision version).
 
-test_get_beam_gains_two_antennas.c
+test_get_beam_gains_multiants*.c
 ***************************************
-This works the same as ``test_get_beam_gains.c``, but we run using three different primary beams, meaning we input three times the number of gains. Still input each beam gain as it's index in ``primay_beam_J``. The selected beam gains are now expected to be different for antenna 1 and antenna 2, depending on which visibility they correspond to; they are duly tested to be so.
+This works the same as ``test_get_beam_gains*.c``, but we run using a unique primary
+beam per station (a.k.a tile a.k.a antenna), meaning we input three times the number of gains. Still input each beam gain as it's index in ``primay_beam_J``. The selected beam gains are now expected to be different for antenna 1 and antenna 2, depending on which visibility they correspond to; they are duly tested to be so. Currently tests using all
+beams which can produce unique primary beams, which are ``FEE_BEAM, FEE_BEAM_INTERP,
+EB_LOFAR, EB_OSKAR`` (even though the beam values aren't calculated, check function
+works as expected with beamtype set).
 
-test_update_sum_visis_multiants.c
+test_update_sum_visis_multiants*.c
 ***************************************
-This works similarly to same as ``test_update_sum_visis.c``, but we run using three different primary beams, meaning we input three times the number of gains. Still input each beam gain as it's index in ``primay_beam_J``. The selected beam gains are now expected to be different for antenna 1 and antenna 2, depending on which visibility they correspond to; they are duly tested to be so. Do a bunch of index maths to predict that the accumulated visibilities are correct. For each tile/pol, give it dipole amplitudes of all of either 0.0, 0.2, 0.4, 0.6, 0.8, 1.0. That way we can just multiply the expected beam gain by the dipole amplitudes to check they're being implemented and returned correctly.
+This works similarly to same as ``test_update_sum_visis*.c``, but we run using three unqiue different primary beams, meaning we input three times the number of gains. Still input each beam gain as it's index in ``primay_beam_J``, which means all three primary beams get
+different values for every time, freq, direction. Do a bunch of index maths to predict that what value each pair of beam gains should have and check the summed visibilities are correct.
+Currently tests using all beams which can produce unique primary beams, which are ``FEE_BEAM, FEE_BEAM_INTERP, EB_LOFAR, EB_OSKAR``. (even though the beam values aren't
+calculated, check function works as expected with beamtype set).
 
-test_source_component_common_multiants.c
+test_source_component_common_multiants*.c
 *******************************************
-This works similarly to same as ``test_source_component_common.c``, but we run using three different primary beams, meaning we input three times the number of gains. There are stored beam gains for a given set of directions on the sky used in ``test_source_component_common.c`` to check it's calling the primary beam function correctly. For each tile/pol, give it dipole amplitudes of all of either 0.0, 0.2, 0.4, 0.6, 0.8, 1.0. That way we can just multiply the expected beam gain by the dipole amplitudes to check they're being implemented and returned correctly.
+This works similarly to same as ``test_source_component_common*.c``, but we run using three different primary beams, meaning we calculate three times the number of gains. 
 
-test_kern_calc_autos_multiants.c
+We test against stored ``hyperbeam`` beam gains for a given set of directions on the sky used in ``test_source_component_common.c`` to check it's calling the primary beam function correctly. 
+However, for each tile/pol, we pass it dipole amplitudes of all of either 0.0, 0.2, 0.4, 0.6, 0.8, 1.0. That way we can just multiply the expected ``hyperbeam`` beam gain by the dipole amplitudes to check they're being implemented and returned correctly. Although this
+limits the test to only work with ``FEE_BEAM, FEE_BEAM_INTERP``, it tests the order
+of the outputs, and that most of the machinery to handle multiple primary beams is working correctly.
+
+test_calc_autos_multiants*.c
 ************************************
 This calls ``source_components::test_kern_calc_autos``, which in turn calls
 ``source_components::kern_calc_autos``. This runs the same as ``test_kern_calc_autos.c``, but we run using three different primary beams, meaning we input three times the number of gains. Still input each beam gain as it's index in ``primay_beam_J``. The selected beam gains are now expected to be different for antenna 1 and antenna 2, depending on which visibility they correspond to; they are duly tested to be so.

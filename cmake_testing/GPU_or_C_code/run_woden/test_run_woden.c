@@ -77,9 +77,7 @@ void check_visi_contents(visibility_set_t *visibility_set, int num_cross,
   }
 }
 
-/*
-Test `fill_primary_beam_settings` when `beamtype = MWA_ANALY`
-*/
+
 void test_run_woden(void) {
 
   //Setup array layout as defined in calculate_visibilities_common_common.c
@@ -208,9 +206,6 @@ void test_run_woden(void) {
     comps->zas[time] = zas[time];
   }
 
-  
-  
-  //No matter what, always have one POL_FRACTION source for both pols
   comps->do_QUV = 0;
 
   run_woden(woden_settings, visibility_sets,

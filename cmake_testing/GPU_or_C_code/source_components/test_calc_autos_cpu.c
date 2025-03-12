@@ -30,6 +30,18 @@ void test_calculate_autos_MWAFEEInterp_cpu(void) {
   test_calculate_autos(FEE_BEAM_INTERP, 0);
 }
 
+void test_calculate_autos_EBMWA_cpu(void) {
+  test_calculate_autos(EB_MWA, 0);
+}
+
+void test_calculate_autos_EBLOFAR_cpu(void) {
+  test_calculate_autos(EB_LOFAR, 0);
+}
+
+void test_calculate_autos_EBOSKAR_cpu(void) {
+  test_calculate_autos(EB_OSKAR, 0);
+}
+
 
 //Run the test with unity
 int main(void)
@@ -43,6 +55,9 @@ int main(void)
     RUN_TEST(test_calculate_autos_MWAAnaly_cpu);
     RUN_TEST(test_calculate_autos_MWAFEE_cpu);
     RUN_TEST(test_calculate_autos_MWAFEEInterp_cpu);
+    RUN_TEST(test_calculate_autos_EBMWA_cpu);
+    RUN_TEST(test_calculate_autos_EBLOFAR_cpu);
+    RUN_TEST(test_calculate_autos_EBOSKAR_cpu);
 
     return UNITY_END();
 }

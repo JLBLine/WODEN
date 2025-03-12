@@ -96,13 +96,15 @@ if __name__ == '__main__':
     ##read in the data output by ctest - obviously need to run ctest first!
 
 
-    ctest_data = np.loadtxt("../../../build/cmake_testing/GPU_code/source_components/test_extrap_stokes.txt")
+    ctest_data = np.loadtxt("../../../build/cmake_testing/GPU_or_C_code/source_components/test_extrap_stokes.txt")
 
-    fig, axs = plt.subplots(3, 2, figsize=(8, 8))
+    fig, axs = plt.subplots(2, 2, figsize=(8, 8))
 
     axs = axs.flatten()
+    
+    num_plots = 4
 
-    for power in range(num_powers):
+    for power in range(num_plots):
 
         expec_I, expec_Q, expec_U, expec_V = power_law(extrap_freqs,
                                           200e+6, stokesI_power_SIs[power],
@@ -129,11 +131,11 @@ if __name__ == '__main__':
     fig.savefig("test_extrap_power_laws.png", bbox_inches='tight')
 
 
-    fig, axs = plt.subplots(3, 2, figsize=(8, 8))
+    fig, axs = plt.subplots(2, 2, figsize=(8, 8))
 
     axs = axs.flatten()
 
-    for curve in range(num_curves):
+    for curve in range(num_plots):
 
 
         expec_I, expec_Q, expec_U, expec_V = curved_power_law(extrap_freqs,
@@ -165,11 +167,11 @@ if __name__ == '__main__':
     fig.savefig("test_extrap_curve_power_laws.png", bbox_inches='tight')
 
 
-    fig, axs = plt.subplots(3, 2, figsize=(8, 8))
+    fig, axs = plt.subplots(2, 2, figsize=(8, 8))
 
     axs = axs.flatten()
 
-    for list_ind, num_list_vals in enumerate(num_list_values):
+    for list_ind, num_list_vals in enumerate(num_list_values[:num_plots]):
 
         axs[list_ind].set_xscale('log')
         axs[list_ind].set_yscale('symlog')
@@ -179,9 +181,6 @@ if __name__ == '__main__':
         l_freqs = list_freqs[start_index:start_index+num_list_vals]
 
         l_stokesI = list_stokesI[start_index:start_index+num_list_vals]
-        l_stokesQ = list_stokesQ[start_index:start_index+num_list_vals]
-        l_stokesU = list_stokesU[start_index:start_index+num_list_vals]
-        l_stokeVI = list_stokesV[start_index:start_index+num_list_vals]
 
         axs[list_ind].plot(l_freqs/1e+6, l_stokesI, '-ok', ms=4, mfc='none',label='List entries')
 
@@ -197,10 +196,7 @@ if __name__ == '__main__':
         high = low + num_extrap_freqs
 
         extrap_I = ctest_data[low:high,0]
-        extrap_Q = ctest_data[low:high,1]
-        extrap_U = ctest_data[low:high,2]
-        extrap_V = ctest_data[low:high,3]
-        #
+        
         axs[list_ind].plot(extrap_freqs/1e+6, extrap_I, 'cs', ms=6, mfc='none', label='GPU extrap')
 
         axs[list_ind].set_xlabel("Freq (MHz)")

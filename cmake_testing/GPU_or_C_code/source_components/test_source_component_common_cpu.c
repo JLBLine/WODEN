@@ -136,9 +136,9 @@ int main(void)
       RUN_TEST(test_source_component_common_ConstantDecEveryBeamLOFARGaussian_cpu);
       RUN_TEST(test_source_component_common_ConstantDecEveryBeamLOFARShapelet_cpu);
 
-      // RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARPoint_cpu);
-      // RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARGaussian_cpu);
-      // RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARShapelet_cpu);
+      RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARPoint_cpu);
+      RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARGaussian_cpu);
+      RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARShapelet_cpu);
     #endif
 
 

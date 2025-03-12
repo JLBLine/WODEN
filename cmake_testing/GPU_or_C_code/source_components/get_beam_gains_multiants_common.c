@@ -1,4 +1,4 @@
-#include "get_beam_gains_two_antennas_common.h"
+#include "get_beam_gains_multiants_common.h"
 
 #define UNITY_INCLUDE_FLOAT
 

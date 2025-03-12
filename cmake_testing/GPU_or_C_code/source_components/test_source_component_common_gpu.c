@@ -135,9 +135,9 @@ int main(void)
       RUN_TEST(test_source_component_common_ConstantDecEveryBeamLOFARGaussian_gpu);
       RUN_TEST(test_source_component_common_ConstantDecEveryBeamLOFARShapelet_gpu);
 
-      // RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARPoint_gpu);
-      // RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARGaussian_gpu);
-      // RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARShapelet_gpu);
+      RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARPoint_gpu);
+      RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARGaussian_gpu);
+      RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARShapelet_gpu);
     #endif
 
     return UNITY_END();

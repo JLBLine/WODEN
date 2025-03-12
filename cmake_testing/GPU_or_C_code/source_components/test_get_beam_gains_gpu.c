@@ -55,6 +55,18 @@ void test_get_beam_gains_MWAAnaly_gpu(void) {
   test_get_beam_gains_ChooseBeams(MWA_ANALY, 1);
 }
 
+void test_get_beam_gains_EBMWA_gpu(void) {
+  test_get_beam_gains_ChooseBeams(EB_MWA, 1);
+}
+
+void test_get_beam_gains_EBLOFAR_gpu(void) {
+  test_get_beam_gains_ChooseBeams(EB_LOFAR, 1);
+}
+
+void test_get_beam_gains_EBOSKAR_gpu(void) {
+  test_get_beam_gains_ChooseBeams(EB_OSKAR, 1);
+}
+
 
 //Run the test with unity
 int main(void)
@@ -66,6 +78,9 @@ int main(void)
     RUN_TEST(test_get_beam_gains_NoBeam_gpu);
     RUN_TEST(test_get_beam_gains_FEEBeamInterp_gpu);
     RUN_TEST(test_get_beam_gains_MWAAnaly_gpu);
+    RUN_TEST(test_get_beam_gains_EBMWA_gpu);
+    RUN_TEST(test_get_beam_gains_EBLOFAR_gpu);
+    RUN_TEST(test_get_beam_gains_EBOSKAR_gpu);
 
 
     return UNITY_END();
