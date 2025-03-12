@@ -17,6 +17,11 @@ build:
   os: ubuntu-20.04
   tools:
     python: "3.10"
+  jobs:
+    pre_build:
+    # Note that this HTML won't be automatically uploaded,
+    # unless your documentation build includes it somehow.
+      - doxygen
 
 # Optionally set the version of Python and requirements required
 # to build your docs
