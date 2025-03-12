@@ -87,7 +87,7 @@ nb_execution_mode = "off"
 
 ##Uncomment this if building locally to avoid loading the notebooks
 ##as they can be quite slow to load
-exclude_patterns = ["**/*.ipynb"]
+# exclude_patterns = ["**/*.ipynb"]
 
 # Enable LaTeX rendering in markdown cells
 myst_enable_extensions = [

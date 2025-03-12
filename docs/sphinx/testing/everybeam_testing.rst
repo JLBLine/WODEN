@@ -30,6 +30,21 @@ When I ran ``cmake``, I did::
 
 so I would know where the installation went.
 
+For the record, if you need to install the native EveryBeam Python wrapper,
+you need first to add this to your cmake command (and then remake and install)::
+
+   $ cmake .. -DBUILD_WITH_PYTHON=ON
+
+Once that's done, I had to do some linking, as I was using a conda environment, and EveryBeam wants to be system wide::
+
+   $ export PYTHONPATH=$PYTHONPATH:"/home/jline/software/installed/lib/python3.12/site-packages"
+   $ ln -s /home/jline/software/installed/share/everybeam /home/jline/software/anaconda3/envs/woden_dev/share/everybeam
+
+which let my conda environment see everything it needed to. When I was running notebooks, which don't load stuff from system, only the conda environment, I had to do::
+
+  $ conda install -c conda-forge libstdcxx-ng
+  $ conda install hdf5
+
 
 Work still to be done on EveryBeam in WODEN
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
