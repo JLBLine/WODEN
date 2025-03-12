@@ -22,7 +22,7 @@ build:
 # to build your docs
 python:
    install:
-   - requirements: requirements.txt
+   - requirements: docs/sphinx/requirements.txt
 
 submodules:
   include: all

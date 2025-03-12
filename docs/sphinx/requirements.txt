@@ -1,0 +1,15 @@
+sphinx_argparse
+breathe
+astropy<=6.1.0
+numpy<=1.26.0
+pyerfa
+palpy
+importlib_resources
+sphinx-math-dollar
+matplotlib
+pyuvdata
+python-casacore
+myst-nb
+binpacking
+line_profiler
+-e .
