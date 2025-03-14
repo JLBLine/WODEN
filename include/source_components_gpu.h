@@ -16,10 +16,7 @@
 #include "primary_beam_gpu.h"
 #include "woden_precision_defs.h"
 #include "gpu_macros.h"
-// #include "source_components_cpu.h"
 #include "source_components_common.h"
-
-
 
 
 /**
@@ -788,7 +785,6 @@ __global__ void kern_polarisation_fraction_linpol(int num_extrap_freqs,
              double *d_extrap_freqs, int num_comps, components_t d_components);
 
 
-
 /**
 Assuming a list-type spectral model, extrapolates the flux for a given component and
 frequency.
@@ -803,9 +799,9 @@ frequency.
 @param[in,out]  extrap_flux The extrapolated flux.
  */
 __device__ void extrap_stokes_list_fluxes_gpu(user_precision_t *list_stokes,
-           double *list_freqs, int *arr_num_list_values, int *list_start_indexes,
-           double *d_extrap_freqs, int iFluxComp, int iFreq,
-           user_precision_t * extrap_flux);
+     double *list_freqs, int *arr_num_list_values, int *list_start_indexes,
+     double *d_extrap_freqs, int iFluxComp, int iFreq,
+     user_precision_t * extrap_flux);
 
 /**
 @brief Extrapolates list-type spectral model fluxes to given frequencies. To be clear,
@@ -824,14 +820,254 @@ entries, given by `num_list_values`.
 @param[in] d_extrap_freqs Pointer to the array of extrapolation frequencies.
 @param[in] num_comps The number of components.
 @param[in,out] extrap_stokes Output extrapolated fluxes
- */
+*/
 __global__ void kern_extrap_list_fluxes(user_precision_t *list_stokes, double *list_freqs,
-                                        int *num_list_values, int *list_start_indexes,
-                                        int *list_comp_inds,
-                                        int num_extrap_freqs, double *d_extrap_freqs,
-                                        int num_comps, user_precision_t *extrap_stokes);
+                                  int *num_list_values, int *list_start_indexes,
+                                  int *list_comp_inds,
+                                  int num_extrap_freqs, double *d_extrap_freqs,
+                                  int num_comps, user_precision_t *extrap_stokes);
+
+/**
+* @brief Apply rotation measure to existing fluxes in `components.extrap_stokesQ`.
+ * 
+ * @details Fills `d_components.extrap_stokesQ` and `d_components.extrap_stokesU` with the rotated linear polarisation flux densities. Assumes the model
+ * 
+  \f[
+  Q = \mathrm{P}(\lambda) \cos(2\chi_0 + 2\phi_{\textrm{RM}} \lambda^2), \\
+  U = \mathrm{P}(\lambda) \sin(2\chi_0 + 2\phi_{\textrm{RM}} \lambda^2).
+  \f]
+
+  where \f$\mathrm{P}(\lambda)\f$ is the polarised flux, stored in `components.extrap_stokesQ`, \f$\chi_0\f$ is the intrinsic polarisation angle (`components.intr_pol_angle`), and \f$\phi_{\textrm{RM}}\f$ is the rotation measure (`components.rm_values`).
+
+ * @param num_extrap_freqs The number of extrapolation frequencies.
+ * @param d_extrap_freqs The frequencies to extrapolate to.
+ * @param num_comps The number of components.
+ * @param d_components The components to apply rotation measure to
+ 
+ 
+ */
+__global__ void kern_apply_rotation_measure(int num_extrap_freqs, double *d_extrap_freqs,
+     int num_comps, components_t d_components);
 
 
+/**
+ * @brief Extrapolates power law SEDSs for Stokes I flux densities to 
+ * given frequencies on the GPU.
+ *
+ * Calls `kern_extrap_power_laws_stokesI` to fill `d_components.extrap_stokesI`
+ * with the extrapolated flux densities with inputs from `d_components`.
+ *
+ * @param d_components The device components structure containing necessary data.
+ * @param n_powers The number of power laws to extrapolate.
+ * @param d_extrap_freqs Pointer to the device array of extrapolation frequencies.
+ * @param num_extrap_freqs The number of extrapolated frequencies.
+ */
+extern "C" void extrap_power_laws_stokesI_gpu(components_t d_components,
+                                   int n_powers, double *d_extrap_freqs,
+                                   int num_extrap_freqs);
+
+/**
+ * @brief Extrapolates curved power law SEds for Stokes I flux densities to 
+ * given frequencies on the GPU.
+ *
+ * Calls `kern_extrap_curved_power_laws_stokesI` to fill `d_components.extrap_stokesI`
+ * with the extrapolated flux densities with inputs from `d_components`.
+ *
+ * @param d_components The device components structure containing necessary data for extrapolation.
+ * @param n_curves The number of curves to be extrapolated.
+ * @param d_extrap_freqs Pointer to the device array of extrapolation frequencies.
+ * @param num_extrap_freqs The number of frequencies in the d_extrap_freqs array.
+ */
+extern "C" void extrap_curved_power_laws_stokesI_gpu(components_t d_components,
+                                   int n_curves, double *d_extrap_freqs,
+                                   int num_extrap_freqs);
+
+
+/**
+ * @brief Extrapolate list-type SEDs for Stokes I flux densities to 
+ * given frequencies on GPU.
+ *
+ * Calls `kern_extrap_list_fluxes` to fill `d_components.extrap_stokesI`
+ * with the extrapolated flux densities with inputs from `d_components`.
+ *
+ * @param d_components The device pointer to the components data structure.
+ * @param n_lists The number of lists to process.
+ * @param d_extrap_freqs The device pointer to the array of frequencies at which to extrapolate.
+ * @param num_extrap_freqs The number of frequencies in the d_extrap_freqs array.
+ */
+extern "C" void extrap_list_fluxes_stokesI_gpu(components_t d_components,
+                                   int n_lists, double *d_extrap_freqs,
+                                   int num_extrap_freqs);
+
+/**
+ * @brief Extrapolates power law SEDSs for Stokes V flux densities to 
+ * given frequencies on the GPU.
+ *
+ * Calls `kern_extrap_power_laws_stokesV` to fill `d_components.extrap_stokesV`
+ * with the extrapolated flux densities with inputs from `d_components`.
+ *
+ * @param d_components The device components structure containing necessary data.
+ * @param d_extrap_freqs Pointer to the device array of extrapolation frequencies.
+ * @param num_extrap_freqs The number of extrapolated frequencies.
+ */
+extern "C" void extrap_power_laws_stokesV_gpu(components_t d_components,
+                                                  double *d_extrap_freqs,
+                                                  int num_extrap_freqs);
+
+/**
+ * @brief Extrapolates curved power law SEds for Stokes V flux densities to 
+ * given frequencies on the GPU.
+ *
+ * Calls `kern_extrap_curved_power_laws_stokesV` to fill `d_components.extrap_stokesV`
+ * with the extrapolated flux densities with inputs from `d_components`.
+ *
+ * @param d_components The device components structure containing necessary data for extrapolation.
+ * @param d_extrap_freqs Pointer to the device array of extrapolation frequencies.
+ * @param num_extrap_freqs The number of frequencies in the d_extrap_freqs array.
+ */
+extern "C" void extrap_curved_power_laws_stokesV_gpu(components_t d_components,
+                                                       double *d_extrap_freqs,
+                                                       int num_extrap_freqs);
+
+/**
+ * @brief Calculates polarisations fraction for Stokes V flux densities to 
+ * given frequencies on the GPU.
+ *
+ * Calls `kern_polarisation_fraction_stokesV` to fill `d_components.extrap_stokesV`
+ * with the extrapolated flux densities with inputs from `d_components`. Requires
+ * `d_components.extrap_stokesI` to be filled first.
+ *
+ * @param d_components The device components structure containing necessary data for extrapolation.
+ * @param d_extrap_freqs Pointer to the device array of extrapolation frequencies.
+ * @param num_extrap_freqs The number of frequencies in the d_extrap_freqs array.
+ */                                                    
+extern "C" void polarisation_fraction_stokesV_gpu(components_t d_components,
+                                                       double *d_extrap_freqs,
+                                                       int num_extrap_freqs);
+
+/**
+ * @brief Extrapolate list-type SEDs for Stokes V flux densities to 
+ * given frequencies on GPU.
+ *
+ * Calls `kern_extrap_list_fluxes` to fill `d_components.extrap_stokesV`
+ * with the extrapolated flux densities with inputs from `d_components`.
+ *
+ * @param d_components The device pointer to the components data structure.
+ * @param d_extrap_freqs The device pointer to the array of frequencies at which to extrapolate.
+ * @param num_extrap_freqs The number of frequencies in the d_extrap_freqs array.
+ */
+extern "C" void extrap_list_fluxes_stokesV_gpu(components_t d_components,
+                                                  double *d_extrap_freqs,
+                                                  int num_extrap_freqs);
+
+/**
+ * @brief Extrapolates power law SEDSs for linear polarisation flux 
+ * given frequencies on the GPU.
+ *
+ * Calls `kern_extrap_power_laws_linpol` to fill `d_components.extrap_stokesQ`
+ * with the extrapolated flux densities with inputs from `d_components`.
+ * Once called, the function `kern_apply_rotation_measure` should be called to rotate
+ * the linear polarisation fluxes into both `d_components.extrap_stokesQ` and
+ * `d_components.extrap_stokesU`.
+ *
+ * @param d_components The device components structure containing necessary data.
+ * @param d_extrap_freqs Pointer to the device array of extrapolation frequencies.
+ * @param num_extrap_freqs The number of extrapolated frequencies.
+ */
+extern "C" void extrap_power_laws_linpol_gpu(components_t d_components,
+                                                  double *d_extrap_freqs,
+                                                  int num_extrap_freqs);
+
+/**
+ * @brief Extrapolates curved power law SEDs for linear polarisation flux for
+ * given frequencies on the GPU.
+ *
+ * Calls `kern_extrap_curved_power_laws_linpol` to fill to fill `d_components.extrap_stokesQ`
+ * with the extrapolated flux densities with inputs from `d_components`.
+ * Once called, the function `kern_apply_rotation_measure` should be called to rotate
+ * the linear polarisation fluxes into both `d_components.extrap_stokesQ` and
+ * `d_components.extrap_stokesU`.
+ *
+ * @param d_components The device components structure containing necessary data for extrapolation.
+ * @param n_curves The number of curves to be extrapolated.
+ * @param d_extrap_freqs Pointer to the device array of extrapolation frequencies.
+ * @param num_extrap_freqs The number of frequencies in the d_extrap_freqs array.
+ */
+extern "C" void extrap_curved_power_laws_linpol_gpu(components_t d_components,
+                                                  double *d_extrap_freqs,
+                                                  int num_extrap_freqs);
+
+/**
+ * @brief Calculates polarisations fraction for linear polarisation flux on
+ * the GPU
+ *
+ * Calls `kern_polarisation_fraction_linpol` to fill `d_components.extrap_stokesQ`
+ * with the extrapolated flux densities with inputs from `d_components`. Requires
+ * `d_components.extrap_stokesI` to be filled first. Once called, the function
+ * `kern_apply_rotation_measure` should be called to rotate the linear polarisation
+ * fluxes into both `d_components.extrap_stokesQ` and `d_components.extrap_stokesU`.
+ * 
+ * @param d_components The device components structure containing necessary data for extrapolation.
+ * @param d_extrap_freqs Pointer to the device array of extrapolation frequencies.
+ * @param num_extrap_freqs The number of frequencies in the d_extrap_freqs array.
+ */  
+extern "C" void polarisation_fraction_linpol_gpu(components_t d_components,
+                                                  double *d_extrap_freqs,
+                                                  int num_extrap_freqs);
+
+/**
+ * @brief Extrapolate list-type SEDs for linear polarisation flux for
+ * given frequencies on the GPU.
+ *
+ * Calls `kern_extrap_list_fluxes` twice to separately fill
+ * `d_components.extrap_stokesQ` and `d_components.extrap_stokesU`. Assumes
+ * information for boths Q and U list type fluxes are stored in `d_components`.
+ * Does not required rotation measure to be applied as this model type
+ * just requires lists of Q and U fluxes.
+ *
+ * @param d_components The device pointer to the components data structure.
+ * @param d_extrap_freqs The device pointer to the array of frequencies at which to extrapolate.
+ * @param num_extrap_freqs The number of frequencies in the d_extrap_freqs array.
+ */
+extern "C" void extrap_list_fluxes_linpol_gpu(components_t d_components,
+                                                  double *d_extrap_freqs,
+                                                  int num_extrap_freqs);
+
+
+/**
+ * @brief Extrapolate list-type SEDs for linear polarisation flux for
+ * given frequencies on the GPU.
+ *
+ * Calls `kern_extrap_list_fluxes` to fill `d_components.extrap_stokesQ`
+ * with the extrapolated flux densities with inputs from `d_components`.
+ * Assumes `linpol_p` type list flux information exists in `d_components`.
+ * Once called, the function `kern_apply_rotation_measure` should be called to rotate
+ * the linear polarisation fluxes into both `d_components.extrap_stokesQ` and
+ * `d_components.extrap_stokesU`.
+ *
+ * @param d_components The device components structure containing necessary data.
+ * @param d_extrap_freqs Pointer to the device array of extrapolation frequencies.
+ * @param num_extrap_freqs The number of extrapolated frequencies.
+ */
+extern "C" void extrap_p_list_fluxes_linpol_gpu(components_t d_components,
+                                                  double *d_extrap_freqs,
+                                                  int num_extrap_freqs);
+
+/**
+ * @brief Applies rotation measure to the given components on the GPU.
+ *
+ * Calls `kern_apply_rotation_measure`. Assumes `d_components.extrap_stokesQ` has
+ * been filled with the total linear polarisation flux. The function
+ * will fill `d_components.extrap_stokesQ` and `d_components.extrap_stokesU` with
+ * the rotated linear polarisation fluxes.
+ *
+ * @param d_components The device pointer to the components structure.
+ * @param d_extrap_freqs The device pointer to the array of extrapolated frequencies.
+ * @param num_extrap_freqs The number of extrapolated frequencies.
+ */
+extern "C" void apply_rotation_measure_gpu(components_t d_components,
+                                                  double *d_extrap_freqs,
+                                                  int num_extrap_freqs);
 
 /**
 @brief Kernel to calculate the visibility response to a number `num_components`
@@ -1326,6 +1562,33 @@ extern "C" void malloc_beam_gains_gpu(beam_gains_t *d_component_beam_gains,
                                      int beamtype, int num_gains);
 
 
+/**
+ * @brief Calculate the auto-correlations for all antennas given the fluxes
+ * already calculated in `d_components` and beam gains in `d_component_beam_gains`.
+ * Stores the outputs in `d_visibility_set`.
+ * 
+ * @details `d_component_beam_gains` should have gains for
+ * as many antennas (a.k.a stations/tiles). This function
+ * then just does the dot product of the component fluxes and beam gains specific
+ * to each baseline.
+ *
+ * @param d_components Pointer to the device memory holding the components.
+ * @param beam_settings Pointer to the beam settings structure.
+ * @param d_component_beam_gains Pointer to the device memory holding the component beam gains.
+ * @param d_visibility_set Pointer to the device memory holding the visibility set.
+ * @param woden_settings Pointer to the WODEN settings structure.
+ * @param num_components The number of components to process.
+ * @param use_twobeams If True (1), use two primary beams per visibility.
+ * Otherwise, assume all primary beams are identical
+ */
+extern "C" void calc_autos_gpu(components_t *d_components,
+                               beam_settings_t *beam_settings,
+                               beam_gains_t *d_component_beam_gains,
+                               visibility_set_t *d_visibility_set,
+                               woden_settings_t *woden_settings,
+                               int num_components, int use_twobeams);
+
+//------------------------------------------------------------------------------
 //Wrapper kernels used in unit tests to test __device__ functions externally
 //These are not used in the main code
 

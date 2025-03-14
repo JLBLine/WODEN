@@ -65,10 +65,17 @@ or ``double _Complex``.
   :maxdepth: 1
 
   C_code/beam_settings
+  C_code/call_everybeam_c
+  C_code/check_compilation_flags
   C_code/constants
+  C_code/logger
+  C_code/hyperbeam_error
+  C_code/shapelet_basis
   C_code/visibility_set
+  C_code/woden
   C_code/woden_precision_defs
   C_code/woden_struct_defs
+
 
 ``GPU`` and ``C`` equivalent functions
 -----------------------------------------
@@ -94,6 +101,7 @@ are designed to minimise the amount of code dupilcation between the ``C`` and
 .. toctree::
   :maxdepth: 1
 
+  CPU_code/calculate_visibilities_cpu
   CPU_code/fundamental_coords_cpu
   CPU_code/primary_beam_cpu
   CPU_code/source_components_cpu

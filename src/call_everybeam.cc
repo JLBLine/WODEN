@@ -1,5 +1,10 @@
 
-// #include <EveryBeam/pointresponse/pointresponse.h
+/*! \file
+Note that all documentation is in the header file `call_everybeam_c.h`, as this
+is the C interface to the C++ code. We only ever bother calling this code from
+C so made sense to chuck the doc-strings there.
+
+*/
 
 #include "call_everybeam.h"
 

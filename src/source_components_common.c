@@ -492,7 +492,7 @@ void source_component_common(woden_settings_t *woden_settings,
   //   }
   //   int num_gains = num_components*woden_settings->num_freqs*woden_settings->num_time_steps*num_beams;
   //   if (do_gpu == 1){
-  //     copy_CPU_beam_gains_to_GPU(components, mem_component_beam_gains, num_gains);  
+  //     copy_CPU_component_gains_to_GPU_beam_gains(components, mem_component_beam_gains, num_gains);  
   //   } else {
   //     //It seems wasteful to copy across the beam gains, but `components` was created
   //     //on the python side, where the memory freeing is handled (hopefully) by

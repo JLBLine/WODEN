@@ -1,9 +1,8 @@
 #include "calculate_visibilities_cpu.h"
 
-calc_visi_inouts_t * create_calc_visi_inouts_cpu(array_layout_t *array_layout,
-        visibility_set_t *visibility_set,  user_precision_t *sbf,
-        woden_settings_t *woden_settings,
-        int num_shapelets, int use_twobeams) {
+calc_visi_inouts_t * create_calc_visi_inouts_cpu(visibility_set_t *visibility_set, 
+                          user_precision_t *sbf, woden_settings_t *woden_settings,
+                          int num_shapelets, int use_twobeams){
 
   calc_visi_inouts_t *calc_visi_inouts = (calc_visi_inouts_t *)malloc(sizeof(calc_visi_inouts_t));
 

@@ -11,9 +11,6 @@ void calculate_component_visis(e_component_type comptype,
                                int num_beams, int use_twobeams,
                                int do_gpu) {
 
-  // char log_buffer[128];
-  // int log_len = sizeof log_buffer;
-
   if (woden_settings->verbose == 1){
     log_message("Starting calculate_component_visis");
   }
@@ -178,9 +175,8 @@ void calculate_visibilities(array_layout_t *array_layout,
                 cropped_sky_models->num_shapelets, use_twobeams);
   } else {
     mem_visibility_set = setup_visibility_set(num_visis);
-    mem_calc_visi_inouts = create_calc_visi_inouts_cpu(array_layout,
-                visibility_set, sbf, woden_settings,
-                cropped_sky_models->num_shapelets, use_twobeams);
+    mem_calc_visi_inouts = create_calc_visi_inouts_cpu(visibility_set, sbf,
+                woden_settings, cropped_sky_models->num_shapelets, use_twobeams);
   }
   
   //TODO - this could be a function in some other file?

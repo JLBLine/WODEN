@@ -704,3 +704,82 @@ extern "C" void run_hyperbeam_gpu(int num_components,
   gpuFree(d_jones);
 
 }
+
+
+//This purely exists as d_component_beam_gains->gxs, d_gys are GPU
+//complexes and can't be included the function definition in a C header
+extern "C" void wrapper_calculate_gaussian_beam_gpu(int num_components,
+                          user_precision_t cos_theta,
+                          user_precision_t sin_theta, user_precision_t sin_2theta,
+                          user_precision_t fwhm_lm,
+                          woden_settings_t *woden_settings,
+                          beam_settings_t *beam_settings,
+                          components_t *components,
+                          beam_gains_t *d_component_beam_gains,
+                          double *d_freqs) {
+
+  calculate_gaussian_beam_gpu(num_components,
+         woden_settings->num_time_steps, woden_settings->num_freqs,
+         beam_settings->gauss_ha, beam_settings->gauss_sdec,
+         beam_settings->gauss_cdec,
+         fwhm_lm, cos_theta, sin_theta, sin_2theta,
+         beam_settings->beam_ref_freq, d_freqs,
+         components->beam_has,
+         components->beam_decs,
+         (gpuUserComplex *)d_component_beam_gains->gxs,
+         (gpuUserComplex *)d_component_beam_gains->gys);
+
+
+  
+}
+
+
+//This purely exists as d_component_beam_gains->gxs, d_gys are GPU
+//complexes and can't be included the function definition in a C header
+extern "C" void wrapper_calculate_analytic_dipole_beam_gpu(int num_components,
+                          components_t *components,
+                          beam_gains_t *d_component_beam_gains,
+                          double *d_freqs, woden_settings_t *woden_settings) {
+
+  calculate_analytic_dipole_beam_gpu(num_components,
+         woden_settings->num_time_steps, woden_settings->num_freqs,
+         components->azs, components->zas, d_freqs,
+         (gpuUserComplex *)d_component_beam_gains->gxs,
+         (gpuUserComplex *)d_component_beam_gains->gys);
+
+}
+
+//This purely exists as d_component_beam_gains->gxs, d_gys are GPU
+//complexes and can't be included the function definition in a C header
+extern "C" void wrapper_run_hyperbeam_gpu(int num_components,
+                          beam_settings_t *beam_settings,
+                          int num_beams, int parallactic,
+                          double *reordered_azs, double *reordered_zas,
+                          beam_gains_t *d_component_beam_gains,
+                          double *d_freqs, woden_settings_t *woden_settings) {
+  run_hyperbeam_gpu(num_components,
+           woden_settings->num_time_steps, woden_settings->num_freqs,
+           num_beams, parallactic,
+           beam_settings->gpu_fee_beam,
+           reordered_azs, reordered_zas,
+           woden_settings->latitudes,
+           (gpuUserComplex *)d_component_beam_gains->gxs,
+           (gpuUserComplex *)d_component_beam_gains->Dxs,
+           (gpuUserComplex *)d_component_beam_gains->Dys,
+           (gpuUserComplex *)d_component_beam_gains->gys);
+}
+
+extern "C" void wrapper_calculate_RTS_MWA_analytic_beam_gpu(int num_components,
+                          components_t *components, int norm,
+                          beam_gains_t *d_component_beam_gains,
+                          double *d_freqs, woden_settings_t *woden_settings) {
+    calculate_RTS_MWA_analytic_beam_gpu(num_components,
+         woden_settings->num_time_steps, woden_settings->num_freqs,
+         components->azs, components->zas,
+         woden_settings->FEE_ideal_delays, woden_settings->latitude,
+         norm, components->beam_has, components->beam_decs,
+         d_freqs, (gpuUserComplex *)d_component_beam_gains->gxs,
+         (gpuUserComplex *)d_component_beam_gains->Dxs,
+         (gpuUserComplex *)d_component_beam_gains->Dys,
+         (gpuUserComplex *)d_component_beam_gains->gys);
+}

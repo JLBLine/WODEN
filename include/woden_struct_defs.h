@@ -206,13 +206,6 @@ typedef struct _source_t {
   components_t shape_components; /*!< `components_t` holding component
   information for all SHAPELET COMPONENTs in this SOURCE.*/
 
-  // //Device versions
-  // components_t d_point_components; /*!< `components_t` holding component
-  // information for all POINT COMPONENTs in this SOURCE.*/
-  // components_t d_gauss_components; /*!< `components_t` holding component
-  // information for all GAUSSIAN COMPONENTs in this SOURCE.*/
-  // components_t d_shape_components; /*!< `components_t` holding component
-  // information for all SHAPELET COMPONENTs in this SOURCE.*/
 
 } source_t;
 

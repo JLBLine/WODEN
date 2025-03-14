@@ -5,6 +5,7 @@
 */
 #pragma once
 #include "woden_precision_defs.h"
+#include "woden_struct_defs.h"
 #include <mwa_hyperbeam.h>
 #include "gpucomplex.h"
 #include "hyperbeam_error.h"
@@ -353,13 +354,6 @@ extern "C" void calculate_RTS_MWA_analytic_beam_gpu(int num_components,
      gpuUserComplex *d_gxs, gpuUserComplex *d_Dxs,
      gpuUserComplex *d_Dys, gpuUserComplex *d_gys);
 
-
-
-
-
-
-
-
 /**
 @brief Calculate the FEE MWA primary beam model to a set of sky directions
 `azs` and `zas` for a given initialised `mwa_hyperbeam` device beam object
@@ -407,3 +401,95 @@ extern "C" void run_hyperbeam_gpu(int num_components,
            gpuUserComplex *d_primay_beam_J01,
            gpuUserComplex *d_primay_beam_J10,
            gpuUserComplex *d_primay_beam_J11);
+
+
+
+
+/**
+ * @brief Wrapper function to call the Gaussian beam on the GPU from C. Calls
+ * `calculate_gaussian_beam_gpu`; see that function for more details.
+ *
+ * @details Need a wrapper here as the GPU function has
+ * GPU types in the argument, so can't be linked to directly from the CPU.
+ *
+ * @param num_components The number of components to process.
+ * @param cos_theta Cosine of the rotation angle
+ * @param sin_theta Sine of the rotation angle
+ * @param sin_2theta Sine of two times the rotation angle
+ * @param fwhm_lm FWHM of the beam in \f$l,m\f$ coords
+ * @param woden_settings Pointer to the WODEN settings structure.
+ * @param beam_settings Pointer to the beam settings structure.
+ * @param components Pointer to the components structure.
+ * @param d_component_beam_gains Pointer to the device memory for component beam gains.
+ * @param d_freqs Pointer to the device memory array for frequencies.
+ */
+extern "C" void wrapper_calculate_gaussian_beam_gpu(int num_components,
+               user_precision_t cos_theta,
+               user_precision_t sin_theta, user_precision_t sin_2theta,
+               user_precision_t fwhm_lm,
+               woden_settings_t *woden_settings,
+               beam_settings_t *beam_settings,
+               components_t *components,
+               beam_gains_t *d_component_beam_gains,
+               double *d_freqs);
+
+/**
+ * @brief Wrapper to call the analytic dipole beam on the GPU from C. Calls
+ * `calculate_analytic_dipole_beam_gpu`; see that function for more details.
+ *
+ * @details Need a wrapper here as the GPU function has
+ * GPU types in the argument, so can't be linked to directly from the CPU.
+ *
+ * @param num_components The number of components to process.
+ * @param components Pointer to the components structure.
+ * @param d_component_beam_gains Pointer to the device memory beam gains struct.
+ * @param d_freqs Pointer to the device memory array for frequencies.
+ * @param woden_settings Pointer to the settings structure for WODEN.
+ */
+extern "C" void wrapper_calculate_analytic_dipole_beam_gpu(int num_components,
+               components_t *components,
+               beam_gains_t *d_component_beam_gains,
+               double *d_freqs, woden_settings_t *woden_settings);
+
+/**
+ * @brief Wrapper function to run the Hyperbeam GPU computation from C. Calls
+ * `run_hyperbeam_gpu`; see that function for more details.
+ *
+ * @details Need a wrapper here as the GPU function has
+ * GPU types in the argument, so can't be linked to directly from the CPU.
+ *
+ * @param num_components The number of components to process.
+ * @param beam_settings Pointer to the beam settings structure.
+ * @param num_beams The number of beams to process.
+ * @param parallactic Flag indicating whether to use parallactic angle correction.
+ * @param reordered_azs Pointer to the array of reordered azimuth values; they should be ordered by time index, then component index (other WODEN beam functions expect component index, then time index).
+ * @param reordered_zas Pointer to the array of reordered zenith angle values; they should be ordered by time index, then component index (other WODEN beam functions expect component index, then time index).
+ * @param d_component_beam_gains Pointer to the device memory component beam gains struct
+ * @param d_freqs Pointer to the device memeory array of frequencies.
+ * @param woden_settings Pointer to the Woden settings structure.
+ */
+extern "C" void wrapper_run_hyperbeam_gpu(int num_components,
+               beam_settings_t *beam_settings,
+               int num_beams, int parallactic,
+               double *reordered_azs, double *reordered_zas,
+               beam_gains_t *d_component_beam_gains,
+               double *d_freqs, woden_settings_t *woden_settings);
+
+/**
+ * @brief Wrapper function to calculate the RTS MWA analytic beam on the GPU from C
+ *
+ * @details Need a wrapper here as the GPU function has
+ * GPU types in the argument, so can't be linked to directly from the CPU.
+ *
+ * @param num_components The number of components to process.
+ * @param components Pointer to an array of components to be processed.
+ * @param norm Normalisation flag (1 to normalise, 0 otherwise).
+ * @param d_component_beam_gains Pointer to the device memory where the beam gains
+ *                               for each component will be stored.
+ * @param d_freqs Pointer to the device memory array containing the frequencies.
+ * @param woden_settings Pointer to the settings structure for WODEN.
+ */
+extern "C" void wrapper_calculate_RTS_MWA_analytic_beam_gpu(int num_components,
+               components_t *components, int norm,
+               beam_gains_t *d_component_beam_gains,
+               double *d_freqs, woden_settings_t *woden_settings);
