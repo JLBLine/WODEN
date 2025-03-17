@@ -2,14 +2,20 @@
 
 [![status](https://joss.theoj.org/papers/bbc90ec4cd925ade93ed0781e571d247/status.svg)](https://joss.theoj.org/papers/bbc90ec4cd925ade93ed0781e571d247)
 
-[![Documentation Status](https://readthedocs.org/projects/woden/badge/?version=latest)](https://woden.readthedocs.io/en/latest/?badge=latest) [![codecov](https://codecov.io/gh/JLBLine/WODEN/branch/master/graph/badge.svg?token=Q3JFCI5GOC)](https://codecov.io/gh/JLBLine/WODEN) _*note code coverage only applies to `python3` and `C` code, `CUDA` code is not currently supported by free code coverage software_
+[![Documentation Status](https://readthedocs.org/projects/woden/badge/?version=latest)](https://woden.readthedocs.io/en/latest/?badge=latest) [![codecov](https://codecov.io/gh/JLBLine/WODEN/branch/master/graph/badge.svg?token=Q3JFCI5GOC)](https://codecov.io/gh/JLBLine/WODEN) _*note code coverage only applies to `python3`, `C`, `C++` code, as `CUDA` code is not currently supported by free code coverage software. However, every GPU function now has a CPU equivalent which is tested, so this number is indicative of the entire package_
 
-`WODEN` is C / GPU code designed to be able to simulate low-frequency radio interferometric data. It is written to be simplistic and *fast* to allow all-sky simulations. Although `WODEN` was primarily written to simulate Murchinson Widefield Array ([MWA, Tingay et al. 2013](https://doi.org/10.1017/pasa.2012.007)) visibilities, it is capable of bespoke array layouts, and has a number of primary beam options. `WODEN` outputs `uvfits` files. The `WODEN` documentation lives [here on readthedocs](https://woden.readthedocs.io/en/latest/). If your internet has broken and you have already installed `WODEN`, you can build a local copy by navigating into `WODEN/docs/sphinx` and running `make html` (you'll need to have `doxygen` installed).
+`WODEN` is Python / C / C++ / GPU code designed to be able to simulate low-frequency radio interferometric data. It is written to be simplistic and *fast* to allow all-sky simulations. Although `WODEN` was primarily written to simulate Murchinson Widefield Array ([MWA, Tingay et al. 2013](https://doi.org/10.1017/pasa.2012.007)) visibilities, it is capable of bespoke array layouts, and has a number of primary beam options. Currently, the ``MWA`` primary beam is supported via [hyperbeam](https://github.com/MWATelescope/mwa_hyperbeam); ``LOFAR`` and ``OSKAR``-style primary beams are supported via the [EveryBeam](https://everybeam.readthedocs.io/en/latest/index.html) package; ``EDA2``, an analytic ``MWA`` beam, and a simple Gaussian beam are supported natively to ``WODEN``.
+
+`WODEN` outputs `uvfits` files. The `WODEN` documentation lives [here on readthedocs](https://woden.readthedocs.io/en/latest/). If your internet has broken and you have already installed `WODEN`, you can build a local copy by navigating into `WODEN/docs/sphinx` and running `make html` (you'll need to have `doxygen` installed).
 
 > **Note**
 > Jul 2024: Jack is back on a temporary contract to do some `WODEN` development. Keep your eyes peeled for new features!
 
 <!-- > Although ``WODEN`` is still very much a great tool for MWA interferomteric simulations, I (Jack Line) am no longer working in astronomy. I'll drop in to advise and/or fix bugs from time to time, but I can't commit to developing new features I'm afraid. If you want new features (or even better, want to write new features), please reach out to the [Epoch of Reionisation group at Curtin University](https://astronomy.curtin.edu.au/research/epoch-of-reionisation/). They should know if anyone is actively working on/using the software. If you end up taking over this project, feel free to delete this message! -->
+
+> New in version 2.5-alpha:
+ - CPU-only mode via `--cpu_mode`! You should use this when running with an `EveryBeam` primary beam, as around 70% of all computation time is spent in the primary beam calculation. On a cluster, the GPU just sits there doing nothing but costing you and environment.
+ - `EveryBeam` is now called directly from `C++` rather than the `Python` wrapper. It's a good deal faster that way.
 
 > New in version 2.4-alpha:
  - You can now use EveryBeam primary beams in `WODEN`. This allows you to simulate `LOFAR` and `SKA` like instruments.
@@ -87,7 +93,7 @@ $ cd WODEN
 $ pip install -r requirements.txt
 $ pip install .
 ```
-with a couple of post-compilation environment variables needed to use the MWA FEE primary beam model.
+with a couple of post-compilation environment variables needed to use the MWA FEE primary beam model. See the full installation guide for more details, including how to use the `EveryBeam` functionality.
 
 ## 2. Testing
 There are two routes to test WODEN:
