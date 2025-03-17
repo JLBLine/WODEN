@@ -13,9 +13,22 @@ sphinx:
 # formats:
 #    - pdf
 
+build:
+  os: ubuntu-20.04
+  tools:
+    python: "3.10"
+  jobs:
+    pre_build:
+    # Note that this HTML won't be automatically uploaded,
+    # unless your documentation build includes it somehow.
+      - doxygen
+
 # Optionally set the version of Python and requirements required
 # to build your docs
 python:
-   version: 3.7
    install:
    - requirements: docs/sphinx/requirements.txt
+
+submodules:
+  include: all
+  recursive: true

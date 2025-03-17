@@ -52,7 +52,7 @@ def make_gitdict():
     return git_dict
 
 class GitInfo(setuptools.Command):
-  '''A custom command to create a json file containing wodenpy git information.'''
+  '''A custom command to create git commit information'''
 
   description = 'Create the file "wodenpy/wodenpy_gitinfo.txt" containing git information '
   user_options = []
@@ -70,7 +70,7 @@ class GitInfo(setuptools.Command):
         print('Creating file wodenpy/wodenpy_gitinfo.txt')
 
   def run(self):
-    '''Write the wodenpy git npz file.'''
+    '''Write the wodenpy git txt file. Check to see if we have'''
 
     ##Find where we are running the pip install from, and add in a sensible
     ##place to save the git dictionary
@@ -80,7 +80,7 @@ class GitInfo(setuptools.Command):
     with open(save_path, "w") as fp:
         for key in git_dict.keys():
             fp.write("{:s},{:s}\n".format(key, git_dict[key]))
-
+            
 class BuildPyCommand(_build_py):
   '''Custom build command to run the gitinfo command during build'''
 
@@ -90,7 +90,7 @@ class BuildPyCommand(_build_py):
 
 setup(
     name = "wodenpy",
-    version = '2.4.0',
+    version = '2.5.0',
     author = "Jack L. B. Line",
     url = "https://github.com/JLBLine/WODEN",
     python_requires=">=3.7",
@@ -103,14 +103,15 @@ setup(
         "Operating System :: Linux",
     ],
     packages = ['wodenpy',
-                'wodenpy.wodenpy_setup',
-                'wodenpy.use_libwoden',
-                'wodenpy.observational',
-                'wodenpy.uvfits',
                 'wodenpy.array_layout',
+                'wodenpy.observational',
                 'wodenpy.phase_rotate',
                 'wodenpy.primary_beam',
-                'wodenpy.skymodel'],
+                'wodenpy.skymodel',
+                'wodenpy.use_libwoden',
+                'wodenpy.uvfits',
+                'wodenpy.wodenpy_setup'             
+                ],
     scripts=["scripts/run_woden.py",
              "scripts/add_woden_uvfits.py",
              "scripts/concat_woden_uvfits.py",
@@ -118,6 +119,7 @@ setup(
              "scripts/add_instrumental_effects_woden.py"],
     package_data={"wodenpy" : ["libwoden_float.so",
                                "libwoden_double.so",
+                               "libuse_everybeam.so",
                                'wodenpy_gitinfo.txt',
                                'bandpass_1kHz.txt']},
     cmdclass={'gitinfo': GitInfo,

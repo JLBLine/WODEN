@@ -1,3 +1,7 @@
+"""Functions and Classes to setup the source catalogue and components. Eventually
+these things are passed to the C/C++/GPU code, so many functions here to set up
+the data structures, and convert from Python native to ctypes types."""
+
 import ctypes 
 import importlib_resources
 import numpy as np
@@ -106,8 +110,9 @@ def create_components_struct(precision="double"):
         :cvar POINTER(user_precision_t) minors: GAUSSIAN/SHAPELET minor axis (beta2, radians)
         :cvar POINTER(user_precision_t) pas: GAUSSIAN/SHAPELET position angles (radians)
         :cvar POINTER(user_precision_t) param_indexes: An index value to match each coeff, n1, and n2 to the correct ra, dec, major, minor, pa for a SHAPELET
-        :cvar POINTER(user_precision_t) azs: SHAPELET source azimuth angles for all time steps
-        :cvar POINTER(user_precision_t) zas: SHAPELET source zenith angles for all time steps
+        :cvar POINTER(user_precision_t) azs: Azimuth angles for all time steps
+        :cvar POINTER(user_precision_t) zas: Zenith angles for all time steps
+        :cvar POINTER(user_precision_t) para_angles: Parallactic angles for all time steps
         :cvar POINTER(double) beam_has: Hour angle of COMPONENTs for all time steps, used for beam calculations
         :cvar POINTER(double) beam_decs: Declinations of COMPONENTs for all time steps, used for beam calculations
         :cvar POINTER(int) num_primarybeam_values: Number of beam calculations needed for COMPONENTs
@@ -115,10 +120,6 @@ def create_components_struct(precision="double"):
         :cvar POINTER(user_precision_complex_t) Dxs: North-South Beam leakage values for all directions, frequencies, and times for these COMPONENT
         :cvar POINTER(user_precision_complex_t) Dys: East-West Beam leakage values for all directions, frequencies, and times  for these COMPONENT
         :cvar POINTER(user_precision_complex_t) gys: East-West Beam gain values for all directions, frequencies, and times  for these COMPONENT
-        :cvar POINTER(user_precision_complex_t) gxs_ants: North-South Beam gain values for all directions, frequencies, times, and ants for these COMPONENT
-        :cvar POINTER(user_precision_complex_t) Dxs_ants: North-South Beam leakage values for all directions, frequencies, times, and ants for these COMPONENT
-        :cvar POINTER(user_precision_complex_t) Dys_ants: East-West Beam leakage values for all directions, frequencies, times, and ants  for these COMPONENT
-        :cvar POINTER(user_precision_complex_t) gys_ants: East-West Beam gain values for all directions, frequencies, times, and ants  for these COMPONENT
         :cvar POINTER(double) ls: Device memory l cosine direction coords for these COMPONENTs
         :cvar POINTER(double) ms: Device memory m cosine direction coords for these COMPONENTs
         :cvar POINTER(double) ns: Device memory n cosine direction coords for these COMPONENTs
@@ -196,6 +197,7 @@ def create_components_struct(precision="double"):
                     ##Specific to observation settings for these COMPONENTs
                     ("azs", POINTER(c_user_precision)),
                     ("zas", POINTER(c_user_precision)),
+                    ("para_angles", POINTER(c_user_precision)),
                     ("beam_has", POINTER(c_double)),
                     ("beam_decs", POINTER(c_double)),
                     ("num_primarybeam_values", c_int),
@@ -204,10 +206,6 @@ def create_components_struct(precision="double"):
                     ("Dxs", POINTER(c_user_precision_complex)),
                     ("Dys", POINTER(c_user_precision_complex)),
                     ("gys", POINTER(c_user_precision_complex)),
-                    ("gxs_ants", POINTER(c_user_precision)),
-                    ("Dxs_ants", POINTER(c_user_precision)),
-                    ("Dys_ants", POINTER(c_user_precision)),
-                    ("gys_ants", POINTER(c_user_precision)),
                     ##used to hold l,m,n coords on the GPU
                     ("ls", POINTER(c_double)),
                     ("ms", POINTER(c_double)),
@@ -319,6 +317,7 @@ class Components_Python(object):
         self.param_indexes = None
         self.azs = None
         self.zas = None
+        self.para_angles = None
         self.beam_has = None
         self.beam_decs = None
         self.num_primarybeam_values = None
@@ -426,9 +425,6 @@ def create_source_struct(Components_Ctypes : Components_Ctypes): # type: ignore
         :cvar Components_Ctypes_Double point_components: `Components_Ctypes` holding component information for all POINT COMPONENTs in this SOURCE
         :cvar Components_Ctypes_Double gauss_components: `Components_Ctypes` holding component information for all GAUSSIAN COMPONENTs in this SOURCE
         :cvar Components_Ctypes_Double shape_components: `Components_Ctypes` holding component information for all SHAPELET COMPONENTs in this SOURCE
-        :cvar Components_Ctypes_Double d_point_components: `Components_Ctypes` holding component information on the device for all POINT COMPONENTs in this SOURCE
-        :cvar Components_Ctypes_Double d_gauss_components: `Components_Ctypes` holding component information on the device for all GAUSSIAN COMPONENTs in this SOURCE
-        :cvar Components_Ctypes_Double d_shape_components: `Components_Ctypes` holding component information on the device for all SHAPELET COMPONENTs in this SOURCE
         
         """
         
@@ -451,9 +447,6 @@ def create_source_struct(Components_Ctypes : Components_Ctypes): # type: ignore
             ("point_components",  Components_Ctypes),
             ("gauss_components",  Components_Ctypes),
             ("shape_components",  Components_Ctypes),
-            ("d_point_components",  Components_Ctypes),
-            ("d_gauss_components",  Components_Ctypes),
-            ("d_shape_components",  Components_Ctypes),
         ]
         
     return Source_Ctypes
@@ -535,11 +528,26 @@ def setup_source_catalogue(Source_Ctypes : Source_Ctypes, Source_Catalogue : Sou
                            num_sources : int, num_shapelets : int,
                            precision = "double") -> Source_Catalogue: # type: ignore
     """
-    Creates a `Source_Catalogue` with the specified number of sources and shapelets.
-    Sets source_catalogue.sources an array of `Source_Ctypes` objects of length `num_sources`
+    Setups a `Source_Catalogue` with the specified number of sources and shapelets.
+    Sets source_catalogue.sources as an array of `Source_Ctypes` objects of length `num_sources`
+    
+    As `Source_Ctypes`/`Source_Catalogue` are created dynamically based on
+    the `precision`, this function takes them as arguments rather than creating
+    them within the function.
+    
+    These classes should be created once via
+    `wodenpy.use_libwoden.create_woden_struct_classes.Woden_Struct_Classes`
+    and called from there e.g.
+    
+    woden_struct_classes = Woden_Struct_Classes()
+    Source_Catalogue = woden_struct_classes.Source_Catalogue 
     
     Parameters
     ------------
+    Source_Ctypes: Source_Ctypes
+        The Source_Ctypes class structured equivalent to a `source_t` struct.
+    Source_Catalogue: Source_Catalogue
+        The Source_Catalogue class structured equivalent to a `source_catalogue_t` struct.
     num_sources: int
         The number of sources in the catalogue.
     num_shapelets: int
@@ -555,9 +563,7 @@ def setup_source_catalogue(Source_Ctypes : Source_Ctypes, Source_Catalogue : Sou
     
     source_catalogue = Source_Catalogue()
     
-    source_array = num_sources*Source_Ctypes
-        
-    source_catalogue.sources = source_array()
+    source_catalogue.sources = (num_sources*Source_Ctypes)()
     source_catalogue.num_sources = num_sources
     source_catalogue.num_shapelets = num_shapelets
     
@@ -690,11 +696,16 @@ def setup_components(chunk_map: Skymodel_Chunk_Map,
         components.azs = np.empty(n_comps*num_times, dtype=np_precision)
         components.zas = np.empty(n_comps*num_times, dtype=np_precision)
         
-    if beamtype in BeamGroups.eb_beam_values:
-        components.gxs = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
-        components.Dxs = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
-        components.Dys = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
-        components.gys = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
+    if beamtype == BeamTypes.EB_MWA.value:
+        components.para_angles = np.empty(n_comps*num_times, dtype=np_precision)
+        
+    ##NOTE: use this to calculate beam values in Python
+    ##Needs to be done in future for pyuvbeam
+    # if beamtype in BeamGroups.eb_beam_values:
+    #     components.gxs = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
+    #     components.Dxs = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
+    #     components.Dys = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
+    #     components.gys = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
         
     ##now do the polarisation thingies------------------------------------------
     
@@ -920,34 +931,39 @@ def copy_python_components_to_ctypes(python_comps: Components_Python,
         ctypes_comps.azs = python_comps.azs.ctypes.data_as(POINTER(c_user_precision))
         ctypes_comps.zas = python_comps.zas.ctypes.data_as(POINTER(c_user_precision))
         
+    if beamtype == BeamTypes.EB_MWA.value:
+        ctypes_comps.para_angles = python_comps.para_angles.ctypes.data_as(POINTER(c_user_precision))
+        # print("WE DID THIS MOTHER HUCKER", python_comps.para_angles, python_comps.azs, python_comps.zas)
+        
     if beamtype in BeamGroups.hadec_beam_values:
         ctypes_comps.beam_has = python_comps.beam_has.ctypes.data_as(POINTER(c_double))
         ctypes_comps.beam_decs = python_comps.beam_decs.ctypes.data_as(POINTER(c_double))
     
     ctypes_comps.num_primarybeam_values = python_comps.num_primarybeam_values
     ##things to hold the beam gain
-    
-    if beamtype in BeamGroups.eb_beam_values:
-        num_gains = len(python_comps.gxs)
+
+    ##NOTE: this needs to happen when calculating beam values in Python    
+    # if beamtype in BeamGroups.eb_beam_values:
+    #     num_gains = len(python_comps.gxs)
         
-        complex_num_beams = c_user_precision_complex*num_gains
+    #     complex_num_beams = c_user_precision_complex*num_gains
             
-        ctypes_comps.gxs = complex_num_beams()
-        ctypes_comps.Dxs = complex_num_beams()
-        ctypes_comps.Dys = complex_num_beams()
-        ctypes_comps.gys = complex_num_beams()
+    #     ctypes_comps.gxs = complex_num_beams()
+    #     ctypes_comps.Dxs = complex_num_beams()
+    #     ctypes_comps.Dys = complex_num_beams()
+    #     ctypes_comps.gys = complex_num_beams()
         
-        ##Actually iterate over the complex beam gains, as the ctypes complex
-        ##object is actually a bespoke class
-        for beam_ind in range(num_gains):
-            ctypes_comps.gxs[beam_ind].real = python_comps.gxs[beam_ind].real
-            ctypes_comps.gxs[beam_ind].imag = python_comps.gxs[beam_ind].imag
-            ctypes_comps.Dxs[beam_ind].real = python_comps.Dxs[beam_ind].real
-            ctypes_comps.Dxs[beam_ind].imag = python_comps.Dxs[beam_ind].imag
-            ctypes_comps.Dys[beam_ind].real = python_comps.Dys[beam_ind].real
-            ctypes_comps.Dys[beam_ind].imag = python_comps.Dys[beam_ind].imag
-            ctypes_comps.gys[beam_ind].real = python_comps.gys[beam_ind].real
-            ctypes_comps.gys[beam_ind].imag = python_comps.gys[beam_ind].imag
+    #     ##Actually iterate over the complex beam gains, as the ctypes complex
+    #     ##object is actually a bespoke class
+    #     for beam_ind in range(num_gains):
+    #         ctypes_comps.gxs[beam_ind].real = python_comps.gxs[beam_ind].real
+    #         ctypes_comps.gxs[beam_ind].imag = python_comps.gxs[beam_ind].imag
+    #         ctypes_comps.Dxs[beam_ind].real = python_comps.Dxs[beam_ind].real
+    #         ctypes_comps.Dxs[beam_ind].imag = python_comps.Dxs[beam_ind].imag
+    #         ctypes_comps.Dys[beam_ind].real = python_comps.Dys[beam_ind].real
+    #         ctypes_comps.Dys[beam_ind].imag = python_comps.Dys[beam_ind].imag
+    #         ctypes_comps.gys[beam_ind].real = python_comps.gys[beam_ind].real
+    #         ctypes_comps.gys[beam_ind].imag = python_comps.gys[beam_ind].imag
         
     ctypes_comps.n_stokesV_pol_frac = 0
     ctypes_comps.n_stokesV_power = 0

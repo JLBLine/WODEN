@@ -31,9 +31,14 @@ endforeach()
 
 ##Set an environment variable for the ctest of this, so we can find a path
 ##to some test files that live in this dir
-add_test(python_test_make_woden_settings ${PYTHON_EXECUTABLE}
-         ${CMAKE_CURRENT_SOURCE_DIR}/test_make_woden_settings.py)
-set_tests_properties(python_test_make_woden_settings PROPERTIES
+add_test(python_test_fill_woden_settings_python ${PYTHON_EXECUTABLE}
+         ${CMAKE_CURRENT_SOURCE_DIR}/test_fill_woden_settings_python.py)
+set_tests_properties(python_test_fill_woden_settings_python PROPERTIES
+         ENVIRONMENT CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})
+
+add_test(python_test_convert_woden_settings_to_ctypes ${PYTHON_EXECUTABLE}
+         ${CMAKE_CURRENT_SOURCE_DIR}/test_convert_woden_settings_to_ctypes.py)
+set_tests_properties(python_test_convert_woden_settings_to_ctypes PROPERTIES
          ENVIRONMENT CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})
 
 ##Set an environment variable for the ctest of this, so we can find a path
@@ -54,3 +59,22 @@ add_test(python_test_make_skymodel_structs ${PYTHON_EXECUTABLE}
          ${CMAKE_CURRENT_SOURCE_DIR}/test_make_skymodel_structs.py)
 set_tests_properties(python_test_make_skymodel_structs PROPERTIES
          ENVIRONMENT CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})
+
+
+
+##Create two different libraries, one with the EveryBeam flag, 
+##one without
+add_library(check_comp_has_flag_with_flag SHARED
+            ${CMAKE_SOURCE_DIR}/src/check_compilation_flags.c)
+
+target_compile_options(check_comp_has_flag_with_flag PRIVATE
+                       ${C_FLAGS} -DHAVE_EVERYBEAM)
+
+add_library(check_comp_has_flag_without_flag SHARED
+            ${CMAKE_SOURCE_DIR}/src/check_compilation_flags.c)
+            
+
+add_test(python_test_check_for_everybeam ${PYTHON_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_check_for_everybeam.py)
+set_tests_properties(python_test_check_for_everybeam PROPERTIES
+        ENVIRONMENT CMAKE_CURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR})

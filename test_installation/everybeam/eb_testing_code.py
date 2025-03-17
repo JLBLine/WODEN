@@ -10,8 +10,7 @@ import matplotlib.pyplot as plt
 import numpy.testing as npt
 from astropy.constants import c
 from astropy.wcs import WCS
-import everybeam as eb
-from wodenpy.primary_beam.use_everybeam import load_OSKAR_telescope, load_LOFAR_telescope, run_everybeam, radec_to_xyz
+from wodenpy.primary_beam.use_everybeam import run_everybeam
 import erfa
 import mwa_hyperbeam
 

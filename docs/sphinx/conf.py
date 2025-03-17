@@ -59,7 +59,7 @@ copyright = '2024, J.L.B. Line'
 author = 'J.L.B. Line'
 
 # The full version, including alpha/beta/rc tags
-release = '2.4'
+release = '2.5'
 
 # -- General configuration ---------------------------------------------------
 
@@ -82,7 +82,12 @@ extensions = [
     "myst_nb",
 ]
 
+##Don't execute the notebooks, just load them in
 nb_execution_mode = "off"
+
+##Uncomment this if building locally to avoid loading the notebooks
+##as they can be quite slow to load
+# exclude_patterns = ["**/*.ipynb"]
 
 # Enable LaTeX rendering in markdown cells
 myst_enable_extensions = [

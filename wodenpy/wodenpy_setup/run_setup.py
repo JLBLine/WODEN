@@ -1,3 +1,7 @@
+"""Functions to parse arguments from the command line, check validity of
+arguments, and read relevant information from linked files, all for `run_woden.py`
+"""
+
 import wodenpy
 from wodenpy.wodenpy_setup.git_helper import retrieve_gitdict
 import numpy as np
@@ -12,6 +16,22 @@ import argparse
 from argparse import RawTextHelpFormatter
 import importlib.util
 from wodenpy.use_libwoden.beam_settings import BeamTypes, BeamGroups
+import time
+from pathlib import Path
+import logging
+from astropy.time import Time
+from astropy import units as u
+import importlib_resources
+from wodenpy.use_libwoden.use_libwoden import check_for_everybeam
+from wodenpy.primary_beam.use_everybeam import create_filtered_ms
+
+MWA_LAT = -26.703319405555554
+MWA_LONG = 116.67081523611111
+MWA_HEIGHT = 377.827
+
+LOFAR_LAT = 52.905329712
+LOFAR_LONG = 6.867996528
+LOFAR_HEIGHT = 0.0
 
 def get_parser():
     """
@@ -40,6 +60,22 @@ def get_parser():
                 "of which is split into fine channels. This naturally allows "
                 "any simulation to be split across multiple GPUs as separate "
                 "processes.", formatter_class=SmartFormatter)
+    
+    obs_group = parser.add_argument_group('OBSERVATION OPTIONS')
+    obs_group.add_argument('--ra0', default=np.nan, type=float,
+        help='RA of the desired phase centre (deg). If not set, must be using '
+              'a metafits file or measurement set.')
+    obs_group.add_argument('--dec0', default=np.nan, type=float,
+        help='Dec of the desired phase centre (deg). If not set, must be using '
+              'a metafits file or measurement set.')
+    obs_group.add_argument('--date', default=False,
+        help='Initial UTC date of the observatio in format YYYY-MM-DDThh:mm:ss '
+             'This is used to set the LST and array precession. This is set '
+             'automatically when reading a metafits but including this will '
+             'override the date in the metafits')
+    obs_group.add_argument('--no_precession', default=False, action='store_true',
+        help='By default, WODEN rotates the array back to J2000 to match '
+             'the input sky catalogue. Add this to switch off precession')
 
     freq_group = parser.add_argument_group('FREQUENCY OPTIONS')
     freq_group.add_argument('--band_nums', default='all',
@@ -68,28 +104,20 @@ def get_parser():
         help='Time resolution (s) - will default to what is in the metafits '
               'if the metafits if using metafits')
 
-
-    obs_group = parser.add_argument_group('OBSERVATION OPTIONS')
-    obs_group.add_argument('--ra0', type=float, required=True,
-        help='RA of the desired phase centre (deg)')
-    obs_group.add_argument('--dec0', type=float, required=True,
-        help='Dec of the desired phase centre (deg)')
-    obs_group.add_argument('--date', default=False,
-        help='Initial UTC date of the observatio in format YYYY-MM-DDThh:mm:ss '
-             'This is used to set the LST and array precession. This is set '
-             'automatically when reading a metafits but including this will '
-             'override the date in the metafits')
-    obs_group.add_argument('--no_precession', default=False, action='store_true',
-        help='By default, WODEN rotates the array back to J2000 to match '
-             'the input sky catalogue. Add this to switch off precession')
     
     tel_group = parser.add_argument_group('TELESCOPE OPTIONS')
-    tel_group.add_argument('--latitude', default=-26.703319405555554, type=float,
-        help='Latitude (deg) of the array - defaults to MWA at -26.703319405555554')
-    tel_group.add_argument('--longitude', default=116.67081523611111, type=float,
-        help='Longitude (deg) of the array - defaults to MWA at 116.67081523611111')
-    tel_group.add_argument('--array_height', default=377.827, type=float,
-        help='Height (m) of the array above sea level - defaults to MWA at 377.827')
+    tel_group.add_argument('--latitude', default=np.nan, type=float,
+        help='Central Latitude (deg) of the array: if --primary_beam=EB_LOFAR, '
+             f'this defaults to LOFAR at {LOFAR_LAT}, otherwise defaults to '
+             f'MWA at {MWA_LAT}. --latitude will override these defaults.')
+    tel_group.add_argument('--longitude', default=np.nan, type=float,
+        help='Central Longitude (deg) of the array: if --primary_beam=EB_LOFAR, '
+             f'this defaults to LOFAR at {LOFAR_LONG}, otherwise defaults to '
+             f'MWA at {MWA_LONG}. --longitude will override these defaults.')
+    tel_group.add_argument('--array_height', default=np.nan, type=float,
+        help='Central height (m) of the array: if --primary_beam=EB_LOFAR, '
+             f'this defaults to LOFAR at {LOFAR_HEIGHT}, otherwise defaults to '
+             f'MWA at {MWA_HEIGHT}. --array_height will override these defaults.')
     tel_group.add_argument('--array_layout', default=False,
         help='Instead of reading the array layout from the metafits file, read'
              ' from a text file. Store antenna positions as offset from array '
@@ -101,7 +129,7 @@ def get_parser():
             "\t\t spherical harmonics interpolated over frequency\n"
             "\t - Gaussian (Analytic symmetric Gaussian)\n"
             "\t\t see --gauss_beam_FWHM and\n"
-            "\t\t and --gauss_beam_ref_freq for\nfine control)\n"
+            "\t\t and --gauss_beam_ref_freq for fine control)\n"
             "\t - EDA2 (Analytic dipole with a ground mesh) \n"
             "\t - MWA_analy (MWA analytic model)\n"
             "\t - everybeam_OSKAR (requires an OSKAR measurement set via --beam_ms_path)\n"
@@ -109,56 +137,85 @@ def get_parser():
             "\t - everybeam_MWA (requires an MWA measurement set via --beam_ms_path)\n"
             "\t - none (Don't use a primary beam at all)\n"
             "Defaults to --primary_beam=none")
-    
     tel_group.add_argument('--off_cardinal_dipoles', default=False, action='store_true',
                            help='Add this to force the dipole orientations to be at 45, 135 degrees '
                                 '(aka NE-SW and SE-NW orientated) rather than 0, 90 (a.k.a. N-S, E-W). '
-                                'By default the dipole orientations are set depending on what primary '
-                                'beam has been selected. This changes the mixing matrix that applies '
+                                'This changes the mixing matrix that applies '
                                 'the beam gains to the Stokes IQUV values to create instrumental '
-                                'Stokes visibilities. ')
+                                'Stokes visibilities. Currently always set to False, pending further '
+                                'investigation.')
+    tel_group.add_argument('--telescope_name', default=False,
+        help='Name of telescope written out to the uvfits file. Defaults to something "sensible" '
+             'based on the primary beam being used.')
     
-    tel_group.add_argument('--beam_ms_path', default=False,
+    eb_group = parser.add_argument_group('EVERYBEAM PRIMARY BEAM OPTIONS')
+    eb_group.add_argument('--beam_ms_path', default=False,
                            help='When using any `everybeam` primary beam option, '
                                 'must provide a path to the measurement set')
-    tel_group.add_argument('--station_id', default=np.nan, type=int,
+    eb_group.add_argument('--no_beam_normalisation', default=False,
+                           action='store_true',
+                           help='When using an `everybeam` primary beam option, '
+                                'do not normalise the primary beam to the beam ' 
+                                'centre. By default, WODEN calculated the beam response '
+                                'at the beam centre, and multiplies all beam values '
+                                'by the inverse of this value. Add this option to switch '
+                                'that off.')
+    eb_group.add_argument('--station_id', default=np.nan, type=int,
                            help='When using any `everybeam` primary beam option, '
                                 'default is to simulate a unique beam per station.'
                                 'Include this index to use a specific station number '
                                 'for all stations instead.')
+    eb_group.add_argument('--eb_point_to_phase', default=False, action='store_true',
+        help='Lock the EveryBeam pointing to the phase centre. '
+              'EveryBeam reads the beam pointing in from a measurement set, so '
+              'this defaults to whatever is in --beam_ms_path. '
+              'If added, `--eb_point_to_phase` will trigger WODEN to create a minimal '
+              'copy of the measurement set with the pointing set to the phase centre')
+    eb_group.add_argument('--eb_ra_point', default=np.nan, type=float,
+        help='The RA (deg) to lock the EveryBeam primary beam centre to. '
+              'EveryBeam reads this pointing in from a measurement set, so '
+              'this defaults to whatever is in --beam_ms_path. '
+              'If added, `--eb_ra_point` will trigger WODEN to create a minimal '
+              'copy of the measurement set with the pointing set to this value')
+    eb_group.add_argument('--eb_dec_point', default=np.nan, type=float,
+        help='The Declination (deg) to lock the EveryBeam primary beam centre to. '
+              'EveryBeam reads this pointing in from a measurement set, so '
+              'this defaults to whatever is in --beam_ms_path. '
+              'If added, `--eb_dec_point` will trigger WODEN to create a minimal '
+              'copy of the measurement set with the pointing set to this value')
     
-    tel_group.add_argument('--gauss_beam_FWHM', default=20, type=float,
+    gauss_group = parser.add_argument_group('GAUSSIAN PRIMARY BEAM OPTIONS')
+    gauss_group.add_argument('--gauss_beam_FWHM', default=20, type=float,
         help='The FWHM of the Gaussian beam in deg - WODEN defaults to using'
              ' 20 deg if this is not set')
-    tel_group.add_argument('--gauss_beam_ref_freq', default=150e+6, type=float,
+    gauss_group.add_argument('--gauss_beam_ref_freq', default=150e+6, type=float,
         help='The frequency at which the gauss beam FWHM is set at. If not set,'
              ' WODEN will default to 150MHz.')
-    tel_group.add_argument('--gauss_ra_point', default=False,
+    gauss_group.add_argument('--gauss_ra_point', default=False,
         help='The initial RA (deg) to point the Gaussian beam at. This will be '
               'used to calculate an hour angle at which the beam will remain '
               'pointed at for the duration of the observation. Defaults to the '
               'RA of the metafits if available, or the RA of the phase centre '
               'if not')
-    tel_group.add_argument('--gauss_dec_point', default=False,
+    gauss_group.add_argument('--gauss_dec_point', default=False,
         help='The initial Dec (deg) to point the Gaussian beam at. Defaults '
         'to the Dec of the metafits if available, or the Dec of the phase centre'
         ' if not')
 
-    tel_group.add_argument('--hdf5_beam_path', default=False,
-        help='Location of the hdf5 file holding the FEE beam coefficients')
-    tel_group.add_argument('--MWA_FEE_delays', default=False,
+    hyper_group = parser.add_argument_group('HYPERBEAM PRIMARY BEAM OPTIONS')
+    hyper_group.add_argument('--hdf5_beam_path', default=False,
+        help='Location of the hdf5 file holding the MWA FEE beam coefficients')
+    hyper_group.add_argument('--MWA_FEE_delays', default=False,
         help='R|A list of 16 delays to point the MWA FEE primary beam \n'
               'model enter as as list like: \n'
               '--MWA_FEE_delays=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]\n'
               'for a zenith pointing. This is read directly from\n'
               'the metafits if using a metafits file')
-    tel_group.add_argument('--telescope_name', default='MWA',
-        help='Name of telescope written out to the uvfits file, defaults to MWA')
     
-    tel_group.add_argument('--use_MWA_dipflags', default=False, action='store_true',
+    hyper_group.add_argument('--use_MWA_dipflags', default=False, action='store_true',
         help='Apply the dipole flags stored in the metafits file. Only works'
              ' for the MWA FEE currently, not the MWA analytic model')
-    tel_group.add_argument('--use_MWA_dipamps', default=False, action='store_true',
+    hyper_group.add_argument('--use_MWA_dipamps', default=False, action='store_true',
         help='Attempt to use bespoke MWA dipole amplitudes stored in the metafits'
              ' file. Must be stored under the `DipAmps` column. Only works'
              ' for the MWA FEE currently, not the MWA analytic model')
@@ -195,6 +252,9 @@ def get_parser():
              ' flag to include auto-correlations.')
 
     sim_group = parser.add_argument_group('SIMULATOR OPTIONS')
+    sim_group.add_argument('--cpu_mode', default=False, action='store_true',
+        help='Switch to CPU only mode. By default, WODEN will attempt to use '
+             'a GPU. Add this flag to force CPU only mode')
     sim_group.add_argument('--num_threads', default=0, type=int,
         help='Number of threads to run the sky model reading / EveryBeam calculations on. '
              'Defaults to the number of physical cores on the machine. Add to set a specific number '
@@ -207,9 +267,6 @@ def get_parser():
     sim_group.add_argument('--precision', default='double',
         help='What precision to run WODEN at. Options are "double" or "float". '
              'Defaults to "double"')
-    sim_group.add_argument('--no_tidy', default=False, action='store_true',
-        help='Defaults to deleting output binary files from woden and json '
-             'files. Add this flag to not delete those files')
     sim_group.add_argument('--chunking_size', type=float, default=1e10,
         help='The chunk size to break up the point sources into for processing '
              '- defaults to 1e10')
@@ -219,7 +276,17 @@ def get_parser():
     sim_group.add_argument('--remove_phase_tracking', default=False, action='store_true',
         help='By adding this flag, remove the phase tracking of the '
              'visibilities - use this to feed uvfits into the RTS')
-    sim_group.add_argument('--profile', default=False, action='store_true',
+    
+    logging_group = parser.add_argument_group('LOGGING OPTIONS')
+    logging_group.add_argument('--version', default=False, action='store_true',
+        help='Just print the version of WODEN and exit')
+    logging_group.add_argument('--verbose', default=False, action='store_true',
+        help='Add to increase the verbosity of the logging. Extra information '
+             'will be prefaced with DEBUG')
+    logging_group.add_argument('--save_log', default=False, action='store_true',
+        help='By default, WODEN just logs to stdout. Add this flag to save a '
+             'log file to disk')
+    logging_group.add_argument('--profile', default=False, action='store_true',
         help='By adding this flag, profile the WODEN code using line_profiler '
              'Must also run the code via `LINE_PROFILE=1 run_woden.py`')
 
@@ -234,14 +301,15 @@ def get_parser():
     parser.add_argument('--array_layout_name', help=argparse.SUPPRESS)
     parser.add_argument('--dipamps', help=argparse.SUPPRESS)
     parser.add_argument('--dipflags', help=argparse.SUPPRESS)
-    
     parser.add_argument('--command', help=argparse.SUPPRESS)
+    parser.add_argument('--pointed_ms_file_name', help=argparse.SUPPRESS)
+    parser.add_argument('--output_dir', help=argparse.SUPPRESS)
     
     return parser
 
-def select_argument_and_check(parser_arg, parser_value,
-                              metafits_arg, parser_string,
-                              do_exit=True):
+def select_argument_and_check(parser_arg : bool, parser_value : bool,
+                              metafits_arg : bool, parser_string : str,
+                              do_exit : bool = True):
     """Some arguments taken from the argparse.parser should override settings
     from the metafits if present. If the parser argument `parser_arg` is
     defined (i.e. not False), update it to equal `parser_value`. If not defined,
@@ -316,7 +384,6 @@ def select_correct_enh(args):
     elif args.array_layout == "from_ms":
         ##TODO work out how to get the lat/lon of the array from the measurement set
         with table(args.beam_ms_path + '/ANTENNA') as t: 
-        
             num_ants = len(t)
             args.num_antennas = num_ants
             ant_locations = np.array([t.getcell('POSITION', ant) for ant in range(num_ants)])
@@ -378,28 +445,6 @@ def get_antenna_order(tilenames: np.ndarray) -> np.ndarray:
     
     return antenna_order
 
-def check_for_library(libname : str) -> bool:
-    """
-    Check if a library is available for import.
-
-    Parameters
-    ----------
-    libname : str
-        The name of the library to check.
-
-    Returns
-    -------
-    bool
-        True if the library is available, False otherwise.
-    """
-    
-    if importlib.util.find_spec(libname) is not None:
-        have_library = True
-    else:
-        have_library = False
-        
-    return have_library
-
 def check_args(args : argparse.Namespace) -> argparse.Namespace:
     """Check that the combination of arguments parsed will work with the
     WODEN executable. Attempts to grab information from a metafits file if
@@ -422,6 +467,45 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     ##Preserve the command line arguments so we can stick them in the uvfits    
     args.command = ""
     for arg in sys.argv: args.command += f" {arg}"
+    
+    
+    if np.isnan(args.ra0) or np.isnan(args.dec0):
+        if not args.metafits_filename and not args.beam_ms_path:
+            exit('ERROR: Must specify --ra0 and --dec0 if not using --metafits_filename\n'
+                 'or --beam_ms_path. Exiting now as WODEN will fail')
+ 
+            
+    ##Check that the uvfits prepend doesn't end in uvfits, as we tack that on
+    ##the end ourselves
+    output_uvfits_prepend = args.output_uvfits_prepend
+    if output_uvfits_prepend[-7:] == '.uvfits':
+        args.output_uvfits_prepend = output_uvfits_prepend[-7:]
+        
+    ##Check that the output directory exists, if not make it
+    uvfits_path = Path(args.output_uvfits_prepend)
+    output_dir = uvfits_path.parent.absolute()
+    args.output_dir = output_dir
+    uvfits_name = uvfits_path.name
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+            
+    if args.primary_beam == 'everybeam_LOFAR':
+        lat = LOFAR_LAT
+        long = LOFAR_LONG
+        height = LOFAR_HEIGHT
+    else:
+        lat = MWA_LAT
+        long = MWA_LONG
+        height = MWA_HEIGHT
+            
+    if np.isnan(args.latitude): args.latitude = lat
+    if np.isnan(args.longitude): args.longitude = long
+    if np.isnan(args.array_height): args.array_height = height
+    
+    if args.precision not in ['double', 'float']:
+        print(f"Arg --precision={args.precision} is not valid. Should be either"
+              "'double' or 'float'. Setting to 'double'")
+        args.precision='double'
 
     if args.primary_beam not in ['MWA_FEE', 'Gaussian', 'EDA2', 'none', 'None',
                                  'MWA_FEE_interp', 'MWA_analy',
@@ -499,6 +583,44 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
                      'variable MWA_FEE_HDF5 must point towards the file\n'
                      'mwa_full_embedded_element_pattern.h5. Exiting now as WODEN will fail.')
                 
+    eb_args = ['everybeam_OSKAR', 'everybeam_LOFAR', 'everybeam_MWA']
+    
+    woden_lib_path = importlib_resources.files(wodenpy).joinpath(f"libwoden_{args.precision}.so")
+    have_everybeam = check_for_everybeam(woden_lib_path)
+            
+    if args.primary_beam in eb_args:
+        
+        if have_everybeam:
+            if not args.beam_ms_path:
+                exit(f'ERROR: To use the {args.primary_beam} beam, you must specify a path to the'
+                     ' measurement set using --beam_ms_path. Exiting now as WODEN will fail.')
+                
+            if not os.path.isdir(args.beam_ms_path):
+                exit('ERROR: Could not open measurement set specified by user as:\n'
+                    '\t--beam_ms_path={:s}.\n'
+                    'Cannot get required observation settings, exiting now'.format(args.beam_ms_path))
+                
+            array_layout = "from_ms"
+            
+            if not args.max_sky_directions:
+                args.max_sky_directions = 200
+        else:
+            exit(f'ERROR: You have requested to use the {args.primary_beam} beam model, but '
+                 f'{woden_lib_path} was compiled without the everybeam library. '
+                 'Exiting now as WODEN will fail.')
+            
+    if args.band_nums == 'all':
+        args.band_nums = range(1,25)
+    else:
+        try:
+            args.band_nums = list(np.array(args.band_nums.split(','),dtype=int))
+        except:
+            message = ("ERROR - failed to convert --band_nums into a list of ints"
+                       " correctly. You entered:\n"
+                       f"    --band_nums={args.band_nums}\n"
+                       "Exiting now.")
+            exit(message)
+        
     ##variables that will be filled by metafits if reading a metafits
     ##set them as False here for testing later on
     MWA_FEE_delays = False
@@ -562,10 +684,18 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
                 args.gauss_ra_point = float(f[0].header['RA'])
             if not args.gauss_dec_point:
                 args.gauss_dec_point = float(f[0].header['DEC'])
+                
+            ##If user hasn't specified a phase centre, read it from the metafits
+            if np.isnan(args.ra0):
+                args.ra0 = float(f[0].header['RA'])
+            if np.isnan(args.dec0):
+                args.dec0 = float(f[0].header['DEC'])
 
             f.close()
             
-    if args.primary_beam == 'none' and args.beam_ms_path:
+    ##Do this here to allow people to run a simulation using the measurement set
+    ##to set observational parameters, but with a different primary beam e.g. None
+    elif args.beam_ms_path:
         if not os.path.isdir(args.beam_ms_path):
             exit('Could not open measurement set specified by user as:\n'
                  '\t--beam_ms_path={:s}.\n'
@@ -573,28 +703,69 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
             
         array_layout = "from_ms"
             
-    eb_args = ['everybeam_OSKAR', 'everybeam_LOFAR', 'everybeam_MWA']
-    have_everybeam = check_for_library('everybeam')
+        with table(args.beam_ms_path) as ms:
             
-    if args.primary_beam in eb_args:
+            first_time_mjd = ms.getcol("TIME_CENTROID")[0]
+            time_res = ms.getcol("INTERVAL")[0]
+            
+            times = ms.getcol("TIME")
+            num_time_steps = np.unique(times).size
+            
+            date = Time((first_time_mjd - time_res/2.0)*u.s, format='mjd')
+            date = date.datetime.strftime('%Y-%m-%dT%H:%M:%S')
+            
+        with table(f"{args.beam_ms_path}/SPECTRAL_WINDOW") as spw:
+    
+            # Get frequency resolution
+            freq_res = spw.getcol("RESOLUTION")[0][0]
+            num_frequencies = spw.getcol("NUM_CHAN")[0]
+            
+            ##TODO subtract half a freq res from the lowest channel freq??
+            lowest_channel_freq = spw.getcol("CHAN_FREQ")[0][0]
+            highest_channel_freq = spw.getcol("CHAN_FREQ")[0][-1]
+            
+            args.coarse_band_width = num_frequencies*freq_res
+            
+        with table(args.beam_ms_path+'::FIELD', readonly=False) as field_table:
+            ra0, dec0 = np.squeeze(field_table.getcol('PHASE_DIR'))
+            
+            if np.isnan(args.ra0):    
+                args.ra0 = np.degrees(ra0)
+            if np.isnan(args.dec0):
+                args.dec0 = np.degrees(dec0)
         
-        if have_everybeam:
-            if not args.beam_ms_path:
-                exit(f'To use the {args.primary_beam} beam, you must specify a path to the'
-                    ' measurement set using --beam_ms_path. Exiting now as WODEN will fail.')
+        make_pointed_ms = False
                 
-            if not os.path.isdir(args.beam_ms_path):
-                exit('Could not open measurement set specified by user as:\n'
-                    '\t--beam_ms_path={:s}.\n'
-                    'Cannot get required observation settings, exiting now'.format(args.beam_ms_path))
-                
-            array_layout = "from_ms"
+        if args.eb_point_to_phase or ~np.isnan(args.eb_ra_point) or ~np.isnan(args.eb_dec_point):
+            make_pointed_ms = True
             
-            if not args.max_sky_directions:
-                args.max_sky_directions = 200
+        beam_ra0 = np.degrees(ra0)
+        beam_dec0 = np.degrees(dec0)
+        
+        if args.eb_point_to_phase:
+            beam_ra0 = args.ra0
+            beam_dec0 = args.dec0
+            
+        if ~np.isnan(args.eb_ra_point):
+            beam_ra0 = args.eb_ra_point
+            
+        if ~np.isnan(args.eb_dec_point):
+            beam_dec0 = args.eb_dec_point
+            
+        args.eb_ra_point = beam_ra0
+        args.eb_dec_point = beam_dec0
+        
+        if make_pointed_ms:
+            band_num_string = ",".join(f"{num:02}" for num in args.band_nums)
+            args.pointed_ms_file_name = Path(f"{output_dir}/pointed_{uvfits_name}_band{band_num_string}.ms")
+            
+            if not args.dry_run:
+                create_filtered_ms(args.beam_ms_path, args.pointed_ms_file_name.as_posix(),
+                                np.radians(beam_ra0), np.radians(beam_dec0))
         else:
-            exit(f'You have requested to use the {args.primary_beam} beam model, but '
-                 'the `everybeam` python package is not installed. Exiting now.')
+            args.pointed_ms_file_name = False
+                
+        
             
     ##Override metafits and/or load arguments
     args.lowest_channel_freq = select_argument_and_check(args.lowest_channel_freq,
@@ -616,7 +787,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
 
     args.array_layout = select_argument_and_check(args.array_layout, args.array_layout,
                                   array_layout, "array_layout")
-
+    
     ##TODO change this from MWA_FEE_delays to MWA_delays (or allow both via
     ##some argparse magic)
     ##If the user has manually specified some MWA FEE delays, ensure they
@@ -639,30 +810,19 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
                                       args.MWA_FEE_delays,
                                       MWA_FEE_delays, "MWA_FEE_delays")
 
+
     ##Set the band numbers we are simulating in this run
     if args.num_freq_channels == 'obs':
         args.num_freq_channels = int(np.floor(args.coarse_band_width / args.freq_res))
     else:
         args.num_freq_channels = int(args.num_freq_channels)
 
-    if args.band_nums == 'all':
-        args.band_nums = range(1,25)
-    else:
-        try:
-            args.band_nums = list(np.array(args.band_nums.split(','),dtype=int))
-        except:
-            message = ("ERROR - failed to convert --band_nums into a list of ints"
-                       " correctly. You entered:\n"
-                       f"    --band_nums={args.band_nums}\n"
-                       "Exiting now.")
-            exit(message)
-            
-    if args.primary_beam == 'everybeam_OSKAR' or args.primary_beam == 'everybeam_LOFAR' or args.primary_beam == 'everybeam_MWA':
-        if len(args.band_nums) > 1:
-            exit('ERROR: --band_nums must be a single band when using everybeam '
-                 'as these beam models are calculated on the CPU; the bands '
-                 'are iterated over the GPU. Please iterate over bands by '
-                 'multiple calls to run_woden.py. Exiting now.')
+    # if args.primary_beam == 'everybeam_OSKAR' or args.primary_beam == 'everybeam_LOFAR' or args.primary_beam == 'everybeam_MWA':
+    #     if len(args.band_nums) > 1:
+    #         exit('ERROR: --band_nums must be a single band when using everybeam '
+    #              'as these beam models are calculated on the CPU; the bands '
+    #              'are iterated over the GPU. Please iterate over bands by '
+    #              'multiple calls to run_woden.py. Exiting now.')
             
 
     ##If pointing for Gaussian beam is not set, point it at the phase centre
@@ -681,11 +841,6 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
 
         if args.gauss_beam_ref_freq: args.gauss_beam_ref_freq = float(args.gauss_beam_ref_freq)
         if args.gauss_beam_FWHM: args.gauss_beam_FWHM = float(args.gauss_beam_FWHM)
-
-    if args.precision not in ['double', 'float']:
-        print(f"Arg --precision={args.precision} is not valid. Should be either"
-              "'double' or 'float'. Setting to 'double'")
-        args.precision='double'
 
     ##Either read the array layout from a file or use what was in the metafits
     select_correct_enh(args)
@@ -836,7 +991,36 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     if args.num_threads == 0:
         args.num_threads = psutil.cpu_count(logical=False)
         
+    if args.verbose:
+        args.log_level = logging.DEBUG
+    else:
+        args.log_level = logging.INFO
         
+    if args.save_log:
+        
+        run_time = time.localtime()
+        log_time = time.strftime("%Y_%m_%d_%H_%M_%S", run_time)
+        band_num_string = ",".join(f"{num:02}" for num in args.band_nums)
+        
+        args.log_file_name = Path(f"{output_dir}/woden_{log_time}_{uvfits_name}_band{band_num_string}.log")
+    else:
+        args.log_file_name = False
+
+    ##Set the telescope name to best of our ability, if not set by user explicitly
+    if not args.telescope_name:
+        if args.primary_beam in ['MWA_FEE', 'MWA_FEE_interp', 'MWA_analy', 'everybeam_MWA']:
+            args.telescope_name = 'MWA'
+        elif args.primary_beam in ['everybeam_LOFAR']:
+            args.telescope_name = 'LOFAR'
+        elif args.primary_beam in ['everybeam_OSKAR']:
+            args.telescope_name = 'SKA_LOW'
+        elif args.primary_beam in ['Gaussian']:
+            args.telescope_name = 'GAUSSIAN'
+        elif args.primary_beam in ['EDA2']:
+            args.telescope_name = 'EDA2'
+        else:
+            args.telescope_name = 'UNKNOWN'
+            
     return args
 
 def get_code_version():
@@ -853,7 +1037,6 @@ def get_code_version():
     git_dict = retrieve_gitdict()
     if git_dict:
         version = git_dict['describe']
-
     else:
         ##If doing testing with pip install -e, __version__ will not exists
         try:
@@ -861,6 +1044,4 @@ def get_code_version():
         except AttributeError:
             version = "No git describe nor __version__ avaible"
     
-    print(f"You are using WODEN commit: {version}")
-
     return version

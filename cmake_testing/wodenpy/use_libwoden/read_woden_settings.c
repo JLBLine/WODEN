@@ -36,8 +36,8 @@ void read_woden_settings(woden_settings_t *woden_settings)
                        woden_settings->num_time_steps);
   fprintf(output_text,"time_res %.12f\n",
                        woden_settings->time_res);
-  fprintf(output_text,"cat_filename %s\n",
-                       woden_settings->cat_filename);
+  // fprintf(output_text,"cat_filename %s\n",
+  //                      woden_settings->cat_filename);
 
   fprintf(output_text,"jd_date %.12f\n",
                        woden_settings->jd_date);
@@ -95,6 +95,12 @@ void read_woden_settings(woden_settings_t *woden_settings)
 
   fprintf(output_text,"off_cardinal_dipoles %d\n",
                        woden_settings->off_cardinal_dipoles);
+
+  fprintf(output_text,"do_gpu %d\n",
+                       woden_settings->do_gpu);
+
+  fprintf(output_text,"normalise_primary_beam %d\n",
+                       woden_settings->normalise_primary_beam);
 
 
   if (woden_settings->use_dipamps == 1) {

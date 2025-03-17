@@ -8,10 +8,11 @@ import ctypes
 import wodenpy.use_libwoden.woden_settings as ws
 import wodenpy.wodenpy_setup.run_setup
 # import woden_lib
-from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
+# from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 
-woden_struct_classes = Woden_Struct_Classes()
-Woden_Settings = woden_struct_classes.Woden_Settings
+# woden_struct_classes = Woden_Struct_Classes()
+# Woden_Settings = woden_struct_classes.Woden_Settings
+from wodenpy.use_libwoden.woden_settings import Woden_Settings_Python
 
 D2R = np.pi/180.0
 SOLAR2SIDEREAL = 1.00274
@@ -46,7 +47,10 @@ class Test(unittest.TestCase):
     
     def test_setup_lsts_and_phase_centre_1(self):
         
-        woden_settings = Woden_Settings()
+        # woden_settings = Woden_Settings()
+        woden_settings = Woden_Settings_Python()
+        woden_settings.ra0 = 0.0
+        woden_settings.dec0 = -26.7*D2R
         
         woden_settings.time_res = 1.0
         woden_settings.latitude = -0.46606083776035967
@@ -66,7 +70,9 @@ class Test(unittest.TestCase):
         
     def test_setup_lsts_and_phase_centre_2(self):
         
-        woden_settings = Woden_Settings()
+        woden_settings = Woden_Settings_Python()
+        woden_settings.ra0 = 0.0
+        woden_settings.dec0 = -26.7*D2R
         
         woden_settings.time_res = 1.0
         woden_settings.latitude = -0.46606083776035967

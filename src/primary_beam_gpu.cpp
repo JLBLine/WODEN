@@ -3,12 +3,12 @@
 #include <complex.h>
 #include <math.h>
 #include "constants.h"
-#include "fundamental_coords.h"
+#include "fundamental_coords_gpu.h"
 #include "primary_beam_gpu.h"
 #include "gpu_macros.h"
 
 //__host__??
-__device__ void twoD_Gaussian(user_precision_t x, user_precision_t y,
+__device__ void twoD_Gaussian_gpu(user_precision_t x, user_precision_t y,
            user_precision_t xo, user_precision_t yo,
            user_precision_t sigma_x, user_precision_t sigma_y,
            user_precision_t cos_theta, user_precision_t sin_theta,
@@ -48,7 +48,7 @@ __global__ void kern_gaussian_beam(double *d_beam_ls, double *d_beam_ms,
     //Convert FWHM into standard dev, and scale for frequency
     user_precision_t std = (fwhm_lm / FWHM_FACTOR) * (user_precision_t)(beam_ref_freq / d_freqs[iFreq]);
 
-    twoD_Gaussian((user_precision_t)d_beam_ls[iLMcoord], (user_precision_t)d_beam_ms[iLMcoord], 0, 0,
+    twoD_Gaussian_gpu((user_precision_t)d_beam_ls[iLMcoord], (user_precision_t)d_beam_ms[iLMcoord], 0, 0,
                std, std, cos_theta, sin_theta, sin_2theta,
                &d_beam_real, &d_beam_imag);
 
@@ -59,7 +59,7 @@ __global__ void kern_gaussian_beam(double *d_beam_ls, double *d_beam_ms,
 }
 
 
-extern "C" void calculate_gaussian_beam(int num_components, int num_time_steps,
+extern "C" void calculate_gaussian_beam_gpu(int num_components, int num_time_steps,
            int num_freqs, user_precision_t ha0,
            user_precision_t sdec0, user_precision_t cdec0,
            user_precision_t fwhm_lm, user_precision_t cos_theta,
@@ -115,7 +115,7 @@ extern "C" void calculate_gaussian_beam(int num_components, int num_time_steps,
   gpuFree( d_beam_has );
 }
 
-__device__ void analytic_dipole(user_precision_t az, user_precision_t za,
+__device__ void analytic_dipole_gpu(user_precision_t az, user_precision_t za,
            user_precision_t wavelength,
            gpuUserComplex * d_beam_X, gpuUserComplex * d_beam_Y) {
 
@@ -169,12 +169,12 @@ __global__ void kern_analytic_dipole_beam(user_precision_t *d_azs,
     gpuUserComplex d_beam_norm_X, d_beam_norm_Y;
     user_precision_t wavelength = VELC / d_freqs[iFreq];
 
-    analytic_dipole(d_azs[iCoord], d_zas[iCoord], wavelength,
+    analytic_dipole_gpu(d_azs[iCoord], d_zas[iCoord], wavelength,
                &d_beam_X, &d_beam_Y);
 
     //Should really calculate this normalisation outside of this kernel - we are
     //massively increasing the number calculations for no reason
-    analytic_dipole(0.0, 0.0, wavelength,
+    analytic_dipole_gpu(0.0, 0.0, wavelength,
                &d_beam_norm_X, &d_beam_norm_Y);
 
     gpuUserComplex normed_X = d_beam_X;
@@ -190,7 +190,7 @@ __global__ void kern_analytic_dipole_beam(user_precision_t *d_azs,
   }
 }
 
-extern "C" void calculate_analytic_dipole_beam(int num_components,
+extern "C" void calculate_analytic_dipole_beam_gpu(int num_components,
      int num_time_steps, int num_freqs,
      user_precision_t *azs, user_precision_t *zas, double *d_freqs,
      gpuUserComplex *d_g1xs, gpuUserComplex *d_g1ys){
@@ -198,14 +198,14 @@ extern "C" void calculate_analytic_dipole_beam(int num_components,
   int num_beam_azza = num_components * num_time_steps;
 
   user_precision_t *d_azs = NULL;
-  ( gpuMalloc( (void**)&d_azs, num_beam_azza*sizeof(user_precision_t)) );
-  ( gpuMemcpy(d_azs, azs, num_beam_azza*sizeof(user_precision_t),
-                      gpuMemcpyHostToDevice) );
+  gpuMalloc( (void**)&d_azs, num_beam_azza*sizeof(user_precision_t));
+  gpuMemcpy(d_azs, azs, num_beam_azza*sizeof(user_precision_t),
+                      gpuMemcpyHostToDevice);
 
   user_precision_t *d_zas = NULL;
-  ( gpuMalloc( (void**)&d_zas, num_beam_azza*sizeof(user_precision_t)) );
-  ( gpuMemcpy(d_zas, zas, num_beam_azza*sizeof(user_precision_t),
-                      gpuMemcpyHostToDevice) );
+  gpuMalloc( (void**)&d_zas, num_beam_azza*sizeof(user_precision_t));
+  gpuMemcpy(d_zas, zas, num_beam_azza*sizeof(user_precision_t),
+                      gpuMemcpyHostToDevice);
 
   dim3 grid, threads;
   threads.x = 128;
@@ -220,12 +220,12 @@ extern "C" void calculate_analytic_dipole_beam(int num_components,
              num_time_steps, num_components,
              d_g1xs, d_g1ys);
 
-  ( gpuFree(d_azs) );
-  ( gpuFree(d_zas) );
+  gpuFree(d_azs);
+  gpuFree(d_zas);
 
 }
 
-__device__ void RTS_MWA_beam(user_precision_t az, user_precision_t za,
+__device__ void RTS_MWA_beam_gpu(user_precision_t az, user_precision_t za,
            double ha, double dec,
            double wavelength, double *d_metre_delays,
            double latitude, int norm,
@@ -360,7 +360,7 @@ __global__ void kern_RTS_analytic_MWA_beam(user_precision_t *d_azs,
 
     double wavelength = VELC / d_freqs[iFreq];
 
-    RTS_MWA_beam(d_azs[iCoord], d_zas[iCoord],
+    RTS_MWA_beam_gpu(d_azs[iCoord], d_zas[iCoord],
              d_beam_has[iCoord], d_beam_decs[iCoord],
              wavelength, d_metre_delays,
              latitude, norm,
@@ -374,7 +374,7 @@ __global__ void kern_RTS_analytic_MWA_beam(user_precision_t *d_azs,
   }
 }
 
-extern "C" void calculate_RTS_MWA_analytic_beam(int num_components,
+extern "C" void calculate_RTS_MWA_analytic_beam_gpu(int num_components,
      int num_time_steps, int num_freqs,
      user_precision_t *azs, user_precision_t *zas, int *delays,
      double latitude, int norm,
@@ -489,7 +489,7 @@ __global__ void kern_map_hyperbeam_gains(int num_components,
   //All baselines at all freqs and all times
   int iComponent = threadIdx.x + (blockDim.x*blockIdx.x);
 
-  //The tile to map - currently unused but hopefully in the future tis possible
+  //The tile to map
   int iTile = threadIdx.y + (blockDim.y*blockIdx.y);
 
   //freq step
@@ -523,11 +523,12 @@ __global__ void kern_map_hyperbeam_gains(int num_components,
       //already remapped
       current_ind = hyper_ind + iComponent;
     } else {
-      hyper_ind = ((num_components*num_times*num_unique_fee_freqs*i_row) + num_components * i_col);
+      // printf("Doing me a no parallactic rotation\n");
+      hyper_ind = ((num_components*num_times*num_unique_fee_freqs*i_row) + num_components*num_times*i_col);
 
-      //There is no frequency used in first chunk of this remapping, as that's handled
-      //by the hyper_ind
-      current_ind = iTime*num_components*num_tiles + hyper_ind + iComponent;
+      //Add on how many previous time-steps-worth of outputs we've already remapped
+      current_ind = hyper_ind + iTime*num_components + iComponent;
+
     }
 
     d_beam_J00.x = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 0];
@@ -539,8 +540,19 @@ __global__ void kern_map_hyperbeam_gains(int num_components,
     d_beam_J11.x = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 6];
     d_beam_J11.y = (user_precision_t)d_jones[2*MAX_POLS*current_ind + 7];
 
+
     //Get an index to split into the WODEN style containers
     int new_ind =  num_times*num_freqs*num_components*iTile + num_freqs*iTime*num_components + (num_components*iFreq) + iComponent;
+
+    // printf("Le what new_ind: %d %.8f %.8f %.8f %.8f %.8f %.8f %.8f %.8f\n", new_ind,
+    //                                   (user_precision_t)d_jones[2*MAX_POLS*current_ind + 0],
+    //                                   (user_precision_t)d_jones[2*MAX_POLS*current_ind + 1],
+    //                                   (user_precision_t)d_jones[2*MAX_POLS*current_ind + 2],
+    //                                   (user_precision_t)d_jones[2*MAX_POLS*current_ind + 3],
+    //                                   (user_precision_t)d_jones[2*MAX_POLS*current_ind + 4],
+    //                                   (user_precision_t)d_jones[2*MAX_POLS*current_ind + 5],
+    //                                   (user_precision_t)d_jones[2*MAX_POLS*current_ind + 6],
+    //                                   (user_precision_t)d_jones[2*MAX_POLS*current_ind + 7]);
 
     d_gxs[new_ind] = d_beam_J00;
     d_Dxs[new_ind] = d_beam_J01;
@@ -573,6 +585,8 @@ extern "C" void run_hyperbeam_gpu(int num_components,
            gpuUserComplex *d_Dys,
            gpuUserComplex *d_gys){
 
+  // printf("Running hyperbeam with %d beams\n", num_beams);
+
   //Always do things in IAU order
   int iau_order = 1;
 
@@ -584,11 +598,11 @@ extern "C" void run_hyperbeam_gpu(int num_components,
   double *d_jones = NULL;
 
   if (parallactic) {
-    ( gpuMalloc( (void**)&(d_jones),
-                      2*MAX_POLS*num_beam_values*sizeof(double)) );
+    gpuMalloc( (void**)&(d_jones),
+                      2*MAX_POLS*num_beam_values*sizeof(double));
   } else {
-    ( gpuMalloc( (void**)&(d_jones),
-                      2*MAX_POLS*num_beam_values*num_time_steps*sizeof(double)) );
+    gpuMalloc( (void**)&(d_jones),
+                      2*MAX_POLS*num_beam_values*num_time_steps*sizeof(double));
   }
 
   int32_t status = 0;
@@ -622,18 +636,18 @@ extern "C" void run_hyperbeam_gpu(int num_components,
 
   //Copy the tile and freq maps to the GPU
   int32_t *d_tile_map = NULL;
-  ( gpuMalloc( (void**)&(d_tile_map),
-                      num_beams*sizeof(int32_t) ) );
+  gpuMalloc( (void**)&(d_tile_map),
+                      num_beams*sizeof(int32_t) );
   int32_t *d_freq_map = NULL;
-  ( gpuMalloc( (void**)&(d_freq_map),
-                      num_freqs*sizeof(int32_t) ) );
+  gpuMalloc( (void**)&(d_freq_map),
+                      num_freqs*sizeof(int32_t) );
 
-  ( gpuMemcpy(d_tile_map, tile_map,
-            num_beams*sizeof(int32_t), gpuMemcpyHostToDevice ) );
-  ( gpuMemcpy(d_freq_map, freq_map,
-            num_freqs*sizeof(int32_t), gpuMemcpyHostToDevice ) );
+  gpuMemcpy(d_tile_map, tile_map,
+            num_beams*sizeof(int32_t), gpuMemcpyHostToDevice );
+  gpuMemcpy(d_freq_map, freq_map,
+            num_freqs*sizeof(int32_t), gpuMemcpyHostToDevice );
 
-  if (parallactic) {
+  if (parallactic == 1) {
     //The latitude of the array should change with time if we are precessing
     //it back to J2000. This means we have to call hyperbeam for as many time
     //steps as we have. Supply chunks of az, za, and d_jones via pointer
@@ -658,10 +672,7 @@ extern "C" void run_hyperbeam_gpu(int num_components,
                             time_ind, num_unique_fee_freqs,
                             d_jones, d_tile_map, d_freq_map,
                             parallactic,
-                            d_gxs,
-                            d_Dxs,
-                            d_Dys,
-                            d_gys);
+                            d_gxs, d_Dxs, d_Dys, d_gys);
     }
   }
   else {
@@ -680,10 +691,7 @@ extern "C" void run_hyperbeam_gpu(int num_components,
                             iTime, num_unique_fee_freqs,
                             d_jones, d_tile_map, d_freq_map,
                             parallactic,
-                            d_gxs,
-                            d_Dxs,
-                            d_Dys,
-                            d_gys);
+                            d_gxs, d_Dxs, d_Dys, d_gys);
     }
 
   }
@@ -693,288 +701,85 @@ extern "C" void run_hyperbeam_gpu(int num_components,
     // printf("Something went wrong running fee_calc_jones_gpu_device\n");
   }
 
-  ( gpuFree(d_jones) );
-
-}
-
-/*******************************************************************************
-                 Functions below to be used in unit tests
-*******************************************************************************/
-
-extern "C" void test_RTS_calculate_MWA_analytic_beam(int num_components,
-     int num_time_steps, int num_freqs,
-     user_precision_t *azs, user_precision_t *zas, int *delays,
-     double latitude, int norm,
-     double *beam_has, double *beam_decs, double *freqs,
-     user_precision_complex_t *gxs, user_precision_complex_t *Dxs,
-     user_precision_complex_t *Dys, user_precision_complex_t *gys) {
-
-  //Allocate space for beam gains
-  user_precision_complex_t *d_gxs = NULL;
-  user_precision_complex_t *d_Dxs = NULL;
-  user_precision_complex_t *d_Dys = NULL;
-  user_precision_complex_t *d_gys = NULL;
-
-  ( gpuMalloc( (void**)&d_gxs,
-    num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
-  ( gpuMalloc( (void**)&d_Dxs,
-    num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
-  ( gpuMalloc( (void**)&d_Dys,
-    num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
-  ( gpuMalloc( (void**)&d_gys,
-    num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
-
-  double *d_freqs = NULL;
-  ( gpuMalloc( (void**)&d_freqs, num_freqs*sizeof(double)) );
-  ( gpuMemcpy(d_freqs, freqs, num_freqs*sizeof(double),
-                      gpuMemcpyHostToDevice) );
-
-  //Run
-  calculate_RTS_MWA_analytic_beam(num_components,
-       num_time_steps, num_freqs,
-       azs, zas, delays, latitude, norm,
-       beam_has, beam_decs, d_freqs,
-       (gpuUserComplex*)d_gxs, (gpuUserComplex*)d_Dxs,
-       (gpuUserComplex*)d_Dys, (gpuUserComplex*)d_gys);
-
-  ( gpuMemcpy(gxs, d_gxs,
-       num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
-       gpuMemcpyDeviceToHost) );
-  ( gpuMemcpy(Dxs, d_Dxs,
-       num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
-       gpuMemcpyDeviceToHost) );
-  ( gpuMemcpy(Dys, d_Dys,
-       num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
-       gpuMemcpyDeviceToHost) );
-  ( gpuMemcpy(gys, d_gys,
-       num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
-       gpuMemcpyDeviceToHost) );
-
-  ( gpuFree(d_gxs) );
-  ( gpuFree(d_Dxs) );
-  ( gpuFree(d_Dys) );
-  ( gpuFree(d_gys) );
-
-  ( gpuFree(d_freqs) );
-
-
-}
-
-extern "C" void test_analytic_dipole_beam(int num_components,
-     int num_time_steps, int num_freqs,
-     user_precision_t *azs, user_precision_t *zas, double *freqs,
-     user_precision_complex_t *analy_beam_X,
-     user_precision_complex_t *analy_beam_Y) {
-
-  user_precision_complex_t *d_analy_beam_X = NULL;
-  ( gpuMalloc( (void**)&d_analy_beam_X,
-    num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
-
-  user_precision_complex_t *d_analy_beam_Y = NULL;
-  ( gpuMalloc( (void**)&d_analy_beam_Y,
-     num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t)) );
-
-  double *d_freqs = NULL;
-  ( gpuMalloc( (void**)&d_freqs, num_freqs*sizeof(double)) );
-  ( gpuMemcpy(d_freqs, freqs, num_freqs*sizeof(double),
-                      gpuMemcpyHostToDevice) );
-
-  calculate_analytic_dipole_beam(num_components,
-      num_time_steps, num_freqs,
-      azs, zas, d_freqs,
-      (gpuUserComplex *)d_analy_beam_X, (gpuUserComplex *)d_analy_beam_Y);
-
-  ( gpuMemcpy(analy_beam_X, d_analy_beam_X,
-             num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
-             gpuMemcpyDeviceToHost) );
-  ( gpuMemcpy(analy_beam_Y, d_analy_beam_Y,
-             num_freqs*num_time_steps*num_components*sizeof(user_precision_complex_t),
-             gpuMemcpyDeviceToHost) );
-
-  ( gpuFree(d_analy_beam_X) );
-  ( gpuFree(d_analy_beam_Y) );
-  ( gpuFree(d_freqs) );
-
-}
-
-extern "C" void test_kern_gaussian_beam(double *beam_ls, double *beam_ms,
-           double beam_ref_freq, double *freqs,
-           user_precision_t fwhm_lm, user_precision_t cos_theta, user_precision_t sin_theta, user_precision_t sin_2theta,
-           int num_freqs, int num_time_steps, int num_components,
-           user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J11) {
-
-  int num_beam_hadec = num_components * num_time_steps;
-
-  double *d_beam_ls = NULL;
-  ( gpuMalloc( (void**)&d_beam_ls, num_beam_hadec*sizeof(double)) );
-  ( gpuMemcpy(d_beam_ls, beam_ls,
-                           num_beam_hadec*sizeof(double), gpuMemcpyHostToDevice ) );
-
-  double *d_beam_ms = NULL;
-  ( gpuMalloc( (void**)&d_beam_ms, num_beam_hadec*sizeof(double)) );
-  ( gpuMemcpy(d_beam_ms, beam_ms,
-                           num_beam_hadec*sizeof(double), gpuMemcpyHostToDevice ) );
-
-  double *d_freqs = NULL;
-  ( gpuMalloc( (void**)&d_freqs, num_freqs*sizeof(double) ) );
-  ( gpuMemcpy(d_freqs, freqs,
-                           num_freqs*sizeof(double), gpuMemcpyHostToDevice ) );
-
-  user_precision_complex_t *d_g1xs = NULL;
-  ( gpuMalloc( (void**)&d_g1xs,
-                                   num_freqs*num_beam_hadec*sizeof(user_precision_complex_t)) );
-
-  user_precision_complex_t *d_g1ys = NULL;
-  ( gpuMalloc( (void**)&d_g1ys,
-                                   num_freqs*num_beam_hadec*sizeof(user_precision_complex_t)) );
-
-  dim3 grid, threads;
-
-  threads.x = 16;
-  grid.x = (int)ceil( (float)num_beam_hadec / (float)threads.x );
-
-  threads.y = 16;
-  grid.y = (int)ceil( (float)num_freqs / (float)threads.y );
-
-  gpuErrorCheckKernel("kern_gaussian_beam",
-                        kern_gaussian_beam, grid, threads,
-                        d_beam_ls, d_beam_ms,
-                        beam_ref_freq, d_freqs,
-                        fwhm_lm, cos_theta, sin_theta, sin_2theta,
-                        num_freqs, num_time_steps, num_components,
-                        (gpuUserComplex *)d_g1xs,
-                        (gpuUserComplex *)d_g1ys);
-
-  ( gpuMemcpy(primay_beam_J00, d_g1xs,
-                 num_freqs*num_beam_hadec*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost) );
-  ( gpuMemcpy(primay_beam_J11, d_g1ys,
-                 num_freqs*num_beam_hadec*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost) );
-
-  ( gpuFree(d_beam_ls ) );
-  ( gpuFree(d_beam_ms ) );
-  ( gpuFree(d_freqs ) );
-  ( gpuFree(d_g1xs ) );
-  ( gpuFree(d_g1ys ) );
+  gpuFree(d_jones);
 
 }
 
 
-extern "C" void test_calculate_gaussian_beam(int num_components, int num_time_steps,
-     int num_freqs, user_precision_t ha0, user_precision_t sdec0, user_precision_t cdec0,
-     user_precision_t fwhm_lm, user_precision_t cos_theta, user_precision_t sin_theta, user_precision_t sin_2theta,
-     double beam_ref_freq, double *freqs,
-     double *beam_has, double *beam_decs,
-     user_precision_complex_t *primay_beam_J00, user_precision_complex_t *primay_beam_J11) {
+//This purely exists as d_component_beam_gains->gxs, d_gys are GPU
+//complexes and can't be included the function definition in a C header
+extern "C" void wrapper_calculate_gaussian_beam_gpu(int num_components,
+                          user_precision_t cos_theta,
+                          user_precision_t sin_theta, user_precision_t sin_2theta,
+                          user_precision_t fwhm_lm,
+                          woden_settings_t *woden_settings,
+                          beam_settings_t *beam_settings,
+                          components_t *components,
+                          beam_gains_t *d_component_beam_gains,
+                          double *d_freqs) {
 
-  int num_beam_hadec = num_components * num_time_steps;
-
-  double *d_freqs = NULL;
-  ( gpuMalloc( (void**)&d_freqs, num_freqs*sizeof(double) ) );
-  ( gpuMemcpy(d_freqs, freqs,
-                           num_freqs*sizeof(double), gpuMemcpyHostToDevice ) );
-
-  user_precision_complex_t *d_g1xs = NULL;
-  ( gpuMalloc( (void**)&d_g1xs,
-                                   num_freqs*num_beam_hadec*sizeof(user_precision_complex_t)) );
-
-  user_precision_complex_t *d_g1ys = NULL;
-  ( gpuMalloc( (void**)&d_g1ys,
-                                   num_freqs*num_beam_hadec*sizeof(user_precision_complex_t)) );
+  calculate_gaussian_beam_gpu(num_components,
+         woden_settings->num_time_steps, woden_settings->num_freqs,
+         beam_settings->gauss_ha, beam_settings->gauss_sdec,
+         beam_settings->gauss_cdec,
+         fwhm_lm, cos_theta, sin_theta, sin_2theta,
+         beam_settings->beam_ref_freq, d_freqs,
+         components->beam_has,
+         components->beam_decs,
+         (gpuUserComplex *)d_component_beam_gains->gxs,
+         (gpuUserComplex *)d_component_beam_gains->gys);
 
 
-  calculate_gaussian_beam(num_components, num_time_steps,
-                         num_freqs, ha0, sdec0, cdec0,
-                         fwhm_lm, cos_theta, sin_theta, sin_2theta,
-                         beam_ref_freq, d_freqs,
-                         beam_has, beam_decs,
-                         (gpuUserComplex *)d_g1xs,
-                         (gpuUserComplex *)d_g1ys);
+  
+}
 
-  ( gpuMemcpy(primay_beam_J00, d_g1xs,
-                 num_freqs*num_beam_hadec*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost) );
-  ( gpuMemcpy(primay_beam_J11, d_g1ys,
-                 num_freqs*num_beam_hadec*sizeof(user_precision_complex_t), gpuMemcpyDeviceToHost) );
 
-  ( gpuFree(d_freqs ) );
-  ( gpuFree(d_g1xs ) );
-  ( gpuFree(d_g1ys ) );
+//This purely exists as d_component_beam_gains->gxs, d_gys are GPU
+//complexes and can't be included the function definition in a C header
+extern "C" void wrapper_calculate_analytic_dipole_beam_gpu(int num_components,
+                          components_t *components,
+                          beam_gains_t *d_component_beam_gains,
+                          double *d_freqs, woden_settings_t *woden_settings) {
+
+  calculate_analytic_dipole_beam_gpu(num_components,
+         woden_settings->num_time_steps, woden_settings->num_freqs,
+         components->azs, components->zas, d_freqs,
+         (gpuUserComplex *)d_component_beam_gains->gxs,
+         (gpuUserComplex *)d_component_beam_gains->gys);
 
 }
 
-extern "C" void test_run_hyperbeam_gpu(int num_components,
-           int num_time_steps, int num_freqs, int num_ants,
-           uint8_t parallatic,
-           struct FEEBeamGpu *gpu_fee_beam,
-           double *azs, double *zas,
-           double *latitudes,
-           user_precision_complex_t *primay_beam_J00,
-           user_precision_complex_t *primay_beam_J01,
-           user_precision_complex_t *primay_beam_J10,
-           user_precision_complex_t *primay_beam_J11){
-  uint32_t num_azza = num_components * num_time_steps;
-  int num_beam_values = num_azza * num_freqs * num_ants;
-
-  user_precision_complex_t *d_gxs = NULL;
-  user_precision_complex_t *d_Dxs = NULL;
-  user_precision_complex_t *d_Dys = NULL;
-  user_precision_complex_t *d_gys = NULL;
-
-  ( gpuMalloc( (void**)&d_gxs,
-                      num_beam_values*sizeof(user_precision_complex_t)) );
-  ( gpuMalloc( (void**)&d_Dxs,
-                      num_beam_values*sizeof(user_precision_complex_t)) );
-  ( gpuMalloc( (void**)&d_Dys,
-                      num_beam_values*sizeof(user_precision_complex_t)) );
-  ( gpuMalloc( (void**)&d_gys,
-                      num_beam_values*sizeof(user_precision_complex_t)) );
-
-  double *reordered_azs = (double *)malloc(num_azza*sizeof(double));
-  double *reordered_zas = (double *)malloc(num_azza*sizeof(double));
-
-  int stripe_new, stripe_old;
-
-  for (int time_ind = 0; time_ind < num_time_steps; time_ind++) {
-    for (int comp_ind = 0; comp_ind < num_components; comp_ind++) {
-      stripe_new = time_ind*num_components + comp_ind;
-      stripe_old = comp_ind*num_time_steps + time_ind;
-      reordered_azs[stripe_new] = azs[stripe_old];
-      reordered_zas[stripe_new] = zas[stripe_old];
-    }
-  }
-
+//This purely exists as d_component_beam_gains->gxs, d_gys are GPU
+//complexes and can't be included the function definition in a C header
+extern "C" void wrapper_run_hyperbeam_gpu(int num_components,
+                          beam_settings_t *beam_settings,
+                          int num_beams, int parallactic,
+                          double *reordered_azs, double *reordered_zas,
+                          beam_gains_t *d_component_beam_gains,
+                          double *d_freqs, woden_settings_t *woden_settings) {
   run_hyperbeam_gpu(num_components,
-             num_time_steps, num_freqs, num_ants,
-             parallatic,
-             gpu_fee_beam,
-             reordered_azs, reordered_zas,
-             latitudes,
-             (gpuUserComplex *)d_gxs,
-             (gpuUserComplex *)d_Dxs,
-             (gpuUserComplex *)d_Dys,
-             (gpuUserComplex *)d_gys);
+           woden_settings->num_time_steps, woden_settings->num_freqs,
+           num_beams, parallactic,
+           beam_settings->gpu_fee_beam,
+           reordered_azs, reordered_zas,
+           woden_settings->latitudes,
+           (gpuUserComplex *)d_component_beam_gains->gxs,
+           (gpuUserComplex *)d_component_beam_gains->Dxs,
+           (gpuUserComplex *)d_component_beam_gains->Dys,
+           (gpuUserComplex *)d_component_beam_gains->gys);
+}
 
-  ( gpuMemcpy( primay_beam_J00, d_gxs,
-                      num_beam_values*sizeof(user_precision_complex_t),
-                      gpuMemcpyDeviceToHost) );
-
-  ( gpuMemcpy( primay_beam_J01, d_Dxs,
-                      num_beam_values*sizeof(user_precision_complex_t),
-                      gpuMemcpyDeviceToHost) );
-
-  ( gpuMemcpy( primay_beam_J10, d_Dys,
-                      num_beam_values*sizeof(user_precision_complex_t),
-                      gpuMemcpyDeviceToHost) );
-
-  ( gpuMemcpy( primay_beam_J11, d_gys,
-                      num_beam_values*sizeof(user_precision_complex_t),
-                      gpuMemcpyDeviceToHost) );
-
-  ( gpuFree(d_gxs) );
-  ( gpuFree(d_Dxs) );
-  ( gpuFree(d_Dys) );
-  ( gpuFree(d_gys) );
-
-  free(reordered_azs);
-  free(reordered_zas);
-
+extern "C" void wrapper_calculate_RTS_MWA_analytic_beam_gpu(int num_components,
+                          components_t *components, int norm,
+                          beam_gains_t *d_component_beam_gains,
+                          double *d_freqs, woden_settings_t *woden_settings) {
+    calculate_RTS_MWA_analytic_beam_gpu(num_components,
+         woden_settings->num_time_steps, woden_settings->num_freqs,
+         components->azs, components->zas,
+         woden_settings->FEE_ideal_delays, woden_settings->latitude,
+         norm, components->beam_has, components->beam_decs,
+         d_freqs, (gpuUserComplex *)d_component_beam_gains->gxs,
+         (gpuUserComplex *)d_component_beam_gains->Dxs,
+         (gpuUserComplex *)d_component_beam_gains->Dys,
+         (gpuUserComplex *)d_component_beam_gains->gys);
 }

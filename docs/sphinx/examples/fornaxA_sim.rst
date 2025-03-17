@@ -4,7 +4,8 @@ Fornax A simulation
 =========================================
 
 This example not only compares two sky model types, but compares the speed of the
-``float`` vs the ``double`` precision of ``WODEN``.
+``float`` vs the ``double`` precision of ``WODEN``. The simulation is run in GPU mode,
+using a GTX 1080 Ti, and the imaging is done using the ``WSClean`` software.
 
 .. note:: Running and imaging both Fornax A simulations will need 3.6 GB of storage.
 
@@ -41,7 +42,7 @@ where ``${precision}`` is either "float" or "double" to choose the precision of 
 
 each of which will contain 16 frequency and 14 time steps. I've selected to use the ``MWA_FEE`` primary beam, which will use the MWA fully embedded element (FEE) primary beam pattern (using the delays specified in the ``metafits`` to point the beam). As described in :ref:`Post compilation (optional)`, you'll need to grab an hdf5 file and set an environment variable to point to it for this to work.
 
-The sky model is specified using ``--cat_filename``, which contains 4544 point and 1736 Gaussian components, and was made from WSClean CLEAN components. The "float" precision version took about 48 seconds on my card, with the "double" taking about 144 seconds. If you run the imaging, you should get something that looks like this:
+The sky model is specified using ``--cat_filename``, which contains 4544 point and 1736 Gaussian components, and was made from WSClean CLEAN components. The "float" precision version took about 37 seconds on my card, with the "double" taking about 60 seconds. If you run the imaging, you should get something that looks like this:
 
 .. image:: FornaxA_msclean-image.png
    :width: 400pt
@@ -55,7 +56,7 @@ You can run and image the shapelet simulation via::
   $ ./FornaxA_shapelet_simulation.sh
   $ ./FornaxA_shapelet_imaging.sh
 
-with the "float" simulation taking 59 seconds on my GPU, the "double" taking 144 seconds, and the image looking like:
+with the "float" simulation taking 48 seconds on my GPU, the "double" taking 109 seconds, and the image looking like:
 
 .. image:: FornaxA_shapelets-image.png
    :width: 400pt

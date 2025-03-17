@@ -31,7 +31,7 @@ class Test(unittest.TestCase):
         self.num_baselines = int(((self.num_antennas - 1)*self.num_antennas) / 2)
         self.num_time_steps = 2
         self.num_freq_channels = 3
-        self.int_jd = 2458647.0
+        self.jd_midnight = 2458646.5
         self.gitlabel = 'as987has'
         self.XYZ_array = np.arange(self.num_antennas*3)
         self.XYZ_array.shape = (self.num_antennas, 3)
@@ -171,7 +171,7 @@ class Test(unittest.TestCase):
             self.assertEqual(0.0, data_table.header['PZERO3'])
             self.assertEqual(1.0, data_table.header['PSCAL4'])
             ##This is the date array so has an offset for JD date
-            self.assertEqual(float(self.int_jd), data_table.header['PZERO4'])
+            self.assertEqual(float(self.jd_midnight), data_table.header['PZERO4'])
             self.assertEqual(1.0, data_table.header['PSCAL5'])
             self.assertEqual(0.0, data_table.header['PZERO5'])
 
@@ -219,7 +219,7 @@ class Test(unittest.TestCase):
                   central_freq_chan=self.central_freq_chan,
                   ra_point=self.ra_point, dec_point=self.dec_point,
                   output_uvfits_name=self.output_uvfits_name,
-                  int_jd=self.int_jd, gitlabel=self.gitlabel,
+                  jd_midnight=self.jd_midnight, gitlabel=self.gitlabel,
                   v_container=self.v_container,
                   uu=self.uu, vv=self.vv, ww=self.ww,
                   baselines_array=self.baselines_array, date_array=self.date_array,
@@ -242,7 +242,7 @@ class Test(unittest.TestCase):
                   central_freq_chan=self.central_freq_chan,
                   ra_point=self.ra_point, dec_point=self.dec_point,
                   output_uvfits_name=self.output_uvfits_name,
-                  int_jd=self.int_jd, gitlabel=self.gitlabel,
+                  jd_midnight=self.jd_midnight, gitlabel=self.gitlabel,
                   v_container=self.v_container,
                   uu=self.uu, vv=self.vv, ww=self.ww,
                   baselines_array=self.baselines_array, date_array=self.date_array,
@@ -267,7 +267,9 @@ class Test(unittest.TestCase):
                       num_antennas=self.num_antennas, freq_cent=self.freq_cent,
                       date=self.date,
                       longitude=self.longitude, latitude=self.latitude,
-                      array_height=self.array_height)
+                      array_height=self.array_height,
+                      gst0_deg=self.gst0_deg, ut1utc=self.ut1utc,
+                      degpdy=self.degpdy)
 
         ##Make unequal inputs to create failure
         self.v_container = np.zeros((10, 1, 1, 16, 4, 3))
@@ -283,11 +285,13 @@ class Test(unittest.TestCase):
                       central_freq_chan=self.central_freq_chan,
                       ra_point=self.ra_point, dec_point=self.dec_point,
                       output_uvfits_name=self.output_uvfits_name,
-                      int_jd=self.int_jd, gitlabel=self.gitlabel,
+                      jd_midnight=self.jd_midnight, gitlabel=self.gitlabel,
                       v_container=self.v_container,
                       uu=self.uu, vv=self.vv, ww=self.ww,
                       baselines_array=self.baselines_array, date_array=self.date_array,
-                      hdu_ant=self.ant_table)
+                      hdu_ant=self.ant_table, longitude=self.longitude,
+                      latitude=self.latitude, array_height=self.array_height,
+                      telescope_name=self.telescope_name)
         ##Check the error string is as expected
         expec_fail_string = ("run_woden.create_uvfits: The first dimension of the arrays:\n"
                             "v_container, uu, vv, ww, baselines_array, date_array\n"

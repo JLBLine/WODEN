@@ -1,9 +1,9 @@
 API Reference
 ==============
 
-Here you can find documentation of all the functions grouped by coding language.
-``python`` script documentation also includes a summary of all arguments, which
-can be reproduced on the command line using ``script.py --help``.
+Here you can find documentation of all the functions grouped by coding language
+and/or function. ``python`` script documentation also includes a summary of all
+arguments, which can be reproduced on the command line using ``script.py --help``.
 
 .. note::  All functions that begin with ``RTS`` are either borrowed or adapted
    from the RTS (`Mitchell et al. 2008`_) calibration package, with permission
@@ -33,6 +33,8 @@ can be reproduced on the command line using ``script.py --help``.
 
 ``C`` code
 ----------------------
+This refers to the ``C`` code that has no GPU equivalent; see below for more
+details.
 
 The precision of most functions is determined at compilation time, via the
 following ``#ifdef`` statement found in ``WODEN/include/woden_precision_defs.h``:
@@ -62,14 +64,51 @@ or ``double _Complex``.
 .. toctree::
   :maxdepth: 1
 
+  C_code/beam_settings
+  C_code/call_everybeam_c
+  C_code/check_compilation_flags
   C_code/constants
-  C_code/primary_beam
+  C_code/logger
+  C_code/hyperbeam_error
+  C_code/shapelet_basis
   C_code/visibility_set
+  C_code/woden
   C_code/woden_precision_defs
   C_code/woden_struct_defs
 
+
+``GPU`` and ``C`` equivalent functions
+-----------------------------------------
+These functions call either ``C`` or ``GPU`` code, depending on whether the 
+user wants to run on a GPU or not. The ``common`` functions listed here
+are designed to minimise the amount of code dupilcation between the ``C`` and
+``GPU`` code, either calling a ``cpu`` or ``gpu`` function depending on the
+``do_gpu`` boolean.
+
+``common`` code
+****************
+
+.. toctree::
+  :maxdepth: 1
+
+  common_code/calculate_visibilities_common.rst
+  common_code/source_components_common.rst
+
+
+``C`` code
+**************
+
+.. toctree::
+  :maxdepth: 1
+
+  CPU_code/calculate_visibilities_cpu
+  CPU_code/fundamental_coords_cpu
+  CPU_code/primary_beam_cpu
+  CPU_code/source_components_cpu
+
 ``GPU`` code
--------------------------
+**************
+
 All GPU code is either compiled as ``CUDA`` or ``HIP`` code. This is decided at
 compilation, depending on whether ``-D__NVCC__`` (for ``CUDA``) or ``-D__HIPCC__``
 (for ``HIP``) was passed to the compiler. Various macros found in ``WODEN/include/gpu_macros.h``
@@ -97,9 +136,9 @@ meaning that ``cuUserComplex`` in the API either means ``cuFloatComplex`` or
 .. toctree::
   :maxdepth: 1
 
-  GPU_code/calculate_visibilities
+  GPU_code/calculate_visibilities_gpu
+  GPU_code/fundamental_coords_gpu
   GPU_code/gpu_macros
   GPU_code/gpucomplex
-  GPU_code/fundamental_coords
   GPU_code/primary_beam_gpu
-  GPU_code/source_components
+  GPU_code/source_components_gpu

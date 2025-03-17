@@ -1,3 +1,7 @@
+"""Classes to match the BeamTypes enum in libwoden, and to group beam types for WODEN.
+Beam group are useful to calculate associated values for specific beam types,
+e.g. azimuth/altitude, hour angle/declination, etc.
+"""
 from enum import Enum, auto
 
 class BeamTypes(Enum):
@@ -48,8 +52,12 @@ class BeamGroups:
     
     eb_beam_values = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value, BeamTypes.EB_MWA.value]
     azza_beam_values = [BeamTypes.MWA_ANALY.value, BeamTypes.FEE_BEAM.value,
-                        BeamTypes.FEE_BEAM_INTERP.value, BeamTypes.ANALY_DIPOLE.value]
+                        BeamTypes.FEE_BEAM_INTERP.value, BeamTypes.ANALY_DIPOLE.value,
+                        BeamTypes.EB_MWA.value]
     hadec_beam_values = [BeamTypes.GAUSS_BEAM.value, BeamTypes.MWA_ANALY.value]
-    off_cardinal_beam_values = [BeamTypes.EB_LOFAR.value]
+    # needs_fee_hdf5 = [BeamTypes.FEE_BEAM.value, BeamTypes.FEE_BEAM_INTERP, BeamTypes.EB_MWA.value]
+    # needs_mwa_delays = [BeamTypes.FEE_BEAM.value, BeamTypes.FEE_BEAM_INTERP, BeamTypes.MWA_ANALY.value]
+    ##TODO investigate what beam types are off-cardinal, and add to this list below
+    off_cardinal_beam_values = []
         
         

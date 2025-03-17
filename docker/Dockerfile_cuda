@@ -2,9 +2,10 @@
 FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
 ARG CUDA_ARCH
 
-ENV WODEN_TAG=v2.4.0-alpha
+ENV WODEN_TAG=cpu_version
 ENV EVERYBEAM_TAG=mwa_python_wrapper
-ENV HYPER_VERSION=0.9.2
+ENV HYPER_VERSION=0.10.0
+ENV RUST_VERSION=1.84.0
 
 ENV HYPERDRIVE_CUDA_COMPUTE=${CUDA_ARCH}
 ENV CUDAARCHS=${CUDA_ARCH}
@@ -46,17 +47,18 @@ RUN apt-get update -y && \
 RUN wget -q ftp://ftp.astron.nl/outgoing/Measures/WSRT_Measures.ztar \
     && tar -xf WSRT_Measures.ztar -C /var/lib/casacore/data/
 
+
+RUN mkdir -p /everybeam_install
 RUN git clone -b $EVERYBEAM_TAG --recursive -j4 https://git.astron.nl/RD/EveryBeam.git \
   && cd EveryBeam \
   && mkdir -p build && cd build \
-  && cmake .. -DBUILD_WITH_PYTHON=ON \
+  && cmake .. -DCMAKE_INSTALL_PREFIX=/everybeam_install \
   && make \
   && make install
 
 # Get Rust
 RUN mkdir -m755 /opt/rust /opt/cargo
 ENV RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/cargo PATH=/opt/cargo/bin:$PATH
-ENV RUST_VERSION=1.79
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain=$RUST_VERSION
 
 # hyperbeam used for MWA primary beam
@@ -72,18 +74,29 @@ RUN git clone -b $WODEN_TAG https://github.com/JLBLine/WODEN.git \
   && mkdir build && cd build \
   && cmake .. -DHBEAM_INC=/mwa_hyperbeam-${HYPER_VERSION}/include/ \
            -DHBEAM_LIB=/mwa_hyperbeam-${HYPER_VERSION}/target/release/libmwa_hyperbeam.so \
+           -DEBEAM_INSTALL=/everybeam_install/ \
+           -DEBEAM_ROOT=/EveryBeam/ \
   && make
   
 ##Now do the pip install
 RUN cd /WODEN && pip install -r requirements.txt && pip install .
+RUN pip install --upgrade astropy-iers-data
 
-# unity - used for testing
-RUN cd / && git clone https://github.com/ThrowTheSwitch/Unity.git
+RUN mkdir -p /astropy_data
+ENV ASTROPY_DATA=/astropy_data
 
-##install the tests. no sense in running the tests of course because
-##that is user GPU dependent. But we can install them.
-RUN cd /WODEN/build && cmake .. -DTARGET_GROUP=test -DUNITY_ROOT=/Unity \
-    && make -j4
+RUN wget https://datacenter.iers.org/data/9/finals2000A.all
+RUN mv finals2000A.all /astropy_data/finals2000A.all
+
+RUN python3 /WODEN/docker/fetch_iers_data.py
+
+# # unity - used for testing
+# RUN cd / && git clone https://github.com/ThrowTheSwitch/Unity.git
+
+# ##install the tests. no sense in running the tests of course because
+# ##that is user GPU dependent. But we can install them.
+# RUN cd /WODEN/build && cmake .. -DTARGET_GROUP=test -DUNITY_ROOT=/Unity \
+#     && make -j4
 
 # ##copy the MWA primary beam files
 # RUN cd / && mkdir MWA_beam_files && cd MWA_beam_files \

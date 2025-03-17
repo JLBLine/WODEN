@@ -9,15 +9,14 @@ import os
 import unittest
 import numpy as np
 import numpy.testing as npt
-
-from wodenpy.skymodel.read_fits_skymodel import calc_everybeam_for_components
+import wodenpy
 from wodenpy.use_libwoden.skymodel_structs import Components_Python
-from wodenpy.primary_beam.use_everybeam import load_LOFAR_telescope, load_MWA_telescope, load_OSKAR_telescope
 from astropy.coordinates import EarthLocation
 from astropy import units as u
 from astropy.time import Time
 from wodenpy.primary_beam.use_everybeam import run_everybeam_over_threads, run_everybeam
-from wodenpy.wodenpy_setup.run_setup import check_for_library
+from wodenpy.use_libwoden.use_libwoden import check_for_everybeam
+import importlib_resources
 
 ##Location of this file; use it to find test measurement sets
 code_dir = os.path.realpath(__file__)
@@ -36,8 +35,6 @@ class Test(unittest.TestCase):
         arr_long = np.radians(6.867996528)
         date = "2024-07-21T03:35:00"
         ms_path = f'{code_dir}/../../../test_installation/everybeam/lba.MS'
-        
-        telescope = load_LOFAR_telescope(ms_path)
         
         location = EarthLocation(lat=arr_latitude*u.rad, 
                                  lon=arr_long*u.rad)
@@ -70,18 +67,16 @@ class Test(unittest.TestCase):
         all_freqs = np.array([100e+6])
         station_ids = np.array([0,10])
         
-        
-        serial_jones =  run_everybeam(ras, decs, beam_ra0, beam_dec0,
+        coeff_path = ""
+        serial_jones =  run_everybeam(ms_path, coeff_path,
+                                ras, decs, beam_ra0, beam_dec0,
                                 j2000_latitudes, j2000_lsts,
-                                arr_latitude, arr_long,
                                 all_times, all_freqs,
-                                telescope,
                                 station_ids,
                                 apply_beam_norms=True,
-                                reorder_jones=False,
+                                iau_order=False,
                                 element_only=False,
-                                eb_rotate=True,
-                                parallactic_rotate=False)
+                                parallactic_rotate=True)
         
         
         coeff_path=""
@@ -91,20 +86,19 @@ class Test(unittest.TestCase):
                                 ms_path, coeff_path,
                                 ras, decs, beam_ra0, beam_dec0,
                                 j2000_latitudes, j2000_lsts,
-                                arr_latitude, arr_long,
                                 all_times, all_freqs,
                                 station_ids,
-                                use_differential_beam=False,
                                 apply_beam_norms= True,
-                                reorder_jones=False,
+                                iau_order=False,
                                 element_only=False,
-                                eb_rotate=True,
-                                parallactic_rotate=False)
+                                parallactic_rotate=True)
             
             npt.assert_allclose(serial_jones, parallel_jones, atol=1e-8)
             
     def test_run_everybeam_over_threads(self):
-        have_everybeam = check_for_library('everybeam')
+        woden_lib_path = importlib_resources.files(wodenpy).joinpath(f"libwoden_double.so")
+        have_everybeam = check_for_everybeam(woden_lib_path)
+        
         if have_everybeam:
             self.do_test()
         else:

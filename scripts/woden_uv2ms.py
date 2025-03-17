@@ -69,7 +69,7 @@ def get_parser():
 
     return parser
 
-def main():
+def main(argv=None):
     """
     Converts UVFITS files to Measurement Sets (MS) using WODEN.
 
@@ -90,7 +90,7 @@ def main():
     
     ##Get command line arguments
     parser = get_parser()
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     ##if single uvfits, convert single uvfits
     if args.single_uvfits:
         make_ms(args.single_uvfits, no_delete=args.no_delete)

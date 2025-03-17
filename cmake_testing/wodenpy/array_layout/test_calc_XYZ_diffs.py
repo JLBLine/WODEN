@@ -4,9 +4,9 @@ import unittest
 import numpy as np
 from ctypes import c_double
 import argparse
-
-from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
-from wodenpy.array_layout.create_array_layout import calc_XYZ_diffs
+import numpy.testing as npt
+from wodenpy.use_libwoden.woden_settings import Woden_Settings_Python
+from wodenpy.array_layout.create_array_layout import setup_array_layout_python, calc_XYZ_diffs
 
 D2R = np.pi / 180.0
 
@@ -163,8 +163,7 @@ expec_Z_prec = np.array([98.629888069350, 178.965419626805, 334.283004207471,
 class Test(unittest.TestCase):
     def run_test_RTS_PrecessXYZtoJ2000(self, do_precession = 0):
         
-        woden_struct_classes = Woden_Struct_Classes("double")
-        woden_settings = woden_struct_classes.Woden_Settings()
+        woden_settings = Woden_Settings_Python()
         ##Set up where woden_settings correctly
         woden_settings.latitude = -0.46606083776035967
         woden_settings.jd_date = 2457278.2010995
@@ -173,12 +172,12 @@ class Test(unittest.TestCase):
         woden_settings.num_time_steps = 2
         woden_settings.time_res = 8
         woden_settings.latitude_obs_epoch_base = -0.46606083776035967
+        woden_settings.num_freqs = 1
 
         ##These are ctype double arrays, and as ever we have to iterate
         ##over them to populate
-        num_times_array = woden_settings.num_time_steps*c_double
-        woden_settings.lsts = num_times_array()
-        woden_settings.mjds = num_times_array()
+        woden_settings.lsts = np.empty(woden_settings.num_time_steps)
+        woden_settings.mjds = np.empty(woden_settings.num_time_steps)
 
         for time_ind in range(woden_settings.num_time_steps):
             woden_settings.lsts[time_ind] = lsts[time_ind]
@@ -190,6 +189,7 @@ class Test(unittest.TestCase):
             woden_settings.lst_base = LST_BEFORE
 
         woden_settings.do_autos = 1
+        woden_settings.num_ants = 8
 
         ##Some things get setup after checking the input arguments, so
         ##quickly knock up a reduced version for this test
@@ -221,23 +221,23 @@ class Test(unittest.TestCase):
 
         if do_precession:
 
-            self.assertTrue(np.allclose(found_X, expec_X_prec, atol=1e-10))
-            self.assertTrue(np.allclose(found_Y, expec_Y_prec, atol=1e-10))
-            self.assertTrue(np.allclose(found_Z, expec_Z_prec, atol=1e-10))
+            npt.assert_allclose(array_layout.ant_X, expec_X_prec, atol=1e-10)
+            npt.assert_allclose(array_layout.ant_Y, expec_Y_prec, atol=1e-10)
+            npt.assert_allclose(array_layout.ant_Z, expec_Z_prec, atol=1e-10)
 
-            self.assertTrue(np.allclose(found_X_diff, expec_X_diffs_prec, atol=1e-10))
-            self.assertTrue(np.allclose(found_Y_diff, expec_Y_diffs_prec, atol=1e-10))
-            self.assertTrue(np.allclose(found_Z_diff, expec_Z_diffs_prec, atol=1e-10))
+            npt.assert_allclose(array_layout.X_diff_metres, expec_X_diffs_prec, atol=1e-10)
+            npt.assert_allclose(array_layout.Y_diff_metres, expec_Y_diffs_prec, atol=1e-10)
+            npt.assert_allclose(array_layout.Z_diff_metres, expec_Z_diffs_prec, atol=1e-10)
 
         else:
 
-            self.assertTrue(np.allclose(found_X, expec_X_noprec, atol=1e-10))
-            self.assertTrue(np.allclose(found_Y, expec_Y_noprec, atol=1e-10))
-            self.assertTrue(np.allclose(found_Z, expec_Z_noprec, atol=1e-10))
+            npt.assert_allclose(array_layout.ant_X, expec_X_noprec, atol=1e-10)
+            npt.assert_allclose(array_layout.ant_Y, expec_Y_noprec, atol=1e-10)
+            npt.assert_allclose(array_layout.ant_Z, expec_Z_noprec, atol=1e-10)
 
-            self.assertTrue(np.allclose(found_X_diff, expec_X_diffs_noprec, atol=1e-10))
-            self.assertTrue(np.allclose(found_Y_diff, expec_Y_diffs_noprec, atol=1e-10))
-            self.assertTrue(np.allclose(found_Z_diff, expec_Z_diffs_noprec, atol=1e-10))
+            npt.assert_allclose(array_layout.X_diff_metres, expec_X_diffs_noprec, atol=1e-10)
+            npt.assert_allclose(array_layout.Y_diff_metres, expec_Y_diffs_noprec, atol=1e-10)
+            npt.assert_allclose(array_layout.Z_diff_metres, expec_Z_diffs_noprec, atol=1e-10)
 
             
 

@@ -1,7 +1,5 @@
 mkdir -p images
 
-fi
-
 for precision in "float" "double"
 
 do
@@ -17,5 +15,3 @@ do
     ./data/MWA_EoR1_${precision}_band*.ms
 
 done
-
-#rm casa*.log

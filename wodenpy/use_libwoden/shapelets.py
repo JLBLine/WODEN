@@ -1,3 +1,4 @@
+"""Functions to create shapelet basis functions for use in WODEN"""
 import numpy as np
 from ctypes import c_float, c_double
 from numpy.polynomial.hermite import Hermite

@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include "logger.h"
 
 // #ifndef __NVCC__
 // #define __NVCC__ // should be set by compiler !!!
@@ -68,10 +69,16 @@ exiting if an error is found (default true)
 */
 inline void GPUErrorCheck(const char *message, gpuError_t code, const char *file, int line, bool abort=EXITERROR){
   if (code != gpuSuccess) {
-    fprintf(stderr,"GPU ERROR %s: %s\n %s:%d\n",
+    fprintf(stderr,"GPU ERROR %s: %s\n Occurred at %s:%d\n",
                     message, gpuGetErrorString(code), file, line);
+    char log_buffer[1024];
+    int log_len = sizeof log_buffer;
+    snprintf(log_buffer, log_len,
+             "GPU ERROR %s: %s\n Occurred at %s:%d", message, gpuGetErrorString(code), file, line);
+    log_message(log_buffer);
     if (abort) {
-      printf("GPU IS EXITING\n");
+      fprintf(stderr, "GPU IS EXITING\n");
+      log_message("GPU IS EXITING\n");
       exit(code);
     }
   }

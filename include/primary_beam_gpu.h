@@ -5,6 +5,7 @@
 */
 #pragma once
 #include "woden_precision_defs.h"
+#include "woden_struct_defs.h"
 #include <mwa_hyperbeam.h>
 #include "gpucomplex.h"
 #include "hyperbeam_error.h"
@@ -42,7 +43,7 @@ standard deviations.
 @param[in,out] *d_beam_real Real part of the Gaussian repsonse
 @param[in,out] *d_beam_imag Imaginary part of the Gaussian reponse
 */
-__device__ void twoD_Gaussian(user_precision_t x, user_precision_t y,
+__device__ void twoD_Gaussian_gpu(user_precision_t x, user_precision_t y,
            user_precision_t xo, user_precision_t yo,
            user_precision_t sigma_x, user_precision_t sigma_y,
            user_precision_t cos_theta, user_precision_t sin_theta,
@@ -131,7 +132,7 @@ complex `J[0,0]` response in
 complex `J[1,1]` response in
 
 */
-extern "C" void calculate_gaussian_beam(int num_components, int num_time_steps,
+extern "C" void calculate_gaussian_beam_gpu(int num_components, int num_time_steps,
            int num_freqs, user_precision_t ha0,
            user_precision_t sdec0, user_precision_t cdec0,
            user_precision_t fwhm_lm, user_precision_t cos_theta,
@@ -155,7 +156,7 @@ size on the sky scales with frequency hence the need for `wavelength`
 @param[in,out] d_beam_Y Complex beam value for east-west dipole
 
 */
-__device__ void analytic_dipole(user_precision_t az, user_precision_t za,
+__device__ void analytic_dipole_gpu(user_precision_t az, user_precision_t za,
            user_precision_t wavelength,
            gpuUserComplex * d_beam_X, gpuUserComplex * d_beam_Y);
 
@@ -228,7 +229,7 @@ complex `J[0,0]` response in
 complex `J[1,1]` response in
 
 */
-extern "C" void calculate_analytic_dipole_beam(int num_components,
+extern "C" void calculate_analytic_dipole_beam_gpu(int num_components,
      int num_time_steps, int num_freqs,
      user_precision_t *azs, user_precision_t *zas, double *d_freqs,
      gpuUserComplex *d_primay_beam_J00, gpuUserComplex *d_primay_beam_J11);
@@ -243,7 +244,7 @@ hence needs the ha/dec along with the az/za. The delays added to the
 paths of individual dipoles allow the beam to be 'pointed'. The physical
 length of these paths should be given in `d_metre_delays` (this conversion
 from the delays given in the MWA metafits is handled by
-`primary_beam_gpu::calculate_RTS_MWA_analytic_beam`)
+`primary_beam_gpu::calculate_RTS_MWA_analytic_beam_gpu`)
 
 
 @param[in] az Azimuth to calculate the beam toward (radians)
@@ -261,7 +262,7 @@ steer the beam (metres)
 @param[in,out] *gy The gain for the east-west beam
 
 */
-__device__ void RTS_MWA_beam(user_precision_t az, user_precision_t za,
+__device__ void RTS_MWA_beam_gpu(user_precision_t az, user_precision_t za,
            double ha, double dec,
            double wavelength, double *d_metre_delays,
            double latitude, int norm,
@@ -273,14 +274,14 @@ __device__ void RTS_MWA_beam(user_precision_t az, user_precision_t za,
 `d_azs` and `d_zas` for a given set of delays `d_metre_delays` and frequencies
 `d_freqs`.
 
-@details Kernel calls `primary_beam_gpu::RTS_MWA_beam`. The MWA primary beam
+@details Kernel calls `primary_beam_gpu::RTS_MWA_beam_gpu`. The MWA primary beam
 is stationary on the sky for a given set of delays, so the Azimuth and Zenith
 Angles in `azs,zas` should contain `num_components*num_times` values,
 as the COMPONENTs move through the beam with time. The delays added to the
 paths of individual dipoles allow the beam to be 'pointed'. The physical
 length of these paths should be given in `d_metre_delays` (this conversion
 from the delays given in the MWA metafits is handled by
-`primary_beam_gpu::calculate_RTS_MWA_analytic_beam`)
+`primary_beam_gpu::calculate_RTS_MWA_analytic_beam_gpu`)
 
 When called with `dim3 grid, threads`, kernel should be called with both
 `grid.x` and `grid.y` defined, where:
@@ -326,7 +327,7 @@ with time. The delays added to the paths of individual dipoles allow the beam
 to be 'pointed'. The delays as listed in the metafits (given as `delays`) are
 listed in units of the delay time added internally to the tile (in seconds).
 This function coverts them into a path length (metres), as needed by
-`primary_beam_gpu::RTS_MWA_beam``.
+`primary_beam_gpu::RTS_MWA_beam_gpu``.
 
 @param[in] num_components Number of COMPONENTS the beam is calculated for
 @param[in] num_time_steps Number of time steps being calculated
@@ -345,20 +346,13 @@ This function coverts them into a path length (metres), as needed by
 @param[in,out] *d_gys The gains for the east-west beam
 
 */
-extern "C" void calculate_RTS_MWA_analytic_beam(int num_components,
+extern "C" void calculate_RTS_MWA_analytic_beam_gpu(int num_components,
      int num_time_steps, int num_freqs,
      user_precision_t *azs, user_precision_t *zas, int *delays,
      double latitude, int norm,
      double *beam_has, double *beam_decs, double *d_freqs,
      gpuUserComplex *d_gxs, gpuUserComplex *d_Dxs,
      gpuUserComplex *d_Dys, gpuUserComplex *d_gys);
-
-
-
-
-
-
-
 
 /**
 @brief Calculate the FEE MWA primary beam model to a set of sky directions
@@ -407,3 +401,95 @@ extern "C" void run_hyperbeam_gpu(int num_components,
            gpuUserComplex *d_primay_beam_J01,
            gpuUserComplex *d_primay_beam_J10,
            gpuUserComplex *d_primay_beam_J11);
+
+
+
+
+/**
+ * @brief Wrapper function to call the Gaussian beam on the GPU from C. Calls
+ * `calculate_gaussian_beam_gpu`; see that function for more details.
+ *
+ * @details Need a wrapper here as the GPU function has
+ * GPU types in the argument, so can't be linked to directly from the CPU.
+ *
+ * @param num_components The number of components to process.
+ * @param cos_theta Cosine of the rotation angle
+ * @param sin_theta Sine of the rotation angle
+ * @param sin_2theta Sine of two times the rotation angle
+ * @param fwhm_lm FWHM of the beam in \f$l,m\f$ coords
+ * @param woden_settings Pointer to the WODEN settings structure.
+ * @param beam_settings Pointer to the beam settings structure.
+ * @param components Pointer to the components structure.
+ * @param d_component_beam_gains Pointer to the device memory for component beam gains.
+ * @param d_freqs Pointer to the device memory array for frequencies.
+ */
+extern "C" void wrapper_calculate_gaussian_beam_gpu(int num_components,
+               user_precision_t cos_theta,
+               user_precision_t sin_theta, user_precision_t sin_2theta,
+               user_precision_t fwhm_lm,
+               woden_settings_t *woden_settings,
+               beam_settings_t *beam_settings,
+               components_t *components,
+               beam_gains_t *d_component_beam_gains,
+               double *d_freqs);
+
+/**
+ * @brief Wrapper to call the analytic dipole beam on the GPU from C. Calls
+ * `calculate_analytic_dipole_beam_gpu`; see that function for more details.
+ *
+ * @details Need a wrapper here as the GPU function has
+ * GPU types in the argument, so can't be linked to directly from the CPU.
+ *
+ * @param num_components The number of components to process.
+ * @param components Pointer to the components structure.
+ * @param d_component_beam_gains Pointer to the device memory beam gains struct.
+ * @param d_freqs Pointer to the device memory array for frequencies.
+ * @param woden_settings Pointer to the settings structure for WODEN.
+ */
+extern "C" void wrapper_calculate_analytic_dipole_beam_gpu(int num_components,
+               components_t *components,
+               beam_gains_t *d_component_beam_gains,
+               double *d_freqs, woden_settings_t *woden_settings);
+
+/**
+ * @brief Wrapper function to run the Hyperbeam GPU computation from C. Calls
+ * `run_hyperbeam_gpu`; see that function for more details.
+ *
+ * @details Need a wrapper here as the GPU function has
+ * GPU types in the argument, so can't be linked to directly from the CPU.
+ *
+ * @param num_components The number of components to process.
+ * @param beam_settings Pointer to the beam settings structure.
+ * @param num_beams The number of beams to process.
+ * @param parallactic Flag indicating whether to use parallactic angle correction.
+ * @param reordered_azs Pointer to the array of reordered azimuth values; they should be ordered by time index, then component index (other WODEN beam functions expect component index, then time index).
+ * @param reordered_zas Pointer to the array of reordered zenith angle values; they should be ordered by time index, then component index (other WODEN beam functions expect component index, then time index).
+ * @param d_component_beam_gains Pointer to the device memory component beam gains struct
+ * @param d_freqs Pointer to the device memeory array of frequencies.
+ * @param woden_settings Pointer to the Woden settings structure.
+ */
+extern "C" void wrapper_run_hyperbeam_gpu(int num_components,
+               beam_settings_t *beam_settings,
+               int num_beams, int parallactic,
+               double *reordered_azs, double *reordered_zas,
+               beam_gains_t *d_component_beam_gains,
+               double *d_freqs, woden_settings_t *woden_settings);
+
+/**
+ * @brief Wrapper function to calculate the RTS MWA analytic beam on the GPU from C
+ *
+ * @details Need a wrapper here as the GPU function has
+ * GPU types in the argument, so can't be linked to directly from the CPU.
+ *
+ * @param num_components The number of components to process.
+ * @param components Pointer to an array of components to be processed.
+ * @param norm Normalisation flag (1 to normalise, 0 otherwise).
+ * @param d_component_beam_gains Pointer to the device memory where the beam gains
+ *                               for each component will be stored.
+ * @param d_freqs Pointer to the device memory array containing the frequencies.
+ * @param woden_settings Pointer to the settings structure for WODEN.
+ */
+extern "C" void wrapper_calculate_RTS_MWA_analytic_beam_gpu(int num_components,
+               components_t *components, int norm,
+               beam_gains_t *d_component_beam_gains,
+               double *d_freqs, woden_settings_t *woden_settings);

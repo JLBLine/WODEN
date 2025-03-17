@@ -4,10 +4,11 @@ import unittest
 import numpy as np
 from ctypes import c_double
 import argparse
+import numpy.testing as npt
 
 ##This is where our code lives
-from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
-from wodenpy.use_libwoden.array_layout_struct import setup_array_layout
+from wodenpy.use_libwoden.woden_settings import Woden_Settings_Python
+from wodenpy.array_layout.create_array_layout import setup_array_layout_python
 from wodenpy.array_layout.create_array_layout import RTS_PrecessXYZtoJ2000
 
 D2R = np.pi / 180.0
@@ -66,8 +67,8 @@ expec_Z_prec = np.array([98.629888069350, 178.965419626805, 334.283004207471,
 class Test(unittest.TestCase):
     def test_RTS_PrecessXYZtoJ2000(self):
         
-        woden_struct_classes = Woden_Struct_Classes("double")
-        woden_settings = woden_struct_classes.Woden_Settings()
+        woden_settings = Woden_Settings_Python()
+        
         ##Set up where woden_settings correctly
         woden_settings.latitude = -0.46606083776035967
         woden_settings.jd_date = 2457278.2010995
@@ -76,12 +77,12 @@ class Test(unittest.TestCase):
         woden_settings.do_precession = 1
         woden_settings.num_time_steps = 2
         woden_settings.time_res = 8
+        woden_settings.num_freqs = 1
 
         ##These are ctype double arrays, and as ever we have to iterate
         ##over them to populate
-        num_times_array = woden_settings.num_time_steps*c_double
-        woden_settings.lsts = num_times_array()
-        woden_settings.mjds = num_times_array()
+        woden_settings.lsts = np.empty(woden_settings.num_time_steps)
+        woden_settings.mjds = np.empty(woden_settings.num_time_steps)
 
         for time_ind in range(woden_settings.num_time_steps):
             woden_settings.lsts[time_ind] = lsts[time_ind]
@@ -100,7 +101,7 @@ class Test(unittest.TestCase):
         # args.north = np.zeros(8)
         # args.height = np.zeros(8)
 
-        array_layout = setup_array_layout(woden_settings, args)
+        array_layout = setup_array_layout_python(woden_settings, args)
         # print(array_layout.num_baselines)
 
         for xyz_ind in range(len(expec_X_noprec)):
@@ -114,13 +115,13 @@ class Test(unittest.TestCase):
 
         expec_num = woden_settings.num_time_steps*args.num_antennas
 
-        found_X_prec = np.ctypeslib.as_array(array_layout.ant_X, shape=(expec_num, ))
-        found_Y_prec = np.ctypeslib.as_array(array_layout.ant_Y, shape=(expec_num, ))
-        found_Z_prec = np.ctypeslib.as_array(array_layout.ant_Z, shape=(expec_num, ))
-
-        self.assertTrue(np.allclose(found_X_prec, expec_X_prec, atol=1e-10))
-        self.assertTrue(np.allclose(found_Y_prec, expec_Y_prec, atol=1e-10))
-        self.assertTrue(np.allclose(found_Z_prec, expec_Z_prec, atol=1e-10))
+        # found_X_prec = np.ctypeslib.as_array(array_layout.ant_X, shape=(expec_num, ))
+        # found_Y_prec = np.ctypeslib.as_array(array_layout.ant_Y, shape=(expec_num, ))
+        # found_Z_prec = np.ctypeslib.as_array(array_layout.ant_Z, shape=(expec_num, ))
+        
+        npt.assert_allclose(array_layout.ant_X, expec_X_prec, atol=1e-10)
+        npt.assert_allclose(array_layout.ant_Y, expec_Y_prec, atol=1e-10)
+        npt.assert_allclose(array_layout.ant_Z, expec_Z_prec, atol=1e-10)
 
         
 

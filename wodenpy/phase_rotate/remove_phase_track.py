@@ -1,8 +1,10 @@
+"""Remove phase tracking applied by WODEN."""
+
 import numpy as np
 
-def remove_phase_tracking(frequencies=None, wws_seconds=None,
-                          num_time_steps=None, v_container=None,
-                          num_baselines=None):
+def remove_phase_tracking(frequencies : np.ndarray, wws_seconds : np.ndarray,
+                          num_time_steps : int, v_container : np.ndarray,
+                          num_baselines : int):
     """
     WARNING - currently does not change the :math:`u,v,w` coordinates, so they
     are still defined via the original phase centre. This function really is
@@ -14,27 +16,31 @@ def remove_phase_tracking(frequencies=None, wws_seconds=None,
     apply the opposite effect of the w term, i.e.
 
     .. math::
-        V^\\prime = V \\exp(2\pi i w)
+        V^\prime = V \exp(2\pi i w)
 
-    where :math:`V` is the phase tracked visibility and :math:`V^\\prime` is
+    where :math:`V` is the phase tracked visibility and :math:`V^\prime` is
     the visibility after removing phase tracking.
 
     Parameters
     ----------
 
-    frequencies : float array
+    frequencies : np.ndarray
         Frequencies of all fine channels (Hz)
-    wws_seconds : float array
+    wws_seconds : np.ndarray
         The :math:`w` coordinates (seconds)
     num_baselines : int
         Number of baselines
-    v_container : float array
+    num_time_steps : int
+        Number of time steps
+    v_container : np.ndarray
         Complex visibility data out of WODEN with phase tracking, with
         `shape=(num_time_steps*num_baselines,1,1,num_freq_channels,4,3))`
+    num_baselines : int
+        Number of baselines (including auto-correlations)
 
     Returns
     -------
-    v_container : float array
+    v_container : np.ndarray
         Same visibility data as before, with phase tracking returned.
 
     """

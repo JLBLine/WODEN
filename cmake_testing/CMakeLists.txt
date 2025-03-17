@@ -1,19 +1,22 @@
 ##Define some constants that are used in all of the testing
 set(FLOAT "float")
 set(DOUBLE "double")
+set(GPU "gpu")
+set(CPU "cpu")
 
 ##Turns on code coverage type outputs for gcc
 # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
 
 ##Flags to make C code compile in WODEN float or double modes
-set(FLOAT_C_FLAGS -Wall -g )
-set(DOUBLE_C_FLAGS -Wall -g -DDOUBLE_PRECISION)
+set(FLOAT_C_FLAGS -Wall -g -lm )
+# set(DOUBLE_C_FLAGS -O3 -march=native -Wall -g -lm -DDOUBLE_PRECISION)
+set(DOUBLE_C_FLAGS -Wall -g -lm -DDOUBLE_PRECISION)
 
 ##Flags to make C code compile in WODEN float or double modes,
 ##and to create code coverage reports. Only need these flags on the things
 ##we want to cover with tracking
-set(FLOAT_C_COVER_FLAGS -coverage -g -Wall)
-set(DOUBLE_C_COVER_FLAGS -coverage -g -Wall -DDOUBLE_PRECISION)
+set(FLOAT_C_COVER_FLAGS -coverage -g -lm -Wall)
+set(DOUBLE_C_COVER_FLAGS -coverage -g -lm -Wall -DDOUBLE_PRECISION)
 
 if(USE_CUDA)
   ##Flags to make CUDA code compile in WODEN float or double modes
@@ -50,14 +53,11 @@ if (NOT DEFINED ${PYTHON_EXECUTABLE})
     set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
 endif()
 
-## Test C code
-add_subdirectory(C_code)
+## Test GPU/C code
+add_subdirectory(GPU_or_C_code)
 
-## Test CUDA code
-add_subdirectory(GPU_code)
-
-## Test python library
+# ## Test python library
 add_subdirectory(wodenpy)
 
-## Test python scripts
+# ## Test python scripts
 add_subdirectory(scripts)

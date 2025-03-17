@@ -15,6 +15,7 @@ import numpy as np
 from wodenpy.skymodel import read_yaml_skymodel
 # import wodenpy
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, crop_below_horizon
+# import logging
 
 
 D2R = np.pi/180.0
@@ -33,6 +34,7 @@ TEST_DECS = np.array([-0.46606083776035967, -0.46606083776035967,
 class Test(unittest.TestCase):
     """Test cropping everything below the horizon works"""
     
+    
     def make_comp_counter(self):
         """Here fill a comp counter with two SOURCEs, each with 3 components"""
         
@@ -50,6 +52,8 @@ class Test(unittest.TestCase):
         comp_counter.num_list_fluxes = np.arange(comp_counter.total_comps)
         comp_counter.num_shape_coeffs = np.arange(comp_counter.total_comps)
         comp_counter.file_line_nums = np.arange(comp_counter.total_comps)
+        
+        # logger = logging.getLogger(__name__)
         
         return comp_counter
     

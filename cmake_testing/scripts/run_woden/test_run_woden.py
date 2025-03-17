@@ -29,6 +29,10 @@ from wodenpy.uvfits import wodenpy_uvfits
 import run_woden as rw
 import numpy.testing as npt
 
+# from multiprocessing import Manager, set_start_method
+
+from subprocess import call
+
 def get_lon(inputs, lon):
     """Every time they update astropy, the exact values of LST seems to change
     This is worrying and annoying as hell. So here I come up with a way to 
@@ -126,7 +130,7 @@ class Test(unittest.TestCase):
             
         self.num_time_steps = 1
         self.num_freq_channels = 16
-        # self.int_jd = 2458647.0
+        # self.jd_midnight = 2458646.5
         # self.gitlabel = 'as987has'
         self.XYZ_array = np.zeros(self.num_antennas*3)
         self.XYZ_array.shape = (self.num_antennas, 3)
@@ -179,6 +183,12 @@ class Test(unittest.TestCase):
         rw.main(args)
         
         self.check_uvfits_contents("test_run_woden_band01.uvfits")
+        
+        # ##do it again in CPU mode
+        args.append("--cpu_mode")
+        rw.main(args)
+        self.check_uvfits_contents("test_run_woden_band01.uvfits")
+        
 
     def test_nobeam_phase_centre_float(self):
         
@@ -208,6 +218,11 @@ class Test(unittest.TestCase):
 
         rw.main(args)
         
+        self.check_uvfits_contents("test_run_woden_band01.uvfits")
+        
+        ##do it again in CPU mode
+        args.append("--cpu_mode")
+        rw.main(args)
         self.check_uvfits_contents("test_run_woden_band01.uvfits")
     
     def test_nobeam_phase_centre_float_autos(self):
@@ -240,7 +255,111 @@ class Test(unittest.TestCase):
         
         self.check_uvfits_contents("test_run_woden_band01.uvfits")
         
+        ##do it again in CPU mode
+        args.append("--cpu_mode")
+        rw.main(args)
+        self.check_uvfits_contents("test_run_woden_band01.uvfits")
+        
+        
+    def test_nobeam_phase_centre_float_autos_multithread_multiband(self):
 
+        self.expec_values(autos=True)
+        
+        args = []
+        args.append("--band_nums=1,2,3")
+        args.append("--lowest_channel_freq=180e6")
+        args.append("--coarse_band_width=1.28e+6")
+        args.append("--freq_res=80e+3")
+        args.append("--num_time_steps=1")
+        args.append("--time_res=1e-16")
+        args.append("--ra0=0.0")
+        args.append("--dec0=0.0")
+        args.append("--date=2000-01-01T12:00:00")
+        args.append("--array_height=0.0")
+        args.append(f"--longitude={self.longitude}")
+        args.append(f"--latitude=0.0")
+        args.append(f"--cat_filename={code_dir}/simple_sky.txt")
+        args.append("--output_uvfits_prepend=test_run_woden")
+        args.append("--primary_beam=none")
+        args.append(f"--array_layout={code_dir}/simple_array.txt")
+        args.append("--telescope_name=test")
+        args.append("--no_precession")
+        args.append("--do_autos")
+        args.append("--num_threads=3")
+
+        rw.main(args)
+        
+        self.check_uvfits_contents("test_run_woden_band01.uvfits")
+        self.check_uvfits_contents("test_run_woden_band02.uvfits")
+        self.check_uvfits_contents("test_run_woden_band03.uvfits")
+        
+        ##do it again in CPU mode
+        args.append("--cpu_mode")
+        rw.main(args)
+        self.check_uvfits_contents("test_run_woden_band01.uvfits")
+        self.check_uvfits_contents("test_run_woden_band02.uvfits")
+        self.check_uvfits_contents("test_run_woden_band03.uvfits")
+        
+        
+    def test_runs_with_profiler_on(self):
+
+        self.expec_values(autos=True)
+        
+        args = []
+        args.append("--band_nums=1")
+        args.append("--lowest_channel_freq=180e6")
+        args.append("--coarse_band_width=1.28e+6")
+        args.append("--freq_res=80e+3")
+        args.append("--num_time_steps=1")
+        args.append("--time_res=1e-16")
+        args.append("--ra0=0.0")
+        args.append("--dec0=0.0")
+        args.append("--date=2000-01-01T12:00:00")
+        args.append("--array_height=0.0")
+        args.append(f"--longitude={self.longitude}")
+        args.append(f"--latitude=0.0")
+        args.append(f"--cat_filename={code_dir}/simple_sky.txt")
+        args.append("--output_uvfits_prepend=test_run_woden")
+        args.append("--primary_beam=none")
+        args.append(f"--array_layout={code_dir}/simple_array.txt")
+        args.append("--telescope_name=test")
+        args.append("--num_threads=1")
+        args.append("--profile")
+
+        rw.main(args)
+        
+        call("rm *.lprof", shell=True)
+        
+    def test_woden_on_command_line_for_logger(self):
+        
+        self.expec_values(autos=True)
+        
+        args = []
+        args.append("--band_nums=1,2,3")
+        args.append("--lowest_channel_freq=180e6")
+        args.append("--coarse_band_width=1.28e+6")
+        args.append("--freq_res=80e+3")
+        args.append("--num_time_steps=1")
+        args.append("--time_res=1e-16")
+        args.append("--ra0=0.0")
+        args.append("--dec0=0.0")
+        args.append("--date=2000-01-01T12:00:00")
+        args.append("--array_height=0.0")
+        args.append(f"--longitude={self.longitude}")
+        args.append(f"--latitude=0.0")
+        args.append(f"--cat_filename={code_dir}/simple_sky.txt")
+        args.append("--output_uvfits_prepend=test_run_woden")
+        args.append("--primary_beam=none")
+        args.append(f"--array_layout={code_dir}/simple_array.txt")
+        args.append("--telescope_name=test")
+        args.append("--no_precession")
+        args.append("--do_autos")
+        args.append("--num_threads=3")
+        args.append("--save_log")
+        args.append("--verbose")
+
+        rw.main(args)
+        
 ##Run the test
 if __name__ == '__main__':
-   unittest.main()
+    unittest.main()

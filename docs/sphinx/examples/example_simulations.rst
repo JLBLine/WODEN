@@ -7,7 +7,7 @@ Below are a number of example simulations with various settings. You can find an
 
 Two of the southern hemisphere sky models are largish (a total of about 100 MB), so instead of bundling them into the github, I've added links into the relevant instructions to download them. For the LOFAR examples, the sky models are linked within the notebook, so you can download them from source.
 
-.. note:: For all simulation times reported in the below, I used a single NVIDIA GeForce GTX 1080 Ti with 12 GB of RAM.
+.. note:: For all simulation times reported in the below, when using a GPU, I used an NVIDIA GeForce GTX 1080 Ti with 12 GB of RAM. The CPU used was a AMD Ryzen™ 7 2700X x16.
 
 The examples are:
 

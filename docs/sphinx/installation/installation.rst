@@ -1,11 +1,11 @@
-.. `Windows Subsystem for Linux 2 (WSL 2)`: https://docs.microsoft.com/en-us/windows/wsl/
+.. _`Windows Subsystem for Linux 2 (WSL 2)`: https://docs.microsoft.com/en-us/windows/wsl/
 .. _everybeam insallation page: https://everybeam.readthedocs.io/en/latest/build-instructions.html
 
 *************
 Installation
 *************
 
-``WODEN`` is built for speed and only works with a GPU. Currently, you need either an NVIDIA GPU to use ``CUDA`` functionality, or something else that can use ``HIP`` (likely an AMD GPU). ``CUDA`` is tried and tested, whereas ``HIP`` is new in version 2.2 and not well tested. Furthermore, ``WODEN`` has only been tested to run on linux, specifically Ubuntu 16.04 up to 24.04. This does however include the _`Windows Subsystem for Linux 2 (WSL 2)`., so you can technically run in on Windows kinda.
+``WODEN`` is built for speed and intended to work with a GPU. Currently, you need either an NVIDIA GPU to use ``CUDA`` functionality, or something else that can use ``HIP`` (likely an AMD GPU). ``CUDA`` is tried and tested in ``WODEN``, whereas ``HIP`` is new in version 2.2 and not well tested. Furthermore, ``WODEN`` has only been tested to run on linux, specifically Ubuntu 16.04 up to 24.04. This does however include the `Windows Subsystem for Linux 2 (WSL 2)`_., so you can technically run on Windows kinda.
 
 You have two options for installation:
 
@@ -26,10 +26,21 @@ Both options are described below, jump to whatever suits you.
 Manual Installation
 ######################
 
-For examples of building ``WODEN`` from source on superclusters, see:
+If you don't want to read, an example installation command (assuming you've installed all dependencies) is::
 
-- ``WODEN/templates/install_woden_nt.sh`` for a CUDA build on Ngarrgu Tindebeek
-- ``WODEN/templates/install_woden_setonix.sh`` for a HIP build on Setonix
+   HYPER_VERSION=0.10.1
+   git clone https://github.com/JLBLine/WODEN.git &&
+   cd WODEN &&
+   mkdir build && cd build &&
+   cmake .. -DHBEAM_INC=/mwa_hyperbeam-${HYPER_VERSION}/include/ \
+            -DHBEAM_LIB=/mwa_hyperbeam-${HYPER_VERSION}/target/release/libmwa_hyperbeam.so \
+            -DEBEAM_INSTALL=/everybeam_install/ \
+            -DEBEAM_ROOT=/EveryBeam/ &&
+   make -j8 &&
+   cd .. &&
+   pip install -r requirements.txt && pip install .
+
+Obviously you'll need to change the paths to where you've installed things. The following sections will guide you through the installation process.
 
 Dependencies
 -----------------
@@ -88,32 +99,23 @@ linux-like systems.
 
   $ pip3 install -r requirements_testing.txt
 
-+ **everybeam** - You only need to do this if you want to use EveryBeam primary beams in your simulations. ``WODEN`` will check for the ``everybeam`` Python package at runtime, and run fine if it's missing (unless you ask it to run with EveryBeam, then it will complain). The build instructions for EveryBeam live on the `everybeam insallation page`_. You can follow them with *one important difference* - you need to currently install my branch, as it's the only one that has MWA Python bindings. You can do this by running::
++ **everybeam** - You only need to do this if you want to use EveryBeam primary beams in your simulations. ``WODEN`` will check for the ``everybeam`` Python package at runtime, and run fine if it's missing (unless you ask it to run with EveryBeam, then it will complain). The build instructions for EveryBeam live on the `everybeam insallation page`_. You'll have to install a bunch of dependencies, including ``casacore``. This is sad, but not too hard on Ubuntu.
+ 
+You can follow them with *one important difference* - you need to currently install my branch, as it's the only one that has MWA Python bindings. You can do this by running::
 
   $ git clone -b mwa_python_wrapper --recursive -j4 https://git.astron.nl/RD/EveryBeam.git
 
-  If you follow the EveryBeam instructions, you'll install a system-wide version. If this isn't suitable for your system, i.e. you're not running in a container, this was may approach. When I ran ``cmake``, I did::
+If you follow the EveryBeam instructions, you'll install a system-wide version. If this isn't suitable for your system, i.e. you're not running in a container, this was may approach. When I ran ``cmake``, I did::
 
-  $ cmake .. -DCMAKE_INSTALL_PREFIX=/home/jline/software/installed/ \
-     -DBUILD_WITH_PYTHON=ON
+  $ cmake .. -DCMAKE_INSTALL_PREFIX=/some/path/software/installed/ 
 
-  so I would know where the installation went. I also did all of this inside a conda environment called ``woden_dev``, but I think ``cmake`` still found the system Python. Once installed, I had to do::
-    
-  $ export PYTHONPATH=$PYTHONPATH:"/home/jline/software/installed/lib/python3.12/site-packages"
-  $ ln -s /home/jline/software/installed/share/everybeam /home/jline/software/anaconda3/envs/woden_dev/share/everybeam
-
-  which let me conda environment see everything it needed to. When I was running notebooks, which don't load stuff from system, only the conda environment, I had to do::
-
-  $ conda install -c conda-forge libstdcxx-ng
-  $ conda install hdf5
-
-  for certain things to work.
 
 Compiling ``WODEN`` ``C/CUDA`` code
-**************************************
+-----------------
+.. note:: The installation files used to make docker images live in ``WODEN/docker``. You can use them as a template to install on Ubuntu. If you have another OS, you should be able to use them as a guide.
 
-In an ideal world, if the installation of your dependencies went perfectly and
-you have a newer NVIDIA GPU, you should be able to simply run::
+In an ideal world, if the installation of your dependencies went perfectly,
+you have a newer NVIDIA GPU, and you don't care about EveryBeam, you should be able to simply run::
 
   $ git clone https://github.com/JLBLine/WODEN.git
   $ cd WODEN
@@ -123,10 +125,10 @@ you have a newer NVIDIA GPU, you should be able to simply run::
 
 et voila, your code is compiled. Keep reading to see how to install ``WODEN`` so you can run it from anywhere.
 
-.. warning:: Even if the code compiled, if your GPU has a compute capability < 5.1, newer versions of ``nvcc`` won't compile code that will work. You'll get error messages like "No kernel image available". Check out how to fix that in 'Machine specifics' below.
+.. warning:: Even if the code compiled, if your GPU has a compute capability < 5.1, newer versions of ``nvcc`` won't compile code that will work. You'll get error messages like "No kernel image available". Check out how to fix that in 'NVIDIA specifics' below.
 
-Machine specifics
-~~~~~~~~~~~~~~~~~~~~~
+HyperBeam
+~~~~~~~~~~~~~~~~
 It's almost a guarantee ``cmake`` won't be able to find ``mwa_hyperbeam``, so you'll have to point it to where things are installed. You can use two keywords in the following way to achieve that::
 
   $ cmake .. -DHBEAM_INC=/home/jline/software/mwa_hyperbeam/include \
@@ -134,6 +136,22 @@ It's almost a guarantee ``cmake`` won't be able to find ``mwa_hyperbeam``, so yo
 
 Obviously you'll need to point to where you have installed things. If *you* have a library with my name in the path I'd be concerned, so edit it as appropriate.
 
+EveryBeam
+~~~~~~~~~~~~~~~~
+``EveryBeam`` relies on ``casacore``. As ``WODEN`` compiles some EveryBeam code directly,
+you have to link ``WODEN`` against it. If you've installed via Ubuntu, ``CMake`` will be able to find it. If you've installed it in a non-standard location, you'll need to point ``CMake`` to it. You can do this via::
+
+  $ cmake .. -DCMAKE_PREFIX_PATH=/path/to/casacore
+
+Next, you not only have to point ``CMake`` to where you installed the compiled ``EveryBeam``, but also to the source code as well. Parts of ``EveryBeam`` rely on ``aocommon`` headers, which doesn't get copied during ``EveryBeam``  installation. So you need to point ``EBEAM_INSTALL`` to where you installed the compiled
+``EveryBeam`` outputs, and ``EBEAM_ROOT`` to where you installed the source code. You can do this via::
+
+  $ cmake .. -DEBEAM_INSTALL=/some/path/software/installed/ \
+             -DEBEAM_ROOT=/path/to/EveryBeam
+
+
+NVIDIA/CUDA specifics
+~~~~~~~~~~~~~~~~~~~~~
 All NVIDIA GPUs have a specific compute capability, which relates to their internal architecture. You can tell the compiler which architecture to compile for, which in theory should make compilation quicker, and ensure the code runs correctly on your GPU. You can find out the compute value here (https://developer.nvidia.com/cuda-gpus), and pass it to CMake via setting the ``CUDAARCHS`` environment variable (https://cmake.org/cmake/help/latest/envvar/CUDAARCHS.html) BEFORE you run the call to ``cmake``::
 
   $ export CUDAARCHS=60
@@ -147,16 +165,15 @@ If you need to pass extra flags to your CUDA compiler, you can do so by adding s
   -DCMAKE_CUDA_FLAGS="-Dsomeflag"
 
 
-Compiling ``WODEN`` ``C/HIP`` code
-**************************************
+AMD/HIP specifics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 If you have an AMD GPU, you can compile the ``HIP`` code instead of the ``CUDA`` code. This is a new feature in ``WODEN`` and not as well tested. You can compile the ``HIP`` code by setting the ``USE_HIP`` flag to ``ON`` when you run ``cmake`` (you'll still need to link )::
 
   $ cmake .. -DUSE_HIP=ON \
       -DHBEAM_INC=/home/jline/software/mwa_hyperbeam/include \
       -DHBEAM_LIB=/home/jline/software/mwa_hyperbeam/target/release/libmwa_hyperbeam.so
 
-Machine specifics
-~~~~~~~~~~~~~~~~~~~~~
 Similarly to ``CUDA``, you can set a ``HIP`` architecture. To find out which one you need, try::
   
   $ offload-arch
@@ -170,7 +187,7 @@ which spat of ``gfx90a`` for me. You pass that onto ``cmake`` via the ``HIP_ARCH
 Fair warning, I *had* to include the ``HIP_ARCH`` flag. The code would compile fine but not work at runtime, so a bit nasty.
 
 Installing ``wodenpy``
-*****************************
+-----------------------
 
 OK, we've compiled the C/GPU libraries; now to install the ``WODEN`` Python package and executables. You can do this by running::
 
@@ -180,7 +197,7 @@ OK, we've compiled the C/GPU libraries; now to install the ``WODEN`` Python pack
 That's it. You should be able to run ``run_woden.py --help`` on the command line.
 
 Post compilation (optional)
-*****************************
+----------------------------
 
 If you want to use the MWA FEE primary beam model, you must have the stored spherical harmonic coefficients hdf5 file ``mwa_full_embedded_element_pattern.h5``. You can then define this environment variable in your ``~/.bash_rc``::
 
@@ -210,11 +227,11 @@ For CUDA
 
 Fair warning, this is a new option, and hasn't been heavily tested. I have successfully run it on a number of clusters (via singularity). Which version you pull depends on your GPU. If you have an NVIDIA GPU, you need to work out what your compute capability is, and pull the appropriate image. Say you have an NVIDIA V100 card, you have a compute capacity of 7.0, so you'd pull the image like this::
 
-  $ docker pull jlbline/woden-2.3:cuda-70
+  $ docker pull jlbline/woden-2.5:cuda-70
 
 I have made images for computes ``60,61,70,75,80,86``. If you need another compute, either run the Docker script to make a new docker, or just compile from source as instructed above. In theory, you can just run ``WODEN`` commands by doing something like this::
 
-  $ docker run -it --gpus all woden-2.3:cuda-70 \
+  $ docker run -it --gpus all woden-2.5:cuda-70 \
     --env XDG_CONFIG_HOME=/somewhere/astropy_storage \
     --env XDG_CACHE_HOME=/somewhere/astropy_storage \
     run_woden.py --help
@@ -238,12 +255,12 @@ For CUDA
 
 If your system has ``singularity`` and not docker, you can convert the docker image to a singularity image via::
 
-  $ singularity build woden-2.3-70.sif docker://jlbline/woden-2.3:cuda-70
+  $ singularity build woden-2.5-70.sif docker://jlbline/woden-2.3:cuda-70
 
 with an example of running the help looking something like::
 
   $ singularity exec --nv --home=/astro/mwaeor/jline \
-    woden-2.3-70.sif run_woden.py --help
+    woden-2.5-70.sif run_woden.py --help
 
 Similarly to the ``docker`` image, ``--nv`` means use the NVIDIA GPUs, and ``--home`` sets a specific location to treat as home if you're not on a local machine.
 
@@ -260,3 +277,13 @@ and run it like::
   ${MYSOFTWARE}/woden-2.3-setonix.sif run_woden.py --help
 
 .. warning:: EVERYTHING on the internet will tell you to use the ``--rocm`` flag. This WILL NOT WORK with the Setonix based image, because of shenanigans. So leave it be.
+
+Updating ``astropy`` IERS
+############################
+
+If you're working on a cluster, often you won't have access to the internet. If you try and a recent date, you'll likely need to update the IERS data. This normally happens automatically, but obviously without internet you're cooked. If you're using a singularity image, I've included a little helper script, which you can launch on the head node (which will have internet) and then ``astropy`` will store a new IERS file in a location it thinks is sensible (which should be accessible to the compute nodes). You can run it like this::
+
+  $ apptainer shell --home=/path/to/cluster/home /path/to/sing_file/woden-2.5-80.sif
+  $ Apptainer> python3 /WODEN/docker/fetch_iers_data.py
+
+Note here I'm using ``apptainer``, but you can swap ``singularity`` in for ``apptainer``. It just depends on what system you're using. Also note that you need to change ``/path/to/cluster/home`` and ``/path/to/sing_file`` to the appropriate locations, but leave ``/WODEN/docker/fetch_iers_data.py`` as is, as it's in the image.

@@ -1,3 +1,5 @@
+"""Functions to help with git information retrieval"""
+
 from subprocess import check_output
 import importlib_resources
 import os

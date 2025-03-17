@@ -4,7 +4,7 @@ Tests for the functions in ``WODEN/src/visibility_set.c``. These functions handl
 a ``visibility_set_t`` struct, which holds the output visibilities. Functions
 here include mallocing, filling, and freeing attributes.
 
-``test_fill_timefreq_visibility_set.c``
+test_fill_timefreq_visibility_set.c
 *****************************************
 This calls ``visibility_set::fill_timefreq_visibility_set``, which uses a
 populated ``woden_settings_t`` struct to fill in the following attributes in
@@ -28,7 +28,7 @@ code versions are tested to within an absolute tolerance of 1e-15. The precision
 of ``allsteps_wavelengths`` is set by the user, and is tested to within 1e-7
 for FLOAT and 1e-15 for DOUBLE.
 
-``test_malloc_and_free.c``
+test_malloc_and_free.c
 *****************************************
 Very basic test of ``visibility_set::setup_visibility_set``,
 ``visibility_set::free_visi_set_inputs``, and ``visibility_set::free_visi_set_outputs``,
@@ -37,7 +37,7 @@ which are functions that either ``malloc`` or ``free`` specific attributes in a
 the following attributes are NOT a NULL if a ``malloc`` was called, and the correct
 attributes are NULL if ``free`` was called.
 
-``test_write_visi_set_binary.c``
+test_write_visi_set_binary.c
 *****************************************
 Tests ``visibility_set::write_visi_set_binary``, which writes out the contents
 of a ``visibility_set_t`` struct to a binary file. Tests by filling a
@@ -45,7 +45,7 @@ of a ``visibility_set_t`` struct to a binary file. Tests by filling a
 uses ``write_visi_set_binary``. Then reads that binary file in and checks the
 contents matched what was in the ``visibility_set_t`` struct.
 
-``test_write_visi_set_text.c``
+test_write_visi_set_text.c
 *****************************************
 Tests ``visibility_set::write_visi_set_text``, which writes out a subset of
 the contents of a ``visibility_set_t`` struct to a text file. This test

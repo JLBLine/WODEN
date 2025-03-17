@@ -66,7 +66,7 @@ class Test(unittest.TestCase):
             self.num_baselines = int(((self.num_antennas - 1)*self.num_antennas) / 2)
             
         self.num_time_steps = 2
-        self.int_jd = 2458647.0
+        self.jd_midnight = 2458646.5
         self.gitlabel = 'as987has'
         self.XYZ_array = np.arange(self.num_antennas*3)
         self.XYZ_array.shape = (self.num_antennas, 3)
@@ -106,7 +106,7 @@ class Test(unittest.TestCase):
                   central_freq_chan=self.central_freq_chan,
                   ra_point=self.ra_point, dec_point=self.dec_point,
                   output_uvfits_name=self.output_uvfits_name,
-                  int_jd=self.int_jd, gitlabel=self.gitlabel,
+                  jd_midnight=self.jd_midnight, gitlabel=self.gitlabel,
                   v_container=v_container,
                   uu=uu, vv=vv, ww=ww,
                   baselines_array=baselines_array, date_array=date_array,

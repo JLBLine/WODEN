@@ -1,3 +1,7 @@
+"""A function to centralise reading all sky model formats, and converting to
+the FITS format. Also a function to convert Python source objects in a
+ctypes Source_Catalogue object."""
+
 from wodenpy.skymodel.read_yaml_skymodel import read_yaml_radec_count_components
 from wodenpy.skymodel.read_fits_skymodel import read_fits_skymodel_chunks, read_fits_radec_count_components, check_columns_fits
 from wodenpy.skymodel.read_text_skymodel import read_text_radec_count_components

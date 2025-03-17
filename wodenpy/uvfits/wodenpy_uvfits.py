@@ -1,3 +1,4 @@
+"""Code to write out UVFITS files"""
 from astropy.io import fits
 import numpy as np
 from wodenpy.observational.calc_obs import calc_jdcal
@@ -12,7 +13,7 @@ D2R = np.pi / 180.0
 SOLAR2SIDEREAL = 1.00274
 
 
-def RTS_encode_baseline(b1, b2):
+def RTS_encode_baseline(b1 : int, b2 : int):
     """The ancient aips/miriad extended way of encoding a baseline by antenna
     number, by multiplying antenna number 1 by 256, and adding the second
     antenna number. (e.g. `b1*256 + b2`). Needed for populating the uvfits files.
@@ -38,7 +39,7 @@ def RTS_encode_baseline(b1, b2):
     else:
         return b1*256 + b2
 
-def RTS_decode_baseline(blcode):
+def RTS_decode_baseline(blcode : int):
     """The ancient aips/miriad extended way of decoding a baseline. Takes
     the baseline code from the 'BASELINE' array of a uvfits, and returns the
     index of antennas 1 and 2 that form the baseline.
@@ -69,9 +70,10 @@ def RTS_decode_baseline(blcode):
     return b1,b2
 
 
-def make_antenna_table(XYZ_array=None, telescope_name=None,num_antennas=None,
-                       freq_cent=None, date=None, gst0_deg=None, degpdy=None,
-                       ut1utc=None, longitude=None, latitude=None, array_height=None, ant_names=False):
+def make_antenna_table(XYZ_array : np.ndarray, telescope_name : str, num_antennas : int,
+                       freq_cent : float, date : str, gst0_deg : float, degpdy : float,
+                       ut1utc : float, longitude : float, latitude : float,
+                       array_height : float, ant_names : np.ndarray = False):
     """Write an antenna table for a uvfits file. This is the first table in
     the uvfits file that encodes antenna positions, with some header keywords.
     Uses `astropy.io.fits.BinTableHDU`_ to create the table.
@@ -80,7 +82,7 @@ def make_antenna_table(XYZ_array=None, telescope_name=None,num_antennas=None,
 
     Parameters
     ----------
-    XYZ_array : float array
+    XYZ_array : np.ndarray
         Array with shape = (num_antennas, 3), containg the local :math:`X,Y,Z`
         coorindates of the antenna locations (meters)
     telescope_name : string
@@ -104,6 +106,9 @@ def make_antenna_table(XYZ_array=None, telescope_name=None,num_antennas=None,
         Latitude of the array (deg)
     array_height : float
         Height of the array above sea level (metres)
+    ant_names : np.ndarray
+        Optional array of antenna names to assign to the 'ANNAME' column. If
+        not given, will assign antenna names as '00001', '00002', etc.
 
     Returns
     -------
@@ -173,15 +178,15 @@ def make_antenna_table(XYZ_array=None, telescope_name=None,num_antennas=None,
 
     return hdu_ant
 
-def create_uvfits(v_container=None,freq_cent=None,
-                  central_freq_chan=None,ch_width=None,
-                  ra_point=None, dec_point=None,
-                  output_uvfits_name=None,uu=None,vv=None,ww=None,
-                  longitude=None, latitude=None, array_height=None,
-                  telescope_name=None,
-                  baselines_array=None, date_array=None,
-                  int_jd=None, hdu_ant=None, gitlabel=False,
-                  IAU_order=False, comment=False):
+def create_uvfits(v_container: np.ndarray, freq_cent: float,
+                  central_freq_chan: int, ch_width: float,
+                  ra_point: float, dec_point: float,
+                  output_uvfits_name: str, uu: np.ndarray, vv: np.ndarray, ww: np.ndarray,
+                  longitude: float, latitude: float, array_height: float,
+                  telescope_name: str,
+                  baselines_array: np.ndarray, date_array: np.ndarray,
+                  jd_midnight: int, hdu_ant: fits.BinTableHDU, gitlabel: str = False,
+                  IAU_order: bool = False, comment: str = False) -> None:
     """
     Takes visibility data read in from WODEN binary files, predefined
     BASELINE and DATE arrays and an antenna table, and writes them out
@@ -199,7 +204,7 @@ def create_uvfits(v_container=None,freq_cent=None,
 
     Parameters
     ----------
-    v_container : float array
+    v_container : np.ndarray
         Data container for the visibility data. Should have
         `shape = (num_time_steps*num_baselines, 1, 1, num_freq_channels, 4, 3)`
         and should contain instrumental linear polarisation visibilities. The axes should change as:
@@ -222,24 +227,32 @@ def create_uvfits(v_container=None,freq_cent=None,
         Declination of the observation, to set header keyword 'OBSDEC' with (deg)
     output_uvfits_name : string
         Name for the output uvfits file
-    uu : float array
+    uu : np.ndarray
         :math`u` coordinates (seconds).
-    vv : float array
+    vv : np.ndarray
         :math`v` coordinates (seconds).
-    ww : float array
+    ww : np.ndarray
         :math`w` coordinates (seconds).
-    baselines_array : int/float array
+    longitude : float
+        Longitude of the array (deg)
+    latitude : float
+        Latitude of the array (deg)
+    array_height : float
+        Height of the array above sea level (metres)
+    telescope_name : string
+        Name to assign to the 'TELESCOP' header keyword
+    baselines_array : np.ndarray
         Baseline coding needed for 'BASELINE' array
-    date_array : float array
+    date_array : np.ndarray
         Fractional julian date array to put in 'DATE' array (days)
-    int_jd : int
-        Integer julian date to put in the header as 'PZERO4'
+    jd_midnight : int
+        JD date at midnight of the observation; goes into header value 'PZERO4'
     hdu_ant : `astropy.io.fits.hdu.table.BinTableHDU`
         Populated uvfits antenna table
     gitlabel : string
         Optional string to add as 'GITLABEL' in the header. Used by WODEN to
         add the git commit of the code for this run
-    IAU_order : Boolean
+    IAU_order : bool
         By default, the visibilities out of the GPU/C code have 
         XX = North-South, which is the the IAU ordering. Turns out most people
         want `uvfits` with XX = East-West. So when `IAU_order == True`, do
@@ -298,7 +311,7 @@ def create_uvfits(v_container=None,freq_cent=None,
     uvhdu.header['PSCAL3'] = 1.0
     uvhdu.header['PZERO3'] = 0.0
     uvhdu.header['PSCAL4'] = 1.0
-    uvhdu.header['PZERO4'] = float(int_jd)
+    uvhdu.header['PZERO4'] = float(jd_midnight)
     uvhdu.header['PSCAL5'] = 1.0
     uvhdu.header['PZERO5'] = 0.0
     uvhdu.header['PSCAL6'] = 1.0
@@ -368,8 +381,9 @@ def create_uvfits(v_container=None,freq_cent=None,
     hdulist.writeto(output_uvfits_name,overwrite=True)
     hdulist.close()
     
-def make_baseline_date_arrays(num_antennas, date, num_time_steps, time_res,
-                              do_autos=False):
+def make_baseline_date_arrays(num_antennas: int, date: str,
+                              num_time_steps: int, time_res: float,
+                              do_autos: bool = False) -> tuple[np.ndarray, np.ndarray]:
     """Makes the BASELINE and DATE arrays needed in the uvfits file
     The BASELINE array encode which two antennas formed the baseline
     The DATE array contains the fractional jd date, that is added to the
@@ -389,6 +403,8 @@ def make_baseline_date_arrays(num_antennas, date, num_time_steps, time_res,
         time_res : float
             Integration time of the data (seconds)
         time_res : Boolean
+            Whether to include auto-correlations (same antenna to antenna)
+        do_autos : Boolean
             Whether to include auto-correlations (same antenna to antenna)
 
     Returns
@@ -420,10 +436,10 @@ def make_baseline_date_arrays(num_antennas, date, num_time_steps, time_res,
                 template_baselines[baseline_ind] = RTS_encode_baseline(b1+1, b2+1)
                 baseline_ind += 1
 
-    ##Calculate the Julian date, which get's split up into the header (int_jd)
+    ##Calculate the Julian date, which get's split up into the header (jd_midnight)
     ##and DATE array (float_jd)
     ##array in the
-    int_jd, float_jd = calc_jdcal(date)
+    jd_midnight, float_jd = calc_jdcal(date)
 
     ##Need an array the length of number of baselines worth of the fractional jd date
     float_jd_array = np.ones(num_baselines)*float_jd

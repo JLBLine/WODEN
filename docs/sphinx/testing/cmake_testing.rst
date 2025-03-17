@@ -5,14 +5,11 @@ This is totally optional, but you can run the unit / integration tests I use for
 developing ``WODEN`` to check your system / the code runs as expected. The tests
 are compiled using the same ``cmake`` script as the main code.
 
+The test code lives in the ``WODEN/cmake_testing`` directory. See below on how to compile. Everything is run through ``ctest``, a testing tool that comes with ``cmake``. The Python code is techincally run via ``pytest``, but the tests are still called through ``ctest``.
+
 ALL tests are compiled in both FLOAT and DOUBLE precision, meaning the same
 test code is used to test the two different precision versions, with the compiler
-dropping in the necessary precision. Unless explicitly noted in the details
-in :ref:`What do the tests actually do?`, the tests require the same level
-of accuracy from the FLOAT and DOUBLE precision versions. Most of the time
-the FLOAT version is accurate to an absolute tolerance of 1e-7, and the DOUBLE
-to 1e-15. Read the tolerances for specific functions in the sections listed in
-:ref:`What do the tests actually do?`.
+dropping in the necessary precision. See below in :ref:`What do the tests actually do?` for an overview of what the tests actually do.
 
 Dependencies
 -------------
@@ -90,11 +87,11 @@ If you want more detail of what the tests are doing, run::
 What do the tests actually do?
 ---------------------------------
 
-The tests are all located in ``WODEN/cmake_testing``, and each directory within contains tests
-for a different file from ``WODEN/src``. Within each test directory, there are separate files for testing different functions, which include the function name. As an example, the directory ``WODEN/cmake_testing/GPU_code/fundamental_coords`` contains tests for the file ``WODEN/src/fundamental_coords.cpp``, and contains test files that test the following functions::
+The tests are all located in ``WODEN/cmake_testing``, and each directory therein contains tests
+for a different file from ``WODEN/wodenpy``, ``WODEN/src``, and ``WODEN/scripts``. Within each test directory, there are separate directories for different files, and in each directory, a different test file for testing a specific function, which include the function name. As an example, the directory ``WODEN/cmake_testing/GPU_or_C_code/beam_settings`` contains tests for the file ``WODEN/src/beam_settings.c``, and contains test files that test the following functions::
 
-  cmake_testing/GPU_code/fundamental_coords/test_lmn_coords.c -> src/fundamental_coords.cpp::kern_calc_lmn
-  cmake_testing/GPU_code/fundamental_coords/test_uvw_coords.c -> src/fundamental_coords.cpp::kern_calc_uvw
+  test_fill_primary_beam_settings.c -> src/beam_settings.c::fill_primary_beam_settings
+
 
 The ``C`` and ``GPU`` functions are tested using the `Unity`_ library, which has useful functions like::
 
@@ -112,7 +109,9 @@ function.
 
 The sections below give an outline of the tests performed in each directory.
 
-``wodenpy`` code tests:
+``wodenpy`` tests
+~~~~~~~~~~~~~~~~~~~~
+These tests are for the ``python`` module in ``WODEN/wodenpy``. They test the ``python`` code using the ``pytest`` library, and are run using the ``ctest`` command. The tests are located in the ``WODEN/cmake_testing/wodenpy`` directory.
 
 .. toctree::
    :maxdepth: 1
@@ -120,30 +119,33 @@ The sections below give an outline of the tests performed in each directory.
    cmake_testing/wodenpy/array_layout
    cmake_testing/wodenpy/observational
    cmake_testing/wodenpy/phase_rotate
+   cmake_testing/wodenpy/primary_beam
    cmake_testing/wodenpy/skymodel
    cmake_testing/wodenpy/use_libwoden
    cmake_testing/wodenpy/uvfits
    cmake_testing/wodenpy/wodenpy_setup
 
-``C`` code tests:
+
+``GPU_or_C_code`` tests
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Tests in some of these sections test code that has both ``C`` and ``GPU`` versions; by using the same test code for both, we can ensure the ``C`` and ``GPU`` versions are consistent. The tests are located in the ``WODEN/cmake_testing/GPU_or_C_code`` directory.
 
 .. toctree::
    :maxdepth: 1
 
+   cmake_testing/beam_settings
+   cmake_testing/calculate_visibilities
+   cmake_testing/call_everybeam
+   cmake_testing/fundamental_coords
+   cmake_testing/logger
    cmake_testing/primary_beam
+   cmake_testing/run_woden
+   cmake_testing/source_components
    cmake_testing/visibility_set
 
-``GPU`` code tests:
-
-.. toctree::
-   :maxdepth: 1
-
-   cmake_testing/calculate_visibilities
-   cmake_testing/fundamental_coords
-   cmake_testing/primary_beam_gpu
-   cmake_testing/source_components
-
-``script`` code tests:
+``script`` code:
+~~~~~~~~~~~~~~~~~~~~~~~~~
+These integration tests check the major ``python`` scripts as working as expected. The tests are located in the ``WODEN/cmake_testing/scripts`` directory.
 
 .. toctree::
    :maxdepth: 1
@@ -153,5 +155,3 @@ The sections below give an outline of the tests performed in each directory.
    cmake_testing/scripts/concat_woden_uvfits
    cmake_testing/scripts/run_woden
    cmake_testing/scripts/woden_uv2ms
-
-.. note:: To be able to test ``GPU`` functions that are designed to work solely in GPU memory, it's necessary to write wrapper functions that allocate GPU memory, pass the data into the ``GPU`` code to be tested, and then copy the results back into host memory. I've kept these 'intermediate' test functions inside the ``*.cpp`` files that contain the code being tested, as it's not straight forward / performance degrading to have them in separate files. On casual inspection it looks like there are many functions in the ``*.cpp`` files I haven't written tests for, but the extra functions are there *because* of testing. Sigh.

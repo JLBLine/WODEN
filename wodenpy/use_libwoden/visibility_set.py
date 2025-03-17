@@ -1,3 +1,4 @@
+"""Functions to create and manipulate visibility sets in WODEN"""
 import ctypes 
 import importlib_resources
 import wodenpy
@@ -5,6 +6,23 @@ import numpy as np
 from ctypes import POINTER, c_double, c_float, c_int
 
 VELC = 299792458.0
+
+class Visi_Set_Python(object):
+    """A class structured equivalently to a `visibility_set_t` struct, used by
+    the C/C++/GPU code in libwoden_*.so. This class is used in the Python
+    code to pass around easily (and can be pickled)"""
+    def __init__(self):
+        self.us_metres = None
+        self.vs_metres = None
+        self.ws_metres = None
+        self.sum_visi_XX_real = None
+        self.sum_visi_XX_imag = None
+        self.sum_visi_XY_real = None
+        self.sum_visi_XY_imag = None
+        self.sum_visi_YX_real = None
+        self.sum_visi_YX_imag = None
+        self.sum_visi_YY_real = None
+        self.sum_visi_YY_imag = None
 
 def create_visi_set_struct(precision="double"):
     """Creates a `Visi_Set` class structured equivalently to a `visibility_set_t`
@@ -29,7 +47,7 @@ def create_visi_set_struct(precision="double"):
     
     class Visi_Set(ctypes.Structure):
         """A class structured equivalently to a `visi_set` struct, used by 
-        the C and CUDA code in libwoden_float.so
+        the C/C++/GPU code in libwoden_*.so
 
         :cvar POINTER(c_user_precision) us_metres: Output $u$ for all time steps, frequency steps, and baselines
         :cvar POINTER(c_user_precision) vs_metres: Output $v$ for all time steps, frequency steps, and baselines
@@ -121,6 +139,8 @@ def setup_visi_set_array(Visi_Set : Visi_Set, #type: ignore
     ----------
     Visi_Set : Visi_Set
         The Visi_Set class; NOT initialised, just the Class type
+    num_bands : int
+        Number of bands to assign memory for
     num_visis : int
         Number of visibilities to assign memory for
     precision : str, optional
@@ -140,11 +160,19 @@ def setup_visi_set_array(Visi_Set : Visi_Set, #type: ignore
 
     return visi_set_array
 
-def load_visibility_set(visibility_set=None,num_baselines=None,num_freq_channels=None,
-              num_time_steps=None, precision=None, do_autos=False, num_ants=0):
+def load_visibility_set(visibility_set : Visi_Set_Python,
+                        num_baselines : int, num_freq_channels : int,
+                        num_time_steps : int, num_ants : int,
+                        precision : str = "double",
+                        do_autos: bool = False):
     """
-    Read the WODEN ctype output and shove into a numpy arrays, ready to be put
-    into a uvfits file. By default, WODEN only outputs cross-correlations.
+    Read the contents of `visibility_set` (a `Visi_Set_Python` object), ready to be put
+    into a uvfits file. `visibility_set` is a list of `Visi_Set_Python` objects,
+    each of which contains the visibility data for a single band and thread.
+    It should have the shape `(num_bands, num_threads)`.
+    
+    
+    By default, WODEN only outputs cross-correlations.
     In this case, the output binary is ordered by baseline (fastest
     changing), frequency, and time (slowest changing). Visibility coords and
     data are read in, with the visi data output into an array of
@@ -165,20 +193,20 @@ def load_visibility_set(visibility_set=None,num_baselines=None,num_freq_channels
 
     Parameters
     ----------
-    filename : string
-        Name of WODEN binary file to read from
+    visibility_set : Visi_Set_Python
+        The visibility set to load the data into
     num_baselines : int
-        Number of baselines in the binary file
+        Number of baselines
     num_freq_channels : int
-        Number of frequencies in the binary file
+        Number of frequencies
     num_time_steps : int
-        Number of time steps in the binary file
+        Number of time steps
+    num_ants : int
+        Number of antennas (a.k.a. stations/tiles, e.g. 128 for MWA)
     precision : string
         Precision WODEN was run with - either 'float' or 'double'
     do_autos : Boolean
         if True, data has auto-correlations in
-    do_autos : int
-        Number of antennas in the array
 
     Returns
     -------
@@ -206,19 +234,17 @@ def load_visibility_set(visibility_set=None,num_baselines=None,num_freq_channels
     num_visi = num_time_steps * num_freq_channels * (num_baselines + num_ants)
     num_cross = num_time_steps * num_freq_channels * num_baselines
 
-    ##Righto, this converts from the ctype POINTER into a numpy array
-    ##This is grabbing all the lovely things calculated by the GPU
-    us_metres = np.ctypeslib.as_array(visibility_set.us_metres, shape=(num_visi,))
-    vs_metres = np.ctypeslib.as_array(visibility_set.vs_metres, shape=(num_visi,))
-    ws_metres = np.ctypeslib.as_array(visibility_set.ws_metres, shape=(num_visi,))
-    visi_XX_real = np.ctypeslib.as_array(visibility_set.sum_visi_XX_real, shape=(num_visi,))
-    visi_XX_imag = np.ctypeslib.as_array(visibility_set.sum_visi_XX_imag, shape=(num_visi,))
-    visi_XY_real = np.ctypeslib.as_array(visibility_set.sum_visi_XY_real, shape=(num_visi,))
-    visi_XY_imag = np.ctypeslib.as_array(visibility_set.sum_visi_XY_imag, shape=(num_visi,))
-    visi_YX_real = np.ctypeslib.as_array(visibility_set.sum_visi_YX_real, shape=(num_visi,))
-    visi_YX_imag = np.ctypeslib.as_array(visibility_set.sum_visi_YX_imag, shape=(num_visi,))
-    visi_YY_real = np.ctypeslib.as_array(visibility_set.sum_visi_YY_real, shape=(num_visi,))
-    visi_YY_imag = np.ctypeslib.as_array(visibility_set.sum_visi_YY_imag, shape=(num_visi,))
+    us_metres = visibility_set.us_metres
+    vs_metres = visibility_set.vs_metres
+    ws_metres = visibility_set.ws_metres
+    visi_XX_real = visibility_set.sum_visi_XX_real
+    visi_XX_imag = visibility_set.sum_visi_XX_imag
+    visi_XY_real = visibility_set.sum_visi_XY_real
+    visi_XY_imag = visibility_set.sum_visi_XY_imag
+    visi_YX_real = visibility_set.sum_visi_YX_real
+    visi_YX_imag = visibility_set.sum_visi_YX_imag
+    visi_YY_real = visibility_set.sum_visi_YY_real
+    visi_YY_imag = visibility_set.sum_visi_YY_imag
 
     ##If doing auto-correlations, need some mapping arrays so we can
     ##shove the correct data into the correct spots

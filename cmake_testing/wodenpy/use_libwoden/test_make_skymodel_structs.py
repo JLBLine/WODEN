@@ -31,12 +31,6 @@ class Test(unittest.TestCase):
         self.read_source_catalogue = libwoden.read_source_catalogue
         self.read_source_catalogue.argtypes = [ctypes.POINTER(self.woden_struct_classes.Source_Catalogue)]
         
-        # ## Read in the C library for double version
-        # libwoden_double = ctypes.cdll.LoadLibrary(f"{test_dir}/libread_source_catalogue_double.so")
-        # self.read_source_catalogue_double = libwoden_double.read_source_catalogue
-        # self.read_source_catalogue_double.argtypes = [ctypes.POINTER(ws.source_catalogue_Double)]
-
-    
     def read_C_output_textfile(self):
         
         output_dict = {}
@@ -62,8 +56,6 @@ class Test(unittest.TestCase):
         
         for precision in ["float", "double"]:
             
-            print(precision)
-        
             self.woden_struct_classes = Woden_Struct_Classes(precision)
             
             self.read_in_C_functions(precision)
@@ -82,12 +74,12 @@ class Test(unittest.TestCase):
                 for j in range(num_comps):
                     components.ras[j] = i + j
                     
-        self.read_source_catalogue(cropped_sky_models)
-        data = self.read_C_output_textfile()
-        
-        for i in range(num_sources):
-            for j in range(num_comps):
-                self.assertEqual(data[f'cropped_sky_models->sources[{i}].gauss_components.ras[{j}]'], i+j)
+            self.read_source_catalogue(cropped_sky_models)
+            data = self.read_C_output_textfile()
+            
+            for i in range(num_sources):
+                for j in range(num_comps):
+                    self.assertEqual(data[f'cropped_sky_models->sources[{i}].gauss_components.ras[{j}]'], i+j)
         
 
 ##Run the test

@@ -1,14 +1,17 @@
 .. _`this googledoc link to woden-srclist_pumav3.txt`: https://drive.google.com/file/d/1GFnQPXVGsS_7eE5EKTuRp6naNO6IHNFI/view?usp=sharing
+.. _`https://github.com/JLBLine/srclists`: https://github.com/JLBLine/srclists
 
 MWA EoR1 simulation
 ====================
 
 .. note:: Running the simulation and making all the images will take up around 1.8 GB storage.
 
-You'll need to download the skymodel from `this googledoc link to woden-srclist_pumav3.txt`_ and put it in the correct directory. If you're comfortable with ``wget`` you can do::
+We'll use a sky model out of this repo here `https://github.com/JLBLine/srclists`_. 
+If you don't want to clone the entire repo, you can just download the specific source list (which is 41MB) via::
+
 
   $ cd WODEN/examples/MWA_EoR1
-  $ wget 'https://docs.google.com/uc?export=download&id=1GFnQPXVGsS_7eE5EKTuRp6naNO6IHNFI' -O woden-srclist_pumav3.txt
+  $ wget https://github.com/JLBLine/srclists/raw/refs/heads/master/srclist_pumav3_EoR0LoBES_EoR1pietro_CenA-GP_2023-11-07.fits 
 
 This skymodel contains over 300,000 sources, and is based on the GLEAM catalogue, with some embellishment. The simulation we're going to run is of the MWA 'EoR1' field, centred at RA, Dec = :math:`60^\circ, -30^\circ`. This field contains Fornax A, and is a good way to demonstrate a sky with point, Gaussian, and shapelet models, as well as the effect of the MWA FEE primary beam. To run the simulation, simply run::
 
@@ -27,7 +30,7 @@ Which contains the command::
     --primary_beam=MWA_FEE \
     --sky_crop_components
 
-Running this took 55 mins 46 secs seconds on my GPU (running with the ``--precision=float`` flag runs in 10 min 39 sec). I've reduced the time and frequency resolution as specified in the ``metafits`` file to keep the size of the outputs smaller on your machine. If you wanted to run the full resolution data of this observation, (2s, 40kHz), you can just remove the ``--num_freq_channels, --num_time_steps, --freq_res, --time_res`` arguments.
+Running this took 25 mins 5 secs seconds on my GPU (running with the ``--precision=float`` flag runs in 11 min 47 sec). I've reduced the time and frequency resolution as specified in the ``metafits`` file to keep the size of the outputs smaller on your machine. If you wanted to run the full resolution data of this observation, (2s, 40kHz), you can just remove the ``--num_freq_channels, --num_time_steps, --freq_res, --time_res`` arguments.
 
 I've included two imaging commands::
 

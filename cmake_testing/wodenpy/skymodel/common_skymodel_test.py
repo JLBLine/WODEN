@@ -41,6 +41,7 @@ class Args:
         self.num_freq_channels = 0
         self.freq_res = 80e+3
         self.hdf5_beam_path = ""
+        self.fast_everybeam = False
 
 class Skymodel_Settings:
     """Something to hold all the various settings and pass around between

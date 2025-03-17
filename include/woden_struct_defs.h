@@ -5,6 +5,7 @@
 #include "constants.h"
 #include "woden_precision_defs.h"
 #include <mwa_hyperbeam.h>
+#include "call_everybeam_c.h"
 
 //Different
 typedef enum {POINT=0, /*!< Point source type component */
@@ -85,8 +86,9 @@ typedef struct _components_t {
   to the correct ra, dec, major, minor, pa for a SHAPELET */
 
   //Specific to observation settings for these COMPONENTs
-  user_precision_t *azs; /*!< SHAPELET source azimuth angles for all time steps */
-  user_precision_t *zas; /*!< SHAPELET source zenith angles for all time steps */
+  user_precision_t *azs; /*!< Azimuth angles for all time steps */
+  user_precision_t *zas; /*!< Zenith angles for all time steps */
+  user_precision_t *para_angles; /*!< Parallactic angles for all time steps */
   double *beam_has; /*!< Hour angle of COMPONENTs for all time steps, used for
    beam calculations */
   double *beam_decs; /*!< Declinations of COMPONENTs for all time steps, used for
@@ -105,18 +107,6 @@ typedef struct _components_t {
   frequencies, and times for these COMPONENTS*/
   user_precision_complex_t *gys; /*!< East-West Beam gain values for all directions,
   frequencies, and times for these COMPONENTS*/
-
-  /*
-  Things to hold beam gain values when you have different beams per antenna
-  */
-  user_precision_complex_t *gxs_ants; /*!< North-South Beam gain values for all directions,
-  frequencies, times, and antennas for these COMPONENTS*/
-  user_precision_complex_t *Dxs_ants; /*!< North-South Beam leakage values for all directions,
-  frequencies, times, and antennas for these COMPONENTS*/
-  user_precision_complex_t *Dys_ants; /*!< East-West Beam leakage values for all directions,
-  frequencies, times, and antennas for these COMPONENTS*/
-  user_precision_complex_t *gys_ants; /*!< East-West Beam gain values for all directions,
-  frequencies, times, and antennas for these COMPONENTS*/
 
   //Leave off the d_ from these device values, as the components_t struct
   //itself will have the d_ label if doing things on the GPU
@@ -216,13 +206,6 @@ typedef struct _source_t {
   components_t shape_components; /*!< `components_t` holding component
   information for all SHAPELET COMPONENTs in this SOURCE.*/
 
-  //Device versions
-  components_t d_point_components; /*!< `components_t` holding component
-  information for all POINT COMPONENTs in this SOURCE.*/
-  components_t d_gauss_components; /*!< `components_t` holding component
-  information for all GAUSSIAN COMPONENTs in this SOURCE.*/
-  components_t d_shape_components; /*!< `components_t` holding component
-  information for all SHAPELET COMPONENTs in this SOURCE.*/
 
 } source_t;
 
@@ -262,6 +245,8 @@ typedef struct _beam_settings_t {
     double base_middle_freq; /*!< The frequency at the middle of the base coarse band */
     uint32_t *hyper_delays; /*!< MWA FEE delays in a format that hyperbeam likes */
 
+    struct Telescope *everybeam_telescope; /*!< Loaded Everybeam Telescope object */
+
 
 } beam_settings_t;
 
@@ -283,7 +268,7 @@ typedef struct _visibility_set_t {
   frequency steps, and baselines (radians)*/
   user_precision_t *allsteps_wavelengths; /*!< Wavelengths for all time steps,
   frequency steps, and baselines (metres)*/
-  double *channel_frequencies; /*!< Frequencies for a frequency steps (Hz)*/
+  double *channel_frequencies; /*!< Frequencies for all frequency steps (Hz)*/
 
   user_precision_t *sum_visi_XX_real; /*!< Real values for XX polarisation for all time
   steps, frequency steps, and baselines */
@@ -323,7 +308,6 @@ typedef struct _woden_settings_t {
   double base_low_freq;  /*!< The lowest fine channel frequency of band 1*/
   int num_time_steps;  /*!< Number of time steps to simulate*/
   double time_res;  /*!< Time resolution of simulation (seconds)*/
-  const char* cat_filename;  /*!< Path to WODEN-style sky model*/
   int num_bands;  /*!< Number of coarse frequency bands to simulate */
   int *band_nums;  /*!< Which number coarse bands to simulate (e.g 1,4,6) */
   int sky_crop_type;  /*!< Whether to crop sky models by SOURCE or COMPONENT */
@@ -362,6 +346,12 @@ typedef struct _woden_settings_t {
   int single_everybeam_station; /*!< If using everybeam, add this to say we are only using a single station*/
   int off_cardinal_dipoles; /*!< Boolean of whether to use off-cardinal dipole equations to
   apply the beams gains to the Stokes IQUV parameters*/
+  int do_gpu; /*!< Boolean of whether to use the GPU or not (0 False, 1 True)*/
+  int verbose; /*!< Boolean of whether to print out verbose information or not (0 False, 1 True)*/
+  int normalise_primary_beam; /*!< Boolean of whether to normalise the primary beam (0 False, 1 True) */
+  const char* beam_ms_path; /*!< Path to a measurement set for EveryBeam */
+  double eb_beam_ra0; /*!< Right ascension to lock the EveryBeam primary beam centre to (radians) */
+  double eb_beam_dec0; /*!< Declination to lock the EveryBeam primary beam centre to (radians) */
 
 } woden_settings_t;
 
@@ -386,3 +376,73 @@ typedef struct _array_layout_t {
     double lst_base; /*!< Local sidereal time of the first time step (radians)*/
 
 } array_layout_t;
+
+/**
+Struct to contain the various inputs needed for many functions used by
+`calculate_visibilities`.
+
+*/
+typedef struct _calc_visi_inouts_t {
+  double *X_diff; /*!< The length of all baselines in \f$X\f$ (metres).
+    Only used when processing on GPU, as already exists in `array_layout_t`.
+    Easier to copy everythng into one struct*/
+  double *Y_diff; /*!< The length of all baselines in \f$Y\f$ (metres).
+    Only used when processing on GPU, as already exists in `array_layout_t`.
+    Easier to copy everythng into one struct*/
+  double *Z_diff; /*!< The length of all baselines in \f$Z\f$ (metres).
+    Only used when processing on GPU, as already exists in `array_layout_t`.
+    Easier to copy everythng into one struct*/
+  double *allsteps_sha0s; /*!< Sine of hour angle of phase centre for all
+  time steps, frequency steps, and baselines*/
+  double *allsteps_cha0s; /*!< Cosine of hour angle of phase centre for all
+  time steps, frequency steps, and baselines*/
+  user_precision_t *allsteps_wavelengths; /*!< Wavelengths for all time steps,
+  frequency steps, and baselines (metres)*/
+
+  user_precision_t *u_metres; /*!< Array of `u` coords (metres)*/
+  user_precision_t *v_metres; /*!< Array of `v` coords (metres)*/
+  user_precision_t *w_metres; /*!< Array of `w` coords (metres)*/
+  user_precision_t *us; /*!< Array of `u` coord (wavelengths)*/
+  user_precision_t *vs; /*!< Array of `v` coord (wavelengths)*/
+  user_precision_t *ws; /*!< Array of `w` coord (wavelengths)*/
+  double *freqs; /*!< Frequencies for all frequency steps (Hz)*/
+  
+  //If we have a different primary beam for each antenna, setup the baseline
+  //to anetenna mapping arrays
+  int *ant1_to_baseline_map; /*!< The index of antenna 1 in all unique pairs of
+antennas. Used to map iBaseline to the correct antenna 1 */
+  int *ant2_to_baseline_map; /*!< The index of antenna 2 in all unique pairs of
+antennas. Used to map iBaseline to the correct antenna 2 */
+
+  //Shapelet specific stuff. Only gets malloced/used if we have shapelets
+  user_precision_t *sbf; /*!< Array of shapelet basis functions as created by shapelet_basis::create_sbf */
+  user_precision_t *u_shapes; /*!<Output `u` coords with various phase centres for
+SHAPELET components (metres) */
+  user_precision_t *v_shapes; /*!<Output `v` coords with various phase centres for
+SHAPELET components (metres) */
+
+} calc_visi_inouts_t;
+
+
+/*!
+A struct to contain primary beam values
+*/
+typedef struct _beam_gains_t {
+
+  int *ant1_to_baseline_map; /*!< The index of antenna 1 in all unique pairs of
+antennas. Used to map iBaseline to the correct antenna 1 */
+  int *ant2_to_baseline_map; /*!< The index of antenna 2 in all unique pairs of
+antennas. Used to map iBaseline to the correct antenna 2 */
+  int use_twobeams; /*!< The beam gains were made with unique primary beams so
+  should use two antenna patterns per visibility */
+
+  user_precision_complex_t *gxs; /*!< North-South Beam gain values
+  for all beams, directions, frequencies, and times for these COMPONENTS*/
+  user_precision_complex_t *Dxs; /*!< North-South Beam leakage values
+  for all beams, directions, frequencies, and times for these COMPONENTS*/
+  user_precision_complex_t *Dys; /*!< East-West Beam leakage values
+  for all beams, directions, frequencies, and times for these COMPONENTS*/
+  user_precision_complex_t *gys; /*!< East-West Beam gain values
+  for all beams, directions, frequencies, and times for these COMPONENTS*/
+
+} beam_gains_t;

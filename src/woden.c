@@ -1,34 +1,28 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <complex.h>
-
-#include "woden_precision_defs.h"
-#include "constants.h"
-#include "woden_struct_defs.h"
-
-// #include "shapelet_basis.h"
-#include "primary_beam.h"
-#include "visibility_set.h"
-#include "hyperbeam_error.h"
-
-//Main GPU executable to link in
-extern void calculate_visibilities(array_layout_t *array_layout,
-  source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
-  woden_settings_t *woden_settings, visibility_set_t *visibility_set,
-  user_precision_t *sbf);
+#include "woden.h"
 
 int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_sets,
-             source_catalogue_t *cropped_sky_models, array_layout_t * array_layout, user_precision_t *sbf) {
+             source_catalogue_t *cropped_sky_models, array_layout_t * array_layout,
+             user_precision_t *sbf) {
+  
 
-  int verbose = 0;
+  // if (woden_settings->do_gpu) {
+  //   log_message("Will be using the GPU");
+  // } else {
+  //   log_message("Will be using only the CPU");
+  // }
 
-  if (verbose == 1){
+  //Setup a buffer on the stack to hold log messages
+  //Things made on the stack don't have to be freed
+  char log_buffer[128];
+  int log_len = sizeof log_buffer;
+
+  if (woden_settings->verbose == 1){
     #ifdef DOUBLE_PRECISION
-    printf("WODEN is using DOUBLE precision\n");
+    // printf("WODEN is using DOUBLE precision\n");
+    log_message("WODEN is using DOUBLE precision");
     #else
-    printf("WODEN is using FLOAT precision\n");
+    // printf("WODEN is using FLOAT precision\n");
+    log_message("WODEN is using FLOAT precision");
     #endif
   }
   
@@ -50,8 +44,10 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
     int band_num = woden_settings->band_nums[band];
     double base_band_freq = ((band_num - 1)*woden_settings->coarse_band_width) + woden_settings->base_low_freq;
 
-    if (verbose == 1){
-      printf("Simulating band %02d with bottom freq %.8e\n",band_num,base_band_freq);
+    if (woden_settings->verbose == 1){
+      snprintf(log_buffer, log_len,
+              "Simulating band %02d with bottom freq %.8e", band_num, base_band_freq);
+      log_message(log_buffer);
     }
 
     woden_settings->base_band_freq = base_band_freq;
@@ -66,7 +62,11 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
       double base_middle_freq = base_band_freq + (woden_settings->coarse_band_width/2.0);
       beam_settings->base_middle_freq = base_middle_freq;
 
-      printf("Middle freq is %.8e \n",base_middle_freq );
+      if (woden_settings->verbose == 1){
+        snprintf(log_buffer, log_len,
+                "Middle freq for FEE beam is %.8e",base_middle_freq);
+        log_message(log_buffer);
+      }
 
       status = new_fee_beam(woden_settings->hdf5_beam_path,
                             &beam_settings->fee_beam);
@@ -76,21 +76,20 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
       }
     }
 
-    //Launch the GPU code
+    //Launch the GPU or CPU code
     calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
                   woden_settings, &visibility_sets[band], sbf);
 
-    if (verbose == 1){
-      printf("GPU calls for band %d finished\n",band_num );
+    if (woden_settings->verbose == 1){
+      snprintf(log_buffer, log_len, "Calls for band %d finished",band_num );
+        log_message(log_buffer);
     }
 
     //Release the CPU MWA FEE beam if required
     if (woden_settings->beamtype == FEE_BEAM || woden_settings->beamtype == FEE_BEAM_INTERP){
       free_fee_beam(beam_settings->fee_beam);
     }
-
   }//band loop
-  // // printf("WODEN is done\n");
-
+  // log_message("run_woden.c is ending");
   return status;
-}//main
+}//run_woden
