@@ -46,6 +46,11 @@ If you use ``WODEN`` in your research, please cite the JOSS paper `Line et al. 2
    API_reference/API_index
    code_graphs/code_graphs
 
+.. toctree::
+   :maxdepth: 4
+
+   developers_guide/developers_guide
+
 .. Indices and tables
 .. --------------------
 ..

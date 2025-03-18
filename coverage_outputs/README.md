@@ -5,6 +5,6 @@ At the moment this is slightly stone-henge, due to the fact that CUDA is not sup
 pip install coverage
 ```
 
-Once those outputs have been created, you can then run `source send_reports_to_codecov.sh` to update the [codecov](https://about.codecov.io/) hosted coverage report. You will need an environment variable `WODEN_CODECOV_TOKEN` to be able to do this. Read the Community Guidelines (this doesn't exist yet) on how to get hold of that token (with great power...)
+Once those outputs have been created, you can then run `source send_reports_to_codecov.sh` to update the [codecov](https://about.codecov.io/) hosted coverage report. You will need an environment variable `WODEN_CODECOV_TOKEN` to be able to do this. Read the `CONTRIBUTION_GUIDE.md` on how to get hold of that token (with great power...)
 
 It's possible in the future that we can separate out the CUDA tests from the C/python tests, and automate that whole part, to automagically generate the whole "codecov" report.
