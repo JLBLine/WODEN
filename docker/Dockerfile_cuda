@@ -2,7 +2,7 @@
 FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
 ARG CUDA_ARCH
 
-ENV WODEN_TAG=2.5.0-alpha
+ENV WODEN_TAG=v2.5.0-alpha
 ENV EVERYBEAM_TAG=mwa_python_wrapper
 ENV HYPER_VERSION=0.10.0
 ENV RUST_VERSION=1.84.0
