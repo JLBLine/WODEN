@@ -27,7 +27,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS GPU_FLAGS C_COVER_FLAGS)
 
     ##If we are using CUDA, we have to tell CMake that the files are CUDA
-    ##and to use the CUDA compiler. We've already to CMake to use hipcc
+    ##and to use the CUDA compiler. We've already told CMake to use hipcc
     ##in the case of HIP.
     if(USE_CUDA)
         set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fundamental_coords_gpu.cpp

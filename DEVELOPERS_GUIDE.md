@@ -7,7 +7,10 @@ deity-of-choice help you, good luck. I've including some practical reasons as
 to why the code is structured the way it is, to try and help you make sense of it.
 
 This guide will be in no way exhaustive, and will be aimed at developing code
-in a Linux environment. Hopefully it helps you future peoples.
+in a Linux environment. Hopefully it helps you future peoples. FYI, I'm not
+including installation instructions for things like `gdb` and `valgrind` here
+as they are google-able. I link the doc pages for anything I think needs to be
+installed so I reckon you have enough to go on.
 
 Jack Line, March 2025
 
@@ -56,7 +59,7 @@ Most of the heavy calculations are done by the compiled code. So along with maki
  - `wodenpy.wodenpy_setup` - handles parsing command line arguments, checking they are sane and will be able to run, all logging functionality, and code to work out what git/release version of `WODEN` is being run.
 
 #### Compiled code
-There will be more details the compiled code later, but I'll quickly mention a few things here. Anything ending in `.c` is `C` code, `.cc` is `C++`, and `.cpp` is `CUDA/HIP` (so GPU code for NVIDIA/AMD cards). The GPU and CPU codes must be compiled separately, and linked later, hence different extensions. The `.cpp` extension for GPU code is weird, as that normally means `c++`, but `hipcc` (`HIP` compiler) likes the `.cpp` extension.
+There will be more details on the compiled code later, but I'll quickly mention a few things here. Anything ending in `.c` is `C` code, `.cc` is `C++`, and `.cpp` is `CUDA/HIP` (so GPU code for NVIDIA/AMD cards). The GPU and CPU codes must be compiled separately, and linked later, hence different extensions. The `.cpp` extension for GPU code is weird, as that normally means `c++`, but `hipcc` (`HIP` compiler) likes the `.cpp` extension.
 
  - `calculate_visibilities_common.c` - this is the gateway to the visibility calculation code, and calls either CPU or GPU code from the below depending on the `woden_settings` passed to it. This centralises the visibility calculation code, so anyting common between component types (point,gaussian,shapelet) and device (CPU/GPU) isn't repeated
  - `calculate_visibilities_cpu.c/calculate_visibilities_gpu.cpp` - contain specific functions for malloc-ing and free-ing memory required by `calculate_visibilities_common.c` in device specific ways.
@@ -139,15 +142,233 @@ Et voila! If we do this, we can write all of our code to just use `gpuDeviceSync
 
 ### CMake build system
 
+Again, this won't be a tutorial on `CMake`, but I'll give you a brief overview, with some `WODEN` project specifics.
+
+[CMake](https://cmake.org/) is a tool to make building compiled libraries and executables easier. While there is some learning curve, it not only makes it easier to get the compilation and linkage commands for various compilers in the correct order, but it (usually) can auto-magically find the correct compiler and flags for your system. It's widely used in radio astronomy (examples include [WSClean](https://wsclean.readthedocs.io/en/latest/index.html) and [OSKAR](https://ska-telescope.gitlab.io/sim/oskar/index.html)).
+
+`CMake` instructions hang out in files called `CMakeLists.txt`. Everytime you make a sub-directory that contains code that needs to be compiled, you often include another `CMakeLists.txt` file in that directory. `CMake` commands are a language unto themselves, which allows you to input command line options and do logic operations. This is how we take advantage of the `CUDA`/`HIP` compiler flags I mentioned above. In the toplevel `CMakeLists.txt`, you'll see lines like this:
+
+```cmake
+option(USE_HIP "Enable the GPU acceleration for AMD GPUs." OFF)
+##default to using CUDA to be somewhat backwards compatible
+option(USE_CUDA "Enable the GPU acceleration for NVIDIA GPUs." ON)
+
+if(USE_HIP)
+  set(USE_CUDA OFF)
+endif()
+```
+this sets two command line options, `USE_HIP` and `USE_CUDA`, which can be set to `ON` or `OFF`. `USE_CUDA` is set to default `ON`. If `USE_HIP` is set to `ON`, then `USE_CUDA` is set to `OFF`. When building with `CMake`, you can set these options via the command line, like so (any command line option like this must have `-D` added in front):
+
+```bash
+cmake -DUSE_HIP=ON ..
+```
+
+Later in the file you'll find lines like this:
+
+```cmake
+if(USE_CUDA)
+   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D__NVCC__ ")
+elseif(USE_HIP)
+   ... do something else way more complicated
+endif()
+```
+
+the specifics here don't matter too much (I will not go into the `HIP` compilation stuff here). The logic is if `USE_CUDA==ON`, we modify the existing compilation flags for CUDA `CMAKE_CUDA_FLAGS` to also include the `__NVCC__` flag; as discussed above, that sets specific marcos in our source code to compile the necessary `CUDA` code. The point here it you can set up logical compilation options based on user input, and `CMake` parses it all and creates a `Makefile` that will compile the code with the correct flags.
+
+Other typical lines found in `CMake` files are to help `CMake` find the correct libraries. For example, in the toplevel `CMakeLists.txt`, you'll see lines like this:
+
+```cmake
+##Try and find the hyperbeam library--------------------------------------------
+set(HINTS_HBEAM_INC "/usr/local/include/;${HBEAM_ROOT}/;")
+set(HINTS_HBEAM_LIB "/usr/local/lib/;${HBEAM_ROOT}")
+
+find_path(HBEAM_INC mwa_hyperbeam.h HINTS ${HINTS_HBEAM_INC})
+find_library(HBEAM_LIB mwa_hyperbeam HINTS ${HINTS_HBEAM_LIB} REQUIRED)
+```
+
+where we set two variables `HINTS_HBEAM_INC, HINTS_HBEAM_LIB` to give `CMake` hints as to where to find a header file `mwa_hyperbeam.h` and a library `mwa_hyperbeam`. The variable `HBEAM_ROOT` can be passed on the command line via `cmake -DHBEAM_ROOT=path/to/thing`, allowing the user to point to their local setup. The command `find_path` will search for the header file in the hinted directories; the `find_library` command will search for a library matching `mwa_hyperbeam`. `find_library` is where CMake will earn it's money as it'll look for various naming versions e.g. `libmwa_hyperbeam.so`, `libmwa_hyperbeam.a`, `mwa_hyperbeam.so`, `mwa_hyperbeam.a`, etc. As we pass the `REQUIRED` arg, `CMake` will stop the build if it can't find the `hyperbeam` library and tell us why.
+
 ## Testing setup
+Another lovely feature of `CMake` is that it comes with a testing suite, [ctest](https://cmake.org/cmake/help/book/mastering-cmake/chapter/Testing%20With%20CMake%20and%20CTest.html). Inside `WODEN/cmake_testing`, you'll find a litany of tests included. What each of them does is detailed in the online documentation [here](https://woden.readthedocs.io/en/latest/testing/cmake_testing.html). `ctest` is nice because it means we can centralise all compilation and testing through the single `CMake` system. However, it does mean that you have to write a lot of `CMake` code to get it to work. 
+
+### Compiled code testing
+At it's core, adding a `C/C++/GPU` test looks like this:
+
+```cmake
+   add_executable(test_name_exe test_name.c)
+   target_link_libraries(add in necessary libraries)
+   target_compile_options(add specific compilation flags)
+   add_test(test_name test_name_exe)
+```
+
+where `test_name.c` is where you actually write the test code. `target_link_libraries` is where you link in any libraries you need to run the test. In `WODEN/cmake_testing/GPU_or_C_code/CMakelists.txt`, I create top level libraries `calculate_visibilities_GPU_float`, `calculate_visibilities_GPU_double`, `calculate_visibilities_CPU_float` ,`calculate_visibilities_CPU_double`, `use_everybeam` that contain all the code that we are testing (so compiled from everything that lives in `WODEN/src`). All tests have links to these libraries, depending on what precision we are testing. `target_compile_options` is where you set up the compilation flags for the test, and finally `add_test` tells `ctest` to run the executable you've created, calling it `test_name`.
+
+`ctest` is lacking a couple of features that like, and so I embellish it using [Unity](https://github.com/ThrowTheSwitch/Unity). This lets us use basic testing features like `TEST_ASSERT_EQUAL` and `TEST_ASSERT_FLOAT_WITHIN`. Adds a little coding overhead, but there are enough tests in `WODEN` that you can use as a template to create new ones. It means compiled `WODEN` tests look like this (this would be contents of `test_name.c` as above):
+
+```c
+
+#include <unity.h>
+void setUp (void) {} /* Must be included for Unity to be happy */
+void tearDown (void) {} /* Must be included for Unity to be happy */
+
+void test_something(void)
+{
+    amazing test code here
+}
+
+int main(void)
+{
+    UNITY_BEGIN();
+    RUN_TEST(test_something);
+    return UNITY_END();
+}
+```
+
+Of further note, I create a function called `DEFINE_COMP_FLAGS`, which takes a precision (`FLOAT` or `DOUBLE`) as an argument. This function sets up a number of compilation flags, which means we can write the same test code for both `FLOAT` and `DOUBLE` precision, and just keep switching compilation flags by calling this function. Specifcally, in most `CMakeLists.txt` files, you'll see lines like this:
+
+```cmake
+foreach(PRECISION IN LISTS DOUBLE)
+##Set the flags depending on the precision
+  DEFINE_COMP_FLAGS(${PRECISION} C_FLAGS CUDA_FLAGS C_COVER_FLAGS)
+  ...
+  add some tests here
+  ...
+endforeach()
+```
+which just loops over whatever tests we are adding with both precision flags. These flags are important because they allow us to compile code with debugging flags (`-g`, which enables things like backtracing errors to exact lines) and coverage flags (`--coverage`, which allows for coverage testing, see below).
+
+### Python code testing
+As for Python code, I use the [unittest](https://docs.python.org/3/library/unittest.html) library. This is a standard library that comes with Python, and is pretty easy to use. I simply write the tests in Python, and then call them from `ctest` via calls like:
+
+```cmake
+add_test(python_test_name ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_name.py)
+```
+
+This means we run all tests for all languages from one centralised system.
+
+### Code coverage
+As noted above, adding the `--coverage` flag at compilation time means we collect the information necessary for code coverage testing. As we have a nice top-level compiled libraries `calculate_visibilities_CPU_double` and `use_everybeam`, we can just grab the coverage outputs from these two libraries and collate them. I do this via the [gcov](https://gcc.gnu.org/onlinedocs/gcc/Gcov.html) command, with the exact commands in  `WODEN/coverage_outputs/create_cov_reports.sh`. 
+
+As for the Python tests, I use the `coverage` module (install via `pip install coverage`). Best I can tell, you have to call all tests one by one, and then collate them at the end. I do this in `WODEN/coverage_outputs/create_cov_reports.sh` as well. Of note is the `--source=wodenpy` flag, which tells `coverage` to just add coverage for `wodenpy` when testing the library. When testing a script, change that to `--source=run_woden` or whatever the script name is. I've setup the script tests so they actually import the `main` function from each script, so that the coverage is calculated as if it was a module.
+
+Once those outputs have been created, you can then run `source send_reports_to_codecov.sh` to update the [codecov](https://about.codecov.io/) hosted coverage report. You will need an environment variable `WODEN_CODECOV_TOKEN` to be able to do this. You should be gifted this by Jack or Nichole or someone if you end up developing `WODEN`.
 
 ## Debugging tips 'n' tricks
 
-Common errors I have created that you might also:
+Righto, so you've been developing some compiled code, and it keeps erroring or segfaulting. What do you do? First things first, have you written a unit test for the new functionality? If not, do that first. It can be a pain and feel like you are wasting time, but in the long run, you will be saving days of angry debugging. Trust me. When I add a new feature these days, I write the test first.
+
+### Debugging from a test executable
+
+If the unit test itself is segfaulting, it's time to crack out the debugger. I'm biased towards Linux as that's what I develop in. If you've used the current testing framework, your test executable will end up in `WODEN/build/cmake_testing` somewhere. Let's use `test_fill_primary_beam_settings` as an example. I use `gdb` ([GNU Debugger](https://sourceware.org/gdb/)) to debug. To run `gdb` on the test executable, you can do the following:
+
+```bash
+cd WODEN/build/cmake_testing/GPU_or_C_code/beam_settings
+gdb ./test_fill_primary_beam_settings_double_app
+```
+
+This will open up `gdb` and you can then run the test by typing `r`. If it segfaults, you can then type `bt` to run a backtrace to see where it's segfaulting. As we compile with `-g` for the tests, you should get a file and line number. Just finding out where it crashes helps isolate the error more often than not. There are many MANY things you can do with `gdb`, but I won't go into them here. To be honest I don't know that many beyond `p $variable` to print a variable, which you can use to check certain variables have been set correctly. If you're testing `GPU` code, you can also use [cuda-gdb](https://docs.nvidia.com/cuda/cuda-gdb/index.html) (for NVIDIA) or [ROCgdb](https://rocm.docs.amd.com/projects/ROCgdb/en/latest/) (for AMD), which works equivalently to `gdb` (`gdb` alone cannot see the GPU memory).
+
+### Debugging from run_woden.py
+
+So what if all the tests work, but `run_woden.py` causes a segfault? First thing to do, recomplile the main code in debug mode, via
+
+```bash
+cd WODEN/build
+cmake -DTARGET_GROUP=DEBUG ..
+make -j8
+```
+
+this will rebuild everything with the `-g` flag, allowing you greater information when debugging. Once that's done, run `run_woden.py` in `gdb`:
+
+```bash
+gdb --args python /path/to/run_woden.py --arg1=1 --arg2=2
+```
+where obviously you replace `--arg1, --arg2` with whatever options you're running `run_woden.py` with. Once running, you can use `gdb` as you would on a normal executable.
+
+If you have a more malicious error, such as a non-repeatable segfault, you can use a core dump if your system uses one. The exact way you system saves a core dump will vary, but if you get hold of one, amend the `gdb` command to:
+
+```bash
+gdb -c core.687667 --args python /path/to/run_woden.py --arg1=1 --arg2=2
+```
+
+which will use the information from the core dump, rather than executing the code again. Hitting run (`r`) then backtrace (`bt`) on this particular example gave me this output, where I was running on the OzStar Ngarrgu Tindebeek cluster:
+
+```
+#0  0x0000155554f8a7dd in __memmove_avx_unaligned_erms () from /lib64/libc.so.6
+#1  0x000015554090d366 in std::char_traits<char>::copy (__n=117, __s2=<optimized out>, __s1=<optimized out>)
+    at /dev/shm/easybuild/GCCcore/11.3.0/system-system/gcc-11.3.0/stage3_obj/x86_64-pc-linux-gnu/libstdc++-v3/include/bits/char_traits.h:437
+#2  std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_S_copy (__n=117, __s=<optimized out>, __d=<optimized out>)
+    at /dev/shm/easybuild/GCCcore/11.3.0/system-system/gcc-11.3.0/stage3_obj/x86_64-pc-linux-gnu/libstdc++-v3/include/bits/basic_string.h:359
+#3  std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_S_copy (__n=117, __s=<optimized out>, __d=<optimized out>)
+    at /dev/shm/easybuild/GCCcore/11.3.0/system-system/gcc-11.3.0/stage3_obj/x86_64-pc-linux-gnu/libstdc++-v3/include/bits/basic_string.h:354
+#4  std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_M_assign (this=0x3959700, __str=...)
+    at /dev/shm/easybuild/GCCcore/11.3.0/system-system/gcc-11.3.0/stage3_obj/x86_64-pc-linux-gnu/libstdc++-v3/include/bits/basic_string.tcc:272
+#5  0x00001555352ccfcb in casacore::Aipsrc::genParse(casacore::Block<casacore::String>&, casacore::Block<casacore::String>&, unsigned int&, casacore::String const&) ()
+   from /fred/oz048/achokshi/software/casacore/3.5.0_NO_MPI/lib/libcasa_casa.so.7
+#6  0x00001555352cdc51 in casacore::Aipsrc::doParse(casacore::String&) () from /fred/oz048/achokshi/software/casacore/3.5.0_NO_MPI/lib/libcasa_casa.so.7
+#7  0x00001555352ce146 in casacore::Aipsrc::parse() () from /fred/oz048/achokshi/software/casacore/3.5.0_NO_MPI/lib/libcasa_casa.so.7
+#8  0x0000155554ebff38 in __pthread_once_slow () from /lib64/libc.so.6
+#9  0x00001555352c92b3 in casacore::Aipsrc::find(casacore::String&, casacore::String const&, unsigned int) () from /fred/oz048/achokshi/software/casacore/3.5.0_NO_MPI/lib/libcasa_casa.so.7
+#10 0x00001555352d1ecc in casacore::AipsrcValue<bool>::find(bool&, casacore::String const&) () from /fred/oz048/achokshi/software/casacore/3.5.0_NO_MPI/lib/libcasa_casa.so.7
+#11 0x00001555352d1f51 in casacore::AipsrcValue<bool>::find(bool&, casacore::String const&, bool const&) () from /fred/oz048/achokshi/software/casacore/3.5.0_NO_MPI/lib/libcasa_casa.so.7
+#12 0x00001555358278ec in casacore::TableLock::init() () from /fred/oz048/achokshi/software/casacore/3.5.0_NO_MPI/lib/libcasa_tables.so.7
+#13 0x0000155535807c62 in casacore::Table::Table(casacore::String const&, casacore::Table::TableOption, casacore::TSMOption const&) () from /fred/oz048/achokshi/software/casacore/3.5.0_NO_MPI/lib/libcasa_tables.so.7
+#14 0x0000155536f292e0 in casacore::MSTable<casacore::MSMainEnums>::MSTable(casacore::String const&, casacore::Table::TableOption) () from /fred/oz048/achokshi/software/casacore/3.5.0_NO_MPI/lib/libcasa_ms.so.7
+#15 0x0000155536ea1639 in casacore::MeasurementSet::MeasurementSet(casacore::String const&, casacore::Table::TableOption) () from /fred/oz048/achokshi/software/casacore/3.5.0_NO_MPI/lib/libcasa_ms.so.7
+#16 0x000015553813e81c in load_everybeam_telescope (status=0x7ffffffe455c, ms_path=0x155536976090 "pointed_HBA.ms", element_response_model=0x155537ef8d14 "hamaker", use_differential_beam=false, use_channel_frequency=true, 
+    coeff_path=0x155537ef8d12 " ", use_local_mwa=true) at /fred/oz048/jline/software_nt/WODEN_dev/src/call_everybeam.cc:78
+#17 0x000015553813f524 in load_and_run_lofar_beam(const char *, const char *, const char *, int, int *, int, double, double, double *, double *, int, double *, int, double *, bool, bool, bool, bool, complex double *) (
+    ms_path=0x155536976090 "pointed_HBA.ms", element_response_model=0x155537ef8d14 "hamaker", coeff_path=0x155537ef8d12 " ", num_stations=70, station_idxs=0x7ffffffe4600, num_dirs=96, ra0=3.1227780042532944, 
+    dec0=0.86826639628213897, ras=0x12ebfc0, decs=0x20a2540, num_times=2, mjd_sec_times=0x7ffffffe45f0, num_freqs=2, freqs=0x39811b0, apply_beam_norms=true, parallactic_rotate=true, element_only=false, iau_order=true, 
+    jones=0x3effed0) at /fred/oz048/jline/software_nt/WODEN_dev/src/call_everybeam.cc:294
+#18 0x000015553773871c in source_component_common (woden_settings=0x155538b5cab0, beam_settings=0x39828d0, cpu_freqs=0x39811b0, mem_freqs=0x39811b0, chunked_source=0x3875cb0, mem_chunked_source=0x3875cb0, 
+    mem_component_beam_gains=0x37d0560, comptype=POINT, mem_visibility_set=0x396cf00) at /fred/oz048/jline/software_nt/WODEN_dev/src/source_components_common.c:435
+#19 0x00001555377310e5 in calculate_component_visis (comptype=POINT, mem_calc_visi_inouts=0x37da870, cpu_channel_freqs=0x39811b0, woden_settings=0x155538b5cab0, beam_settings=0x39828d0, source=0x3875cb0, 
+    mem_chunked_source=0x3875cb0, mem_visibility_set=0x396cf00, num_beams=70, use_twobeams=1, do_gpu=0) at /fred/oz048/jline/software_nt/WODEN_dev/src/calculate_visibilities_common.c:53
+#20 0x0000155537731cc2 in calculate_visibilities (array_layout=0x155537fba9d0, cropped_sky_models=0x15553a4a3510, beam_settings=0x39828d0, woden_settings=0x155538b5cab0, visibility_set=0x1555369761b0, sbf=0x15552425d010)
+    at /fred/oz048/jline/software_nt/WODEN_dev/src/calculate_visibilities_common.c:330
+#21 0x0000155537730bbd in run_woden (woden_settings=0x155538b5cab0, visibility_sets=0x1555369761b0, cropped_sky_models=0x15553a4a3510, array_layout=0x155537fba9d0, sbf=0x15552425d010)
+    at /fred/oz048/jline/software_nt/WODEN_dev/src/woden.c:80
+```
+
+which is pretty full-on, but told me that when calling `load_everybeam_telescope` at line `call_everybeam.cc:78`, some kind of `casacore` error happened. This one pointed towards an error in the compilation of the underlying `casacore` library. This is the kind of forensic detective work you have to sometimes do with compiled langauges.
+
+
+### Common boo-boos
+
+Here is a list errors I have often created that you might also:
  - Compilation goes weird and says it can't find a function, and then you can see weird shiz like `_Z8myfunctionv`. This is a name mangling error. You've probably forgotten to put `extern "C"` in the `C++/GPU` function declaration.
  - Everything runs fine, but all the values from the GPU come out as 0.0. Sometimes you've simply forgotten to copy the data back from the GPU to the CPU. However, sometimes insidiously, you've forgotten to free some device memory, which you re-allocate later in a loop, and for some reason it doesn't cause a segfault. It just gives you 0.0s and a silent middle finger. I've never found a good way to check this other than commenting out bits of code until you find the offending line. A good trick for memory related things is to print the memory address of the pointer you're using (e.g. `printf("Pointer address: %p\n", pointer);`), which you can use to check memory is allocated and freed correctly.
+ - All the CPU/GPU tests run completely fine, but when you call things from Python, either you get zeros, or segfaults. Here you might have added a new member to a `struct` on the `C` side, but haven't added that attribute to the `ctypes` equivalent class on the `Python` side. Even more sinister, you might have added it, but in a different _order_ to the `C` side. The order / type of attributes in the `ctypes` class must match _exactly_ to the `C` `struct` definition. 
 
 ## Profiling WODEN
+
+OK, so as it stands as of version `2.5`, all of the heavy calculation happens in the compiled code. The `run_woden.py` wrapper adds a layer of difficulty to profiling, as it multithreads in Python and calls the external compiled code. If you therefore call `run_woden.py` to profile to compiled code, your life will be very very hard.
+
+The most practical way I've found of profiling is to create a separate executable, from within the testing framework detailed above, which I can then call with [valgrind callgrind](https://valgrind.org/docs/manual/cl-manual.html). This is by no means the only profiling tool out there, but it's one I've managed to use, and you can get graphical outputs from it.
+
+An example of this profiling lives here: `WODEN/cmake_testing/GPU_or_C_code/calculate_visibilities/make_exe_to_profile_lofar_everybeam.c`. It runs `calculate_visibilities` for the LOFAR EveryBeam primary beam model with 50 stations, 100 points sources (all power-law SEDs), 10 time steps, 20 frequency steps, all in CPU mode. It goes through all the pain of filling in the sky model, array layout etc etc that is normally done by `run_woden.py`. This example gets compiled alongside all the unit tests, but not run by default. To profile it, using `valgrind`, run:
+
+```bash
+cd WODEN/build/cmake_testing/GPU_or_C_code/calculate_visibilities
+valgrind --tool=callgrind ./profile_lofar_everybeam
+```
+
+Be warned, profiling code makes things infinitely slower. This example is small enough, only takes about 5 mins to run on my machine. Once it's run, you can use [kcachegrind](https://kcachegrind.github.io/html/Home.html) to view the output, via something like this:
+
+```bash
+kcachegrind callgrind.out.3056699
+```
+
+which will open up a GUI that looks something like this:
+
+![kcachegrind1](./docs/sphinx/developers_guide/kcachgrind_eg1.png)
+
+Again, plenty of tutorials online for how, and there are a tonne of features. For now I'll just focus on the call graph in the bottom right corner. Here we have a call graph, and can see that 99.74% of our time has been spent calling `calculate_visibilities`. This is good, means our test is doing what it should. If I scroll down a little, I see this:
+
+![kcachegrind2](./docs/sphinx/developers_guide/kcachgrind_eg2.png)
+
+This is telling me that `run_phased_array_beam` (which is calculating the LOFAR phased array beam) is taking up 90.24% of the time, so is the dominant calculation. You can keep scrolling around and seeing exactly where time is being spent, to try and see if there are any easy gains to be made. Handy.
 
 ## Making the release docker images
 Hopefully it should be pretty straight forward to maintain the docker images, at least the CUDA one. Probably the most annoying part of this is that you'll have to install [docker](https://docs.docker.com/engine/install/) on your machine. 

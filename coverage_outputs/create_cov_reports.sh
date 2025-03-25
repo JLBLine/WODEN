@@ -94,19 +94,19 @@ rm -r WODEN_array_layout.txt *.uvfits *.json \
     example.txt test_load_data.dat test_full_skymodel* \
     woden_settings.txt *.so *.png *.npz  *.lprof *.log *.ms
 
-##Use this to create two local reports, one for C and one for python
-##Only uncomment if you want to see the reports locally without pushing to codecov
+# ##Use this to create two local reports, one for C and one for python
+# ##Only uncomment if you want to see the reports locally without pushing to codecov
 
-lcov --gcov-tool gcov-12 --capture --directory ${cov_src_dir} --output-file coverage.info
-lcov --gcov-tool gcov-12  --capture --directory ${eb_src_dir} --output-file eb_coverage.info
-lcov --extract eb_coverage.info 'src/*'  --output-file filtered_coverage.info
-lcov --add-tracefile coverage.info --add-tracefile filtered_coverage.info --output-file merged_coverage.info
-mv merged_coverage.info coverage.info
-rm eb_coverage.info filtered_coverage.info
+# lcov --gcov-tool gcov-12 --capture --directory ${cov_src_dir} --output-file coverage.info
+# lcov --gcov-tool gcov-12  --capture --directory ${eb_src_dir} --output-file eb_coverage.info
+# lcov --extract eb_coverage.info 'src/*'  --output-file filtered_coverage.info
+# lcov --add-tracefile coverage.info --add-tracefile filtered_coverage.info --output-file merged_coverage.info
+# mv merged_coverage.info coverage.info
+# rm eb_coverage.info filtered_coverage.info
 
-genhtml coverage.info --output-directory C_coverage
+# genhtml coverage.info --output-directory C_coverage
 
-if [ "$do_python" = "True" ]; then
-    coverage html -d python_coverage
-fi
+# if [ "$do_python" = "True" ]; then
+#     coverage html -d python_coverage
+# fi
 

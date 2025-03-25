@@ -18,7 +18,6 @@ if(USE_CUDA)
 
     ##Sets the -std=c++11 nvcc compiler flag I think
     set(CMAKE_CUDA_STANDARD 11)
-    #set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++11 ")
     ##Internal flag to let code know we're using nvcc
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D__NVCC__ ")
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)

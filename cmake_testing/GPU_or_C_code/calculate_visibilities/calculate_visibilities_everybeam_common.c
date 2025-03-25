@@ -32,20 +32,20 @@ double LOFAR_lsts[] ={1.36655619, 2.15410469};
 double SKA_mjds[] ={60512.84237269, 60512.96737269};
 double SKA_lsts[] ={4.36691696, 5.15446548};
 
-void set_azza_para(source_catalogue_t *cropped_sky_models,
+void set_azza_para(source_catalogue_t *cropped_sky_models, int num_time_steps,
                     int n_points, int n_gauss, int n_shapes, int num_sources,
                     int beamtype){
 
   // components_t *components = malloc(sizeof(components_t));
   // components_t *components;
 
-  double azs[NUM_TIME_STEPS];
-  double zas[NUM_TIME_STEPS];
-  double para_angles[NUM_TIME_STEPS];
+  double azs[num_time_steps];
+  double zas[num_time_steps];
+  double para_angles[num_time_steps];
   
 
   if (beamtype == EB_MWA) {
-    for (int time_ind = 0; time_ind < NUM_TIME_STEPS; time_ind++) {
+    for (int time_ind = 0; time_ind < num_time_steps; time_ind++) {
       azs[time_ind] = MWA_azs[time_ind];
       zas[time_ind] = MWA_zas[time_ind];
       para_angles[time_ind] = MWA_para_angles[time_ind];
@@ -57,9 +57,9 @@ void set_azza_para(source_catalogue_t *cropped_sky_models,
   if (n_points > 0) {
     for (int source_ind = 0; source_ind < num_sources; source_ind++) {
       for (int comp_ind = 0; comp_ind < n_points; comp_ind++) {
-        for (int time_ind = 0; time_ind < NUM_TIME_STEPS; time_ind++) {
+        for (int time_ind = 0; time_ind < num_time_steps; time_ind++) {
           
-          ind = comp_ind*NUM_TIME_STEPS + time_ind;
+          ind = comp_ind*num_time_steps + time_ind;
           cropped_sky_models->sources[source_ind].point_components.azs[ind] = azs[time_ind];
           cropped_sky_models->sources[source_ind].point_components.zas[ind] = zas[time_ind];
           cropped_sky_models->sources[source_ind].point_components.para_angles[ind] = para_angles[time_ind];
@@ -72,9 +72,9 @@ void set_azza_para(source_catalogue_t *cropped_sky_models,
   if (n_gauss > 0) {
     for (int source_ind = 0; source_ind < num_sources; source_ind++) {
       for (int comp_ind = 0; comp_ind < n_gauss; comp_ind++) {
-        for (int time_ind = 0; time_ind < NUM_TIME_STEPS; time_ind++) {
+        for (int time_ind = 0; time_ind < num_time_steps; time_ind++) {
           
-          ind = comp_ind*NUM_TIME_STEPS + time_ind;
+          ind = comp_ind*num_time_steps + time_ind;
           cropped_sky_models->sources[source_ind].gauss_components.azs[ind] = azs[time_ind];
           cropped_sky_models->sources[source_ind].gauss_components.zas[ind] = zas[time_ind];
           cropped_sky_models->sources[source_ind].gauss_components.para_angles[ind] = para_angles[time_ind];
@@ -86,9 +86,9 @@ void set_azza_para(source_catalogue_t *cropped_sky_models,
   if (n_shapes > 0) {
     for (int source_ind = 0; source_ind < num_sources; source_ind++) {
       for (int comp_ind = 0; comp_ind < n_shapes; comp_ind++) {
-        for (int time_ind = 0; time_ind < NUM_TIME_STEPS; time_ind++) {
+        for (int time_ind = 0; time_ind < num_time_steps; time_ind++) {
           
-          ind = comp_ind*NUM_TIME_STEPS + time_ind;
+          ind = comp_ind*num_time_steps + time_ind;
           cropped_sky_models->sources[source_ind].shape_components.azs[ind] = azs[time_ind];
           cropped_sky_models->sources[source_ind].shape_components.zas[ind] = zas[time_ind];
           cropped_sky_models->sources[source_ind].shape_components.para_angles[ind] = para_angles[time_ind];
@@ -99,24 +99,24 @@ void set_azza_para(source_catalogue_t *cropped_sky_models,
 
 }
 
-void set_mjds(woden_settings_t *woden_settings, int beamtype){
+void set_mjds(woden_settings_t *woden_settings, int beamtype, int num_time_steps){
   
-    woden_settings->mjds = malloc(NUM_TIME_STEPS*sizeof(double));
+    woden_settings->mjds = malloc(num_time_steps*sizeof(double));
 
     if (beamtype == EB_MWA) {
-      for (int time_ind = 0; time_ind < NUM_TIME_STEPS; time_ind++) {
+      for (int time_ind = 0; time_ind < num_time_steps; time_ind++) {
         woden_settings->mjds[time_ind] = MWA_mjds[time_ind];
       }
     }
 
     else if (beamtype == EB_LOFAR) {
-      for (int time_ind = 0; time_ind < NUM_TIME_STEPS; time_ind++) {
+      for (int time_ind = 0; time_ind < num_time_steps; time_ind++) {
         woden_settings->mjds[time_ind] = LOFAR_mjds[time_ind];
       }
     }
 
     else {
-      for (int time_ind = 0; time_ind < NUM_TIME_STEPS; time_ind++) {
+      for (int time_ind = 0; time_ind < num_time_steps; time_ind++) {
         woden_settings->mjds[time_ind] = SKA_mjds[time_ind];
       }
     }
@@ -162,9 +162,10 @@ void test_calculate_visibilities_EveryBeam(int n_points, int n_gauss, int n_shap
     woden_settings->single_everybeam_station = 0;
   }
 
-  set_mjds(woden_settings, beamtype);
+  set_mjds(woden_settings, beamtype, NUM_TIME_STEPS);
 
-  set_azza_para(cropped_sky_models, n_points, n_gauss, n_shapes, num_sources,
+  set_azza_para(cropped_sky_models, NUM_TIME_STEPS,
+                n_points, n_gauss, n_shapes, num_sources,
                 beamtype);
 
   // printf("OUTIDE BEFORE CALL %.5f %.5f %.5f\n", cropped_sky_models->sources[0].point_components.azs[0],
@@ -296,7 +297,8 @@ void test_calculate_visibilities_EveryBeam(int n_points, int n_gauss, int n_shap
   cropped_sky_models = make_cropped_sky_models(RA0, dec0,
                                                n_points, n_gauss, n_shapes,
                                                num_sources);
-  set_azza_para(cropped_sky_models, n_points, n_gauss, n_shapes, num_sources,
+  set_azza_para(cropped_sky_models, NUM_TIME_STEPS,
+                n_points, n_gauss, n_shapes, num_sources,
                 beamtype);
 
   // printf("We have this many visis %d %d %d\n",woden_settings->num_visis,woden_settings->num_autos,woden_settings->num_cross );
