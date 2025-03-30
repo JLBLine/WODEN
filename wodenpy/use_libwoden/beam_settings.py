@@ -22,6 +22,7 @@ class BeamTypes(Enum):
         EB_OSKAR (int): EveryBeam OSKAR beam type.
         EB_LOFAR (int): EveryBeam LOFAR beam type.
         EB_MWA (int): EveryBeam MWA beam type.
+        UVB_MWA (int): pyuvdata UVData MWA beam type.
     """
     NO_BEAM = 0
     GAUSS_BEAM = 1
@@ -32,6 +33,7 @@ class BeamTypes(Enum):
     EB_OSKAR = 6
     EB_LOFAR = 7
     EB_MWA = 8
+    UVB_MWA = 9
     
 class BeamGroups:
     """A class to represent different groups of beam types.
@@ -53,7 +55,7 @@ class BeamGroups:
     eb_beam_values = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value, BeamTypes.EB_MWA.value]
     azza_beam_values = [BeamTypes.MWA_ANALY.value, BeamTypes.FEE_BEAM.value,
                         BeamTypes.FEE_BEAM_INTERP.value, BeamTypes.ANALY_DIPOLE.value,
-                        BeamTypes.EB_MWA.value]
+                        BeamTypes.EB_MWA.value, BeamTypes.UVB_MWA.value]
     hadec_beam_values = [BeamTypes.GAUSS_BEAM.value, BeamTypes.MWA_ANALY.value]
     # needs_fee_hdf5 = [BeamTypes.FEE_BEAM.value, BeamTypes.FEE_BEAM_INTERP, BeamTypes.EB_MWA.value]
     # needs_mwa_delays = [BeamTypes.FEE_BEAM.value, BeamTypes.FEE_BEAM_INTERP, BeamTypes.MWA_ANALY.value]

@@ -386,3 +386,9 @@ ENV RUST_VERSION=1.84.0
 
 which sets version of repos to copy. Modify that to whatever release you're building, and whatever version of the dependencies you want. In
 `make_docker_image.sh`, there is a line like `woden_version="2.5"`. Again, change that to match whatever version you are building. Finally, in the line `docker push jlbline/woden-${woden_version}:cuda-$arch`, you'll need to change `jlbline` to your docker repo. 
+
+## Miscellaneous
+
+### LOFAR considerations
+ - I've implemented the maths to have off-cardianl dipoles (i.e. dipoles that are aligned NE-SW and NW-SE, rather that E-W N-S). I think only LBA stations are off-cardinal (??) but I don't really know. The off-cardinal dipoles only make a difference to the visibilities if the sky model has polarised components; stokes I plonks out the same. We need something to compare output visibilities to, and I haven't been able to do that. Currently, you can optionally use them by setting the `--off_cardinal_dipoles` flag in `run_woden.py`. However, I've also set a list up in `wodenpy.use_libwoden.beam_settings.BeamGroups.off_cardinal_beam_values` where you can add primary beam types to default to off-cardinal dipoles. If after more investgation you find that off-cardinal dipoles are needed, add values to that `off_cardinal_beam_values` list; that will trigger `wodenpy.use_libwoden.woden_settings.fill_woden_settings_python` to set `woden_settings.off_cardinal_dipoles = 1`.
+ - Related note, if only `LBA` stations are off-cardinal, you'll need to work out how to distinguish `LBA` for `HBA`. At the moment the code just sees that a measurement set is `LOFAR`, and that's it.

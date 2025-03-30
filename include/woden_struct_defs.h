@@ -24,6 +24,7 @@ typedef enum {NO_BEAM, /*!< Do not use a primary beam in the simulation */
               EB_OSKAR, /*!< Use everybeam with the OSKAR primary beam */
               EB_LOFAR, /*!< Use everybeam with the LOFAR primary beam */
               EB_MWA, /*!< Use everybeam with the MWA primary beam */
+              UVB_MWA, /*!< Use pyuvdata UVBeam the MWA model */
               }e_beamtype;
 
 typedef enum {POWER_LAW=0, /*!< Power law flux model */

@@ -440,6 +440,8 @@ class Test(unittest.TestCase):
         information is missing, and if the delays have been specified
         incorrectly"""
 
+        actual_hdf5_path = os.environ[beam_env_var]
+
         ##We want to test that the argument fails if the environment key
         ##MWA_FEE_HDF5 is not set. Here we check if it is set and delete it
         ##if so
@@ -492,7 +494,7 @@ class Test(unittest.TestCase):
 
         ##This time, set the environment variable to the hdf5 file. Should
         ##pass (just use a file we know exists somewhere)
-        os.environ[beam_env_var] = '{:s}/example_array_layout.txt'.format(code_dir)
+        os.environ[beam_env_var] = actual_hdf5_path
         args = self.run_parser_and_check_args()
         ##Assert the delays were read in correctly
         self.assertEqual("[6, 4, 2, 0, 8, 6, 4, 2, 10, 8, 6, 4, 12, 10, 8, 6]", args.MWA_FEE_delays)
@@ -520,17 +522,25 @@ class Test(unittest.TestCase):
         and if the delays have been specified incorrectly"""
 
         self._check_MWA_FEE_generic('MWA_FEE_interp', 'MWA_FEE_HDF5_INTERP')
+        
+    def test_UVBeamMWA_args_work(self):
+        """Check that the UVBeam MWA primary beam is handled `ra.check_args`
+        correctly. The function should error out if certain paths to the
+        hdf5 file that holds the spherical harmonic information is missing,
+        and if the delays have been specified incorrectly"""
+
+        self._check_MWA_FEE_generic('uvbeam_MWA', 'MWA_FEE_HDF5')
 
 
     def test_MWAAnalyBeam_args_work(self):
         """Check `ra.check_args` works correctly for the analytic MWA beam.
         Should fail if the delays have been specified incorrectly"""
 
-        ##Trying to run an MWA_FEE simulation with no metafits, no 'MWA_FEE_HDF5'
-        ##or --hdf5_beam_path should fail
+        ##Trying to run an MWA_FEE simulation with no metafits or
+        ##delays should fail
         self.make_minimum_required_args_without_metafits()
         self.inputs.append(f'--primary_beam=MWA_analy')
-
+        
         ##Check the primary_beam has been selected and that `run_setup.check_args` fails
         args = self.assert_check_args_errors()
         self.assertEqual('MWA_analy', args.primary_beam)
@@ -874,8 +884,6 @@ class Test(unittest.TestCase):
             self.assertAlmostEqual(ref_dir[0], ra0, 6)
             self.assertAlmostEqual(ref_dir[1], dec0, 6)
         
-        
-        
     def test_read_radec_from_MS(self):
         """Check `ra.check_args` works correctly for the `--primary_beam=everybeam_MWA`
         
@@ -989,6 +997,7 @@ class Test(unittest.TestCase):
         self.assertAlmostEqual(args.freq_res, 10000.0, 2)
         self.assertAlmostEqual(args.time_res, 0.5, 2)
         self.assertEqual("2018-02-16T11:18:54", args.date)
+        
             
         
 ##Run the test

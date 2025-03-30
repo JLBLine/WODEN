@@ -24,6 +24,7 @@ from astropy import units as u
 import importlib_resources
 from wodenpy.use_libwoden.use_libwoden import check_for_everybeam
 from wodenpy.primary_beam.use_everybeam import create_filtered_ms
+from sys import exit
 
 MWA_LAT = -26.703319405555554
 MWA_LONG = 116.67081523611111
@@ -124,17 +125,23 @@ def get_parser():
              'centre, in east, north, height coords (metres)')
     tel_group.add_argument('--primary_beam', default="none",
         help="R|Which primary beam to use in the simulation.\nOptions are:\n"
-            "\t - MWA_FEE (MWA fully embedded element model)\n"
-            "\t - MWA_FEE_interp (MWA fully embedded element model that has had)\n"
-            "\t\t spherical harmonics interpolated over frequency\n"
+            "\t - MWA_FEE (`hyperbeam` MWA fully embedded element model;\n"
+            "\t\t defaults to using env variable $MWA_FEE_HDF5 as input; use\n"
+            "\t\t `--hdf5_beam_path` to specifiy otherwise)\n"
+            "\t - MWA_FEE_interp (`hyperbeam` MWA fully embedded element model that has had\n"
+            "\t\t spherical harmonics interpolated over frequency via ;\n"
+            "\t\t defaults to using env variable $MWA_FEE_HDF5_INTERP as input; use\n"
+            "\t\t `--hdf5_beam_path` to specifiy otherwise)\n"
             "\t - Gaussian (Analytic symmetric Gaussian)\n"
             "\t\t see --gauss_beam_FWHM and\n"
             "\t\t and --gauss_beam_ref_freq for fine control)\n"
             "\t - EDA2 (Analytic dipole with a ground mesh) \n"
             "\t - MWA_analy (MWA analytic model)\n"
-            "\t - everybeam_OSKAR (requires an OSKAR measurement set via --beam_ms_path)\n"
-            "\t - everybeam_LOFAR (requires a LOFAR measurement set via --beam_ms_path)\n"
-            "\t - everybeam_MWA (requires an MWA measurement set via --beam_ms_path)\n"
+            "\t - everybeam_OSKAR (EveryBeam OSKAR model; requires an OSKAR measurement set via --beam_ms_path)\n"
+            "\t - everybeam_LOFAR (EveryBeam LOFAR model; requires a LOFAR measurement set via --beam_ms_path)\n"
+            "\t - everybeam_MWA (EveryBeam MWA model; requires an MWA measurement set via --beam_ms_path.\n"
+            "\t\t defaults to using env variable $MWA_FEE_HDF5 as input; use `--hdf5_beam_path` to specifiy otherwise)"
+            "\t - uvbeam_MWA (defaults to using env variable $MWA_FEE_HDF5 as input; use `--hdf5_beam_path` to specifiy otherwise)\n"
             "\t - none (Don't use a primary beam at all)\n"
             "Defaults to --primary_beam=none")
     tel_group.add_argument('--off_cardinal_dipoles', default=False, action='store_true',
@@ -510,7 +517,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     if args.primary_beam not in ['MWA_FEE', 'Gaussian', 'EDA2', 'none', 'None',
                                  'MWA_FEE_interp', 'MWA_analy',
                                  'everybeam_OSKAR', 'everybeam_LOFAR',
-                                 'everybeam_MWA']:
+                                 'everybeam_MWA', 'uvbeam_MWA']:
         sys.exit('Primary beam option --primary_beam must be one of:\n'
              '\t Gaussian, EDA2, none, MWA_FEE, MWA_FEE_interp, '
              'MWA_analy, everybeam_OSKAR, everybeam_LOFAR, everybeam_MWA, \n'
@@ -520,16 +527,21 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     ##Be a little flexible in how people specify 'none'
     if args.primary_beam in ['None', 'none']:
         args.primary_beam = 'none'
-
-    ##If we're using the MWA FEE beam, make sure we can find the stored
-    ##spherical harmonics file
-    if args.primary_beam == 'MWA_FEE':
+        
+    requested_mwa_hdf5_found = False
+    
+    if args.primary_beam in ['MWA_FEE', 'MWA_FEE_interp', 'everybeam_MWA', 'uvbeam_MWA']:
         if args.hdf5_beam_path:
             if not os.path.isfile(args.hdf5_beam_path):
                 exit('Could not open hdf5 MWA FEE path as specified by user as:\n'
                      '\t--hdf5_beam_path={:s}.\n'
                      'This will cause WODEN to fail, exiting now'.format(args.hdf5_beam_path))
-        else:
+            requested_mwa_hdf5_found = True
+
+    ##If we're using the MWA FEE beam, make sure we can find the stored
+    ##spherical harmonics file
+    if args.primary_beam in ['MWA_FEE', 'everybeam_MWA', 'uvbeam_MWA']:
+        if not requested_mwa_hdf5_found:
             try:
                 MWA_FEE_HDF5 = os.environ['MWA_FEE_HDF5']
                 args.hdf5_beam_path = MWA_FEE_HDF5
@@ -545,12 +557,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     ##If we're using the MWA FEE beam, make sure we can find the stored
     ##spherical harmonics file
     elif args.primary_beam == 'MWA_FEE_interp':
-        if args.hdf5_beam_path:
-            if not os.path.isfile(args.hdf5_beam_path):
-                exit('Could not open hdf5 MWA FEE path as specified by user as:\n'
-                     '\t--hdf5_beam_path={:s}.\n'
-                     'This will cause WODEN to fail, exiting now'.format(args.hdf5_beam_path))
-        else:
+        if not requested_mwa_hdf5_found:
             try:
                 MWA_FEE_HDF5_INTERP = os.environ['MWA_FEE_HDF5_INTERP']
                 args.hdf5_beam_path = MWA_FEE_HDF5_INTERP
@@ -562,26 +569,6 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
                 exit('To use MWA FEE intrep beam, either --hdf5_beam_path or environment\n'
                      'variable MWA_FEE_HDF5_INTERP must point towards the file\n'
                      'MWA_embedded_element_pattern_rev2_interp_167_197MHz.h5. Exiting now as WODEN will fail.')
-                
-    if args.primary_beam == 'everybeam_MWA':
-        
-        if args.hdf5_beam_path:
-            if not os.path.isfile(args.hdf5_beam_path):
-                exit('Could not open hdf5 MWA FEE path as specified by user as:\n'
-                     '\t--hdf5_beam_path={:s}.\n'
-                     'This will cause WODEN to fail, exiting now'.format(args.hdf5_beam_path))
-        else:
-            try:
-                MWA_FEE_HDF5 = os.environ['MWA_FEE_HDF5']
-                args.hdf5_beam_path = MWA_FEE_HDF5
-                if not os.path.isfile(args.hdf5_beam_path):
-                    exit('Could not open hdf5 MWA FEE path as specified by user as:\n'
-                         '\t--environ["MWA_FEE_HDF5"]={:s}.\n'
-                         'This will cause WODEN to fail, exiting now'.format(args.hdf5_beam_path))
-            except KeyError:
-                exit('To use EveryBeam MWA, either --hdf5_beam_path or environment\n'
-                     'variable MWA_FEE_HDF5 must point towards the file\n'
-                     'mwa_full_embedded_element_pattern.h5. Exiting now as WODEN will fail.')
                 
     eb_args = ['everybeam_OSKAR', 'everybeam_LOFAR', 'everybeam_MWA']
     
@@ -804,8 +791,9 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
         except:
             exit(message)
 
-    ##Do the test on MWA_FEE_delays only if this is an MWA_FEE simulation
-    if args.primary_beam == 'MWA_FEE' or args.primary_beam == 'MWA_FEE_interp' or args.primary_beam == 'MWA_analy':
+    ##Do the test on MWA_FEE_delays only if this particular primary beam
+    ##needs MWA delays
+    if args.primary_beam in ['MWA_FEE', 'MWA_FEE_interp', 'MWA_analy', 'uvbeam_MWA']:
         args.MWA_FEE_delays = select_argument_and_check(args.MWA_FEE_delays,
                                       args.MWA_FEE_delays,
                                       MWA_FEE_delays, "MWA_FEE_delays")
@@ -817,12 +805,12 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     else:
         args.num_freq_channels = int(args.num_freq_channels)
 
-    # if args.primary_beam == 'everybeam_OSKAR' or args.primary_beam == 'everybeam_LOFAR' or args.primary_beam == 'everybeam_MWA':
-    #     if len(args.band_nums) > 1:
-    #         exit('ERROR: --band_nums must be a single band when using everybeam '
-    #              'as these beam models are calculated on the CPU; the bands '
-    #              'are iterated over the GPU. Please iterate over bands by '
-    #              'multiple calls to run_woden.py. Exiting now.')
+    if args.primary_beam == 'uvbeam_MWA':
+        if len(args.band_nums) > 1:
+            exit('ERROR: --band_nums must be a single band when using everybeam '
+                 'as these beam models are calculated on the CPU; the bands '
+                 'are iterated over the GPU. Please iterate over bands by '
+                 'multiple calls to run_woden.py. Exiting now.')
             
 
     ##If pointing for Gaussian beam is not set, point it at the phase centre

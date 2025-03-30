@@ -79,7 +79,7 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.autosectionlabel',
     'breathe',
-    "myst_nb",
+    "myst_nb"
 ]
 
 ##Don't execute the notebooks, just load them in
