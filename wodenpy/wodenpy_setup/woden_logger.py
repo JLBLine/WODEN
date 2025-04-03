@@ -232,7 +232,8 @@ def simple_logger(logging_level: int = logging.DEBUG):
     return logger
 
 
-def _mwa_beam_settings_string(logger: logging.Logger, woden_settings: object, args: argparse.Namespace) -> str:
+def _mwa_beam_settings_string(logger: logging.Logger, woden_settings: object,
+                              args: argparse.Namespace, package = 'hyperbeam') -> str:
     """
     Generate a string describing the MWA primary beam settings.
     
@@ -251,7 +252,7 @@ def _mwa_beam_settings_string(logger: logging.Logger, woden_settings: object, ar
         A formatted string describing the MWA primary beam settings.
     """
     
-    out_string = "Using MWA primary beam via hyperbeam with the following parameters:\n" \
+    out_string = f"Using MWA primary beam via {package} with the following parameters:\n" \
                     f"\thdf5 file: { woden_settings.hdf5_beam_path}\n" \
                     f"\tdelays: {woden_settings.FEE_ideal_delays}"
     if args.use_MWA_dipamps:
@@ -352,6 +353,10 @@ def log_chosen_beamtype(logger: logging.Logger, woden_settings: object,
     elif woden_settings.beamtype in BeamGroups.eb_beam_values:
         eb_beam_string = _everybeam_settings_string(logger, woden_settings, args)
         logger.info(eb_beam_string)
+        
+    elif woden_settings.beamtype == BeamTypes.UVB_MWA.value:
+        mwa_beam_string = _mwa_beam_settings_string(logger, woden_settings, args, 'pyuvdata.UVBeam')
+        logger.info(mwa_beam_string)
 
     else:
         logger.error("Primary beam type not recognised. This shouldn't be possible "

@@ -322,6 +322,10 @@ def fill_woden_settings_python(args : argparse.Namespace,
     elif args.primary_beam == 'everybeam_MWA':
         woden_settings.beamtype = BeamTypes.EB_MWA.value
         
+    elif args.primary_beam == 'uvbeam_MWA':
+        woden_settings.beamtype = BeamTypes.UVB_MWA.value
+        woden_settings.hdf5_beam_path = args.hdf5_beam_path
+        
     if woden_settings.beamtype in BeamGroups.eb_beam_values:
         woden_settings.eb_beam_ra0 = float(args.eb_ra_point)*D2R
         woden_settings.eb_beam_dec0 = float(args.eb_dec_point)*D2R

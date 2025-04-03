@@ -44,12 +44,18 @@ class BeamGroups:
     eb_beam_values : list
         All the EveryBeam beam types.
     azza_beam_values : list
-        All beams that need azimuth/altitude calculated before sending to GPU.
+        All beams that need azimuth/altitude calculated before sending to CPU/GPU.
     hadec_beam_values : list
-        All beams that need Hour Angle/Declination calculated/filled before sending to GPU.
+        All beams that need Hour Angle/Declination calculated/filled before sending to CPU/GPU.
     off_cardinal_beam_values : list
         All beams that have off-cardinal dipole alignments, e.g. not N/S or E/W at 0,90 degrees,
-        but rather 45, 135 degrees (e.g. LOFAR).
+        but rather 45, 135 degrees. Currently empty pending further development (something in
+        LOFAR is definitely off-cardinal but needs more research).
+    python_calc_beams : list
+        All beams that are calculated in Python before sending to CPU/GPU (e.g.
+        any `UVBeam` beam types).
+    uvbeam_beams : list
+        All the UVBeam beam types).
     """
     
     eb_beam_values = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value, BeamTypes.EB_MWA.value]
@@ -61,5 +67,7 @@ class BeamGroups:
     # needs_mwa_delays = [BeamTypes.FEE_BEAM.value, BeamTypes.FEE_BEAM_INTERP, BeamTypes.MWA_ANALY.value]
     ##TODO investigate what beam types are off-cardinal, and add to this list below
     off_cardinal_beam_values = []
+    python_calc_beams = [BeamTypes.UVB_MWA.value]
+    uvbeam_beams = [BeamTypes.UVB_MWA.value]
         
         

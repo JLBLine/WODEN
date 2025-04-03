@@ -140,7 +140,7 @@ def get_parser():
             "\t - everybeam_OSKAR (EveryBeam OSKAR model; requires an OSKAR measurement set via --beam_ms_path)\n"
             "\t - everybeam_LOFAR (EveryBeam LOFAR model; requires a LOFAR measurement set via --beam_ms_path)\n"
             "\t - everybeam_MWA (EveryBeam MWA model; requires an MWA measurement set via --beam_ms_path.\n"
-            "\t\t defaults to using env variable $MWA_FEE_HDF5 as input; use `--hdf5_beam_path` to specifiy otherwise)"
+            "\t\t defaults to using env variable $MWA_FEE_HDF5 as input; use `--hdf5_beam_path` to specifiy otherwise)\n"
             "\t - uvbeam_MWA (defaults to using env variable $MWA_FEE_HDF5 as input; use `--hdf5_beam_path` to specifiy otherwise)\n"
             "\t - none (Don't use a primary beam at all)\n"
             "Defaults to --primary_beam=none")
@@ -191,6 +191,25 @@ def get_parser():
               'If added, `--eb_dec_point` will trigger WODEN to create a minimal '
               'copy of the measurement set with the pointing set to this value')
     
+    hyper_group = parser.add_argument_group('MWA PRIMARY BEAM OPTIONS')
+    hyper_group.add_argument('--hdf5_beam_path', default=False,
+        help='Location of the hdf5 file holding the MWA FEE beam coefficients')
+    hyper_group.add_argument('--MWA_FEE_delays', default=False,
+        help='R|A list of 16 delays to point the MWA FEE primary beam \n'
+              'model enter as as list like: \n'
+              '--MWA_FEE_delays=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]\n'
+              'for a zenith pointing. This is read directly from\n'
+              'the metafits if using a metafits file. Only effects `hyperbeam`, '
+              '`uvbeam`, and analytic MWA models; `everybeam` reads delays from a measurement set')
+    
+    hyper_group.add_argument('--use_MWA_dipflags', default=False, action='store_true',
+        help='Apply the dipole flags stored in the metafits file. Only effects'
+             ' `hyperbeam` and `uvbeam` models, does not work on analytic or `everybeam` models.')
+    hyper_group.add_argument('--use_MWA_dipamps', default=False, action='store_true',
+        help='Attempt to use bespoke MWA dipole amplitudes stored in the metafits'
+             ' file. Must be stored under the `DipAmps` column. Only effects'
+             ' `hyperbeam` and `uvbeam` models, does not work on analytic or `everybeam` models.')
+    
     gauss_group = parser.add_argument_group('GAUSSIAN PRIMARY BEAM OPTIONS')
     gauss_group.add_argument('--gauss_beam_FWHM', default=20, type=float,
         help='The FWHM of the Gaussian beam in deg - WODEN defaults to using'
@@ -208,24 +227,6 @@ def get_parser():
         help='The initial Dec (deg) to point the Gaussian beam at. Defaults '
         'to the Dec of the metafits if available, or the Dec of the phase centre'
         ' if not')
-
-    hyper_group = parser.add_argument_group('HYPERBEAM PRIMARY BEAM OPTIONS')
-    hyper_group.add_argument('--hdf5_beam_path', default=False,
-        help='Location of the hdf5 file holding the MWA FEE beam coefficients')
-    hyper_group.add_argument('--MWA_FEE_delays', default=False,
-        help='R|A list of 16 delays to point the MWA FEE primary beam \n'
-              'model enter as as list like: \n'
-              '--MWA_FEE_delays=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]\n'
-              'for a zenith pointing. This is read directly from\n'
-              'the metafits if using a metafits file')
-    
-    hyper_group.add_argument('--use_MWA_dipflags', default=False, action='store_true',
-        help='Apply the dipole flags stored in the metafits file. Only works'
-             ' for the MWA FEE currently, not the MWA analytic model')
-    hyper_group.add_argument('--use_MWA_dipamps', default=False, action='store_true',
-        help='Attempt to use bespoke MWA dipole amplitudes stored in the metafits'
-             ' file. Must be stored under the `DipAmps` column. Only works'
-             ' for the MWA FEE currently, not the MWA analytic model')
 
     input_group = parser.add_argument_group('INPUT/OUTPUT OPTIONS')
     input_group.add_argument('--IAU_order', default=False, action='store_true',
@@ -929,7 +930,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     ##Now do dipole amplitudes
     args.dipamps = np.ones(2*args.num_antennas*16)
     if args.use_MWA_dipamps:
-        if args.primary_beam != 'MWA_FEE' and args.primary_beam != 'MWA_FEE_interp':
+        if args.primary_beam not in ['MWA_FEE', 'MWA_FEE_interp', 'uvbeam_MWA']:
             exit('ERROR: --use_MWA_dipamps can only be used with the MWA FEE beam'
                  ' so must be used with --primary_beam=MWA_FEE or --primary_beam=MWA_FEE_interp.')
             

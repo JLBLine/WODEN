@@ -43,6 +43,7 @@ import multiprocessing
 from datetime import timedelta
 import traceback
 import shutil
+from wodenpy.primary_beam.use_uvbeam import setup_MWA_uvbeams
 
 ##Constants
 R2D = 180.0 / np.pi
@@ -207,7 +208,8 @@ def read_skymodel_worker(thread_id : int, num_threads : int,
                          main_table : Table, shape_table : Table,
                          v_table : Table = False, q_table : Table = False,
                          u_table : Table = False, p_table : Table = False,
-                         logger : Logger = False) -> Tuple[List[Source_Python], int]:
+                         logger : Logger = False,
+                         uvbeam_objs : np.ndarray = None) -> Tuple[List[Source_Python], int]:
     """
     Reads a list of `Skymodel_Chunk_Map` types in `chunked_skymodel_map_sets`
     from the given astropy tables, into a list of `Source_Python` types.
@@ -290,11 +292,10 @@ def read_skymodel_worker(thread_id : int, num_threads : int,
         python_sources = read_fits_skymodel_chunks(args, main_table, shape_table,
                                 chunk_maps,
                                 args.num_freq_channels, args.num_time_steps,
-                                beamtype,
-                                lsts, latitudes,
+                                beamtype, lsts, latitudes,
                                 v_table, q_table,
                                 u_table, p_table,
-                                args.precision)
+                                args.precision, uvbeam_objs)
         
         end = time()
         
@@ -361,7 +362,7 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                  lsts, latitudes, args, beamtype,
                  main_table, shape_table, v_table, q_table, u_table, p_table,
                  woden_settings_python, array_layout_python, visi_sets_python,
-                 logger = False, serial_mode = False):
+                 logger = False, serial_mode = False, uvbeam_objs = None):
     
     if not logger:
         logger = simple_logger(args.log_level)
@@ -386,7 +387,7 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                                                             args, beamtype,
                                                             main_table, shape_table,
                                                             v_table, q_table, u_table, p_table,
-                                                            logger)
+                                                            logger, uvbeam_objs)
             
                 all_loaded_python_sources.append(python_sources)
                 all_loaded_sources_orders.append(order)
@@ -414,8 +415,6 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                         f"\t{done_n_shapes} of {total_n_shapes} shapelets\n"
                         f"\t{done_n_shape_coeffs} of {total_n_shape_coeffs} shape coeffs")
     else:
-    
-    
         if args.cpu_mode:
             num_visi_threads = num_threads
             device = 'CPU'
@@ -423,27 +422,32 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
             num_visi_threads = 1
             device = 'GPU'
             
+        if woden_settings_python.beamtype in BeamGroups.uvbeam_beams:
+            num_sky_model_threads = 1
+        else:
+            num_sky_model_threads = num_threads
+            
         # logger.info(f"Running WODEN with {num_threads} threads for sky model reading and {num_visi_threads} threads for visibility processing")
         
         if device == 'CPU':
         
-            with ProcessPoolExecutor(max_workers=num_threads) as sky_model_executor, ProcessPoolExecutor(max_workers=num_visi_threads) as visi_executor:
+            with ProcessPoolExecutor(max_workers=num_sky_model_threads) as sky_model_executor, ProcessPoolExecutor(max_workers=num_visi_threads) as visi_executor:
             
                 # # Loop through multiple rounds of data reading and calculation
                 for round_num in range(num_rounds):
                     logger.info(f"Reading set {round_num} sky models")
                     future_data_sky = [sky_model_executor.submit(read_skymodel_worker,
-                                                i + round_num * num_threads, num_threads,
+                                                i + round_num * num_sky_model_threads, num_sky_model_threads,
                                                 chunked_skymodel_map_sets,
                                                 lsts, latitudes,
                                                 args, beamtype,
                                                 main_table, shape_table,
                                                 v_table, q_table, u_table, p_table,
-                                                logger)
-                                        for i in range(num_threads)]
+                                                logger, uvbeam_objs)
+                                        for i in range(num_sky_model_threads)]
                     
-                    all_loaded_python_sources = [0]*num_threads
-                    all_loaded_sources_orders = [0]*num_threads
+                    all_loaded_python_sources = [0]*num_sky_model_threads
+                    all_loaded_sources_orders = [0]*num_sky_model_threads
                     for future in future_data_sky:
                         python_sources, order = get_future_result(future, logger)
                         
@@ -483,7 +487,7 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                         
         else:
                         
-            with concurrent.futures.ProcessPoolExecutor(max_workers=num_threads) as sky_model_executor:
+            with concurrent.futures.ProcessPoolExecutor(max_workers=num_sky_model_threads) as sky_model_executor:
                 
                 visi_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
                 gpu_calc = None  # To store the future of the calculation thread
@@ -493,14 +497,14 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                     
                     logger.info(f"Reading set {round_num} sky models")
                     future_data_sky = [sky_model_executor.submit(read_skymodel_worker,
-                                                i + round_num * num_threads, num_threads,
+                                                i + round_num * num_sky_model_threads, num_sky_model_threads,
                                                 chunked_skymodel_map_sets,
                                                 lsts, latitudes,
                                                 args, beamtype,
                                                 main_table, shape_table,
                                                 v_table, q_table, u_table, p_table, 
-                                                logger)
-                                        for i in range(num_threads)]
+                                                logger, uvbeam_objs)
+                                        for i in range(num_sky_model_threads)]
                     
                     all_loaded_python_sources = []
                     all_loaded_sources_orders = []
@@ -714,6 +718,31 @@ def main(argv=None):
                 visi_sets_python[thread_ind, band_ind].ws_metres = np.zeros(num_visis)
             
 
+        ##Setup UVBeam objects; only have to do this once, so do it
+        ##before looping over all the sky model chunks
+        
+        if woden_settings_python.beamtype in BeamGroups.uvbeam_beams:
+            main_logger.info("Creating UVBeam objects. This may take a while")
+            
+            band_num = args.band_nums[0]
+            base_band_freq = ((band_num - 1)*float(args.coarse_band_width)) + args.lowest_channel_freq
+            top_freq = base_band_freq + args.num_freq_channels*args.freq_res
+            freqs = np.array([base_band_freq, top_freq])
+            
+            if args.use_MWA_dipamps:
+                dipole_amps = woden_settings_python.mwa_dipole_amps
+            else:
+                dipole_amps = np.ones(32)
+            
+            uvbeam_objs = setup_MWA_uvbeams(args.hdf5_beam_path, freqs,
+                                            woden_settings_python.FEE_ideal_delays,
+                                            dipole_amps, pixels_per_deg = 5)
+            
+            main_logger.info("UVBeam objects have been initialised")
+            
+        else:
+            uvbeam_objs = False
+
         ###---------------------------------------------------------------------
         ### heavy lifting area - here we setup running the sky model reading
         ### and running CPU/GPU code at the same time. Means we can limit the
@@ -744,7 +773,7 @@ def main(argv=None):
             lsts, latitudes, args, woden_settings_python.beamtype,
             main_table, shape_table, v_table, q_table, u_table, p_table,
             woden_settings_python, array_layout_python, visi_sets_python,
-            main_logger, serial_mode)
+            main_logger, serial_mode, uvbeam_objs)
             
         ### we've now calculated all the visibilities
         ###---------------------------------------------------------------------

@@ -69,6 +69,8 @@ cmake_testing/wodenpy/skymodel/test_full_skymodel.fits
 cmake_testing/wodenpy/skymodel/test_full_skymodel.txt
 cmake_testing/wodenpy/skymodel/test_full_skymodel.yaml
 
+cmake_testing/wodenpy/primary_beam/*.png
+
 *importuvfits.last
 *.log
 

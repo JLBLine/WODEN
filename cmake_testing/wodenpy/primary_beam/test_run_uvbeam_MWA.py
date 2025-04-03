@@ -14,7 +14,7 @@ from wodenpy.use_libwoden.skymodel_structs import Components_Python
 from astropy.coordinates import EarthLocation
 from astropy import units as u
 from astropy.time import Time
-from wodenpy.primary_beam.use_uvbeam import run_uvbeam
+from wodenpy.primary_beam.use_uvbeam import run_uvbeam, setup_MWA_uvbeams
 import importlib_resources
 import mwa_hyperbeam
 from astropy.io import fits
@@ -22,7 +22,7 @@ from astropy.wcs import WCS
 from astropy.time import TimeDelta
 import erfa
 from pyuvdata import ShortDipoleBeam, BeamInterface, UVBeam
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 ##Location of this file; use it to find test measurement sets
 code_dir = os.path.realpath(__file__)
@@ -37,23 +37,24 @@ MWA_LONG = 116.67081523611111
 MWA_LONG_RAD = MWA_LONG * D2R
 MWA_HEIGHT = 377.83
 
-NSIDE=41
+NSIDE=51
 
 ##Vehicle for running tests
 class Test(unittest.TestCase):
     """Vehicle for running tests"""
     
-    def do_MWA_beam_test(self, both_delays):
+    def do_MWA_beam_test(self, delays, 
+                         gains=np.ones(32)):
         """First of all, run `run_everybeam` to get a set of expected values
         for given inputs. Then run `run_everybeam_over_threads` for a number
         of threads, and check the outputs match."""
         
-        
-        # freqs = np.array([1.6768e+08, 1.8944e+08])
         freqs = np.array([1.87e+08, 1.8944e+08])
+        # freqs = np.array([137e+6])
         num_freqs = len(freqs)
         num_times = 2
-        num_beams = 1
+        
+        num_beams = int(gains.size / 32)
         
         date = "2013-05-16T10:48:48"
         
@@ -77,6 +78,7 @@ class Test(unittest.TestCase):
         ##This resolution seems to cover the full sky nicely
         cpix = int(nside // 2) + 1
         cdelt = 0.35
+        # cdelt = 120 / nside
         cdelt = 80 / nside
 
         header['NAXIS']   = 2
@@ -107,110 +109,185 @@ class Test(unittest.TestCase):
         ras = np.radians(ras)
         decs = np.radians(decs)
         
+        ##Call uvbeam first so we can test for failures before calling
+        ##hyperbeam (which should fail as well but probably in a different way)
         coeff_path=os.environ['MWA_FEE_HDF5']
+        uvbeam_objs = setup_MWA_uvbeams(coeff_path, freqs,
+                      delays, gains,
+                      pixels_per_deg = 5)
+        
+        
+        uvbeam_jones = run_uvbeam(uvbeam_objs, ras, decs,
+                                  latitudes, lsts,
+                                  freqs, iau_order=True,
+                                  parallactic_rotate=True)
+        
+        
         hyp_beam = mwa_hyperbeam.FEEBeam(hdf5_file=coeff_path)
         
         norm_to_zenith = True
         iau_order = True
         
-        gains = [1]*16
-        
         full_hyp_jones = np.zeros((num_beams, num_times, num_freqs, nside*nside, 2, 2), dtype=complex)
         
         beam_ind = 0
-        for time_ind, time in enumerate(times):
-            for freq_ind, freq in enumerate(freqs):
-                
-                lst = lsts[time_ind]
-                
-                ##Then use erfa to convert these values into azs, els
-                has = lst - ras
+        for beam_ind in range(num_beams):
+            these_gains = gains[beam_ind*32:(beam_ind+1)*32]
+            for time_ind, time in enumerate(times):
+                for freq_ind, freq in enumerate(freqs):
+                    
+                    lst = lsts[time_ind]
+                    
+                    ##Then use erfa to convert these values into azs, els
+                    has = lst - ras
 
-                ##use this erfa function to convert to azimuth and elevation
-                ##were using degrees, but erfa uses rads, so convert here
-                azs, els = erfa.hd2ae(has, decs, MWA_LAT_RAD)
-                
-                zas = np.pi/2 - els
-                
-                hyp_jones = hyp_beam.calc_jones_array(azs, zas, freq,
-                                                  both_delays[0], gains, norm_to_zenith,
-                                                  MWA_LAT_RAD, iau_order)
-                
-                
-                # hyp_jones = hyp_beam.calc_jones_array(azs, zas, freq,
-                #                                   both_delays[0], gains, norm_to_zenith)
-                
-                full_hyp_jones[beam_ind, time_ind, freq_ind, :, 0, 0] = hyp_jones[:, 0]
-                full_hyp_jones[beam_ind, time_ind, freq_ind, :, 0, 1] = hyp_jones[:, 1]
-                full_hyp_jones[beam_ind, time_ind, freq_ind, :, 1, 0] = hyp_jones[:, 2]
-                full_hyp_jones[beam_ind, time_ind, freq_ind, :, 1, 1] = hyp_jones[:, 3]
+                    ##use this erfa function to convert to azimuth and elevation
+                    ##were using degrees, but erfa uses rads, so convert here
+                    azs, els = erfa.hd2ae(has, decs, MWA_LAT_RAD)
+                    
+                    zas = np.pi/2 - els
+                    
+                    hyp_jones = hyp_beam.calc_jones_array(azs, zas, freq,
+                                                    delays, these_gains, norm_to_zenith,
+                                                    MWA_LAT_RAD, iau_order)
+                    
+                    
+                    # hyp_jones = hyp_beam.calc_jones_array(azs, zas, freq,
+                    #                                   delays, gains, norm_to_zenith)
+                    
+                    full_hyp_jones[beam_ind, time_ind, freq_ind, :, 0, 0] = hyp_jones[:, 0]
+                    full_hyp_jones[beam_ind, time_ind, freq_ind, :, 0, 1] = hyp_jones[:, 1]
+                    full_hyp_jones[beam_ind, time_ind, freq_ind, :, 1, 0] = hyp_jones[:, 2]
+                    full_hyp_jones[beam_ind, time_ind, freq_ind, :, 1, 1] = hyp_jones[:, 3]
           
-        uvbeam_mwa = UVBeam.from_file(coeff_path, pixels_per_deg=5,
-                                      delays=both_delays,
-                                      freq_range=[freqs.min()-2*1.28e6, freqs.max()+2*1.28e+6])
+        # fig, axs = plt.subplots(4, 3, figsize=(10, 10), layout='constrained')
         
-        # print(uvbeam_mwa.bandpass_array)
+        # this_hyp = np.abs(full_hyp_jones)
+        # this_uvbeam = np.abs(uvbeam_jones)
         
-        uvbeam_mwa.peak_normalize()
-                
-        uvbeam_obs = [uvbeam_mwa]
+        # labels = ['hyperbeam', 'pyuvdata', 'hyperbeam - pyuvdata']
         
-        uvbeam_jones = run_uvbeam(uvbeam_obs, ras, decs,
-                                  latitudes, lsts,
-                                  MWA_LAT_RAD, MWA_LONG_RAD,
-                                  times, freqs, iau_order=True,
-                                  parallactic_rotate=True)
+        # for col, jones in enumerate([this_hyp, this_uvbeam, this_hyp - this_uvbeam]):
+        # # for col, jones in zip(range(1), [full_hyp_jones]):
+        #     for row in range(4):
+                
+        #         beam = jones[0, 0, 0, :, row//2, row%2]
+        #         beam.shape = (nside, nside)
+                
+        #         im = axs[row, col].imshow(beam, origin='lower')
+                
+        #         axs[row, col].set_xticks([])
+        #         axs[row, col].set_yticks([])
+                
+        #         if row == 0:
+        #             axs[row, col].set_title(f'{labels[col]} gx')
+        #         elif row == 1:
+        #             axs[row, col].set_title(f'{labels[col]} Dx')
+        #         elif row == 2:
+        #             axs[row, col].set_title(f'{labels[col]} Dy')
+        #         elif row == 3:
+        #             axs[row, col].set_title(f'{labels[col]} gy')
+                
+        #         plt.colorbar(im, ax=axs[row, col])
+                
+        # fig, axs = plt.subplots(4, 4, figsize=(12, 10), layout='constrained')
         
-        fig, axs = plt.subplots(4, 3, figsize=(8, 10), layout='constrained')
+        # this_hyp = full_hyp_jones
+        # this_uvbeam = uvbeam_jones
         
-        this_hyp = np.abs(full_hyp_jones)
-        this_uvbeam = np.abs(uvbeam_jones)
+        # labels = ['hyperbeam', 'pyuvdata']
         
-        for col, jones in enumerate([this_hyp, this_uvbeam, this_hyp - this_uvbeam]):
-        # for col, jones in zip(range(1), [full_hyp_jones]):
-            for row in range(4):
+        # for col, jones in enumerate([this_hyp, this_uvbeam]):
+        # # for col, jones in zip(range(1), [full_hyp_jones]):
+        #     for row in range(4):
                 
-                beam = jones[0, 0, 0, :, row//2, row%2]
-                beam.shape = (nside, nside)
+        #         beam = jones[0, 0, 0, :, row//2, row%2]
+        #         beam.shape = (nside, nside)
                 
-                im = axs[row, col].imshow(beam, origin='lower')
+        #         im = axs[row, col].imshow(np.real(beam), origin='lower')
+        #         plt.colorbar(im, ax=axs[row, col])
                 
-                axs[row, col].set_xticks([])
-                axs[row, col].set_yticks([])
+        #         im = axs[row, 2 + col].imshow(np.imag(beam), origin='lower')
+        #         plt.colorbar(im, ax=axs[row, 2+col])
                 
-                plt.colorbar(im, ax=axs[row, col])
+        #         axs[row, col].set_title(f'{labels[col]} real')
+        #         axs[row, 2 + col].set_title(f'{labels[col]} imag')
                 
-        axs[0, 0].set_title('hyperbeam')
-        axs[0, 1].set_title('pyuvdata')
-        axs[0, 2].set_title('hyperbeam - pyuvdata')
+        #         axs[row, col].set_xticks([])
+        #         axs[row, col].set_yticks([])
+        #         axs[row, col+2].set_xticks([])
+        #         axs[row, col+2].set_yticks([])
                 
-        fig.savefig('test_uvbeam.png',bbox_inches='tight')
-        plt.close(fig)
+                
+                
+        # axs[0, 0].set_title('hyperbeam')
+        # axs[0, 1].set_title('pyuvdata')
+        # axs[0, 2].set_title('hyperbeam - pyuvdata')
+                
+        # fig.savefig('test_uvbeam.png',bbox_inches='tight')
+        # plt.close(fig)
+        
+        
         
         npt.assert_allclose(uvbeam_jones, full_hyp_jones,
                             rtol=1e-1, atol=1e-4)
+        
+        # diff = np.abs(uvbeam_jones[0,0,0,:,0,0]) - np.abs(full_hyp_jones[0,0,0,:,1,1])
+        
+        # im = plt.imshow(np.reshape(diff, (nside, nside)), origin='lower')
+        # plt.colorbar(im)
+        # plt.xlabel("RA")
+        # plt.ylabel("Dec")
+        # plt.show()
             
             
     
+    def test_bad_amps(self):
+        """Test things error when the gains aren't a multiple of 32"""
+        
+        delays = np.zeros(16, dtype='int')
+        amps = np.ones(16, dtype='float')
+        
+        with self.assertRaises(SystemExit) as cm:
+            self.do_MWA_beam_test(delays, amps)
+            
+    def test_bad_delays(self):
+        """Test things error when the delays aren't a multiple of 16"""
+        
+        delays = np.zeros(13, dtype='int')
+        
+        with self.assertRaises(SystemExit) as cm:
+            self.do_MWA_beam_test(delays)
+        
     def test_zenith(self):
         """Test the zenith beam"""
         
         # Set up the test parameters
-        both_delays = np.zeros((2, 16), dtype='int')
+        delays = np.zeros(16, dtype='int')
         
-        self.do_MWA_beam_test(both_delays)
+        self.do_MWA_beam_test(delays)
         
         
-    # def test_offzenith(self):
-    #     """Test the zenith beam"""
+    def test_use_amps(self):
+        """Test the zenith beam with a dead dipole in each pol"""
         
-    #     # Set up the test parameters
-    #     both_delays = np.zeros((2, 16), dtype='int')
+        # Set up the test parameters
+        delays = np.zeros(16, dtype='int')
+        amps = np.ones(32, dtype='float')
+        # amps[0] = 0.0
+        amps[3] = 0.0
+        amps[16+3] = 0.0
         
-    #     both_delays[0, :] = np.tile(np.arange(0,8,2), 4)
-    #     both_delays[1, :] = np.tile(np.arange(0,8,2), 4)
+        self.do_MWA_beam_test(delays, amps)
         
-    #     self.do_MWA_beam_test(both_delays)
+        
+    def test_offzenith(self):
+        """Test the zenith beam"""
+        
+        delays = np.tile(np.arange(0,8,2), 4)
+        
+        
+        self.do_MWA_beam_test(delays)
 
 ##Run the test
 if __name__ == '__main__':

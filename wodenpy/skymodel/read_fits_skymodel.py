@@ -22,6 +22,8 @@ from sys import exit
 import argparse
 from astropy.time import Time, TimeDelta
 
+from wodenpy.primary_beam.use_uvbeam import calc_uvbeam_for_components
+
 ##This call is so we can use it as a type annotation
 woden_struct_classes = Woden_Struct_Classes()
 Woden_Settings = woden_struct_classes.Woden_Settings
@@ -740,7 +742,9 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
                         chunk_map : Skymodel_Chunk_Map,
                         beamtype : int, lsts : np.ndarray, latitudes : np.ndarray,
                         v_table : Table = False, q_table : Table = False,
-                        u_table : Table = False, p_table : Table = False):
+                        u_table : Table = False, p_table : Table = False,
+                        uvbeam_objs : np.ndarray = False,
+                        all_freqs : np.ndarray = False):
     """Given the desired components as detailed in the `chunk_map`, add
     the relevant information from the FITS file `main_table`, `shape_table`
     objects to the `chunk_source` object. As well as the skymodel information
@@ -1082,6 +1086,12 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
             else:
                 source_components.intr_pol_angle[linpol_ind] = 0.0
             linpol_ind += 1
+            
+    ##when calculating the primary beam values via Python, do it here
+    if beamtype == BeamTypes.UVB_MWA.value:
+        
+        calc_uvbeam_for_components(source_components, uvbeam_objs, all_freqs,
+                                   latitudes, lsts)
         
     return
 
@@ -1094,7 +1104,8 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                               j2000_lsts : np.ndarray, j2000_latitudes : np.ndarray,
                               v_table : Table = False, q_table : Table = False,
                               u_table : Table = False, p_table : Table = False,
-                              precision = "double") -> List[Source_Python]:
+                              precision : str = "double",
+                              uvbeam_objs : np.ndarray = False) -> List[Source_Python]:
     """
     Uses Tables read from a FITS file and returns a list of populated
     `Source_Python` classes. Uses the maps in `chunked_skymodel_maps` to
@@ -1144,9 +1155,23 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
     """
     source_array = [Source_Python() for i in range(len(chunked_skymodel_maps))]
     
-    ##Will be used in future if calculating primary beam values via Python
-    ##If a different beam patter per station, afjust num_beams accordingly
+    ##If num_beams is 1, we use the same primary beam patter for every station
+    ##Adjust here if we need to
     num_beams = 1
+    
+    if beamtype in BeamGroups.uvbeam_beams:
+        if type(uvbeam_objs) == bool:
+            sys.exit("UVBeam objects not passed in, but beamtype is UVBeam. "
+                    "Can't calculate the primary beam values so exiting.")
+        else:
+            num_beams = len(uvbeam_objs)
+        
+    
+    
+    ##`all_freqs` only used if calculating the primary beam via Python
+    band_num = args.band_nums[0]
+    base_band_freq = ((band_num - 1)*float(args.coarse_band_width)) + args.lowest_channel_freq
+    all_freqs = base_band_freq + np.arange(args.num_freq_channels)*args.freq_res
         
     ##for each chunk map, create a Source_Float or Source_Double ctype
     ##struct, and "malloc" the right amount of arrays to store required infor
@@ -1166,24 +1191,26 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                                       main_table, shape_table,
                                       source_array[chunk_ind], chunk_map,
                                       beamtype, j2000_lsts, j2000_latitudes,
-                                      v_table, q_table, u_table, p_table)
-            
-            ##NOTE this is where you would calculate beam values if you were
-            ##doing it via Python. Future place for pyuvbeam
-            ##The values would end up in source_array[chunk_ind].point_components.gxs
+                                      v_table, q_table, u_table, p_table,
+                                      uvbeam_objs=uvbeam_objs,
+                                      all_freqs=all_freqs)
             
         if chunk_map.n_gauss > 0:
             add_fits_info_to_source_catalogue(CompTypes.GAUSSIAN,
                                       main_table, shape_table,
                                       source_array[chunk_ind], chunk_map,
                                       beamtype, j2000_lsts, j2000_latitudes,
-                                      v_table, q_table, u_table, p_table)
+                                      v_table, q_table, u_table, p_table,
+                                      uvbeam_objs=uvbeam_objs,
+                                      all_freqs=all_freqs)
         if chunk_map.n_shapes > 0:
             add_fits_info_to_source_catalogue(CompTypes.SHAPELET,
                                       main_table, shape_table,
                                       source_array[chunk_ind], chunk_map,
                                       beamtype, j2000_lsts, j2000_latitudes,
-                                      v_table, q_table, u_table, p_table)
+                                      v_table, q_table, u_table, p_table,
+                                      uvbeam_objs=uvbeam_objs,
+                                      all_freqs=all_freqs)
             
     ##TODO some kind of consistency check between the chunk_maps and the
     ##sources in the catalogue - make sure we read in the correct information

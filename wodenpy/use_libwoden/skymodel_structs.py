@@ -699,13 +699,12 @@ def setup_components(chunk_map: Skymodel_Chunk_Map,
     if beamtype == BeamTypes.EB_MWA.value:
         components.para_angles = np.empty(n_comps*num_times, dtype=np_precision)
         
-    ##NOTE: use this to calculate beam values in Python
-    ##Needs to be done in future for pyuvbeam
-    # if beamtype in BeamGroups.eb_beam_values:
-    #     components.gxs = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
-    #     components.Dxs = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
-    #     components.Dys = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
-    #     components.gys = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
+    ##If calculating the primary beam via Python, make some space for the outputs
+    if beamtype in BeamGroups.python_calc_beams:
+        components.gxs = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
+        components.Dxs = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
+        components.Dys = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
+        components.gys = np.empty(n_comps*num_beams*num_freqs*num_times, dtype=np.complex128)
         
     ##now do the polarisation thingies------------------------------------------
     

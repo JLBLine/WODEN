@@ -9,13 +9,13 @@ import unittest
 import numpy as np
 import numpy.testing as npt
 
-from wodenpy.primary_beam.use_uvbeam import calc_uvbeam_for_components
+from wodenpy.primary_beam.use_uvbeam import calc_uvbeam_for_components, setup_MWA_uvbeams
 from wodenpy.use_libwoden.skymodel_structs import Components_Python
 from astropy.coordinates import EarthLocation
 from astropy import units as u
 from astropy.time import Time
 from wodenpy.array_layout.precession import RTS_Precess_LST_Lat_to_J2000
-from pyuvdata import ShortDipoleBeam, BeamInterface, UVBeam
+# from pyuvdata import ShortDipoleBeam, BeamInterface, UVBeam
 
 ##Location of this file; use it to find test measurement sets
 code_dir = os.path.realpath(__file__)
@@ -70,9 +70,8 @@ class Test(unittest.TestCase):
         components.decs = decs
         
         calc_uvbeam_for_components(components, uvbeam_objs,
-                                   all_times, all_freqs,
-                                   j2000_latitudes, j2000_lsts,
-                                   arr_latitude, arr_long)
+                                   all_freqs,
+                                   j2000_latitudes, j2000_lsts)
         
         ##I've intentionally put the central coord at beam centre, so we should
         ##get gains of 1 and leakages of 0
@@ -83,10 +82,10 @@ class Test(unittest.TestCase):
         npt.assert_allclose(np.abs(components.gys[2]), 1, atol=atol)
         
         ##Now just check against the expected values
-        npt.assert_allclose(components.gxs, expec_gxs, rtol=1e-4, atol=1e-4)
-        npt.assert_allclose(components.Dxs, expec_Dxs, rtol=1e-4, atol=1e-4)
-        npt.assert_allclose(components.Dys, expec_Dys, rtol=1e-4, atol=1e-4)
-        npt.assert_allclose(components.gys, expec_gys, rtol=1e-4, atol=1e-4)
+        npt.assert_allclose(components.gxs, expec_gxs, rtol=1e-4, atol=atol)
+        npt.assert_allclose(components.Dxs, expec_Dxs, rtol=1e-4, atol=atol)
+        npt.assert_allclose(components.Dys, expec_Dys, rtol=1e-4, atol=atol)
+        npt.assert_allclose(components.gys, expec_gys, rtol=1e-4, atol=atol)
         
     
     def test_MWA_zenith(self):
@@ -113,13 +112,21 @@ class Test(unittest.TestCase):
                          0.63274342-0.77436155j, 0.18302489-0.25105522j,
                          -0.00100178-0.00475868j]
             
-            uvbeam_mwa = UVBeam.from_file(mwa_coeff, pixels_per_deg=5,
-                                      delays=np.zeros((2,16), dtype=int),
-                                      freq_range=[FREQ-2*1.28e6, FREQ+2*1.28e+6])
+            # uvbeam_mwa = UVBeam.from_file(mwa_coeff, pixels_per_deg=5,
+            #                           delays=np.zeros((2,16), dtype=int),
+            #                           freq_range=[FREQ-2*1.28e6, FREQ+2*1.28e+6])
             
-            uvbeam_objs = [uvbeam_mwa]
-            for beam in uvbeam_objs:
-                beam.peak_normalize()
+            # uvbeam_objs = [uvbeam_mwa]
+            # for beam in uvbeam_objs:
+            #     beam.peak_normalize()
+            
+            freqs = np.array([FREQ])
+            delays = np.zeros(16, dtype=int)
+            gains = np.ones(32, dtype=float)
+            
+            uvbeam_objs = setup_MWA_uvbeams(mwa_coeff, freqs,
+                        delays, gains,
+                        pixels_per_deg = 5)
             
             self.run_calc_uvbeam_for_components(uvbeam_objs, mwa_lat, mwa_long,
                                                 date, expec_gxs, expec_Dxs,

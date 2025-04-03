@@ -212,11 +212,29 @@ dipamps = np.array([0.90376163, 0.95701027, 0.44699562, 0.95701027,
 dipamps_flagged = np.array([0.0, 0.0, 0.0, 0.95701027,
                     1., 0.97801661, 0.95163655, 1., 1.])
 
+
+
+
 ##Vehicle for running tests
 class Test(unittest.TestCase):
     """Test whether the args collected by the argument parser are read in
     correctly, and that sanity checks on certain combinations work such that
     we don't feed WODEN arguments that won't work"""
+    
+    def setUp(self):
+        """Grab two environment variables. We're going to break these during
+        tests to check things fail, so we need to restore them afterwards
+        We do that via the `addCleanup` method, which will run the function
+        passed to it after the test has finished. This is a unittest feature"""
+        self.hdf5_path = os.environ['MWA_FEE_HDF5']
+        self.hdf5_interp_path = os.environ['MWA_FEE_HDF5_INTERP']
+            
+        self.addCleanup(self.reset_env_var)  # Ensure cleanup runs
+
+    def reset_env_var(self):
+        """Restore the environment variables to their original values"""
+        os.environ["MWA_FEE_HDF5"] = self.hdf5_path  # Restore original value
+        os.environ["MWA_FEE_HDF5_INTERP"] = self.hdf5_interp_path  # Restore original value
 
     def run_parser_on_inputs(self):
         """Call `run_setup.get_parser` and run the returned parser using the inputs
@@ -441,6 +459,7 @@ class Test(unittest.TestCase):
         incorrectly"""
 
         actual_hdf5_path = os.environ[beam_env_var]
+        # self.actual_hdf5_path = actual_hdf5_path
 
         ##We want to test that the argument fails if the environment key
         ##MWA_FEE_HDF5 is not set. Here we check if it is set and delete it
@@ -454,7 +473,11 @@ class Test(unittest.TestCase):
         ##or --hdf5_beam_path should fail
         self.make_minimum_required_args_without_metafits()
         self.inputs.append(f'--primary_beam={beam_name}')
-
+        
+        ##UVBeam MWA can only work with one band number, so add that arg here.
+        ##Doesn't change the test outputs for the other beam models
+        self.inputs.append('--band_nums=1')
+        
         ##Check the primary_beam has been selected and that `run_setup.check_args` fails
         args = self.assert_check_args_errors()
         self.assertEqual(beam_name, args.primary_beam)
@@ -482,6 +505,9 @@ class Test(unittest.TestCase):
         ##Reset the arguments try to run using a metafits file, but still
         ##have no path to the hdf5 file. Should fail
         self.make_minimum_required_args_without_metafits()
+        ##UVBeam MWA can only work with one band number, so add that arg here.
+        ##Doesn't change the test outputs for the other beam models
+        self.inputs.append('--band_nums=1')
         self.inputs.append(f'--primary_beam={beam_name}')
         self.inputs.append("--metafits_filename={:s}/1202815152_metafits_ppds.fits".format(code_dir))
         args = self.assert_check_args_errors()
@@ -495,6 +521,7 @@ class Test(unittest.TestCase):
         ##This time, set the environment variable to the hdf5 file. Should
         ##pass (just use a file we know exists somewhere)
         os.environ[beam_env_var] = actual_hdf5_path
+        
         args = self.run_parser_and_check_args()
         ##Assert the delays were read in correctly
         self.assertEqual("[6, 4, 2, 0, 8, 6, 4, 2, 10, 8, 6, 4, 12, 10, 8, 6]", args.MWA_FEE_delays)
