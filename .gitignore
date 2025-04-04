@@ -136,6 +136,9 @@ test_installation/everybeam/check_positions_everybeam_LOFAR*
 test_installation/everybeam/*.lprof
 test_installation/everybeam/profile_output
 
+test_installation/pyuvbeam/*.fits
+test_installation/pyuvbeam/*.txt
+
 
 examples/LOFAR_LoTSS/*.fits
 examples/LOFAR_LoTSS/*.ms
