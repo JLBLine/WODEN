@@ -21,7 +21,7 @@ from wodenpy.array_layout.precession import RTS_Precess_LST_Lat_to_J2000
 code_dir = os.path.realpath(__file__)
 code_dir = ('/').join(code_dir.split('/')[:-1])
 
-FREQ = 100e+6
+FREQ = 99840000
 
 ##Vehicle for running tests
 class Test(unittest.TestCase):
@@ -63,7 +63,7 @@ class Test(unittest.TestCase):
         j2000_lsts = np.array([np.radians(LST_deg)])
         
         all_times = np.array([observing_time])
-        all_freqs = np.array([100e+6])
+        all_freqs = np.array([FREQ])
         station_id = 0
         
         components.ras = ras
@@ -87,7 +87,6 @@ class Test(unittest.TestCase):
         npt.assert_allclose(components.Dys, expec_Dys, rtol=1e-4, atol=atol)
         npt.assert_allclose(components.gys, expec_gys, rtol=1e-4, atol=atol)
         
-    
     def test_MWA_zenith(self):
         """Run test using an MWA beam. Skip if we can't find the hdf5 file"""
         
@@ -111,14 +110,6 @@ class Test(unittest.TestCase):
             expec_gys = [-0.01732507+0.02962904j, 0.2206394 -0.29093557j,
                          0.63274342-0.77436155j, 0.18302489-0.25105522j,
                          -0.00100178-0.00475868j]
-            
-            # uvbeam_mwa = UVBeam.from_file(mwa_coeff, pixels_per_deg=5,
-            #                           delays=np.zeros((2,16), dtype=int),
-            #                           freq_range=[FREQ-2*1.28e6, FREQ+2*1.28e+6])
-            
-            # uvbeam_objs = [uvbeam_mwa]
-            # for beam in uvbeam_objs:
-            #     beam.peak_normalize()
             
             freqs = np.array([FREQ])
             delays = np.zeros(16, dtype=int)

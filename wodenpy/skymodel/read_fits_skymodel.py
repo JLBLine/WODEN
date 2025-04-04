@@ -737,14 +737,14 @@ def add_list_flux_info(mod_type : CompTypes, n_lists : int,
         list_start_index += int(len(these_freqs))
 
 def add_fits_info_to_source_catalogue(comp_type : CompTypes,
-                        main_table : Table, shape_table : Table,
-                        chunk_source : Source_Ctypes,
-                        chunk_map : Skymodel_Chunk_Map,
-                        beamtype : int, lsts : np.ndarray, latitudes : np.ndarray,
-                        v_table : Table = False, q_table : Table = False,
-                        u_table : Table = False, p_table : Table = False,
-                        uvbeam_objs : np.ndarray = False,
-                        all_freqs : np.ndarray = False):
+                                      main_table : Table, shape_table : Table,
+                                      chunk_source : Source_Ctypes,
+                                      chunk_map : Skymodel_Chunk_Map,
+                                      beamtype : int, lsts : np.ndarray, latitudes : np.ndarray,
+                                      v_table : Table = False, q_table : Table = False,
+                                      u_table : Table = False, p_table : Table = False,
+                                      uvbeam_objs : np.ndarray = False,
+                                      all_freqs : np.ndarray = False):
     """Given the desired components as detailed in the `chunk_map`, add
     the relevant information from the FITS file `main_table`, `shape_table`
     objects to the `chunk_source` object. As well as the skymodel information

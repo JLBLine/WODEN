@@ -1150,7 +1150,7 @@ void malloc_beam_gains_cpu(beam_gains_t *component_beam_gains,
 
   //Only some models have leakage terms
   if (beamtype == FEE_BEAM || beamtype == MWA_ANALY || beamtype == FEE_BEAM_INTERP ||
-      beamtype == EB_LOFAR || beamtype == EB_OSKAR || beamtype == EB_MWA) {
+      beamtype == EB_LOFAR || beamtype == EB_OSKAR || beamtype == EB_MWA || beamtype == UVB_MWA) {
     component_beam_gains->Dxs = malloc(num_gains*sizeof(user_precision_complex_t));
     component_beam_gains->Dys = malloc(num_gains*sizeof(user_precision_complex_t));
   }

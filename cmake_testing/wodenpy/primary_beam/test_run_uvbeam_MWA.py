@@ -49,7 +49,9 @@ class Test(unittest.TestCase):
         for given inputs. Then run `run_everybeam_over_threads` for a number
         of threads, and check the outputs match."""
         
-        freqs = np.array([1.87e+08, 1.8944e+08])
+        ##Test at actual frequency locations in the hdf5 file, because
+        ##hyperbeam doesn't interpolate and we default to interpolate with UVBeam
+        freqs = np.array([186880000, 1.8944e+08])
         # freqs = np.array([137e+6])
         num_freqs = len(freqs)
         num_times = 2

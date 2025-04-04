@@ -277,8 +277,6 @@ void calculate_visibilities(array_layout_t *array_layout,
 
     set_visi_set_to_zero_cpu(chunk_visibility_set, num_visis);
 
-    //TODO setup some kind of logging and have an option to silence all this
-    //printed output
     if (woden_settings->verbose == 1){
       snprintf(log_buffer, log_len, "Processing chunk %d", chunk);
       log_message(log_buffer);

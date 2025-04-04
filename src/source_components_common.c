@@ -146,7 +146,6 @@ void extrapolate_Stokes(source_t *mem_chunked_source, double *mem_extrap_freqs,
   }
 }
 
-//TODO get cpu_freqs in here as well so can always pass to everybeam
 void source_component_common(woden_settings_t *woden_settings,
            beam_settings_t *beam_settings,
            double *cpu_freqs, double *mem_freqs,
@@ -483,28 +482,31 @@ void source_component_common(woden_settings_t *woden_settings,
   }
   #endif //end if defined(HAVE_EVERYBEAM)
 
-  //If a pyuvbeam model, already calculated beam gains on the CPU
-  //So just copy them across
-  //NOTE add this back in when doing pyuvbeam
-  // else if (some pyuvbeam thing) {
-  //   if (woden_settings->verbose == 1){
-  //     log_message("\tDoing a pyuvbeam");
-  //   }
-  //   int num_gains = num_components*woden_settings->num_freqs*woden_settings->num_time_steps*num_beams;
-  //   if (do_gpu == 1){
-  //     copy_CPU_component_gains_to_GPU_beam_gains(components, mem_component_beam_gains, num_gains);  
-  //   } else {
-  //     //It seems wasteful to copy across the beam gains, but `components` was created
-  //     //on the python side, where the memory freeing is handled (hopefully) by
-  //     //the garbage collector. By copying here, we can free the beam gains on
-  //     //the C side regardless of whether we generate the beam gains in C or Python.
-  //     memcpy(mem_component_beam_gains->gxs, components->gxs, num_gains*sizeof(user_precision_complex_t));
-  //     memcpy(mem_component_beam_gains->Dxs, components->Dxs, num_gains*sizeof(user_precision_complex_t));
-  //     memcpy(mem_component_beam_gains->Dys, components->Dys, num_gains*sizeof(user_precision_complex_t));
-  //     memcpy(mem_component_beam_gains->gys, components->gys, num_gains*sizeof(user_precision_complex_t));
+  //TODO if we ever have a beam model calculated via Python that does not
+  //have leakage terms, need to not copy across Dx,Dy as they won't be
+  //in memory and we'll segfault
+  
+  else if (beam_settings->beamtype == UVB_MWA) {
+    if (woden_settings->verbose == 1){
+      if (beam_settings->beamtype == UVB_MWA) {
+        log_message("\tDoing UVBeam MWA beam");
+      } 
+    }
+    int num_gains = num_components*woden_settings->num_freqs*woden_settings->num_time_steps*num_beams;
+    if (do_gpu == 1){
+      copy_CPU_component_gains_to_GPU_beam_gains(components, mem_component_beam_gains, num_gains);  
+    } else {
+      //It seems wasteful to copy across the beam gains, but `components` was created
+      //on the python side, where the memory freeing is handled (hopefully) by
+      //the garbage collector. By copying here, we can free the beam gains on
+      //the C side regardless of whether we generate the beam gains in C or Python.
+      memcpy(mem_component_beam_gains->gxs, components->gxs, num_gains*sizeof(user_precision_complex_t));
+      memcpy(mem_component_beam_gains->Dxs, components->Dxs, num_gains*sizeof(user_precision_complex_t));
+      memcpy(mem_component_beam_gains->Dys, components->Dys, num_gains*sizeof(user_precision_complex_t));
+      memcpy(mem_component_beam_gains->gys, components->gys, num_gains*sizeof(user_precision_complex_t));
 
-  //   }
-  // }
+    }
+  }
 
   //Now we've calculated the beams, we can calculate the auto-correlations,
   //if so required

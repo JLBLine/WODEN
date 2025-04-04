@@ -71,12 +71,6 @@ def setup_MWA_uvbeams(hdf5_path: str, freqs: np.ndarray,
         
         use_amplitudes = np.empty((2, 16), dtype='float')
         
-        ##This amplitude reordering is entirely based on comparing to
-        ##hyperbeam outputs
-        
-        # amps1 = np.zeros((16), dtype='float')
-        # amps2 = np.zeros((16), dtype='float')
-        
         pol1 = amplitudes[beam_ind*32:beam_ind*32+16]
         pol2 = amplitudes[beam_ind*32+16:(beam_ind+1)*32]
         
@@ -206,15 +200,22 @@ def run_uvbeam(uvbeam_objs: np.array,
             beam = BeamInterface(beam_obj, beam_type="efield")
             
             
-            freq_interp_kind = "nearest"
+            
             response = beam.compute_response(az_array=use_azs,
                                              za_array=zas,
                                              freq_array=freqs,
-                                             interpolation_function=interpol_fn,
-                                             freq_interp_kind=freq_interp_kind,
-                                             spline_opts=spline_opts,
                                              check_azza_domain=check_azza_domain
                                              )
+            
+            # freq_interp_kind = "nearest"
+            # response = beam.compute_response(az_array=use_azs,
+            #                                  za_array=zas,
+            #                                  freq_array=freqs,
+            #                                  interpolation_function=interpol_fn,
+            #                                  freq_interp_kind=freq_interp_kind,
+            #                                  spline_opts=spline_opts,
+            #                                  check_azza_domain=check_azza_domain
+            #                                  )
             
             response[:,:,:,np.isnan(zas)] = np.nan
             

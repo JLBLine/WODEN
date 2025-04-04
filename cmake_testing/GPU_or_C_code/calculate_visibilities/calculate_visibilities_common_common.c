@@ -688,10 +688,9 @@ visibility_set_t * test_calculate_visibilities(source_catalogue_t *cropped_sky_m
   // printf("calculate_visibilities has finished\n");
 
   //TODO will need something like this when doing pyuvbeam
-  // if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_MWA ||
-  //     beam_settings->beamtype == EB_OSKAR){
-  //       free_beam_gains(cropped_sky_models);
-  // }
+  if (beam_settings->beamtype == UVB_MWA){
+    free_beam_gains(cropped_sky_models);
+  }
 
   //Be free my pretties!
   if (cropped_sky_models->num_shapelets > 0) {

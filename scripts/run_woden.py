@@ -373,8 +373,10 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
     
     if serial_mode:
         for round_num in range(num_rounds):
-            
-            logger.info(f"Reading set {round_num} sky models")
+            if woden_settings_python.beamtype in BeamGroups.python_calc_beams:
+                logger.info(f"Reading (and calculating primary beam values for) set {round_num} sky models")
+            else:
+                logger.info(f"Reading set {round_num} sky models")
             
             all_loaded_python_sources = []
             all_loaded_sources_orders = []
@@ -422,32 +424,37 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
             num_visi_threads = 1
             device = 'GPU'
             
+        ##Currently, multi-threading doesn't work across UVBeam. So read in
+        ##sky model with one thread for now
         if woden_settings_python.beamtype in BeamGroups.uvbeam_beams:
             num_sky_model_threads = 1
         else:
             num_sky_model_threads = num_threads
             
-        # logger.info(f"Running WODEN with {num_threads} threads for sky model reading and {num_visi_threads} threads for visibility processing")
-        
         if device == 'CPU':
         
             with ProcessPoolExecutor(max_workers=num_sky_model_threads) as sky_model_executor, ProcessPoolExecutor(max_workers=num_visi_threads) as visi_executor:
             
                 # # Loop through multiple rounds of data reading and calculation
                 for round_num in range(num_rounds):
-                    logger.info(f"Reading set {round_num} sky models")
+                    if woden_settings_python.beamtype in BeamGroups.python_calc_beams:
+                        logger.info(f"Reading (and calculating primary beam values for) set {round_num} sky models")
+                    else:
+                        logger.info(f"Reading set {round_num} sky models")
+                        
+                        
                     future_data_sky = [sky_model_executor.submit(read_skymodel_worker,
-                                                i + round_num * num_sky_model_threads, num_sky_model_threads,
+                                                i + round_num * num_threads, num_threads,
                                                 chunked_skymodel_map_sets,
                                                 lsts, latitudes,
                                                 args, beamtype,
                                                 main_table, shape_table,
                                                 v_table, q_table, u_table, p_table,
                                                 logger, uvbeam_objs)
-                                        for i in range(num_sky_model_threads)]
+                                        for i in range(num_threads)]
                     
-                    all_loaded_python_sources = [0]*num_sky_model_threads
-                    all_loaded_sources_orders = [0]*num_sky_model_threads
+                    all_loaded_python_sources = [0]*num_threads
+                    all_loaded_sources_orders = [0]*num_threads
                     for future in future_data_sky:
                         python_sources, order = get_future_result(future, logger)
                         
@@ -494,8 +501,10 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                 
             # # Loop through multiple rounds of data reading and calculation
                 for round_num in range(num_rounds):
-                    
-                    logger.info(f"Reading set {round_num} sky models")
+                    if woden_settings_python.beamtype in BeamGroups.python_calc_beams:
+                        logger.info(f"Reading (and calculating primary beam values for) set {round_num} sky models")
+                    else:
+                        logger.info(f"Reading set {round_num} sky models")
                     future_data_sky = [sky_model_executor.submit(read_skymodel_worker,
                                                 i + round_num * num_sky_model_threads, num_sky_model_threads,
                                                 chunked_skymodel_map_sets,

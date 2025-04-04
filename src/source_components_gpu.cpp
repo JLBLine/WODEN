@@ -1952,6 +1952,8 @@ extern "C" source_t * copy_chunked_source_to_GPU(source_t *chunked_source){
   return d_chunked_source;
 }
 
+//TODO might be circumstances in the future where there are no leakages
+//allocated in `components`, so need a switch to not copy them
 extern "C" void copy_CPU_component_gains_to_GPU_beam_gains(components_t *components,
   beam_gains_t *d_beam_gains, int num_gains) {
 
@@ -1979,6 +1981,7 @@ extern "C" void copy_CPU_component_gains_to_GPU_beam_gains(components_t *compone
     gpuMemcpy( d_beam_gains->gys, components->gys,
                num_gains*sizeof(user_precision_complex_t), gpuMemcpyHostToDevice );
 }
+
 
 extern "C" void copy_CPU_beam_gains_to_GPU_beam_gains(beam_gains_t *beam_gains,
   beam_gains_t *d_beam_gains, int num_gains) {
@@ -2193,10 +2196,6 @@ __global__ void kern_calc_autos(components_t d_components,
   const int iTimeFreq = threadIdx.x + (blockDim.x*blockIdx.x);
   const int iAnt = threadIdx.y + (blockDim.y*blockIdx.y);
 
-  //TODO One day we might have different primary beams for each tile,
-  //then we'll have to use iAuto to reference different primary
-  //beams - at the mo we get grab the same primary beam for all antennas
-  // const int iAuto = threadIdx.z + (blockDim.z*blockIdx.z);
   if(iAnt < num_ants && iTimeFreq < num_times*num_freqs) {
 
     int time_ind = (int)floorf( (float)iTimeFreq / (float)num_freqs);
