@@ -28,4 +28,4 @@ For testing ``UVBeam`` functionality , I've made a number of notebooks that live
 .. toctree::
    :maxdepth: 2
 
-   uvbeam_testing.rst
+   uvbeam_testing

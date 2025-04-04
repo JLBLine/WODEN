@@ -1,8 +1,6 @@
-.. _everybeam insallation page: https://everybeam.readthedocs.io/en/latest/build-instructions.html
-
 .. _`pyuvdata UVBeam testing`:
 
-EveryBeam Testing and Development
+UVBeam Testing and Development
 ======================================
 
 .. toctree::
