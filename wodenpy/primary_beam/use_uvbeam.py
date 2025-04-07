@@ -1,4 +1,8 @@
+"""Wrappers around pyuvdata.UVBeam to calculate primary beam values.
 
+See https://pyuvdata.readthedocs.io/en/latest/uvbeam.html for more information
+on the UVBeam class.
+"""
 from pyuvdata import ShortDipoleBeam, BeamInterface, UVBeam
 from pyuvdata.analytic_beam import AnalyticBeam
 import numpy as np
@@ -21,21 +25,33 @@ def setup_MWA_uvbeams(hdf5_path: str, freqs: np.ndarray,
     """
     Setup the MWA uvbeam objects for a given set of frequencies and delays.
     
+    Delays should be as appears in the metafits file, so 16 integers.
+    
+    Amplitudes should have a length which is a multiple of 32; 16 amplitudes
+    for each dipole, for each tile. So if you want three unqiue tile beams,
+    submit an amplitude array of length 96.
+    
     Parameters
     ------------
+    hdf5_path : str
+        Path to the hdf5 file containing the MWA FEE beam model.
     freqs : np.ndarray
         Array of frequencies in Hz.
     delays : np.ndarray, optional
-        Array of delays as integers as written in the metafits file.
+        Array of delays as integers as written in the metafits file. If not
+        given, all delays set to 0.
     amplitudes : np.ndarray, optional
         Array of amplitudes. If None, amplitudes of 1.0 used everywhere.
         Should be in format output from wodenpy.run_setup.check_args a.k.a 16 amps for NS
         dipole for tile 1, 16 amps for EW dipole for tile 1, 16 amps for NS dipole for tile 2, etc.
+        Should be a multiple of 32.
+    pixels_per_deg : float, optional
+        Number of pixels per degree for UVBeam to use. Defaults to 5.
 
     Returns
     --------
     np.array
-        Array of MWA uvbeam objects.
+        Array of MWA uvbeam objects, of length len(amplitudes)/32.
     """
     if delays is None:
         use_delays = np.zeros((2, 16), dtype='int')
@@ -91,24 +107,24 @@ def setup_MWA_uvbeams(hdf5_path: str, freqs: np.ndarray,
     
     return uvbeam_objs
 
-def run_uvbeam(uvbeam_objs: np.array,
+def run_uvbeam(uvbeam_objs: np.ndarray[UVBeam],
                ras: np.ndarray, decs: np.ndarray,
                j2000_latitudes: np.ndarray, j2000_lsts: np.ndarray,
                freqs: np.ndarray,
                iau_order: bool = False,
                parallactic_rotate: bool = True) -> np.ndarray:
     """
-    Calculate the Jones matrices for a given set of coordinates, times,
-    frequencies, and station ids using the pyuvdata module.
+    Calculate the Jones matrices for a given set of directions, times (via `j2000_lsts`
+    and `j2000_latitudes`), frequencies, and stations (a.k.a tiles for MWA),
+    using an array of UVBeam objects.
     `j2000_latitudes` should be the array latitude as precessed back to J2000,
-    with `j2000_lsts` being the matching LST in J2000. `current_latitude` and
-    `current_longitude` should be latitude and longitude of the array at the
-    time of the observation. 
+    with `j2000_lsts` being the matching LST in J2000. Uses these values to
+    calculate the azimuth and zenith angles for each station at each time.
     
     
     Parameters
     ------------
-    uvbeam_objs: np.array
+    uvbeam_objs: np.ndarray[UVBeam]
         Array of initiliased UVBeam objects.
     ras : np.ndarray
         Right ascensions of the coordinates in radians.
@@ -118,16 +134,12 @@ def run_uvbeam(uvbeam_objs: np.array,
         Latitudes in J2000 coordinates.
     j2000_lsts : np.ndarray
         Local sidereal times in J2000 coordinates.
-    times : np.ndarray
-        Array of observation times.
     freqs : np.ndarray
         Array of frequencies.
-    parallactic_rotate : bool, optional
-        Whether to apply parallactic angle rotation using `wodenpy`. Defaults to False.
-        Should be True for MWA beams if you want rotation. If True for a non-MWA beam,
-        `wodenpy` should match the output as if `eb_rotate` was True.
     iau_order : bool, optional
-        Whether to return the Jones matrices in IAU order. Defaults to False.
+        Whether to return the Jones matrices in IAU order (NS = X, EW = Y). Defaults to False.
+    parallactic_rotate : bool, optional
+        Whether to apply parallactic angle rotation. Defaults to True.
         
     Returns
     --------
@@ -148,7 +160,6 @@ def run_uvbeam(uvbeam_objs: np.array,
         interpol_fn = None
         
     check_azza_domain = False
-    spline_opts = None
     
     all_output_jones = np.zeros((num_stations, num_times, num_freqs, num_coords, 2, 2), dtype=np.complex128)*np.nan
     
@@ -161,27 +172,17 @@ def run_uvbeam(uvbeam_objs: np.array,
         azs, els = erfa.hd2ae(comp_has, decs, j2000_latitudes[time_ind])
         zas = np.pi/2 - els
         
+        ##pyuvdata defines azimuth as 0 at East, increasing to 90 at North
+        ##astropy, erfa, and wodenpy define azimuth as 0 at North, increasing to 90 at East
+        ##So need to rotate azimuth by 90 degrees and invert rotation direction
+        ##classic astronomy
         use_azs = np.pi/2 - azs
         where_neg_az = np.nonzero(use_azs < 0)
         use_azs[where_neg_az] = use_azs[where_neg_az] + np.pi * 2.
         
-        # import matplotlib.pyplot as plt
-        
-        # fig, ax = plt.subplots(1, 2)
-        
-        # ax[0].imshow(np.reshape(azs, (51, 51)), origin='lower')
-        # ax[1].imshow(np.reshape(use_azs, (51, 51)), origin='lower')
-        
-        # plt.show()
-        
-        # use_azs = azs
-            
         if parallactic_rotate:
             has = j2000_lsts[time_ind] - ras
             para_angles = erfa.hd2pa(has, decs, j2000_latitudes[time_ind])
-            
-            # para_angles = np.pi/2 - para_angles
-            # para_angles
             
             rot_matrix = np.empty((num_coords, 2,2))
             
@@ -190,16 +191,8 @@ def run_uvbeam(uvbeam_objs: np.array,
             rot_matrix[:,1,0] = -np.cos(-para_angles)
             rot_matrix[:,1,1] = -np.sin(-para_angles)
             
-            # rot_matrix[:,0,0] = np.cos(-para_angles)
-            # rot_matrix[:,0,1] = -np.sin(-para_angles)
-            # rot_matrix[:,1,0] = np.sin(-para_angles)
-            # rot_matrix[:,1,1] = np.cos(-para_angles)
-            
         for station_ind, beam_obj in enumerate(uvbeam_objs):
-            # for freq_ind, freq in enumerate(freqs):
             beam = BeamInterface(beam_obj, beam_type="efield")
-            
-            
             
             response = beam.compute_response(az_array=use_azs,
                                              za_array=zas,
@@ -207,7 +200,9 @@ def run_uvbeam(uvbeam_objs: np.array,
                                              check_azza_domain=check_azza_domain
                                              )
             
+            ##If in future want to switch off interpolation over frequency
             # freq_interp_kind = "nearest"
+            # spline_opts = None
             # response = beam.compute_response(az_array=use_azs,
             #                                  za_array=zas,
             #                                  freq_array=freqs,
@@ -246,15 +241,39 @@ def calc_uvbeam_for_components(components : Components_Python, uvbeam_objs : np.
                                j2000_latitudes : np.ndarray, j2000_lsts : np.ndarray,
                                iau_order : bool = True,
                                parallactic_rotate : bool = True):
-    """
-    Given a set of components, calculate the Jones matrices for each component
-    at each time and frequency.
-    
-    
+    """For a set of `components` with filled `ras,decs` attributes,
+    calculate the primary beam Jones matrices for all UVBeam objects
+    in `uvbeam_objs` at the given frequencies `all_freqs`. Uses `j2000_latitudes`
+    and `j2000_lsts` to calculate `az,za` for all time steps.
+    Stores the results in the `components` `gxs,Dxs,Dys,gys`
+    attributes. The beam values will eventually be used by the compiled code,
+    either on the CPU or GPU.
+
     Parameters
     ----------
-   
+    components : Components_Python
+        An initialised Components_Python object with the ras, decs attributes
+        filled with the coordinates of the components. Should also have
+        the gxs, Dxs, Dys, gys attributes setup as an array of np.float32 or
+        np.float64 of length `len(uvbeam_objs)*len(all_freqs)*len(j2000_lsts)*len(components.ras)`.
+        float32 or float64 depends on if running simulation in "float" or "double" mode.
+    uvbeam_objs: np.ndarray[UVBeam]
+        Array of initiliased UVBeam objects.
+    all_freqs : np.ndarray
+        Array of frequencies in Hz.
+    j2000_latitudes : np.ndarray
+        Latitudes in J2000 coordinates.
+    j2000_lsts : np.ndarray
+        Local sidereal times in J2000 coordinates.
+    freqs : np.ndarray
+        Array of frequencies.
+    iau_order : bool, optional
+        Whether to return the Jones matrices in IAU order (NS = X, EW = Y). Defaults to False.
+        parallactic_rotate : bool, optional
+    parallactic_rotate : bool, optional
+        Whether to apply parallactic angle rotation. Defaults to True.
     """
+    
     
     all_jones = run_uvbeam(uvbeam_objs, components.ras, components.decs,
                            j2000_latitudes, j2000_lsts,
@@ -275,162 +294,3 @@ def calc_uvbeam_for_components(components : Components_Python, uvbeam_objs : np.
     components.Dxs = Dxs.flatten()
     components.Dys = Dys.flatten()
     components.gys = gys.flatten()
-    
-    
-    
-
-#DOESN'T WORK as something inside the UVBeam object is triggering
-#the GIL (I think)
-def run_uvbeam_thread(num_threads : int, thread_id : int,
-                      uvbeam_objs: np.array,
-                      ras: np.ndarray, decs: np.ndarray,
-                      j2000_latitudes: np.ndarray, j2000_lsts: np.ndarray,
-                      times: np.ndarray, freqs: np.ndarray,
-                      iau_order: bool = False,
-                      parallactic_rotate: bool = True) -> Tuple[np.ndarray, int]:
-    """
-    Thread function called by `run_uvbeam_over_threads` to calculate the
-    EveryBeam response in parrallel. Calls `run_uvbeam` with a subset of
-    the coordinates; see `run_uvbeam` for more details of the parameters.
-    
-    Creates a new EveryBeam telescope object from `ms_path` for each thread.
-    This has to be done because `concurrent.futures.ProcessPoolExecutor` has
-    to pickle the function and all it's arguments, and EveryBeam objects can't
-    be pickled. This is somewhat wasteful but I can't work out a better way
-    to make things parallel.
-    
-    Parameters
-    ------------
-    num_threads : int
-        Number of threads being in call by `run_uvbeam_over_threads`.
-    thread_id : int
-        ID of the current thread. Useds to work out what chunk of `ras` and `decs`
-        to process.
-    
-        
-    Returns
-    --------
-    Tuple[np.ndarray, int]
-        The calculated Jones matrices with shape
-        (num_stations, num_times, num_freqs, num_coords_in_thread, 2, 2), as
-        well as the thread ID. Use the thread ID to insert this thread output
-        into the correct place in the final Jones matrix.
-        
-    """
-    
-    num_coords = len(ras)
-    coords_per_thread = int(np.ceil(num_coords / num_threads))
-    
-    low_coord = thread_id * coords_per_thread
-    high_coord = (thread_id + 1) * coords_per_thread
-    
-    print(f"Thread {thread_id} processing coords {low_coord} to {high_coord}")
-    
-    # these_objs = [deepcopy(uvbeam_obj) for uvbeam_obj in uvbeam_objs]
-    
-    # shutil.copyfile(os.environ['MWA_FEE_HDF5'], f'mwa_fee_{thread_id}.hdf5')
-    
-    # delays1 = np.zeros((2, 16), dtype='int')
-    # start = time.time()
-    # mwabeam1 = UVBeam.from_file(f'mwa_fee_{thread_id}.hdf5', pixels_per_deg=5, delays=delays1,
-    #                             freq_range=[freqs.min()-2*1.28e6, freqs.max()+2*1.28e+6])
-    # print("read parallel", time.time() - start)
-    
-    these_objs = uvbeam_objs
-    
-    # start = time.time()
-    jones = run_uvbeam(these_objs, ras[low_coord:high_coord],
-                              decs[low_coord:high_coord],
-                              j2000_latitudes, j2000_lsts,
-                              times, freqs,
-                              iau_order=iau_order,
-                              parallactic_rotate=parallactic_rotate)
-    # print("run parallel", time.time() - start)
-    
-    print(f"Thread {thread_id} finished")
-    
-    return jones, thread_id
-
-def run_uvbeam_over_threads(num_threads : int,
-                            uvbeam_objs: np.array,
-                            ras: np.ndarray, decs: np.ndarray,
-                            j2000_latitudes: np.ndarray, j2000_lsts: np.ndarray,
-                            times: np.ndarray, freqs: np.ndarray,
-                            iau_order: bool = False,
-                            parallactic_rotate: bool = True):
-    """
-    Runs `run_uvbeam` in parallel over `num_threads` threads, using
-    `concurrent.futures.ProcessPoolExecutor`. See `run_uvbeam` for more
-    details of what each parameter does.
-    
-    Creates a new EveryBeam telescope object from `ms_path` for each thread.
-    This has to be done because `concurrent.futures.ProcessPoolExecutor` has
-    to pickle the function and all it's arguments, and EveryBeam objects can't
-    be pickled. This is somewhat wasteful but I can't work out a better way
-    to make things parallel.
-    
-    Parameters
-    ------------
-    num_threads : int
-        Number of threads being in call by `run_uvbeam_over_threads`.
-    ms_path : str
-        Path to the measurement set to load the EveryBeam telescope from.
-    ras : np.ndarray
-        Right ascensions of the coordinates in radians.
-    decs : np.ndarray
-         Declinations of the coordinates in radians.
-    j2000_latitudes : np.ndarray
-        Latitudes in J2000 coordinates.
-    j2000_lsts : np.ndarray
-        Local sidereal times in J2000 coordinates.
-    times : np.ndarray
-        Array of observation times.
-    freqs : np.ndarray
-        Array of frequencies.
-    iau_order : bool, optional
-        If True, use IAU polarisation ordering, so set jones[0,0] to the NS dipole and jones[1,1] to EW. If False, jones[0,0] is EW.
-    parallactic_rotate : bool, optional
-        Whether to apply parallactic angle. Defaults to False.
-        
-    Returns
-    --------
-    np.ndarray
-        The calculated Jones matrices with shape
-        (num_stations, num_times, num_freqs, num_coord, 2, 2)
-    """
-    
-    with concurrent.futures.ProcessPoolExecutor(max_workers=num_threads) as executor:
-        
-            future_data = [executor.submit(run_uvbeam_thread,
-                                           num_threads, thread_id,
-                                           uvbeam_objs, ras, decs,
-                                           j2000_latitudes, j2000_lsts,
-                                           times, freqs,
-                                           iau_order=iau_order,
-                                           parallactic_rotate=parallactic_rotate)
-                                    for thread_id in range(num_threads)]
-            
-            all_jones_chunks = []
-            all_thread_ids = []
-            for future in concurrent.futures.as_completed(future_data):
-                jones_chunk, thread_id = future.result()
-                all_jones_chunks.append(jones_chunk)
-                all_thread_ids.append(thread_id)
-                
-    num_stations = len(uvbeam_objs)
-    num_times = len(times)
-    num_freqs = len(freqs)
-    num_coords = len(ras)
-    
-    all_jones = np.zeros((num_stations, num_times, num_freqs, num_coords, 2, 2), dtype=np.complex128)*np.nan
-    
-    coords_per_thread = int(np.ceil(num_coords / num_threads))
-    
-    for jones_chunk, thread_id in zip(all_jones_chunks, all_thread_ids):
-        
-        low_coord = thread_id * coords_per_thread
-        high_coord = (thread_id + 1) * coords_per_thread
-        
-        all_jones[:, :, :, low_coord:high_coord, :, :] = jones_chunk
-    
-    return all_jones

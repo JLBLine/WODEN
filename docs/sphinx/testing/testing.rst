@@ -20,7 +20,7 @@ For testing ``everybeam`` functionality , I've made a number of notebooks that l
    everybeam_testing
 
 
-``pyuvdata UVBeam`` Testing
+pyuvdata UVBeam Testing
 -------------------------------
 
 For testing ``UVBeam`` functionality , I've made a number of notebooks that live in ``WODEN/test_installation/pyuvbeam/``. This is on top of normal unit testing, to do proper sanity checks and for full disclosure of what is happening.  The integration tests in the notebooks are:

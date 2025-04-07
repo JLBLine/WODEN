@@ -1,3 +1,12 @@
+"""Wrappers around the EveryBeam library to calculate primary beam values.
+The core functionality is in the C++ library `libuse_everybeam.so`, which in
+turn contains wrappers about the EveryBeam library. Functions here call the
+C++ library to calculate the primary beam values, and return them to Python
+usable data types, via `ctypes`.
+
+See https://everybeam.readthedocs.io/en/latest/index.html for more information
+on the EveryBeam library."""
+
 import numpy as np
 from astropy.coordinates import ITRS, SkyCoord, AltAz, EarthLocation
 from astropy.time import Time, TimeDelta
@@ -19,6 +28,7 @@ from wodenpy.wodenpy_setup.woden_logger import simple_logger
 from logging import Logger
 from casacore.tables import table, taql
 from wodenpy.use_libwoden.beam_settings import BeamTypes
+import ctypes
 
 
 ##This call is so we can use it as a type annotation
@@ -28,6 +38,18 @@ Woden_Settings = woden_struct_classes.Woden_Settings
 
 
 def get_num_stations(ms_path : str) -> int:
+    """
+    Get the number of stations in a measurement set.
+    
+    Parameters
+    ----------
+    ms_path : str
+        Path to the measurement set.
+    Returns
+    -------
+    int
+        Number of stations in the measurement set.
+    """
     
     with table(ms_path + '/ANTENNA') as t: 
         num_stations = len(t)
@@ -36,6 +58,27 @@ def get_num_stations(ms_path : str) -> int:
 
 def create_filtered_ms(ms_path : str, new_ms_path : str,
                        ra0 : float, dec0 : float):
+    """
+    Create a filtered measurement set with only the first time and frequency
+    channel, and set the delay and reference direction to the given RA/Dec.
+    
+    The `EveryBeam` functions that `WODEN` wraps read the beam centre value
+    directly from the measurement set. Rather than downloading a specific
+    MS which exactly the pointing we want, we just make the smallest possible
+    copy of the MS with the first time and frequency channel, and set
+    the delay and reference direction to what we want.
+    
+    Parameters
+    ----------
+    ms_path : str
+        Path to the original measurement set.
+    new_ms_path : str
+        Path to the new measurement set.
+    ra0 : float
+        Right ascension of the beam centre in radians.
+    dec0 : float
+        Declination of the beam centre in radians.
+    """
     
     ##Find out telescope type
     with table(ms_path + "/OBSERVATION", ack=False) as tb:
@@ -68,7 +111,36 @@ def create_filtered_ms(ms_path : str, new_ms_path : str,
 
 def check_ms_telescope_type_matches_element_response(ms_path : str,
                                                      element_response_model : str = 'default',
-                                                     logger : Logger = False) -> str:
+                                                     logger : Logger = False) -> Tuple[str, str]:
+    """
+    Check the requested `element_response_model` is compatible with the
+    telescope type in the measurement set. If they don't match, set the element
+    response model to the default for the telescope type. This function uses
+    the `check_ms_telescope_type` function in `libuse_everybeam.so`.
+    
+    Accpetable combinations of telescope type and `element_response_model` are:
+    - MWA: 'MWA' or 'default'
+    - LOFAR: 'hamaker', 'hamakerlba', 'lobes' or 'default'
+    - OSKAR: 'skala40_wave' or 'default'
+    
+    Please note that 'hamakerlba', 'lobes' are not tested or supported in
+    WODEN, and are not recommended for use. They are included for completeness.
+    
+    Parameters
+    ----------
+    ms_path : str
+        Path to the measurement set.
+    element_response_model : str, optional
+        Requested Element response model to use. Defaults to 'default'.
+    logger : Logger, optional
+        Logger to use. Defaults to False; if False, create a new simple logger instance.
+        
+    Returns
+    -------
+    Tuple[str, str]
+        Tuple of the telescope type and the element response model to use.
+    """
+
     
     
     if not logger:
@@ -137,7 +209,34 @@ def convert_common_args_to_everybeam_args(ms_path : str, coeff_path : str,
                                           element_response_model : str,
                                           station_idxs : np.ndarray,
                                           freqs : np.ndarray,
-                                          mjd_sec_times : np.ndarray):
+                                          mjd_sec_times : np.ndarray) -> Tuple:
+    """
+    Convert input arugments common to all EveryBeam primary beam models
+    into `ctypes` equivalents to pass to the C++ library.
+    
+    Parameters
+    ----------
+    ms_path : str
+        Path to the measurement set.
+    coeff_path : str
+        Path to the coefficients file (only needed for MWA, pass the path
+        to the hdf5 FEE file).
+    element_response_model : str
+        Element response model to use. Can be 'MWA', 'hamaker', 'skala40_wave',
+        or 'default'.
+    station_idxs : np.ndarray
+        Array of station indices to use.
+    freqs : np.ndarray
+        Array of frequencies to use.
+    mjd_sec_times : np.ndarray
+        Array of times in MJD seconds.
+        
+    Returns
+    -------
+    Tuple[ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double),ctypes.POINTER(ctypes.c_double)]
+        Tuple of the converted arguments in the format required by the
+        EveryBeam library. Order of outputs is identical to order of inputs arguments.
+    """
     
     num_stations = len(station_idxs)
     num_times = len(mjd_sec_times)
@@ -183,6 +282,11 @@ def run_everybeam(ms_path : str, coeff_path : str,
     
     Parameters
     ------------
+    ms_path : str
+        Path to the measurement set to load the EveryBeam telescope from.
+    coeff_path : str
+        Path to the coefficients file (only needs a value for MWA, pass the path
+        to the hdf5 FEE file. Otherwise just pass "").
     ras : np.ndarray
         Right ascensions of the coordinates in radians.
     decs : np.ndarray
@@ -203,6 +307,9 @@ def run_everybeam(ms_path : str, coeff_path : str,
         Telescope object from the EveryBeam library.
     station_ids : np.ndarray
         Array of station IDs.
+    element_response_model : str, optional
+        The Everybeam element response model to use. Defaults to 'hamaker'.
+        Avaible options are 'hamaker' (LOFAR), 'skala40_wave' (OSKAR), and 'MWA' (MWA).
     apply_beam_norms : bool, optional
         Whether to apply beam normalisation. Defaults to True. Achieved by
         calculating the beam response at beam centre, and multiplying all
@@ -214,6 +321,9 @@ def run_everybeam(ms_path : str, coeff_path : str,
         look at the dipole response only, not the beam formed response.
     parallactic_rotate : bool, optional
         Whether to apply parallactic angle rotation. Defaults to False.
+    logger : Logger, optional
+        Logger to use. Defaults to False; if False, create a new simple logger instance.
+    
         
     Returns
     --------
@@ -279,7 +389,6 @@ def run_everybeam_thread(num_threads : int, thread_id : int,
                          j2000_latitudes : np.ndarray, j2000_lsts : np.ndarray,
                          times : np.ndarray, freqs : np.ndarray,
                          station_ids : np.ndarray,
-                         full_accuracy : bool = True,
                          apply_beam_norms : bool = True,
                          iau_order : bool = False,
                          element_only : bool = False,
@@ -306,13 +415,16 @@ def run_everybeam_thread(num_threads : int, thread_id : int,
         to process.
     ms_path : str
         Path to the measurement set to load the EveryBeam telescope from.
+    coeff_path : str
+        Path to the coefficients file (only needs a value for MWA, pass the path
+        to the hdf5 FEE file. Otherwise just pass "").
     ras : np.ndarray
         Right ascensions of the coordinates in radians.
     decs : np.ndarray
          Declinations of the coordinates in radians.
-    beam_ra0 : float
+    ra0 : float
         Right ascension of the beam center in radians.
-    beam_dec0 : float
+    dec0 : float
         Declination of the beam center in radians.
     j2000_latitudes : np.ndarray
         Latitudes in J2000 coordinates.
@@ -324,14 +436,6 @@ def run_everybeam_thread(num_threads : int, thread_id : int,
         Array of frequencies.
     station_ids : np.ndarray
         Array of station IDs.
-    full_accuracy : bool, optional
-        Whether to use the full accuracy of the EveryBeam library. Defaults to True.
-        If False, the array factor and element response are calculated separately
-        (the two values that multiply to give the full response). The array factor
-        is only calculated at the middle time and frequency, under the assumption
-        that the range of frequencies and times is small enough that the array factor
-        will not change significantly. Magnitude of the differences vary by
-        frequency and direction so use with caution.
     apply_beam_norms : bool, optional
         Whether to apply beam normalisation. Defaults to True. Achieved by
         calculating the beam response at beam centre, and multiplying all
@@ -392,7 +496,6 @@ def run_everybeam_over_threads(num_threads : int,
                                j2000_latitudes : np.ndarray, j2000_lsts : np.ndarray,
                                times : np.ndarray, freqs : np.ndarray,
                                station_ids : np.ndarray,
-                               full_accuracy : bool = True,
                                apply_beam_norms : bool = True,
                                iau_order : bool = False,
                                element_only : bool = False,
@@ -416,13 +519,16 @@ def run_everybeam_over_threads(num_threads : int,
         Number of threads being in call by `run_everybeam_over_threads`.
     ms_path : str
         Path to the measurement set to load the EveryBeam telescope from.
+    coeff_path : str
+        Path to the coefficients file (only needs a value for MWA, pass the path
+        to the hdf5 FEE file. Otherwise just pass "").
     ras : np.ndarray
         Right ascensions of the coordinates in radians.
     decs : np.ndarray
          Declinations of the coordinates in radians.
-    beam_ra0 : float
+    ra0 : float
         Right ascension of the beam center in radians.
-    beam_dec0 : float
+    dec0 : float
         Declination of the beam center in radians.
     j2000_latitudes : np.ndarray
         Latitudes in J2000 coordinates.
@@ -434,14 +540,6 @@ def run_everybeam_over_threads(num_threads : int,
         Array of frequencies.
     station_ids : np.ndarray
         Array of station IDs.
-    full_accuracy : bool, optional
-        Whether to use the full accuracy of the EveryBeam library. Defaults to True.
-        If False, the array factor and element response are calculated separately
-        (the two values that multiply to give the full response). The array factor
-        is only calculated at the middle time and frequency, under the assumption
-        that the range of frequencies and times is small enough that the array factor
-        will not change significantly. Magnitude of the differences vary by
-        frequency and direction so use with caution.
     apply_beam_norms : bool, optional
         Whether to apply beam normalisation. Defaults to True. Achieved by
         calculating the beam response at beam centre, and multiplying all
@@ -480,7 +578,6 @@ def run_everybeam_over_threads(num_threads : int,
                                            j2000_latitudes, j2000_lsts,
                                            times, freqs,
                                            station_ids,
-                                           full_accuracy=full_accuracy,
                                            apply_beam_norms=apply_beam_norms,
                                            iau_order=iau_order,
                                            element_only=element_only,
@@ -520,10 +617,55 @@ def run_lofar_beam(ms_path : str, element_response_model : bool,
                    ras : np.ndarray, decs : np.ndarray,
                    mjd_sec_times : np.ndarray,
                    freqs : np.ndarray,
-                   apply_beam_norms : bool,
-                   parallactic_rotate : bool,
+                   apply_beam_norms : bool = True,
+                   parallactic_rotate : bool = False,
                    iau_order : bool = True,
                    element_only : bool = False):
+    """
+    Run the LOFAR beam model using the EveryBeam library.
+    This function is a wrapper around the C++ library `libuse_everybeam.so`.
+    It takes the input parameters and converts them to the appropriate
+    ctypes types, then calls the C++ function to calculate the beam response.
+    The output is a numpy array of the beam response, with shape
+    (num_stations, num_times, num_freqs, num_coords, 2, 2).
+    
+    Parameters
+    ----------
+    ms_path : str
+        Path to the measurement set.
+    element_response_model : str
+        Element response model to use. Can be 'hamaker', 'hamakerlba', 'lobes' or 'default'.
+    station_idxs : np.ndarray
+        Array of station indices to use.
+    beam_ra0 : float
+        Right ascension of the beam center in radians.
+    beam_dec0 : float
+        Declination of the beam center in radians.
+    ras : np.ndarray
+        Right ascensions of the coordinates in radians.
+    decs : np.ndarray
+        Declinations of the coordinates in radians.
+    mjd_sec_times : np.ndarray
+        Array of times in MJD seconds.
+    freqs : np.ndarray
+        Array of frequencies to use.
+    apply_beam_norms : bool
+        Whether to apply beam normalisation. Defaults to True. Achieved by
+        calculating the beam response at beam centre, and multiplying all
+        Jones by the inverse of this central beam response.
+    parallactic_rotate : bool
+        Whether to apply parallactic angle rotation. Defaults to False.
+    iau_order : bool
+        If True, use IAU polarisation ordering, so set jones[0,0] to the NS dipole and jones[1,1] to EW. If False, jones[0,0] is EW.
+    element_only : bool
+        Whether to use only the element response. Defaults to False. Use this to
+        look at the dipole response only, not the beam formed response.
+    Returns
+    -------
+    np.ndarray
+        The calculated Jones matrices with shape
+        (num_stations, num_times, num_freqs, num_coords, 2, 2).
+    """
     
     woden_path = importlib_resources.files(wodenpy).joinpath(f"libuse_everybeam.so")
     woden_lib = ctypes.cdll.LoadLibrary(woden_path)
@@ -600,6 +742,58 @@ def run_oskar_beam(ms_path : str, element_response_model : bool,
                    parallactic_rotate : bool,
                    iau_order : bool = True,
                    element_only : bool = False):
+    """
+    Run the OSKAR beam model using the EveryBeam library.
+    
+    This function is a wrapper around the C++ library `libuse_everybeam.so`.
+    It takes the input parameters and converts them to the appropriate
+    ctypes types, then calls the C++ function to calculate the beam response.
+    The output is a numpy array of the beam response, with shape
+    (num_stations, num_times, num_freqs, num_coords, 2, 2).
+    
+    NOTE: This function is currently identical to the LOFAR beam function.
+    Both LOFAR and OSKAR call the PhasedArrayBeam class in the C++ library.
+    These functions have only been lightly tested for functionality. So I've
+    kept them separate incase it's discovered they need different default
+    values in the future.
+    
+    Parameters
+    ----------
+    ms_path : str
+        Path to the measurement set.
+    element_response_model : str
+        Element response model to use. Can be 'hamaker', 'hamakerlba', 'lobes' or 'default'.
+    station_idxs : np.ndarray
+        Array of station indices to use.
+    beam_ra0 : float
+        Right ascension of the beam center in radians.
+    beam_dec0 : float
+        Declination of the beam center in radians.
+    ras : np.ndarray
+        Right ascensions of the coordinates in radians.
+    decs : np.ndarray
+        Declinations of the coordinates in radians.
+    mjd_sec_times : np.ndarray
+        Array of times in MJD seconds.
+    freqs : np.ndarray
+        Array of frequencies to use.
+    apply_beam_norms : bool
+        Whether to apply beam normalisation. Defaults to True. Achieved by
+        calculating the beam response at beam centre, and multiplying all
+        Jones by the inverse of this central beam response.
+    parallactic_rotate : bool
+        Whether to apply parallactic angle rotation. Defaults to False.
+    iau_order : bool
+        If True, use IAU polarisation ordering, so set jones[0,0] to the NS dipole and jones[1,1] to EW. If False, jones[0,0] is EW.
+    element_only : bool
+        Whether to use only the element response. Defaults to False. Use this to
+        look at the dipole response only, not the beam formed response.
+    Returns
+    -------
+    np.ndarray
+        The calculated Jones matrices with shape
+        (num_stations, num_times, num_freqs, num_coords, 2, 2).
+    """
     
     woden_path = importlib_resources.files(wodenpy).joinpath(f"libuse_everybeam.so")
     woden_lib = ctypes.cdll.LoadLibrary(woden_path)
@@ -656,8 +850,6 @@ def run_oskar_beam(ms_path : str, element_response_model : bool,
                             element_only, iau_order,
                             jones)
     
-    # print(jones)
-    
     jones_py = np.ctypeslib.as_array(jones, shape=(num_stations*num_times*num_freqs*num_dirs*4))
     jones_py = jones_py['real'] + 1j*jones_py['imag']
     
@@ -673,9 +865,59 @@ def run_mwa_beam(ms_path : str, element_response_model : bool,
                    mjd_sec_times : np.ndarray,
                    j2000_lsts : np.ndarray, j2000_latitudes : np.ndarray,
                    freqs : np.ndarray,
-                   apply_beam_norms : bool, parallactic_rotate : bool,
+                   apply_beam_norms : bool = False,
+                   parallactic_rotate : bool = True,
                    iau_order : bool = True,
                    element_only : bool = False):
+    """
+    Run the MWA beam model using the EveryBeam library.
+    This function is a wrapper around the C++ library `libuse_everybeam.so`.
+    It takes the input parameters and converts them to the appropriate
+    ctypes types, then calls the C++ function to calculate the beam response.
+    The output is a numpy array of the beam response, with shape
+    (num_stations, num_times, num_freqs, num_coords, 2, 2).
+    
+    Parameters
+    ----------
+    ms_path : str
+        Path to the measurement set.
+    element_response_model : str
+        Element response model to use. Can be 'hamaker', 'hamakerlba', 'lobes' or 'default'.
+    coeff_path : str
+        Path to the hdf5 FEE file.
+    station_idxs : np.ndarray
+        Array of station indices to use. For now this should always be np.zeros(1),
+        as there is not yet a way to pass bespoke dipole amplitudes to the C++ code.
+        Hence all stations will be the same, so passing multiple station ids will
+        just increase computation time for no gain.
+    ras : np.ndarray
+        Right ascensions of the coordinates in radians.
+    decs : np.ndarray
+        Declinations of the coordinates in radians.
+    mjd_sec_times : np.ndarray
+        Array of times in MJD seconds.
+    j2000_lsts : np.ndarray
+        Local sidereal times in J2000 coordinates.
+    j2000_latitudes : np.ndarray
+        Latitudes in J2000 coordinates.
+    freqs : np.ndarray
+        Array of frequencies to use.
+    apply_beam_norms : bool
+        Whether to apply beam normalisation. Defaults to False. The beam seems
+        to be normalised by EveryBeam by default, so this is not needed.
+    parallactic_rotate : bool
+        Whether to apply parallactic angle rotation. Defaults to True.
+    iau_order : bool
+        If True, use IAU polarisation ordering, so set jones[0,0] to the NS dipole and jones[1,1] to EW. If False, jones[0,0] is EW.
+    element_only : bool
+        Whether to use only the element response. Defaults to False. Use this to
+        look at the dipole response only, not the beam formed response.
+    Returns
+    -------
+    np.ndarray
+        The calculated Jones matrices with shape
+        (num_stations, num_times, num_freqs, num_coords, 2, 2).
+    """
     
     num_stations = len(station_idxs)
     num_dirs = len(ras)

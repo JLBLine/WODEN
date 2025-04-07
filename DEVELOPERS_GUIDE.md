@@ -387,7 +387,26 @@ ENV RUST_VERSION=1.84.0
 which sets version of repos to copy. Modify that to whatever release you're building, and whatever version of the dependencies you want. In
 `make_docker_image.sh`, there is a line like `woden_version="2.5"`. Again, change that to match whatever version you are building. Finally, in the line `docker push jlbline/woden-${woden_version}:cuda-$arch`, you'll need to change `jlbline` to your docker repo. 
 
+## Writing documentation
+When editing/adding to the documentation, I like to check it properly renders. You can build the documentation locally via:
+
+```bash
+cd WODEN/docs/sphinx
+make html
+```
+
+As a bare minimum, if you add some functionality, please add documentation for it. This should include:
+ - Docstrings for everything. If it's Python code, there is a little helper script `WODEN/check_documentation/check_missing_docstrings.sh` to run which should catch any missing dosctrings. If it's `C/C++/GPU` code, please check the `doxygen` output, which is called when you run `make html` as above. Make sure if you've added new submodules or compiled code files, that you add them to the relevant API documentation in `docs/sphinx/API_reference/*`
+ - Hopefully you've written unit and integration tests. Please add notes as to what they are doing in `docs/sphinx/testing/cmake_testing`
+
+If you've added a new feature, please consider doing the following:
+ - If the feature requires indepth explanation or equations to share, please add a new page to `docs/sphinx/operating_principles` with relevant links to references.
+ - Consider adding an example notebook in `WODEN/examples` to illustrate what the new feature can do.
+
 ## Miscellaneous
+
+### Parallel UVBeam
+Something internal to `UVBeam` seems to trigger the GIL. This means the current way I run `WODEN` in parallel via Python doesn't work. So I've currently hardcoded the number of threads called to read in the sky model and calculate the primary beam to 1 when using `UVBeam`. Will require an entirely different parallel setup to fix this, so for now is out of scope. 
 
 ### LOFAR considerations
  - I've implemented the maths to have off-cardianl dipoles (i.e. dipoles that are aligned NE-SW and NW-SE, rather that E-W N-S). I think only LBA stations are off-cardinal (??) but I don't really know. The off-cardinal dipoles only make a difference to the visibilities if the sky model has polarised components; stokes I plonks out the same. We need something to compare output visibilities to, and I haven't been able to do that. Currently, you can optionally use them by setting the `--off_cardinal_dipoles` flag in `run_woden.py`. However, I've also set a list up in `wodenpy.use_libwoden.beam_settings.BeamGroups.off_cardinal_beam_values` where you can add primary beam types to default to off-cardinal dipoles. If after more investgation you find that off-cardinal dipoles are needed, add values to that `off_cardinal_beam_values` list; that will trigger `wodenpy.use_libwoden.woden_settings.fill_woden_settings_python` to set `woden_settings.off_cardinal_dipoles = 1`.

@@ -9,7 +9,8 @@ import numpy as np
 import sys
 import os
 from typing import Union, List
-
+from pyuvdata import UVBeam
+from typing import Sequence
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, Component_Info, CompTypes
 from wodenpy.skymodel.chunk_sky_model import Skymodel_Chunk_Map, Components_Map
 from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, setup_source_catalogue, _Ctype_Source_Into_Python, Source_Python, Components_Python
@@ -740,16 +741,21 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
                                       main_table : Table, shape_table : Table,
                                       chunk_source : Source_Ctypes,
                                       chunk_map : Skymodel_Chunk_Map,
-                                      beamtype : int, lsts : np.ndarray, latitudes : np.ndarray,
+                                      beamtype : int, lsts : np.ndarray[float],
+                                      latitudes : np.ndarray[float],
                                       v_table : Table = False, q_table : Table = False,
                                       u_table : Table = False, p_table : Table = False,
-                                      uvbeam_objs : np.ndarray = False,
+                                      uvbeam_objs : np.ndarray[UVBeam] = False,
                                       all_freqs : np.ndarray = False):
     """Given the desired components as detailed in the `chunk_map`, add
     the relevant information from the FITS file `main_table`, `shape_table`
     objects to the `chunk_source` object. As well as the skymodel information
     this function adds either az/za or ha/dec information, depending on the `beamtype`,
     and polarisation information if it is present.
+    
+    Furthermore, if `beamtype` is in
+    `wodenpy.use_libwoden.beam_settings.BeamGroups.python_calc_beams`,
+    the function will call the relevant beam model and calculate beam values.
 
     Parameters
     ----------
@@ -777,6 +783,12 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
         The Table containing the Stokes U information, by default False.
     p_table : Table, optional
         The Table containing the linear polarisation information, by default False.
+    uvbeam_objs : np.ndarray[UVBeam], optional
+        The initialised UVBeam objects if calculating primary beams via UVBeam.
+    all_freqs : np.ndarray, optional
+        The frequencies to calculate the primary beam response to (only needed
+        if calculating primary beams)
+        
     """
     
     num_time_steps = len(lsts)
@@ -1105,7 +1117,7 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                               v_table : Table = False, q_table : Table = False,
                               u_table : Table = False, p_table : Table = False,
                               precision : str = "double",
-                              uvbeam_objs : np.ndarray = False) -> List[Source_Python]:
+                              uvbeam_objs : np.ndarray[UVBeam] = False) -> List[Source_Python]:
     """
     Uses Tables read from a FITS file and returns a list of populated
     `Source_Python` classes. Uses the maps in `chunked_skymodel_maps` to
@@ -1115,6 +1127,11 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
     multiprocessing requires everything to be picklable. This means we can't
     use ctypes, so we can't use `Woden_Settings`, hence we have to pass in
     all the relevant information as arguments.
+    
+    If `beamtype` is in
+    `wodenpy.use_libwoden.beam_settings.BeamGroups.python_calc_beams`,
+    this function will call the relevant beam model and calculate beam values
+    (via `add_fits_info_to_source_catalogue`).
 
     Parameters
     ----------
@@ -1147,6 +1164,8 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
         The Table containing the linear polarisation information, by default False.
     precision : str, optional
         Precision of the source catalogue (either "float" or "double"), by default "double".
+    uvbeam_objs : np.ndarray[UVBeam], optional
+        The initialised UVBeam objects if calculating primary beams via UVBeam.
 
     Returns
     -------
