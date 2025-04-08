@@ -254,7 +254,7 @@ def _mwa_beam_settings_string(logger: logging.Logger, woden_settings: object,
     
     out_string = f"Using MWA primary beam via {package} with the following parameters:\n" \
                     f"\thdf5 file: { woden_settings.hdf5_beam_path}\n" \
-                    f"\tdelays: {woden_settings.FEE_ideal_delays}"
+                    f"\tdelays: {woden_settings.FEE_ideal_delays[:16]}"
     if args.use_MWA_dipamps:
         out_string += f"\n\twill use dipole amplitudes from given metafits file"
     else:

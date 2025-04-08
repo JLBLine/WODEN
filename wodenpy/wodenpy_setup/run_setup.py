@@ -845,7 +845,8 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     ##Do dipole flags first
     args.dipflags = np.ones(2*args.num_antennas*16)
     if args.use_MWA_dipflags:
-        if args.primary_beam != 'MWA_FEE' and args.primary_beam != 'MWA_FEE_interp':
+        # if args.primary_beam != 'MWA_FEE' and args.primary_beam != 'MWA_FEE_interp':
+        if args.primary_beam not in ['MWA_FEE', 'MWA_FEE_interp', 'uvbeam_MWA']:
             exit('ERROR: --use_MWA_dipflags can only be used with the MWA FEE beam'
                  ' so must be used with --primary_beam=MWA_FEE or --primary_beam=MWA_FEE_interp.')
             
