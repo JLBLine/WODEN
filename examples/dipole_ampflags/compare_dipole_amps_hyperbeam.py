@@ -24,11 +24,11 @@ if __name__ == "__main__":
     
     
     
-    wod_xx_default, wod_yy_default = read_uvfits("woden_noflags_band01.uvfits")
-    wod_xx_deformed, wod_yy_deformed = read_uvfits("woden_dipflags_band01.uvfits")
+    wod_xx_default, wod_yy_default = read_uvfits("woden_hypbeam_default_band01.uvfits")
+    wod_xx_deformed, wod_yy_deformed = read_uvfits("woden_hypbeam_dipamps_band01.uvfits")
     
-    hyp_xx_default, hyp_yy_default = read_uvfits("hyperdrive_noflags.uvfits")
-    hyp_xx_deformed, hyp_yy_deformed = read_uvfits("hyperdrive_dipflags.uvfits")
+    hyp_xx_default, hyp_yy_default = read_uvfits("hyperdrive_perfect.uvfits")
+    hyp_xx_deformed, hyp_yy_deformed = read_uvfits("hyperdrive_dipamps.uvfits")
     
     
     atol=5e-6
@@ -55,18 +55,20 @@ if __name__ == "__main__":
     print("Deformed beams imag N-S all close? ", allclose_deform)
     
     fig, axs = plt.subplots(2, 2, figsize=(8,8))
+    for ax in axs.flatten():
+        ax.set_yscale('log')
     
     # bins = np.linspace(0.9988, 0.99895, 10)
     
     axs[0,0].hist(np.abs(wod_xx_default), histtype='step', 
-                  label='E-W WODEN perfect', lw=2, hatch='/')#, bins=bins)
+                  label='E-W WODEN-hyperbeam amps=1', lw=2, hatch='/')#, bins=bins)
     axs[0,0].hist(np.abs(hyp_xx_default), histtype='step',
-                  label='E-W hyperdrive perfect', lw=2)#, bins=bins)
+                  label='E-W hyperdrive amps=1', lw=2, hatch='\\')#, bins=bins)
     
     axs[0,1].hist(np.abs(wod_yy_default), histtype='step',
-                  label='N-S WODEN perfect', lw=2, hatch='/')#, bins=bins)
+                  label='N-S WODEN-hyperbeam amps=1', lw=2, hatch='/')#, bins=bins)
     axs[0,1].hist(np.abs(hyp_yy_default), histtype='step',
-                  label='N-S hyperdrive perfect', lw=2)#, bins=bins)
+                  label='N-S hyperdrive amps=1', lw=2, hatch='\\')#, bins=bins)
     
     bins = np.linspace(0.0, 1.0, 100)
     bins = False
@@ -76,25 +78,25 @@ if __name__ == "__main__":
     if type(bins) == np.ndarray:
     
         axs[1,0].hist(np.abs(wod_xx_deformed), histtype='step',
-                    label='E-W WODEN deformed', lw=2, bins=bins, hatch='/')
+                    label='E-W WODEN-hyperbeam bespoke amps', lw=2, bins=bins, hatch='/')
         axs[1,0].hist(np.abs(hyp_xx_deformed), histtype='step',
-                    label='E-W hyperdrive deformed', lw=2, bins=bins)
+                    label='E-W hyperdrive bespoke amps', lw=2, bins=bins, hatch='\\')
         axs[1,1].hist(np.abs(wod_yy_deformed), histtype='step',
-                    label='N-S WODEN deformed', lw=2, bins=bins, hatch='/')
+                    label='N-S WODEN-hyperbeam bespoke amps', lw=2, bins=bins, hatch='/')
         axs[1,1].hist(np.abs(hyp_yy_deformed), histtype='step',
-                    label='N-S hyperdrive deformed', lw=2, bins=bins)
+                    label='N-S hyperdrive bespoke amps', lw=2, bins=bins, hatch='\\')
         
     else:
     
         axs[1,0].hist(np.abs(wod_xx_deformed), histtype='step',
-                    label='E-W WODEN flagged', lw=2, hatch='/')
+                    label='E-W WODEN-hyperbeam bespoke amps', lw=2, hatch='/')
         axs[1,0].hist(np.abs(hyp_xx_deformed), histtype='step',
-                    label='E-W hyperdrive flagged', lw=2)
+                    label='E-W hyperdrive bespoke amps', lw=2, hatch='\\')
         
         axs[1,1].hist(np.abs(wod_yy_deformed), histtype='step',
-                    label='N-S WODEN flagged', lw=2, hatch='/')
+                    label='N-S WODEN-hyperbeam bespoke amps', lw=2, hatch='/')
         axs[1,1].hist(np.abs(hyp_yy_deformed), histtype='step',
-                    label='N-S hyperdrive flagged', lw=2)
+                    label='N-S hyperdrive bespoke amps', lw=2, hatch='\\')
     
     
     axs[0,0].set_ylabel('Count')
@@ -109,8 +111,7 @@ if __name__ == "__main__":
     
     
     plt.tight_layout()
-    # fig.savefig('visi_amp_hists.png', bbox_inches='tight')
-    fig.savefig('compare_woden_hyp_dipflags.png', bbox_inches='tight')
+    fig.savefig('compare_woden_hypbeam_dipamps.png', bbox_inches='tight')
     plt.close()
 
     

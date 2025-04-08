@@ -1,0 +1,4 @@
+python compare_dipole_amps_hyperbeam.py 
+python compare_dipole_amps_uvbeam.py 
+python compare_dipole_flags_hyperbeam.py 
+python compare_dipole_flags_uvbeam.py

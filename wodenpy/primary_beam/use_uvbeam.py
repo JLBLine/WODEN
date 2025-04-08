@@ -93,8 +93,6 @@ def setup_MWA_uvbeams(hdf5_path: str, freqs: np.ndarray,
         use_amplitudes[0, :] = pol1
         use_amplitudes[1, :] = pol2
         
-        # print(use_amplitudes)
-    
         mwabeam = UVBeam.from_file(hdf5_path,
                                    pixels_per_deg=pixels_per_deg,
                                    delays=use_delays,

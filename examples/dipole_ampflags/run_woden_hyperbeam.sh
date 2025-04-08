@@ -8,7 +8,7 @@ time run_woden.py \
     --cat_filename=srclist_singlepoint_power.yaml \
     --metafits_filename=$META \
     --band_nums=1 \
-    --output_uvfits_prepend=woden_dipflags \
+    --output_uvfits_prepend=woden_hypbeam_dipflags \
     --primary_beam=MWA_FEE_interp \
     --lowest_channel_freq=181.775e+6 \
     --use_MWA_dipflags
@@ -20,7 +20,7 @@ time run_woden.py \
     --cat_filename=srclist_singlepoint_power.yaml \
     --metafits_filename=$META \
     --band_nums=1 \
-    --output_uvfits_prepend=woden_noflags \
+    --output_uvfits_prepend=woden_hypbeam_noflags \
     --primary_beam=MWA_FEE_interp \
     --lowest_channel_freq=181.775e+6
 
@@ -33,7 +33,7 @@ time run_woden.py \
     --cat_filename=srclist_singlepoint_power.yaml \
     --metafits_filename=$META \
     --band_nums=1 \
-    --output_uvfits_prepend=woden_dipamps \
+    --output_uvfits_prepend=woden_hypbeam_dipamps \
     --primary_beam=MWA_FEE_interp \
     --lowest_channel_freq=181.775e+6 \
     --use_MWA_dipamps
@@ -46,6 +46,6 @@ time run_woden.py \
     --cat_filename=srclist_singlepoint_power.yaml \
     --metafits_filename=$META \
     --band_nums=1 \
-    --output_uvfits_prepend=woden_default \
+    --output_uvfits_prepend=woden_hypbeam_default \
     --primary_beam=MWA_FEE_interp \
     --lowest_channel_freq=181.775e+6

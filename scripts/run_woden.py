@@ -744,7 +744,7 @@ def main(argv=None):
                 dipole_amps = np.ones(32)
             
             uvbeam_objs = setup_MWA_uvbeams(args.hdf5_beam_path, freqs,
-                                            woden_settings_python.FEE_ideal_delays,
+                                            woden_settings_python.FEE_ideal_delays[:16],
                                             dipole_amps, pixels_per_deg = 5)
             
             main_logger.info("UVBeam objects have been initialised")
@@ -771,9 +771,17 @@ def main(argv=None):
             para_mode = "parallel"
         
         if args.cpu_mode:
-            msg = f"Running in {para_mode} on CPU mode with {num_threads} threads"
+            if woden_settings_python.beamtype in BeamGroups.uvbeam_beams:
+                msg = f"Running in {para_mode} on CPU mode with {num_threads} threads\n"
+                msg += "Will read sky model using one thread (UVBeam models seem to do their own threading, trying to thread leads to GIL issues)"
+            else:
+                msg = f"Running in {para_mode} on CPU mode with {num_threads} threads"
         else:
-            msg = f"Running in {para_mode} on GPU.\nWill read sky model using {num_threads} threads"
+            if woden_settings_python.beamtype in BeamGroups.uvbeam_beams:
+                msg = f"Running in {para_mode} on GPU.\n"
+                msg += "Will read sky model using one thread (UVBeam models seem to do their own threading, trying to thread leads to GIL issues)"
+            else:
+                msg = f"Running in {para_mode} on GPU.\nWill read sky model using {num_threads} threads"
         msg += f"\nThere are {num_rounds} sets of sky models to run"
         
         main_logger.info(msg)

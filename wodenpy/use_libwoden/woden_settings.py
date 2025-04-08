@@ -275,12 +275,12 @@ def fill_woden_settings_python(args : argparse.Namespace,
     if args.MWA_FEE_delays:
         
         ##If using a a different set of dipole amplitudes for each tile,
-        ##need to repeat the delays for each tile
+        ##need to repeat the delays for each tile for hyperdrive
         if args.use_MWA_dipamps:
             num_beams = args.num_antennas
         else:
             num_beams = 1
-        
+            
         delays = np.array(args.MWA_FEE_delays.strip('[]').split(','))
         num_delays = len(delays)*num_beams
         woden_settings.FEE_ideal_delays = np.empty(num_delays, dtype=np.int32)
