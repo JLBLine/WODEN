@@ -692,7 +692,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
             
     ##Do this here to allow people to run a simulation using the measurement set
     ##to set observational parameters, but with a different primary beam e.g. None
-    elif args.beam_ms_path:
+    if args.beam_ms_path:
         if not os.path.isdir(args.beam_ms_path):
             exit('Could not open measurement set specified by user as:\n'
                  '\t--beam_ms_path={:s}.\n'
