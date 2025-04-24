@@ -86,7 +86,7 @@ def get_parser():
         help='Set the frequency (Hz) of the lowest channel for band 1. '
              'If using a metafits file, this will override the frequency in'
              ' the metafits')
-    freq_group.add_argument('--coarse_band_width', type=float, default=1.28e+6,
+    freq_group.add_argument('--coarse_band_width', type=float, default='obs',
         help='Set the width of each coarse band \
               If using a metafits file, this will override the frequency in '
               'the metafits')
@@ -628,6 +628,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     num_time_steps = False
     date = False
     array_layout = False
+    b_width = False
 
     ##read in args from the metafits if requested
     if args.metafits_filename:
@@ -721,7 +722,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
             lowest_channel_freq = spw.getcol("CHAN_FREQ")[0][0]
             highest_channel_freq = spw.getcol("CHAN_FREQ")[0][-1]
             
-            args.coarse_band_width = num_frequencies*freq_res
+            b_width = num_frequencies*freq_res
             
         with table(args.beam_ms_path+'::FIELD', readonly=False) as field_table:
             ra0, dec0 = np.squeeze(field_table.getcol('PHASE_DIR'))
@@ -769,7 +770,9 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
         else:
             args.pointed_ms_file_name = False
                 
-        
+    
+    if args.coarse_band_width == 'obs':
+        args.coarse_band_width = b_width
             
     ##Override metafits and/or load arguments
     args.lowest_channel_freq = select_argument_and_check(args.lowest_channel_freq,
