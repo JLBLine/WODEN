@@ -86,7 +86,7 @@ def get_parser():
         help='Set the frequency (Hz) of the lowest channel for band 1. '
              'If using a metafits file, this will override the frequency in'
              ' the metafits')
-    freq_group.add_argument('--coarse_band_width', type=float, default='obs',
+    freq_group.add_argument('--coarse_band_width', default='obs',
         help='Set the width of each coarse band \
               If using a metafits file, this will override the frequency in '
               'the metafits')
@@ -259,7 +259,8 @@ def get_parser():
              'horizon for the given LST. By default, '
              'WODEN will include any COMPONENT above the horizon, regardless '
              'of which SOURCE it belongs to. If --sky_crop_source is included '
-             'for each SOURCE in the sky model, if any COMPONENT is below the ' 'horizon, the entire source will be flagged')
+             'for each SOURCE in the sky model, if any COMPONENT is below the '
+             'horizon, the entire source will be flagged')
     input_group.add_argument('--do_autos', default=False, action='store_true',
         help='By default, WODEN only calculates cross-correlations. Add this'
              ' flag to include auto-correlations.')
@@ -671,10 +672,12 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
             lowest_channel_freq = freqcent - (b_width/2) - (freq_res/2)
             
             num_time_steps = int(f[0].header['NSCANS'])
-
+            
+            ##IF somehow to the delays have a 32 in them, set it to 0
             delays = np.array(f[0].header['DELAYS'].split(','),dtype=int)
             delays[np.where(delays == 32)] = 0
-            MWA_FEE_delays = str(list(delays))
+            
+            MWA_FEE_delays = ','.join([str(int(d)) for d in delays])
 
             ##If user hasn't specified a pointing for a Gaussian beam,
             ##fill in using the metafits file
@@ -772,7 +775,12 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
                 
     
     if args.coarse_band_width == 'obs':
-        args.coarse_band_width = b_width
+        if b_width:
+            args.coarse_band_width = b_width
+        else:
+            args.coarse_band_width = 1.28e+6
+    else:
+        args.coarse_band_width = float(args.coarse_band_width)
             
     ##Override metafits and/or load arguments
     args.lowest_channel_freq = select_argument_and_check(args.lowest_channel_freq,
