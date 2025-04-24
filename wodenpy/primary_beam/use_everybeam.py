@@ -29,7 +29,8 @@ from logging import Logger
 from casacore.tables import table, taql
 from wodenpy.use_libwoden.beam_settings import BeamTypes
 import ctypes
-
+from wodenpy.array_layout.create_array_layout import convert_ecef_to_enh, convert_enh_to_ecef, rotate_local_XYZ, enh2xyz
+from erfa import gc2gd, gd2gc
 
 ##This call is so we can use it as a type annotation
 woden_struct_classes = Woden_Struct_Classes()
@@ -56,8 +57,83 @@ def get_num_stations(ms_path : str) -> int:
         
     return num_stations
 
+def enu_basis(lat, lon):
+    # Unit vectors for local ENU frame at (lat, lon)
+    east = np.array([-np.sin(lon),  np.cos(lon), 0.0])
+    north = np.array([-np.sin(lat) * np.cos(lon),
+                      -np.sin(lat) * np.sin(lon),
+                       np.cos(lat)])
+    up = np.array([np.cos(lat) * np.cos(lon),
+                   np.cos(lat) * np.sin(lon),
+                   np.sin(lat)])
+    return east, north, up
+
+
+def calc_coordinate_axes(positions : np.ndarray,
+                         central_lat : float, central_lon : float):
+    
+    arrX, arrY, arrZ = gd2gc(1, central_lon, central_lat, 0)
+    arr_centre = np.array([arrX, arrY, arrZ])
+    
+    num_positions = positions.shape[0]
+    coordinate_axes = np.zeros((num_positions, 3, 3), dtype=np.float64)
+
+    for pos in range(num_positions):
+        # delta = arr_centre - positions[pos, :]
+        delta = positions[pos, :] - arr_centre
+        lon, lat, height = gc2gd(1, positions[pos, :])
+
+        east, north, up = enu_basis(lat, lon)
+        
+        ##IF doing everything relative to the array centre, then
+        ##use the array centre as the ENU basis
+        # east, north, up = enu_basis(central_lat, central_lon)
+
+        east_comp = np.dot(delta, east)
+        north_comp = np.dot(delta, north)
+        up_comp = np.dot(delta, up)
+
+        # Reconstruct component vectors
+        east_vec = east_comp * east
+        north_vec = north_comp * north
+        up_vec = up_comp * up
+        
+        east_vec /= np.linalg.norm(east_vec)
+        north_vec /= np.linalg.norm(north_vec)
+        up_vec /= np.linalg.norm(up_vec)
+        
+        
+        if lon < central_lon:
+            east_vec *= -1
+        if lat < central_lat:
+            north_vec *= -1
+        
+        coordinate_axes[pos, 0, :] = east_vec
+        coordinate_axes[pos, 1, :] = north_vec
+        coordinate_axes[pos, 2, :] = up_vec
+        
+        # print(arr_centre / np.linalg.norm(arr_centre), up_vec)
+        
+        # coordinate_axes[pos, 0, :] = east_vec
+        # coordinate_axes[pos, 1, :] = -north_vec
+        # coordinate_axes[pos, 2, :] = -up_vec
+        
+        # if pos == 1:
+        #     print("Station: ", positions[pos, :])
+        #     print("Arr_centre: ", arr_centre)
+        #     print("East: ", east_vec)
+        #     print("North: ", north_vec)
+        #     print("Up: ", up_vec)
+
+    return coordinate_axes
+
 def create_filtered_ms(ms_path : str, new_ms_path : str,
-                       ra0 : float, dec0 : float):
+                       ra0 : float, dec0 : float,
+                       recentre_array : bool = False,
+                       current_latitude : float = False,
+                       current_longitude : float = False,
+                       new_latitude : float = False,
+                       new_longitude : float = False) -> None:
     """
     Create a filtered measurement set with only the first time and frequency
     channel, and set the delay and reference direction to the given RA/Dec.
@@ -108,7 +184,126 @@ def create_filtered_ms(ms_path : str, new_ms_path : str,
         
         if telescope_name == "LOFAR":
             field_table.putcol('LOFAR_TILE_BEAM_DIR', np.array([[[ra0, dec0]]]))
+            
+    if recentre_array:
+        
+        with table(ms_path + '/ANTENNA', readonly=True) as t: 
+            num_ants = len(t)
+            num_antennas = num_ants
+            ant_locations = np.array([t.getcell('POSITION', ant) for ant in range(num_ants)])
+            ##convert from ECEF to ENH, as WODEN starts with enh coords
+            east, north, height = convert_ecef_to_enh(ant_locations[:,0],
+                                        ant_locations[:,1], ant_locations[:,2],
+                                        current_longitude, current_latitude)
+            
+        ecef_X, ecef_Y, ecef_Z = convert_enh_to_ecef(east, north, height,
+                                             new_longitude, new_latitude)
+        
+        
+        # print(ant_locations[:5,0])
+        # print(ecef_X[:5])
+            
+        with table(new_ms_path+'::ANTENNA', readonly=False) as antenna:
+            
+            new_locations = np.zeros((num_antennas, 3), dtype=np.float64)
+            new_locations[:, 0] = ecef_X
+            new_locations[:, 1] = ecef_Y
+            new_locations[:, 2] = ecef_Z
+            
+            antenna.putcol('POSITION', new_locations)
+            
+            if telescope_name == "LOFAR":
+                antenna.putcol('LOFAR_PHASE_REFERENCE', new_locations)
+            
+        if telescope_name == "LOFAR":
+            with table(new_ms_path+'::LOFAR_ANTENNA_FIELD', readonly=False) as antenna:
+                lof_ant_position = antenna.getcol('POSITION')
+                
+                east, north, height = convert_ecef_to_enh(lof_ant_position[:,0],
+                                        lof_ant_position[:,1], lof_ant_position[:,2],
+                                        current_longitude, current_latitude)
+            
+                ecef_X, ecef_Y, ecef_Z = convert_enh_to_ecef(east, north, height,
+                                                    new_longitude, new_latitude)
+                
+                new_locations = np.zeros((num_antennas, 3), dtype=np.float64)
+                new_locations[:, 0] = ecef_X
+                new_locations[:, 1] = ecef_Y
+                new_locations[:, 2] = ecef_Z
+                
+                antenna.putcol('POSITION', new_locations)
+                
+            new_coord_axes = calc_coordinate_axes(new_locations,
+                                                        new_latitude,
+                                                        new_longitude)
+            
+            with table(new_ms_path+'::LOFAR_ANTENNA_FIELD', readonly=False) as antenna:
+                
+                coord_axes = antenna.getcol('COORDINATE_AXES')
+                antenna.putcol('COORDINATE_AXES', new_coord_axes)
+                
+                # ind = 43
+                ind = 0
+                arrX, arrY, arrZ = gd2gc(1, new_longitude, new_latitude, 0)
+                arr_centre = np.array([arrX, arrY, arrZ])
+                # print(arr_centre)
+                # print(lof_ant_position[ind])
+                # print(coord_axes[ind])
+                # print(new_coord_axes[ind])
+                
+                
+                for station in range(num_antennas):
+                    offsets = antenna.getcell('ELEMENT_OFFSET', station)
+                    offsets += ant_locations[station, :]
+                    
+                    cur_lon, cur_lat, height = gc2gd(1, ant_locations[station, :])
+                    
+                    east, north, height = convert_ecef_to_enh(offsets[:,0],
+                                        offsets[:,1], offsets[:,2],
+                                        cur_lon, cur_lat)
+                    
+                    new_lon, new_lat, height = gc2gd(1, new_locations[station, :])
+            
+                    ecef_X, ecef_Y, ecef_Z = convert_enh_to_ecef(east, north, height,
+                                                        new_lon, new_lat)
+                    
+                    new_offsets = np.zeros_like(offsets)
+                    new_offsets[:, 0] = ecef_X - new_locations[station, 0]
+                    new_offsets[:, 1] = ecef_Y - new_locations[station, 1]
+                    new_offsets[:, 2] = ecef_Z - new_locations[station, 2]
+                    
+                        
+                    antenna.putcell('ELEMENT_OFFSET', station, new_offsets)
+                    
+                for station in range(num_antennas):
+                    offsets = antenna.getcell('TILE_ELEMENT_OFFSET', station)
+                    # if station == 0:
+                    #     print(offsets)
+                    
+                    offsets += ant_locations[station, :]
+                    
+                    cur_lon, cur_lat, height = gc2gd(1, ant_locations[station, :])
+                    
+                    east, north, height = convert_ecef_to_enh(offsets[:,0],
+                                        offsets[:,1], offsets[:,2],
+                                        cur_lon, cur_lat)
+                    
+                    new_lon, new_lat, height = gc2gd(1, new_locations[station, :])
+            
+                    ecef_X, ecef_Y, ecef_Z = convert_enh_to_ecef(east, north, height,
+                                                        new_lon, new_lat)
+                    
+                    new_offsets = np.zeros_like(offsets)
+                    new_offsets[:, 0] = ecef_X - new_locations[station, 0]
+                    new_offsets[:, 1] = ecef_Y - new_locations[station, 1]
+                    new_offsets[:, 2] = ecef_Z - new_locations[station, 2]
+                    
+                    # if station == 0:
+                    #     print(new_offsets)
+                    antenna.putcell('TILE_ELEMENT_OFFSET', station, new_offsets)
 
+                
+            
 def check_ms_telescope_type_matches_element_response(ms_path : str,
                                                      element_response_model : str = 'default',
                                                      logger : Logger = False) -> Tuple[str, str]:

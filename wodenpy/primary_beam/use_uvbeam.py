@@ -110,7 +110,8 @@ def run_uvbeam(uvbeam_objs: np.ndarray[UVBeam],
                j2000_latitudes: np.ndarray, j2000_lsts: np.ndarray,
                freqs: np.ndarray,
                iau_order: bool = False,
-               parallactic_rotate: bool = True) -> np.ndarray:
+               parallactic_rotate: bool = True,
+               freq_interp=True) -> np.ndarray:
     """
     Calculate the Jones matrices for a given set of directions, times (via `j2000_lsts`
     and `j2000_latitudes`), frequencies, and stations (a.k.a tiles for MWA),
@@ -178,6 +179,8 @@ def run_uvbeam(uvbeam_objs: np.ndarray[UVBeam],
         where_neg_az = np.nonzero(use_azs < 0)
         use_azs[where_neg_az] = use_azs[where_neg_az] + np.pi * 2.
         
+        # use_azs = azs
+        
         if parallactic_rotate:
             has = j2000_lsts[time_ind] - ras
             para_angles = erfa.hd2pa(has, decs, j2000_latitudes[time_ind])
@@ -192,30 +195,38 @@ def run_uvbeam(uvbeam_objs: np.ndarray[UVBeam],
         for station_ind, beam_obj in enumerate(uvbeam_objs):
             beam = BeamInterface(beam_obj, beam_type="efield")
             
-            response = beam.compute_response(az_array=use_azs,
-                                             za_array=zas,
-                                             freq_array=freqs,
-                                             check_azza_domain=check_azza_domain
-                                             )
-            
-            ##If in future want to switch off interpolation over frequency
-            # freq_interp_kind = "nearest"
-            # spline_opts = None
-            # response = beam.compute_response(az_array=use_azs,
-            #                                  za_array=zas,
-            #                                  freq_array=freqs,
-            #                                  interpolation_function=interpol_fn,
-            #                                  freq_interp_kind=freq_interp_kind,
-            #                                  spline_opts=spline_opts,
-            #                                  check_azza_domain=check_azza_domain
-            #                                  )
+            if freq_interp:
+                response = beam.compute_response(az_array=use_azs,
+                                                za_array=zas,
+                                                freq_array=freqs,
+                                                check_azza_domain=check_azza_domain
+                                                )
+            else:
+                freq_interp_kind = "nearest"
+                spline_opts = None
+                response = beam.compute_response(az_array=use_azs,
+                                                za_array=zas,
+                                                freq_array=freqs,
+                                                interpolation_function=interpol_fn,
+                                                freq_interp_kind=freq_interp_kind,
+                                                spline_opts=spline_opts,
+                                                check_azza_domain=check_azza_domain
+                                                )
             
             response[:,:,:,np.isnan(zas)] = np.nan
             
+            ##Correct for MWA beam convention
             all_output_jones[station_ind, time_ind, :, :, 0, 0] = response[1,0,:,:]
             all_output_jones[station_ind, time_ind, :, :, 0, 1] = -response[0,0,:,:]
             all_output_jones[station_ind, time_ind, :, :, 1, 0] = response[1,1,:,:]
             all_output_jones[station_ind, time_ind, :, :, 1, 1] = -response[0,1,:,:]
+            
+            
+            # all_output_jones[station_ind, time_ind, :, :, 0, 0] = response[0,1,:,:]
+            # all_output_jones[station_ind, time_ind, :, :, 0, 1] = response[0,0,:,:]
+            # all_output_jones[station_ind, time_ind, :, :, 1, 0] = response[1,1,:,:]
+            # all_output_jones[station_ind, time_ind, :, :, 1, 1] = response[1,0,:,:]
+            
             
         if parallactic_rotate:
             ##Parallactic angle doesn't change per station or freq, only by
@@ -224,7 +235,20 @@ def run_uvbeam(uvbeam_objs: np.ndarray[UVBeam],
             all_output_jones[:, time_ind, :, :, :, :] = rot_jones
                     
                     
-    if iau_order:
+    ##different telescope beams seem to come out with different east-west/ north-south
+    ##polarisation orders. So change whether we reorder based on telescope name??
+    
+    
+    reorder = False
+    if beam.telescope_name == "HERA":
+        if not iau_order:
+            reorder = True
+              
+    else:
+        if iau_order:
+            reorder = True      
+                    
+    if reorder:
         ##swap all_output_jones[:,:,:,:,0,0] with all_output_jones[:,:,:,:,1,1]
         all_output_jones[:, :, :, :, [0, 1], [0, 1]] = all_output_jones[:, :, :, :, [1, 0], [1, 0]]
         ##swap all_output_jones[:,:,:,:,0,1] with all_output_jones[:,:,:,:,1,0]

@@ -2,7 +2,6 @@
 #include <cstdio>
 #include <EveryBeam/load.h>
 #include <EveryBeam/options.h>
-// #include <EveryBeam/station.h>
 #include <EveryBeam/telescope/phasedarray.h>
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
 #include <EveryBeam/pointresponse/phasedarraypoint.h>

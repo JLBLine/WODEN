@@ -190,6 +190,11 @@ def get_parser():
               'this defaults to whatever is in --beam_ms_path. '
               'If added, `--eb_dec_point` will trigger WODEN to create a minimal '
               'copy of the measurement set with the pointing set to this value')
+    eb_group.add_argument('--move_array_to_latlon', default=False, action='store_true',
+        help='Use the arguments in --latitude and --longitude to move the array '
+              'to a new location. Does a number of rotations to the linked '
+              'measuerment in --beam_ms_path. Writes results to a new '
+              'measurement set to pass to EveryBeam. ')
     
     hyper_group = parser.add_argument_group('MWA PRIMARY BEAM OPTIONS')
     hyper_group.add_argument('--hdf5_beam_path', default=False,
@@ -398,8 +403,8 @@ def select_correct_enh(args):
             ##convert from ECEF to ENH, as WODEN starts with enh coords
             east, north, height = convert_ecef_to_enh(ant_locations[:,0],
                                         ant_locations[:,1], ant_locations[:,2],
-                                        np.radians(args.longitude),
-                                        np.radians(args.latitude))
+                                        np.radians(args.orig_long),
+                                        np.radians(args.orig_lat))
             
             args.east = east
             args.north = north
@@ -505,6 +510,10 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
         lat = MWA_LAT
         long = MWA_LONG
         height = MWA_HEIGHT
+        
+    args.orig_lat = lat
+    args.orig_long = long
+    args.orig_height = height
             
     if np.isnan(args.latitude): args.latitude = lat
     if np.isnan(args.longitude): args.longitude = long
@@ -748,8 +757,15 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
             args.pointed_ms_file_name = Path(f"{output_dir}/pointed_{uvfits_name}_band{band_num_string}.ms")
             
             if not args.dry_run:
-                create_filtered_ms(args.beam_ms_path, args.pointed_ms_file_name.as_posix(),
-                                np.radians(beam_ra0), np.radians(beam_dec0))
+                if args.move_array_to_latlon:
+                    create_filtered_ms(args.beam_ms_path,
+                                       args.pointed_ms_file_name.as_posix(),
+                                       np.radians(beam_ra0), np.radians(beam_dec0),
+                                       True, np.radians(lat), np.radians(long),
+                                       np.radians(args.latitude), np.radians(args.longitude))
+                else:
+                    create_filtered_ms(args.beam_ms_path, args.pointed_ms_file_name.as_posix(),
+                                    np.radians(beam_ra0), np.radians(beam_dec0))
         else:
             args.pointed_ms_file_name = False
                 
