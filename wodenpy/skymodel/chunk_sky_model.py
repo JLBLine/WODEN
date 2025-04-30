@@ -1062,10 +1062,10 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
     
     ##Only do all the shapelet faffing if we actually have shapelets
     if comp_counter.total_shape_basis > 0:
-        ##When doing everybeam, the limiting calculation is each beam value,
+        ##When doing python beam calcs, the limiting calculation is each beam value,
         ##so most efficient to chunk over the number of directions. Hence
         ##we try and optimise over `total_shape_comps` here
-        if beamtype_value in BeamGroups.eb_beam_values:
+        if beamtype_value in BeamGroups.python_calc_beams:
             num_shape_dirs = find_num_dirs_per_chunk(comp_counter.total_shape_comps,
                                                      max_dirs_per_chunk,
                                                      num_threads)
@@ -1085,7 +1085,7 @@ def create_skymodel_chunk_map(comp_counter : Component_Type_Counter,
                                             max_coeffs_per_chunk,
                                             num_shape_dirs)
         
-        if beamtype_value in BeamGroups.eb_beam_values:
+        if beamtype_value in BeamGroups.python_calc_beams:
             indexed_shape_chunk_sizes = [(i, chunk_map.n_shapes) for i,chunk_map in enumerate(shapelet_chunk_maps)]  # List of (index, value) tuples
         else:
             indexed_shape_chunk_sizes = [(i, chunk_map.n_shape_coeffs) for i,chunk_map in enumerate(shapelet_chunk_maps)]  # List of (index, value) tuples

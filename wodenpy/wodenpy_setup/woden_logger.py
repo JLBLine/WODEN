@@ -296,19 +296,19 @@ def _everybeam_settings_string(logger: logging.Logger, woden_settings: object, a
     elif woden_settings.beamtype == BeamTypes.EB_MWA.value:
         beam = "MWA"
     
-    out_string = f"Will run with EveryBeam {beam} primary beam, based on this measurement set:\n"
-    out_string +=  f"\t{args.beam_ms_path}\n"
+    out_string = f"Will run with EveryBeam {beam} primary beam, based on this measurement set:"
+    out_string +=  f"\n\t{args.beam_ms_path}"
     
     if beam == "MWA":
-        out_string += f"Using the following hdf5 file:\n"
-        out_string += f"\t{woden_settings.hdf5_beam_path}\n"
+        out_string += f"\nUsing the following hdf5 file:"
+        out_string += f"\n\t{woden_settings.hdf5_beam_path}"
         
     if args.pointed_ms_file_name:
-        out_string += f"Created the following minimal MS to point the beam:\n"
-        out_string += f"\t{args.pointed_ms_file_name}\n"
+        out_string += f"\nCreated the following minimal MS to point the beam:"
+        out_string += f"\n\t{args.pointed_ms_file_name}"
         
     if beam == "LOFAR" or beam == "OSKAR":
-        out_string += f"Primary beam is pointed at RA,Dec = {args.eb_ra_point}, {args.eb_dec_point} deg\n"
+        out_string += f"\nPrimary beam is pointed at RA,Dec = {args.eb_ra_point}, {args.eb_dec_point} deg"
         
 
     return out_string

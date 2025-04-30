@@ -299,7 +299,7 @@ def read_skymodel_worker(thread_id : int, num_threads : int,
         
         end = time()
         
-        if beamtype in BeamGroups.eb_beam_values:
+        if beamtype in BeamGroups.python_calc_beams:
             logger.info(f"Finshed sky set {set_ind} reading thread num {thread_num} in {end-start:.1f} seconds")
         else:
             logger.debug(f"Finshed sky set {set_ind} reading thread num {thread_num} in {end-start:.1f} seconds")
@@ -307,7 +307,7 @@ def read_skymodel_worker(thread_id : int, num_threads : int,
         if args.profile:
             profiler.disable()
             profile_filename = f"wod_read_skymodel_worker_{os.getpid()}_{set_ind:04d}.lprof"
-            # logger.info("Dumping profile to", profile_filename)
+            logger.info(f"Dumping profile for set {set_ind} thread {thread_num} to {profile_filename}")
             profiler.dump_stats(profile_filename)
             
         return python_sources, thread_num
@@ -884,6 +884,13 @@ def main(argv=None):
     time_passed = timedelta(seconds=woden_end - woden_start)
     main_logger.info(f"Full run took {time_passed}")
     main_logger.info("WODEN is done. Closing the log. S'later")
+    
+    ##Make sure we clean out the handlers. If we don't, when running
+    ##integration tests, old messages hang around and it gets confusing as
+    for handler in main_logger.handlers:
+        handler.close()
+        main_logger.removeHandler(handler)
+    logging.shutdown()
     
 if __name__ == "__main__":
     main()

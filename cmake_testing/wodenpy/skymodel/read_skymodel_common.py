@@ -7,11 +7,10 @@ import numpy.testing as npt
 
 # ##Code we are testing
 from wodenpy.skymodel import read_yaml_skymodel
-# import wodenpy
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes, crop_below_horizon
 from wodenpy.skymodel.chunk_sky_model import create_skymodel_chunk_map, map_chunk_pointgauss, Skymodel_Chunk_Map, increment_flux_type_counters
-
-from wodenpy.use_libwoden.beam_settings import BeamTypes
+from wodenpy.use_libwoden.beam_settings import BeamTypes,BeamGroups
+from wodenpy.skymodel.chunk_sky_model import find_num_dirs_per_chunk
 
 from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, _Ctype_Source_Into_Python
 
@@ -2014,7 +2013,8 @@ def populate_shapelet_chunk(expec_chunk : Expected_Sky_Chunk,
 
 def make_expected_chunks(ra_range, dec_range,
                          skymodel_settings, comps_per_chunk, lst = 0.0,
-                         fits_skymodel = False):
+                         fits_skymodel = False,
+                         beamtype=BeamTypes.FEE_BEAM.value):
     
     num_of_each_comp = len(ra_range)
     
@@ -2184,8 +2184,24 @@ def make_expected_chunks(ra_range, dec_range,
     if skymodel_settings.num_coeff_per_shape:
         ##We will have some unedfined number of chunks, so we want to split
         ##things as evenly as possible in the available number of threads
-        indexed_shape_chunk_sizes = [(i, n_shape) for i,n_shape in enumerate(num_shapes_per_comp)]  # List of (index, value) tuples
-        target_volume = comps_per_chunk  # Set the target volume for each bin
+        # indexed_shape_chunk_sizes = [(i, n_shape) for i,n_shape in enumerate(num_shapes_per_comp)]  # List of (index, value) tuples
+        # target_volume = comps_per_chunk  # Set the target volume for each bin
+        
+        if beamtype in BeamGroups.python_calc_beams:
+            indexed_shape_chunk_sizes = [(i, n_shape) for i,n_shape in enumerate(num_shapes_per_comp)]  # List of (index, value) tuples
+            num_shape_dirs = find_num_dirs_per_chunk(total_shape_basis,
+                                                     comps_per_chunk,
+                                                     1)
+            num_shape_calcs = num_shape_dirs
+        else:
+            num_shape_calcs = find_num_dirs_per_chunk(total_shape_basis,
+                                                     comps_per_chunk,
+                                                     1)
+            indexed_shape_chunk_sizes = [(i, skymodel_settings.num_coeff_per_shape*n_shape) for i,n_shape in enumerate(num_shapes_per_comp)] 
+        
+        target_volume = num_shape_calcs
+        
+        
         # Step 2: Partition the numbers while keeping track of indices using the `to_constant_volume` function
         binned_shape_chunk_sizes = binpacking.to_constant_volume(indexed_shape_chunk_sizes, target_volume, weight_pos=1)
         

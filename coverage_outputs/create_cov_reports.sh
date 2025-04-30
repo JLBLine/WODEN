@@ -1,6 +1,8 @@
 ##Delete any old reports hanging around
 rm coverage.xml *.gcov *.gcno *.gcda coverage.info .coverage.*
 
+export COVERAGE_PROCESS_START=.coveragerc
+
 ##Use the ctest C code outputs and run gcov over them. Converts them into
 ##something that codecov can read
 
@@ -42,6 +44,10 @@ if [ "$do_python" = "True" ]; then
     coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_everybeam_over_threads.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_everybeam_over_threads_MWA.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_check_ms_telescope_type_matches_element_response.py
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_calc_uvbeam_for_components.py
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_uvbeam_MWA.py
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_create_filtered_ms.py
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_everybeam_OSKAR.py
 
     ##skymodel
     coverage run --source=wodenpy ../cmake_testing/wodenpy/skymodel/test_crop_below_horizon.py
@@ -74,16 +80,21 @@ if [ "$do_python" = "True" ]; then
     # coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/test_make_logger.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/test_log_chosen_beamtype.py
 
-    ##scripts
+    #scripts
     coverage run --source=add_woden_uvfits ../cmake_testing/scripts/add_woden_uvfits/test_add_woden_uvfits.py
     coverage run --source=concat_woden_uvfits ../cmake_testing/scripts/concat_woden_uvfits/test_concat_woden_uvfits.py
+    coverage run --source=wodenpy ../cmake_testing/scripts/run_woden/test_run_woden.py
     coverage run --source=run_woden ../cmake_testing/scripts/run_woden/test_run_woden.py
+    coverage run --source=run_woden ../cmake_testing/scripts/run_woden/test_run_woden.py Test.test_runs_with_profiler_on
+    coverage run --source=run_woden ../cmake_testing/scripts/run_woden/test_run_woden.py Test.test_runs_with_uvbeam
+
+
     coverage run --source=wodenpy ../cmake_testing/scripts/run_woden/test_run_woden.py
     coverage run --source=woden_uv2ms ../cmake_testing/scripts/woden_uv2ms/test_woden_uv2ms.py
     coverage run --source=add_instrumental_effects_woden ../cmake_testing/scripts/add_instrumental_effects_woden/test_add_instrumental_effects_woden.py
 
     #convert output to something that codecov accepts
-    coverage combine
+    coverage combine #--keep
     coverage xml
 fi
 
@@ -97,16 +108,16 @@ rm -r WODEN_array_layout.txt *.uvfits *.json \
 # ##Use this to create two local reports, one for C and one for python
 # ##Only uncomment if you want to see the reports locally without pushing to codecov
 
-# lcov --gcov-tool gcov-12 --capture --directory ${cov_src_dir} --output-file coverage.info
-# lcov --gcov-tool gcov-12  --capture --directory ${eb_src_dir} --output-file eb_coverage.info
-# lcov --extract eb_coverage.info 'src/*'  --output-file filtered_coverage.info
-# lcov --add-tracefile coverage.info --add-tracefile filtered_coverage.info --output-file merged_coverage.info
-# mv merged_coverage.info coverage.info
-# rm eb_coverage.info filtered_coverage.info
+lcov --gcov-tool gcov-12 --capture --directory ${cov_src_dir} --output-file coverage.info
+lcov --gcov-tool gcov-12  --capture --directory ${eb_src_dir} --output-file eb_coverage.info
+lcov --extract eb_coverage.info 'src/*'  --output-file filtered_coverage.info
+lcov --add-tracefile coverage.info --add-tracefile filtered_coverage.info --output-file merged_coverage.info
+mv merged_coverage.info coverage.info
+rm eb_coverage.info filtered_coverage.info
 
-# genhtml coverage.info --output-directory C_coverage
+genhtml coverage.info --output-directory C_coverage
 
-# if [ "$do_python" = "True" ]; then
-#     coverage html -d python_coverage
-# fi
+if [ "$do_python" = "True" ]; then
+    coverage html -d python_coverage
+fi
 

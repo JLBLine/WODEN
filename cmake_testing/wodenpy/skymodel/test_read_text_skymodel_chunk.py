@@ -186,7 +186,7 @@ def make_expected_chunks_text(ra_range, dec_range,
         
     ##We will have some unedfined number of chunks, so we want to split
     ##things as evenly as possible in the available number of threads
-    indexed_shape_chunk_sizes = [(i, n_shape) for i,n_shape in enumerate(num_shapes_per_comp)]  # List of (index, value) tuples
+    indexed_shape_chunk_sizes = [(i, n_shape*num_coeff_per_shape) for i,n_shape in enumerate(num_shapes_per_comp)]  # List of (index, value) tuples
     target_volume = comps_per_chunk  # Set the target volume for each bin
     # Step 2: Partition the numbers while keeping track of indices using the `to_constant_volume` function
     binned_shape_chunk_sizes = binpacking.to_constant_volume(indexed_shape_chunk_sizes, target_volume, weight_pos=1)

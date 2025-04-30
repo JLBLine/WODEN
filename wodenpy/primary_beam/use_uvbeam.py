@@ -240,7 +240,7 @@ def run_uvbeam(uvbeam_objs: np.ndarray[UVBeam],
     
     
     reorder = False
-    if beam.telescope_name == "HERA":
+    if uvbeam_objs[0].telescope_name == "HERA":
         if not iau_order:
             reorder = True
               

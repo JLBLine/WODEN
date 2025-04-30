@@ -493,7 +493,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     ##the end ourselves
     output_uvfits_prepend = args.output_uvfits_prepend
     if output_uvfits_prepend[-7:] == '.uvfits':
-        args.output_uvfits_prepend = output_uvfits_prepend[-7:]
+        args.output_uvfits_prepend = output_uvfits_prepend[:-7]
         
     ##Check that the output directory exists, if not make it
     uvfits_path = Path(args.output_uvfits_prepend)
@@ -515,7 +515,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     args.orig_lat = lat
     args.orig_long = long
     args.orig_height = height
-            
+    
     if np.isnan(args.latitude): args.latitude = lat
     if np.isnan(args.longitude): args.longitude = long
     if np.isnan(args.array_height): args.array_height = height
@@ -629,6 +629,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     num_time_steps = False
     date = False
     array_layout = False
+    coarse_b_width = False
     b_width = False
 
     ##read in args from the metafits if requested
@@ -669,6 +670,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
             freq_res = float(f[0].header['FINECHAN'])*1e+3
             freqcent = float(f[0].header['FREQCENT'])*1e+6
             b_width = float(f[0].header['BANDWDTH'])*1e+6
+            coarse_b_width = b_width / 24.0
             lowest_channel_freq = freqcent - (b_width/2) - (freq_res/2)
             
             num_time_steps = int(f[0].header['NSCANS'])
@@ -775,7 +777,9 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
                 
     
     if args.coarse_band_width == 'obs':
-        if b_width:
+        if coarse_b_width:
+            args.coarse_band_width = coarse_b_width
+        elif b_width:
             args.coarse_band_width = b_width
         else:
             args.coarse_band_width = 1.28e+6

@@ -213,7 +213,13 @@ dipamps_flagged = np.array([0.0, 0.0, 0.0, 0.95701027,
                     1., 0.97801661, 0.95163655, 1., 1.])
 
 
+MWA_LAT = -26.703319405555554
+MWA_LONG = 116.67081523611111
+MWA_HEIGHT = 377.827
 
+LOFAR_LAT = 52.905329712
+LOFAR_LONG = 6.867996528
+LOFAR_HEIGHT = 0.0
 
 ##Vehicle for running tests
 class Test(unittest.TestCase):
@@ -524,7 +530,7 @@ class Test(unittest.TestCase):
         
         args = self.run_parser_and_check_args()
         ##Assert the delays were read in correctly
-        self.assertEqual("[6, 4, 2, 0, 8, 6, 4, 2, 10, 8, 6, 4, 12, 10, 8, 6]", args.MWA_FEE_delays)
+        self.assertEqual("6,4,2,0,8,6,4,2,10,8,6,4,12,10,8,6", args.MWA_FEE_delays)
 
         ##Setting the delays manually should override the delays in the
         ##metafits
@@ -1025,7 +1031,86 @@ class Test(unittest.TestCase):
         self.assertAlmostEqual(args.time_res, 0.5, 2)
         self.assertEqual("2018-02-16T11:18:54", args.date)
         
+    def test_output_uvfits_prepend(self):
+        """Check that the output_uvfits_prepend is set correctly, a.k.a
+        if the user actually includes '.uvfits' that we strip it out"""
+        
+        self.make_minimum_required_args_without_metafits()
+        
+        self.inputs.append('--output_uvfits_prepend=some_cool_name.uvfits')
+        
+        args = self.run_parser_and_check_args()
+        self.assertEqual("some_cool_name", args.output_uvfits_prepend)
+        
+    def test_setting_lon_lat_height(self):
+        """Check latitude / longitude / height are set correctly based
+        on requested beam type.
+        
+        However, can only run these tests if we have EveryBeam. If not, we
+        expect and error, so adjust the test accordingly
+        """
+        
+        if HAVE_EVERYBEAM:
+            ##Doing LOFAR should stick the beam at the LOFAR lat/long/height
+            self.make_minimum_required_args_minus_radec()
+            self.inputs.append('--primary_beam=everybeam_LOFAR')
+            ms_path = f"{code_dir}/../../../test_installation/everybeam/LOFAR_HBA_MOCK.ms"
+            self.inputs.append(f'--beam_ms_path={ms_path}')
+            self.inputs.append(f'--band_nums=1')
             
+            args = self.run_parser_and_check_args()
+            
+            self.assertEqual(args.orig_lat, LOFAR_LAT)
+            self.assertEqual(args.orig_long, LOFAR_LONG)
+            self.assertEqual(args.orig_height, LOFAR_HEIGHT)
+            
+            self.assertEqual(args.latitude, LOFAR_LAT)
+            self.assertEqual(args.longitude, LOFAR_LONG)
+            self.assertEqual(args.array_height, LOFAR_HEIGHT)
+            
+            ##If we do it again, but set the lat/long/height manually, it should
+            ##use those instead. However original lat/long/height should
+            ##still be the LOFAR ones
+            
+            self.inputs.append(f'--latitude={MWA_LAT}')
+            self.inputs.append(f'--longitude={MWA_LONG}')
+            self.inputs.append(f'--array_height={MWA_HEIGHT}')
+            
+            args = self.run_parser_and_check_args()
+            
+            self.assertEqual(args.orig_lat, LOFAR_LAT)
+            self.assertEqual(args.orig_long, LOFAR_LONG)
+            self.assertEqual(args.orig_height, LOFAR_HEIGHT)
+            
+            self.assertEqual(args.latitude, MWA_LAT)
+            self.assertEqual(args.longitude, MWA_LONG)
+            self.assertEqual(args.array_height, MWA_HEIGHT)
+            
+        ##All other beams currently default to the MWA lat/long/height
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append('--primary_beam=Gaussian')
+        
+        args = self.run_parser_and_check_args()
+        self.assertEqual(args.orig_lat, MWA_LAT)
+        self.assertEqual(args.orig_long, MWA_LONG)
+        self.assertEqual(args.orig_height, MWA_HEIGHT)
+        
+        self.assertEqual(args.latitude, MWA_LAT)
+        self.assertEqual(args.longitude, MWA_LONG)
+        self.assertEqual(args.array_height, MWA_HEIGHT)
+        
+    def test_check_asking_for_log_does_something(self):
+        """Check that asking for a log file actually does something"""
+        
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append('--save_log')
+        
+        args = self.run_parser_and_check_args()
+        
+        ##Check that the log file name is set. It will be False if not set.
+        self.assertTrue(args.log_file_name)
+        
+        
         
 ##Run the test
 if __name__ == '__main__':
