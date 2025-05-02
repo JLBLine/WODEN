@@ -9,6 +9,7 @@ import wodenpy.use_libwoden.woden_settings as ws
 from wodenpy.wodenpy_setup import run_setup
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 import numpy.testing as npt
+from wodenpy.use_libwoden.beam_settings import BeamTypes
 
 ##annoying path hack to find where the C library is
 test_dir = os.environ['CMAKE_CURRENT_SOURCE_DIR'] + "/../../../build/cmake_testing/wodenpy/use_libwoden/"
@@ -157,7 +158,7 @@ class Test(unittest.TestCase):
         
         self.data = data
 
-    def call_fill_woden_settings_python(self):
+    def call_fill_woden_settings_python_and_convert_to_ctypes(self):
         """Calls the function under test"""
         woden_settings_python = ws.fill_woden_settings_python(args=self.args,
                                  lst=self.lst, jd_date=self.jd_date)
@@ -194,7 +195,7 @@ class Test(unittest.TestCase):
         
         for precision in ['float', 'double']:
             self.make_basic_inputs(precision)
-            woden_settings = self.call_fill_woden_settings_python()
+            woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
             self.check_basic_inputs(woden_settings)
         
     def test_write_gaussian_beam(self):
@@ -236,7 +237,7 @@ class Test(unittest.TestCase):
             add_extra_gauss_args()
             
             ##This runs `fill_woden_settings_python`
-            woden_settings = self.call_fill_woden_settings_python()
+            woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
 
             ##This passes woden_settings into C code which write contents to a text
             ## file, reads in that text file, and checks the outputs make sense
@@ -275,7 +276,7 @@ class Test(unittest.TestCase):
             add_extra_MWAFEE_args()
             
             ##This runs `fill_woden_settings_python`
-            woden_settings = self.call_fill_woden_settings_python()
+            woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
 
             ##This passes woden_settings into C code which write contents to a text
             ## file, reads in that text file, and checks the outputs make sense
@@ -303,7 +304,7 @@ class Test(unittest.TestCase):
             add_extra_MWAFEE_args()
             
             ##This runs `fill_woden_settings_python`
-            woden_settings = self.call_fill_woden_settings_python()
+            woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
 
             ##This passes woden_settings into C code which write contents to a text
             ## file, reads in that text file, and checks the outputs make sense
@@ -328,7 +329,7 @@ class Test(unittest.TestCase):
             add_extra_MWAanaly_args()
             
             ##This runs `fill_woden_settings_python`
-            woden_settings = self.call_fill_woden_settings_python()
+            woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
 
             ##This passes woden_settings into C code which write contents to a text
             ## file, reads in that text file, and checks the outputs make sense
@@ -344,7 +345,7 @@ class Test(unittest.TestCase):
             self.args.primary_beam = 'EDA2'
             
             ##This runs `fill_woden_settings_python`
-            woden_settings = self.call_fill_woden_settings_python()
+            woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
 
             ##This passes woden_settings into C code which write contents to a text
             ## file, reads in that text file, and checks the outputs make sense
@@ -360,7 +361,7 @@ class Test(unittest.TestCase):
         self.args.do_autos = True
         
         ##This runs `fill_woden_settings_python`
-        woden_settings = self.call_fill_woden_settings_python()
+        woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
         
         ##This passes woden_settings into C code which write contents to a text
         ## file, reads in that text file, and checks the outputs make sense
@@ -368,7 +369,7 @@ class Test(unittest.TestCase):
         self.assertTrue(int(self.data['do_autos']))
         
         self.args.do_autos = False
-        woden_settings = self.call_fill_woden_settings_python()
+        woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
         self.check_basic_inputs(woden_settings)
         self.assertFalse(int(self.data['do_autos']))
 
@@ -383,7 +384,7 @@ class Test(unittest.TestCase):
         self.args.no_precession = False
         
         ##This runs `fill_woden_settings_python`
-        woden_settings = self.call_fill_woden_settings_python()
+        woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
         
         ##This passes woden_settings into C code which write contents to a text
         ## file, reads in that text file, and checks the outputs make sense
@@ -391,7 +392,7 @@ class Test(unittest.TestCase):
         self.assertTrue(int(self.data['do_precession']))
         
         self.args.no_precession = True
-        woden_settings = self.call_fill_woden_settings_python()
+        woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
         self.check_basic_inputs(woden_settings)
         self.assertFalse(int(self.data['do_precession']))
         
@@ -404,7 +405,7 @@ class Test(unittest.TestCase):
         # self.args.no_precession = False
         
         ##This runs `fill_woden_settings_python`
-        woden_settings = self.call_fill_woden_settings_python()
+        woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
         
         ##This passes woden_settings into C code which write contents to a text
         ## file, reads in that text file, and checks the outputs make sense
@@ -419,7 +420,7 @@ class Test(unittest.TestCase):
         self.args.use_MWA_dipamps = True
         self.args.dipamps = np.arange(16)
         ##This runs `fill_woden_settings_python`
-        woden_settings = self.call_fill_woden_settings_python()
+        woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
         
         self.check_basic_inputs(woden_settings)
         ##check it we have a True flag
@@ -435,14 +436,14 @@ class Test(unittest.TestCase):
 
         ##First up, check that the off_cardinal_dipoles flag off by default
         self.make_basic_inputs('double')
-        woden_settings = self.call_fill_woden_settings_python()
+        woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
         self.check_basic_inputs(woden_settings)
         self.assertFalse(int(self.data['off_cardinal_dipoles']))
         
         ##Next, turn it on via the command line
         self.make_basic_inputs('double')
         self.args.off_cardinal_dipoles = True
-        woden_settings = self.call_fill_woden_settings_python()
+        woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
         self.check_basic_inputs(woden_settings)
         self.assertTrue(int(self.data['off_cardinal_dipoles']))
         
@@ -451,7 +452,7 @@ class Test(unittest.TestCase):
         ##only turned on if requested by the user
         # self.make_basic_inputs('double')
         # self.args.primary_beam = 'everybeam_LOFAR'
-        # woden_settings = self.call_fill_woden_settings_python()
+        # woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
         # self.check_basic_inputs(woden_settings)
         # self.assertTrue(int(self.data['off_cardinal_dipoles']))
         
@@ -461,14 +462,14 @@ class Test(unittest.TestCase):
 
         ##First up, check that the off_cardinal_dipoles flag off by default
         self.make_basic_inputs('double')
-        woden_settings = self.call_fill_woden_settings_python()
+        woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
         self.check_basic_inputs(woden_settings)
         self.assertTrue(int(self.data['do_gpu']))
         
         ##Next, turn it on via the command line
         self.make_basic_inputs('double')
         self.args.cpu_mode = True
-        woden_settings = self.call_fill_woden_settings_python()
+        woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
         self.check_basic_inputs(woden_settings)
         self.assertFalse(int(self.data['do_gpu']))
         
@@ -478,17 +479,34 @@ class Test(unittest.TestCase):
 
         ##First up, check that the off_cardinal_dipoles flag off by default
         self.make_basic_inputs('double')
-        woden_settings = self.call_fill_woden_settings_python()
+        woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
         self.check_basic_inputs(woden_settings)
         self.assertTrue(int(self.data['normalise_primary_beam']))
         
         ##Next, turn it on via the command line
         self.make_basic_inputs('double')
         self.args.no_beam_normalisation = True
-        woden_settings = self.call_fill_woden_settings_python()
+        woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
         self.check_basic_inputs(woden_settings)
         self.assertFalse(int(self.data['normalise_primary_beam']))
         
+        
+    def test_write_uvbeam_HERA(self):
+        """Test that the uvbeam HERA primary beam options work correctly"""
+        
+        for precision in ['float', 'double']:
+            ##This makes fake args with double precision
+            self.make_basic_inputs(precision)
+            self.args.primary_beam = 'uvbeam_HERA'
+            
+            ##This runs `fill_woden_settings_python`
+            woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
+
+            ##This passes woden_settings into C code which write contents to a text
+            ## file, reads in that text file, and checks the outputs make sense
+            self.check_basic_inputs(woden_settings)
+            self.assertEqual(BeamTypes.UVB_HERA.value, int(self.data['beamtype']))
+            
 ##Run the test
 if __name__ == '__main__':
    unittest.main()

@@ -310,7 +310,35 @@ def _everybeam_settings_string(logger: logging.Logger, woden_settings: object, a
     if beam == "LOFAR" or beam == "OSKAR":
         out_string += f"\nPrimary beam is pointed at RA,Dec = {args.eb_ra_point}, {args.eb_dec_point} deg"
         
+    return out_string
 
+
+def _cst_uvbeam_settings_string(logger: logging.Logger, args: argparse.Namespace,
+                              beam : str) -> str:
+    """
+    Generates a string describing the settings for the EveryBeam primary beam.
+    
+    Parameters
+    ----------
+    logger : logging.Logger
+        The logger instance to use for logging messages.
+    woden_settings : object
+        An object containing the WODEN settings, including the beam type and paths.
+    beam : str
+        Name of the beam model (e.g., 'HERA').
+        
+    Returns
+    -------
+    str
+        A formatted string describing the EveryBeam primary beam settings.
+    """
+    
+    out_string = f"Will create a {beam} beam from CST files listed in this file:"
+    out_string +=  f"\n\t{args.cst_file_list}"
+    out_string += f"\nHave read the following frequencies from this file:"
+    out_string += f"\n\t{args.cst_freqs}"
+    
+        
     return out_string
 
 def log_chosen_beamtype(logger: logging.Logger, woden_settings: object,
@@ -325,7 +353,7 @@ def log_chosen_beamtype(logger: logging.Logger, woden_settings: object,
     woden_settings : wodenpy.use_libwoden.woden_settings.Woden_Settings_Python
         An object containing the settings for WODEN, including the beam type and related parameters.
     args : object
-        Additional arguments that may be required for logging specific beam types.
+        The args as parsed by argparse, containing command-line arguments and options.
     
     """
     
@@ -357,6 +385,10 @@ def log_chosen_beamtype(logger: logging.Logger, woden_settings: object,
     elif woden_settings.beamtype == BeamTypes.UVB_MWA.value:
         mwa_beam_string = _mwa_beam_settings_string(logger, woden_settings, args, 'pyuvdata.UVBeam')
         logger.info(mwa_beam_string)
+        
+    elif woden_settings.beamtype == BeamTypes.UVB_HERA.value:
+        hera_beam_string = _cst_uvbeam_settings_string(logger, args, 'HERA')
+        logger.info(hera_beam_string)
 
     else:
         logger.error("Primary beam type not recognised. This shouldn't be possible "

@@ -17,6 +17,8 @@ import shutil
 import time
 from wodenpy.use_libwoden.skymodel_structs import Components_Python
 import sys
+from wodenpy.wodenpy_setup.woden_logger import simple_logger
+from logging import Logger
 
 def setup_MWA_uvbeams(hdf5_path: str, freqs: np.ndarray,
                       delays: np.ndarray = None,
@@ -105,13 +107,63 @@ def setup_MWA_uvbeams(hdf5_path: str, freqs: np.ndarray,
     
     return uvbeam_objs
 
+
+def setup_HERA_uvbeams(filenames: list[str], freqs: np.ndarray[float],
+                       logger : Logger = False) -> np.array:
+    """
+    Setup the HERA uvbeam object, using a list of CST simulation files
+    and corresponding frequencies.
+    
+    Currently only supports a single beam object, so the output
+    is a 1D array of length 1. Can be extended to support multiple beams
+    by modifying filenames and freqs to be 2D arrays. However, currently only
+    have access to a single set of CST files.
+    
+    Parameters
+    ------------
+    filenames : list[str]
+        A list of paths to CST simulation files containing the HERA beam
+        at various frequencies
+    freqs : np.ndarray
+        Array of frequencies in Hz.
+
+    Returns
+    --------
+    np.array
+        Array of HERA uvbeam objects, currently of length 1.
+    """
+    
+    if logger is False:
+        logger = simple_logger()
+    
+    if len(filenames) != len(freqs):
+        msg = "Number of filenames and frequencies submitted to HERA pyvudata UVBeam do not match.\n"
+        msg += "WODEN must exit now as it doesn't know how to run the beam."
+        logger.error(msg)
+        raise ValueError(msg)
+    
+        
+    herabeam = UVBeam.from_file(
+        filenames, beam_type='e-field', frequency=freqs,
+        feed_pol='x', rotate_pol=True, telescope_name='HERA',
+        feed_name='PAPER_dipole', feed_version='0.1',
+        model_name='E-field pattern - Rigging height 4.9m',
+        model_version='1.0',
+        )
+    
+    herabeam.peak_normalize()
+    
+    return np.array([herabeam], dtype=object)
+
+
 def run_uvbeam(uvbeam_objs: np.ndarray[UVBeam],
                ras: np.ndarray, decs: np.ndarray,
                j2000_latitudes: np.ndarray, j2000_lsts: np.ndarray,
                freqs: np.ndarray,
                iau_order: bool = False,
                parallactic_rotate: bool = True,
-               freq_interp=True) -> np.ndarray:
+               freq_interp=True,
+               logger : Logger = False) -> np.ndarray:
     """
     Calculate the Jones matrices for a given set of directions, times (via `j2000_lsts`
     and `j2000_latitudes`), frequencies, and stations (a.k.a tiles for MWA),
@@ -145,6 +197,8 @@ def run_uvbeam(uvbeam_objs: np.ndarray[UVBeam],
     np.ndarray
         The calculated Jones matrices with shape (num_stations, num_times, num_freqs, num_coords, 2, 2).
     """
+    if logger is False:
+        logger = simple_logger()
     
     num_stations = len(uvbeam_objs)
     num_times = len(j2000_lsts)
@@ -153,6 +207,25 @@ def run_uvbeam(uvbeam_objs: np.ndarray[UVBeam],
     
         # use the faster interpolation method if appropriate
     beam = BeamInterface(uvbeam_objs[0], beam_type="efield")
+    
+    
+    num_base_freqs = len(uvbeam_objs[0].freq_array)
+    
+    ##Turn off freq interp if we have less than 3 frequencies
+    ##Do a warning first time we do it
+    if num_base_freqs < 3:
+        freq_interp = False
+        if not getattr(run_uvbeam, "_warned_three_freqs", False):
+        
+            msg = "Number of CST files submitted to HERA pyvudata UVBeam is less than 3.\n"
+            msg += "WODEN will proceed, but will switch off frequency interpolation.\n"
+            msg += "UVBeam needs at least three frequencies to perform default interpolation.\n"
+            msg += "Further warnings of this type will be suppressed.\n"
+            logger.warning(msg)
+            
+            run_uvbeam._warned_three_freqs = True
+            
+        
     if beam._isuvbeam and beam.beam.pixel_coordinate_system == "az_za":
         interpol_fn = "az_za_map_coordinates"
     else:
@@ -221,13 +294,6 @@ def run_uvbeam(uvbeam_objs: np.ndarray[UVBeam],
             all_output_jones[station_ind, time_ind, :, :, 1, 0] = response[1,1,:,:]
             all_output_jones[station_ind, time_ind, :, :, 1, 1] = -response[0,1,:,:]
             
-            
-            # all_output_jones[station_ind, time_ind, :, :, 0, 0] = response[0,1,:,:]
-            # all_output_jones[station_ind, time_ind, :, :, 0, 1] = response[0,0,:,:]
-            # all_output_jones[station_ind, time_ind, :, :, 1, 0] = response[1,1,:,:]
-            # all_output_jones[station_ind, time_ind, :, :, 1, 1] = response[1,0,:,:]
-            
-            
         if parallactic_rotate:
             ##Parallactic angle doesn't change per station or freq, only by
             ##time and direction
@@ -262,7 +328,8 @@ def calc_uvbeam_for_components(components : Components_Python, uvbeam_objs : np.
                                all_freqs : np.ndarray,
                                j2000_latitudes : np.ndarray, j2000_lsts : np.ndarray,
                                iau_order : bool = True,
-                               parallactic_rotate : bool = True):
+                               parallactic_rotate : bool = True,
+                               logger : Logger = False) -> None:
     """For a set of `components` with filled `ras,decs` attributes,
     calculate the primary beam Jones matrices for all UVBeam objects
     in `uvbeam_objs` at the given frequencies `all_freqs`. Uses `j2000_latitudes`
@@ -294,8 +361,12 @@ def calc_uvbeam_for_components(components : Components_Python, uvbeam_objs : np.
         parallactic_rotate : bool, optional
     parallactic_rotate : bool, optional
         Whether to apply parallactic angle rotation. Defaults to True.
+    logger : Logger, optional
+        A logger object to log messages. If False, a default logger is created.
+        Defaults to False.
     """
-    
+    if logger is False:
+        logger = simple_logger()
     
     all_jones = run_uvbeam(uvbeam_objs, components.ras, components.decs,
                            j2000_latitudes, j2000_lsts,

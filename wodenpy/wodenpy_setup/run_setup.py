@@ -25,6 +25,7 @@ import importlib_resources
 from wodenpy.use_libwoden.use_libwoden import check_for_everybeam
 from wodenpy.primary_beam.use_everybeam import create_filtered_ms
 from sys import exit
+from pyuvdata.telescopes import known_telescope_location
 
 MWA_LAT = -26.703319405555554
 MWA_LONG = 116.67081523611111
@@ -33,6 +34,11 @@ MWA_HEIGHT = 377.827
 LOFAR_LAT = 52.905329712
 LOFAR_LONG = 6.867996528
 LOFAR_HEIGHT = 0.0
+
+location = known_telescope_location('hera')
+HERA_LAT = location.lat.value
+HERA_LONG = location.lon.value
+HERA_HEIGHT = location.height.value
 
 def get_parser():
     """
@@ -109,15 +115,21 @@ def get_parser():
     tel_group = parser.add_argument_group('TELESCOPE OPTIONS')
     tel_group.add_argument('--latitude', default=np.nan, type=float,
         help='Central Latitude (deg) of the array: if --primary_beam=EB_LOFAR, '
-             f'this defaults to LOFAR at {LOFAR_LAT}, otherwise defaults to '
+             f'this defaults to LOFAR at {LOFAR_LAT}, '
+             f'elif --primary_beam=UVB_HERA, this defaults to HERA at {HERA_LAT}, '
+             'else defaults to '
              f'MWA at {MWA_LAT}. --latitude will override these defaults.')
     tel_group.add_argument('--longitude', default=np.nan, type=float,
         help='Central Longitude (deg) of the array: if --primary_beam=EB_LOFAR, '
-             f'this defaults to LOFAR at {LOFAR_LONG}, otherwise defaults to '
+             f'this defaults to LOFAR at {LOFAR_LONG}, '
+             f'elif --primary_beam=UVB_HERA, this defaults to HERA at {HERA_LONG}, '
+             'else defaults to '
              f'MWA at {MWA_LONG}. --longitude will override these defaults.')
     tel_group.add_argument('--array_height', default=np.nan, type=float,
         help='Central height (m) of the array: if --primary_beam=EB_LOFAR, '
-             f'this defaults to LOFAR at {LOFAR_HEIGHT}, otherwise defaults to '
+             f'this defaults to LOFAR at {LOFAR_HEIGHT}, '
+             f'elif --primary_beam=UVB_HERA, this defaults to HERA at {HERA_HEIGHT}, '
+             'else defaults to '
              f'MWA at {MWA_HEIGHT}. --array_height will override these defaults.')
     tel_group.add_argument('--array_layout', default=False,
         help='Instead of reading the array layout from the metafits file, read'
@@ -141,7 +153,11 @@ def get_parser():
             "\t - everybeam_LOFAR (EveryBeam LOFAR model; requires a LOFAR measurement set via --beam_ms_path)\n"
             "\t - everybeam_MWA (EveryBeam MWA model; requires an MWA measurement set via --beam_ms_path.\n"
             "\t\t defaults to using env variable $MWA_FEE_HDF5 as input; use `--hdf5_beam_path` to specifiy otherwise)\n"
-            "\t - uvbeam_MWA (defaults to using env variable $MWA_FEE_HDF5 as input; use `--hdf5_beam_path` to specifiy otherwise)\n"
+            "\t - uvbeam_MWA (pyuvdata.uvbeam MWA model; \n"
+            "\t\t defaults to using env variable $MWA_FEE_HDF5 as input; \n"
+            "\t\t use `--hdf5_beam_path` to specifiy otherwise)\n"
+            "\t - uvbeam_HERA (pyuvdata.uvbeam HERA beam model from CST simulations. \n"
+            "\t\t requires `--cst_file_list` to specifiy CST file locations and frequencies)\n"
             "\t - none (Don't use a primary beam at all)\n"
             "Defaults to --primary_beam=none")
     tel_group.add_argument('--off_cardinal_dipoles', default=False, action='store_true',
@@ -154,6 +170,25 @@ def get_parser():
     tel_group.add_argument('--telescope_name', default=False,
         help='Name of telescope written out to the uvfits file. Defaults to something "sensible" '
              'based on the primary beam being used.')
+    
+    hyper_group = parser.add_argument_group('MWA PRIMARY BEAM OPTIONS')
+    hyper_group.add_argument('--hdf5_beam_path', default=False,
+        help='Location of the hdf5 file holding the MWA FEE beam coefficients')
+    hyper_group.add_argument('--MWA_FEE_delays', default=False,
+        help='R|A list of 16 delays to point the MWA FEE primary beam \n'
+              'model enter as as list like: \n'
+              '--MWA_FEE_delays=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]\n'
+              'for a zenith pointing. This is read directly from\n'
+              'the metafits if using a metafits file. Only effects `hyperbeam`, '
+              '`uvbeam`, and analytic MWA models; `everybeam` reads delays from a measurement set')
+    
+    hyper_group.add_argument('--use_MWA_dipflags', default=False, action='store_true',
+        help='Apply the dipole flags stored in the metafits file. Only effects'
+             ' `hyperbeam` and `uvbeam` models, does not work on analytic or `everybeam` models.')
+    hyper_group.add_argument('--use_MWA_dipamps', default=False, action='store_true',
+        help='Attempt to use bespoke MWA dipole amplitudes stored in the metafits'
+             ' file. Must be stored under the `DipAmps` column. Only effects'
+             ' `hyperbeam` and `uvbeam` models, does not work on analytic or `everybeam` models.')
     
     eb_group = parser.add_argument_group('EVERYBEAM PRIMARY BEAM OPTIONS')
     eb_group.add_argument('--beam_ms_path', default=False,
@@ -196,24 +231,15 @@ def get_parser():
               'measuerment in --beam_ms_path. Writes results to a new '
               'measurement set to pass to EveryBeam. ')
     
-    hyper_group = parser.add_argument_group('MWA PRIMARY BEAM OPTIONS')
-    hyper_group.add_argument('--hdf5_beam_path', default=False,
-        help='Location of the hdf5 file holding the MWA FEE beam coefficients')
-    hyper_group.add_argument('--MWA_FEE_delays', default=False,
-        help='R|A list of 16 delays to point the MWA FEE primary beam \n'
-              'model enter as as list like: \n'
-              '--MWA_FEE_delays=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]\n'
-              'for a zenith pointing. This is read directly from\n'
-              'the metafits if using a metafits file. Only effects `hyperbeam`, '
-              '`uvbeam`, and analytic MWA models; `everybeam` reads delays from a measurement set')
-    
-    hyper_group.add_argument('--use_MWA_dipflags', default=False, action='store_true',
-        help='Apply the dipole flags stored in the metafits file. Only effects'
-             ' `hyperbeam` and `uvbeam` models, does not work on analytic or `everybeam` models.')
-    hyper_group.add_argument('--use_MWA_dipamps', default=False, action='store_true',
-        help='Attempt to use bespoke MWA dipole amplitudes stored in the metafits'
-             ' file. Must be stored under the `DipAmps` column. Only effects'
-             ' `hyperbeam` and `uvbeam` models, does not work on analytic or `everybeam` models.')
+    uvb_group = parser.add_argument_group('PYUVDATA UVBEAM PRIMARY BEAM OPTIONS')
+    uvb_group.add_argument('--cst_file_list', default=False,
+                           help='When using --primary_beam=uvbeam_HERA, '
+                                'must provide a list of CST simulation file locations. '
+                                'Provided via a csv file, where the first column is the '
+                                'path to the CST file, and the second column is the '
+                                'frequency in Hz. Must be comma separated. '
+                                'If there are commas in the path/filenames '
+                                'this will fail. ')
     
     gauss_group = parser.add_argument_group('GAUSSIAN PRIMARY BEAM OPTIONS')
     gauss_group.add_argument('--gauss_beam_FWHM', default=20, type=float,
@@ -507,6 +533,11 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
         lat = LOFAR_LAT
         long = LOFAR_LONG
         height = LOFAR_HEIGHT
+    elif args.primary_beam == 'uvbeam_HERA':
+        location = known_telescope_location("HERA")
+        lat = HERA_LAT
+        long = HERA_LONG
+        height = HERA_HEIGHT
     else:
         lat = MWA_LAT
         long = MWA_LONG
@@ -528,10 +559,11 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     if args.primary_beam not in ['MWA_FEE', 'Gaussian', 'EDA2', 'none', 'None',
                                  'MWA_FEE_interp', 'MWA_analy',
                                  'everybeam_OSKAR', 'everybeam_LOFAR',
-                                 'everybeam_MWA', 'uvbeam_MWA']:
+                                 'everybeam_MWA', 'uvbeam_MWA', 'uvbeam_HERA']:
         sys.exit('Primary beam option --primary_beam must be one of:\n'
-             '\t Gaussian, EDA2, none, MWA_FEE, MWA_FEE_interp, '
-             'MWA_analy, everybeam_OSKAR, everybeam_LOFAR, everybeam_MWA, \n'
+             '\t Gaussian, EDA2, none, MWA_FEE, MWA_FEE_interp, \n'
+             '\tMWA_analy, everybeam_OSKAR, everybeam_LOFAR, everybeam_MWA, \n'
+             '\tuvbeam_MWA, uvbeam_HERA\n'
              'User has entered --primary_beam={:s}\n'
              'Please fix and try again. Exiting now'.format(args.primary_beam))
 
@@ -565,7 +597,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
                      'variable MWA_FEE_HDF5 must point towards the file\n'
                      'mwa_full_embedded_element_pattern.h5. Exiting now as WODEN will fail.')
 
-    ##If we're using the MWA FEE beam, make sure we can find the stored
+    ##If we're using the interpolated MWA FEE beam, make sure we can find the stored
     ##spherical harmonics file
     elif args.primary_beam == 'MWA_FEE_interp':
         if not requested_mwa_hdf5_found:
@@ -606,6 +638,31 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
             exit(f'ERROR: You have requested to use the {args.primary_beam} beam model, but '
                  f'{woden_lib_path} was compiled without the everybeam library. '
                  'Exiting now as WODEN will fail.')
+            
+    ##Make sure user has specified a text file linking to CST files for the
+    ##uvbeam HERA beam pattern
+    if args.primary_beam == 'uvbeam_HERA':
+        if not args.cst_file_list:
+            exit('ERROR: To use the uvbeam_HERA beam, you must specify a path to the'
+                 ' CST file list using --cst_file_list. Exiting now as WODEN will fail.')
+        else:
+            try:
+                args.cst_paths = []
+                args.cst_freqs = []   
+                with open(args.cst_file_list, 'r') as f:
+                    lines = f.readlines()
+                    
+                    for line in lines:
+                        line = line.split(',')
+                        if len(line) != 2:
+                            exit('ERROR: The CST file list must have two columns, '
+                                 'the first being the path to the CST file, and the second '
+                                 'being the frequency in Hz. Exiting now as WODEN will fail.')
+                        args.cst_paths.append(line[0])
+                        args.cst_freqs.append(float(line[1]))
+            except FileNotFoundError:
+                exit(f'ERROR: The CST file list does not exist. Exiting now as WODEN will fail.')
+            
             
     if args.band_nums == 'all':
         args.band_nums = range(1,25)
@@ -1039,6 +1096,8 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
             args.telescope_name = 'GAUSSIAN'
         elif args.primary_beam in ['EDA2']:
             args.telescope_name = 'EDA2'
+        elif args.telescope_name in ['uvbeam_HERA']:
+            args.telescope_name = 'HERA'
         else:
             args.telescope_name = 'UNKNOWN'
             

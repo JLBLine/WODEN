@@ -45,6 +45,7 @@ coverage_outputs/*.gcno
 coverage_outputs/*.xml
 coverage_outputs/codecov
 coverage_outputs/.coverage
+coverage_outputs/.coverage.info
 coverage_outputs/.coverage.*
 
 test_installation/*/data
@@ -162,3 +163,6 @@ cmake_testing/GPU_or_C_code/call_everybeam/plots
 check_documentation/docstring_issues.txt
 
 cmake_testing/GPU_or_C_code/primary_beam/plots
+
+examples/HERA_sim/hera_beam
+examples/HERA_sim/*.zip

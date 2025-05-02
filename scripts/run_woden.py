@@ -295,7 +295,8 @@ def read_skymodel_worker(thread_id : int, num_threads : int,
                                 beamtype, lsts, latitudes,
                                 v_table, q_table,
                                 u_table, p_table,
-                                args.precision, uvbeam_objs)
+                                args.precision, uvbeam_objs,
+                                logger=logger)
         
         end = time()
         
@@ -738,14 +739,19 @@ def main(argv=None):
             top_freq = base_band_freq + args.num_freq_channels*args.freq_res
             freqs = np.array([base_band_freq, top_freq])
             
-            if args.use_MWA_dipamps:
-                dipole_amps = woden_settings_python.mwa_dipole_amps
-            else:
-                dipole_amps = np.ones(32)
+            if woden_settings_python.beamtype == BeamTypes.UVB_MWA.value:
             
-            uvbeam_objs = setup_MWA_uvbeams(args.hdf5_beam_path, freqs,
-                                            woden_settings_python.FEE_ideal_delays[:16],
-                                            dipole_amps, pixels_per_deg = 5)
+                if args.use_MWA_dipamps:
+                    dipole_amps = woden_settings_python.mwa_dipole_amps
+                else:
+                    dipole_amps = np.ones(32)
+                
+                uvbeam_objs = setup_MWA_uvbeams(args.hdf5_beam_path, freqs,
+                                                woden_settings_python.FEE_ideal_delays[:16],
+                                                dipole_amps, pixels_per_deg = 5)
+                
+            elif woden_settings_python.beamtype == BeamTypes.UVB_HERA.value:
+                pass
             
             main_logger.info("UVBeam objects have been initialised")
             

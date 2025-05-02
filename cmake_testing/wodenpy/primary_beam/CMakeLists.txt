@@ -23,3 +23,6 @@ add_test(python_test_run_uvbeam_MWA ${PYTHON_EXECUTABLE}
 
 add_test(python_test_calc_uvbeam_for_components ${PYTHON_EXECUTABLE}
         ${CMAKE_CURRENT_SOURCE_DIR}/test_calc_uvbeam_for_components.py)
+
+add_test(python_test_run_uvbeam_HERA ${PYTHON_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_run_uvbeam_HERA.py)

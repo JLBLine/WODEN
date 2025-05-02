@@ -9,13 +9,14 @@ import unittest
 import numpy as np
 import numpy.testing as npt
 
-from wodenpy.primary_beam.use_uvbeam import calc_uvbeam_for_components, setup_MWA_uvbeams
+from wodenpy.primary_beam.use_uvbeam import calc_uvbeam_for_components, setup_MWA_uvbeams, setup_HERA_uvbeams
 from wodenpy.use_libwoden.skymodel_structs import Components_Python
 from astropy.coordinates import EarthLocation
 from astropy import units as u
 from astropy.time import Time
 from wodenpy.array_layout.precession import RTS_Precess_LST_Lat_to_J2000
-# from pyuvdata import ShortDipoleBeam, BeamInterface, UVBeam
+from pyuvdata.telescopes import known_telescope_location
+
 
 ##Location of this file; use it to find test measurement sets
 code_dir = os.path.realpath(__file__)
@@ -28,7 +29,8 @@ class Test(unittest.TestCase):
     """Vehicle for running tests"""
     
     def run_calc_uvbeam_for_components(self, uvbeam_objs, arr_latitude, arr_long,
-                                          date, expec_gxs, expec_Dxs,
+                                          interp_freqs, date,
+                                          expec_gxs, expec_Dxs,
                                           expec_Dys, expec_gys):
         """Run calc_uvbeam_for_components for a minimal set of inputs,
         given the telescope, array location, date. Test outputs
@@ -63,14 +65,13 @@ class Test(unittest.TestCase):
         j2000_lsts = np.array([np.radians(LST_deg)])
         
         all_times = np.array([observing_time])
-        all_freqs = np.array([FREQ])
         station_id = 0
         
         components.ras = ras
         components.decs = decs
         
         calc_uvbeam_for_components(components, uvbeam_objs,
-                                   all_freqs,
+                                   interp_freqs,
                                    j2000_latitudes, j2000_lsts)
         
         ##I've intentionally put the central coord at beam centre, so we should
@@ -81,11 +82,16 @@ class Test(unittest.TestCase):
         npt.assert_allclose(np.abs(components.Dys[2]), 0, atol=atol)
         npt.assert_allclose(np.abs(components.gys[2]), 1, atol=atol)
         
-        ##Now just check against the expected values
+        # ##Now just check against the expected values
         npt.assert_allclose(components.gxs, expec_gxs, rtol=1e-4, atol=atol)
         npt.assert_allclose(components.Dxs, expec_Dxs, rtol=1e-4, atol=atol)
         npt.assert_allclose(components.Dys, expec_Dys, rtol=1e-4, atol=atol)
         npt.assert_allclose(components.gys, expec_gys, rtol=1e-4, atol=atol)
+        
+        # print(components.gxs)
+        # print(components.Dxs)
+        # print(components.Dys)
+        # print(components.gys)
         
     def test_MWA_zenith(self):
         """Run test using an MWA beam. Skip if we can't find the hdf5 file"""
@@ -120,12 +126,47 @@ class Test(unittest.TestCase):
                         pixels_per_deg = 5)
             
             self.run_calc_uvbeam_for_components(uvbeam_objs, mwa_lat, mwa_long,
-                                                date, expec_gxs, expec_Dxs,
+                                                freqs, date,
+                                                expec_gxs, expec_Dxs,
                                                 expec_Dys, expec_gys)
         except KeyError:
             print("MWA_FEE_HDF5 not set. Skipping test on MWA beam as cannot access FEE hdf5 file")
             
+    def test_HERA(self):
+        """Run test using an MWA beam. Skip if we can't find the hdf5 file"""
         
+        location = known_telescope_location("HERA")
+    
+        hera_lat = location.lat.rad
+        hera_long = location.lon.rad
+        date = "2024-07-21T20:13:00"
+        
+        expec_gxs = [ 0.00469052+0.03492783j, -0.0610229 +0.03528347j, 
+                      0.99028506-0.13905212j, -0.03207008+0.04151301j,
+                      0.01978553+0.00379045j]
+        expec_Dxs = [-7.86750332e-03-3.16647590e-02j, 2.48645020e-02+1.91676440e-03j,
+                     4.17131195e-05-2.95126801e-05j, -8.52941233e-04+1.93206234e-02j,
+                     1.54498722e-02+1.42866354e-02j]
+        expec_Dys = [-7.75906936e-04+2.34698146e-02j, -7.86821406e-03+2.12239270e-02j,
+                     -4.17131195e-05+2.95126801e-05j,  7.87160199e-03+8.14428707e-03j,
+                     6.82080395e-03+1.17098673e-02j]
+        expec_gys = [ 0.00235155+0.03122886j, -0.05574702+0.04135226j, 
+                     0.99028506-0.13905212j,  -0.03191038+0.0424186j, 
+                     0.01687027+0.00408544j]
+        
+        load_freqs = np.array([100, 125])
+        filenames = [f'{code_dir}/HERA_4.9m_E-pattern_{int(freq)}MHz.txt' for freq in load_freqs]
+        
+        
+        
+        uvbeam_objs = setup_HERA_uvbeams(filenames, load_freqs*1e+6)
+        
+        freqs = np.array([110e+6])
+        
+        self.run_calc_uvbeam_for_components(uvbeam_objs, hera_lat, hera_long,
+                                            freqs, date, expec_gxs, expec_Dxs,
+                                            expec_Dys, expec_gys)
+            
 ##Run the test
 if __name__ == '__main__':
     

@@ -6,13 +6,13 @@ import numpy.testing as npt
 import importlib_resources
 import shutil
 from casacore.tables import table
+from pyuvdata.telescopes import known_telescope_location
 
 code_dir = os.path.realpath(__file__)
 code_dir = ('/').join(code_dir.split('/')[:-1])
 
 # ##Code we are testing
 from wodenpy.wodenpy_setup import run_setup
-
 from wodenpy.use_libwoden.use_libwoden import check_for_everybeam
 
 
@@ -1109,6 +1109,43 @@ class Test(unittest.TestCase):
         
         ##Check that the log file name is set. It will be False if not set.
         self.assertTrue(args.log_file_name)
+        
+    def test_use_uvdata_HERA_beam(self):
+        """Check that asking for a HERA beam demands you give a
+        text file listing CST files. Should also error if bad file is linked,
+        or if it can't read the file correctly"""
+        
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append('--primary_beam=uvbeam_HERA')
+        ##should die if --cst_file_list not set
+        self.assert_check_args_errors()
+        
+        
+        self.inputs.append('--cst_file_list=note_a_file.txt')
+        ##should die if --cst_file_list isn't a file
+        self.assert_check_args_errors()
+        
+        ##Get rid of old --cst_file_list arg, replace with a bad file
+        ##check it fails
+        self.inputs.pop(-1)
+        self.inputs.append(f'--cst_file_list={code_dir}/bad_eg_cst_file_list.csv')
+        self.assert_check_args_errors()
+        
+        ##should run now. Check certain things are set successfully
+        self.inputs.pop(-1)
+        self.inputs.append(f'--cst_file_list={code_dir}/eg_cst_file_list.csv')
+        
+        args = self.run_parser_and_check_args()
+        
+        self.assertEqual(args.primary_beam, 'uvbeam_HERA')
+        self.assertEqual(args.cst_paths, ['/hey/look/here/file 100 [1].txt', '/hey/look/here/file 150 [1].txt', '/hey/look/here/file 200 [1].txt'])
+        self.assertEqual(args.cst_freqs, [100e+6, 150e+6, 200e+6])
+        
+        location = known_telescope_location("HERA")
+        
+        self.assertEqual(args.latitude, location.lat.value)
+        self.assertEqual(args.longitude, location.lon.value)
+        self.assertEqual(args.array_height, location.height.value)
         
         
         

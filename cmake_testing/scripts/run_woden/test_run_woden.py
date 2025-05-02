@@ -343,7 +343,7 @@ class Test(unittest.TestCase):
 
         rw.main(args)
         
-        # call("rm *.lprof", shell=True)
+        call("rm *.lprof", shell=True)
         self.check_uvfits_contents("test_run_woden_band01.uvfits")
         
     def test_verbose_logger(self):

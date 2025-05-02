@@ -34,6 +34,7 @@ class BeamTypes(Enum):
     EB_LOFAR = 7
     EB_MWA = 8
     UVB_MWA = 9
+    UVB_HERA = 10
     
 class BeamGroups:
     """A class to represent different groups of beam types.
@@ -55,19 +56,20 @@ class BeamGroups:
         All beams that are calculated in Python before sending to CPU/GPU (e.g.
         any `UVBeam` beam types).
     uvbeam_beams : list
-        All the UVBeam beam types).
+        All the UVBeam beam types.
     """
     
     eb_beam_values = [BeamTypes.EB_OSKAR.value, BeamTypes.EB_LOFAR.value, BeamTypes.EB_MWA.value]
+    ##these are beam types that need azimuth/altitude calculated before sending to CPU/GPU via ctypes
     azza_beam_values = [BeamTypes.MWA_ANALY.value, BeamTypes.FEE_BEAM.value,
                         BeamTypes.FEE_BEAM_INTERP.value, BeamTypes.ANALY_DIPOLE.value,
-                        BeamTypes.EB_MWA.value, BeamTypes.UVB_MWA.value]
+                        BeamTypes.EB_MWA.value] #, BeamTypes.UVB_MWA.value, BeamTypes.UVB_HERA.value
     hadec_beam_values = [BeamTypes.GAUSS_BEAM.value, BeamTypes.MWA_ANALY.value]
     # needs_fee_hdf5 = [BeamTypes.FEE_BEAM.value, BeamTypes.FEE_BEAM_INTERP, BeamTypes.EB_MWA.value]
     # needs_mwa_delays = [BeamTypes.FEE_BEAM.value, BeamTypes.FEE_BEAM_INTERP, BeamTypes.MWA_ANALY.value]
     ##TODO investigate what beam types are off-cardinal, and add to this list below
     off_cardinal_beam_values = []
-    python_calc_beams = [BeamTypes.UVB_MWA.value]
-    uvbeam_beams = [BeamTypes.UVB_MWA.value]
+    python_calc_beams = [BeamTypes.UVB_MWA.value, BeamTypes.UVB_HERA.value]
+    uvbeam_beams = [BeamTypes.UVB_MWA.value, BeamTypes.UVB_HERA.value]
         
         
