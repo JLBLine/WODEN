@@ -796,7 +796,7 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
         If False, make a new logger object.
     """
     
-    if logger is False:
+    if not logger:
         logger = simple_logger()
     
     num_time_steps = len(lsts)
@@ -1183,8 +1183,8 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
      List[Source_Python]
         A list of populated `Source_Python` classes.
     """
-    if logger is False:
-        logger = simple_logger()
+    if not logger:
+        logger = simple_logger(args.logger_level)
     
     source_array = [Source_Python() for i in range(len(chunked_skymodel_maps))]
     

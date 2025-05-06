@@ -23,6 +23,7 @@ class BeamTypes(Enum):
         EB_LOFAR (int): EveryBeam LOFAR beam type.
         EB_MWA (int): EveryBeam MWA beam type.
         UVB_MWA (int): pyuvdata UVData MWA beam type.
+        UVB_MWA (int): pyuvdata UVData HERA beam type.
     """
     NO_BEAM = 0
     GAUSS_BEAM = 1

@@ -43,7 +43,7 @@ import multiprocessing
 from datetime import timedelta
 import traceback
 import shutil
-from wodenpy.primary_beam.use_uvbeam import setup_MWA_uvbeams
+from wodenpy.primary_beam.use_uvbeam import setup_MWA_uvbeams, setup_HERA_uvbeams
 
 ##Constants
 R2D = 180.0 / np.pi
@@ -507,14 +507,14 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                     else:
                         logger.info(f"Reading set {round_num} sky models")
                     future_data_sky = [sky_model_executor.submit(read_skymodel_worker,
-                                                i + round_num * num_sky_model_threads, num_sky_model_threads,
+                                                i + round_num * num_threads, num_threads,
                                                 chunked_skymodel_map_sets,
                                                 lsts, latitudes,
                                                 args, beamtype,
                                                 main_table, shape_table,
-                                                v_table, q_table, u_table, p_table, 
+                                                v_table, q_table, u_table, p_table,
                                                 logger, uvbeam_objs)
-                                        for i in range(num_sky_model_threads)]
+                                        for i in range(num_threads)]
                     
                     all_loaded_python_sources = []
                     all_loaded_sources_orders = []
@@ -751,7 +751,8 @@ def main(argv=None):
                                                 dipole_amps, pixels_per_deg = 5)
                 
             elif woden_settings_python.beamtype == BeamTypes.UVB_HERA.value:
-                pass
+                uvbeam_objs = setup_HERA_uvbeams(args.cst_paths, args.cst_freqs,
+                                                 main_logger)
             
             main_logger.info("UVBeam objects have been initialised")
             

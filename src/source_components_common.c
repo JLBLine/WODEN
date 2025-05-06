@@ -486,11 +486,14 @@ void source_component_common(woden_settings_t *woden_settings,
   //have leakage terms, need to not copy across Dx,Dy as they won't be
   //in memory and we'll segfault
   
-  else if (beam_settings->beamtype == UVB_MWA) {
+  else if (beam_settings->beamtype == UVB_MWA || beam_settings->beamtype == UVB_HERA) {
     if (woden_settings->verbose == 1){
       if (beam_settings->beamtype == UVB_MWA) {
         log_message("\tDoing UVBeam MWA beam");
-      } 
+      }
+      else {
+        log_message("\tDoing UVBeam HERA beam");
+      }
     }
     int num_gains = num_components*woden_settings->num_freqs*woden_settings->num_time_steps*num_beams;
     if (do_gpu == 1){

@@ -499,7 +499,8 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     chunk_components = &chunked_source->shape_components;
   }
 
-  if (beamtype == UVB_MWA) {
+  //UVBeam gains calculated in python, so just set them to the index
+  if (beamtype == UVB_MWA || beamtype ==  UVB_HERA) {
     chunk_components->gxs = malloc(num_beam_values*sizeof(user_precision_complex_t));
     chunk_components->Dxs = malloc(num_beam_values*sizeof(user_precision_complex_t));
     chunk_components->Dys = malloc(num_beam_values*sizeof(user_precision_complex_t));
@@ -949,7 +950,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
     }
   }
 
-  else if (beamtype == UVB_MWA) {
+  else if (beamtype == UVB_MWA || beamtype == UVB_HERA) {
 
     #ifdef DOUBLE_PRECISION
       TOL = 1e-7;
@@ -1018,7 +1019,7 @@ void test_source_component_common_ConstantDecChooseBeams(int beamtype, char* mwa
   #endif
 
   // //Be free my beauties
-  if (beamtype == UVB_MWA) {
+  if (beamtype == UVB_MWA || beamtype == UVB_HERA) {
     free(chunk_components->gxs);
     free(chunk_components->Dxs);
     free(chunk_components->Dys);
@@ -1163,5 +1164,14 @@ This test checks source_component_common with beamtype=UVB_MWA
 void test_source_component_common_ConstantDecUVBeamMWA(e_component_type comptype,
                                                        int do_gpu) {
   test_source_component_common_ConstantDecChooseBeams(UVB_MWA, " ",
+                                                      comptype, do_gpu);
+}
+
+/*
+This test checks source_component_common with beamtype=UVB_MWA
+*/
+void test_source_component_common_ConstantDecUVBeamHERA(e_component_type comptype,
+  int do_gpu) {
+  test_source_component_common_ConstantDecChooseBeams(UVB_HERA, " ",
                                                       comptype, do_gpu);
 }

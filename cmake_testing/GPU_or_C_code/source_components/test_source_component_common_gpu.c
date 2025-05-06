@@ -107,6 +107,16 @@ void test_source_component_common_ConstantDecUVBeamMWAShapelet_gpu(void){
   test_source_component_common_ConstantDecUVBeamMWA(SHAPELET, 1);
 }
 
+void test_source_component_common_ConstantDecUVBeamHERAPoint_gpu(void){
+  test_source_component_common_ConstantDecUVBeamHERA(POINT, 1);
+}
+void test_source_component_common_ConstantDecUVBeamHERAGaussian_gpu(void){
+  test_source_component_common_ConstantDecUVBeamHERA(GAUSSIAN, 1);
+}
+void test_source_component_common_ConstantDecUVBeamHERAShapelet_gpu(void){
+  test_source_component_common_ConstantDecUVBeamHERA(SHAPELET, 1);
+}
+
 //Run the test with unity
 int main(void)
 {
@@ -153,6 +163,10 @@ int main(void)
     RUN_TEST(test_source_component_common_ConstantDecUVBeamMWAPoint_gpu);
     RUN_TEST(test_source_component_common_ConstantDecUVBeamMWAGaussian_gpu);
     RUN_TEST(test_source_component_common_ConstantDecUVBeamMWAShapelet_gpu);
+
+    RUN_TEST(test_source_component_common_ConstantDecUVBeamHERAPoint_gpu);
+    RUN_TEST(test_source_component_common_ConstantDecUVBeamHERAGaussian_gpu);
+    RUN_TEST(test_source_component_common_ConstantDecUVBeamHERAShapelet_gpu);
 
     return UNITY_END();
 }

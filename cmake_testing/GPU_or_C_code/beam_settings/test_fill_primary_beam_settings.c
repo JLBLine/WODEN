@@ -100,6 +100,10 @@ void test_fill_primary_beam_settings(woden_settings_t *woden_settings) {
     TEST_ASSERT_EQUAL_INT(UVB_MWA, beam_settings->beamtype );
   }
 
+  else if (woden_settings->beamtype == UVB_HERA) {
+    TEST_ASSERT_EQUAL_INT(UVB_HERA, beam_settings->beamtype );
+  }
+
   else {
     TEST_ASSERT_EQUAL_INT(NO_BEAM, beam_settings->beamtype );
   }
@@ -227,6 +231,18 @@ void test_fill_primary_beam_settingsUVbeamMWA(void) {
 
 }
 
+/*
+Test `fill_primary_beam_settings` when `beamtype = UVB_MWA`
+*/
+void test_fill_primary_beam_settingsUVbeamHERA(void) {
+
+  woden_settings_t *woden_settings = make_woden_settings();
+  woden_settings->beamtype = UVB_HERA;
+
+  test_fill_primary_beam_settings(woden_settings);
+
+}
+
 
 //Run test using unity
 int main(void)
@@ -243,6 +259,7 @@ int main(void)
     RUN_TEST(test_fill_primary_beam_settingsEverybeamLOFAR);
     RUN_TEST(test_fill_primary_beam_settingsEverybeamMWA);
     RUN_TEST(test_fill_primary_beam_settingsUVbeamMWA);
+    RUN_TEST(test_fill_primary_beam_settingsUVbeamHERA);
 
     return UNITY_END();
 }

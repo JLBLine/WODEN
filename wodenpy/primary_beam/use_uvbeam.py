@@ -197,7 +197,7 @@ def run_uvbeam(uvbeam_objs: np.ndarray[UVBeam],
     np.ndarray
         The calculated Jones matrices with shape (num_stations, num_times, num_freqs, num_coords, 2, 2).
     """
-    if logger is False:
+    if not logger:
         logger = simple_logger()
     
     num_stations = len(uvbeam_objs)
@@ -313,6 +313,10 @@ def run_uvbeam(uvbeam_objs: np.ndarray[UVBeam],
     else:
         if iau_order:
             reorder = True      
+    
+    # reorder = False
+    # if iau_order:
+    #         reorder = True  
                     
     if reorder:
         ##swap all_output_jones[:,:,:,:,0,0] with all_output_jones[:,:,:,:,1,1]
@@ -365,14 +369,15 @@ def calc_uvbeam_for_components(components : Components_Python, uvbeam_objs : np.
         A logger object to log messages. If False, a default logger is created.
         Defaults to False.
     """
-    if logger is False:
+    if not logger:
         logger = simple_logger()
     
     all_jones = run_uvbeam(uvbeam_objs, components.ras, components.decs,
                            j2000_latitudes, j2000_lsts,
                            all_freqs,
                            iau_order=iau_order,
-                           parallactic_rotate=parallactic_rotate)
+                           parallactic_rotate=parallactic_rotate,
+                           logger=logger)
     
     ##all_jones comes out as shape (num_beams, num_times, num_freqs, num_components, 2, 2)
     ##WODEN wants this to be flat. I've intentionally made the shape so we can just

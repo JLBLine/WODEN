@@ -74,6 +74,10 @@ beam_settings_t * fill_primary_beam_settings(woden_settings_t *woden_settings,
     beam_settings->beamtype = UVB_MWA;
   }
 
+  else if (woden_settings->beamtype == UVB_HERA) {
+    beam_settings->beamtype = UVB_HERA;
+  }
+
   else {
     if (woden_settings->verbose == 1) {
       log_message("NO PRIMARY BEAM HAS BEEN SELECTED\n\tWill run without a primary beam");
