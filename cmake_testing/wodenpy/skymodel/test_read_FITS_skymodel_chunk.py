@@ -27,6 +27,7 @@ from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classe
 import wodenpy.use_libwoden.skymodel_structs
 
 
+
 D2R = np.pi/180.0
 # MWA_LATITUDE = -26.7*D2R
 

@@ -1184,7 +1184,7 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
         A list of populated `Source_Python` classes.
     """
     if not logger:
-        logger = simple_logger(args.logger_level)
+        logger = simple_logger(args.log_level)
     
     source_array = [Source_Python() for i in range(len(chunked_skymodel_maps))]
     

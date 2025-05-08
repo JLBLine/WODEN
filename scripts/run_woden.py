@@ -345,17 +345,20 @@ def sum_components_in_chunked_skymodel_map_sets(chunked_skymodel_map_sets):
         
     return n_points, n_gauss, n_shapes, n_shape_coeffs
 
-def get_future_result(future, logger):
+def get_future_result(future, logger, function):
     try:
         result = future.result()
         if isinstance(result, str):
-            logger.error(result)
+            logger.error(f"Future error running function `{function}`: {result}" )
             sys.exit(result)
         else:
             return result
     except Exception as e:
-        msg = f"Exception in getting result from future: {e}"
+        
+        msg = f"Exception running function `{function}`: {e}\n"
+        msg += f"Error traceback is as follows:\n{traceback.format_exc()}"
         logger.error(msg)
+        
         sys.exit(msg)
     
 
@@ -457,7 +460,7 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                     all_loaded_python_sources = [0]*num_threads
                     all_loaded_sources_orders = [0]*num_threads
                     for future in future_data_sky:
-                        python_sources, order = get_future_result(future, logger)
+                        python_sources, order = get_future_result(future, logger, "read_skymodel_worker")
                         
                         all_loaded_python_sources[order] = python_sources
                         all_loaded_sources_orders[order] = order
@@ -477,7 +480,7 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                     completed = 0
                     
                     for future in concurrent.futures.as_completed(future_data_visi):
-                        visi_set_python, thread_ind, completed_round = get_future_result(future, logger)
+                        visi_set_python, thread_ind, completed_round = get_future_result(future, logger, "woden_worker")
                         
                         visi_sets_python[thread_ind, :] = visi_set_python
                         
@@ -519,14 +522,14 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                     all_loaded_python_sources = []
                     all_loaded_sources_orders = []
                     for future in concurrent.futures.as_completed(future_data_sky):
-                        python_sources, order = get_future_result(future, logger)
+                        python_sources, order = get_future_result(future, logger, "read_skymodel_worker")
                         all_loaded_python_sources.append(python_sources)
                         all_loaded_sources_orders.append(order)
                         
                     # Wait for previous calculation to complete (if there was one)
                     if gpu_calc is not None:
                         # visi_set_python, _, completed_round = gpu_calc.result()
-                        visi_set_python, _, completed_round = get_future_result(gpu_calc, logger)
+                        visi_set_python, _, completed_round = get_future_result(gpu_calc, logger, "woden_worker")
                         
                         visi_sets_python[0, :] = visi_set_python
                         done_n_points, done_n_gauss, done_n_shapes, done_n_shape_coeffs = sum_components_in_chunked_skymodel_map_sets(chunked_skymodel_map_sets[:completed_round + 1])
@@ -552,7 +555,7 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                 # # Wait for the final calculation to complete
                 if gpu_calc is not None:
                     # visi_set_python, _, completed_round = gpu_calc.result()
-                    visi_set_python, _, completed_round = get_future_result(gpu_calc, logger)
+                    visi_set_python, _, completed_round = get_future_result(gpu_calc, logger, "woden_worker")
                     visi_sets_python[0, :] = visi_set_python
                     done_n_points, done_n_gauss, done_n_shapes, done_n_shape_coeffs = sum_components_in_chunked_skymodel_map_sets(chunked_skymodel_map_sets[:completed_round + 1])
                     done_comps = done_n_points + done_n_gauss + done_n_shapes + done_n_shape_coeffs
