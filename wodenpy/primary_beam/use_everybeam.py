@@ -26,7 +26,7 @@ from ctypes import c_char_p, c_int, c_double, POINTER, c_bool
 import ctypes
 from wodenpy.wodenpy_setup.woden_logger import simple_logger
 from logging import Logger
-from casacore.tables import table, taql
+from multiprocessing import Process, Queue
 from wodenpy.use_libwoden.beam_settings import BeamTypes
 import ctypes
 from wodenpy.array_layout.create_array_layout import convert_ecef_to_enh, convert_enh_to_ecef, rotate_local_XYZ, enh2xyz
@@ -37,6 +37,15 @@ woden_struct_classes = Woden_Struct_Classes()
 Source_Catalogue = woden_struct_classes.Source_Catalogue
 Woden_Settings = woden_struct_classes.Woden_Settings
 
+
+def worker_get_num_stations(ms_path : str, q : Queue) -> int:
+    
+    from casacore.tables import table
+    
+    with table(ms_path + '/ANTENNA') as t: 
+        num_stations = len(t)
+        
+    return num_stations
 
 def get_num_stations(ms_path : str) -> int:
     """
@@ -52,8 +61,12 @@ def get_num_stations(ms_path : str) -> int:
         Number of stations in the measurement set.
     """
     
-    with table(ms_path + '/ANTENNA') as t: 
-        num_stations = len(t)
+    q = Queue()
+    p = Process(target=worker_get_num_stations, args=(ms_path, q,))
+    p.start()
+    p.join()
+
+    num_stations = q.get()
         
     return num_stations
 
@@ -127,7 +140,7 @@ def calc_coordinate_axes(positions : np.ndarray,
 
     return coordinate_axes
 
-def create_filtered_ms(ms_path : str, new_ms_path : str,
+def do_create_filtered_ms(ms_path : str, new_ms_path : str,
                        ra0 : float, dec0 : float,
                        recentre_array : bool = False,
                        current_latitude : float = False,
@@ -156,9 +169,15 @@ def create_filtered_ms(ms_path : str, new_ms_path : str,
         Declination of the beam centre in radians.
     """
     
+    from casacore.tables import table, taql
+    
+    # print("WE BE HERE")
+    
     ##Find out telescope type
     with table(ms_path + "/OBSERVATION", ack=False) as tb:
         telescope_name = tb.getcol("TELESCOPE_NAME")[0]  # Get first entry
+        
+    # print(f"Telescope name: {telescope_name}")
         
     ##First up, read in original MS, and filter it to only have 
     ## the first time and frequency channel
@@ -216,6 +235,7 @@ def create_filtered_ms(ms_path : str, new_ms_path : str,
                 antenna.putcol('LOFAR_PHASE_REFERENCE', new_locations)
             
         if telescope_name == "LOFAR":
+            
             with table(new_ms_path+'::LOFAR_ANTENNA_FIELD', readonly=False) as antenna:
                 lof_ant_position = antenna.getcol('POSITION')
                 
@@ -302,6 +322,22 @@ def create_filtered_ms(ms_path : str, new_ms_path : str,
                     #     print(new_offsets)
                     antenna.putcell('TILE_ELEMENT_OFFSET', station, new_offsets)
 
+
+def create_filtered_ms(ms_path : str, new_ms_path : str,
+                       ra0 : float, dec0 : float,
+                       recentre_array : bool = False,
+                       current_latitude : float = False,
+                       current_longitude : float = False,
+                       new_latitude : float = False,
+                       new_longitude : float = False):
+
+    p = Process(target=do_create_filtered_ms,
+                args=(ms_path, new_ms_path, ra0, dec0,
+                      recentre_array, current_latitude,
+                      current_longitude, new_latitude,
+                      new_longitude))
+    p.start()
+    p.join()  # module is fully cleaned when the process exits
                 
             
 def check_ms_telescope_type_matches_element_response(ms_path : str,
@@ -341,12 +377,14 @@ def check_ms_telescope_type_matches_element_response(ms_path : str,
     if not logger:
         logger = simple_logger()
     
-    woden_path = importlib_resources.files(wodenpy).joinpath(f"libuse_everybeam.so")
+    woden_path = importlib_resources.files(wodenpy).joinpath(f"libwoden_double.so")
     woden_lib = ctypes.cdll.LoadLibrary(woden_path)
     
     check_ms_telescope_type = woden_lib.check_ms_telescope_type
     check_ms_telescope_type.argtypes = [c_char_p]
     check_ms_telescope_type.restype = c_char_p
+    
+    # print(f"MS path: {type(ms_path)}, {ms_path}")
     
     ms_path_ctypes = ctypes.c_char_p(ms_path.encode('utf-8'))
     

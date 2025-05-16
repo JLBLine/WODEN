@@ -13,7 +13,7 @@ import wodenpy
 from astropy.coordinates import EarthLocation
 from astropy import units as u
 from astropy.time import Time
-from wodenpy.primary_beam.use_everybeam import run_everybeam, create_filtered_ms
+from wodenpy.primary_beam.use_everybeam import run_everybeam_over_threads, create_filtered_ms
 from wodenpy.use_libwoden.use_libwoden import check_for_everybeam
 import importlib_resources
 from erfa import ae2hd
@@ -68,7 +68,8 @@ class Test(unittest.TestCase):
         # print(np.degrees(decs))
         
         coeff_path = ""
-        jones =  run_everybeam(ms_path, coeff_path,
+        num_threads = 1
+        jones =  run_everybeam_over_threads(num_threads, ms_path, coeff_path,
                                 ras, decs, beam_ra0, beam_dec0,
                                 j2000_latitudes, j2000_lsts,
                                 all_times, all_freqs,
@@ -110,7 +111,6 @@ class Test(unittest.TestCase):
         
         in_situ_jones = self.run_beam_given_inputs(arr_latitude, LST_deg, ms_path, observing_time)
         # print(np.abs(in_situ_jones[0,0,0,:,0,0]))
-        
         # ##Next, use the function to move the array location as well
         
         arr_latitude = np.radians(MWA_LAT)
@@ -135,6 +135,7 @@ class Test(unittest.TestCase):
                            np.radians(MWA_LAT), np.radians(MWA_LONG))  
         
         recentred_jones = self.run_beam_given_inputs(arr_latitude, LST_deg, ms_path, observing_time)
+        # print(np.abs(recentred_jones[0,0,0,:,0,0]))
         
         npt.assert_allclose(np.abs(in_situ_jones),
                             np.abs(recentred_jones),
@@ -165,7 +166,6 @@ class Test(unittest.TestCase):
         LST = observing_time.sidereal_time('mean')
         LST_deg = LST.value*15
         
-        
         ms_path = "test.ms"
         
         ##First, use the function just to change the pointing of the measurement set
@@ -175,7 +175,7 @@ class Test(unittest.TestCase):
         in_situ_jones = self.run_beam_given_inputs(arr_latitude, LST_deg, ms_path, observing_time)
         # print(np.abs(in_situ_jones[0,0,0,:,0,0]))
         
-        # ##Next, use the function to move the array location as well
+        # # ##Next, use the function to move the array location as well
         
         
         
@@ -187,6 +187,7 @@ class Test(unittest.TestCase):
                            np.radians(LOFAR_LAT), np.radians(LOFAR_LONG))  
         
         recentred_jones = self.run_beam_given_inputs(arr_latitude, LST_deg, ms_path, observing_time)
+        # print(np.abs(in_situ_jones[0,0,0,:,0,0]))
         
         npt.assert_allclose(np.abs(in_situ_jones),
                             np.abs(recentred_jones),

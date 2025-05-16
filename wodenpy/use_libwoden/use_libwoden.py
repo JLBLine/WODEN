@@ -8,9 +8,10 @@ import numpy as np
 import sys
 import os
 from ctypes import CFUNCTYPE
-
+from multiprocessing import Queue, Process
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 from wodenpy.use_libwoden.array_layout_struct import Array_Layout_Ctypes
+
 
 VELC = 299792458.0
 
@@ -67,7 +68,7 @@ def load_in_run_woden(woden_lib : ctypes.CDLL,
     
     return run_woden
 
-def check_for_everybeam(woden_lib_path: str) -> bool:
+def worker_check_for_everybeam(woden_lib_path: str, q : Queue) -> bool:
     """
     Checks if libwoden*.so has been compiled against EveryBeam (via a flag
     -DHAVE_EVERYBEAM which was set via CMake during compilation).
@@ -91,4 +92,30 @@ def check_for_everybeam(woden_lib_path: str) -> bool:
     
     check_for_everybeam_compilation.restype = ctypes.c_bool
     
-    return check_for_everybeam_compilation()
+    q.put(check_for_everybeam_compilation())
+
+
+def check_for_everybeam(woden_lib_path: str) -> bool:
+    """
+    Checks if libwoden*.so has been compiled against EveryBeam (via a flag
+    -DHAVE_EVERYBEAM which was set via CMake during compilation).
+    
+    Returns True if it has, False otherwise.
+    
+    Parameters
+    ----------
+    woden_lib_path : str
+        The file path to the WODEN library (either `libwoden_float.so` or `libwoden_double.so`).
+    
+    Returns
+    -------
+    bool
+        True if the 'EveryBeam' feature is compiled in the WODEN library, False otherwise.
+    """
+    
+    q = Queue()
+    p = Process(target=worker_check_for_everybeam, args=(woden_lib_path, q))
+    p.start()
+    p.join()
+    
+    return q.get()

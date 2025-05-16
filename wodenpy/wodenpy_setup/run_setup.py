@@ -9,7 +9,7 @@ import sys
 import os
 from astropy.io import fits
 import warnings
-from casacore.tables import table
+from multiprocessing import Process, Queue
 from wodenpy.array_layout.create_array_layout import convert_ecef_to_enh
 import psutil
 import argparse
@@ -26,6 +26,7 @@ from wodenpy.use_libwoden.use_libwoden import check_for_everybeam
 from wodenpy.primary_beam.use_everybeam import create_filtered_ms
 from sys import exit
 from pyuvdata.telescopes import known_telescope_location
+from typing import Union, Tuple
 
 MWA_LAT = -26.703319405555554
 MWA_LONG = 116.67081523611111
@@ -347,6 +348,56 @@ def get_parser():
     
     return parser
 
+def worker_get_enh_from_measurement_set(args : argparse.Namespace, q : Queue):
+    from casacore.tables import table
+    with table(args.beam_ms_path + '/ANTENNA') as t: 
+        num_ants = len(t)
+        args.num_antennas = num_ants
+        ant_locations = np.array([t.getcell('POSITION', ant) for ant in range(num_ants)])
+        ##convert from ECEF to ENH, as WODEN starts with enh coords
+        east, north, height = convert_ecef_to_enh(ant_locations[:,0],
+                                    ant_locations[:,1], ant_locations[:,2],
+                                    np.radians(args.orig_long),
+                                    np.radians(args.orig_lat))
+        
+        ant_names = np.array([t.getcell('NAME', ant) for ant in range(num_ants)])
+        
+    ##Put the results in a queue
+    q.put((east, north, height, ant_names))
+    
+def get_enh_from_measurement_set(args : argparse.Namespace) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Get the antenna positions in ENH coordinates from a measurement set.
+    This is done in a separate process to avoid blocking the main thread
+    while waiting for the measurement set to be read in.
+
+    Parameters
+    ----------
+    args : `argparse.Namespace`
+        The populated arguments `args = parser.parse_args()`` as returned from
+        the parser given by :func:`~run_woden.get_parser`
+
+    Returns
+    -------
+    east : np.ndarray
+        The east coordinates of the antennas in ENH coordinates
+    north : np.ndarray
+        The north coordinates of the antennas in ENH coordinates
+    height : np.ndarray
+        The height coordinates of the antennas in ENH coordinates
+    num_ants : int
+        The number of antennas in the measurement set
+
+    """
+    
+    q = Queue()
+    p = Process(target=worker_get_enh_from_measurement_set, args=(args, q))
+    p.start()
+    p.join()
+    
+    east, north, height, ant_names = q.get()
+    
+    return east, north, height, ant_names
+
 def select_argument_and_check(parser_arg : bool, parser_value : bool,
                               metafits_arg : bool, parser_string : str,
                               do_exit : bool = True):
@@ -423,20 +474,14 @@ def select_correct_enh(args):
         
     elif args.array_layout == "from_ms":
         ##TODO work out how to get the lat/lon of the array from the measurement set
-        with table(args.beam_ms_path + '/ANTENNA') as t: 
-            num_ants = len(t)
-            args.num_antennas = num_ants
-            ant_locations = np.array([t.getcell('POSITION', ant) for ant in range(num_ants)])
-            ##convert from ECEF to ENH, as WODEN starts with enh coords
-            east, north, height = convert_ecef_to_enh(ant_locations[:,0],
-                                        ant_locations[:,1], ant_locations[:,2],
-                                        np.radians(args.orig_long),
-                                        np.radians(args.orig_lat))
+        
+        east, north, height, ant_names = get_enh_from_measurement_set(args)
             
-            args.east = east
-            args.north = north
-            args.height = height
-            args.ant_names = np.array([t.getcell('NAME', ant) for ant in range(num_ants)])
+        args.east = east
+        args.north = north
+        args.height = height
+        args.ant_names = ant_names
+        args.num_antennas = len(east)
         
     else:
         try:
@@ -452,6 +497,85 @@ def select_correct_enh(args):
         except:
             exit("Could not read array layout file:\n"
                  "\t{:s}\nExiting before woe beings".format(args.array_layout))
+            
+            
+def worker_get_observation_info_from_measurement_set(args : argparse.Namespace,
+                                                     q : Queue):
+    from casacore.tables import table
+    with table(args.beam_ms_path) as ms:
+            
+        first_time_mjd = ms.getcol("TIME_CENTROID")[0]
+        time_res = ms.getcol("INTERVAL")[0]
+        
+        times = ms.getcol("TIME")
+        num_time_steps = np.unique(times).size
+        
+        date = Time((first_time_mjd - time_res/2.0)*u.s, format='mjd')
+        date = date.datetime.strftime('%Y-%m-%dT%H:%M:%S')
+        
+    with table(f"{args.beam_ms_path}/SPECTRAL_WINDOW") as spw:
+
+        # Get frequency resolution
+        freq_res = spw.getcol("RESOLUTION")[0][0]
+        num_frequencies = spw.getcol("NUM_CHAN")[0]
+        
+        ##TODO subtract half a freq res from the lowest channel freq??
+        lowest_channel_freq = spw.getcol("CHAN_FREQ")[0][0]
+        highest_channel_freq = spw.getcol("CHAN_FREQ")[0][-1]
+        
+        b_width = num_frequencies*freq_res
+        
+    with table(args.beam_ms_path+'::FIELD', readonly=False) as field_table:
+        ra0, dec0 = np.squeeze(field_table.getcol('PHASE_DIR'))
+        
+    q.put((date, time_res, num_time_steps, freq_res, lowest_channel_freq,
+            highest_channel_freq, b_width, ra0, dec0))
+        
+def get_observation_info_from_measurement_set(args : argparse.Namespace) -> Tuple[str, float, int, float, float, float, float, float]:
+    """Get the observation information from a measurement set. This is done in
+    a separate process to avoid blocking the main thread while waiting for the
+    measurement set to be read in.
+
+    Parameters
+    ----------
+    args : `argparse.Namespace`
+        The populated arguments `args = parser.parse_args()`` as returned from
+        the parser given by :func:`~run_woden.get_parser`
+
+    Returns
+    -------
+    date : str
+        The date of the observation in YYYY-MM-DDThh:mm:ss format
+    time_res : float
+        The time resolution of the observation in seconds
+    num_time_steps : int
+        The number of time steps in the observation
+    freq_res : float
+        The frequency resolution of the observation in Hz
+    lowest_channel_freq : float
+        The frequency of the lowest channel in Hz
+    highest_channel_freq : float
+        The frequency of the highest channel in Hz
+    b_width : float
+        The bandwidth of the observation in Hz
+    ra0 : float
+        The RA of the phase centre in degrees
+    dec0 : float
+        The Dec of the phase centre in degrees
+
+    """
+    
+    q = Queue()
+    p = Process(target=worker_get_observation_info_from_measurement_set,
+                args=(args, q))
+    p.start()
+    p.join()
+    
+    date, time_res, num_time_steps, freq_res, lowest_channel_freq, \
+            highest_channel_freq, b_width, ra0, dec0 = q.get()
+    
+    return date, time_res, num_time_steps, freq_res, lowest_channel_freq, \
+            highest_channel_freq, b_width, ra0, dec0
             
             
 def get_antenna_order(tilenames: np.ndarray) -> np.ndarray:
@@ -763,36 +887,13 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
             
         array_layout = "from_ms"
             
-        with table(args.beam_ms_path) as ms:
+        date, time_res, num_time_steps, freq_res, lowest_channel_freq, \
+            highest_channel_freq, b_width, ra0, dec0 = get_observation_info_from_measurement_set(args)
             
-            first_time_mjd = ms.getcol("TIME_CENTROID")[0]
-            time_res = ms.getcol("INTERVAL")[0]
-            
-            times = ms.getcol("TIME")
-            num_time_steps = np.unique(times).size
-            
-            date = Time((first_time_mjd - time_res/2.0)*u.s, format='mjd')
-            date = date.datetime.strftime('%Y-%m-%dT%H:%M:%S')
-            
-        with table(f"{args.beam_ms_path}/SPECTRAL_WINDOW") as spw:
-    
-            # Get frequency resolution
-            freq_res = spw.getcol("RESOLUTION")[0][0]
-            num_frequencies = spw.getcol("NUM_CHAN")[0]
-            
-            ##TODO subtract half a freq res from the lowest channel freq??
-            lowest_channel_freq = spw.getcol("CHAN_FREQ")[0][0]
-            highest_channel_freq = spw.getcol("CHAN_FREQ")[0][-1]
-            
-            b_width = num_frequencies*freq_res
-            
-        with table(args.beam_ms_path+'::FIELD', readonly=False) as field_table:
-            ra0, dec0 = np.squeeze(field_table.getcol('PHASE_DIR'))
-            
-            if np.isnan(args.ra0):    
-                args.ra0 = np.degrees(ra0)
-            if np.isnan(args.dec0):
-                args.dec0 = np.degrees(dec0)
+        if np.isnan(args.ra0):    
+            args.ra0 = np.degrees(ra0)
+        if np.isnan(args.dec0):
+            args.dec0 = np.degrees(dec0)
         
         make_pointed_ms = False
                 
