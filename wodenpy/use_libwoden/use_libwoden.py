@@ -68,22 +68,32 @@ def load_in_run_woden(woden_lib : ctypes.CDLL,
     
     return run_woden
 
-def worker_check_for_everybeam(woden_lib_path: str, q : Queue) -> bool:
+def worker_check_for_everybeam(woden_lib_path: str, q : Queue):
     """
     Checks if libwoden*.so has been compiled against EveryBeam (via a flag
-    -DHAVE_EVERYBEAM which was set via CMake during compilation).
+    -DHAVE_EVERYBEAM which was set via CMake during compilation). Puts True
+    into the queue `q`, if it has, False otherwise.
     
-    Returns True if it has, False otherwise.
+    This function is run in a separate process to avoid clashing with 
+    `python-casacore`. `python-casacore` and `libwoden*.so`
+    can be linked to different versions of `casacore`. When
+    loaded, both create dependency paths and global variables in a persisting
+    `c++` state. This causes much explosions and segfaults. Wrapping in a 
+    separate process isolates the state of the `c++` code. This is a hot-fix.
     
+    .. todo::
+        Replace all calls to `python-casacore` with calls to `casacore`
+        directly, via libuse_everybeam.so. It's also possible that using 
+        pybind11 to call c++ instead of `ctypes` would be better?
+        
     Parameters
     ----------
     woden_lib_path : str
-        The file path to the WODEN library (either `libwoden_float.so` or `libwoden_double.so`).
+        The file path to the WODEN library (either `/some/path/libwoden_float.so`
+        or `/some/path/libwoden_double.so`).
+    q : Queue
+        A multiprocessing queue to store the result of the check.
     
-    Returns
-    -------
-    bool
-        True if the 'EveryBeam' feature is compiled in the WODEN library, False otherwise.
     """
     
     woden_lib = ctypes.cdll.LoadLibrary(woden_lib_path)
@@ -102,10 +112,15 @@ def check_for_everybeam(woden_lib_path: str) -> bool:
     
     Returns True if it has, False otherwise.
     
+    This function calls :func:~`worker_check_for_everybeam` in a separate
+    process to avoid clashing with `python-casacore`. See 
+    :func:~`worker_check_for_everybeam` docs for more details.
+    
     Parameters
     ----------
     woden_lib_path : str
-        The file path to the WODEN library (either `libwoden_float.so` or `libwoden_double.so`).
+        The file path to the WODEN library (either `/some/path/libwoden_float.so`
+        or `/some/path/libwoden_double.so`).
     
     Returns
     -------

@@ -172,19 +172,17 @@ def convert_enh_to_ecef(east : np.ndarray, north : np.ndarray, height : np.ndarr
     
     return ecef_X, ecef_Y, ecef_Z
 
-
-
-def rotate_local_XYZ(X, Y, Z, curr_lat, curr_lon, new_lat, new_lon):
+# def rotate_local_XYZ(X, Y, Z, curr_lat, curr_lon, new_lat, new_lon):
     
-    east = -np.sin(curr_lon)*X + np.cos(curr_lon)*Y
-    north = -np.cos(curr_lon)*np.sin(curr_lat)*X - np.sin(curr_lon)*np.sin(curr_lat)*Y + np.cos(curr_lat)*Z
-    height = np.cos(curr_lon)*np.cos(curr_lat)*X + np.sin(curr_lon)*np.cos(curr_lat)*Y + np.sin(curr_lat)*Z
+#     east = -np.sin(curr_lon)*X + np.cos(curr_lon)*Y
+#     north = -np.cos(curr_lon)*np.sin(curr_lat)*X - np.sin(curr_lon)*np.sin(curr_lat)*Y + np.cos(curr_lat)*Z
+#     height = np.cos(curr_lon)*np.cos(curr_lat)*X + np.sin(curr_lon)*np.cos(curr_lat)*Y + np.sin(curr_lat)*Z
     
-    X = -np.sin(new_lon)*east - np.sin(new_lat)*np.cos(new_lon)*north + np.cos(new_lat)*np.cos(new_lon)*height
-    Y = np.cos(new_lon)*east - np.sin(new_lat) * np.sin(new_lon)*north + np.cos(new_lat)*np.sin(new_lon)*height
-    Z = np.cos(new_lat)*north + np.sin(new_lat)*height
+#     X = -np.sin(new_lon)*east - np.sin(new_lat)*np.cos(new_lon)*north + np.cos(new_lat)*np.cos(new_lon)*height
+#     Y = np.cos(new_lon)*east - np.sin(new_lat) * np.sin(new_lon)*north + np.cos(new_lat)*np.sin(new_lon)*height
+#     Z = np.cos(new_lat)*north + np.sin(new_lat)*height
     
-    return X, Y, Z
+#     return X, Y, Z
 
 def enh2xyz(east : float, north : float, height : float, latitude : float) -> Tuple[float, float, float]:
     """

@@ -39,6 +39,30 @@ Woden_Settings = woden_struct_classes.Woden_Settings
 
 
 def worker_get_num_stations(ms_path : str, q : Queue) -> int:
+    """
+    Worker function to get the number of stations in the measurement set
+    given by `ms_path`, and put the in the queue `q`.
+    
+    This is done in a separate process because it uses `python-casacore`.
+    Running `import casacore` creates a `c++` state with a number of library paths
+    and casacore global variables. If `libuse_everybeam.so` has been built with
+    against a different casacore library, this causes epic intermittent errors
+    and segfaults. To void this, run the import in this separate thread process,
+    which isolates the state of the `c++` library.
+    
+    TODO: All calls to `python-casacore` should be done via direct calls to
+    casacore in c++ in `libuse_everybeam.so`. This removes all conflicts;
+    however, this is a large task and will take time to implement. For now,
+    this is a workaround to avoid the segfaults and errors.
+    
+    Parameters
+    ----------
+    ms_path : str
+        Path to the measurement set.
+    q : Queue
+        Queue to put the number of stations in.
+    """
+    
     
     from casacore.tables import table
     
@@ -49,12 +73,17 @@ def worker_get_num_stations(ms_path : str, q : Queue) -> int:
 
 def get_num_stations(ms_path : str) -> int:
     """
-    Get the number of stations in a measurement set.
+    Get the number of stations in a measurement set given by `ms_path`.
+    
+    Runs :func:`~worker_get_num_stations` in a separate process to
+    avoid `python-casacore` clashing with WODEN-built `libuse_everybeam.so`.
+    See :func:`~worker_get_num_stations` for more details.
     
     Parameters
     ----------
     ms_path : str
         Path to the measurement set.
+        
     Returns
     -------
     int
@@ -70,8 +99,24 @@ def get_num_stations(ms_path : str) -> int:
         
     return num_stations
 
-def enu_basis(lat, lon):
-    # Unit vectors for local ENU frame at (lat, lon)
+def enu_basis(lat : float, lon : float) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Calculate the ENU basis vectors in terms of earth-centred earth-fixed coords,
+    for a given latitude `lat` and longitude `lon`.
+    
+    Parameters
+    ----------
+    lat : float
+        Latitude in radians.
+    lon : float
+        Longitude in radians.
+        
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray, np.ndarray]
+        Tuple of the east, north, and up basis vectors.
+    """
+    
     east = np.array([-np.sin(lon),  np.cos(lon), 0.0])
     north = np.array([-np.sin(lat) * np.cos(lon),
                       -np.sin(lat) * np.sin(lon),
@@ -84,6 +129,72 @@ def enu_basis(lat, lon):
 
 def calc_coordinate_axes(positions : np.ndarray,
                          central_lat : float, central_lon : float):
+    """
+    Internal to a LOFAR measurement set, inside the `LOFAR_ANTENNA_FIELD` table,
+    there is a column called `COORDINATE_AXES`. This has something to do with
+    defining what the normal direction of the incoming radation is relative
+    to a particular station. If moving a measurement set from one lat/long to
+    another, this must be recalculated. Below is a best guess by JLBLine at how
+    to do this. See the following doc string copied from EveryBeam which
+    describes the coordinate system, from the 
+    `EveryBeam/cpp/antenna.h::Antenna::CoordinateSystem` function
+    
+    .. seealso:: from the EveryBeam documentation:
+    
+        Station coordinate system.
+      
+        A right handed, cartesian, local coordinate system with coordinate axes
+        `p`, `q`, and `r` is associated with each antenna field.
+      
+        The r-axis is orthogonal to the antenna field, and points towards the
+        local pseudo zenith.
+      
+        The q-axis is the northern bisector of the X and Y dipoles, i.e.
+        it is the reference direction from which the orientation of the dual
+        dipole antennae is determined. The q-axis points towards the North at
+        the core. At remote sites it is defined as the intersection of the
+        antenna field plane and a plane parallel to the meridian plane at the
+        core. This ensures the reference directions at all sites are similar.
+      
+        The p-axis is orthogonal to both other axes, and points towards the East
+        at the core.
+      
+        The axes and origin of the anntena field coordinate system are expressed
+        as vectors in the geocentric, cartesian, ITRF coordinate system, in
+        meters.
+      
+        "LOFAR Reference Plane and Reference Direction", M.A. Brentjens,
+        LOFAR-ASTRON-MEM-248.
+     
+    .. todo::
+        find out how to do this properly. As described above, everything is
+        supposed to be calculated relative to the array centre, or for remote stations,
+        "the intersection of the antenna field plane and a plane parallel to the 
+        meridian plane at the core". Wtf does that mean? Below, I calculate things
+        relative to the local ENU for each station. This means the calculations
+        for remote stations are way off, as the curvature of the earth changes
+        what local up is the further you get from the core. If people need accurate
+        remote stations, this needs to be fixed (or just don't move the telescope).
+    
+    Parameters
+    ----------
+    positions : np.ndarray
+        Array of station positions in ECEF coordinates. Shape (num_positions, 3).
+    central_lat : float
+        Latitude of the array centre in radians.
+    central_lon : float
+        Longitude of the array centre in radians.
+        
+    Returns
+    -------
+    coordinate_axes : np.ndarray
+        Array of coordinate axes for each station. Shape (num_positions, 3, 3).
+        coordinate_axes[:, 0, :] are the `p` vectors, coordinate_axes[:, 1, :]
+        are the `q` vectors, and coordinate_axes[:, 2, :] are the `r` vectors, 
+        as described in the docstring above.
+        
+    """
+    
     
     arrX, arrY, arrZ = gd2gc(1, central_lon, central_lat, 0)
     arr_centre = np.array([arrX, arrY, arrZ])
@@ -125,37 +236,38 @@ def calc_coordinate_axes(positions : np.ndarray,
         coordinate_axes[pos, 1, :] = north_vec
         coordinate_axes[pos, 2, :] = up_vec
         
-        # print(arr_centre / np.linalg.norm(arr_centre), up_vec)
-        
-        # coordinate_axes[pos, 0, :] = east_vec
-        # coordinate_axes[pos, 1, :] = -north_vec
-        # coordinate_axes[pos, 2, :] = -up_vec
-        
-        # if pos == 1:
-        #     print("Station: ", positions[pos, :])
-        #     print("Arr_centre: ", arr_centre)
-        #     print("East: ", east_vec)
-        #     print("North: ", north_vec)
-        #     print("Up: ", up_vec)
 
     return coordinate_axes
 
-def do_create_filtered_ms(ms_path : str, new_ms_path : str,
-                       ra0 : float, dec0 : float,
-                       recentre_array : bool = False,
-                       current_latitude : float = False,
-                       current_longitude : float = False,
-                       new_latitude : float = False,
-                       new_longitude : float = False) -> None:
+def worker_create_filtered_ms(ms_path : str, new_ms_path : str,
+                              ra0 : float, dec0 : float,
+                              recentre_array : bool = False,
+                              current_latitude : float = False,
+                              current_longitude : float = False,
+                              new_latitude : float = False,
+                              new_longitude : float = False) -> None:
     """
-    Create a filtered measurement set with only the first time and frequency
-    channel, and set the delay and reference direction to the given RA/Dec.
+    Create a reduced measurement to path `new_ms_path` with only the first time 
+    and frequency channel of the measurement set `ms_path`. Set the delay and 
+    reference directions to the given RA/Dec `ra0,dec0`.
     
     The `EveryBeam` functions that `WODEN` wraps read the beam centre value
     directly from the measurement set. Rather than downloading a specific
     MS which exactly the pointing we want, we just make the smallest possible
     copy of the MS with the first time and frequency channel, and set
     the delay and reference direction to what we want.
+    
+    If `recentre_array` is True, also perform the necessary calculations and
+    updates to move the array centre from `current_latitude` and `current_longitude`
+    to `new_latitude` and `new_longitude`. 
+    
+    This function is run in a separate process to avoid `python-casacore`
+    clashing with WODEN-built `libuse_everybeam.so`. Running `import casacore`
+    creates a `c++` state with a number of library paths and casacore global variables.
+    If `libuse_everybeam.so` has been built with against a different casacore library,
+    this causes epic intermittent errors and segfaults. To void this, run the import
+    in this separate thread process, which isolates the state of the `c++` library.
+    
     
     Parameters
     ----------
@@ -167,17 +279,29 @@ def do_create_filtered_ms(ms_path : str, new_ms_path : str,
         Right ascension of the beam centre in radians.
     dec0 : float
         Declination of the beam centre in radians.
+    recentre_array : bool, optional
+        Whether to recentre the array to the new latitude and longitude.
+        Defaults to False. If True, `current_latitude`, `current_longitude`,
+        `new_latitude`, and `new_longitude` must be set.
+    current_latitude : float, optional
+        Current latitude of the array in radians. Required if `recentre_array`
+        is True.
+    current_longitude : float, optional
+        Current longitude of the array in radians. Required if `recentre_array`
+        is True.
+    new_latitude : float, optional
+        New latitude of the array in radians. Required if `recentre_array`
+        is True.
+    new_longitude : float, optional
+        New longitude of the array in radians. Required if `recentre_array`
+        is True.
     """
     
     from casacore.tables import table, taql
     
-    # print("WE BE HERE")
-    
     ##Find out telescope type
     with table(ms_path + "/OBSERVATION", ack=False) as tb:
         telescope_name = tb.getcol("TELESCOPE_NAME")[0]  # Get first entry
-        
-    # print(f"Telescope name: {telescope_name}")
         
     ##First up, read in original MS, and filter it to only have 
     ## the first time and frequency channel
@@ -218,10 +342,6 @@ def do_create_filtered_ms(ms_path : str, new_ms_path : str,
         ecef_X, ecef_Y, ecef_Z = convert_enh_to_ecef(east, north, height,
                                              new_longitude, new_latitude)
         
-        
-        # print(ant_locations[:5,0])
-        # print(ecef_X[:5])
-            
         with table(new_ms_path+'::ANTENNA', readonly=False) as antenna:
             
             new_locations = np.zeros((num_antennas, 3), dtype=np.float64)
@@ -262,15 +382,8 @@ def do_create_filtered_ms(ms_path : str, new_ms_path : str,
                 coord_axes = antenna.getcol('COORDINATE_AXES')
                 antenna.putcol('COORDINATE_AXES', new_coord_axes)
                 
-                # ind = 43
-                ind = 0
                 arrX, arrY, arrZ = gd2gc(1, new_longitude, new_latitude, 0)
                 arr_centre = np.array([arrX, arrY, arrZ])
-                # print(arr_centre)
-                # print(lof_ant_position[ind])
-                # print(coord_axes[ind])
-                # print(new_coord_axes[ind])
-                
                 
                 for station in range(num_antennas):
                     offsets = antenna.getcell('ELEMENT_OFFSET', station)
@@ -291,14 +404,11 @@ def do_create_filtered_ms(ms_path : str, new_ms_path : str,
                     new_offsets[:, 0] = ecef_X - new_locations[station, 0]
                     new_offsets[:, 1] = ecef_Y - new_locations[station, 1]
                     new_offsets[:, 2] = ecef_Z - new_locations[station, 2]
-                    
                         
                     antenna.putcell('ELEMENT_OFFSET', station, new_offsets)
                     
                 for station in range(num_antennas):
                     offsets = antenna.getcell('TILE_ELEMENT_OFFSET', station)
-                    # if station == 0:
-                    #     print(offsets)
                     
                     offsets += ant_locations[station, :]
                     
@@ -318,8 +428,6 @@ def do_create_filtered_ms(ms_path : str, new_ms_path : str,
                     new_offsets[:, 1] = ecef_Y - new_locations[station, 1]
                     new_offsets[:, 2] = ecef_Z - new_locations[station, 2]
                     
-                    # if station == 0:
-                    #     print(new_offsets)
                     antenna.putcell('TILE_ELEMENT_OFFSET', station, new_offsets)
 
 
@@ -330,8 +438,48 @@ def create_filtered_ms(ms_path : str, new_ms_path : str,
                        current_longitude : float = False,
                        new_latitude : float = False,
                        new_longitude : float = False):
+    """
+    Create a reduced measurement to path `new_ms_path` with only the first time
+    and frequency channel of the measurement set `ms_path`. Set the delay and
+    reference directions to the given RA/Dec `ra0,dec0`. If `recentre_array`
+    is True, also perform the necessary calculations and updates to move the
+    array centre from `current_latitude` and `current_longitude` to 
+    `new_latitude` and `new_longitude`.
+    
+    Runs :func:`~worker_create_filtered_ms` in a separate process to 
+    avoid `python-casacore` clashing with WODEN-built `libuse_everybeam.so`.
+    See :func:`~worker_create_filtered_ms` for more details.
+    
+    Parameters
+    ----------
+    ms_path : str
+        Path to the original measurement set.
+    new_ms_path : str
+        Path to the new measurement set.
+    ra0 : float
+        Right ascension of the beam centre in radians.
+    dec0 : float
+        Declination of the beam centre in radians.
+    recentre_array : bool, optional
+        Whether to recentre the array to the new latitude and longitude.
+        Defaults to False. If True, `current_latitude`, `current_longitude`,
+        `new_latitude`, and `new_longitude` must be set.
+    current_latitude : float, optional
+        Current latitude of the array in radians. Required if `recentre_array`
+        is True.
+    current_longitude : float, optional
+        Current longitude of the array in radians. Required if `recentre_array`
+        is True.
+    new_latitude : float, optional
+        New latitude of the array in radians. Required if `recentre_array`
+        is True.
+    new_longitude : float, optional
+        New longitude of the array in radians. Required if `recentre_array`
+        is True.
+    """
+    
 
-    p = Process(target=do_create_filtered_ms,
+    p = Process(target=worker_create_filtered_ms,
                 args=(ms_path, new_ms_path, ra0, dec0,
                       recentre_array, current_latitude,
                       current_longitude, new_latitude,

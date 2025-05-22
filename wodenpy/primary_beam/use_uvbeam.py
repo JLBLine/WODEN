@@ -126,6 +126,9 @@ def setup_HERA_uvbeams(filenames: list[str], freqs: np.ndarray[float],
         at various frequencies
     freqs : np.ndarray
         Array of frequencies in Hz.
+    logger : Logger, optional
+        A logger object to log messages. If False, a default logger is created.
+        Defaults to False.
 
     Returns
     --------
@@ -162,7 +165,7 @@ def run_uvbeam(uvbeam_objs: np.ndarray[UVBeam],
                freqs: np.ndarray,
                iau_order: bool = False,
                parallactic_rotate: bool = True,
-               freq_interp=True,
+               freq_interp : bool = True,
                logger : Logger = False) -> np.ndarray:
     """
     Calculate the Jones matrices for a given set of directions, times (via `j2000_lsts`
@@ -191,6 +194,12 @@ def run_uvbeam(uvbeam_objs: np.ndarray[UVBeam],
         Whether to return the Jones matrices in IAU order (NS = X, EW = Y). Defaults to False.
     parallactic_rotate : bool, optional
         Whether to apply parallactic angle rotation. Defaults to True.
+    freq_interp : bool, optional
+        Whether to use frequency interpolation. Defaults to True. If True, uses
+        the default interpolation method of UVBeam.
+    logger : Logger, optional
+        A logger object to log messages. If False, a default logger is created.
+        Defaults to False.
         
     Returns
     --------
@@ -205,9 +214,7 @@ def run_uvbeam(uvbeam_objs: np.ndarray[UVBeam],
     num_freqs = len(freqs)
     num_coords = len(ras)
     
-        # use the faster interpolation method if appropriate
     beam = BeamInterface(uvbeam_objs[0], beam_type="efield")
-    
     
     num_base_freqs = len(uvbeam_objs[0].freq_array)
     
@@ -225,7 +232,7 @@ def run_uvbeam(uvbeam_objs: np.ndarray[UVBeam],
             
             run_uvbeam._warned_three_freqs = True
             
-        
+    # use the faster interpolation method if appropriate    
     if beam._isuvbeam and beam.beam.pixel_coordinate_system == "az_za":
         interpol_fn = "az_za_map_coordinates"
     else:
@@ -314,10 +321,6 @@ def run_uvbeam(uvbeam_objs: np.ndarray[UVBeam],
         if iau_order:
             reorder = True      
     
-    # reorder = False
-    # if iau_order:
-    #         reorder = True  
-                    
     if reorder:
         ##swap all_output_jones[:,:,:,:,0,0] with all_output_jones[:,:,:,:,1,1]
         all_output_jones[:, :, :, :, [0, 1], [0, 1]] = all_output_jones[:, :, :, :, [1, 0], [1, 0]]

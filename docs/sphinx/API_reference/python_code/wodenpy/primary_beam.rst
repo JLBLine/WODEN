@@ -9,3 +9,9 @@ Ways to calculate the primary beam response on the CPU rather than the GPU.
 
 .. automodule:: use_everybeam
    :members:
+
+``use_uvbeam``
+----------------------------
+
+.. automodule:: use_uvbeam
+   :members:

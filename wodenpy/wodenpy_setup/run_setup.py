@@ -349,6 +349,31 @@ def get_parser():
     return parser
 
 def worker_get_enh_from_measurement_set(args : argparse.Namespace, q : Queue):
+    """
+    Worker function to get the antenna positions in ENH coordinates from a
+    measurement set. This is done in a separate process because it uses 
+    `python-casacore`. Running `import casacore` creates a `c++` state with 
+    a number of library paths and casacore global variables. If `libuse_everybeam.so`
+    has been built with against a different casacore library, this causes epic
+    intermittent errors and segfaults. To void this, run the import in this
+    separate thread process, which isolates the state of the `c++` library.
+    
+    TODO: All calls to `python-casacore` should be done via direct calls to
+    casacore in c++ in `libuse_everybeam.so`. This removes all conflicts;
+    however, this is a large task and will take time to implement. For now,
+    this is a workaround to avoid the segfaults and errors.
+     
+    
+    Parameters
+    ----------
+    args : `argparse.Namespace`
+        The populated arguments `args = parser.parse_args()` as returned from
+        the parser given by :func:`~run_setup.get_parser`
+    q : `multiprocessing.Queue`
+        The queue to put the results in. Places arrays of `east`, `north`, 
+        `height` and `ant_names` in the queue.
+    """
+    
     from casacore.tables import table
     with table(args.beam_ms_path + '/ANTENNA') as t: 
         num_ants = len(t)
@@ -366,15 +391,17 @@ def worker_get_enh_from_measurement_set(args : argparse.Namespace, q : Queue):
     q.put((east, north, height, ant_names))
     
 def get_enh_from_measurement_set(args : argparse.Namespace) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Get the antenna positions in ENH coordinates from a measurement set.
-    This is done in a separate process to avoid blocking the main thread
-    while waiting for the measurement set to be read in.
+    """Get the antenna positions and names in ENH coordinates from a measurement set.
+    
+    Runs :func:`~worker_get_enh_from_measurement_set` in a separate process to
+    avoid `python-casacore` clashing with WODEN-built `libuse_everybeam.so`.
+    See :func:`~worker_get_enh_from_measurement_set` for more details. 
 
     Parameters
     ----------
     args : `argparse.Namespace`
-        The populated arguments `args = parser.parse_args()`` as returned from
-        the parser given by :func:`~run_woden.get_parser`
+        The populated arguments `args = parser.parse_args()` as returned from
+        the parser given by :func:`~run_setup.get_parser`
 
     Returns
     -------
@@ -384,8 +411,8 @@ def get_enh_from_measurement_set(args : argparse.Namespace) -> Tuple[np.ndarray,
         The north coordinates of the antennas in ENH coordinates
     height : np.ndarray
         The height coordinates of the antennas in ENH coordinates
-    num_ants : int
-        The number of antennas in the measurement set
+    ant_names : np.ndarray
+        The names of the antennas in the measurement set
 
     """
     
@@ -457,8 +484,8 @@ def select_correct_enh(args):
     Parameters
     ----------
     args : `argparse.Namespace`
-        The populated arguments `args = parser.parse_args()`` as returned from
-        the parser given by :func:`~run_woden.get_parser`
+        The populated arguments `args = parser.parse_args()` as returned from
+        the parser given by :func:`~run_setup.get_parser`
     """
 
     if args.array_layout == "from_the_metafits":
@@ -501,6 +528,31 @@ def select_correct_enh(args):
             
 def worker_get_observation_info_from_measurement_set(args : argparse.Namespace,
                                                      q : Queue):
+    """Worker function to get the observation information from a measurement set.
+    
+    This is done in a separate process because it uses `python-casacore`.
+    Running `import casacore` creates a `c++` state with a number of library paths
+    and casacore global variables. If `libuse_everybeam.so` has been built with
+    against a different casacore library, this causes epic intermittent errors
+    and segfaults. To void this, run the import in this separate thread process,
+    which isolates the state of the `c++` library.
+    
+    TODO: All calls to `python-casacore` should be done via direct calls to
+    casacore in c++ in `libuse_everybeam.so`. This removes all conflicts;
+    however, this is a large task and will take time to implement. For now,
+    this is a workaround to avoid the segfaults and errors.
+    
+    Parameters
+    ----------
+    args : `argparse.Namespace`
+        The populated arguments `args = parser.parse_args()` as returned from
+        the parser given by :func:`~run_setup.get_parser`
+    q : `multiprocessing.Queue`
+        The queue to put the results in. Places arrays of `date`, `time_res`,
+        `num_time_steps`, `freq_res`, `lowest_channel_freq`, `highest_channel_freq`,
+        `b_width`, `ra0`, and `dec0` in the queue.
+    """
+    
     from casacore.tables import table
     with table(args.beam_ms_path) as ms:
             
@@ -531,16 +583,18 @@ def worker_get_observation_info_from_measurement_set(args : argparse.Namespace,
     q.put((date, time_res, num_time_steps, freq_res, lowest_channel_freq,
             highest_channel_freq, b_width, ra0, dec0))
         
-def get_observation_info_from_measurement_set(args : argparse.Namespace) -> Tuple[str, float, int, float, float, float, float, float]:
-    """Get the observation information from a measurement set. This is done in
-    a separate process to avoid blocking the main thread while waiting for the
-    measurement set to be read in.
+def get_observation_info_from_measurement_set(args : argparse.Namespace) -> Tuple[str, float, int, float, float, float, float, float, float]:
+    """Get the observation information from a measurement set. 
+    
+    Runs :func:`~worker_get_observation_info_from_measurement_set` in a separate process to
+    avoid `python-casacore` clashing with WODEN-built `libuse_everybeam.so`.
+    See :func:`~worker_get_observation_info_from_measurement_set` for more details.
 
     Parameters
     ----------
     args : `argparse.Namespace`
-        The populated arguments `args = parser.parse_args()`` as returned from
-        the parser given by :func:`~run_woden.get_parser`
+        The populated arguments `args = parser.parse_args()` as returned from
+        the parser given by :func:`~run_setup.get_parser`
 
     Returns
     -------
@@ -600,8 +654,7 @@ def get_antenna_order(tilenames: np.ndarray) -> np.ndarray:
     ##This is bad as we use this to re-order dipole amplitude and flags
     ##later on; so only select one of the pols, do an argsort, and
     ##expand back to both pols
-    tilenames = tilenames[np.arange(0, len(tilenames), 2)]
-    order = np.argsort(tilenames)
+    order = np.argsort(tilenames[np.arange(0, len(tilenames), 2)])
     
     antenna_order = np.empty(2*len(order), dtype=int)
     antenna_order[np.arange(0, 2*len(order), 2)] = 2*order
@@ -618,8 +671,8 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     Parameters
     ----------
     args : `argparse.Namespace`
-        The populated arguments `args = parser.parse_args()`` as returned from
-        the parser given by :func:`~run_woden.get_parser`
+        The populated arguments `args = parser.parse_args()` as returned from
+        the parser given by :func:`~run_setup.get_parser`
 
     Returns
     -------

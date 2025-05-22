@@ -55,11 +55,11 @@ if run_doxygen: subprocess.call('doxygen Doxyfile', shell=True)
 # -- Project information -----------------------------------------------------
 
 project = 'WODEN'
-copyright = '2024, J.L.B. Line'
+copyright = '2025, J.L.B. Line'
 author = 'J.L.B. Line'
 
 # The full version, including alpha/beta/rc tags
-release = '2.5'
+release = '2.6'
 
 # -- General configuration ---------------------------------------------------
 
