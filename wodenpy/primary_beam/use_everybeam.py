@@ -29,7 +29,7 @@ from logging import Logger
 from multiprocessing import Process, Queue
 from wodenpy.use_libwoden.beam_settings import BeamTypes
 import ctypes
-from wodenpy.array_layout.create_array_layout import convert_ecef_to_enh, convert_enh_to_ecef, rotate_local_XYZ, enh2xyz
+from wodenpy.array_layout.create_array_layout import convert_ecef_to_enh, convert_enh_to_ecef, enh2xyz
 from erfa import gc2gd, gd2gc
 
 ##This call is so we can use it as a type annotation
@@ -69,7 +69,7 @@ def worker_get_num_stations(ms_path : str, q : Queue) -> int:
     with table(ms_path + '/ANTENNA') as t: 
         num_stations = len(t)
         
-    return num_stations
+    q.put(num_stations)
 
 def get_num_stations(ms_path : str) -> int:
     """

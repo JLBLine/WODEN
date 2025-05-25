@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Wrapper script to run the GPU WODEN code. Author: J.L.B. Line
+"""Wrapper script to run the WODEN simulator. Author: J.L.B. Line
 """
 import numpy as np
 import sys
@@ -11,7 +11,7 @@ import argparse
 from threading import Thread
 from ctypes import POINTER, c_double, c_float, c_int, create_string_buffer, string_at
 import ctypes
-from typing import Union, Tuple, List
+from typing import Union, Tuple, List, Callable
 from astropy.table import Table
 from astropy.io import fits
 from wodenpy.use_libwoden.beam_settings import BeamTypes, BeamGroups
@@ -34,12 +34,12 @@ from wodenpy.use_libwoden.skymodel_structs import setup_source_catalogue, Source
 import concurrent.futures
 from logging import Logger
 import logging
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, as_completed, Future
 from line_profiler import profile, LineProfiler
 from wodenpy.primary_beam.use_everybeam import run_everybeam
 from wodenpy.wodenpy_setup.woden_logger import get_log_callback, set_logger_header, simple_logger, log_chosen_beamtype, summarise_input_args, set_woden_logger
 from copy import deepcopy
-import multiprocessing
+from multiprocessing import Process, Queue
 from datetime import timedelta
 import traceback
 import shutil
@@ -76,10 +76,13 @@ def woden_worker(thread_ind : int,
                 logger : Logger = False,
                 profile = False) -> Tuple[List[Visi_Set_Python], int, int]:
     """
-    This function runs WODEN CPU code on a separate thread, processing source catalogues from a queue until the queue is empty.
+    This worker function runs WODEN CPU/GPU code, to process chunked source catalogues
+    from a queue until the queue is empty.
     
     Parameters
     ----------
+    thread_ind : int
+        The index of the thread this worker is running in. Just used for logging here.
     all_loaded_python_sources : List[List[Source_Python]]
         A list of lists of `Source_Python` to be processed, as ouput by `read_skymodel_worker`,
         where each list of `Source_Python` matches a chunk_map in `chunked_skymodel_map_set`.
@@ -92,18 +95,28 @@ def woden_worker(thread_ind : int,
         the order of the sources in `all_loaded_python_sources` may not match the order of the chunk_maps)
     round_num : int
         The round number of the processing
-    run_woden : _NamedFuncPointer
-        A pointer to the WODEN GPU function to be run.
-    woden_settings : Woden_Settings
+    woden_settings_python : Woden_Settings_Python
         The WODEN settings to be used.
-    array_layout : Array_Layout_Ctypes
+    array_layout_python : Array_Layout_Python
         The array layout to be used.
-    woden_struct_classes : Woden_Struct_Classes
-        The WODEN struct classes to be used
-    sbf : np.ndarray
-        The shapelet basis function array
+    visi_sets_python : List[Visi_Set_Python]
+        The existing visibility sets information. The results of this worker
+        will be added to this and returned. Should have length of `num_bands`,
+        where `num_bands` is the number of frequency bands.
     beamtype : int
         The value of the type of beam being used, e.g. BeamTypes.FEE_BEAM.value
+    logging_level : int
+        The logging level to use for logging. Default is logging.DEBUG.
+    precision : str
+        The precision to use for the WODEN processing. Default is "double".
+        Should be either "float" or "double".
+    logger : Logger
+        The logger to use for logging. If not provided, a default logger
+        will be created.
+    profile : bool
+        Whether to profile the function. This is a VERY experimental
+        way of doing things, and only includes some specific functions. Use
+        with caution. Default is False.
     """
     
     try:
@@ -244,8 +257,13 @@ def read_skymodel_worker(thread_id : int, num_threads : int,
         Table containing U polarization data (default is False).
     p_table : Table, optional
         Table containing P polarization data (default is False).
-    profile : bool, optional
-        Whether to profile the function (default is False).
+    logger : Logger, optional
+        The logger to use for logging (default is False). If not provided,
+        a default logger will be created.
+    uvbeam_objs : np.ndarray, optional
+        The UVBeam objects to use for the primary beam calculations. Only needed
+        if the beamtype is in `BeamGroups.uvbeam_beams`.
+        
     Returns
     =======
     tuple : Tuple[List[Source_Python], int]
@@ -345,7 +363,25 @@ def sum_components_in_chunked_skymodel_map_sets(chunked_skymodel_map_sets):
         
     return n_points, n_gauss, n_shapes, n_shape_coeffs
 
-def get_future_result(future, logger, function):
+def get_future_result(future : Future, logger : Logger,
+                      function : Callable):
+    """
+    This function gets the result of a future, and handles any exceptions
+    that may occur. It logs the error and exits the program if an exception
+    occurs.
+    Parameters
+    ----------
+    future : Future
+        The future to get the result from, as returned by the `ProcessPoolExecutor`.
+    logger : Logger
+        The logger to use for logging.
+    function : Callable
+        The function that was run in the future. Used for logging.
+    Returns
+    -------
+    Any
+        The result of the future, or None if an exception occurred.
+    """
     try:
         result = future.result()
         if isinstance(result, str):
@@ -360,6 +396,80 @@ def get_future_result(future, logger, function):
         logger.error(msg)
         
         sys.exit(msg)
+        
+def woden_worker_into_queue(q : Queue,
+                            all_loaded_python_sources : List[List[Source_Python]],
+                            all_loaded_sources_orders : List[int],
+                            round_num : int,
+                            woden_settings_python : Woden_Settings_Python,
+                            array_layout_python : Array_Layout_Python,
+                            visi_sets_python : List[Visi_Set_Python],
+                            beamtype : int,
+                            args : argparse.Namespace,
+                            logger : Logger):
+    """
+    This function launches the :func:`woden_worker` function in a separate process,
+    putting outputs into the queue `q`. Specifically, it places
+    
+     - visi_set_python
+     - completed_round
+     
+    into the queue. 
+    
+    Do this to keep the casacore version linked to `libwoden_*.so` separate from
+    the one linked to `python-casacore`. When both casacore versions are initialised
+    in the main process, they clash, and can cause segfaults.
+    
+    This wrapper is only intended for use when running WODEN in serial mode. As
+    such, we pass 0 as the thread index and `visi_sets_python[0,:]`
+    into :func:`woden_worker`, as there should only be one thread's worth of
+    visibility sets.
+    
+    Parameters
+    ----------
+    q : Queue
+        The queue to put the outputs into.
+    all_loaded_python_sources : List[List[Source_Python]]
+        A list of lists of `Source_Python` to be processed, as ouput by `read_skymodel_worker`,
+        where each list of `Source_Python` matches a chunk_map in `chunked_skymodel_map_set`.
+        Each entry is a list itself as the Shapelet chunking can result in multiple sources
+        per thread per round, as the chunking happens by sky direction as well as number of
+        shapelet coefficients.
+    all_loaded_sources_orders : List[int]
+        The order of the sources in `all_loaded_python_sources` as matched to `chunked_skymodel_map_set`;
+        orders also output by `read_skymodel_worker` (different threads finish in different times so
+        the order of the sources in `all_loaded_python_sources` may not match the order of the chunk_maps)
+    round_num : int
+        The round number of the processing
+    woden_settings_python : Woden_Settings_Python
+        The WODEN settings to be used.
+    array_layout_python : Array_Layout_Python
+        The array layout to be used.
+    visi_sets_python : List[Visi_Set_Python]
+        The exisiting visibility sets information. The results of this round
+        of processing will be added to this and put in the queue; `visi_sets_python`
+        will then need to be updated in turn with this `visi_sets_python` in
+        the main process.
+    beamtype : int
+        The value of the type of beam being used, e.g. BeamTypes.FEE_BEAM.value
+    args : argparse.Namespace
+        Command-line arguments namespace as returned by :func:`get_parser`.
+    logger : Logger
+        The logger to use for logging.
+    """
+    
+    visi_set_python, _, completed_round = woden_worker(0, all_loaded_python_sources,
+                                                       all_loaded_sources_orders,
+                                                       round_num,
+                                                       woden_settings_python,
+                                                       array_layout_python, 
+                                                       visi_sets_python[0,:],
+                                                       beamtype, args.log_level,
+                                                       args.precision,
+                                                       profile=args.profile,
+                                                       logger=logger)
+    
+    q.put((visi_set_python, completed_round))
     
 
 def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
@@ -367,6 +477,57 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                  main_table, shape_table, v_table, q_table, u_table, p_table,
                  woden_settings_python, array_layout_python, visi_sets_python,
                  logger = False, serial_mode = False, uvbeam_objs = None):
+    """
+    This function runs the WODEN processing, either in serial or parallel mode.
+    It sets up the WODEN settings, array layout, and visibility set arrays,
+    and then runs the WODEN processing in either serial or parallel mode.
+    It also handles the logging and profiling of the processing.
+    Parameters
+    ----------
+    num_threads : int
+        The number of threads to use for processing.
+    num_rounds : int
+        The number of rounds of processing to perform.
+    chunked_skymodel_map_sets : List[Skymodel_Chunk_Map]
+        A list of chunked skymodel map sets.
+    lsts : np.ndarray
+        Local Sidereal Times (LSTs) for all time steps.
+    latitudes : np.ndarray
+        Latitudes of the array at all time steps; when doing array precession,
+        these will all be slightly different.
+    args : argparse.Namespace
+        Command-line arguments namespace.
+    beamtype : int
+        The value of the type of beam being used, e.g. BeamTypes.FEE_BEAM.value
+    main_table : Table
+        Main table containing skymodel data.
+    shape_table : Table
+        Table containing Shapelet data.
+    v_table : Table
+        Table containing V polarisation data (if not needed, can be boolean False)
+    q_table : Table
+        Table containing Q polarisation data (if not needed, can be boolean False)
+    u_table : Table
+        Table containing U polarisation data (if not needed, can be boolean False)
+    p_table : Table
+        Table containing P polarisation data (if not needed, can be boolean False)
+    woden_settings_python : Woden_Settings_Python
+        The WODEN settings to be used.
+    array_layout_python : Array_Layout_Python
+        The array layout to be used.
+    visi_sets_python : List[List[Visi_Set_Python]]
+        Place to output the visibilities to. Should be of shape (num_visi_threads, num_bands)
+        where num_visi_threads is the number of threads to use for processing
+        visibilities, and num_bands is the number of frequency bands.
+    logger : Logger
+        The logger to use for logging. If not provided, a default logger
+        will be created.
+    serial_mode : bool
+        Whether to run in serial mode (True) or parallel mode (False). Default is False.
+    uvbeam_objs : np.ndarray
+        The UVBeam objects to use for the primary beam calculations. Only needed
+        if the beamtype is in `BeamGroups.uvbeam_beams`.
+    """
     
     if not logger:
         logger = simple_logger(args.log_level)
@@ -398,17 +559,24 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                 all_loaded_python_sources.append(python_sources)
                 all_loaded_sources_orders.append(order)
                 
-            visi_set_python, _, completed_round = woden_worker(0, 
-                                                               all_loaded_python_sources,
-                                                               all_loaded_sources_orders,
-                                                               round_num,
-                                                               woden_settings_python,
-                                                               array_layout_python, 
-                                                               visi_sets_python[0,:],
-                                                               beamtype, args.log_level,
-                                                               args.precision,
-                                                               profile=args.profile,
-                                                               logger=logger)
+                q = Queue()
+                p = Process(target=woden_worker_into_queue,
+                            args=(q,
+                                all_loaded_python_sources,
+                                all_loaded_sources_orders,
+                                round_num,
+                                woden_settings_python,
+                                array_layout_python,
+                                visi_sets_python,
+                                beamtype,
+                                args,
+                                logger))
+                p.start()
+                p.join()
+
+                visi_set_python, completed_round = q.get()
+                p.terminate()
+                q.close()
                 
             
             visi_sets_python[0, :] = visi_set_python
@@ -500,7 +668,7 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                         
             with concurrent.futures.ProcessPoolExecutor(max_workers=num_sky_model_threads) as sky_model_executor:
                 
-                visi_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+                visi_executor = concurrent.futures.ProcessPoolExecutor(max_workers=1)
                 gpu_calc = None  # To store the future of the calculation thread
                 
             # # Loop through multiple rounds of data reading and calculation
