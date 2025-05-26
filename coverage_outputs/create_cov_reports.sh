@@ -41,57 +41,68 @@ if [ "$do_python" = "True" ]; then
     coverage run --source=wodenpy ../cmake_testing/wodenpy/phase_rotate/test_remove_phase_tracking.py
 
     ##primary_beam
-    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_everybeam_over_threads.py
-    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_everybeam_over_threads_MWA.py
-    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_check_ms_telescope_type_matches_element_response.py
-    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_calc_uvbeam_for_components.py
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_calc_uvbeam_for_components.py                            
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_check_ms_telescope_type_matches_element_response.py      
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_create_filtered_ms.py                                    
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_everybeam_OSKAR.py                                   
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_everybeam_over_threads_MWA.py                        
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_everybeam_over_threads.py                            
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_uvbeam_HERA.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_uvbeam_MWA.py
-    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_create_filtered_ms.py
-    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_everybeam_OSKAR.py
-
+     
     ##skymodel
-    coverage run --source=wodenpy ../cmake_testing/wodenpy/skymodel/test_crop_below_horizon.py
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/skymodel/common_skymodel_test.py
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/skymodel/fits_skymodel_common.py
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/skymodel/read_skymodel_common.py
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/skymodel/test_check_columns_fits.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/skymodel/test_create_skymodel_chunk_map.py
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/skymodel/test_crop_below_horizon.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/skymodel/test_map_chunk_pointgauss.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/skymodel/test_map_chunk_shapelets.py
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/skymodel/test_read_FITS_radec_count_components.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/skymodel/test_read_FITS_skymodel_chunk.py
-    coverage run --source=wodenpy ../cmake_testing/wodenpy/skymodel/test_check_columns_fits.py
-    coverage run --source=wodenpy ../cmake_testing/wodenpy/skymodel/test_read_text_skymodel_chunk.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/skymodel/test_read_skymodel_chunk.py
-    coverage run --source=wodenpy ../cmake_testing/wodenpy/skymodel/test_calc_everybeam_for_components.py
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/skymodel/test_read_text_skymodel_chunk.py
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/skymodel/test_read_yaml_skymodel_chunk.py
 
     ##use_libwoden
     export CMAKE_CURRENT_SOURCE_DIR=../cmake_testing/wodenpy/use_libwoden/
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/use_libwoden/test_check_for_everybeam.py
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/use_libwoden/test_convert_woden_settings_to_ctypes.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/use_libwoden/test_create_sbf.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/use_libwoden/test_fill_woden_settings_python.py
-    coverage run --source=wodenpy ../cmake_testing/wodenpy/use_libwoden/test_convert_woden_settings_to_ctypes.py
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/use_libwoden/test_make_skymodel_structs.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/use_libwoden/test_setup_lsts_and_phase_centre.py
 
     ##uvfits
-    coverage run --source=wodenpy ../cmake_testing/wodenpy/uvfits/test_RTS_encoding.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/uvfits/test_create_uvfits.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/uvfits/test_make_antenna_table.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/uvfits/test_make_baseline_date_arrays.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/uvfits/test_read_uvfits_into_pyuvdata.py
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/uvfits/test_RTS_encoding.py
 
     ##run_setup
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/edit_metafits.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/test_argument_inputs.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/test_get_code_version.py
-    # coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/test_make_logger.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/test_log_chosen_beamtype.py
+    # coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/test_make_logger.py
 
     #scripts
     coverage run --source=add_woden_uvfits ../cmake_testing/scripts/add_woden_uvfits/test_add_woden_uvfits.py
     coverage run --source=concat_woden_uvfits ../cmake_testing/scripts/concat_woden_uvfits/test_concat_woden_uvfits.py
+    coverage run --source=woden_uv2ms ../cmake_testing/scripts/woden_uv2ms/test_woden_uv2ms.py
+    coverage run --source=add_instrumental_effects_woden ../cmake_testing/scripts/add_instrumental_effects_woden/test_add_instrumental_effects_woden.py
+
+    ##Do some weird multiple runs of the test_run_woden.py script to make sure
+    ##that the coverage actually gets captured correctly. Weirdness happens due
+    ##to parallel processing within the script, and the unittest framework
+    ##also running things in parallel.
     coverage run --source=wodenpy ../cmake_testing/scripts/run_woden/test_run_woden.py
     coverage run --source=run_woden ../cmake_testing/scripts/run_woden/test_run_woden.py
     coverage run --source=run_woden ../cmake_testing/scripts/run_woden/test_run_woden.py Test.test_runs_with_profiler_on
     coverage run --source=run_woden ../cmake_testing/scripts/run_woden/test_run_woden.py Test.test_runs_with_uvbeam
-
-
     coverage run --source=wodenpy ../cmake_testing/scripts/run_woden/test_run_woden.py
-    coverage run --source=woden_uv2ms ../cmake_testing/scripts/woden_uv2ms/test_woden_uv2ms.py
-    coverage run --source=add_instrumental_effects_woden ../cmake_testing/scripts/add_instrumental_effects_woden/test_add_instrumental_effects_woden.py
 
     #convert output to something that codecov accepts
     coverage combine #--keep

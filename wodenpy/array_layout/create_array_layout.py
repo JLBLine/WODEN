@@ -464,6 +464,5 @@ def convert_array_layout_to_ctypes(array_layout_python : Array_Layout_Python,
     array_layout_ctypes.latitude = array_layout_python.latitude
     array_layout_ctypes.num_baselines = array_layout_python.num_baselines
     array_layout_ctypes.num_tiles = array_layout_python.num_tiles
-    # array_layout_ctypes.lst_base = array_layout_python.lst_base
     
     return array_layout_ctypes

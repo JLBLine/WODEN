@@ -166,3 +166,7 @@ cmake_testing/GPU_or_C_code/primary_beam/plots
 
 examples/HERA_sim/hera_beam
 examples/HERA_sim/*.zip
+
+examples/relocate_everybeam_array/*.txt
+examples/relocate_everybeam_array/*.uvfits
+examples/relocate_everybeam_array/*.ms
