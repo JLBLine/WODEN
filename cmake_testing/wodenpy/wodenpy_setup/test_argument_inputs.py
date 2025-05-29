@@ -1149,6 +1149,43 @@ class Test(unittest.TestCase):
         
         
         
+        ##Now check the single file settings, rather than the CST list
+        ##remove the cst option, and add the single file option
+        ##add a borked path to check that this fails
+        self.inputs.pop(-1)
+        self.inputs.append(f'--uvbeam_file_path=note_a_file.txt')
+        self.assert_check_args_errors()
+        
+        ##parser only checks if file exists, not if it is a valid (UVBeam can do that)
+        ##so we can check things run here via an existing path
+        self.inputs.pop(-1)
+        self.inputs.append(f'--uvbeam_file_path={code_dir}/eg_cst_file_list.csv')
+        
+        args = self.run_parser_and_check_args()
+        
+        self.assertEqual(args.primary_beam, 'uvbeam_HERA')
+        self.assertEqual(args.uvbeam_file_path, f'{code_dir}/eg_cst_file_list.csv')
+        self.assertEqual(args.latitude, location.lat.value)
+        self.assertEqual(args.longitude, location.lon.value)
+        self.assertEqual(args.array_height, location.height.value)
+        
+        ##have made behaviour to default to single file if both
+        ##--cst_file_list and --uvbeam_file_path are set, so check that
+        
+        self.inputs.append(f'--cst_file_list={code_dir}/eg_cst_file_list.csv')
+        
+        self.assertEqual(args.primary_beam, 'uvbeam_HERA')
+        self.assertEqual(args.uvbeam_file_path, f'{code_dir}/eg_cst_file_list.csv')
+        self.assertEqual(args.latitude, location.lat.value)
+        self.assertEqual(args.longitude, location.lon.value)
+        self.assertEqual(args.array_height, location.height.value)
+        
+        ##assert that args.cst_paths doesn't exist
+        self.assertFalse(hasattr(args, 'cst_paths'))
+        self.assertFalse(hasattr(args, 'cst_freqs'))
+        
+
+        
 ##Run the test
 if __name__ == '__main__':
     unittest.main()

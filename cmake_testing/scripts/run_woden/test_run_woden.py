@@ -414,7 +414,7 @@ class Test(unittest.TestCase):
         self.check_uvfits_contents("test_run_woden_band01.uvfits")
         
         
-    def test_runs_with_uvbeam(self):
+    def test_runs_with_uvbeam_MWA(self):
         
         args = []
         args.append("--band_nums=1")
@@ -432,7 +432,7 @@ class Test(unittest.TestCase):
         
         ##we don't actually care what the outputs are here; this is just
         ##to check that it runs without error. All the myriad other tests
-        ##get into the nitty gritty of the outputs.
+        ##get into the nitty gritty of the output values.
             
     def test_runs_multiple_GPU_rounds(self):
         """Want to check that multiple rounds of processing work correctly.
@@ -501,11 +501,11 @@ class Test(unittest.TestCase):
         
         rw.main(args)
         
-        with fits.open("woden_LOFAR-MRO_EoR1_band02.uvfits") as hdu:
-            ant_table = hdu[1]
-            data_table = hdu[0]
+        # with fits.open("woden_LOFAR-MRO_EoR1_band02.uvfits") as hdu:
+        #     ant_table = hdu[1]
+        #     data_table = hdu[0]
             
-            print(data_table.data.data[0,0,0,0,:,:])
+            # print(data_table.data.data[0,0,0,0,:,:])
             
             # ##Test that a bunch of named columns in the data table are correct
             # npt.assert_allclose(self.uu, data_table.data['UU']*speed_of_light.value, atol=1e-12)
@@ -513,6 +513,28 @@ class Test(unittest.TestCase):
             # npt.assert_allclose(np.zeros(self.num_baselines), data_table.data['WW']*speed_of_light.value, atol=1e-12)
             
             # npt.assert_allclose(self.expec_data, data_table.data.data, atol=1e-12)
+            
+    def test_runs_with_uvbeam_HERA_FITS(self):
+        """Check it runs with the HERA uvbeam FITS file. Run test at MRO so
+        we can use same obsevational settings and sky model as other tests"""
+        
+        args = []
+        args.append("--band_nums=1")
+        args.append("--num_time_steps=1")
+        args.append("--num_freq_channels=1")
+        args.append("--latitude=-26.703319405555554")
+        args.append("--longitude=116.67081523611111")
+        args.append("--height=377.0")
+        args.append(f"--metafits_filename={code_dir}/../../../examples/metafits/1125949472_metafits.fits")
+        args.append(f"--cat_filename={code_dir}/simple_sky.txt")
+        args.append("--output_uvfits_prepend=test_run_woden")
+        args.append("--primary_beam=uvbeam_HERA")
+        args.append(f"--uvbeam_file_path={code_dir}/../../wodenpy/primary_beam/NF_HERA_Dipole_small.fits")
+        args.append(f"--array_layout={code_dir}/simple_array.txt")
+        args.append("--num_threads=1")
+        args.append("--cpu_mode")
+        
+        rw.main(args)
         
         
 ##Run the test

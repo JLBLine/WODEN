@@ -225,10 +225,13 @@ def simple_logger(logging_level: int = logging.DEBUG):
         Configured logger instance.
     """
     
-    logger = logging.getLogger(__name__)
-    logging.basicConfig(level=logging_level,
-                        format='%(asctime)s - %(levelname)s - %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S')
+    logger = logging.getLogger("WODEN")
+    
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s',
+                                           '%Y-%m-%d %H:%M:%S'))
+    logger.addHandler(handler)
+    
     return logger
 
 
@@ -313,7 +316,7 @@ def _everybeam_settings_string(logger: logging.Logger, woden_settings: object, a
     return out_string
 
 
-def _cst_uvbeam_settings_string(logger: logging.Logger, args: argparse.Namespace,
+def _uvbeam_settings_string(logger: logging.Logger, args: argparse.Namespace,
                               beam : str) -> str:
     """
     Generates a string describing the settings for the EveryBeam primary beam.
@@ -333,11 +336,16 @@ def _cst_uvbeam_settings_string(logger: logging.Logger, args: argparse.Namespace
         A formatted string describing the EveryBeam primary beam settings.
     """
     
-    out_string = f"Will create a {beam} beam from CST files listed in this file:"
-    out_string +=  f"\n\t{args.cst_file_list}"
-    out_string += f"\nHave read the following frequencies from this file:"
-    out_string += f"\n\t{args.cst_freqs}"
+    if hasattr(args, 'cst_freqs'):
     
+        out_string = f"Will create a {beam} beam from CST files listed in this file:"
+        out_string +=  f"\n\t{args.cst_file_list}"
+        out_string += f"\nHave read the following frequencies from this file:"
+        out_string += f"\n\t{args.cst_freqs}"
+
+    else:
+        out_string = f"Will create a {beam} beam from the following file:"
+        out_string +=  f"\n\t{args.uvbeam_file_path}"
         
     return out_string
 
@@ -387,7 +395,7 @@ def log_chosen_beamtype(logger: logging.Logger, woden_settings: object,
         logger.info(mwa_beam_string)
         
     elif woden_settings.beamtype == BeamTypes.UVB_HERA.value:
-        hera_beam_string = _cst_uvbeam_settings_string(logger, args, 'HERA')
+        hera_beam_string = _uvbeam_settings_string(logger, args, 'HERA')
         logger.info(hera_beam_string)
 
     else:

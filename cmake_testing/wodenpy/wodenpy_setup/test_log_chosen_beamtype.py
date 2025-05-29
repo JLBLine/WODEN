@@ -46,10 +46,13 @@ class Test(unittest.TestCase):
             args.eb_ra_point = args.ra0
             args.eb_dec_point = args.dec0
             args.pointed_ms_file_name = Path("path/to/pointed_ms")
-            
+        
         if args.primary_beam == 'uvbeam_HERA':
-            args.cst_file_list = 'uwotm8.txt'
-            args.cst_freqs = [100e+6, 150e+6, 200e+6]
+            if "--uvbeam_file_path=path/to/uvbeam.fits" in self.inputs:
+                pass
+            else:
+                args.cst_file_list = 'uwotm8.txt'
+                args.cst_freqs = [100e+6, 150e+6, 200e+6]
         
         self.args = args
         
@@ -179,12 +182,19 @@ class Test(unittest.TestCase):
         expected_lines = ["Primary beam type not recognised. This shouldn't be possible if you've used wodenpy.woden_setup.run_setup.check_args().\n"]
         self.read_lines_check_against_expected(expected_lines)
         
-    def test_with_uvbeam_HERA(self):
+    def test_with_uvbeam_HERA_CST(self):
         self.run_log_beamtype(['--primary_beam=uvbeam_HERA'])
         expected_lines = [f"Will create a HERA beam from CST files listed in this file:\n",
                           f"\t{self.args.cst_file_list}\n",
                           f"Have read the following frequencies from this file:\n",
                           f"\t{self.args.cst_freqs}\n"]
+        self.read_lines_check_against_expected(expected_lines)
+        
+    def test_with_uvbeam_HERA_FITS(self):
+        self.run_log_beamtype(['--primary_beam=uvbeam_HERA', 
+                               '--uvbeam_file_path=path/to/uvbeam.fits'])
+        expected_lines = [f"Will create a HERA beam from the following file:\n",
+                          f"\t{self.args.uvbeam_file_path}\n"]
         self.read_lines_check_against_expected(expected_lines)
     
 if __name__ == '__main__':

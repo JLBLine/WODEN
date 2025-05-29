@@ -108,7 +108,7 @@ def setup_MWA_uvbeams(hdf5_path: str, freqs: np.ndarray,
     return uvbeam_objs
 
 
-def setup_HERA_uvbeams(filenames: list[str], freqs: np.ndarray[float],
+def setup_HERA_uvbeams_from_CST(filenames: list[str], freqs: np.ndarray[float],
                        logger : Logger = False) -> np.array:
     """
     Setup the HERA uvbeam object, using a list of CST simulation files
@@ -153,6 +153,41 @@ def setup_HERA_uvbeams(filenames: list[str], freqs: np.ndarray[float],
         model_name='E-field pattern - Rigging height 4.9m',
         model_version='1.0',
         )
+    
+    herabeam.peak_normalize()
+    
+    return np.array([herabeam], dtype=object)
+
+
+def setup_HERA_uvbeams_from_single_file(filepath: str,
+                                 logger : Logger = False) -> np.array:
+    """
+    Setup the HERA uvbeam object, using the single file path to a UVBeam
+    file (e.g. a beam FITS file). Will try to initialise the UVBeam object
+    using the `pyuvdata.UVBeam.from_file` method.
+    
+    Currently only supports a single beam object, so the output
+    is a 1D array of length 1. Can be extended to support multiple beams
+    by modifying to taking in a list of filepaths.
+    
+    Parameters
+    ------------
+    filenames : str
+        Path to a single UVBeam file (e.g. a FITS file) containing the HERA beam
+    logger : Logger, optional
+        A logger object to log messages. If False, a default logger is created.
+        Defaults to False.
+
+    Returns
+    --------
+    np.array
+        Array of HERA uvbeam objects, currently of length 1.
+    """
+    
+    if logger is False:
+        logger = simple_logger()
+    
+    herabeam = UVBeam.from_file(filepath)
     
     herabeam.peak_normalize()
     
@@ -224,7 +259,7 @@ def run_uvbeam(uvbeam_objs: np.ndarray[UVBeam],
         freq_interp = False
         if not getattr(run_uvbeam, "_warned_three_freqs", False):
         
-            msg = "Number of CST files submitted to HERA pyvudata UVBeam is less than 3.\n"
+            msg = "Number of frequencies in the UVBeam object is less than 3.\n"
             msg += "WODEN will proceed, but will switch off frequency interpolation.\n"
             msg += "UVBeam needs at least three frequencies to perform default interpolation.\n"
             msg += "Further warnings of this type will be suppressed.\n"

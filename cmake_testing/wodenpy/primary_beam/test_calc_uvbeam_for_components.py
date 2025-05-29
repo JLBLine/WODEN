@@ -9,7 +9,7 @@ import unittest
 import numpy as np
 import numpy.testing as npt
 
-from wodenpy.primary_beam.use_uvbeam import calc_uvbeam_for_components, setup_MWA_uvbeams, setup_HERA_uvbeams
+from wodenpy.primary_beam.use_uvbeam import calc_uvbeam_for_components, setup_MWA_uvbeams, setup_HERA_uvbeams_from_CST, setup_HERA_uvbeams_from_single_file
 from wodenpy.use_libwoden.skymodel_structs import Components_Python
 from astropy.coordinates import EarthLocation
 from astropy import units as u
@@ -74,6 +74,11 @@ class Test(unittest.TestCase):
                                    interp_freqs,
                                    j2000_latitudes, j2000_lsts)
         
+        # print(components.gxs)
+        # print(components.Dxs)
+        # print(components.Dys)
+        # print(components.gys)
+        
         ##I've intentionally put the central coord at beam centre, so we should
         ##get gains of 1 and leakages of 0
         atol=4e-4
@@ -88,10 +93,6 @@ class Test(unittest.TestCase):
         npt.assert_allclose(components.Dys, expec_Dys, rtol=1e-4, atol=atol)
         npt.assert_allclose(components.gys, expec_gys, rtol=1e-4, atol=atol)
         
-        # print(components.gxs)
-        # print(components.Dxs)
-        # print(components.Dys)
-        # print(components.gys)
         
     def test_MWA_zenith(self):
         """Run test using an MWA beam. Skip if we can't find the hdf5 file"""
@@ -132,8 +133,8 @@ class Test(unittest.TestCase):
         except KeyError:
             print("MWA_FEE_HDF5 not set. Skipping test on MWA beam as cannot access FEE hdf5 file")
             
-    def test_HERA(self):
-        """Run test using an MWA beam. Skip if we can't find the hdf5 file"""
+    def test_HERA_from_CST(self):
+        """Run test using an HERA beam made from CST files."""
         
         location = known_telescope_location("HERA")
     
@@ -157,9 +158,37 @@ class Test(unittest.TestCase):
         load_freqs = np.array([100, 125])
         filenames = [f'{code_dir}/HERA_4.9m_E-pattern_{int(freq)}MHz.txt' for freq in load_freqs]
         
+        uvbeam_objs = setup_HERA_uvbeams_from_CST(filenames, load_freqs*1e+6)
         
+        freqs = np.array([110e+6])
         
-        uvbeam_objs = setup_HERA_uvbeams(filenames, load_freqs*1e+6)
+        self.run_calc_uvbeam_for_components(uvbeam_objs, hera_lat, hera_long,
+                                            freqs, date, expec_gxs, expec_Dxs,
+                                            expec_Dys, expec_gys)
+        
+    def test_HERA_from_FITS(self):
+        """Run test using an HERA beam made from a single FITS file."""
+        
+        location = known_telescope_location("HERA")
+    
+        hera_lat = location.lat.rad
+        hera_long = location.lon.rad
+        date = "2024-07-21T20:13:00"
+        
+        expec_gxs = [ 0.02018872-0.02733598j,  0.05969875+0.01843239j, -0.79901318-0.60131288j,
+                      0.0434535 -0.00588061j, -0.01377475-0.01347978j]
+        expec_Dxs = [-1.60819249e-02+2.65616147e-02j, -1.43199114e-02-1.72719201e-02j,
+                      -4.96312003e-05-6.61203429e-06j,  1.20484967e-02-1.06622968e-02j,
+                      1.34610696e-03-1.88635679e-02j]
+        expec_Dys = [1.62948355e-02-1.64310449e-02j, 1.78479329e-02-7.60350004e-03j,
+                      4.96312003e-05+6.61203429e-06j, 3.63231466e-04-9.10834317e-03j,
+                      6.80607408e-03-1.24032166e-02j]
+        expec_gys = [ 0.01967479-0.02339772j,  0.0603888 +0.01131459j, -0.79901318-0.60131288j,
+                      0.04383092-0.0065169j,  -0.01258404-0.011599j  ]
+        
+        filepath = f'{code_dir}/NF_HERA_Dipole_small.fits'
+        
+        uvbeam_objs = setup_HERA_uvbeams_from_single_file(filepath)
         
         freqs = np.array([110e+6])
         

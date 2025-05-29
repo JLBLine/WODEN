@@ -14,7 +14,7 @@ from wodenpy.use_libwoden.skymodel_structs import Components_Python
 from astropy.coordinates import EarthLocation
 from astropy import units as u
 from astropy.time import Time
-from wodenpy.primary_beam.use_uvbeam import run_uvbeam, setup_HERA_uvbeams
+from wodenpy.primary_beam.use_uvbeam import run_uvbeam, setup_HERA_uvbeams_from_CST
 import importlib_resources
 import mwa_hyperbeam
 from astropy.io import fits
@@ -152,7 +152,7 @@ class Test(unittest.TestCase):
         ras = np.radians(ras)
         decs = np.radians(decs)
         
-        uvbeam_objs = setup_HERA_uvbeams(filenames, freqs)
+        uvbeam_objs = setup_HERA_uvbeams_from_CST(filenames, freqs)
         
         uvbeam_jones = run_uvbeam(uvbeam_objs, ras, decs,
                                   latitudes, lsts,
@@ -206,7 +206,7 @@ class Test(unittest.TestCase):
         
         freqs = np.array([100e+6, 125e+6, 150e+6])
         filenames = [f'{code_dir}/HERA_4.9m_E-pattern_{int(freq/1e+6)}MHz.txt' for freq in freqs]
-        interp_freqs = np.array([1050e+6, 120e+6, 137e+6])
+        interp_freqs = np.array([105e+6, 120e+6, 137e+6])
         
         self.do_HERA_beam_test(filenames, interp_freqs)
         
@@ -222,7 +222,7 @@ class Test(unittest.TestCase):
         with self.assertLogs() as cm:
         
             ##This is the message we expect to see
-            msg = "Number of CST files submitted to HERA pyvudata UVBeam is less than 3.\n"
+            msg = "Number of frequencies in the UVBeam object is less than 3.\n"
             msg += "WODEN will proceed, but will switch off frequency interpolation.\n"
             msg += "UVBeam needs at least three frequencies to perform default interpolation.\n"
             msg += "Further warnings of this type will be suppressed.\n"
@@ -232,16 +232,16 @@ class Test(unittest.TestCase):
             ##should only have one logging message
             self.assertEqual(len(cm.output), 1)
             
-            ##The output message will have 'WARNING:wodenpy.wodenpy_setup.woden_logger:' at the start
+            ##The output message will have 'WARNING:WODEN:' at the start
             ##so we need to remove that
-            output_msg = cm.output[0].split('WARNING:wodenpy.wodenpy_setup.woden_logger:')[1]
+            output_msg = cm.output[0].split('WARNING:WODEN:')[1]
             self.assertEqual(output_msg, msg)
         
             ##If we run the same command again, we should not see the message
             ##repeated
             self.do_HERA_beam_test(filenames, interp_freqs)
             self.assertEqual(len(cm.output), 1)
-            output_msg = cm.output[0].split('WARNING:wodenpy.wodenpy_setup.woden_logger:')[1]
+            output_msg = cm.output[0].split('WARNING:WODEN:')[1]
             self.assertEqual(output_msg, msg)
             
 

@@ -157,8 +157,8 @@ def get_parser():
             "\t - uvbeam_MWA (pyuvdata.uvbeam MWA model; \n"
             "\t\t defaults to using env variable $MWA_FEE_HDF5 as input; \n"
             "\t\t use `--hdf5_beam_path` to specifiy otherwise)\n"
-            "\t - uvbeam_HERA (pyuvdata.uvbeam HERA beam model from CST simulations. \n"
-            "\t\t requires `--cst_file_list` to specifiy CST file locations and frequencies)\n"
+            "\t - uvbeam_HERA (pyuvdata.uvbeam HERA beam model either from CST simulations \n"
+            "\t\t via `--cst_file_list` or some other UVBeam file via `--uvbeam_file_path`)\n"
             "\t - none (Don't use a primary beam at all)\n"
             "Defaults to --primary_beam=none")
     tel_group.add_argument('--off_cardinal_dipoles', default=False, action='store_true',
@@ -233,9 +233,15 @@ def get_parser():
               'measurement set to pass to EveryBeam. ')
     
     uvb_group = parser.add_argument_group('PYUVDATA UVBEAM PRIMARY BEAM OPTIONS')
+    uvb_group.add_argument('--uvbeam_file_path', default=False,
+                           help='When using --primary_beam=uvbeam_HERA, '
+                                'use this to point to a single UVBeam file to use, '
+                                'e.g. --uvbeam_file_path=/path/to/beamfile.fits. '
+                                'Assumes the file is a functional UVBeam file; '
+                                'error messages associated from file will come from pyuvdata. ')
     uvb_group.add_argument('--cst_file_list', default=False,
                            help='When using --primary_beam=uvbeam_HERA, '
-                                'must provide a list of CST simulation file locations. '
+                                'can also provide a list of CST simulation file locations. '
                                 'Provided via a csv file, where the first column is the '
                                 'path to the CST file, and the second column is the '
                                 'frequency in Hz. Must be comma separated. '
@@ -819,9 +825,19 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     ##Make sure user has specified a text file linking to CST files for the
     ##uvbeam HERA beam pattern
     if args.primary_beam == 'uvbeam_HERA':
-        if not args.cst_file_list:
-            exit('ERROR: To use the uvbeam_HERA beam, you must specify a path to the'
+        if not args.cst_file_list and not args.uvbeam_file_path:
+            exit('ERROR: To use the uvbeam_HERA beam, you must specify either a path '
+                 'to a single UVBeam file using --uvbeam_file_path, or a path to the a '
                  ' CST file list using --cst_file_list. Exiting now as WODEN will fail.')
+        elif args.cst_file_list and args.uvbeam_file_path:
+            print('WARNING: You have specified both --cst_file_list and --uvbeam_file_path. '\
+                  'WODEN will use the --uvbeam_file_path and ignore the CST file list.')
+        elif args.uvbeam_file_path:
+            ##check file exists
+            if not os.path.isfile(args.uvbeam_file_path):
+                exit('ERROR: The uvbeam file specified by user as:\n'
+                     '\t--uvbeam_file_path={:s} does not exist.\n'
+                     'Exiting now as WODEN will fail.'.format(args.uvbeam_file_path))
         else:
             try:
                 args.cst_paths = []

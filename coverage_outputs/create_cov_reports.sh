@@ -47,7 +47,8 @@ if [ "$do_python" = "True" ]; then
     coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_everybeam_OSKAR.py                                   
     coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_everybeam_over_threads_MWA.py                        
     coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_everybeam_over_threads.py                            
-    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_uvbeam_HERA.py
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_uvbeam_HERA_CST.py
+    coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_uvbeam_HERA_FITS.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/primary_beam/test_run_uvbeam_MWA.py
      
     ##skymodel
@@ -114,7 +115,8 @@ fi
 ##delete things that were written out by running tests
 rm -r WODEN_array_layout.txt *.uvfits *.json \
     example.txt test_load_data.dat test_full_skymodel* \
-    woden_settings.txt *.so *.png *.npz  *.lprof *.log *.ms
+    woden_settings.txt cropped_sky_models.txt \
+    *.so *.png *.npz  *.lprof *.log *.ms
 
 # ##Use this to create two local reports, one for C and one for python
 # ##Only uncomment if you want to see the reports locally without pushing to codecov

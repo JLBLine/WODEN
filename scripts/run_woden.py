@@ -43,7 +43,7 @@ from multiprocessing import Process, Queue
 from datetime import timedelta
 import traceback
 import shutil
-from wodenpy.primary_beam.use_uvbeam import setup_MWA_uvbeams, setup_HERA_uvbeams
+from wodenpy.primary_beam.use_uvbeam import setup_MWA_uvbeams, setup_HERA_uvbeams_from_CST, setup_HERA_uvbeams_from_single_file
 
 ##Constants
 R2D = 180.0 / np.pi
@@ -470,6 +470,7 @@ def woden_worker_into_queue(q : Queue,
                                                        logger=logger)
     
     q.put((visi_set_python, completed_round))
+    return
     
 
 def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
@@ -572,9 +573,9 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                                 args,
                                 logger))
                 p.start()
-                p.join()
-
+                
                 visi_set_python, completed_round = q.get()
+                p.join()
                 p.terminate()
                 q.close()
                 
@@ -901,6 +902,7 @@ def main(argv=None):
 
         ##Setup UVBeam objects; only have to do this once, so do it
         ##before looping over all the sky model chunks
+        ##TODO pull this out and whack into a function in wodenpy.primary_beams.use_uvbeam.py
         
         if woden_settings_python.beamtype in BeamGroups.uvbeam_beams:
             main_logger.info("Creating UVBeam objects. This may take a while")
@@ -922,8 +924,17 @@ def main(argv=None):
                                                 dipole_amps, pixels_per_deg = 5)
                 
             elif woden_settings_python.beamtype == BeamTypes.UVB_HERA.value:
-                uvbeam_objs = setup_HERA_uvbeams(args.cst_paths, args.cst_freqs,
-                                                 main_logger)
+                
+                ##We only give args the attribute cst_paths if we are
+                ##using CST files, so check for that and run accordingly
+                if hasattr(args, 'cst_paths'):
+                
+                    uvbeam_objs = setup_HERA_uvbeams_from_CST(args.cst_paths,
+                                                              args.cst_freqs,
+                                                              main_logger)
+                else:
+                    uvbeam_objs = setup_HERA_uvbeams_from_single_file(args.uvbeam_file_path,
+                                                                      main_logger)
             
             main_logger.info("UVBeam objects have been initialised")
             
