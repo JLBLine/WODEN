@@ -158,10 +158,17 @@ def woden_worker(thread_ind : int,
             # print(f"Visibility processing thread {thread_ind} has no work to do")
             return visi_sets_python, thread_ind, round_num
         
+        if woden_settings_python.beamtype in BeamGroups.python_calc_beams:
+            start = time()
+            logger.info(f"Coverting sky model and beam values into `ctypes` for sky set {round_num}")
         ##Create a ctypes Source_Catalogue from the python sources to feed the GPU
         source_catalogue = create_source_catalogue_from_python_sources(python_sources,
                                                                     woden_struct_classes,
                                                                     beamtype, precision)
+        if woden_settings_python.beamtype in BeamGroups.python_calc_beams:
+            end = time()
+            logger.info(f"`ctype` catalogue for round {round_num} created in {end-start:.1f} seconds")
+            # print(f"Created source catalogue for round {round_num} in {end-start:.1f} seconds")
         
         woden_settings = woden_struct_classes.Woden_Settings()
         woden_settings = convert_woden_settings_to_ctypes(woden_settings_python, woden_settings)
@@ -548,7 +555,7 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
             all_loaded_sources_orders = []
             
             for i in range(num_threads):
-                python_sources, order = read_skymodel_worker(i + round_num * num_threads,
+                outputs = read_skymodel_worker(i + round_num * num_threads,
                                                             num_threads, 
                                                             chunked_skymodel_map_sets,
                                                             lsts, latitudes,
@@ -556,29 +563,33 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                                                             main_table, shape_table,
                                                             v_table, q_table, u_table, p_table,
                                                             logger, uvbeam_objs)
-            
-                all_loaded_python_sources.append(python_sources)
-                all_loaded_sources_orders.append(order)
-                
-                q = Queue()
-                p = Process(target=woden_worker_into_queue,
-                            args=(q,
-                                all_loaded_python_sources,
-                                all_loaded_sources_orders,
-                                round_num,
-                                woden_settings_python,
-                                array_layout_python,
-                                visi_sets_python,
-                                beamtype,
-                                args,
-                                logger))
-                p.start()
-                
-                visi_set_python, completed_round = q.get()
-                p.join()
-                p.terminate()
-                q.close()
-                
+                if len(outputs) == 2:
+                    python_sources, order = outputs
+                    all_loaded_python_sources.append(python_sources)
+                    all_loaded_sources_orders.append(order)
+                    
+                    q = Queue()
+                    p = Process(target=woden_worker_into_queue,
+                                args=(q,
+                                    all_loaded_python_sources,
+                                    all_loaded_sources_orders,
+                                    round_num,
+                                    woden_settings_python,
+                                    array_layout_python,
+                                    visi_sets_python,
+                                    beamtype,
+                                    args,
+                                    logger))
+                    p.start()
+                    
+                    visi_set_python, completed_round = q.get()
+                    p.join()
+                    p.terminate()
+                    q.close()
+                    
+                else:
+                    logger.error(f"{outputs}")
+                    sys.exit(f"{outputs}")
             
             visi_sets_python[0, :] = visi_set_python
             done_n_points, done_n_gauss, done_n_shapes, done_n_shape_coeffs = sum_components_in_chunked_skymodel_map_sets(chunked_skymodel_map_sets[:completed_round + 1])
@@ -1037,7 +1048,7 @@ def main(argv=None):
                                         num_time_steps=args.num_time_steps,
                                         v_container=v_container,
                                         num_baselines=num_baselines)
-
+                
             hdu_ant = make_antenna_table(XYZ_array=XYZ_array,telescope_name=args.telescope_name,
                         num_antennas=args.num_antennas, freq_cent=central_freq_chan_value,
                         date=args.date, gst0_deg=gst0_deg, degpdy=degpdy,

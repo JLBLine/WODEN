@@ -128,7 +128,9 @@ def make_antenna_table(XYZ_array : np.ndarray, telescope_name : str, num_antenna
     col2 = fits.Column(array=XYZ_array,name='STABXYZ',format='3D')
     ##col3 makes an empty array, and the format states skip reading this column
     ##Just replicating the example uvfits I've been using
-    col3 = fits.Column(array=np.array([]),name='ORBPARM',format='0D')
+    ##Removed the ORBPARM column as latest verison of astropy errors with a
+    ##zero-length column
+    # col3 = fits.Column(array=np.array([]),name='ORBPARM',format='0D')
     col4 = fits.Column(array=np.arange(1,num_antennas+1),name='NOSTA',format='1J')
     col5 = fits.Column(array=np.zeros(num_antennas),name='MNTSTA',format='1J')
     col6 = fits.Column(array=np.zeros(num_antennas),name='STAXOF',format='1E')
@@ -140,16 +142,10 @@ def make_antenna_table(XYZ_array : np.ndarray, telescope_name : str, num_antenna
     col12 = fits.Column(array=np.zeros(num_antennas),name='POLCALB',format='1E')
 
     ##Stick the columns into a ColDefs
-    coldefs = fits.ColDefs([col1,col2,col3,col4,col5,col6, \
+    coldefs = fits.ColDefs([col1,col2,col4,col5,col6, \
                             col7,col8,col9,col10,col11,col12])
 
-    ##Use the columns to for a BinTableHDU object. This is shoved into the
-    ##uvfits file later
-    ##Astropy doesn't like the fact we have a zero sized column (col3 see above)
-    ##so supress the warning when making the BinTableHDU
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        hdu_ant = fits.BinTableHDU.from_columns(coldefs, name="AIPS AN")
+    hdu_ant = fits.BinTableHDU.from_columns(coldefs, name="AIPS AN")
 
     ##-----Add some header values that seem to be needed by casa/RTS/WSClean
     ##Absolute reference point of the centre of the array

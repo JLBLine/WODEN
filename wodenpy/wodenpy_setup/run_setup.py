@@ -1266,7 +1266,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
             args.telescope_name = 'GAUSSIAN'
         elif args.primary_beam in ['EDA2']:
             args.telescope_name = 'EDA2'
-        elif args.telescope_name in ['uvbeam_HERA']:
+        elif args.primary_beam in ['uvbeam_HERA']:
             args.telescope_name = 'HERA'
         else:
             args.telescope_name = 'UNKNOWN'

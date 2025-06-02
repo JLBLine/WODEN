@@ -14,11 +14,12 @@
 .. _EveryBeam: https://everybeam.readthedocs.io/en/latest/index.html
 .. _Line et al. 2022: https://joss.theoj.org/papers/10.21105/joss.03676
 .. _hyperbeam: https://github.com/MWATelescope/mwa_hyperbeam
+.. _pyuvdata UVBeam: https://pyuvdata.readthedocs.io/en/latest/uvbeam.html#uvbeam
 
 The WODEN visibility simulator
 =================================
 
-``WODEN`` is Python / C / C++ / GPU code designed to be able to simulate low-frequency radio interferometric data. It is written to be simplistic and *fast* to allow all-sky simulations. Although ``WODEN`` was primarily written to simulate Murchinson Widefield Array (MWA, `Tingay et al. 2013`_) visibilities, it is becoming less instrument-specific as time goes on. `WODEN` outputs `uvfits` files. Currently, the ``MWA`` primary beam is supported via `hyperbeam`_; ``LOFAR`` and ``OSKAR``-style primary beams are supported vis the `EveryBeam`_ package; ``EDA2``, an analytic ``MWA`` beam, and a simple Gaussian beam are supported natively to ``WODEN``.
+``WODEN`` is Python / C / C++ / GPU code designed to be able to simulate low-frequency radio interferometric data. It is written to be simplistic and *fast* to allow all-sky simulations. Although ``WODEN`` was primarily written to simulate Murchinson Widefield Array (MWA, `Tingay et al. 2013`_) visibilities, it is becoming less instrument-specific as time goes on. `WODEN` outputs `uvfits` files. Currently, the ``MWA`` primary beam is supported via `hyperbeam`_; ``LOFAR`` and ``OSKAR``-style primary beams are supported vis the `EveryBeam`_ package; ``HERA``is supported via `pyuvdata UVBeam`_;  ``EDA2``, an analytic ``MWA`` beam, and a simple Gaussian beam are supported natively to ``WODEN``.
 
 ``WODEN`` has been written with Stokes polarisations in mind. A fully Stokes IQUV model is propagated through the polarised instrumental response (depending on which primary beam you select), and output into Stokes `XX,XY,YX,YY` polarisations. See :ref:`sky model formats` and :ref:`visibility calculations` for more information.
 
