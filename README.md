@@ -13,6 +13,11 @@
 
 <!-- > Although ``WODEN`` is still very much a great tool for MWA interferomteric simulations, I (Jack Line) am no longer working in astronomy. I'll drop in to advise and/or fix bugs from time to time, but I can't commit to developing new features I'm afraid. If you want new features (or even better, want to write new features), please reach out to the [Epoch of Reionisation group at Curtin University](https://astronomy.curtin.edu.au/research/epoch-of-reionisation/). They should know if anyone is actively working on/using the software. If you end up taking over this project, feel free to delete this message! -->
 
+> New in version 2.6-alpha:
+ - You can run `HERA` primary beams via `pyuvdata.UVBeam` models, via `--primary_beam=uvbeam_HERA`, and either linking a set of CST files via `--cst_file_list` or a single beam FITS file via `--uvbeam_file_path`.
+ - You can also run the `UVBeam` MWA beam model via `--primary_beam=uvbeam_MWA`, which will use the existing environment variables to read in `mwa_full_embedded_element_pattern.h5`. Full support for flagging and dipole amplitudes is implemented in the same way it is for `mwa_hyperbeam`. `UVBeam` does use more memory and far more compute, so be aware. It does frequency interpolation however, so gives you more spectrally smooth outputs. 
+ - Slightly experimental support to move the array location in a measurement set to a new lat/lon, e.g. you can move a LOFAR measurement set to the MWA lat/lon, and use `EveryBeam` to simulate `LOFAR` at Inyarrimanha Ilgari Bundara (MWA site). To do this, have to rotate array positions, but also renormalise each station to a new faux-zenith direction. See the example [detailed here](https://woden.readthedocs.io/en/pyuvbeam/examples/relocate_everybeam_array.html) for notes on accuracy.
+
 > New in version 2.5-alpha:
  - CPU-only mode via `--cpu_mode`! You should use this when running with an `EveryBeam` primary beam, as around 70% of all computation time is spent in the primary beam calculation. On a cluster, the GPU just sits there doing nothing but costing you and environment.
  - `EveryBeam` is now called directly from `C++` rather than the `Python` wrapper. It's a good deal faster that way.
@@ -67,7 +72,7 @@ and then run things through Docker or Singularity (more detail on that on [ReadT
 Docker versions tested to run on various Australian superclusters are listed below:
 
 - `jlbline/woden-2.3:cuda-60` - tested on Swinburne OzStar
-- `jlbline/woden-2.3:cuda-80` - tested on Swinburne Ngarrgu Tindebeek
+- `jlbline/woden-2.6:cuda-80` - tested on Swinburne Ngarrgu Tindebeek
 - `jlbline/woden-2.3:setonix` - tested on Pawsey Setonix (this is *very* experimental)
 
 To get the most control, install yourself. Again, go to [ReadTheDocs](https://woden.readthedocs.io/en/latest/installation/installation.html#dependencies) for details, but in short, you will need the dependencies:

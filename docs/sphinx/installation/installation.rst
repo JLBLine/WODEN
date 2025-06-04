@@ -19,10 +19,10 @@ Both options are described below, jump to whatever suits you.
 
 ``WODEN`` has been tested to run on the following Australian super computers:
 
-- Garrawarla (Pawsey) CUDA
-- OzStar (Swinburne University) CUDA
-- Ngarrgu Tindebeek (Swinburne University) CUDA
-- Setonix (Pawsey) HIP (only tested up to ``WODEN`` version 2.3)
+- Garrawarla (Pawsey) CUDA (only tested up to ``WODEN`` v2.3)
+- OzStar (Swinburne University) CUDA (tested ``WODEN`` v2.6, EveryBeam does not work from singularity)
+- Ngarrgu Tindebeek (Swinburne University) CUDA (tested ``WODEN`` v2.6, including EveryBeam)
+- Setonix (Pawsey) HIP (only tested up to ``WODEN`` v2.3)
 
 .. _install manual:
 
@@ -238,9 +238,17 @@ For CUDA
 
 Fair warning, this is a new option, and hasn't been heavily tested. I have successfully run it on a number of clusters (via singularity). Which version you pull depends on your GPU. If you have an NVIDIA GPU, you need to work out what your compute capability is, and pull the appropriate image. Say you have an NVIDIA V100 card, you have a compute capacity of 7.0, so you'd pull the image like this::
 
-  $ docker pull jlbline/woden-2.5:cuda-70
+  $ docker pull jlbline/woden-2.6:cuda-70
 
-I have made images for computes ``60,61,70,75,80,86``. If you need another compute, either run the Docker script to make a new docker, or just compile from source as instructed above. In theory, you can just run ``WODEN`` commands by doing something like this::
+I have made images for computes ``60,61,70,75,80,86``. If you need another compute, either run the Docker script to make a new docker image, or just compile from source as instructed above. 
+
+Alternatively, if you really want an image which can in theory run on many architectures, I've built an image with all ``60,61,70,75,80,86`` computes, called
+
+$ docker pull jlbline/woden-2.6:cuda-multi
+
+This should run on any NVIDIA GPU with a compute capability in that list. However, depending on your compute environment, it may not run as fast as a specific compute image.
+
+In theory, you can just run ``WODEN`` commands by doing something like this::
 
   $ docker run -it --gpus all woden-2.5:cuda-70 \
     --env XDG_CONFIG_HOME=/somewhere/astropy_storage \

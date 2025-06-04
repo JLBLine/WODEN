@@ -11,7 +11,7 @@ ARG ROCM_VER=5.7.3
 #Base image ROCm
 FROM quay.io/pawsey/rocm-mpich-base:rocm${ROCM_VER}-mpich3.4.3-ubuntu22
 
-ENV WODEN_TAG=v2.5.0-alpha
+ENV WODEN_TAG=v2.6.0-alpha
 ENV EVERYBEAM_TAG=mwa_python_wrapper
 ENV HYPER_VERSION=0.10.0
 ENV RUST_VERSION=1.84.0

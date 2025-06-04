@@ -106,7 +106,7 @@ if [ "$do_python" = "True" ]; then
     coverage run --source=wodenpy ../cmake_testing/scripts/run_woden/test_run_woden.py
 
     #convert output to something that codecov accepts
-    coverage combine #--keep
+    coverage combine
     coverage xml
 fi
 
