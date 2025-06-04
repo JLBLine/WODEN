@@ -173,12 +173,8 @@ class Test(unittest.TestCase):
                            np.radians(LST_deg), arr_latitude)        
         
         in_situ_jones = self.run_beam_given_inputs(arr_latitude, LST_deg, ms_path, observing_time)
-        # print(np.abs(in_situ_jones[0,0,0,:,0,0]))
         
         # # ##Next, use the function to move the array location as well
-        
-        
-        
         recentre_array=True
         create_filtered_ms(orig_ms_path, ms_path,
                            np.radians(LST_deg), arr_latitude,

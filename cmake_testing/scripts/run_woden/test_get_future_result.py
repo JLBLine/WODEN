@@ -6,23 +6,6 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import concurrent
 import sys
 
-# from astropy.io import fits
-# from unittest import mock
-# import argparse
-# from astropy.time import Time, TimeDelta
-# import numpy as np
-# from astropy.coordinates import EarthLocation
-# from astropy import units as u
-# from astropy.constants import c as speed_of_light
-
-# from wodenpy.array_layout.precession import RTS_Precess_LST_Lat_to_J2000
-# from astropy.time import Time, TimeDelta
-# import numpy as np
-# from astropy.coordinates import EarthLocation
-# from astropy import units as u
-# import scipy.optimize as opt
-# from glob import glob
-
 code_dir = os.path.realpath(__file__)
 code_dir = ('/').join(code_dir.split('/')[:-1])
 
@@ -43,9 +26,6 @@ from wodenpy.wodenpy_setup.woden_logger import simple_logger
 from ctypes import c_int, c_float, c_double, c_char_p, c_void_p
 import ctypes
 
-# from multiprocessing import Manager, set_start_method
-
-# from subprocess import call
 
 def proc_one_works_python(thread_ind):
     return thread_ind, thread_ind*2
@@ -88,18 +68,7 @@ def proc_one_fails_c(thread_ind):
     proc_one_fails_c.argtypes = [ctypes.c_int]
     proc_one_fails_c.restype = ctypes.c_int
     
-    # print("WE HERE")
-    
-    # with open("worker_stderr.log", "w") as f:
-    #     os.dup2(f.fileno(), sys.stderr.fileno())
-        
     output = proc_one_fails_c(thread_ind)
-    
-    # try:
-    #     output = proc_one_fails_c(thread_ind)
-    # except Exception as e:
-    #     msg = f"Error in proc_one_fails_c: {e}"
-    #     sys.exit(msg)
     
     return thread_ind, output
 

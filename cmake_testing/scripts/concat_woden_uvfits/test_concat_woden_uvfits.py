@@ -106,6 +106,11 @@ class Test(unittest.TestCase):
             annnames = np.array(['00001', '00002', '00003', '00004', '00005',
                                  '00006', '00007', '00008', '00009', '00010'])
 
+            ##DEPRECATED: astropy won't let me write a table with a zero-length
+            ##array in it. For now, I just don't write the ORBPARM column
+            ##leave the code here as a head-up for future developers in case you
+            ##need to bring it back for some God forsaken reason
+            
             ##ant_table.data['ORBPARM'] is a weirdo empty array type that seems
             ##to hang around in a uvfits file
             ##At some point, the behaviour of astropy changes drastically so
@@ -113,18 +118,18 @@ class Test(unittest.TestCase):
             ##So based on what mood astropy is in, create an array to test against
             ##SIIIIIIIIIIIIIIIIIGH
 
-            if ant_table.data['ORBPARM'].dtype == "float64":
-                nothing_array = np.array([], dtype='float64')
-                nothing_array.shape = (0,0)
+            # if ant_table.data['ORBPARM'].dtype == "float64":
+            #     nothing_array = np.array([], dtype='float64')
+            #     nothing_array.shape = (0,0)
 
-            else:
-                nothing_array = np.array([], dtype='|V8')
-                nothing_array.shape = (0,)
+            # else:
+            #     nothing_array = np.array([], dtype='|V8')
+            #     nothing_array.shape = (0,)
 
             ##Test that a bunch of named columns in the antenna table are correct
             self.assertTrue(np.array_equal(annnames, ant_table.data['ANNAME']))
             self.assertTrue(np.array_equal(self.XYZ_array, ant_table.data['STABXYZ']))
-            self.assertTrue(np.array_equal(nothing_array, ant_table.data['ORBPARM']))
+            # self.assertTrue(np.array_equal(nothing_array, ant_table.data['ORBPARM']))
             self.assertTrue(np.array_equal(np.arange(1, self.num_antennas+1), ant_table.data['NOSTA']))
             self.assertTrue(np.array_equal(np.zeros(self.num_antennas), ant_table.data['MNTSTA']))
             self.assertTrue(np.array_equal(np.zeros(self.num_antennas), ant_table.data['STAXOF']))

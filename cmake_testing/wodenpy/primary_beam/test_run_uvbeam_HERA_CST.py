@@ -90,9 +90,7 @@ class Test(unittest.TestCase):
     #     """Setup the """
     
     def do_HERA_beam_test(self, filenames, freqs):
-        """First of all, run `run_everybeam` to get a set of expected values
-        for given inputs. Then run `run_everybeam_over_threads` for a number
-        of threads, and check the outputs match."""
+        """."""
         
         num_freqs = len(freqs)
         num_times = 2

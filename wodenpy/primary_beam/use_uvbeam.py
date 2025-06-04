@@ -172,7 +172,7 @@ def setup_HERA_uvbeams_from_single_file(filepath: str,
     
     Parameters
     ------------
-    filenames : str
+    filepath : str
         Path to a single UVBeam file (e.g. a FITS file) containing the HERA beam
     logger : Logger, optional
         A logger object to log messages. If False, a default logger is created.

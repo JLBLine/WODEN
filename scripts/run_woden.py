@@ -160,14 +160,14 @@ def woden_worker(thread_ind : int,
         
         if woden_settings_python.beamtype in BeamGroups.python_calc_beams:
             start = time()
-            logger.info(f"Coverting sky model and beam values into `ctypes` for sky set {round_num}")
+            logger.info(f"Coverting sky model and beam values into `ctypes` for sky set {round_num} chunk {thread_ind}")
         ##Create a ctypes Source_Catalogue from the python sources to feed the GPU
         source_catalogue = create_source_catalogue_from_python_sources(python_sources,
                                                                     woden_struct_classes,
                                                                     beamtype, precision)
         if woden_settings_python.beamtype in BeamGroups.python_calc_beams:
             end = time()
-            logger.info(f"`ctype` catalogue for round {round_num} created in {end-start:.1f} seconds")
+            logger.info(f"`ctype` catalogue for round {round_num} chunk {thread_ind} created in {end-start:.1f} seconds")
             # print(f"Created source catalogue for round {round_num} in {end-start:.1f} seconds")
         
         woden_settings = woden_struct_classes.Woden_Settings()
@@ -563,6 +563,7 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                                                             main_table, shape_table,
                                                             v_table, q_table, u_table, p_table,
                                                             logger, uvbeam_objs)
+                ##If everything ran fine, should have two outputs
                 if len(outputs) == 2:
                     python_sources, order = outputs
                     all_loaded_python_sources.append(python_sources)
@@ -586,7 +587,7 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                     p.join()
                     p.terminate()
                     q.close()
-                    
+                ##Otherwise, something went wrong, so log the error
                 else:
                     logger.error(f"{outputs}")
                     sys.exit(f"{outputs}")
