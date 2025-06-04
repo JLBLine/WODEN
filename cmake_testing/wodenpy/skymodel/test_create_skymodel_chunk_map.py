@@ -53,7 +53,7 @@ class Test(BaseChunkTest):
         
         comp_counter.print_info()
         
-        beamtype_value = BeamTypes.EB_MWA.value
+        beamtype_value = BeamTypes.UVB_MWA.value
         # beamtype_value = 0
         ##Run the code we are testing!
         chunked_skymodel_counters = create_skymodel_chunk_map(comp_counter,

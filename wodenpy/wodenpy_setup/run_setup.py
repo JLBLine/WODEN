@@ -9,7 +9,7 @@ import sys
 import os
 from astropy.io import fits
 import warnings
-from casacore.tables import table
+from multiprocessing import Process, Queue
 from wodenpy.array_layout.create_array_layout import convert_ecef_to_enh
 import psutil
 import argparse
@@ -24,6 +24,9 @@ from astropy import units as u
 import importlib_resources
 from wodenpy.use_libwoden.use_libwoden import check_for_everybeam
 from wodenpy.primary_beam.use_everybeam import create_filtered_ms
+from sys import exit
+from pyuvdata.telescopes import known_telescope_location
+from typing import Union, Tuple
 
 MWA_LAT = -26.703319405555554
 MWA_LONG = 116.67081523611111
@@ -32,6 +35,11 @@ MWA_HEIGHT = 377.827
 LOFAR_LAT = 52.905329712
 LOFAR_LONG = 6.867996528
 LOFAR_HEIGHT = 0.0
+
+location = known_telescope_location('hera')
+HERA_LAT = location.lat.value
+HERA_LONG = location.lon.value
+HERA_HEIGHT = location.height.value
 
 def get_parser():
     """
@@ -85,7 +93,7 @@ def get_parser():
         help='Set the frequency (Hz) of the lowest channel for band 1. '
              'If using a metafits file, this will override the frequency in'
              ' the metafits')
-    freq_group.add_argument('--coarse_band_width', type=float, default=1.28e+6,
+    freq_group.add_argument('--coarse_band_width', default='obs',
         help='Set the width of each coarse band \
               If using a metafits file, this will override the frequency in '
               'the metafits')
@@ -108,15 +116,21 @@ def get_parser():
     tel_group = parser.add_argument_group('TELESCOPE OPTIONS')
     tel_group.add_argument('--latitude', default=np.nan, type=float,
         help='Central Latitude (deg) of the array: if --primary_beam=EB_LOFAR, '
-             f'this defaults to LOFAR at {LOFAR_LAT}, otherwise defaults to '
+             f'this defaults to LOFAR at {LOFAR_LAT}, '
+             f'elif --primary_beam=UVB_HERA, this defaults to HERA at {HERA_LAT}, '
+             'else defaults to '
              f'MWA at {MWA_LAT}. --latitude will override these defaults.')
     tel_group.add_argument('--longitude', default=np.nan, type=float,
         help='Central Longitude (deg) of the array: if --primary_beam=EB_LOFAR, '
-             f'this defaults to LOFAR at {LOFAR_LONG}, otherwise defaults to '
+             f'this defaults to LOFAR at {LOFAR_LONG}, '
+             f'elif --primary_beam=UVB_HERA, this defaults to HERA at {HERA_LONG}, '
+             'else defaults to '
              f'MWA at {MWA_LONG}. --longitude will override these defaults.')
     tel_group.add_argument('--array_height', default=np.nan, type=float,
         help='Central height (m) of the array: if --primary_beam=EB_LOFAR, '
-             f'this defaults to LOFAR at {LOFAR_HEIGHT}, otherwise defaults to '
+             f'this defaults to LOFAR at {LOFAR_HEIGHT}, '
+             f'elif --primary_beam=UVB_HERA, this defaults to HERA at {HERA_HEIGHT}, '
+             'else defaults to '
              f'MWA at {MWA_HEIGHT}. --array_height will override these defaults.')
     tel_group.add_argument('--array_layout', default=False,
         help='Instead of reading the array layout from the metafits file, read'
@@ -124,17 +138,27 @@ def get_parser():
              'centre, in east, north, height coords (metres)')
     tel_group.add_argument('--primary_beam', default="none",
         help="R|Which primary beam to use in the simulation.\nOptions are:\n"
-            "\t - MWA_FEE (MWA fully embedded element model)\n"
-            "\t - MWA_FEE_interp (MWA fully embedded element model that has had)\n"
-            "\t\t spherical harmonics interpolated over frequency\n"
+            "\t - MWA_FEE (`hyperbeam` MWA fully embedded element model;\n"
+            "\t\t defaults to using env variable $MWA_FEE_HDF5 as input; use\n"
+            "\t\t `--hdf5_beam_path` to specifiy otherwise)\n"
+            "\t - MWA_FEE_interp (`hyperbeam` MWA fully embedded element model that has had\n"
+            "\t\t spherical harmonics interpolated over frequency via ;\n"
+            "\t\t defaults to using env variable $MWA_FEE_HDF5_INTERP as input; use\n"
+            "\t\t `--hdf5_beam_path` to specifiy otherwise)\n"
             "\t - Gaussian (Analytic symmetric Gaussian)\n"
             "\t\t see --gauss_beam_FWHM and\n"
             "\t\t and --gauss_beam_ref_freq for fine control)\n"
             "\t - EDA2 (Analytic dipole with a ground mesh) \n"
             "\t - MWA_analy (MWA analytic model)\n"
-            "\t - everybeam_OSKAR (requires an OSKAR measurement set via --beam_ms_path)\n"
-            "\t - everybeam_LOFAR (requires a LOFAR measurement set via --beam_ms_path)\n"
-            "\t - everybeam_MWA (requires an MWA measurement set via --beam_ms_path)\n"
+            "\t - everybeam_OSKAR (EveryBeam OSKAR model; requires an OSKAR measurement set via --beam_ms_path)\n"
+            "\t - everybeam_LOFAR (EveryBeam LOFAR model; requires a LOFAR measurement set via --beam_ms_path)\n"
+            "\t - everybeam_MWA (EveryBeam MWA model; requires an MWA measurement set via --beam_ms_path.\n"
+            "\t\t defaults to using env variable $MWA_FEE_HDF5 as input; use `--hdf5_beam_path` to specifiy otherwise)\n"
+            "\t - uvbeam_MWA (pyuvdata.uvbeam MWA model; \n"
+            "\t\t defaults to using env variable $MWA_FEE_HDF5 as input; \n"
+            "\t\t use `--hdf5_beam_path` to specifiy otherwise)\n"
+            "\t - uvbeam_HERA (pyuvdata.uvbeam HERA beam model either from CST simulations \n"
+            "\t\t via `--cst_file_list` or some other UVBeam file via `--uvbeam_file_path`)\n"
             "\t - none (Don't use a primary beam at all)\n"
             "Defaults to --primary_beam=none")
     tel_group.add_argument('--off_cardinal_dipoles', default=False, action='store_true',
@@ -147,6 +171,25 @@ def get_parser():
     tel_group.add_argument('--telescope_name', default=False,
         help='Name of telescope written out to the uvfits file. Defaults to something "sensible" '
              'based on the primary beam being used.')
+    
+    hyper_group = parser.add_argument_group('MWA PRIMARY BEAM OPTIONS')
+    hyper_group.add_argument('--hdf5_beam_path', default=False,
+        help='Location of the hdf5 file holding the MWA FEE beam coefficients')
+    hyper_group.add_argument('--MWA_FEE_delays', default=False,
+        help='R|A list of 16 delays to point the MWA FEE primary beam \n'
+              'model enter as as list like: \n'
+              '--MWA_FEE_delays=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]\n'
+              'for a zenith pointing. This is read directly from\n'
+              'the metafits if using a metafits file. Only effects `hyperbeam`, '
+              '`uvbeam`, and analytic MWA models; `everybeam` reads delays from a measurement set')
+    
+    hyper_group.add_argument('--use_MWA_dipflags', default=False, action='store_true',
+        help='Apply the dipole flags stored in the metafits file. Only effects'
+             ' `hyperbeam` and `uvbeam` models, does not work on analytic or `everybeam` models.')
+    hyper_group.add_argument('--use_MWA_dipamps', default=False, action='store_true',
+        help='Attempt to use bespoke MWA dipole amplitudes stored in the metafits'
+             ' file. Must be stored under the `DipAmps` column. Only effects'
+             ' `hyperbeam` and `uvbeam` models, does not work on analytic or `everybeam` models.')
     
     eb_group = parser.add_argument_group('EVERYBEAM PRIMARY BEAM OPTIONS')
     eb_group.add_argument('--beam_ms_path', default=False,
@@ -183,6 +226,27 @@ def get_parser():
               'this defaults to whatever is in --beam_ms_path. '
               'If added, `--eb_dec_point` will trigger WODEN to create a minimal '
               'copy of the measurement set with the pointing set to this value')
+    eb_group.add_argument('--move_array_to_latlon', default=False, action='store_true',
+        help='Use the arguments in --latitude and --longitude to move the array '
+              'to a new location. Does a number of rotations to the linked '
+              'measuerment in --beam_ms_path. Writes results to a new '
+              'measurement set to pass to EveryBeam. ')
+    
+    uvb_group = parser.add_argument_group('PYUVDATA UVBEAM PRIMARY BEAM OPTIONS')
+    uvb_group.add_argument('--uvbeam_file_path', default=False,
+                           help='When using --primary_beam=uvbeam_HERA, '
+                                'use this to point to a single UVBeam file to use, '
+                                'e.g. --uvbeam_file_path=/path/to/beamfile.fits. '
+                                'Assumes the file is a functional UVBeam file; '
+                                'error messages associated from file will come from pyuvdata. ')
+    uvb_group.add_argument('--cst_file_list', default=False,
+                           help='When using --primary_beam=uvbeam_HERA, '
+                                'can also provide a list of CST simulation file locations. '
+                                'Provided via a csv file, where the first column is the '
+                                'path to the CST file, and the second column is the '
+                                'frequency in Hz. Must be comma separated. '
+                                'If there are commas in the path/filenames '
+                                'this will fail. ')
     
     gauss_group = parser.add_argument_group('GAUSSIAN PRIMARY BEAM OPTIONS')
     gauss_group.add_argument('--gauss_beam_FWHM', default=20, type=float,
@@ -201,24 +265,6 @@ def get_parser():
         help='The initial Dec (deg) to point the Gaussian beam at. Defaults '
         'to the Dec of the metafits if available, or the Dec of the phase centre'
         ' if not')
-
-    hyper_group = parser.add_argument_group('HYPERBEAM PRIMARY BEAM OPTIONS')
-    hyper_group.add_argument('--hdf5_beam_path', default=False,
-        help='Location of the hdf5 file holding the MWA FEE beam coefficients')
-    hyper_group.add_argument('--MWA_FEE_delays', default=False,
-        help='R|A list of 16 delays to point the MWA FEE primary beam \n'
-              'model enter as as list like: \n'
-              '--MWA_FEE_delays=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]\n'
-              'for a zenith pointing. This is read directly from\n'
-              'the metafits if using a metafits file')
-    
-    hyper_group.add_argument('--use_MWA_dipflags', default=False, action='store_true',
-        help='Apply the dipole flags stored in the metafits file. Only works'
-             ' for the MWA FEE currently, not the MWA analytic model')
-    hyper_group.add_argument('--use_MWA_dipamps', default=False, action='store_true',
-        help='Attempt to use bespoke MWA dipole amplitudes stored in the metafits'
-             ' file. Must be stored under the `DipAmps` column. Only works'
-             ' for the MWA FEE currently, not the MWA analytic model')
 
     input_group = parser.add_argument_group('INPUT/OUTPUT OPTIONS')
     input_group.add_argument('--IAU_order', default=False, action='store_true',
@@ -246,7 +292,8 @@ def get_parser():
              'horizon for the given LST. By default, '
              'WODEN will include any COMPONENT above the horizon, regardless '
              'of which SOURCE it belongs to. If --sky_crop_source is included '
-             'for each SOURCE in the sky model, if any COMPONENT is below the ' 'horizon, the entire source will be flagged')
+             'for each SOURCE in the sky model, if any COMPONENT is below the '
+             'horizon, the entire source will be flagged')
     input_group.add_argument('--do_autos', default=False, action='store_true',
         help='By default, WODEN only calculates cross-correlations. Add this'
              ' flag to include auto-correlations.')
@@ -307,6 +354,83 @@ def get_parser():
     
     return parser
 
+def worker_get_enh_from_measurement_set(args : argparse.Namespace, q : Queue):
+    """
+    Worker function to get the antenna positions in ENH coordinates from a
+    measurement set. This is done in a separate process because it uses 
+    `python-casacore`. Running `import casacore` creates a `c++` state with 
+    a number of library paths and casacore global variables. If `libuse_everybeam.so`
+    has been built with against a different casacore library, this causes epic
+    intermittent errors and segfaults. To void this, run the import in this
+    separate thread process, which isolates the state of the `c++` library.
+    
+    TODO: All calls to `python-casacore` should be done via direct calls to
+    casacore in c++ in `libuse_everybeam.so`. This removes all conflicts;
+    however, this is a large task and will take time to implement. For now,
+    this is a workaround to avoid the segfaults and errors.
+     
+    
+    Parameters
+    ----------
+    args : `argparse.Namespace`
+        The populated arguments `args = parser.parse_args()` as returned from
+        the parser given by :func:`~run_setup.get_parser`
+    q : `multiprocessing.Queue`
+        The queue to put the results in. Places arrays of `east`, `north`, 
+        `height` and `ant_names` in the queue.
+    """
+    
+    from casacore.tables import table
+    with table(args.beam_ms_path + '/ANTENNA') as t: 
+        num_ants = len(t)
+        args.num_antennas = num_ants
+        ant_locations = np.array([t.getcell('POSITION', ant) for ant in range(num_ants)])
+        ##convert from ECEF to ENH, as WODEN starts with enh coords
+        east, north, height = convert_ecef_to_enh(ant_locations[:,0],
+                                    ant_locations[:,1], ant_locations[:,2],
+                                    np.radians(args.orig_long),
+                                    np.radians(args.orig_lat))
+        
+        ant_names = np.array([t.getcell('NAME', ant) for ant in range(num_ants)])
+        
+    ##Put the results in a queue
+    q.put((east, north, height, ant_names))
+    
+def get_enh_from_measurement_set(args : argparse.Namespace) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Get the antenna positions and names in ENH coordinates from a measurement set.
+    
+    Runs :func:`~worker_get_enh_from_measurement_set` in a separate process to
+    avoid `python-casacore` clashing with WODEN-built `libuse_everybeam.so`.
+    See :func:`~worker_get_enh_from_measurement_set` for more details. 
+
+    Parameters
+    ----------
+    args : `argparse.Namespace`
+        The populated arguments `args = parser.parse_args()` as returned from
+        the parser given by :func:`~run_setup.get_parser`
+
+    Returns
+    -------
+    east : np.ndarray
+        The east coordinates of the antennas in ENH coordinates
+    north : np.ndarray
+        The north coordinates of the antennas in ENH coordinates
+    height : np.ndarray
+        The height coordinates of the antennas in ENH coordinates
+    ant_names : np.ndarray
+        The names of the antennas in the measurement set
+
+    """
+    
+    q = Queue()
+    p = Process(target=worker_get_enh_from_measurement_set, args=(args, q))
+    p.start()
+    p.join()
+    
+    east, north, height, ant_names = q.get()
+    
+    return east, north, height, ant_names
+
 def select_argument_and_check(parser_arg : bool, parser_value : bool,
                               metafits_arg : bool, parser_string : str,
                               do_exit : bool = True):
@@ -366,8 +490,8 @@ def select_correct_enh(args):
     Parameters
     ----------
     args : `argparse.Namespace`
-        The populated arguments `args = parser.parse_args()`` as returned from
-        the parser given by :func:`~run_woden.get_parser`
+        The populated arguments `args = parser.parse_args()` as returned from
+        the parser given by :func:`~run_setup.get_parser`
     """
 
     if args.array_layout == "from_the_metafits":
@@ -383,20 +507,14 @@ def select_correct_enh(args):
         
     elif args.array_layout == "from_ms":
         ##TODO work out how to get the lat/lon of the array from the measurement set
-        with table(args.beam_ms_path + '/ANTENNA') as t: 
-            num_ants = len(t)
-            args.num_antennas = num_ants
-            ant_locations = np.array([t.getcell('POSITION', ant) for ant in range(num_ants)])
-            ##convert from ECEF to ENH, as WODEN starts with enh coords
-            east, north, height = convert_ecef_to_enh(ant_locations[:,0],
-                                        ant_locations[:,1], ant_locations[:,2],
-                                        np.radians(args.longitude),
-                                        np.radians(args.latitude))
+        
+        east, north, height, ant_names = get_enh_from_measurement_set(args)
             
-            args.east = east
-            args.north = north
-            args.height = height
-            args.ant_names = np.array([t.getcell('NAME', ant) for ant in range(num_ants)])
+        args.east = east
+        args.north = north
+        args.height = height
+        args.ant_names = ant_names
+        args.num_antennas = len(east)
         
     else:
         try:
@@ -412,6 +530,112 @@ def select_correct_enh(args):
         except:
             exit("Could not read array layout file:\n"
                  "\t{:s}\nExiting before woe beings".format(args.array_layout))
+            
+            
+def worker_get_observation_info_from_measurement_set(args : argparse.Namespace,
+                                                     q : Queue):
+    """Worker function to get the observation information from a measurement set.
+    
+    This is done in a separate process because it uses `python-casacore`.
+    Running `import casacore` creates a `c++` state with a number of library paths
+    and casacore global variables. If `libuse_everybeam.so` has been built with
+    against a different casacore library, this causes epic intermittent errors
+    and segfaults. To void this, run the import in this separate thread process,
+    which isolates the state of the `c++` library.
+    
+    TODO: All calls to `python-casacore` should be done via direct calls to
+    casacore in c++ in `libuse_everybeam.so`. This removes all conflicts;
+    however, this is a large task and will take time to implement. For now,
+    this is a workaround to avoid the segfaults and errors.
+    
+    Parameters
+    ----------
+    args : `argparse.Namespace`
+        The populated arguments `args = parser.parse_args()` as returned from
+        the parser given by :func:`~run_setup.get_parser`
+    q : `multiprocessing.Queue`
+        The queue to put the results in. Places arrays of `date`, `time_res`,
+        `num_time_steps`, `freq_res`, `lowest_channel_freq`, `highest_channel_freq`,
+        `b_width`, `ra0`, and `dec0` in the queue.
+    """
+    
+    from casacore.tables import table
+    with table(args.beam_ms_path) as ms:
+            
+        first_time_mjd = ms.getcol("TIME_CENTROID")[0]
+        time_res = ms.getcol("INTERVAL")[0]
+        
+        times = ms.getcol("TIME")
+        num_time_steps = np.unique(times).size
+        
+        date = Time((first_time_mjd - time_res/2.0)*u.s, format='mjd')
+        date = date.datetime.strftime('%Y-%m-%dT%H:%M:%S')
+        
+    with table(f"{args.beam_ms_path}/SPECTRAL_WINDOW") as spw:
+
+        # Get frequency resolution
+        freq_res = spw.getcol("RESOLUTION")[0][0]
+        num_frequencies = spw.getcol("NUM_CHAN")[0]
+        
+        ##TODO subtract half a freq res from the lowest channel freq??
+        lowest_channel_freq = spw.getcol("CHAN_FREQ")[0][0]
+        highest_channel_freq = spw.getcol("CHAN_FREQ")[0][-1]
+        
+        b_width = num_frequencies*freq_res
+        
+    with table(args.beam_ms_path+'::FIELD', readonly=False) as field_table:
+        ra0, dec0 = np.squeeze(field_table.getcol('PHASE_DIR'))
+        
+    q.put((date, time_res, num_time_steps, freq_res, lowest_channel_freq,
+            highest_channel_freq, b_width, ra0, dec0))
+        
+def get_observation_info_from_measurement_set(args : argparse.Namespace) -> Tuple[str, float, int, float, float, float, float, float, float]:
+    """Get the observation information from a measurement set. 
+    
+    Runs :func:`~worker_get_observation_info_from_measurement_set` in a separate process to
+    avoid `python-casacore` clashing with WODEN-built `libuse_everybeam.so`.
+    See :func:`~worker_get_observation_info_from_measurement_set` for more details.
+
+    Parameters
+    ----------
+    args : `argparse.Namespace`
+        The populated arguments `args = parser.parse_args()` as returned from
+        the parser given by :func:`~run_setup.get_parser`
+
+    Returns
+    -------
+    date : str
+        The date of the observation in YYYY-MM-DDThh:mm:ss format
+    time_res : float
+        The time resolution of the observation in seconds
+    num_time_steps : int
+        The number of time steps in the observation
+    freq_res : float
+        The frequency resolution of the observation in Hz
+    lowest_channel_freq : float
+        The frequency of the lowest channel in Hz
+    highest_channel_freq : float
+        The frequency of the highest channel in Hz
+    b_width : float
+        The bandwidth of the observation in Hz
+    ra0 : float
+        The RA of the phase centre in degrees
+    dec0 : float
+        The Dec of the phase centre in degrees
+
+    """
+    
+    q = Queue()
+    p = Process(target=worker_get_observation_info_from_measurement_set,
+                args=(args, q))
+    p.start()
+    p.join()
+    
+    date, time_res, num_time_steps, freq_res, lowest_channel_freq, \
+            highest_channel_freq, b_width, ra0, dec0 = q.get()
+    
+    return date, time_res, num_time_steps, freq_res, lowest_channel_freq, \
+            highest_channel_freq, b_width, ra0, dec0
             
             
 def get_antenna_order(tilenames: np.ndarray) -> np.ndarray:
@@ -436,8 +660,7 @@ def get_antenna_order(tilenames: np.ndarray) -> np.ndarray:
     ##This is bad as we use this to re-order dipole amplitude and flags
     ##later on; so only select one of the pols, do an argsort, and
     ##expand back to both pols
-    tilenames = tilenames[np.arange(0, len(tilenames), 2)]
-    order = np.argsort(tilenames)
+    order = np.argsort(tilenames[np.arange(0, len(tilenames), 2)])
     
     antenna_order = np.empty(2*len(order), dtype=int)
     antenna_order[np.arange(0, 2*len(order), 2)] = 2*order
@@ -454,8 +677,8 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     Parameters
     ----------
     args : `argparse.Namespace`
-        The populated arguments `args = parser.parse_args()`` as returned from
-        the parser given by :func:`~run_woden.get_parser`
+        The populated arguments `args = parser.parse_args()` as returned from
+        the parser given by :func:`~run_setup.get_parser`
 
     Returns
     -------
@@ -479,7 +702,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     ##the end ourselves
     output_uvfits_prepend = args.output_uvfits_prepend
     if output_uvfits_prepend[-7:] == '.uvfits':
-        args.output_uvfits_prepend = output_uvfits_prepend[-7:]
+        args.output_uvfits_prepend = output_uvfits_prepend[:-7]
         
     ##Check that the output directory exists, if not make it
     uvfits_path = Path(args.output_uvfits_prepend)
@@ -493,11 +716,20 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
         lat = LOFAR_LAT
         long = LOFAR_LONG
         height = LOFAR_HEIGHT
+    elif args.primary_beam == 'uvbeam_HERA':
+        location = known_telescope_location("HERA")
+        lat = HERA_LAT
+        long = HERA_LONG
+        height = HERA_HEIGHT
     else:
         lat = MWA_LAT
         long = MWA_LONG
         height = MWA_HEIGHT
-            
+        
+    args.orig_lat = lat
+    args.orig_long = long
+    args.orig_height = height
+    
     if np.isnan(args.latitude): args.latitude = lat
     if np.isnan(args.longitude): args.longitude = long
     if np.isnan(args.array_height): args.array_height = height
@@ -510,26 +742,32 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     if args.primary_beam not in ['MWA_FEE', 'Gaussian', 'EDA2', 'none', 'None',
                                  'MWA_FEE_interp', 'MWA_analy',
                                  'everybeam_OSKAR', 'everybeam_LOFAR',
-                                 'everybeam_MWA']:
+                                 'everybeam_MWA', 'uvbeam_MWA', 'uvbeam_HERA']:
         sys.exit('Primary beam option --primary_beam must be one of:\n'
-             '\t Gaussian, EDA2, none, MWA_FEE, MWA_FEE_interp, '
-             'MWA_analy, everybeam_OSKAR, everybeam_LOFAR, everybeam_MWA, \n'
+             '\t Gaussian, EDA2, none, MWA_FEE, MWA_FEE_interp, \n'
+             '\tMWA_analy, everybeam_OSKAR, everybeam_LOFAR, everybeam_MWA, \n'
+             '\tuvbeam_MWA, uvbeam_HERA\n'
              'User has entered --primary_beam={:s}\n'
              'Please fix and try again. Exiting now'.format(args.primary_beam))
 
     ##Be a little flexible in how people specify 'none'
     if args.primary_beam in ['None', 'none']:
         args.primary_beam = 'none'
-
-    ##If we're using the MWA FEE beam, make sure we can find the stored
-    ##spherical harmonics file
-    if args.primary_beam == 'MWA_FEE':
+        
+    requested_mwa_hdf5_found = False
+    
+    if args.primary_beam in ['MWA_FEE', 'MWA_FEE_interp', 'everybeam_MWA', 'uvbeam_MWA']:
         if args.hdf5_beam_path:
             if not os.path.isfile(args.hdf5_beam_path):
                 exit('Could not open hdf5 MWA FEE path as specified by user as:\n'
                      '\t--hdf5_beam_path={:s}.\n'
                      'This will cause WODEN to fail, exiting now'.format(args.hdf5_beam_path))
-        else:
+            requested_mwa_hdf5_found = True
+
+    ##If we're using the MWA FEE beam, make sure we can find the stored
+    ##spherical harmonics file
+    if args.primary_beam in ['MWA_FEE', 'everybeam_MWA', 'uvbeam_MWA']:
+        if not requested_mwa_hdf5_found:
             try:
                 MWA_FEE_HDF5 = os.environ['MWA_FEE_HDF5']
                 args.hdf5_beam_path = MWA_FEE_HDF5
@@ -542,15 +780,10 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
                      'variable MWA_FEE_HDF5 must point towards the file\n'
                      'mwa_full_embedded_element_pattern.h5. Exiting now as WODEN will fail.')
 
-    ##If we're using the MWA FEE beam, make sure we can find the stored
+    ##If we're using the interpolated MWA FEE beam, make sure we can find the stored
     ##spherical harmonics file
     elif args.primary_beam == 'MWA_FEE_interp':
-        if args.hdf5_beam_path:
-            if not os.path.isfile(args.hdf5_beam_path):
-                exit('Could not open hdf5 MWA FEE path as specified by user as:\n'
-                     '\t--hdf5_beam_path={:s}.\n'
-                     'This will cause WODEN to fail, exiting now'.format(args.hdf5_beam_path))
-        else:
+        if not requested_mwa_hdf5_found:
             try:
                 MWA_FEE_HDF5_INTERP = os.environ['MWA_FEE_HDF5_INTERP']
                 args.hdf5_beam_path = MWA_FEE_HDF5_INTERP
@@ -562,26 +795,6 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
                 exit('To use MWA FEE intrep beam, either --hdf5_beam_path or environment\n'
                      'variable MWA_FEE_HDF5_INTERP must point towards the file\n'
                      'MWA_embedded_element_pattern_rev2_interp_167_197MHz.h5. Exiting now as WODEN will fail.')
-                
-    if args.primary_beam == 'everybeam_MWA':
-        
-        if args.hdf5_beam_path:
-            if not os.path.isfile(args.hdf5_beam_path):
-                exit('Could not open hdf5 MWA FEE path as specified by user as:\n'
-                     '\t--hdf5_beam_path={:s}.\n'
-                     'This will cause WODEN to fail, exiting now'.format(args.hdf5_beam_path))
-        else:
-            try:
-                MWA_FEE_HDF5 = os.environ['MWA_FEE_HDF5']
-                args.hdf5_beam_path = MWA_FEE_HDF5
-                if not os.path.isfile(args.hdf5_beam_path):
-                    exit('Could not open hdf5 MWA FEE path as specified by user as:\n'
-                         '\t--environ["MWA_FEE_HDF5"]={:s}.\n'
-                         'This will cause WODEN to fail, exiting now'.format(args.hdf5_beam_path))
-            except KeyError:
-                exit('To use EveryBeam MWA, either --hdf5_beam_path or environment\n'
-                     'variable MWA_FEE_HDF5 must point towards the file\n'
-                     'mwa_full_embedded_element_pattern.h5. Exiting now as WODEN will fail.')
                 
     eb_args = ['everybeam_OSKAR', 'everybeam_LOFAR', 'everybeam_MWA']
     
@@ -609,6 +822,41 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
                  f'{woden_lib_path} was compiled without the everybeam library. '
                  'Exiting now as WODEN will fail.')
             
+    ##Make sure user has specified a text file linking to CST files for the
+    ##uvbeam HERA beam pattern
+    if args.primary_beam == 'uvbeam_HERA':
+        if not args.cst_file_list and not args.uvbeam_file_path:
+            exit('ERROR: To use the uvbeam_HERA beam, you must specify either a path '
+                 'to a single UVBeam file using --uvbeam_file_path, or a path to the a '
+                 ' CST file list using --cst_file_list. Exiting now as WODEN will fail.')
+        elif args.cst_file_list and args.uvbeam_file_path:
+            print('WARNING: You have specified both --cst_file_list and --uvbeam_file_path. '\
+                  'WODEN will use the --uvbeam_file_path and ignore the CST file list.')
+        elif args.uvbeam_file_path:
+            ##check file exists
+            if not os.path.isfile(args.uvbeam_file_path):
+                exit('ERROR: The uvbeam file specified by user as:\n'
+                     '\t--uvbeam_file_path={:s} does not exist.\n'
+                     'Exiting now as WODEN will fail.'.format(args.uvbeam_file_path))
+        else:
+            try:
+                args.cst_paths = []
+                args.cst_freqs = []   
+                with open(args.cst_file_list, 'r') as f:
+                    lines = f.readlines()
+                    
+                    for line in lines:
+                        line = line.split(',')
+                        if len(line) != 2:
+                            exit('ERROR: The CST file list must have two columns, '
+                                 'the first being the path to the CST file, and the second '
+                                 'being the frequency in Hz. Exiting now as WODEN will fail.')
+                        args.cst_paths.append(line[0])
+                        args.cst_freqs.append(float(line[1]))
+            except FileNotFoundError:
+                exit(f'ERROR: The CST file list does not exist. Exiting now as WODEN will fail.')
+            
+            
     if args.band_nums == 'all':
         args.band_nums = range(1,25)
     else:
@@ -631,6 +879,8 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     num_time_steps = False
     date = False
     array_layout = False
+    coarse_b_width = False
+    b_width = False
 
     ##read in args from the metafits if requested
     if args.metafits_filename:
@@ -670,13 +920,16 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
             freq_res = float(f[0].header['FINECHAN'])*1e+3
             freqcent = float(f[0].header['FREQCENT'])*1e+6
             b_width = float(f[0].header['BANDWDTH'])*1e+6
+            coarse_b_width = b_width / 24.0
             lowest_channel_freq = freqcent - (b_width/2) - (freq_res/2)
             
             num_time_steps = int(f[0].header['NSCANS'])
-
+            
+            ##IF somehow to the delays have a 32 in them, set it to 0
             delays = np.array(f[0].header['DELAYS'].split(','),dtype=int)
             delays[np.where(delays == 32)] = 0
-            MWA_FEE_delays = str(list(delays))
+            
+            MWA_FEE_delays = ','.join([str(int(d)) for d in delays])
 
             ##If user hasn't specified a pointing for a Gaussian beam,
             ##fill in using the metafits file
@@ -695,7 +948,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
             
     ##Do this here to allow people to run a simulation using the measurement set
     ##to set observational parameters, but with a different primary beam e.g. None
-    elif args.beam_ms_path:
+    if args.beam_ms_path:
         if not os.path.isdir(args.beam_ms_path):
             exit('Could not open measurement set specified by user as:\n'
                  '\t--beam_ms_path={:s}.\n'
@@ -703,36 +956,13 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
             
         array_layout = "from_ms"
             
-        with table(args.beam_ms_path) as ms:
+        date, time_res, num_time_steps, freq_res, lowest_channel_freq, \
+            highest_channel_freq, b_width, ra0, dec0 = get_observation_info_from_measurement_set(args)
             
-            first_time_mjd = ms.getcol("TIME_CENTROID")[0]
-            time_res = ms.getcol("INTERVAL")[0]
-            
-            times = ms.getcol("TIME")
-            num_time_steps = np.unique(times).size
-            
-            date = Time((first_time_mjd - time_res/2.0)*u.s, format='mjd')
-            date = date.datetime.strftime('%Y-%m-%dT%H:%M:%S')
-            
-        with table(f"{args.beam_ms_path}/SPECTRAL_WINDOW") as spw:
-    
-            # Get frequency resolution
-            freq_res = spw.getcol("RESOLUTION")[0][0]
-            num_frequencies = spw.getcol("NUM_CHAN")[0]
-            
-            ##TODO subtract half a freq res from the lowest channel freq??
-            lowest_channel_freq = spw.getcol("CHAN_FREQ")[0][0]
-            highest_channel_freq = spw.getcol("CHAN_FREQ")[0][-1]
-            
-            args.coarse_band_width = num_frequencies*freq_res
-            
-        with table(args.beam_ms_path+'::FIELD', readonly=False) as field_table:
-            ra0, dec0 = np.squeeze(field_table.getcol('PHASE_DIR'))
-            
-            if np.isnan(args.ra0):    
-                args.ra0 = np.degrees(ra0)
-            if np.isnan(args.dec0):
-                args.dec0 = np.degrees(dec0)
+        if np.isnan(args.ra0):    
+            args.ra0 = np.degrees(ra0)
+        if np.isnan(args.dec0):
+            args.dec0 = np.degrees(dec0)
         
         make_pointed_ms = False
                 
@@ -760,12 +990,28 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
             args.pointed_ms_file_name = Path(f"{output_dir}/pointed_{uvfits_name}_band{band_num_string}.ms")
             
             if not args.dry_run:
-                create_filtered_ms(args.beam_ms_path, args.pointed_ms_file_name.as_posix(),
-                                np.radians(beam_ra0), np.radians(beam_dec0))
+                if args.move_array_to_latlon:
+                    create_filtered_ms(args.beam_ms_path,
+                                       args.pointed_ms_file_name.as_posix(),
+                                       np.radians(beam_ra0), np.radians(beam_dec0),
+                                       True, np.radians(lat), np.radians(long),
+                                       np.radians(args.latitude), np.radians(args.longitude))
+                else:
+                    create_filtered_ms(args.beam_ms_path, args.pointed_ms_file_name.as_posix(),
+                                    np.radians(beam_ra0), np.radians(beam_dec0))
         else:
             args.pointed_ms_file_name = False
                 
-        
+    
+    if args.coarse_band_width == 'obs':
+        if coarse_b_width:
+            args.coarse_band_width = coarse_b_width
+        elif b_width:
+            args.coarse_band_width = b_width
+        else:
+            args.coarse_band_width = 1.28e+6
+    else:
+        args.coarse_band_width = float(args.coarse_band_width)
             
     ##Override metafits and/or load arguments
     args.lowest_channel_freq = select_argument_and_check(args.lowest_channel_freq,
@@ -804,8 +1050,9 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
         except:
             exit(message)
 
-    ##Do the test on MWA_FEE_delays only if this is an MWA_FEE simulation
-    if args.primary_beam == 'MWA_FEE' or args.primary_beam == 'MWA_FEE_interp' or args.primary_beam == 'MWA_analy':
+    ##Do the test on MWA_FEE_delays only if this particular primary beam
+    ##needs MWA delays
+    if args.primary_beam in ['MWA_FEE', 'MWA_FEE_interp', 'MWA_analy', 'uvbeam_MWA']:
         args.MWA_FEE_delays = select_argument_and_check(args.MWA_FEE_delays,
                                       args.MWA_FEE_delays,
                                       MWA_FEE_delays, "MWA_FEE_delays")
@@ -817,12 +1064,12 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     else:
         args.num_freq_channels = int(args.num_freq_channels)
 
-    # if args.primary_beam == 'everybeam_OSKAR' or args.primary_beam == 'everybeam_LOFAR' or args.primary_beam == 'everybeam_MWA':
-    #     if len(args.band_nums) > 1:
-    #         exit('ERROR: --band_nums must be a single band when using everybeam '
-    #              'as these beam models are calculated on the CPU; the bands '
-    #              'are iterated over the GPU. Please iterate over bands by '
-    #              'multiple calls to run_woden.py. Exiting now.')
+    if args.primary_beam == 'uvbeam_MWA':
+        if len(args.band_nums) > 1:
+            exit('ERROR: --band_nums must be a single band when using everybeam '
+                 'as these beam models are calculated on the CPU; the bands '
+                 'are iterated over the GPU. Please iterate over bands by '
+                 'multiple calls to run_woden.py. Exiting now.')
             
 
     ##If pointing for Gaussian beam is not set, point it at the phase centre
@@ -856,7 +1103,8 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     ##Do dipole flags first
     args.dipflags = np.ones(2*args.num_antennas*16)
     if args.use_MWA_dipflags:
-        if args.primary_beam != 'MWA_FEE' and args.primary_beam != 'MWA_FEE_interp':
+        # if args.primary_beam != 'MWA_FEE' and args.primary_beam != 'MWA_FEE_interp':
+        if args.primary_beam not in ['MWA_FEE', 'MWA_FEE_interp', 'uvbeam_MWA']:
             exit('ERROR: --use_MWA_dipflags can only be used with the MWA FEE beam'
                  ' so must be used with --primary_beam=MWA_FEE or --primary_beam=MWA_FEE_interp.')
             
@@ -941,7 +1189,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     ##Now do dipole amplitudes
     args.dipamps = np.ones(2*args.num_antennas*16)
     if args.use_MWA_dipamps:
-        if args.primary_beam != 'MWA_FEE' and args.primary_beam != 'MWA_FEE_interp':
+        if args.primary_beam not in ['MWA_FEE', 'MWA_FEE_interp', 'uvbeam_MWA']:
             exit('ERROR: --use_MWA_dipamps can only be used with the MWA FEE beam'
                  ' so must be used with --primary_beam=MWA_FEE or --primary_beam=MWA_FEE_interp.')
             
@@ -1018,6 +1266,8 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
             args.telescope_name = 'GAUSSIAN'
         elif args.primary_beam in ['EDA2']:
             args.telescope_name = 'EDA2'
+        elif args.primary_beam in ['uvbeam_HERA']:
+            args.telescope_name = 'HERA'
         else:
             args.telescope_name = 'UNKNOWN'
             

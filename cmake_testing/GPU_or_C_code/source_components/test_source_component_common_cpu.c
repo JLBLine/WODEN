@@ -97,6 +97,26 @@ void test_source_component_common_ConstantDecEveryBeamOSKARShapelet_cpu(void){
   test_source_component_common_ConstantDecEveryBeamOSKAR(SHAPELET, 0);
 }
 
+void test_source_component_common_ConstantDecUVBeamMWAPoint_cpu(void){
+  test_source_component_common_ConstantDecUVBeamMWA(POINT, 0);
+}
+void test_source_component_common_ConstantDecUVBeamMWAGaussian_cpu(void){
+  test_source_component_common_ConstantDecUVBeamMWA(GAUSSIAN, 0);
+}
+void test_source_component_common_ConstantDecUVBeamMWAShapelet_cpu(void){
+  test_source_component_common_ConstantDecUVBeamMWA(SHAPELET, 0);
+}
+
+void test_source_component_common_ConstantDecUVBeamHERAPoint_cpu(void){
+  test_source_component_common_ConstantDecUVBeamHERA(POINT, 0);
+}
+void test_source_component_common_ConstantDecUVBeamHERAGaussian_cpu(void){
+  test_source_component_common_ConstantDecUVBeamHERA(GAUSSIAN, 0);
+}
+void test_source_component_common_ConstantDecUVBeamHERAShapelet_cpu(void){
+  test_source_component_common_ConstantDecUVBeamHERA(SHAPELET, 0);
+}
+
 //Run the test with unity
 int main(void)
 {
@@ -141,6 +161,13 @@ int main(void)
       RUN_TEST(test_source_component_common_ConstantDecEveryBeamOSKARShapelet_cpu);
     #endif
 
+    RUN_TEST(test_source_component_common_ConstantDecUVBeamMWAPoint_cpu);
+    RUN_TEST(test_source_component_common_ConstantDecUVBeamMWAGaussian_cpu);
+    RUN_TEST(test_source_component_common_ConstantDecUVBeamMWAShapelet_cpu);
+
+    RUN_TEST(test_source_component_common_ConstantDecUVBeamHERAPoint_cpu);
+    RUN_TEST(test_source_component_common_ConstantDecUVBeamHERAGaussian_cpu);
+    RUN_TEST(test_source_component_common_ConstantDecUVBeamHERAShapelet_cpu);
 
     return UNITY_END();
 }

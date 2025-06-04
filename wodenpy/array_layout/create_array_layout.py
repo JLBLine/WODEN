@@ -124,6 +124,66 @@ def convert_ecef_to_enh(ecef_X : np.ndarray, ecef_Y : np.ndarray, ecef_Z : np.nd
     
     return east, north, height
 
+
+def convert_enh_to_ecef(east : np.ndarray, north : np.ndarray, height : np.ndarray,
+                        lon : float, lat : float) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Convert from array centred east, north, heigh (ENH) coordinates to
+    Earth Centred, Earth Fixed (ECEF) coordinates.
+    
+    I got the maths from this site:
+    https://gssc.esa.int/navipedia/index.php/Transformations_between_ECEF_and_ENU_coordinates
+
+    Parameters
+    ----------
+    east : np.ndarray
+        Local east (metres)
+    north : np.ndarray
+        Local north (metres)
+    height : np.ndarray
+        Local height (metres)
+    lon : float
+        Longitude of the array centre (radians)
+    lat : float
+        Latitude of the array centre (radians)
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray, np.ndarray]
+        The ECEF X, Y, Z coordinates
+    """
+                        
+    ##Calculate the ecef xyz of the array position using the geodectic to
+    ##geocentric function
+    arrX, arrY, arrZ = gd2gc(1, lon, lat, 0)
+    
+
+    
+    ##convert enh to local earth centred coords (but not earth fixed??)
+    
+    X = -np.sin(lon)*east - np.sin(lat)*np.cos(lon)*north + np.cos(lat)*np.cos(lon)*height
+    Y = np.cos(lon)*east - np.sin(lat) * np.sin(lon)*north + np.cos(lat)*np.sin(lon)*height
+    Z = np.cos(lat)*north + np.sin(lat)*height
+    
+    ##add the earth centred coords of the array centre to get earth-fixed
+    ecef_X = X + arrX
+    ecef_Y = Y + arrY
+    ecef_Z = Z + arrZ
+    
+    return ecef_X, ecef_Y, ecef_Z
+
+# def rotate_local_XYZ(X, Y, Z, curr_lat, curr_lon, new_lat, new_lon):
+    
+#     east = -np.sin(curr_lon)*X + np.cos(curr_lon)*Y
+#     north = -np.cos(curr_lon)*np.sin(curr_lat)*X - np.sin(curr_lon)*np.sin(curr_lat)*Y + np.cos(curr_lat)*Z
+#     height = np.cos(curr_lon)*np.cos(curr_lat)*X + np.sin(curr_lon)*np.cos(curr_lat)*Y + np.sin(curr_lat)*Z
+    
+#     X = -np.sin(new_lon)*east - np.sin(new_lat)*np.cos(new_lon)*north + np.cos(new_lat)*np.cos(new_lon)*height
+#     Y = np.cos(new_lon)*east - np.sin(new_lat) * np.sin(new_lon)*north + np.cos(new_lat)*np.sin(new_lon)*height
+#     Z = np.cos(new_lat)*north + np.sin(new_lat)*height
+    
+#     return X, Y, Z
+
 def enh2xyz(east : float, north : float, height : float, latitude : float) -> Tuple[float, float, float]:
     """
     Takes local east, north, height coords for a given latitude (radians)
@@ -404,6 +464,5 @@ def convert_array_layout_to_ctypes(array_layout_python : Array_Layout_Python,
     array_layout_ctypes.latitude = array_layout_python.latitude
     array_layout_ctypes.num_baselines = array_layout_python.num_baselines
     array_layout_ctypes.num_tiles = array_layout_python.num_tiles
-    # array_layout_ctypes.lst_base = array_layout_python.lst_base
     
     return array_layout_ctypes

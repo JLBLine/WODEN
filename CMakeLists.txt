@@ -14,6 +14,18 @@ endif()
 
 if(USE_CUDA)
     message("USING CUDA : USE_CUDA=ON")
+
+    if (NOT DEFINED ENV{CUDAARCHS} AND NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+        message(STATUS "CUDAARCHS/CMAKE_CUDA_ARCHITECTURES so using CMAKE default architectures for CUDA")
+        ##If you want to build a bunch of architectures by default, do this
+        #set(CMAKE_CUDA_ARCHITECTURES "60;61;70;75;80;86;89;90")
+    elseif(DEFINED ENV{CUDAARCHS})
+        set(CMAKE_CUDA_ARCHITECTURES $ENV{CUDAARCHS})
+        message(STATUS "CUDAARCHS was set to $ENV{CUDAARCHS}, so now CMAKE_CUDA_ARCHITECTURES is set to ${CMAKE_CUDA_ARCHITECTURES}")
+    else()
+        message(STATUS "CMAKE_CUDA_ARCHITECTURES was set to ${CMAKE_CUDA_ARCHITECTURES}, so using that")
+    endif()
+
     project(woden VERSION ${WODEN_VERSION} LANGUAGES CXX C CUDA)
 
     ##Sets the -std=c++11 nvcc compiler flag I think
@@ -22,12 +34,6 @@ if(USE_CUDA)
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D__NVCC__ ")
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
-    if (NOT DEFINED ENV{CUDAARCHS})
-        message("WARNING : CUDAARCHS not set, so CMAKE_CUDA_ARCHITECTURES has defaulted to whatever CMake has set, which is ${CMAKE_CUDA_ARCHITECTURES}")
-    else()
-        message("INFO : CUDAARCHS was set to $ENV{CUDAARCHS}, so now CMAKE_CUDA_ARCHITECTURES is set to ${CMAKE_CUDA_ARCHITECTURES}")
-    endif()
-    
 elseif(USE_HIP)
     message("DEBUG : USE_HIP=ON")
 

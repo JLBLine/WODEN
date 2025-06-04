@@ -13,7 +13,7 @@ typedef enum {POINT=0, /*!< Point source type component */
               SHAPELET, /*!< Shapelet type component */
               }e_component_type;
 
-typedef enum {NO_BEAM, /*!< Do not use a primary beam in the simulation */
+typedef enum {NO_BEAM=0, /*!< Do not use a primary beam in the simulation */
               GAUSS_BEAM, /*!< Use a analytic Gaussian primary beam */
               FEE_BEAM, /*!< Use the MWA FEE primary beam code */
               ANALY_DIPOLE, /*!< Use an analytic MWA dipole primary beam */
@@ -24,6 +24,8 @@ typedef enum {NO_BEAM, /*!< Do not use a primary beam in the simulation */
               EB_OSKAR, /*!< Use everybeam with the OSKAR primary beam */
               EB_LOFAR, /*!< Use everybeam with the LOFAR primary beam */
               EB_MWA, /*!< Use everybeam with the MWA primary beam */
+              UVB_MWA, /*!< Use pyuvdata UVBeam the MWA model */
+              UVB_HERA, /*!< Use pyuvdata UVBeam the HERA model */
               }e_beamtype;
 
 typedef enum {POWER_LAW=0, /*!< Power law flux model */

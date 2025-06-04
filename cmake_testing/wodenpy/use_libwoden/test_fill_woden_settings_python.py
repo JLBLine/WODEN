@@ -6,6 +6,7 @@ import ctypes
 
 # ##Code we are testing
 import wodenpy.use_libwoden.woden_settings as ws
+from wodenpy.use_libwoden.beam_settings import BeamTypes
 from wodenpy.wodenpy_setup import run_setup
 from wodenpy.use_libwoden.create_woden_struct_classes import Woden_Struct_Classes
 import numpy.testing as npt
@@ -413,6 +414,18 @@ class Test(unittest.TestCase):
         woden_settings = self.call_fill_woden_settings_python()
         self.check_basic_inputs(woden_settings)
         self.assertFalse(woden_settings.normalise_primary_beam)
+        
+    def test_write_uvbeam_HERA(self):
+        """Test that the uvbeam HERA primary beam options work correctly"""
+        
+        self.make_basic_inputs('double')
+        self.args.primary_beam = 'uvbeam_HERA'
+            
+            ##This runs `fill_woden_settings_python`
+        woden_settings = self.call_fill_woden_settings_python()
+
+        self.check_basic_inputs(woden_settings)
+        self.assertEqual(BeamTypes.UVB_HERA.value, woden_settings.beamtype)
         
 ##Run the test
 if __name__ == '__main__':

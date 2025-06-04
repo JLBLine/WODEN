@@ -145,38 +145,38 @@ the latitude of the array. The allows us to check the *u,v,w* are changing with 
 For FLOAT compiled code, the absolute tolerance threshold on the *u,v,w*
 values is set to 1e-5, and 1e-12 for DOUBLE compiled code.
 
-``test_calculate_visibilities_nobeam*.c``
+test_calculate_visibilities_nobeam*.c
 *********************************************
 Runs tests above, but with no primary beam model applied. Predicted gains are 
 ones with zero leakage.
 
-``test_calculate_visibilities_gaussbeam*.c``
+test_calculate_visibilities_gaussbeam*.c
 *********************************************
 Runs tests using the Gaussian primary beam model. No leakage in this model.
 
-``test_calculate_visibilities_edabeam*.c``
+test_calculate_visibilities_edabeam*.c
 *********************************************
 Runs tests using the EDA2 primary beam model. No leakage in this model.
 
-``test_calculate_visibilities_mwafeebeam*.c``
+test_calculate_visibilities_mwafeebeam*.c
 *********************************************
 Runs tests using the MWA FEE primary beam model. Has gains and leakage terms.
 
-``test_calculate_visibilities_mwafeebeaminterp*.c``
+test_calculate_visibilities_mwafeebeaminterp*.c
 ****************************************************
 Runs tests using the interpolated MWA FEE primary beam model. Has gains and leakage terms.
 
-``test_calculate_visibilities_mwaanalybeam*c``
+test_calculate_visibilities_mwaanalybeam*c
 ****************************************************
 Runs tests using the interpolated MWA FEE primary beam model. Has gains and leakage terms,
 but is a real-only model.
 
-``test_calculate_visibilities_multibeams*.c``
+test_calculate_visibilities_multibeams*.c
 *********************************************
 Same as ``test_calculate_visibilities_mwafeebeaminterp.c``, but where every antenna (tile) has a different primary beam. Uses dipole amplitude gains that cause predictable scalar multiplications of expected visibilities from the previous tests. Doing indexing and keeping track of which primary beams should match which visibilities allows predictions of the expected visibilities to be made. 
 
 
-``test_calculate_visibilities_everybeam_lofar_*.c``
+test_calculate_visibilities_everybeam_lofar*.c
 *******************************************************
 Runs with the EveryBeam ``LOFAR`` primary beam model. Has gains and leakage terms. Runs
 with a different model for each station. Here we intentionally point the 
@@ -186,7 +186,7 @@ gains of 1 and leakage of zero. Use stored beam gain values to calculate
 expected visibilities to compare results against.
 
 
-``test_calculate_visibilities_everybeam_mwa_*.c``
+test_calculate_visibilities_everybeam_mwa*.c
 *******************************************************
 Runs with the EveryBeam ``MWA`` primary beam model. Has gains and leakage terms. Runs
 with a single primary beam, and I haven't worked out how to change dipole amplitudes
@@ -194,7 +194,7 @@ with EveryBeam. Use stored beam gain values to calculate expected visibilities
 to compare results against.
 
 
-``test_calculate_visibilities_everybeam_oskar_*.c``
+test_calculate_visibilities_everybeam_oskar*.c
 *******************************************************
 Runs with the EveryBeam ``OSKAR`` primary beam model. Has gains and leakage terms. Runs
 with a different model for each station. Here we intentionally point the 
@@ -202,6 +202,24 @@ primary beam slightly off zenith, so that the beam response is different for
 each station. If we left it locked to the phase centre, the beam response would
 gains of 1 and leakage of zero. Use stored beam gain values to calculate 
 expected visibilities to compare results against.
+
+
+test_calculate_visibilities_uvbeam_mwa*.c
+*******************************************************
+All ``UVBeam`` primary beam calculations are done in Python, so this test
+creates a sky model struct with a set of gains and leakage values assigned.
+These known gains are used to predict the expected visibilities, and compared
+to those calculated by ``calculate_visibilities``. This tests the MWA ``UVBeam``
+model, which can a different model for each station via different amplitudes
+in different dipoles. This test ensures the gains are different for each tile
+to ensure the mapping from the stored gains into the visibilitiy calculations
+is correct.
+
+test_calculate_visibilities_uvbeam_mwa*.c
+*******************************************************
+Runs the same tests as ``test_calculate_visibilities_uvbeam_mwa*.c``, but just
+sets the beam type to ``UVB_HERA`` instead, to ensure the
+``calculate_visibilities`` function can handle HERA gains and leakages.
 
 .. ``make_exe_to_profile_lofar_everybeam.c``
 .. **********************************************

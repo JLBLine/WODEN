@@ -260,6 +260,7 @@ extern "C" void run_phased_array_beam(Telescope *telescope,
     PhasedArrayPoint& phased_array_point =
           static_cast<PhasedArrayPoint&>(*point_response);
     phased_array_point.SetParalacticRotation(parallactic_rotate);
+    // phased_array_point.SetParalacticRotation(false);
 
     everybeam::coords::ItrfConverter itrf_converter(mjd_time);
 

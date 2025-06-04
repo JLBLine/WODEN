@@ -12,9 +12,20 @@ There are two ways to test WODEN. The first is to use the CMake testing suite wh
 EveryBeam Testing
 -----------------------
 
-For testing ``everybeam`` functionality , I've made a number of notebooks that live in ``WODEN/test_installation/everybeam/``. This is in lieu of full unit testing to speed up development. At some point the correct thing would be to go back and break down the testing into units. However, the notebooks are fairly rigorous, so suffice for now. The integration tests in the notebooks are:
+For testing ``everybeam`` functionality , I've made a number of notebooks that live in ``WODEN/test_installation/everybeam/``. This is on top of normal unit testing, to do proper sanity checks and for full disclosure of what is happening.  The integration tests in the notebooks are:
 
 .. toctree::
    :maxdepth: 2
 
    everybeam_testing
+
+
+pyuvdata UVBeam Testing
+-------------------------------
+
+For testing ``UVBeam`` functionality , I've made a number of notebooks that live in ``WODEN/test_installation/pyuvbeam/``. This is on top of normal unit testing, to do proper sanity checks and for full disclosure of what is happening.  The integration tests in the notebooks are:
+
+.. toctree::
+   :maxdepth: 2
+
+   uvbeam_testing

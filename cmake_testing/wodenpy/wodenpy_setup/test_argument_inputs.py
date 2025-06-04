@@ -6,13 +6,13 @@ import numpy.testing as npt
 import importlib_resources
 import shutil
 from casacore.tables import table
+from pyuvdata.telescopes import known_telescope_location
 
 code_dir = os.path.realpath(__file__)
 code_dir = ('/').join(code_dir.split('/')[:-1])
 
 # ##Code we are testing
 from wodenpy.wodenpy_setup import run_setup
-
 from wodenpy.use_libwoden.use_libwoden import check_for_everybeam
 
 
@@ -212,11 +212,35 @@ dipamps = np.array([0.90376163, 0.95701027, 0.44699562, 0.95701027,
 dipamps_flagged = np.array([0.0, 0.0, 0.0, 0.95701027,
                     1., 0.97801661, 0.95163655, 1., 1.])
 
+
+MWA_LAT = -26.703319405555554
+MWA_LONG = 116.67081523611111
+MWA_HEIGHT = 377.827
+
+LOFAR_LAT = 52.905329712
+LOFAR_LONG = 6.867996528
+LOFAR_HEIGHT = 0.0
+
 ##Vehicle for running tests
 class Test(unittest.TestCase):
     """Test whether the args collected by the argument parser are read in
     correctly, and that sanity checks on certain combinations work such that
     we don't feed WODEN arguments that won't work"""
+    
+    def setUp(self):
+        """Grab two environment variables. We're going to break these during
+        tests to check things fail, so we need to restore them afterwards
+        We do that via the `addCleanup` method, which will run the function
+        passed to it after the test has finished. This is a unittest feature"""
+        self.hdf5_path = os.environ['MWA_FEE_HDF5']
+        self.hdf5_interp_path = os.environ['MWA_FEE_HDF5_INTERP']
+            
+        self.addCleanup(self.reset_env_var)  # Ensure cleanup runs
+
+    def reset_env_var(self):
+        """Restore the environment variables to their original values"""
+        os.environ["MWA_FEE_HDF5"] = self.hdf5_path  # Restore original value
+        os.environ["MWA_FEE_HDF5_INTERP"] = self.hdf5_interp_path  # Restore original value
 
     def run_parser_on_inputs(self):
         """Call `run_setup.get_parser` and run the returned parser using the inputs
@@ -440,6 +464,9 @@ class Test(unittest.TestCase):
         information is missing, and if the delays have been specified
         incorrectly"""
 
+        actual_hdf5_path = os.environ[beam_env_var]
+        # self.actual_hdf5_path = actual_hdf5_path
+
         ##We want to test that the argument fails if the environment key
         ##MWA_FEE_HDF5 is not set. Here we check if it is set and delete it
         ##if so
@@ -452,7 +479,11 @@ class Test(unittest.TestCase):
         ##or --hdf5_beam_path should fail
         self.make_minimum_required_args_without_metafits()
         self.inputs.append(f'--primary_beam={beam_name}')
-
+        
+        ##UVBeam MWA can only work with one band number, so add that arg here.
+        ##Doesn't change the test outputs for the other beam models
+        self.inputs.append('--band_nums=1')
+        
         ##Check the primary_beam has been selected and that `run_setup.check_args` fails
         args = self.assert_check_args_errors()
         self.assertEqual(beam_name, args.primary_beam)
@@ -480,6 +511,9 @@ class Test(unittest.TestCase):
         ##Reset the arguments try to run using a metafits file, but still
         ##have no path to the hdf5 file. Should fail
         self.make_minimum_required_args_without_metafits()
+        ##UVBeam MWA can only work with one band number, so add that arg here.
+        ##Doesn't change the test outputs for the other beam models
+        self.inputs.append('--band_nums=1')
         self.inputs.append(f'--primary_beam={beam_name}')
         self.inputs.append("--metafits_filename={:s}/1202815152_metafits_ppds.fits".format(code_dir))
         args = self.assert_check_args_errors()
@@ -492,10 +526,11 @@ class Test(unittest.TestCase):
 
         ##This time, set the environment variable to the hdf5 file. Should
         ##pass (just use a file we know exists somewhere)
-        os.environ[beam_env_var] = '{:s}/example_array_layout.txt'.format(code_dir)
+        os.environ[beam_env_var] = actual_hdf5_path
+        
         args = self.run_parser_and_check_args()
         ##Assert the delays were read in correctly
-        self.assertEqual("[6, 4, 2, 0, 8, 6, 4, 2, 10, 8, 6, 4, 12, 10, 8, 6]", args.MWA_FEE_delays)
+        self.assertEqual("6,4,2,0,8,6,4,2,10,8,6,4,12,10,8,6", args.MWA_FEE_delays)
 
         ##Setting the delays manually should override the delays in the
         ##metafits
@@ -520,17 +555,25 @@ class Test(unittest.TestCase):
         and if the delays have been specified incorrectly"""
 
         self._check_MWA_FEE_generic('MWA_FEE_interp', 'MWA_FEE_HDF5_INTERP')
+        
+    def test_UVBeamMWA_args_work(self):
+        """Check that the UVBeam MWA primary beam is handled `ra.check_args`
+        correctly. The function should error out if certain paths to the
+        hdf5 file that holds the spherical harmonic information is missing,
+        and if the delays have been specified incorrectly"""
+
+        self._check_MWA_FEE_generic('uvbeam_MWA', 'MWA_FEE_HDF5')
 
 
     def test_MWAAnalyBeam_args_work(self):
         """Check `ra.check_args` works correctly for the analytic MWA beam.
         Should fail if the delays have been specified incorrectly"""
 
-        ##Trying to run an MWA_FEE simulation with no metafits, no 'MWA_FEE_HDF5'
-        ##or --hdf5_beam_path should fail
+        ##Trying to run an MWA_FEE simulation with no metafits or
+        ##delays should fail
         self.make_minimum_required_args_without_metafits()
         self.inputs.append(f'--primary_beam=MWA_analy')
-
+        
         ##Check the primary_beam has been selected and that `run_setup.check_args` fails
         args = self.assert_check_args_errors()
         self.assertEqual('MWA_analy', args.primary_beam)
@@ -874,8 +917,6 @@ class Test(unittest.TestCase):
             self.assertAlmostEqual(ref_dir[0], ra0, 6)
             self.assertAlmostEqual(ref_dir[1], dec0, 6)
         
-        
-        
     def test_read_radec_from_MS(self):
         """Check `ra.check_args` works correctly for the `--primary_beam=everybeam_MWA`
         
@@ -989,7 +1030,161 @@ class Test(unittest.TestCase):
         self.assertAlmostEqual(args.freq_res, 10000.0, 2)
         self.assertAlmostEqual(args.time_res, 0.5, 2)
         self.assertEqual("2018-02-16T11:18:54", args.date)
+        
+    def test_output_uvfits_prepend(self):
+        """Check that the output_uvfits_prepend is set correctly, a.k.a
+        if the user actually includes '.uvfits' that we strip it out"""
+        
+        self.make_minimum_required_args_without_metafits()
+        
+        self.inputs.append('--output_uvfits_prepend=some_cool_name.uvfits')
+        
+        args = self.run_parser_and_check_args()
+        self.assertEqual("some_cool_name", args.output_uvfits_prepend)
+        
+    def test_setting_lon_lat_height(self):
+        """Check latitude / longitude / height are set correctly based
+        on requested beam type.
+        
+        However, can only run these tests if we have EveryBeam. If not, we
+        expect and error, so adjust the test accordingly
+        """
+        
+        if HAVE_EVERYBEAM:
+            ##Doing LOFAR should stick the beam at the LOFAR lat/long/height
+            self.make_minimum_required_args_minus_radec()
+            self.inputs.append('--primary_beam=everybeam_LOFAR')
+            ms_path = f"{code_dir}/../../../test_installation/everybeam/LOFAR_HBA_MOCK.ms"
+            self.inputs.append(f'--beam_ms_path={ms_path}')
+            self.inputs.append(f'--band_nums=1')
             
+            args = self.run_parser_and_check_args()
+            
+            self.assertEqual(args.orig_lat, LOFAR_LAT)
+            self.assertEqual(args.orig_long, LOFAR_LONG)
+            self.assertEqual(args.orig_height, LOFAR_HEIGHT)
+            
+            self.assertEqual(args.latitude, LOFAR_LAT)
+            self.assertEqual(args.longitude, LOFAR_LONG)
+            self.assertEqual(args.array_height, LOFAR_HEIGHT)
+            
+            ##If we do it again, but set the lat/long/height manually, it should
+            ##use those instead. However original lat/long/height should
+            ##still be the LOFAR ones
+            
+            self.inputs.append(f'--latitude={MWA_LAT}')
+            self.inputs.append(f'--longitude={MWA_LONG}')
+            self.inputs.append(f'--array_height={MWA_HEIGHT}')
+            
+            args = self.run_parser_and_check_args()
+            
+            self.assertEqual(args.orig_lat, LOFAR_LAT)
+            self.assertEqual(args.orig_long, LOFAR_LONG)
+            self.assertEqual(args.orig_height, LOFAR_HEIGHT)
+            
+            self.assertEqual(args.latitude, MWA_LAT)
+            self.assertEqual(args.longitude, MWA_LONG)
+            self.assertEqual(args.array_height, MWA_HEIGHT)
+            
+        ##All other beams currently default to the MWA lat/long/height
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append('--primary_beam=Gaussian')
+        
+        args = self.run_parser_and_check_args()
+        self.assertEqual(args.orig_lat, MWA_LAT)
+        self.assertEqual(args.orig_long, MWA_LONG)
+        self.assertEqual(args.orig_height, MWA_HEIGHT)
+        
+        self.assertEqual(args.latitude, MWA_LAT)
+        self.assertEqual(args.longitude, MWA_LONG)
+        self.assertEqual(args.array_height, MWA_HEIGHT)
+        
+    def test_check_asking_for_log_does_something(self):
+        """Check that asking for a log file actually does something"""
+        
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append('--save_log')
+        
+        args = self.run_parser_and_check_args()
+        
+        ##Check that the log file name is set. It will be False if not set.
+        self.assertTrue(args.log_file_name)
+        
+    def test_use_uvdata_HERA_beam(self):
+        """Check that asking for a HERA beam demands you give a
+        text file listing CST files. Should also error if bad file is linked,
+        or if it can't read the file correctly"""
+        
+        self.make_minimum_required_args_without_metafits()
+        self.inputs.append('--primary_beam=uvbeam_HERA')
+        ##should die if --cst_file_list not set
+        self.assert_check_args_errors()
+        
+        
+        self.inputs.append('--cst_file_list=note_a_file.txt')
+        ##should die if --cst_file_list isn't a file
+        self.assert_check_args_errors()
+        
+        ##Get rid of old --cst_file_list arg, replace with a bad file
+        ##check it fails
+        self.inputs.pop(-1)
+        self.inputs.append(f'--cst_file_list={code_dir}/bad_eg_cst_file_list.csv')
+        self.assert_check_args_errors()
+        
+        ##should run now. Check certain things are set successfully
+        self.inputs.pop(-1)
+        self.inputs.append(f'--cst_file_list={code_dir}/eg_cst_file_list.csv')
+        
+        args = self.run_parser_and_check_args()
+        
+        self.assertEqual(args.primary_beam, 'uvbeam_HERA')
+        self.assertEqual(args.cst_paths, ['/hey/look/here/file 100 [1].txt', '/hey/look/here/file 150 [1].txt', '/hey/look/here/file 200 [1].txt'])
+        self.assertEqual(args.cst_freqs, [100e+6, 150e+6, 200e+6])
+        
+        location = known_telescope_location("HERA")
+        
+        self.assertEqual(args.latitude, location.lat.value)
+        self.assertEqual(args.longitude, location.lon.value)
+        self.assertEqual(args.array_height, location.height.value)
+        
+        
+        
+        ##Now check the single file settings, rather than the CST list
+        ##remove the cst option, and add the single file option
+        ##add a borked path to check that this fails
+        self.inputs.pop(-1)
+        self.inputs.append(f'--uvbeam_file_path=note_a_file.txt')
+        self.assert_check_args_errors()
+        
+        ##parser only checks if file exists, not if it is a valid (UVBeam can do that)
+        ##so we can check things run here via an existing path
+        self.inputs.pop(-1)
+        self.inputs.append(f'--uvbeam_file_path={code_dir}/eg_cst_file_list.csv')
+        
+        args = self.run_parser_and_check_args()
+        
+        self.assertEqual(args.primary_beam, 'uvbeam_HERA')
+        self.assertEqual(args.uvbeam_file_path, f'{code_dir}/eg_cst_file_list.csv')
+        self.assertEqual(args.latitude, location.lat.value)
+        self.assertEqual(args.longitude, location.lon.value)
+        self.assertEqual(args.array_height, location.height.value)
+        
+        ##have made behaviour to default to single file if both
+        ##--cst_file_list and --uvbeam_file_path are set, so check that
+        
+        self.inputs.append(f'--cst_file_list={code_dir}/eg_cst_file_list.csv')
+        
+        self.assertEqual(args.primary_beam, 'uvbeam_HERA')
+        self.assertEqual(args.uvbeam_file_path, f'{code_dir}/eg_cst_file_list.csv')
+        self.assertEqual(args.latitude, location.lat.value)
+        self.assertEqual(args.longitude, location.lon.value)
+        self.assertEqual(args.array_height, location.height.value)
+        
+        ##assert that args.cst_paths doesn't exist
+        self.assertFalse(hasattr(args, 'cst_paths'))
+        self.assertFalse(hasattr(args, 'cst_freqs'))
+        
+
         
 ##Run the test
 if __name__ == '__main__':

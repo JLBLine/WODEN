@@ -6,6 +6,7 @@ import numpy.testing as npt
 import logging
 from wodenpy.wodenpy_setup import run_setup, woden_logger
 from wodenpy.use_libwoden.woden_settings import fill_woden_settings_python
+from pathlib import Path
 
 code_dir = os.path.realpath(__file__)
 code_dir = ('/').join(code_dir.split('/')[:-1])
@@ -13,6 +14,10 @@ code_dir = ('/').join(code_dir.split('/')[:-1])
 class Test(unittest.TestCase):
     """Test when we invoke WODEN with different beam settings, the correct
     information is dumped to the log file"""
+    
+    @classmethod
+    def tearDownClass(cls):
+        os.remove('test_log.log')
 
     def make_required_args(self, extra_args=[]):
         """These are arguments that if missing, the parser itself should fail"""
@@ -28,10 +33,26 @@ class Test(unittest.TestCase):
         args =  parser.parse_args(self.inputs)
         # args = run_setup.check_args(args)
         
+        ##Don't actually run check_args as we want to test things that would
+        ##fail it. But set things here that would be set by check_args
         args.num_antennas = 1
         args.dipamps = np.array([1.0])
-        args.metafits_path = "path/to/metafits"
+        args.metafits_filename = "path/to/metafits"
         args.beam_ms_path = "path/to/beam_ms"
+        args.coarse_band_width = 1.28e+6
+        
+        
+        if args.primary_beam == 'everybeam_LOFAR' or args.primary_beam == 'everybeam_OSKAR':
+            args.eb_ra_point = args.ra0
+            args.eb_dec_point = args.dec0
+            args.pointed_ms_file_name = Path("path/to/pointed_ms")
+        
+        if args.primary_beam == 'uvbeam_HERA':
+            if "--uvbeam_file_path=path/to/uvbeam.fits" in self.inputs:
+                pass
+            else:
+                args.cst_file_list = 'uwotm8.txt'
+                args.cst_freqs = [100e+6, 150e+6, 200e+6]
         
         self.args = args
         
@@ -63,6 +84,8 @@ class Test(unittest.TestCase):
     def read_lines_check_against_expected(self, expected_lines):
         with open("test_log.log", 'r') as f:
             lines = f.readlines()
+        # print(lines[-len(expected_lines):])
+        # print(expected_lines)
         self.assertEqual(lines[-len(expected_lines):], expected_lines)
         
     def test_with_no_beam(self):
@@ -123,19 +146,27 @@ class Test(unittest.TestCase):
     def test_with_everybeam_OSKAR(self):
         self.run_log_beamtype(['--primary_beam=everybeam_OSKAR'])
         expected_lines = ['Will run with EveryBeam OSKAR primary beam, based on this measurement set:\n',
-                          '\tpath/to/beam_ms\n']
+                          '\tpath/to/beam_ms\n',
+                          f"Created the following minimal MS to point the beam:\n",
+                          f"\tpath/to/pointed_ms\n",
+                          f"Primary beam is pointed at RA,Dec = {self.args.eb_ra_point}, {self.args.eb_dec_point} deg\n"]
         self.read_lines_check_against_expected(expected_lines)
         
     def test_with_everybeam_LOFAR(self):
         self.run_log_beamtype(['--primary_beam=everybeam_LOFAR'])
         expected_lines = ['Will run with EveryBeam LOFAR primary beam, based on this measurement set:\n',
-                          '\tpath/to/beam_ms\n']
+                          '\tpath/to/beam_ms\n',
+                          f"Created the following minimal MS to point the beam:\n",
+                          f"\tpath/to/pointed_ms\n",
+                          f"Primary beam is pointed at RA,Dec = {self.args.eb_ra_point}, {self.args.eb_dec_point} deg\n"]
         self.read_lines_check_against_expected(expected_lines)
         
     def test_with_everybeam_MWA(self):
         self.run_log_beamtype(['--primary_beam=everybeam_MWA'])
         expected_lines = ['Will run with EveryBeam MWA primary beam, based on this measurement set:\n',
-                          '\tpath/to/beam_ms\n']
+                          '\tpath/to/beam_ms\n',
+                          f"Using the following hdf5 file:\n",
+                          f"\tpath/to/hdf5\n"]
         self.read_lines_check_against_expected(expected_lines)
         
     def test_with_a_boo_boo(self):
@@ -149,6 +180,21 @@ class Test(unittest.TestCase):
                                          self.args)
         
         expected_lines = ["Primary beam type not recognised. This shouldn't be possible if you've used wodenpy.woden_setup.run_setup.check_args().\n"]
+        self.read_lines_check_against_expected(expected_lines)
+        
+    def test_with_uvbeam_HERA_CST(self):
+        self.run_log_beamtype(['--primary_beam=uvbeam_HERA'])
+        expected_lines = [f"Will create a HERA beam from CST files listed in this file:\n",
+                          f"\t{self.args.cst_file_list}\n",
+                          f"Have read the following frequencies from this file:\n",
+                          f"\t{self.args.cst_freqs}\n"]
+        self.read_lines_check_against_expected(expected_lines)
+        
+    def test_with_uvbeam_HERA_FITS(self):
+        self.run_log_beamtype(['--primary_beam=uvbeam_HERA', 
+                               '--uvbeam_file_path=path/to/uvbeam.fits'])
+        expected_lines = [f"Will create a HERA beam from the following file:\n",
+                          f"\t{self.args.uvbeam_file_path}\n"]
         self.read_lines_check_against_expected(expected_lines)
     
 if __name__ == '__main__':

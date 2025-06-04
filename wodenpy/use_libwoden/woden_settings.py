@@ -275,12 +275,12 @@ def fill_woden_settings_python(args : argparse.Namespace,
     if args.MWA_FEE_delays:
         
         ##If using a a different set of dipole amplitudes for each tile,
-        ##need to repeat the delays for each tile
+        ##need to repeat the delays for each tile for hyperdrive
         if args.use_MWA_dipamps:
             num_beams = args.num_antennas
         else:
             num_beams = 1
-        
+            
         delays = np.array(args.MWA_FEE_delays.strip('[]').split(','))
         num_delays = len(delays)*num_beams
         woden_settings.FEE_ideal_delays = np.empty(num_delays, dtype=np.int32)
@@ -321,6 +321,13 @@ def fill_woden_settings_python(args : argparse.Namespace,
         
     elif args.primary_beam == 'everybeam_MWA':
         woden_settings.beamtype = BeamTypes.EB_MWA.value
+        
+    elif args.primary_beam == 'uvbeam_MWA':
+        woden_settings.beamtype = BeamTypes.UVB_MWA.value
+        woden_settings.hdf5_beam_path = args.hdf5_beam_path
+        
+    elif args.primary_beam == 'uvbeam_HERA':
+        woden_settings.beamtype = BeamTypes.UVB_HERA.value
         
     if woden_settings.beamtype in BeamGroups.eb_beam_values:
         woden_settings.eb_beam_ra0 = float(args.eb_ra_point)*D2R

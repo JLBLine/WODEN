@@ -9,7 +9,8 @@ import numpy as np
 import sys
 import os
 from typing import Union, List
-
+from pyuvdata import UVBeam
+from typing import Sequence
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, Component_Info, CompTypes
 from wodenpy.skymodel.chunk_sky_model import Skymodel_Chunk_Map, Components_Map
 from wodenpy.use_libwoden.skymodel_structs import setup_chunked_source, setup_source_catalogue, _Ctype_Source_Into_Python, Source_Python, Components_Python
@@ -21,6 +22,10 @@ from astropy.io import fits
 from sys import exit
 import argparse
 from astropy.time import Time, TimeDelta
+from wodenpy.wodenpy_setup.woden_logger import simple_logger
+from logging import Logger
+from wodenpy.primary_beam.use_uvbeam import calc_uvbeam_for_components
+from logging import Logger
 
 ##This call is so we can use it as a type annotation
 woden_struct_classes = Woden_Struct_Classes()
@@ -735,17 +740,25 @@ def add_list_flux_info(mod_type : CompTypes, n_lists : int,
         list_start_index += int(len(these_freqs))
 
 def add_fits_info_to_source_catalogue(comp_type : CompTypes,
-                        main_table : Table, shape_table : Table,
-                        chunk_source : Source_Ctypes,
-                        chunk_map : Skymodel_Chunk_Map,
-                        beamtype : int, lsts : np.ndarray, latitudes : np.ndarray,
-                        v_table : Table = False, q_table : Table = False,
-                        u_table : Table = False, p_table : Table = False):
+                                      main_table : Table, shape_table : Table,
+                                      chunk_source : Source_Ctypes,
+                                      chunk_map : Skymodel_Chunk_Map,
+                                      beamtype : int, lsts : np.ndarray[float],
+                                      latitudes : np.ndarray[float],
+                                      v_table : Table = False, q_table : Table = False,
+                                      u_table : Table = False, p_table : Table = False,
+                                      uvbeam_objs : np.ndarray[UVBeam] = False,
+                                      all_freqs : np.ndarray = False,
+                                      logger : Logger = False):
     """Given the desired components as detailed in the `chunk_map`, add
     the relevant information from the FITS file `main_table`, `shape_table`
     objects to the `chunk_source` object. As well as the skymodel information
     this function adds either az/za or ha/dec information, depending on the `beamtype`,
     and polarisation information if it is present.
+    
+    Furthermore, if `beamtype` is in
+    `wodenpy.use_libwoden.beam_settings.BeamGroups.python_calc_beams`,
+    the function will call the relevant beam model and calculate beam values.
 
     Parameters
     ----------
@@ -773,7 +786,18 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
         The Table containing the Stokes U information, by default False.
     p_table : Table, optional
         The Table containing the linear polarisation information, by default False.
+    uvbeam_objs : np.ndarray[UVBeam], optional
+        The initialised UVBeam objects if calculating primary beams via UVBeam.
+    all_freqs : np.ndarray, optional
+        The frequencies to calculate the primary beam response to (only needed
+        if calculating primary beams)
+    logger : Logger, optional
+        The logger object to log information to, by default False.
+        If False, make a new logger object.
     """
+    
+    if not logger:
+        logger = simple_logger()
     
     num_time_steps = len(lsts)
     
@@ -1082,6 +1106,12 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
             else:
                 source_components.intr_pol_angle[linpol_ind] = 0.0
             linpol_ind += 1
+            
+    ##when calculating the primary beam values via Python, do it here
+    if beamtype in BeamGroups.uvbeam_beams:
+        
+        calc_uvbeam_for_components(source_components, uvbeam_objs, all_freqs,
+                                   latitudes, lsts, logger=logger)
         
     return
 
@@ -1094,7 +1124,9 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                               j2000_lsts : np.ndarray, j2000_latitudes : np.ndarray,
                               v_table : Table = False, q_table : Table = False,
                               u_table : Table = False, p_table : Table = False,
-                              precision = "double") -> List[Source_Python]:
+                              precision : str = "double",
+                              uvbeam_objs : np.ndarray[UVBeam] = False,
+                              logger : Logger = False) -> List[Source_Python]:
     """
     Uses Tables read from a FITS file and returns a list of populated
     `Source_Python` classes. Uses the maps in `chunked_skymodel_maps` to
@@ -1104,6 +1136,11 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
     multiprocessing requires everything to be picklable. This means we can't
     use ctypes, so we can't use `Woden_Settings`, hence we have to pass in
     all the relevant information as arguments.
+    
+    If `beamtype` is in
+    `wodenpy.use_libwoden.beam_settings.BeamGroups.python_calc_beams`,
+    this function will call the relevant beam model and calculate beam values
+    (via `add_fits_info_to_source_catalogue`).
 
     Parameters
     ----------
@@ -1136,17 +1173,36 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
         The Table containing the linear polarisation information, by default False.
     precision : str, optional
         Precision of the source catalogue (either "float" or "double"), by default "double".
+    uvbeam_objs : np.ndarray[UVBeam], optional
+        The initialised UVBeam objects if calculating primary beams via UVBeam.
+    logger : Logging, optional
+        The logger object to use, by default False. If False, makes a new logger.
 
     Returns
     -------
      List[Source_Python]
         A list of populated `Source_Python` classes.
     """
+    if not logger:
+        logger = simple_logger(args.log_level)
+    
     source_array = [Source_Python() for i in range(len(chunked_skymodel_maps))]
     
-    ##Will be used in future if calculating primary beam values via Python
-    ##If a different beam patter per station, afjust num_beams accordingly
+    ##If num_beams is 1, we use the same primary beam patter for every station
+    ##Adjust here if we need to
     num_beams = 1
+    
+    if beamtype in BeamGroups.uvbeam_beams:
+        if type(uvbeam_objs) == bool:
+            sys.exit("UVBeam objects not passed in, but beamtype is UVBeam. "
+                    "Can't calculate the primary beam values so exiting.")
+        else:
+            num_beams = len(uvbeam_objs)
+        
+    ##`all_freqs` only used if calculating the primary beam via Python
+    band_num = args.band_nums[0]
+    base_band_freq = ((band_num - 1)*float(args.coarse_band_width)) + args.lowest_channel_freq
+    all_freqs = base_band_freq + np.arange(args.num_freq_channels)*args.freq_res
         
     ##for each chunk map, create a Source_Float or Source_Double ctype
     ##struct, and "malloc" the right amount of arrays to store required infor
@@ -1166,24 +1222,29 @@ def read_fits_skymodel_chunks(args : argparse.Namespace,
                                       main_table, shape_table,
                                       source_array[chunk_ind], chunk_map,
                                       beamtype, j2000_lsts, j2000_latitudes,
-                                      v_table, q_table, u_table, p_table)
-            
-            ##NOTE this is where you would calculate beam values if you were
-            ##doing it via Python. Future place for pyuvbeam
-            ##The values would end up in source_array[chunk_ind].point_components.gxs
+                                      v_table, q_table, u_table, p_table,
+                                      uvbeam_objs=uvbeam_objs,
+                                      all_freqs=all_freqs,
+                                      logger=logger)
             
         if chunk_map.n_gauss > 0:
             add_fits_info_to_source_catalogue(CompTypes.GAUSSIAN,
                                       main_table, shape_table,
                                       source_array[chunk_ind], chunk_map,
                                       beamtype, j2000_lsts, j2000_latitudes,
-                                      v_table, q_table, u_table, p_table)
+                                      v_table, q_table, u_table, p_table,
+                                      uvbeam_objs=uvbeam_objs,
+                                      all_freqs=all_freqs,
+                                      logger=logger)
         if chunk_map.n_shapes > 0:
             add_fits_info_to_source_catalogue(CompTypes.SHAPELET,
                                       main_table, shape_table,
                                       source_array[chunk_ind], chunk_map,
                                       beamtype, j2000_lsts, j2000_latitudes,
-                                      v_table, q_table, u_table, p_table)
+                                      v_table, q_table, u_table, p_table,
+                                      uvbeam_objs=uvbeam_objs,
+                                      all_freqs=all_freqs,
+                                      logger=logger)
             
     ##TODO some kind of consistency check between the chunk_maps and the
     ##sources in the catalogue - make sure we read in the correct information

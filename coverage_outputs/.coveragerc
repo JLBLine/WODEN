@@ -1,3 +1,6 @@
 [run]
 parallel = true
 concurrency = multiprocessing, thread
+
+[debug]
+dataio = true

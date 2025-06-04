@@ -35,3 +35,9 @@ void test_source_component_common_ConstantDecEveryBeamLOFAR(e_component_type com
 
 void test_source_component_common_ConstantDecEveryBeamOSKAR(e_component_type comptype,
                                                        int do_gpu);
+
+void test_source_component_common_ConstantDecUVBeamMWA(e_component_type comptype,
+                                                        int do_gpu);
+
+void test_source_component_common_ConstantDecUVBeamHERA(e_component_type comptype,
+                                                          int do_gpu);

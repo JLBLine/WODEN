@@ -9,7 +9,7 @@ from wodenpy.skymodel import read_yaml_skymodel
 # import wodenpy
 from wodenpy.skymodel.woden_skymodel import Component_Type_Counter, CompTypes
 from wodenpy.skymodel.chunk_sky_model import map_chunk_pointgauss, Skymodel_Chunk_Map
-# from read_skymodel_common import Skymodel_Settings
+import logging
 
 D2R = np.pi/180.0
 
@@ -42,6 +42,8 @@ class Args:
         self.freq_res = 80e+3
         self.hdf5_beam_path = ""
         self.fast_everybeam = False
+        
+        self.log_level = logging.INFO
 
 class Skymodel_Settings:
     """Something to hold all the various settings and pass around between

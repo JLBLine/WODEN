@@ -1,26 +1,35 @@
 #Base image including CUDA to write everything on to
-FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
+# FROM nvidia/cuda:12.2.0-devel-ubuntu22.04
+FROM nvidia/cuda:12.5.1-devel-ubuntu24.04
 ARG CUDA_ARCH
+ARG USE_BUILD
 
-ENV WODEN_TAG=v2.5.0-alpha
+ENV WODEN_TAG=v2.6.0-alpha
 ENV EVERYBEAM_TAG=mwa_python_wrapper
 ENV HYPER_VERSION=0.10.0
 ENV RUST_VERSION=1.84.0
-
-ENV HYPERDRIVE_CUDA_COMPUTE=${CUDA_ARCH}
 ENV CUDAARCHS=${CUDA_ARCH}
+ENV BUILD=${USE_BUILD}
 
 RUN echo "Building for CUDA_ARCH=$CUDA_ARCH"
-RUN echo "HYPERDRIVE_CUDA_COMPUTE=$HYPERDRIVE_CUDA_COMPUTE"
+RUN echo "Building with USE_BUILD=$USE_BUILD"
 RUN echo "CUDAARCHS=$CUDAARCHS"
 RUN echo "Using WODEN tag ${WODEN_TAG}"
 RUN echo "Using EveryBeam tag ${EVERYBEAM_TAG}"
 RUN echo "Using Hyperbeam version ${HYPER_VERSION}"
 
+RUN if [ "$CUDA_ARCH" != "60;61;70;75;80;86" ]; then \
+      export HYPERBEAM_CUDA_COMPUTE=${CUDA_ARCH} && \
+      echo "HYPERBEAM_CUDA_COMPUTE=$HYPERBEAM_CUDA_COMPUTE"; \
+    else \
+      echo "Using default hyperbeam CUDA compute capability"; \
+    fi
+
 ##install the dependencies
 ENV DEBIAN_FRONTEND="noninteractive"
 RUN apt-get update -y && \
     apt-get -y install \
+            gdb \
             software-properties-common \
             tzdata \
             build-essential \
@@ -38,7 +47,7 @@ RUN apt-get update -y && \
             wget git make cmake g++ doxygen \
             libboost-all-dev libhdf5-dev libfftw3-dev \
             libblas-dev liblapack-dev libxml2-dev \
-            libgtkmm-3.0-dev libpython3-dev python3-distutils \
+            libgtkmm-3.0-dev libpython3-dev python3-setuptools \
             casacore-dev libcfitsio-dev wcslib-dev \
             && apt-get clean all \
             && rm -rf /var/lib/apt/lists/*
@@ -72,15 +81,18 @@ RUN wget https://github.com/MWATelescope/mwa_hyperbeam/archive/refs/tags/v${HYPE
 RUN git clone -b $WODEN_TAG https://github.com/JLBLine/WODEN.git \
   && cd WODEN \
   && mkdir build && cd build \
-  && cmake .. -DHBEAM_INC=/mwa_hyperbeam-${HYPER_VERSION}/include/ \
+  && cmake .. -DTARGET_GROUP=${BUILD} \
+           -DHBEAM_INC=/mwa_hyperbeam-${HYPER_VERSION}/include/ \
            -DHBEAM_LIB=/mwa_hyperbeam-${HYPER_VERSION}/target/release/libmwa_hyperbeam.so \
            -DEBEAM_INSTALL=/everybeam_install/ \
            -DEBEAM_ROOT=/EveryBeam/ \
   && make
+
   
 ##Now do the pip install
-RUN cd /WODEN && pip install -r requirements.txt && pip install .
-RUN pip install --upgrade astropy-iers-data
+RUN cd /WODEN && pip install --ignore-installed --break-system-packages -r requirements.txt
+RUN cd /WODEN && pip install --ignore-installed --break-system-packages  .
+RUN pip install --ignore-installed --break-system-packages --upgrade astropy-iers-data
 
 RUN mkdir -p /astropy_data
 ENV ASTROPY_DATA=/astropy_data

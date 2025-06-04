@@ -5,4 +5,4 @@ try:
     from importlib.metadata import version as _version
     __version__ = _version("wodenpy")
 except:
-    __version__ = "2.5.0"
+    __version__ = "2.6.0-alpha"

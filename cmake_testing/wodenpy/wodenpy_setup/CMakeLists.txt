@@ -22,3 +22,6 @@ add_test(python_test_get_code_version ${PYTHON_EXECUTABLE}
 
 add_test(python_test_make_logger ${PYTHON_EXECUTABLE}
          ${CMAKE_CURRENT_SOURCE_DIR}/test_make_logger.py)
+
+add_test(python_test_log_chosen_beamtype ${PYTHON_EXECUTABLE}
+         ${CMAKE_CURRENT_SOURCE_DIR}/test_log_chosen_beamtype.py)
