@@ -83,7 +83,6 @@ if [ "$do_python" = "True" ]; then
     coverage run --source=wodenpy ../cmake_testing/wodenpy/uvfits/test_RTS_encoding.py
 
     ##run_setup
-    coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/edit_metafits.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/test_argument_inputs.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/test_get_code_version.py
     coverage run --source=wodenpy ../cmake_testing/wodenpy/wodenpy_setup/test_log_chosen_beamtype.py
@@ -102,7 +101,7 @@ if [ "$do_python" = "True" ]; then
     coverage run --source=wodenpy ../cmake_testing/scripts/run_woden/test_run_woden.py
     coverage run --source=run_woden ../cmake_testing/scripts/run_woden/test_run_woden.py
     coverage run --source=run_woden ../cmake_testing/scripts/run_woden/test_run_woden.py Test.test_runs_with_profiler_on
-    coverage run --source=run_woden ../cmake_testing/scripts/run_woden/test_run_woden.py Test.test_runs_with_uvbeam
+    coverage run --source=run_woden ../cmake_testing/scripts/run_woden/test_run_woden.py Test.test_runs_with_uvbeam_MWA
     coverage run --source=wodenpy ../cmake_testing/scripts/run_woden/test_run_woden.py
 
     #convert output to something that codecov accepts
