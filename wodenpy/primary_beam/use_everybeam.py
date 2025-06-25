@@ -1321,9 +1321,6 @@ def run_mwa_beam(ms_path : str, element_response_model : bool,
         para_angles[comp_ind*num_times:(comp_ind+1)*num_times] = these_para_angles
         
     woden_path = importlib_resources.files(wodenpy).joinpath(f"libuse_everybeam.so")
-    
-    woden_path = "/home/jack-line/software/WODEN_dev/build/cmake_testing/GPU_or_C_code/libuse_everybeam.so"
-    
     woden_lib = ctypes.cdll.LoadLibrary(woden_path)
     
     load_and_run_mwa_beam = woden_lib.load_and_run_mwa_beam
