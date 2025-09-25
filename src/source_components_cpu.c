@@ -8,22 +8,11 @@
 
 user_precision_complex_t calc_measurement_equation_cpu(user_precision_t u,
            user_precision_t v, user_precision_t w,
-           double l, double m, double n,
-           double ant1_X, double ant1_Y, double ant1_Z,
-           double ant2_X, double ant2_Y, double ant2_Z,
-           user_precision_t az, user_precision_t zen){
+           double l, double m, double n, double offset){
 
   user_precision_complex_t visi;
 
-  double height = 100000;
 
-  double pp1_x = ant1_X + height * tan(zen) * sin(az);
-  double pp1_y = ant1_Y + height * tan(zen) * cos(az);
-  double pp2_x = ant2_X + height * tan(zen) * sin(az);
-  double pp2_y = ant2_Y + height * tan(zen) * cos(az);
-
-  // double offset = calc_phase_offset(pp_x, pp_y);
-  double offset = 1 * sin(1 + pp1_x * 0.003) - 1 * sin(1 + pp2_x * 0.003);
 
   double temp = 2*M_PI*( u*l + v*m + w*(n-1) + offset);
   double temp_im, temp_re;
@@ -36,20 +25,13 @@ user_precision_complex_t calc_measurement_equation_cpu(user_precision_t u,
 }
 
 void calc_measurement_equation_arrays_cpu(int num_cross, int num_components,
-           int num_baselines, int num_ants, int num_freqs,
            user_precision_t *us, user_precision_t *vs, user_precision_t *ws,
-           double *ls, double *ms, double *ns, user_precision_complex_t *visis,
-           double *ant_Xs, double *ant_Ys, double *ant_Zs,
-           user_precision_t *azs, user_precision_t *zens,
-           int *ant1_to_baseline_map, int *ant2_to_baseline_map){
+           double *ls, double *ms, double *ns, user_precision_complex_t *visis){
 
   user_precision_complex_t visi;
 
   double u, v, w;
-  double ant1_X, ant1_Y, ant1_Z;
-  double ant2_X, ant2_Y, ant2_Z;
   double l, m, n;
-  user_precision_t az, zen;
 
   for (int iBaseline = 0; iBaseline < num_cross; iBaseline++) {
 
@@ -57,25 +39,12 @@ void calc_measurement_equation_arrays_cpu(int num_cross, int num_components,
     v = (double)vs[iBaseline];
     w = (double)ws[iBaseline];
 
-    int baseline_ind = iBaseline % num_baselines;
-    int time_ind = floorf(((float)iBaseline - (float)baseline_ind) / ((float)num_freqs*(float)num_baselines));
-    int ant1 = time_ind*num_ants + ant1_to_baseline_map[baseline_ind];
-    int ant2 = time_ind*num_ants + ant2_to_baseline_map[baseline_ind];
-    ant1_X = ant_Xs[ant1];
-    ant1_Y = ant_Ys[ant1];
-    ant1_Z = ant_Zs[ant1];
-    ant2_X = ant_Xs[ant2];
-    ant2_Y = ant_Ys[ant2];
-    ant2_Z = ant_Zs[ant2];
-
     for (int iComponent = 0; iComponent < num_components; iComponent++) {
       l = ls[iComponent];
       m = ms[iComponent];
       n = ns[iComponent];
-      az = azs[iComponent];
-      zen = zens[iComponent];
 
-      visi = calc_measurement_equation_cpu(u, v, w, l, m, n, ant1_X, ant1_Y, ant1_Z, ant2_X, ant2_Y, ant2_Z, az, zen);
+      visi = calc_measurement_equation_cpu(u, v, w, l, m, n, 0);
 
       visis[num_components*iBaseline + iComponent] = visi;
     }
@@ -1245,6 +1214,16 @@ void calc_visi_point_or_gauss_cpu(components_t components,
         flux_U = components.extrap_stokesU[extrap_ind];
         flux_V = components.extrap_stokesV[extrap_ind];
       }
+
+      double height = 100000;
+
+      double pp1_x = calc_visi_inouts->ant_X[ant1] + height * tan(components.zas[time_ind*num_components + iComponent]) * sin(components.azs[time_ind*num_components + iComponent]);
+      double pp1_y = calc_visi_inouts->ant_Y[ant1] + height * tan(components.zas[time_ind*num_components + iComponent]) * cos(components.azs[time_ind*num_components + iComponent]);
+      double pp2_x = calc_visi_inouts->ant_X[ant2] + height * tan(components.zas[time_ind*num_components + iComponent]) * sin(components.azs[time_ind*num_components + iComponent]);
+      double pp2_y = calc_visi_inouts->ant_Y[ant2] + height * tan(components.zas[time_ind*num_components + iComponent]) * cos(components.azs[time_ind*num_components + iComponent]);
+
+      // double offset = calc_phase_offset(pp_x, pp_y);
+      double offset = 1 * sin(1 + pp1_x * 0.003) - 1 * sin(1 + pp2_x * 0.003);
       
       visi_comp = calc_measurement_equation_cpu(calc_visi_inouts->us[iBaseline],
                                                 calc_visi_inouts->vs[iBaseline],
@@ -1252,14 +1231,7 @@ void calc_visi_point_or_gauss_cpu(components_t components,
                                                 components.ls[iComponent],
                                                 components.ms[iComponent],
                                                 components.ns[iComponent],
-                                                calc_visi_inouts->ant_X[ant1],
-                                                calc_visi_inouts->ant_Y[ant1],
-                                                calc_visi_inouts->ant_Z[ant1],
-                                                calc_visi_inouts->ant_X[ant2],
-                                                calc_visi_inouts->ant_Y[ant2],
-                                                calc_visi_inouts->ant_Z[ant2],
-                                                components.azs[time_ind*num_components + iComponent],
-                                                components.zas[time_ind*num_components + iComponent]);
+                                                offset);
 
       if (comptype == GAUSSIAN) {
 
@@ -1365,20 +1337,23 @@ void calc_visi_shapelets_cpu(components_t components,
         shape_flux_V = components.extrap_stokesV[extrap_ind];
       }
 
+        double height = 100000;
+
+        double pp1_x = calc_visi_inouts->ant_X[ant1] + height * tan(components.zas[time_ind*num_shapes + iComponent]) * sin(components.azs[time_ind*num_shapes + iComponent]);
+        double pp1_y = calc_visi_inouts->ant_Y[ant1] + height * tan(components.zas[time_ind*num_shapes + iComponent]) * cos(components.azs[time_ind*num_shapes + iComponent]);
+        double pp2_x = calc_visi_inouts->ant_X[ant2] + height * tan(components.zas[time_ind*num_shapes + iComponent]) * sin(components.azs[time_ind*num_shapes + iComponent]);
+        double pp2_y = calc_visi_inouts->ant_Y[ant2] + height * tan(components.zas[time_ind*num_shapes + iComponent]) * cos(components.azs[time_ind*num_shapes + iComponent]);
+
+        // double offset = calc_phase_offset(pp_x, pp_y);
+        double offset = 1 * sin(1 + pp1_x * 0.003) - 1 * sin(1 + pp2_x * 0.003);
+
       visi_shape = calc_measurement_equation_cpu(calc_visi_inouts->us[iBaseline],
                                                 calc_visi_inouts->vs[iBaseline],
                                                 calc_visi_inouts->ws[iBaseline],
                                                 components.ls[iComponent],
                                                 components.ms[iComponent],
                                                 components.ns[iComponent],
-                                                calc_visi_inouts->ant_X[ant1],
-                                                calc_visi_inouts->ant_Y[ant1],
-                                                calc_visi_inouts->ant_Z[ant1],
-                                                calc_visi_inouts->ant_X[ant2],
-                                                calc_visi_inouts->ant_Y[ant2],
-                                                calc_visi_inouts->ant_Z[ant2],
-                                                components.azs[time_ind*num_shapes + iComponent],
-                                                components.zas[time_ind*num_shapes + iComponent]);
+                                                offset);
 
       user_precision_t pa = components.pas[iComponent];
       user_precision_t sinpa = sin(pa);

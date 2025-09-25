@@ -42,10 +42,7 @@ this yields the correct output visibilities.
 */
 user_precision_complex_t calc_measurement_equation_cpu(user_precision_t u,
            user_precision_t v, user_precision_t w,
-           double l, double m, double n,
-           double ant1_X, double ant1_Y, double ant1_Z,
-           double ant2_X, double ant2_Y, double ant2_Z,
-           user_precision_t az, user_precision_t zen);
+           double l, double m, double n, double offset);
 
 
 /**
@@ -69,12 +66,8 @@ is `num_components*iBaseline + iComponent`.
 
 */
 void calc_measurement_equation_arrays_cpu(int num_cross, int num_components,
-           int num_baselines, int num_ants, int num_freqs,
            user_precision_t *us, user_precision_t *vs, user_precision_t *ws,
-           double *ls, double *ms, double *ns, user_precision_complex_t *visis,
-           double *ant_Xs, double *ant_Ys, double *ant_Zs,
-           user_precision_t *azs, user_precision_t *zens,
-           int *ant1_to_baseline_map, int *ant2_to_baseline_map);
+           double *ls, double *ms, double *ns, user_precision_complex_t *visis);
 /**
 @brief Given primary beam gains and leakage terms for antenna 1
 `g1x, D1x, D1y, gy` and antenna 2 `g1x, D1x, D1y, gy`,the complex visibility
