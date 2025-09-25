@@ -175,8 +175,9 @@ void calculate_visibilities(array_layout_t *array_layout,
                 cropped_sky_models->num_shapelets, use_twobeams);
   } else {
     mem_visibility_set = setup_visibility_set(num_visis);
-    mem_calc_visi_inouts = create_calc_visi_inouts_cpu(visibility_set, sbf,
-                woden_settings, cropped_sky_models->num_shapelets, use_twobeams);
+    mem_calc_visi_inouts = create_calc_visi_inouts_cpu(array_layout, 
+                visibility_set, sbf, woden_settings,
+                cropped_sky_models->num_shapelets, use_twobeams);
   }
   
   //TODO - this could be a function in some other file?

@@ -47,8 +47,9 @@
  * 
  * @return Pointer to the initialised calc_visi_inouts_t structure.
  */
-calc_visi_inouts_t * create_calc_visi_inouts_cpu(visibility_set_t *visibility_set, 
-                user_precision_t *sbf, woden_settings_t *woden_settings,
+calc_visi_inouts_t * create_calc_visi_inouts_cpu(array_layout_t *array_layout,
+                visibility_set_t *visibility_set, user_precision_t *sbf, 
+                woden_settings_t *woden_settings,
                 int num_shapelets, int use_twobeams);
 
 /**

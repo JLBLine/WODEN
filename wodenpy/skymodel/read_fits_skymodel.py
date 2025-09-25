@@ -867,7 +867,7 @@ def add_fits_info_to_source_catalogue(comp_type : CompTypes,
                     source_components.beam_decs[hadec_low + time_ind] = source_components.decs[new_comp_ind]
         
         # ##Only some models calculated on the GPU need az/za coords
-        if beamtype in BeamGroups.azza_beam_values:
+        if True: # if beamtype in BeamGroups.azza_beam_values:
             ##Calculate ha, and then azimuth/elevation
             comp_has = lsts - source_components.ras[new_comp_ind]
             comp_azs, comp_els = erfa.hd2ae(comp_has, source_components.decs[new_comp_ind],

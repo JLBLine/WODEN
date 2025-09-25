@@ -1,7 +1,8 @@
 #include "calculate_visibilities_cpu.h"
 
-calc_visi_inouts_t * create_calc_visi_inouts_cpu(visibility_set_t *visibility_set, 
-                          user_precision_t *sbf, woden_settings_t *woden_settings,
+calc_visi_inouts_t * create_calc_visi_inouts_cpu(array_layout_t *array_layout,
+                          visibility_set_t *visibility_set, user_precision_t *sbf,
+                          woden_settings_t *woden_settings,
                           int num_shapelets, int use_twobeams){
 
   calc_visi_inouts_t *calc_visi_inouts = (calc_visi_inouts_t *)malloc(sizeof(calc_visi_inouts_t));
@@ -12,6 +13,10 @@ calc_visi_inouts_t * create_calc_visi_inouts_cpu(visibility_set_t *visibility_se
   int num_visis = woden_settings->num_visis;
   // int num_freqs = woden_settings->num_freqs;
   int num_ants = woden_settings->num_ants;
+
+  calc_visi_inouts->ant_X = array_layout->ant_X;
+  calc_visi_inouts->ant_Y = array_layout->ant_Y;
+  calc_visi_inouts->ant_Z = array_layout->ant_Z;
 
   calc_visi_inouts->allsteps_sha0s = visibility_set->allsteps_sha0s;
   calc_visi_inouts->allsteps_cha0s = visibility_set->allsteps_cha0s;
@@ -41,7 +46,7 @@ calc_visi_inouts_t * create_calc_visi_inouts_cpu(visibility_set_t *visibility_se
 
   }
 
-  if (use_twobeams == 1) {
+  if (1) { //use_twobeams == 1
 
     calc_visi_inouts->ant1_to_baseline_map = malloc(num_baselines*sizeof(int) );
     calc_visi_inouts->ant2_to_baseline_map = malloc(num_baselines*sizeof(int) );
@@ -83,7 +88,7 @@ void free_calc_visi_inouts_cpu(calc_visi_inouts_t *calc_visi_inouts,
 
   }
 
-  if (use_twobeams == 1) {
+  if (1) { //use_twobeams == 1
     free(calc_visi_inouts->ant1_to_baseline_map);
     free(calc_visi_inouts->ant2_to_baseline_map);
   }

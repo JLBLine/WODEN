@@ -460,6 +460,10 @@ def convert_array_layout_to_ctypes(array_layout_python : Array_Layout_Python,
     array_layout_ctypes.X_diff_metres = array_layout_python.X_diff_metres.ctypes.data_as(POINTER(c_double))
     array_layout_ctypes.Y_diff_metres = array_layout_python.Y_diff_metres.ctypes.data_as(POINTER(c_double))
     array_layout_ctypes.Z_diff_metres = array_layout_python.Z_diff_metres.ctypes.data_as(POINTER(c_double))
+
+    array_layout_ctypes.ant_X = array_layout_python.ant_X.ctypes.data_as(POINTER(c_double))
+    array_layout_ctypes.ant_Y = array_layout_python.ant_Y.ctypes.data_as(POINTER(c_double))
+    array_layout_ctypes.ant_Z = array_layout_python.ant_Z.ctypes.data_as(POINTER(c_double))
     
     array_layout_ctypes.latitude = array_layout_python.latitude
     array_layout_ctypes.num_baselines = array_layout_python.num_baselines
