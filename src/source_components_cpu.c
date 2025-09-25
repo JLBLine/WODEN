@@ -12,8 +12,6 @@ user_precision_complex_t calc_measurement_equation_cpu(user_precision_t u,
 
   user_precision_complex_t visi;
 
-
-
   double temp = 2*M_PI*( u*l + v*m + w*(n-1) + offset);
   double temp_im, temp_re;
 
@@ -1215,15 +1213,14 @@ void calc_visi_point_or_gauss_cpu(components_t components,
         flux_V = components.extrap_stokesV[extrap_ind];
       }
 
-      double height = 100000;
-
-      double pp1_x = calc_visi_inouts->ant_X[ant1] + height * tan(components.zas[time_ind*num_components + iComponent]) * sin(components.azs[time_ind*num_components + iComponent]);
-      double pp1_y = calc_visi_inouts->ant_Y[ant1] + height * tan(components.zas[time_ind*num_components + iComponent]) * cos(components.azs[time_ind*num_components + iComponent]);
-      double pp2_x = calc_visi_inouts->ant_X[ant2] + height * tan(components.zas[time_ind*num_components + iComponent]) * sin(components.azs[time_ind*num_components + iComponent]);
-      double pp2_y = calc_visi_inouts->ant_Y[ant2] + height * tan(components.zas[time_ind*num_components + iComponent]) * cos(components.azs[time_ind*num_components + iComponent]);
-
-      // double offset = calc_phase_offset(pp_x, pp_y);
-      double offset = 1 * sin(1 + pp1_x * 0.003) - 1 * sin(1 + pp2_x * 0.003);
+      double offset = calc_ionospheric_phase_offset(calc_visi_inouts->ant_X[ant1],
+                                                  calc_visi_inouts->ant_Y[ant1],
+                                                  calc_visi_inouts->ant_Z[ant1],
+                                                  calc_visi_inouts->ant_X[ant2],
+                                                  calc_visi_inouts->ant_Y[ant2],
+                                                  calc_visi_inouts->ant_Z[ant2],
+                                                  components.azs[time_ind*num_components + iComponent],
+                                                  components.zas[time_ind*num_components + iComponent]);
       
       visi_comp = calc_measurement_equation_cpu(calc_visi_inouts->us[iBaseline],
                                                 calc_visi_inouts->vs[iBaseline],
@@ -1337,15 +1334,14 @@ void calc_visi_shapelets_cpu(components_t components,
         shape_flux_V = components.extrap_stokesV[extrap_ind];
       }
 
-        double height = 100000;
-
-        double pp1_x = calc_visi_inouts->ant_X[ant1] + height * tan(components.zas[time_ind*num_shapes + iComponent]) * sin(components.azs[time_ind*num_shapes + iComponent]);
-        double pp1_y = calc_visi_inouts->ant_Y[ant1] + height * tan(components.zas[time_ind*num_shapes + iComponent]) * cos(components.azs[time_ind*num_shapes + iComponent]);
-        double pp2_x = calc_visi_inouts->ant_X[ant2] + height * tan(components.zas[time_ind*num_shapes + iComponent]) * sin(components.azs[time_ind*num_shapes + iComponent]);
-        double pp2_y = calc_visi_inouts->ant_Y[ant2] + height * tan(components.zas[time_ind*num_shapes + iComponent]) * cos(components.azs[time_ind*num_shapes + iComponent]);
-
-        // double offset = calc_phase_offset(pp_x, pp_y);
-        double offset = 1 * sin(1 + pp1_x * 0.003) - 1 * sin(1 + pp2_x * 0.003);
+      double offset = calc_ionospheric_phase_offset(calc_visi_inouts->ant_X[ant1],
+                                                  calc_visi_inouts->ant_Y[ant1],
+                                                  calc_visi_inouts->ant_Z[ant1],
+                                                  calc_visi_inouts->ant_X[ant2],
+                                                  calc_visi_inouts->ant_Y[ant2],
+                                                  calc_visi_inouts->ant_Z[ant2],
+                                                  components.azs[time_ind*num_shapes + iComponent],
+                                                  components.zas[time_ind*num_shapes + iComponent]);
 
       visi_shape = calc_measurement_equation_cpu(calc_visi_inouts->us[iBaseline],
                                                 calc_visi_inouts->vs[iBaseline],

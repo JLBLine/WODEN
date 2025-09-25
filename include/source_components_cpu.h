@@ -14,6 +14,7 @@
 
 #include "fundamental_coords_cpu.h"
 #include "primary_beam_cpu.h"
+#include "ionosphere_cpu.h"
 #include "source_components_common.h"
 
 /**
