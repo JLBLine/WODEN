@@ -321,7 +321,7 @@ def worker_create_filtered_ms(ms_path : str, new_ms_path : str,
         filtered_ms.close()
         
     with table(new_ms_path+'::FIELD', readonly=False) as field_table:
-        
+        field_table.putcol('PHASE_DIR', np.array([[[ra0, dec0]]]))
         field_table.putcol('DELAY_DIR', np.array([[[ra0, dec0]]]))
         field_table.putcol('REFERENCE_DIR', np.array([[[ra0, dec0]]]))
         

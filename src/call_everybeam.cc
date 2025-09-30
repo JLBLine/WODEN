@@ -244,9 +244,9 @@ extern "C" void run_phased_array_beam(Telescope *telescope,
                                double _Complex * jones) {
 
   std::vector<vector3r_t> direction_itrfs(num_dirs);
-  vector3r_t direction, phase_itrf; //, phase_itrf, station_itrf;
+  vector3r_t direction, phase_itrf;
 
-  aocommon::MC2x2 norm, normed, response; //, response;
+  aocommon::MC2x2 norm, normed, response;
 
   double freq, mjd_time;
 
@@ -276,6 +276,12 @@ extern "C" void run_phased_array_beam(Telescope *telescope,
       freq = freqs[fi];
       for (int si = 0; si < num_stations; si++) {
         int station_idx = station_idxs[si];
+
+        // const PhasedArray& phased_array = static_cast<const PhasedArray&>(*telescope);
+        // const std::string station_name = phased_array.GetStation(station_idx).GetName();
+        // std::cout << "Calculating beam for station " << station_name
+        //           << " at time " << mjd_time << " and frequency " << freq
+        //           << std::endl;
 
         if (apply_beam_norms) {
           phase_itrf = itrf_converter.RaDecToItrf(ra0, dec0);

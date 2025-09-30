@@ -11,7 +11,8 @@ EveryBeam Testing and Development
 
    test_parallactic_rotation.ipynb
    test_MWA.ipynb
-   test_LOFAR_LBA.ipynb
+   test_LOFAR_LBA_hamaker.ipynb
+   test_LOFAR_LBA_lobes.ipynb
    test_LOFAR_HBA.ipynb
    test_OSKAR_MWA.ipynb
    test_OSKAR_SKA.ipynb
@@ -50,6 +51,7 @@ Work still to be done on EveryBeam in WODEN
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 - Only certain frequencies exists in certain models. This means we don't need to call EveryBeam for every single frequency. So create some kind of cache or map for the existing beam models to save compute.
 - Getting rid of the reliance on my branch of EveryBeam. This will require a change in the EveryBeam API to allow for feeding in ``az,za`` directly, and working with the authors to get it merged.
+- I cannot get the LOBES version of the LOFAR beam to make sense, only the Hamaker model. See the ``test_LOFAR_LBA_lobes.ipynb`` notebook for more details.
 
 .. Adding new beam models
 .. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
