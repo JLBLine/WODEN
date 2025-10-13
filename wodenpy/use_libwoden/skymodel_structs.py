@@ -692,7 +692,7 @@ def setup_components(chunk_map: Skymodel_Chunk_Map,
         components.beam_has = np.empty(n_comps*num_times, dtype=np.float64)
         components.beam_decs = np.empty(n_comps*num_times, dtype=np.float64)
         
-    if beamtype in BeamGroups.azza_beam_values:
+    if True: # beamtype in BeamGroups.azza_beam_values
         components.azs = np.empty(n_comps*num_times, dtype=np_precision)
         components.zas = np.empty(n_comps*num_times, dtype=np_precision)
         
@@ -926,7 +926,7 @@ def copy_python_components_to_ctypes(python_comps: Components_Python,
         ctypes_comps.param_indexes = python_comps.param_indexes.ctypes.data_as(POINTER(c_user_precision))
     
     
-    if beamtype in BeamGroups.azza_beam_values:
+    if True: # beamtype in BeamGroups.azza_beam_values
         ctypes_comps.azs = python_comps.azs.ctypes.data_as(POINTER(c_user_precision))
         ctypes_comps.zas = python_comps.zas.ctypes.data_as(POINTER(c_user_precision))
         

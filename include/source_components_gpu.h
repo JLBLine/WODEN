@@ -17,6 +17,7 @@
 #include "woden_precision_defs.h"
 #include "gpu_macros.h"
 #include "source_components_common.h"
+#include "ionosphere_gpu.h"
 
 
 /**
@@ -54,7 +55,7 @@ this yields the correct output visibilities.
 */
 __device__ gpuUserComplex calc_measurement_equation_gpu(user_precision_t *d_us,
            user_precision_t *d_vs, user_precision_t *d_ws,
-           double *d_ls, double *d_ms, double *d_ns,
+           double *d_ls, double *d_ms, double *d_ns, double offset,
            const int iBaseline, const int iComponent);
 
 /**
@@ -1142,9 +1143,11 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
            user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
            user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
+           double *d_ant_X, double *d_ant_Y, double *d_ant_Z,
+           int *ant1_to_baseline_map, int *ant2_to_baseline_map,
            int num_components, int num_baselines, int num_freqs, int num_cross,
-           int num_times, e_beamtype beamtype, e_component_type comptype,
-           int off_cardinal_dipoles);
+           int num_times, int num_ants, e_beamtype beamtype,
+           e_component_type comptype, int off_cardinal_dipoles);
 
 /**
 @brief Kernel to calculate the visibility response to a number `num_shapes` of
@@ -1249,8 +1252,11 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
       user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
       user_precision_t *d_sbf,
+      double *d_ant_X, double *d_ant_Y, double *d_ant_Z,
+      int *ant1_to_baseline_map, int *ant2_to_baseline_map,
       int num_shapes, int num_baselines, int num_freqs, int num_cross,
-      const int num_coeffs, int num_times, e_beamtype beamtype, int off_cardinal_dipoles);
+      int num_ants, const int num_coeffs, int num_times,
+      e_beamtype beamtype, int off_cardinal_dipoles);
 
 /**
 @brief Copies the specified type of source components from host memory to device memory.
@@ -1264,7 +1270,7 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
 @param[in] comptype The type of source components to copy.
  */
 void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source,
-                            e_component_type comptype);
+                            e_component_type comptype, woden_settings_t *woden_settings);
 
 /**
 @brief Frees device memory associated with `d_chunked_source`, depending on
@@ -1308,7 +1314,7 @@ copied across to the GPU is (no empty pointers arrays are copied across)
 
 @param[in,out] *chunked_source A populated `source_t` struct
 */
-extern "C" source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
+extern "C" source_t * copy_chunked_source_to_GPU(source_t *chunked_source, woden_settings_t *woden_settings);
 
 
 

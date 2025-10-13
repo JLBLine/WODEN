@@ -267,7 +267,7 @@ void calculate_visibilities(array_layout_t *array_layout,
       if (woden_settings->verbose == 1){
         log_message("About to copy the chunked source to the GPU");
       }
-      mem_chunked_source = copy_chunked_source_to_GPU(source);
+      mem_chunked_source = copy_chunked_source_to_GPU(source, woden_settings);
       if (woden_settings->verbose == 1){
         log_message("Have copied across the chunk to the GPU");
       }

@@ -1213,7 +1213,7 @@ void calc_visi_point_or_gauss_cpu(components_t components,
         flux_V = components.extrap_stokesV[extrap_ind];
       }
 
-      double offset = calc_ionospheric_phase_offset(calc_visi_inouts->ant_X[ant1],
+      double offset = calc_ionospheric_phase_offset_cpu(calc_visi_inouts->ant_X[ant1],
                                                   calc_visi_inouts->ant_Y[ant1],
                                                   calc_visi_inouts->ant_Z[ant1],
                                                   calc_visi_inouts->ant_X[ant2],
@@ -1334,7 +1334,7 @@ void calc_visi_shapelets_cpu(components_t components,
         shape_flux_V = components.extrap_stokesV[extrap_ind];
       }
 
-      double offset = calc_ionospheric_phase_offset(calc_visi_inouts->ant_X[ant1],
+      double offset = calc_ionospheric_phase_offset_cpu(calc_visi_inouts->ant_X[ant1],
                                                   calc_visi_inouts->ant_Y[ant1],
                                                   calc_visi_inouts->ant_Z[ant1],
                                                   calc_visi_inouts->ant_X[ant2],

@@ -45,6 +45,18 @@ extern "C" calc_visi_inouts_t * create_calc_visi_inouts_gpu(array_layout_t *arra
   gpuMemcpy( d_calc_visi_inouts->Z_diff, array_layout->Z_diff_metres,
       num_time_steps*num_baselines*sizeof(double), gpuMemcpyHostToDevice );
 
+  gpuMalloc( (void**)&d_calc_visi_inouts->ant_X, num_time_steps*num_ants*sizeof(double) );
+  gpuMemcpy( d_calc_visi_inouts->ant_X, array_layout->ant_X,
+      num_time_steps*num_ants*sizeof(double), gpuMemcpyHostToDevice );
+      
+  gpuMalloc( (void**)&d_calc_visi_inouts->ant_Y, num_time_steps*num_ants*sizeof(double) );
+  gpuMemcpy( d_calc_visi_inouts->ant_Y, array_layout->ant_Y,
+      num_time_steps*num_ants*sizeof(double), gpuMemcpyHostToDevice );
+
+  gpuMalloc( (void**)&d_calc_visi_inouts->ant_Z, num_time_steps*num_ants*sizeof(double) );
+  gpuMemcpy( d_calc_visi_inouts->ant_Z, array_layout->ant_Z,
+      num_time_steps*num_ants*sizeof(double), gpuMemcpyHostToDevice );
+
   gpuMalloc( (void**)&d_calc_visi_inouts->allsteps_sha0s, num_cross*sizeof(double) );
   gpuMemcpy( d_calc_visi_inouts->allsteps_sha0s, visibility_set->allsteps_sha0s,
                       num_cross*sizeof(double), gpuMemcpyHostToDevice );
@@ -103,7 +115,7 @@ extern "C" calc_visi_inouts_t * create_calc_visi_inouts_gpu(array_layout_t *arra
         num_shapelets*num_baselines*num_time_steps*sizeof(user_precision_t));
   }
 
-  if (use_twobeams == 1) {
+  if (1) { // use_twobeams == 1
 
     gpuMalloc( (void**)&d_calc_visi_inouts->ant1_to_baseline_map, num_baselines*sizeof(int) );
     gpuMalloc( (void**)&d_calc_visi_inouts->ant2_to_baseline_map, num_baselines*sizeof(int) );
@@ -194,6 +206,9 @@ extern "C"  void free_calc_visi_inouts_gpu(calc_visi_inouts_t *d_calc_visi_inout
   gpuFree(d_calc_visi_inouts->X_diff);
   gpuFree(d_calc_visi_inouts->Y_diff);
   gpuFree(d_calc_visi_inouts->Z_diff);
+  gpuFree(d_calc_visi_inouts->ant_X);
+  gpuFree(d_calc_visi_inouts->ant_Y);
+  gpuFree(d_calc_visi_inouts->ant_Z);
   gpuFree(d_calc_visi_inouts->allsteps_sha0s);
   gpuFree(d_calc_visi_inouts->allsteps_cha0s);
   gpuFree(d_calc_visi_inouts->allsteps_wavelengths);
@@ -221,7 +236,7 @@ extern "C"  void free_calc_visi_inouts_gpu(calc_visi_inouts_t *d_calc_visi_inout
     gpuFree(d_calc_visi_inouts->v_shapes);
   }
 
-  if (use_twobeams == 1) {
+  if (1) { // use_twobeams == 1
     gpuFree(d_calc_visi_inouts->ant1_to_baseline_map);
     gpuFree(d_calc_visi_inouts->ant2_to_baseline_map);
   }

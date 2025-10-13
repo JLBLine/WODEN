@@ -162,7 +162,7 @@ extern void free_calc_visi_inouts_gpu(calc_visi_inouts_t *d_calc_visi_inouts,
 /**
 * External GPU code linked in from source_components_gpu.cpp, see source_components_gpu.h for full details.
 */
-extern source_t * copy_chunked_source_to_GPU(source_t *chunked_source);
+extern source_t * copy_chunked_source_to_GPU(source_t *chunked_source, woden_settings_t *woden_settings);
 
 /**
 * External GPU code linked in from source_components_gpu.cpp, see source_components_gpu.h for full details.

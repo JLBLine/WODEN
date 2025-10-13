@@ -2,7 +2,7 @@
 
 __device__  gpuUserComplex calc_measurement_equation_gpu(user_precision_t *d_us,
            user_precision_t *d_vs, user_precision_t *d_ws,
-           double *d_ls, double *d_ms, double *d_ns,
+           double *d_ls, double *d_ms, double *d_ns, double offset,
            const int iBaseline, const int iComponent){
 
   gpuUserComplex visi;
@@ -27,7 +27,7 @@ __device__  gpuUserComplex calc_measurement_equation_gpu(user_precision_t *d_us,
 
   //Not sure why, but get match with OSKAR/RTS sims, and correct location
   //on sky through WSClean, without negative infront on 2pi
-  double temp = 2*M_PI*( u*l + v*m + w*(n-1) );
+  double temp = 2*M_PI*( u*l + v*m + w*(n-1) + offset);
 
   visi.y = (user_precision_t)sin(temp);
   visi.x = (user_precision_t)cos(temp);
@@ -1194,9 +1194,11 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
            user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
            user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
+           double *d_ant_X, double *d_ant_Y, double *d_ant_Z,
+           int *ant1_to_baseline_map, int *ant2_to_baseline_map,
            int num_components, int num_baselines, int num_freqs, int num_cross,
-           int num_times, e_beamtype beamtype, e_component_type comptype,
-           int off_cardinal_dipoles) {
+           int num_times, int num_ants, e_beamtype beamtype,
+           e_component_type comptype, int off_cardinal_dipoles) {
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
@@ -1233,8 +1235,14 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
       //   printf("Fluxes %.3e %.3e %.3e %.3e\n", flux_I, flux_Q, flux_U, flux_V);
       // }
       
+      double offset = calc_ionospheric_phase_offset_gpu(d_ant_X, d_ant_Y, d_ant_Z,
+                                                  d_components.azs, d_components.zas,
+                                                  ant1_to_baseline_map, ant2_to_baseline_map,
+                                                  num_baselines, num_ants, time_ind, num_components,
+                                                  iBaseline, iComponent);
+      
       visi_comp = calc_measurement_equation_gpu(d_us, d_vs, d_ws,
-                             d_components.ls, d_components.ms, d_components.ns,
+                             d_components.ls, d_components.ms, d_components.ns, offset,
                              iBaseline, iComponent);
 
       // if (iBaseline == 0 && d_components.do_QUV == 1) {
@@ -1323,10 +1331,15 @@ extern "C" void calc_visi_point_or_gauss_gpu(components_t d_components,
                   d_visibility_set->sum_visi_YX_imag,
                   d_visibility_set->sum_visi_YY_real,
                   d_visibility_set->sum_visi_YY_imag,
+                  d_calc_visi_inouts->ant_X,
+                  d_calc_visi_inouts->ant_Y,
+                  d_calc_visi_inouts->ant_Z,
+                  d_calc_visi_inouts->ant1_to_baseline_map,
+                  d_calc_visi_inouts->ant2_to_baseline_map,
                   num_components, woden_settings->num_baselines,
                   woden_settings->num_freqs, woden_settings->num_cross,
-                  woden_settings->num_time_steps, beamtype, comptype,
-                  woden_settings->off_cardinal_dipoles);
+                  woden_settings->num_time_steps, woden_settings->num_ants,
+                  beamtype, comptype, woden_settings->off_cardinal_dipoles);
 
 }
 
@@ -1341,9 +1354,11 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
       user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
       user_precision_t *d_sbf,
+      double *d_ant_X, double *d_ant_Y, double *d_ant_Z,
+      int *ant1_to_baseline_map, int *ant2_to_baseline_map,
       int num_shapes, int num_baselines, int num_freqs, int num_cross,
-      const int num_coeffs, int num_times, e_beamtype beamtype,
-      int off_cardinal_dipoles) {
+      int num_ants, const int num_coeffs, int num_times,
+      e_beamtype beamtype, int off_cardinal_dipoles) {
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
@@ -1384,8 +1399,14 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
         shape_flux_V = d_components.extrap_stokesV[extrap_ind];
       }
 
+      double offset = calc_ionospheric_phase_offset_gpu(d_ant_X, d_ant_Y, d_ant_Z,
+                                                  d_components.azs, d_components.zas,
+                                                  ant1_to_baseline_map, ant2_to_baseline_map,
+                                                  num_baselines, num_ants, time_ind, num_shapes,
+                                                  iBaseline, iComponent);
+
       visi_shape = calc_measurement_equation_gpu(d_us, d_vs, d_ws,
-                            d_components.ls, d_components.ms, d_components.ns,
+                            d_components.ls, d_components.ms, d_components.ns, offset,
                             iBaseline, iComponent);
 
       user_precision_t pa = d_components.pas[iComponent];
@@ -1506,10 +1527,16 @@ extern "C" void calc_visi_shapelets_gpu(components_t d_components,
                   d_visibility_set->sum_visi_YX_imag,
                   d_visibility_set->sum_visi_YY_real,
                   d_visibility_set->sum_visi_YY_imag,
-                  d_calc_visi_inouts->sbf,  num_shapes,
-                  woden_settings->num_baselines, woden_settings->num_freqs,
-                  woden_settings->num_cross,
-                  num_shape_coeffs, woden_settings->num_time_steps,
+                  d_calc_visi_inouts->sbf,
+                  d_calc_visi_inouts->ant_X,
+                  d_calc_visi_inouts->ant_Y,
+                  d_calc_visi_inouts->ant_Z,
+                  d_calc_visi_inouts->ant1_to_baseline_map,
+                  d_calc_visi_inouts->ant2_to_baseline_map,
+                  num_shapes, woden_settings->num_baselines,
+                  woden_settings->num_freqs, woden_settings->num_cross,
+                  woden_settings->num_ants, num_shape_coeffs,
+                  woden_settings->num_time_steps,
                   beamtype, woden_settings->off_cardinal_dipoles);
 }
 
@@ -1517,12 +1544,13 @@ extern "C" void calc_visi_shapelets_gpu(components_t d_components,
 
 //Copy the sky model info from a set of components from the CPU to the GPU
 void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source,
-                            e_component_type comptype) {
+                            e_component_type comptype, woden_settings_t *woden_settings) {
 
   components_t *components=NULL;
   components_t *d_components=NULL;
   int num_comps = 0, num_shape_coeffs = 0;
   int num_powers = 0, num_curves = 0, num_lists = 0;
+  int num_time_steps = woden_settings->num_time_steps;
 
   if (comptype == POINT) {
     components = &chunked_source->point_components;
@@ -1569,6 +1597,14 @@ void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source
                                                         gpuMemcpyHostToDevice );
 
   d_components->num_primarybeam_values = components->num_primarybeam_values;
+
+  gpuMalloc( (void**)&d_components->azs, num_comps*num_time_steps*sizeof(double) );
+  gpuMemcpy( d_components->azs, components->azs, num_comps*num_time_steps*sizeof(double),
+                                                        gpuMemcpyHostToDevice );
+
+  gpuMalloc( (void**)&d_components->zas, num_comps*num_time_steps*sizeof(double) );
+  gpuMemcpy( d_components->zas, components->zas, num_comps*num_time_steps*sizeof(double),
+                                                        gpuMemcpyHostToDevice );
 
   //GAUSSIAN and SHAPELET only attributes
   if (comptype == GAUSSIAN || comptype == SHAPELET ) {
@@ -1917,18 +1953,18 @@ void copy_components_to_GPU(source_t *chunked_source, source_t *d_chunked_source
   }
 }
 
-extern "C" source_t * copy_chunked_source_to_GPU(source_t *chunked_source){
+extern "C" source_t * copy_chunked_source_to_GPU(source_t *chunked_source, woden_settings_t *woden_settings){
 
   source_t *d_chunked_source = (source_t*)malloc(sizeof(source_t));
 
   if (chunked_source->n_points > 0) {
-    copy_components_to_GPU(chunked_source, d_chunked_source, POINT);
+    copy_components_to_GPU(chunked_source, d_chunked_source, POINT, woden_settings);
   }
   if (chunked_source->n_gauss > 0) {
-    copy_components_to_GPU(chunked_source, d_chunked_source, GAUSSIAN);
+    copy_components_to_GPU(chunked_source, d_chunked_source, GAUSSIAN, woden_settings);
   }
   if (chunked_source->n_shapes > 0) {
-    copy_components_to_GPU(chunked_source, d_chunked_source, SHAPELET);
+    copy_components_to_GPU(chunked_source, d_chunked_source, SHAPELET, woden_settings);
   }
 
   //copy across the component counters
@@ -2054,6 +2090,9 @@ extern "C" void free_components_gpu(source_t *d_chunked_source,
   gpuFree( d_components.ls);
   gpuFree( d_components.ms);
   gpuFree( d_components.ns);
+
+  gpuFree(d_components.azs);
+  gpuFree(d_components.zas);
 
   //The az,za,beam_has,beam_decs are handled by other functions
 
@@ -2404,7 +2443,7 @@ __global__ void kern_calc_measurement_equation(int num_components, int num_basel
   if(iComponent < num_components && iBaseline < num_baselines) {
 
     gpuUserComplex visi;
-    visi = calc_measurement_equation_gpu(d_us, d_vs, d_ws, d_ls, d_ms, d_ns,
+    visi = calc_measurement_equation_gpu(d_us, d_vs, d_ws, d_ls, d_ms, d_ns, 0,
                                      iBaseline, iComponent);
 
     int visi_ind = num_components*iBaseline + iComponent;
