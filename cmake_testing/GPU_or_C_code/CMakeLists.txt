@@ -34,6 +34,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
               ${CMAKE_SOURCE_DIR}/src/primary_beam_gpu.cpp
               ${CMAKE_SOURCE_DIR}/src/source_components_gpu.cpp
               ${CMAKE_SOURCE_DIR}/src/calculate_visibilities_gpu.cpp
+              ${CMAKE_SOURCE_DIR}/src/ionosphere_gpu.cpp
               PROPERTIES LANGUAGE CUDA)
               
     endif()
@@ -42,8 +43,10 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
                 ${CMAKE_SOURCE_DIR}/src/fundamental_coords_gpu.cpp
                 ${CMAKE_SOURCE_DIR}/src/primary_beam_gpu.cpp
                 ${CMAKE_SOURCE_DIR}/src/source_components_gpu.cpp
-                ${CMAKE_SOURCE_DIR}/src/calculate_visibilities_gpu.cpp)
+                ${CMAKE_SOURCE_DIR}/src/calculate_visibilities_gpu.cpp
+                ${CMAKE_SOURCE_DIR}/src/ionosphere_gpu.cpp)
     target_compile_options(calculate_visibilities_GPU_${PRECISION} PRIVATE ${GPU_FLAGS})
+    set_target_properties(calculate_visibilities_GPU_${PRECISION} PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
     if (USE_EVERYBEAM)
         target_compile_options(calculate_visibilities_GPU_${PRECISION} PRIVATE
                               -DHAVE_EVERYBEAM)

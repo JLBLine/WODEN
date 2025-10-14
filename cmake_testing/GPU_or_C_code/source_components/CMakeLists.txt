@@ -11,6 +11,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
     set_source_files_properties(${CMAKE_SOURCE_DIR}/src/fundamental_coords_gpu.cpp
                                 ${CMAKE_SOURCE_DIR}/src/primary_beam_gpu.cpp
                                 ${CMAKE_SOURCE_DIR}/src/source_components_gpu.cpp
+                                ${CMAKE_SOURCE_DIR}/src/ionosphere_gpu.cpp
                                 extrap_stokes_common_gpu.cpp
                                 calc_measurement_equation_common_gpu.cpp
                                 apply_beam_gains_common_gpu.cpp
@@ -27,6 +28,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
               ${CMAKE_SOURCE_DIR}/src/fundamental_coords_gpu.cpp
               ${CMAKE_SOURCE_DIR}/src/primary_beam_gpu.cpp
               ${CMAKE_SOURCE_DIR}/src/source_components_gpu.cpp
+              ${CMAKE_SOURCE_DIR}/src/ionosphere_gpu.cpp
               extrap_stokes_common_gpu.cpp
               calc_measurement_equation_common_gpu.cpp
               apply_beam_gains_common_gpu.cpp
@@ -36,6 +38,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
               update_sum_visis_common_gpu.cpp
               calc_autos_common_gpu.cpp)
   target_compile_options(source_components_GPU_${PRECISION} PRIVATE ${GPU_FLAGS})
+  set_target_properties(source_components_GPU_${PRECISION} PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 
   ##----------------------------------------------------------------------------
   ##Now to add the tests in

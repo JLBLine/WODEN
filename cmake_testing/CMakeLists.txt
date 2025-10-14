@@ -21,7 +21,7 @@ set(DOUBLE_C_COVER_FLAGS -coverage -g -lm -Wall -DDOUBLE_PRECISION)
 if(USE_CUDA)
   ##Flags to make CUDA code compile in WODEN float or double modes
   set(FLOAT_GPU_FLAGS -g -G --compiler-options -Wall )
-  set(DOUBLE_GPU_FLAGS -DDOUBLE_PRECISION -g -G --compiler-options -Wall -D__NVCC__)
+  set(DOUBLE_GPU_FLAGS -DDOUBLE_PRECISION -g -G --compiler-options -Wall -D__NVCC__ -rdc=true)
 elseif(USE_HIP)
   ##Flags to make CUDA code compile in WODEN float or double modes
   set(FLOAT_GPU_FLAGS -g -Wall )

@@ -58,6 +58,7 @@ foreach(PRECISION IN LISTS DOUBLE)
               bad_gpu_code.cpp)
 
   target_compile_options(bad_cpu_code_${PRECISION} PRIVATE ${GPU_FLAGS})
+  set_target_properties(bad_cpu_code_${PRECISION} PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 
   ##Test primary beam filling function works
   add_executable(test_log_gpu_errors_${PRECISION}_app

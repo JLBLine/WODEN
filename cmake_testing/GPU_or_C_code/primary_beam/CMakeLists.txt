@@ -20,6 +20,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
               run_hyperbeam_common_gpu.cpp)
 
   target_compile_options(primary_beam_GPU_${PRECISION} PRIVATE ${GPU_FLAGS})
+  set_target_properties(primary_beam_GPU_${PRECISION} PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 
   ##complile the CPU version of the primary beam, and link to gcov so we
   ##can get coverage information

@@ -19,6 +19,7 @@ foreach(PRECISION IN LISTS FLOAT DOUBLE)
               lmn_coords_common_gpu.cpp
               uvw_coords_common_gpu.cpp)
   target_compile_options(fundamental_coords_GPU_${PRECISION} PRIVATE ${GPU_FLAGS})
+  set_target_properties(fundamental_coords_GPU_${PRECISION} PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 
   ##Now loop over the cpu and gpu tests
   foreach(DEVICE IN LISTS CPU GPU)
