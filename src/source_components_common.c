@@ -416,13 +416,10 @@ void source_component_common(woden_settings_t *woden_settings,
       //MWA beam is already normalised to zenith
       apply_beam_norms = false;
 
-      run_mwa_beam(beam_settings->everybeam_telescope,
-                    num_beams, station_idxs, num_components,
-                    azs, zas, para_angles,
-                    num_times, mjd_sec_times,
+      run_mwa_beam(beam_settings->eb_mwa_tile_beam,
+                    num_components, azs, zas, para_angles,
                     num_freqs, cpu_freqs,
-                    apply_beam_norms, rotate, element_only, iau_order,
-                    jones);
+                    num_times, rotate, iau_order, jones);
     }
 
     if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR) {

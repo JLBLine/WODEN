@@ -58,10 +58,12 @@ class Test(unittest.TestCase):
     def test_check_MWA(self):
         """Check we get expected behaviour with an MWA MS"""
         
-        
         ms_path = f'{code_dir}/../../../test_installation/everybeam/MWA-single-timeslot.ms'
+        # self.run_the_test(ms_path, "MWA", "MWA", ["MWA"])
         
-        self.run_the_test(ms_path, "MWA", "MWA", ["MWA"])
+        ##We want things to fail as we don't use an MS for MWA beams in WODEN
+        with self.assertRaises(SystemExit) as cm:
+            telescope_type, checked_response = check_ms_telescope_type_matches_element_response(ms_path)
 
         
     def test_check_LOFAR(self):

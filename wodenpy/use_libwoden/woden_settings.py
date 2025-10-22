@@ -320,6 +320,7 @@ def fill_woden_settings_python(args : argparse.Namespace,
         woden_settings.beamtype = BeamTypes.EB_LOFAR.value
         
     elif args.primary_beam == 'everybeam_MWA':
+        woden_settings.hdf5_beam_path = args.hdf5_beam_path
         woden_settings.beamtype = BeamTypes.EB_MWA.value
         
     elif args.primary_beam == 'uvbeam_MWA':
@@ -354,11 +355,15 @@ def fill_woden_settings_python(args : argparse.Namespace,
     else:
         woden_settings.mwa_dipole_amps = np.ones(16, dtype=np.float64)
     
-    ##Only ever need one beam for everybeam MWA, as we have no way of passing
-    ##different ampltiudes for each tile currently
+    ##Always set identical primary beam for EveryBeam MWA
+    ##Need to implement mapping of amplitudes to the c++ calls.
+    ##The everybeam c++ code maps the same dipole amplitudes to both X and Y
+    ##pols so I think you'd need to run everything twice and be careful mapping
+    ##the correct pol to output jones array index
     if args.primary_beam == 'everybeam_MWA':
         woden_settings.single_everybeam_station = 1
         woden_settings.hdf5_beam_path = args.hdf5_beam_path
+        woden_settings.mwa_dipole_amps = np.ones(16, dtype=np.float64)
     elif np.isnan(args.station_id):
         woden_settings.single_everybeam_station = 0
     else:
@@ -543,14 +548,10 @@ def convert_woden_settings_to_ctypes(woden_settings_python : Woden_Settings_Pyth
     woden_settings_ctypes.lsts = woden_settings_python.lsts.ctypes.data_as(POINTER(c_double))
     woden_settings_ctypes.band_nums = woden_settings_python.band_nums.ctypes.data_as(POINTER(c_int))
     
-    if woden_settings_ctypes.beamtype == BeamTypes.FEE_BEAM.value or \
-        woden_settings_ctypes.beamtype == BeamTypes.FEE_BEAM_INTERP.value or \
-        woden_settings_ctypes.beamtype == BeamTypes.MWA_ANALY.value:
+    if woden_settings_ctypes.beamtype in BeamGroups.needs_MWA_delays:
         woden_settings_ctypes.FEE_ideal_delays = woden_settings_python.FEE_ideal_delays.ctypes.data_as(POINTER(c_int))
         
-    if woden_settings_ctypes.beamtype == BeamTypes.FEE_BEAM.value or \
-        woden_settings_ctypes.beamtype == BeamTypes.FEE_BEAM_INTERP.value or \
-        woden_settings_ctypes.beamtype == BeamTypes.EB_MWA.value:
+    if woden_settings_ctypes.beamtype in BeamGroups.needs_MWA_hdf5_path:
         woden_settings_ctypes.hdf5_beam_path = create_string_buffer(woden_settings_python.hdf5_beam_path.encode('utf-8'))
         
     if woden_settings_ctypes.beamtype in BeamGroups.eb_beam_values:

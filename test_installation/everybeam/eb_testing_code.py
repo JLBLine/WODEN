@@ -73,19 +73,22 @@ def plot_jones_on_sky(all_gx, all_Dx, all_Dy, all_gy, wcs, title=False,
             gy = np.imag(all_gy)
             tag = "Imag"
 
-        im0 = axs[0, row].imshow(gx, origin='lower')
+        cmap = plt.cm.viridis.copy()
+        cmap.set_bad(color='gray')
+
+        im0 = axs[0, row].imshow(gx, origin='lower', cmap=cmap)
         plt.colorbar(im0, ax=axs[0, row])
-        
-        
-        im1 = axs[1, row].imshow(Dx, origin='lower')
+
+
+        im1 = axs[1, row].imshow(Dx, origin='lower', cmap=cmap)
         plt.colorbar(im1, ax=axs[1, row])
-        
-        
-        im2 = axs[2, row].imshow(Dy, origin='lower')
+
+
+        im2 = axs[2, row].imshow(Dy, origin='lower', cmap=cmap)
         plt.colorbar(im2, ax=axs[2, row])
-        
-        
-        im3 = axs[3, row].imshow(gy, origin='lower')
+
+
+        im3 = axs[3, row].imshow(gy, origin='lower', cmap=cmap)
         plt.colorbar(im3, ax=axs[3, row])
         
         # for ax in axs[:, row]:

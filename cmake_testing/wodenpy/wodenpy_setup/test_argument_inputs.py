@@ -779,48 +779,32 @@ class Test(unittest.TestCase):
         
             self.make_minimum_required_args_without_metafits()
             self.inputs.append('--primary_beam=everybeam_MWA')
-            ##check it errors as we haven't provided a measurement set or
-            ##path to hdf5
+            ##check it errors as we haven't provided a hdf5 path or metafits
             self.assert_check_args_errors()
             
             ##check it errors with bad path to hdf5
             self.inputs.append('--hdf5_beam_path=hdf5_beam_path')
             self.assert_check_args_errors()
             
-            ##reset input args
-            self.make_minimum_required_args_without_metafits()
-            self.inputs.append('--primary_beam=everybeam_MWA')
-            ms_path = "lsjkhdgfkjhsdgfkajsdh"
-            self.inputs.append(f'--beam_ms_path={ms_path}')
-            self.assert_check_args_errors()
             
             ##reset input args
             self.make_minimum_required_args_without_metafits()
             self.inputs.append('--primary_beam=everybeam_MWA')
-            ms_path = f"{code_dir}/../../../test_installation/everybeam/MWA-single-timeslot.ms"
-            self.inputs.append(f'--beam_ms_path={ms_path}')
-            self.inputs.append(f'--band_nums=1')
-            
-            ##we need to get rid of the --array_layout flag, as it will
-            ##override reading the measurement set array layout
-            for ind, arg in enumerate(self.inputs):
-                if arg.startswith('--array_layout'):
-                    self.inputs.pop(ind)
-                    break
+            self.inputs.append("--metafits_filename={:s}/1202815152_metafits_ppds.fits".format(code_dir))
             
             args = self.run_parser_and_check_args()
+            ##Make sure delays were read in from the metafits, and the 
+            ##amplitudes were set to 1.0
+            self.assertEqual("6,4,2,0,8,6,4,2,10,8,6,4,12,10,8,6", args.MWA_FEE_delays)
             
-            self.assertTrue(np.allclose(east_ms, args.east, atol=1e-5))
-            self.assertTrue(np.allclose(north_ms, args.north, atol=1e-5))
-            self.assertTrue(np.allclose(height_ms, args.height, atol=1e-5))
+            npt.assert_array_equal(np.ones(16), args.dipamps)
+
             
         ##If we don't have EveryBeam, we expect an error when someone asks
         ##for it
         else:
             self.make_minimum_required_args_without_metafits()
             self.inputs.append('--primary_beam=everybeam_MWA')
-            ##check it errors as we haven't provided a measurement set or
-            ##path to hdf5
             self.assert_check_args_errors()
         
     def test_bad_primary_beam(self):
@@ -918,7 +902,9 @@ class Test(unittest.TestCase):
             self.assertAlmostEqual(ref_dir[1], dec0, 6)
         
     def test_read_radec_from_MS(self):
-        """Check `ra.check_args` works correctly for the `--primary_beam=everybeam_MWA`
+        """Check we can read the ra,dec pointing from a measurement set,
+        and also check we can override with a new phase centre and/or beam
+        pointing
         
         However, can only run these tests if we have EveryBeam. If not, we
         expect and error, so adjust the test accordingly
@@ -927,8 +913,8 @@ class Test(unittest.TestCase):
         if HAVE_EVERYBEAM:
         
             self.make_minimum_required_args_minus_radec()
-            self.inputs.append('--primary_beam=everybeam_MWA')
-            ms_path = f"{code_dir}/../../../test_installation/everybeam/MWA-single-timeslot.ms"
+            self.inputs.append('--primary_beam=everybeam_LOFAR')
+            ms_path = f"{code_dir}/../../../test_installation/everybeam/LOFAR_LBA_MOCK.ms"
             self.inputs.append(f'--beam_ms_path={ms_path}')
             self.inputs.append(f'--band_nums=1')
             
@@ -940,24 +926,23 @@ class Test(unittest.TestCase):
                     break
             
             args = self.run_parser_and_check_args()
+            # print(args.ra0, args.dec0)
             
-            ##That's right, for some reason, the MWA-single-timeslot.ms set,
-            ##which is zenith pointed, has a phase centre of 124.999995, -42.75
-            self.assertAlmostEqual(args.ra0, 124.999995, 6)
-            self.assertAlmostEqual(args.dec0, -42.75, 6)
+            self.assertAlmostEqual(args.ra0, -82.61757960000001, 6)
+            self.assertAlmostEqual(args.dec0, 48.7461556, 6)
             
-            self.assertAlmostEqual(args.eb_ra_point, 124.999995, 6)
-            self.assertAlmostEqual(args.eb_dec_point, -42.75, 6)
+            self.assertAlmostEqual(args.eb_ra_point, -82.61757960000001, 6)
+            self.assertAlmostEqual(args.eb_dec_point, 48.7461556, 6)
             
             ##Now check we can override the defaults
             self.inputs.append('--ra0=0.0')
             args = self.run_parser_and_check_args()
             
             self.assertAlmostEqual(args.ra0, 0.0, 6)
-            self.assertAlmostEqual(args.dec0, -42.75, 6)
+            self.assertAlmostEqual(args.dec0, 48.7461556, 6)
             
-            self.assertAlmostEqual(args.eb_ra_point, 124.999995, 6)
-            self.assertAlmostEqual(args.eb_dec_point, -42.75, 6)
+            self.assertAlmostEqual(args.eb_ra_point, -82.61757960000001, 6)
+            self.assertAlmostEqual(args.eb_dec_point, 48.7461556, 6)
             
             ##Now check we can override the defaults
             self.inputs.append('--dec0=-26.7')
@@ -966,14 +951,11 @@ class Test(unittest.TestCase):
             self.assertAlmostEqual(args.ra0, 0.0, 6)
             self.assertAlmostEqual(args.dec0, -26.7, 6)
             
-            self.assertAlmostEqual(args.eb_ra_point, 124.999995, 6)
-            self.assertAlmostEqual(args.eb_dec_point, -42.75, 6)
+            self.assertAlmostEqual(args.eb_ra_point, -82.61757960000001, 6)
+            self.assertAlmostEqual(args.eb_dec_point, 48.7461556, 6)
             
-            ##NOTE changing the MWA everybeam pointing won't actually change
-            ##the MWA beam direction, as that's controlled by the delays
-            ##But it would change the direction of a LOFAR beam, and the
-            ##code tested here is same for LOFAR. Just had the paths to the MWA
-            ##measurement sets handy here so roll with it
+            #The above has changed the phase centre; now check we can
+            #set the pointing to be the same as the phase centre
             self.inputs.append('--eb_point_to_phase')
             args = self.run_parser_and_check_args()
             

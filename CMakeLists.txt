@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.21)
 
-set(WODEN_VERSION 2.5)
+set(WODEN_VERSION 2.6)
+
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(CheckLanguage)
 
@@ -29,7 +33,7 @@ if(USE_CUDA)
     project(woden VERSION ${WODEN_VERSION} LANGUAGES CXX C CUDA)
 
     ##Sets the -std=c++11 nvcc compiler flag I think
-    set(CMAKE_CUDA_STANDARD 11)
+    set(CMAKE_CUDA_STANDARD 17)
     ##Internal flag to let code know we're using nvcc
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D__NVCC__ ")
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
@@ -118,6 +122,25 @@ if(${EVERYBEAM_FOUND})
             )
         endif(AOCOM_INC)
 
+        ##We want to directly call the EveryBeam MWA function with az,za
+        ##as an input. This means we need to include the mwabeam headers
+        ##which aren't installed by default
+        set(HINTS_EBEAM_MWA "${EBEAM_ROOT}/cpp/mwabeam/")
+        message(STATUS "Looking for beam2016implementation.h in ${HINTS_EBEAM_MWA}")
+        find_path(EBEAM_MWA_DIR beam2016implementation.h HINTS ${HINTS_EBEAM_MWA})
+
+        if(EBEAM_MWA_DIR)
+            message(STATUS "EveryBeam MWA source code dir found: ${EBEAM_MWA_DIR}")
+            # get_filename_component(EBEAM_MWA_DIR ${EBEAM_MWA_DIR} DIRECTORY)
+            message(STATUS "EBEAM_MWA_DIR: ${EBEAM_MWA_DIR}")
+            set(USE_EVERYBEAM TRUE)
+        else(EBEAM_MWA_DIR)
+            message(
+              STATUS
+                "EveryBeam MWA source code dir not found. WODEN needs it to use the EveryBeam library. Building without EveryBeam."
+            )
+            set(USE_EVERYBEAM FALSE)
+        endif(EBEAM_MWA_DIR)
 
 
     else(${CASACORE_FOUND})
@@ -155,17 +178,24 @@ if(TARGET_GROUP STREQUAL production OR TARGET_GROUP STREQUAL debug)
         add_library(use_everybeam SHARED
             ${CXXSOURCES}
             ${CMAKE_SOURCE_DIR}/src/logger.c
+            ${EBEAM_MWA_DIR}/beam2016implementation.cc
             )
         target_link_libraries(use_everybeam ${EVERYBEAM_LIB} ${CASACORE_LIBRARIES})
 
         target_include_directories(use_everybeam PRIVATE
                         ${EVERYBEAM_INCLUDE_DIRS}
                         ${AOCOM_BASE}
-                        ${CASACORE_INCLUDE_DIRS})
+                        ${CASACORE_INCLUDE_DIRS}
+                        ${EBEAM_MWA_DIR})
+
+        ##Need the -march=native to tell aocommon to use the correct 
+        ##matrix class, an internal data type to EveryBeam
         if(TARGET_GROUP STREQUAL production)
-            target_compile_options(use_everybeam PRIVATE -DHAVE_EVERYBEAM -O3 -Wall)
+            target_compile_options(use_everybeam PRIVATE -DHAVE_EVERYBEAM -O3 -Wall
+                                                -march=native)
         else()
-            target_compile_options(use_everybeam PRIVATE -DHAVE_EVERYBEAM -O0 -g -Wall)
+            target_compile_options(use_everybeam PRIVATE -DHAVE_EVERYBEAM -O0 -g -Wall
+                                                -march=native)
         endif()
         
 

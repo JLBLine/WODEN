@@ -152,7 +152,7 @@ def get_parser():
             "\t - MWA_analy (MWA analytic model)\n"
             "\t - everybeam_OSKAR (EveryBeam OSKAR model; requires an OSKAR measurement set via --beam_ms_path)\n"
             "\t - everybeam_LOFAR (EveryBeam LOFAR model; requires a LOFAR measurement set via --beam_ms_path)\n"
-            "\t - everybeam_MWA (EveryBeam MWA model; requires an MWA measurement set via --beam_ms_path.\n"
+            "\t - everybeam_MWA (EveryBeam MWA model; does NOT require a measurement set.\n"
             "\t\t defaults to using env variable $MWA_FEE_HDF5 as input; use `--hdf5_beam_path` to specifiy otherwise)\n"
             "\t - uvbeam_MWA (pyuvdata.uvbeam MWA model; \n"
             "\t\t defaults to using env variable $MWA_FEE_HDF5 as input; \n"
@@ -180,8 +180,7 @@ def get_parser():
               'model enter as as list like: \n'
               '--MWA_FEE_delays=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]\n'
               'for a zenith pointing. This is read directly from\n'
-              'the metafits if using a metafits file. Only effects `hyperbeam`, '
-              '`uvbeam`, and analytic MWA models; `everybeam` reads delays from a measurement set')
+              'the metafits if using a metafits file. Used for all MWA model variants.')
     
     hyper_group.add_argument('--use_MWA_dipflags', default=False, action='store_true',
         help='Apply the dipole flags stored in the metafits file. Only effects'
@@ -193,21 +192,22 @@ def get_parser():
     
     eb_group = parser.add_argument_group('EVERYBEAM PRIMARY BEAM OPTIONS')
     eb_group.add_argument('--beam_ms_path', default=False,
-                           help='When using any `everybeam` primary beam option, '
+                           help='When using a LOFAR/OSKAR `everybeam` primary beam option, '
                                 'must provide a path to the measurement set')
     eb_group.add_argument('--no_beam_normalisation', default=False,
                            action='store_true',
                            help='When using an `everybeam` primary beam option, '
                                 'do not normalise the primary beam to the beam ' 
-                                'centre. By default, WODEN calculated the beam response '
+                                'centre. By default, WODEN calculates the beam response '
                                 'at the beam centre, and multiplies all beam values '
                                 'by the inverse of this value. Add this option to switch '
-                                'that off.')
+                                'that off. Note this does not have an effect for the MWA '
+                                'beam')
     eb_group.add_argument('--station_id', default=np.nan, type=int,
                            help='When using any `everybeam` primary beam option, '
                                 'default is to simulate a unique beam per station.'
                                 'Include this index to use a specific station number '
-                                'for all stations instead.')
+                                'for all stations instead. (Does not apply to MWA beam)')
     eb_group.add_argument('--eb_point_to_phase', default=False, action='store_true',
         help='Lock the EveryBeam pointing to the phase centre. '
               'EveryBeam reads the beam pointing in from a measurement set, so '
@@ -796,7 +796,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
                      'variable MWA_FEE_HDF5_INTERP must point towards the file\n'
                      'MWA_embedded_element_pattern_rev2_interp_167_197MHz.h5. Exiting now as WODEN will fail.')
                 
-    eb_args = ['everybeam_OSKAR', 'everybeam_LOFAR', 'everybeam_MWA']
+    eb_args = ['everybeam_OSKAR', 'everybeam_LOFAR']
     
     woden_lib_path = importlib_resources.files(wodenpy).joinpath(f"libwoden_{args.precision}.so")
     have_everybeam = check_for_everybeam(woden_lib_path)
@@ -1052,7 +1052,7 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
 
     ##Do the test on MWA_FEE_delays only if this particular primary beam
     ##needs MWA delays
-    if args.primary_beam in ['MWA_FEE', 'MWA_FEE_interp', 'MWA_analy', 'uvbeam_MWA']:
+    if args.primary_beam in ['MWA_FEE', 'MWA_FEE_interp', 'MWA_analy', 'uvbeam_MWA', 'everybeam_MWA']:
         args.MWA_FEE_delays = select_argument_and_check(args.MWA_FEE_delays,
                                       args.MWA_FEE_delays,
                                       MWA_FEE_delays, "MWA_FEE_delays")
@@ -1230,6 +1230,11 @@ def check_args(args : argparse.Namespace) -> argparse.Namespace:
     if args.use_MWA_dipflags or args.use_MWA_dipamps:
         args.dipamps = args.dipflags*args.dipamps
         args.use_MWA_dipamps = True
+        
+    ##For now, we're not propagating dipole flags and amplitudes through
+    ##to the EveryBeam MWA beam. So just set them to 16 ones here:
+    if args.primary_beam == 'everybeam_MWA':
+        args.dipamps = np.ones(16)
        
     if ~np.isnan(args.station_id):
         if args.station_id >= args.num_antennas:

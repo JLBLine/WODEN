@@ -7,6 +7,7 @@ usable data types, via `ctypes`.
 See https://everybeam.readthedocs.io/en/latest/index.html for more information
 on the EveryBeam library."""
 
+from time import time
 import numpy as np
 from astropy.coordinates import ITRS, SkyCoord, AltAz, EarthLocation
 from astropy.time import Time, TimeDelta
@@ -29,7 +30,7 @@ from logging import Logger
 from multiprocessing import Process, Queue
 from wodenpy.use_libwoden.beam_settings import BeamTypes
 import ctypes
-from wodenpy.array_layout.create_array_layout import convert_ecef_to_enh, convert_enh_to_ecef, enh2xyz
+from wodenpy.array_layout.create_array_layout import convert_ecef_to_enh, convert_enh_to_ecef
 from erfa import gc2gd, gd2gc
 
 ##This call is so we can use it as a type annotation
@@ -497,13 +498,15 @@ def check_ms_telescope_type_matches_element_response(ms_path : str,
     response model to the default for the telescope type. This function uses
     the `check_ms_telescope_type` function in `libuse_everybeam.so`.
     
-    Accpetable combinations of telescope type and `element_response_model` are:
-    - MWA: 'MWA' or 'default'
     - LOFAR: 'hamaker', 'hamakerlba', 'lobes' or 'default'
     - OSKAR: 'skala40_wave' or 'default'
     
     Please note that 'hamakerlba', 'lobes' are not tested or supported in
     WODEN, and are not recommended for use. They are included for completeness.
+    
+    Furthermore, please note that WODEN doesn't use a base measurement set
+    for the MWA primary beam, and so will throw an error here to make sure
+    you're not doing something the c++ code can't handle.
     
     Parameters
     ----------
@@ -541,14 +544,13 @@ def check_ms_telescope_type_matches_element_response(ms_path : str,
     use_element_response_model = False
     
     if telescope_type == 'MWA':
-        if element_response_model == 'default':
-            use_element_response_model = "MWA"
-        else:
-            if element_response_model != 'MWA':
-                logger.warning(f"Measurement set telescope type is MWA, but element_response_model was set to {element_response_model}. Changing to 'MWA'")
-                use_element_response_model = "MWA"
-            else:
-                use_element_response_model = element_response_model
+        exit_message = "WODEN does not support using a measurement set for the MWA primary beam model. "
+        exit_message += "It instead calls the EveryBeam Beam2016Implementation code "
+        exit_message += "directly to input az,za, and uses the array layout from either "
+        exit_message += "an MWA metafits file, or a user-defined array layout. "
+        
+        logger.error(exit_message)
+        exit(exit_message)
                 
     elif telescope_type == 'LOFAR':
         if element_response_model == 'default':
@@ -576,13 +578,12 @@ def check_ms_telescope_type_matches_element_response(ms_path : str,
     else:
         use_element_response_model = element_response_model
         exit_message = f"Measurement set telescope type is {telescope_type}. "
-        exit_message += "WODEN currently supports LOFAR, MWA, OSKAR EveryBeam."
+        exit_message += "WODEN currently supports LOFAR, OSKAR EveryBeam from a measurement set. "
         exit_message += "Cannot proceed as unknown behaviour will happen in C++ code. "
         exit_message += "Exiting now."
         logger.error(exit_message)
         exit(exit_message)
         
-    
     return telescope_type, use_element_response_model
 
 
@@ -642,12 +643,19 @@ def convert_common_args_to_everybeam_args(ms_path : str, coeff_path : str,
     
     return ms_path_ctypes, coeff_path_ctypes, element_response_model_ctypes, station_idxs_ctypes, freqs_ctypes, mjd_sec_times_ctypes
 
-def run_everybeam(ms_path : str, coeff_path : str,
-                  ras: np.ndarray, decs: np.ndarray,
-                  beam_ra0: float, beam_dec0: float,
-                  j2000_latitudes: np.ndarray, j2000_lsts: np.ndarray,
-                  times: np.ndarray, freqs: np.ndarray,
-                  station_ids: np.ndarray,
+def run_everybeam(ras: np.ndarray, decs: np.ndarray,
+                  freqs: np.ndarray,
+                  ms_path : str = False,
+                  beam_ra0: float = np.nan, beam_dec0: float = np.nan,
+                  times: np.ndarray[Time] = False,
+                  station_ids: np.ndarray = False,
+                  
+                  mwa_coeff_path : str = False,
+                  mwa_dipole_delays: np.ndarray = False,
+                  mwa_dipole_amps: np.ndarray = np.ones(16),
+                  j2000_latitudes: np.ndarray = False,
+                  j2000_lsts: np.ndarray = False,
+                  
                   element_response_model='default',
                   apply_beam_norms: bool = True,
                   iau_order: bool = False,
@@ -665,9 +673,9 @@ def run_everybeam(ms_path : str, coeff_path : str,
     ------------
     ms_path : str
         Path to the measurement set to load the EveryBeam telescope from.
-    coeff_path : str
-        Path to the coefficients file (only needs a value for MWA, pass the path
-        to the hdf5 FEE file. Otherwise just pass "").
+    mwa_coeff_path : str
+        Path to the coefficients file (needed for MWA, pass the path
+        to the hdf5 FEE file.)
     ras : np.ndarray
         Right ascensions of the coordinates in radians.
     decs : np.ndarray
@@ -677,9 +685,9 @@ def run_everybeam(ms_path : str, coeff_path : str,
     beam_dec0 : float
         Declination of the beam center in radians.
     j2000_latitudes : np.ndarray
-        Latitudes in J2000 coordinates.
+        Latitudes in J2000 coordinates (needed for MWA beam az,za calculations).
     j2000_lsts : np.ndarray
-        Local sidereal times in J2000 coordinates.
+        Local sidereal times in J2000 coordinates (needed for MWA beam az,za calculations).
     times : np.ndarray
         Array of observation times.
     freqs : np.ndarray
@@ -711,71 +719,97 @@ def run_everybeam(ms_path : str, coeff_path : str,
     np.ndarray
         The calculated Jones matrices with shape (num_stations, num_times, num_freqs, num_coords, 2, 2).
     """
+
+    if type(ms_path) == bool and type(mwa_coeff_path) == bool:
+            logger.error("Either `ms_path` or `mwa_coeff_path` must be provided. Exiting now.")
+            exit()
     
     if not logger:
         logger = simple_logger()
         
-    telescope_type, checked_element_response_model = check_ms_telescope_type_matches_element_response(ms_path,
-                                                                           element_response_model,
-                                                                           logger)
-    
-    num_stations = len(station_ids)
-    num_times = len(times)
-    num_freqs = len(freqs)
-    num_coords = len(ras)
-    
-    mjd_sec_times = np.array([time.mjd * 86400.0 for time in times])
-    
-    if telescope_type == 'MWA':
-        jones = run_mwa_beam(ms_path, checked_element_response_model,
-                             coeff_path, station_ids,
-                             ras, decs, mjd_sec_times,
-                             j2000_lsts, j2000_latitudes, freqs, 
+
+    if mwa_coeff_path:
+        
+        ##Check coeff path exists
+        if not os.path.exists(mwa_coeff_path):
+            logger.error(f"MWA coefficient path mwa_coeff_path={mwa_coeff_path} does not exist. Exiting now.")
+            exit()
+        
+        if type(j2000_latitudes) == bool or type(j2000_lsts) == bool or type(mwa_dipole_delays) == bool:
+            logger.error("j2000_latitudes, j2000_lsts, and mwa_dipole_delays must be provided for MWA beam calculations. Exiting now.")
+            exit()
+        
+        jones = run_mwa_beam(mwa_dipole_delays,
+                             mwa_coeff_path,
+                             ras, decs, 
+                             j2000_lsts, j2000_latitudes, freqs,
+                             amps=mwa_dipole_amps,
                              apply_beam_norms=apply_beam_norms,
                              parallactic_rotate=parallactic_rotate,
                              iau_order=iau_order,
                              element_only=element_only)
-        
-    elif telescope_type == 'LOFAR':
-        jones = run_lofar_beam(ms_path, checked_element_response_model,
-                               station_ids,
-                               beam_ra0, beam_dec0,
-                               ras, decs, mjd_sec_times, freqs,
-                               apply_beam_norms=apply_beam_norms,
-                               parallactic_rotate=parallactic_rotate,
-                               iau_order=iau_order,
-                               element_only=element_only)
-        
-    elif telescope_type == 'OSKAR':
-        jones = run_oskar_beam(ms_path, checked_element_response_model,
-                               station_ids,
-                               beam_ra0, beam_dec0,
-                               ras, decs, mjd_sec_times, freqs,
-                               apply_beam_norms=apply_beam_norms,
-                               parallactic_rotate=parallactic_rotate,
-                               iau_order=iau_order,
-                               element_only=element_only)
-        
+    
     else:
-        logger.error("Unknown telescope type. Exiting now.")
-        exit()
+        if type(ms_path) == bool:
+            logger.error("ms_path must be provided for LOFAR and OSKAR beam calculations. Exiting now.")
+            exit()
+        
+        telescope_type, checked_element_response_model = check_ms_telescope_type_matches_element_response(ms_path,
+                                                                           element_response_model,
+                                                                           logger)
+        
+        if type(station_ids) == bool or type(times) == bool or type(beam_ra0) == bool or type(beam_dec0) == bool:
+            logger.error("station_ids, times, beam_ra0, and beam_dec0 must be provided for LOFAR and OSKAR beam calculations. Exiting now.")
+            exit()
+        
+        mjd_sec_times = np.array([time.mjd * 86400.0 for time in times])
+        
+
+        if telescope_type == 'LOFAR':
+            jones = run_lofar_beam(ms_path, checked_element_response_model,
+                               station_ids,
+                               beam_ra0, beam_dec0,
+                               ras, decs, mjd_sec_times, freqs,
+                               apply_beam_norms=apply_beam_norms,
+                               parallactic_rotate=parallactic_rotate,
+                               iau_order=iau_order,
+                               element_only=element_only)
+        
+        elif telescope_type == 'OSKAR':
+            jones = run_oskar_beam(ms_path, checked_element_response_model,
+                                station_ids,
+                                beam_ra0, beam_dec0,
+                                ras, decs, mjd_sec_times, freqs,
+                                apply_beam_norms=apply_beam_norms,
+                                parallactic_rotate=parallactic_rotate,
+                                iau_order=iau_order,
+                                element_only=element_only)
+            
+        else:
+            logger.error("Unknown telescope type. Exiting now.")
+            exit()
     
     return jones
 
 
 def run_everybeam_thread(num_threads : int, thread_id : int,
-                         ms_path : str, coeff_path : str,
-                         ras : np.ndarray, decs : np.ndarray,
-                         ra0 : float, dec0 : float,
-                         j2000_latitudes : np.ndarray, j2000_lsts : np.ndarray,
-                         times : np.ndarray, freqs : np.ndarray,
-                         station_ids : np.ndarray,
-                         apply_beam_norms : bool = True,
-                         iau_order : bool = False,
-                         element_only : bool = False,
-                         parallactic_rotate : bool = True,
+                         ras: np.ndarray, decs: np.ndarray,
+                         freqs: np.ndarray,
+                         ms_path : str = False,
+                         times: np.ndarray[Time] = False,
+                         beam_ra0: float = np.nan, beam_dec0: float = np.nan,
+                         mwa_coeff_path : str = False,
+                         mwa_dipole_delays: np.ndarray = False,
+                         mwa_dipole_amps: np.ndarray = np.ones(16),
+                         j2000_latitudes: np.ndarray = False,
+                         j2000_lsts: np.ndarray = False,
+                         station_ids: np.ndarray = False,
                          element_response_model='default',
-                         use_local_mwa : bool = True) -> Tuple[np.ndarray, int]:
+                         apply_beam_norms: bool = True,
+                         iau_order: bool = False,
+                         element_only: bool = False,
+                         parallactic_rotate: bool = False,
+                         logger : Logger = False) -> Tuple[np.ndarray, int]:
     """
     Thread function called by `run_everybeam_over_threads` to calculate the
     EveryBeam response in parrallel. Calls `run_everybeam` with a subset of
@@ -831,9 +865,6 @@ def run_everybeam_thread(num_threads : int, thread_id : int,
     element_response_model : str, optional
         The Everybeam element response model to use. Defaults to 'hamaker'.
         Avaible options are 'hamaker' (LOFAR), 'skala40_wave' (OSKAR), and 'MWA' (MWA).
-    use_local_mwa : bool, optional
-        Whether to use the local MWA model. Defaults to True. The local MWA model
-        takes za/az instead of RA/Dec.
         
     Returns
     --------
@@ -851,38 +882,49 @@ def run_everybeam_thread(num_threads : int, thread_id : int,
     low_coord = thread_id * coords_per_thread
     high_coord = (thread_id + 1) * coords_per_thread
     
-    print(f"Thread {thread_id} processing coords {low_coord} to {high_coord}")
+    # print(f"Thread {thread_id} processing coords {low_coord} to {high_coord}")
     
-    jones = run_everybeam(ms_path, coeff_path,
-                  ras[low_coord:high_coord],
-                  decs[low_coord:high_coord],
-                  ra0, dec0, j2000_latitudes, j2000_lsts,
-                  times, freqs,
-                  station_ids,
-                  element_response_model=element_response_model,
-                  apply_beam_norms=apply_beam_norms,
-                  iau_order=iau_order,
-                  element_only=element_only,
-                  parallactic_rotate=parallactic_rotate)
+    jones = run_everybeam(ras[low_coord:high_coord],
+                          decs[low_coord:high_coord],
+                          freqs,
+                          ms_path=ms_path,
+                          times=times,
+                          beam_ra0=beam_ra0, beam_dec0=beam_dec0,
+                          mwa_coeff_path=mwa_coeff_path,
+                          mwa_dipole_delays=mwa_dipole_delays,
+                          mwa_dipole_amps=mwa_dipole_amps,
+                          j2000_latitudes=j2000_latitudes,
+                          j2000_lsts=j2000_lsts,
+                          station_ids=station_ids,
+                          element_response_model=element_response_model,
+                          apply_beam_norms=apply_beam_norms,
+                          iau_order=iau_order,
+                          element_only=element_only,
+                          parallactic_rotate=parallactic_rotate,
+                          logger=logger)
     
-    print(f"Thread {thread_id} finished")
+    # print(f"Thread {thread_id} finished")
     
     return jones, thread_id
 
 def run_everybeam_over_threads(num_threads : int,
-                               ms_path : str,
-                               coeff_path : str,
-                               ras : np.ndarray, decs : np.ndarray,
-                               ra0 : float, dec0 : float,
-                               j2000_latitudes : np.ndarray, j2000_lsts : np.ndarray,
-                               times : np.ndarray, freqs : np.ndarray,
-                               station_ids : np.ndarray,
-                               apply_beam_norms : bool = True,
-                               iau_order : bool = False,
-                               element_only : bool = False,
-                               parallactic_rotate : bool = True,
-                               use_local_mwa : bool = True,
-                               element_response_model='default'):
+                               ras: np.ndarray, decs: np.ndarray,
+                               freqs: np.ndarray,
+                               ms_path : str = False,
+                               times: np.ndarray[Time] = False,
+                               beam_ra0: float = np.nan, beam_dec0: float = np.nan,
+                               mwa_coeff_path : str = False,
+                               mwa_dipole_delays: np.ndarray = False,
+                               mwa_dipole_amps: np.ndarray = np.ones(16),
+                               j2000_latitudes: np.ndarray = False,
+                               j2000_lsts: np.ndarray = False,
+                               station_ids: np.ndarray = False,
+                               element_response_model='default',
+                               apply_beam_norms: bool = True,
+                               iau_order: bool = False,
+                               element_only: bool = False,
+                               parallactic_rotate: bool = False,
+                               logger : Logger = False):
     """
     Runs `run_everybeam` in parallel over `num_threads` threads, using
     `concurrent.futures.ProcessPoolExecutor`. See `run_everybeam` for more
@@ -937,9 +979,6 @@ def run_everybeam_over_threads(num_threads : int,
     element_response_model : str, optional
         The Everybeam element response model to use. Defaults to 'hamaker'.
         Avaible options are 'hamaker' (LOFAR), 'skala40_wave' (OSKAR), and 'MWA' (MWA).
-    use_local_mwa : bool, optional
-        Whether to use the local MWA model. Defaults to True. The local MWA model
-        takes za/az instead of RA/Dec.
         
     Returns
     --------
@@ -950,32 +989,40 @@ def run_everybeam_over_threads(num_threads : int,
     
     with concurrent.futures.ProcessPoolExecutor(max_workers=num_threads) as executor:
         
-            future_data = [executor.submit(run_everybeam_thread,
-                                           num_threads, thread_id,
-                                           ms_path, 
-                                           coeff_path,
-                                           ras, decs,
-                                           ra0, dec0,
-                                           j2000_latitudes, j2000_lsts,
-                                           times, freqs,
-                                           station_ids,
-                                           apply_beam_norms=apply_beam_norms,
-                                           iau_order=iau_order,
-                                           element_only=element_only,
-                                           parallactic_rotate=parallactic_rotate,
-                                           element_response_model=element_response_model,
-                                           use_local_mwa=use_local_mwa)
-                                    for thread_id in range(num_threads)]
+        future_data = [executor.submit(run_everybeam_thread,
+                                       num_threads, thread_id,
+                                       ras, decs, freqs,
+                                       ms_path=ms_path,
+                                       times=times,
+                                       beam_ra0=beam_ra0, beam_dec0=beam_dec0,
+                                       mwa_coeff_path=mwa_coeff_path,
+                                       mwa_dipole_delays=mwa_dipole_delays,
+                                       mwa_dipole_amps=mwa_dipole_amps,
+                                       j2000_latitudes=j2000_latitudes,
+                                       j2000_lsts=j2000_lsts,
+                                       station_ids=station_ids,
+                                       element_response_model=element_response_model,
+                                       apply_beam_norms=apply_beam_norms,
+                                       iau_order=iau_order,
+                                       element_only=element_only,
+                                       parallactic_rotate=parallactic_rotate,
+                                       logger=logger)
+                                for thread_id in range(num_threads)]
             
-            all_jones_chunks = []
-            all_thread_ids = []
-            for future in concurrent.futures.as_completed(future_data):
-                jones_chunk, thread_id = future.result()
-                all_jones_chunks.append(jones_chunk)
-                all_thread_ids.append(thread_id)
-                
-    num_stations = len(station_ids)
-    num_times = len(times)
+        all_jones_chunks = []
+        all_thread_ids = []
+        for future in concurrent.futures.as_completed(future_data):
+            jones_chunk, thread_id = future.result()
+            all_jones_chunks.append(jones_chunk)
+            all_thread_ids.append(thread_id)
+    
+    if type(mwa_coeff_path) != bool:
+        num_stations = 1
+        num_times = len(j2000_lsts)
+    else:
+        num_stations = len(station_ids)
+        num_times = len(times)
+        
     num_freqs = len(freqs)
     num_coords = len(ras)
     
@@ -1238,18 +1285,16 @@ def run_oskar_beam(ms_path : str, element_response_model : bool,
     
     return jones_py
 
-
-def run_mwa_beam(ms_path : str, element_response_model : bool,
-                   coeff_path : str,
-                   station_idxs : np.ndarray,
-                   ras : np.ndarray, decs : np.ndarray,
-                   mjd_sec_times : np.ndarray,
-                   j2000_lsts : np.ndarray, j2000_latitudes : np.ndarray,
-                   freqs : np.ndarray,
-                   apply_beam_norms : bool = False,
-                   parallactic_rotate : bool = True,
-                   iau_order : bool = True,
-                   element_only : bool = False):
+def run_mwa_beam(delays : np.ndarray,
+                 coeff_path : str,
+                 ras : np.ndarray, decs : np.ndarray,
+                 j2000_lsts : np.ndarray, j2000_latitudes : np.ndarray,
+                 freqs : np.ndarray,
+                 amps : np.ndarray = np.ones(16),
+                 apply_beam_norms : bool = False,
+                 parallactic_rotate : bool = True,
+                 iau_order : bool = True,
+                 element_only : bool = False):
     """
     Run the MWA beam model using the EveryBeam library.
     This function is a wrapper around the C++ library `libuse_everybeam.so`.
@@ -1260,17 +1305,10 @@ def run_mwa_beam(ms_path : str, element_response_model : bool,
     
     Parameters
     ----------
-    ms_path : str
-        Path to the measurement set.
-    element_response_model : str
-        Element response model to use. Can be 'hamaker', 'hamakerlba', 'lobes' or 'default'.
+    delays : np.ndarray
+        Array of length 16 of MWA pointing delays
     coeff_path : str
         Path to the hdf5 FEE file.
-    station_idxs : np.ndarray
-        Array of station indices to use. For now this should always be np.zeros(1),
-        as there is not yet a way to pass bespoke dipole amplitudes to the C++ code.
-        Hence all stations will be the same, so passing multiple station ids will
-        just increase computation time for no gain.
     ras : np.ndarray
         Right ascensions of the coordinates in radians.
     decs : np.ndarray
@@ -1283,27 +1321,35 @@ def run_mwa_beam(ms_path : str, element_response_model : bool,
         Latitudes in J2000 coordinates.
     freqs : np.ndarray
         Array of frequencies to use.
+    amps : np.ndarray
+        Array of length 16 of MWA dipole amplitudes. Defaults to all ones.
     apply_beam_norms : bool
         Whether to apply beam normalisation. Defaults to False. The beam seems
-        to be normalised by EveryBeam by default, so this is not needed.
+        to be normalised by EveryBeam by default, so this is not ne eded.
     parallactic_rotate : bool
         Whether to apply parallactic angle rotation. Defaults to True.
     iau_order : bool
         If True, use IAU polarisation ordering, so set jones[0,0] to the NS dipole and jones[1,1] to EW. If False, jones[0,0] is EW.
     element_only : bool
         Whether to use only the element response. Defaults to False. Use this to
-        look at the dipole response only, not the beam formed response.
+        look at the dipole response only, not the beam formed response. Does this by settings
+        all amplitudes bar the first dipole, so defaults to the first dipole only.
     Returns
     -------
     np.ndarray
         The calculated Jones matrices with shape
         (num_stations, num_times, num_freqs, num_coords, 2, 2).
+        Note that this is to have a consistent shape with other EveryBeam
+        functions which can have varying station patterns; at the moment,
+        num_stations is hard-coded to 1 for MWA.
     """
     
-    num_stations = len(station_idxs)
+    num_stations = 1
+    station_idxs = np.array([0])
+    
     num_dirs = len(ras)
     num_freqs = len(freqs)
-    num_times = len(mjd_sec_times)
+    num_times = len(j2000_lsts)
     
     azs = np.empty(num_dirs*num_times)
     zas = np.empty(num_dirs*num_times)
@@ -1315,7 +1361,6 @@ def run_mwa_beam(ms_path : str, element_response_model : bool,
         these_zas = np.pi/2 - these_els
         
         these_para_angles = erfa.hd2pa(comp_has, decs[comp_ind], j2000_latitudes)
-    
         azs[comp_ind*num_times:(comp_ind+1)*num_times] = these_azs
         zas[comp_ind*num_times:(comp_ind+1)*num_times] = these_zas
         para_angles[comp_ind*num_times:(comp_ind+1)*num_times] = these_para_angles
@@ -1328,47 +1373,48 @@ def run_mwa_beam(ms_path : str, element_response_model : bool,
     zas_ctypes = (ctypes.c_double*(num_dirs*num_times))()
     azs_ctypes = (ctypes.c_double*(num_dirs*num_times))()
     para_angles_ctypes = (ctypes.c_double*(num_dirs*num_times))()
+    
     for i in range(num_dirs*num_times):
         zas_ctypes[i] = zas[i]
         azs_ctypes[i] = azs[i]
         para_angles_ctypes[i] = para_angles[i]
     
-    ms_path_ctypes, coeff_path_ctypes, \
-    element_response_model_ctypes, \
-    station_idxs_ctypes, freqs_ctypes, \
-    mjd_sec_times_ctypes = convert_common_args_to_everybeam_args(ms_path, 
-                                    coeff_path, element_response_model,
-                                    station_idxs, freqs, mjd_sec_times)
+    freqs_ctypes = (ctypes.c_double * num_freqs)()
+    for i in range(num_freqs):
+        freqs_ctypes[i] = freqs[i]
+    coeff_path_ctypes = ctypes.c_char_p(coeff_path.encode('utf-8'))
     
     jones = ((num_stations*num_times*num_freqs*num_dirs*4)*c_double_complex)()
     
-    load_and_run_mwa_beam.argtypes = [c_char_p, c_char_p, c_char_p,
-                                        c_int, POINTER(c_int),
-                                        c_int, 
-                                        POINTER(c_double), POINTER(c_double),
-                                        POINTER(c_double),
-                                        c_int, POINTER(c_double),
-                                        c_int, POINTER(c_double),
-                                        c_bool, c_bool, c_bool, c_bool,
-                                        POINTER(c_double_complex)]
+    delays_ctypes = (ctypes.c_double * 16)()
+    for i in range(16):
+        delays_ctypes[i] = delays[i]
+        
+    amps_ctypes = (ctypes.c_double * 16)()
+    for i in range(16):
+        amps_ctypes[i] = amps[i]
     
-    load_and_run_mwa_beam(ms_path_ctypes,
-                            element_response_model_ctypes,
-                            coeff_path_ctypes,
-                            num_stations, station_idxs_ctypes,
-                            num_dirs,
-                            azs_ctypes, zas_ctypes,
-                            para_angles_ctypes,
-                            num_times, mjd_sec_times_ctypes,
-                            num_freqs, freqs_ctypes,
-                            apply_beam_norms, parallactic_rotate, element_only,
-                            iau_order,
-                            jones)
+    load_and_run_mwa_beam.argtypes = [POINTER(c_double), POINTER(c_double), 
+                                      c_char_p, 
+                                      c_int, POINTER(c_double), POINTER(c_double),
+                                      POINTER(c_double),
+                                      c_int, POINTER(c_double),
+                                      c_int,
+                                      c_bool, c_bool,
+                                      POINTER(c_double_complex)]
+    
+    load_and_run_mwa_beam(delays_ctypes, amps_ctypes,
+                          coeff_path_ctypes,
+                          num_dirs, azs_ctypes, zas_ctypes,
+                          para_angles_ctypes,
+                          num_freqs, freqs_ctypes,
+                          num_times, 
+                          parallactic_rotate, iau_order,
+                          jones)
     
     jones_py = np.ctypeslib.as_array(jones, shape=(num_stations*num_times*num_freqs*num_dirs*4))
     jones_py = jones_py['real'] + 1j*jones_py['imag']
     
     jones_py = jones_py.reshape(num_stations, num_times, num_freqs, num_dirs, 2, 2)
-    
     
     return jones_py

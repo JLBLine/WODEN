@@ -212,14 +212,13 @@ typedef struct _source_t {
 } source_t;
 
 /*!
-A struct to contain multiple `source_t` type sky models and `beam_settings_t`
-primary beam settings, to be iterated over by `calculate_visibilities`
+A struct to contain multiple `source_t` type sky models, to be iterated over
+by `calculate_visibilities`
 */
 typedef struct _source_catalogue_t {
     int num_sources; /*!< Number of SOURCES in this `source_catalogue_t`*/
     int num_shapelets; /*!< Total number of SHAPELET components in this `source_catalogue_t` */
     source_t *sources; /*!< Multiple sky models to simulate */
-    // beam_settings_t *beam_settings; /*!< Primary beam settings corresponding to `sources` */
 } source_catalogue_t;
 
 /*!
@@ -248,7 +247,7 @@ typedef struct _beam_settings_t {
     uint32_t *hyper_delays; /*!< MWA FEE delays in a format that hyperbeam likes */
 
     struct Telescope *everybeam_telescope; /*!< Loaded Everybeam Telescope object */
-
+    struct Beam2016Implementation *eb_mwa_tile_beam; /*!< Loaded Everybeam MWA tile beam object */
 
 } beam_settings_t;
 

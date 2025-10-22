@@ -30,6 +30,20 @@ extern "C" {
  */
 typedef struct Telescope Telescope;
 
+/**
+ * @typedef Beam2016Implementation
+ * 
+ * @brief A structure representing an EveryBeam Beam2016Implementation.
+ * 
+ * @details There is a fancy `everybeam::mwabeam::Beam2016Implementation` in C++ that we
+ * want to pass around in our C code. We can't do that directly, so we
+ * define a struct here that will hold a pointer to the C++ class. This is
+ * classic compiled language trickery, which is probably bad practice, but I don't
+ * know how else to do it, and it works.
+ * 
+ */
+typedef struct Beam2016Implementation Beam2016Implementation;
+
 
 /**
  * @brief Checks the telescope type of a measurement set (MS).
@@ -67,16 +81,13 @@ char* check_ms_telescope_type(const char *ms_path);
  * @param use_differential_beam Boolean flag indicating whether to use differential beam a.k.a normalisation out of EveryBeam
  * @param use_channel_frequency Boolean flag indicating whether to use channel frequency (not entirely sure what this does, always set to True in defualt `WODEN`).
  * @param coeff_path Path to the coefficients file, which should point to an HDF5 file in the case of MWA; not needed for LOFAR or OSKAR.
- * @param use_local_mwa Boolean flag indicating whether to use the local MWA (Murchison Widefield Array). This means loading an EveryBeam MWA telescope that uses `az,za` as input coords instead of `ra,dec`.
- *
  * @return A pointer to the initialized Telescope structure, or NULL if an error occurred.
  */
 Telescope* load_everybeam_telescope(int * status, const char *ms_path,
                                     const char *element_response_model,
                                     bool use_differential_beam,
                                     bool use_channel_frequency,
-                                    const char *coeff_path,
-                                    bool use_local_mwa);
+                                    const char *coeff_path);
 
 
 /**
@@ -89,6 +100,15 @@ Telescope* load_everybeam_telescope(int * status, const char *ms_path,
  * @param telescope A pointer to the Telescope object to be destroyed.
  */
 void destroy_everybeam_telescope(Telescope* telescope);
+
+
+
+Beam2016Implementation* load_everybeam_MWABeam(const char *coeff_path,
+                                                 double *delays, double *amps);
+
+
+void destroy_everybeam_MWABeam(Beam2016Implementation* eb_mwa);
+
 
 
 /**
@@ -225,12 +245,61 @@ int load_and_run_oskar_beam(const char *ms_path,
                             double _Complex * jones);
 
 /**
+ * @brief Loads and runs the MWA primary beam model.
+ * 
+ * Runs `load_everybeam_telescope` with some default values, 
+ * then runs `run_mwa_beam` to calculate the beam response, and finally
+ * destroys the telescope object.
+ * 
+ * Currently only creates one beam; `num_stations` and `station_idxs` have
+ * been included for future expansion. You can use these parameters to
+ * have a different primary beam per station (tile), if you also pass a number
+ * of extra amplitudes to create unique beams.
+ * 
+ * Outputs are stored in the `jones` array, which should be pre-allocated to
+ * `num_times*num_freqs*num_dirs*4` (as there are 4 polarisations).
+ * Outputs are ordered by station (slowest changing), time, frequency,
+ * direction, and polarisation (fasting changing).
+ * 
+ *
+ * @param delays Array of dipole delays - should be 16 values per station.
+ * @param amps Array of dipole amplitudes - should be 16 values per station.
+ * @param coeff_path Path to the coefficient file.
+ * @param num_dirs Number of directions.
+ * @param azs Azimuth (radians) for all directions and all times. Order should be 
+ * all directions for first time step, followed by all directions for second
+ * time step, etc etc (a.k.a time slowest changing, direction fastest changing).
+ * @param zas Zenith angles (radians) for all directions and all times. Order should be
+ * all directions for first time step, followed by all directions for second
+ * time step, etc etc (a.k.a time slowest changing, direction fastest changing).
+ * @param para_angles Parallactic angle (radians) for all directions and all times. Order should be 
+ * all directions for first time step, followed by all directions for second
+ * time step, etc etc (a.k.a time slowest changing, direction fastest changing).
+ * @param num_freqs Number of frequency samples.
+ * @param freqs Array of frequencies (in Hz).
+ * @param num_times Number of time samples.
+ * @param parallactic_rotate Flag to apply parallactic rotation.
+ * @param iau_order Flag to use IAU order.
+ * @param jones Output array for Jones matrices.
+ * 
+ * @return 0 on success, non-zero on failure.
+ */
+int load_and_run_mwa_beam(double *delays, double *amps,
+                          const char *coeff_path,
+                          int num_dirs, double *azs, double *zas,
+                          double *para_angles,
+                          int num_freqs, double *freqs,
+                          int num_times,
+                          bool parallactic_rotate, bool iau_order,
+                          double _Complex * jones);
+
+/**
  * @brief Runs the MWA primary beam for a given MWALocal telescope.
  * 
  * @details Calculates the beam response for a given set of directions, times, and frequencies.
  * Outputs are stored in the `jones` array, which should be pre-allocated to
- * `num_stations*num_times*num_freqs*num_dirs*4` (as there are 4 polarisations).
- * Outputs are ordered by station (slowest changing), time, frequency,
+ * `num_times*num_freqs*num_dirs*4` (as there are 4 polarisations).
+ * Outputs are ordered by time (slowest changing), frequency,
  * direction, and polarisation (fasting changing).
  * 
  * Specifically, this function takes in azimuth and zenith angle (az,za) coordinates,
@@ -241,92 +310,38 @@ int load_and_run_oskar_beam(const char *ms_path,
  * just take the parallactic angle as an input. Very easy to calculate using
  * Python erfa via erfa.hd2pa, which is how `run_woden.py` does it. 
  * 
- * Note that although you can ask for multiple stations, this wrapper can
- * only calculate identical beams for each station (no way to pass bespoke
- * dipole ampltiudes for example). I've kept the machinery for future expansion,
- * but you should only ask for one station, otherwise you're just wasting
- * compute.
+ * Note this wrapper calculates only one primary beam. To have a unique beam
+ * per station, you would need to call this function multiple times with different
+ * `eb_mwa_tile_beam` objects, each created with different dipole amplitudes.
+ * That mapping
  *
- * @param telescope Pointer to the EveryBeam Telescope structure.
- * @param num_stations Number of stations.
- * @param station_idxs Array of station indices; must match the number of stations.
+ * @param eb_mwa_tile_beam Pointer to the initialized EveryBeam MWA Beam2016Implementation structure.
+ * This should be created using `load_everybeam_MWABeam`; there you pass in dipole delays and amplitudes.
  * @param num_dirs Number of directions to process.
- * @param azs Azimuth for all directions (radians).
- * @param zas Zenith angles for all direcitons (radians).
- * @param para_angles Parallactic angle for all directions (radians).
- * @param num_times Number of time samples.
- * @param mjd_sec_times Array of Modified Julian Dates (seconds).
+ * @param azs Azimuth (radians) for all directions and all times. Order should be 
+ * all directions for first time step, followed by all directions for second
+ * time step, etc etc (a.k.a time slowest changing, direction fastest changing).
+ * @param zas Zenith angles (radians) for all directions and all times. Order should be
+ * all directions for first time step, followed by all directions for second
+ * time step, etc etc (a.k.a time slowest changing, direction fastest changing).
+ * @param para_angles Parallactic angle (radians) for all directions and all times. Order should be 
+ * all directions for first time step, followed by all directions for second
+ * time step, etc etc (a.k.a time slowest changing, direction fastest changing).
  * @param num_freqs Number of frequency channels.
  * @param freqs Array of frequency channels (Hz).
- * @param apply_beam_norms Boolean flag to apply beam normalisation.
+ * @param num_times Number of time samples.
  * @param parallactic_rotate Boolean flag to apply parallactic angle rotation.
- * @param element_only Boolean flag to only calculate a single element (e.g. a single dipole instead of a beam-formed station).
  * @param iau_order Boolean flag to use IAU order for outputs; in IAU, X = North-South.
  * @param jones Output array of Jones matrices (complex values).
  */
-void run_mwa_beam(Telescope *telescope,
-                  int num_stations, int *station_idxs,
-                  int num_dirs,
-                  double *azs, double *zas,
-                  double *para_angles,
-                  int num_times, double *mjd_sec_times,
-                  int num_freqs, double *freqs,
-                  bool apply_beam_norms, bool parallactic_rotate,
-                  bool element_only, bool iau_order,
-                  double _Complex * jones);
+void run_mwa_beam(Beam2016Implementation *eb_mwa_tile_beam,
+                               int num_dirs, double *azs, double *zas,
+                               double *para_angles,
+                               int num_freqs, double *freqs,
+                               int num_times,
+                               bool parallactic_rotate, bool iau_order,
+                               double _Complex * jones);
 
-
-/**
- * @brief Loads and runs the MWA primary beam model.
- * 
- * Runs `load_everybeam_telescope` with some default values, 
- * then runs `run_mwa_beam` to calculate the beam response, and finally
- * destroys the telescope object.
- * 
- * Outputs are stored in the `jones` array, which should be pre-allocated to
- * `num_stations*num_times*num_freqs*num_dirs*4` (as there are 4 polarisations).
- * Outputs are ordered by station (slowest changing), time, frequency,
- * direction, and polarisation (fasting changing).
- * 
- * Note that although you can ask for multiple stations, this wrapper can
- * only calculate identical beams for each station (no way to pass bespoke
- * dipole ampltiudes for example). I've kept the machinery for future expansion,
- * but you should only ask for one station, otherwise you're just wasting
- * compute.
- *
- * @param ms_path Path to the measurement set.
- * @param element_response_model Path to the element response model.
- * @param coeff_path Path to the coefficient file.
- * @param num_stations Number of stations.
- * @param station_idxs Array of station indices.
- * @param num_dirs Number of directions.
- * @param azs Array of azimuth angles (in radians).
- * @param zas Array of zenith angles (in radians).
- * @param para_angles Array of parallactic angles (in radians).
- * @param num_times Number of time samples.
- * @param mjd_sec_times Array of times in Modified Julian Date seconds.
- * @param num_freqs Number of frequency samples.
- * @param freqs Array of frequencies (in Hz).
- * @param apply_beam_norms Flag to apply beam normalization.
- * @param parallactic_rotate Flag to apply parallactic rotation.
- * @param element_only Flag to use element-only model.
- * @param iau_order Flag to use IAU order.
- * @param jones Output array for Jones matrices.
- * 
- * @return 0 on success, non-zero on failure.
- */
-int load_and_run_mwa_beam(const char *ms_path,
-                          const char *element_response_model,
-                          const char *coeff_path,
-                          int num_stations, int *station_idxs,
-                          int num_dirs,
-                          double *azs, double *zas,
-                          double *para_angles,
-                          int num_times, double *mjd_sec_times,
-                          int num_freqs, double *freqs,
-                          bool apply_beam_norms, bool parallactic_rotate,
-                          bool element_only, bool iau_order,
-                          double _Complex * jones);
 
 #ifdef __cplusplus
 }

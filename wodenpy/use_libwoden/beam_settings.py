@@ -64,7 +64,14 @@ class BeamGroups:
     ##these are beam types that need azimuth/altitude calculated before sending to CPU/GPU via ctypes
     azza_beam_values = [BeamTypes.MWA_ANALY.value, BeamTypes.FEE_BEAM.value,
                         BeamTypes.FEE_BEAM_INTERP.value, BeamTypes.ANALY_DIPOLE.value,
-                        BeamTypes.EB_MWA.value] #, BeamTypes.UVB_MWA.value, BeamTypes.UVB_HERA.value
+                        BeamTypes.EB_MWA.value]
+    
+    needs_MWA_delays = [BeamTypes.MWA_ANALY.value, BeamTypes.FEE_BEAM.value,
+                        BeamTypes.FEE_BEAM_INTERP.value, BeamTypes.EB_MWA.value]
+    
+    needs_MWA_hdf5_path = [BeamTypes.FEE_BEAM.value, BeamTypes.FEE_BEAM_INTERP.value,
+                           BeamTypes.EB_MWA.value]
+    
     hadec_beam_values = [BeamTypes.GAUSS_BEAM.value, BeamTypes.MWA_ANALY.value]
     # needs_fee_hdf5 = [BeamTypes.FEE_BEAM.value, BeamTypes.FEE_BEAM_INTERP, BeamTypes.EB_MWA.value]
     # needs_mwa_delays = [BeamTypes.FEE_BEAM.value, BeamTypes.FEE_BEAM_INTERP, BeamTypes.MWA_ANALY.value]
