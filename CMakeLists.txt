@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-set(WODEN_VERSION 2.6)
+set(WODEN_VERSION 2.7)
 
 
 set(CMAKE_CXX_STANDARD 20)

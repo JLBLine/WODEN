@@ -59,7 +59,7 @@ copyright = '2025, J.L.B. Line'
 author = 'J.L.B. Line'
 
 # The full version, including alpha/beta/rc tags
-release = '2.6'
+release = '2.7'
 
 # -- General configuration ---------------------------------------------------
 

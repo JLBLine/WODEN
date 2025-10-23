@@ -645,10 +645,13 @@ def convert_common_args_to_everybeam_args(ms_path : str, coeff_path : str,
 
 def run_everybeam(ras: np.ndarray, decs: np.ndarray,
                   freqs: np.ndarray,
+                  
                   ms_path : str = False,
                   beam_ra0: float = np.nan, beam_dec0: float = np.nan,
                   times: np.ndarray[Time] = False,
                   station_ids: np.ndarray = False,
+                  element_response_model='default',
+                  apply_beam_norms: bool = True,
                   
                   mwa_coeff_path : str = False,
                   mwa_dipole_delays: np.ndarray = False,
@@ -656,55 +659,82 @@ def run_everybeam(ras: np.ndarray, decs: np.ndarray,
                   j2000_latitudes: np.ndarray = False,
                   j2000_lsts: np.ndarray = False,
                   
-                  element_response_model='default',
-                  apply_beam_norms: bool = True,
                   iau_order: bool = False,
                   element_only: bool = False,
                   parallactic_rotate: bool = False,
                   logger : Logger = False) -> np.ndarray:
     """
     Calculate the Jones matrices for a given set of coordinates, times,
-    frequencies, and station ids using the EveryBeam library.
-    `j2000_latitudes` should be the array latitude as precessed back to J2000,
-    with `j2000_lsts` being the matching LST in J2000. 
+    frequencies, and station ids using the EveryBeam library. Currently,
+    LOFAR and OSKAR beams require a measurement set as an input. The MWA beam
+    does not need a measurement set, but does need the path to the FEE
+    coefficients hdf5 file.
     
+    For all beam types, `ras`, `decs`, `freqs` are required.
+    
+    For LOFAR/OSKAR beams, `ms_path`, `beam_ra0`, `beam_dec0`, `times`,
+    and `station_ids` are required.
+
+    For MWA beams, `mwa_coeff_path`, `mwa_dipole_delays`, `j2000_latitudes`,
+    and `j2000_lsts` are required. `j2000_latitudes` should be the array
+    latitude as precessed back to J2000, with `j2000_lsts` being the
+    matching LST in J2000. 
+    
+    The returned Jones matrices will have shape
+    (num_stations, num_times, num_freqs, num_radec, 2, 2). The MWA beam will
+    always default to `num_stations=1` as dipole flagging has not been
+    implemented in the WODEN wrapper. All other beams will have
+    `num_stations=len(station_ids)`.
     
     Parameters
     ------------
-    ms_path : str
-        Path to the measurement set to load the EveryBeam telescope from.
-    mwa_coeff_path : str
-        Path to the coefficients file (needed for MWA, pass the path
-        to the hdf5 FEE file.)
     ras : np.ndarray
         Right ascensions of the coordinates in radians.
     decs : np.ndarray
          Declinations of the coordinates in radians.
+    freqs : np.ndarray
+        Array of frequencies (Hz)
+        
+    ms_path : str
+        Path to the measurement set to load the EveryBeam telescope from.
     beam_ra0 : float
-        Right ascension of the beam center in radians.
+        Right ascension (radians) of the beam pointing centre; the beam will
+        be centered on this position and therefore move with time. Does not
+        apply to MWA beam as that is locked in az,za.
     beam_dec0 : float
-        Declination of the beam center in radians.
+        Declination (radians) of the beam pointing centre; the beam will
+        be centered on this position and therefore move with time. Does not
+        apply to MWA beam as that is locked in az,za.
+    times : np.ndarray
+        Array of `astropy.Time` observation times.
+    station_ids : np.ndarray
+        Array of station IDs. Will calculation n_stations=len(station_ids)
+        worth of station beams (does not apply to MWA, which will only
+        calculate a single beam).
+    element_response_model : str, optional
+        The Everybeam element response model to use. Defaults to 'hamaker'.
+        Avaible options are 'hamaker' (LOFAR), 'skala40_wave' (OSKAR)
+    apply_beam_norms : bool, optional
+        Whether to apply beam normalisation. Defaults to True. Achieved by
+        calculating the beam response at beam centre, and multiplying all
+        Jones by the inverse of this central beam response (does not apply
+        to MWA beam).
+        
+    mwa_coeff_path : str
+        Path to the coefficients file (needed for MWA, pass the path
+        to the hdf5 FEE file.)
+    mwa_dipole_delays : np.ndarray
+        Array of dipole delays for the MWA stations. Must be of length 16.
+    mwa_dipole_amps : np.ndarray, optional
+        Array of dipole amplitudes for the MWA stations. Must be of length 16.
     j2000_latitudes : np.ndarray
         Latitudes in J2000 coordinates (needed for MWA beam az,za calculations).
     j2000_lsts : np.ndarray
         Local sidereal times in J2000 coordinates (needed for MWA beam az,za calculations).
-    times : np.ndarray
-        Array of observation times.
-    freqs : np.ndarray
-        Array of frequencies.
-    telescope : (eb.Telescope):
-        Telescope object from the EveryBeam library.
-    station_ids : np.ndarray
-        Array of station IDs.
-    element_response_model : str, optional
-        The Everybeam element response model to use. Defaults to 'hamaker'.
-        Avaible options are 'hamaker' (LOFAR), 'skala40_wave' (OSKAR), and 'MWA' (MWA).
-    apply_beam_norms : bool, optional
-        Whether to apply beam normalisation. Defaults to True. Achieved by
-        calculating the beam response at beam centre, and multiplying all
-        Jones by the inverse of this central beam response.
+    
     iau_order : bool, optional
-        If True, use IAU polarisation ordering, so set jones[0,0] to the NS dipole and jones[1,1] to EW. If False, jones[0,0] is EW.
+        If True, use IAU polarisation ordering, so set jones[0,0] to the NS dipole
+        and jones[1,1] to EW. If False, jones[0,0] is EW. Defaults to False
     element_only : bool, optional
         Whether to use only the element response. Defaults to False. Use this to
         look at the dipole response only, not the beam formed response.
@@ -795,17 +825,20 @@ def run_everybeam(ras: np.ndarray, decs: np.ndarray,
 def run_everybeam_thread(num_threads : int, thread_id : int,
                          ras: np.ndarray, decs: np.ndarray,
                          freqs: np.ndarray,
+                         
                          ms_path : str = False,
-                         times: np.ndarray[Time] = False,
                          beam_ra0: float = np.nan, beam_dec0: float = np.nan,
+                         times: np.ndarray[Time] = False,
+                         station_ids: np.ndarray = False,
+                         element_response_model='default',
+                         apply_beam_norms: bool = True,
+                         
                          mwa_coeff_path : str = False,
                          mwa_dipole_delays: np.ndarray = False,
                          mwa_dipole_amps: np.ndarray = np.ones(16),
                          j2000_latitudes: np.ndarray = False,
                          j2000_lsts: np.ndarray = False,
-                         station_ids: np.ndarray = False,
-                         element_response_model='default',
-                         apply_beam_norms: bool = True,
+                         
                          iau_order: bool = False,
                          element_only: bool = False,
                          parallactic_rotate: bool = False,
@@ -815,7 +848,8 @@ def run_everybeam_thread(num_threads : int, thread_id : int,
     EveryBeam response in parrallel. Calls `run_everybeam` with a subset of
     the coordinates; see `run_everybeam` for more details of the parameters.
     
-    Creates a new EveryBeam telescope object from `ms_path` for each thread.
+    Creates a new EveryBeam telescope object from `ms_path` or a new EveryBeam
+    MWA Tile beam from `mwa_coeff_path` for each thread.
     This has to be done because `concurrent.futures.ProcessPoolExecutor` has
     to pickle the function and all it's arguments, and EveryBeam objects can't
     be pickled. This is somewhat wasteful but I can't work out a better way
@@ -828,43 +862,60 @@ def run_everybeam_thread(num_threads : int, thread_id : int,
     thread_id : int
         ID of the current thread. Useds to work out what chunk of `ras` and `decs`
         to process.
-    ms_path : str
-        Path to the measurement set to load the EveryBeam telescope from.
-    coeff_path : str
-        Path to the coefficients file (only needs a value for MWA, pass the path
-        to the hdf5 FEE file. Otherwise just pass "").
     ras : np.ndarray
         Right ascensions of the coordinates in radians.
     decs : np.ndarray
          Declinations of the coordinates in radians.
-    ra0 : float
-        Right ascension of the beam center in radians.
-    dec0 : float
-        Declination of the beam center in radians.
-    j2000_latitudes : np.ndarray
-        Latitudes in J2000 coordinates.
-    j2000_lsts : np.ndarray
-        Local sidereal times in J2000 coordinates.
-    times : np.ndarray
-        Array of observation times.
     freqs : np.ndarray
-        Array of frequencies.
+        Array of frequencies (Hz)
+        
+    ms_path : str
+        Path to the measurement set to load the EveryBeam telescope from.
+    beam_ra0 : float
+        Right ascension (radians) of the beam pointing centre; the beam will
+        be centered on this position and therefore move with time. Does not
+        apply to MWA beam as that is locked in az,za.
+    beam_dec0 : float
+        Declination (radians) of the beam pointing centre; the beam will
+        be centered on this position and therefore move with time. Does not
+        apply to MWA beam as that is locked in az,za.
+    times : np.ndarray
+        Array of `astropy.Time` observation times.
     station_ids : np.ndarray
-        Array of station IDs.
+        Array of station IDs. Will calculation n_stations=len(station_ids)
+        worth of station beams (does not apply to MWA, which will only
+        calculate a single beam).
+    element_response_model : str, optional
+        The Everybeam element response model to use. Defaults to 'hamaker'.
+        Avaible options are 'hamaker' (LOFAR), 'skala40_wave' (OSKAR)
     apply_beam_norms : bool, optional
         Whether to apply beam normalisation. Defaults to True. Achieved by
         calculating the beam response at beam centre, and multiplying all
-        Jones by the inverse of this central beam response.
+        Jones by the inverse of this central beam response (does not apply
+        to MWA beam).
+        
+    mwa_coeff_path : str
+        Path to the coefficients file (needed for MWA, pass the path
+        to the hdf5 FEE file.)
+    mwa_dipole_delays : np.ndarray
+        Array of dipole delays for the MWA stations. Must be of length 16.
+    mwa_dipole_amps : np.ndarray, optional
+        Array of dipole amplitudes for the MWA stations. Must be of length 16.
+    j2000_latitudes : np.ndarray
+        Latitudes in J2000 coordinates (needed for MWA beam az,za calculations).
+    j2000_lsts : np.ndarray
+        Local sidereal times in J2000 coordinates (needed for MWA beam az,za calculations).
+    
     iau_order : bool, optional
-        If True, use IAU polarisation ordering, so set jones[0,0] to the NS dipole and jones[1,1] to EW. If False, jones[0,0] is EW.
+        If True, use IAU polarisation ordering, so set jones[0,0] to the NS dipole
+        and jones[1,1] to EW. If False, jones[0,0] is EW. Defaults to False
     element_only : bool, optional
         Whether to use only the element response. Defaults to False. Use this to
         look at the dipole response only, not the beam formed response.
     parallactic_rotate : bool, optional
         Whether to apply parallactic angle rotation. Defaults to False.
-    element_response_model : str, optional
-        The Everybeam element response model to use. Defaults to 'hamaker'.
-        Avaible options are 'hamaker' (LOFAR), 'skala40_wave' (OSKAR), and 'MWA' (MWA).
+    logger : Logger, optional
+        Logger to use. Defaults to False; if False, create a new simple logger instance.
         
     Returns
     --------
@@ -910,17 +961,20 @@ def run_everybeam_thread(num_threads : int, thread_id : int,
 def run_everybeam_over_threads(num_threads : int,
                                ras: np.ndarray, decs: np.ndarray,
                                freqs: np.ndarray,
+                               
                                ms_path : str = False,
-                               times: np.ndarray[Time] = False,
                                beam_ra0: float = np.nan, beam_dec0: float = np.nan,
+                               times: np.ndarray[Time] = False,
+                               station_ids: np.ndarray = False,
+                               element_response_model='default',
+                               apply_beam_norms: bool = True,
+                               
                                mwa_coeff_path : str = False,
                                mwa_dipole_delays: np.ndarray = False,
                                mwa_dipole_amps: np.ndarray = np.ones(16),
                                j2000_latitudes: np.ndarray = False,
                                j2000_lsts: np.ndarray = False,
-                               station_ids: np.ndarray = False,
-                               element_response_model='default',
-                               apply_beam_norms: bool = True,
+                               
                                iau_order: bool = False,
                                element_only: bool = False,
                                parallactic_rotate: bool = False,
@@ -930,55 +984,73 @@ def run_everybeam_over_threads(num_threads : int,
     `concurrent.futures.ProcessPoolExecutor`. See `run_everybeam` for more
     details of what each parameter does.
     
-    Creates a new EveryBeam telescope object from `ms_path` for each thread.
+    Creates a new EveryBeam telescope object from `ms_path` or a new EveryBeam
+    MWA Tile beam from `mwa_coeff_path` for each thread.
     This has to be done because `concurrent.futures.ProcessPoolExecutor` has
     to pickle the function and all it's arguments, and EveryBeam objects can't
     be pickled. This is somewhat wasteful but I can't work out a better way
-    to make things parallel.
+    to make things parallel (without using MPI on the other end of things).
     
     Parameters
     ------------
     num_threads : int
         Number of threads being in call by `run_everybeam_over_threads`.
-    ms_path : str
-        Path to the measurement set to load the EveryBeam telescope from.
-    coeff_path : str
-        Path to the coefficients file (only needs a value for MWA, pass the path
-        to the hdf5 FEE file. Otherwise just pass "").
+        ras : np.ndarray
+        Right ascensions of the coordinates in radians.
     ras : np.ndarray
         Right ascensions of the coordinates in radians.
     decs : np.ndarray
          Declinations of the coordinates in radians.
-    ra0 : float
-        Right ascension of the beam center in radians.
-    dec0 : float
-        Declination of the beam center in radians.
-    j2000_latitudes : np.ndarray
-        Latitudes in J2000 coordinates.
-    j2000_lsts : np.ndarray
-        Local sidereal times in J2000 coordinates.
-    times : np.ndarray
-        Array of observation times.
     freqs : np.ndarray
-        Array of frequencies.
+        Array of frequencies (Hz)
+        
+    ms_path : str
+        Path to the measurement set to load the EveryBeam telescope from.
+    beam_ra0 : float
+        Right ascension (radians) of the beam pointing centre; the beam will
+        be centered on this position and therefore move with time. Does not
+        apply to MWA beam as that is locked in az,za.
+    beam_dec0 : float
+        Declination (radians) of the beam pointing centre; the beam will
+        be centered on this position and therefore move with time. Does not
+        apply to MWA beam as that is locked in az,za.
+    times : np.ndarray
+        Array of `astropy.Time` observation times.
     station_ids : np.ndarray
-        Array of station IDs.
+        Array of station IDs. Will calculation n_stations=len(station_ids)
+        worth of station beams (does not apply to MWA, which will only
+        calculate a single beam).
+    element_response_model : str, optional
+        The Everybeam element response model to use. Defaults to 'hamaker'.
+        Avaible options are 'hamaker' (LOFAR), 'skala40_wave' (OSKAR)
     apply_beam_norms : bool, optional
         Whether to apply beam normalisation. Defaults to True. Achieved by
         calculating the beam response at beam centre, and multiplying all
-        Jones by the inverse of this central beam response.
+        Jones by the inverse of this central beam response (does not apply
+        to MWA beam).
+        
+    mwa_coeff_path : str
+        Path to the coefficients file (needed for MWA, pass the path
+        to the hdf5 FEE file.)
+    mwa_dipole_delays : np.ndarray
+        Array of dipole delays for the MWA stations. Must be of length 16.
+    mwa_dipole_amps : np.ndarray, optional
+        Array of dipole amplitudes for the MWA stations. Must be of length 16.
+    j2000_latitudes : np.ndarray
+        Latitudes in J2000 coordinates (needed for MWA beam az,za calculations).
+    j2000_lsts : np.ndarray
+        Local sidereal times in J2000 coordinates (needed for MWA beam az,za calculations).
+    
     iau_order : bool, optional
-        If True, use IAU polarisation ordering, so set jones[0,0] to the NS dipole and jones[1,1] to EW. If False, jones[0,0] is EW.
+        If True, use IAU polarisation ordering, so set jones[0,0] to the NS dipole
+        and jones[1,1] to EW. If False, jones[0,0] is EW. Defaults to False
     element_only : bool, optional
         Whether to use only the element response. Defaults to False. Use this to
         look at the dipole response only, not the beam formed response.
     parallactic_rotate : bool, optional
-        Whether to apply parallactic angle. Defaults to False.
-    para_angle_offset : float, optional
-        Offset to add to the parallactic angle. Defaults to 0.
-    element_response_model : str, optional
-        The Everybeam element response model to use. Defaults to 'hamaker'.
-        Avaible options are 'hamaker' (LOFAR), 'skala40_wave' (OSKAR), and 'MWA' (MWA).
+        Whether to apply parallactic angle rotation. Defaults to False.
+    logger : Logger, optional
+        Logger to use. Defaults to False; if False, create a new simple logger instance.
         
     Returns
     --------
@@ -1182,7 +1254,7 @@ def run_oskar_beam(ms_path : str, element_response_model : bool,
     NOTE: This function is currently identical to the LOFAR beam function.
     Both LOFAR and OSKAR call the PhasedArrayBeam class in the C++ library.
     These functions have only been lightly tested for functionality. So I've
-    kept them separate incase it's discovered they need different default
+    kept them separate in case it's discovered they need different default
     values in the future.
     
     Parameters

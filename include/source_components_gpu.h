@@ -989,7 +989,6 @@ extern "C" void extrap_power_laws_linpol_gpu(components_t d_components,
  * `d_components.extrap_stokesU`.
  *
  * @param d_components The device components structure containing necessary data for extrapolation.
- * @param n_curves The number of curves to be extrapolated.
  * @param d_extrap_freqs Pointer to the device array of extrapolation frequencies.
  * @param num_extrap_freqs The number of frequencies in the d_extrap_freqs array.
  */

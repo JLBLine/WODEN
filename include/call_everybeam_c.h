@@ -102,11 +102,33 @@ Telescope* load_everybeam_telescope(int * status, const char *ms_path,
 void destroy_everybeam_telescope(Telescope* telescope);
 
 
-
+/**
+ * @brief Creates an EveryBeam MWA Beam2016Implementation object. This can
+ * then be used multiple times to calculate the beam response 
+ * 
+ * @details This function creates a single EveryBeam MWA Beam2016Implementation
+ * object. The delays point the beam, and amplitudes are applied to the dipoles.
+ * Note the amplitudes are applied identically for X/Y polarisations, so if you
+ * want to flag separate X and Y dipoles, you'll have to create two separate
+ * Beam2016Implementation instances and pull out the relevant polarisation info.
+ * 
+ * @param coeff_path Path to the MWA beam coefficients HDF5 file.
+ * @param delays Array of delays for the MWA tiles (should be length 16)
+ * @param amps Array of amplitudes for the MWA tiles (should be length 16)
+ * @return A pointer to the initialized Beam2016Implementation structure, or NULL if an error occurred.
+ */
 Beam2016Implementation* load_everybeam_MWABeam(const char *coeff_path,
-                                                 double *delays, double *amps);
+                                               double *delays, double *amps);
 
-
+/**
+ * @brief Destroys the given EveryBeam MWA Beam2016Implementation object.
+ *
+ * @details Frees the memory associated with the given Beam2016Implementation object; as 
+ * the Beam2016Implementation is actually a pointer to a C++ object, this function is
+ * a wrapper around the C++ destructor.
+ * 
+ * @param eb_mwa A pointer to the Beam2016Implementation object to be destroyed.
+ */
 void destroy_everybeam_MWABeam(Beam2016Implementation* eb_mwa);
 
 

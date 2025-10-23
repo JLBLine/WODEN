@@ -554,7 +554,7 @@ def convert_woden_settings_to_ctypes(woden_settings_python : Woden_Settings_Pyth
     if woden_settings_ctypes.beamtype in BeamGroups.needs_MWA_hdf5_path:
         woden_settings_ctypes.hdf5_beam_path = create_string_buffer(woden_settings_python.hdf5_beam_path.encode('utf-8'))
         
-    if woden_settings_ctypes.beamtype in BeamGroups.eb_beam_values:
+    if woden_settings_ctypes.beamtype in BeamGroups.eb_ms_beam_values:
         woden_settings_ctypes.beam_ms_path = create_string_buffer(woden_settings_python.beam_ms_path.encode('utf-8'))
         woden_settings_ctypes.eb_beam_ra0 = woden_settings_python.eb_beam_ra0
         woden_settings_ctypes.eb_beam_dec0 = woden_settings_python.eb_beam_dec0
