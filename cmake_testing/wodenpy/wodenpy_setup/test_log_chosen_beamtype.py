@@ -163,10 +163,11 @@ class Test(unittest.TestCase):
         
     def test_with_everybeam_MWA(self):
         self.run_log_beamtype(['--primary_beam=everybeam_MWA'])
-        expected_lines = ['Will run with EveryBeam MWA primary beam, based on this measurement set:\n',
-                          '\tpath/to/beam_ms\n',
-                          f"Using the following hdf5 file:\n",
-                          f"\tpath/to/hdf5\n"]
+        expected_lines = ['Using MWA primary beam via EveryBeam MWA with the following parameters:\n',
+                            '\thdf5 file: path/to/hdf5\n',
+                            '\tdelays: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]\n',
+                            '\tsetting all dipole amplitudes to 1.0\n',
+                            '\twill not flag any dipoles\n']
         self.read_lines_check_against_expected(expected_lines)
         
     def test_with_a_boo_boo(self):

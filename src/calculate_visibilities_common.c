@@ -225,18 +225,15 @@ void calculate_visibilities(array_layout_t *array_layout,
   }
 
   #if defined(HAVE_EVERYBEAM)
-  if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_MWA || beam_settings->beamtype == EB_OSKAR) {
+  if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR) {
     int eb_status = 0;
 
     const char *element_response_model;
     bool use_differential_beam = false;
     bool use_channel_frequency = true;
-    bool use_local_mwa = true;
 
     if (beam_settings->beamtype == EB_LOFAR) {
       element_response_model = "hamaker";
-    } else if (beam_settings->beamtype == EB_MWA) {
-      element_response_model = "MWA";
     } else {
       element_response_model = "skala40_wave";
     }
@@ -246,13 +243,33 @@ void calculate_visibilities(array_layout_t *array_layout,
                                                element_response_model,
                                                use_differential_beam,
                                                use_channel_frequency,
-                                               woden_settings->hdf5_beam_path,
-                                               use_local_mwa);
+                                               woden_settings->hdf5_beam_path);
 
     if (eb_status != 0) {
       log_message("WARNING - Something went wrong loading the EveryBeam telescope");
     }
-  }
+
+  } else if (beam_settings->beamtype == EB_MWA ) {
+      log_message("Loading EveryBeam MWA tile beam");
+
+      //Gotta convert delays from ints to double for EveryBeam function
+      double delays[16];
+
+      for (int d = 0; d < 16; d++) {
+        delays[d] = woden_settings->FEE_ideal_delays[d];
+      }
+
+      beam_settings->eb_mwa_tile_beam = load_everybeam_MWABeam(
+                                    woden_settings->hdf5_beam_path,
+                                    delays,
+                                    woden_settings->mwa_dipole_amps);
+    }
+
+    // if (eb_status != 0) {
+    //   log_message("WARNING - Something went wrong loading the EveryBeam MWA Beam object");
+    // }
+
+
   #endif
 
   //Iterate through all sky model chunks, calculated visibilities are
@@ -454,8 +471,10 @@ void calculate_visibilities(array_layout_t *array_layout,
   }
 
   #if defined(HAVE_EVERYBEAM)
-  if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_MWA || beam_settings->beamtype == EB_OSKAR) {
+  if (beam_settings->beamtype == EB_LOFAR || beam_settings->beamtype == EB_OSKAR) {
     destroy_everybeam_telescope(beam_settings->everybeam_telescope);
+  } else if (beam_settings->beamtype == EB_MWA ) {
+    destroy_everybeam_MWABeam(beam_settings->eb_mwa_tile_beam);
   }
   #endif
 

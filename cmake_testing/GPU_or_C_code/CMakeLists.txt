@@ -12,14 +12,16 @@ if (USE_EVERYBEAM)
     add_library(use_everybeam SHARED
                 ${CXXSOURCES}
                 ${CMAKE_SOURCE_DIR}/src/logger.c
+                ${EBEAM_MWA_DIR}/beam2016implementation.cc
                 )
     target_link_libraries(use_everybeam gcov ${EVERYBEAM_LIB} ${CASACORE_LIBRARIES})
 
     target_include_directories(use_everybeam PRIVATE
                             ${EVERYBEAM_INCLUDE_DIRS}
                             ${AOCOM_BASE}
-                            ${CASACORE_INCLUDE_DIRS})
-    target_compile_options(use_everybeam PRIVATE -DHAVE_EVERYBEAM -coverage -g -Wall)
+                            ${CASACORE_INCLUDE_DIRS}
+                            ${EBEAM_MWA_DIR})
+    target_compile_options(use_everybeam PRIVATE -DHAVE_EVERYBEAM -coverage -g -Wall -march=native)
 endif()
 
 

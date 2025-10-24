@@ -13,6 +13,8 @@ C so made sense to chuck the doc-strings there.
 #include <EveryBeam/coords/itrfdirection.h>
 #include <EveryBeam/coords/itrfconverter.h>
 
+#include <EveryBeam/common/mathutils.h>
+
 using casacore::MeasurementSet;
 using everybeam::BeamNormalisationMode;
 using everybeam::GetTelescopeType;
@@ -21,15 +23,12 @@ using everybeam::telescope::Telescope;
 using everybeam::telescope::PhasedArray;
 using everybeam::Station;
 using everybeam::vector3r_t;
-// using aocommon::CoordinateSystem;
 using everybeam::BeamMode;
 using everybeam::BeamNormalisationMode;
 using everybeam::pointresponse::PointResponse;
 using everybeam::pointresponse::PhasedArrayPoint;
-using everybeam::real_t;
 using everybeam::telescope::LOFAR;
-
-
+using everybeam::mwabeam::Beam2016Implementation;
 
 #include <mutex>
 
@@ -70,8 +69,7 @@ extern "C" Telescope* load_everybeam_telescope(int * status,  const char *ms_pat
                                                const char *element_response_model,
                                                bool use_differential_beam,
                                                bool use_channel_frequency,
-                                               const char *coeff_path,
-                                               bool use_local_mwa) {
+                                               const char *coeff_path) {
   char message[256];
   std::string data_column = "DATA";
 
@@ -134,13 +132,19 @@ extern "C" Telescope* load_everybeam_telescope(int * status,  const char *ms_pat
   //   options.element_response_model =
   //       everybeam::ElementResponseModel::kSkaMidAnalytical;
   //  }
-  else if (element_response_tmp == "MWA") {
-    options.element_response_model = everybeam::ElementResponseModel::kDefault;
-  }
+  // else if (element_response_tmp == "MWA") {
+  //   options.element_response_model = everybeam::ElementResponseModel::kDefault;
+  // }
   else {
     * status = 1;
 
-    sprintf(message, "ERROR: Requested EveryBeam element response model '%s' not recognised. ", element_response_model);
+    if (element_response_tmp == "MWA") {
+      sprintf(message, "ERROR: Requested EveryBeam element response model '%s'. WODEN doesn't use the MWA EveryBeam `Telescope` object. Please use the `load_everybeam_MWABeam` function instead ", element_response_model);
+    }
+    else {
+      sprintf(message, "ERROR: Requested EveryBeam element response model '%s' not recognised. ", element_response_model);
+    }
+
     log_message(message);
 
     return nullptr;
@@ -153,21 +157,34 @@ extern "C" Telescope* load_everybeam_telescope(int * status,  const char *ms_pat
   options.data_column_name = "DATA";
   options.beam_normalisation_mode = beam_normalisation_mode;
   options.use_channel_frequency = use_channel_frequency;
-  if (element_response_tmp == "MWA") {
-    options.coeff_path = coeff_path;
-  } else {
-    options.coeff_path = "";
-  }
-  options.use_local_mwa = use_local_mwa;
-
+  // if (element_response_tmp == "MWA") {
+  //   options.coeff_path = coeff_path;
+  // } else {
+  //   options.coeff_path = "";
+  // }
 
   std::unique_ptr<Telescope> telescope = Load(ms_path, options);
   return telescope.release();
 }
 
+
 extern "C" void destroy_everybeam_telescope(Telescope* telescope) {
   delete telescope;
 }
+
+extern "C" Beam2016Implementation* load_everybeam_MWABeam(const char *coeff_path,
+                                                 double *delays, double *amps) {
+
+  // Beam2016Implementation eb_mwa_tile_beam(delays, amps, coeff_path);
+
+  return new Beam2016Implementation(delays, amps, std::string(coeff_path));
+}
+
+extern "C" void destroy_everybeam_MWABeam(Beam2016Implementation* eb_mwa) {
+  delete eb_mwa;
+}
+
+
 
 void print_arr(const char* name, double _Complex *jones, int offset, int num_times, int num_freqs,
                int num_dirs, int num_ants, int num_baselines, int *ant_to_baseline_map) {
@@ -264,9 +281,6 @@ extern "C" void run_phased_array_beam(Telescope *telescope,
 
     everybeam::coords::ItrfConverter itrf_converter(mjd_time);
 
-    // phase_itrf = itrf_converter.RaDecToItrf(ra0, dec0);
-    // station_itrf = itrf_converter.RaDecToItrf(ra0, dec0);
-
     for (int ci = 0; ci < num_dirs; ci++) {
       direction_itrfs[ci] = itrf_converter.RaDecToItrf(ras[ci], decs[ci]);
       // std::printf("direction_itrfs ci: %d %.5f %.5f  %.8f %.8f %.8f\n", ci, ras[ci], decs[ci], direction_itrfs[ci][0], direction_itrfs[ci][1], direction_itrfs[ci][2]);
@@ -288,19 +302,8 @@ extern "C" void run_phased_array_beam(Telescope *telescope,
           norm = phased_array_point.Response(
                   beammode, station_idx, freq, phase_itrf, &mtx);
 
-          // std::printf("norm: %.5f %.5f, %.5f %.5f, %.5f %.5f, %.5f %.5f\n",
-          //                                         norm[0].real(), norm[0].imag(),
-          //                                         norm[1].real(), norm[1].imag(),
-          //                                         norm[2].real(), norm[2].imag(),
-          //                                         norm[3].real(), norm[3].imag());
-
           aocommon::Matrix2x2::Invert(reinterpret_cast<std::complex<double>*>(&norm));
 
-          // std::printf("norm inv: %.5f %.5f, %.5f %.5f, %.5f %.5f, %.5f %.5f\n",
-          //                                         norm[0].real(), norm[0].imag(),
-          //                                         norm[1].real(), norm[1].imag(),
-          //                                         norm[2].real(), norm[2].imag(),
-          //                                         norm[3].real(), norm[3].imag());
         }
 
         for (int ci = 0; ci < num_dirs; ci++) {
@@ -316,35 +319,27 @@ extern "C" void run_phased_array_beam(Telescope *telescope,
 
           // std::printf("%d %d %d %d: %.5f %.5f, %.5f %.5f, %.5f %.5f, %.5f %.5f\n",
           //                               si, ti, fi, ci,
-          //                               response[0].real(), response[0].imag(),
-          //                               response[1].real(), response[1].imag(),
-          //                               response[2].real(), response[2].imag(),
-          //                               response[3].real(), response[3].imag());
+          //                               response.Get(0).real(), response.Get(0).imag(),
+          //                               response.Get(1).real(), response.Get(1).imag(),
+          //                               response.Get(2).real(), response.Get(2).imag(),
+          //                               response.Get(3).real(), response.Get(3).imag());
 
           if (apply_beam_norms) {
-            // std::printf("response[0] before: %.8f\n", response[0].real());
-            aocommon::MC2x2::ATimesB(normed, norm, response);
-            response = normed; 
-            // std::printf("response[0] after: %.8f\n", response[0].real());
+            normed = norm*response;
+            response = normed;
+
           }
 
-          // std::printf("normed %d %d %d %d: %.5f %.5f, %.5f %.5f, %.5f %.5f, %.5f %.5f\n",
-          //                               si, ti, fi, ci,
-          //                               response[0].real(), response[0].imag(),
-          //                               response[1].real(), response[1].imag(),
-          //                               response[2].real(), response[2].imag(),
-          //                               response[3].real(), response[3].imag());
-
           if (iau_order){
-            jones[jones_index + 0] = {response[0].real(), response[0].imag()};
-            jones[jones_index + 1] = {response[1].real(), response[1].imag()};
-            jones[jones_index + 2] = {response[2].real(), response[2].imag()};
-            jones[jones_index + 3] = {response[3].real(), response[3].imag()};
+            jones[jones_index + 0] = {response.Get(0).real(), response.Get(0).imag()};
+            jones[jones_index + 1] = {response.Get(1).real(), response.Get(1).imag()};
+            jones[jones_index + 2] = {response.Get(2).real(), response.Get(2).imag()};
+            jones[jones_index + 3] = {response.Get(3).real(), response.Get(3).imag()};
           } else {
-            jones[jones_index + 0] = {response[3].real(), response[3].imag()};
-            jones[jones_index + 1] = {response[2].real(), response[2].imag()};
-            jones[jones_index + 2] = {response[1].real(), response[1].imag()};
-            jones[jones_index + 3] = {response[0].real(), response[0].imag()};
+            jones[jones_index + 0] = {response.Get(3).real(), response.Get(3).imag()};
+            jones[jones_index + 1] = {response.Get(2).real(), response.Get(2).imag()};
+            jones[jones_index + 2] = {response.Get(1).real(), response.Get(1).imag()};
+            jones[jones_index + 3] = {response.Get(0).real(), response.Get(0).imag()};
           }
           // std::printf("s%d t%d f%d c%d: %.10f + %.10f*I, %.10f + %.10f*I, %.10f + %.10f*I, %.10f + %.10f*I\n",
           //   si, ti, fi, ci,
@@ -378,12 +373,11 @@ extern "C" int load_and_run_lofar_beam(const char *ms_path,
   int status = 0;
   bool use_differential_beam = false;
   bool use_channel_frequency = true;
-  bool use_local_mwa = true;
   const char *coeff_path = "";
   
   Telescope *telescope = load_everybeam_telescope(&status, ms_path, element_response_model,
                                                   use_differential_beam, use_channel_frequency,
-                                                  coeff_path, use_local_mwa);
+                                                  coeff_path);
 
   run_phased_array_beam(telescope, num_stations, station_idxs,
                  num_dirs, ra0, dec0, ras, decs,
@@ -411,12 +405,11 @@ extern "C" int load_and_run_oskar_beam(const char *ms_path,
   int status = 0;
   bool use_differential_beam = false;
   bool use_channel_frequency = true;
-  bool use_local_mwa = true;
   const char *coeff_path = "";
 
   Telescope *telescope = load_everybeam_telescope(&status, ms_path, element_response_model,
                                                   use_differential_beam, use_channel_frequency,
-                                                  coeff_path, use_local_mwa);
+                                                  coeff_path);
 
   run_phased_array_beam(telescope, num_stations, station_idxs,
                  num_dirs, ra0, dec0, ras, decs,
@@ -429,40 +422,28 @@ extern "C" int load_and_run_oskar_beam(const char *ms_path,
   return status;
 }
 
-
-
-extern "C" void run_mwa_beam(Telescope *telescope,
-                               int num_stations, int *station_idxs,
-                               int num_dirs,
-                               double *azs, double *zas,
+extern "C" void run_mwa_beam(Beam2016Implementation *eb_mwa_tile_beam,
+                               int num_dirs, double *azs, double *zas,
                                double *para_angles,
-                               int num_times, double *mjd_sec_times,
                                int num_freqs, double *freqs,
-                               bool apply_beam_norms, bool parallactic_rotate,
-                               bool element_only, bool iau_order,
+                               int num_times,
+                               bool parallactic_rotate, bool iau_order,
                                double _Complex * jones) {
 
-  double freq, mjd_time, az, za, para_angle;
+  double freq, az, za, para_angle;
 
-  BeamMode beammode = element_only ? BeamMode::kElement : BeamMode::kFull;
-
-  std::complex<float>* buffer = new std::complex<float>[4];
-  std::complex<float>* rot_mat = new std::complex<float>[4];
-  std::complex<float>* rotated = new std::complex<float>[4];
+  aocommon::MC2x2 buffer, rotated;
 
   for (int ti = 0; ti < num_times; ti++) {
-    mjd_time = mjd_sec_times[ti];
-
-    std::unique_ptr<PointResponse> point_response = telescope->GetPointResponse(mjd_time);
-
-    // everybeam::coords::ItrfConverter itrf_converter(mjd_time);
-
     for (int fi = 0; fi < num_freqs; fi++) {
       freq = freqs[fi];
-      // std::printf("DOING freq: %.3e\n", freq);
-      for (int si = 0; si < num_stations; si++) {
-        int station_idx = station_idxs[si];
 
+      //You could loop over stations here if you were doing flagged dipoles
+      //Would need some way of getting different amplitudes into different
+      //stations and/or polarisation, and *eb_mwa_tile_beam would need to
+      //be an array of beams, one per station (i.e. all beams with different amps)
+      // for (int si = 0; si < num_stations; si++) {
+        int si=0;
         for (int ci = 0; ci < num_dirs; ci++) {
 
           az = azs[ ci*num_times + ti];
@@ -472,42 +453,39 @@ extern "C" void run_mwa_beam(Telescope *telescope,
           // std::printf("s%d t%d f%d c%d this %d: az, za, para %.8f, %.8f, %.8f\n",
           //           si, ti, fi, ci, ci*num_times + ti,
           //           az, za, para_angle);
-          // std::printf("s%d t%d f%d c%d : time %.4f, freq %.1e, station %d\n",
-          //           si, ti, fi, ci, mjd_time, freq, station_idx);
+          // std::printf("s%d t%d f%d c%d : time %.4f, freq %.1e, \n",
+          //           si, ti, fi, ci, mjd_time, freq);
 
-          //wtf is the fieled number
-          int field = 0;
-          point_response->Response(beammode, buffer,
-                                  za, az, freq,
-                                  station_idx, field);
+          double az_deg = az*(180.0/M_PI);
+          double za_deg = za*(180.0/M_PI);
+
+          eb_mwa_tile_beam->CalcJones(&buffer, az_deg, za_deg,
+                              std::span<const double>(&freq, 1), true);
 
           if (parallactic_rotate) {
 
-            rot_mat[0] = sin(-para_angle);
-            rot_mat[1] = -cos(-para_angle);
-            rot_mat[2] = -cos(-para_angle);
-            rot_mat[3] = -sin(-para_angle);
+            auto a = std::complex<float>(std::sin(-para_angle), 0.0f);
+            auto b = std::complex<float>(-std::cos(-para_angle), 0.0f);
+            auto c = std::complex<float>(-std::cos(-para_angle), 0.0f);
+            auto d = std::complex<float>(-std::sin(-para_angle), 0.0f);
 
-            aocommon::Matrix2x2::ATimesB(rotated, buffer, rot_mat);
-
-            buffer[0] = rotated[0]; 
-            buffer[1] = rotated[1];
-            buffer[2] = rotated[2];
-            buffer[3] = rotated[3];
+            aocommon::MC2x2 rot_mat(a, b, c, d);
+            rotated = buffer*rot_mat;
+            buffer = rotated;
           }
 
           int jones_index = 4*(si*num_times*num_freqs*num_dirs + ti*num_freqs*num_dirs + fi*num_dirs + ci);
 
           if (iau_order){
-            jones[jones_index + 0] = {buffer[3].real(), buffer[3].imag()};
-            jones[jones_index + 1] = {buffer[2].real(), buffer[2].imag()};
-            jones[jones_index + 2] = {buffer[1].real(), buffer[1].imag()};
-            jones[jones_index + 3] = {buffer[0].real(), buffer[0].imag()};
+            jones[jones_index + 0] = {buffer.Get(3).real(), buffer.Get(3).imag()};
+            jones[jones_index + 1] = {buffer.Get(2).real(), buffer.Get(2).imag()};
+            jones[jones_index + 2] = {buffer.Get(1).real(), buffer.Get(1).imag()};
+            jones[jones_index + 3] = {buffer.Get(0).real(), buffer.Get(0).imag()};
           } else {
-            jones[jones_index + 0] = {buffer[0].real(), buffer[0].imag()};
-            jones[jones_index + 1] = {buffer[1].real(), buffer[1].imag()};
-            jones[jones_index + 2] = {buffer[2].real(), buffer[2].imag()};
-            jones[jones_index + 3] = {buffer[3].real(), buffer[3].imag()};
+            jones[jones_index + 0] = {buffer.Get(0).real(), buffer.Get(0).imag()};
+            jones[jones_index + 1] = {buffer.Get(1).real(), buffer.Get(1).imag()};
+            jones[jones_index + 2] = {buffer.Get(2).real(), buffer.Get(2).imag()};
+            jones[jones_index + 3] = {buffer.Get(3).real(), buffer.Get(3).imag()};
           }
 
           // std::printf("s%d t%d f%d c%d: %.10f %.10f, %.10f %.10f, %.10f %.10f, %.10f %.10f\n",
@@ -517,42 +495,33 @@ extern "C" void run_mwa_beam(Telescope *telescope,
           //           __real__ jones[jones_index + 2], __imag__ jones[jones_index + 2],
           //           __real__ jones[jones_index + 3], __imag__ jones[jones_index + 3]);
         }
-      }
+      // } //If you were looping over stations, this is where you'd end the station loop
     }
   }
 }
 
-extern "C" int load_and_run_mwa_beam(const char *ms_path,
-                                     const char *element_response_model,
+extern "C" int load_and_run_mwa_beam(double *delays, double *amps,
                                      const char *coeff_path,
-                                     int num_stations, int *station_idxs,
-                                     int num_dirs,
-                                     double *azs, double *zas,
+                                     int num_dirs, double *azs, double *zas,
                                      double *para_angles,
-                                     int num_times, double *mjd_sec_times,
                                      int num_freqs, double *freqs,
-                                     bool apply_beam_norms, bool parallactic_rotate,
-                                     bool element_only, bool iau_order,
+                                     int num_times,
+                                     bool parallactic_rotate, bool iau_order,
                                      double _Complex * jones) {
 
   // std::printf("Loading MWA beam\n");
 
   int status = 0;
-  bool use_differential_beam = false;
-  bool use_channel_frequency = true;
-  bool use_local_mwa = true;
-  
-  Telescope *telescope = load_everybeam_telescope(&status, ms_path, element_response_model,
-                                                  use_differential_beam, use_channel_frequency,
-                                                  coeff_path, use_local_mwa);
 
-  run_mwa_beam(telescope, num_stations, station_idxs,
+  Beam2016Implementation* eb_mwa_tile_beam = load_everybeam_MWABeam(coeff_path, delays, amps);
+
+  run_mwa_beam(eb_mwa_tile_beam, 
                  num_dirs, azs, zas, para_angles,
-                 num_times, mjd_sec_times, num_freqs, freqs,
-                 apply_beam_norms, parallactic_rotate, element_only, iau_order,
+                 num_freqs, freqs, num_times, 
+                 parallactic_rotate, iau_order,
                  jones);
 
-  destroy_everybeam_telescope(telescope);
+  destroy_everybeam_MWABeam(eb_mwa_tile_beam);
 
   return status;
 }

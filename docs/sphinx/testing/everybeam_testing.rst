@@ -21,17 +21,7 @@ EveryBeam Testing and Development
 
 Installing EveryBeam
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The build instructions for EveryBeam live on the `everybeam insallation page`_. However, you need to clone my branch as currently it's the only branch where you can easily feed ``az,za`` coords directly into the beam. We want to do that in ``WODEN`` as we precess the array position back to J2000, instead of precessing the ``ra,dec`` coordinates forward to the current date. ``EveryBeam`` will automatically precess any ``ra,dec``. Clone my branch via::
-
-   $ git clone -b mwa_python_wrapper --recursive -j4 https://git.astron.nl/RD/EveryBeam.git
-
-When I ran ``cmake``, I did::
-
-   cmake .. -DCMAKE_INSTALL_PREFIX=/home/jline/software/installed/ 
-
-so I would know where the installation went.
-
-For the record, if you need to install the native EveryBeam Python wrapper,
+The build instructions for EveryBeam live on the `everybeam insallation page`_. For the record, if you need to install the native EveryBeam Python wrapper,
 you need first to add this to your cmake command (and then remake and install)::
 
    $ cmake .. -DBUILD_WITH_PYTHON=ON
@@ -49,9 +39,9 @@ which let my conda environment see everything it needed to. When I was running n
 
 Work still to be done on EveryBeam in WODEN
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-- Only certain frequencies exists in certain models. This means we don't need to call EveryBeam for every single frequency. So create some kind of cache or map for the existing beam models to save compute.
-- Getting rid of the reliance on my branch of EveryBeam. This will require a change in the EveryBeam API to allow for feeding in ``az,za`` directly, and working with the authors to get it merged.
+- Only certain frequencies exists in certain models. This means we don't need to call EveryBeam for every single frequency. So create some kind of cache or map for the existing beam models to save compute (although I *think* EveryBeam cache things under the hood, so might already be happening...)
 - I cannot get the LOBES version of the LOFAR beam to make sense, only the Hamaker model. See the ``test_LOFAR_LBA_lobes.ipynb`` notebook for more details.
+- The ``--off_cardinal_dipoles`` flag changes the underlying maths that applies the beam to Stokes QUV. It's unclear whether this does or does not need to happen with LOFAR simulations. You'll need to do some kind of testing with a polarised sky and compare to real data to get an understanding.
 
 .. Adding new beam models
 .. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

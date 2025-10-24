@@ -60,38 +60,38 @@ class Test(unittest.TestCase):
         
         ##No need to precess for this simple test
         
-        j2000_latitudes = np.array([arr_latitude])
-        j2000_lsts = np.array([np.radians(LST_deg)])
+        # j2000_latitudes = np.array([arr_latitude])
+        # j2000_lsts = np.array([np.radians(LST_deg)])
         
         all_times = np.array([observing_time])
         all_freqs = np.array([100e+6])
         station_ids = np.array([0,10])
         
         coeff_path = ""
-        serial_jones =  run_everybeam(ms_path, coeff_path,
-                                ras, decs, beam_ra0, beam_dec0,
-                                j2000_latitudes, j2000_lsts,
-                                all_times, all_freqs,
-                                station_ids,
-                                apply_beam_norms=True,
-                                iau_order=False,
-                                element_only=False,
-                                parallactic_rotate=True)
+        serial_jones =  run_everybeam(ras, decs, all_freqs,
+                                      ms_path=ms_path,
+                                      beam_ra0=beam_ra0, beam_dec0=beam_dec0,
+                                      times=all_times, 
+                                      station_ids=station_ids,
+                                      apply_beam_norms=True,
+                                      iau_order=False,
+                                      element_only=False,
+                                      parallactic_rotate=True)
         
         
         coeff_path=""
         for num_threads in [1, 3, 4, 8]:
         
             parallel_jones =  run_everybeam_over_threads(num_threads,
-                                ms_path, coeff_path,
-                                ras, decs, beam_ra0, beam_dec0,
-                                j2000_latitudes, j2000_lsts,
-                                all_times, all_freqs,
-                                station_ids,
-                                apply_beam_norms= True,
-                                iau_order=False,
-                                element_only=False,
-                                parallactic_rotate=True)
+                                      ras, decs, all_freqs,
+                                      ms_path=ms_path,
+                                      beam_ra0=beam_ra0, beam_dec0=beam_dec0,
+                                      times=all_times, 
+                                      station_ids=station_ids,
+                                      apply_beam_norms=True,
+                                      iau_order=False,
+                                      element_only=False,
+                                      parallactic_rotate=True)
             
             npt.assert_allclose(serial_jones, parallel_jones, atol=1e-8)
             
