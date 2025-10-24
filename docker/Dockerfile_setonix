@@ -7,7 +7,7 @@ FROM quay.io/pawsey/rocm-mpich-base:rocm${ROCM_VER}-mpich3.4.3-ubuntu24.04
 
 ARG USE_BUILD
 
-ENV WODEN_TAG=update_everybeam
+ENV WODEN_TAG=v2.7.0
 ENV EVERYBEAM_TAG=v0.7.4
 ENV CASACORE_TAG=v3.7.1
 ENV HYPER_VERSION=0.10.0

@@ -19,10 +19,9 @@ Both options are described below, jump to whatever suits you.
 
 ``WODEN`` has been tested to run on the following Australian super computers:
 
-- Garrawarla (Pawsey) CUDA (only tested up to ``WODEN`` v2.3)
 - OzStar (Swinburne University) CUDA (tested ``WODEN`` v2.6, EveryBeam does not work from singularity)
-- Ngarrgu Tindebeek (Swinburne University) CUDA (tested ``WODEN`` v2.6, including EveryBeam)
-- Setonix (Pawsey) HIP (only tested up to ``WODEN`` v2.3)
+- Ngarrgu Tindebeek (Swinburne University) CUDA (tested ``WODEN`` v2.7, including EveryBeam)
+- Setonix (Pawsey) HIP (only tested up to ``WODEN`` v2.7)
 
 .. _install manual:
 
@@ -31,14 +30,14 @@ Manual Installation
 
 If you don't want to read, an example installation command (assuming you've installed all dependencies) is::
 
-   HYPER_VERSION=0.10.1
    git clone https://github.com/JLBLine/WODEN.git &&
    cd WODEN &&
    mkdir build && cd build &&
-   cmake .. -DHBEAM_INC=/mwa_hyperbeam-${HYPER_VERSION}/include/ \
-            -DHBEAM_LIB=/mwa_hyperbeam-${HYPER_VERSION}/target/release/libmwa_hyperbeam.so \
-            -DEBEAM_INSTALL=/everybeam_install/ \
-            -DEBEAM_ROOT=/EveryBeam/ &&
+   cmake .. -DHBEAM_INC=/home/jack-line/software/mwa_hyperbeam-0.10.1/include \
+            -DHBEAM_LIB=/home/jack-line/software/mwa_hyperbeam-0.10.1/target/release/libmwa_hyperbeam.so \
+            -DEBEAM_INSTALL=/home/jack-line/software/install/ \
+            -DEBEAM_ROOT=/home/jack-line/software/EveryBeam/ \
+            -DCASACORE_ROOT_DIR=/home/jack-line/software/install
    make -j8 &&
    cd .. &&
    pip install -r requirements.txt && pip install .
@@ -57,6 +56,7 @@ Dependencies
 - **mwa_hyperbeam** - https://github.com/MWATelescope/mwa_hyperbeam
 - **Python >= 3.8** (as well as a number of Python modules, see below)
 - *Optional* **EveryBeam** - https://everybeam.readthedocs.io/en/latest/build-instructions.html
+- *Optional* **casacore** - if you install latest ``EveryBeam`` you need to manually install ``casacore``.
 
 How to install dependencies
 ------------------------------
@@ -76,6 +76,14 @@ linux-like systems.
 + **AMD ROCm** - https://rocm.docs.amd.com/projects/install-on-linux/en/latest/::
 
   I don't have an AMD GPU, so I've never done this. Fingers crossed the linked instructions work for you!
++ **python >= 3.8** - 3.8 should work, but I'd suggest going with 3.11 or 3.12. There are many ways to install base python, so shop around online. I highly recommend using a virtual environment once you have python however to keep things tidy. An example of setting one up::
+  
+    $ cd /path/to/software
+    $ python3 -m venv venv_name ##replace venv_name with your own choice of name
+    $ source venv_name/bin/activate
+    $ pip install --upgrade pip setuptools wheel
+    $ pip install numpy ##if installing casacore, sometimes it complains if numpy isn't installed
+
 + **mwa_hyperbeam** - https://github.com/MWATelescope/mwa_hyperbeam - ``mwa_hyperbeam`` is the go-to package for calculating the MWA Fully Embedded Element (FEE) primary beam model. At the time of writing (23/03/2022), we'll have to install and compile from source to get the CUDA code that we want to link to. We should be able to install release versions in the future. For now, you'll first need to install ``rust``, the language the library is written in. I followed the installation guide at https://www.rust-lang.org/tools/install, which for me on Ubuntu just means running::
 
   $ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -98,24 +106,41 @@ linux-like systems.
   where again the value of ``HYPERBEAM_HIP_ARCH`` depends on what kind of GPU you have.
 
   That's it! I'll show you how to link to it later when we install ``WODEN``. If you don't want to have to tell ``CMake`` where to look for the libraries, you'll need to link/copy ``libmwa_hyperbeam.so`` somewhere your compiler can see, as well as ``mwa_hyperbeam.h``.
-+ **python >= 3.8** - 3.8 should work, but I'd suggest going with 3.11 or 3.12. The requirements can be found in ``WODEN/requirements.txt``, which you can install via something like::
++ **casacore** - If you want to use ``EveryBeam`` in ``WODEN v2.7`` or later, you'll need to install ``casacore`` manually (``sudo apt install libcasacore-dev`` installs too old a version). On Ubuntu, I do something like the below. I use virtual environments and casacore gets a little mad finding Python paths, so you might need to be explicit about paths to the python executable. You can also explicitly download all the up-to-date leap second tables and what not and link that, so we'll also do that here. I'll put things in an imaginary ``/path/to/software``; change what to wherever you want to install things to::
 
-  $ pip3 install -r requirements_testing.txt
+  $ cd /path/to/software
+  $ mkdir -p casacore_data
+  $ wget -q ftp://ftp.astron.nl/outgoing/Measures/WSRT_Measures.ztar
+  $ tar -xf WSRT_Measures.ztar -C /path/to/software/casacore_data
 
-+ **everybeam** - You only need to do this if you want to use EveryBeam primary beams in your simulations. ``WODEN`` will check for the ``everybeam`` Python package at runtime, and run fine if it's missing (unless you ask it to run with EveryBeam, then it will complain). The build instructions for EveryBeam live on the `everybeam insallation page`_. You'll have to install a bunch of dependencies, including ``casacore``. This is sad, but not too hard on Ubuntu. You can follow them with *one important difference* - you need to currently install my branch, as it's the only one that has MWA Python bindings. You can do this by running::
+  that installs the data, then install casacore (note I'm explicitly setting v3.7.1 here, which works with ``WODEN v2.7``)::
 
-  $ git clone -b mwa_python_wrapper --recursive -j4 https://git.astron.nl/RD/EveryBeam.git
+    $ cd /path/to/software
+    $ git clone -b v3.7.1 -j4 https://github.com/casacore/casacore.git
+    $ mkdir -p build && cd build
+    $ cmake .. -DUSE_THREADS=ON \
+               -DCMAKE_INSTALL_PREFIX=/path/to/software/install \
+               -DDATA_DIR=/path/to/software/casacore_data \
+               -DUSE_HDF5=OFF \
+               -DBUILD_PYTHON=OFF -DBUILD_PYTHON3=ON \
+               -DPYTHON3_EXECUTABLE=/path/to/software/venv_name/bin/python3 ##Might no be necessary for you
+    $ make -j8 ##it takes a decent time to compile so strap in
+    $ make install
 
-  If you follow the EveryBeam instructions, you'll install a system-wide version. If this isn't suitable for your system, i.e. you're not running in a container, this was may approach. When I ran ``cmake``, I did::
+  Note that I explicitly set an installation location. I'll use that later when linking to ``WODEN``.
 
-  $ cmake .. -DCMAKE_INSTALL_PREFIX=/some/path/software/installed/ 
++ **everybeam** - You only need to do this if you want to use EveryBeam primary beams in your simulations. The build instructions for EveryBeam live on the `everybeam insallation page`_. You'll have to install a bunch of dependencies, including ``casacore`` as noted above. This is how I the install ``EveryBeam`` itself::
 
-+ **casacore** - If you installed ``EveryBeam`` via the instructions above, you should have ``casacore`` installed. If not, you'll need to install it. You can do this via::
+    $ cd /path/to/software
+    $ git clone -b v0.7.4 --recursive -j4 https://git.astron.nl/RD/EveryBeam.git
+    $ cd EveryBeam && mkdir -p build && cd build
+    $ cmake .. -DCMAKE_INSTALL_PREFIX=/path/to/software/install \
+               -DBUILD_WITH_PYTHON=ON \
+               -DCASACORE_ROOT_DIR=/path/to/software/install/
 
-  $ sudo apt install libcasacore-dev
+  If you follow the EveryBeam instructions, you'll install a system-wide version. Again, I've installed things locally into the example ``/path/to/software/install`` directory. Adjust as appropriate for your setup.
 
-  or if you want to install from source, follow the instructions at `casacore installation`_.  If you installed it in a non-standard location, you'll need to point ``CMake`` to it when you compile ``WODEN`` (see below).
-
+.. note:: If you install libraries into a specific non-standard directory, you'll need to add them to your ``LD_LIBRARY_PATH`` at run time, via something like ``export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/software/install/lib``. I put this in my ``~/.bashrc``.
 
 Compiling ``WODEN`` ``C/CUDA`` code
 =========================================
@@ -124,6 +149,7 @@ Compiling ``WODEN`` ``C/CUDA`` code
 In an ideal world, if the installation of your dependencies went perfectly,
 you have a newer NVIDIA GPU, and you don't care about EveryBeam, you should be able to simply run::
 
+  $ cd /path/to/software
   $ git clone https://github.com/JLBLine/WODEN.git
   $ cd WODEN
   $ mkdir build && cd build
@@ -138,8 +164,8 @@ HyperBeam
 ------------------------------
 It's almost a guarantee ``cmake`` won't be able to find ``mwa_hyperbeam``, so you'll have to point it to where things are installed. You can use two keywords in the following way to achieve that::
 
-  $ cmake .. -DHBEAM_INC=/home/jline/software/mwa_hyperbeam/include \
-             -DHBEAM_LIB=/home/jline/software/mwa_hyperbeam/target/release/libmwa_hyperbeam.so
+  $ cmake .. -DHBEAM_INC=/path/to/software/mwa_hyperbeam/include \
+             -DHBEAM_LIB=/path/to/software/mwa_hyperbeam/target/release/libmwa_hyperbeam.so
 
 Obviously you'll need to point to where you have installed things. If *you* have a library with my name in the path I'd be concerned, so edit it as appropriate.
 
@@ -148,14 +174,13 @@ EveryBeam
 ``EveryBeam`` relies on ``casacore``. As ``WODEN`` compiles some EveryBeam code directly,
 you have to link ``WODEN`` against it. If you've installed via Ubuntu, ``CMake`` will be able to find it. If you've installed it in a non-standard location, you'll need to point ``CMake`` to it. You can do this via::
 
-  $ cmake .. -DCASACORE_ROOT_DIR=/path/to/casacore
+  $ cmake .. -DCASACORE_ROOT_DIR=/path/to/software/install
 
 Next, you not only have to point ``CMake`` to where you installed the compiled ``EveryBeam``, but also to the source code as well. Parts of ``EveryBeam`` rely on ``aocommon`` headers, which doesn't get copied during ``EveryBeam``  installation. So you need to point ``EBEAM_INSTALL`` to where you installed the compiled
 ``EveryBeam`` outputs, and ``EBEAM_ROOT`` to where you installed the source code. You can do this via::
 
-  $ cmake .. -DEBEAM_INSTALL=/some/path/software/installed/ \
-             -DEBEAM_ROOT=/path/to/EveryBeam
-
+  $ cmake .. -DEBEAM_INSTALL=/path/to/software/install \
+             -DEBEAM_ROOT=/path/to/software/EveryBeam
 
 NVIDIA/CUDA specifics
 ------------------------------
@@ -197,15 +222,30 @@ which spat out ``gfx90a`` for me. You pass that onto ``cmake`` via the ``HIP_ARC
 
 Fair warning, I *had* to include the ``HIP_ARCH`` flag. The code would compile fine but not work at runtime, so a bit nasty.
 
+Putting it all together
+-------------------------------
+
+Combining all the above for an NVIDIA GPU, here is a genuine example from my machine::
+
+    $ cmake .. -DUSE_CUDA=ON \
+        -DHBEAM_INC=/home/jack-line/software/mwa_hyperbeam-0.10.1/include \
+        -DHBEAM_LIB=/home/jack-line/software/mwa_hyperbeam-0.10.1/target/release/libmwa_hyperbeam.so \
+        -DEBEAM_INSTALL=/home/jack-line/software/install/ \
+        -DEBEAM_ROOT=/home/jack-line/software/EveryBeam_release/ \
+        -DCASACORE_ROOT_DIR=/home/jack-line/software/install
+
 Installing ``wodenpy``
 ==========================
 
-OK, we've compiled the C/GPU libraries; now to install the ``WODEN`` Python package and executables. You can do this by running::
+OK, we've compiled the C/GPU libraries; now to install the ``WODEN`` Python package and executables. 
+
+You can do this by running::
 
   $ cd WODEN
+  $ pip3 install -r requirements.txt
   $ pip3 install .
 
-That's it. You should be able to run ``run_woden.py --help`` on the command line.
+That's it. You should now be able to run ``run_woden.py --help`` on the command line.
 
 Post compilation (optional)
 ==============================
