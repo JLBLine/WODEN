@@ -82,6 +82,9 @@ class Woden_Settings_Python(object):
         self.off_cardinal_dipoles = None
         self.do_gpu = None
         self.normalise_primary_beam = None
+        self.do_ionosphere = None
+        self.TEC_grad_x = None
+        self.TEC_grad_y = None
 
 def create_woden_settings_struct(precision : str = "double"):
     """Creates a `Woden_Settings` class structured equivalently to a `woden_settings_t`
@@ -163,6 +166,9 @@ def create_woden_settings_struct(precision : str = "double"):
         :cvar POINTER(c_char) beam_ms_path:  Path to the beam model MS file for everybeam simulations
         :cvar c_double eb_beam_ra0:  Right ascension to lock the EveryBeam primary beam centre to (radians)
         :cvar c_double eb_beam_dec0:  Declination to lock the EveryBeam primary beam centre to (radians)
+        :cvar c_int do_ionosphere: Boolean of whether to calculate ionosphereic effects or not (0 False, 1 True)
+        :cvar c_user_precision_t TEC_grad_x: gradient of the TEC screen in x direction (TECU/m)
+        :cvar c_user_precision_t TEC_grad_y: gradient of the TEC screen in y direction (TECU/m)
         """
         
         _fields_ = [("lst_base", c_double),
@@ -214,7 +220,10 @@ def create_woden_settings_struct(precision : str = "double"):
                     ("normalise_primary_beam", c_int),
                     ("beam_ms_path", POINTER(c_char)),
                     ("eb_beam_ra0", c_double),
-                    ("eb_beam_dec0", c_double),]
+                    ("eb_beam_dec0", c_double),
+                    ("do_ionosphere", c_int),
+                    ("TEC_grad_x", c_user_precision),
+                    ("TEC_grad_y", c_user_precision),]
         
     return Woden_Settings
 
@@ -385,6 +394,10 @@ def fill_woden_settings_python(args : argparse.Namespace,
         woden_settings.beam_ms_path = args.pointed_ms_file_name.as_posix()
     else:
         woden_settings.beam_ms_path = args.beam_ms_path
+
+    woden_settings.do_ionosphere = 1
+    woden_settings.TEC_grad_x = 0.00002
+    woden_settings.TEC_grad_y = 0.00002
     
     return woden_settings
     
@@ -563,5 +576,9 @@ def convert_woden_settings_to_ctypes(woden_settings_python : Woden_Settings_Pyth
     
     woden_settings_ctypes.verbose = woden_settings_python.verbose
     woden_settings_ctypes.normalise_primary_beam = woden_settings_python.normalise_primary_beam
+
+    woden_settings_ctypes.do_ionosphere = woden_settings_python.do_ionosphere
+    woden_settings_ctypes.TEC_grad_x = woden_settings_python.TEC_grad_x
+    woden_settings_ctypes.TEC_grad_y = woden_settings_python.TEC_grad_y
     
     return woden_settings_ctypes

@@ -1139,6 +1139,7 @@ if off_cardinal == 0, then the dipoles are aligned at 0 and 90 degrees
 __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            beam_gains_t d_component_beam_gains,
            user_precision_t *d_us, user_precision_t *d_vs, user_precision_t *d_ws,
+           user_precision_t *d_allsteps_wavelengths,
            user_precision_t *d_sum_visi_XX_real, user_precision_t *d_sum_visi_XX_imag,
            user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
            user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
@@ -1147,7 +1148,8 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            int *ant1_to_baseline_map, int *ant2_to_baseline_map,
            int num_components, int num_baselines, int num_freqs, int num_cross,
            int num_times, int num_ants, e_beamtype beamtype,
-           e_component_type comptype, int off_cardinal_dipoles);
+           e_component_type comptype, int off_cardinal_dipoles,
+           int do_ionosphere, user_precision_t TEC_grad_x, user_precision_t TEC_grad_y);
 
 /**
 @brief Kernel to calculate the visibility response to a number `num_shapes` of
@@ -1256,7 +1258,8 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       int *ant1_to_baseline_map, int *ant2_to_baseline_map,
       int num_shapes, int num_baselines, int num_freqs, int num_cross,
       int num_ants, const int num_coeffs, int num_times,
-      e_beamtype beamtype, int off_cardinal_dipoles);
+      e_beamtype beamtype, int off_cardinal_dipoles,
+      int do_ionosphere, user_precision_t TEC_grad_x, user_precision_t TEC_grad_y);
 
 /**
 @brief Copies the specified type of source components from host memory to device memory.

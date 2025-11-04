@@ -1190,6 +1190,7 @@ extern "C" void malloc_beam_gains_gpu(beam_gains_t *d_component_beam_gains,
 __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            beam_gains_t d_component_beam_gains,
            user_precision_t *d_us, user_precision_t *d_vs, user_precision_t *d_ws,
+           user_precision_t *d_allsteps_wavelengths,
            user_precision_t *d_sum_visi_XX_real, user_precision_t *d_sum_visi_XX_imag,
            user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
            user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
@@ -1198,7 +1199,8 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            int *ant1_to_baseline_map, int *ant2_to_baseline_map,
            int num_components, int num_baselines, int num_freqs, int num_cross,
            int num_times, int num_ants, e_beamtype beamtype,
-           e_component_type comptype, int off_cardinal_dipoles) {
+           e_component_type comptype, int off_cardinal_dipoles,
+           int do_ionosphere, user_precision_t TEC_grad_x, user_precision_t TEC_grad_y) {
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
@@ -1234,12 +1236,17 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
       // if (iBaseline == 0 && d_components.do_QUV == 1) {
       //   printf("Fluxes %.3e %.3e %.3e %.3e\n", flux_I, flux_Q, flux_U, flux_V);
       // }
-      
-      double offset = calc_ionospheric_phase_offset_gpu(d_ant_X, d_ant_Y, d_ant_Z,
+
+      double offset = 0;
+      if (do_ionosphere) {
+        offset = calc_ionospheric_phase_offset_gpu(d_ant_X, d_ant_Y, d_ant_Z,
                                                   d_components.azs, d_components.zas,
+                                                  d_allsteps_wavelengths,
                                                   ant1_to_baseline_map, ant2_to_baseline_map,
                                                   num_baselines, num_ants, time_ind, num_components,
-                                                  iBaseline, iComponent);
+                                                  iBaseline, iComponent, TEC_grad_x, TEC_grad_y);
+      }
+      
       
       visi_comp = calc_measurement_equation_gpu(d_us, d_vs, d_ws,
                              d_components.ls, d_components.ms, d_components.ns, offset,
@@ -1323,6 +1330,7 @@ extern "C" void calc_visi_point_or_gauss_gpu(components_t d_components,
                   d_components, d_component_beam_gains,
                   d_calc_visi_inouts->us, d_calc_visi_inouts->vs,
                   d_calc_visi_inouts->ws,
+                  d_calc_visi_inouts->allsteps_wavelengths,
                   d_visibility_set->sum_visi_XX_real,
                   d_visibility_set->sum_visi_XX_imag,
                   d_visibility_set->sum_visi_XY_real,
@@ -1339,7 +1347,9 @@ extern "C" void calc_visi_point_or_gauss_gpu(components_t d_components,
                   num_components, woden_settings->num_baselines,
                   woden_settings->num_freqs, woden_settings->num_cross,
                   woden_settings->num_time_steps, woden_settings->num_ants,
-                  beamtype, comptype, woden_settings->off_cardinal_dipoles);
+                  beamtype, comptype, woden_settings->off_cardinal_dipoles,
+                  woden_settings->do_ionosphere,
+                  woden_settings->TEC_grad_x, woden_settings->TEC_grad_y);
 
 }
 
@@ -1358,7 +1368,8 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       int *ant1_to_baseline_map, int *ant2_to_baseline_map,
       int num_shapes, int num_baselines, int num_freqs, int num_cross,
       int num_ants, const int num_coeffs, int num_times,
-      e_beamtype beamtype, int off_cardinal_dipoles) {
+      e_beamtype beamtype, int off_cardinal_dipoles,
+      int do_ionosphere, user_precision_t TEC_grad_x, user_precision_t TEC_grad_y) {
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
@@ -1399,11 +1410,15 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
         shape_flux_V = d_components.extrap_stokesV[extrap_ind];
       }
 
-      double offset = calc_ionospheric_phase_offset_gpu(d_ant_X, d_ant_Y, d_ant_Z,
+      double offset = 0;
+      if (do_ionosphere) {
+        offset = calc_ionospheric_phase_offset_gpu(d_ant_X, d_ant_Y, d_ant_Z,
                                                   d_components.azs, d_components.zas,
+                                                  d_allsteps_wavelengths,
                                                   ant1_to_baseline_map, ant2_to_baseline_map,
                                                   num_baselines, num_ants, time_ind, num_shapes,
-                                                  iBaseline, iComponent);
+                                                  iBaseline, iComponent, TEC_grad_x, TEC_grad_y);
+      }
 
       visi_shape = calc_measurement_equation_gpu(d_us, d_vs, d_ws,
                             d_components.ls, d_components.ms, d_components.ns, offset,
@@ -1537,7 +1552,9 @@ extern "C" void calc_visi_shapelets_gpu(components_t d_components,
                   woden_settings->num_freqs, woden_settings->num_cross,
                   woden_settings->num_ants, num_shape_coeffs,
                   woden_settings->num_time_steps,
-                  beamtype, woden_settings->off_cardinal_dipoles);
+                  beamtype, woden_settings->off_cardinal_dipoles,
+                  woden_settings->do_ionosphere,
+                  woden_settings->TEC_grad_x, woden_settings->TEC_grad_y);
 }
 
 

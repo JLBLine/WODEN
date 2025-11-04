@@ -355,6 +355,10 @@ typedef struct _woden_settings_t {
   double eb_beam_ra0; /*!< Right ascension to lock the EveryBeam primary beam centre to (radians) */
   double eb_beam_dec0; /*!< Declination to lock the EveryBeam primary beam centre to (radians) */
 
+  int do_ionosphere; /*!< Boolean of whether to calculate ionosphereic effects or not (0 False, 1 True)*/
+  user_precision_t TEC_grad_x; /*!< gradient of the TEC screen in x direction (TECU/m) */
+  user_precision_t TEC_grad_y; /*!< gradient of the TEC screen in y direction (TECU/m) */
+  
 } woden_settings_t;
 
 /**

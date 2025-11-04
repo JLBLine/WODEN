@@ -101,3 +101,9 @@ Initially make enough room to fit 100 flux entries in a list*/
 /*! 200000000.0 \n
 Frequency (Hz) that all power-law and curved power-law models are referenced to*/
 #define REF_FREQ 200000000.0
+
+
+//ionospheric TEC screen to phase conversion---------------------------------------------------
+/*! -28.179 \n
+\f$ - \frac{q_e^2}{4 \pi e_0 m_e c^2} \times TECU  \f$ */
+#define TEC_TO_PHASE -28.179 /* - q_e^2 / (4 pi e_0 m_e c^2) * TECU */
