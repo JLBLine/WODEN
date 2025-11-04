@@ -31,8 +31,10 @@ if(USE_CUDA)
     ##Sets the -std=c++11 nvcc compiler flag I think
     set(CMAKE_CUDA_STANDARD 11)
     ##Internal flag to let code know we're using nvcc
-    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D__NVCC__ -rdc=true")
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D__NVCC__")
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+    set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 elseif(USE_HIP)
     message("DEBUG : USE_HIP=ON")
@@ -173,10 +175,9 @@ if(TARGET_GROUP STREQUAL production OR TARGET_GROUP STREQUAL debug)
 
     ##Do it for the float code first--------------------------------------------
     ##Generate library for the CUDA code
-    add_library(wodenGPU_float SHARED ${GPUSOURCES})
+    add_library(wodenGPU_float STATIC ${GPUSOURCES})
     ##Compile CUDA code with all warnings
     if(USE_CUDA)
-        set_target_properties(wodenGPU_float PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
         if(TARGET_GROUP STREQUAL production)
             target_compile_options(wodenGPU_float PRIVATE --compiler-options -Wall)
         else()
@@ -214,11 +215,10 @@ if(TARGET_GROUP STREQUAL production OR TARGET_GROUP STREQUAL debug)
     ##Now do it for the double code by adding the -DDOUBLE_PRECISION compiler
     ##flag----------------------------------------------------------------------
 
-    add_library(wodenGPU_double SHARED ${GPUSOURCES})
+    add_library(wodenGPU_double STATIC ${GPUSOURCES})
     target_compile_options(wodenGPU_double PRIVATE -DDOUBLE_PRECISION)
     ##Compile CUDA code with all warnings
     if(USE_CUDA)
-        set_target_properties(wodenGPU_double PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
         if(TARGET_GROUP STREQUAL production)
             target_compile_options(wodenGPU_double PRIVATE --compiler-options -Wall)
         else()
