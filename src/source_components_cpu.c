@@ -1173,6 +1173,7 @@ void calc_visi_point_or_gauss_cpu(components_t components,
   int num_ants = woden_settings->num_ants;
   int num_times = woden_settings->num_time_steps;
   int off_cardinal_dipoles = woden_settings->off_cardinal_dipoles;
+  int do_ionosphere = woden_settings->do_ionosphere;
 
   int use_twobeams = component_beam_gains.use_twobeams;
 
@@ -1213,14 +1214,20 @@ void calc_visi_point_or_gauss_cpu(components_t components,
         flux_V = components.extrap_stokesV[extrap_ind];
       }
 
-      double offset = calc_ionospheric_phase_offset_cpu(calc_visi_inouts->ant_X[ant1],
+      double offset = 0;
+      if (do_ionosphere) {
+        offset = calc_ionospheric_phase_offset_cpu(calc_visi_inouts->ant_X[ant1],
                                                   calc_visi_inouts->ant_Y[ant1],
                                                   calc_visi_inouts->ant_Z[ant1],
                                                   calc_visi_inouts->ant_X[ant2],
                                                   calc_visi_inouts->ant_Y[ant2],
                                                   calc_visi_inouts->ant_Z[ant2],
                                                   components.azs[time_ind*num_components + iComponent],
-                                                  components.zas[time_ind*num_components + iComponent]);
+                                                  components.zas[time_ind*num_components + iComponent],
+                                                  calc_visi_inouts->allsteps_wavelengths[iBaseline],
+                                                  woden_settings->TEC_grad_x, woden_settings->TEC_grad_y);
+      }
+      
       
       visi_comp = calc_measurement_equation_cpu(calc_visi_inouts->us[iBaseline],
                                                 calc_visi_inouts->vs[iBaseline],
@@ -1294,6 +1301,7 @@ void calc_visi_shapelets_cpu(components_t components,
   int num_ants = woden_settings->num_ants;
   int num_times = woden_settings->num_time_steps;
   int off_cardinal_dipoles = woden_settings->off_cardinal_dipoles;
+  int do_ionosphere = woden_settings->do_ionosphere;
 
   for (int iBaseline = 0; iBaseline < num_cross; iBaseline++) {
     int use_twobeams = component_beam_gains.use_twobeams;
@@ -1334,14 +1342,19 @@ void calc_visi_shapelets_cpu(components_t components,
         shape_flux_V = components.extrap_stokesV[extrap_ind];
       }
 
-      double offset = calc_ionospheric_phase_offset_cpu(calc_visi_inouts->ant_X[ant1],
+      double offset = 0;
+      if (do_ionosphere) {
+        offset = calc_ionospheric_phase_offset_cpu(calc_visi_inouts->ant_X[ant1],
                                                   calc_visi_inouts->ant_Y[ant1],
                                                   calc_visi_inouts->ant_Z[ant1],
                                                   calc_visi_inouts->ant_X[ant2],
                                                   calc_visi_inouts->ant_Y[ant2],
                                                   calc_visi_inouts->ant_Z[ant2],
                                                   components.azs[time_ind*num_shapes + iComponent],
-                                                  components.zas[time_ind*num_shapes + iComponent]);
+                                                  components.zas[time_ind*num_shapes + iComponent],
+                                                  calc_visi_inouts->allsteps_wavelengths[iBaseline],
+                                                  woden_settings->TEC_grad_x, woden_settings->TEC_grad_y);
+      }
 
       visi_shape = calc_measurement_equation_cpu(calc_visi_inouts->us[iBaseline],
                                                 calc_visi_inouts->vs[iBaseline],

@@ -1,8 +1,12 @@
 #include "ionosphere_cpu.h"
+#include <math.h>
+#include "constants.h"
 
 double calc_ionospheric_phase_offset_cpu(double ant1_X, double ant1_Y, double ant1_Z,
                             double ant2_X, double ant2_Y, double ant2_Z,
-                            user_precision_t az, user_precision_t zen) {
+                            user_precision_t az, user_precision_t zen,
+                            user_precision_t wavelength,
+                            user_precision_t TEC_grad_x, user_precision_t TEC_grad_y) {
     double height = 100000;
 
     // find pierce points
@@ -11,9 +15,16 @@ double calc_ionospheric_phase_offset_cpu(double ant1_X, double ant1_Y, double an
     double pp2_x = ant2_X + height * tan(zen) * sin(az);
     double pp2_y = ant2_Y + height * tan(zen) * cos(az);
 
-    return get_phase_delay_cpu(pp1_x, pp1_y) - get_phase_delay_cpu(pp2_x, pp2_y);
+    double phase1 = get_phase_delay_cpu(pp1_x, pp1_y, (double)TEC_grad_x, (double)TEC_grad_y, (double)wavelength);
+    double phase2 = get_phase_delay_cpu(pp2_x, pp2_y, (double)TEC_grad_x, (double)TEC_grad_y, (double)wavelength);
+
+    return phase1 - phase2;
 }
 
-double get_phase_delay_cpu(double pp_x, double pp_y) {
-    return 1 * sin(1 + pp_x * 0.003);
+double get_phase_delay_cpu(double pp_x, double pp_y,
+                        double TEC_grad_x, double TEC_grad_y,
+                        double wavelength) {
+    double TEC = TEC_grad_x * pp_x + TEC_grad_y * pp_y;
+
+    return TEC * wavelength * TEC_TO_PHASE;
 }
