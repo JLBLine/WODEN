@@ -43,8 +43,7 @@ __device__ double calc_ionospheric_phase_offset_gpu(double *d_ant_X,
 __device__ double get_phase_delay_gpu(double pp_x, double pp_y,
            double TEC_grad_x, double TEC_grad_y,
            double wavelength) {
-    // return 1 * sin(1 + pp_x * 0.003);
     double TEC = TEC_grad_x * pp_x + TEC_grad_y * pp_y;
-    
+
     return TEC * wavelength * TEC_TO_PHASE;
 }
