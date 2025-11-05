@@ -395,9 +395,12 @@ def fill_woden_settings_python(args : argparse.Namespace,
     else:
         woden_settings.beam_ms_path = args.beam_ms_path
 
-    woden_settings.do_ionosphere = 1
-    woden_settings.TEC_grad_x = 0.00002
-    woden_settings.TEC_grad_y = 0.00002
+    if args.do_ionosphere:
+        woden_settings.do_ionosphere = 1
+        woden_settings.TEC_grad_x = args.TEC_grad_x
+        woden_settings.TEC_grad_y = args.TEC_grad_y
+    else:
+        woden_settings.do_ionosphere = 0
     
     return woden_settings
     
@@ -578,7 +581,8 @@ def convert_woden_settings_to_ctypes(woden_settings_python : Woden_Settings_Pyth
     woden_settings_ctypes.normalise_primary_beam = woden_settings_python.normalise_primary_beam
 
     woden_settings_ctypes.do_ionosphere = woden_settings_python.do_ionosphere
-    woden_settings_ctypes.TEC_grad_x = woden_settings_python.TEC_grad_x
-    woden_settings_ctypes.TEC_grad_y = woden_settings_python.TEC_grad_y
+    if woden_settings_python.do_ionosphere:
+        woden_settings_ctypes.TEC_grad_x = woden_settings_python.TEC_grad_x
+        woden_settings_ctypes.TEC_grad_y = woden_settings_python.TEC_grad_y
     
     return woden_settings_ctypes
