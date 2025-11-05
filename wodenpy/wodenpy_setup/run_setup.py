@@ -338,9 +338,6 @@ def get_parser():
              'Must also run the code via `LINE_PROFILE=1 run_woden.py`')
 
     ion_group = parser.add_argument_group('IONOSPHERE OPTIONS')
-    ion_group.add_argument('--do_ionosphere', default=False, action='store_true',
-        help='By default, WODEN does not include ionospheric effects.'
-              'Add this flag to simulate ionospheric effects.')
     ion_group.add_argument('--TEC_grad_x', default=0, type=float,
         help='Gradient of the linear TEC screen in the x direction (TECU/m). If not set, will '
               'default to zero.')

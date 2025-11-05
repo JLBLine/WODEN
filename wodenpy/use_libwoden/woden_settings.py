@@ -395,12 +395,12 @@ def fill_woden_settings_python(args : argparse.Namespace,
     else:
         woden_settings.beam_ms_path = args.beam_ms_path
 
-    if args.do_ionosphere:
+    woden_settings.do_ionosphere = 0
+
+    if args.TEC_grad_x != 0 or args.TEC_grad_y != 0:
         woden_settings.do_ionosphere = 1
         woden_settings.TEC_grad_x = args.TEC_grad_x
         woden_settings.TEC_grad_y = args.TEC_grad_y
-    else:
-        woden_settings.do_ionosphere = 0
     
     return woden_settings
     
