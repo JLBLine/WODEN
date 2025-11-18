@@ -29,10 +29,10 @@ __device__ double calc_ionospheric_phase_offset_gpu(double *d_ant_X,
     double zen = (double)d_zas[time_ind*num_components + iComponent];
 
     // find pierce points
-    double pp1_x = ant1_X + height * tan(zen) * sin(az);
-    double pp1_y = ant1_Y + height * tan(zen) * cos(az);
-    double pp2_x = ant2_X + height * tan(zen) * sin(az);
-    double pp2_y = ant2_Y + height * tan(zen) * cos(az);
+    double pp1_x = ant1_X + (height - ant1_Z) * tan(zen) * sin(az);
+    double pp1_y = ant1_Y + (height - ant1_Z) * tan(zen) * cos(az);
+    double pp2_x = ant2_X + (height - ant2_Z) * tan(zen) * sin(az);
+    double pp2_y = ant2_Y + (height - ant2_Z) * tan(zen) * cos(az);
 
     double phase1 = get_phase_delay_gpu(pp1_x, pp1_y, (double)TEC_grad_x, (double)TEC_grad_y, wavelength);
     double phase2 = get_phase_delay_gpu(pp2_x, pp2_y, (double)TEC_grad_x, (double)TEC_grad_y, wavelength);
