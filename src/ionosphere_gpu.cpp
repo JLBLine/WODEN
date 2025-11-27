@@ -1,7 +1,6 @@
 #include "ionosphere_gpu.h"
 #include "constants.h"
 #include <math.h>
-#include <stdio.h>
 
 __device__ double calc_ionospheric_phase_offset_gpu(double *d_ant_X,
            double *d_ant_Y, double *d_ant_Z,
@@ -10,9 +9,10 @@ __device__ double calc_ionospheric_phase_offset_gpu(double *d_ant_X,
            int *ant1_to_baseline_map, int *ant2_to_baseline_map,
            int num_baselines, int num_ants, int time_ind, int num_components,
            const int iBaseline, const int iComponent,
-           user_precision_t TEC_grad_x, user_precision_t TEC_grad_y) {
+           user_precision_t TEC_grad_x, user_precision_t TEC_grad_y,
+           user_precision_t *TEC_screen, int resolution,
+           user_precision_t screen_size, user_precision_t height) {
 
-    double height = 100000;
     int baseline_ind = iBaseline % num_baselines;
     int ant1 = time_ind*num_ants + ant1_to_baseline_map[baseline_ind];
     int ant2 = time_ind*num_ants + ant2_to_baseline_map[baseline_ind];
@@ -34,8 +34,11 @@ __device__ double calc_ionospheric_phase_offset_gpu(double *d_ant_X,
     double pp2_x = ant2_X + (height - ant2_Z) * tan(zen) * sin(az);
     double pp2_y = ant2_Y + (height - ant2_Z) * tan(zen) * cos(az);
 
-    double phase1 = get_phase_delay_gpu(pp1_x, pp1_y, (double)TEC_grad_x, (double)TEC_grad_y, wavelength);
-    double phase2 = get_phase_delay_gpu(pp2_x, pp2_y, (double)TEC_grad_x, (double)TEC_grad_y, wavelength);
+    // double phase1 = get_phase_delay_gpu(pp1_x, pp1_y, (double)TEC_grad_x, (double)TEC_grad_y, wavelength);
+    // double phase2 = get_phase_delay_gpu(pp2_x, pp2_y, (double)TEC_grad_x, (double)TEC_grad_y, wavelength);
+
+    double phase1 = get_phase_delay_from_TEC_gpu(pp1_x, pp1_y, TEC_screen, resolution, screen_size, wavelength);
+    double phase2 = get_phase_delay_from_TEC_gpu(pp2_x, pp2_y, TEC_screen, resolution, screen_size, wavelength);
 
     return phase1 - phase2;
 }
@@ -44,6 +47,26 @@ __device__ double get_phase_delay_gpu(double pp_x, double pp_y,
            double TEC_grad_x, double TEC_grad_y,
            double wavelength) {
     double TEC = TEC_grad_x * pp_x + TEC_grad_y * pp_y;
+
+    return TEC * wavelength * TEC_TO_PHASE;
+}
+
+__device__ double get_phase_delay_from_TEC_gpu(double pp_x, double pp_y,
+           user_precision_t *TEC_screen, int resolution,
+           user_precision_t screen_size, double wavelength) {
+    
+    if (-screen_size * 0.5 > pp_x  || pp_x > screen_size * 0.5 || 
+        -screen_size * 0.5 > pp_y  || pp_y > screen_size * 0.5) {
+        // oops TEC too small
+        return 0;
+    }
+    
+    // getting point in pixel coordinates
+    double x = (pp_x / screen_size + 0.5) * resolution;
+    double y = (pp_y / screen_size + 0.5) * resolution;
+    
+    // interpolate here instead
+    double TEC = TEC_screen[resolution * (int)x + (int)y];
 
     return TEC * wavelength * TEC_TO_PHASE;
 }

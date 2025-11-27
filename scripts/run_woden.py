@@ -44,6 +44,7 @@ from datetime import timedelta
 import traceback
 import shutil
 from wodenpy.primary_beam.use_uvbeam import setup_MWA_uvbeams, setup_HERA_uvbeams_from_CST, setup_HERA_uvbeams_from_single_file
+from wodenpy.use_libwoden.TEC_screen import TEC_Screen_Python, convert_TEC_screen_to_ctypes, setup_TEC_screen_python
 
 ##Constants
 R2D = 180.0 / np.pi
@@ -71,6 +72,7 @@ def woden_worker(thread_ind : int,
                 woden_settings_python : Woden_Settings_Python,
                 array_layout_python : Array_Layout_Python,
                 visi_sets_python : List[Visi_Set_Python],
+                TEC_screen_python : TEC_Screen_Python,
                 beamtype : int, logging_level : int = logging.DEBUG,
                 precision : str = "double", 
                 logger : Logger = False,
@@ -180,6 +182,9 @@ def woden_worker(thread_ind : int,
         
         array_layout = Array_Layout_Ctypes()
         array_layout = convert_array_layout_to_ctypes(array_layout_python, array_layout)
+
+        TEC_screen = woden_struct_classes.TEC_Screen()
+        TEC_screen = convert_TEC_screen_to_ctypes(TEC_screen_python, TEC_screen, precision)
         
         sbf = create_sbf(precision=precision)
         
@@ -192,7 +197,7 @@ def woden_worker(thread_ind : int,
         # print(f"Sending Sky set {round_num} thread {thread_ind} to CPU")
         start = time()
                 
-        run_woden(woden_settings, visibility_set, source_catalogue, array_layout,
+        run_woden(woden_settings, visibility_set, source_catalogue, array_layout, TEC_screen,
                     sbf)
         end = time()
         
@@ -411,6 +416,7 @@ def woden_worker_into_queue(q : Queue,
                             woden_settings_python : Woden_Settings_Python,
                             array_layout_python : Array_Layout_Python,
                             visi_sets_python : List[Visi_Set_Python],
+                            TEC_screen_python : TEC_Screen_Python,
                             beamtype : int,
                             args : argparse.Namespace,
                             logger : Logger):
@@ -471,6 +477,7 @@ def woden_worker_into_queue(q : Queue,
                                                        woden_settings_python,
                                                        array_layout_python, 
                                                        visi_sets_python[0,:],
+                                                       TEC_screen_python,
                                                        beamtype, args.log_level,
                                                        args.precision,
                                                        profile=args.profile,
@@ -483,7 +490,8 @@ def woden_worker_into_queue(q : Queue,
 def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                  lsts, latitudes, args, beamtype,
                  main_table, shape_table, v_table, q_table, u_table, p_table,
-                 woden_settings_python, array_layout_python, visi_sets_python,
+                 woden_settings_python, array_layout_python,
+                 visi_sets_python, TEC_screen_python,
                  logger = False, serial_mode = False, uvbeam_objs = None):
     """
     This function runs the WODEN processing, either in serial or parallel mode.
@@ -578,6 +586,7 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                                     woden_settings_python,
                                     array_layout_python,
                                     visi_sets_python,
+                                    TEC_screen_python,
                                     beamtype,
                                     args,
                                     logger))
@@ -653,6 +662,7 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                                                 woden_settings_python,
                                                 array_layout_python, 
                                                 visi_sets_python[i, :],
+                                                TEC_screen_python,
                                                 beamtype, args.log_level,
                                                 args.precision, logger,
                                                 args.profile)
@@ -729,6 +739,7 @@ def run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
                                                         woden_settings_python,
                                                         array_layout_python, 
                                                         visi_sets_python[0,:],
+                                                        TEC_screen_python,
                                                         beamtype, args.log_level,
                                                         args.precision, logger,
                                                         args.profile)
@@ -826,6 +837,8 @@ def main(argv=None):
     ##calculate the array layout
         array_layout_python = calc_XYZ_diffs(woden_settings_python, args, main_logger)
     
+    TEC_screen_python = setup_TEC_screen_python(woden_settings_python)
+
     ##report what beam type we are using
     log_chosen_beamtype(main_logger, woden_settings_python, args)
 
@@ -990,7 +1003,8 @@ def main(argv=None):
         run_woden_processing(num_threads, num_rounds, chunked_skymodel_map_sets,
             lsts, latitudes, args, woden_settings_python.beamtype,
             main_table, shape_table, v_table, q_table, u_table, p_table,
-            woden_settings_python, array_layout_python, visi_sets_python,
+            woden_settings_python, array_layout_python,
+            visi_sets_python, TEC_screen_python,
             main_logger, serial_mode, uvbeam_objs)
             
         ### we've now calculated all the visibilities

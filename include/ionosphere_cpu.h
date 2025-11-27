@@ -5,8 +5,14 @@ double calc_ionospheric_phase_offset_cpu(double ant1_X, double ant1_Y, double an
                             double ant2_X, double ant2_Y, double ant2_Z,
                             user_precision_t az, user_precision_t zen,
                             user_precision_t wavelength,
-                            user_precision_t TEC_grad_x, user_precision_t TEC_grad_y);
+                            user_precision_t TEC_grad_x, user_precision_t TEC_grad_y,
+                            user_precision_t *TEC_screen, int resolution,
+                            user_precision_t screen_size, user_precision_t height);
 
 double get_phase_delay_cpu(double pp_x, double pp_y,
                         double TEC_grad_x, double TEC_grad_y,
                         double wavelength);
+
+double get_phase_delay_from_TEC_cpu(double pp_x, double pp_y,
+           user_precision_t *TEC_screen, int resolution,
+           user_precision_t screen_size, double wavelength);

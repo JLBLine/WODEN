@@ -985,7 +985,8 @@ void calc_visi_point_or_gauss_cpu(components_t components,
                   visibility_set_t *visibility_set, 
                   int num_components, e_beamtype beamtype,
                   e_component_type comptype,
-                  woden_settings_t *woden_settings);
+                  woden_settings_t *woden_settings,
+                  TEC_screen_t *TEC_screen);
 
 /**
 @brief the visibility response to a number `num_shapes` of
@@ -1045,7 +1046,8 @@ void calc_visi_shapelets_cpu(components_t components,
                visibility_set_t *visibility_set,
                int num_shapes, int num_shape_coeffs,
                e_beamtype beamtype,
-               woden_settings_t *woden_settings);
+               woden_settings_t *woden_settings,
+               TEC_screen_t *TEC_screen);
 
 /**
 @brief Calculate the auto-correlations for all antennas given the fluxes

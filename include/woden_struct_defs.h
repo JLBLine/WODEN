@@ -430,6 +430,8 @@ SHAPELET components (metres) */
   user_precision_t *v_shapes; /*!<Output `v` coords with various phase centres for
 SHAPELET components (metres) */
 
+  user_precision_t *screen; /*!< pixel data of TEC screen*/
+
 } calc_visi_inouts_t;
 
 
@@ -455,3 +457,14 @@ antennas. Used to map iBaseline to the correct antenna 2 */
   for all beams, directions, frequencies, and times for these COMPONENTS*/
 
 } beam_gains_t;
+
+/**
+Struct to contain TEC screen data
+*/
+typedef struct _TEC_screen_t {
+    user_precision_t *screen; /*!< pixel data of TEC screen*/
+    int resolution; /*!< resolution of TEC screen*/
+    user_precision_t screen_size;
+    user_precision_t height; /*!< height of TEC screen (meters)*/
+
+} TEC_screen_t;

@@ -1149,7 +1149,9 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            int num_components, int num_baselines, int num_freqs, int num_cross,
            int num_times, int num_ants, e_beamtype beamtype,
            e_component_type comptype, int off_cardinal_dipoles,
-           int do_ionosphere, user_precision_t TEC_grad_x, user_precision_t TEC_grad_y);
+           int do_ionosphere, user_precision_t TEC_grad_x, user_precision_t TEC_grad_y,
+           user_precision_t *TEC_screen, int resolution,
+           user_precision_t screen_size, user_precision_t height);
 
 /**
 @brief Kernel to calculate the visibility response to a number `num_shapes` of
@@ -1259,7 +1261,9 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       int num_shapes, int num_baselines, int num_freqs, int num_cross,
       int num_ants, const int num_coeffs, int num_times,
       e_beamtype beamtype, int off_cardinal_dipoles,
-      int do_ionosphere, user_precision_t TEC_grad_x, user_precision_t TEC_grad_y);
+      int do_ionosphere, user_precision_t TEC_grad_x, user_precision_t TEC_grad_y,
+      user_precision_t *TEC_screen, int resolution,
+      user_precision_t screen_size, user_precision_t height);
 
 /**
 @brief Copies the specified type of source components from host memory to device memory.
@@ -1489,7 +1493,8 @@ extern "C" void calc_visi_point_or_gauss_gpu(components_t d_components,
                                         visibility_set_t *d_visibility_set,
                                         int num_components, e_beamtype beamtype,
                                         e_component_type comptype,
-                                        woden_settings_t *woden_settings);
+                                        woden_settings_t *woden_settings,
+                                        TEC_screen_t *TEC_screen);
 
 /**
 @brief the visibility response to a number `num_shapes` of
@@ -1549,7 +1554,8 @@ extern "C" void calc_visi_shapelets_gpu(components_t d_components,
                                         visibility_set_t *d_visibility_set,
                                         int num_shapes, int num_shape_coeffs,
                                         e_beamtype beamtype,
-                                        woden_settings_t *woden_settings);
+                                        woden_settings_t *woden_settings,
+                                        TEC_screen_t *TEC_screen);
 
 
 /**

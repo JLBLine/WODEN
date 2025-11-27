@@ -2,7 +2,7 @@
 
 int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_sets,
              source_catalogue_t *cropped_sky_models, array_layout_t * array_layout,
-             user_precision_t *sbf) {
+             TEC_screen_t *TEC_screen, user_precision_t *sbf) {
   
 
   // if (woden_settings->do_gpu) {
@@ -78,7 +78,7 @@ int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_set
 
     //Launch the GPU or CPU code
     calculate_visibilities(array_layout, cropped_sky_models, beam_settings,
-                  woden_settings, &visibility_sets[band], sbf);
+                  woden_settings, &visibility_sets[band], TEC_screen, sbf);
 
     if (woden_settings->verbose == 1){
       snprintf(log_buffer, log_len, "Calls for band %d finished",band_num );

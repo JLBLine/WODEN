@@ -47,10 +47,11 @@
  * @param visibility_sets Pointer to the visibility sets structure.
  * @param cropped_sky_models Pointer to the source catalogue structure containing cropped sky models.
  * @param array_layout Pointer to the array layout structure.
+ * @param TEC_screen Pointer to the TEC screen structure.
  * @param sbf Pointer to the shapelet basis functions array
  *
  * @return An integer indicating the success or failure of the simulation.
  */
 int run_woden(woden_settings_t *woden_settings, visibility_set_t *visibility_sets,
              source_catalogue_t *cropped_sky_models, array_layout_t * array_layout,
-             user_precision_t *sbf);
+             TEC_screen_t *TEC_screen, user_precision_t *sbf);

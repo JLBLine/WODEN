@@ -44,6 +44,7 @@ def load_in_run_woden(woden_lib : ctypes.CDLL,
          - ctypes.POINTER(woden_struct_classes.Visi_Set)
          - ctypes.POINTER(woden_struct_classes.Source_Catalogue)
          - ctypes.POINTER(Array_Layout)
+         - ctypes.POINTER(woden_struct_classes.TEC_Screen)
          - sbf_pointer
     """
     
@@ -64,6 +65,7 @@ def load_in_run_woden(woden_lib : ctypes.CDLL,
                             ctypes.POINTER(woden_struct_classes.Visi_Set),
                             ctypes.POINTER(woden_struct_classes.Source_Catalogue),
                             ctypes.POINTER(Array_Layout_Ctypes),
+                            ctypes.POINTER(woden_struct_classes.TEC_Screen),
                             sbf_pointer]
     
     return run_woden

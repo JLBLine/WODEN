@@ -3,6 +3,7 @@ based on the required precision."""
 from wodenpy.use_libwoden.skymodel_structs import create_components_struct, create_source_struct, create_source_catalogue_struct, setup_source_catalogue
 from wodenpy.use_libwoden.woden_settings import create_woden_settings_struct
 from wodenpy.use_libwoden.visibility_set import create_visi_set_struct
+from wodenpy.use_libwoden.TEC_screen import create_TEC_screen_struct
 
 
 class Woden_Struct_Classes:
@@ -14,6 +15,7 @@ class Woden_Struct_Classes:
     :cvar Source_Catalogue Source_Catalogue: Equivalent to the C struct `source_catalogue_t`.
     :cvar Woden_Settings Woden_Settings: Equivalent to the C struct `woden_settings_t`.
     :cvar Visi_Set Visi_Set: Equivalent to the C struct `visibility_set_t`.
+    :cvar TEC_Screen TEC_Screen: Equivalent to the C struct `TEC_screen_t`.
     
     """
     def __init__(self, precision="double"):
@@ -40,3 +42,6 @@ class Woden_Struct_Classes:
         
         ##visibility set
         self.Visi_Set = create_visi_set_struct(precision)
+
+        ##TEC screen
+        self.TEC_Screen = create_TEC_screen_struct(precision)

@@ -22,7 +22,7 @@
 extern "C" calc_visi_inouts_t * create_calc_visi_inouts_gpu(array_layout_t *array_layout,
         visibility_set_t *visibility_set, visibility_set_t *d_visibility_set,
         user_precision_t *sbf, woden_settings_t *woden_settings,
-        int num_shapelets, int use_twobeams) {
+        TEC_screen_t *TEC_screen, int num_shapelets, int use_twobeams) {
 
   calc_visi_inouts_t *d_calc_visi_inouts = (calc_visi_inouts_t *)malloc(sizeof(calc_visi_inouts_t));
 
@@ -32,6 +32,7 @@ extern "C" calc_visi_inouts_t * create_calc_visi_inouts_gpu(array_layout_t *arra
   int num_visis = woden_settings->num_visis;
   int num_freqs = woden_settings->num_freqs;
   int num_ants = woden_settings->num_ants;
+  int TEC_resolution = TEC_screen->resolution;
 
   gpuMalloc( (void**)&d_calc_visi_inouts->X_diff, num_time_steps*num_baselines*sizeof(double) );
   gpuMemcpy( d_calc_visi_inouts->X_diff, array_layout->X_diff_metres,
@@ -114,6 +115,10 @@ extern "C" calc_visi_inouts_t * create_calc_visi_inouts_gpu(array_layout_t *arra
     gpuMalloc( (void**)&d_calc_visi_inouts->v_shapes,
         num_shapelets*num_baselines*num_time_steps*sizeof(user_precision_t));
   }
+
+  gpuMalloc( (void**)&d_calc_visi_inouts->screen, TEC_resolution*TEC_resolution*sizeof(user_precision_t) );
+  gpuMemcpy( d_calc_visi_inouts->screen, TEC_screen->screen,
+                      TEC_resolution*TEC_resolution*sizeof(user_precision_t), gpuMemcpyHostToDevice );
 
   if (1) { // use_twobeams == 1
 
@@ -227,6 +232,8 @@ extern "C"  void free_calc_visi_inouts_gpu(calc_visi_inouts_t *d_calc_visi_inout
   gpuFree(d_visibility_set->sum_visi_YY_real);
   gpuFree(d_visibility_set->sum_visi_YY_imag);
   gpuFree(d_calc_visi_inouts->freqs);
+
+  gpuFree(d_calc_visi_inouts->screen);
 
   //if we have shapelets in our sky model, copy the shapelet basis functions
   //into GPU memory

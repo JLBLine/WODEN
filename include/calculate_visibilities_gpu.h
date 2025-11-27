@@ -62,7 +62,7 @@
 extern "C" calc_visi_inouts_t * create_calc_visi_inouts_gpu(array_layout_t *array_layout,
   visibility_set_t *visibility_set, visibility_set_t *d_visibility_set,
   user_precision_t *sbf, woden_settings_t *woden_settings,
-  int num_shapelets, int use_twobeams);
+  TEC_screen_t *TEC_screen, int num_shapelets, int use_twobeams);
 
 /**
  * @brief Sets the visibility set to zero.

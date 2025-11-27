@@ -51,6 +51,7 @@ void calculate_component_visis(e_component_type comptype,
   beam_settings_t *beam_settings,
   source_t *source, source_t *mem_chunked_source,
   visibility_set_t *mem_visibility_set,
+  TEC_screen_t *TEC_screen,
   int num_beams, int use_twobeams,
   int do_gpu);
 
@@ -118,7 +119,7 @@ void calculate_component_visis(e_component_type comptype,
 void calculate_visibilities(array_layout_t *array_layout,
   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
-  user_precision_t *sbf);
+  TEC_screen_t *TEC_screen, user_precision_t *sbf);
 
 
 
@@ -130,7 +131,7 @@ void calculate_visibilities(array_layout_t *array_layout,
 extern calc_visi_inouts_t * create_calc_visi_inouts_gpu(array_layout_t *array_layout,
         visibility_set_t *visibility_set, visibility_set_t *d_visibility_set,
         user_precision_t *sbf, woden_settings_t *woden_settings,
-        int num_shapelets, int use_twobeams);
+        TEC_screen_t *TEC_screen, int num_shapelets, int use_twobeams);
 
 /**
  * External GPU code linked in from calculate_visibilities_gpu.c, see calculate_visibilities_gpu.h for full details.
@@ -188,7 +189,8 @@ extern void calc_visi_point_or_gauss_gpu(components_t d_components,
                                         visibility_set_t *d_visibility_set,
                                         int num_components, e_beamtype beamtype,
                                         e_component_type comptype,
-                                        woden_settings_t *woden_settings);
+                                        woden_settings_t *woden_settings,
+                                        TEC_screen_t *TEC_screen);
 /**
 * External GPU code linked in from source_components_gpu.cpp, see source_components_gpu.h for full details.
 */
@@ -198,7 +200,8 @@ extern void calc_visi_shapelets_gpu(components_t d_components,
                                         visibility_set_t *d_visibility_set,
                                         int num_shapes, int num_shape_coeffs,
                                         e_beamtype beamtype,
-                                        woden_settings_t *woden_settings);
+                                        woden_settings_t *woden_settings,
+                                        TEC_screen_t *TEC_screen);
 
 
 /**

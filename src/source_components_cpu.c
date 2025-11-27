@@ -1165,7 +1165,8 @@ void calc_visi_point_or_gauss_cpu(components_t components,
                                   visibility_set_t *visibility_set, 
                                   int num_components, e_beamtype beamtype,
                                   e_component_type comptype,
-                                  woden_settings_t *woden_settings) {
+                                  woden_settings_t *woden_settings,
+                                  TEC_screen_t *TEC_screen) {
 
   int num_freqs = woden_settings->num_freqs;
   int num_cross = woden_settings->num_cross;
@@ -1225,7 +1226,9 @@ void calc_visi_point_or_gauss_cpu(components_t components,
                                                   components.azs[time_ind*num_components + iComponent],
                                                   components.zas[time_ind*num_components + iComponent],
                                                   calc_visi_inouts->allsteps_wavelengths[iBaseline],
-                                                  woden_settings->TEC_grad_x, woden_settings->TEC_grad_y);
+                                                  woden_settings->TEC_grad_x, woden_settings->TEC_grad_y,
+                                                  TEC_screen->screen, TEC_screen->resolution,
+                                                  TEC_screen->screen_size, TEC_screen->height);
       }
       
       
@@ -1294,7 +1297,9 @@ void calc_visi_shapelets_cpu(components_t components,
                              visibility_set_t *visibility_set,
                              int num_shapes, int num_shape_coeffs,
                              e_beamtype beamtype,
-                             woden_settings_t *woden_settings) {
+                             woden_settings_t *woden_settings,
+                             TEC_screen_t *TEC_screen) {
+
   int num_freqs = woden_settings->num_freqs;
   int num_cross = woden_settings->num_cross;
   int num_baselines = woden_settings->num_baselines;
@@ -1353,7 +1358,9 @@ void calc_visi_shapelets_cpu(components_t components,
                                                   components.azs[time_ind*num_shapes + iComponent],
                                                   components.zas[time_ind*num_shapes + iComponent],
                                                   calc_visi_inouts->allsteps_wavelengths[iBaseline],
-                                                  woden_settings->TEC_grad_x, woden_settings->TEC_grad_y);
+                                                  woden_settings->TEC_grad_x, woden_settings->TEC_grad_y,
+                                                  TEC_screen->screen, TEC_screen->resolution,
+                                                  TEC_screen->screen_size, TEC_screen->height);
       }
 
       visi_shape = calc_measurement_equation_cpu(calc_visi_inouts->us[iBaseline],

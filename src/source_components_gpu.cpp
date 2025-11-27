@@ -1200,7 +1200,9 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            int num_components, int num_baselines, int num_freqs, int num_cross,
            int num_times, int num_ants, e_beamtype beamtype,
            e_component_type comptype, int off_cardinal_dipoles,
-           int do_ionosphere, user_precision_t TEC_grad_x, user_precision_t TEC_grad_y) {
+           int do_ionosphere, user_precision_t TEC_grad_x, user_precision_t TEC_grad_y,
+           user_precision_t *TEC_screen, int resolution,
+           user_precision_t screen_size, user_precision_t height) {
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
@@ -1244,7 +1246,8 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
                                                   d_allsteps_wavelengths,
                                                   ant1_to_baseline_map, ant2_to_baseline_map,
                                                   num_baselines, num_ants, time_ind, num_components,
-                                                  iBaseline, iComponent, TEC_grad_x, TEC_grad_y);
+                                                  iBaseline, iComponent, TEC_grad_x, TEC_grad_y,
+                                                  TEC_screen, resolution, screen_size, height);
       }
       
       
@@ -1318,7 +1321,8 @@ extern "C" void calc_visi_point_or_gauss_gpu(components_t d_components,
                                         visibility_set_t *d_visibility_set,
                                         int num_components, e_beamtype beamtype,
                                         e_component_type comptype,
-                                        woden_settings_t *woden_settings){
+                                        woden_settings_t *woden_settings,
+                                        TEC_screen_t *TEC_screen){
 
   dim3 grid, threads;
 
@@ -1349,7 +1353,9 @@ extern "C" void calc_visi_point_or_gauss_gpu(components_t d_components,
                   woden_settings->num_time_steps, woden_settings->num_ants,
                   beamtype, comptype, woden_settings->off_cardinal_dipoles,
                   woden_settings->do_ionosphere,
-                  woden_settings->TEC_grad_x, woden_settings->TEC_grad_y);
+                  woden_settings->TEC_grad_x, woden_settings->TEC_grad_y,
+                  d_calc_visi_inouts->screen, TEC_screen->resolution,
+                  TEC_screen->screen_size, TEC_screen->height);
 
 }
 
@@ -1369,7 +1375,9 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       int num_shapes, int num_baselines, int num_freqs, int num_cross,
       int num_ants, const int num_coeffs, int num_times,
       e_beamtype beamtype, int off_cardinal_dipoles,
-      int do_ionosphere, user_precision_t TEC_grad_x, user_precision_t TEC_grad_y) {
+      int do_ionosphere, user_precision_t TEC_grad_x, user_precision_t TEC_grad_y,
+      user_precision_t *TEC_screen, int resolution,
+      user_precision_t screen_size, user_precision_t height) {
 
   // Start by computing which baseline we're going to do
   const int iBaseline = threadIdx.x + (blockDim.x*blockIdx.x);
@@ -1417,7 +1425,8 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
                                                   d_allsteps_wavelengths,
                                                   ant1_to_baseline_map, ant2_to_baseline_map,
                                                   num_baselines, num_ants, time_ind, num_shapes,
-                                                  iBaseline, iComponent, TEC_grad_x, TEC_grad_y);
+                                                  iBaseline, iComponent, TEC_grad_x, TEC_grad_y,
+                                                  TEC_screen, resolution, screen_size, height);
       }
 
       visi_shape = calc_measurement_equation_gpu(d_us, d_vs, d_ws,
@@ -1520,7 +1529,8 @@ extern "C" void calc_visi_shapelets_gpu(components_t d_components,
                                         visibility_set_t *d_visibility_set,
                                         int num_shapes, int num_shape_coeffs,
                                         e_beamtype beamtype,
-                                        woden_settings_t *woden_settings){
+                                        woden_settings_t *woden_settings,
+                                        TEC_screen_t *TEC_screen){
 
   dim3 grid, threads;
 
@@ -1554,7 +1564,9 @@ extern "C" void calc_visi_shapelets_gpu(components_t d_components,
                   woden_settings->num_time_steps,
                   beamtype, woden_settings->off_cardinal_dipoles,
                   woden_settings->do_ionosphere,
-                  woden_settings->TEC_grad_x, woden_settings->TEC_grad_y);
+                  woden_settings->TEC_grad_x, woden_settings->TEC_grad_y,
+                  d_calc_visi_inouts->screen, TEC_screen->resolution,
+                  TEC_screen->screen_size, TEC_screen->height);
 }
 
 

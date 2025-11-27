@@ -8,6 +8,7 @@ void calculate_component_visis(e_component_type comptype,
                                beam_settings_t *beam_settings,
                                source_t *source, source_t *mem_chunked_source,
                                visibility_set_t *mem_visibility_set,
+                               TEC_screen_t *TEC_screen,
                                int num_beams, int use_twobeams,
                                int do_gpu) {
 
@@ -71,12 +72,12 @@ void calculate_component_visis(e_component_type comptype,
       calc_visi_point_or_gauss_gpu(mem_components, *mem_beam_gains,
                                 mem_calc_visi_inouts, mem_visibility_set,
                                 num_components, beam_settings->beamtype,
-                                comptype, woden_settings);
+                                comptype, woden_settings, TEC_screen);
     } else {
       calc_visi_point_or_gauss_cpu(mem_components, *mem_beam_gains,
                                 mem_calc_visi_inouts, mem_visibility_set,
                                 num_components, beam_settings->beamtype,
-                                comptype, woden_settings);
+                                comptype, woden_settings, TEC_screen);
       // printf("CPU inside %.3f\n", mem_visibility_set->sum_visi_XX_real[0]);
 
     }
@@ -86,13 +87,15 @@ void calculate_component_visis(e_component_type comptype,
                               mem_calc_visi_inouts, mem_visibility_set,
                               num_components,
                               mem_chunked_source->n_shape_coeffs,
-                              beam_settings->beamtype, woden_settings);
+                              beam_settings->beamtype,
+                              woden_settings, TEC_screen);
     } else {
       calc_visi_shapelets_cpu(mem_components, *mem_beam_gains,
                               mem_calc_visi_inouts, mem_visibility_set,
                               num_components,
                               mem_chunked_source->n_shape_coeffs,
-                              beam_settings->beamtype, woden_settings);
+                              beam_settings->beamtype,
+                              woden_settings, TEC_screen);
     }
   } //end else it's a shapelet
   if (woden_settings->verbose == 1){
@@ -119,7 +122,7 @@ void calculate_component_visis(e_component_type comptype,
 void calculate_visibilities(array_layout_t *array_layout,
   source_catalogue_t *cropped_sky_models, beam_settings_t *beam_settings,
   woden_settings_t *woden_settings, visibility_set_t *visibility_set,
-  user_precision_t *sbf) {
+  TEC_screen_t *TEC_screen, user_precision_t *sbf) {
 
   char log_buffer[128];
   int log_len = sizeof log_buffer;
@@ -172,7 +175,7 @@ void calculate_visibilities(array_layout_t *array_layout,
     
     mem_calc_visi_inouts = create_calc_visi_inouts_gpu(array_layout,
                 visibility_set, mem_visibility_set, sbf, woden_settings,
-                cropped_sky_models->num_shapelets, use_twobeams);
+                TEC_screen, cropped_sky_models->num_shapelets, use_twobeams);
   } else {
     mem_visibility_set = setup_visibility_set(num_visis);
     mem_calc_visi_inouts = create_calc_visi_inouts_cpu(array_layout, 
@@ -357,7 +360,8 @@ void calculate_visibilities(array_layout_t *array_layout,
                                 visibility_set->channel_frequencies,
                                 woden_settings,
                                 beam_settings, source, mem_chunked_source,
-                                mem_visibility_set, num_beams, use_twobeams, do_gpu);
+                                mem_visibility_set, TEC_screen,
+                                num_beams, use_twobeams, do_gpu);
 
     }//if point sources
 
@@ -369,7 +373,8 @@ void calculate_visibilities(array_layout_t *array_layout,
                                 visibility_set->channel_frequencies,
                                 woden_settings,
                                 beam_settings, source, mem_chunked_source,
-                                mem_visibility_set, num_beams, use_twobeams, do_gpu);
+                                mem_visibility_set, TEC_screen,
+                                num_beams, use_twobeams, do_gpu);
     }//if gauss sources
 
     if (num_shapes > 0) {
@@ -400,7 +405,8 @@ void calculate_visibilities(array_layout_t *array_layout,
                                 visibility_set->channel_frequencies,
                                 woden_settings,
                                 beam_settings, source, mem_chunked_source,
-                                mem_visibility_set, num_beams, use_twobeams, do_gpu);
+                                mem_visibility_set, TEC_screen,
+                                num_beams, use_twobeams, do_gpu);
     }//if shapelet
 
     if (do_gpu == 1){
