@@ -16,6 +16,6 @@ __device__ double get_phase_delay_gpu(double pp_x, double pp_y,
            double TEC_grad_x, double TEC_grad_y,
            double wavelength);
 
-__device__ double get_phase_delay_from_TEC_gpu(double pp_x, double pp_y,
+__device__ user_precision_t get_phase_delay_from_TEC_gpu(user_precision_t pp_x, user_precision_t pp_y,
            user_precision_t *TEC_screen, int resolution,
-           user_precision_t screen_size, double wavelength);
+           user_precision_t screen_size, user_precision_t wavelength);
