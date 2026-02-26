@@ -29,6 +29,10 @@ Convert solar angle to sidereal */
 /*! -0.8 \n
 Default Spectral Index */
 #define DEFAULT_SI -0.8
+/*! 6378137 \n
+Radius of Earth (m) */
+#define EARTH_RADIUS 6378137
+
 
 //MWA defaults------------------------------------------------------------------
 /*! -26.703319405555554 \n

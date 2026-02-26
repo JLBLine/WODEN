@@ -34,6 +34,18 @@ __device__ double calc_ionospheric_phase_offset_gpu(double *d_ant_X,
     user_precision_t pp2_x = ant2_X + (height - ant2_Z) * tan(zen) * sin(az);
     user_precision_t pp2_y = ant2_Y + (height - ant2_Z) * tan(zen) * cos(az);
 
+    // for now just use MWA values
+    user_precision_t longitude = 2.036289866851053;
+    user_precision_t latitude = MWA_LAT_RAD;
+
+    int do_spherical_TEC = 1;
+    if (do_spherical_TEC) {
+        pp1_x = zen * sin(az) + ant1_X / EARTH_RADIUS;
+        pp1_y = zen * cos(az) + ant1_Y / EARTH_RADIUS;
+        pp2_x = zen * sin(az) + ant2_X / EARTH_RADIUS;
+        pp2_y = zen * cos(az) + ant2_Y / EARTH_RADIUS;
+    }
+
     // double phase1 = get_phase_delay_gpu(pp1_x, pp1_y, (double)TEC_grad_x, (double)TEC_grad_y, wavelength);
     // double phase2 = get_phase_delay_gpu(pp2_x, pp2_y, (double)TEC_grad_x, (double)TEC_grad_y, wavelength);
 
@@ -55,8 +67,11 @@ __device__ user_precision_t get_phase_delay_from_TEC_gpu(user_precision_t pp_x, 
            user_precision_t *TEC_screen, int resolution,
            user_precision_t screen_size, user_precision_t wavelength) {
     
-    if (-screen_size * 0.5 > pp_x  || pp_x > screen_size * 0.5 || 
-        -screen_size * 0.5 > pp_y  || pp_y > screen_size * 0.5) {
+    user_precision_t longitude = 2.036289866851053;
+    user_precision_t latitude = MWA_LAT_RAD;
+    
+    if (-screen_size * 0.5 > pp_x || pp_x > screen_size * 0.5 || 
+        -screen_size * 0.5 > pp_y || pp_y > screen_size * 0.5) {
         // oops TEC too small
         return 0;
     }
