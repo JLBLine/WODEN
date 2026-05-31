@@ -776,8 +776,8 @@ void get_beam_gains_cpu(int iBaseline, int iComponent, int num_freqs,
   int time_ind = 0;
   int freq_ind = 0;
 
-  time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
-  freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+  time_ind = (int)floor( (double)iBaseline / ((double)num_baselines * (double)num_freqs));
+  freq_ind = (int)floor( ((double)iBaseline - ((double)time_ind*(double)num_baselines * (double)num_freqs)) / (double)num_baselines);
   beam_ind = num_freqs*time_ind*num_components + (num_components*freq_ind) + iComponent;
 
     //Set gains to one if no beam
@@ -833,8 +833,8 @@ void get_beam_gains_multibeams_cpu(int iBaseline, int iComponent, int num_freqs,
   int time_ind = 0;
   int freq_ind = 0;
 
-  time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
-  freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+  time_ind = (int)floor( (double)iBaseline / ((double)num_baselines * (double)num_freqs));
+  freq_ind = (int)floor( ((double)iBaseline - ((double)time_ind*(double)num_baselines * (double)num_freqs)) / (double)num_baselines);
   // beam_ind = num_freqs*time_ind*num_components + (num_components*freq_ind) + iComponent;
 
   int baseline_ind = iBaseline % num_baselines;
@@ -1056,7 +1056,7 @@ void calc_autos_cpu(components_t components, beam_gains_t component_beam_gains,
   for (int iAnt = 0; iAnt < num_ants; iAnt++) {
     for (int iTimeFreq = 0; iTimeFreq < num_times*num_freqs; iTimeFreq++) {
 
-    int time_ind = (int)floorf( (float)iTimeFreq / (float)num_freqs);
+    int time_ind = (int)floor( (double)iTimeFreq / (double)num_freqs);
     int freq_ind = iTimeFreq - time_ind*num_freqs;
 
     //Set up iBaseline to be a cross-pol of the correct time
@@ -1194,8 +1194,8 @@ void calc_visi_point_or_gauss_cpu(components_t components,
   // #pragma omp parallel for collapse(2)
   // #pragma omp parallel for
   for (int iBaseline = 0; iBaseline < num_cross; iBaseline++) {
-    time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
-    freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+    time_ind = (int)floor( (double)iBaseline / ((double)num_baselines * (double)num_freqs));
+    freq_ind = (int)floor( ((double)iBaseline - ((double)time_ind*(double)num_baselines * (double)num_freqs)) / (double)num_baselines);
 
     for (int iComponent = 0; iComponent < num_components; iComponent++) {
     
@@ -1289,11 +1289,11 @@ void calc_visi_shapelets_cpu(components_t components,
     user_precision_t shape_flux_V;
     user_precision_complex_t visi_shape;
 
-    int mobaseline = iBaseline - num_baselines*floorf((float)iBaseline / (float)num_baselines);
+    int mobaseline = iBaseline - num_baselines*floor((double)iBaseline / (double)num_baselines);
 
     //Find out what time and freq index this baseline corresponds to
-    int time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
-    int freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+    int time_ind = (int)floor( (double)iBaseline / ((double)num_baselines * (double)num_freqs));
+    int freq_ind = (int)floor( ((double)iBaseline - ((double)time_ind*(double)num_baselines * (double)num_freqs)) / (double)num_baselines);
 
     for (int iCoeff = 0; iCoeff < num_shape_coeffs; iCoeff++) {
 

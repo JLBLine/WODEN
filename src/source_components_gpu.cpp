@@ -156,8 +156,8 @@ __device__ void get_beam_gains_gpu(int iBaseline, int iComponent, int num_freqs,
   int time_ind = 0;
   int freq_ind = 0;
 
-  time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
-  freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+  time_ind = (int)floor( (double)iBaseline / ((double)num_baselines * (double)num_freqs));
+  freq_ind = (int)floor( ((double)iBaseline - ((double)time_ind*(double)num_baselines * (double)num_freqs)) / (double)num_baselines);
   beam_ind = num_freqs*time_ind*num_components + (num_components*freq_ind) + iComponent;
 
     //Set gains to one if no beam
@@ -208,8 +208,8 @@ __device__ void get_beam_gains_multibeams_gpu(int iBaseline, int iComponent, int
   int time_ind = 0;
   int freq_ind = 0;
 
-  time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
-  freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+  time_ind = (int)floor( (double)iBaseline / ((double)num_baselines * (double)num_freqs));
+  freq_ind = (int)floor( ((double)iBaseline - ((double)time_ind*(double)num_baselines * (double)num_freqs)) / (double)num_baselines);
   // beam_ind = num_freqs*time_ind*num_components + (num_components*freq_ind) + iComponent;
 
   int baseline_ind = iBaseline % num_baselines;
@@ -1215,8 +1215,8 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
     user_precision_t pa, sinpa, cospa, u, v, x, y, invsig_x, invsig_y;
 
     //Find out what time and freq index this baseline corresponds to
-    int time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
-    int freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+    int time_ind = (int)floor( (double)iBaseline / ((double)num_baselines * (double)num_freqs));
+    int freq_ind = (int)floor( ((double)iBaseline - ((float)time_ind*(double)num_baselines * (double)num_freqs)) / (double)num_baselines);
 
     for (int iComponent = 0; iComponent < num_components; iComponent++) {
       int extrap_ind = num_freqs*iComponent + freq_ind;
@@ -1357,11 +1357,11 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
     user_precision_t shape_flux_V;
     gpuUserComplex visi_shape;
 
-    int mod_baseline = iBaseline - num_baselines*floorf((float)iBaseline / (float)num_baselines);
+    int mod_baseline = iBaseline - num_baselines*floor((double)iBaseline / (double)num_baselines);
 
     //Find out what time and freq index this baseline corresponds to
-    int time_ind = (int)floorf( (float)iBaseline / ((float)num_baselines * (float)num_freqs));
-    int freq_ind = (int)floorf( ((float)iBaseline - ((float)time_ind*(float)num_baselines * (float)num_freqs)) / (float)num_baselines);
+    int time_ind = (int)floor( (double)iBaseline / ((double)num_baselines * (double)num_freqs));
+    int freq_ind = (int)floor( ((double)iBaseline - ((double)time_ind*(double)num_baselines * (double)num_freqs)) / (double)num_baselines);
 
     for (int iCoeff = 0; iCoeff < num_coeffs; iCoeff++) {
 
@@ -2198,7 +2198,7 @@ __global__ void kern_calc_autos(components_t d_components,
 
   if(iAnt < num_ants && iTimeFreq < num_times*num_freqs) {
 
-    int time_ind = (int)floorf( (float)iTimeFreq / (float)num_freqs);
+    int time_ind = (int)floor( (double)iTimeFreq / (double)num_freqs);
     int freq_ind = iTimeFreq - time_ind*num_freqs;
 
     //Set up iBaseline to be a cross-pol of the correct time
@@ -2561,8 +2561,8 @@ __global__ void kern_update_sum_visis_stokesIQUV(int num_freqs,
 
   if(iBaseline < num_freqs*num_baselines*num_times) {
 
-    int time_ind = (int)floorf( (user_precision_t)iBaseline / ((user_precision_t)num_baselines * (user_precision_t)num_freqs));
-    int freq_ind = (int)floorf( ((user_precision_t)iBaseline - ((user_precision_t)time_ind*(user_precision_t)num_baselines * (user_precision_t)num_freqs)) / (user_precision_t)num_baselines);
+    int time_ind = (int)floor( (double)iBaseline / ((user_precision_t)num_baselines * (double)num_freqs));
+    int freq_ind = (int)floor( ((double)iBaseline - ((double)time_ind*(double)num_baselines * (double)num_freqs)) / (double)num_baselines);
 
     for (int iComponent = 0; iComponent < num_components; iComponent++) {
 

@@ -39,7 +39,7 @@ void gaussian_beam_from_lm_cpu(double *beam_ls, double *beam_ms,
   for (int iFreq = 0; iFreq < num_freqs; iFreq++) {
     for (int iLMcoord = 0; iLMcoord < num_components * num_time_steps; iLMcoord++) {
 
-      component = (int)floorf((float)iLMcoord / (float)num_time_steps);
+      component = (int)floor((double)iLMcoord / (double)num_time_steps);
       time_ind = iLMcoord - component*num_time_steps;
       beam_ind = num_freqs*time_ind*num_components + (num_components*iFreq) + component;
 
@@ -137,7 +137,7 @@ void calculate_analytic_dipole_beam_cpu(int num_components,
 
     for (int iCoord = 0; iCoord < num_beam_azza; iCoord++) {
 
-      component = (int)floorf((float)iCoord / (float)num_time_steps);
+      component = (int)floor((double)iCoord / (double)num_time_steps);
       time_ind = iCoord - component*num_time_steps;
       beam_ind = num_freqs*time_ind*num_components + (num_components*iFreq) + component;
 
@@ -313,7 +313,7 @@ void calculate_RTS_MWA_analytic_beam_cpu(int num_components,
   for (int iFreq = 0; iFreq < num_freqs; iFreq++) {
     for (int iCoord = 0; iCoord < num_coords; iCoord++) {
 
-      component = (int)floorf((float)iCoord / (float)num_time_steps);
+      component = (int)floor((double)iCoord / (double)num_time_steps);
       time_ind = iCoord - component*num_time_steps;
       beam_ind = num_freqs*time_ind*num_components + (num_components*iFreq) + component;
 

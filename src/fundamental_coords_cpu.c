@@ -14,8 +14,8 @@ void calc_uvw_cpu(double *X_diff, double *Y_diff, double *Z_diff,
 
   for (int iBaseline = 0; iBaseline < num_cross; iBaseline++)
   {
-    int mod_baseline = iBaseline - num_baselines*floorf((float)iBaseline / (float)num_baselines);
-    int time_ind = floorf(((float)iBaseline - (float)mod_baseline) / ((float)num_freqs*(float)num_baselines));
+    int mod_baseline = iBaseline - num_baselines*floor((double)iBaseline / (double)num_baselines);
+    int time_ind = floor(((double)iBaseline - (double)mod_baseline) / ((double)num_freqs*(double)num_baselines));
     int xyz_ind = time_ind*num_baselines + mod_baseline;
 
     sha0 = sha0s[iBaseline];

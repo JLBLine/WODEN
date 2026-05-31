@@ -40,7 +40,7 @@ __global__ void kern_gaussian_beam(double *d_beam_ls, double *d_beam_ms,
   // components on other axis?
   if (iFreq < num_freqs && iLMcoord < num_components * num_times) {
 
-    int component = (int)floorf((float)iLMcoord / (float)num_times);
+    int component = (int)floor((double)iLMcoord / (double)num_times);
     int time_ind = iLMcoord - component*num_times;
     int beam_ind = num_freqs*time_ind*num_components + (num_components*iFreq) + component;
 
@@ -160,7 +160,7 @@ __global__ void kern_analytic_dipole_beam(user_precision_t *d_azs,
   // components on other axis?
   if (iFreq < num_freqs && iCoord < num_components * num_times) {
 
-    int component = (int)floorf((float)iCoord / (float)num_times);
+    int component = (int)floor((double)iCoord / (double)num_times);
     int time_ind = iCoord - component*num_times;
 
     int beam_ind = num_freqs*time_ind*num_components + (num_components*iFreq) + component;
@@ -349,7 +349,7 @@ __global__ void kern_RTS_analytic_MWA_beam(user_precision_t *d_azs,
 
   if (iFreq < num_freqs && iCoord < num_components * num_times) {
 
-    int component = (int)floorf((float)iCoord / (float)num_times);
+    int component = (int)floor((double)iCoord / (double)num_times);
     int time_ind = iCoord - component*num_times;
     int beam_ind = num_freqs*time_ind*num_components + (num_components*iFreq) + component;
 

@@ -16,8 +16,8 @@ __device__ void calc_uvw(double *d_X_diff, double *d_Y_diff,
                          user_precision_t * u, user_precision_t * v,
                          user_precision_t * w) {
 
-  int mod_baseline = iBaseline - num_baselines*floorf((float)iBaseline / (float)num_baselines);
-  int time_ind = floorf(((float)iBaseline - (float)mod_baseline) / ((float)num_freqs*(float)num_baselines));
+  int mod_baseline = iBaseline - num_baselines*floor((double)iBaseline / (double)num_baselines);
+  int time_ind = floor(((double)iBaseline - (double)mod_baseline) / ((double)num_freqs*(double)num_baselines));
 
   int xyz_ind = time_ind*num_baselines + mod_baseline;
 
@@ -132,8 +132,8 @@ __global__ void kern_calc_uv_shapelet(double *d_X_diff,
 
   if(iBaseline < num_baselines*num_times && iComponent < num_shapes) {
 
-    int mod_baseline = iBaseline - num_baselines*floorf((float)iBaseline / (float)num_baselines);
-    int time_ind = floorf(((float)iBaseline - (float)mod_baseline) / (float)num_baselines);
+    int mod_baseline = iBaseline - num_baselines*floor((double)iBaseline / (double)num_baselines);
+    int time_ind = floor(((double)iBaseline - (double)mod_baseline) / (double)num_baselines);
     int xyz_ind = time_ind*num_baselines + mod_baseline;
 
     // user_precision_t u_shape, v_shape, w_shape;
