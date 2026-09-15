@@ -43,7 +43,7 @@ def create_WCS(ra_cent, dec_cent, nside, radec_reso):
 
 def plot_jones_on_sky(all_gx, all_Dx, all_Dy, all_gy, wcs, title=False,
                       show_plot = True, ra0=None, dec0=None):
-    fig, axs = plt.subplots(4, 4, figsize=(16, 12), layout='constrained', subplot_kw={'projection': wcs})
+    fig, axs = plt.subplots(4, 4, figsize=(16, 14), layout='constrained', subplot_kw={'projection': wcs})
 
     for row in range(4):
         if row == 3:
@@ -73,25 +73,41 @@ def plot_jones_on_sky(all_gx, all_Dx, all_Dy, all_gy, wcs, title=False,
             gy = np.imag(all_gy)
             tag = "Imag"
 
-        im0 = axs[0, row].imshow(gx, origin='lower')
+        cmap = plt.cm.viridis.copy()
+        cmap.set_bad(color='gray')
+
+        im0 = axs[0, row].imshow(gx, origin='lower', cmap=cmap)
         plt.colorbar(im0, ax=axs[0, row])
-        axs[0, row].set_title(f'{tag} g_x')
-        
-        im1 = axs[1, row].imshow(Dx, origin='lower')
+
+
+        im1 = axs[1, row].imshow(Dx, origin='lower', cmap=cmap)
         plt.colorbar(im1, ax=axs[1, row])
-        axs[1, row].set_title(f'{tag} D_x')
-        
-        im2 = axs[2, row].imshow(Dy, origin='lower')
+
+
+        im2 = axs[2, row].imshow(Dy, origin='lower', cmap=cmap)
         plt.colorbar(im2, ax=axs[2, row])
-        axs[2, row].set_title(f'{tag} D_y')
-        
-        im3 = axs[3, row].imshow(gy, origin='lower')
+
+
+        im3 = axs[3, row].imshow(gy, origin='lower', cmap=cmap)
         plt.colorbar(im3, ax=axs[3, row])
-        axs[3, row].set_title(f'{tag} g_y')
+        
+        # for ax in axs[:, row]:
+        #     ax.grid()
+        
+        # axs[0, row].set_title(f'{tag} g_x')
+        
+        axs[0, row].text(0.05, 0.90, f'{tag} g_x', size=16, ha="left", transform=axs[0, row].transAxes, color='white')
+        axs[1, row].text(0.05, 0.90, f'{tag} D_x', size=16, ha="left", transform=axs[1, row].transAxes, color='white')
+        axs[2, row].text(0.05, 0.90, f'{tag} D_y', size=16, ha="left", transform=axs[2, row].transAxes, color='white')
+        axs[3, row].text(0.05, 0.90, f'{tag} g_y', size=16, ha="left", transform=axs[3, row].transAxes, color='white')
         
     if title: fig.suptitle(title)
 
-    for ax in axs.flatten(): ax.grid()
+    for ax in axs.flatten():
+        ax.grid()
+        # ax.set_xlabel(' ')
+        # ax.set_ylabel(' ')
+        # ax.tick_params(axis='x', top=False, labeltop=False)
 
     if show_plot:
         plt.show()

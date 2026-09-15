@@ -68,28 +68,28 @@ class Test(unittest.TestCase):
         all_times = np.array([observing_time])
         all_freqs = np.array([160e+6])
         station_ids = np.array([0])
+        delays = np.zeros(16)
         
-        mwa_jones =  run_everybeam(ms_path, coeff_path,
-                                ras, decs, beam_ra0, beam_dec0,
-                                j2000_latitudes, j2000_lsts,
-                                all_times, all_freqs,
-                                station_ids,
-                                apply_beam_norms=False,
-                                iau_order=True,
-                                element_only=False,
-                                parallactic_rotate=True)
+        mwa_jones =  run_everybeam(ras, decs, all_freqs,
+                                   mwa_coeff_path=coeff_path,
+                                   j2000_latitudes=j2000_latitudes,
+                                   j2000_lsts=j2000_lsts,
+                                   mwa_dipole_delays=delays,
+                                   iau_order=True,
+                                   element_only=False,
+                                   parallactic_rotate=True)
         
         
         ms_path = f'{code_dir}/../../../test_installation/everybeam/create_OSKAR-MWA_ms/OSKAR-MWA-layout.ms'
-        oskar_jones =  run_everybeam(ms_path, coeff_path,
-                                ras, decs, beam_ra0, beam_dec0,
-                                j2000_latitudes, j2000_lsts,
-                                all_times, all_freqs,
-                                station_ids,
-                                apply_beam_norms=True,
-                                iau_order=True,
-                                element_only=False,
-                                parallactic_rotate=True)
+        oskar_jones =  run_everybeam(ras, decs, all_freqs,
+                                      ms_path=ms_path,
+                                      beam_ra0=beam_ra0, beam_dec0=beam_dec0,
+                                      times=all_times, 
+                                      station_ids=station_ids,
+                                      apply_beam_norms=True,
+                                      iau_order=True,
+                                      element_only=False,
+                                      parallactic_rotate=True)
         
         ##These are same array layout, but different dipoles (bow-tie vs.
         # analytic log dipole) so test abs value matches to within 15% is good enough

@@ -162,6 +162,10 @@ void test_calculate_visibilities_EveryBeam(int n_points, int n_gauss, int n_shap
     woden_settings->single_everybeam_station = 0;
   }
 
+
+  int delays[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+  woden_settings->FEE_ideal_delays = delays;
+
   set_mjds(woden_settings, beamtype, NUM_TIME_STEPS);
 
   set_azza_para(cropped_sky_models, NUM_TIME_STEPS,

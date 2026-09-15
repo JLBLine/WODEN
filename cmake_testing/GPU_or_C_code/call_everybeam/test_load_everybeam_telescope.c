@@ -23,22 +23,21 @@ void test_load_telescope(const char *ms_path,
                           const char *element_response_model,
                           bool use_differential_beam,
                           bool use_channel_frequency,
-                          const char *coeff_path,
-                          bool use_local_mwa) {
+                          const char *coeff_path) {
 
   int eb_status = 0;
 
   //Test that the correct arguments load up fine
   Telescope *telescope = load_everybeam_telescope(&eb_status, ms_path, element_response_model,
                                                   use_differential_beam, use_channel_frequency,
-                                                  coeff_path, use_local_mwa);
+                                                coeff_path);
   TEST_ASSERT_EQUAL_INT(0, eb_status);
   destroy_everybeam_telescope(telescope);
 
   // Check it throws an error with incorrect model
   telescope = load_everybeam_telescope(&eb_status, ms_path, "jeeeezus",
                                         use_differential_beam, use_channel_frequency,
-                                        coeff_path, use_local_mwa);
+                                        coeff_path);
   TEST_ASSERT_EQUAL_INT(1, eb_status);
   destroy_everybeam_telescope(telescope);
 }
@@ -50,11 +49,10 @@ void test_load_lofar_telescope(void) {
   bool use_differential_beam = false;
   bool use_channel_frequency = true;
   const char coeff_path[] = "";
-  bool use_local_mwa = false;
   const char element_response_model[] = "hamaker";
 
   test_load_telescope(ms_path, element_response_model, use_differential_beam,
-                      use_channel_frequency, coeff_path, use_local_mwa);
+                      use_channel_frequency, coeff_path);
 
   // int num_coords = 3;
   // double _Complex *jones = malloc(4*num_coords * num_coords * sizeof(double _Complex));
@@ -71,11 +69,16 @@ void test_load_mwa_telescope(void) {
   bool use_differential_beam = false;
   bool use_channel_frequency = true;
   const char coeff_path[] = "";
-  bool use_local_mwa = false;
   const char element_response_model[] = "MWA";
 
-  test_load_telescope(ms_path, element_response_model, use_differential_beam,
-                      use_channel_frequency, coeff_path, use_local_mwa);
+  int eb_status = 0;
+
+  // Check it throws an error with MWA; we should be using a different function
+  Telescope *telescope = load_everybeam_telescope(&eb_status, ms_path, element_response_model,
+                                        use_differential_beam, use_channel_frequency,
+                                        coeff_path);
+  TEST_ASSERT_EQUAL_INT(1, eb_status);
+  destroy_everybeam_telescope(telescope);
 }
 
 void test_load_oskar_telescope(void) {
@@ -84,11 +87,10 @@ void test_load_oskar_telescope(void) {
   bool use_differential_beam = false;
   bool use_channel_frequency = true;
   const char coeff_path[] = "";
-  bool use_local_mwa = false;
   const char element_response_model[] = "SKALA40_WAVE";
 
   test_load_telescope(ms_path, element_response_model, use_differential_beam,
-                      use_channel_frequency, coeff_path, use_local_mwa);
+                      use_channel_frequency, coeff_path);
 }
 
 

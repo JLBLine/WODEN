@@ -37,22 +37,19 @@ void tearDown (void) {} /* Is run after every test, put unit clean-up calls here
 
 
 void do_run_mwa_beam(const char *ms_path, bool apply_beam_norms, bool iau_order,
-                       bool rotate, bool element_only, bool write_text,
+                       bool rotate, bool write_text,
                        double _Complex * jones) {
 
   // const char coeff_path[] = "/home/jack-line/software/mwa_beam_files/mwa_full_embedded_element_pattern.h5";
 
   char* coeff_path = getenv("MWA_FEE_HDF5");
 
-  // getenv
-  const char element_response_model[] = "MWA";
-
   int eb_status = 0;
 
-  double mjd_sec_times[NUM_TIMES]; 
-  for (int timei = 0; timei < NUM_TIMES; timei++) {
-    mjd_sec_times[timei] = MJD_mwa + timei*TIME_RES;
-  }
+  // double mjd_sec_times[NUM_TIMES]; 
+  // for (int timei = 0; timei < NUM_TIMES; timei++) {
+  //   mjd_sec_times[timei] = MJD_mwa + timei*TIME_RES;
+  // }
 
   // int num_freqs = 1;
   double freqs[NUM_FREQS];
@@ -62,7 +59,7 @@ void do_run_mwa_beam(const char *ms_path, bool apply_beam_norms, bool iau_order,
   }
 
   // int num_stations = 1;
-  int station_idxs[NUM_STATIONS] = {0};
+  // int station_idxs[NUM_STATIONS] = {0};
 
   //Iternally, the load_and_run_mwa_beam function expects za,az,para
   //to have time fastest changing, then direction. So do a cheeky reorder
@@ -78,13 +75,20 @@ void do_run_mwa_beam(const char *ms_path, bool apply_beam_norms, bool iau_order,
     }
   }
 
-  eb_status = load_and_run_mwa_beam(ms_path, element_response_model,
-                          coeff_path,
-                          NUM_STATIONS, station_idxs,
+  double delays[16] = {0.0,0.0,0.0,0.0,
+                        0.0,0.0,0.0,0.0,
+                        0.0,0.0,0.0,0.0,
+                        0.0,0.0,0.0,0.0};
+
+  double amps[16] = {1.0,1.0,1.0,1.0,
+                      1.0,1.0,1.0,1.0,
+                      1.0,1.0,1.0,1.0,
+                      1.0,1.0,1.0,1.0};
+
+  eb_status = load_and_run_mwa_beam(delays, amps, coeff_path,
                           NUM_DIRS, azs, zas, para_angles,
-                          NUM_TIMES, mjd_sec_times, NUM_FREQS, freqs,
-                          apply_beam_norms, rotate, element_only, iau_order,
-                          jones);
+                          NUM_FREQS, freqs, NUM_TIMES,
+                          rotate, iau_order, jones);
 
   TEST_ASSERT_EQUAL_INT(0, eb_status);
 
@@ -156,7 +160,6 @@ void test_run_mwa_telescope_rotate_iau(void) {
   const char ms_path[] = "../../../../test_installation/everybeam/MWA-single-timeslot.ms";
   bool apply_beam_norms = false;
   bool rotate = true;
-  bool element_only = false;
   bool iau_order = true;
   bool write_text = true;
 
@@ -164,7 +167,7 @@ void test_run_mwa_telescope_rotate_iau(void) {
 
   //This calcs all the different freqs and times
   do_run_mwa_beam(ms_path, apply_beam_norms, iau_order,
-                    rotate, element_only, write_text, jones);
+                    rotate, write_text, jones);
 
   int stripe = 0;
   int time_ind = 0;
@@ -202,7 +205,6 @@ void test_run_mwa_telescope_norotate_noiau(void) {
   const char ms_path[] = "../../../../test_installation/everybeam/MWA-single-timeslot.ms";
   bool apply_beam_norms = false;
   bool rotate = false;
-  bool element_only = false;
   bool iau_order = false;
   bool write_text = false;
 
@@ -210,7 +212,7 @@ void test_run_mwa_telescope_norotate_noiau(void) {
 
   //This calcs all the different freqs and times
   do_run_mwa_beam(ms_path, apply_beam_norms, iau_order,
-                    rotate, element_only, write_text, jones);
+                    rotate, write_text, jones);
 
   check_against_hyperbeam_values(jones, hyper_jones_100_time0_norotate);
 

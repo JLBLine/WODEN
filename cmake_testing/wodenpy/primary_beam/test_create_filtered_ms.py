@@ -69,15 +69,16 @@ class Test(unittest.TestCase):
         
         coeff_path = ""
         num_threads = 1
-        jones =  run_everybeam_over_threads(num_threads, ms_path, coeff_path,
-                                ras, decs, beam_ra0, beam_dec0,
-                                j2000_latitudes, j2000_lsts,
-                                all_times, all_freqs,
-                                station_ids,
-                                apply_beam_norms=False,
-                                iau_order=True,
-                                element_only=False,
-                                parallactic_rotate=False)
+        jones =  run_everybeam_over_threads(num_threads, 
+                                            ras, decs, all_freqs,
+                                            times=all_times,
+                                            ms_path=ms_path,
+                                            beam_ra0=beam_ra0, beam_dec0=beam_dec0,
+                                            station_ids=station_ids,
+                                            apply_beam_norms=False,
+                                            iau_order=True,
+                                            element_only=False,
+                                            parallactic_rotate=False)
         
         return jones
     

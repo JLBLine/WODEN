@@ -296,22 +296,22 @@ def _everybeam_settings_string(logger: logging.Logger, woden_settings: object, a
         beam = "OSKAR"
     elif woden_settings.beamtype == BeamTypes.EB_LOFAR.value:
         beam = "LOFAR"
-    elif woden_settings.beamtype == BeamTypes.EB_MWA.value:
-        beam = "MWA"
+    # elif woden_settings.beamtype == BeamTypes.EB_MWA.value:
+    #     beam = "MWA"
     
     out_string = f"Will run with EveryBeam {beam} primary beam, based on this measurement set:"
     out_string +=  f"\n\t{args.beam_ms_path}"
     
-    if beam == "MWA":
-        out_string += f"\nUsing the following hdf5 file:"
-        out_string += f"\n\t{woden_settings.hdf5_beam_path}"
+    # if beam == "MWA":
+    #     out_string += f"\nUsing the following hdf5 file:"
+    #     out_string += f"\n\t{woden_settings.hdf5_beam_path}"
         
     if args.pointed_ms_file_name:
         out_string += f"\nCreated the following minimal MS to point the beam:"
         out_string += f"\n\t{args.pointed_ms_file_name}"
         
-    if beam == "LOFAR" or beam == "OSKAR":
-        out_string += f"\nPrimary beam is pointed at RA,Dec = {args.eb_ra_point}, {args.eb_dec_point} deg"
+    # if beam == "LOFAR" or beam == "OSKAR":
+    out_string += f"\nPrimary beam is pointed at RA,Dec = {args.eb_ra_point}, {args.eb_dec_point} deg"
         
     return out_string
 
@@ -386,9 +386,13 @@ def log_chosen_beamtype(logger: logging.Logger, woden_settings: object,
         logger.info("Using MWA analytic primary beam with:\n" \
                     f"\tdelays: {woden_settings.FEE_ideal_delays}")
 
-    elif woden_settings.beamtype in BeamGroups.eb_beam_values:
+    elif woden_settings.beamtype in BeamGroups.eb_ms_beam_values:
         eb_beam_string = _everybeam_settings_string(logger, woden_settings, args)
         logger.info(eb_beam_string)
+        
+    elif woden_settings.beamtype == BeamTypes.EB_MWA.value:
+        mwa_beam_string = _mwa_beam_settings_string(logger, woden_settings, args, 'EveryBeam MWA')
+        logger.info(mwa_beam_string)
         
     elif woden_settings.beamtype == BeamTypes.UVB_MWA.value:
         mwa_beam_string = _mwa_beam_settings_string(logger, woden_settings, args, 'pyuvdata.UVBeam')

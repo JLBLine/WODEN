@@ -76,6 +76,13 @@ or ``double _Complex``.
   C_code/woden_precision_defs
   C_code/woden_struct_defs
 
+``C++`` code
+----------------------
+
+.. toctree::
+  :maxdepth: 1
+
+  C++_code/call_everybeam
 
 ``GPU`` and ``C`` equivalent functions
 -----------------------------------------

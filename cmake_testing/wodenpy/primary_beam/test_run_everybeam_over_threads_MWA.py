@@ -34,7 +34,7 @@ class Test(unittest.TestCase):
         arr_latitude = np.radians(-26.703319405555554)
         arr_long = np.radians(116.67081523611111)
         date = "2024-07-21T20:13:00"
-        ms_path = f'{code_dir}/../../../test_installation/everybeam/MWA-single-timeslot.ms'
+        # ms_path = f'{code_dir}/../../../test_installation/everybeam/MWA-single-timeslot.ms'
         
         coeff_path=os.environ['MWA_FEE_HDF5']
         
@@ -69,28 +69,28 @@ class Test(unittest.TestCase):
         all_freqs = np.array([100e+6])
         station_ids = np.array([0,10])
         
-        serial_jones =  run_everybeam(ms_path, coeff_path,
-                                ras, decs, beam_ra0, beam_dec0,
-                                j2000_latitudes, j2000_lsts,
-                                all_times, all_freqs,
-                                station_ids,
-                                apply_beam_norms=False,
-                                iau_order=True,
-                                element_only=False,
-                                parallactic_rotate=True)
+        delays = np.zeros(16)
+        
+        serial_jones =  run_everybeam(ras, decs, all_freqs,
+                                      mwa_coeff_path=coeff_path,
+                                      j2000_latitudes=j2000_latitudes,
+                                      j2000_lsts=j2000_lsts,
+                                      mwa_dipole_delays=delays,
+                                      iau_order=True,
+                                      element_only=False,
+                                      parallactic_rotate=True)
         
         for num_threads in [1, 3, 4, 8]:
         
             parallel_jones =  run_everybeam_over_threads(num_threads,
-                                ms_path, coeff_path,
-                                ras, decs, beam_ra0, beam_dec0,
-                                j2000_latitudes, j2000_lsts,
-                                all_times, all_freqs,
-                                station_ids,
-                                apply_beam_norms=False,
-                                iau_order=True,
-                                element_only=False,
-                                parallactic_rotate=True)
+                                                         ras, decs, all_freqs,
+                                                         mwa_coeff_path=coeff_path,
+                                                         j2000_latitudes=j2000_latitudes,
+                                                         j2000_lsts=j2000_lsts,
+                                                         mwa_dipole_delays=delays,
+                                                         iau_order=True,
+                                                         element_only=False,
+                                                         parallactic_rotate=True)
             
             npt.assert_allclose(serial_jones, parallel_jones, atol=1e-8)
             

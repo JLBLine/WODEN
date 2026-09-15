@@ -1,7 +1,7 @@
 sphinx_argparse
 breathe
-astropy<=6.1.0
-numpy<=1.26.0
+astropy
+numpy
 pyerfa
 palpy
 importlib_resources
@@ -12,3 +12,4 @@ python-casacore
 myst-nb
 binpacking
 line_profiler
+mwa_hyperbeam

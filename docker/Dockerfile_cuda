@@ -4,8 +4,9 @@ FROM nvidia/cuda:12.5.1-devel-ubuntu24.04
 ARG CUDA_ARCH
 ARG USE_BUILD
 
-ENV WODEN_TAG=v2.6.0-alpha
-ENV EVERYBEAM_TAG=mwa_python_wrapper
+ENV WODEN_TAG=v2.7.0-alpha
+ENV EVERYBEAM_TAG=v0.7.4
+ENV CASACORE_TAG=v3.7.1
 ENV HYPER_VERSION=0.10.0
 ENV RUST_VERSION=1.84.0
 ENV CUDAARCHS=${CUDA_ARCH}
@@ -14,9 +15,10 @@ ENV BUILD=${USE_BUILD}
 RUN echo "Building for CUDA_ARCH=$CUDA_ARCH"
 RUN echo "Building with USE_BUILD=$USE_BUILD"
 RUN echo "CUDAARCHS=$CUDAARCHS"
-RUN echo "Using WODEN tag ${WODEN_TAG}"
-RUN echo "Using EveryBeam tag ${EVERYBEAM_TAG}"
-RUN echo "Using Hyperbeam version ${HYPER_VERSION}"
+RUN echo "Using WODEN ${WODEN_TAG}"
+RUN echo "Using casacore ${CASACORE_TAG}"
+RUN echo "Using EveryBeam ${EVERYBEAM_TAG}"
+RUN echo "Using Hyperbeam ${HYPER_VERSION}"
 
 RUN if [ "$CUDA_ARCH" != "60;61;70;75;80;86" ]; then \
       export HYPERBEAM_CUDA_COMPUTE=${CUDA_ARCH} && \
@@ -47,22 +49,64 @@ RUN apt-get update -y && \
             wget git make cmake g++ doxygen \
             libboost-all-dev libhdf5-dev libfftw3-dev \
             libblas-dev liblapack-dev libxml2-dev \
-            libgtkmm-3.0-dev libpython3-dev python3-setuptools \
-            casacore-dev libcfitsio-dev wcslib-dev \
+            libgtkmm-3.0-dev libpython3-dev python3-venv python3-setuptools \
+            libcfitsio-dev wcslib-dev \
+            libncurses-dev libreadline-dev flex bison libgsl-dev \
             && apt-get clean all \
             && rm -rf /var/lib/apt/lists/*
 
-##Update the data dir in casacore
-RUN wget -q ftp://ftp.astron.nl/outgoing/Measures/WSRT_Measures.ztar \
-    && tar -xf WSRT_Measures.ztar -C /var/lib/casacore/data/
+##Make data dir and download casacore data
+RUN cd / \
+    && mkdir -p /var/lib/casacore \
+    && mkdir -p /var/lib/casacore/data/ \
+    && wget -q ftp://ftp.astron.nl/outgoing/Measures/WSRT_Measures.ztar \
+    && tar -xf WSRT_Measures.ztar -C /var/lib/casacore/data/ 
 
+
+##Install casacore manually as latest version of EveryBeam needs casacore >3.6,
+##which is not available in ubuntu repos yet.
+##We also need python and some python libraries to install casacore,
+##so install a virtualenv for that.
+
+##Create a virtual environment for python and update pip
+##Note `source` doesn't exist in this environment, so we use the `.` command instead.
+RUN python3 -m venv /opt/woden-python-venv \
+    && . /opt/woden-python-venv/bin/activate \
+    && pip install --upgrade pip setuptools wheel \
+    && pip install numpy
+ENV PATH=/opt/woden-python-venv/bin:$PATH
+
+RUN cd / \
+    && git clone -b ${CASACORE_TAG} https://github.com/casacore/casacore.git \
+    && cd casacore \
+    && mkdir -p build && cd build \
+    && cmake .. \
+    	-DUSE_THREADS=ON \
+    	-DDATA_DIR=/var/lib/casacore/data/ \
+    	-DUSE_HDF5=OFF \
+      -DBUILD_PYTHON=OFF -DBUILD_PYTHON3=ON \
+    && make -j8 \
+    && make install
+
+
+RUN if [ "$BUILD" == "production" ]; then \
+        export CMAKE_BUILD_TYPE=Release \
+        && echo "Building EveryBeam production version"; \
+        else \
+        # Default build stuff here
+        export CMAKE_BUILD_TYPE=Debug \
+        && echo "Building EveryBeam debug version"; \
+    fi
+
+# https://git.astron.nl/RD/EveryBeam.git
 
 RUN mkdir -p /everybeam_install
 RUN git clone -b $EVERYBEAM_TAG --recursive -j4 https://git.astron.nl/RD/EveryBeam.git \
   && cd EveryBeam \
   && mkdir -p build && cd build \
   && cmake .. -DCMAKE_INSTALL_PREFIX=/everybeam_install \
-  && make \
+              -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} \
+  && make -j8 \
   && make install
 
 # Get Rust
@@ -71,7 +115,7 @@ ENV RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/cargo PATH=/opt/cargo/bin:$PATH
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain=$RUST_VERSION
 
 # hyperbeam used for MWA primary beam
-RUN wget https://github.com/MWATelescope/mwa_hyperbeam/archive/refs/tags/v${HYPER_VERSION}.tar.gz \
+RUN cd / && wget https://github.com/MWATelescope/mwa_hyperbeam/archive/refs/tags/v${HYPER_VERSION}.tar.gz \
   && tar -xvf v${HYPER_VERSION}.tar.gz \
   && cd mwa_hyperbeam-${HYPER_VERSION} \
   && /opt/cargo/bin/cargo build --release --features=cuda,cuda-static \
@@ -86,21 +130,29 @@ RUN git clone -b $WODEN_TAG https://github.com/JLBLine/WODEN.git \
            -DHBEAM_LIB=/mwa_hyperbeam-${HYPER_VERSION}/target/release/libmwa_hyperbeam.so \
            -DEBEAM_INSTALL=/everybeam_install/ \
            -DEBEAM_ROOT=/EveryBeam/ \
-  && make
+  && make -j8
 
   
-##Now do the pip install
-RUN cd /WODEN && pip install --ignore-installed --break-system-packages -r requirements.txt
-RUN cd /WODEN && pip install --ignore-installed --break-system-packages  .
-RUN pip install --ignore-installed --break-system-packages --upgrade astropy-iers-data
+##Install wodenpy and dependencies into the virtual environment
+RUN cd /WODEN \
+    && pip install -r requirements.txt \
+    && pip install . \
+    && pip install --upgrade astropy-iers-data
 
-RUN mkdir -p /astropy_data
-ENV ASTROPY_DATA=/astropy_data
+# RUN mkdir -p /astropy_data
+# ENV ASTROPY_DATA=/astropy_data
 
-RUN wget https://datacenter.iers.org/data/9/finals2000A.all
-RUN mv finals2000A.all /astropy_data/finals2000A.all
+# RUN cd / && wget https://datacenter.iers.org/data/9/finals2000A.all
+# RUN mv finals2000A.all /astropy_data/finals2000A.all
 
 RUN python3 /WODEN/docker/fetch_iers_data.py
+
+##This does the equivalent of permanently switching on the python virtual environment
+ENV PATH=/opt/woden-python-venv/bin:$PATH
+##Make sure we can find casacore libs
+ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+
+
 
 # # unity - used for testing
 # RUN cd / && git clone https://github.com/ThrowTheSwitch/Unity.git

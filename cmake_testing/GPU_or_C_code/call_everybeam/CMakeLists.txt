@@ -20,6 +20,18 @@ foreach(PRECISION IN LISTS DOUBLE)
   add_test(CXX_test_load_everybeam_telescope_${PRECISION}
            test_load_everybeam_telescope_${PRECISION}_app)
 
+  add_executable(test_load_everybeam_MWABeam_${PRECISION}_app
+      test_load_everybeam_MWABeam.c
+  )
+  target_link_libraries(test_load_everybeam_MWABeam_${PRECISION}_app
+      Unity gcov
+      use_everybeam
+  )
+  target_compile_options(test_load_everybeam_MWABeam_${PRECISION}_app
+                                                             PRIVATE ${C_FLAGS})
+  add_test(CXX_test_load_everybeam_MWABeam_${PRECISION}
+           test_load_everybeam_MWABeam_${PRECISION}_app)
+
 
   add_executable(test_check_ms_telescope_type_${PRECISION}_app
       test_check_ms_telescope_type.c

@@ -107,6 +107,7 @@ class Test(unittest.TestCase):
         
         with open('woden_settings.txt', 'r') as infile:
             for line in infile.read().split('\n'):
+                # print(line)
                 if line == '':
                     pass
                 else:
@@ -336,6 +337,37 @@ class Test(unittest.TestCase):
             self.check_basic_inputs(woden_settings)
             check_MWAanaly_outputs()
             
+            
+    def test_write_everybeam_MWA(self):
+        """Test that the everybeam MWA primary beam options work correctly"""
+
+        def add_extra_ebMWA_args():
+            ##Add in primary_beam as Gaussian to inputs
+            self.args.primary_beam = 'everybeam_MWA'
+            self.args.MWA_FEE_delays = "[0,2,4,6,0,2,4,6,0,2,4,6,0,2,4,6]"
+            self.args.hdf5_beam_path = "This_is_the_way_interped"
+            self.args.use_dipamps = True
+            
+        def check_ebMWA_outputs():
+            self.assertEqual(8, int(self.data['beamtype']))
+            self.check_mwa_beam_delays()
+            mwa_dipole_amps = np.array([float(amp) for amp in self.data['mwa_dipole_amps'].split(',')])
+            npt.assert_allclose(mwa_dipole_amps, np.ones(16), atol=1e-8)
+            
+        # for precision in ['float', 'double']:
+        for precision in ['float']:
+            ##This makes fake args with double precision
+            self.make_basic_inputs(precision)
+            add_extra_ebMWA_args()
+            
+            ##This runs `fill_woden_settings_python`
+            woden_settings = self.call_fill_woden_settings_python_and_convert_to_ctypes()
+
+            ##This passes woden_settings into C code which write contents to a text
+            ## file, reads in that text file, and checks the outputs make sense
+            self.check_basic_inputs(woden_settings)
+            check_ebMWA_outputs()
+            
     def test_write_EDA2_beam(self):
         """Test that the EDA2 primary beam options work correctly"""
         
@@ -413,7 +445,6 @@ class Test(unittest.TestCase):
         
         ##check it defaults to False
         self.assertFalse(int(self.data['use_dipamps']))
-        
         
         ##Now ask for some dipole amps, provide some (as would happen using
         # run_setup.check_args) and check things are propagated correctly
