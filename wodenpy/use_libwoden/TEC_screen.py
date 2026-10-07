@@ -83,16 +83,6 @@ def setup_TEC_screen_python(woden_settings_python : Woden_Settings_Python) -> TE
     TEC_screen.height = 200000
     TEC_screen.screen_size = 4000000
 
-    do_spherical_TEC = True
-    earth_radius = 6378137
-
-    if (do_spherical_TEC):
-        # Converting to radians
-        TEC_grad_x = TEC_grad_x * (earth_radius + TEC_screen.height)
-        TEC_grad_y = TEC_grad_y * (earth_radius + TEC_screen.height)
-
-        TEC_screen.screen_size = TEC_screen.screen_size / (earth_radius + TEC_screen.height)
-
     xaxis = np.linspace(-TEC_screen.screen_size / 2, TEC_screen.screen_size / 2, TEC_screen.resolution)
     yaxis = np.linspace(-TEC_screen.screen_size / 2, TEC_screen.screen_size / 2, TEC_screen.resolution)
     x, y = np.meshgrid(xaxis, yaxis)

@@ -40,10 +40,17 @@ __device__ double calc_ionospheric_phase_offset_gpu(double *d_ant_X,
 
     int do_spherical_TEC = 1;
     if (do_spherical_TEC) {
-        pp1_x = zen * sin(az) + ant1_X / EARTH_RADIUS;
-        pp1_y = zen * cos(az) + ant1_Y / EARTH_RADIUS;
-        pp2_x = zen * sin(az) + ant2_X / EARTH_RADIUS;
-        pp2_y = zen * cos(az) + ant2_Y / EARTH_RADIUS;
+        // find point directly above antennas on TEC screen
+        user_precision_t ant1_X_screen = (EARTH_RADIUS + height) / EARTH_RADIUS * ant1_X;
+        user_precision_t ant1_Y_screen = (EARTH_RADIUS + height) / EARTH_RADIUS * ant1_Y;
+        user_precision_t ant2_X_screen = (EARTH_RADIUS + height) / EARTH_RADIUS * ant2_X;
+        user_precision_t ant2_Y_screen = (EARTH_RADIUS + height) / EARTH_RADIUS * ant2_Y;
+
+        user_precision_t pp_zen = asin(EARTH_RADIUS / (EARTH_RADIUS + height) * sin(zen));
+        pp1_x = ant1_X_screen + (EARTH_RADIUS + height) * (zen - pp_zen) * sin(az);
+        pp1_y = ant1_Y_screen + (EARTH_RADIUS + height) * (zen - pp_zen) * cos(az);
+        pp2_x = ant2_X_screen + (EARTH_RADIUS + height) * (zen - pp_zen) * sin(az);
+        pp2_y = ant2_Y_screen + (EARTH_RADIUS + height) * (zen - pp_zen) * cos(az);
     }
 
     // double phase1 = get_phase_delay_gpu(pp1_x, pp1_y, (double)TEC_grad_x, (double)TEC_grad_y, wavelength);
