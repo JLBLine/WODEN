@@ -81,7 +81,9 @@ def setup_TEC_screen_python(woden_settings_python : Woden_Settings_Python) -> TE
 
     TEC_screen.resolution = 5000
     TEC_screen.height = 200000
-    TEC_screen.screen_size = 4000000
+    # TEC_screen.screen_size = 4000000
+    # large enough for full sky
+    TEC_screen.screen_size = 41400000
 
     xaxis = np.linspace(-TEC_screen.screen_size / 2, TEC_screen.screen_size / 2, TEC_screen.resolution)
     yaxis = np.linspace(-TEC_screen.screen_size / 2, TEC_screen.screen_size / 2, TEC_screen.resolution)
