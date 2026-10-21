@@ -89,10 +89,10 @@ __device__ user_precision_t get_phase_delay_from_TEC_gpu(user_precision_t pp_eas
     user_precision_t y = (pp_north / screen_size + 0.5) * resolution;
     
     // interpolating
-    user_precision_t TEC00 = TEC_screen[resolution * (int)x + (int)y];
-    user_precision_t TEC10 = TEC_screen[resolution * ((int)x + 1) + (int)y];
-    user_precision_t TEC01 = TEC_screen[resolution * (int)x + (int)y + 1];
-    user_precision_t TEC11 = TEC_screen[resolution * ((int)x + 1) + (int)y + 1];
+    user_precision_t TEC00 = TEC_screen[resolution * (int)y + (int)x];
+    user_precision_t TEC10 = TEC_screen[resolution * (int)y + (int)x + 1];
+    user_precision_t TEC01 = TEC_screen[resolution * ((int)y + 1) + (int)x];
+    user_precision_t TEC11 = TEC_screen[resolution * ((int)y + 1) + (int)x + 1];
 
     // now just want the decimal part of x and y
     x = x - (int)x;
@@ -103,7 +103,7 @@ __device__ user_precision_t get_phase_delay_from_TEC_gpu(user_precision_t pp_eas
 
     user_precision_t TEC = (1 - y) * X0 + y * X1;
 
-    // user_precision_t TEC = TEC_screen[resolution * (int)round(x) + (int)round(y)];
+    // user_precision_t TEC = TEC_screen[resolution * (int)round(y) + (int)round(x)];
 
     return TEC * wavelength * TEC_TO_PHASE;
 }

@@ -48,7 +48,7 @@ double get_phase_delay_from_TEC_cpu(double pp_east, double pp_north,
     double y = (pp_north / screen_size + 0.5) * resolution;
     
     // interpolate here instead
-    double TEC = TEC_screen[resolution * (int)x + (int)y];
+    double TEC = TEC_screen[resolution * (int)y + (int)x];
 
     return TEC * wavelength * TEC_TO_PHASE;
 }
