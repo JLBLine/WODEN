@@ -76,8 +76,8 @@ def setup_TEC_screen_python(woden_settings_python : Woden_Settings_Python) -> TE
         TEC_screen.screen = np.empty(0)
         return TEC_screen
 
-    TEC_grad_x = woden_settings_python.TEC_grad_x
-    TEC_grad_y = woden_settings_python.TEC_grad_y
+    TEC_grad_east = woden_settings_python.TEC_grad_east
+    TEC_grad_north = woden_settings_python.TEC_grad_north
 
     TEC_screen.resolution = 5000
     TEC_screen.height = 200000
@@ -88,7 +88,7 @@ def setup_TEC_screen_python(woden_settings_python : Woden_Settings_Python) -> TE
     xaxis = np.linspace(-TEC_screen.screen_size / 2, TEC_screen.screen_size / 2, TEC_screen.resolution)
     yaxis = np.linspace(-TEC_screen.screen_size / 2, TEC_screen.screen_size / 2, TEC_screen.resolution)
     x, y = np.meshgrid(xaxis, yaxis)
-    TEC_screen_2d = TEC_grad_x * x + TEC_grad_y * y
+    TEC_screen_2d = TEC_grad_east * x + TEC_grad_north * y
 
     TEC_screen.screen = TEC_screen_2d.flatten()
     

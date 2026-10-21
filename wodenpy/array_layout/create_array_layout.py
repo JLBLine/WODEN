@@ -375,6 +375,10 @@ def setup_array_layout_python(woden_settings_python : Woden_Settings_Python,
     array_layout.ant_Y = np.empty(woden_settings_python.num_time_steps*args.num_antennas, dtype=np.float64)
     array_layout.ant_Z = np.empty(woden_settings_python.num_time_steps*args.num_antennas, dtype=np.float64)
 
+    array_layout.ant_east = np.empty(woden_settings_python.num_time_steps*args.num_antennas, dtype=np.float64)
+    array_layout.ant_north = np.empty(woden_settings_python.num_time_steps*args.num_antennas, dtype=np.float64)
+    array_layout.ant_height = np.empty(woden_settings_python.num_time_steps*args.num_antennas, dtype=np.float64)
+
     array_layout.X_diff_metres = np.empty(woden_settings_python.num_time_steps*array_layout.num_baselines, dtype=np.float64)
     array_layout.Y_diff_metres = np.empty(woden_settings_python.num_time_steps*array_layout.num_baselines, dtype=np.float64)
     array_layout.Z_diff_metres = np.empty(woden_settings_python.num_time_steps*array_layout.num_baselines, dtype=np.float64)
@@ -426,6 +430,11 @@ def calc_XYZ_diffs(woden_settings_python : Woden_Settings_Python,
             array_layout.ant_X[st_offset + i] = x
             array_layout.ant_Y[st_offset + i] = y
             array_layout.ant_Z[st_offset + i] = z
+            
+            ##Also store east,north,height
+            array_layout.ant_east[st_offset + i] = args.east[i]
+            array_layout.ant_north[st_offset + i] = args.north[i]
+            array_layout.ant_height[st_offset + i] = args.height[i]
 
     if woden_settings_python.do_precession:
         logger.info("Precessing array layout to J2000")
@@ -464,6 +473,10 @@ def convert_array_layout_to_ctypes(array_layout_python : Array_Layout_Python,
     array_layout_ctypes.ant_X = array_layout_python.ant_X.ctypes.data_as(POINTER(c_double))
     array_layout_ctypes.ant_Y = array_layout_python.ant_Y.ctypes.data_as(POINTER(c_double))
     array_layout_ctypes.ant_Z = array_layout_python.ant_Z.ctypes.data_as(POINTER(c_double))
+
+    array_layout_ctypes.ant_east = array_layout_python.ant_east.ctypes.data_as(POINTER(c_double))
+    array_layout_ctypes.ant_north = array_layout_python.ant_north.ctypes.data_as(POINTER(c_double))
+    array_layout_ctypes.ant_height = array_layout_python.ant_height.ctypes.data_as(POINTER(c_double))
     
     array_layout_ctypes.latitude = array_layout_python.latitude
     array_layout_ctypes.num_baselines = array_layout_python.num_baselines

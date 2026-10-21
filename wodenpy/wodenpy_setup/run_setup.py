@@ -338,11 +338,11 @@ def get_parser():
              'Must also run the code via `LINE_PROFILE=1 run_woden.py`')
 
     ion_group = parser.add_argument_group('IONOSPHERE OPTIONS')
-    ion_group.add_argument('--TEC_grad_x', default=0, type=float,
-        help='Gradient of the linear TEC screen in the x direction (TECU/m). If not set, will '
+    ion_group.add_argument('--TEC_grad_east', default=0, type=float,
+        help='Gradient of the linear TEC screen in the east direction (TECU/m). If not set, will '
               'default to zero.')
-    ion_group.add_argument('--TEC_grad_y', default=0, type=float,
-        help='Gradient of the linear TEC screen in the y direction (TECU/m). If not set, will '
+    ion_group.add_argument('--TEC_grad_north', default=0, type=float,
+        help='Gradient of the linear TEC screen in the north direction (TECU/m). If not set, will '
               'default to zero.')
 
     ##Add a number of hidden arguments. This means we can add attributes to

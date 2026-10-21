@@ -355,8 +355,8 @@ typedef struct _woden_settings_t {
   double eb_beam_dec0; /*!< Declination to lock the EveryBeam primary beam centre to (radians) */
 
   int do_ionosphere; /*!< Boolean of whether to calculate ionosphereic effects or not (0 False, 1 True)*/
-  user_precision_t TEC_grad_x; /*!< gradient of the TEC screen in x direction (TECU/m) */
-  user_precision_t TEC_grad_y; /*!< gradient of the TEC screen in y direction (TECU/m) */
+  user_precision_t TEC_grad_east; /*!< gradient of the TEC screen in x direction (TECU/m) */
+  user_precision_t TEC_grad_north; /*!< gradient of the TEC screen in y direction (TECU/m) */
   
 } woden_settings_t;
 
@@ -397,9 +397,9 @@ typedef struct _calc_visi_inouts_t {
   double *Z_diff; /*!< The length of all baselines in \f$Z\f$ (metres).
     Only used when processing on GPU, as already exists in `array_layout_t`.
     Easier to copy everythng into one struct*/
-  double *ant_X; /*!< Local \f$X\f$ location of all antenna/tiles*/
-  double *ant_Y; /*!< Local \f$Y\f$ location of all antenna/tiles*/
-  double *ant_Z; /*!< Local \f$Z\f$ location of all antenna/tiles*/
+  double *ant_east; /*!< Local \f$X\f$ location of all antenna/tiles*/
+  double *ant_north; /*!< Local \f$Y\f$ location of all antenna/tiles*/
+  double *ant_height; /*!< Local \f$Z\f$ location of all antenna/tiles*/
   double *allsteps_sha0s; /*!< Sine of hour angle of phase centre for all
   time steps, frequency steps, and baselines*/
   double *allsteps_cha0s; /*!< Cosine of hour angle of phase centre for all

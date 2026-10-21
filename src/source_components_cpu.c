@@ -1217,16 +1217,16 @@ void calc_visi_point_or_gauss_cpu(components_t components,
 
       double offset = 0;
       if (do_ionosphere) {
-        offset = calc_ionospheric_phase_offset_cpu(calc_visi_inouts->ant_X[ant1],
-                                                  calc_visi_inouts->ant_Y[ant1],
-                                                  calc_visi_inouts->ant_Z[ant1],
-                                                  calc_visi_inouts->ant_X[ant2],
-                                                  calc_visi_inouts->ant_Y[ant2],
-                                                  calc_visi_inouts->ant_Z[ant2],
+        offset = calc_ionospheric_phase_offset_cpu(calc_visi_inouts->ant_east[ant1],
+                                                  calc_visi_inouts->ant_north[ant1],
+                                                  calc_visi_inouts->ant_east[ant1],
+                                                  calc_visi_inouts->ant_east[ant2],
+                                                  calc_visi_inouts->ant_north[ant2],
+                                                  calc_visi_inouts->ant_east[ant2],
                                                   components.azs[time_ind*num_components + iComponent],
                                                   components.zas[time_ind*num_components + iComponent],
                                                   calc_visi_inouts->allsteps_wavelengths[iBaseline],
-                                                  woden_settings->TEC_grad_x, woden_settings->TEC_grad_y,
+                                                  woden_settings->TEC_grad_east, woden_settings->TEC_grad_north,
                                                   TEC_screen->screen, TEC_screen->resolution,
                                                   TEC_screen->screen_size, TEC_screen->height);
       }
@@ -1349,16 +1349,16 @@ void calc_visi_shapelets_cpu(components_t components,
 
       double offset = 0;
       if (do_ionosphere) {
-        offset = calc_ionospheric_phase_offset_cpu(calc_visi_inouts->ant_X[ant1],
-                                                  calc_visi_inouts->ant_Y[ant1],
-                                                  calc_visi_inouts->ant_Z[ant1],
-                                                  calc_visi_inouts->ant_X[ant2],
-                                                  calc_visi_inouts->ant_Y[ant2],
-                                                  calc_visi_inouts->ant_Z[ant2],
+        offset = calc_ionospheric_phase_offset_cpu(calc_visi_inouts->ant_east[ant1],
+                                                  calc_visi_inouts->ant_north[ant1],
+                                                  calc_visi_inouts->ant_east[ant1],
+                                                  calc_visi_inouts->ant_east[ant2],
+                                                  calc_visi_inouts->ant_north[ant2],
+                                                  calc_visi_inouts->ant_east[ant2],
                                                   components.azs[time_ind*num_shapes + iComponent],
                                                   components.zas[time_ind*num_shapes + iComponent],
                                                   calc_visi_inouts->allsteps_wavelengths[iBaseline],
-                                                  woden_settings->TEC_grad_x, woden_settings->TEC_grad_y,
+                                                  woden_settings->TEC_grad_east, woden_settings->TEC_grad_north,
                                                   TEC_screen->screen, TEC_screen->resolution,
                                                   TEC_screen->screen_size, TEC_screen->height);
       }

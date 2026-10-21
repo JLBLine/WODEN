@@ -1195,12 +1195,12 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
            user_precision_t *d_sum_visi_XY_real, user_precision_t *d_sum_visi_XY_imag,
            user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
            user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
-           double *d_ant_X, double *d_ant_Y, double *d_ant_Z,
+           double *d_ant_east, double *d_ant_north, double *d_ant_height,
            int *ant1_to_baseline_map, int *ant2_to_baseline_map,
            int num_components, int num_baselines, int num_freqs, int num_cross,
            int num_times, int num_ants, e_beamtype beamtype,
            e_component_type comptype, int off_cardinal_dipoles,
-           int do_ionosphere, user_precision_t TEC_grad_x, user_precision_t TEC_grad_y,
+           int do_ionosphere, user_precision_t TEC_grad_east, user_precision_t TEC_grad_north,
            user_precision_t *TEC_screen, int resolution,
            user_precision_t screen_size, user_precision_t height) {
 
@@ -1241,12 +1241,12 @@ __global__ void kern_calc_visi_point_or_gauss(components_t d_components,
 
       double offset = 0;
       if (do_ionosphere) {
-        offset = calc_ionospheric_phase_offset_gpu(d_ant_X, d_ant_Y, d_ant_Z,
+        offset = calc_ionospheric_phase_offset_gpu(d_ant_east, d_ant_north, d_ant_height,
                                                   d_components.azs, d_components.zas,
                                                   d_allsteps_wavelengths,
                                                   ant1_to_baseline_map, ant2_to_baseline_map,
                                                   num_baselines, num_ants, time_ind, num_components,
-                                                  iBaseline, iComponent, TEC_grad_x, TEC_grad_y,
+                                                  iBaseline, iComponent, TEC_grad_east, TEC_grad_north,
                                                   TEC_screen, resolution, screen_size, height);
       }
       
@@ -1343,9 +1343,9 @@ extern "C" void calc_visi_point_or_gauss_gpu(components_t d_components,
                   d_visibility_set->sum_visi_YX_imag,
                   d_visibility_set->sum_visi_YY_real,
                   d_visibility_set->sum_visi_YY_imag,
-                  d_calc_visi_inouts->ant_X,
-                  d_calc_visi_inouts->ant_Y,
-                  d_calc_visi_inouts->ant_Z,
+                  d_calc_visi_inouts->ant_east,
+                  d_calc_visi_inouts->ant_north,
+                  d_calc_visi_inouts->ant_height,
                   d_calc_visi_inouts->ant1_to_baseline_map,
                   d_calc_visi_inouts->ant2_to_baseline_map,
                   num_components, woden_settings->num_baselines,
@@ -1353,7 +1353,7 @@ extern "C" void calc_visi_point_or_gauss_gpu(components_t d_components,
                   woden_settings->num_time_steps, woden_settings->num_ants,
                   beamtype, comptype, woden_settings->off_cardinal_dipoles,
                   woden_settings->do_ionosphere,
-                  woden_settings->TEC_grad_x, woden_settings->TEC_grad_y,
+                  woden_settings->TEC_grad_east, woden_settings->TEC_grad_north,
                   d_calc_visi_inouts->screen, TEC_screen->resolution,
                   TEC_screen->screen_size, TEC_screen->height);
 
@@ -1370,12 +1370,12 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
       user_precision_t *d_sum_visi_YX_real, user_precision_t *d_sum_visi_YX_imag,
       user_precision_t *d_sum_visi_YY_real, user_precision_t *d_sum_visi_YY_imag,
       user_precision_t *d_sbf,
-      double *d_ant_X, double *d_ant_Y, double *d_ant_Z,
+      double *d_ant_east, double *d_ant_north, double *d_ant_height,
       int *ant1_to_baseline_map, int *ant2_to_baseline_map,
       int num_shapes, int num_baselines, int num_freqs, int num_cross,
       int num_ants, const int num_coeffs, int num_times,
       e_beamtype beamtype, int off_cardinal_dipoles,
-      int do_ionosphere, user_precision_t TEC_grad_x, user_precision_t TEC_grad_y,
+      int do_ionosphere, user_precision_t TEC_grad_east, user_precision_t TEC_grad_north,
       user_precision_t *TEC_screen, int resolution,
       user_precision_t screen_size, user_precision_t height) {
 
@@ -1420,12 +1420,12 @@ __global__ void kern_calc_visi_shapelets(components_t d_components,
 
       double offset = 0;
       if (do_ionosphere) {
-        offset = calc_ionospheric_phase_offset_gpu(d_ant_X, d_ant_Y, d_ant_Z,
+        offset = calc_ionospheric_phase_offset_gpu(d_ant_east, d_ant_north, d_ant_height,
                                                   d_components.azs, d_components.zas,
                                                   d_allsteps_wavelengths,
                                                   ant1_to_baseline_map, ant2_to_baseline_map,
                                                   num_baselines, num_ants, time_ind, num_shapes,
-                                                  iBaseline, iComponent, TEC_grad_x, TEC_grad_y,
+                                                  iBaseline, iComponent, TEC_grad_east, TEC_grad_north,
                                                   TEC_screen, resolution, screen_size, height);
       }
 
@@ -1553,9 +1553,9 @@ extern "C" void calc_visi_shapelets_gpu(components_t d_components,
                   d_visibility_set->sum_visi_YY_real,
                   d_visibility_set->sum_visi_YY_imag,
                   d_calc_visi_inouts->sbf,
-                  d_calc_visi_inouts->ant_X,
-                  d_calc_visi_inouts->ant_Y,
-                  d_calc_visi_inouts->ant_Z,
+                  d_calc_visi_inouts->ant_east,
+                  d_calc_visi_inouts->ant_north,
+                  d_calc_visi_inouts->ant_height,
                   d_calc_visi_inouts->ant1_to_baseline_map,
                   d_calc_visi_inouts->ant2_to_baseline_map,
                   num_shapes, woden_settings->num_baselines,
@@ -1564,7 +1564,7 @@ extern "C" void calc_visi_shapelets_gpu(components_t d_components,
                   woden_settings->num_time_steps,
                   beamtype, woden_settings->off_cardinal_dipoles,
                   woden_settings->do_ionosphere,
-                  woden_settings->TEC_grad_x, woden_settings->TEC_grad_y,
+                  woden_settings->TEC_grad_east, woden_settings->TEC_grad_north,
                   d_calc_visi_inouts->screen, TEC_screen->resolution,
                   TEC_screen->screen_size, TEC_screen->height);
 }

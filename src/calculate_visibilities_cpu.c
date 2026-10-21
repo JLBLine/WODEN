@@ -14,9 +14,9 @@ calc_visi_inouts_t * create_calc_visi_inouts_cpu(array_layout_t *array_layout,
   // int num_freqs = woden_settings->num_freqs;
   int num_ants = woden_settings->num_ants;
 
-  calc_visi_inouts->ant_X = array_layout->ant_X;
-  calc_visi_inouts->ant_Y = array_layout->ant_Y;
-  calc_visi_inouts->ant_Z = array_layout->ant_Z;
+  calc_visi_inouts->ant_east = array_layout->ant_east;
+  calc_visi_inouts->ant_north = array_layout->ant_north;
+  calc_visi_inouts->ant_height = array_layout->ant_height;
 
   calc_visi_inouts->allsteps_sha0s = visibility_set->allsteps_sha0s;
   calc_visi_inouts->allsteps_cha0s = visibility_set->allsteps_cha0s;

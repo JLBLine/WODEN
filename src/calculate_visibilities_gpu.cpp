@@ -46,16 +46,16 @@ extern "C" calc_visi_inouts_t * create_calc_visi_inouts_gpu(array_layout_t *arra
   gpuMemcpy( d_calc_visi_inouts->Z_diff, array_layout->Z_diff_metres,
       num_time_steps*num_baselines*sizeof(double), gpuMemcpyHostToDevice );
 
-  gpuMalloc( (void**)&d_calc_visi_inouts->ant_X, num_time_steps*num_ants*sizeof(double) );
-  gpuMemcpy( d_calc_visi_inouts->ant_X, array_layout->ant_X,
+  gpuMalloc( (void**)&d_calc_visi_inouts->ant_east, num_time_steps*num_ants*sizeof(double) );
+  gpuMemcpy( d_calc_visi_inouts->ant_east, array_layout->ant_east,
       num_time_steps*num_ants*sizeof(double), gpuMemcpyHostToDevice );
       
-  gpuMalloc( (void**)&d_calc_visi_inouts->ant_Y, num_time_steps*num_ants*sizeof(double) );
-  gpuMemcpy( d_calc_visi_inouts->ant_Y, array_layout->ant_Y,
+  gpuMalloc( (void**)&d_calc_visi_inouts->ant_north, num_time_steps*num_ants*sizeof(double) );
+  gpuMemcpy( d_calc_visi_inouts->ant_north, array_layout->ant_north,
       num_time_steps*num_ants*sizeof(double), gpuMemcpyHostToDevice );
 
-  gpuMalloc( (void**)&d_calc_visi_inouts->ant_Z, num_time_steps*num_ants*sizeof(double) );
-  gpuMemcpy( d_calc_visi_inouts->ant_Z, array_layout->ant_Z,
+  gpuMalloc( (void**)&d_calc_visi_inouts->ant_height, num_time_steps*num_ants*sizeof(double) );
+  gpuMemcpy( d_calc_visi_inouts->ant_height, array_layout->ant_height,
       num_time_steps*num_ants*sizeof(double), gpuMemcpyHostToDevice );
 
   gpuMalloc( (void**)&d_calc_visi_inouts->allsteps_sha0s, num_cross*sizeof(double) );
@@ -211,9 +211,9 @@ extern "C"  void free_calc_visi_inouts_gpu(calc_visi_inouts_t *d_calc_visi_inout
   gpuFree(d_calc_visi_inouts->X_diff);
   gpuFree(d_calc_visi_inouts->Y_diff);
   gpuFree(d_calc_visi_inouts->Z_diff);
-  gpuFree(d_calc_visi_inouts->ant_X);
-  gpuFree(d_calc_visi_inouts->ant_Y);
-  gpuFree(d_calc_visi_inouts->ant_Z);
+  gpuFree(d_calc_visi_inouts->ant_east);
+  gpuFree(d_calc_visi_inouts->ant_north);
+  gpuFree(d_calc_visi_inouts->ant_height);
   gpuFree(d_calc_visi_inouts->allsteps_sha0s);
   gpuFree(d_calc_visi_inouts->allsteps_cha0s);
   gpuFree(d_calc_visi_inouts->allsteps_wavelengths);
