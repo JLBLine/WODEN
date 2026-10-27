@@ -14,8 +14,8 @@ __device__ double calc_ionospheric_phase_offset_gpu(double *d_ant_east,
 
 __device__ double get_phase_delay_gpu(double pp_east, double pp_north,
            double TEC_grad_east, double TEC_grad_north,
-           double wavelength);
+           double wavelength, double pp_zer);
 
 __device__ user_precision_t get_phase_delay_from_TEC_gpu(user_precision_t pp_east, user_precision_t pp_north,
            user_precision_t *TEC_screen, int resolution,
-           user_precision_t screen_size, user_precision_t wavelength);
+           user_precision_t screen_size, user_precision_t wavelength, user_precision_t pp_zer);
