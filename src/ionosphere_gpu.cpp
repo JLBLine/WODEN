@@ -29,10 +29,6 @@ __device__ double calc_ionospheric_phase_offset_gpu(double *d_ant_east,
     user_precision_t az = d_azs[time_ind*num_components + iComponent];
     user_precision_t zen = d_zas[time_ind*num_components + iComponent];
 
-    // for now just use MWA values
-    user_precision_t longitude = 2.036289866851053;
-    user_precision_t latitude = MWA_LAT_RAD;
-
     // find point directly above antennas on TEC screen
     user_precision_t ant1_east_screen = (EARTH_RADIUS + height) / EARTH_RADIUS * ant1_east;
     user_precision_t ant1_north_screen = (EARTH_RADIUS + height) / EARTH_RADIUS * ant1_north;
@@ -67,9 +63,6 @@ __device__ double get_phase_delay_gpu(double pp_east, double pp_north,
 __device__ user_precision_t get_phase_delay_from_TEC_gpu(user_precision_t pp_east, user_precision_t pp_north,
            user_precision_t *TEC_screen, int resolution,
            user_precision_t screen_size, user_precision_t wavelength, user_precision_t pp_zen) {
-    
-    user_precision_t longitude = 2.036289866851053;
-    user_precision_t latitude = MWA_LAT_RAD;
     
     if (-screen_size * 0.5 > pp_east || pp_east > screen_size * 0.5 || 
         -screen_size * 0.5 > pp_north || pp_north > screen_size * 0.5) {
